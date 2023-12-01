@@ -48,7 +48,8 @@ import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.MirroredReportContext
-import scala.meta.internal.metals.RemoteReportContext
+import scala.meta.internal.metals.TelemetryReportContext
+import scala.meta.internal.metals.LoggerAccess
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
@@ -191,16 +192,17 @@ class MetalsLspService(
     },
     ReportLevel.fromString(MetalsServerConfig.default.loglevel),
   )
-  private val remoteTelemetryReports = new RemoteReportContext(
-    serverEndpoint = RemoteReportContext.DefaultEndpoint,
-    getReporterContext = makeTelemetryContext,
-    sanitizers = new RemoteReportContext.Sanitizers(
+  private val remoteTelemetryReports = new TelemetryReportContext(
+    telemetryLevel = () => userConfig.telemetryLevel,
+    reporterContext = createTelemetryReporterContext,
+    sanitizers = new TelemetryReportContext.Sanitizers(
       workspace = Some(folder.toNIO),
       sourceCodeTransformer = Some(ScalametaSourceCodeTransformer),
     ),
     logger = {
       val logger = logging.MetalsLogger.default
-      RemoteReportContext.LoggerAccess(
+      LoggerAccess(
+        debug = logger.debug(_),
         info = logger.info(_),
         warning = logger.warn(_),
         error = logger.error(_),
@@ -984,7 +986,10 @@ class MetalsLspService(
       }
     }
 
-    if (userConfig.symbolPrefixes != old.symbolPrefixes) {
+    if (
+      userConfig.symbolPrefixes != old.symbolPrefixes ||
+      userConfig.telemetryLevel != old.telemetryLevel
+    ) {
       compilers.restartAll()
     }
 
@@ -2869,7 +2874,7 @@ class MetalsLspService(
 
   def runDoctorCheck(): Unit = doctor.check(headDoctor)
 
-  private def makeTelemetryContext(): telemetry.ReporterContext =
+  private def createTelemetryReporterContext(): telemetry.ReporterContext =
     new telemetry.MetalsLspContext(
       /* metalsVersion = */ BuildInfo.metalsVersion,
       /* userConfig = */ telemetry.conversion.UserConfiguration(userConfig),

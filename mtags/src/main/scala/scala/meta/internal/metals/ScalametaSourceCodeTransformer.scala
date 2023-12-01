@@ -29,8 +29,7 @@ object ScalametaSourceCodeTransformer
   }
 
   override def parse(source: String): Option[(Dialect, Tree)] =
-    availableDialects
-      .iterator
+    availableDialects.iterator
       .map { implicit dialect: meta.Dialect =>
         dialect -> parse(source, dialect)
       }

@@ -181,6 +181,7 @@ def lintingOptions(scalaVersion: String) = {
     "-Wconf:src=*.TreeViewProvider.scala&msg=parameter params in method (children|parent) is never used:silent",
     // silence "The outer reference in this type test cannot be checked at run time."
     "-Wconf:src=.*(CompletionProvider|ArgCompletions|Completions|Keywords|IndentOnPaste).scala&msg=The outer reference:silent",
+    "-Wconf:src=.*(SourceCodeSanitizer).scala&msg=Unused import:silent",
   )
   crossSetting(
     scalaVersion,
@@ -399,6 +400,7 @@ lazy val mtags3 = project
     Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala-3",
     moduleName := "mtags3",
     scalaVersion := V.scala3,
+    crossScalaVersions := Seq(V.scala3),
     target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3",
     publish / skip := true,
     scalafixConfig := Some(
@@ -632,6 +634,7 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   publish / skip := true,
   fork := true,
   testFrameworks := List(TestFrameworks.MUnit),
+  Test / javaOptions += "-Dmetals.telemetryLevel=off",
   Test / testOptions ++= {
     if (isCI) {
       // Enable verbose logging using sbt loggers in CI.

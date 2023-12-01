@@ -15,7 +15,7 @@ import scala.collection.mutable
 import java.net.InetSocketAddress
 import io.undertow.server.handlers.BlockingHandler
 
-class RemoteReporterSuite extends BaseSuite {
+class TelemetryReporterSuite extends BaseSuite {
   def simpleReport(id: String) = metals.Report(
     name = "name",
     text = "text",
@@ -25,14 +25,28 @@ class RemoteReporterSuite extends BaseSuite {
     error = Some(new RuntimeException("A", new NullPointerException())),
   )
 
+  // Ensure that tests by default don't use telemtry reporting, it should be disabled in the build.sbt
+  test("default telemetry level") {
+    def getDefault = metals.TelemetryLevel.default
+    assertEquals(metals.TelemetryLevel.Off, getDefault)
+    sys.props
+      .get(metals.TelemetryLevel.SystemPropertyKey)
+      .fold(fail("Expected telemetry level system property to be overriden")) {
+        assertEquals(_, metals.TelemetryLevel.Off.stringValue)
+      }
+  }
+
   // Remote telemetry reporter should be treated as best effort, ensure that logging
   test("ignore connectiviy failures") {
-    val reporter = new metals.RemoteReportContext(
-      "https://not.existing.endpoint.for.metals.tests:8081",
-      getReporterContext = () =>
+    val reporter = new metals.TelemetryReportContext(
+      telemetryClientConfig =
+        metals.TelemetryClient.Config.default.copy(serverHost =
+          "https://not.existing.endpoint.for.metals.tests:8081"
+        ),
+      telemetryLevel = () => metals.TelemetryLevel.All,
+      reporterContext = () =>
         SampleReports.metalsLSPReport().getReporterContext.getMetalsLSP.get(),
-      sanitizers = new metals.RemoteReportContext.Sanitizers(None, None),
-      logger = metals.RemoteReportContext.LoggerAccess.system,
+      sanitizers = new metals.TelemetryReportContext.Sanitizers(None, None),
     )
 
     assertEquals(
@@ -56,14 +70,15 @@ class RemoteReporterSuite extends BaseSuite {
           SampleReports.scalaPresentationCompilerReport(),
           SampleReports.unknownReport(),
         ).map(_.getReporterContext().get())
-        reporter = new metals.RemoteReportContext(
-          serverEndpoint,
-          getReporterContext = () => reporterCtx,
-          sanitizers = new metals.RemoteReportContext.Sanitizers(
+        reporter = new metals.TelemetryReportContext(
+          telemetryClientConfig = metals.TelemetryClient.Config.default
+            .copy(serverHost = serverEndpoint),
+          telemetryLevel = () => metals.TelemetryLevel.All,
+          reporterContext = () => reporterCtx,
+          sanitizers = new metals.TelemetryReportContext.Sanitizers(
             None,
             Some(metals.ScalametaSourceCodeTransformer),
           ),
-          logger = metals.RemoteReportContext.LoggerAccess.system,
         )
       } {
         val createdReport = simpleReport(reporterCtx.toString())

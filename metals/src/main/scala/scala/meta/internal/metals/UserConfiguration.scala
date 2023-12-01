@@ -9,6 +9,7 @@ import scala.util.Try
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.metals.TelemetryLevel
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig
 
@@ -56,7 +57,7 @@ case class UserConfiguration(
     verboseCompilation: Boolean = false,
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
     scalaCliLauncher: Option[String] = None,
-    defaultBspToBuildTool: Boolean = false,
+    telemetryLevel: TelemetryLevel = TelemetryLevel.default,
 ) {
 
   def shouldAutoImportNewProject: Boolean =
@@ -345,6 +346,35 @@ object UserConfiguration {
            |about incremental compilation in Zinc.""".stripMargin,
       ),
       UserConfigurationOption(
+        "telemetry-level",
+        TelemetryLevel.default.stringValue,
+        TelemetryLevel.default.stringValue,
+        "Scope of reported telemetry data",
+        s"""Control what kind of telemetry events can be send to maintainers of Metals.
+           |With `${TelemetryLevel.Off.stringValue}` no telemetry data would be send.
+           |Minimal recommended level is `${TelemetryLevel.Error.stringValue}` which would collect diagnostic information when Metals components would crash or fail unexpectedly, allowing to understand why the problem occoured.
+           |Defaults to `${TelemetryLevel.All.stringValue}` allowing to collect all information including how features are used to help us priortize future improvements."
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "auto-import-build",
+        "off",
+        "all",
+        "Import build when changes detected without prompting",
+        """|Automatically import builds rather than prompting the user to choose. "initial" will 
+           |only automatically import a build when a project is first opened, "all" will automate 
+           |build imports after subsequent changes as well.""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "default-bsp-to-build-tool",
+        "false",
+        "true",
+        "Default to using build tool as your build server.",
+        """|If your build tool can also serve as a build server,
+           |default to using it instead of Bloop.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
         "auto-import-build",
         "off",
         "all",
@@ -588,40 +618,46 @@ object UserConfiguration {
     val defaultBspToBuildTool =
       getBooleanKey("default-bsp-to-build-tool").getOrElse(false)
 
+    val telemetryLevel = getStringKey("telemetry-level")
+      .flatMap(TelemetryLevel.fromString)
+      .getOrElse(TelemetryLevel.default)
+
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
-          javaHome,
-          sbtScript,
-          gradleScript,
-          mavenScript,
-          millScript,
-          scalafmtConfigPath,
-          scalafixConfigPath,
-          symbolPrefixes,
-          worksheetScreenWidth,
-          worksheetCancelTimeout,
-          bloopSbtAlreadyInstalled,
-          bloopVersion,
-          bloopJvmProperties,
-          ammoniteProperties,
-          superMethodLensesEnabled,
-          showInferredType,
-          showImplicitArguments,
-          showImplicitConversionsAndClasses,
-          enableStripMarginOnTypeFormatting,
-          enableIndentOnPaste,
-          enableSemanticHighlighting,
-          excludedPackages,
-          defaultScalaVersion,
-          disableTestCodeLenses,
-          javaFormatConfig,
-          scalafixRulesDependencies,
-          customProjectRoot,
-          verboseCompilation,
-          autoImportBuilds,
-          scalaCliLauncher,
-          defaultBspToBuildTool,
+          javaHome = javaHome,
+          sbtScript = sbtScript,
+          gradleScript = gradleScript,
+          mavenScript = mavenScript,
+          millScript = millScript,
+          scalafmtConfigPath = scalafmtConfigPath,
+          scalafixConfigPath = scalafixConfigPath,
+          symbolPrefixes = symbolPrefixes,
+          worksheetScreenWidth = worksheetScreenWidth,
+          worksheetCancelTimeout = worksheetCancelTimeout,
+          bloopSbtAlreadyInstalled = bloopSbtAlreadyInstalled,
+          bloopVersion = bloopVersion,
+          bloopJvmProperties = bloopJvmProperties,
+          ammoniteJvmProperties = ammoniteProperties,
+          superMethodLensesEnabled = superMethodLensesEnabled,
+          showInferredType = showInferredType,
+          showImplicitArguments = showImplicitArguments,
+          showImplicitConversionsAndClasses = showImplicitConversionsAndClasses,
+          remoteLanguageServer = remoteLanguageServer,
+          enableStripMarginOnTypeFormatting = enableStripMarginOnTypeFormatting,
+          enableIndentOnPaste = enableIndentOnPaste,
+          enableSemanticHighlighting = enableSemanticHighlighting,
+          excludedPackages = excludedPackages,
+          fallbackScalaVersion = defaultScalaVersion,
+          testUserInterface = disableTestCodeLenses,
+          javaFormatConfig = javaFormatConfig,
+          scalafixRulesDependencies = scalafixRulesDependencies,
+          customProjectRoot = customProjectRoot,
+          verboseCompilation = verboseCompilation,
+          telemetryLevel = telemetryLevel,
+          autoImportBuilds = autoImportBuilds,
+          scalaCliLauncher = scalaCliLauncher,
+          defaultBspToBuildTool = defaultBspToBuildTool,
         )
       )
     } else {

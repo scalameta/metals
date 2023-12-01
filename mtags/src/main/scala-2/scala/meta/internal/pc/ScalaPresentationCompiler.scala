@@ -25,6 +25,13 @@ import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.metals.StdReportContext
+import scala.meta.internal.metals.LoggerAccess
+import scala.meta.internal.metals.TelemetryReportContext
+import scala.meta.internal.metals.MirroredReportContext
+import scala.meta.internal.metals.ScalametaSourceCodeTransformer
+import scala.meta.internal.metals.TelemetryLevel
+import scala.meta.internal.{telemetry => telemetryApi}
+import scala.meta.internal.pc.{telemetry => pcTelemetryApi}
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.AutoImportsResult
@@ -50,11 +57,7 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
-import scala.meta.internal.{telemetry => telemetryApi}
-import scala.meta.internal.pc.{telemetry => pcTelemetryApi}
-import scala.meta.internal.metals.RemoteReportContext
-import scala.meta.internal.metals.MirroredReportContext
-import scala.meta.internal.metals.ScalametaSourceCodeTransformer
+
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -66,7 +69,8 @@ case class ScalaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     folderPath: Option[Path] = None,
-    reportsLevel: ReportLevel = ReportLevel.Info
+    reportsLevel: ReportLevel = ReportLevel.Info,
+    telemetryLevel: TelemetryLevel = TelemetryLevel.default
 ) extends PresentationCompiler {
 
   implicit val executionContext: ExecutionContextExecutor = ec
@@ -77,14 +81,15 @@ case class ScalaPresentationCompiler(
     Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
 
   implicit val reportContex: ReportContext = {
-    val remoteReporters = new RemoteReportContext(
-      serverEndpoint = RemoteReportContext.discoverTelemetryServer,
-      getReporterContext = makeTelemetryContext,
-      sanitizers = new RemoteReportContext.Sanitizers(
+    val remoteReporters = new TelemetryReportContext(
+      telemetryLevel = () => telemetryLevel,
+      reporterContext = createTelemetryReporterContext,
+      sanitizers = new TelemetryReportContext.Sanitizers(
         workspace = folderPath,
         sourceCodeTransformer = Some(ScalametaSourceCodeTransformer)
       ),
-      logger = RemoteReportContext.LoggerAccess(
+      logger = LoggerAccess(
+        debug = logger.fine(_),
         info = logger.info(_),
         warning = logger.warning(_),
         error = logger.severe(_)
@@ -104,6 +109,11 @@ case class ScalaPresentationCompiler(
 
   override def withReportsLoggerLevel(level: String): PresentationCompiler =
     copy(reportsLevel = ReportLevel.fromString(level))
+
+  override def withTelemetryLevel(level: String): PresentationCompiler =
+    TelemetryLevel
+      .fromString(level)
+      .fold(this) { level => copy(telemetryLevel = level) }
 
   override def withSearch(search: SymbolSearch): PresentationCompiler =
     copy(search = search)
@@ -472,7 +482,7 @@ case class ScalaPresentationCompiler(
     )
   }
 
-  def makeTelemetryContext(): telemetryApi.ReporterContext =
+  def createTelemetryReporterContext(): telemetryApi.ReporterContext =
     new telemetryApi.ScalaPresentationCompilerContext(
       /* scalaVersion = */ scalaVersion,
       /* options = */ options.asJava,

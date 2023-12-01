@@ -228,6 +228,13 @@ public abstract class PresentationCompiler {
 	};
 
 	/**
+	 * Set logger telemetry level for reports.
+	 */
+	public PresentationCompiler withTelemetryLevel(String level) {
+		return this;
+	};
+
+	/**
 	 * Set build target name.
 	 */
 	public PresentationCompiler withBuildTargetName(String buildTargetName) {

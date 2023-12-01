@@ -112,8 +112,6 @@ final case class MetalsServerConfig(
       Option(System.getProperty("metals.build-server-ping-interval"))
         .flatMap(opt => Try(Duration(opt)).toOption)
         .getOrElse(Duration("1m")),
-    telemetryServer: String =
-      RemoteTelemetryReportContext.discoverTelemetryServer,
 ) {
   override def toString: String =
     List[String](
@@ -136,7 +134,6 @@ final case class MetalsServerConfig(
       s"max-log-backup=${maxLogBackups}",
       s"server-to-idle-time=${metalsToIdleTime}",
       s"build-server-ping-interval=${pingInterval}",
-      s"telemetry-server=${telemetryServer}",
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {
