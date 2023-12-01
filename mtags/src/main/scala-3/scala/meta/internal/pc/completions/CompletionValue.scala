@@ -131,6 +131,20 @@ object CompletionValue:
       s"${printer.completionSymbol(symbol)} (extension)"
 
   /**
+   * CompletionValue for old implicit classes methods via SymbolSearch
+   */
+  case class ImplicitClass(
+      label: String,
+      symbol: Symbol,
+      override val snippetSuffix: CompletionSuffix,
+      override val importSymbol: Symbol,
+  ) extends Symbolic:
+    override def completionItemKind(using Context): CompletionItemKind =
+      CompletionItemKind.Method
+    override def description(printer: MetalsPrinter)(using Context): String =
+      s"${printer.completionSymbol(symbol)} (implicit)"
+
+  /**
    * @param shortenedNames shortened type names by `Printer`. This field should be used for autoImports
    * @param start Starting position of the completion
    *              this is needed, because for OverrideCompletion, completionPos
