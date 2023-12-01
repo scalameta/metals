@@ -197,7 +197,7 @@ final class PcSyntheticDecorationsProvider(
      * val <<t>> @ ... =
      */
     private def isValDefBind(vd: ValDef) = {
-      val (_, afterDef) = vd.pos.source.content.splitAt(vd.namePosition.end)
+      val afterDef = text.drop(vd.namePosition.end)
       val index = indexAfterSpacesAndComments(afterDef)
       index >= 0 && index < afterDef.size && afterDef(index) == '@'
     }
