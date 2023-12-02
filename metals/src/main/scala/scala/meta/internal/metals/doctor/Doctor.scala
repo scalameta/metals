@@ -57,15 +57,15 @@ final class Doctor(
     diagnostics: Diagnostics,
     languageClient: MetalsLanguageClient,
     currentBuildServer: () => Option[BspSession],
-    calculateNewBuildServer: () => BspResolvedResult,
+    calculateNewBuildServer: () => Option[BspResolvedResult],
     tables: Tables,
     clientConfig: ClientConfiguration,
     mtagsResolver: MtagsResolver,
     javaHome: () => Option[String],
     maybeJDKVersion: Option[JdkVersion],
     folderName: String,
-    buildTools: BuildTools,
-    bspStatus: ConnectionBspStatus,
+    buildTools: Option[BuildTools],
+    bspStatus: Option[ConnectionBspStatus],
 )(implicit ec: ExecutionContext, rc: ReportContext) {
   private val hasProblems = new AtomicBoolean(false)
   private val problemResolver =
@@ -129,7 +129,7 @@ final class Doctor(
     buildTargets.allBuildTargetIds
 
   private def selectedBuildToolMessage(): Option[(String, Boolean)] = {
-    val isExplicitChoice = buildTools.loadSupported().length > 1
+    val isExplicitChoice = buildTools.exists(_.loadSupported().length > 1)
     tables.buildTool.selectedBuildTool().map { value =>
       (s"Build definition is coming from ${value}.", isExplicitChoice)
     }
@@ -164,23 +164,24 @@ final class Doctor(
         (s"Build server currently being used is $name v$version.", false)
       case (None, _) =>
         calculateNewBuildServer() match {
-          case ResolvedNone =>
+          case Some(ResolvedNone) =>
             (
               "No build server found. Try to run the generate-bsp-config command.",
               false,
             )
-          case ResolvedBloop =>
+          case Some(ResolvedBloop) =>
             ("Build server currently being used is Bloop.", false)
-          case ResolvedBspOne(details) =>
+          case Some(ResolvedBspOne(details)) =>
             (
               s"Build server currently being used is ${details.getName()}.",
               false,
             )
-          case ResolvedMultiple(_, _) =>
+          case Some(ResolvedMultiple(_, _)) =>
             (
               "Multiple build servers found for your workspace. Attempt to connect to choose your desired server.",
               false,
             )
+          case None => ("", false)
         }
     }
   }
@@ -550,7 +551,7 @@ final class Doctor(
   }
 
   private def isServerResponsive: Option[Boolean] =
-    bspStatus.isBuildServerResponsive
+    bspStatus.flatMap(_.isBuildServerResponsive)
 
   private def extractScalaTargetInfo(
       scalaTarget: ScalaTarget,

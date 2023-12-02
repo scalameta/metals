@@ -353,13 +353,20 @@ object MetalsEnrichments
       def isScalaDir(
           file: File,
           dirFilter: File => Boolean = _ => true,
+          isRoot: Boolean = false,
       ): Boolean = {
         file.listFiles().exists { file =>
-          if (file.isDirectory()) dirFilter(file) && isScalaDir(file)
-          else fileNamePredicate(file.getName())
+          if (file.isDirectory()) {
+            if (dirFilter(file)) isScalaDir(file)
+            else
+              isRoot && !file.getName().startsWith(".") && isScalaDir(
+                file,
+                dirFilter,
+              )
+          } else fileNamePredicate(file.getName())
         }
       }
-      path.isDirectory && isScalaDir(path.toFile, dirFilter)
+      path.isDirectory && isScalaDir(path.toFile, dirFilter, isRoot = true)
     }
 
     def scalaSourcerootOption: String = s""""-P:semanticdb:sourceroot:$path""""

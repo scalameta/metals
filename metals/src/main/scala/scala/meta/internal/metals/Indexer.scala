@@ -20,7 +20,6 @@ import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.BuildTool
-import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.builds.WorkspaceReload
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -46,7 +45,7 @@ import org.eclipse.lsp4j.Position
  */
 final case class Indexer(
     workspaceReload: () => WorkspaceReload,
-    doctorCheck: () => Unit,
+    workspaceCheck: () => Unit,
     languageClient: DelegatingLanguageClient,
     bspSession: () => Option[BspSession],
     executionContext: ExecutionContextExecutorService,
@@ -67,8 +66,6 @@ final case class Indexer(
     treeView: () => FolderTreeViewProvider,
     worksheetProvider: () => WorksheetProvider,
     symbolSearch: () => MetalsSymbolSearch,
-    buildTools: () => BuildTools,
-    formattingProvider: () => FormattingProvider,
     fileWatcher: FileWatcher,
     focusedDocument: () => Option[AbsolutePath],
     focusedDocumentBuildTarget: AtomicReference[b.BuildTargetIdentifier],
@@ -97,7 +94,7 @@ final case class Indexer(
         .flatMap(_ => importBuild(session))
         .map { _ =>
           scribe.info("Correctly reloaded workspace")
-          profiledIndexWorkspace(doctorCheck)
+          profiledIndexWorkspace(workspaceCheck)
           workspaceReload().persistChecksumStatus(Status.Installed, buildTool)
           BuildChange.Reloaded
         }
@@ -305,17 +302,6 @@ final case class Indexer(
       clientConfig.initialConfig.statistics.isIndex,
     ) {
       check()
-      buildTools()
-        .loadSupported()
-        .map(_.projectRoot)
-        .distinct match {
-        case Nil => formattingProvider().validateWorkspace(workspaceFolder)
-        case paths =>
-          paths.foreach(
-            formattingProvider().validateWorkspace(_)
-          )
-      }
-
     }
     timerProvider.timedThunk(
       "started file watcher",

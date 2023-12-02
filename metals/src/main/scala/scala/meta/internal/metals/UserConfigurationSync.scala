@@ -24,7 +24,7 @@ class UserConfigurationSync(
   } yield out.booleanValue()).getOrElse(false)
 
   def initSyncUserConfiguration(
-      services: List[MetalsLspService]
+      services: List[BspMetalsLspService]
   ): Future[Unit] =
     optSyncUserConfiguration(
       services,
@@ -37,7 +37,7 @@ class UserConfigurationSync(
 
   def onDidChangeConfiguration(
       params: lsp4j.DidChangeConfigurationParams,
-      services: List[MetalsLspService],
+      services: List[BspMetalsLspService],
   ): Future[Unit] =
     optSyncUserConfiguration(
       services,
@@ -56,8 +56,8 @@ class UserConfigurationSync(
       .getOrElse(Future.successful(()))
 
   private def optSyncUserConfiguration(
-      services: List[MetalsLspService],
-      consume: MetalsLspService => UserConfiguration => Future[Unit],
+      services: List[BspMetalsLspService],
+      consume: BspMetalsLspService => UserConfiguration => Future[Unit],
   ): Option[Future[Unit]] =
     Option.when(supportsConfiguration) {
       val items = services.map { service =>

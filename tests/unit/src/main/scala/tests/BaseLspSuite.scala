@@ -96,7 +96,7 @@ abstract class BaseLspSuite(
       server,
       client,
       expectError,
-      layout.keys.toList,
+      Some(layout.keys.toList),
     )
   }
 

@@ -15,10 +15,10 @@ import scala.util.control.NonFatal
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.NewProjectProvider
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.BspMetalsLspService
 import scala.meta.internal.metals.DidFocusResult
 import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLspService
 import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -101,6 +101,7 @@ class WorkspaceLspService(
     client: MetalsLanguageClient,
     initializeParams: lsp4j.InitializeParams,
     val folders: List[Folder],
+    fallbackServicePath: => AbsolutePath,
 ) extends ScalaLspService {
   import serverInputs._
   implicit val ex: ExecutionContextExecutorService = ec
@@ -162,10 +163,28 @@ class WorkspaceLspService(
     focusedDocument = newFocusedDocument
   }
 
-  def createService(folder: Folder): MetalsLspService =
+  lazy val fallbackService: FallbackMetalsLspService =
+    new FallbackMetalsLspService(
+      ec,
+      sh,
+      serverInputs,
+      languageClient,
+      initializeParams,
+      clientConfig,
+      statusBar,
+      () => focusedDocument,
+      shellRunner,
+      timerProvider,
+      initTreeView,
+      fallbackServicePath,
+      Some("fallback-service"),
+      doctor,
+    )
+
+  def createService(folder: Folder): BspMetalsLspService =
     folder match {
       case Folder(uri, name) =>
-        new MetalsLspService(
+        new BspMetalsLspService(
           ec,
           sh,
           serverInputs,
@@ -196,7 +215,6 @@ class WorkspaceLspService(
 
   def folderServices = workspaceFolders.getFolderServices
   def nonScalaProjects = workspaceFolders.nonScalaProjects
-  def fallbackService: MetalsLspService = folderServices.head
 
   val treeView: TreeViewProvider =
     if (clientConfig.isTreeViewProvider) {
@@ -215,12 +233,13 @@ class WorkspaceLspService(
     clientConfig,
     shellRunner,
     clientConfig.icons,
-    folders.head.path,
+    fallbackService.path,
   )
 
   private val githubNewIssueUrlCreator = new GithubNewIssueUrlCreator(
     () => folderServices.map(_.gitHubIssueFolderInfo),
     initializeParams.getClientInfo(),
+    () => fallbackService.buildTargets,
   )
 
   private val workspaceChoicePopup: WorkspaceChoicePopup =
@@ -249,7 +268,7 @@ class WorkspaceLspService(
       case _: ProviderMismatchException => None
     }
 
-  def getServiceForOpt(path: AbsolutePath): Option[MetalsLspService] =
+  def getServiceForOpt(path: AbsolutePath): Option[BspMetalsLspService] =
     getFolderForOpt(path, folderServices)
 
   def getServiceFor(path: AbsolutePath): MetalsLspService =
@@ -267,7 +286,7 @@ class WorkspaceLspService(
     } yield service).getOrElse(fallbackService)
   }
 
-  def currentFolder: Option[MetalsLspService] =
+  def currentFolder: Option[BspMetalsLspService] =
     focusedDocument.flatMap(getServiceForOpt)
 
   /**
@@ -277,11 +296,11 @@ class WorkspaceLspService(
    * @param actionName -- action name to display for popup
    */
   def onCurrentFolder[A](
-      f: MetalsLspService => Future[A],
+      f: BspMetalsLspService => Future[A],
       actionName: String,
       default: () => A,
   ): Future[A] = {
-    def currentService(): Future[Option[MetalsLspService]] =
+    def currentService(): Future[Option[BspMetalsLspService]] =
       folderServices match {
         case head :: Nil => Future { Some(head) }
         case _ =>
@@ -304,21 +323,21 @@ class WorkspaceLspService(
   }
 
   def onCurrentFolder(
-      f: MetalsLspService => Future[Unit],
+      f: BspMetalsLspService => Future[Unit],
       actionName: String,
   ): Future[Unit] =
     onCurrentFolder(f, actionName, () => ())
 
   def getServiceForExactUri(
       folderUri: String
-  ): Option[MetalsLspService] =
+  ): Option[BspMetalsLspService] =
     for {
       workSpaceFolder <- folderServices
         .find(service => service.path.toString == folderUri)
     } yield workSpaceFolder
 
   def foreachSeq[A](
-      f: MetalsLspService => Future[A],
+      f: BspMetalsLspService => Future[A],
       ignoreValue: Boolean = false,
   ): CompletableFuture[Object] = {
     val res = Future.sequence(folderServices.map(f))
@@ -326,7 +345,7 @@ class WorkspaceLspService(
     else res.asJavaObject
   }
 
-  def collectSeq[A, B](f: MetalsLspService => Future[A])(
+  def collectSeq[A, B](f: BspMetalsLspService => Future[A])(
       compose: List[A] => B
   ): Future[B] =
     Future.sequence(folderServices.map(f)).collect { case v => compose(v) }
@@ -653,9 +672,9 @@ class WorkspaceLspService(
       )
   }
 
-  private def onFirstSatifying[T, R](mapTo: MetalsLspService => Future[T])(
+  private def onFirstSatifying[T, R](mapTo: BspMetalsLspService => Future[T])(
       satisfies: T => Boolean,
-      exec: (MetalsLspService, T) => Future[R],
+      exec: (BspMetalsLspService, T) => Future[R],
       onNotFound: () => Future[R],
   ): Future[R] =
     Future
@@ -967,12 +986,12 @@ class WorkspaceLspService(
           .getOrElse(fallbackService)
           .createFile(directoryURI, name, fileType, isScala = false)
       case ServerCommands.StartAmmoniteBuildServer() =>
-        val res = focusedDocument match {
-          case None => Future.unit
-          case Some(path) =>
-            getServiceFor(path).ammoniteStart()
-        }
-        res.asJavaObject
+        val res =
+          for {
+            path <- focusedDocument
+            service <- getServiceForOpt(path)
+          } yield service.ammoniteStart()
+        res.getOrElse(Future.successful(())).asJavaObject
       case ServerCommands.StopAmmoniteBuildServer() =>
         foreachSeq(_.ammoniteStop(), ignoreValue = false)
       case ServerCommands.StartScalaCliServer() =>
@@ -991,7 +1010,7 @@ class WorkspaceLspService(
       case ServerCommands.CopyWorksheetOutput(path) =>
         getServiceFor(path).copyWorksheetOutput(path.toAbsolutePath)
       case actionCommand
-          if folderServices.head.allActionCommandsIds(
+          if fallbackService.allActionCommandsIds(
             actionCommand.getCommand()
           ) =>
         val getOptDisplayableMessage: PartialFunction[Throwable, String] = {
@@ -1033,7 +1052,7 @@ class WorkspaceLspService(
         val capabilities = new lsp4j.ServerCapabilities()
         capabilities.setExecuteCommandProvider(
           new lsp4j.ExecuteCommandOptions(
-            (ServerCommands.allIds ++ folderServices.head.allActionCommandsIds).toList.asJava
+            (ServerCommands.allIds ++ fallbackService.allActionCommandsIds).toList.asJava
           )
         )
         capabilities.setFoldingRangeProvider(true)

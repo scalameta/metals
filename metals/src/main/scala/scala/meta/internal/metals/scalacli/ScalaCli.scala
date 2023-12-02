@@ -60,8 +60,9 @@ class ScalaCli(
     buildClient: () => MetalsBuildClient,
     languageClient: MetalsLanguageClient,
     config: () => MetalsServerConfig,
-    userConfig: () => UserConfiguration,
+    cliCommand: List[String],
     parseTreesAndPublishDiags: Seq[AbsolutePath] => Future[Unit],
+    val path: AbsolutePath,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
@@ -173,59 +174,7 @@ class ScalaCli(
     }
   }
 
-  private lazy val localScalaCli: Option[Seq[String]] =
-    ScalaCli.localScalaCli(userConfig())
-
-  private lazy val cliCommand = {
-    localScalaCli.getOrElse {
-      scribe.warn(
-        s"scala-cli >= ${ScalaCli.minVersion} not found in PATH, fetching and starting a JVM-based Scala CLI"
-      )
-      jvmBased()
-    }
-  }
-
-  def jvmBased(): Seq[String] = {
-    val cp = ScalaCli.scalaCliClassPath()
-    Seq(
-      ScalaCli.javaCommand,
-      "-cp",
-      cp.mkString(File.pathSeparator),
-      ScalaCli.scalaCliMainClass,
-    )
-  }
-
-  def loaded(path: AbsolutePath): Boolean =
-    ifConnectedOrElse(st =>
-      st.path == path || path.toNIO.startsWith(st.path.toNIO)
-    )(false)
-
-  def setupIDE(path: AbsolutePath): Future[Unit] = {
-    localScalaCli
-      .map { cliCommand =>
-        val command = cliCommand ++ Seq("setup-ide", path.toString())
-        scribe.info(s"Running $command")
-        val proc = SystemProcess.run(
-          command.toList,
-          path,
-          redirectErrorOutput = false,
-          env = Map(),
-          processOut = None,
-          processErr = Some(line => scribe.info("Scala CLI: " + line)),
-          discardInput = false,
-          threadNamePrefix = "scala-cli-setup-ide",
-        )
-        proc.complete.ignoreValue
-      }
-      .getOrElse {
-        start(path)
-      }
-  }
-
-  def path: Option[AbsolutePath] =
-    ifConnectedOrElse(st => Option(st.path))(None)
-
-  def start(path: AbsolutePath): Future[Unit] = {
+  def start(): Future[Unit] = {
     val workspace = {
       val globalTmpDir =
         scalaCliBuildDirectory.get() match {
@@ -254,7 +203,6 @@ class ScalaCli(
           workspace
         }
     }
-
     disconnectOldBuildServer().onComplete {
       case Failure(e) =>
         scribe.warn("Error disconnecting old Scala CLI server", e)

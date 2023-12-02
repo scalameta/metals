@@ -9,7 +9,7 @@ import scala.meta.internal.metals.logging.MetalsLogger
 
 class WorkspaceFolders(
     initialFolders: List[Folder],
-    createService: Folder => MetalsLspService,
+    createService: Folder => BspMetalsLspService,
     shutdownMetals: () => Future[Unit],
     redirectSystemOut: Boolean,
     initialServerConfig: MetalsServerConfig,
@@ -18,15 +18,13 @@ class WorkspaceFolders(
 
   private val folderServices: AtomicReference[WorkspaceFoldersServices] = {
     val (scalaProjects, nonScalaProjects) =
-      initialFolders.partition(_.isMetalsProject) match {
-        case (Nil, nonScala) => (List(nonScala.head), nonScala.tail)
-        case t => t
-      }
+      initialFolders.partition(_.isMetalsProject)
     val services = scalaProjects.map(createService(_))
     new AtomicReference(WorkspaceFoldersServices(services, nonScalaProjects))
   }
 
-  def getFolderServices: List[MetalsLspService] = folderServices.get().services
+  def getFolderServices: List[BspMetalsLspService] =
+    folderServices.get().services
   def nonScalaProjects: List[Folder] = folderServices.get().nonScalaFolders
 
   def changeFolderServices(
@@ -69,7 +67,7 @@ class WorkspaceFolders(
     }
   }
 
-  def convertToScalaProject(folder: Folder): MetalsLspService = {
+  def convertToScalaProject(folder: Folder): BspMetalsLspService = {
     val newService = createService(folder)
     val WorkspaceFoldersServices(prev, _) = folderServices.getAndUpdate {
       case wfs @ WorkspaceFoldersServices(services, nonScalaProjects) =>
@@ -105,6 +103,6 @@ class WorkspaceFolders(
 }
 
 case class WorkspaceFoldersServices(
-    services: List[MetalsLspService],
+    services: List[BspMetalsLspService],
     nonScalaFolders: List[Folder],
 )

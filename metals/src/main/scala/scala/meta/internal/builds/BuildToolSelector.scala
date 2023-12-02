@@ -57,7 +57,8 @@ final class BuildToolSelector(
   ): Future[Boolean] = {
     languageClient
       .showMessageRequest(
-        Messages.NewBuildToolDetected.params(newBuildTool, currentBuildTool)
+        Messages.NewBuildToolDetected
+          .params(newBuildTool.executableName, currentBuildTool.executableName)
       )
       .asScala
       .map {
