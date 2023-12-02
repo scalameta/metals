@@ -2,16 +2,21 @@ package scala.meta.internal.telemetry;
 
 import java.util.Optional;
 
-public class ReportEvent {
+public class ErrorReport {
 	final private String name;
 	final private Optional<String> text;
 	final private Optional<String> id;
-	final private Optional<ReportedError> error;
+	final private Optional<ExceptionSummary> error;
 	final private String reporterName;
 	final private ReporterContextUnion reporterContext;
 	final private Environment env;
 
-	public ReportEvent(String name, Optional<String> text, Optional<String> id, Optional<ReportedError> error,
+	public ErrorReport(String name, Optional<String> text, Optional<String> id, Optional<ExceptionSummary> error,
+			String reporterName, ReporterContextUnion reporterContext) {
+		this(name, text, id, error, reporterName, reporterContext, Environment.get());
+	}
+
+	public ErrorReport(String name, Optional<String> text, Optional<String> id, Optional<ExceptionSummary> error,
 			String reporterName, ReporterContextUnion reporterContext, Environment env) {
 		this.name = name;
 		this.text = text;
@@ -34,7 +39,7 @@ public class ReportEvent {
 		return id;
 	}
 
-	public Optional<ReportedError> getError() {
+	public Optional<ExceptionSummary> getError() {
 		return error;
 	}
 
@@ -72,7 +77,7 @@ public class ReportEvent {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		ReportEvent other = (ReportEvent) obj;
+		ErrorReport other = (ErrorReport) obj;
 		if (name == null) {
 			if (other.name != null)
 				return false;

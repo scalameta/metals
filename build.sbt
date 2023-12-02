@@ -400,7 +400,6 @@ lazy val mtags3 = project
     Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala-3",
     moduleName := "mtags3",
     scalaVersion := V.scala3,
-    crossScalaVersions := Seq(V.scala3),
     target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3",
     publish / skip := true,
     scalafixConfig := Some(

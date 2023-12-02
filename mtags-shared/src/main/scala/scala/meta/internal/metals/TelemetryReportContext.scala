@@ -78,32 +78,17 @@ private class TelemetryReporter(
     Nil
   override def deleteAll(): Unit = ()
 
-  private lazy val environmentInfo: telemetry.Environment = {
-    def propertyOrUnknown(key: String) = sys.props.getOrElse(key, "unknown")
-    new telemetry.Environment(
-      /* java = */ new telemetry.JavaInfo(
-        /* version = */ propertyOrUnknown("java.version"),
-        /* distribution = */ sys.props.get("java.vendor").toJava
-      ),
-      /* system = */ new telemetry.SystemInfo(
-        /* architecture = */ propertyOrUnknown("os.arch"),
-        /* name = */ propertyOrUnknown("os.name"),
-        /* version = */ propertyOrUnknown("os.version")
-      )
-    )
-  }
-
   override def sanitize(message: String): String =
     sanitizers.all.foldRight(message)(_.apply(_))
 
-  private def createSanitizedReport(report: Report) = new telemetry.ReportEvent(
+  private def createSanitizedReport(report: Report) = new telemetry.ErrorReport(
     /* name =  */ report.name,
     /* text =  */ if (sanitizers.canSanitizeSources)
       Optional.of(sanitize(report.text))
     else Optional.empty(),
     /* id =  */ report.id.toJava,
     /* error =  */ report.error
-      .map(telemetry.ReportedError.fromThrowable(_, sanitize(_)))
+      .map(telemetry.ExceptionSummary.fromThrowable(_, sanitize(_)))
       .toJava,
     /* reporterName =  */ name,
     /* reporterContext =  */ reporterContext() match {
@@ -113,8 +98,7 @@ private class TelemetryReporter(
         telemetry.ReporterContextUnion.scalaPresentationCompiler(ctx)
       case ctx: telemetry.UnknownProducerContext =>
         telemetry.ReporterContextUnion.unknown(ctx)
-    },
-    /* env =  */ environmentInfo
+    }
   )
 
   override def create(
@@ -122,9 +106,9 @@ private class TelemetryReporter(
       ifVerbose: Boolean
   ): Option[Path] = {
     if (telemetryLevel().reportErrors) {
-      val event = createSanitizedReport(unsanitizedReport)
-      if (event.getText().isPresent() || event.getError().isPresent())
-        client.sendReportEvent(event)
+      val report = createSanitizedReport(unsanitizedReport)
+      if (report.getText().isPresent() || report.getError().isPresent())
+        client.sendErrorReport(report)
       else
         logger.info(
           "Skiped reporting remotely unmeaningful report, no context or error, reportId=" +

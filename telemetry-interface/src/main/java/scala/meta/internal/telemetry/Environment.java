@@ -1,19 +1,27 @@
 package scala.meta.internal.telemetry;
 
 public class Environment {
-	private JavaInfo java;
-	private SystemInfo system;
+	final private JavaInfo java;
+	final private SystemInfo system;
+
+	private final static Environment instance;
+
+	public static Environment get() {
+		return instance;
+	}
+
+	static {
+		instance = new Environment(
+				new JavaInfo(System.getProperty("java.version", "unknown"),
+						System.getProperty("java.vendor", "unknown")),
+				new SystemInfo(System.getProperty("os.arch", "unknown"), System.getProperty("os.name", "unknown"),
+						System.getProperty("os.version", "unknown")));
+	}
+
+	// Generated
 
 	public Environment(JavaInfo java, SystemInfo system) {
 		this.java = java;
-		this.system = system;
-	}
-
-	public void setJava(JavaInfo java) {
-		this.java = java;
-	}
-
-	public void setSystem(SystemInfo system) {
 		this.system = system;
 	}
 

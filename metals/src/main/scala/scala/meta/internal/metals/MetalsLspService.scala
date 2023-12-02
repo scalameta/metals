@@ -150,6 +150,7 @@ class MetalsLspService(
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
 
   def getVisibleName: String = folderVisibleName.getOrElse(folder.toString())
+  def getTelemetryLevel: TelemetryLevel = userConfig.telemetryLevel
 
   private val cancelables = new MutableCancelable()
   val isCancelled = new AtomicBoolean(false)

@@ -4,9 +4,9 @@ import java.util.Optional;
 
 public class JavaInfo {
 	final private String version;
-	final private Optional<String> distribution;
+	final private String distribution;
 
-	public JavaInfo(String version, Optional<String> distribution) {
+	public JavaInfo(String version, String distribution) {
 		this.version = version;
 		this.distribution = distribution;
 	}
@@ -15,7 +15,7 @@ public class JavaInfo {
 		return version;
 	}
 
-	public Optional<String> getDistribution() {
+	public String getDistribution() {
 		return distribution;
 	}
 

@@ -4,6 +4,7 @@ import scala.meta.internal.telemetry
 
 import scala.util.Random
 import scala.util.Try
+import scala.util.control.NonFatal
 
 import java.io.InputStreamReader
 
@@ -79,7 +80,7 @@ object TelemetryClient {
   }
 }
 
-private class TelemetryClient(
+private[meta] class TelemetryClient(
     telemetryLevel: () => TelemetryLevel,
     config: TelemetryClient.Config = TelemetryClient.Config.default,
     logger: LoggerAccess = LoggerAccess.system
@@ -89,12 +90,26 @@ private class TelemetryClient(
 
   implicit private def clientConfig: Config = config
 
-  private val SendReportEvent = new Endpoint(api.SendReportEventEndpoint)
+  private val SendErrorReport = new Endpoint(api.SendErrorReportEndpoint)
+  private val SendCrashReport = new Endpoint(api.SendCrashReportEndpoint)
 
-  override def sendReportEvent(event: telemetry.ReportEvent): Unit =
+  override def sendErrorReport(report: telemetry.ErrorReport): Unit =
     if (telemetryLevel().reportErrors) {
-      SendReportEvent(event).recover { case err =>
-        logger.warning(s"Failed to send report: ${err}")
-      }
+      SendErrorReport(report)
+        .recover { case NonFatal(err) =>
+          logSendFailure(reportType = "error")(err)
+        }
     }
+
+  override def sendCrashReport(report: telemetry.CrashReport): Unit =
+    if (telemetryLevel().reportCrash) {
+      SendCrashReport(report)
+        .recover { case NonFatal(err) =>
+          logSendFailure(reportType = "crash")(err)
+        }
+    }
+
+  private def logSendFailure(reportType: String)(error: Throwable) =
+    logger.debug(s"Failed to send $reportType report: ${error}")
+
 }

@@ -28,12 +28,12 @@ object SampleReports {
   private def reportOf(ctx: telemetry.ReporterContextUnion)(implicit
       opt: OptionalControl,
       list: ListControl,
-  ): telemetry.ReportEvent = new telemetry.ReportEvent(
+  ): telemetry.ErrorReport = new telemetry.ErrorReport(
     "name",
     optional("text"),
     optional("id"),
     optional(
-      new telemetry.ReportedError(
+      new telemetry.ExceptionSummary(
         maybeEmptyList("ExceptionType"),
         "stacktrace",
       )
@@ -41,7 +41,7 @@ object SampleReports {
     "reporterName",
     ctx,
     new telemetry.Environment(
-      new telemetry.JavaInfo("version", optional("distiribution")),
+      new telemetry.JavaInfo("version", "distiribution"),
       new telemetry.SystemInfo("arch", "name", "version"),
     ),
   )
@@ -70,7 +70,7 @@ object SampleReports {
       emptyOptionals: Boolean = false,
       emptyLists: Boolean = false,
       emptyMaps: Boolean = false,
-  ): telemetry.ReportEvent = {
+  ): telemetry.ErrorReport = {
     implicit val ctrl: OptionalControl = OptionalControl(!emptyOptionals)
     implicit val map: MapControl = MapControl(!emptyMaps)
     implicit val list: ListControl = ListControl(!emptyLists)
@@ -89,7 +89,7 @@ object SampleReports {
       emptyOptionals: Boolean = false,
       emptyLists: Boolean = false,
       emptyMaps: Boolean = false,
-  ): telemetry.ReportEvent = {
+  ): telemetry.ErrorReport = {
     implicit val ctrl: OptionalControl = OptionalControl(!emptyOptionals)
     implicit val map: MapControl = MapControl(!emptyMaps)
     implicit val list: ListControl = ListControl(!emptyLists)
@@ -140,7 +140,7 @@ object SampleReports {
       emptyOptionals: Boolean = false,
       emptyLists: Boolean = false,
       emptyMaps: Boolean = false,
-  ): telemetry.ReportEvent = {
+  ): telemetry.ErrorReport = {
     implicit val ctrl: OptionalControl = OptionalControl(!emptyOptionals)
     implicit val map: MapControl = MapControl(!emptyMaps)
     implicit val list: ListControl = ListControl(!emptyLists)

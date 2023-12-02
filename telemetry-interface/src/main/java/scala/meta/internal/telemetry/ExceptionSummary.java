@@ -5,11 +5,11 @@ import java.io.StringWriter;
 import java.util.List;
 import java.util.function.Function;
 
-public class ReportedError {
+public class ExceptionSummary {
 	final private List<String> exceptions;
 	final private String stacktrace;
 
-	public ReportedError(List<String> exceptions, String stacktrace) {
+	public ExceptionSummary(List<String> exceptions, String stacktrace) {
 		this.exceptions = exceptions;
 		this.stacktrace = stacktrace;
 	}
@@ -23,7 +23,7 @@ public class ReportedError {
 	}
 
 	
-	public static ReportedError fromThrowable(Throwable exception, Function<String, String> sanitizer) {
+	public static ExceptionSummary fromThrowable(Throwable exception, Function<String, String> sanitizer) {
 		List<String> exceptions = new java.util.LinkedList<>();
 		for (Throwable current = exception; current != null; current = current.getCause()) {
 			exceptions.add(current.getClass().getName());
@@ -33,7 +33,7 @@ public class ReportedError {
 			exception.printStackTrace(pw);
 		}
 		String stacktrace = sanitizer.apply(stringWriter.toString());
-		return new ReportedError(exceptions, stacktrace);
+		return new ExceptionSummary(exceptions, stacktrace);
 	}
 
 	@Override
@@ -53,7 +53,7 @@ public class ReportedError {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		ReportedError other = (ReportedError) obj;
+		ExceptionSummary other = (ExceptionSummary) obj;
 		if (exceptions == null) {
 			if (other.exceptions != null)
 				return false;

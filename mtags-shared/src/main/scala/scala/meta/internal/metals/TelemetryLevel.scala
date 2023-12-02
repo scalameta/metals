@@ -11,6 +11,8 @@ sealed class TelemetryLevel(
 }
 
 object TelemetryLevel {
+  implicit lazy val ordering: Ordering[TelemetryLevel] = Ordering.by(_.level)
+
   case object Off extends TelemetryLevel(0, "off")
   case object Crash extends TelemetryLevel(1, "crash")
   case object Error extends TelemetryLevel(2, "error")

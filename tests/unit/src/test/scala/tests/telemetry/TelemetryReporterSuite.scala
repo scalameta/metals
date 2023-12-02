@@ -57,9 +57,7 @@ class TelemetryReporterSuite extends BaseSuite {
 
   // Test end-to-end connection and event serialization using local http server implementing TelemetryService endpoints
   test("connect with local server") {
-    implicit val ctx = new MockTelemetryServer.Context(
-      reports = mutable.ListBuffer.empty
-    )
+    implicit val ctx = new MockTelemetryServer.Context()
     val server = MockTelemetryServer("127.0.0.1", 8081)
     server.start()
     try {
@@ -83,7 +81,7 @@ class TelemetryReporterSuite extends BaseSuite {
       } {
         val createdReport = simpleReport(reporterCtx.toString())
         reporter.incognito.create(createdReport)
-        val received = ctx.reports.filter(_.getId().toScala == createdReport.id)
+        val received = ctx.errors.filter(_.getId().toScala == createdReport.id)
         assert(received.nonEmpty, "Not received matching id")
         assert(received.size == 1, "Found more then 1 received event")
       }
@@ -98,7 +96,12 @@ object MockTelemetryServer {
   import io.undertow.server.HttpServerExchange
   import io.undertow.util.Headers
 
-  case class Context(reports: mutable.ListBuffer[telemetry.ReportEvent])
+  case class Context(
+      errors: mutable.ListBuffer[telemetry.ErrorReport] =
+        mutable.ListBuffer.empty,
+      crashes: mutable.ListBuffer[telemetry.CrashReport] =
+        mutable.ListBuffer.empty,
+  )
 
   def apply(
       host: String,
@@ -106,11 +109,17 @@ object MockTelemetryServer {
   )(implicit ctx: Context) = {
     val port = freePort(host, preferredPort)
 
-    val baseHandler = path().withEndpoint(
-      telemetry.TelemetryService.SendReportEventEndpoint,
-      defaultResponse = null.asInstanceOf[Void],
-      _.reports,
-    )
+    val baseHandler = path()
+      .withEndpoint(
+        telemetry.TelemetryService.SendErrorReportEndpoint,
+        defaultResponse = null.asInstanceOf[Void],
+        _.errors,
+      )
+      .withEndpoint(
+        telemetry.TelemetryService.SendCrashReportEndpoint,
+        defaultResponse = null.asInstanceOf[Void],
+        _.crashes, /*unused*/
+      )
     Undertow.builder
       .addHttpListener(port, host)
       .setHandler(baseHandler)

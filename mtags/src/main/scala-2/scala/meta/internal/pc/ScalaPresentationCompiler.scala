@@ -58,7 +58,6 @@ import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
 
-
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
     buildTargetName: Option[String] = None,
