@@ -1,13 +1,12 @@
 package scala.meta.internal.metals
 
-import scala.meta.internal.telemetry
-import scala.meta.internal.metals.utils.TimestampedFile
-import scala.meta.internal.jdk.OptionConverters._
-
-import java.util.Optional
 import java.nio.file.Path
+import java.util.Optional
 
-import TelemetryReportContext._
+import scala.meta.internal.jdk.OptionConverters._
+import scala.meta.internal.metals.TelemetryReportContext._
+import scala.meta.internal.metals.utils.TimestampedFile
+import scala.meta.internal.telemetry
 
 object TelemetryReportContext {
   case class Sanitizers(
@@ -24,7 +23,8 @@ object TelemetryReportContext {
         sourceCodeSanitizer =
           sourceCodeTransformer.map(new SourceCodeSanitizer(_))
       )
-    val all = Seq(workspaceSanitizer) ++ sourceCodeSanitizer
+    val all: Seq[ReportSanitizer] =
+      Seq(workspaceSanitizer) ++ sourceCodeSanitizer
   }
 }
 

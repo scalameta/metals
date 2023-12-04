@@ -1,11 +1,12 @@
 package tests.telemetry
 
-import scala.util.Random.nextBoolean
-import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.telemetry
-
 import java.util.Optional
 import java.{util => ju}
+
+import scala.util.Random.nextBoolean
+
+import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.telemetry
 
 object SampleReports {
   private case class OptionalControl(setEmpty: Boolean)

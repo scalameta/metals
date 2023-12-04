@@ -1,12 +1,12 @@
 package scala.meta.internal.telemetry
 
-import scala.meta.internal.metals
-import scala.meta.internal.telemetry
-import scala.meta.internal.bsp
-import scala.meta.internal.pc.telemetry.conversion.PresentationCompilerConfig
-
 import scala.collection.JavaConverters._
 import scala.jdk.OptionConverters._
+
+import scala.meta.internal.bsp
+import scala.meta.internal.metals
+import scala.meta.internal.pc.telemetry.conversion.PresentationCompilerConfig
+import scala.meta.internal.telemetry
 
 package object conversion {
   def UserConfiguration(

@@ -138,6 +138,7 @@ commands ++= Seq(
       runMtagsPublishLocal(st, v, localSnapshotVersion)
     }
     "interfaces/publishLocal" ::
+      "telemetryInterfaces/publishLocal" ::
       s"++${V.scala213} metals/publishLocal" ::
       "mtags-java/publishLocal" ::
       publishMtags
@@ -253,11 +254,11 @@ lazy val interfaces = project
   )
 
 lazy val telemetryInterfaces = project
-  .in(file("telemetry-interface"))
+  .in(file("telemetry-interfaces"))
   .settings(sharedSettings)
   .settings(
     sharedJavacOptions,
-    moduleName := "telemetry-interface",
+    moduleName := "telemetry-interfaces",
     autoScalaLibrary := false,
     crossVersion := CrossVersion.disabled,
     crossPaths := false,
@@ -633,7 +634,7 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   publish / skip := true,
   fork := true,
   testFrameworks := List(TestFrameworks.MUnit),
-  Test / javaOptions += "-Dmetals.telemetryLevel=off",
+  Test / javaOptions += "-Dmetals.telemetry-level=off",
   Test / testOptions ++= {
     if (isCI) {
       // Enable verbose logging using sbt loggers in CI.
@@ -693,6 +694,7 @@ def publishAllMtags(
 def publishBinaryMtags =
   (interfaces / publishLocal)
     .dependsOn(
+      telemetryInterfaces / publishLocal,
       `mtags-java` / publishLocal,
       publishAllMtags(V.quickPublishScalaVersions),
     )

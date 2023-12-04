@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.util.regex.Pattern
+
 import scala.meta.internal.ScalaStdlibCompat._
 
 /**
@@ -25,7 +26,7 @@ class SourceCodeSanitizer[ParserCtx, ParserAST](
 
   private final val MarkdownCodeSnippet = java.util.regex.Pattern
     .compile(
-      raw"^`{3}(\w+\s*)?\n([\s\S]*?)`{3}",
+      raw"```(\w+)?\s*\R([\s\S]*?)```",
       Pattern.MULTILINE | Pattern.CASE_INSENSITIVE
     )
   private final val StackTraceLine =

@@ -1,8 +1,9 @@
 package scala.meta.internal.pc.telemetry
 
-import scala.meta.pc
-import scala.meta.internal.telemetry
 import java.{util => ju}
+
+import scala.meta.internal.telemetry
+import scala.meta.pc
 
 // TOOD: scalafmt crashes when maxCollumn=100
 package object conversion {

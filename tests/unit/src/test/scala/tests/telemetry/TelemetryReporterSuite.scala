@@ -1,22 +1,24 @@
 package tests.telemetry
 
-import tests.BaseSuite
-import tests.telemetry.SampleReports
-import scala.meta.internal.telemetry
-import scala.meta.internal.metals
+import java.io.IOException
+import java.net.InetSocketAddress
+import java.net.ServerSocket
+
+import scala.collection.mutable
+import scala.util.control.NonFatal
+
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.jdk.OptionConverters._
+import scala.meta.internal.metals
+import scala.meta.internal.telemetry
 
-import io.undertow.server.handlers.PathHandler
-import java.net.ServerSocket
-import java.io.IOException
-import scala.util.control.NonFatal
-import scala.collection.mutable
-import java.net.InetSocketAddress
 import io.undertow.server.handlers.BlockingHandler
+import io.undertow.server.handlers.PathHandler
+import tests.BaseSuite
+import tests.telemetry.SampleReports
 
 class TelemetryReporterSuite extends BaseSuite {
-  def simpleReport(id: String) = metals.Report(
+  def simpleReport(id: String): metals.Report = metals.Report(
     name = "name",
     text = "text",
     shortSummary = "sumamry",
@@ -106,7 +108,7 @@ object MockTelemetryServer {
   def apply(
       host: String,
       preferredPort: Int,
-  )(implicit ctx: Context) = {
+  )(implicit ctx: Context): Undertow = {
     val port = freePort(host, preferredPort)
 
     val baseHandler = path()

@@ -9,6 +9,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import java.util.logging.Logger
+import java.{util as ju}
 
 import scala.collection.JavaConverters.*
 import scala.concurrent.ExecutionContext
@@ -17,20 +18,22 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.EmptyReportContext
+import scala.meta.internal.metals.LoggerAccess
+import scala.meta.internal.metals.MirroredReportContext
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ReportLevel
-import scala.meta.internal.metals.TelemetryLevel
-import scala.meta.internal.metals.StdReportContext
-import scala.meta.internal.metals.TelemetryReportContext
-import scala.meta.internal.metals.MirroredReportContext
 import scala.meta.internal.metals.ScalametaSourceCodeTransformer
-import scala.meta.internal.metals.LoggerAccess
+import scala.meta.internal.metals.StdReportContext
+import scala.meta.internal.metals.TelemetryLevel
+import scala.meta.internal.metals.TelemetryReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments.given
 import scala.meta.internal.telemetry as telemetryApi
 import scala.meta.internal.pc.{telemetry as pcTelemetryApi}
 import scala.meta.internal.pc.completions.CompletionProvider
 import scala.meta.internal.pc.completions.OverrideCompletions
+import scala.meta.internal.pc.{telemetry as pcTelemetryApi}
+import scala.meta.internal.telemetry as telemetryApi
 import scala.meta.pc.*
 import scala.meta.pc.PcSymbolInformation as IPcSymbolInformation
 

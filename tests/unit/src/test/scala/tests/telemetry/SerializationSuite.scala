@@ -1,7 +1,8 @@
 package tests.telemetry
 
-import tests.BaseSuite
 import scala.meta.internal.telemetry
+
+import tests.BaseSuite
 
 /* Test checking correctness of to/from JSON serialization for telemetry model.
    It's purpouse is to check if Optional[T] fields and Java collections are correctly serialized.

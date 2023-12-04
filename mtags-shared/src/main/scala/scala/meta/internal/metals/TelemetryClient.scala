@@ -1,12 +1,12 @@
 package scala.meta.internal.metals
 
-import scala.meta.internal.telemetry
+import java.io.InputStreamReader
 
 import scala.util.Random
 import scala.util.Try
 import scala.util.control.NonFatal
 
-import java.io.InputStreamReader
+import scala.meta.internal.telemetry
 
 import com.google.gson.JsonSyntaxException
 import requests.Response
@@ -17,12 +17,10 @@ object TelemetryClient {
 
   case class Config(serverHost: String)
   object Config {
-    private def discoverTelemetryServer =
-      sys.props.getOrElse("metals.telemetry-server", DefaultEndpoint)
-    final val DefaultEndpoint =
+    private final val DefaultTelemetryEndpoint =
       "https://scala3.westeurope.cloudapp.azure.com/telemetry"
 
-    val default = Config(discoverTelemetryServer)
+    val default: Config = Config(DefaultTelemetryEndpoint)
   }
 
   private class Endpoint[-In, +Out](

@@ -1,8 +1,8 @@
 package scala.meta.internal.metals
 
-import scala.util.Random
 import scala.annotation.tailrec
 import scala.collection.mutable
+import scala.util.Random
 
 // Needs to be implemented in user of the reporting, eg. MetalsLSPService using scalameta or compiler
 trait SourceCodeTransformer[Context, Tree] {
@@ -38,7 +38,7 @@ trait SourceCodeTransformer[Context, Tree] {
       SourceCodeTransformer.CommonNames.methods.contains(symbol)
     }
 
-    def isScalaOrJavaSelector(v: String) =
+    def isScalaOrJavaSelector(v: String): Boolean =
       v.startsWith("scala.") || v.startsWith("java.")
 
     protected def sanitizeTermName(name: TermName): TermName =
@@ -165,16 +165,17 @@ trait SourceCodeTransformer[Context, Tree] {
 
 private object SourceCodeTransformer {
   object CommonNames {
-    final val types = Seq("Byte", "Short", "Int", "Long", "String", "Unit",
-      "Nothing", "Class", "Option", "Some", "None", "List", "Nil", "Set", "Seq",
-      "Array", "Vector", "Stream", "LazyList", "Map", "Future", "Try",
-      "Success", "Failure", "mutable", "immutable")
+    final val types: Seq[String] = Seq("Byte", "Short", "Int", "Long", "String",
+      "Unit", "Nothing", "Class", "Option", "Some", "None", "List", "Nil",
+      "Set", "Seq", "Array", "Vector", "Stream", "LazyList", "Map", "Future",
+      "Try", "Success", "Failure", "mutable", "immutable")
 
-    final val methods = Seq("get", "getOrElse", "orElse", "map", "left",
-      "right", "flatMap", "flatten", "apply", "unapply", "fold", "foldLeft",
-      "foldRight", "reduce", "reduceLeft", "reduceRight", "scan", "scanLeft",
-      "scanRight", "recover", "recoverWith", "size", "length", "exists",
-      "contains", "forall", "value", "underlying", "classOf", "toOption",
-      "toEither", "toLeft", "toRight", "toString", "to", "stripMargin", "empty")
+    final val methods: Seq[String] = Seq("get", "getOrElse", "orElse", "map",
+      "left", "right", "flatMap", "flatten", "apply", "unapply", "fold",
+      "foldLeft", "foldRight", "reduce", "reduceLeft", "reduceRight", "scan",
+      "scanLeft", "scanRight", "recover", "recoverWith", "size", "length",
+      "exists", "contains", "forall", "value", "underlying", "classOf",
+      "toOption", "toEither", "toLeft", "toRight", "toString", "to",
+      "stripMargin", "empty")
   }
 }

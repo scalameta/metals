@@ -17,9 +17,9 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerInputs
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.StdReportContext
+import scala.meta.internal.metals.TelemetryLevel
 import scala.meta.internal.metals.ThreadPools
 import scala.meta.internal.metals.WorkspaceLspService
-import scala.meta.internal.metals.TelemetryLevel
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.logging.MetalsLogger

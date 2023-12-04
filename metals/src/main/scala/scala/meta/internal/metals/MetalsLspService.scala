@@ -44,12 +44,12 @@ import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.LoggerAccess
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.MirroredReportContext
+import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.TelemetryReportContext
-import scala.meta.internal.metals.LoggerAccess
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
@@ -82,6 +82,7 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.search.SymbolHierarchyOps
 import scala.meta.internal.semver.SemVer
+import scala.meta.internal.telemetry
 import scala.meta.internal.tvp._
 import scala.meta.internal.worksheets.DecorationWorksheetPublisher
 import scala.meta.internal.worksheets.WorksheetProvider
@@ -91,7 +92,6 @@ import scala.meta.metals.lsp.TextDocumentService
 import scala.meta.parsers.ParseException
 import scala.meta.pc.CancelToken
 import scala.meta.tokenizers.TokenizeException
-import scala.meta.internal.telemetry
 
 import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.{bsp4j => b}

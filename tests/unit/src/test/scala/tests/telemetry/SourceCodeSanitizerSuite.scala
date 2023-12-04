@@ -1,14 +1,15 @@
 package tests.telemetry
 
-import tests.BaseSuite
-import scala.meta.internal.metals.SourceCodeSanitizer
 import scala.meta.internal.metals.ScalametaSourceCodeTransformer
+import scala.meta.internal.metals.SourceCodeSanitizer
+
+import tests.BaseSuite
 
 class SourceCodeSanitizerSuite extends BaseSuite {
 
   val sanitizer = new SourceCodeSanitizer(ScalametaSourceCodeTransformer)
 
-  val sampleScalaInput =
+  val sampleScalaInput: String =
     """
       |package some.namespace.of.my.app
       |class Foo{
@@ -23,14 +24,14 @@ class SourceCodeSanitizerSuite extends BaseSuite {
       |    else -1
       |}
     """.stripMargin
-  val sampleScalaOutput =
+  val sampleScalaOutput: String =
     """package som0.namxxxxx1.of.my.ap4
       |class Fo0 { def myFx5: Int = 42 }
       |trait Ba1 { def myBxxxxxxx6: String = "--_-----------------" }
       |object Fooxx7 extends Fo0 with Ba1 { def comxxx8(inpx9: String, oth10: Ba1): Unit = if (myBxxxxxxx6.contains("-----------------") || this.myBxxxxxxx6 == oth10.myBxxxxxxx6) myFx5 * 42 else -1 }
     """.stripMargin
 
-  val sampleStackTraceElements =
+  val sampleStackTraceElements: String =
     """
       |scala.meta.internal.pc.completions.OverrideCompletions.scala$meta$internal$pc$completions$OverrideCompletions$$getMembers(OverrideCompletions.scala:180)
       | scala.meta.internal.pc.completions.OverrideCompletions$OverrideCompletion.contribute(OverrideCompletions.scala:79)
@@ -41,7 +42,7 @@ class SourceCodeSanitizerSuite extends BaseSuite {
       |
       |""".stripMargin
 
-  val sampleJavaInput =
+  val sampleJavaInput: String =
     """
       |package scala.meta.internal.telemetry;
       |
@@ -67,7 +68,7 @@ class SourceCodeSanitizerSuite extends BaseSuite {
 	}
   """.stripMargin
 
-  val sampleStackTrace =
+  val sampleStackTrace: String =
     """
       |java.lang.RuntimeException
       |    at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
@@ -85,12 +86,12 @@ class SourceCodeSanitizerSuite extends BaseSuite {
   test("erases names from sources in Scala") {
     val input = sampleScalaInput
     val expected = sampleScalaOutput
-    assertEquals(expected.trim(), sanitizer(input).trim())
+    assertNoDiff(sanitizer(input), expected)
   }
 
   test("erases sources in non parsable sources") { // TODO: Java parsing
     val input = sampleJavaInput
-    assertEquals("<unparsable>", sanitizer(input).trim())
+    assertNoDiff(sanitizer(input), "<unparsable>")
   }
 
   test("erases names from markdown snippets") {
@@ -155,7 +156,7 @@ class SourceCodeSanitizerSuite extends BaseSuite {
       .map(_.trim())
       .filterNot(_.isEmpty())
       .mkString(System.lineSeparator())
-    assertEquals(trimLines(expected), trimLines(sanitizer(input)))
+    assertNoDiff(trimLines(sanitizer(input)), trimLines(expected))
   }
 
 }

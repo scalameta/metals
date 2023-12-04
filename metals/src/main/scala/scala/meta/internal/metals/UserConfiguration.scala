@@ -8,8 +8,8 @@ import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.metals.TelemetryLevel
+import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig
 

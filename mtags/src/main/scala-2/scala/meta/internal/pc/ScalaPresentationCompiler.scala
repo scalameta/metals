@@ -22,18 +22,18 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.EmptyReportContext
+import scala.meta.internal.metals.LoggerAccess
+import scala.meta.internal.metals.MirroredReportContext
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ReportLevel
-import scala.meta.internal.metals.StdReportContext
-import scala.meta.internal.metals.LoggerAccess
-import scala.meta.internal.metals.TelemetryReportContext
-import scala.meta.internal.metals.MirroredReportContext
 import scala.meta.internal.metals.ScalametaSourceCodeTransformer
+import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.TelemetryLevel
-import scala.meta.internal.{telemetry => telemetryApi}
-import scala.meta.internal.pc.{telemetry => pcTelemetryApi}
+import scala.meta.internal.metals.TelemetryReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.pc.{telemetry => pcTelemetryApi}
+import scala.meta.internal.{telemetry => telemetryApi}
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.DisplayableException
