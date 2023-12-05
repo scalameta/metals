@@ -32,14 +32,6 @@ class CompletionSuite extends BaseCompletionSuite {
            |List - java.util
            |List - scala.collection.immutable
            |List[A](elems: A*): CC[A]
-           |""".stripMargin,
-      // TODO https://github.com/scalameta/metals/issues/5885
-      ">=3.4.0-RC1-bin-20231127-41e7d95-NIGHTLY" ->
-        """|List:  scala.collection.immutable
-           |List - java.awt
-           |List - java.util
-           |List - scala.collection.immutable
-           |List[A](elems: A*): CC[A]
            |""".stripMargin
     ),
     topLines = Some(5)
@@ -1073,14 +1065,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|None scala
        |NoManifest scala.reflect
        |""".stripMargin,
-    topLines = Some(2),
-    compat = Map(
-      // TODO https://github.com/scalameta/metals/issues/5885
-      ">=3.4.0-RC1-bin-20231127-41e7d95-NIGHTLY" ->
-        """|None scala
-           |NoManifest:  scala.reflect
-           |""".stripMargin
-    )
+    topLines = Some(2)
   )
 
   check(
@@ -1110,12 +1095,6 @@ class CompletionSuite extends BaseCompletionSuite {
         """|Some(value) scala
            |Seq scala.collection.immutable
            |Set scala.collection.immutable
-           |""".stripMargin,
-      // TODO https://github.com/scalameta/metals/issues/5885
-      ">=3.4.0-RC1-bin-20231127-41e7d95-NIGHTLY" ->
-        """|Some(value) scala
-           |Seq:  scala.collection.immutable
-           |Set:  scala.collection.immutable
            |""".stripMargin
     )
   )
