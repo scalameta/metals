@@ -95,7 +95,8 @@ final class PcSyntheticDecorationsProvider(
 
   object ImplicitConversion {
     def unapply(tree: Tree): Option[(String, Position)] = tree match {
-      case Apply(fun, args) if isImplicitConversion(fun) =>
+      case Apply(fun, args)
+          if isImplicitConversion(fun) && args.exists(_.pos.isRange) =>
         val lastArgPos = args.lastOption.fold(fun.pos)(_.pos)
         Some((fun.symbol.decodedName, lastArgPos))
       case _ => None

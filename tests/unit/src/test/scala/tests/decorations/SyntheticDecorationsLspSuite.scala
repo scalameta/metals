@@ -951,4 +951,46 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
       )
     } yield ()
   }
+
+  test("i4970") {
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies": [
+           |        "co.fs2::fs2-core:3.9.0"
+           |    ]
+           |  }
+           |}
+           |/a/src/main/scala/Main.scala
+           |import cats.effect.IO
+           |
+           |object Test {
+           |  def foo(str: fs2.Stream[IO, Int]) =
+           |    str.compile.to(Set)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "show-implicit-conversions-and-classes": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.syntheticDecorations,
+        """|import cats.effect.IO
+           |
+           |object Test {
+           |  def foo(str: fs2.Stream[IO, Int]) =
+           |    str.compile.to(supportsIterableFactory(Set))
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
 }
