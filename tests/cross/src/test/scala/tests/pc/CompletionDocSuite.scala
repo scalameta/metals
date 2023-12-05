@@ -660,9 +660,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
     includeDocs = true,
     compat = Map(
       "2.13" -> vectorDocs213,
-      "3" -> vectorDocs213,
-      // TODO https://github.com/scalameta/metals/issues/5885
-      ">=3.4.0-RC1-bin-20231127-41e7d95-NIGHTLY" -> "Vector:  scala.collection.immutable"
+      "3" -> vectorDocs213
     )
   )
 
