@@ -364,9 +364,7 @@ class MetalsLspService(
         folder,
         buildTargets,
         charset,
-        languageClient,
         tables,
-        statusBar,
         () => compilers,
         clientConfig,
         () => semanticDBIndexer,
@@ -1076,11 +1074,7 @@ class MetalsLspService(
     } yield ()
 
     if (path.isDependencySource(folder)) {
-      CancelTokens { _ =>
-        // publish diagnostics
-        interactiveSemanticdbs.didFocus(path)
-        ()
-      }
+      CompletableFuture.completedFuture(())
     } else {
       buildServerPromise.future.flatMap { _ =>
         def load(): Future[Unit] = {
@@ -1135,8 +1129,6 @@ class MetalsLspService(
     buildTargets
       .inverseSources(path)
       .foreach(focusedDocumentBuildTarget.set)
-    // unpublish diagnostic for dependencies
-    interactiveSemanticdbs.didFocus(path)
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
     if (path.isDependencySource(folder)) {
