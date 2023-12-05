@@ -1020,4 +1020,28 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |}""".stripMargin
   )
 
+  check(
+    "extends",
+    """
+      |abstract class Base(foo: Int, bar: Int)
+      |
+      |class Test(<<foo>>: Int, bar: Int) extends Base(<<f@@oo>>, bar) {
+      |  def transform = <<foo>> + bar
+      |  val description = s"$<<foo>> & $bar"
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "extends1",
+    """
+      |abstract class Base(foo: Int, bar: Int)
+      |
+      |class Test(<<foo>>: Int, bar: Int) extends Base(<<foo>>, bar) {
+      |  def transform = <<fo@@o>> + bar
+      |  val description = s"$<<foo>> & $bar"
+      |}
+      |""".stripMargin
+  )
+
 }
