@@ -130,6 +130,36 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "name-conflict",
+    """|package example
+       |
+       |import example.enrichments.*
+       |
+       |object enrichments:
+       |  extension (num: Int)
+       |    def plus(other: Int): Int = num + other
+       |
+       |def main = {
+       |  val plus = 100.plus(19)
+       |  val y = 19.pl@@
+       |}
+       |""".stripMargin,
+    """|package example
+       |
+       |import example.enrichments.*
+       |
+       |object enrichments:
+       |  extension (num: Int)
+       |    def plus(other: Int): Int = num + other
+       |
+       |def main = {
+       |  val plus = 100.plus(19)
+       |  val y = 19.plus($0)
+       |}
+       |""".stripMargin
+  )
+
   // NOTE: In 3.1.3, package object name includes the whole path to file
   // eg. in 3.2.2 we get `A$package`, but in 3.1.3 `/some/path/to/file/A$package`
   check(
