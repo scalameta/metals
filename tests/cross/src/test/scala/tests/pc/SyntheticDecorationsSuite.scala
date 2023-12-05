@@ -590,4 +590,82 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
        |}
        |""".stripMargin
   )
+
+  check(
+    "complex".tag(IgnoreScalaVersion.forLessThan("2.12.16")),
+    """|object ScalatestMock {
+       |  class SRF
+       |  implicit val subjectRegistrationFunction: SRF = new SRF()
+       |  class Position
+       |  implicit val here: Position = new Position()
+       |  implicit class StringTestOps(name: String) {
+       |    def should(right: => Unit)(implicit config: SRF): Unit = ()
+       |    def in(f: => Unit)(implicit pos: Position): Unit = ()
+       |  }
+       |  implicit def instancesString: Eq[String] with Semigroup[String] = ???
+       |}
+       |
+       |trait Eq[A]
+       |trait Semigroup[A]
+       |
+       |class DemoSpec {
+       |  import ScalatestMock._
+       |
+       |  "foo" should {
+       |    "checkThing1" in {
+       |      checkThing1[String]
+       |    }
+       |    "checkThing2" in {
+       |      checkThing2[String]
+       |    }
+       |  }
+       |
+       |  "bar" should {
+       |    "checkThing1" in {
+       |      checkThing1[String]
+       |    }
+       |  }
+       |
+       |  def checkThing1[A](implicit ev: Eq[A]) = ???
+       |  def checkThing2[A](implicit ev: Eq[A], sem: Semigroup[A]) = ???
+       |}
+       |""".stripMargin,
+    """|object ScalatestMock {
+       |  class SRF
+       |  implicit val subjectRegistrationFunction: SRF = new SRF()
+       |  class Position
+       |  implicit val here: Position = new Position()
+       |  implicit class StringTestOps(name: String) {
+       |    def should(right: => Unit)(implicit config: SRF): Unit = ()
+       |    def in(f: => Unit)(implicit pos: Position): Unit = ()
+       |  }
+       |  implicit def instancesString: Eq[String] with Semigroup[String] = ???
+       |}
+       |
+       |trait Eq[A]
+       |trait Semigroup[A]
+       |
+       |class DemoSpec {
+       |  import ScalatestMock._
+       |
+       |  StringTestOps("foo") should {
+       |    StringTestOps("checkThing1") in {
+       |      checkThing1[String](instancesString)
+       |    }(here)
+       |    StringTestOps("checkThing2") in {
+       |      checkThing2[String](instancesString, instancesString)
+       |    }(here)
+       |  }(subjectRegistrationFunction)
+       |
+       |  StringTestOps("bar") should {
+       |    StringTestOps("checkThing1") in {
+       |      checkThing1[String](instancesString)
+       |    }(here)
+       |  }(subjectRegistrationFunction)
+       |
+       |  def checkThing1[A](implicit ev: Eq[A]): Nothing = ???
+       |  def checkThing2[A](implicit ev: Eq[A], sem: Semigroup[A]): Nothing = ???
+       |}
+       |""".stripMargin
+  )
 }
