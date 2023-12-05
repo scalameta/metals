@@ -152,6 +152,9 @@ object SemanticTokensProvider {
       case comm: Token.Comment if isDocString(comm.value) =>
         val (toAdd, delta0) = makeDocStringTokens(comm, delta)
         (toAdd, nodesIterator, delta0)
+      case EscapableString(text, isInterpolation) =>
+        val (toAdd, delta0) = makeStringTokens(text, isInterpolation, delta)
+        (toAdd, nodesIterator, delta0)
       case _ =>
         val (tokenType, tokenModifier, remainingNodes) =
           getTypeAndMod(tk, nodesIterator, isScala3)
@@ -402,6 +405,67 @@ object SemanticTokensProvider {
     (buffer.toList, delta)
   }
 
+  private def makeStringTokens(
+      text: String,
+      isInterpolation: Boolean,
+      initialDelta: Line,
+  ): (List[Integer], Line) = {
+    val buffer = ListBuffer.empty[Integer]
+    var delta = initialDelta
+    val currentPart = new StringBuilder()
+
+    def emitToken(token: String, tokenType: Int, tokenModifiers: Int = 0) {
+      val (toAdd, newDelta) = convertTokensToIntList(
+        token,
+        delta,
+        tokenType,
+        tokenModifiers,
+      )
+      buffer.addAll(toAdd)
+      delta = newDelta
+    }
+
+    def emitCurrent() = {
+      val current = currentPart.result()
+      if (current.nonEmpty) {
+        emitToken(current, getTypeId(SemanticTokenTypes.String))
+        currentPart.clear()
+      }
+    }
+
+    def emitEscape(special: String) =
+      emitToken(
+        special,
+        getTypeId(SemanticTokenTypes.Operator),
+        1 << getModifierId(SemanticTokenModifiers.Documentation),
+      )
+
+    @tailrec
+    def loop(text: List[Char]): Unit = {
+      text match {
+        case '\\' :: 'u' :: rest if rest.length >= 4 =>
+          emitCurrent()
+          emitEscape(s"\\u${rest.take(4).mkString}")
+          loop(rest.drop(4))
+        case '\\' :: c :: rest =>
+          emitCurrent()
+          emitEscape("\\" + c)
+          loop(rest)
+        case '$' :: '$' :: rest if isInterpolation =>
+          emitCurrent()
+          emitEscape("$$")
+          loop(rest)
+        case Nil => emitCurrent()
+        case c :: rest =>
+          currentPart.addOne(c)
+          loop(rest)
+      }
+    }
+
+    loop(text.toList)
+    (buffer.result(), delta)
+  }
+
   case class DocstringToken(
       start: Int,
       end: Int,
@@ -485,4 +549,17 @@ object SemanticTokensProvider {
       }
     }
   }
+}
+
+object EscapableString {
+  def unapply(token: Token): Option[(String, Boolean)] =
+    token match {
+      case str: Token.Constant.String if !str.text.startsWith("\"\"\"") =>
+        Some((str.text, false))
+      case c: Token.Constant.Char =>
+        Some((c.text, false))
+      case inter: Token.Interpolation.Part =>
+        Some((inter.text, true))
+      case _ => None
+    }
 }
