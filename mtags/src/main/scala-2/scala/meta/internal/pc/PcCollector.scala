@@ -61,9 +61,18 @@ abstract class PcCollector[T](
           info.member(sym.getterName),
           info.member(sym.setterName),
           info.member(sym.localName)
-        ) ++ sym.allOverriddenSymbols.toSet
+        ) ++ constructorParam(sym) ++ sym.allOverriddenSymbols.toSet
       } else Set(sym)
     all.filter(s => s != NoSymbol && !s.isError)
+  }
+
+  private def constructorParam(
+      symbol: Symbol
+  ): Set[Symbol] = {
+    if (symbol.owner.isClass) {
+      val info = symbol.owner.info.member(nme.CONSTRUCTOR).info
+      info.paramss.flatten.find(_.name == symbol.name).toSet
+    } else Set.empty
   }
 
   private lazy val namedArgCache = {
