@@ -414,12 +414,11 @@ object SemanticTokensProvider {
     var delta = initialDelta
     val currentPart = new StringBuilder()
 
-    def emitToken(token: String, tokenType: Int, tokenModifiers: Int = 0) {
+    def emitToken(token: String, tokenType: Int) {
       val (toAdd, newDelta) = convertTokensToIntList(
         token,
         delta,
         tokenType,
-        tokenModifiers,
       )
       buffer.addAll(toAdd)
       delta = newDelta
@@ -436,8 +435,7 @@ object SemanticTokensProvider {
     def emitEscape(special: String) =
       emitToken(
         special,
-        getTypeId(SemanticTokenTypes.Operator),
-        1 << getModifierId(SemanticTokenModifiers.Documentation),
+        getTypeId(SemanticTokenTypes.Regexp),
       )
 
     @tailrec
