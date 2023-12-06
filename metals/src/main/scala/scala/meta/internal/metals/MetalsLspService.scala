@@ -869,7 +869,7 @@ class MetalsLspService(
     cancelable
   }
 
-  private def loadFingerPrints(): Unit = {
+  private def loadFingerPrints(): Future[Unit] = Future {
     // load fingerprints from last execution
     fingerprints.addAll(tables.fingerprints.load())
   }
@@ -908,11 +908,10 @@ class MetalsLspService(
   val isInitialized = new AtomicBoolean(false)
 
   def initialized(): Future[Unit] = {
-    loadFingerPrints()
     registerNiceToHaveFilePatterns()
-    tables.connect()
 
     for {
+      _ <- loadFingerPrints()
       _ <- maybeSetupScalaCli()
       _ <-
         Future

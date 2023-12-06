@@ -3,6 +3,8 @@ package scala.meta.internal.metals
 import java.nio.file.Files
 import java.sql.Connection
 import java.sql.DriverManager
+import java.sql.SQLException
+import java.util.Properties
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.util.control.NonFatal
@@ -14,6 +16,9 @@ import scala.meta.io.AbsolutePath
 
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.FlywayException
+import org.h2.mvstore.DataUtils
+import org.h2.mvstore.MVStoreException
+import org.h2.tools.Upgrade
 
 final class Tables(
     workspace: AbsolutePath,
@@ -40,6 +45,8 @@ final class Tables(
 
   private val ref: AtomicReference[ConnectionState] =
     new AtomicReference(ConnectionState.Empty)
+
+  private val user = "sa"
 
   def connect(): Connection = {
     ref.get() match {
@@ -138,11 +145,11 @@ final class Tables(
       System.getProperty("h2.bindAddress", "127.0.0.1"),
     )
     val url = s"jdbc:h2:file:$dbfile$autoServer"
+    upgradeIfNeeded(url)
     tryUrl(url)
   }
 
   private def tryUrl(url: String): Connection = {
-    val user = "sa"
     val flyway = Flyway.configure.dataSource(url, user, null).load()
     migrateOrRestart(flyway)
     DriverManager.getConnection(url, user, null)
@@ -158,6 +165,47 @@ final class Tables(
         scribe.warn(s"resetting database: $databasePath")
         flyway.clean()
         flyway.migrate()
+    }
+  }
+
+  /**
+   * Between h2 "2.1.x" and "2.2.x" write/read formats in MVStore changed
+   * (https://github.com/h2database/h2database/pull/3834)
+   */
+  private def upgradeIfNeeded(url: String): Unit = {
+    val oldVersion = 214
+    val formatVersionChangedMessage =
+      "The write format 2 is smaller than the supported format 3"
+    try {
+      DriverManager.getConnection(url, user, null)
+    } catch {
+      case e: SQLException if e.getErrorCode() == 90048 =>
+        e.getCause() match {
+          case e: MVStoreException
+              if e.getErrorCode() == DataUtils.ERROR_UNSUPPORTED_FORMAT &&
+                e.getMessage().startsWith(formatVersionChangedMessage) =>
+            val info: Properties = new Properties()
+            info.put("user", user)
+            try {
+              val didUpgrade = Upgrade.upgrade(url, info, oldVersion)
+              if (didUpgrade) scribe.info(s"Upgraded H2 database.")
+              else deleteDatabase()
+            } catch {
+              case NonFatal(_) => deleteDatabase()
+            }
+
+          case e => throw e
+        }
+    }
+  }
+
+  private def deleteDatabase() = {
+    val dbFile = workspace.resolve(".metals").resolve("metals.mv.db")
+    if (dbFile.exists) {
+      scribe.warn(
+        s"Deleting old database, due to failed database upgrade. Non-default build tool and build server choices will be lost."
+      )
+      dbFile.delete()
     }
   }
 
