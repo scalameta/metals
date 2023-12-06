@@ -9,6 +9,8 @@ import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Tables
 
+import com.google.common.io.BaseEncoding
+
 class BspErrorHandler(
     currentSession: () => Option[BspSession],
     tables: Tables,
@@ -30,11 +32,8 @@ class BspErrorHandler(
   protected def logError(message: String): Unit = scribe.error(message)
 
   private def createReport(message: String) = {
-    val id = MessageDigest
-      .getInstance("MD5")
-      .digest(message.getBytes)
-      .map(_.toChar)
-      .mkString
+    val digest = MessageDigest.getInstance("MD5").digest(message.getBytes)
+    val id = BaseEncoding.base64().encode(digest)
     val sanitized = reportContext.bloop.sanitize(message)
     reportContext.bloop.create(
       Report(
