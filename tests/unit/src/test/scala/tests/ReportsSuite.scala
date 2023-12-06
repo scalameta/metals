@@ -123,7 +123,7 @@ class ReportsSuite extends BaseSuite {
     val obtained =
       new String(Files.readAllBytes(path.get), StandardCharsets.UTF_8)
     assertNoDiff(
-      s"""|id: $testId
+      s"""|error id: $testId
           |${exampleText(StdReportContext.WORKSPACE_STR)}
           |#### Short summary: 
           |

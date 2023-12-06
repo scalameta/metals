@@ -273,7 +273,7 @@ object Report {
   def apply(name: String, text: String, error: Throwable): Report =
     Report(name, text, error, path = None)
 
-  val idPrefix = "id: "
+  val idPrefix = "error id: "
   val summaryTitle = "#### Short summary: "
 }
 
