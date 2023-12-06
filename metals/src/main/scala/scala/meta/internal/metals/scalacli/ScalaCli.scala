@@ -7,6 +7,8 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
@@ -66,9 +68,11 @@ class ScalaCli(
   private val isCancelled = new AtomicBoolean(false)
   def cancel(): Unit =
     if (isCancelled.compareAndSet(false, true))
-      try disconnectOldBuildServer()
-      catch {
+      try {
+        disconnectOldBuildServer().asJava.get(100, TimeUnit.MILLISECONDS)
+      } catch {
         case NonFatal(_) =>
+        case _: TimeoutException =>
       }
 
   private val state =
