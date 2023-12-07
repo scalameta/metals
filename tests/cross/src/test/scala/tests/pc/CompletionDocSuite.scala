@@ -6,6 +6,11 @@ class CompletionDocSuite extends BaseCompletionSuite {
   override def requiresJdkSources: Boolean = true
   override def requiresScalaLibrarySources: Boolean = true
 
+  // the docs can change and fail the tests easily, Scala 3 changes much less often
+  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = Some(
+    IgnoreScala2Nightlies
+  )
+
   check(
     "java",
     """
