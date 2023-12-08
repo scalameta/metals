@@ -277,9 +277,9 @@ object MetalsInteractive:
        *
        * val a = MyIntOut(1).un@@even
        */
-      case (a @ Apply(sel: Select, _)) :: _
-          if sel.span.isZeroExtent && sel.symbol.is(Flags.ExtensionMethod) =>
-        List((sel.symbol, a.typeOpt))
+      case (a @ ExtensionMethodCall(symbol, app)) :: _
+          if app.span.withStart(app.span.point).contains(pos.span) =>
+        List((symbol, a.typeOpt))
 
       case path @ head :: tail =>
         if head.symbol.is(Synthetic) then
@@ -344,6 +344,26 @@ object MetalsInteractive:
       case Apply(TypeApply(select: Select, _), _) => select
     }
   end ApplySelect
+
+  object ExtensionMethodCallSymbol:
+    def unapply(tree: Tree)(using Context): Option[(Ident | Select)] =
+      tree match
+        case tree: (Ident | Select) if tree.symbol.is(Flags.ExtensionMethod) =>
+          Some(tree)
+        case TypeApply(tree: (Ident | Select), _)
+            if tree.symbol.is(Flags.ExtensionMethod) =>
+          Some(tree)
+        case _ => None
+  end ExtensionMethodCallSymbol
+
+  object ExtensionMethodCall:
+    def unapply(tree: Tree)(using Context): Option[(Symbol, Apply)] =
+      tree match
+        case app @ Apply(ExtensionMethodCallSymbol(tree), _) =>
+          Some((tree.symbol, app))
+        case Apply(tree, _) => unapply(tree)
+        case _ => None
+  end ExtensionMethodCall
 
   object TreeApply:
     def unapply(tree: Tree): Option[(Tree, List[Tree])] =

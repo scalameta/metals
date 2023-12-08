@@ -339,4 +339,50 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |""".stripMargin
   )
 
+  check(
+    "i5921-1",
+    """|object Logarithms:
+       |  opaque type Logarithm = Double
+       |  extension [K](vmap: Logarithm)
+       |    def <<multiply>>(k: Logarithm): Logarithm = ???
+       |
+       |object Test:
+       |  val in: Logarithms.Logarithm = ???
+       |  in.<<multi@@ply>>(in)
+       |""".stripMargin
+  )
+
+  check(
+    "i5921-2",
+    """|object Logarithms:
+       |  opaque type Logarithm = Double
+       |  extension [K](vmap: Logarithm)
+       |    def <<mu@@ltiply>>(k: Logarithm): Logarithm = ???
+       |
+       |object Test:
+       |  val in: Logarithms.Logarithm = ???
+       |  in.<<multiply>>(in)
+       |""".stripMargin
+  )
+
+  check(
+    "i5921-3",
+    """|object Logarithms:
+       |  opaque type Logarithm = Double
+       |  extension [K](vmap: Logarithm)
+       |    def <<multiply>>(k: Logarithm): Logarithm = ???
+       |  (2.0).<<mult@@iply>>(1.0)
+       |""".stripMargin
+  )
+
+  check(
+    "i5921-4",
+    """|object Logarithms:
+       |  opaque type Logarithm = Double
+       |  extension [K](vmap: Logarithm)
+       |    def <<mult@@iply>>(k: Logarithm): Logarithm = ???
+       |  (2.0).<<multiply>>(1.0)
+       |""".stripMargin
+  )
+
 }

@@ -376,4 +376,18 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
     """|extension (i: MyIntOut) def uneven: Boolean
        |""".stripMargin.hover
   )
+
+  check(
+    "i5921",
+    """|object Logarithms:
+       |  trait Logarithm
+       |  extension [K](vmap: Logarithm)
+       |    def multiply(k: Logarithm): Logarithm = ???
+       |
+       |object Test:
+       |  val in: Logarithms.Logarithm = ???
+       |  in.multi@@ply(in)
+       |""".stripMargin,
+    "extension [K](vmap: Logarithm) def multiply(k: Logarithm): Logarithm".hover
+  )
 }

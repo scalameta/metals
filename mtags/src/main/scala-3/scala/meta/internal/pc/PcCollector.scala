@@ -6,6 +6,8 @@ import scala.meta as m
 
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.pc.MetalsInteractive.ExtensionMethodCall
+import scala.meta.internal.pc.MetalsInteractive.ExtensionMethodCallSymbol
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.VirtualFileParams
 
@@ -250,10 +252,10 @@ abstract class PcCollector[T](
        *
        * val a = MyIntOut(1).<<un@@even>>
        */
-      case (a @ Apply(sel: Select, _)) :: _
-          if sel.span.isZeroExtent && sel.symbol.is(Flags.ExtensionMethod) =>
-        val span = a.span.withStart(a.span.point)
-        Some(symbolAlternatives(sel.symbol), pos.withSpan(span))
+      case ExtensionMethodCall(sym, app) :: _
+          if app.span.withStart(app.span.point).contains(pos.span) =>
+        val span = app.span.withStart(app.span.point)
+        Some(symbolAlternatives(sym), pos.withSpan(span))
       case _ => None
 
     sought match
@@ -424,7 +426,11 @@ abstract class PcCollector[T](
          * All indentifiers such as:
          * val a = <<b>>
          */
-        case ident: Ident if ident.span.isCorrect && filter(ident) =>
+        case ident: Ident
+            if ident.span.isCorrect && filter(ident) && !isExtensionMethodCall(
+              parent,
+              ident.symbol,
+            ) =>
           // symbols will differ for params in different ext methods, but source pos will be the same
           if soughtFilter(_.sourcePos == ident.symbol.sourcePos)
           then
@@ -468,15 +474,14 @@ abstract class PcCollector[T](
          *
          * val a = MyIntOut(1).<<un@@even>>
          */
-        case sel: Select
-            if sel.span.isZeroExtent && sel.symbol.is(Flags.ExtensionMethod) =>
+        case ExtensionMethodCallSymbol(tree) =>
           parent match
             case Some(a: Apply) =>
               val span = a.span.withStart(a.span.point)
-              val amendedSelect = sel.withSpan(span)
-              if filter(amendedSelect) then
+              val amendedTree = tree.withSpan(span)
+              if filter(amendedTree) then
                 occurences + collect(
-                  amendedSelect,
+                  amendedTree,
                   pos.withSpan(span),
                 )
               else occurences
@@ -639,6 +644,16 @@ abstract class PcCollector[T](
     tree match
       case sel: Select => sel.sourcePos.withSpan(selectNameSpan(sel))
       case _ => tree.sourcePos
+
+  /**
+   * Those have wrong spans and we special case for them.
+   */
+  private def isExtensionMethodCall(parent: Option[Tree], symbol: Symbol) =
+    symbol.is(Flags.ExtensionMethod) && parent.exists {
+      case _: TypeApply | _: Apply => true
+      case _ => false
+    }
+
 end PcCollector
 
 object PcCollector:
