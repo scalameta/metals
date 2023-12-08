@@ -560,12 +560,46 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
   )
 
   check(
-    "i5630".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    "i5630".tag(IgnoreScala2),
     """|class MyIntOut(val value: Int)
        |object MyIntOut:
        |  extension (i: MyIntOut) def <<uneven>> = i.value % 2 == 1
        |
        |val a = MyIntOut(1).un@@even
+       |""".stripMargin
+  )
+
+  check(
+    "i5921".tag(IgnoreScala2),
+    """|object Logarithms:
+       |  opaque type Logarithm = Double
+       |  extension [K](vmap: Logarithm)
+       |    def <<multiply>>(k: Logarithm): Logarithm = ???
+       |
+       |object Test:
+       |  val in: Logarithms.Logarithm = ???
+       |  in.multi@@ply(in)
+       |""".stripMargin
+  )
+
+  check(
+    "i5921-1".tag(IgnoreScala2),
+    """|object Logarithms:
+       |  opaque type Logarithm = Double
+       |  extension [K](vmap: Logarithm)
+       |    def <<multiply>>(k: Logarithm): Logarithm = ???
+       |  (2.0).mult@@iply(1.0)
+       |""".stripMargin
+  )
+
+  check(
+    "i5921-2".tag(IgnoreScala2),
+    """|object Logarithms:
+       |  opaque type Logarithm = Double
+       |  extension [K](vmap: Logarithm)
+       |    def multiply(k: Logarithm): Logarithm = ???
+       |  val <<vv>> = 1.0
+       |  (2.0).multiply(v@@v)
        |""".stripMargin
   )
 
