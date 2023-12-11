@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.net.UnknownHostException
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -17,6 +18,7 @@ import scala.meta.io.AbsolutePath
 
 import coursier.Fetch
 import coursier.Repositories
+import coursier.cache.ArtifactError
 import coursier.core.Classifier
 import coursier.core.Dependency
 import coursier.core.Module
@@ -56,9 +58,20 @@ object JarSourcesProvider {
           dependencies.map { dep =>
             fetchDependencySources(dep)
               .recover { case error: CoursierError =>
-                scribe.warn(
-                  s"Could not fetch dependency sources for $dep, error: $error"
-                )
+                Option(error.getCause()).map(e => (e, e.getCause())) match {
+                  case Some(
+                        (
+                          _: ArtifactError.DownloadError,
+                          e: UnknownHostException,
+                        )
+                      ) =>
+                    // Fail all if repositories cannot be resolved, e.g. no internet connection.
+                    throw e
+                  case _ =>
+                    scribe.warn(
+                      s"Could not fetch dependency sources for $dep, error: $error"
+                    )
+                }
                 Nil
               }
           }
@@ -66,6 +79,9 @@ object JarSourcesProvider {
         .recover {
           case _: TimeoutException =>
             scribe.warn(s"Timeout when fetching dependency sources.")
+            Nil
+          case e: UnknownHostException =>
+            scribe.warn(s"Repository `${e.getMessage()}` is not available.")
             Nil
           case NonFatal(e) =>
             scribe.warn(s"Could not fetch dependency sources, error: $e.")
@@ -83,6 +99,8 @@ object JarSourcesProvider {
     filename match {
       case sbtRegex(versionStr) =>
         Try(SemVer.Version.fromString(versionStr)) match {
+          // Since `SemVer.Version.fromString` might be able to parse strings, that are not versions,
+          // we check if the result version is a correct parse of the input string.
           case Success(version) if version.toString == versionStr =>
             val module = Module(
               Organization("org.scala-sbt"),
@@ -133,7 +151,7 @@ object JarSourcesProvider {
       .addClassifiers(Classifier.sources)
       .future()
       .map(_.map(_.toPath()).toList)
-      .withTimeout(5, TimeUnit.MINUTES)
+      .withTimeout(1, TimeUnit.MINUTES)
   }
 
 }
