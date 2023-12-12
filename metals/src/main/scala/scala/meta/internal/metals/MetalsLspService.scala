@@ -258,6 +258,7 @@ class MetalsLspService(
     buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
     worksheets => onWorksheetChanged(worksheets),
     onStartCompilation,
+    () => userConfig,
   )
   private val fileWatcher = register(
     new FileWatcher(
