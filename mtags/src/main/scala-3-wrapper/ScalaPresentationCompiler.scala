@@ -7,11 +7,13 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import java.{util => ju}
 
+import scala.compat.java8.FutureConverters
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
 import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.ReportLevel
+import scala.meta.internal.mtags.CommonMtagsEnrichments.*
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.HoverSignature
@@ -31,6 +33,8 @@ import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.InlayHint
+import org.eclipse.lsp4j.DocumentHighlightKind
+import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
@@ -69,6 +73,8 @@ case class ScalaPresentationCompiler(
     folderPath = folderPath,
     reportsLevel = reportsLevel,
   )
+
+  given ExecutionContext = ec
 
   def this() = this("", None, Nil, Nil)
 
@@ -177,6 +183,34 @@ case class ScalaPresentationCompiler(
       params: OffsetParams
   ): CompletableFuture[ju.List[DocumentHighlight]] =
     underlying.documentHighlight(params)
+
+  override def references(
+      params: OffsetParams,
+      targetFiles: ju.List[VirtualFileParams],
+      includeDefinition: Boolean,
+  ): CompletableFuture[ju.List[Location]] =
+    targetFiles.asScala.toList match
+      case file :: Nil if file.uri() == params.uri() =>
+        FutureConverters
+          .toJava(
+            FutureConverters
+              .toScala(documentHighlight(params))
+              .map(
+                _.asScala
+                  .collect {
+                    case highlight
+                        if highlight.getKind() == DocumentHighlightKind.Read || includeDefinition =>
+                      new Location(
+                        params.uri().toString(),
+                        highlight.getRange(),
+                      )
+                  }
+                  .asJava
+              )
+          )
+          .toCompletableFuture
+      case _ =>
+        CompletableFuture.completedFuture(Nil.asJava)
 
   override def rename(
       params: OffsetParams,

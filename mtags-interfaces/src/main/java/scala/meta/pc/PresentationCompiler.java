@@ -113,6 +113,13 @@ public abstract class PresentationCompiler {
 	public abstract CompletableFuture<java.util.List<DocumentHighlight>> documentHighlight(OffsetParams params);
 
 	/**
+	 * Returns the references of the symbol under the current position in the target files.
+	 */
+	public CompletableFuture<java.util.List<Location>> references(OffsetParams params, java.util.List<VirtualFileParams> targetFiles, boolean includeDefinition) {
+		return CompletableFuture.completedFuture(Collections.emptyList());
+	}
+
+	/**
 	 * Return decoded and pretty printed TASTy content for .scala or .tasty file.
 	 * 
 	 */

@@ -16,7 +16,7 @@ final class PcSemanticTokensProvider(
     val params: VirtualFileParams
 ) {
   // Initialize Tree
-  object Collector extends PcCollector[Option[Node]](cp, params) {
+  object Collector extends SimpleCollector[Option[Node]](cp, params) {
 
     /**
      * Declaration is set for:

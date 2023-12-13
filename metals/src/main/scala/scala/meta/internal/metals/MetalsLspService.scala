@@ -524,6 +524,7 @@ class MetalsLspService(
     definitionProvider,
     trees,
     buildTargets,
+    compilers,
   )
 
   private val formattingProvider: FormattingProvider = new FormattingProvider(
@@ -1486,7 +1487,9 @@ class MetalsLspService(
   override def references(
       params: ReferenceParams
   ): CompletableFuture[util.List[Location]] =
-    CancelTokens { _ => referencesResult(params).flatMap(_.locations).asJava }
+    CancelTokens.future { _ =>
+      referencesResult(params).map(_.flatMap(_.locations).asJava)
+    }
 
   // Triggers a cascade compilation and tries to find new references to a given symbol.
   // It's not possible to stream reference results so if we find new symbols we notify the
@@ -1494,10 +1497,10 @@ class MetalsLspService(
   private def compileAndLookForNewReferences(
       params: ReferenceParams,
       result: List[ReferencesResult],
-  ): Unit = {
+  ): Future[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     val old = path.toInputFromBuffers(buffers)
-    compilations.cascadeCompileFiles(Seq(path)).foreach { _ =>
+    compilations.cascadeCompileFiles(Seq(path)).flatMap { _ =>
       val newBuffer = path.toInputFromBuffers(buffers)
       val newParams: Option[ReferenceParams] =
         if (newBuffer.text == old.text) Some(params)
@@ -1520,46 +1523,54 @@ class MetalsLspService(
             )
         }
       newParams match {
-        case None =>
+        case None => Future.unit
         case Some(p) =>
-          val newResult = referencesProvider.references(p)
-          val diff = newResult
-            .flatMap(_.locations)
-            .length - result.flatMap(_.locations).length
-          val diffSyms: Set[String] =
-            newResult.map(_.symbol).toSet -- result.map(_.symbol).toSet
-          if (diffSyms.nonEmpty && diff > 0) {
-            import scala.meta.internal.semanticdb.Scala._
-            val names =
-              diffSyms.map(sym => s"'${sym.desc.name.value}'").mkString(" and ")
-            val message =
-              s"Found new symbol references for $names, try running again."
-            scribe.info(message)
-            statusBar
-              .addMessage(clientConfig.icons.info + message)
+          for {
+            newResult <- referencesProvider.references(p)
+          } yield {
+            val diff = newResult
+              .flatMap(_.locations)
+              .length - result.flatMap(_.locations).length
+            val diffSyms: Set[String] =
+              newResult.map(_.symbol).toSet -- result.map(_.symbol).toSet
+            if (diffSyms.nonEmpty && diff > 0) {
+              import scala.meta.internal.semanticdb.Scala._
+              val names =
+                diffSyms
+                  .map(sym => s"'${sym.desc.name.value}'")
+                  .mkString(" and ")
+              val message =
+                s"Found new symbol references for $names, try running again."
+              scribe.info(message)
+              statusBar
+                .addMessage(clientConfig.icons.info + message)
+            }
           }
       }
     }
   }
 
-  def referencesResult(params: ReferenceParams): List[ReferencesResult] = {
+  def referencesResult(
+      params: ReferenceParams
+  ): Future[List[ReferencesResult]] = {
     val timer = new Timer(time)
-    val results: List[ReferencesResult] = referencesProvider.references(params)
-    if (clientConfig.initialConfig.statistics.isReferences) {
-      if (results.forall(_.symbol.isEmpty)) {
-        scribe.info(s"time: found 0 references in $timer")
-      } else {
-        scribe.info(
-          s"time: found ${results.flatMap(_.locations).length} references to symbol '${results
-              .map(_.symbol)
-              .mkString("and")}' in $timer"
-        )
+    referencesProvider.references(params).map { results =>
+      if (clientConfig.initialConfig.statistics.isReferences) {
+        if (results.forall(_.symbol.isEmpty)) {
+          scribe.info(s"time: found 0 references in $timer")
+        } else {
+          scribe.info(
+            s"time: found ${results.flatMap(_.locations).length} references to symbol '${results
+                .map(_.symbol)
+                .mkString("and")}' in $timer"
+          )
+        }
       }
+      if (results.nonEmpty) {
+        compileAndLookForNewReferences(params, results)
+      }
+      results
     }
-    if (results.nonEmpty) {
-      compileAndLookForNewReferences(params, results)
-    }
-    results
   }
 
   override def semanticTokensFull(
@@ -2573,21 +2584,22 @@ class MetalsLspService(
               positionParams.getPosition(),
               new ReferenceContext(false),
             )
-            val results = referencesResult(refParams)
-            if (results.flatMap(_.locations).isEmpty) {
-              // Fallback again to the original behavior that returns
-              // the definition location itself if no reference locations found,
-              // for avoiding the confusing messages like "No definition found ..."
-              definitionResult(positionParams, token)
-            } else {
-              Future.successful(
-                DefinitionResult(
-                  locations = results.flatMap(_.locations).asJava,
-                  symbol = results.head.symbol,
-                  definition = None,
-                  semanticdb = None,
+            referencesResult(refParams).flatMap { results =>
+              if (results.flatMap(_.locations).isEmpty) {
+                // Fallback again to the original behavior that returns
+                // the definition location itself if no reference locations found,
+                // for avoiding the confusing messages like "No definition found ..."
+                definitionResult(positionParams, token)
+              } else {
+                Future.successful(
+                  DefinitionResult(
+                    locations = results.flatMap(_.locations).asJava,
+                    symbol = results.head.symbol,
+                    definition = None,
+                    semanticdb = None,
+                  )
                 )
-              )
+              }
             }
           } else {
             definitionResult(positionParams, token)

@@ -50,6 +50,9 @@ trait AdjustLspData {
     diag
   }
 
+  def adjustLocation(location: Location): Location =
+    new Location(location.getUri(), adjustRange(location.getRange()))
+
   def adjustLocations(
       locations: java.util.List[Location]
   ): ju.List[Location]

@@ -179,6 +179,26 @@ case class ScalaPresentationCompiler(
       PcDocumentHighlightProvider(driver, params).highlights.asJava
     }
 
+  override def references(
+      params: OffsetParams,
+      targetFiles: ju.List[VirtualFileParams],
+      includeDefinition: Boolean,
+  ): CompletableFuture[ju.List[l.Location]] =
+    compilerAccess.withNonInterruptableCompiler(Some(params))(
+      List.empty[l.Location].asJava,
+      params.token,
+    ) { access =>
+      val driver = access.compiler()
+      PcReferencesProvider(
+        driver,
+        params,
+        targetFiles.asScala.toList,
+        includeDefinition,
+      )
+        .result()
+        .asJava
+    }
+
   def shutdown(): Unit =
     compilerAccess.shutdown()
 
