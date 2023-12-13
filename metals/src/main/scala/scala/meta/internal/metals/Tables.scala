@@ -177,7 +177,7 @@ final class Tables(
     val formatVersionChangedMessage =
       "The write format 2 is smaller than the supported format 3"
     try {
-      DriverManager.getConnection(url, user, null)
+      DriverManager.getConnection(url, user, null).close()
     } catch {
       case e: SQLException if e.getErrorCode() == 90048 =>
         e.getCause() match {
