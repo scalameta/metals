@@ -67,8 +67,9 @@ class FingerprintsLspSuite extends BaseLspSuite("fingerprints") {
            |                                         ^^^^^^^^
            |""".stripMargin,
       )
+      workspaceRefs <- server.workspaceReferences()
       _ = assertNoDiff(
-        newServer.workspaceReferences().referencesFormat,
+        workspaceRefs.referencesFormat,
         """|=============
            |= a/Adresses#
            |=============

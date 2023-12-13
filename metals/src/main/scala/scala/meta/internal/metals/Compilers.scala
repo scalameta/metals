@@ -35,7 +35,8 @@ import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SyntheticDecorationsParams
-
+import scala.meta.pc.SyntheticDecoration
+import scala.meta.pc.VirtualFileParams
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
 import org.eclipse.lsp4j.CompletionItem
@@ -48,6 +49,8 @@ import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintKind
 import org.eclipse.lsp4j.InlayHintParams
+import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SelectionRangeParams
@@ -726,6 +729,39 @@ class Compilers(
         }
     }
   }.getOrElse(Future.successful(Nil.asJava))
+
+  def references(
+      params: ReferenceParams,
+      targetFiles: List[AbsolutePath],
+      token: CancelToken,
+  ): Future[List[Location]] = {
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+      val targets = targetFiles.map { target =>
+        target.toURI.toString -> {
+          val (vFile, _, adjustLsp) =
+            sourceAdjustments(
+              target.toURI.toString(),
+              pc.scalaVersion(),
+            )
+          val params =
+            CompilerVirtualFileParams(target.toURI, vFile.text, token)
+          (params, adjustLsp)
+        }
+      }.toMap
+      val targetFilesParams: List[VirtualFileParams] =
+        targets.values.map(_._1).toList
+      pc.references(
+        CompilerOffsetParamsUtils.fromPos(pos, token),
+        targetFilesParams.asJava,
+        params.getContext().isIncludeDeclaration(),
+      ).asScala
+        .map(
+          _.asScala.toList.map(loc =>
+            targets(loc.getUri())._2.adjustLocation(loc)
+          )
+        )
+    }
+  }.getOrElse(Future.successful(Nil))
 
   def extractMethod(
       doc: TextDocumentIdentifier,

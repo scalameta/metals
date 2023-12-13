@@ -9,7 +9,7 @@ import org.eclipse.lsp4j.DocumentHighlightKind
 final class PcDocumentHighlightProvider(
     override val compiler: MetalsGlobal,
     params: OffsetParams
-) extends PcCollector[DocumentHighlight](compiler, params) {
+) extends WithSymbolSearchCollector[DocumentHighlight](compiler, params) {
   import compiler._
 
   def collect(

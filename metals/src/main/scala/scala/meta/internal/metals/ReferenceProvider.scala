@@ -40,7 +40,9 @@ final class ReferenceProvider(
     definition: DefinitionProvider,
     trees: Trees,
     buildTargets: BuildTargets,
-) extends SemanticdbFeatureProvider {
+    compilers: Compilers,
+)(implicit ec: ExecutionContext)
+    extends SemanticdbFeatureProvider {
 
   case class IndexEntry(
       id: BuildTargetIdentifier,
@@ -126,7 +128,7 @@ final class ReferenceProvider(
       params: ReferenceParams,
       findRealRange: AdjustRange = noAdjustRange,
       includeSynthetics: Synthetic => Boolean = _ => true,
-  )(implicit report: ReportContext): List[ReferencesResult] = {
+  )(implicit report: ReportContext): Future[List[ReferencesResult]] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     semanticdbs().textDocument(source).documentIncludingStale match {
       case Some(doc) =>
@@ -135,7 +137,7 @@ final class ReferenceProvider(
             definition.positionOccurrences(source, params.getPosition, doc)
           if (posOccurrences.isEmpty)
             // handling case `import a.{A as @@B}`
-            occerencesForRenamedImport(source, params, doc)
+            occurrencesForRenamedImport(source, params, doc)
           else posOccurrences
         }
         if (results.isEmpty) {
@@ -143,55 +145,62 @@ final class ReferenceProvider(
             s"No symbol found at ${params.getPosition()} for $source"
           )
         }
-        results.map { result =>
-          val occurrence = result.occurrence.get
-          val distance = result.distance
-          val alternatives =
-            referenceAlternatives(occurrence.symbol, source, doc)
-          val locations = references(
-            source,
-            params,
-            doc,
-            distance,
-            occurrence,
-            alternatives,
-            params.getContext.isIncludeDeclaration,
-            findRealRange,
-            includeSynthetics,
-          )
-          // It's possible to return nothing is we exclude declaration
-          if (locations.isEmpty && params.getContext().isIncludeDeclaration()) {
-            val fileInIndex =
-              if (index.contains(source.toNIO))
-                s"Current file ${source} is present"
-              else s"Missing current file ${source}"
-            scribe.debug(
-              s"No references found, index size ${index.size}\n" + fileInIndex
-            )
-            report.unsanitized.create(
-              Report(
-                "empty-references",
-                index
-                  .map { case (path, entry) =>
-                    s"$path -> ${entry.bloom.approximateElementCount()}"
-                  }
-                  .mkString("\n"),
-                s"Could not find any locations for ${result.occurrence}, printing index state",
-                Some(source.toString()),
-                Some(source.toString() + ":" + result.occurrence.getOrElse("")),
-              )
-            )
+        Future.sequence {
+          results.map { result =>
+            val occurrence = result.occurrence.get
+            val distance = result.distance
+            val alternatives =
+              referenceAlternatives(occurrence.symbol, source, doc)
+            references(
+              source,
+              params,
+              doc,
+              distance,
+              occurrence,
+              alternatives,
+              params.getContext.isIncludeDeclaration,
+              findRealRange,
+              includeSynthetics,
+            ).map { locations =>
+              // It's possible to return nothing is we exclude declaration
+              if (
+                locations.isEmpty && params.getContext().isIncludeDeclaration()
+              ) {
+                val fileInIndex =
+                  if (index.contains(source.toNIO))
+                    s"Current file ${source} is present"
+                  else s"Missing current file ${source}"
+                scribe.debug(
+                  s"No references found, index size ${index.size}\n" + fileInIndex
+                )
+                report.unsanitized.create(
+                  Report(
+                    "empty-references",
+                    index
+                      .map { case (path, entry) =>
+                        s"$path -> ${entry.bloom.approximateElementCount()}"
+                      }
+                      .mkString("\n"),
+                    s"Could not find any locations for ${result.occurrence}, printing index state",
+                    Some(source.toString()),
+                    Some(
+                      source.toString() + ":" + result.occurrence.getOrElse("")
+                    ),
+                  )
+                )
+              }
+              ReferencesResult(occurrence.symbol, locations)
+            }
           }
-          ReferencesResult(occurrence.symbol, locations)
         }
       case None =>
-        Nil
+        Future.successful(Nil)
     }
   }
 
-  // for `import package.{AA as B@@B}` we look for occurences at `import package.{@@AA as BB}`,
-  // since rename is not a position occurence in semanticDB
-  private def occerencesForRenamedImport(
+  // for `import package.{AA as B@@B}` we look for occurrences at `import package.{@@AA as BB}`,
+  // since rename is not a position occurrence in semanticDB
+  private def occurrencesForRenamedImport(
       source: AbsolutePath,
       params: ReferenceParams,
       document: TextDocument,
@@ -390,12 +399,11 @@ final class ReferenceProvider(
       isIncludeDeclaration: Boolean,
       findRealRange: AdjustRange,
       includeSynthetics: Synthetic => Boolean,
-  ): Seq[Location] = {
+  ): Future[Seq[Location]] = {
     val isSymbol = alternatives + occ.symbol
     val isLocal = occ.symbol.isLocal
 
     /* search local in the following cases:
-     * - it's local symbol
      * - it's a dependency source.
      *   We can't search references inside dependencies so at least show them in a source file.
      * - it's a standalone file that doesn't belong to any build target
@@ -404,18 +412,22 @@ final class ReferenceProvider(
       isLocal || source.isDependencySource(workspace) ||
         buildTargets.inverseSources(source).isEmpty
     val local =
-      if (searchLocal)
-        referenceLocations(
-          snapshot,
-          isSymbol,
-          distance,
-          params.getTextDocument.getUri,
-          isIncludeDeclaration,
-          findRealRange,
-          includeSynthetics,
-          source.isJava,
+      if (isLocal && !source.isJava)
+        compilers.references(params, List(source), EmptyCancelToken)
+      else if (searchLocal)
+        Future.successful(
+          referenceLocations(
+            snapshot,
+            isSymbol,
+            distance,
+            params.getTextDocument.getUri,
+            isIncludeDeclaration,
+            findRealRange,
+            includeSynthetics,
+            source.isJava,
+          )
         )
-      else Seq.empty
+      else Future.successful(Seq.empty)
 
     val workspaceRefs =
       if (!isLocal) {
@@ -436,7 +448,7 @@ final class ReferenceProvider(
       } else
         Seq.empty
 
-    workspaceRefs ++ local
+    local.map(workspaceRefs ++ _)
   }
 
   private def referenceLocations(

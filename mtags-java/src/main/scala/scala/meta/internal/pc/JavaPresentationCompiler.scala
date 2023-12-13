@@ -99,6 +99,13 @@ case class JavaPresentationCompiler(
   ): CompletableFuture[util.List[DocumentHighlight]] =
     CompletableFuture.completedFuture(Nil.asJava)
 
+  override def references(
+      params: OffsetParams,
+      targetFiles: util.List[VirtualFileParams],
+      includeDefinition: Boolean
+  ): CompletableFuture[util.List[lsp4j.Location]] =
+    CompletableFuture.completedFuture(Nil.asJava)
+
   override def getTasty(
       targetUri: URI,
       isHttpEnabled: Boolean

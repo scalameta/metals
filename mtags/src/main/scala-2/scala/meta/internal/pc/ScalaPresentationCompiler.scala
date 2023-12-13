@@ -46,6 +46,7 @@ import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.InlayHint
+import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
@@ -423,6 +424,23 @@ case class ScalaPresentationCompiler(
       new PcDocumentHighlightProvider(pc.compiler(params), params)
         .highlights()
         .asJava
+    }
+
+  override def references(
+      params: OffsetParams,
+      targetFiles: ju.List[VirtualFileParams],
+      includeDefinition: Boolean
+  ): CompletableFuture[ju.List[Location]] =
+    compilerAccess.withInterruptableCompiler(Some(params))(
+      List.empty[Location].asJava,
+      params.token()
+    ) { pc =>
+      new PcReferencesProvider(
+        pc.compiler(),
+        params,
+        targetFiles.asScala.toList,
+        includeDefinition
+      ).result().asJava
     }
 
   override def semanticdbTextDocument(
