@@ -3,6 +3,7 @@ package tests.scalacli
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
+import scala.meta.internal.metals.codeactions.SourceOrganizeImports
 import scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion
 import scala.meta.internal.mtags.CoursierComplete
 
@@ -155,6 +156,44 @@ class ScalaCliActionsSuite
         |""".stripMargin,
     scalaCliOptions = List("--actions", "-S", scalaVersion),
     expectNoDiagnostics = false,
+    fileName = "A.sc",
+  )
+
+  checkScalaCLI(
+    "script-organize-imports",
+    s"""|//> using scala "${BuildInfo.scala213}"
+        |
+        |import scala.concurrent.Futur<<>>e
+        |import scala.concurrent.duration._
+        |import scala.concurrent.ExecutionContext
+        |import scala.concurrent.ExecutionContext.global
+        |
+        |object A {
+        |  implicit val ec: ExecutionContext = global
+        |  val d = Duration(10, MICROSECONDS)
+        |  val k = Future.successful(1)
+        |  Future{ println("Hello!") }
+        |}
+        |""".stripMargin,
+    s"""|${SourceOrganizeImports.title}
+        |""".stripMargin,
+    s"""|//> using scala "${BuildInfo.scala213}"
+        |
+        |import scala.concurrent.ExecutionContext
+        |import scala.concurrent.ExecutionContext.global
+        |import scala.concurrent.Future
+        |import scala.concurrent.duration._
+        |
+        |object A {
+        |  implicit val ec: ExecutionContext = global
+        |  val d = Duration(10, MICROSECONDS)
+        |  val k = Future.successful(1)
+        |  Future{ println("Hello!") }
+        |}
+        |""".stripMargin,
+    scalaCliOptions = List("-S", scalaVersion),
+    expectNoDiagnostics = false,
+    kind = List(SourceOrganizeImports.kind),
     fileName = "A.sc",
   )
 
