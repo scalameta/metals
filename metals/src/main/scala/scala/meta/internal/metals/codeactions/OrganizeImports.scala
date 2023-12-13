@@ -66,7 +66,7 @@ sealed abstract class OrganizeImports(
   }
 
   protected def isScalaOrSbt(file: AbsolutePath): Boolean =
-    Seq("scala", "sbt").contains(file.extension)
+    Seq("scala", "sbt", "sc").contains(file.extension)
 }
 
 object OrganizeImports {}
