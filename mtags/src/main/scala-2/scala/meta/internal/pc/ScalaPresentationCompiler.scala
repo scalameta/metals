@@ -339,6 +339,17 @@ case class ScalaPresentationCompiler(
     ) { pc => new PcDefinitionProvider(pc.compiler(), params).definition() }
   }
 
+  override def findParents(
+      symbol: String
+  ): CompletableFuture[util.List[String]] = {
+    compilerAccess.withNonInterruptableCompiler(None)(
+      List.empty[String].asJava,
+      EmptyCancelToken
+    ) { pc =>
+      pc.compiler().findParents(symbol).asJava
+    }
+  }
+
   override def typeDefinition(
       params: OffsetParams
   ): CompletableFuture[DefinitionResult] = {

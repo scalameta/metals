@@ -13,6 +13,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReportContext
@@ -53,6 +54,7 @@ final class ImplementationProvider(
     definitionProvider: DefinitionProvider,
     trees: Trees,
     scalaVersionSelector: ScalaVersionSelector,
+    compilers: Compilers
 )(implicit ec: ExecutionContext, rc: ReportContext)
     extends SemanticdbFeatureProvider {
   import ImplementationProvider._
@@ -186,7 +188,7 @@ final class ImplementationProvider(
         globalTable.globalContextFor(
           source,
           implementationsInPath.asScala.toMap,
-          definitionProvider,
+          compilers,
           implementationsInDependencySources.asScala.toMap,
         )
       } else {

@@ -533,24 +533,6 @@ class MetalsLspService(
     )
   }
 
-  private val implementationProvider: ImplementationProvider =
-    new ImplementationProvider(
-      semanticdbs,
-      folder,
-      definitionIndex,
-      buildTargets,
-      buffers,
-      definitionProvider,
-      trees,
-      scalaVersionSelector,
-    )
-
-  private val supermethods: Supermethods = new Supermethods(
-    languageClient,
-    definitionProvider,
-    implementationProvider,
-  )
-
   private val referencesProvider: ReferenceProvider = new ReferenceProvider(
     folder,
     semanticdbs,
@@ -577,17 +559,6 @@ class MetalsLspService(
     isStatisticsEnabled = clientConfig.initialConfig.statistics.isTreeView
   )
 
-  private val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
-    List(
-      referencesProvider,
-      implementationProvider,
-      testProvider,
-      classpathTreeIndex,
-    ),
-    buildTargets,
-    folder,
-  )
-
   private val formattingProvider: FormattingProvider = new FormattingProvider(
     folder,
     buffers,
@@ -599,26 +570,6 @@ class MetalsLspService(
     tables,
     buildTargets,
   )
-
-  private val javaFormattingProvider: JavaFormattingProvider =
-    new JavaFormattingProvider(
-      buffers,
-      () => userConfig,
-      buildTargets,
-    )
-
-  private val callHierarchyProvider: CallHierarchyProvider =
-    new CallHierarchyProvider(
-      folder,
-      semanticdbs,
-      definitionProvider,
-      referencesProvider,
-      clientConfig.icons,
-      () => compilers,
-      trees,
-      buildTargets,
-      supermethods,
-    )
 
   private val javaHighlightProvider: JavaDocumentHighlightProvider =
     new JavaDocumentHighlightProvider(
@@ -694,6 +645,56 @@ class MetalsLspService(
       worksheetProvider,
     )
   )
+
+  private val javaFormattingProvider: JavaFormattingProvider =
+    new JavaFormattingProvider(
+      buffers,
+      () => userConfig,
+      buildTargets,
+    )
+
+  private val implementationProvider: ImplementationProvider =
+    new ImplementationProvider(
+      semanticdbs,
+      folder,
+      definitionIndex,
+      buildTargets,
+      buffers,
+      definitionProvider,
+      trees,
+      scalaVersionSelector,
+      compilers,
+    )
+
+  private val supermethods: Supermethods = new Supermethods(
+    languageClient,
+    definitionProvider,
+    implementationProvider,
+  )
+
+  private val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
+    List(
+      referencesProvider,
+      implementationProvider,
+      testProvider,
+      classpathTreeIndex,
+    ),
+    buildTargets,
+    folder,
+  )
+
+  private val callHierarchyProvider: CallHierarchyProvider =
+    new CallHierarchyProvider(
+      folder,
+      semanticdbs,
+      definitionProvider,
+      referencesProvider,
+      clientConfig.icons,
+      () => compilers,
+      trees,
+      buildTargets,
+      supermethods,
+    )
 
   private val renameProvider: RenameProvider = new RenameProvider(
     referencesProvider,

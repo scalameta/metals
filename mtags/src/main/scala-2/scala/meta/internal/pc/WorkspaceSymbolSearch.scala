@@ -10,10 +10,38 @@ import org.eclipse.{lsp4j => l}
 
 trait WorkspaceSymbolSearch { this: MetalsGlobal =>
 
+  def findParents(symbol: String): List[String] = {
+    val index = symbol.lastIndexOf("/")
+    val pkgString = symbol.take(index + 1)
+    val pkg = packageSymbolFromString(pkgString).getOrElse(
+      throw new NoSuchElementException(pkgString)
+    )
+
+    def loop(
+        symbol: String,
+        acc: List[(String, Boolean)]
+    ): List[(String, Boolean)] =
+      if (symbol.isEmpty()) acc.reverse
+      else {
+        val newSymbol = symbol.takeWhile(c => c != '.' && c != '#')
+        val rest = symbol.drop(newSymbol.size)
+        loop(rest.drop(1), (newSymbol, rest.headOption.exists(_ == '#')) :: acc)
+      }
+    val names =
+      loop(symbol.drop(index + 1), List.empty)
+    val compilerSymbol = names.foldLeft(pkg) { case (sym, (name, isClass)) =>
+      if (isClass) sym.info.member(TypeName(name))
+      else sym.info.member(TermName(name))
+    }
+
+    compilerSymbol.parentSymbols.map(semanticdbSymbol)
+  }
+
   class CompilerSearchVisitor(
       context: Context,
       visitMember: Symbol => Boolean
   ) extends SymbolSearchVisitor {
+
     def visit(top: SymbolSearchCandidate): Int = {
       var added = 0
       for {

@@ -171,6 +171,10 @@ public abstract class PresentationCompiler {
 		return CompletableFuture.completedFuture(Collections.emptyList());
 	}
 
+	public CompletableFuture<List<String>> findParents(String symbol) {
+		return CompletableFuture.completedFuture(Collections.emptyList());
+	}
+
 	/**
 	 * File was closed.
 	 */

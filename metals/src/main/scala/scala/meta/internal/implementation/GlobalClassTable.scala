@@ -5,7 +5,7 @@ import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 
 import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.DefinitionProvider
+import scala.meta.internal.metals.Compilers
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.meta.io.AbsolutePath
@@ -27,14 +27,14 @@ final class GlobalClassTable(
   def globalContextFor(
       source: AbsolutePath,
       implementationsInPath: ImplementationCache,
-      definitionProvider: DefinitionProvider,
+      compilers: Compilers,
       implementationsInDependencySources: Map[String, Set[ClassLocation]],
   ): Option[InheritanceContext] = {
     for {
       symtab <- globalSymbolTableFor(source)
     } yield {
       calculateIndex(symtab, implementationsInPath).toGlobal(
-        definitionProvider,
+        compilers,
         implementationsInDependencySources,
       )
     }

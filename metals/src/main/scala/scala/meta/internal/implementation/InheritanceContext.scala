@@ -6,7 +6,7 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.DefinitionProvider
+import scala.meta.internal.metals.Compilers
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.io.AbsolutePath
@@ -42,11 +42,11 @@ class InheritanceContext(
   }
 
   def toGlobal(
-      definitionProvider: DefinitionProvider,
+      compilers: Compilers,
       implementationsInDependencySources: Map[String, Set[ClassLocation]],
   ) = new GlobalInheritanceContext(
     findSymbol,
-    definitionProvider,
+    compilers,
     implementationsInDependencySources,
     inheritance,
   )
@@ -54,7 +54,7 @@ class InheritanceContext(
 
 class GlobalInheritanceContext(
     override val findSymbol: String => Option[SymbolInformation],
-    definitionProvider: DefinitionProvider,
+    compilers: Compilers,
     implementationsInDependencySources: Map[String, Set[ClassLocation]],
     localInheritance: Map[String, Set[ClassLocation]],
 ) extends InheritanceContext(findSymbol, localInheritance) {
@@ -69,13 +69,14 @@ class GlobalInheritanceContext(
     val resolveGlobal =
       implementationsInDependencySources
         .getOrElse(shortName, Set.empty)
-        .collect { case loc @ ClassLocation(_, Some(file), Some(pos)) =>
-          definitionProvider.definition(AbsolutePath(file), pos).map {
-            definition =>
-              def dealiased = ImplementationProvider
-                .dealiasClass(definition.symbol, findSymbol)
-              if (definition.symbol == symbol || dealiased == symbol) Some(loc)
-              else None
+        .collect { case loc @ ClassLocation(sym, Some(file), _) =>
+          compilers.findParents(AbsolutePath(file), sym).map{ res =>
+            Option.when(
+              res.exists{ sym =>
+                def dealiased = ImplementationProvider.dealiasClass(sym, findSymbol)
+                sym == symbol || dealiased == symbol
+              }
+            )(loc)
           }
         }
     Future

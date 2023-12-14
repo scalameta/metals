@@ -177,6 +177,14 @@ case class ScalaPresentationCompiler(
   def diagnosticsForDebuggingPurposes(): ju.List[String] =
     List[String]().asJava
 
+  override def findParents(symbol: String): ju.concurrent.CompletableFuture[ju.List[String]] =
+    compilerAccess.withNonInterruptableCompiler(None)(
+      List.empty[String].asJava,
+      EmptyCancelToken,
+    ) { access =>
+      ParentProvider(using access.compiler().currentCtx).parents(symbol).asJava
+    }
+
   def semanticdbTextDocument(
       filename: URI,
       code: String,
