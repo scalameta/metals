@@ -585,9 +585,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |""".stripMargin,
     """|a/MySet#
        |scala/Enumeration#ValueSet#
-       |scala/Enumeration#ValueSet#
        |scala/collection/immutable/AbstractSet#
-       |scala/collection/immutable/BitSet#
        |scala/collection/immutable/BitSet#
        |scala/collection/immutable/BitSet.BitSet1#
        |scala/collection/immutable/BitSet.BitSet2#
@@ -604,9 +602,7 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |scala/collection/immutable/Set.Set3#
        |scala/collection/immutable/Set.Set4#
        |scala/collection/immutable/SortedMapOps#ImmutableKeySortedSet#
-       |scala/collection/immutable/SortedMapOps#ImmutableKeySortedSet#
        |scala/collection/immutable/SortedSet#
-       |scala/collection/immutable/TreeSet#
        |scala/collection/immutable/TreeSet#
        |""".stripMargin,
   )

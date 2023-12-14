@@ -69,11 +69,12 @@ class GlobalInheritanceContext(
     val resolveGlobal =
       implementationsInDependencySources
         .getOrElse(shortName, Set.empty)
-        .collect { case loc @ ClassLocation(sym, Some(file), _) =>
-          compilers.findParents(AbsolutePath(file), sym).map{ res =>
+        .collect { case loc @ ClassLocation(sym, Some(file)) =>
+          compilers.findParents(AbsolutePath(file), sym).map { res =>
             Option.when(
-              res.exists{ sym =>
-                def dealiased = ImplementationProvider.dealiasClass(sym, findSymbol)
+              res.exists { sym =>
+                def dealiased =
+                  ImplementationProvider.dealiasClass(sym, findSymbol)
                 sym == symbol || dealiased == symbol
               }
             )(loc)

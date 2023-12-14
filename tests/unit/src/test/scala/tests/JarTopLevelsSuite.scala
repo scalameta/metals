@@ -35,7 +35,7 @@ class JarTopLevelsSuite extends BaseTablesSuite {
     val filePath = AbsolutePath(fs.getPath("/foo.scala"))
     val toplevels = List("foo" -> filePath)
     val overrides =
-      List((filePath, "foo/Hello#", UnresolvedOverriddenSymbol("AnyVal", 32)))
+      List((filePath, "foo/Hello#", UnresolvedOverriddenSymbol("AnyVal")))
     jarSymbols.putJarIndexingInfo(jar1, toplevels, overrides)
     val resultOption = jarSymbols.getTopLevels(jar1)
     assert(resultOption.isDefined)
@@ -56,7 +56,7 @@ class JarTopLevelsSuite extends BaseTablesSuite {
       val filePath = AbsolutePath(fs.getPath("/foo.scala"))
       val toplevels = List("foo" -> filePath)
       val overrides =
-        List((filePath, "foo/Hello#", UnresolvedOverriddenSymbol("AnyVal", 32)))
+        List((filePath, "foo/Hello#", UnresolvedOverriddenSymbol("AnyVal")))
       jarSymbols.putJarIndexingInfo(jar, toplevels, overrides)
     }
     jarSymbols.deleteNotUsedTopLevels(Array(jar1, jar1))
@@ -77,7 +77,7 @@ class JarTopLevelsSuite extends BaseTablesSuite {
     val filePath = AbsolutePath(fs.getPath("/foo.scala"))
     val toplevels = List("foo" -> filePath)
     val overrides =
-      List((filePath, "foo/Hello#", UnresolvedOverriddenSymbol("AnyVal", 32)))
+      List((filePath, "foo/Hello#", UnresolvedOverriddenSymbol("AnyVal")))
 
     var jarStmt: PreparedStatement = null
     val jar =

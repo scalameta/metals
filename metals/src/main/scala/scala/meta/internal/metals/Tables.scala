@@ -143,7 +143,8 @@ final class Tables(
 
   private def tryUrl(url: String): Connection = {
     val user = "sa"
-    val flyway = Flyway.configure.dataSource(url, user, null).load()
+    val flyway =
+      Flyway.configure.dataSource(url, user, null).cleanDisabled(false).load()
     migrateOrRestart(flyway)
     DriverManager.getConnection(url, user, null)
   }

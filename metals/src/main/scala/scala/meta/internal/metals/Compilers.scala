@@ -785,12 +785,14 @@ class Compilers(
   }
 
   def findParents(
-    path: AbsolutePath,
-    symbol: String
+      path: AbsolutePath,
+      symbol: String,
   ): Future[List[String]] = {
-    loadCompiler(path).map{
-      _.findParents(symbol).asScala.map(_.asScala.toList)
-    }.getOrElse(Future.successful(Nil))
+    loadCompiler(path)
+      .map {
+        _.findParents(symbol).asScala.map(_.asScala.toList)
+      }
+      .getOrElse(Future.successful(Nil))
   }
 
   private def definition(

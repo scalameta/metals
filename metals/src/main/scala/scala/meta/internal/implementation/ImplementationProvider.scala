@@ -54,7 +54,7 @@ final class ImplementationProvider(
     definitionProvider: DefinitionProvider,
     trees: Trees,
     scalaVersionSelector: ScalaVersionSelector,
-    compilers: Compilers
+    compilers: Compilers,
 )(implicit ec: ExecutionContext, rc: ReportContext)
     extends SemanticdbFeatureProvider {
   import ImplementationProvider._
@@ -110,10 +110,10 @@ final class ImplementationProvider(
           ClassLocation(overridesSymbol, Some(path.toNIO))
         )
         implementationsInDependencySources.compute(symbol, update(_, _))
-      case UnresolvedOverriddenSymbol(name, pos) =>
+      case UnresolvedOverriddenSymbol(name) =>
         val update =
           createUpdate(
-            ClassLocation(overridesSymbol, Some(path.toNIO), Some(pos))
+            ClassLocation(overridesSymbol, Some(path.toNIO))
           )
         implementationsInDependencySources.compute(name, update(_, _))
     }

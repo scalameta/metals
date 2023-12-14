@@ -662,7 +662,7 @@ class ScalaToplevelSuite extends BaseSuite {
                     symbols
                       .map {
                         case ResolvedOverriddenSymbol(symbol) => symbol
-                        case UnresolvedOverriddenSymbol(name, _) => name
+                        case UnresolvedOverriddenSymbol(name) => name
                       }
                       .mkString(", ")
                   s"$symbol -> $overridden"

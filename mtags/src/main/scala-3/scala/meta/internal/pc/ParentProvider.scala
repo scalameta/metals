@@ -15,9 +15,9 @@ class ParentProvider(using Context):
       parts match
         case (head, isClass) :: tl =>
           val next =
-            if(isClass) owner.info.member(typeName(head))
+            if isClass then owner.info.member(typeName(head))
             else owner.info.member(termName(head))
-          if(next.exists) loop(next.symbol, tl)
+          if next.exists then loop(next.symbol, tl)
           else None
         case Nil => Some(owner)
 
@@ -31,23 +31,22 @@ class ParentProvider(using Context):
 
     def loop(
         symbol: String,
-        acc: List[(String, Boolean)]
+        acc: List[(String, Boolean)],
     ): List[(String, Boolean)] =
-      if (symbol.isEmpty()) acc.reverse
-      else {
+      if symbol.isEmpty() then acc.reverse
+      else
         val newSymbol = symbol.takeWhile(c => c != '.' && c != '#')
         val rest = symbol.drop(newSymbol.size)
         loop(rest.drop(1), (newSymbol, rest.headOption.exists(_ == '#')) :: acc)
-      }
     val names =
       loop(symbol.drop(index + 1), List.empty)
 
     val foundSym =
       try toSymbols(pkg, names)
-      catch
-        case NonFatal(e) => None
+      catch case NonFatal(e) => None
     foundSym.toList.flatMap(_.ownersIterator).map(SemanticdbSymbols.symbolName)
   end parents
 
   private def normalizePackage(pkg: String): String =
     pkg.replace("/", ".").stripSuffix(".")
+end ParentProvider

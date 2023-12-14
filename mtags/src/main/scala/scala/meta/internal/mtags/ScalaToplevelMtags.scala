@@ -416,7 +416,7 @@ class ScalaToplevelMtags(
             withOwner(tmpl.owner) {
               addOverridden(
                 overridden.reverse.map(id =>
-                  UnresolvedOverriddenSymbol(id.name, id.pos.start)
+                  UnresolvedOverriddenSymbol(id.name)
                 )
               )
             }

@@ -63,7 +63,7 @@ final class JarTopLevels(conn: () => Connection) {
       val toplevels = List.newBuilder[(AbsolutePath, String, OverriddenSymbol)]
       conn()
         .query(
-          """select th.symbol, th.parent_name, th.parent_name_offset, th.path, th.is_resolved
+          """select th.symbol, th.parent_name, th.path, th.is_resolved
             |from indexed_jar ij
             |left join type_hierarchy th
             |on ij.id=th.jar
@@ -75,12 +75,11 @@ final class JarTopLevels(conn: () => Connection) {
           ) {
             val symbol = rs.getString(1)
             val parentName = rs.getString(2)
-            val parentOffset = rs.getInt(3)
-            val path = toPath(jar, rs.getString(4))
-            val isResolved = rs.getBoolean(5)
+            val path = toPath(jar, rs.getString(3))
+            val isResolved = rs.getBoolean(4)
             val overridden =
               if (isResolved) ResolvedOverriddenSymbol(parentName)
-              else UnresolvedOverriddenSymbol(parentName, parentOffset)
+              else UnresolvedOverriddenSymbol(parentName)
             toplevels += ((path, symbol, overridden))
           }
         }
@@ -190,7 +189,7 @@ final class JarTopLevels(conn: () => Connection) {
       var symbolStmt: PreparedStatement = null
       try {
         symbolStmt = conn().prepareStatement(
-          s"insert into type_hierarchy (symbol, parent_name, parent_name_offset, path, jar, is_resolved) values (?, ?, ?, ?, ?, ?)"
+          s"insert into type_hierarchy (symbol, parent_name, path, jar, is_resolved) values (?, ?, ?, ?, ?)"
         )
         type_hierarchy.foreach { case (path, symbol, overridden) =>
           symbolStmt.setString(1, symbol)
@@ -198,14 +197,13 @@ final class JarTopLevels(conn: () => Connection) {
             case ResolvedOverriddenSymbol(name) =>
               symbolStmt.setString(2, name)
               symbolStmt.setInt(3, 0)
-              symbolStmt.setBoolean(6, true)
-            case UnresolvedOverriddenSymbol(name, pos) =>
+              symbolStmt.setBoolean(5, true)
+            case UnresolvedOverriddenSymbol(name) =>
               symbolStmt.setString(2, name)
-              symbolStmt.setInt(3, pos)
-              symbolStmt.setBoolean(6, false)
+              symbolStmt.setBoolean(5, false)
           }
-          symbolStmt.setString(4, path.toString())
-          symbolStmt.setInt(5, jar)
+          symbolStmt.setString(3, path.toString())
+          symbolStmt.setInt(4, jar)
           symbolStmt.addBatch()
         }
         // Return number of rows inserted
