@@ -507,4 +507,50 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
         |  }
         |}""".stripMargin
   )
+
+  checkEdit(
+    "empty-lines",
+    s"""|object Hello {
+        |  val a: Int = 2
+        |  @@def m() = {
+        |    <<print("1")
+        |
+        |    print(a)>>
+        |
+        |    a + 2
+        |  }
+        |}
+        |""".stripMargin,
+    s"""|object Hello {
+        |  val a: Int = 2
+        |  def newMethod(): Unit = {
+        |    print("1")
+        |
+        |    print(a)
+        |  }
+        |  def m() = {
+        |    newMethod()
+        |
+        |    a + 2
+        |  }
+        |}
+        |""".stripMargin,
+    compat = Map(
+      "3" ->
+        s"""|object Hello {
+            |  val a: Int = 2
+            |  def newMethod(): Unit =
+            |    print("1")
+            |
+            |    print(a)
+            |
+            |  def m() = {
+            |    newMethod()
+            |
+            |    a + 2
+            |  }
+            |}
+            |""".stripMargin
+    )
+  )
 }
