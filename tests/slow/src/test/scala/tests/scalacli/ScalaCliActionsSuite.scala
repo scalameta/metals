@@ -6,7 +6,7 @@ import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion
 import scala.meta.internal.mtags.CoursierComplete
 
-import coursier.version.Version
+import coursier.core.Version
 
 class ScalaCliActionsSuite
     extends BaseScalaCLIActionSuite("actionableDiagnostic") {
@@ -112,6 +112,36 @@ class ScalaCliActionsSuite
         |${CreateNewSymbol.title("Future")}
         |""".stripMargin,
     s"""|//> using scala "${BuildInfo.scala213}"
+        |//> using lib "org.typelevel::cats-core:2.9.0"
+        |import scala.concurrent.Future
+        |
+        |object A {
+        |  Future.successful(2)
+        |}
+        |""".stripMargin,
+    scalaCliOptions = List("--actions", "-S", scalaVersion),
+    expectNoDiagnostics = false,
+    fileName = "A.sc",
+  )
+
+  checkScalaCLI(
+    "auto-import-shebang",
+    s"""|#!/usr/bin/env -S scala-cli shebang
+        |
+        |//> using scala "${BuildInfo.scala213}"
+        |//> using lib "org.typelevel::cats-core:2.9.0"
+        |
+        |object A {
+        |  <<Future>>.successful(2)
+        |}
+        |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
+        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+        |${CreateNewSymbol.title("Future")}
+        |""".stripMargin,
+    s"""|#!/usr/bin/env -S scala-cli shebang
+        |
+        |//> using scala "${BuildInfo.scala213}"
         |//> using lib "org.typelevel::cats-core:2.9.0"
         |import scala.concurrent.Future
         |

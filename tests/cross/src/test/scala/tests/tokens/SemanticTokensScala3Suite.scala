@@ -146,4 +146,19 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
        |""".stripMargin
   )
 
+  check(
+    "constructor2",
+    """
+      |object <<Bar>>/*class*/ {
+      |  class <<Abc>>/*class*/[<<T>>/*typeParameter,definition,abstract*/](<<a>>/*variable,declaration,readonly*/: <<T>>/*typeParameter,abstract*/)
+      |}
+      |
+      |object <<O>>/*class*/ {
+      |  val <<x>>/*variable,definition,readonly*/ = new <<Bar>>/*class*/.<<Abc>>/*class*/(2)
+      |  val <<y>>/*variable,definition,readonly*/ = new <<Bar>>/*class*/.<<Abc>>/*class*/[<<Int>>/*class,abstract*/](2)
+      |  val <<z>>/*variable,definition,readonly*/ = <<Bar>>/*class*/.<<Abc>>/*class*/(2)
+      |  val <<w>>/*variable,definition,readonly*/ = <<Bar>>/*class*/.<<Abc>>/*class*/[<<Int>>/*class,abstract*/](2)
+      |}""".stripMargin
+  )
+
 }

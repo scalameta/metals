@@ -6,6 +6,8 @@ import scala.meta as m
 
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.pc.MetalsInteractive.ExtensionMethodCall
+import scala.meta.internal.pc.MetalsInteractive.ExtensionMethodCallSymbol
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.VirtualFileParams
 
@@ -148,6 +150,23 @@ abstract class PcCollector[T](
           if id.symbol
             .is(Flags.Param) && id.symbol.owner.is(Flags.ExtensionMethod) =>
         Some(findAllExtensionParamSymbols(id.sourcePos, id.name, id.symbol))
+      /**
+       * Workaround for missing symbol in:
+       * class A[T](a: T)
+       * val x = new <<A>>(1)
+       */
+      case t :: (n: New) :: (sel: Select) :: _
+          if t.symbol == NoSymbol && sel.symbol.isConstructor =>
+        Some(symbolAlternatives(sel.symbol.owner), namePos(t))
+      /**
+       * Workaround for missing symbol in:
+       * class A[T](a: T)
+       * val x = <<A>>[Int](1)
+       */
+      case (sel @ Select(New(t), _)) :: (_: TypeApply) :: _
+          if sel.symbol.isConstructor =>
+        Some(symbolAlternatives(sel.symbol.owner), namePos(t))
+
       /* simple identifier:
        * val a = val@@ue + value
        */
@@ -233,10 +252,10 @@ abstract class PcCollector[T](
        *
        * val a = MyIntOut(1).<<un@@even>>
        */
-      case (a @ Apply(sel: Select, _)) :: _
-          if sel.span.isZeroExtent && sel.symbol.is(Flags.ExtensionMethod) =>
-        val span = a.span.withStart(a.span.point)
-        Some(symbolAlternatives(sel.symbol), pos.withSpan(span))
+      case ExtensionMethodCall(sym, app) :: _
+          if app.span.withStart(app.span.point).contains(pos.span) =>
+        val span = app.span.withStart(app.span.point)
+        Some(symbolAlternatives(sym), pos.withSpan(span))
       case _ => None
 
     sought match
@@ -407,13 +426,34 @@ abstract class PcCollector[T](
          * All indentifiers such as:
          * val a = <<b>>
          */
-        case ident: Ident if ident.span.isCorrect && filter(ident) =>
+        case ident: Ident
+            if ident.span.isCorrect && filter(ident) && !isExtensionMethodCall(
+              parent,
+              ident.symbol,
+            ) =>
           // symbols will differ for params in different ext methods, but source pos will be the same
           if soughtFilter(_.sourcePos == ident.symbol.sourcePos)
           then
             occurences + collect(
               ident,
               ident.sourcePos,
+            )
+          else occurences
+
+        /**
+         * Workaround for missing symbol in:
+         * class A[T](a: T)
+         * val x = new <<A>>(1)
+         */
+        case sel @ Select(New(t), _)
+            if sel.span.isCorrect &&
+              sel.symbol.isConstructor &&
+              t.symbol == NoSymbol =>
+          if soughtFilter(_ == sel.symbol.owner) then
+            occurences + collect(
+              sel,
+              namePos(t),
+              Some(sel.symbol.owner),
             )
           else occurences
         /**
@@ -434,15 +474,14 @@ abstract class PcCollector[T](
          *
          * val a = MyIntOut(1).<<un@@even>>
          */
-        case sel: Select
-            if sel.span.isZeroExtent && sel.symbol.is(Flags.ExtensionMethod) =>
+        case ExtensionMethodCallSymbol(tree) =>
           parent match
             case Some(a: Apply) =>
               val span = a.span.withStart(a.span.point)
-              val amendedSelect = sel.withSpan(span)
-              if filter(amendedSelect) then
+              val amendedTree = tree.withSpan(span)
+              if filter(amendedTree) then
                 occurences + collect(
-                  amendedSelect,
+                  amendedTree,
                   pos.withSpan(span),
                 )
               else occurences
@@ -600,6 +639,21 @@ abstract class PcCollector[T](
         Span(span.start, span.start + realName.length, point)
       else Span(point, span.end, point)
     else span
+
+  private def namePos(tree: Tree): SourcePosition =
+    tree match
+      case sel: Select => sel.sourcePos.withSpan(selectNameSpan(sel))
+      case _ => tree.sourcePos
+
+  /**
+   * Those have wrong spans and we special case for them.
+   */
+  private def isExtensionMethodCall(parent: Option[Tree], symbol: Symbol) =
+    symbol.is(Flags.ExtensionMethod) && parent.exists {
+      case _: TypeApply | _: Apply => true
+      case _ => false
+    }
+
 end PcCollector
 
 object PcCollector:

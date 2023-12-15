@@ -66,7 +66,7 @@ object Semanticdbs {
     val sdocs = loadTextDocuments(semanticdbPath)
     sdocs.documents.find(_.uri.replace("\\", "/") == reluri) match {
       case None => TextDocumentLookup.NoMatchingUri(scalaPath, sdocs)
-      case Some(sdoc) =>
+      case Some(sdoc) if scalaPath.exists =>
         val text = FileIO.slurp(scalaPath, charset)
         val md5 = MD5.compute(text)
         val sdocMd5 = sdoc.md5.toUpperCase()
@@ -81,6 +81,7 @@ object Semanticdbs {
         } else {
           TextDocumentLookup.Success(sdoc.withText(text))
         }
+      case _ => TextDocumentLookup.NotFound(scalaPath)
     }
   }
   def printTextDocument(doc: s.TextDocument): String = {

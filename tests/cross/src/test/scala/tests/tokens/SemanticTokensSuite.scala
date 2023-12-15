@@ -293,6 +293,29 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
         |""".stripMargin
   )
 
+  check(
+    "predef",
+    """
+      |object <<Main>>/*class*/ {
+      |  val <<a>>/*variable,definition,readonly*/ = <<List>>/*class*/(1,2,3)
+      |  val <<y>>/*class,definition*/ = <<List>>/*class*/
+      |  val <<z>>/*class,definition*/ = <<scala>>/*namespace*/.<<collection>>/*namespace*/.<<immutable>>/*namespace*/.<<List>>/*class*/
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "val-object",
+    """|case class <<X>>/*class*/(<<a>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
+       |object <<X>>/*class*/
+       |
+       |object <<Main>>/*class*/ {
+       |  val <<x>>/*class,definition*/ = <<X>>/*class*/
+       |  val <<y>>/*variable,definition,readonly*/ = <<X>>/*class*/(1)
+       |}
+       |""".stripMargin
+  )
+
   // When for-comprehension includes line with `=`, we get `scala.x$1`, `scala.x$2` symbols on `foo`.
   // Both `scala` and `x$#` have position on `foo`, and we don't want to highlight it as a `scala` package,
   // so we need `namespace` to have lower priority than `variable`.
@@ -340,6 +363,47 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
       |    (<<abc>>/*parameter,declaration,readonly*/: <<Int>>/*class,abstract*/, <<bde>>/*parameter,declaration,readonly*/: <<Int>>/*class,abstract*/) => <<abc>>/*parameter,readonly*/ <<+>>/*method,abstract*/ <<bde>>/*parameter,readonly*/
       |  }
       |}""".stripMargin
+  )
+
+  check(
+    "constructor",
+    """
+      |object <<Main>>/*class*/ {
+      |  class <<Abc>>/*class*/[<<T>>/*typeParameter,declaration,abstract*/](<<abc>>/*variable,declaration,readonly*/: <<T>>/*typeParameter,abstract*/)
+      |  object <<Abc>>/*class*/
+      |  val <<x>>/*variable,definition,readonly*/ = new <<Abc>>/*class*/(123)
+      |}""".stripMargin,
+    compat = Map(
+      "3" -> """
+               |object <<Main>>/*class*/ {
+               |  class <<Abc>>/*class*/[<<T>>/*typeParameter,definition,abstract*/](<<abc>>/*variable,declaration,readonly*/: <<T>>/*typeParameter,abstract*/)
+               |  object <<Abc>>/*class*/
+               |  val <<x>>/*variable,definition,readonly*/ = new <<Abc>>/*class*/(123)
+               |}""".stripMargin
+    )
+  )
+
+  check(
+    "constructor1",
+    """
+      |object <<Main>>/*class*/ {
+      |  class <<Abc>>/*class*/[<<T>>/*typeParameter,declaration,abstract*/](<<abc>>/*variable,declaration,readonly*/: <<T>>/*typeParameter,abstract*/)
+      |  object <<Abc>>/*class*/ {
+      |    def <<apply>>/*method,definition*/[<<T>>/*typeParameter,declaration,abstract*/](<<abc>>/*parameter,declaration,readonly*/: <<T>>/*typeParameter,abstract*/, <<bde>>/*parameter,declaration,readonly*/: <<T>>/*typeParameter,abstract*/) = new <<Abc>>/*class*/(<<abc>>/*parameter,readonly*/)
+      |  }
+      |  val <<x>>/*variable,definition,readonly*/ = <<Abc>>/*class*/(123, 456)
+      |}""".stripMargin,
+    compat = Map(
+      "3" ->
+        """
+          |object <<Main>>/*class*/ {
+          |  class <<Abc>>/*class*/[<<T>>/*typeParameter,definition,abstract*/](<<abc>>/*variable,declaration,readonly*/: <<T>>/*typeParameter,abstract*/)
+          |  object <<Abc>>/*class*/ {
+          |    def <<apply>>/*method,definition*/[<<T>>/*typeParameter,definition,abstract*/](<<abc>>/*parameter,declaration,readonly*/: <<T>>/*typeParameter,abstract*/, <<bde>>/*parameter,declaration,readonly*/: <<T>>/*typeParameter,abstract*/) = new <<Abc>>/*class*/(<<abc>>/*parameter,readonly*/)
+          |  }
+          |  val <<x>>/*variable,definition,readonly*/ = <<Abc>>/*class*/(123, 456)
+          |}""".stripMargin
+    )
   )
 
 }

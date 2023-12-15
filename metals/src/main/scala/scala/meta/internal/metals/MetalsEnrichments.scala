@@ -58,6 +58,8 @@ import com.google.gson.JsonObject
 import fansi.ErrorMode
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j.TextDocumentIdentifier
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
+import org.eclipse.lsp4j.jsonrpc.messages
 import org.eclipse.{lsp4j => l}
 
 /**
@@ -203,6 +205,17 @@ object MetalsEnrichments
     def asJavaObject: CompletableFuture[Object] =
       future.asJava.asInstanceOf[CompletableFuture[Object]]
 
+    def liftToLspError(implicit ec: ExecutionContext): Future[A] =
+      future.recoverWith { case NonFatal(e) =>
+        val newException = new ResponseErrorException(
+          new messages.ResponseError(
+            messages.ResponseErrorCode.InvalidRequest,
+            e.getMessage(),
+            null,
+          )
+        )
+        Future.failed(newException)
+      }
     def asJavaUnit(implicit ec: ExecutionContext): CompletableFuture[Unit] =
       future.ignoreValue.asJava
 

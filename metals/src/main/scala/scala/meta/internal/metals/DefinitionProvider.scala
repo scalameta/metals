@@ -194,8 +194,9 @@ final class DefinitionProvider(
         else true
       }
 
+      val dialect = scalaVersionSelector.dialectFromBuildTarget(path)
       val locs = workspaceSearch
-        .searchExactFrom(ident.value, path, token)
+        .searchExactFrom(ident.value, path, token, dialect)
 
       val reducedGuesses =
         if (locs.size > 1)
@@ -315,7 +316,10 @@ final class DefinitionProvider(
       queryPosition <- queryPositionOpt
       occurrence <-
         snapshot.occurrences
-          .find(_.encloses(queryPosition, true))
+          .find(occ =>
+            // empty range is set for anon classes definition
+            occ.range.exists(!_.isPoint) && occ.encloses(queryPosition, true)
+          )
           // In case of macros we might need to get the postion from the presentation compiler
           .orElse(fromMtags(source, queryPosition))
     } yield occurrence

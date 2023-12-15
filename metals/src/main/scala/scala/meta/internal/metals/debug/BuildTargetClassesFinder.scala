@@ -39,8 +39,9 @@ class BuildTargetClassesFinder(
         // We check whether there is a main in dependencies that is not reported via BSP
         case ClassNotFoundInBuildTargetException(className, target) =>
           revertToDependencies(className, Some(target))
-        case _: ClassNotFoundException =>
+        case _: NoClassFoundException =>
           revertToDependencies(className, buildTarget = None)
+        case _ => Nil
       }
       found match {
         case Nil => Failure(ex)
@@ -109,7 +110,7 @@ class BuildTargetClassesFinder(
           }
           .reverse
       if (classes.nonEmpty) Success(classes)
-      else Failure(new ClassNotFoundException(className))
+      else Failure(new NoClassFoundException(className))
     } { targetName =>
       buildTargets
         .findByDisplayName(targetName)
@@ -148,15 +149,19 @@ class BuildTargetClassesFinder(
 case class BuildTargetNotFoundException(buildTargetName: String)
     extends Exception(s"Build target not found: $buildTargetName")
 
-case class BuildTargetUndefinedException()
-    extends Exception("Debugger configuration is missing 'buildTarget' param.")
-
 case class ClassNotFoundInBuildTargetException(
     className: String,
     buildTarget: b.BuildTarget,
 ) extends Exception(
       s"Class '$className' not found in build target '${buildTarget.getDisplayName()}'"
     )
+
+case class NoClassFoundException(
+    className: String
+) extends Exception(
+      s"Class '$className' not found in any build target"
+    )
+
 case class BuildTargetNotFoundForPathException(path: AbsolutePath)
     extends Exception(
       s"No build target could be found for the path: ${path.toString()}"

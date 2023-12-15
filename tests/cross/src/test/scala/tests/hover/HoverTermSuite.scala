@@ -519,4 +519,106 @@ class HoverTermSuite extends BaseHoverSuite {
     "def this(): tailrec".hover
   )
 
+  check(
+    "function-chain",
+    """
+      |trait Consumer {
+      |  def subConsumer: Consumer
+      |  def consume(value: Int): Unit
+      |}
+      |
+      |object O {
+      |  val consumer: Consumer = ???
+      |  List(1).foreach(<<consumer.subConsumer.co@@nsume>>)
+      |}
+      |""".stripMargin,
+    """|```scala
+       |def consume(value: Int): Unit
+       |```
+       |""".stripMargin
+  )
+
+  check(
+    "function-chain2",
+    """
+      |trait Consumer {
+      |  def subConsumer: Consumer
+      |  def consume(value: Int): Unit
+      |}
+      |
+      |object O {
+      |  val consumer: Consumer = ???
+      |  List(1).foreach(<<cons@@umer>>.subConsumer.consume)
+      |}
+      |""".stripMargin,
+    """|```scala
+       |val consumer: Consumer
+       |```
+       |""".stripMargin
+  )
+
+  check(
+    "function-chain3",
+    """
+      |trait Consumer {
+      |  def subConsumer: Consumer
+      |  def consume(value: Int)(n: Int): Unit
+      |}
+      |
+      |object O {
+      |  val consumer: Consumer = ???
+      |  List(1).foreach(<<consumer.subConsumer.subConsumer.con@@sume>>)
+      |}
+      |""".stripMargin,
+    """|```scala
+       |def consume(value: Int)(n: Int): Unit
+       |```
+       |""".stripMargin
+  )
+
+  check(
+    "function-chain4",
+    """
+      |trait Consumer {
+      |  def subConsumer[T](i: T): T
+      |  def consume(value: Int)(n: Int): Unit
+      |}
+      |
+      |object O {
+      |  val consumer: Consumer = ???
+      |  List(1).foreach(<<consumer.su@@bConsumer(consumer)>>.consume(1))
+      |}
+      |""".stripMargin,
+    """|**Expression type**:
+       |```scala
+       |Consumer
+       |```
+       |**Symbol signature**:
+       |```scala
+       |def subConsumer[T](i: T): T
+       |```
+       |""".stripMargin
+  )
+
+  check(
+    "function-chain5",
+    """
+      |trait Consumer {
+      |  def subConsumer[T](i: T): T
+      |  def consume(value: Int)(n: Int): Unit
+      |}
+      |
+      |object O {
+      |  def w = {
+      |    val consumer: Consumer = ???
+      |    List(1).foreach(consumer.subConsumer(<<consu@@mer>>).consume(1))
+      |  }
+      |}
+      |""".stripMargin,
+    """|```scala
+       |val consumer: Consumer
+       |```
+       |""".stripMargin
+  )
+
 }

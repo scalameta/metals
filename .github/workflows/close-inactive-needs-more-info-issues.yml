@@ -1,0 +1,21 @@
+name: Close inactive issues that need more information
+on:
+  schedule:
+    - cron: "15 10 * * 1-5"
+
+jobs:
+  close-issues:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/stale@v5
+        with:
+          days-before-issue-close: 30
+          stale-issue-label: "needs more information"
+          close-issue-message: "This issue was closed because no new information was added for the last 30 days. If you have any relevant information, feel free to add it and reopen the issue."
+          remove-stale-when-updated: false
+          days-before-issue-stale: -1
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
+          repo-token: ${{ secrets.GITHUB_TOKEN }}

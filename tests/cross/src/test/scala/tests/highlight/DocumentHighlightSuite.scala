@@ -837,6 +837,21 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
   )
 
   check(
+    "for-comp-bind2",
+    """
+      |object Main {
+      |  val abc = for {
+      |    <<f@@oo>> <- List(1)
+      |    baz = <<foo>> + 1
+      |    a <- List(<<foo>>, 123)
+      |  } yield {
+      |    val x = <<foo>> + baz
+      |    x
+      |  }
+      |}""".stripMargin
+  )
+
+  check(
     "for-comp-map",
     """|object Main {
        |  val x = List(1).<<m@@ap>>(_ + 1)
@@ -990,6 +1005,136 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |      val <<ab@@c>> = 2
       |      someLongName + <<abc>>
       |  }
+      |}""".stripMargin
+  )
+
+  check(
+    "map-bind6",
+    """
+      |object Main {
+      |  List("test").map {
+      |        case <<string@@Name>>: String if <<stringName>>.startsWith("a") => <<stringName>> + "a"
+      |        case stringName: String if stringName.startsWith("b") => stringName + "b"
+      |        case stringName: String => stringName + "c"
+      |  }
+      |}""".stripMargin
+  )
+
+  check(
+    "extends",
+    """
+      |abstract class Base(foo: Int, bar: Int)
+      |
+      |class Test(<<foo>>: Int, bar: Int) extends Base(<<f@@oo>>, bar) {
+      |  def transform = <<foo>> + bar
+      |  val description = s"$<<foo>> & $bar"
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "extends1",
+    """
+      |abstract class Base(foo: Int, bar: Int)
+      |
+      |class Test(<<foo>>: Int, bar: Int) extends Base(<<foo>>, bar) {
+      |  def transform = <<fo@@o>> + bar
+      |  val description = s"$<<foo>> & $bar"
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "constructor",
+    """
+      |object Main {
+      |  class <<A@@bc>>[T](abc: T)
+      |  val x = new <<Abc>>(123)
+      |}""".stripMargin
+  )
+
+  check(
+    "constructor1",
+    """
+      |object Main {
+      |  case class <<Abc>>[T](abc: T)
+      |  val x = <<A@@bc>>(123)
+      |}""".stripMargin
+  )
+
+  check(
+    "constructor2",
+    """
+      |object Main {
+      |  class <<A@@bc>>[T](abc: T)
+      |  object <<Abc>>
+      |  val x = new <<Abc>>(123)
+      |}""".stripMargin
+  )
+
+  check(
+    "constructor3",
+    """
+      |object Main {
+      |  class <<Abc>>[T](abc: T)
+      |  object <<Abc>>
+      |  val x = new <<A@@bc>>(123)
+      |}""".stripMargin
+  )
+
+  check(
+    "constructor4",
+    """
+      |object Main {
+      |  class <<Abc>>[T](abc: T)
+      |  object <<Ab@@c>>
+      |  val x = new <<Abc>>(123)
+      |}""".stripMargin
+  )
+
+  check(
+    "constructor5",
+    """
+      |object Main {
+      |  class <<Abc>>[T](abc: T)
+      |  object <<Abc>> {
+      |    def apply(abc: Int, bde: Int) = new <<Abc>>(abc + bde)
+      |  }
+      |  val x = <<Ab@@c>>(123, 456)
+      |}""".stripMargin
+  )
+
+  check(
+    "constructor6".tag(IgnoreScala2),
+    """
+      |class <<Abc>>[T](a: T)
+      |object O {
+      |  def foo(a: Int) = new <<Abc>>[Int](a)
+      |  val x = <<Ab@@c>>[Int](2)
+      |}""".stripMargin
+  )
+
+  check(
+    "constructor7",
+    """
+      |object Bar {
+      |class <<Abc>>[T](a: T)
+      |}
+      |
+      |object O {
+      |  val x = new Bar.<<Ab@@c>>(2)
+      |}""".stripMargin
+  )
+
+  check(
+    "constructor8".tag(IgnoreScala2),
+    """
+      |object Bar {
+      |class <<Abc>>[T](a: T)
+      |}
+      |
+      |object O {
+      |  val x = Bar.<<Ab@@c>>[Int](2)
       |}""".stripMargin
   )
 

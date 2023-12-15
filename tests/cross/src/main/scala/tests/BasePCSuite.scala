@@ -39,6 +39,10 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
   val executorService: ScheduledExecutorService =
     Executors.newSingleThreadScheduledExecutor()
   val scalaVersion: String = BuildInfoVersions.scalaVersion
+
+  val isNightly: Boolean =
+    scalaVersion.contains("-bin-") || scalaVersion.contains("NIGHTLY")
+
   val tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("metals"))
   val dialect: Dialect =
     if (scalaVersion.startsWith("3.")) dialects.Scala3 else dialects.Scala213
@@ -264,6 +268,10 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
   }
 
   object IgnoreScala2 extends IgnoreScalaVersion(_.startsWith("2."))
+  object IgnoreScala2Nightlies
+      extends IgnoreScalaVersion(version =>
+        version.startsWith("2.") && version.contains("-bin-")
+      )
 
   object IgnoreScala212 extends IgnoreScalaVersion(_.startsWith("2.12"))
 

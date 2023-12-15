@@ -89,6 +89,7 @@ abstract class BaseStepDapSuite(
         .at("a/src/main/scala/a/ScalaMain.scala", line = 5)(StepIn)
         .at("a/src/main/java/a/JavaClass.java", line = 5)(StepOut)
         .at("a/src/main/scala/a/ScalaMain.scala", line = 6)(Continue),
+    focusFile = "a/src/main/scala/a/ScalaMain.scala",
   )
 
   assertSteps("step-into-scala-lib", withoutVirtualDocs = true)(
@@ -162,12 +163,14 @@ abstract class BaseStepDapSuite(
       steps
         .at("a/src/main/scala/a/Main.scala", line = 6)(Continue)
         .at("a/src/main/scala/a/Main.scala", line = 13)(Continue),
+    focusFile = "a/src/main/scala/a/Main.scala",
   )
 
   def assertSteps(name: TestOptions, withoutVirtualDocs: Boolean = false)(
       sources: String,
       main: String,
       instrument: StepNavigator => StepNavigator,
+      focusFile: String = "a/src/main/scala/Main.scala",
   )(implicit loc: Location): Unit = {
     test(name, withoutVirtualDocs) {
       cleanWorkspace()
@@ -176,6 +179,7 @@ abstract class BaseStepDapSuite(
 
       for {
         _ <- initialize(workspaceLayout)
+        _ <- server.didFocus(focusFile)
         navigator = instrument(StepNavigator(workspace))
         debugger <- debugMain("a", main, navigator)
         _ <- debugger.initialize

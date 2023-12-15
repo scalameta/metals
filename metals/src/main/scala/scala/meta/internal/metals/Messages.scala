@@ -585,31 +585,6 @@ object Messages {
       show = true,
     )
 
-  object DebugClassNotFound {
-
-    def invalidTargetClass(cls: String, target: String): MessageParams = {
-      new MessageParams(
-        MessageType.Error,
-        s"Class '$cls' not found in build target '$target'.",
-      )
-    }
-
-    def invalidTarget(target: String): MessageParams = {
-      new MessageParams(
-        MessageType.Error,
-        s"Target '$target' not found.",
-      )
-    }
-
-    def invalidClass(cls: String): MessageParams = {
-      new MessageParams(
-        MessageType.Error,
-        s"Class '$cls' not found.",
-      )
-    }
-
-  }
-
   object MissingScalafmtConf {
     def tryAgain(isAgain: Boolean): String =
       if (isAgain) ", try formatting again"

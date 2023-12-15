@@ -46,7 +46,7 @@ class ClasspathFuzzBench {
   @BenchmarkMode(Array(Mode.SingleShotTime))
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def run(): Seq[SymbolInformation] = {
-    symbols.search(query)
+    symbols.search(query, None)
   }
 
 }

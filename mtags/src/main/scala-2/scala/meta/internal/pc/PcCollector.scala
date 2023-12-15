@@ -61,9 +61,18 @@ abstract class PcCollector[T](
           info.member(sym.getterName),
           info.member(sym.setterName),
           info.member(sym.localName)
-        ) ++ sym.allOverriddenSymbols.toSet
+        ) ++ constructorParam(sym) ++ sym.allOverriddenSymbols.toSet
       } else Set(sym)
     all.filter(s => s != NoSymbol && !s.isError)
+  }
+
+  private def constructorParam(
+      symbol: Symbol
+  ): Set[Symbol] = {
+    if (symbol.owner.isClass) {
+      val info = symbol.owner.info.member(nme.CONSTRUCTOR).info
+      info.paramss.flatten.find(_.name == symbol.name).toSet
+    } else Set.empty
   }
 
   private lazy val namedArgCache = {
@@ -223,11 +232,22 @@ abstract class PcCollector[T](
          * For comprehensions have two owners, one for the enumerators and one for
          * yield. This is a heuristic to find that out.
          */
-        def isForComprehensionOwner(named: NameTree) =
-          soughtNames(named.name) &&
-            named.symbol.owner.isAnonymousFunction && owners.exists(owner =>
-              pos.isDefined && owner.pos.isDefined && owner.pos.point == named.symbol.owner.pos.point
+        def isForComprehensionOwner(named: NameTree) = {
+          if (named.symbol.pos.isDefined) {
+            def alternativeSymbol = sought.exists(symbol =>
+              symbol.name == named.name &&
+                symbol.pos.isDefined &&
+                symbol.pos.start == named.symbol.pos.start
             )
+            def sameOwner = {
+              val owner = named.symbol.owner
+              owner.isAnonymousFunction && owners.exists(o =>
+                pos.isDefined && o.pos.isDefined && o.pos.point == owner.pos.point
+              )
+            }
+            alternativeSymbol && sameOwner
+          } else false
+        }
 
         def soughtOrOverride(sym: Symbol) =
           sought(sym) || sym.allOverriddenSymbols.exists(sought(_))

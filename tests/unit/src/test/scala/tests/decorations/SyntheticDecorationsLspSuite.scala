@@ -494,7 +494,7 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
            |  val List[Int](l1: Int, l2: Int) = List[Int](12, 13)
            |  println("Hello!")
            |  val abc: Int = 123
-           |  val tupleBound: (String, String) @ (one: String, two: String) = ("1", "2")
+           |  val tupleBound @ (one: String, two: String) = ("1", "2")
            |  val tupleExplicit: (String, String) = Tuple2[String, String]("1", "2")
            |  val tupleExplicitApply: (String, String) = Tuple2.apply[String, String]("1", "2")
            |  var variable: Int = 123
@@ -946,6 +946,48 @@ class SyntheticDecorationsLspSuite extends BaseLspSuite("implicits") {
         """|object O {
            |  def foo[Total <: Int](implicit total: ValueOf[Total]): Int = total.value
            |  val m = foo[500](new ValueOf(...))
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("i4970") {
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies": [
+           |        "co.fs2::fs2-core:3.9.0"
+           |    ]
+           |  }
+           |}
+           |/a/src/main/scala/Main.scala
+           |import cats.effect.IO
+           |
+           |object Test {
+           |  def foo(str: fs2.Stream[IO, Int]) =
+           |    str.compile.to(Set)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "show-implicit-conversions-and-classes": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ <- server.didSave("a/src/main/scala/Main.scala")(identity)
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.syntheticDecorations,
+        """|import cats.effect.IO
+           |
+           |object Test {
+           |  def foo(str: fs2.Stream[IO, Int]) =
+           |    str.compile.to(supportsIterableFactory(Set))
            |}
            |""".stripMargin,
       )

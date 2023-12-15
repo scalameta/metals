@@ -242,6 +242,18 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
         |""".stripMargin,
   )
 
+  check(
+    "escapes",
+    s"""|<<object>>/*keyword*/ <<O>>/*class*/ {
+        |  <<val>>/*keyword*/ <<stringEscape>>/*variable,definition,readonly*/ = <<"smth >>/*string*/<<\\n>>/*regexp*/<<\\">>/*regexp*/<< rest>>/*string*/<<\\n>>/*regexp*/<<">>/*string*/
+        |  <<val>>/*keyword*/ <<multilineString>>/*variable,definition,readonly*/ = <<\"\"\"\\n\"\"\">>/*string*/
+        |  <<val>>/*keyword*/ <<charEscape>>/*variable,definition,readonly*/ = <<'>>/*string*/<<\\n>>/*regexp*/<<'>>/*string*/
+        |  <<val>>/*keyword*/ <<interpolatorEscape>>/*variable,definition,readonly*/ = <<s>>/*keyword*/<<">>/*string*/<<$$$$>>/*regexp*/<<smth >>/*string*/<<\\n>>/*regexp*/<<\\">>/*regexp*/<< rest>>/*string*/<<">>/*string*/
+        |  <<val>>/*keyword*/ <<unicode>>/*variable,definition,readonly*/ = <<s>>/*keyword*/<<\"\"\">>/*string*/<<\\u202c>>/*regexp*/<<\"\"\">>/*string*/
+        |}
+        |""".stripMargin,
+  )
+
   def check(
       name: TestOptions,
       expected: String,

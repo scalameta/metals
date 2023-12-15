@@ -9,7 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
-def localSnapshotVersion = "1.1.1-SNAPSHOT"
+def localSnapshotVersion = "1.2.1-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 
 def isScala211(v: Option[(Long, Long)]): Boolean = v.contains((2, 11))
@@ -400,7 +400,7 @@ lazy val mtags3WithPresentationCompiler = project
     mtagsSettings,
     Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags" / "src" / "main" / "scala-3-wrapper",
     moduleName := "mtags3WithPresentationCompiler",
-    scalaVersion := V.firstScala3PCVersion,
+    scalaVersion := V.wrapperMetalsVersion,
     target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3-wrapper",
     publish / skip := true,
     scalafixConfig := Some(
@@ -451,7 +451,7 @@ lazy val metals = project
       "org.jboss.xnio" % "xnio-nio" % "3.8.12.Final",
       // for persistent data like "dismissed notification"
       "org.flywaydb" % "flyway-core" % "9.22.3",
-      "com.h2database" % "h2" % "2.1.214",
+      "com.h2database" % "h2" % "2.2.224",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.2",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
@@ -490,8 +490,9 @@ lazy val metals = project
       // For reading classpaths.
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % V.coursierInterfaces,
-      // for comparing versions
-      "io.get-coursier" %% "versions" % "0.3.2",
+      // for comparing versions && fetching from sbt maven repository
+      "io.get-coursier" %% "coursier" % V.coursier,
+      "io.get-coursier" %% "coursier-sbt-maven-repository" % V.coursier,
       // for logging
       "com.outr" %% "scribe" % V.scribe,
       "com.outr" %% "scribe-file" % V.scribe,

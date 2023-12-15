@@ -95,7 +95,8 @@ final class PcSyntheticDecorationsProvider(
 
   object ImplicitConversion {
     def unapply(tree: Tree): Option[(String, Position)] = tree match {
-      case Apply(fun, args) if isImplicitConversion(fun) =>
+      case Apply(fun, args)
+          if isImplicitConversion(fun) && args.exists(_.pos.isRange) =>
         val lastArgPos = args.lastOption.fold(fun.pos)(_.pos)
         Some((fun.symbol.decodedName, lastArgPos))
       case _ => None
@@ -152,14 +153,17 @@ final class PcSyntheticDecorationsProvider(
           if hasMissingTypeAnnot(vd, tpt) &&
             !primaryConstructorParam(vd.symbol) &&
             isNotInUnapply(vd) &&
-            !isCompilerGeneratedSymbol(vd.symbol) =>
+            !isCompilerGeneratedSymbol(vd.symbol) &&
+            !isValDefBind(vd) =>
         Some(vd.symbol.tpe.widen.finalResultType, vd.namePosition)
       case dd @ DefDef(_, _, _, _, tpt, _)
           if hasMissingTypeAnnot(dd, tpt) &&
             !dd.symbol.isConstructor &&
-            !dd.symbol.isMutable =>
+            !dd.symbol.isMutable &&
+            !samePosAsOwner(dd.symbol) =>
         Some(dd.symbol.tpe.widen.finalResultType, findTpePos(dd))
-      case bb @ Bind(name, Ident(nme.WILDCARD)) if name != nme.WILDCARD =>
+      case bb @ Bind(name, Ident(nme.WILDCARD))
+          if name != nme.WILDCARD && name != nme.DEFAULT_CASE =>
         Some(bb.symbol.tpe.widen.finalResultType, bb.namePosition)
       case _ => None
     }
@@ -168,6 +172,11 @@ final class PcSyntheticDecorationsProvider(
 
     private def primaryConstructorParam(sym: Symbol) =
       sym.safeOwner.isPrimaryConstructor
+
+    private def samePosAsOwner(sym: Symbol) = {
+      val owner = sym.safeOwner
+      sym.pos == owner.pos
+    }
 
     private def findTpePos(dd: DefDef) = {
       if (dd.rhs.isEmpty) dd.pos
@@ -184,6 +193,15 @@ final class PcSyntheticDecorationsProvider(
 
     private def isNotInUnapply(vd: ValDef) =
       !vd.rhs.pos.isRange || vd.rhs.pos.start > vd.namePosition.end
+
+    /* If is left part of val definition bind:
+     * val <<t>> @ ... =
+     */
+    private def isValDefBind(vd: ValDef) = {
+      val afterDef = text.drop(vd.namePosition.end)
+      val index = indexAfterSpacesAndComments(afterDef)
+      index >= 0 && index < afterDef.size && afterDef(index) == '@'
+    }
   }
 
   private def syntheticTupleApply(sel: Select): Boolean = {

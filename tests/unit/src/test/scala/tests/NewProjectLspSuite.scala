@@ -37,7 +37,7 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
         |      organization := "com.example",
         |      scalaVersion := "2.13.8"
         |    )),
-        |    name := "scalatest-example"
+        |    name := "$name"
         |  )
         |
         |libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.16" % Test
@@ -47,14 +47,14 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
         |sbt.version=1.6.2
         |
         |
-        |/$name/src/main/scala/CubeCalculator.scala
+        |/$name/src/main/scala/com/example/CubeCalculator.scala
         |object CubeCalculator extends App {
         |  def cube(x: Int) = {
         |    x * x * x
         |  }
         |}
         |
-        |/$name/src/test/scala/CubeCalculatorTest.scala
+        |/$name/src/test/scala/com/example/CubeCalculatorTest.scala
         |class CubeCalculatorTest extends org.scalatest.funsuite.AnyFunSuite {
         |  test("CubeCalculator.cube") {
         |    assert(CubeCalculator.cube(3) === 27)

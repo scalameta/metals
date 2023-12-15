@@ -364,9 +364,7 @@ class MetalsLspService(
         folder,
         buildTargets,
         charset,
-        languageClient,
         tables,
-        statusBar,
         () => compilers,
         clientConfig,
         () => semanticDBIndexer,
@@ -872,7 +870,7 @@ class MetalsLspService(
     cancelable
   }
 
-  private def loadFingerPrints(): Unit = {
+  private def loadFingerPrints(): Future[Unit] = Future {
     // load fingerprints from last execution
     fingerprints.addAll(tables.fingerprints.load())
   }
@@ -911,11 +909,10 @@ class MetalsLspService(
   val isInitialized = new AtomicBoolean(false)
 
   def initialized(): Future[Unit] = {
-    loadFingerPrints()
     registerNiceToHaveFilePatterns()
-    tables.connect()
 
     for {
+      _ <- loadFingerPrints()
       _ <- maybeSetupScalaCli()
       _ <-
         Future
@@ -1077,11 +1074,7 @@ class MetalsLspService(
     } yield ()
 
     if (path.isDependencySource(folder)) {
-      CancelTokens { _ =>
-        // publish diagnostics
-        interactiveSemanticdbs.didFocus(path)
-        ()
-      }
+      CompletableFuture.completedFuture(())
     } else {
       buildServerPromise.future.flatMap { _ =>
         def load(): Future[Unit] = {
@@ -1136,8 +1129,6 @@ class MetalsLspService(
     buildTargets
       .inverseSources(path)
       .foreach(focusedDocumentBuildTarget.set)
-    // unpublish diagnostic for dependencies
-    interactiveSemanticdbs.didFocus(path)
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
     if (path.isDependencySource(folder)) {
@@ -1715,7 +1706,8 @@ class MetalsLspService(
   ): Future[List[SymbolInformation]] =
     indexingPromise.future.map { _ =>
       val timer = new Timer(time)
-      val result = workspaceSymbols.search(params.getQuery, token).toList
+      val result =
+        workspaceSymbols.search(params.getQuery, token, currentDialect).toList
       if (clientConfig.initialConfig.statistics.isWorkspaceSymbol) {
         scribe.info(
           s"time: found ${result.length} results for query '${params.getQuery}' in $timer"
@@ -1725,8 +1717,11 @@ class MetalsLspService(
     }
 
   def workspaceSymbol(query: String): Seq[SymbolInformation] = {
-    workspaceSymbols.search(query)
+    workspaceSymbols.search(query, currentDialect)
   }
+
+  private def currentDialect =
+    focusedDocument().flatMap(scalaVersionSelector.dialectFromBuildTarget)
 
   def indexSources(): Future[Unit] = Future {
     indexer.indexWorkspaceSources(buildTargets.allWritableData)
@@ -1910,11 +1905,10 @@ class MetalsLspService(
   def analyzeStackTrace(content: String): Option[ExecuteCommandParams] =
     stacktraceAnalyzer.analyzeCommand(content)
 
-  def debugDiscovery(params: DebugDiscoveryParams): CompletableFuture[Object] =
+  def debugDiscovery(params: DebugDiscoveryParams): Future[DebugSession] =
     debugProvider
       .debugDiscovery(params)
       .flatMap(debugProvider.asSession)
-      .asJavaObject
 
   def findBuildTargetByDisplayName(target: String): Option[b.BuildTarget] =
     buildTargets.findByDisplayName(target)
