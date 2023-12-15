@@ -109,7 +109,7 @@ abstract class BaseStepDapSuite(
         .at("a/src/main/scala/Main.scala", line = 5)(StepIn)
         .atDependency(
           server.toPathFromSymbol("scala.Predef", "scala/Predef.scala"),
-          line = 427,
+          line = if (scalaVersion.startsWith("2.13")) 427 else 405,
         )(Continue)
     },
   )
