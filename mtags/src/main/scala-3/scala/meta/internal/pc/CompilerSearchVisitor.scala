@@ -21,13 +21,15 @@ class CompilerSearchVisitor(
 
   val logger: Logger = Logger.getLogger(classOf[CompilerSearchVisitor].getName)
 
+  private def isAccessibleImplicitClass(sym: Symbol) =
+    val owner = sym.maybeOwner
+    owner != NoSymbol && owner.isClass &&
+    owner.is(Flags.Implicit) &&
+    owner.isStatic && owner.isPublic
+
   private def isAccessible(sym: Symbol): Boolean = try
-    sym != NoSymbol && sym.isPublic && sym.isStatic || {
-      val owner = sym.maybeOwner
-      owner != NoSymbol && owner.isClass &&
-      owner.is(Flags.Implicit) &&
-      owner.isStatic && owner.isPublic
-    }
+    sym != NoSymbol && sym.isPublic && sym.isStatic ||
+      isAccessibleImplicitClass(sym)
   catch
     case err: AssertionError =>
       logger.log(Level.WARNING, err.getMessage())

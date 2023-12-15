@@ -599,9 +599,14 @@ class Completions(
             qualType.widenDealias <:< sym.extensionParam.info.widenDealias
 
           def isImplicitClass(owner: Symbol) =
+
             val constructorParam =
-              owner.info.allMembers
-                .find(_.symbol.isAllOf(Flags.PrivateParamAccessor))
+              owner.info
+                .membersBasedOnFlags(
+                  Flags.ParamAccessor,
+                  Flags.EmptyFlags,
+                )
+                .headOption
                 .map(_.info)
             owner.isClass && owner.is(Flags.Implicit) &&
             constructorParam.exists(p =>

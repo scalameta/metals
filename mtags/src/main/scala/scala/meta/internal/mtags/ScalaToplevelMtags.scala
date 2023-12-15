@@ -222,7 +222,8 @@ class ScalaToplevelMtags(
           loop(
             indent,
             isAfterNewline = false,
-            if (needsToGenerateFileClass) currRegion.withTermOwner(owner) else currRegion,
+            if (needsToGenerateFileClass) currRegion.withTermOwner(owner)
+            else currRegion,
             template
           )
         // also covers extension methods because of `def` inside
