@@ -258,9 +258,9 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |  val plus = 100.plus(19)
        |  val y = 19.plus($0)
        |}
-       """
+       """.stripMargin
   )
-  
+
   checkEdit(
     "simple-edit-suffix-old",
     """|package example
