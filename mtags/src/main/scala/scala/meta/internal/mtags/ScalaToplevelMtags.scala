@@ -197,17 +197,19 @@ class ScalaToplevelMtags(
           /* Scala 3 allows for toplevel implicit classes, but generates
            * artificial package object. Scala 2 doesn't allow for it.
            */
-          val isScala3Implicit =
+          val needsToGenerateFileClass =
             dialect.allowExtensionMethods && currRegion.produceSourceToplevel &&
               expectTemplate.exists(_.isImplicit)
-          val owner = if (isScala3Implicit) {
+          val owner = if (needsToGenerateFileClass) {
             val name = s"$srcName$$package"
             val pos = newPosition
             val owner = withOwner(currRegion.owner) {
               term(name, pos, Kind.OBJECT, 0)
             }
             owner
-          } else currRegion.owner
+          } else if (expectTemplate.exists(_.isImplicit)) {
+            currRegion.termOwner
+          } else { currRegion.owner }
           emitMember(isPackageObject = false, owner)
           val template = expectTemplate match {
             case Some(expect) if expect.isCaseClassConstructor =>
@@ -217,7 +219,12 @@ class ScalaToplevelMtags(
             case _ =>
               newExpectClassTemplate(isImplicit = false)
           }
-          loop(indent, isAfterNewline = false, currRegion, template)
+          loop(
+            indent,
+            isAfterNewline = false,
+            if (needsToGenerateFileClass) currRegion.withTermOwner(owner) else currRegion,
+            template
+          )
         // also covers extension methods because of `def` inside
         case DEF
             // extension group
