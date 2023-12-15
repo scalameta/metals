@@ -51,15 +51,11 @@ object SemanticdbSymbols:
                   /**
                    * Looks like decl doesn't work for:
                    *  package a:
-                   *   implicit class A (i: Int):
+                   *   implicit class <<A>> (i: Int):
                    *      def inc = i + 1
                    */
                   else if typeSym == NoSymbol then
-                    val searched = typeName(value)
-                    owner.info.allMembers
-                      .find(_.name == searched)
-                      .map(_.symbol)
-                      .toList
+                    owner.info.member(typeName(value)).symbol :: Nil
                   else typeSym :: Nil
                   end if
                 case Descriptor.Term(value) =>

@@ -22,7 +22,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   check(
-    "simple-old-syntax",
+    "simple-old-syntax".tag(IgnoreForScala3CompilerPC),
     """|package example
        |
        |object Test:
@@ -51,7 +51,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   check(
-    "simple2-old-syntax",
+    "simple2-old-syntax".tag(IgnoreForScala3CompilerPC),
     """|package example
        |
        |object enrichments:
@@ -81,7 +81,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   check(
-    "simple-empty-old",
+    "simple-empty-old".tag(IgnoreForScala3CompilerPC),
     """|package example
        |
        |object enrichments:
@@ -113,7 +113,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   check(
-    "filter-by-type-old",
+    "filter-by-type-old".tag(IgnoreForScala3CompilerPC),
     """|package example
        |
        |object enrichments:
@@ -125,7 +125,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |def main = "foo".iden@@
        |""".stripMargin,
     """|identity: String (implicit)
-       |""".stripMargin // incr won't be available
+       |""".stripMargin // identity2 won't be available
 
   )
 
@@ -148,7 +148,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   check(
-    "filter-by-type-subtype-old",
+    "filter-by-type-subtype-old".tag(IgnoreForScala3CompilerPC),
     """|package example
        |
        |class A
@@ -188,7 +188,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "simple-edit-old",
+    "simple-edit-old".tag(IgnoreForScala3CompilerPC),
     """|package example
        |
        |object enrichments:
@@ -262,11 +262,11 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "simple-edit-suffix-old",
+    "simple-edit-suffix-old".tag(IgnoreForScala3CompilerPC),
     """|package example
        |
        |object enrichments:
-       |  implicit class A (num: Int):
+       |  implicit class A (val num: Int):
        |    def plus(other: Int): Int = num + other
        |
        |def main = 100.pl@@
@@ -276,7 +276,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |import example.enrichments.A
        |
        |object enrichments:
-       |  implicit class A (num: Int):
+       |  implicit class A (val num: Int):
        |    def plus(other: Int): Int = num + other
        |
        |def main = 100.plus($0)
@@ -300,7 +300,10 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   check(
-    "directly-in-pkg1-old".tag(IgnoreScalaVersion.forLessThan("3.2.2")),
+    "directly-in-pkg1-old"
+      .tag(
+        IgnoreScalaVersion.forLessThan("3.2.2").and(IgnoreForScala3CompilerPC)
+      ),
     """|
        |package examples:
        |  implicit class A(num: Int):
@@ -328,7 +331,10 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   check(
-    "directly-in-pkg2-old".tag(IgnoreScalaVersion.forLessThan("3.2.2")),
+    "directly-in-pkg2-old"
+      .tag(
+        IgnoreScalaVersion.forLessThan("3.2.2").and(IgnoreForScala3CompilerPC)
+      ),
     """|package examples:
        |  object X:
        |    def fooBar(num: Int) = num + 1
@@ -359,7 +365,10 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "directly-in-pkg3-old".tag(IgnoreScalaVersion.forLessThan("3.2.2")),
+    "directly-in-pkg3-old"
+      .tag(
+        IgnoreScalaVersion.forLessThan("3.2.2").and(IgnoreForScala3CompilerPC)
+      ),
     """|package examples:
        |  implicit class A (num: Int) { def incr: Int = num + 1 }
        |
@@ -394,7 +403,10 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   check(
-    "nested-pkg-old".tag(IgnoreScalaVersion.forLessThan("3.2.2")),
+    "nested-pkg-old"
+      .tag(
+        IgnoreScalaVersion.forLessThan("3.2.2").and(IgnoreForScala3CompilerPC)
+      ),
     """|package aa:  // some comment
        |  package cc: 
        |    implicit class A (num: Int):
