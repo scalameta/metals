@@ -204,6 +204,10 @@ class BspConnector(
     }
   }
 
+  /**
+   * Looks for a build tool matching the chosen build server, and sets it as the chosen build server.
+   * Only for `bloop` there will be no matching build tool and the previously chosen one remains.
+   */
   private def optSetBuildTool(buildServerName: String): Unit =
     buildTools.loadSupported
       .find {
