@@ -124,14 +124,30 @@ class Fuzzy {
     }
   }
 
-  def isExactMatch(query: String, filename: CharSequence): Boolean = {
+  def startsWith(query: String, filename: CharSequence): Boolean = {
     val sb = lastIndex(filename)
-    val sa = sb - query.length()
-    if (sa < 0) {
-      false
-    } else {
-      exactMatch(query, filename, sa, sb)
+    val st = findStartIndex(filename, sb)
+    if (sb - st < query.length()) false
+    else {
+      var idx = 0
+      while (idx < query.length) {
+        if (query.charAt(idx) != filename.charAt(st + idx)) return false
+        idx += 1
+      }
+      true
     }
+  }
+
+  def findStartIndex(symbol: CharSequence, lastIndex: Int): Int = {
+    var start = 0
+    var i = 0
+    while (i < lastIndex) {
+      if (symbol.charAt(i) == '$') {
+        start = i + 1
+      }
+      i += 1
+    }
+    if (start < lastIndex) start else 0
   }
 
   private def lastIndex(symbol: CharSequence): Int = {
@@ -360,8 +376,8 @@ class Fuzzy {
   def bloomFilterQueryStrings(
       query: String,
       includeTrigrams: Boolean = true
-  ): Iterable[CharSequence] = {
-    if (query.length < ExactSearchLimit) {
+  ): Iterable[CharSequence] =
+    if (query.isEmpty()) {
       List(ExactCharSequence(query))
     } else {
       val result = mutable.Set.empty[CharSequence]
@@ -396,7 +412,6 @@ class Fuzzy {
       }
       result
     }
-  }
 
   /**
    * Returns true if all characters in the query have a case in-sensitive matching character in the symbol, in-order

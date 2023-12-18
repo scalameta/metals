@@ -57,21 +57,27 @@ class ClasspathSearch(
   private def search(
       query: WorkspaceSymbolQuery,
       shouldVisitPackage: String => Boolean,
-      isCancelled: () => Boolean
+      isCancelled: () => Boolean,
+      isRetry: Boolean = false
   ): Iterator[Classfile] = {
-    for {
-      pkg <- packages.iterator
-      if pkg.packages.exists(shouldVisitPackage)
-      if !isCancelled()
-      if query.matches(pkg.bloom)
-      classfile <- pkg.members
-      if classfile.isClassfile
-      isMatch = {
-        if (query.isExact) Fuzzy.isExactMatch(query.query, classfile.filename)
-        else query.matches(classfile.fullname)
-      }
-      if isMatch
-    } yield classfile
+    val result =
+      for {
+        pkg <- packages.iterator
+        if pkg.packages.exists(shouldVisitPackage)
+        if !isCancelled()
+        if query.matches(pkg.bloom)
+        classfile <- pkg.members
+        if classfile.isClassfile
+        isMatch = {
+          if (query.isExact && !isRetry)
+            Fuzzy.startsWith(query.query, classfile.filename)
+          else query.matches(classfile.fullname)
+        }
+        if isMatch
+      } yield classfile
+    if (result.isEmpty && query.isExact && !isRetry && !isCancelled())
+      search(query, shouldVisitPackage, isCancelled, isRetry = true)
+    else result
   }
 }
 

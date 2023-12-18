@@ -139,8 +139,4 @@ class FuzzySuite extends BaseSuite {
     // reasonable despite pathological input.
     assert(bloom.bloom.expectedFpp() < 0.02)
   }
-
-  test("shortClassName") {
-    assert(!Fuzzy.isExactMatch("AA", "A.class"))
-  }
 }

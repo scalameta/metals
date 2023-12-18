@@ -380,4 +380,51 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       )
     } yield ()
   }
+
+  test("scope") {
+      cleanWorkspace()
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/B.scala
+          |package b
+          |case class Query()
+          |
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |
+          |object A {
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ <- server.didChange("a/src/main/scala/a/A.scala")(_ =>
+        """|package a
+           |
+           |object A {
+           |  val k = Qu@@"
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
+      _ <- assertCompletion(
+        "  val k = Qu@@",
+        """|QuadCurve2D - java.awt.geom
+           |QualifiedNameable - javax.lang.model.element
+           |Quasiquotes - scala.reflect.api
+           |Query - b
+           |Query - javax.management
+           |QueryEval - javax.management
+           |QueryExp - javax.management
+           |Queue - java.util
+           |Queue - scala.collection.immutable
+           |Queue - scala.collection.mutable
+           |QueuedJobCount - javax.print.attribute.standard
+           |""".stripMargin,
+      )
+    } yield ()
+  }
 }
