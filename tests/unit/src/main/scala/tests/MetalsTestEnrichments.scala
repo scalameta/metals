@@ -108,6 +108,7 @@ object MetalsTestEnrichments {
       val gson = new Gson
       val data = gson.toJsonTree(scalaTarget)
       buildTarget.setData(data)
+      buildTarget.setDataKind("scala")
       val result = new WorkspaceBuildTargetsResult(List(buildTarget).asJava)
       val data0 = new m.internal.metals.TargetData
       data0.addWorkspaceBuildTargets(result)

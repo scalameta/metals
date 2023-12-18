@@ -1,8 +1,11 @@
 package tests
 
+import java.nio.file.Files
+
 import scala.meta.dialects
-import scala.meta.inputs.Input
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
+import scala.meta.io.AbsolutePath
 
 import munit._
 
@@ -80,14 +83,16 @@ class JavaToplevelSuite extends BaseSuite {
       expected: String,
   )(implicit loc: Location) {
     test(name) {
-      val input = Input.VirtualFile("Test.java", code)
+      val input = AbsolutePath(Files.createTempFile("mtags", ".java"))
+      input.writeText(code)
       val obtained =
-        Mtags.toplevels(input, dialects.Scala213)
+        Mtags.topLevelSymbols(input, dialects.Scala213)
 
       assertNoDiff(
         obtained.sorted.mkString("\n"),
         expected,
       )
+      input.delete()
     }
   }
 }

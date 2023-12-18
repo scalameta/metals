@@ -7,6 +7,8 @@ object V {
   val scala213 = "2.13.12"
   val scala3 = "3.3.1"
   val firstScala3PCVersion = "3.3.2-RC1-bin-20230721-492f777-NIGHTLY"
+  val wrapperMetalsVersion = "3.4.0-RC1-bin-20231127-41e7d95-NIGHTLY"
+
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
   val scala3RC: Option[String] = None
   val sbtScala = "2.12.17"
@@ -14,35 +16,35 @@ object V {
   val ammonite213Version = "2.13.12"
   val ammonite3Version = "3.3.1"
 
-  val ammonite = "3.0.0-M0-56-1bcbe7f6"
+  val ammonite = "3.0.0-M0-60-89836cd8"
   val betterMonadicFor = "0.3.1"
-  val bloop = "1.5.11"
+  val bloop = "1.5.13"
   val bloopConfig = "1.5.5"
   val bsp = "2.1.0-M7"
-  val coursier = "2.1.7"
+  val coursier = "2.1.8"
   val coursierInterfaces =
     "1.0.19" // changing coursier interfaces version may be not binary compatible.
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
-  val debugAdapter = "3.1.4"
+  val debugAdapter = "3.1.5"
   val genyVersion = "1.0.0"
   val gradleBloop = "1.6.2"
   val java8Compat = "1.0.2"
-  val javaSemanticdb = "0.9.6"
-  val jsoup = "1.16.2"
+  val javaSemanticdb = "0.9.8"
+  val jsoup = "1.17.1"
   val kindProjector = "0.13.2"
   val lsp4jV = "0.20.1"
   val mavenBloop = "2.0.0"
-  val mill = "0.11.5"
-  val mdoc = "2.4.0"
+  val mill = "0.11.6"
+  val mdoc = "2.5.1"
   val munit = "1.0.0-M10"
   val pprint = "0.7.3"
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
-  val scalaCli = "1.0.4"
+  val scalaCli = "1.1.0"
   val scalafix = "0.11.1"
   val scalafmt = "3.7.15"
-  val scalameta = "4.8.12"
-  val scribe = "3.12.2"
+  val scalameta = "4.8.14"
+  val scribe = "3.13.0"
   val qdox = "2.0.3"
 
   val guava = "com.google.guava" % "guava" % "32.1.3-jre"

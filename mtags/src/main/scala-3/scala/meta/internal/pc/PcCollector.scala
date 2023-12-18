@@ -6,6 +6,8 @@ import scala.meta as m
 
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.pc.MetalsInteractive.ExtensionMethodCall
+import scala.meta.internal.pc.MetalsInteractive.ExtensionMethodCallSymbol
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.VirtualFileParams
 
@@ -37,6 +39,7 @@ abstract class PcCollector[T](
   val uri = params.uri()
   val filePath = Paths.get(uri)
   val sourceText = params.text
+  val text = sourceText.toCharArray()
   val source =
     SourceFile.virtual(filePath.toString, sourceText)
   driver.run(uri, source)
@@ -70,46 +73,7 @@ abstract class PcCollector[T](
     case _ => rawPath
   def collect(
       parent: Option[Tree]
-  )(tree: Tree, pos: SourcePosition, symbol: Option[Symbol]): T
-
-  /**
-   * @return (adjusted position, should strip backticks)
-   */
-  def adjust(
-      pos1: SourcePosition,
-      forRename: Boolean = false,
-  ): (SourcePosition, Boolean) =
-    if !pos1.span.isCorrect then (pos1, false)
-    else
-      val pos0 =
-        val span = pos1.span
-        if span.exists && span.point > span.end then
-          pos1.withSpan(
-            span
-              .withStart(span.point)
-              .withEnd(span.point + (span.end - span.start))
-          )
-        else pos1
-
-      val pos =
-        if pos0.end > 0 && sourceText(pos0.end - 1) == ',' then
-          pos0.withEnd(pos0.end - 1)
-        else pos0
-      val isBackticked =
-        sourceText(pos.start) == '`' &&
-          pos.end > 0 &&
-          sourceText(pos.end - 1) == '`'
-      // when the old name contains backticks, the position is incorrect
-      val isOldNameBackticked = sourceText(pos.start) != '`' &&
-        pos.start > 0 &&
-        sourceText(pos.start - 1) == '`' &&
-        sourceText(pos.end) == '`'
-      if isBackticked && forRename then
-        (pos.withStart(pos.start + 1).withEnd(pos.end - 1), true)
-      else if isOldNameBackticked then
-        (pos.withStart(pos.start - 1).withEnd(pos.end + 1), false)
-      else (pos, false)
-  end adjust
+  )(tree: Tree | EndMarker, pos: SourcePosition, symbol: Option[Symbol]): T
 
   def symbolAlternatives(sym: Symbol) =
     def member(parent: Symbol) = parent.info.member(sym.name).symbol
@@ -186,6 +150,23 @@ abstract class PcCollector[T](
           if id.symbol
             .is(Flags.Param) && id.symbol.owner.is(Flags.ExtensionMethod) =>
         Some(findAllExtensionParamSymbols(id.sourcePos, id.name, id.symbol))
+      /**
+       * Workaround for missing symbol in:
+       * class A[T](a: T)
+       * val x = new <<A>>(1)
+       */
+      case t :: (n: New) :: (sel: Select) :: _
+          if t.symbol == NoSymbol && sel.symbol.isConstructor =>
+        Some(symbolAlternatives(sel.symbol.owner), namePos(t))
+      /**
+       * Workaround for missing symbol in:
+       * class A[T](a: T)
+       * val x = <<A>>[Int](1)
+       */
+      case (sel @ Select(New(t), _)) :: (_: TypeApply) :: _
+          if sel.symbol.isConstructor =>
+        Some(symbolAlternatives(sel.symbol.owner), namePos(t))
+
       /* simple identifier:
        * val a = val@@ue + value
        */
@@ -271,10 +252,10 @@ abstract class PcCollector[T](
        *
        * val a = MyIntOut(1).<<un@@even>>
        */
-      case (a @ Apply(sel: Select, _)) :: _
-          if sel.span.isZeroExtent && sel.symbol.is(Flags.ExtensionMethod) =>
-        val span = a.span.withStart(a.span.point)
-        Some(symbolAlternatives(sel.symbol), pos.withSpan(span))
+      case ExtensionMethodCall(sym, app) :: _
+          if app.span.withStart(app.span.point).contains(pos.span) =>
+        val span = app.span.withStart(app.span.point)
+        Some(symbolAlternatives(sym), pos.withSpan(span))
       case _ => None
 
     sought match
@@ -435,7 +416,7 @@ abstract class PcCollector[T](
         parent: Option[Tree],
     ): Set[T] =
       def collect(
-          tree: Tree,
+          tree: Tree | EndMarker,
           pos: SourcePosition,
           symbol: Option[Symbol] = None,
       ) =
@@ -445,7 +426,11 @@ abstract class PcCollector[T](
          * All indentifiers such as:
          * val a = <<b>>
          */
-        case ident: Ident if ident.span.isCorrect && filter(ident) =>
+        case ident: Ident
+            if ident.span.isCorrect && filter(ident) && !isExtensionMethodCall(
+              parent,
+              ident.symbol,
+            ) =>
           // symbols will differ for params in different ext methods, but source pos will be the same
           if soughtFilter(_.sourcePos == ident.symbol.sourcePos)
           then
@@ -454,13 +439,30 @@ abstract class PcCollector[T](
               ident.sourcePos,
             )
           else occurences
+
+        /**
+         * Workaround for missing symbol in:
+         * class A[T](a: T)
+         * val x = new <<A>>(1)
+         */
+        case sel @ Select(New(t), _)
+            if sel.span.isCorrect &&
+              sel.symbol.isConstructor &&
+              t.symbol == NoSymbol =>
+          if soughtFilter(_ == sel.symbol.owner) then
+            occurences + collect(
+              sel,
+              namePos(t),
+              Some(sel.symbol.owner),
+            )
+          else occurences
         /**
          * All select statements such as:
          * val a = hello.<<b>>
          */
         case sel: Select
             if sel.span.isCorrect && filter(sel) &&
-              !isForComprehensionMethod(sel) =>
+              !sel.isForComprehensionMethod =>
           occurences + collect(
             sel,
             pos.withSpan(selectNameSpan(sel)),
@@ -472,15 +474,14 @@ abstract class PcCollector[T](
          *
          * val a = MyIntOut(1).<<un@@even>>
          */
-        case sel: Select
-            if sel.span.isZeroExtent && sel.symbol.is(Flags.ExtensionMethod) =>
+        case ExtensionMethodCallSymbol(tree) =>
           parent match
             case Some(a: Apply) =>
               val span = a.span.withStart(a.span.point)
-              val amendedSelect = sel.withSpan(span)
-              if filter(amendedSelect) then
+              val amendedTree = tree.withSpan(span)
+              if filter(amendedTree) then
                 occurences + collect(
-                  amendedSelect,
+                  amendedTree,
                   pos.withSpan(span),
                 )
               else occurences
@@ -493,6 +494,12 @@ abstract class PcCollector[T](
         case df: NamedDefTree
             if df.span.isCorrect && df.nameSpan.isCorrect &&
               filter(df) && !isGeneratedGiven(df) =>
+          def collectEndMarker =
+            EndMarker.getPosition(df, pos, sourceText).map {
+              collect(EndMarker(df.symbol), _)
+            }
+          end collectEndMarker
+
           val annots = collectTrees(df.mods.annotations)
           val traverser =
             new PcCollector.DeepFolderWithParent[Set[T]](
@@ -502,7 +509,7 @@ abstract class PcCollector[T](
             occurences + collect(
               df,
               pos.withSpan(df.nameSpan),
-            )
+            ) ++ collectEndMarker
           ) { case (set, tree) =>
             traverser(set, tree)
           }
@@ -633,16 +640,20 @@ abstract class PcCollector[T](
       else Span(point, span.end, point)
     else span
 
-  private val forCompMethods =
-    Set(nme.map, nme.flatMap, nme.withFilter, nme.foreach)
+  private def namePos(tree: Tree): SourcePosition =
+    tree match
+      case sel: Select => sel.sourcePos.withSpan(selectNameSpan(sel))
+      case _ => tree.sourcePos
 
-  // We don't want to collect synthethic `map`, `withFilter`, `foreach` and `flatMap` in for-comprenhensions
-  private def isForComprehensionMethod(sel: Select): Boolean =
-    val syntheticName = sel.name match
-      case name: TermName => forCompMethods(name)
+  /**
+   * Those have wrong spans and we special case for them.
+   */
+  private def isExtensionMethodCall(parent: Option[Tree], symbol: Symbol) =
+    symbol.is(Flags.ExtensionMethod) && parent.exists {
+      case _: TypeApply | _: Apply => true
       case _ => false
-    val wrongSpan = sel.qualifier.span.contains(sel.nameSpan)
-    syntheticName && wrongSpan
+    }
+
 end PcCollector
 
 object PcCollector:
@@ -667,3 +678,34 @@ case class ExtensionParamOccurence(
     sym: Symbol,
     methods: List[untpd.Tree],
 )
+
+case class EndMarker(symbol: Symbol)
+
+object EndMarker:
+  /**
+   * Matches end marker line from start to the name's beginning.
+   * E.g.
+   *    end /* some comment */
+   */
+  private val endMarkerRegex = """.*end(/\*.*\*/|\s)+""".r
+  def getPosition(df: NamedDefTree, pos: SourcePosition, sourceText: String)(
+      implicit ct: Context
+  ): Option[SourcePosition] =
+    val name = df.name.toString()
+    val endMarkerLine =
+      sourceText.slice(df.span.start, df.span.end).split('\n').last
+    val index = endMarkerLine.length() - name.length()
+    if index < 0 then None
+    else
+      val (possiblyEndMarker, possiblyEndMarkerName) =
+        endMarkerLine.splitAt(index)
+      Option.when(
+        possiblyEndMarkerName == name &&
+          endMarkerRegex.matches(possiblyEndMarker)
+      )(
+        pos
+          .withStart(df.span.end - name.length())
+          .withEnd(df.span.end)
+      )
+  end getPosition
+end EndMarker

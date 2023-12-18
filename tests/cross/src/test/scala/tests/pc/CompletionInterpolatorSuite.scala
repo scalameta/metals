@@ -17,7 +17,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  def message = s"Hello $myName$0, you are welcome"
        |}
        |""".stripMargin,
-    filterText = "myName",
+    filterText = "myName"
   )
 
   checkEdit(
@@ -32,7 +32,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  def message = s"$myName$0"
        |}
        |""".stripMargin,
-    filterText = "myName",
+    filterText = "myName"
   )
 
   checkEdit(
@@ -47,7 +47,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  def message = s"${myName$0}me"
        |}
        |""".stripMargin,
-    filterText = "myName",
+    filterText = "myName"
   )
 
   checkEdit(
@@ -62,7 +62,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  def message = s'''${myName$0}me'''
        |}
        |""".stripMargin.triplequoted,
-    filterText = "myName",
+    filterText = "myName"
   )
 
   checkEdit(
@@ -81,7 +81,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |    |'''.stripMargin
        |}
        |""".stripMargin.triplequoted,
-    filterText = "myName".triplequoted,
+    filterText = "myName".triplequoted
   )
 
   checkEdit(
@@ -96,7 +96,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  s"$myName$0 $$"
        |}
        |""".stripMargin.triplequoted,
-    filterText = "myName",
+    filterText = "myName"
   )
 
   checkEdit(
@@ -111,7 +111,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  s"$myName $$"
        |}
        |""".stripMargin.triplequoted,
-    filterText = "myName",
+    filterText = "myName"
   )
 
   checkEdit(
@@ -125,7 +125,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  val myName = ""
        |  s"Say $$myName is $myName$0"
        |}
-       |""".stripMargin.triplequoted,
+       |""".stripMargin.triplequoted
   )
 
   check(
@@ -136,7 +136,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|myName: String
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -158,7 +158,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |    }
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -167,7 +167,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  "$1@@"
        |}
        |""".stripMargin,
-    "",
+    ""
   )
 
   check(
@@ -176,7 +176,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  "$ @@"
        |}
        |""".stripMargin,
-    "",
+    ""
   )
 
   check(
@@ -185,7 +185,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  "$-@@"
        |}
        |""".stripMargin,
-    "",
+    ""
   )
 
   check(
@@ -194,7 +194,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  "$-@@"
        |}
        |""".stripMargin,
-    "",
+    ""
   )
 
   check(
@@ -203,7 +203,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  "$hello-@@"
        |}
        |""".stripMargin,
-    "",
+    ""
   )
 
   check(
@@ -212,7 +212,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  "$-hello@@"
        |}
        |""".stripMargin,
-    "",
+    ""
   )
 
   check(
@@ -221,7 +221,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  "$he-llo@@"
        |}
        |""".stripMargin,
-    "",
+    ""
   )
 
   check(
@@ -231,7 +231,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  "$he11o@@"
        |}
        |""".stripMargin,
-    "he11o: String",
+    "he11o: String"
   )
 
   checkEdit(
@@ -245,7 +245,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  val myName = "name"
        |  s"$$$myName$0"
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -257,7 +257,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
     """|object Main {
        |  s"${identity($0)}"
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -269,7 +269,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
     """|object Main {
        |  s"${toString()$0}"
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -283,7 +283,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  def empty: Boolean = true
        |  s"$empty$0"
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -297,7 +297,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  val myName = ""
        |  s"${myName$0}"
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -313,7 +313,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
     """|b: Int
        |a: String
        |""".stripMargin,
-    topLines = Some(2),
+    topLines = Some(2)
   )
 
   check(
@@ -329,7 +329,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
     """|b: Int
        |a: String
        |""".stripMargin,
-    topLines = Some(2),
+    topLines = Some(2)
   )
 
   checkEdit(
@@ -343,14 +343,14 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  def member = 42
        |  s"Hello ${Main.member$0}!"
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
     "member-label".tag(
       IgnoreScalaVersion.forRangeUntil(
         "3.2.0-RC1",
-        "3.2.1-RC1",
+        "3.2.1-RC1"
       )
     ),
     """|object Main {
@@ -359,20 +359,20 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|empty[A]: List[A]
-       |equals(x$1: Object): Boolean
+       |equals(x$1: Any): Boolean
        |""".stripMargin,
     compat = Map(
-      "2.12" ->
+      "2.13" ->
         """|empty[A]: List[A]
-           |equals(x$1: Any): Boolean
+           |equals(x$1: Object): Boolean
            |""".stripMargin,
       "3" ->
         """|empty[A]: List[A]
            |equals(x$0: Any): Boolean
-           |""".stripMargin,
+           |""".stripMargin
     ),
     topLines = Some(6),
-    includeDetail = false,
+    includeDetail = false
   )
 
   checkEdit(
@@ -386,7 +386,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  def method(arg: Int) = 42
        |  s"Hello ${Main.method($0)}!"
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -394,7 +394,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
       .tag(
         IgnoreScalaVersion.forRangeUntil(
           "3.2.0-RC1",
-          "3.2.1-RC1",
+          "3.2.1-RC1"
         )
       ),
     """|object Main {
@@ -404,7 +404,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
     """|object Main {
        |  s"Hello ${Main.toString()$0}!"
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -418,7 +418,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
     """|a: String
        |b: Int
        |""".stripMargin,
-    topLines = Some(2),
+    topLines = Some(2)
   )
 
   checkEdit(
@@ -432,7 +432,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  val `type` = ""
        |  s"Hello ${Main.`type`$0}!"
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -448,7 +448,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  val dfg = ""
        |  s"Hello ${abc.toString()$0} from ${dfg.toString()}!"
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -464,7 +464,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  val dfg = ""
        |  s"Hello $dfg ${abc.toString()$0} from ${dfg.toString()}!"
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -478,7 +478,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
     """|a: String
        |b: Int
        |""".stripMargin,
-    topLines = Some(2),
+    topLines = Some(2)
   )
 
   check(
@@ -492,7 +492,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
     """|a: String
        |b: Int
        |""".stripMargin,
-    topLines = Some(2),
+    topLines = Some(2)
   )
 
   check(
@@ -509,7 +509,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
     """|a: String
        |b: Int
        |""".stripMargin,
-    topLines = Some(2),
+    topLines = Some(2)
   )
 
   check(
@@ -523,7 +523,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin.triplequoted,
     """|member: String
        |""".stripMargin,
-    filter = s => s.contains("member"),
+    filter = s => s.contains("member")
   )
 
   checkEditLine(
@@ -534,7 +534,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """"Hello ${hell@@}"""".stripMargin,
-    """s"Hello ${hello$0}"""".stripMargin,
+    """s"Hello ${hello$0}"""".stripMargin
   )
 
   checkEditLine(
@@ -545,7 +545,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """"Hello ${hell@@o}"""".stripMargin,
-    """s"Hello ${hello$0}o}"""".stripMargin,
+    """s"Hello ${hello$0}o}"""".stripMargin
   )
 
   // See https://github.com/scalameta/metals/issues/608
@@ -561,7 +561,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """s"Hello $hello@@"""".stripMargin,
     """s"Hello $helloMethod"""".stripMargin,
-    filter = _.contains("a: Int"),
+    filter = _.contains("a: Int")
   )
 
   checkEditLine(
@@ -573,7 +573,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """s"Hello $@@"""".stripMargin,
     """s"Hello $hello"""".stripMargin,
-    filter = _.contains("hello"),
+    filter = _.contains("hello")
   )
 
   checkEditLine(
@@ -585,7 +585,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """s"Hello ${@@"""".stripMargin,
     """s"Hello ${hello"""".stripMargin,
-    filter = _.contains("hello"),
+    filter = _.contains("hello")
   )
 
   checkEditLine(
@@ -597,7 +597,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """s"Hello ${@@}"""".stripMargin,
     """s"Hello ${hello}"""".stripMargin,
-    filter = _.contains("hello"),
+    filter = _.contains("hello")
   )
 
   checkEdit(
@@ -612,7 +612,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  s"Hello ${`type`$0}"
        |}
        |""".stripMargin,
-    filterText = "type",
+    filterText = "type"
   )
 
   checkEdit(
@@ -627,7 +627,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |  s"Hello ${`hello world`$0}"
        |}
        |""".stripMargin,
-    filterText = "hello world",
+    filterText = "hello world"
   )
 
   checkEdit(
@@ -640,7 +640,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |object Main {
        |  s"this is an interesting $Paths$0"
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -668,14 +668,14 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
            |  s"this is an interesting {java.nio.file.Paths}"
            |}
            |""".stripMargin
-    ),
+    )
   )
 
   checkEdit(
     "auto-imports-prefix-with-interpolator".tag(
       IgnoreScalaVersion.forRangeUntil(
         "3.2.0-RC1",
-        "3.2.1-RC1",
+        "3.2.1-RC1"
       )
     ),
     """|
@@ -701,7 +701,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
            |  s"this is an interesting ${java.nio.file.Paths}"
            |}
            |""".stripMargin
-    ),
+    )
   )
 
   checkEdit(
@@ -725,7 +725,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |def main = s" ${aaa.incr$0}"
        |""".stripMargin,
     // simulate issues with VS Code
-    filterText = "aaa.incr",
+    filterText = "aaa.incr"
   )
 
   checkEdit(
@@ -750,7 +750,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |def aaa = 123
        |def main = s"  ${aaa.plus($0)}"
        |""".stripMargin,
-    filterText = "aaa.plus",
+    filterText = "aaa.plus"
   )
 
   check(
@@ -768,7 +768,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|identity: String (extension)
        |""".stripMargin, // incr won't be available
-    filter = _.contains("(extension)"),
+    filter = _.contains("(extension)")
   )
 
   checkEdit(
@@ -780,7 +780,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |object Main {
        |  val a = s"${ListBuffer($0)}""
        |}""".stripMargin,
-    filter = _.contains("[A]"),
+    filter = _.contains("[A]")
   )
 
 }

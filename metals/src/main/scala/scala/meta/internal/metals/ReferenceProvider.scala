@@ -145,6 +145,11 @@ final class ReferenceProvider(
             occerencesForRenamedImport(source, params, doc)
           else posOccurrences
         }
+        if (results.isEmpty) {
+          scribe.debug(
+            s"No symbol found at ${params.getPosition()} for $source"
+          )
+        }
         results.map { result =>
           val occurrence = result.occurrence.get
           val distance = result.distance
@@ -164,6 +169,7 @@ final class ReferenceProvider(
           ReferencesResult(occurrence.symbol, locations)
         }
       case None =>
+        scribe.debug(s"No semanticdb for $source")
         // NOTE(olafur): we block here instead of returning a Future because it
         // requires a significant refactoring to make the reference provider and
         // its dependencies (including rename provider) asynchronous. The remote

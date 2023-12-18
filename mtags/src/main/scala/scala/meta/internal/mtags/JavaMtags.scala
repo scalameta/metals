@@ -182,15 +182,18 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)
         case _ => 0
       }
       val pos = toRangePosition(line, name)
-      val kind: Kind = m match {
-        case _: JavaMethod => Kind.METHOD
-        case _: JavaField => Kind.FIELD
+      val (kind: Kind, properties: Int) = m match {
+        case _: JavaMethod => (Kind.METHOD, 0)
+        case field: JavaField if field.isEnumConstant() =>
+          (Kind.FIELD, Property.ENUM.value)
+        case _: JavaField =>
+          (Kind.FIELD, 0)
         case c: JavaClass =>
-          if (c.isInterface) Kind.INTERFACE
-          else Kind.CLASS
-        case _ => Kind.UNKNOWN_KIND
+          if (c.isInterface) (Kind.INTERFACE, 0)
+          else (Kind.CLASS, 0)
+        case _ => (Kind.UNKNOWN_KIND, 0)
       }
-      term(name, pos, kind, 0)
+      term(name, pos, kind, properties)
     }
 
   implicit class XtensionJavaModel(m: JavaModel) {

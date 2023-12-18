@@ -20,7 +20,7 @@ class CompletionScala3Suite extends BaseCompletionSuite {
        |other = otxxx : Int
        |otxxx: Int
        |""".stripMargin,
-    topLines = Some(3),
+    topLines = Some(3)
   )
 
   check(
@@ -34,7 +34,7 @@ class CompletionScala3Suite extends BaseCompletionSuite {
        |""".stripMargin,
     """|Testing a
        |Testing(): Testing
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -48,7 +48,7 @@ class CompletionScala3Suite extends BaseCompletionSuite {
        |""".stripMargin,
     """|Testing a
        |Testing(a: Int, b: String): Testing
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   // https://github.com/scalameta/metals/issues/2810
@@ -69,7 +69,7 @@ class CompletionScala3Suite extends BaseCompletionSuite {
        |""".stripMargin,
     """|map[B](f: A => B): Foo[B]
        |""".stripMargin,
-    topLines = Some(1),
+    topLines = Some(1)
   )
 
   checkEdit(
@@ -86,6 +86,6 @@ class CompletionScala3Suite extends BaseCompletionSuite {
        |object Bar extends Foo:
        |  def foo: String = ${0:???}
        |""".stripMargin,
-    assertSingleItem = false,
+    assertSingleItem = false
   )
 }

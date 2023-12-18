@@ -58,6 +58,8 @@ import com.google.gson.JsonObject
 import fansi.ErrorMode
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j.TextDocumentIdentifier
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
+import org.eclipse.lsp4j.jsonrpc.messages
 import org.eclipse.{lsp4j => l}
 
 /**
@@ -88,6 +90,8 @@ object MetalsEnrichments
 
     def isSbtBuild: Boolean = dataKind == "sbt"
 
+    def isScalaBuild: Boolean = dataKind == "scala"
+
     def baseDirectory: String =
       Option(buildTarget.getBaseDirectory()).getOrElse("")
 
@@ -96,7 +100,11 @@ object MetalsEnrichments
     def asScalaBuildTarget: Option[b.ScalaBuildTarget] = {
       asSbtBuildTarget
         .map(_.getScalaBuildTarget)
-        .orElse(decodeJson(buildTarget.getData, classOf[b.ScalaBuildTarget]))
+        .orElse(
+          if (isScalaBuild)
+            decodeJson(buildTarget.getData, classOf[b.ScalaBuildTarget])
+          else None
+        )
     }
 
     def asSbtBuildTarget: Option[b.SbtBuildTarget] = {
@@ -104,6 +112,22 @@ object MetalsEnrichments
         decodeJson(buildTarget.getData, classOf[b.SbtBuildTarget])
       else
         None
+    }
+
+    def getName(): String = {
+      if (buildTarget.getDisplayName == null) {
+        val name =
+          if (buildTarget.getBaseDirectory() != null)
+            buildTarget
+              .getId()
+              .getUri()
+              .stripPrefix(buildTarget.getBaseDirectory())
+          else
+            buildTarget.getId().getUri()
+
+        name.replaceAll("[^a-zA-Z0-9]+", "-")
+      } else
+        buildTarget.getDisplayName
     }
   }
 
@@ -181,6 +205,17 @@ object MetalsEnrichments
     def asJavaObject: CompletableFuture[Object] =
       future.asJava.asInstanceOf[CompletableFuture[Object]]
 
+    def liftToLspError(implicit ec: ExecutionContext): Future[A] =
+      future.recoverWith { case NonFatal(e) =>
+        val newException = new ResponseErrorException(
+          new messages.ResponseError(
+            messages.ResponseErrorCode.InvalidRequest,
+            e.getMessage(),
+            null,
+          )
+        )
+        Future.failed(newException)
+      }
     def asJavaUnit(implicit ec: ExecutionContext): CompletableFuture[Unit] =
       future.ignoreValue.asJava
 
@@ -368,6 +403,12 @@ object MetalsEnrichments
         workspace.resolve(Directories.tmp).toNIO
       )
 
+    def isSrcZipInReadonlyDirectory(workspace: AbsolutePath): Boolean = {
+      path.toNIO.startsWith(
+        workspace.resolve(Directories.dependencies.resolve("src.zip")).toNIO
+      )
+    }
+    
     def toRelativeInside(prefix: AbsolutePath): Option[RelativePath] = {
       // windows throws an exception on toRelative when on different drives
       if (path.toNIO.getRoot() != prefix.toNIO.getRoot())
@@ -1017,8 +1058,12 @@ object MetalsEnrichments
         .map(_.stripPrefix(flag))
     }
 
-    def classpath: List[String] =
-      item.getClasspath.asScala.toList
+    def classpath: List[String] = {
+      val outputClasses = item.getClassDirectory
+      val classes = item.getClasspath.asScala.toList
+      if (classes.contains(outputClasses)) classes
+      else outputClasses :: classes
+    }
 
     def jarClasspath: List[AbsolutePath] =
       classpath

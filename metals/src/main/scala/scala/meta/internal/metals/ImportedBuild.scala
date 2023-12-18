@@ -81,8 +81,13 @@ object ImportedBuild {
         new JavacOptionsParams(ids)
       )
       sources <- conn.buildTargetSources(new SourcesParams(ids))
-      dependencySources <- conn.buildTargetDependencySources(
+      bspProvidedDependencySources <- conn.buildTargetDependencySources(
         new DependencySourcesParams(ids)
+      )
+      dependencySources <- resolveMissingDependencySources(
+        bspProvidedDependencySources,
+        javacOptions,
+        scalacOptions,
       )
       wrappedSources <- conn.buildTargetWrappedSources(
         new WrappedSourcesParams(ids)
@@ -97,6 +102,39 @@ object ImportedBuild {
         wrappedSources,
       )
     }
+
+  private def resolveMissingDependencySources(
+      dependencySources: DependencySourcesResult,
+      javacOptions: JavacOptionsResult,
+      scalacOptions: ScalacOptionsResult,
+  )(implicit ec: ExecutionContext): Future[DependencySourcesResult] = {
+    val dependencySourcesItems = dependencySources.getItems().asScala.toList
+    val idsLookup = dependencySourcesItems.map(_.getTarget()).toSet
+    val classpaths = javacOptions
+      .getItems()
+      .asScala
+      .map(item => (item.getTarget(), item.getClasspath())) ++
+      scalacOptions
+        .getItems()
+        .asScala
+        .map(item => (item.getTarget(), item.getClasspath()))
+
+    val newItemsFuture =
+      Future.sequence {
+        classpaths.collect {
+          case (id, classpath) if !idsLookup(id) =>
+            for {
+              items <- JarSourcesProvider.fetchSources(
+                classpath.asScala.filter(_.endsWith(".jar")).toSeq
+              )
+            } yield new DependencySourcesItem(id, items.asJava)
+        }
+      }
+
+    newItemsFuture.map { newItems =>
+      new DependencySourcesResult((dependencySourcesItems ++ newItems).asJava)
+    }
+  }
 
   def fromList(data: Seq[ImportedBuild]): ImportedBuild =
     if (data.isEmpty) empty

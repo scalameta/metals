@@ -1,9 +1,13 @@
 package tests
 
+import java.nio.file.Files
+
 import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.inputs.Input
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
+import scala.meta.io.AbsolutePath
 
 import munit.TestOptions
 
@@ -605,17 +609,24 @@ class ScalaToplevelSuite extends BaseSuite {
       dialect: Dialect = dialects.Scala3,
   )(implicit location: munit.Location): Unit = {
     test(options) {
-      val input = Input.VirtualFile("Test.scala", code)
       val obtained =
         mode match {
           case All | ToplevelWithInner =>
+            val input = Input.VirtualFile("Test.scala", code)
             val includeMembers = mode == All
             Mtags
               .allToplevels(input, dialect, includeMembers)
               .occurrences
               .map(_.symbol)
               .toList
-          case Toplevel => Mtags.toplevels(input, dialect)
+          case Toplevel =>
+            val dir = AbsolutePath(Files.createTempDirectory("mtags"))
+            val input = dir.resolve("Test.scala")
+            input.writeText(code)
+            val obtained = Mtags.topLevelSymbols(input, dialect)
+            input.delete()
+            dir.delete()
+            obtained
         }
       assertNoDiff(
         obtained.sorted.mkString("\n"),

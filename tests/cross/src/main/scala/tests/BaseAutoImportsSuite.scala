@@ -18,14 +18,14 @@ trait BaseAutoImportsSuite extends BaseCodeActionSuite {
       name: String,
       original: String,
       expected: String,
-      compat: Map[String, String] = Map.empty,
+      compat: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit =
     test(name) {
       val imports = getAutoImports(original, "A.scala")
       val obtained = imports.map(_.packageName()).mkString("\n")
       assertNoDiff(
         obtained,
-        getExpected(expected, compat, scalaVersion),
+        getExpected(expected, compat, scalaVersion)
       )
     }
 
@@ -35,7 +35,7 @@ trait BaseAutoImportsSuite extends BaseCodeActionSuite {
       expected: String,
       selection: Int = 0,
       filename: String = "A.scala",
-      compat: Map[String, String] = Map.empty,
+      compat: Map[String, String] = Map.empty
   )(implicit
       loc: Location
   ): Unit =
@@ -46,7 +46,7 @@ trait BaseAutoImportsSuite extends BaseCodeActionSuite {
       original: String,
       expected: String,
       selection: Int = 0,
-      compat: Map[String, String] = Map.empty,
+      compat: Map[String, String] = Map.empty
   )(implicit
       loc: Location
   ): Unit =
@@ -56,7 +56,7 @@ trait BaseAutoImportsSuite extends BaseCodeActionSuite {
       original,
       expected,
       selection,
-      compat,
+      compat
     )
 
   def checkEditSelection(
@@ -65,7 +65,7 @@ trait BaseAutoImportsSuite extends BaseCodeActionSuite {
       original: String,
       expected: String,
       selection: Int,
-      compat: Map[String, String] = Map.empty,
+      compat: Map[String, String] = Map.empty
   )(implicit
       loc: Location
   ): Unit =
@@ -80,7 +80,7 @@ trait BaseAutoImportsSuite extends BaseCodeActionSuite {
 
   def getAutoImports(
       original: String,
-      filename: String,
+      filename: String
   ): List[AutoImportsResult] = {
     val (code, symbol, offset) = params(original)
     val result = presentationCompiler
@@ -90,9 +90,9 @@ trait BaseAutoImportsSuite extends BaseCodeActionSuite {
           Paths.get(filename).toUri(),
           code,
           offset,
-          cancelToken,
+          cancelToken
         ),
-        isExtensionMethods,
+        isExtensionMethods
       )
       .get()
     result.asScala.toList

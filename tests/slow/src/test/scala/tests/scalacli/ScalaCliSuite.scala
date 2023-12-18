@@ -3,6 +3,7 @@ package tests.scalacli
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.FileOutOfScalaCliBspScope
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
@@ -17,6 +18,14 @@ import tests.FileLayout
 class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
   override def serverConfig: MetalsServerConfig =
     MetalsServerConfig.default.copy(slowTask = SlowTaskConfig.on)
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(
+      InitializationOptions.Default.copy(
+        inlineDecorationProvider = Some(true),
+        decorationProvider = Some(true),
+      )
+    )
 
   private def simpleFileTest(useBsp: Boolean): Future[Unit] =
     for {
@@ -170,6 +179,41 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
            |""".stripMargin,
       )
 
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "show-implicit-arguments": true,
+          |  "show-implicit-conversions-and-classes": true,
+          |  "show-inferred-type": true
+          |}
+          |""".stripMargin
+      )
+
+      _ <- server.didOpen("MyTests.sc")
+      _ = assertNoDiff(
+        client.syntheticDecorations,
+        s"""#!/usr/bin/env -S scala-cli shebang --java-opt -Xms256m --java-opt -XX:MaxRAMPercentage=80 
+           |//> using scala "$scalaVersion"
+           |//> using lib "com.lihaoyi::utest::0.7.10"
+           |//> using lib com.lihaoyi::pprint::0.6.6
+           |
+           |import foo.Foo
+           |import utest._
+           | 
+           |pprint.log[Int](2)(generate, generate) // top-level statement should be fine in a script
+           |
+           |object MyTests extends TestSuite {
+           |  pprint.log[Int](2)(generate, generate)
+           |  val tests: Tests = Tests {
+           |    test("foo") {
+           |      assert(2 + 2 == 4)
+           |    }
+           |    test("nope") {
+           |      assert(2 + 2 == (new Foo).value)
+           |    }
+           |  }
+           |}
+           |""".stripMargin,
+      )
     } yield ()
 
   private val simpleFileLayout =

@@ -26,7 +26,7 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
     List(0, 1),
     """|object A{
        |  val a = scala.math.max(x = 1, y = 2)
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   checkEdit(
@@ -39,7 +39,7 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
     """|object A{
        |  final case class Foo(`type`: Int, arg: String)
        |  val a = Foo(`type` = 1, arg = "a")
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   checkEdit(
@@ -52,7 +52,7 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
     """|object A{
        |  def foo(`type`: Int, arg: String) = "a"
        |  val a = foo(`type` = 1, arg = "a")
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   checkEdit(
@@ -65,7 +65,7 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
     """|object Something {
        |  class Foo(param1: Int, param2: Int)
        |  val a = new Foo(param1 = 1, param2 = 2)
-       |}""".stripMargin,
+       |}""".stripMargin
   )
   checkEdit(
     "new-apply-multiple",
@@ -77,7 +77,7 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
     """|object Something {
        |  class Foo(param1: Int, param2: Int)(param3: Int)
        |  val a = new Foo(param1 = 1, param2 = 2)(param3 = 3)
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   checkError(
@@ -87,14 +87,14 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
        |}
        |""".stripMargin,
     List(0, 1),
-    CodeActionErrorMessages.ConvertToNamedArguments.IsJavaObject,
+    CodeActionErrorMessages.ConvertToNamedArguments.IsJavaObject
   )
 
   def checkError(
       name: TestOptions,
       original: String,
       argIndices: List[Int],
-      expectedErrorMsg: String,
+      expectedErrorMsg: String
   ): Unit = {
     test(name) {
       try {
@@ -117,7 +117,7 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
       original: String,
       argIndices: List[Int],
       expected: String,
-      compat: Map[String, String] = Map.empty,
+      compat: Map[String, String] = Map.empty
   )(implicit location: Location): Unit =
     test(name) {
       val edits = convertToNamedArgs(original, argIndices)
@@ -129,13 +129,13 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
   def convertToNamedArgs(
       original: String,
       argIndices: List[Int],
-      filename: String = "file:/A.scala",
+      filename: String = "file:/A.scala"
   ): List[l.TextEdit] = {
     val (code, _, offset) = params(original)
     val result = presentationCompiler
       .convertToNamedArguments(
         CompilerOffsetParams(URI.create(filename), code, offset, cancelToken),
-        argIndices.map(new Integer(_)).asJava,
+        argIndices.map(new Integer(_)).asJava
       )
       .get()
     result.asScala.toList

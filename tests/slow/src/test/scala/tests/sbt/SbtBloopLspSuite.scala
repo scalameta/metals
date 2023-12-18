@@ -8,6 +8,7 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
@@ -33,6 +34,14 @@ class SbtBloopLspSuite
   override def currentDigest(
       workspace: AbsolutePath
   ): Option[String] = SbtDigest.current(workspace)
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(
+      InitializationOptions.Default.copy(
+        decorationProvider = Some(true),
+        inlineDecorationProvider = Some(true),
+      )
+    )
 
   test("basic") {
     cleanWorkspace()
@@ -835,6 +844,36 @@ class SbtBloopLspSuite
         "build.sbt",
         expected,
         fileContent,
+      )
+    } yield ()
+  }
+
+  test("decorations") {
+    for {
+      _ <- initialize(
+        s"""|/build.sbt
+            |def foo() = "2.13.2"
+            |def bar() = foo() 
+            |scalaVersion := "2.13.2"
+           """.stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "show-implicit-arguments": true,
+          |  "show-implicit-conversions-and-classes": true,
+          |  "show-inferred-type": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("build.sbt")
+      _ <- server.didSave("build.sbt")(identity)
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        client.syntheticDecorations,
+        s"""|def foo(): String = "2.13.2"
+            |def bar(): String = foo() 
+            |scalaVersion := "2.13.2"
+           """.stripMargin,
       )
     } yield ()
   }

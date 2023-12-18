@@ -5,14 +5,16 @@ trait ExtractMethodUtils {
       line: String,
       newIndent: String,
       oldIndentLen: Int
-  ): String = {
-    var i = 0
-    val additional = if (newIndent.indexOf("\t") != -1) "\t" else "  "
-    while ((line(i) == ' ' || line(i) == '\t') && i < oldIndentLen) {
-      i += 1
+  ): String =
+    if (line.forall(c => c == '\t' || c == ' ' || c == '\r')) ""
+    else {
+      var i = 0
+      val additional = if (newIndent.indexOf("\t") != -1) "\t" else "  "
+      while ((line(i) == ' ' || line(i) == '\t') && i < oldIndentLen) {
+        i += 1
+      }
+      newIndent + additional + line.drop(i)
     }
-    newIndent + additional + line.drop(i)
-  }
 
   def genName(usedNames: Set[String], prefix: String): String = {
     if (!usedNames(prefix)) prefix

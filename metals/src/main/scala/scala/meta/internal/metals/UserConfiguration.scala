@@ -54,6 +54,7 @@ case class UserConfiguration(
     javaFormatConfig: Option[JavaFormatConfig] = None,
     scalafixRulesDependencies: List[String] = Nil,
     customProjectRoot: Option[String] = None,
+    verboseCompilation: Boolean = false,
     scalaCliLauncher: Option[String] = None,
 ) {
 
@@ -61,6 +62,25 @@ case class UserConfiguration(
     bloopVersion.getOrElse(BuildInfo.bloopVersion)
 
   def usedJavaBinary(): Option[AbsolutePath] = JavaBinary.path(javaHome)
+
+  def areSyntheticsEnabled(): Boolean = {
+    val showInferredType = !this.showInferredType.contains(
+      "false"
+    ) && this.showInferredType.nonEmpty
+    showImplicitArguments || showInferredType || showImplicitConversionsAndClasses
+  }
+
+  def getCustomProjectRoot(workspace: AbsolutePath): Option[AbsolutePath] =
+    customProjectRoot
+      .map(relativePath => workspace.resolve(relativePath.trim()))
+      .filter { projectRoot =>
+        val exists = projectRoot.toFile.exists
+        if (!exists) {
+          scribe.error(s"custom project root $projectRoot does not exist")
+        }
+        exists
+      }
+
 }
 
 object UserConfiguration {
@@ -322,6 +342,15 @@ object UserConfiguration {
         """Optional relative path to your project's root.
           |If you want your project root to be the workspace/workspace root set it to "." .""".stripMargin,
       ),
+      UserConfigurationOption(
+        "verbose-compilation",
+        "false",
+        "true",
+        "Show all compilation debugging information",
+        """|If a build server supports it (for example Bloop or Scala CLI), setting it to true
+           |will make the logs contain all the possible debugging information including
+           |about incremental compilation in Zinc.""".stripMargin,
+      ),
     )
 
   def fromJson(
@@ -535,6 +564,8 @@ object UserConfiguration {
       getStringListKey("scalafix-rules-dependencies").getOrElse(Nil)
 
     val customProjectRoot = getStringKey("custom-project-root")
+    val verboseCompilation =
+      getBooleanKey("verbose-compilation").getOrElse(false)
 
     if (errors.isEmpty) {
       Right(
@@ -567,6 +598,7 @@ object UserConfiguration {
           javaFormatConfig,
           scalafixRulesDependencies,
           customProjectRoot,
+          verboseCompilation,
         )
       )
     } else {

@@ -2,24 +2,17 @@ package scala.meta.internal.metals
 
 import java.nio.charset.Charset
 import java.util.Collections
-import java.util.concurrent.atomic.AtomicReference
 
 import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.builds.SbtBuildTool
-import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.TextDocumentLookup
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
-
-import org.eclipse.lsp4j.DiagnosticSeverity
-import org.eclipse.lsp4j.PublishDiagnosticsParams
-import org.eclipse.{lsp4j => l}
 
 /**
  * Produces SemanticDBs on-demand by using the presentation compiler.
@@ -34,9 +27,7 @@ final class InteractiveSemanticdbs(
     workspace: AbsolutePath,
     buildTargets: BuildTargets,
     charset: Charset,
-    client: MetalsLanguageClient,
     tables: Tables,
-    statusBar: StatusBar,
     compilers: () => Compilers,
     clientConfig: ClientConfiguration,
     semanticdbIndexer: () => SemanticdbIndexer,
@@ -45,7 +36,6 @@ final class InteractiveSemanticdbs(
 ) extends Cancelable
     with Semanticdbs {
 
-  private val activeDocument = new AtomicReference[Option[String]](None)
   private val textDocumentCache = Collections.synchronizedMap(
     new java.util.HashMap[AbsolutePath, s.TextDocument]()
   )
@@ -131,42 +121,6 @@ final class InteractiveSemanticdbs(
           tables.dependencySources.setBuildTarget(destination, target)
         }
       }
-    }
-  }
-
-  /**
-   * Unpublish diagnostics for un-focused dependency source, if any, and publish diagnostics
-   * for the currently focused source, if any.
-   */
-  def didFocus(path: AbsolutePath): Unit = {
-    activeDocument.get().foreach { uri =>
-      client.publishDiagnostics(
-        new PublishDiagnosticsParams(uri, Collections.emptyList())
-      )
-    }
-    if (path.isDependencySource(workspace)) {
-      textDocument(path).toOption.foreach { doc =>
-        val uri = path.toURI.toString()
-        activeDocument.set(Some(uri))
-        val diagnostics = for {
-          diag <- doc.diagnostics
-          if diag.severity.isError
-          range <- diag.range
-        } yield {
-          // Use INFO instead of ERROR severity because these diagnostics are published for readonly
-          // files of external dependencies so the user cannot fix them.
-          val severity = DiagnosticSeverity.Information
-          new l.Diagnostic(range.toLsp, diag.message, severity, "scala")
-        }
-        if (diagnostics.nonEmpty) {
-          statusBar.addMessage(partialNavigation(clientConfig.icons))
-          client.publishDiagnostics(
-            new PublishDiagnosticsParams(uri, diagnostics.asJava)
-          )
-        }
-      }
-    } else {
-      activeDocument.set(None)
     }
   }
 

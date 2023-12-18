@@ -21,7 +21,7 @@ abstract class BaseSelectionRangeSuite extends BasePCSuite {
       name: TestOptions,
       original: String,
       expectedRanges: List[String],
-      compat: Map[String, List[String]] = Map.empty,
+      compat: Map[String, List[String]] = Map.empty
   ): Unit = {
     test(name) {
       val (code, offset) = params(original, "SelectionRange.scala")
@@ -30,7 +30,7 @@ abstract class BaseSelectionRangeSuite extends BasePCSuite {
           Paths.get("SelectionRange.scala").toUri(),
           code,
           offset,
-          EmptyCancelToken,
+          EmptyCancelToken
         )
       ).asJava
 
@@ -52,7 +52,7 @@ abstract class BaseSelectionRangeSuite extends BasePCSuite {
       assertSelectionRanges(
         selectionRanges.headOption,
         compatOrDefault(expectedRanges, compat, scalaVersion),
-        code,
+        code
       )
     }
   }
@@ -60,7 +60,7 @@ abstract class BaseSelectionRangeSuite extends BasePCSuite {
   private def assertSelectionRanges(
       range: Option[l.SelectionRange],
       expected: List[String],
-      original: String,
+      original: String
   ): Unit = {
     assert(range.nonEmpty)
     expected.headOption.foreach { expectedRange =>
@@ -72,7 +72,7 @@ abstract class BaseSelectionRangeSuite extends BasePCSuite {
 
   private def applyRanges(
       text: String,
-      selectionRange: l.SelectionRange,
+      selectionRange: l.SelectionRange
   ): String = {
     val input = Input.String(text)
 

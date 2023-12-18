@@ -455,18 +455,6 @@ trait Completions { this: MetalsGlobal =>
         ident: Ident,
         apply: Apply
     ): CompletionPosition = {
-      def isInfix(apply: Apply, text: String) =
-        apply.fun match {
-          case Select(New(_), _) => false
-          case Select(_, name) if name.decoded == "apply" => false
-          case Select(This(_), _) => false
-          // is a select statement without a dot `qual.name`
-          case Select(qual, _) => {
-            val pos = qual.pos.end
-            pos < text.length() && text(pos) != '.'
-          }
-          case _ => false
-        }
       if (hasLeadingBrace(ident, text)) {
         if (isCasePrefix(ident.name)) {
           val moveToNewLine = ident.pos.line == apply.pos.line
@@ -485,7 +473,7 @@ trait Completions { this: MetalsGlobal =>
           NoneCompletion
         }
       } else {
-        if (!isInfix(apply, text)) {
+        if (!isInfix(apply.fun, text)) {
           ArgCompletion(ident, apply, pos, text, completions)
         } else NoneCompletion
       }
@@ -723,6 +711,12 @@ trait Completions { this: MetalsGlobal =>
           // for named args apply becomes transparent but fun doesn't
           case Apply(fun, args) =>
             !fun.pos.isTransparent && args.forall(_.pos.isOffset)
+          // for synthetic val definition select on it becomes transparent
+          case sel @ Select(qual: Ident, _) =>
+            val qualifierIsSyntheticVal =
+              Option(qual.symbol).exists(sym => sym.isValue && sym.isSynthetic)
+            qualifierIsSyntheticVal &&
+            !sel.namePosition.isTransparent && sel.namePosition.encloses(pos)
           case _ => false
         }
       }
@@ -740,6 +734,11 @@ trait Completions { this: MetalsGlobal =>
             super.traverse(t)
           } else {
             t match {
+              // workaround for Scala 2.13,
+              // where position is not set properly for synthetic val definition
+              // we are interested only in its children, which have correct positions set
+              case v: ValDef if v.pos.isOffset && v.symbol.isSynthetic =>
+                super.traverse(v)
               case mdef: MemberDef =>
                 val annTrees = mdef.mods.annotations match {
                   case Nil if mdef.symbol != null =>

@@ -74,7 +74,7 @@ abstract class BaseWorksheetLspSuite(
         )
         _ = assertNoDiagnostics()
         _ = assertNoDiff(
-          client.workspaceDecorations,
+          client.syntheticDecorations,
           getExpected(
             """|identity(42) // : Int = 42
                |val name = sourcecode.Name.generate.value // : String = "name"
@@ -103,9 +103,9 @@ abstract class BaseWorksheetLspSuite(
       )
       _ <- server.didOpen("a/Main.worksheet.sc")
       // check that ANSI colors were stripped
-      _ = assertNotContains(client.workspaceDecorations, "\u001b")
+      _ = assertNotContains(client.syntheticDecorations, "\u001b")
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|pprint.pprintln("Hello, world!") // "Hello, world!"
            |""".stripMargin,
       )
@@ -131,7 +131,7 @@ abstract class BaseWorksheetLspSuite(
       _ <- server.didOpen("a/Main.worksheet.sc")
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         getExpected(
           """|import java.nio.file.Files
              |val name = "Susan" // : String = "Susan"
@@ -176,7 +176,7 @@ abstract class BaseWorksheetLspSuite(
       _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         getExpected(
           """|import java.nio.file.Files
              |val name = "Susan" // : String = "Susan"
@@ -199,7 +199,7 @@ abstract class BaseWorksheetLspSuite(
         ),
       )
       _ = assertNoDiff(
-        client.workspaceDecorationHoverMessage,
+        client.syntheticDecorationHoverMessage,
         getExpected(
           """|import java.nio.file.Files
              |val name = "Susan"
@@ -285,7 +285,7 @@ abstract class BaseWorksheetLspSuite(
         _.replace("42", "43")
       )
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|
            |println(43) // 43
            |// Stream.from(10).last
@@ -308,7 +308,7 @@ abstract class BaseWorksheetLspSuite(
       )
       _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         """|
            |val x = 42 // : Int = 42
            |throw new RuntimeException("boom")
@@ -366,7 +366,7 @@ abstract class BaseWorksheetLspSuite(
       _ <- server.didOpen("b/src/main/scala/foo/Main.worksheet.sc")
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.workspaceDecorations("b/src/main/scala/foo/Main.worksheet.sc"),
         """|println(core.Lib) // Lib
            |println(core.Lib2) // Lib2
            |""".stripMargin,
@@ -394,7 +394,7 @@ abstract class BaseWorksheetLspSuite(
       // completions work despite error
       _ = assertNoDiff(identity, "identity[A](x: A): A")
       // decorations do not appear for non ".worksheet.sc" files.
-      _ = assertNoDiff(client.workspaceDecorations, "")
+      _ = assertNoDiff(client.syntheticDecorations, "")
     } yield ()
   }
 
@@ -419,7 +419,7 @@ abstract class BaseWorksheetLspSuite(
       _ <- server.didOpen("a/src/main/scala/a/Main.worksheet.sc")
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.workspaceDecorations("a/src/main/scala/a/Main.worksheet.sc"),
         """
           |a.Util.increase(1) // : Int = 2
           |""".stripMargin,
@@ -429,7 +429,7 @@ abstract class BaseWorksheetLspSuite(
       )
       _ <- server.didSave("a/src/main/scala/a/Main.worksheet.sc")(identity)
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.workspaceDecorations("a/src/main/scala/a/Main.worksheet.sc"),
         """
           |a.Util.increase(1) // : Int = 3
           |""".stripMargin,

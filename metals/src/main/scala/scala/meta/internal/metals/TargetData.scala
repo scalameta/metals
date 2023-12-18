@@ -141,8 +141,10 @@ final class TargetData {
   }
 
   def targetClassDirectories(id: BuildTargetIdentifier): List[String] = {
-    val scalacData = scalaTarget(id).map(_.scalac.getClassDirectory).toList
-    val javacData = javaTarget(id).map(_.javac.getClassDirectory).toList
+    val scalacData =
+      scalaTarget(id).map(_.scalac.getClassDirectory).filter(_.nonEmpty).toList
+    val javacData =
+      javaTarget(id).map(_.javac.getClassDirectory).filter(_.nonEmpty).toList
     (scalacData ++ javacData).distinct
   }
 

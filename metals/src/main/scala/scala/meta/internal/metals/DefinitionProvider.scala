@@ -175,8 +175,9 @@ final class DefinitionProvider(
         else true
       }
 
+      val dialect = scalaVersionSelector.dialectFromBuildTarget(path)
       val locs = workspaceSearch
-        .searchExactFrom(ident.value, path, token)
+        .searchExactFrom(ident.value, path, token, dialect)
 
       val reducedGuesses =
         if (locs.size > 1)
@@ -296,7 +297,10 @@ final class DefinitionProvider(
       queryPosition <- queryPositionOpt
       occurrence <-
         snapshot.occurrences
-          .find(_.encloses(queryPosition, true))
+          .find(occ =>
+            // empty range is set for anon classes definition
+            occ.range.exists(!_.isPoint) && occ.encloses(queryPosition, true)
+          )
           // In case of macros we might need to get the postion from the presentation compiler
           .orElse(fromMtags(source, queryPosition))
     } yield occurrence
@@ -429,13 +433,12 @@ class DestinationProvider(
   private def bestTextDocument(
       symbolDefinition: SymbolDefinition
   ): TextDocument = {
-    val defnRevisedInput = symbolDefinition.path.toInput
     // Read text file from disk instead of editor buffers because the file
     // on disk is more likely to parse.
     lazy val parsed = {
       mtags.index(
         symbolDefinition.path.toLanguage,
-        defnRevisedInput,
+        symbolDefinition.path,
         symbolDefinition.dialect,
       )
     }

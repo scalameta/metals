@@ -3,6 +3,8 @@ package scala.meta.internal.metals
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 import scala.util.matching.Regex
 
@@ -30,6 +32,7 @@ trait Reporter {
   ): List[TimestampedFile]
   def getReports(): List[TimestampedFile]
   def deleteAll(): Unit
+  def sanitize(message: String) = message
 }
 
 class StdReportContext(
@@ -84,7 +87,7 @@ class StdReporter(
     level: ReportLevel,
     override val name: String
 ) extends Reporter {
-  private lazy val maybeReportsDir: Path =
+  val maybeReportsDir: Path =
     workspace.resolve(pathToReports).resolve(name)
   private lazy val reportsDir = maybeReportsDir.createDirectories()
   private val limitedFilesManager =
@@ -97,20 +100,21 @@ class StdReporter(
 
   private lazy val userHome = Option(System.getProperty("user.home"))
 
-  private var initialized = false
-  private var reported = Set.empty[String]
+  private val initialized = new AtomicBoolean(false)
+  private val reported = new AtomicReference(Map[String, Path]())
 
   def readInIds(): Unit = {
-    reported = getReports().flatMap { report =>
+    val reports = getReports().flatMap { report =>
       val lines = Files.readAllLines(report.file.toPath())
       if (lines.size() > 0) {
         lines.get(0) match {
           case id if id.startsWith(Report.idPrefix) =>
-            Some(id.stripPrefix(Report.idPrefix))
+            Some((id.stripPrefix(Report.idPrefix) -> report.toPath))
           case _ => None
         }
       } else None
-    }.toSet
+    }.toMap
+    reported.updateAndGet(_ ++ reports)
   }
 
   override def create(
@@ -119,22 +123,29 @@ class StdReporter(
   ): Option[Path] =
     if (ifVerbose && !level.isVerbose) None
     else {
-      if (!initialized) {
+      if (initialized.compareAndSet(false, true)) {
         readInIds()
-        initialized = true
       }
       val sanitizedId = report.id.map(sanitize)
-      if (sanitizedId.isDefined && reported.contains(sanitizedId.get)) None
-      else {
-        val path = reportPath(report)
-        path.getParent.createDirectories()
-        sanitizedId.foreach(reported += _)
+      val path = reportPath(report)
+
+      val optDuplicate =
+        for {
+          id <- sanitizedId
+          reportedMap = reported.getAndUpdate(map =>
+            if (map.contains(id)) map else map + (id -> path)
+          )
+          duplicate <- reportedMap.get(id)
+        } yield duplicate
+
+      optDuplicate.orElse {
+        path.createDirectories()
         path.writeText(sanitize(report.fullText(withIdAndSummary = true)))
         Some(path)
       }
     }
 
-  private def sanitize(text: String) = {
+  override def sanitize(text: String): String = {
     val textAfterWokspaceReplace =
       text.replace(workspace.toString(), StdReportContext.WORKSPACE_STR)
     userHome
@@ -262,7 +273,7 @@ object Report {
   def apply(name: String, text: String, error: Throwable): Report =
     Report(name, text, error, path = None)
 
-  val idPrefix = "id: "
+  val idPrefix = "error id: "
   val summaryTitle = "#### Short summary: "
 }
 

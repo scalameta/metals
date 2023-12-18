@@ -4,6 +4,8 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.security.MessageDigest
 
+import scala.util.Success
+import scala.util.Try
 import scala.util.control.NonFatal
 import scala.xml.Comment
 import scala.xml.Node
@@ -14,6 +16,8 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
+
+import ujson.BytesRenderer
 
 case class Digest(
     md5: String,
@@ -191,6 +195,19 @@ object Digest {
     } catch {
       case NonFatal(_) =>
         false
+    }
+  }
+
+  def digestJson(
+      file: AbsolutePath,
+      digest: MessageDigest,
+  ): Boolean = {
+    Try(ujson.read(file.readText)) match {
+      case Success(json) =>
+        val bytes = json.transform(BytesRenderer()).toByteArray()
+        digest.update(bytes)
+        true
+      case _ => false
     }
   }
 }

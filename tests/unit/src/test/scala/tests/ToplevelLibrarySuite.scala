@@ -29,8 +29,8 @@ class ToplevelLibrarySuite extends BaseSuite {
     test(entry.toNIO.getFileName.toString) {
       forAllScalaFilesInJar(entry) { file =>
         val input = file.toInput
-        val scalaMtags = Mtags.toplevels(Mtags.index(input, dialects.Scala213))
-        val scalaToplevelMtags = Mtags.toplevels(input)
+        val scalaMtags = Mtags.toplevels(Mtags.index(file, dialects.Scala213))
+        val scalaToplevelMtags = Mtags.topLevelSymbols(file)
 
         assertTopLevels(scalaToplevelMtags, scalaMtags, input)
 
@@ -38,7 +38,7 @@ class ToplevelLibrarySuite extends BaseSuite {
         // to scala2 parser
         if (!scala3ExclusionList(file.toString)) {
           val scala3Toplevels =
-            Mtags.toplevels(input, dialect = dialects.Scala3)
+            Mtags.topLevelSymbols(file, dialect = dialects.Scala3)
           assertTopLevels(scala3Toplevels, scalaMtags, input)
         }
       }
@@ -50,8 +50,8 @@ class ToplevelLibrarySuite extends BaseSuite {
       forAllScalaFilesInJar(entry) { file =>
         if (!scala3ExclusionList.contains(file.toString)) {
           val input = file.toInput
-          val scalaMtags = Mtags.toplevels(Mtags.index(input, dialects.Scala3))
-          val scalaToplevelMtags = Mtags.toplevels(input, dialects.Scala3)
+          val scalaMtags = Mtags.toplevels(Mtags.index(file, dialects.Scala3))
+          val scalaToplevelMtags = Mtags.topLevelSymbols(file, dialects.Scala3)
           assertTopLevels(scalaToplevelMtags, scalaMtags, input)
         }
       }
@@ -62,8 +62,8 @@ class ToplevelLibrarySuite extends BaseSuite {
     test(entry.toNIO.getFileName.toString) {
       forAllJavaFilesInJar(entry) { file =>
         val input = file.toInput
-        val javaMtags = Mtags.toplevels(Mtags.index(input, dialects.Scala3))
-        val javaToplevelMtags = Mtags.toplevels(input, dialects.Scala3)
+        val javaMtags = Mtags.toplevels(Mtags.index(file, dialects.Scala3))
+        val javaToplevelMtags = Mtags.topLevelSymbols(file, dialects.Scala3)
         assertTopLevels(javaToplevelMtags, javaMtags, input)
       }
     }

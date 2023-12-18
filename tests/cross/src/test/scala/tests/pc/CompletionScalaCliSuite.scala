@@ -3,13 +3,18 @@ package tests.pc
 import tests.BaseCompletionSuite
 
 class CompletionScalaCliSuite extends BaseCompletionSuite {
+
+  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = Some(
+    IgnoreScala211
+  )
+
   check(
     "simple",
     """|//> using lib "io.cir@@
        |package A
        |""".stripMargin,
     """|io.circe
-       |io.circul""".stripMargin,
+       |io.circul""".stripMargin
   )
 
   checkEdit(
@@ -25,7 +30,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
        |// //> using lib ???
        |//> using lib io.circe::circe-core_native0.4
        |package A
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -36,7 +41,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|circe-core_native0.4_2.12
        |circe-core_native0.4_2.13
        |circe-core_native0.4_3
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -44,7 +49,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|//> using lib "io.circe::circe-core_sjs1:0.14.1@@"
        |package A
        |""".stripMargin,
-    "0.14.1",
+    "0.14.1"
   )
 
   // We don't to add `::` before version if `sjs1` is specified
@@ -55,7 +60,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|//> using lib "io.circe::circe-core_sjs1:0.14.1"
        |package A
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -63,7 +68,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|//> using lib "io.circe::circe-core:0.14.0", "io.circe::circe-core_na@@"
        |package A
        |""".stripMargin,
-    "circe-core_native0.4",
+    "circe-core_native0.4"
   )
 
   check(
@@ -72,14 +77,14 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
       """|//> using lib "io.circe:circe-core_na@@
          |
          |""".stripMargin,
-      "script.sc.scala",
+      "script.sc.scala"
     ),
     """|circe-core_native0.4_2.12
        |circe-core_native0.4_2.13
        |circe-core_native0.4_3
        |""".stripMargin,
     filename = "script.sc.scala",
-    enablePackageWrap = false,
+    enablePackageWrap = false
   )
 
   check(
@@ -87,7 +92,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|//> using lib "io.circe::circe-core:0.14.0"@@
        |package A
        |""".stripMargin,
-    "",
+    ""
   )
 
   check(
@@ -95,7 +100,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|//> using lib "io.circe::circe-co @@
        |package A
        |""".stripMargin,
-    "",
+    ""
   )
 
   check(
@@ -114,7 +119,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|//> using plugin "org.polyvariant:::@@
        |package A
        |""".stripMargin,
-    "better-tostring",
+    "better-tostring"
   )
 
   checkEdit(
@@ -125,7 +130,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|//> using lib "co.fs2::fs2-core::3.4.0"
        |package A
        |""".stripMargin,
-    filter = _.startsWith("3.4"),
+    filter = _.startsWith("3.4")
   )
 
   check(
@@ -134,7 +139,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
        |package A
        |""".stripMargin,
     """|io.circe
-       |io.circul""".stripMargin,
+       |io.circul""".stripMargin
   )
 
   check(
@@ -142,7 +147,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|//> using libs "io.circe::circe-core:0.14.0", "io.circe::circe-core_na@@"
        |package A
        |""".stripMargin,
-    "circe-core_native0.4",
+    "circe-core_native0.4"
   )
 
   check(
@@ -154,7 +159,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
        |0.7.2
        |0.7.1
        |0.7.0
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -165,7 +170,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|3.7.1
        |3.7.0
        |""".stripMargin,
-    filter = _.startsWith("3.7"),
+    filter = _.startsWith("3.7")
   )
 
   checkEdit(
@@ -176,7 +181,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|//> using lib "com.outr::scribe-cats::3.7.1"
        |package A
        |""".stripMargin,
-    filter = _.startsWith("3.7.1"),
+    filter = _.startsWith("3.7.1")
   )
 
   check(
@@ -186,7 +191,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|3.7.1
        |3.7.0
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -197,7 +202,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|//> using lib "com.outr::scribe-cats::3.7.1"
        |package A
        |""".stripMargin,
-    filter = _.startsWith("3.7.1"),
+    filter = _.startsWith("3.7.1")
   )
 
   check(
@@ -205,7 +210,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|//> using lib "com.outr:scribe-cats_3::@@"
        |package A
        |""".stripMargin,
-    "",
+    ""
   )
 
   checkEdit(
@@ -216,7 +221,7 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|//> using lib "com.outr:scribe-cats_3:3.7.1"
        |package A
        |""".stripMargin,
-    filter = _.startsWith("3.7.1"),
+    filter = _.startsWith("3.7.1")
   )
 
   private def scriptWrapper(code: String, filename: String): String =

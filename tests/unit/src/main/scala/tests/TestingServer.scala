@@ -65,7 +65,9 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tvp.TreeViewChildrenParams
+import scala.meta.internal.tvp.TreeViewNodeCollapseDidChangeParams
 import scala.meta.internal.tvp.TreeViewProvider
+import scala.meta.internal.tvp.TreeViewVisibilityDidChangeParams
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
@@ -1779,12 +1781,12 @@ final case class TestingServer(
   }
 
   def jar(filename: String): String = {
-    server.buildTargets.allWorkspaceJars
+    server.buildTargets.allSourceJars
       .find(_.filename.contains(filename))
       .map(_.toURI.toString())
       .getOrElse {
         val alternatives =
-          server.buildTargets.allWorkspaceJars
+          server.buildTargets.allSourceJars
             .map(_.filename)
             .mkString(" ")
         throw new NoSuchElementException(
@@ -1810,14 +1812,16 @@ final case class TestingServer(
     val reveal =
       fullServer.treeView
         .reveal(toPath(filename), new l.Position(line, 0))
-        .get
+        .getOrElse {
+          sys.error(s"$path: cannot reveal")
+        }
     val parents = (reveal.uriChain :+ null).map { uri =>
       fullServer.treeView.children(
         TreeViewChildrenParams(reveal.viewId, uri)
       )
     }
 
-    val label = parents.iterator
+    val labelsMap = parents.iterator
       .flatMap { r =>
         r.nodes.iterator.map { n =>
           val icon = Option(n.icon) match {
@@ -1831,13 +1835,24 @@ final case class TestingServer(
       .toMap
       .updated("root", "root")
 
+    def label(uri: String, default: String): String =
+      labelsMap.get(uri) match {
+        case None =>
+          scribe.warn(s"Cannot find label for $uri")
+          scribe.warn(labelsMap.mkString("\n"))
+          default
+        case Some(value) => value
+      }
     val tree = parents
       .zip(reveal.uriChain :+ "root")
       .foldLeft(PrettyPrintTree.empty) { case (child, (parent, uri)) =>
+        val realUri =
+          if (uri.contains("-sources.jar")) uri
+          else uri.replace(".jar", "-sources.jar")
         PrettyPrintTree(
-          label(uri.toLowerCase),
+          label(realUri.toLowerCase, realUri),
           parent.nodes
-            .map(n => PrettyPrintTree(label(n.nodeUri.toLowerCase)))
+            .map(n => PrettyPrintTree(label(n.nodeUri.toLowerCase, n.nodeUri)))
             .filterNot(t => isIgnored(t.value))
             .toList :+ child,
         )
@@ -1870,6 +1885,29 @@ final case class TestingServer(
       }
       .mkString("\n")
     Assertions.assertNoDiff(obtained, expected)
+  }
+
+  def treeViewVisibilityDidChange(
+      viewId: String,
+      isVisible: Boolean,
+  ): Future[Unit] = {
+    fullServer
+      .treeViewVisibilityDidChange(
+        TreeViewVisibilityDidChangeParams(viewId, isVisible)
+      )
+      .asScala
+  }
+
+  def treeViewNodeCollapseDidChange(
+      viewId: String,
+      nodeId: String,
+      isCollapsed: Boolean,
+  ): Future[Unit] = {
+    fullServer
+      .treeViewNodeCollapseDidChange(
+        TreeViewNodeCollapseDidChangeParams(viewId, nodeId, isCollapsed)
+      )
+      .asScala
   }
 
   def findTextInDependencyJars(

@@ -37,8 +37,10 @@ trait PCSuite {
     .create()
     .withRepositories(allRepos: _*)
 
-  protected def indexJdkSources: Unit =
-    JdkSources().foreach(jdk => index.addSourceJar(jdk, dialects.Scala213))
+  protected def indexJdkSources: Unit = JdkSources() match {
+    case Right(jdk) => index.addSourceJar(jdk, dialects.Scala213)
+    case _ =>
+  }
 
   protected def extraLibraries(f: Fetch): Seq[Path] = f
     .fetch()
@@ -54,7 +56,7 @@ trait PCSuite {
         .fromClasspath(myclasspath, ExcludedPackagesHandler.default),
       new Docstrings(index),
       workspace,
-      index,
+      index
     )
   }
 
@@ -71,7 +73,7 @@ trait PCSuite {
 
   def hoverParams(
       code: String,
-      filename: String = "test.java",
+      filename: String = "test.java"
   ): (String, Int, Int) = {
     val code2 = code.replace("@@", "").replace("%<%", "").replace("%>%", "")
     val positionOffset =

@@ -105,7 +105,9 @@ case class SymbolDefinition(
     definitionSymbol: Symbol,
     path: AbsolutePath,
     dialect: Dialect,
-    range: Option[s.Range]
+    range: Option[s.Range],
+    kind: Option[s.SymbolInformation.Kind],
+    properties: Int
 ) {
 
   def isExact: Boolean = querySymbol == definitionSymbol

@@ -140,6 +140,7 @@ object Bill {
       )
       result.setDisplayName("id")
       result.setData(scalaTarget)
+      result.setDataKind("scala")
       result
     }
     val reporter = new StoreReporter

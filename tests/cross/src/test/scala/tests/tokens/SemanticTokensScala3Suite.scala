@@ -14,7 +14,7 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
        |enum <<FooEnum>>/*enum,abstract*/:
        |  case <<Bar>>/*enum*/, <<Baz>>/*enum*/
        |object <<FooEnum>>/*class*/
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -26,7 +26,7 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
        |  case <<B>>/*enum*/(<<a>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
        |  case <<C>>/*enum*/(<<a>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<b>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/, <<c>>/*variable,declaration,readonly*/: <<Int>>/*class,abstract*/)
        |
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   // Issue: Sequential parameters are not highlighted
@@ -37,7 +37,7 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
         |
         |def <<m>>/*method,definition*/(<<xs>>/*parameter,declaration,readonly*/: <<Int>>/*class,abstract*/*) = <<xs>>/*parameter,readonly*/.<<map>>/*method*/(<<_>>/*parameter,readonly*/ <<+>>/*method*/ 1)
         |val <<a>>/*variable,definition,readonly*/ = <<m>>/*method*/(xs = 1,2,3)
-        |""".stripMargin,
+        |""".stripMargin
   )
 
   // Issue: Structural types are not highlighted
@@ -88,7 +88,7 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
             |  <<V>>/*variable,readonly*/.<<scalameta>>/*method*/
             |end StructuralTypes
             |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -100,7 +100,7 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
         |  var <<b>>/*variable,definition*/ = 2
         |  val <<c>>/*variable,definition,readonly*/ = <<List>>/*class*/(1,<<a>>/*variable,readonly*/,<<b>>/*variable*/)
         |  <<b>>/*variable*/ = <<a>>/*variable,readonly*/
-        |""".stripMargin,
+        |""".stripMargin
   )
 
   check(
@@ -111,7 +111,7 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
       |  val <<y>>/*variable,definition,readonly*/ = <<Vector>>/*class*/(1,2)
       |  val <<z>>/*variable,definition,readonly*/ = <<Set>>/*class*/(1,2,3)
       |  val <<w>>/*variable,definition,readonly*/ = <<Right>>/*class*/(1)
-      |}""".stripMargin,
+      |}""".stripMargin
   )
 
   check(
@@ -121,7 +121,7 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
        |object <<A>>/*class*/ {
        |  val <<f>>/*variable,definition,readonly*/ = <<Foo>>/*class*/(1,2)
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -137,13 +137,28 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
        |object <<Tag>>/*class*/ {
        |  type <<@@>>/*type,definition*/ = <<Int>>/*class,abstract*/
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
     "main-annot",
     """|@<<main>>/*class*/ def <<main>>/*method,definition*/(<<args>>/*parameter,declaration,readonly*/: <<Array>>/*class*/[<<String>>/*type*/]): <<Unit>>/*class,abstract*/ = ()
-       |""".stripMargin,
+       |""".stripMargin
+  )
+
+  check(
+    "constructor2",
+    """
+      |object <<Bar>>/*class*/ {
+      |  class <<Abc>>/*class*/[<<T>>/*typeParameter,definition,abstract*/](<<a>>/*variable,declaration,readonly*/: <<T>>/*typeParameter,abstract*/)
+      |}
+      |
+      |object <<O>>/*class*/ {
+      |  val <<x>>/*variable,definition,readonly*/ = new <<Bar>>/*class*/.<<Abc>>/*class*/(2)
+      |  val <<y>>/*variable,definition,readonly*/ = new <<Bar>>/*class*/.<<Abc>>/*class*/[<<Int>>/*class,abstract*/](2)
+      |  val <<z>>/*variable,definition,readonly*/ = <<Bar>>/*class*/.<<Abc>>/*class*/(2)
+      |  val <<w>>/*variable,definition,readonly*/ = <<Bar>>/*class*/.<<Abc>>/*class*/[<<Int>>/*class,abstract*/](2)
+      |}""".stripMargin
   )
 
 }

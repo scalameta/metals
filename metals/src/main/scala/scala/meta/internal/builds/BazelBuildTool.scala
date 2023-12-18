@@ -22,7 +22,8 @@ case class BazelBuildTool(
     userConfig: () => UserConfiguration,
     projectRoot: AbsolutePath,
 ) extends BuildTool
-    with BuildServerProvider {
+    with BuildServerProvider
+    with VersionRecommendation {
 
   override def digest(workspace: AbsolutePath): Option[String] = {
     BazelDigest.current(projectRoot)
@@ -64,7 +65,7 @@ case class BazelBuildTool(
 
   override def executableName = BazelBuildTool.name
 
-  override def isBloopDefaultBsp = false
+  override val forcesBuildServer = true
 
   override val buildServerName: Option[String] = Some(BazelBuildTool.bspName)
 

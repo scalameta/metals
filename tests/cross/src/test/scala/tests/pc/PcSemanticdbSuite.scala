@@ -28,7 +28,7 @@ class PcSemanticdbSuite extends BasePCSuite {
        |  val a/*a.O.a.*/ = 123
        |  val b/*a.O.b.*/ = a/*a.O.a.*/ +/*scala.Int#`+`(+4).*/ 1
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -57,7 +57,7 @@ class PcSemanticdbSuite extends BasePCSuite {
            |  val b/*_empty_.O.b.*/ = a/*_empty_.O.a.*/ +/*scala.Int#`+`(+4).*/ 1
            |}
            |""".stripMargin
-    ),
+    )
   )
 
   def check(
@@ -65,7 +65,7 @@ class PcSemanticdbSuite extends BasePCSuite {
       original: String,
       expected: String,
       compat: Map[String, String] = Map.empty,
-      filename: String = "A.scala",
+      filename: String = "A.scala"
   )(implicit loc: Location): Unit = {
     test(name) {
       val uri = new URI(s"file:///$filename")
@@ -76,7 +76,7 @@ class PcSemanticdbSuite extends BasePCSuite {
       val obtained = Semanticdbs.printTextDocument(withCode)
       assertNoDiff(
         obtained,
-        getExpected(expected, compat, scalaVersion),
+        getExpected(expected, compat, scalaVersion)
       )
     }
   }

@@ -134,6 +134,7 @@ trait CommonMtagsEnrichments {
     def isNone: Boolean =
       pos.getLine() < 0 &&
         pos.getCharacter() < 0
+
   }
 
   implicit class XtensionLspRange(range: l.Range) {
@@ -378,4 +379,11 @@ trait CommonMtagsEnrichments {
       }
     }
   }
+
+  implicit class XtensionText(text: String) {
+    def trimTo(maxLength: Int): String =
+      if (text.length() <= maxLength) text
+      else s"${text.take(maxLength)}..."
+  }
+
 }

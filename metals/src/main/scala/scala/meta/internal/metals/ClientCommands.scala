@@ -360,6 +360,12 @@ object ClientCommands {
     "[string], the markdown representation of the stacktrace",
   )
 
+  val ConnectBuildServer = new Command(
+    "metals-build-connect",
+    "Connect to build server.",
+    ServerCommands.ConnectBuildServer.description,
+  )
+
   def all: List[BaseCommand] =
     List(
       OpenFolder,
@@ -374,5 +380,6 @@ object ClientCommands {
       CopyWorksheetOutput,
       StartRunSession,
       StartDebugSession,
+      ConnectBuildServer,
     )
 }

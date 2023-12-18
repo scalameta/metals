@@ -57,22 +57,21 @@ class ScalaVersionSelector(
     )
   }
 
+  def dialectFromBuildTarget(path: AbsolutePath): Option[Dialect] = buildTargets
+    .inverseSources(path)
+    .flatMap(id => buildTargets.scalaTarget(id))
+    .map(_.dialect(path))
+
   def getDialect(path: AbsolutePath): Dialect = {
-
-    def dialectFromBuildTarget = buildTargets
-      .inverseSources(path)
-      .flatMap(id => buildTargets.scalaTarget(id))
-      .map(_.dialect(path))
-
     Option(path.extension) match {
       case Some("scala") =>
-        dialectFromBuildTarget.getOrElse(
+        dialectFromBuildTarget(path).getOrElse(
           fallbackDialect(isAmmonite = false)
         )
       case Some("sbt") => dialects.Sbt
       case Some("sc") =>
         // worksheets support Scala 3, but ammonite scripts do not
-        val dialect = dialectFromBuildTarget.getOrElse(
+        val dialect = dialectFromBuildTarget(path).getOrElse(
           fallbackDialect(isAmmonite = path.isAmmoniteScript)
         )
         dialect

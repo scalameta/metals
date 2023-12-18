@@ -5,10 +5,13 @@ import tests.BaseSignatureHelpSuite
 
 class HKSignatureHelpSuite extends BaseSignatureHelpSuite {
 
+  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = Some(
+    IgnoreScala211
+  )
+
   override def extraDependencies(scalaVersion: String): Seq[Dependency] = {
     val binaryVersion = createBinaryVersion(scalaVersion)
     Seq(Dependency.of("org.typelevel", s"cats-core_$binaryVersion", "2.8.0"))
-
   }
 
   check(
@@ -27,7 +30,7 @@ class HKSignatureHelpSuite extends BaseSignatureHelpSuite {
         """|foldMap[A, B](fa: Option[A])(f: A => B)(using B: cats.kernel.Monoid[B]): B
            |              ^^^^^^^^^^^^^
            |""".stripMargin
-    ),
+    )
   )
 
   // https://github.com/scalameta/metals/issues/5055
@@ -66,7 +69,7 @@ class HKSignatureHelpSuite extends BaseSignatureHelpSuite {
        |                                                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
        |  @param <redactHeadersWhen test description
        |""".stripMargin,
-    includeDocs = true,
+    includeDocs = true
   )
 
 }

@@ -25,8 +25,11 @@ object Library {
       Classpath(PackageIndex.bootClasspath.map(AbsolutePath.apply)),
       Classpath(JdkSources().right.get :: Nil),
     )
-  def cats: Seq[AbsolutePath] =
-    fetch("org.typelevel", "cats-core_2.12", "2.0.0-M4")
+
+  def catsDependency: Dependency =
+    Dependency.of("org.typelevel", "cats-core_2.12", "2.0.0-M4")
+  def catsSources: Seq[AbsolutePath] = fetchSources(catsDependency)
+  def cats: Seq[AbsolutePath] = fetch(catsDependency)
 
   def scala3: Library = {
     val binaryVersion =
@@ -102,12 +105,17 @@ object Library {
     )
   }
 
-  def fetch(org: String, artifact: String, version: String): Seq[AbsolutePath] =
+  def fetchSources(dependency: Dependency): Seq[AbsolutePath] =
+    fetch(dependency, Set("sources"))
+
+  def fetch(
+      dependency: Dependency,
+      classifiers: Set[String] = Set.empty,
+  ): Seq[AbsolutePath] =
     Fetch
       .create()
-      .withDependencies(
-        Dependency.of(org, artifact, version).withTransitive(false)
-      )
+      .withDependencies(dependency.withTransitive(false))
+      .withClassifiers(classifiers.asJava)
       .fetch()
       .asScala
       .toSeq

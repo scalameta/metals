@@ -27,6 +27,7 @@ final class Compilations(
     isCurrentlyFocused: b.BuildTargetIdentifier => Boolean,
     compileWorksheets: Seq[AbsolutePath] => Future[Unit],
     onStartCompilation: () => Unit,
+    userConfiguration: () => UserConfiguration,
 )(implicit ec: ExecutionContext) {
 
   // we are maintaining a separate queue for cascade compilation since those must happen ASAP
@@ -232,6 +233,11 @@ final class Compilations(
     val originId = "METALS-$" + UUID.randomUUID().toString
     val params = new b.CompileParams(targets.asJava)
     params.setOriginId(originId)
+    if (
+      userConfiguration().verboseCompilation && (connection.isBloop || connection.isScalaCLI)
+    ) {
+      params.setArguments(List("--verbose").asJava)
+    }
     targets.foreach(target => isCompiling(target) = true)
     val compilation = connection.compile(params)
 

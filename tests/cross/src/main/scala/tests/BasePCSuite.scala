@@ -39,6 +39,10 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
   val executorService: ScheduledExecutorService =
     Executors.newSingleThreadScheduledExecutor()
   val scalaVersion: String = BuildInfoVersions.scalaVersion
+
+  val isNightly: Boolean =
+    scalaVersion.contains("-bin-") || scalaVersion.contains("NIGHTLY")
+
   val tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("metals"))
   val dialect: Dialect =
     if (scalaVersion.startsWith("3.")) dialects.Scala3 else dialects.Scala213
@@ -98,7 +102,7 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
 
   private def indexScalaLibrary(
       index: GlobalSymbolIndex,
-      scalaVersion: String,
+      scalaVersion: String
   ): Unit = {
     val libDependency =
       Dependency.of(
@@ -112,7 +116,7 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
           case v if isScala3Version(v) => BuildInfoVersions.scala213
           case v if v.startsWith("2.12") => v
           case _ => BuildInfoVersions.scala212
-        },
+        }
       )
     val deps = if (isScala3Version(scalaVersion)) {
       Seq(
@@ -120,8 +124,8 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
         Dependency.of(
           "org.scala-lang",
           "scala3-library_3",
-          scalaVersion,
-        ),
+          scalaVersion
+        )
       )
     } else {
       Seq(libDependency)
@@ -158,7 +162,7 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
         "Append Scala version",
         { test =>
           test.withName(test.name + "_" + scalaVersion)
-        },
+        }
       ),
       new TestTransform(
         "Ignore Scala version",
@@ -171,7 +175,7 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
           if (isIgnoredScalaVersion)
             test.withTags(test.tags + munit.Ignore)
           else test
-        },
+        }
       ),
       new TestTransform(
         "Run for Scala version",
@@ -184,18 +188,18 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
             }
             .getOrElse(test)
 
-        },
-      ),
+        }
+      )
     )
 
   override def params(
       code: String,
-      filename: String = "test.scala",
+      filename: String = "test.scala"
   ): (String, Int) = super.params(code, filename)
 
   override def hoverParams(
       code: String,
-      filename: String = "test.scala",
+      filename: String = "test.scala"
   ): (String, Int, Int) = super.hoverParams(code, filename)
 
   def doc(e: JEither[String, MarkupContent]): String = {
@@ -264,8 +268,14 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
   }
 
   object IgnoreScala2 extends IgnoreScalaVersion(_.startsWith("2."))
+  object IgnoreScala2Nightlies
+      extends IgnoreScalaVersion(version =>
+        version.startsWith("2.") && version.contains("-bin-")
+      )
 
   object IgnoreScala212 extends IgnoreScalaVersion(_.startsWith("2.12"))
+
+  object IgnoreScala211 extends IgnoreScalaVersion(_.startsWith("2.11"))
 
   object IgnoreScala3 extends IgnoreScalaVersion(_.startsWith("3."))
 

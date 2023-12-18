@@ -14,7 +14,8 @@ case class MillBuildTool(
     projectRoot: AbsolutePath,
 ) extends BuildTool
     with BloopInstallProvider
-    with BuildServerProvider {
+    with BuildServerProvider
+    with VersionRecommendation {
 
   private def getMillVersion(workspace: AbsolutePath): String = {
     import scala.meta.internal.jdk.CollectionConverters._

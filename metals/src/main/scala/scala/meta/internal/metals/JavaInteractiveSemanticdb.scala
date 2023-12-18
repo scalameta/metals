@@ -225,6 +225,9 @@ object JdkVersion {
   }
 
   def fromReleaseFile(javaHome: AbsolutePath): Option[JdkVersion] =
+    fromReleaseFileString(javaHome).flatMap(f => parse(f))
+
+  def fromReleaseFileString(javaHome: AbsolutePath): Option[String] =
     Seq(javaHome.resolve("release"), javaHome.parent.resolve("release"))
       .filter(_.exists)
       .flatMap { releaseFile =>
@@ -233,7 +236,6 @@ object JdkVersion {
         props.asScala
           .get("JAVA_VERSION")
           .map(_.stripPrefix("\"").stripSuffix("\""))
-          .flatMap(jv => JdkVersion.parse(jv))
       }
       .headOption
 

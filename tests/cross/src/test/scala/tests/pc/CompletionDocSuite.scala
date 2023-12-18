@@ -6,6 +6,11 @@ class CompletionDocSuite extends BaseCompletionSuite {
   override def requiresJdkSources: Boolean = true
   override def requiresScalaLibrarySources: Boolean = true
 
+  // the docs can change and fail the tests easily, Scala 3 changes much less often
+  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = Some(
+    IgnoreScala2Nightlies
+  )
+
   check(
     "java",
     """
@@ -15,7 +20,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|substring(beginIndex: Int): String
        |substring(beginIndex: Int, endIndex: Int): String
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -36,8 +41,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
       "3" ->
         """|join(delimiter: CharSequence, elements: CharSequence*): String
            |join(delimiter: CharSequence, elements: Iterable[? <: CharSequence]): String
-           |""".stripMargin,
-    ),
+           |""".stripMargin
+    )
   )
 
   check(
@@ -51,7 +56,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|setValue(value: Int): Int
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -67,7 +72,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
       "3" ->
         """|singletonList[T](o: T): java.util.List[T]
            |""".stripMargin
-    ),
+    )
   )
   check(
     "java5",
@@ -130,7 +135,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
          |`OptionalInt` may have unpredictable results and should be avoided.
          |OptionalInt java.util
          |""".stripMargin,
-    includeDocs = true,
+    includeDocs = true
   )
 
   check(
@@ -142,7 +147,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|reportWarning(pos: Int, msg: String, out: PrintStream = Console.out): Unit
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -158,7 +163,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
       "3" ->
         """|sliding[B >: Int](size: Int, step: Int = 1): List[Int]#iterator.GroupedIterator[B]
            |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -177,7 +182,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |- `x`: the object to print.
        |println(x: Any): Unit
        |""".stripMargin,
-    includeDocs = true,
+    includeDocs = true
   )
 
   val commonlyUsedTypesPre2134: String =
@@ -263,8 +268,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
            |${predefDocString(commonlyUsedTypesPost2134)}
            |Predef scala
            |Predef - scala.runtime.stdLibPatches
-           |""".stripMargin,
-    ),
+           |""".stripMargin
+    )
   )
 
   val iteratorDocs213: String =
@@ -417,8 +422,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
       "2.13" -> iteratorAndSpecificIterableFactoryDocs213(
         withLinearSeqIterator = false
       ),
-      "3" -> iteratorDocs213,
-    ),
+      "3" -> iteratorDocs213
+    )
   )
 
   def executionDocstringPre2134: String =
@@ -447,11 +452,13 @@ class CompletionDocSuite extends BaseCompletionSuite {
         |""".stripMargin,
     includeDocs = true,
     compat = Map(
-      "2.12" ->
-        s"""|$executionDocstringPre2134
-            |global: ExecutionContext
-            |""".stripMargin
-    ),
+      "2.12" -> s"""|$executionDocstringPre2134
+                    |global: ExecutionContext
+                    |""".stripMargin,
+      "2.11" -> s"""|$executionDocstringPre2134
+                    |global: ExecutionContextExecutor
+                    |""".stripMargin
+    )
   )
 
   val baseTryDocs: String =
@@ -514,7 +521,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
             |method will ensure any non-fatal exception is caught and a
             |`Failure` object is returned.
             |Try[T](r: => T): Try[T]""".stripMargin
-    ),
+    )
   )
 
   val scala213Docs: String =
@@ -549,29 +556,30 @@ class CompletionDocSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|> A builder for mutable sequence of characters.  This class provides an API
-       |mostly compatible with `java.lang.StringBuilder`, except where there are
-       |conflicts with the Scala collections API (such as the `reverse` method.)
-       |
-       |$multipleResults
+       | mostly compatible with `java.lang.StringBuilder`, except where there are
+       | conflicts with the Scala collections API (such as the `reverse` method.)
        |
        |
        |**See**
-       |- ["Scala's Collection Library overview"](https://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#stringbuilders)
-       |section on `StringBuilders` for more information.
+       |- ["Scala's Collection Library overview"](http://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#stringbuilders)
+       | section on `StringBuilders` for more information.
        |StringBuilder scala.collection.mutable
        |""".stripMargin,
     includeDocs = true,
     compat = Map(
-      "2.12" -> """|> A builder for mutable sequence of characters.  This class provides an API
-                   | mostly compatible with `java.lang.StringBuilder`, except where there are
-                   | conflicts with the Scala collections API (such as the `reverse` method.)
-                   |
-                   |
-                   |**See**
-                   |- ["Scala's Collection Library overview"](http://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#stringbuilders)
-                   | section on `StringBuilders` for more information.
-                   |StringBuilder scala.collection.mutable
-                   |""".stripMargin,
+      ">=2.13.0" ->
+        """|> A builder for mutable sequence of characters.  This class provides an API
+           |mostly compatible with `java.lang.StringBuilder`, except where there are
+           |conflicts with the Scala collections API (such as the `reverse` method.)
+           |
+           |$multipleResults
+           |
+           |
+           |**See**
+           |- ["Scala's Collection Library overview"](https://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#stringbuilders)
+           |section on `StringBuilders` for more information.
+           |StringBuilder scala.collection.mutable
+           |""".stripMargin,
       ">=2.13.11" ->
         s"""|$scala213Docs
             |StringBuilder scala.collection.mutable
@@ -583,7 +591,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
           "StringBuilder(str: String): StringBuilder",
           "StringBuilder(underlying: StringBuilder): StringBuilder",
           "StringBuilder(capacity: Int): StringBuilder",
-          "StringBuilder(initCapacity: Int, initValue: String): StringBuilder",
+          "StringBuilder(initCapacity: Int, initValue: String): StringBuilder"
         ).map(s => scala213Docs + "\n" + s).mkString("\n"),
       scala3PresentationCompilerVersion ->
         List(
@@ -592,9 +600,9 @@ class CompletionDocSuite extends BaseCompletionSuite {
           "StringBuilder(str: String): StringBuilder",
           "StringBuilder(underlying: java.lang.StringBuilder): StringBuilder",
           "StringBuilder(capacity: Int): StringBuilder",
-          "StringBuilder(initCapacity: Int, initValue: String): StringBuilder",
-        ).map(s => scala213Docs + "\n" + s).mkString("\n"),
-    ),
+          "StringBuilder(initCapacity: Int, initValue: String): StringBuilder"
+        ).map(s => scala213Docs + "\n" + s).mkString("\n")
+    )
   )
 
   val vectorDocs213: String =
@@ -657,8 +665,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
     includeDocs = true,
     compat = Map(
       "2.13" -> vectorDocs213,
-      "3" -> vectorDocs213,
-    ),
+      "3" -> vectorDocs213
+    )
   )
 
   check(
@@ -702,7 +710,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
            |Catch[T] - scala.util.control.Exception
            |""".stripMargin
     ),
-    topLines = Some(1), // for Scala3, result contains `Catch[$0]` and `Catch`
+    topLines = Some(1) // for Scala3, result contains `Catch[$0]` and `Catch`
   )
 
   check(
@@ -720,7 +728,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
         """|Failure scala.util
            |Failure[T](exception: Throwable): Failure[T]
            |""".stripMargin
-    ),
+    )
   )
 
   // New completions not yet implemented for Scala 3
@@ -754,7 +762,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
        | are independent of those for the original thread.
        |DynamicVariable scala.util
        |""".stripMargin,
-    includeDocs = true,
+    includeDocs = true
   )
 
   val isDefinedLatestDocs: String =
@@ -787,7 +795,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
     includeDocs = true,
     compat = Map(
       "2.13" -> isDefinedLatestDocs
-    ),
+    )
   )
   check(
     "scala13",
@@ -802,31 +810,32 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |
        |
        |**Type Parameters**
-       |- `V1`: type of the values of the new bindings, a supertype of `V`
+       |- `B1`: type of the values of the new bindings, a supertype of `B`
        |
        |**Parameters**
        |- `key`: the key to be inserted
        |- `value`: the value to be associated with `key`
        |
        |**Returns:** a new immutable tree map with the inserted binding, if it wasn't present in the map
-       |insert[V1 >: Int](key: Int, value: V1): TreeMap[Int,V1]
+       |insert[B1 >: Int](key: Int, value: B1): TreeMap[Int,B1]
        |""".stripMargin,
     includeDocs = true,
     compat = Map(
-      "2.12" -> """|> A new TreeMap with the entry added is returned,
-                   | assuming that key is *not* in the TreeMap.
-                   |
-                   |
-                   |**Type Parameters**
-                   |- `B1`: type of the values of the new bindings, a supertype of `B`
-                   |
-                   |**Parameters**
-                   |- `key`: the key to be inserted
-                   |- `value`: the value to be associated with `key`
-                   |
-                   |**Returns:** a new immutable tree map with the inserted binding, if it wasn't present in the map
-                   |insert[B1 >: Int](key: Int, value: B1): TreeMap[Int,B1]
-                   |""".stripMargin,
+      "2.13" ->
+        """|> A new TreeMap with the entry added is returned,
+           | assuming that key is *not* in the TreeMap.
+           |
+           |
+           |**Type Parameters**
+           |- `V1`: type of the values of the new bindings, a supertype of `V`
+           |
+           |**Parameters**
+           |- `key`: the key to be inserted
+           |- `value`: the value to be associated with `key`
+           |
+           |**Returns:** a new immutable tree map with the inserted binding, if it wasn't present in the map
+           |insert[V1 >: Int](key: Int, value: V1): TreeMap[Int,V1]
+           |""".stripMargin,
       "3" -> """|> A new TreeMap with the entry added is returned,
                 | assuming that key is *not* in the TreeMap.
                 |
@@ -840,8 +849,8 @@ class CompletionDocSuite extends BaseCompletionSuite {
                 |
                 |**Returns:** a new immutable tree map with the inserted binding, if it wasn't present in the map
                 |insert[V1 >: Int](key: Int, value: V1): TreeMap[Int, V1]
-                |""".stripMargin,
-    ),
+                |""".stripMargin
+    )
   )
 
   check(
@@ -855,6 +864,6 @@ class CompletionDocSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|myNumbers: Vector[Int]
-       |""".stripMargin,
+       |""".stripMargin
   )
 }

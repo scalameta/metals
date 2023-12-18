@@ -57,7 +57,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
         _ = assertNoDiff(identity, "render: String")
         _ = assertNoDiagnostics()
         _ = assertNoDiff(
-          client.workspaceDecorations,
+          client.workspaceDecorations(path),
           """|import $dep.`com.lihaoyi::scalatags:0.9.0`
              |import scalatags.Text.all._
              |val htmlFile = html(
@@ -112,7 +112,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
       )
       _ <- server.didOpen(path)
       _ = assertNoDiff(
-        client.workspaceDecorations,
+        client.syntheticDecorations,
         "new java.sql.Date(100L) // : java.sql.Date = 1970-01-01",
       )
     } yield ()
@@ -150,7 +150,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
       _ <- server.didOpen(path)
       _ = assertNoDiff(
         // it seems that part of the string is always different, so let's remove it
-        client.workspaceDecorations.replaceAll(".out\\(.*", ".out(..."),
+        client.syntheticDecorations.replaceAll(".out\\(.*", ".out(..."),
         """|import $dep.`com.typesafe.akka::akka-stream:2.6.13`
            |
            |import akka.actor.ActorSystem

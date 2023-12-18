@@ -28,7 +28,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |  def u(): Unit = {
        |    val p: Int = 1 + 2
        |  }
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   checkEdit(
@@ -38,7 +38,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |}""".stripMargin,
     """|object Main {
        | val a = { val b = 1 + 1 }
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   checkEdit(
@@ -55,7 +55,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |    val b = 1 + 1
        |  }
        |  val a = 3
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   checkEdit(
@@ -74,7 +74,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |  }
        |  val a = 3
        |  val g = a
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   checkEdit(
@@ -91,7 +91,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |    val p: Int = 1 + 2
        |    val i: Int = 1 + 3
        |  }
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   checkEdit(
@@ -108,7 +108,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |    val p: Int = 1 + 2
        |    val i: Int = 1 + 3
        |  }
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   checkEdit(
@@ -126,7 +126,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |    val p: Int = 2 - (1 + 6)
        |    val k: Int = o
        |  }
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   checkEdit(
@@ -145,7 +145,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |    val p: Int = h - (1 + 6)
        |    val k: Int = 1 + 6
        |  }
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   checkEdit(
@@ -157,7 +157,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
     """|object Main {
        |  val o: Int = 6
        |  val p: Int = 2 - 6
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   checkEdit(
@@ -171,7 +171,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |object Main {
        |  val o: Int = 6
        |  val p: Int = 2 - 6
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   checkEdit(
@@ -186,7 +186,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |  def demo = {
        |    println(((x: Int) => x + 1)(1))
        |  }
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   checkEdit(
@@ -201,7 +201,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |  def demo = {
        |    val plus2 = (x: Int) => x + 1
        |  }
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   checkError(
@@ -210,7 +210,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |  val <<o>>: Int = 6
        |  val p: Int = 2 - o
        |}""".stripMargin,
-    InlineErrors.notLocal,
+    InlineErrors.notLocal
   )
 
   checkEdit(
@@ -230,7 +230,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |val b = (for {
        |    i <- List(1,2,3)
        |  } yield i + 1).map(_ + 1)
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   checkEdit(
@@ -242,7 +242,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
     """|object Main {
        |  val b = 1 + (2 + 3)
        |  val c = 1 + (2 + 3)
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   // --- different possibilites of conflicts ----------
@@ -258,7 +258,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |    val z = <<f>> + 1
        |  }
        |}""".stripMargin,
-    InlineErrors.variablesAreShadowed("scala.net.com.ooo.Demo.j"),
+    InlineErrors.variablesAreShadowed("scala.net.com.ooo.Demo.j")
   )
 
   checkError(
@@ -272,7 +272,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |    val z = <<f>> + 1
        |  }
        |}""".stripMargin,
-    InlineErrors.variablesAreShadowed("Demo.j"),
+    InlineErrors.variablesAreShadowed("Demo.j")
   )
 
   // Note: we do not check if summoned implicts change when inlining
@@ -297,7 +297,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |    implicit val v : Boolean = false
        |    val z = myF
        |  }
-       |}""".stripMargin,
+       |}""".stripMargin
   )
 
   checkError(
@@ -315,7 +315,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |    <<inl>>
        |  }
        |}""".stripMargin,
-    InlineErrors.variablesAreShadowed("a.A.aaa"),
+    InlineErrors.variablesAreShadowed("a.A.aaa")
   )
 
   checkError(
@@ -332,7 +332,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
     InlineErrors.variablesAreShadowed("Demo.oo.j"),
     compat = Map(
       "2" -> InlineErrors.variablesAreShadowed("Demo.j")
-    ),
+    )
   )
 
   checkError(
@@ -345,7 +345,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |     val m = <<l>> + 3
        |  }
        |}""".stripMargin,
-    InlineErrors.variablesAreShadowed("A.k"),
+    InlineErrors.variablesAreShadowed("A.k")
   )
 
   def checkEdit(
@@ -353,7 +353,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
       original: String,
       expected: String,
       compat: Map[String, String] = Map.empty,
-      filename: String = "file:/A.scala",
+      filename: String = "file:/A.scala"
   )(implicit location: Location): Unit =
     test(name) {
       val edits = getInlineEdits(original, filename)
@@ -367,7 +367,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
       original: String,
       expectedError: String,
       compat: Map[String, String] = Map.empty,
-      filename: String = "file:/A.scala",
+      filename: String = "file:/A.scala"
   )(implicit location: Location): Unit =
     test(name) {
       try {
@@ -383,14 +383,14 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
             }) =>
           assertNoDiff(
             e.getCause.getMessage,
-            getExpected(expectedError, compat, scalaVersion),
+            getExpected(expectedError, compat, scalaVersion)
           )
       }
     }
 
   def getInlineEdits(
       original: String,
-      filename: String,
+      filename: String
   ): List[l.TextEdit] = {
     val (code, _, offset) = params(original)
     val result = presentationCompiler
@@ -399,7 +399,7 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
           URI.create(filename),
           code,
           offset,
-          cancelToken,
+          cancelToken
         )
       )
       .get()

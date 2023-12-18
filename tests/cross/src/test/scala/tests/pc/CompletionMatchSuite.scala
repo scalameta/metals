@@ -5,6 +5,10 @@ import tests.BaseCompletionSuite
 class CompletionMatchSuite extends BaseCompletionSuite {
   override def requiresScalaLibrarySources: Boolean = true
 
+  override val compatProcess: Map[String, String => String] = Map(
+    "2.11" -> { (s: String) => s.replace("Some(value)", "Some(x)") }
+  )
+
   check(
     "match",
     """
@@ -18,7 +22,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       "3" -> """|match
                 |match (exhaustive) Option (2 cases)
                 |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -35,7 +39,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       "3" -> """|match
                 |match (exhaustive) Option (2 cases)
                 |""".stripMargin
-    ),
+    )
   )
 
   // In Scala3 it's allowed to write xxx.match
@@ -50,7 +54,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       "3" -> """|match
                 |match (exhaustive) Option (2 cases)
                 |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -62,12 +66,12 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |@@
       |""".stripMargin,
     "",
-    filter = _ => false,
+    filter = _ => false
   )
 
   // Assert that Workday/Weekend symbols from previous test don't appear in result.
   checkEdit(
-    "stale2",
+    "stale2".tag(IgnoreScala211),
     """package stale
       |sealed abstract class Weekday
       |object Weekday {
@@ -113,7 +117,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
                  |
                  |}
                  |""".stripMargin
-    ),
+    )
   )
 
   checkEdit(
@@ -150,7 +154,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
                  |
                  |}
                  |""".stripMargin
-    ),
+    )
   )
 
   checkEdit(
@@ -193,7 +197,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
             |
             |}
             |""".stripMargin
-    ),
+    )
   )
 
   checkEdit(
@@ -221,11 +225,11 @@ class CompletionMatchSuite extends BaseCompletionSuite {
                 |}
                 |""".stripMargin
     ),
-    filter = _.contains("exhaustive"),
+    filter = _.contains("exhaustive")
   )
 
   check(
-    "inner-class",
+    "inner-class".tag(IgnoreScala211),
     """
       |package example
       |
@@ -241,7 +245,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|match
        |match (exhaustive) Foo (2 cases)
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -283,7 +287,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
                 |\tcase AccessMode.EXECUTE =>
                 |
                 |}""".stripMargin
-    ),
+    )
   )
 
   checkEdit(
@@ -322,7 +326,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |
         |}
         |""".stripMargin,
-    filter = _.contains("exhaustive"),
+    filter = _.contains("exhaustive")
   )
 
   checkEdit(
@@ -359,7 +363,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
                 |\tcase scala.None =>
                 |
                 |}""".stripMargin
-    ),
+    )
   )
 
   checkEdit(
@@ -405,7 +409,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
                 |\tcase Bar =>
                 |
                 |}""".stripMargin
-    ),
+    )
   )
 
   checkEdit(
@@ -460,7 +464,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
                 |\t
                 |
                 |}""".stripMargin
-    ),
+    )
   )
   check(
     "exhaustive-map",
@@ -475,7 +479,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         """|case (exhaustive) Option (2 cases)
            |""".stripMargin
     ),
-    filter = _.contains("exhaustive"),
+    filter = _.contains("exhaustive")
   )
 
   checkEdit(
@@ -491,7 +495,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |\tcase None =>
        |}
        |}""".stripMargin,
-    filter = _.contains("exhaustive"),
+    filter = _.contains("exhaustive")
   )
 
   checkEdit(
@@ -519,7 +523,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |\tcase E(e) =>
         |  }
         |}""".stripMargin,
-    filter = _.contains("exhaustive"),
+    filter = _.contains("exhaustive")
   )
 
   checkEdit(
@@ -548,7 +552,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |case E(e) =>
         |  }
         |}""".stripMargin,
-    filter = _.contains("exhaustive"),
+    filter = _.contains("exhaustive")
   )
 
   checkEdit(
@@ -598,7 +602,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |\tcase DishWashing(amount) =>
         |
         |""".stripMargin,
-    filter = _.contains("exhaustive"),
+    filter = _.contains("exhaustive")
   )
 
   checkEdit(
@@ -647,7 +651,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |\tcase Cleaning => 
         |
         |""".stripMargin,
-    filter = _.contains("exhaustive"),
+    filter = _.contains("exhaustive")
   )
 
   checkEdit(
@@ -698,7 +702,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |\tcase Singing(song) =>
         |
         |""".stripMargin,
-    filter = _.contains("exhaustive"),
+    filter = _.contains("exhaustive")
   )
 
   checkEdit(
@@ -731,11 +735,11 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |
         |}
         |}""".stripMargin,
-    filter = _.contains("exhaustive"),
+    filter = _.contains("exhaustive")
   )
 
   check(
-    "stale-symbols",
+    "stale-symbols".tag(IgnoreScala211),
     """
       |package example
       |      
@@ -754,7 +758,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|match
        |match (exhaustive) ScalaTargetType (6 cases)
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -784,11 +788,11 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |
        |}
        |""".stripMargin,
-    filter = _.contains("exhaustive"),
+    filter = _.contains("exhaustive")
   )
 
   checkEdit(
-    "type-alias-sealed-trait",
+    "type-alias-sealed-trait".tag(IgnoreScala211),
     s"""|object O {
         | type Id[A] = A
         |
@@ -846,7 +850,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
            |}
            |""".stripMargin
     ),
-    filter = _.contains("exhaustive"),
+    filter = _.contains("exhaustive")
   )
 
 }

@@ -16,7 +16,7 @@ class AutoImportExtensionMethodsSuite extends BaseAutoImportsSuite {
        |def main = 1.<<incr>>
        |""".stripMargin,
     """|A
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -31,6 +31,6 @@ class AutoImportExtensionMethodsSuite extends BaseAutoImportsSuite {
        |  extension (num: Int) def incr = ???
        |
        |def main = 1.incr
-       |""".stripMargin,
+       |""".stripMargin
   )
 }

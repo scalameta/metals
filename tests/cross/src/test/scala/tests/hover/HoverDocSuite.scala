@@ -64,8 +64,8 @@ class HoverDocSuite extends BaseHoverSuite {
            |```
            |List<String> s = Collections.emptyList();
            |```
-           |""".stripMargin,
-    ),
+           |""".stripMargin
+    )
   )
 
   check(
@@ -75,28 +75,27 @@ class HoverDocSuite extends BaseHoverSuite {
       |}
       |""".stripMargin,
     // Assert that the docstring is extracted.
-
     """|```scala
-       |override def headOption: Option[Int]
+       |def headOption: Option[Int]
        |```
        |Optionally selects the first element.
-       | Note: might return different results for different runs, unless the underlying collection type is ordered.
+       | $orderDependent
        |
-       |**Returns:** the first element of this iterable collection if it is nonempty,
+       |**Returns:** the first element of this traversable collection if it is nonempty,
        |          `None` if it is empty.
        |""".stripMargin,
     compat = Map(
-      "2.12" ->
+      ">=2.13.0" ->
         """|```scala
-           |def headOption: Option[Int]
+           |override def headOption: Option[Int]
            |```
            |Optionally selects the first element.
-           | $orderDependent
+           | Note: might return different results for different runs, unless the underlying collection type is ordered.
            |
-           |**Returns:** the first element of this traversable collection if it is nonempty,
+           |**Returns:** the first element of this iterable collection if it is nonempty,
            |          `None` if it is empty.
            |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -112,7 +111,7 @@ class HoverDocSuite extends BaseHoverSuite {
        |```
        |Converts a path string, or a sequence of strings that when joined form
        |a path string, to a `Path`.
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -134,7 +133,7 @@ class HoverDocSuite extends BaseHoverSuite {
        |```
        |Doc about object
        |
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -159,11 +158,11 @@ class HoverDocSuite extends BaseHoverSuite {
        |```
        |Doc about method
        |
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
-    "case-class",
+    "case-class".tag(IgnoreScala211),
     """|
        |/**
        |  * Doc about case class
@@ -190,11 +189,11 @@ class HoverDocSuite extends BaseHoverSuite {
        |```
        |Doc about method
        |
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
-    "case-class1",
+    "case-class1".tag(IgnoreScala211),
     """|
        |/**
        |  * Doc about case class
@@ -218,11 +217,11 @@ class HoverDocSuite extends BaseHoverSuite {
        |```
        |Doc about object
        |
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
-    "case-class2",
+    "case-class2".tag(IgnoreScala211),
     """|
        |/**
        |  * Doc about case class
@@ -243,7 +242,7 @@ class HoverDocSuite extends BaseHoverSuite {
        |```
        |Doc about case class
        |
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -265,7 +264,7 @@ class HoverDocSuite extends BaseHoverSuite {
        |```
        |Doc about case class
        |
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -290,7 +289,7 @@ class HoverDocSuite extends BaseHoverSuite {
        |```
        |Doc about class
        |
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -315,7 +314,7 @@ class HoverDocSuite extends BaseHoverSuite {
            |val abc: Int
            |```
            |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -333,7 +332,7 @@ class HoverDocSuite extends BaseHoverSuite {
     """|```scala
        |val abc: Int
        |```
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -350,7 +349,7 @@ class HoverDocSuite extends BaseHoverSuite {
     """|```scala
        |val abc: Int
        |```
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -375,7 +374,7 @@ class HoverDocSuite extends BaseHoverSuite {
            |type T: T
            |```
            |""".stripMargin
-    ),
+    )
   )
 
   check(
@@ -393,7 +392,7 @@ class HoverDocSuite extends BaseHoverSuite {
     """|```scala
        |abc: Int
        |```
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -411,7 +410,7 @@ class HoverDocSuite extends BaseHoverSuite {
     """|```scala
        |foo: Int
        |```
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -429,7 +428,7 @@ class HoverDocSuite extends BaseHoverSuite {
     """|```scala
        |T: T
        |```
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   check(
@@ -450,7 +449,7 @@ class HoverDocSuite extends BaseHoverSuite {
        |```
        |Doc about class
        |
-       |""".stripMargin,
+       |""".stripMargin
   )
 
 }

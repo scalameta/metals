@@ -22,7 +22,7 @@ class CompletionTypeSuite extends BaseCompletionSuite {
       "2" ->
         """|method[T <: FileSystem](a: T): Nothing
            |""".stripMargin
-    ),
+    )
   )
 
 }

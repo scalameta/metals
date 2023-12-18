@@ -1,4 +1,5 @@
 package scala.meta.internal.pc
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.SemanticTokens._
 import scala.meta.pc.Node
 import scala.meta.pc.VirtualFileParams
@@ -59,7 +60,7 @@ final class PcSemanticTokensProvider(
         Some(
           makeNode(
             sym = sym,
-            pos = adjust(pos)._1,
+            pos = pos.adjust(text)._1,
             isDefinition = isDefinition(tree),
             isDeclaration = isDeclaration(tree)
           )
@@ -118,7 +119,7 @@ final class PcSemanticTokensProvider(
         if (sym.isAccessor)
           getTypeId(SemanticTokenTypes.Variable)
         else getTypeId(SemanticTokenTypes.Method) // "def"
-      else if (isPredefClass(sym)) getTypeId(SemanticTokenTypes.Class)
+      else if (isValObject(sym)) getTypeId(SemanticTokenTypes.Class)
       else if (sym.isTerm && (!sym.isParameter || sym.isParamAccessor)) {
         addPwrToMod(SemanticTokenModifiers.Readonly)
         getTypeId(SemanticTokenTypes.Variable) // "val"
@@ -131,16 +132,18 @@ final class PcSemanticTokensProvider(
     if (isDefinition) addPwrToMod(SemanticTokenModifiers.Definition)
 
     TokenNode(pos.start, pos.end, typ, mod)
-
   }
 
-  private def isPredefClass(sym: Collector.compiler.Symbol) =
+  // eg. val Foo = List
+  private def isValObject(sym: Collector.compiler.Symbol) = {
     sym.info match {
       case Collector.compiler.NullaryMethodType(
             Collector.compiler.SingleType(_, value)
-          ) if value.isModule =>
-        true
+          ) =>
+        value.isModule
+      case Collector.compiler.SingleType(_, value) => value.isModule
       case _ => false
     }
+  }
 
 }

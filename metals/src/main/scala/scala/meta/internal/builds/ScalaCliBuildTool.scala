@@ -17,7 +17,8 @@ class ScalaCliBuildTool(
     val projectRoot: AbsolutePath,
     userConfig: () => UserConfiguration,
 ) extends BuildTool
-    with BuildServerProvider {
+    with BuildServerProvider
+    with VersionRecommendation {
 
   lazy val runScalaCliCommand: Option[Seq[String]] =
     ScalaCli.localScalaCli(userConfig())
@@ -58,16 +59,19 @@ class ScalaCliBuildTool(
 
   override def executableName: String = ScalaCliBuildTool.name
 
-  override def isBloopDefaultBsp = false
+  override val forcesBuildServer = true
+
+  def isBspGenerated(workspace: AbsolutePath): Boolean =
+    ScalaCliBuildTool.pathsToScalaCliBsp(workspace).exists(_.isFile)
 
 }
 
 object ScalaCliBuildTool {
   def name = "scala-cli"
-  def pathsToScalaCliBsp(root: AbsolutePath): List[AbsolutePath] = List(
-    root.resolve(".bsp").resolve("scala-cli.json"),
-    root.resolve(".bsp").resolve("scala.json"),
-  )
+  def pathsToScalaCliBsp(root: AbsolutePath): List[AbsolutePath] =
+    ScalaCli.names.toList.map(name =>
+      root.resolve(".bsp").resolve(s"$name.json")
+    )
 
   def apply(
       workspace: AbsolutePath,
