@@ -5,7 +5,7 @@
 # If no version is given, it falls back to the value of DEFAULT_MILL_VERSION
 #
 # Project page: https://github.com/lefou/millw
-# Script Version: 0.4.7
+# Script Version: 0.4.11
 #
 # If you want to improve this script, please also contribute your changes back!
 #
@@ -14,7 +14,7 @@
 set -e
 
 if [ -z "${DEFAULT_MILL_VERSION}" ] ; then
-  DEFAULT_MILL_VERSION="0.11.0"
+  DEFAULT_MILL_VERSION="0.11.4"
 fi
 
 
@@ -55,12 +55,10 @@ if [ -z "${MILL_VERSION}" ] ; then
   fi
 fi
 
+MILL_USER_CACHE_DIR="${XDG_CACHE_HOME:-${HOME}/.cache}/mill"
+
 if [ -z "${MILL_DOWNLOAD_PATH}" ] ; then
-  if [ -n "${XDG_CACHE_HOME}" ] ; then
-    MILL_DOWNLOAD_PATH="${XDG_CACHE_HOME}/mill/download"
-  else
-    MILL_DOWNLOAD_PATH="${HOME}/.cache/mill/download"
-  fi
+  MILL_DOWNLOAD_PATH="${MILL_USER_CACHE_DIR}/download"
 fi
 
 # If not already set, try to fetch newest from Github
@@ -106,34 +104,71 @@ fi
 MILL="${MILL_DOWNLOAD_PATH}/${MILL_VERSION}"
 
 try_to_use_system_mill() {
+  if [ "$(uname)" != "Linux" ]; then
+    return 0
+  fi
+
   MILL_IN_PATH="$(command -v mill || true)"
 
   if [ -z "${MILL_IN_PATH}" ]; then
-    return
+    return 0
   fi
 
-  UNIVERSAL_SCRIPT_MAGIC="@ 2>/dev/null # 2>nul & echo off & goto BOF"
+  SYSTEM_MILL_FIRST_TWO_BYTES=$(head --bytes=2 "${MILL_IN_PATH}")
+  if [ "${SYSTEM_MILL_FIRST_TWO_BYTES}" = "#!" ]; then
+	  # MILL_IN_PATH is (very likely) a shell script and not the mill
+	  # executable, ignore it.
+	  return 0
+  fi
 
-  if ! head -c 128 "${MILL_IN_PATH}" | grep -qF "${UNIVERSAL_SCRIPT_MAGIC}"; then
-    if [ -n "${MILLW_VERBOSE}" ]; then
-      echo "Could not determine mill version of ${MILL_IN_PATH}, as it does not start with the universal script magic2" 1>&2
+  SYSTEM_MILL_PATH=$(readlink -e "${MILL_IN_PATH}")
+  SYSTEM_MILL_SIZE=$(stat --format=%s "${SYSTEM_MILL_PATH}")
+  SYSTEM_MILL_MTIME=$(stat --format=%y "${SYSTEM_MILL_PATH}")
+
+  if [ ! -d "${MILL_USER_CACHE_DIR}" ]; then
+    mkdir -p "${MILL_USER_CACHE_DIR}"
+  fi
+
+  SYSTEM_MILL_INFO_FILE="${MILL_USER_CACHE_DIR}/system-mill-info"
+  if [ -f "${SYSTEM_MILL_INFO_FILE}" ]; then
+    parseSystemMillInfo() {
+        LINE_NUMBER="${1}"
+        # Select the line number of the SYSTEM_MILL_INFO_FILE, cut the
+        # variable definition in that line in two halves and return
+        # the value, and finally remove the quotes.
+        sed -n "${LINE_NUMBER}p" "${SYSTEM_MILL_INFO_FILE}" |\
+            cut -d= -f2 |\
+            sed 's/"\(.*\)"/\1/'
+    }
+
+    CACHED_SYSTEM_MILL_PATH=$(parseSystemMillInfo 1)
+    CACHED_SYSTEM_MILL_VERSION=$(parseSystemMillInfo 2)
+    CACHED_SYSTEM_MILL_SIZE=$(parseSystemMillInfo 3)
+    CACHED_SYSTEM_MILL_MTIME=$(parseSystemMillInfo 4)
+
+    if [ "${SYSTEM_MILL_PATH}" = "${CACHED_SYSTEM_MILL_PATH}" ] \
+           && [ "${SYSTEM_MILL_SIZE}" = "${CACHED_SYSTEM_MILL_SIZE}" ] \
+           && [ "${SYSTEM_MILL_MTIME}" = "${CACHED_SYSTEM_MILL_MTIME}" ]; then
+      if [ "${CACHED_SYSTEM_MILL_VERSION}" = "${MILL_VERSION}" ]; then
+          MILL="${SYSTEM_MILL_PATH}"
+          return 0
+      else
+          return 0
+      fi
     fi
-    return
   fi
 
-  # Roughly the size of the universal script.
-  MILL_VERSION_SEARCH_RANGE="2403"
-  MILL_IN_PATH_VERSION=$(head -c "${MILL_VERSION_SEARCH_RANGE}" "${MILL_IN_PATH}" |\
-                         sed -n 's/^.*-DMILL_VERSION=\([^\s]*\) .*$/\1/p' |\
-                         head -n 1)
+  SYSTEM_MILL_VERSION=$(${SYSTEM_MILL_PATH} --version | head -n1 | sed -n 's/^Mill.*version \(.*\)/\1/p')
 
-  if [ -z "${MILL_IN_PATH_VERSION}" ]; then
-    echo "Could not determine mill version, even though ${MILL_IN_PATH} has the universal script magic" 1>&2
-    return
-  fi
+  cat <<EOF > "${SYSTEM_MILL_INFO_FILE}"
+CACHED_SYSTEM_MILL_PATH="${SYSTEM_MILL_PATH}"
+CACHED_SYSTEM_MILL_VERSION="${SYSTEM_MILL_VERSION}"
+CACHED_SYSTEM_MILL_SIZE="${SYSTEM_MILL_SIZE}"
+CACHED_SYSTEM_MILL_MTIME="${SYSTEM_MILL_MTIME}"
+EOF
 
-  if [ "${MILL_IN_PATH_VERSION}" = "${MILL_VERSION}" ]; then
-    MILL="${MILL_IN_PATH}"
+  if [ "${SYSTEM_MILL_VERSION}" = "${MILL_VERSION}" ]; then
+    MILL="${SYSTEM_MILL_PATH}"
   fi
 }
 try_to_use_system_mill
@@ -167,7 +202,7 @@ if [ ! -s "${MILL}" ] ; then
     if [ "$DOWNLOAD_FROM_MAVEN" = "1" ] ; then
       DOWNLOAD_URL="https://repo1.maven.org/maven2/com/lihaoyi/mill-dist/${MILL_VERSION}/mill-dist-${MILL_VERSION}.jar"
     else
-      MILL_VERSION_TAG=$(echo $MILL_VERSION | sed -E 's/([^-]+)(-M[0-9]+)?(-.*)?/\1\2/')
+      MILL_VERSION_TAG=$(echo "$MILL_VERSION" | sed -E 's/([^-]+)(-M[0-9]+)?(-.*)?/\1\2/')
       DOWNLOAD_URL="${GITHUB_RELEASE_CDN}${MILL_REPO_URL}/releases/download/${MILL_VERSION_TAG}/${MILL_VERSION}${DOWNLOAD_SUFFIX}"
       unset MILL_VERSION_TAG
     fi
