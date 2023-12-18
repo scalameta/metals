@@ -20,7 +20,8 @@ case class GradleBuildTool(
     userConfig: () => UserConfiguration,
     projectRoot: AbsolutePath,
 ) extends BuildTool
-    with BloopInstallProvider {
+    with BloopInstallProvider
+    with VersionRecommendation {
 
   private val initScriptName = "init-script.gradle"
   private val gradleBloopVersion = BuildInfo.gradleBloopVersion

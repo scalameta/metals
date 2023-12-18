@@ -429,6 +429,7 @@ object ScalaCli {
   def scalaCliBspJsonContent(
       args: List[String] = Nil,
       projectRoot: String = ".",
+      bspName: String = "scala-cli",
   ): String = {
     val argv = List(
       ScalaCli.javaCommand,
@@ -439,7 +440,7 @@ object ScalaCli {
       projectRoot,
     ) ++ args
     val bsjJson = ujson.Obj(
-      "name" -> "scala-cli",
+      "name" -> bspName,
       "argv" -> argv,
       "version" -> BuildInfo.scalaCliVersion,
       "bspVersion" -> scalaCliBspVersion,

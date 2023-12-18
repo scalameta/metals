@@ -47,6 +47,8 @@ final class BspServers(
     config: MetalsServerConfig,
     userConfig: () => UserConfiguration,
 )(implicit ec: ExecutionContextExecutorService) {
+  private def customProjectRoot =
+    userConfig().getCustomProjectRoot(mainWorkspace)
 
   def resolve(): BspResolvedResult = {
     findAvailableServers() match {
@@ -153,7 +155,7 @@ final class BspServers(
    *  may be a server in the current workspace
    */
   def findAvailableServers(): List[BspConnectionDetails] = {
-    val jsonFiles = findJsonFiles(mainWorkspace)
+    val jsonFiles = findJsonFiles()
     val gson = new Gson()
     for {
       candidate <- jsonFiles
@@ -172,9 +174,7 @@ final class BspServers(
     }
   }
 
-  private def findJsonFiles(
-      projectDirectory: AbsolutePath
-  ): List[AbsolutePath] = {
+  private def findJsonFiles(): List[AbsolutePath] = {
     val buf = List.newBuilder[AbsolutePath]
     def visit(dir: AbsolutePath): Unit =
       dir.list.foreach { p =>
@@ -182,7 +182,8 @@ final class BspServers(
           buf += p
         }
       }
-    visit(projectDirectory.resolve(".bsp"))
+    visit(mainWorkspace.resolve(".bsp"))
+    customProjectRoot.map(_.resolve(".bsp")).foreach(visit)
     bspGlobalInstallDirectories.foreach(visit)
     buf.result()
   }

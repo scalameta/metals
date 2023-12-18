@@ -7,8 +7,10 @@ import scala.concurrent.Future
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
 import scala.meta.internal.builds.BuildServerProvider
+import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.SbtBuildTool
+import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildServerConnection
@@ -18,6 +20,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
@@ -43,13 +46,9 @@ class BspConnector(
    * Resolves the current build servers that either have a bsp entry or if the
    * workspace can support Bloop, it will also resolve Bloop.
    */
-  def resolve(): BspResolvedResult = {
+  def resolve(buildTool: Option[BuildTool]): BspResolvedResult = {
     resolveExplicit().getOrElse {
-      if (
-        buildTools
-          .loadSupported()
-          .exists(_.isBloopDefaultBsp) || buildTools.isBloop
-      )
+      if (buildTool.exists(_.isBloopInstallProvider) || buildTools.isBloop)
         ResolvedBloop
       else bspServers.resolve()
     }
@@ -61,7 +60,10 @@ class BspConnector(
       else
         bspServers
           .findAvailableServers()
-          .find(_.getName == sel)
+          .find(buildServer =>
+            (ScalaCli.names(buildServer.getName()) && ScalaCli.names(sel)) ||
+              buildServer.getName == sel
+          )
           .map(ResolvedBspOne)
     }
   }
@@ -74,11 +76,12 @@ class BspConnector(
    * of the bsp entry has already happened at this point.
    */
   def connect(
-      projectRoot: AbsolutePath,
+      buildTool: Option[BuildTool],
       workspace: AbsolutePath,
       userConfiguration: UserConfiguration,
       shellRunner: ShellRunner,
   )(implicit ec: ExecutionContext): Future[Option[BspSession]] = {
+    val projectRoot = buildTool.map(_.projectRoot).getOrElse(workspace)
     def connect(
         projectRoot: AbsolutePath,
         bspTraceRoot: AbsolutePath,
@@ -86,7 +89,7 @@ class BspConnector(
     ): Future[Option[BuildServerConnection]] = {
       def bspStatusOpt = Option.when(addLivenessMonitor)(bspStatus)
       scribe.info("Attempting to connect to the build server...")
-      resolve() match {
+      resolve(buildTool) match {
         case ResolvedNone =>
           scribe.info("No build server found")
           Future.successful(None)
@@ -131,6 +134,7 @@ class BspConnector(
             .map(Some(_))
         case ResolvedBspOne(details) =>
           tables.buildServers.chooseServer(details.getName())
+          optSetBuildTool(details.getName())
           bspServers
             .newServer(projectRoot, bspTraceRoot, details, bspStatusOpt)
             .map(Some(_))
@@ -165,6 +169,7 @@ class BspConnector(
                 )
               )
             _ = tables.buildServers.chooseServer(item.getName())
+            _ = optSetBuildTool(item.getName())
             conn <- bspServers.newServer(
               projectRoot,
               bspTraceRoot,
@@ -180,7 +185,10 @@ class BspConnector(
         possibleBuildServerConn match {
           case None => Future.successful(None)
           case Some(buildServerConn)
-              if buildServerConn.isBloop && buildTools.isSbt =>
+              if buildServerConn.isBloop && buildTool.exists {
+                case _: SbtBuildTool => true
+                case _ => false
+              } =>
             // NOTE: (ckipp01) we special case this here since sbt bsp server
             // doesn't yet support metabuilds. So in the future when that
             // changes, re-work this and move the creation of this out above
@@ -195,6 +203,23 @@ class BspConnector(
         }
     }
   }
+
+  /**
+   * Looks for a build tool matching the chosen build server, and sets it as the chosen build server.
+   * Only for `bloop` there will be no matching build tool and the previously chosen one remains.
+   */
+  private def optSetBuildTool(buildServerName: String): Unit =
+    buildTools.loadSupported
+      .find {
+        case _: ScalaCliBuildTool if ScalaCli.names(buildServerName) => true
+        case buildTool: BuildServerProvider
+            if buildTool.buildServerName.contains(buildServerName) =>
+          true
+        case buildTool => buildTool.executableName == buildServerName
+      }
+      .foreach(buildTool =>
+        tables.buildTool.chooseBuildTool(buildTool.executableName)
+      )
 
   private def sbtMetaWorkspaces(root: AbsolutePath): List[AbsolutePath] = {
     def recursive(
@@ -277,7 +302,9 @@ class BspConnector(
       BspConnectionDetails,
     ]] = {
       if (
-        bloopPresent || buildTools.loadSupported().exists(_.isBloopDefaultBsp)
+        bloopPresent || buildTools
+          .loadSupported()
+          .exists(_.isBloopInstallProvider)
       )
         new BspConnectionDetails(
           BloopServers.name,

@@ -6,10 +6,10 @@ import scala.meta.io.AbsolutePath
 /**
  * Helper trait for build tools that have a Bloop plugin
  */
-trait BloopInstallProvider { this: BuildTool =>
+trait BloopInstallProvider extends BuildTool {
 
   /**
-   * Method used to generate the necesary .bloop files for the
+   * Method used to generate the necessary .bloop files for the
    * build tool.
    */
   def bloopInstall(
@@ -22,4 +22,6 @@ trait BloopInstallProvider { this: BuildTool =>
    * Args necessary for build tool to generate the .bloop files.
    */
   def bloopInstallArgs(workspace: AbsolutePath): List[String]
+
+  override val isBloopInstallProvider = true
 }
