@@ -103,7 +103,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|MyType
-       |""".stripMargin
+       |""".stripMargin,
+    topLines = Some(1)
   )
 
   checkSnippet(
@@ -119,7 +120,8 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|MyType
-       |""".stripMargin
+       |""".stripMargin,
+    topLines = Some(1)
   )
 
   checkSnippet(
@@ -435,16 +437,26 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |  Wi@@
         |}
         |""".stripMargin,
-    "Widget -  example",
+    """|Widget -  example
+       |Window -  java.awt
+       |WindowPeer -  java.awt.peer
+       |WindowEvent -  java.awt.event
+       |""".stripMargin,
     compat = Map(
       "3" ->
         """|Widget -  example
            |Widget($0) - (name: String): Widget
            |Widget($0) - (age: Int): Widget
            |Widget($0) - (name: String, age: Int): Widget
-           |""".stripMargin
+           |""".stripMargin,
+      "2.13" -> """|Widget -  example
+                   |Window -  java.awt
+                   |WindowPeer -  java.awt.peer
+                   |WithFilter -  scala.collection
+                   |""".stripMargin
     ),
-    includeDetail = true
+    includeDetail = true,
+    topLines = Some(4)
   )
 
   checkSnippet(
@@ -456,13 +468,20 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
         |  Wi@@
         |}
         |""".stripMargin,
-    "Widget -  example",
+    """|Widget -  example
+       |Window -  java.awt
+       |WindowPeer -  java.awt.peer
+       |WindowEvent -  java.awt.event
+       |""".stripMargin,
     compat = Map(
-      "3" ->
-        """|Widget -  example
-           |""".stripMargin
+      "2.13" -> """|Widget -  example
+                   |Window -  java.awt
+                   |WindowPeer -  java.awt.peer
+                   |WithFilter -  scala.collection
+                   |""".stripMargin
     ),
-    includeDetail = true
+    includeDetail = true,
+    topLines = Some(4)
   )
 
   // https://github.com/scalameta/metals/issues/4004

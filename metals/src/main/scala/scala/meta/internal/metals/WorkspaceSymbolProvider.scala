@@ -31,6 +31,7 @@ final class WorkspaceSymbolProvider(
     classpathSearchIndexer: ClasspathSearch.Indexer =
       ClasspathSearch.Indexer.default,
 )(implicit rc: ReportContext) {
+  val MaxWorkspaceMatchesForShortQuery = 100
   val inWorkspace: TrieMap[Path, WorkspaceSymbolsIndex] =
     TrieMap.empty[Path, WorkspaceSymbolsIndex]
 
@@ -68,7 +69,7 @@ final class WorkspaceSymbolProvider(
       preferredDialect: Option[Dialect],
   ): Seq[l.SymbolInformation] = {
     val query = WorkspaceSymbolQuery.exact(queryString)
-    val visistor =
+    val visitor =
       new WorkspaceSearchVisitor(
         workspace,
         query,
@@ -78,8 +79,8 @@ final class WorkspaceSymbolProvider(
         preferredDialect,
       )
     val targetId = buildTargets.inverseSources(path)
-    search(query, visistor, targetId)
-    visistor.allResults().filter(_.getName() == queryString)
+    search(query, visitor, targetId)
+    visitor.allResults().filter(_.getName() == queryString)
   }
 
   def search(
@@ -186,6 +187,7 @@ final class WorkspaceSymbolProvider(
       visitor: SymbolSearchVisitor,
       id: Option[BuildTargetIdentifier],
   ): Unit = {
+    var count = 0
     for {
       (path, index) <- id match {
         case None =>
@@ -203,12 +205,16 @@ final class WorkspaceSymbolProvider(
       symbol <- index.symbols
       if query.matches(symbol.symbol)
     } {
-      visitor.visitWorkspaceSymbol(
-        path,
-        symbol.symbol,
-        symbol.kind,
-        symbol.range,
-      )
+      count += 1
+      if (query.isExact && count >= MaxWorkspaceMatchesForShortQuery) return
+      else {
+        visitor.visitWorkspaceSymbol(
+          path,
+          symbol.symbol,
+          symbol.kind,
+          symbol.range,
+        )
+      }
     }
   }
 

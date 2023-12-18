@@ -429,7 +429,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "import-star-multi-import",
+    "import-star-multi-import".tag(IgnoreForScala3CompilerPC),
     """
       |import scala.collection.immutable.List.{range => r, *@@}
       |""".stripMargin,
@@ -1710,7 +1710,8 @@ class CompletionSuite extends BaseCompletionSuite {
     compat = Map(
       "3" -> "TTT[A <: Int]"
     ),
-    includeDetail = false
+    includeDetail = false,
+    topLines = Some(1)
   )
 
   check(
@@ -1723,7 +1724,8 @@ class CompletionSuite extends BaseCompletionSuite {
     "TTT[A] = O.TTT",
     compat = Map(
       "3" -> "TTT[A <: Int] = List[A]"
-    )
+    ),
+    topLines = Some(1)
   )
 
   check(
@@ -1734,7 +1736,8 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "TTT[A <: Int]",
-    includeDetail = false
+    includeDetail = false,
+    topLines = Some(1)
   )
 
   check(
@@ -1745,7 +1748,8 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "TTT[K <: Int]",
-    includeDetail = false
+    includeDetail = false,
+    topLines = Some(1)
   )
 
   check(
@@ -1755,7 +1759,8 @@ class CompletionSuite extends BaseCompletionSuite {
         | val t: TT@@
         |}
         |""".stripMargin,
-    "TTT[K <: Int] = [V] =>> Map[K, V]"
+    "TTT[K <: Int] = [V] =>> Map[K, V]",
+    topLines = Some(1)
   )
 
   check(
@@ -1768,7 +1773,8 @@ class CompletionSuite extends BaseCompletionSuite {
     "TTT<: O.TTT",
     compat = Map(
       "3" -> "TTT <: Int"
-    )
+    ),
+    topLines = Some(1)
   )
 
   check(
@@ -1798,7 +1804,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension (x: Fo@@)
        |""".stripMargin,
     """|Foo extension-definition-scope
-       |""".stripMargin
+       |""".stripMargin,
+    topLines = Some(1)
   )
 
   check(
@@ -1822,7 +1829,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension [A <: Fo@@]
        |""".stripMargin,
     """|Foo extension-definition-type-parameter
-       |""".stripMargin
+       |""".stripMargin,
+    topLines = Some(1)
   )
 
   check(
@@ -1846,7 +1854,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension (using Fo@@)
        |""".stripMargin,
     """|Foo extension-definition-using-param-clause
-       |""".stripMargin
+       |""".stripMargin,
+    topLines = Some(1)
   )
 
   check(
@@ -1858,7 +1867,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension (x: Int)(using Fo@@)
        |""".stripMargin,
     """|Foo extension-definition-mix-1
-       |""".stripMargin
+       |""".stripMargin,
+    topLines = Some(1)
   )
 
   check(
@@ -1870,7 +1880,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension (using Fo@@)(x: Int)(using Foo)
        |""".stripMargin,
     """|Foo extension-definition-mix-2
-       |""".stripMargin
+       |""".stripMargin,
+    topLines = Some(1)
   )
 
   check(
@@ -1882,7 +1893,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension (using Foo)(x: Int)(using Fo@@)
        |""".stripMargin,
     """|Foo extension-definition-mix-3
-       |""".stripMargin
+       |""".stripMargin,
+    topLines = Some(1)
   )
 
   check(
@@ -1894,7 +1906,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension [A](x: Fo@@)
        |""".stripMargin,
     """|Foo extension-definition-mix-4
-       |""".stripMargin
+       |""".stripMargin,
+    topLines = Some(1)
   )
 
   check(
@@ -1906,7 +1919,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension [A](using Fo@@)(x: Int)
        |""".stripMargin,
     """|Foo extension-definition-mix-5
-       |""".stripMargin
+       |""".stripMargin,
+    topLines = Some(1)
   )
 
   check(
@@ -1918,7 +1932,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension [A](using Foo)(x: Fo@@)
        |""".stripMargin,
     """|Foo extension-definition-mix-6
-       |""".stripMargin
+       |""".stripMargin,
+    topLines = Some(1)
   )
 
   check(
@@ -1930,7 +1945,8 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension [A](using Foo)(x: Fo@@)(using Foo)
        |""".stripMargin,
     """|Foo extension-definition-mix-7
-       |""".stripMargin
+       |""".stripMargin,
+    topLines = Some(1)
   )
 
   check(

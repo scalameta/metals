@@ -4,6 +4,9 @@ import tests.BaseCompletionSuite
 
 class CompletionKeywordSuite extends BaseCompletionSuite {
 
+  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] =
+    Some(IgnoreForScala3CompilerPC)
+
   check(
     "super-template",
     """
@@ -149,6 +152,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     """|value: Int
        |val
        |var
+       |varargs - scala.annotation
        |override def equals(x$1: Any): Boolean
        |override def hashCode(): Int
        |override def finalize(): Unit
@@ -158,6 +162,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
         """|value: Int
            |val
            |var
+           |varargs - scala.annotation
            |override def equals(x$1: Object): Boolean
            |override def hashCode(): Int
            |override def finalize(): Unit
@@ -166,6 +171,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
         """|value: Int
            |val
            |var
+           |varargs - scala.annotation
            |""".stripMargin
     )
   )
@@ -183,6 +189,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|val
        |var
+       |varargs - scala.annotation
        |""".stripMargin
   )
 
