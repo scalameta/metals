@@ -26,7 +26,8 @@ case class SbtBuildTool(
     userConfig: () => UserConfiguration,
 ) extends BuildTool
     with BloopInstallProvider
-    with BuildServerProvider {
+    with BuildServerProvider
+    with VersionRecommendation {
 
   import SbtBuildTool._
 

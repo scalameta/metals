@@ -13,7 +13,6 @@ import scala.concurrent.Promise
 
 import scala.meta.inputs.Input
 import scala.meta.internal.bsp.ConnectionBspStatus
-import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.Buffers
@@ -303,20 +302,6 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
         .map(tool => createParams(tool.toString()))
         .contains(params)
     }
-    // NOTE: (ckipp01) Just for easiness of testing, we are going to just look
-    // for sbt and mill builds together, which are most common. The logic however
-    // is identical for all build tools.
-    def isSameMessageFromList(
-        createParams: List[BuildTool] => ShowMessageRequestParams
-    ): Boolean = {
-      val buildTools = BuildTools
-        .default()
-        .allAvailable
-        .filter(bt => bt.executableName == "sbt" || bt.executableName == "mill")
-
-      val targetParams = createParams(buildTools)
-      params == targetParams
-    }
 
     def isNewBuildToolDetectedMessage(): Boolean = {
       val buildTools = BuildTools.default().allAvailable
@@ -347,7 +332,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
           getDoctorInformation
         } else if (BspSwitch.isSelectBspServer(params)) {
           selectBspServer(params.getActions.asScala.toSeq)
-        } else if (isSameMessageFromList(ChooseBuildTool.params)) {
+        } else if (params.getMessage == ChooseBuildTool.message) {
           chooseBuildTool(params.getActions.asScala.toSeq)
         } else if (MissingScalafmtConf.isCreateScalafmtConf(params)) {
           createScalaFmtConf
