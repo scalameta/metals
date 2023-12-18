@@ -5,4 +5,3 @@ root_url=https://raw.githubusercontent.com/lefou/millw/main
 
 curl $root_url/millw > $PWD/metals/src/main/resources/millw
 curl $root_url/millw.bat > $PWD/metals/src/main/resources/millw.bat
-
