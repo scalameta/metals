@@ -9,6 +9,7 @@ import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.pc.Compat.EvidenceParamName
 import scala.meta.internal.pc.IndexedContext
 import scala.meta.internal.pc.Params
 import scala.meta.internal.pc.printer.ShortenedNames.ShortName
@@ -18,7 +19,6 @@ import scala.meta.pc.SymbolSearch
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
-import dotty.tools.dotc.core.NameKinds.EvidenceParamName
 import dotty.tools.dotc.core.NameOps.*
 import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.StdNames
