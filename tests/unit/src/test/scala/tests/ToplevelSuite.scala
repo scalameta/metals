@@ -12,10 +12,12 @@ import scala.meta.internal.mtags.Mtags
  * Assert that Mtags.toplevels method works as expected.
  */
 abstract class ToplevelSuite(
-    input: InputProperties,
+    newInput: InputProperties,
     dialect: Dialect,
     filename: String,
 ) extends SingleFileExpectSuite(filename) {
+
+  override lazy val input: InputProperties = newInput
   override def obtained(): String = {
     val toplevels = ListBuffer.empty[String]
     val missingSymbols = ListBuffer.empty[String]
@@ -24,13 +26,13 @@ abstract class ToplevelSuite(
         val ls = FileIO.listAllFilesRecursively(dir)
         ls.files.foreach { relpath =>
           val reluri = relpath.toURI(isDirectory = false).toString
-          Mtags.topLevelSymbols(dir.resolve(relpath), dialect).foreach {
-            toplevel =>
-              // do not check symtab for Scala 3 since it's not possible currently
-              if (symtab.info(toplevel).isEmpty && dialect != Scala3) {
-                missingSymbols += toplevel
-              }
-              toplevels += s"$reluri -> $toplevel"
+          val path = dir.resolve(relpath)
+          val fileSymtab = symtab(path)
+          Mtags.topLevelSymbols(path, dialect).foreach { toplevel =>
+            if (fileSymtab.info(toplevel).isEmpty) {
+              missingSymbols += toplevel
+            }
+            toplevels += s"$reluri -> $toplevel"
           }
         }
       }

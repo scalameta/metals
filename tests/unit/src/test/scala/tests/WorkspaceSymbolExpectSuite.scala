@@ -22,8 +22,9 @@ class WorkspaceSymbolExpectSuite
             }
           )
           val obtained = Semanticdbs.printTextDocument(mtags)
+          val fileSymtab = symtab(file.file)
           val unknownSymbols = mtags.occurrences.collect {
-            case occ if symtab.info(occ.symbol).isEmpty =>
+            case occ if fileSymtab.info(occ.symbol).isEmpty =>
               val pos = input.toPosition(occ)
               pos.formatMessage("error", s"unknown symbol: ${occ.symbol}")
           }

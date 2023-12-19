@@ -29,14 +29,18 @@ abstract class MtagsSuite(
       ExpectTestCase(
         file,
         { () =>
+          val fileSymtab = symtab(file.file)
           val input = file.input
           val mtags = Mtags.index(file.file, dialect)
           val obtained = Semanticdbs.printTextDocument(mtags)
           val unknownSymbols = mtags.occurrences.collect {
-            case occ if symtab.info(occ.symbol).isEmpty =>
+            case occ
+                if fileSymtab.info(occ.symbol).isEmpty && !occ.symbol
+                  .endsWith("/") =>
               val pos = input.toPosition(occ)
               pos.formatMessage("error", s"unknown symbol: ${occ.symbol}")
           }
+
           if (!ignoreUnknownSymbols && unknownSymbols.nonEmpty) {
             fail(unknownSymbols.mkString("\n"))
           }
