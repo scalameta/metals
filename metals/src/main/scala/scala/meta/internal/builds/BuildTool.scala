@@ -26,6 +26,14 @@ trait BuildTool {
 
   val isBloopInstallProvider = false
 
+  /**
+   * Name of the build server if different than the actual build-tool that is
+   * serving as a build server.
+   *
+   * Ex. mill isn't mill, but rather mill-bsp
+   */
+  def buildServerName = executableName
+
 }
 
 object BuildTool {

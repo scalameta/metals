@@ -917,8 +917,8 @@ class MetalsLspService(
       chosenBuildServer = found match {
         case Some(BuildTool.Found(buildServer, _))
             if buildServer.forcesBuildServer =>
-          tables.buildServers.chooseServer(buildServer.executableName)
-          Some(buildServer.executableName)
+          tables.buildServers.chooseServer(buildServer.buildServerName)
+          Some(buildServer.buildServerName)
         case _ => tables.buildServers.selectedServer()
       }
       _ <- Future
@@ -1977,7 +1977,7 @@ class MetalsLspService(
     ): Unit =
       status match {
         case Generated =>
-          tables.buildServers.chooseServer(buildTool.getBuildServerName)
+          tables.buildServers.chooseServer(buildTool.buildServerName)
           quickConnectToBuildServer().ignoreValue
         case Cancelled => ()
         case Failed(exit) =>
@@ -2114,7 +2114,7 @@ class MetalsLspService(
         slowConnectToBloopServer(forceImport, buildTool, digest)
       case Some(BuildTool.Found(buildTool: ScalaCliBuildTool, _))
           if !buildTool.isBspGenerated(folder) =>
-        tables.buildServers.chooseServer(buildTool.executableName)
+        tables.buildServers.chooseServer(buildTool.buildServerName)
         buildTool
           .generateBspConfig(
             folder,
@@ -2124,9 +2124,9 @@ class MetalsLspService(
           .flatMap(_ => quickConnectToBuildServer())
       case Some(BuildTool.Found(buildTool, _))
           if !chosenBuildServer.exists(
-            _ == buildTool.executableName
+            _ == buildTool.buildServerName
           ) && buildTool.forcesBuildServer =>
-        tables.buildServers.chooseServer(buildTool.executableName)
+        tables.buildServers.chooseServer(buildTool.buildServerName)
         quickConnectToBuildServer()
       case Some(found) =>
         indexer.reloadWorkspaceAndIndex(

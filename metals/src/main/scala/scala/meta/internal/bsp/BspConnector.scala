@@ -212,10 +212,7 @@ class BspConnector(
     buildTools.loadSupported
       .find {
         case _: ScalaCliBuildTool if ScalaCli.names(buildServerName) => true
-        case buildTool: BuildServerProvider
-            if buildTool.buildServerName.contains(buildServerName) =>
-          true
-        case buildTool => buildTool.executableName == buildServerName
+        case buildTool => buildTool.buildServerName == buildServerName
       }
       .foreach(buildTool =>
         tables.buildTool.chooseBuildTool(buildTool.executableName)
@@ -289,9 +286,9 @@ class BspConnector(
         case buildTool: BuildServerProvider
             if !foundServers
               .exists(details =>
-                details.getName() == buildTool.getBuildServerName
+                details.getName() == buildTool.buildServerName
               ) =>
-          buildTool.getBuildServerName -> Left(buildTool)
+          buildTool.buildServerName -> Left(buildTool)
       }
       .toMap
 
@@ -329,14 +326,14 @@ class BspConnector(
         status: BspConfigGenerationStatus,
     ): Boolean = status match {
       case BspConfigGenerationStatus.Generated =>
-        tables.buildServers.chooseServer(buildTool.getBuildServerName)
+        tables.buildServers.chooseServer(buildTool.buildServerName)
         true
       case Cancelled => false
       case Failed(exit) =>
         exit match {
           case Left(exitCode) =>
             scribe.error(
-              s"Creation of .bsp/${buildTool.getBuildServerName} failed with exit code: $exitCode"
+              s"Creation of .bsp/${buildTool.buildServerName} failed with exit code: $exitCode"
             )
             client.showMessage(
               Messages.BspProvider.genericUnableToCreateConfig

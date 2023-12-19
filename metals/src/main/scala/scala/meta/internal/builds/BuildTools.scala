@@ -81,6 +81,10 @@ final class BuildTools(
     _.resolve("build.sc").isFile
   )
   def isMill: Boolean = millProject.isDefined
+  def isMillBsp(path: AbsolutePath): Boolean =
+    isInBsp(path) && path.filename.contains("mill") &&
+      path.filename.endsWith(".json")
+
   def scalaCliProject: Option[AbsolutePath] =
     searchForBuildTool(_.resolve("project.scala").isFile)
       .orElse {
@@ -123,6 +127,10 @@ final class BuildTools(
   )
   def isBazel: Boolean = bazelProject.isDefined
 
+  def isInBsp(path: AbsolutePath): Boolean =
+    path.isFile && path.parent.filename == ".bsp" &&
+      path.filename.endsWith(".json")
+
   private def customBsps: List[BspOnly] = {
     val bspFolders =
       (workspace :: customProjectRoot.toList).distinct
@@ -148,7 +156,7 @@ final class BuildTools(
   }
 
   private def knownBsps =
-    Set(SbtBuildTool.name, MillBuildTool.name) ++ ScalaCli.names
+    Set(SbtBuildTool.name, MillBuildTool.bspName) ++ ScalaCli.names
 
   private def customProjectRoot = userConfig().getCustomProjectRoot(workspace)
 
@@ -227,12 +235,9 @@ final class BuildTools(
       Some(GradleBuildTool.name)
     else if (mavenProject.exists(MavenBuildTool.isMavenRelatedPath(_, path)))
       Some(MavenBuildTool.name)
-    else if (isMill && MillBuildTool.isMillRelatedPath(path))
+    else if (isMill && MillBuildTool.isMillRelatedPath(path) || isMillBsp(path))
       Some(MillBuildTool.name)
-    else if (
-      path.isFile && path.filename.endsWith(".json") &&
-      path.parent.filename == ".bsp"
-    )
+    else if (isInBsp(path))
       Some(path.filename.stripSuffix(".json"))
     else None
   }
