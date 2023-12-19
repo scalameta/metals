@@ -46,7 +46,10 @@ object TestGroups {
       "tests.DidFocusWhileCompilingLspSuite", "tests.BloopJavaHomeLspSuite",
       "tests.testProvider.ScalatestFinderSuite", "tests.ScalaCliSuite",
       "tests.FoldingRangeScala3LineFolingOnlySuite",
-      "tests.debug.BreakpointScalaCliDapSuite", "tests.CallHierarchyLspSuite"),
+      "tests.debug.BreakpointScalaCliDapSuite", "tests.CallHierarchyLspSuite",
+      "tests.BspStatusSuite", "tests.ServerLivenessMonitorLspSuite",
+      "tests.ToplevelWithInnerScala2Suite", "tests.ScaladocSymbolsSuite",
+      "tests.SkipCommentsSuite", "tests.JarSourcesProviderSuite"),
     Set("tests.AmmoniteSuite", "tests.debug.BreakpointDapSuite",
       "tests.OnTypeFormattingSuite", "tests.ReferenceLspSuite",
       "tests.SuperMethodLspSuite", "tests.SyntaxErrorLspSuite",
@@ -115,7 +118,11 @@ object TestGroups {
       "tests.RunProviderLensLspSuite", "tests.SemanticTokensLspSuite",
       "tests.ToplevelsScala3Suite", "tests.codeactions.InlineValueLspSuite",
       "tests.JavaToplevelSuite", "tests.ToplevelLibrarySuite",
-      "tests.FoldingRangeScala3LineFoldingOnlySuite"),
+      "tests.FoldingRangeScala3LineFoldingOnlySuite", "tests.LogBackupSuite",
+      "tests.decorations.SyntheticDecorationsExpectSuite",
+      "tests.codeactions.ConvertSingleLineCommentLspSuite",
+      "tests.ServerLivenessMonitorSuite", "tests.ResetWorkspaceLspSuite",
+      "tests.ToplevelWithInnerScala3Suite"),
   )
 
 }
