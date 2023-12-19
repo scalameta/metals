@@ -596,7 +596,7 @@ lazy val input3 = project
   .settings(
     sharedSettings,
     scalaVersion := V.scala3,
-    target := (ThisBuild / baseDirectory).value / "input" / "target" / "target3",
+    target := (ThisBuild / baseDirectory).value / "tests" / "input" / "target" / "target3",
     Compile / unmanagedSourceDirectories := Seq(
       (input / baseDirectory).value / "src" / "main" / "scala",
       (input / baseDirectory).value / "src" / "main" / "scala-3",
