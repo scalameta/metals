@@ -25,11 +25,17 @@ object Snapshot {
   private implicit val localDateTimeOrdering: Ordering[LocalDateTime] =
     Ordering.fromLessThan[LocalDateTime]((a, b) => a.compareTo(b) < 0)
 
-  def latest(repo: String, binaryVersion: String): Snapshot = {
+  def latest(repo: String, binaryVersion: String, retry: Int = 5): Snapshot = {
     if (System.getenv("CI") != null) {
       try {
         fetchLatest(repo, binaryVersion)
       } catch {
+        case NonFatal(e) if retry > 0 =>
+          scribe.error(
+            "unexpected error fetching SNAPSHOT version, retrying...",
+            e,
+          )
+          latest(repo, binaryVersion, retry - 1)
         case NonFatal(e) =>
           scribe.error("unexpected error fetching SNAPSHOT version", e)
           current
