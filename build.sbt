@@ -19,6 +19,8 @@ def isScala2(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 2)
 def isScala3(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 3)
 def isScala3WithPresentationCompiler(v: String): Boolean =
   (Version.parse(v), Version.parse(V.firstScala3PCVersion)) match {
+    case (Some(v), _) if V.supportedScalaVersions.contains(v.toString()) =>
+      false
     case (Some(v), Some(firstScala3PCVersion)) => v >= firstScala3PCVersion
     case _ => false
   }
