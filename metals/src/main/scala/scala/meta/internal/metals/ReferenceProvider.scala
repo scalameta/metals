@@ -513,6 +513,7 @@ final class ReferenceProvider(
   private val noAdjustRange: AdjustRange =
     (range: s.Range, _: String, _: String) => Some(range)
   type AdjustRange = (s.Range, String, String) => Option[s.Range]
+
 }
 
 class SymbolAlternatives(symbol: String, name: String) {
