@@ -69,7 +69,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
        |""".stripMargin
   )
 
-  check("test-suite-object", library = Some("com.lihaoyi::utest:0.7.3"))(
+  check("test-suite-object", library = Some("com.lihaoyi::utest:0.8.1"))(
     """|package foo.bar
        |<<test>><<debug test>>
        |object Foo extends utest.TestSuite {

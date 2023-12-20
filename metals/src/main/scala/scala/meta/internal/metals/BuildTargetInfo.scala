@@ -4,7 +4,7 @@ import java.nio.file.Path
 
 import scala.collection.mutable.ListBuffer
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.mtags.URIEncoderDecoder
 
 import ch.epfl.scala.bsp4j.BuildTarget
@@ -14,7 +14,7 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
 
   def buildTargetDetails(targetName: String, uri: String): String = {
     buildTargets.all
-      .find(_.getName == targetName)
+      .find(_.getName() == targetName)
       .orElse(buildTargets.all.find(_.getId.getUri.toString == uri))
       .map(target => buildTargetDetail(target.getId()))
       .getOrElse(s"Build target $targetName not found")
@@ -32,7 +32,7 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
 
     commonInfo.foreach(info => {
       output += "Target"
-      output += s"  ${info.getName}"
+      output += s"  ${info.getName()}"
 
       if (!info.getTags.isEmpty)
         output ++= getSection("Tags", info.getTags.asScala.toList)

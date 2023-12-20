@@ -106,20 +106,20 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   val decorations =
     new ConcurrentHashMap[AbsolutePath, Set[PublishDecorationsParams]]()
   var slowTaskHandler: MetalsSlowTaskParams => Option[MetalsSlowTaskResult] = {
-    _: MetalsSlowTaskParams => None
+    (_: MetalsSlowTaskParams) => None
   }
-  var showMessageHandler: MessageParams => Unit = { _: MessageParams =>
+  var showMessageHandler: MessageParams => Unit = { (_: MessageParams) =>
     ()
   }
   var showMessageRequestHandler
       : ShowMessageRequestParams => Option[MessageActionItem] = {
-    _: ShowMessageRequestParams => None
+    (_: ShowMessageRequestParams) => None
   }
   var inputBoxHandler: MetalsInputBoxParams => RawMetalsInputBoxResult = {
-    _: MetalsInputBoxParams => RawMetalsInputBoxResult(cancelled = true)
+    (_: MetalsInputBoxParams) => RawMetalsInputBoxResult(cancelled = true)
   }
   var quickPickHandler: MetalsQuickPickParams => RawMetalsQuickPickResult = {
-    _: MetalsQuickPickParams => RawMetalsQuickPickResult(cancelled = true)
+    (_: MetalsQuickPickParams) => RawMetalsQuickPickResult(cancelled = true)
   }
 
   private val refreshCount = new AtomicInteger

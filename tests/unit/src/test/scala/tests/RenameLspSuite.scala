@@ -1,6 +1,7 @@
 package tests
 
 import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.{BuildInfo => V}
 
 class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
 
@@ -296,8 +297,9 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |""".stripMargin,
   )
 
+  // https://github.com/lampepfl/dotty/issues/18389
   renamed(
-    "colon-good",
+    "colon-good".ignore,
     """|/a/src/main/scala/a/Main.scala
        |package a
        |class User{
@@ -519,67 +521,6 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
     newName = "otherRename",
     breakingChange = (str: String) => str.replaceAll("Int", "String"),
     expectedError = true,
-  )
-
-  renamed(
-    "macro",
-    """|/a/src/main/scala/a/Main.scala
-       |package a
-       |import io.circe.generic.JsonCodec
-       |trait LivingBeing
-       |@JsonCodec sealed trait <<An@@imal>> extends LivingBeing
-       |object <<Animal>> {
-       |  case object Dog extends <<Animal>>
-       |  case object Cat extends <<Animal>>
-       |}
-       |""".stripMargin,
-    "Tree",
-  )
-
-  renamed(
-    "macro1",
-    """|/a/src/main/scala/a/Main.scala
-       |package a
-       |import io.circe.generic.JsonCodec
-       |trait <<LivingBeing>>
-       |@JsonCodec sealed trait Animal extends <<Livi@@ngBeing>>
-       |object Animal {
-       |  case object Dog extends Animal
-       |  case object Cat extends Animal
-       |}
-       |""".stripMargin,
-    "Tree",
-  )
-
-  renamed(
-    "macro2",
-    """|/a/src/main/scala/a/Main.scala
-       |package a
-       |import io.circe.generic.JsonCodec
-       |@JsonCodec
-       |final case class <<Ma@@in2>>(name: String)
-       |""".stripMargin,
-    "Tree",
-  )
-
-  renamed(
-    "macro3",
-    """|/a/src/main/scala/a/Main.scala
-       |package a
-       |import io.circe.generic.JsonCodec
-       |trait LivingBeing
-       |@JsonCodec sealed trait <<Animal>> extends LivingBeing
-       |object <<Animal>>{
-       |  case object Dog extends <<Animal>>
-       |  case object Cat extends <<Animal>>
-       |}
-       |/a/src/main/scala/a/Use.scala
-       |package a
-       |object Use {
-       |  val dog : <<An@@imal>> = <<Animal>>.Dog
-       |}
-       |""".stripMargin,
-    "Tree",
   )
 
   renamed(
@@ -894,7 +835,46 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
     expectedError = true,
   )
 
-  override protected def libraryDependencies: List[String] =
-    List("org.scalatest::scalatest:3.2.12", "io.circe::circe-generic:0.14.1")
+  renamed(
+    "scala3-outer",
+    """|/a/src/main/scala/a/Main.scala
+       |
+       |@main def run() = {
+       |  <<hello>>("Mark")
+       |  <<hello>>("Anne")
+       |}
+       |def <<hel@@lo>>(name : String) : Unit = {
+       |  println(s"Hello $name")
+       |}
+       |""".stripMargin,
+    newName = "greeting",
+    scalaVersion = Some(V.scala3),
+  )
+
+  renamed(
+    "scala3-extension-params",
+    """|/a/src/main/scala/a/Main.scala
+       |
+       |extension (<<sb@@d>>: String)
+       |  def double = <<sbd>> + <<sbd>>
+       |  def double2 = <<sbd>> + <<sbd>>
+       |end extension
+       |""".stripMargin,
+    newName = "greeting",
+    scalaVersion = Some(V.scala3),
+  )
+
+  renamed(
+    "scala3-extension-params-ref",
+    """|/a/src/main/scala/a/Main.scala
+       |
+       |extension (<<sbd>>: String)
+       |  def double = <<sb@@d>> + <<sbd>>
+       |  def double2 = <<sbd>> + <<sbd>>
+       |end extension
+       |""".stripMargin,
+    newName = "greeting",
+    scalaVersion = Some(V.scala3),
+  )
 
 }

@@ -10,7 +10,7 @@ import scala.util.Properties
 
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.JavaBinary
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Time

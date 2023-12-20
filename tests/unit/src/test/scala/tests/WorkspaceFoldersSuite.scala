@@ -12,14 +12,14 @@ class WorkspaceFoldersSuite
         Map(
           "testFolder" ->
             s"""|/metals.json
-                |{"a":{"scalaVersion" : ${V.scala213}}}
+                |{"a":{"scalaVersion" : ${V.scala3}}}
                 |/a/src/main/scala/a/A.scala
                 |package a
                 |case class MyObjectA()
                 |""".stripMargin,
           "otherTestFolder" ->
             s"""|/metals.json
-                |{"a":{"scalaVersion" : ${V.scala213}}}
+                |{"a":{"scalaVersion" : ${V.scala3}}}
                 |/a/src/main/scala/a/B.scala
                 |package a
                 |case class MyObjectB()

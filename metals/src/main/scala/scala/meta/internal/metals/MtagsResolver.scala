@@ -6,7 +6,6 @@ import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.semver.SemVer
 
 import coursierapi.error.SimpleResolutionError

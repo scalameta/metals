@@ -2,7 +2,7 @@ package scala.meta.internal.metals
 
 import java.{util => ju}
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.HoverSignature
 
@@ -55,8 +55,7 @@ trait AdjustLspData {
   ): ju.List[Location]
 
   def adjustHoverResp(hover: Hover): Hover =
-    if (hover.getRange == null)
-      hover
+    if (hover.getRange == null) hover
     else {
       val newRange = adjustRange(hover.getRange)
       val newHover = new Hover

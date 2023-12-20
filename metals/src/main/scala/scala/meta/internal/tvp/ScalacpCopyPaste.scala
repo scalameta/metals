@@ -169,7 +169,7 @@ object ScalacpCopyPaste {
             val ssym = sym.ssym
             sbuf += ssym
             if (sym.isUsefulField && sym.isMutable) {
-              val setterSymbolName = ssym.desc.name + "_="
+              val setterSymbolName = ssym.desc.name.toString + "_="
               val setterSym =
                 Symbols.Global(ssym.owner, d.Method(setterSymbolName, "()"))
               sbuf += setterSym

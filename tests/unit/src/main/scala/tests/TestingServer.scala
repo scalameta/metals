@@ -1052,7 +1052,7 @@ final case class TestingServer(
     // or fails if it could nat be achieved withing [[maxRetries]] number of tries
     var retries = maxRetries
     val codeLenses = Promise[List[l.CodeLens]]()
-    val handler = { refreshCount: Int =>
+    val handler = { (refreshCount: Int) =>
       scribe.info(s"Refreshing model for $filename")
       if (refreshCount > 0)
         for {

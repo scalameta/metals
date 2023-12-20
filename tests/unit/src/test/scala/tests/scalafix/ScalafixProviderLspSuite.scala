@@ -117,8 +117,7 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
            |   
            |}
            |""".stripMargin,
-      ),
-
+      )
     } yield ()
   }
 

@@ -163,7 +163,7 @@ class ClassBreakpointSuite extends BaseClassFinderSuite {
       name: TestOptions,
       original: String,
       expected: String,
-      scalaVersion: String = V.scala213,
+      scalaVersion: String = V.scala3,
   ): Unit =
     test(name) {
       val (buffers, classFinder) = init(scalaVersion)

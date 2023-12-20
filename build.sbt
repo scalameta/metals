@@ -46,7 +46,7 @@ def crossSetting[A](
 logo := Welcome.logo
 usefulTasks := Welcome.tasks
 
-ThisBuild / scalafixScalaBinaryVersion := scalaBinaryVersion.value
+ThisBuild / scalafixScalaBinaryVersion := "2.13"
 
 inThisBuild(
   List(
@@ -54,8 +54,8 @@ inThisBuild(
       if (isCI) dynVer
       else localSnapshotVersion // only for local publishing
     },
-    scalaVersion := V.scala213,
-    crossScalaVersions := List(V.scala213),
+    scalaVersion := V.scala3,
+    crossScalaVersions := List(V.scala3),
     organization := "org.scalameta",
     licenses := Seq(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
@@ -138,7 +138,7 @@ commands ++= Seq(
       runMtagsPublishLocal(st, v, localSnapshotVersion)
     }
     "interfaces/publishLocal" ::
-      s"++${V.scala213} metals/publishLocal" ::
+      s"++${V.scala3} metals/publishLocal" ::
       "mtags-java/publishLocal" ::
       publishMtags
   },
@@ -226,6 +226,27 @@ val sharedSettings = sharedJavacOptions ++ sharedScalacOptions ++ List(
       )
     ),
   ),
+  excludeDependencies ++= crossSetting(
+    scalaVersion.value,
+    if3 = {
+      // Exclude cross published version dependencies leading to conflicts in Scala 3 vs 2.13
+      // When using Scala 3 exclude Scala 2.13 standard native libraries,
+      // when using Scala 2.13 exclude Scala 3 standard native libraries
+      // Use full name, Maven style published artifacts cannot use artifact/cross version for exclusion rules
+      List(
+        ExclusionRule()
+          .withOrganization("org.scala-lang.modules")
+          .withName(
+            "scala-collection-compat_2.13"
+          ),
+        ExclusionRule()
+          .withOrganization("org.scala-lang.modules")
+          .withName(
+            "scala-xml_2.13"
+          ),
+      )
+    },
+  ),
   scalacOptions ++= lintingOptions(scalaVersion.value),
 )
 
@@ -293,21 +314,19 @@ def multiScalaDirectories(root: File, scalaVersion: String) = {
   result.toList
 }
 
-def scala3ScalametaDependency =
-  ("org.scalameta" %% "scalameta" % V.scalameta)
-    .cross(CrossVersion.for3Use2_13)
-    .exclude("org.scala-lang", "scala-reflect")
-    .exclude("org.scala-lang", "scala-compiler")
-    // the correct one should be brought in by the scala 3 compiler
-    .exclude("org.scala-lang", "scala-library")
-    .exclude(
-      "com.lihaoyi",
-      "geny_2.13",
-    ) // avoid 2.13 and 3 on the classpath since we rely on it directly
-    .exclude(
-      "com.lihaoyi",
-      "sourcecode_2.13",
-    ) // avoid 2.13 and 3 on the classpath since it comes in via pprint
+def scalametaDependency = ("org.scalameta" %% "scalameta" % V.scalameta)
+  .cross(CrossVersion.for3Use2_13)
+  .exclude("org.scala-lang", "scala-reflect")
+  .exclude("org.scala-lang", "scala-compiler")
+  .exclude("org.scala-lang.modules", "scala-collection-compat")
+  .exclude(
+    "com.lihaoyi",
+    "geny_2.13",
+  ) // avoid 2.13 and 3 on the classpath since we rely on it directly
+  .exclude(
+    "com.lihaoyi",
+    "sourcecode_2.13",
+  )
 
 val mtagsSettings = List(
   crossScalaVersions := V.supportedScalaVersions ++ V.nightlyScala3Versions,
@@ -340,7 +359,7 @@ val mtagsSettings = List(
       ),
       if3 = List(
         "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
-        scala3ScalametaDependency,
+        scalametaDependency,
       ),
       if3WithPresentationCompiler = List(
         "org.scala-lang" %% "scala3-presentation-compiler" % scalaVersion.value
@@ -374,7 +393,7 @@ val mtagsSettings = List(
   },
 )
 
-lazy val mtags3 = project
+lazy val mtags2 = project
   .in(file(".mtags"))
   .settings(
     Compile / unmanagedSourceDirectories := Seq(),
@@ -382,13 +401,13 @@ lazy val mtags3 = project
     mtagsSettings,
     Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags" / "src" / "main" / "scala",
     Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala",
-    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala-3",
-    moduleName := "mtags3",
-    scalaVersion := V.scala3,
-    target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3",
+    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala-2.13",
+    moduleName := "mtags2",
+    scalaVersion := V.scala213,
+    target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target2",
     publish / skip := true,
     scalafixConfig := Some(
-      (ThisBuild / baseDirectory).value / ".scalafix3.conf"
+      (ThisBuild / baseDirectory).value / ".scalafix2.conf"
     ),
   )
   .dependsOn(interfaces)
@@ -405,9 +424,6 @@ lazy val mtags3WithPresentationCompiler = project
     scalaVersion := V.wrapperMetalsVersion,
     target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3-wrapper",
     publish / skip := true,
-    scalafixConfig := Some(
-      (ThisBuild / baseDirectory).value / ".scalafix3.conf"
-    ),
   )
   .dependsOn(interfaces)
   .enablePlugins(BuildInfoPlugin)
@@ -457,7 +473,8 @@ lazy val metals = project
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.2",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
-      "ch.epfl.scala" %% "bloop-launcher-core" % V.bloop,
+      ("ch.epfl.scala" %% "bloop-launcher-core" % V.bloop)
+        .cross(CrossVersion.for3Use2_13),
       // for LSP
       V.lsp4j,
       // for DAP
@@ -487,14 +504,20 @@ lazy val metals = project
       // Scala dependencies
       // ==================
       "org.scalameta" % "mdoc-interfaces" % V.mdoc,
-      "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
+      ("org.scalameta" %% "scalafmt-dynamic" % V.scalafmt)
+        .cross(CrossVersion.for3Use2_13),
+      "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
       "ch.epfl.scala" % "scalafix-interfaces" % V.scalafix,
       // For reading classpaths.
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % V.coursierInterfaces,
-      // for comparing versions && fetching from sbt maven repository
-      "io.get-coursier" %% "coursier" % V.coursier,
-      "io.get-coursier" %% "coursier-sbt-maven-repository" % V.coursier,
+      // for comparing versions
+      ("io.get-coursier" %% "versions" % "0.3.2")
+        .cross(CrossVersion.for3Use2_13),
+      ("io.get-coursier" %% "coursier-sbt-maven-repository" % V.coursier)
+        .cross(CrossVersion.for3Use2_13),
+      ("io.get-coursier" %% "coursier" % V.coursier)
+        .cross(CrossVersion.for3Use2_13),
       // for logging
       "com.outr" %% "scribe" % V.scribe,
       "com.outr" %% "scribe-file" % V.scribe,
@@ -503,13 +526,12 @@ lazy val metals = project
       "com.lihaoyi" %% "ujson" % "3.1.3",
       // For remote language server
       "com.lihaoyi" %% "requests" % "0.8.0",
-      // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
-      "org.scalameta" %% "scalameta" % V.semanticdb(scalaVersion.value),
-      "org.scalameta" % "semanticdb-scalac-core" % V.semanticdb(
-        scalaVersion.value
-      ) cross CrossVersion.full,
+      // for producing SemanticDB from Scala source files
+      scalametaDependency,
+      // "org.scalameta" % "semanticdb-scalac-core" % V.scalameta cross CrossVersion.full,
       // For starting Ammonite
-      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.4.0",
+      ("io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.4.0")
+        .cross(CrossVersion.for3Use2_13),
       "org.scala-lang.modules" %% "scala-xml" % "2.2.0",
       "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.4",
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
@@ -577,6 +599,7 @@ lazy val `sbt-metals` = project
 lazy val input = project
   .in(file("tests/input"))
   .settings(
+    scalaVersion := V.scala213,
     sharedSettings,
     publish / skip := true,
     libraryDependencies ++= List(
@@ -710,7 +733,7 @@ lazy val mtest = project
     ),
     libraryDependencies ++= {
       if (isScala3WithPresentationCompiler(scalaVersion.value))
-        List(scala3ScalametaDependency)
+        List(scalametaDependency)
       else Nil
     },
     Compile / unmanagedSourceDirectories ++= {
@@ -762,6 +785,7 @@ def isInTestShard(name: String, logger: Logger): Boolean = {
 lazy val metalsDependencies = project
   .in(file("target/.dependencies"))
   .settings(
+    scalaVersion := V.scala213,
     publish / skip := true,
     // silent the intransitive dependency warning
     publishMavenStyle := false,
@@ -770,13 +794,13 @@ lazy val metalsDependencies = project
       // will pick them up and update them. They aren't actually used.
       "com.lihaoyi" %% "ammonite-util" % V.ammonite,
       "org.typelevel" % "kind-projector" % V.kindProjector cross CrossVersion.full,
-      "com.olegpy" %% "better-monadic-for" % V.betterMonadicFor,
+      ("com.olegpy" %% "better-monadic-for" % V.betterMonadicFor),
       "com.lihaoyi" % "mill-contrib-testng" % V.mill,
       "org.virtuslab.scala-cli" % "cli_3" % V.scalaCli intransitive (),
       "ch.epfl.scala" % "bloop-maven-plugin" % V.mavenBloop,
       "ch.epfl.scala" %% "gradle-bloop" % V.gradleBloop,
       "com.sourcegraph" % "semanticdb-java" % V.javaSemanticdb,
-      "ch.epfl.scala" %% "scala-debug-adapter" % V.debugAdapter intransitive (),
+      ("ch.epfl.scala" %% "scala-debug-adapter" % V.debugAdapter) intransitive (),
     ),
   )
   .disablePlugins(ScalafixPlugin)
@@ -791,9 +815,16 @@ lazy val unit = project
     sharedSettings,
     Test / javaOptions += "-Xmx2G",
     libraryDependencies ++= List(
-      "io.get-coursier" %% "coursier" % V.coursier, // for jars
-      "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
+      ("io.get-coursier" %% "coursier" % V.coursier)
+        .cross(CrossVersion.for3Use2_13), // for jars
+      ("ch.epfl.scala" %% "bloop-config" % V.bloopConfig)
+        .cross(CrossVersion.for3Use2_13),
       "org.scalameta" %% "munit" % V.munit,
+      // The dependencies listed below are only listed so Scala Steward
+      // will pick them up and update them. They aren't actually used.
+      ("com.lihaoyi" %% "ammonite-util" % V.ammonite intransitive ())
+        .cross(CrossVersion.for3Use2_13),
+      "com.lihaoyi" % "mill-contrib-testng" % V.mill intransitive (),
     ),
     buildInfoPackage := "tests",
     Compile / resourceGenerators += InputProperties

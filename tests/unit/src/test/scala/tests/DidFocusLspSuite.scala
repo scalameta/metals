@@ -174,9 +174,8 @@ class DidFocusWhileCompilingLspSuite
       _ <- server.didOpen("b/src/main/scala/b/B.scala")
       _ = assertNoDiagnostics()
       xMismatch = {
-        """|a/src/main/scala/a/A.scala:3:16: error: type mismatch;
-           | found   : String("")
-           | required: Int
+        """|a/src/main/scala/a/A.scala:3:16: error: Found:    ("" : String)
+           |Required: Int
            |  val x: Int = ""
            |               ^^
            |""".stripMargin
@@ -211,9 +210,8 @@ class DidFocusWhileCompilingLspSuite
       )
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|b/src/main/scala/b/B.scala:3:16: error: type mismatch;
-           | found   : String("")
-           | required: Int
+        """|b/src/main/scala/b/B.scala:3:16: error: Found:    ("" : String)
+           |Required: Int
            |  val y: Int = ""
            |               ^^
            |""".stripMargin,

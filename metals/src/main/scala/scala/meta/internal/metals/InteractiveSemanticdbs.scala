@@ -7,7 +7,8 @@ import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.builds.SbtBuildTool
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.Messages._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.TextDocumentLookup

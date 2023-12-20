@@ -345,7 +345,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
       paste: String,
       expectedCase: String,
   )(implicit loc: Location): Unit = {
-    val tripleQuote = """\u0022\u0022\u0022"""
+    val tripleQuote = "\"\"\""
     def unmangle(string: String): String =
       string.replaceAll("'''", tripleQuote)
 

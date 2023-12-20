@@ -18,7 +18,7 @@ class BuildTargetsLspSuite
            |  },
            |  "b": {
            |    "scalaVersion": "${BuildInfo.scalaVersion}",
-           |    "libraryDependencies": ["com.lihaoyi::sourcecode:0.1.7"],
+           |    "libraryDependencies": ["com.lihaoyi::sourcecode:0.2.7"],
            |    "additionalSources": [ "shared/Main.scala" ]
            |  }
            |}

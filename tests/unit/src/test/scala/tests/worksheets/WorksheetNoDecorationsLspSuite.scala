@@ -32,7 +32,7 @@ class WorksheetNoDecorationsLspSuite
         workspace.resolve("a/src/main/scala/foo/Main.worksheet.sc").readText,
         """
           |val x = 1  /*>  : Int = 1  */
-          |val foo = "bar"  /*>  : String = "bar"  */
+          |val foo = "bar"  /*>  : String = bar  */
           |println("metals")  /*>  metals  */
           |""".stripMargin,
       )
@@ -40,11 +40,11 @@ class WorksheetNoDecorationsLspSuite
         "a/src/main/scala/foo/Main.worksheet.sc",
         """
           |val x = 1  /*>  : Int@@ = 1  */
-          |val foo = "bar"  /*>  : @@String = "bar"  */
+          |val foo = "bar"  /*>  : @@String = bar  */
           |println("metals")  /*>  @@metals  */
           |""".stripMargin,
         """x: Int = 1""".hover,
-        """foo: String = "bar"""".hover,
+        """foo: String = bar""".hover,
         """// metals""".hover,
       )
     } yield ()
@@ -70,7 +70,7 @@ class WorksheetNoDecorationsLspSuite
         workspace.resolve("a/src/main/scala/foo/Main.worksheet.sc").readText,
         """
           |val x = 2  /*>  : Int = 2  */
-          |val foo = "baz"  /*>  : String = "baz"  */
+          |val foo = "baz"  /*>  : String = baz  */
           |println("meta ls")  /*>  meta ls  */
           |""".stripMargin,
       )
@@ -78,11 +78,11 @@ class WorksheetNoDecorationsLspSuite
         "a/src/main/scala/foo/Main.worksheet.sc",
         """
           |val x = 2  /*>  : Int @@= 2  */
-          |val foo = "baz"  /*>  : String = "baz"@@  */
+          |val foo = "baz"  /*>  : String = baz@@  */
           |println("meta ls")  /*>  meta@@ ls  */
           |""".stripMargin,
         """x: Int = 2""".hover,
-        """foo: String = "baz"""".hover,
+        """foo: String = baz""".hover,
         """// meta ls""".hover,
       )
     } yield ()

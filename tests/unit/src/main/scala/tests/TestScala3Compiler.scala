@@ -13,17 +13,12 @@ import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.pc.PresentationCompiler
 
-import tests.FakeTime
-import tests.InputProperties
-import tests.TestMtagsResolver
-import tests.TestingClient
-
-object TestScala3Compiler {
+object TestScala2Compiler {
   def compiler(name: String, input: InputProperties)(implicit
       ec: ExecutionContext
   ): Option[PresentationCompiler] = {
     val resolver = new TestMtagsResolver()
-    resolver.resolve(V.scala3) match {
+    resolver.resolve(V.scala213) match {
       case Some(mtags: MtagsBinaries.Artifacts) =>
         val time = new FakeTime
         val client = new TestingClient(PathIO.workingDirectory, Buffers())

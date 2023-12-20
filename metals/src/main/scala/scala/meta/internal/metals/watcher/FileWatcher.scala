@@ -19,7 +19,7 @@ import scala.util.Try
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Directories
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.io.AbsolutePath
 

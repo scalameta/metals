@@ -1,5 +1,7 @@
 package tests
 
+import scala.meta.internal.inputs.XtensionInputSyntaxStructure
+
 import munit.internal.difflib.Diffs
 
 case class WorkspaceSymbolReferences(

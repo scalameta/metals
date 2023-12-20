@@ -11,7 +11,7 @@ import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.{Map => MMap}
 
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
