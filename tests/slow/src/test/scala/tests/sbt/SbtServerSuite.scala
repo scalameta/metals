@@ -533,4 +533,50 @@ class SbtServerSuite
     fileContent => SbtBuildLayout(fileContent, V.scala213),
   )
 
+  test("meta-build-references") {
+    cleanWorkspace()
+
+    val buildSbt =
+      s"""|${SbtBuildLayout.commonSbtSettings}
+          |ThisBuild / scalaVersion := "${V.scala213}"
+          |val a = project.in(file(V.<<filename>>))
+          |""".stripMargin
+    val buildSbtBase = buildSbt.replaceAll("<<|>>", "")
+
+    val v =
+      s"""|object V {
+          |  val <<filen@@ame>> = "a"
+          |}
+          |""".stripMargin
+    val vBase = v.replaceAll("<<|>>|@@", "")
+
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=${V.sbtVersion}
+            |/project/V.scala
+            |$vBase
+            |/build.sbt
+            |$buildSbtBase
+            |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      _ <- server.didOpen("project/V.scala")
+      _ <-
+        server.assertReferences(
+          "project/V.scala",
+          v.replaceAll("<<|>>", ""),
+          Map(
+            "project/V.scala" -> v.replaceAll("@@", ""),
+            "build.sbt" -> buildSbt,
+          ),
+          Map(
+            "project/V.scala" -> vBase,
+            "build.sbt" -> buildSbtBase,
+          ),
+        )
+
+    } yield ()
+  }
+
 }

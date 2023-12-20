@@ -9,7 +9,9 @@ import scala.concurrent.Future
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
 
+import scala.meta.Dialect
 import scala.meta.Importee
+import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ResolvedSymbolOccurrence
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
@@ -24,13 +26,17 @@ import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
+import scala.meta.internal.tokenizers.LegacyScanner
+import scala.meta.internal.tokenizers.LegacyToken._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import scala.meta.tokens.Token.Ident
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.ReferenceParams
 
 final class ReferenceProvider(
@@ -41,6 +47,7 @@ final class ReferenceProvider(
     trees: Trees,
     buildTargets: BuildTargets,
     compilers: Compilers,
+    scalaVersionSelector: ScalaVersionSelector,
 )(implicit ec: ExecutionContext)
     extends SemanticdbFeatureProvider {
 
@@ -49,6 +56,7 @@ final class ReferenceProvider(
       bloom: BloomFilter[CharSequence],
   )
   val index: TrieMap[Path, IndexEntry] = TrieMap.empty
+  val tokenIndex: TrieMap[Path, IndexEntry] = TrieMap.empty
 
   override def reset(): Unit = {
     index.clear()
@@ -57,6 +65,40 @@ final class ReferenceProvider(
   override def onDelete(file: AbsolutePath): Unit = {
     index.remove(file.toNIO)
   }
+
+  def indexTokens(
+      path: AbsolutePath,
+      text: String,
+  ): Future[Unit] = Future {
+    val dialect = scalaVersionSelector.getDialect(path)
+    indexTokens(path, Input.String(text), dialect)
+  }
+
+  def indexTokens(
+      file: AbsolutePath,
+      input: Input,
+      dialect: Dialect,
+  ): Unit =
+    buildTargets.inverseSources(file).map { id =>
+      var count = 0
+      new LegacyScanner(input, dialect).foreach {
+        case ident if ident.token == IDENTIFIER => count += 1
+        case _ =>
+      }
+
+      val bloom = BloomFilter.create(
+        Funnels.stringFunnel(StandardCharsets.UTF_8),
+        Integer.valueOf(count * 2),
+        0.01,
+      )
+
+      val entry = IndexEntry(id, bloom)
+      tokenIndex(file.toNIO) = entry
+      new LegacyScanner(input, dialect).foreach {
+        case ident if ident.token == IDENTIFIER => bloom.put(ident.name)
+        case _ =>
+      }
+    }
 
   override def onChange(docs: TextDocuments, file: AbsolutePath): Unit = {
     buildTargets.inverseSources(file).map { id =>
@@ -145,7 +187,7 @@ final class ReferenceProvider(
             s"No symbol found at ${params.getPosition()} for $source"
           )
         }
-        Future.sequence {
+        val semanticdbResult = Future.sequence {
           results.map { result =>
             val occurrence = result.occurrence.get
             val distance = result.distance
@@ -193,8 +235,22 @@ final class ReferenceProvider(
             }
           }
         }
+        val pcResult =
+          pcReferences(source, params, path => !index.contains(path.toNIO))
+
+        Future
+          .sequence(List(semanticdbResult, pcResult))
+          .map(
+            _.flatten
+              .groupBy(_.symbol)
+              .map { case (symbol, refs) =>
+                ReferencesResult(symbol, refs.flatMap(_.locations))
+              }
+              .toList
+          )
       case None =>
-        Future.successful(Nil)
+        scribe.debug(s"No semanticdb for $source")
+        pcReferences(source, params)
     }
   }
 
@@ -286,6 +342,57 @@ final class ReferenceProvider(
           isCandidate -- nonSyntheticSymbols
       case None => Set.empty
     }
+  }
+
+  private def pcReferences(
+      path: AbsolutePath,
+      params: ReferenceParams,
+      filterTargetFiles: AbsolutePath => Boolean = _ => true,
+  ): Future[List[ReferencesResult]] = {
+    val result = for {
+      name <- nameAtPosition(path, params.getPosition())
+      buildTarget <- buildTargets.inverseSources(path)
+      targetFiles = (path :: pathsForName(buildTarget, name).toList).distinct
+        .filter(filterTargetFiles)
+      if targetFiles.nonEmpty
+    } yield compilers
+      .references(params, targetFiles, EmptyCancelToken)
+    result.getOrElse(Future.successful(Nil))
+  }
+
+  private def nameAtPosition(
+      path: AbsolutePath,
+      position: Position,
+  ) =
+    for {
+      text <- buffers.get(path)
+      input = Input.String(text)
+      pos <- position.toMeta(input)
+      tree <- trees.get(path)
+      token <- tree.tokens.find { t => t.pos.encloses(pos) }
+      ident <- token match {
+        case _: Ident => Some(token)
+        case _ => None
+      }
+    } yield ident.text
+
+  private def pathsForName(
+      buildTarget: BuildTargetIdentifier,
+      name: String,
+  ): Iterator[AbsolutePath] = {
+    val allowedBuildTargets = buildTargets.allInverseDependencies(buildTarget)
+    val visited = scala.collection.mutable.Set.empty[AbsolutePath]
+    val result = for {
+      (path, entry) <- tokenIndex.iterator
+      if allowedBuildTargets.contains(entry.id) &&
+        entry.bloom.mightContain(name)
+      sourcePath = AbsolutePath(path)
+      if !visited(sourcePath)
+      _ = visited.add(sourcePath)
+      if sourcePath.exists
+    } yield sourcePath
+
+    result
   }
 
   /**
@@ -402,20 +509,22 @@ final class ReferenceProvider(
   ): Future[Seq[Location]] = {
     val isSymbol = alternatives + occ.symbol
     val isLocal = occ.symbol.isLocal
+    if (isLocal)
+      compilers
+        .references(params, List(source), EmptyCancelToken)
+        .map(_.flatMap(_.locations))
+    else {
+      /* search local in the following cases:
+       * - it's a dependency source.
+       *   We can't search references inside dependencies so at least show them in a source file.
+       * - it's a standalone file that doesn't belong to any build target
+       */
+      val searchLocal =
+        source.isDependencySource(workspace) ||
+          buildTargets.inverseSources(source).isEmpty
 
-    /* search local in the following cases:
-     * - it's a dependency source.
-     *   We can't search references inside dependencies so at least show them in a source file.
-     * - it's a standalone file that doesn't belong to any build target
-     */
-    val searchLocal =
-      isLocal || source.isDependencySource(workspace) ||
-        buildTargets.inverseSources(source).isEmpty
-    val local =
-      if (isLocal && !source.isJava)
-        compilers.references(params, List(source), EmptyCancelToken)
-      else if (searchLocal)
-        Future.successful(
+      val local =
+        if (searchLocal)
           referenceLocations(
             snapshot,
             isSymbol,
@@ -426,29 +535,23 @@ final class ReferenceProvider(
             includeSynthetics,
             source.isJava,
           )
-        )
-      else Future.successful(Seq.empty)
+        else Seq.empty
 
+    val sourceContainsDefinition =
+      occ.role.isDefinition || snapshot.symbols.exists(
+        _.symbol == occ.symbol
+      )
     val workspaceRefs =
-      if (!isLocal) {
-        val sourceContainsDefinition =
-          occ.role.isDefinition || snapshot.symbols.exists(
-            _.symbol == occ.symbol
-          )
-
-        workspaceReferences(
-          source,
-          isSymbol,
-          isIncludeDeclaration,
-          findRealRange,
-          includeSynthetics,
-          sourceContainsDefinition,
-        )
-
-      } else
-        Seq.empty
-
-    local.map(workspaceRefs ++ _)
+      workspaceReferences(
+        source,
+        isSymbol,
+        isIncludeDeclaration,
+        findRealRange,
+        includeSynthetics,
+        sourceContainsDefinition,
+      )
+      Future.successful(local ++ workspaceRefs)
+    }
   }
 
   private def referenceLocations(

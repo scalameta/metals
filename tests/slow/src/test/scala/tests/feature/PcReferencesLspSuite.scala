@@ -5,7 +5,6 @@ import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 
 import munit.TestOptions
-import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.ReferenceContext
 import org.eclipse.lsp4j.ReferenceParams
 import tests.BaseLspSuite
@@ -78,10 +77,12 @@ class PcReferencesLspSuite
 
       val layout = input.replaceAll("<<|>>|@@", "")
 
-      def renderObtained(refs: List[Location]): String = {
-        val refsMap = refs.groupMap(ref =>
-          ref.getUri().toAbsolutePath.toRelative(workspace).toString
-        )(_.getRange())
+      def renderObtained(refs: List[metals.ReferencesResult]): String = {
+        val refsMap = refs
+          .flatMap(_.locations)
+          .groupMap(ref =>
+            ref.getUri().toAbsolutePath.toRelative(workspace).toString
+          )(_.getRange())
         files
           .map { case (pathStr, content) =>
             val actualContent = content.replaceAll("<<|>>", "")

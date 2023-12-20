@@ -544,6 +544,7 @@ final case class Indexer(
         val input = sourceToIndex0.toInput
         val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
+        referencesProvider().indexTokens(source, input, dialect)
         SemanticdbDefinition.foreach(input, dialect, includeMembers = true) {
           case SemanticdbDefinition(info, occ, owner) =>
             if (info.isExtension) {

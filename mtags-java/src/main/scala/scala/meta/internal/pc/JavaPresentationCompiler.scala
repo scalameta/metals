@@ -103,7 +103,7 @@ case class JavaPresentationCompiler(
       params: OffsetParams,
       targetFiles: util.List[VirtualFileParams],
       includeDefinition: Boolean
-  ): CompletableFuture[util.List[lsp4j.Location]] =
+  ): CompletableFuture[util.List[DefinitionResult]] =
     CompletableFuture.completedFuture(Nil.asJava)
 
   override def getTasty(

@@ -734,7 +734,7 @@ class Compilers(
       params: ReferenceParams,
       targetFiles: List[AbsolutePath],
       token: CancelToken,
-  ): Future[List[Location]] = {
+  ): Future[List[ReferencesResult]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       val targets = targetFiles.map { target =>
         target.toURI.toString -> {
@@ -756,9 +756,14 @@ class Compilers(
         params.getContext().isIncludeDeclaration(),
       ).asScala
         .map(
-          _.asScala.toList.map(loc =>
-            targets(loc.getUri())._2.adjustLocation(loc)
-          )
+          _.asScala.toList.map { defRes =>
+            val locations = defRes
+              .locations()
+              .asScala
+              .toList
+              .map(loc => targets(loc.getUri())._2.adjustLocation(loc))
+            ReferencesResult(defRes.symbol(), locations)
+          }
         )
     }
   }.getOrElse(Future.successful(Nil))

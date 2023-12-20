@@ -339,4 +339,5 @@ object PcSymbolSearch:
       nameSpan.start,
       nameSpan.end,
     ) != df.name.toString()
+
 end PcSymbolSearch

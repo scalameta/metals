@@ -183,9 +183,9 @@ case class ScalaPresentationCompiler(
       params: OffsetParams,
       targetFiles: ju.List[VirtualFileParams],
       includeDefinition: Boolean,
-  ): CompletableFuture[ju.List[l.Location]] =
+  ): CompletableFuture[ju.List[DefinitionResult]] =
     compilerAccess.withNonInterruptableCompiler(Some(params))(
-      List.empty[l.Location].asJava,
+      List.empty[DefinitionResult].asJava,
       params.token,
     ) { access =>
       val driver = access.compiler()
