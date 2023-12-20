@@ -437,6 +437,7 @@ class CompletionSuite extends BaseCompletionSuite {
     compat = Map(
       "3" ->
         """|*
+           |*: scala
            |""".stripMargin
     )
   )

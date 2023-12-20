@@ -207,7 +207,8 @@ class Completions(
         end match
     val application = CompletionApplication.fromPath(path)
     val ordering = completionOrdering(application, cursorPos)
-    val values = application.postProcess(all.sorted(ordering))
+    val sorted = all.sorted(ordering)
+    val values = application.postProcess(sorted)
     (values, result)
   end completions
 
@@ -914,6 +915,17 @@ class Completions(
         priority(o1) - priority(o2)
       end compareInApplyParams
 
+      def prioritizeKeywords(o1: CompletionValue, o2: CompletionValue): Int =
+        def priority(v: CompletionValue): Int =
+          v match
+            case _: CompletionValue.CaseKeyword => 0
+            case _: CompletionValue.NamedArg => 1
+            case _: CompletionValue.Keyword => 2
+            case _ => 3
+
+        priority(o1) - priority(o2)
+      end prioritizeKeywords
+
       /**
        * Some completion values should be shown first such as CaseKeyword and
        * NamedArg
@@ -990,7 +1002,10 @@ class Completions(
           case _ =>
             val byApplyParams = compareInApplyParams(o1, o2)
             if byApplyParams != 0 then byApplyParams
-            else compareByRelevance(o1, o2)
+            else
+              val keywords = prioritizeKeywords(o1, o2)
+              if keywords != 0 then keywords
+              else compareByRelevance(o1, o2)
       end compare
 
 end Completions
