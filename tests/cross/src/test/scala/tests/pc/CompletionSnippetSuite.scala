@@ -474,11 +474,11 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
        |WindowEvent -  java.awt.event
        |""".stripMargin,
     compat = Map(
-      "2.13" -> """|Widget -  example
-                   |Window -  java.awt
-                   |WindowPeer -  java.awt.peer
-                   |WithFilter -  scala.collection
-                   |""".stripMargin
+      ">=2.13.0" -> """|Widget -  example
+                       |Window -  java.awt
+                       |WindowPeer -  java.awt.peer
+                       |WithFilter -  scala.collection
+                       |""".stripMargin
     ),
     includeDetail = true,
     topLines = Some(4)

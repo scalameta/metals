@@ -3,7 +3,6 @@ package tests.pc
 import tests.BaseCompletionSuite
 
 class CompletionKeywordSuite extends BaseCompletionSuite {
-
   override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] =
     Some(IgnoreForScala3CompilerPC)
 
@@ -40,6 +39,11 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     "",
+    compat = Map(
+      "3" -> """|transient scala (commit: '')
+                |transparentTrait(): transparentTrait (commit: '')
+                |transparentTrait - scala.annotation (commit: '')""".stripMargin
+    ),
     includeCommitCharacter = true
   )
 
@@ -59,6 +63,11 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     "",
+    compat = Map(
+      "3" -> """|transient scala (commit: '')
+                |transparentTrait(): transparentTrait (commit: '')
+                |transparentTrait - scala.annotation (commit: '')""".stripMargin
+    ),
     includeCommitCharacter = true
   )
 
@@ -171,6 +180,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
         """|value: Int
            |val
            |var
+           |varargs(): varargs
            |varargs - scala.annotation
            |""".stripMargin
     )
@@ -189,8 +199,8 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|val
        |var
-       |varargs - scala.annotation
-       |""".stripMargin
+       |""".stripMargin,
+    topLines = Some(2)
   )
 
   check(
@@ -209,7 +219,8 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     includeCommitCharacter = true,
     compat = Map(
       "2" -> ""
-    )
+    ),
+    topLines = Some(1)
   )
 
   check(
@@ -441,7 +452,8 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |  protected de@@
       |}
     """.stripMargin,
-    "def"
+    "def",
+    topLines = Some(1)
   )
 
   check(
@@ -455,7 +467,8 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     """.stripMargin,
     """val
       |var
-      |""".stripMargin
+      |""".stripMargin,
+    topLines = Some(2)
   )
 
   check(
@@ -513,7 +526,8 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     includeCommitCharacter = true,
     compat = Map(
       "2" -> ""
-    )
+    ),
+    topLines = Some(1)
   )
 
   check(
@@ -521,7 +535,11 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     """|object A{
        |  def hello(a: String, u@@)
        |}""".stripMargin,
-    ""
+    "",
+    compat = Map(
+      "3" -> "unsafeExceptions scala"
+    ),
+    topLines = Some(1)
   )
 
   check(
