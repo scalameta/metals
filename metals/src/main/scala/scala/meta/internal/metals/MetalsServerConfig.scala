@@ -27,7 +27,6 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  *                      dialogues that don't implement window/showMessageRequest yet.
  * @param isInputBoxEnabled whether the client supports the `metals/inputBox` extension.
  * @param isVerbose turn on verbose logging.
- * @param remoteTimeout timeout period for retrieving references while using `RemoteLanguageServer`.
  * @param openFilesOnRenames whether or not file should be opened when a rename occurs
  *                           in an unopened file.
  * @param renameFileThreshold amount of files that should be opened during a rename
@@ -73,10 +72,6 @@ final case class MetalsServerConfig(
     isVerbose: Boolean = MetalsServerConfig.binaryOption(
       "metals.verbose",
       default = false,
-    ),
-    remoteTimeout: String = System.getProperty(
-      "metals.timeout",
-      "1 minute",
     ),
     openFilesOnRenames: Boolean = false,
     renameFileThreshold: Int = 300,
