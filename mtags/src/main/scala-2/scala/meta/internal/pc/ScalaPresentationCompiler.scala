@@ -389,9 +389,9 @@ case class ScalaPresentationCompiler(
       params: OffsetParams,
       targetFiles: ju.List[VirtualFileParams],
       includeDefinition: Boolean
-  ): CompletableFuture[ju.List[Location]] =
+  ): CompletableFuture[ju.List[DefinitionResult]] =
     compilerAccess.withInterruptableCompiler(Some(params))(
-      List.empty[Location].asJava,
+      List.empty[DefinitionResult].asJava,
       params.token()
     ) { pc =>
       new PcReferencesProvider(

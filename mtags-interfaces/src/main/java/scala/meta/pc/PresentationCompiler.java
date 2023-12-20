@@ -115,7 +115,7 @@ public abstract class PresentationCompiler {
 	/**
 	 * Returns the references of the symbol under the current position in the target files.
 	 */
-	public CompletableFuture<java.util.List<Location>> references(OffsetParams params, java.util.List<VirtualFileParams> targetFiles, boolean includeDefinition) {
+	public CompletableFuture<java.util.List<DefinitionResult>> references(OffsetParams params, java.util.List<VirtualFileParams> targetFiles, boolean includeDefinition) {
 		return CompletableFuture.completedFuture(Collections.emptyList());
 	}
 

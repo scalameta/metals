@@ -188,25 +188,24 @@ case class ScalaPresentationCompiler(
       params: OffsetParams,
       targetFiles: ju.List[VirtualFileParams],
       includeDefinition: Boolean,
-  ): CompletableFuture[ju.List[Location]] =
+  ): CompletableFuture[ju.List[DefinitionResult]] =
     targetFiles.asScala.toList match
       case file :: Nil if file.uri() == params.uri() =>
         FutureConverters
           .toJava(
             FutureConverters
               .toScala(documentHighlight(params))
-              .map(
-                _.asScala
-                  .collect {
-                    case highlight
-                        if highlight.getKind() == DocumentHighlightKind.Read || includeDefinition =>
-                      new Location(
-                        params.uri().toString(),
-                        highlight.getRange(),
-                      )
-                  }
-                  .asJava
-              )
+              .map { hightLightResult =>
+                val locations = hightLightResult.asScala.collect {
+                  case highlight
+                      if highlight.getKind() == DocumentHighlightKind.Read || includeDefinition =>
+                    new Location(
+                      params.uri().toString(),
+                      highlight.getRange(),
+                    )
+                }.asJava
+                List(new DefinitionResultImpl("", locations)).asJava
+              }
           )
           .toCompletableFuture
       case _ =>
