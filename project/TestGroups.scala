@@ -19,7 +19,6 @@ object TestGroups {
       "tests.DidFocusLspSuite", "tests.BuildServerConnectionLspSuite",
       "tests.BuildTargetsLspSuite", "tests.FileWatcherLspSuite",
       "tests.CurrentProjectCompileLspSuite",
-      "tests.remotels.RemoteLanguageServerLspSuite",
       "tests.WindowStateDidChangeLspSuite", "tests.DocumentSymbolLspSuite",
       "tests.WorkspaceSymbolExpectSuite", "tests.digest.DigestsSuite",
       "tests.MtagsSuite", "tests.ChosenBuildServerSuite",

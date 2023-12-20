@@ -76,7 +76,6 @@ import scala.meta.internal.parsing.DocumentSymbolProvider
 import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
-import scala.meta.internal.remotels.RemoteLanguageServer
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.tvp._
@@ -234,13 +233,6 @@ class MetalsLspService(
 
   private val scalaVersionSelector = new ScalaVersionSelector(
     () => userConfig,
-    buildTargets,
-  )
-  private val remote = new RemoteLanguageServer(
-    () => folder,
-    () => userConfig,
-    initialServerConfig,
-    buffers,
     buildTargets,
   )
 
@@ -470,7 +462,6 @@ class MetalsLspService(
     semanticdbs,
     warnings,
     () => compilers,
-    remote,
     trees,
     buildTargets,
     scalaVersionSelector,
@@ -555,7 +546,6 @@ class MetalsLspService(
     semanticdbs,
     buffers,
     definitionProvider,
-    remote,
     trees,
     buildTargets,
   )
