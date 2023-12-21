@@ -536,6 +536,20 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |}
        |""".stripMargin,
   )
+  check(
+    "type-implementation",
+    """|/a/src/main/scala/a/Main.scala
+       |trait Test {
+       |  type C@@C 
+       |}
+       |
+       |trait Other extends Test {
+       |  type <<CC>> = String
+       |}
+       |
+       |trait Unrelated
+       |""".stripMargin,
+  )
 
   check(
     "java-implementation",
