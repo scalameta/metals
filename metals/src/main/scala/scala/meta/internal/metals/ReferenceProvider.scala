@@ -100,10 +100,16 @@ final class ReferenceProvider(
   ): Set[String] = {
     val dialect = scalaVersionSelector.getDialect(path)
     val identifiers = Set.newBuilder[String]
-    new LegacyScanner(Input.String(text), dialect).foreach {
-      case ident if ident.token == IDENTIFIER => identifiers += ident.name
-      case _ =>
+
+    try {
+      new LegacyScanner(Input.String(text), dialect).foreach {
+        case ident if ident.token == IDENTIFIER => identifiers += ident.name
+        case _ =>
+      }
+    } catch {
+      case NonFatal(_) =>
     }
+
     identifiers.result()
   }
 
@@ -243,7 +249,12 @@ final class ReferenceProvider(
           }
         }
         val pcResult =
-          pcReferences(source, params, path => !index.contains(path.toNIO))
+          pcReferences(
+            source,
+            params,
+            forceIncludeLocalSearch = false,
+            path => !index.contains(path.toNIO),
+          )
 
         Future
           .sequence(List(semanticdbResult, pcResult))
@@ -257,7 +268,7 @@ final class ReferenceProvider(
           )
       case None =>
         scribe.debug(s"No semanticdb for $source")
-        pcReferences(source, params)
+        pcReferences(source, params, forceIncludeLocalSearch = true)
     }
   }
 
@@ -354,13 +365,16 @@ final class ReferenceProvider(
   private def pcReferences(
       path: AbsolutePath,
       params: ReferenceParams,
+      forceIncludeLocalSearch: Boolean,
       filterTargetFiles: AbsolutePath => Boolean = _ => true,
   ): Future[List[ReferencesResult]] = {
     val result = for {
       name <- nameAtPosition(path, params.getPosition())
       buildTarget <- buildTargets.inverseSources(path)
-      targetFiles = (path :: pathsForName(buildTarget, name).toList).distinct
-        .filter(filterTargetFiles)
+      targetFiles = {
+        val localPath = Option.when(forceIncludeLocalSearch)(path)
+        pathsForName(buildTarget, localPath, name).filter(filterTargetFiles)
+      }
       if targetFiles.nonEmpty
     } yield compilers
       .references(params, targetFiles, EmptyCancelToken)
@@ -385,10 +399,12 @@ final class ReferenceProvider(
 
   private def pathsForName(
       buildTarget: BuildTargetIdentifier,
+      localPath: Option[AbsolutePath],
       name: String,
   ): Iterator[AbsolutePath] = {
     val allowedBuildTargets = buildTargets.allInverseDependencies(buildTarget)
     val visited = scala.collection.mutable.Set.empty[AbsolutePath]
+    localPath.foreach(visited.add)
     val result = for {
       (path, entry) <- tokenIndex.iterator
       if allowedBuildTargets.contains(entry.id) &&
@@ -399,7 +415,7 @@ final class ReferenceProvider(
       if sourcePath.exists
     } yield sourcePath
 
-    result
+    result ++ localPath
   }
 
   /**
@@ -518,7 +534,7 @@ final class ReferenceProvider(
     val isLocal = occ.symbol.isLocal
     if (isLocal)
       compilers
-        .references(params, List(source), EmptyCancelToken)
+        .references(params, Iterator(source), EmptyCancelToken)
         .map(_.flatMap(_.locations))
     else {
       /* search local in the following cases:

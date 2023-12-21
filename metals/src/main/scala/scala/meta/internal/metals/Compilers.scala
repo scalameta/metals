@@ -732,7 +732,7 @@ class Compilers(
 
   def references(
       params: ReferenceParams,
-      targetFiles: List[AbsolutePath],
+      targetFiles: Iterator[AbsolutePath],
       token: CancelToken,
   ): Future[List[ReferencesResult]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
