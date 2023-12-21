@@ -9,7 +9,6 @@ import scala.concurrent.Future
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
 
-import scala.meta.Dialect
 import scala.meta.Importee
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -66,39 +65,47 @@ final class ReferenceProvider(
     index.remove(file.toNIO)
   }
 
-  def indexTokens(
+  def indexIdentifiers(
       path: AbsolutePath,
       text: String,
   ): Future[Unit] = Future {
-    val dialect = scalaVersionSelector.getDialect(path)
-    indexTokens(path, Input.String(text), dialect)
+    buildTargets.inverseSources(path).map { id =>
+      val set = collectIdentifiers(path, text)
+      addIdentifiers(path, id, set)
+    }
   }
 
-  def indexTokens(
+  def addIdentifiers(file: AbsolutePath, set: Set[String]): Unit =
+    buildTargets.inverseSources(file).map(id => addIdentifiers(file, id, set))
+
+  private def addIdentifiers(
       file: AbsolutePath,
-      input: Input,
-      dialect: Dialect,
-  ): Unit =
-    buildTargets.inverseSources(file).map { id =>
-      var count = 0
-      new LegacyScanner(input, dialect).foreach {
-        case ident if ident.token == IDENTIFIER => count += 1
-        case _ =>
-      }
+      id: BuildTargetIdentifier,
+      set: Set[String],
+  ): Unit = {
+    val bloom = BloomFilter.create(
+      Funnels.stringFunnel(StandardCharsets.UTF_8),
+      Integer.valueOf(set.size * 2),
+      0.01,
+    )
 
-      val bloom = BloomFilter.create(
-        Funnels.stringFunnel(StandardCharsets.UTF_8),
-        Integer.valueOf(count * 2),
-        0.01,
-      )
+    val entry = IndexEntry(id, bloom)
+    tokenIndex(file.toNIO) = entry
+    set.foreach(bloom.put)
+  }
 
-      val entry = IndexEntry(id, bloom)
-      tokenIndex(file.toNIO) = entry
-      new LegacyScanner(input, dialect).foreach {
-        case ident if ident.token == IDENTIFIER => bloom.put(ident.name)
-        case _ =>
-      }
+  private def collectIdentifiers(
+      path: AbsolutePath,
+      text: String,
+  ): Set[String] = {
+    val dialect = scalaVersionSelector.getDialect(path)
+    val identifiers = Set.newBuilder[String]
+    new LegacyScanner(Input.String(text), dialect).foreach {
+      case ident if ident.token == IDENTIFIER => identifiers += ident.name
+      case _ =>
     }
+    identifiers.result()
+  }
 
   override def onChange(docs: TextDocuments, file: AbsolutePath): Unit = {
     buildTargets.inverseSources(file).map { id =>

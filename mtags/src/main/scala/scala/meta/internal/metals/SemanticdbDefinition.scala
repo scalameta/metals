@@ -5,6 +5,7 @@ import scala.util.control.NonFatal
 import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.internal.mtags.JavaMtags
+import scala.meta.internal.mtags.MtagsIndexer
 import scala.meta.internal.mtags.ScalaToplevelMtags
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Language
@@ -44,14 +45,30 @@ object SemanticdbDefinition {
       includeMembers: Boolean
   )(
       fn: SemanticdbDefinition => Unit
-  )(implicit rc: ReportContext): Unit = {
+  )(implicit rc: ReportContext): Unit =
+    foreachWithReturnMtags(
+      input,
+      dialect,
+      includeMembers,
+      includeIdentifiers = false
+    )(fn)
+
+  def foreachWithReturnMtags(
+      input: Input.VirtualFile,
+      dialect: Dialect,
+      includeMembers: Boolean,
+      includeIdentifiers: Boolean
+  )(
+      fn: SemanticdbDefinition => Unit
+  )(implicit rc: ReportContext): Option[MtagsIndexer] = {
     input.toLanguage match {
       case Language.SCALA =>
         val mtags = new ScalaToplevelMtags(
           input,
           includeInnerClasses = true,
           includeMembers = includeMembers,
-          dialect
+          dialect,
+          includeIdentifiers = includeIdentifiers
         ) {
           override def visitOccurrence(
               occ: SymbolOccurrence,
@@ -66,6 +83,7 @@ object SemanticdbDefinition {
           case _: TokenizeException =>
             () // ignore because we don't need to index untokenizable files.
         }
+        Some(mtags)
       case Language.JAVA =>
         val mtags = new JavaMtags(input, includeMembers) {
           override def visitOccurrence(
@@ -80,7 +98,8 @@ object SemanticdbDefinition {
         catch {
           case NonFatal(_) =>
         }
-      case _ =>
+        Some(mtags)
+      case _ => None
     }
   }
 }

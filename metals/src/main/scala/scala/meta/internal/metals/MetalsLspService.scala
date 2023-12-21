@@ -896,7 +896,7 @@ abstract class MetalsLspService(
     Future
       .sequence(
         List(
-          referencesProvider.indexTokens(path, text),
+          referencesProvider.indexIdentifiers(path, text),
           renameProvider.runSave(),
           parseTrees(path),
           onChange(List(path)),
