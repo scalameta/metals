@@ -344,8 +344,6 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
         case None =>
           path.toURI.toString
       }
-    def isBuild: Boolean =
-      path.filename.startsWith("BUILD")
 
     def isInBspDirectory(workspace: AbsolutePath): Boolean =
       path.toNIO.startsWith(workspace.resolve(".bsp").toNIO)

@@ -1322,7 +1322,7 @@ class MetalsLspService(
    */
   private def fileWatchFilter(path: Path): Boolean = {
     val abs = AbsolutePath(path)
-    abs.isScalaOrJava || abs.isSemanticdb || abs.isBuild ||
+    abs.isScalaOrJava || abs.isSemanticdb ||
     abs.isInBspDirectory(folder)
   }
 
@@ -1366,8 +1366,6 @@ class MetalsLspService(
             semanticDBIndexer.onOverflow(semanticdbPath)
         }
       }.asJava
-    } else if (path.isBuild) {
-      onBuildChanged(List(path)).asJava
     } else {
       CompletableFuture.completedFuture(())
     }

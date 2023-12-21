@@ -114,10 +114,6 @@ final class BuildTools(
     _.resolve("pom.xml").isFile
   )
   def isMaven: Boolean = mavenProject.isDefined
-  def pantsProject: Option[AbsolutePath] = searchForBuildTool(
-    _.resolve("pants.ini").isFile
-  )
-  def isPants: Boolean = pantsProject.isDefined
   def bazelProject: Option[AbsolutePath] = searchForBuildTool(
     _.resolve("WORKSPACE").isFile
   )
@@ -190,7 +186,6 @@ final class BuildTools(
     if (isMill) buf += "Mill"
     if (isGradle) buf += "Gradle"
     if (isMaven) buf += "Maven"
-    if (isPants) buf += "Pants"
     if (isBazel) buf += "Bazel"
     buf.result()
   }
