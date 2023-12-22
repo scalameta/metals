@@ -94,11 +94,18 @@ class MetalsSymbolSearch(
       buildTargetIdentifier: String,
       visitor: SymbolSearchVisitor,
   ): SymbolSearch.Result = {
-    wsp.search(
-      WorkspaceSymbolQuery.exact(query),
-      visitor,
-      Some(new BuildTargetIdentifier(buildTargetIdentifier)),
-    )
+    def search(query: WorkspaceSymbolQuery) =
+      wsp.search(
+        query,
+        visitor,
+        Some(new BuildTargetIdentifier(buildTargetIdentifier)),
+      )
+
+    val wQuery = WorkspaceSymbolQuery.exact(query)
+    val (result, count) = search(wQuery)
+    if (wQuery.isShortQuery && count == 0)
+      search(WorkspaceSymbolQuery.exact(query, isShortQueryRetry = true))._1
+    else result
   }
 
   override def searchMethods(

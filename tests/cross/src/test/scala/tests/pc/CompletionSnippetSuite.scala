@@ -104,7 +104,11 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|MyType
        |""".stripMargin,
-    topLines = Some(1)
+    compat = Map(
+      "2.11" -> """|MyType
+                   |MTOM
+                   |MTOMFeature""".stripMargin
+    )
   )
 
   checkSnippet(
@@ -121,7 +125,11 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|MyType
        |""".stripMargin,
-    topLines = Some(1)
+    compat = Map(
+      "2.11" -> """|MyType
+                   |MTOM
+                   |MTOMFeature""".stripMargin
+    )
   )
 
   checkSnippet(

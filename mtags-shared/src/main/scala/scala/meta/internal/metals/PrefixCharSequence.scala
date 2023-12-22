@@ -3,10 +3,10 @@ package scala.meta.internal.metals
 /**
  * A char sequence that represents an exact symbol search.
  *
- * For example, `ExactSymbolSearch("S")` is added to a bloom filter
- * to indicate a souce file has a symbol with the exact name "S".
+ * For example, `PrefixCharSequence("S")` is added to a bloom filter
+ * to indicate a source file has a symbol starting with "S".
  */
-case class ExactCharSequence(value: CharSequence) extends CharSequence {
+case class PrefixCharSequence(value: CharSequence) extends CharSequence {
   override def length(): Int = value.length() + 1
 
   override def charAt(index: Int): Char = {

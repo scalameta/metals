@@ -382,7 +382,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
   }
 
   test("scope") {
-      cleanWorkspace()
+    cleanWorkspace()
     for {
       _ <- initialize(
         """/metals.json
