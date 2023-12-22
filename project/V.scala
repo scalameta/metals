@@ -47,7 +47,7 @@ object V {
   val scribe = "3.13.0"
   val qdox = "2.0.3"
 
-  val guava = "com.google.guava" % "guava" % "32.1.3-jre"
+  val guava = "com.google.guava" % "guava" % "33.0.0-jre"
   val lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   val dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
 
