@@ -1711,8 +1711,7 @@ class CompletionSuite extends BaseCompletionSuite {
     compat = Map(
       "3" -> "TTT[A <: Int]"
     ),
-    includeDetail = false,
-    topLines = Some(1)
+    includeDetail = false
   )
 
   check(
@@ -1725,8 +1724,7 @@ class CompletionSuite extends BaseCompletionSuite {
     "TTT[A] = O.TTT",
     compat = Map(
       "3" -> "TTT[A <: Int] = List[A]"
-    ),
-    topLines = Some(1)
+    )
   )
 
   check(
@@ -1737,8 +1735,7 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "TTT[A <: Int]",
-    includeDetail = false,
-    topLines = Some(1)
+    includeDetail = false
   )
 
   check(
@@ -1749,8 +1746,7 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     "TTT[K <: Int]",
-    includeDetail = false,
-    topLines = Some(1)
+    includeDetail = false
   )
 
   check(
@@ -1760,8 +1756,7 @@ class CompletionSuite extends BaseCompletionSuite {
         | val t: TT@@
         |}
         |""".stripMargin,
-    "TTT[K <: Int] = [V] =>> Map[K, V]",
-    topLines = Some(1)
+    "TTT[K <: Int] = [V] =>> Map[K, V]"
   )
 
   check(
@@ -1774,8 +1769,7 @@ class CompletionSuite extends BaseCompletionSuite {
     "TTT<: O.TTT",
     compat = Map(
       "3" -> "TTT <: Int"
-    ),
-    topLines = Some(1)
+    )
   )
 
   check(
@@ -1805,8 +1799,17 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension (x: Fo@@)
        |""".stripMargin,
     """|Foo extension-definition-scope
-       |""".stripMargin,
-    topLines = Some(1)
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
+       |""".stripMargin
   )
 
   check(
@@ -1830,8 +1833,17 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension [A <: Fo@@]
        |""".stripMargin,
     """|Foo extension-definition-type-parameter
-       |""".stripMargin,
-    topLines = Some(1)
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
+       |""".stripMargin
   )
 
   check(
@@ -1855,8 +1867,17 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension (using Fo@@)
        |""".stripMargin,
     """|Foo extension-definition-using-param-clause
-       |""".stripMargin,
-    topLines = Some(1)
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
+       |""".stripMargin
   )
 
   check(
@@ -1868,8 +1889,17 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension (x: Int)(using Fo@@)
        |""".stripMargin,
     """|Foo extension-definition-mix-1
-       |""".stripMargin,
-    topLines = Some(1)
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
+       |""".stripMargin
   )
 
   check(
@@ -1881,8 +1911,17 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension (using Fo@@)(x: Int)(using Foo)
        |""".stripMargin,
     """|Foo extension-definition-mix-2
-       |""".stripMargin,
-    topLines = Some(1)
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
+       |""".stripMargin
   )
 
   check(
@@ -1894,8 +1933,17 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension (using Foo)(x: Int)(using Fo@@)
        |""".stripMargin,
     """|Foo extension-definition-mix-3
-       |""".stripMargin,
-    topLines = Some(1)
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
+       |""".stripMargin
   )
 
   check(
@@ -1907,8 +1955,17 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension [A](x: Fo@@)
        |""".stripMargin,
     """|Foo extension-definition-mix-4
-       |""".stripMargin,
-    topLines = Some(1)
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
+       |""".stripMargin
   )
 
   check(
@@ -1920,8 +1977,17 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension [A](using Fo@@)(x: Int)
        |""".stripMargin,
     """|Foo extension-definition-mix-5
-       |""".stripMargin,
-    topLines = Some(1)
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
+       |""".stripMargin
   )
 
   check(
@@ -1933,8 +1999,17 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension [A](using Foo)(x: Fo@@)
        |""".stripMargin,
     """|Foo extension-definition-mix-6
-       |""".stripMargin,
-    topLines = Some(1)
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
+       |""".stripMargin
   )
 
   check(
@@ -1946,8 +2021,17 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension [A](using Foo)(x: Fo@@)(using Foo)
        |""".stripMargin,
     """|Foo extension-definition-mix-7
-       |""".stripMargin,
-    topLines = Some(1)
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
+       |""".stripMargin
   )
 
   check(

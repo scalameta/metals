@@ -183,7 +183,6 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   check(
     "IO",
     """|akka.io.IO Object
-       |akka.stream.AbruptIOTerminationException Class
        |akka.stream.IOResult Class
        |akka.stream.IOResult Object
        |com.typesafe.config.ConfigException#IO Class

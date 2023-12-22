@@ -81,7 +81,7 @@ class TestingSymbolSearch(
   ): SymbolSearch.Result = {
     val query = WorkspaceSymbolQuery.exact(textQuery)
     workspace.search(query, visitor)
-    classpath.search(query, visitor)
+    classpath.search(query, visitor)._1
   }
 
   override def searchMethods(

@@ -101,7 +101,8 @@ class StandaloneSymbolSearch(
       buildTargetIdentifier: String,
       visitor: SymbolSearchVisitor,
   ): Result = {
-    val res = classpathSearch.search(WorkspaceSymbolQuery.exact(query), visitor)
+    val (res, _) =
+      classpathSearch.search(WorkspaceSymbolQuery.exact(query), visitor)
     workspaceFallback
       .map(_.search(query, buildTargetIdentifier, visitor))
       .getOrElse(res)

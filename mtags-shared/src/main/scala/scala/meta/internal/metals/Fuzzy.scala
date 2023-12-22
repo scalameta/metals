@@ -48,6 +48,12 @@ class Fuzzy {
       val idx: Int
   )
 
+  def prefixMatch(
+      query: CharSequence,
+      symbol: CharSequence,
+      skipNames: Int = 0
+  ): Boolean = genericMatches(query, symbol, skipNames, matchesNamePrefix)
+
   /**
    * Returns true if the query matches the given symbol.
    *
@@ -60,6 +66,13 @@ class Fuzzy {
       query: CharSequence,
       symbol: CharSequence,
       skipNames: Int = 0
+  ): Boolean = genericMatches(query, symbol, skipNames, matchesName)
+
+  private def genericMatches(
+      query: CharSequence,
+      symbol: CharSequence,
+      skipNames: Int,
+      matchesName: (CharSequence, Int, Int, CharSequence, Int, Int) => Boolean
   ): Boolean = {
     val li = lastIndex(symbol)
     // Loops through all names in the query/symbol strings in reverse order (last names first)
@@ -124,30 +137,35 @@ class Fuzzy {
     }
   }
 
-  def startsWith(query: String, filename: CharSequence): Boolean = {
-    val sb = lastIndex(filename)
-    val st = findStartIndex(filename, sb)
-    if (sb - st < query.length()) false
+  private def matchesNamePrefix(
+      query: CharSequence,
+      queryStartIdx: Int,
+      queryEndIdx: Int,
+      symbol: CharSequence,
+      symbolStartIdx: Int,
+      symbolEndIdx: Int
+  ): Boolean = {
+    val qLen = queryEndIdx - queryStartIdx
+    val sLen = symbolEndIdx - symbolStartIdx
+    if (sLen < qLen) false
     else {
       var idx = 0
-      while (idx < query.length) {
-        if (query.charAt(idx) != filename.charAt(st + idx)) return false
-        idx += 1
+      var offset = 0
+      while (idx < qLen && idx + offset < sLen) {
+        if (
+          query.charAt(queryStartIdx + idx) != symbol.charAt(
+            symbolStartIdx + offset + idx
+          )
+        ) {
+          if (symbol.charAt(symbolStartIdx + idx) == '`') {
+            offset += 1
+          } else return false
+        } else {
+          idx += 1
+        }
       }
       true
     }
-  }
-
-  def findStartIndex(symbol: CharSequence, lastIndex: Int): Int = {
-    var start = 0
-    var i = 0
-    while (i < lastIndex) {
-      if (symbol.charAt(i) == '$') {
-        start = i + 1
-      }
-      i += 1
-    }
-    if (start < lastIndex) start else 0
   }
 
   private def lastIndex(symbol: CharSequence): Int = {
@@ -218,13 +236,13 @@ class Fuzzy {
 
   // Compares two names like query "InStr" and "InputFileStream".
   // The substring are guaranteed to not have delimiters.
-  private def matchesName(
+  protected def matchesName(
       query: CharSequence,
-      qa: Int,
-      qb: Int,
+      queryStartIdx: Int,
+      queryEndIdx: Int,
       symbol: CharSequence,
-      sa: Int,
-      sb: Int
+      symbolStartIdx: Int,
+      symbolEndIdx: Int
   ): Boolean = {
     // @param ql the last index in query at which qa.isUpper && charAt(qa) == charAt(sa)
     // @param sl the last index in symbol at which qa.isUpper && charAt(qa) == charAt(sa)
@@ -239,9 +257,9 @@ class Fuzzy {
     // Loop 8: 'p' 'p'       , match, ...
     @tailrec
     def loop(qa: Int, ql: Int, sa: Int, sl: Int): Boolean = {
-      if (qa >= qb) {
+      if (qa >= queryEndIdx) {
         true
-      } else if (sa >= sb) {
+      } else if (sa >= symbolEndIdx) {
         false
       } else {
         val qq = query.charAt(qa)
@@ -262,7 +280,7 @@ class Fuzzy {
         }
       }
     }
-    loop(qa, -1, sa, -1)
+    loop(queryStartIdx, -1, symbolStartIdx, -1)
   }
 
   def bloomFilterSymbolStrings(
@@ -331,10 +349,21 @@ class Fuzzy {
     val lastName = new ZeroCopySubSequence(symbol, symbolicDelimiter, N)
     if (
       !symbol.endsWith("/") &&
-      !isAllNumeric(lastName) &&
-      lastName.length() < ExactSearchLimit
+      !isAllNumeric(lastName)
     ) {
-      hasher.putCharSequence(ExactCharSequence(lastName))
+      var idx = 0
+      while (idx < lastName.length() && idx < PrefixSearchLimit) {
+        hasher.putCharSequence(
+          PrefixCharSequence(
+            new ZeroCopySubSequence(
+              symbol,
+              symbolicDelimiter,
+              symbolicDelimiter + idx + 1
+            )
+          )
+        )
+        idx += 1
+      }
     }
     TrigramSubstrings.foreach(
       upper.toString,
@@ -368,18 +397,20 @@ class Fuzzy {
    * For example, the query "S" returns only symbols with the exact name "S" and not symbols
    * like "Stream".
    */
-  val ExactSearchLimit = 3
+  val PrefixSearchLimit = 3
 
   /**
    * Companion to `bloomFilterSymbolStrings`.
    */
   def bloomFilterQueryStrings(
       query: String,
-      includeTrigrams: Boolean = true
+      includeTrigrams: Boolean = true,
+      isShortQueryRetry: Boolean = false
   ): Iterable[CharSequence] =
-    if (query.isEmpty()) {
-      List(ExactCharSequence(query))
-    } else {
+    if (query.isEmpty()) Nil
+    else if (query.length() < PrefixSearchLimit && !isShortQueryRetry)
+      List(PrefixCharSequence(query))
+    else {
       val result = mutable.Set.empty[CharSequence]
       val upper = new StringBuilder
       var i = 0
@@ -443,5 +474,4 @@ class Fuzzy {
     }
     loop(0, 0)
   }
-
 }
