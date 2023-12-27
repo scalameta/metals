@@ -225,6 +225,7 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
   }
 
   object IgnoreScalaVersion {
+
     def apply(version: String): IgnoreScalaVersion = {
       IgnoreScalaVersion(_ == version)
     }

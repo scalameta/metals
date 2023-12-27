@@ -19,6 +19,7 @@ import scala.meta.dialects._
 import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
+import scala.meta.internal.builds.BspOnly
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.Digest.Status
@@ -91,25 +92,33 @@ final case class Indexer(
       buildTool: BuildTool,
       checksum: String,
       importBuild: BspSession => Future[Unit],
+      reconnectToBuildServer: () => Future[BuildChange],
   ): Future[BuildChange] = {
     def reloadAndIndex(session: BspSession): Future[BuildChange] = {
       workspaceReload().persistChecksumStatus(Status.Started, buildTool)
 
-      session
-        .workspaceReload()
-        .flatMap(_ => importBuild(session))
-        .map { _ =>
-          scribe.info("Correctly reloaded workspace")
-          profiledIndexWorkspace(doctorCheck)
-          workspaceReload().persistChecksumStatus(Status.Installed, buildTool)
-          BuildChange.Reloaded
-        }
-        .recoverWith { case NonFatal(e) =>
-          scribe.error(s"Unable to reload workspace: ${e.getMessage()}")
-          workspaceReload().persistChecksumStatus(Status.Failed, buildTool)
-          languageClient.showMessage(Messages.ReloadProjectFailed)
-          Future.successful(BuildChange.Failed)
-        }
+      buildTool match {
+        case _: BspOnly => reconnectToBuildServer()
+        case _ =>
+          session
+            .workspaceReload()
+            .flatMap(_ => importBuild(session))
+            .map { _ =>
+              scribe.info("Correctly reloaded workspace")
+              profiledIndexWorkspace(doctorCheck)
+              workspaceReload().persistChecksumStatus(
+                Status.Installed,
+                buildTool,
+              )
+              BuildChange.Reloaded
+            }
+            .recoverWith { case NonFatal(e) =>
+              scribe.error(s"Unable to reload workspace: ${e.getMessage()}")
+              workspaceReload().persistChecksumStatus(Status.Failed, buildTool)
+              languageClient.showMessage(Messages.ReloadProjectFailed)
+              Future.successful(BuildChange.Failed)
+            }
+      }
     }
 
     bspSession() match {

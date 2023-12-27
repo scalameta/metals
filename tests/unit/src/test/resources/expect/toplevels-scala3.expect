@@ -41,6 +41,9 @@ example/PatternMatching.scala -> example/PatternMatching#
 example/Scalalib.scala -> example/Scalalib#
 example/StructuralTypes.scala -> example/StructuralTypes.
 example/ToplevelDefVal.scala -> example/ToplevelDefVal$package.
+example/ToplevelImplicit.scala -> example/ToplevelImplicit$package.
+example/ToplevelImplicit.scala -> example/ToplevelImplicit$package.Xtension#
+example/ToplevelImplicit.scala -> example/ToplevelImplicit$package.XtensionAnyVal#
 example/TryCatch.scala -> example/TryCatch#
 example/TypeEnum.scala -> example/TypeEnum#
 example/TypeParameters.scala -> example/TypeParameters#

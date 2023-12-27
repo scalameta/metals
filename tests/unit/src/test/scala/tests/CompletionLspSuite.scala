@@ -343,4 +343,41 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       )
     } yield ()
   }
+
+  test("java") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/java/a/A.java
+          |package a;
+          |
+          |public class A {
+          |  String name = "";
+          |}
+          |/a/src/main/java/a/B.java
+          |package a;
+          |
+          |public class B {
+          |  A a = new A();
+          |  public void main(){
+          |    // @@
+          |  }
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didSave("a/src/main/java/a/B.java")(identity)
+      _ <- assertCompletion(
+        "a.n@@",
+        """|name java.lang.String
+           |notify() void
+           |notifyAll() void
+           |""".stripMargin,
+        filename = Some("a/src/main/java/a/B.java"),
+      )
+    } yield ()
+  }
 }

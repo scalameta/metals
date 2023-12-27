@@ -6,6 +6,7 @@ import java.{util => ju}
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
+import scala.util.Try
 
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.JsonParser._
@@ -140,12 +141,25 @@ final class Diagnostics(
   def onBuildPublishDiagnostics(
       params: bsp4j.PublishDiagnosticsParams
   ): Unit = {
-    val path = params.getTextDocument.getUri.toAbsolutePath
-    onPublishDiagnostics(
-      path,
-      params.getDiagnostics().asScala.map(_.toLsp).toSeq,
-      params.getReset(),
-    )
+    val diagnostics = params.getDiagnostics().asScala.map(_.toLsp).toSeq
+    val publish =
+      for {
+        path <- Try(params.getTextDocument.getUri.toAbsolutePath).toOption
+        if (path.isFile)
+      } yield onPublishDiagnostics(
+        path,
+        params.getDiagnostics().asScala.map(_.toLsp).toSeq,
+        params.getReset(),
+      )
+
+    publish.getOrElse {
+      scribe.warn(
+        s"Invalid text document uri received from build server: ${params.getTextDocument.getUri}"
+      )
+      diagnostics.map(_.getMessage()).foreach { msg =>
+        scribe.info(s"BSP server: $msg")
+      }
+    }
   }
 
   def onPublishDiagnostics(

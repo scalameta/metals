@@ -1,12 +1,12 @@
 package scala.meta.internal.pc.completions
 
+import scala.meta.internal.pc.Compat
 import scala.meta.pc.PresentationCompilerConfig
 
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags.*
-import dotty.tools.dotc.core.NameKinds.*
 import dotty.tools.dotc.core.Symbols.NoSymbol
 import dotty.tools.dotc.core.Types.ExprType
 import dotty.tools.dotc.core.Types.MethodOrPoly
@@ -112,7 +112,7 @@ object ScaladocCompletions:
           defdef.trailingParamss.flatten.collect {
             case param
                 if !param.symbol.isOneOf(Synthetic) &&
-                  !param.name.is(EvidenceParamName) &&
+                  !param.name.is(Compat.EvidenceParamName) &&
                   param.symbol != extensionParam =>
               param.name.show
           }
@@ -121,7 +121,7 @@ object ScaladocCompletions:
             case param
                 if !param.is(Synthetic) &&
                   !param.isTypeParam &&
-                  !param.name.is(EvidenceParamName) =>
+                  !param.name.is(Compat.EvidenceParamName) =>
               param.name.show
           }
         case other =>

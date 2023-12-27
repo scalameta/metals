@@ -46,7 +46,7 @@ class JavaCompletionProvider(
           params.text().substring(params.offset())
       else params.text()
     val task: JavacTask =
-      JavaMetalsGlobal.compilationTask(textWithSemicolon, params.uri())
+      compiler.compilationTask(textWithSemicolon, params.uri())
     val scanner = JavaMetalsGlobal.scanner(task)
     val position =
       CursorPosition(params.offset(), params.offset(), params.offset())

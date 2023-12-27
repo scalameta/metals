@@ -10,7 +10,8 @@ case class MavenBuildTool(
     userConfig: () => UserConfiguration,
     projectRoot: AbsolutePath,
 ) extends BuildTool
-    with BloopInstallProvider {
+    with BloopInstallProvider
+    with VersionRecommendation {
 
   private lazy val embeddedMavenLauncher: AbsolutePath = {
     val out = BuildTool.copyFromResource(tempDir, "maven-wrapper.jar")

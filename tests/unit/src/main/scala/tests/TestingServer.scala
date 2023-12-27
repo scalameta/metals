@@ -1106,7 +1106,7 @@ final case class TestingServer(
         val shouldIncludeDetail = item.getDetail != null && includeDetail
         val detail =
           if (shouldIncludeDetail && !label.contains(item.getDetail))
-            item.getDetail
+            " " + item.getDetail
           else ""
         label + detail
       }

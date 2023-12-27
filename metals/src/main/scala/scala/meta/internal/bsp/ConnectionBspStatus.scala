@@ -4,10 +4,10 @@ import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.meta.internal.metals.BspStatus
+import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReportContext
-import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.clients.language.StatusType
 import scala.meta.io.AbsolutePath
@@ -124,7 +124,7 @@ object ConnectionBspStatus {
       "error",
       show = true,
       tooltip = s"Build sever ($serverName) is not responding.",
-      command = ServerCommands.ConnectBuildServer.id,
+      command = ClientCommands.ConnectBuildServer.id,
       commandTooltip = "Reconnect.",
     ).withStatusType(StatusType.bsp)
 
@@ -139,7 +139,7 @@ object ConnectionBspStatus {
       "warn",
       show = true,
       tooltip = message.trimTo(TOOLTIP_MAX_LENGTH),
-      command = ServerCommands.RunDoctor.id,
+      command = ClientCommands.RunDoctor.id,
       commandTooltip = "Open doctor.",
     ).withStatusType(StatusType.bsp)
 
