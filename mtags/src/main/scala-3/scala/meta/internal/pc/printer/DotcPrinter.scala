@@ -91,9 +91,15 @@ object DotcPrinter:
         case tp: AppliedType =>
           tp.tycon match
             case p: PrettyType =>
-              Str(p.toString) ~ "[" ~ toText(tp.args, ", ") ~ "]"
+              val args: List[Text] =
+                tp.args.map {
+                  case _: TypeBounds => "?"
+                  case arg => toText(arg)
+                }
+              Str(p.toString) ~ "[" ~ Text(args, ", ") ~ "]"
             case other => super.toText(tp)
         case other => super.toText(tp)
+
   end Std
 
   /**

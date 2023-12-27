@@ -95,7 +95,9 @@ object HoverProvider:
           case Some(unit) =>
             val newctx =
               ctx.fresh.setCompilationUnit(unit)
-            MetalsInteractive.contextOfPath(enclosing)(using newctx)
+            val tpdPath =
+              Interactive.pathTo(unit.tpdTree, pos.span)(using newctx)
+            MetalsInteractive.contextOfPath(tpdPath)(using newctx)
           case None => ctx
       val printer = MetalsPrinter.standard(
         IndexedContext(printerContext),
