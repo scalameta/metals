@@ -7,7 +7,6 @@ import scala.meta as m
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.MetalsInteractive.ExtensionMethodCall
-import scala.meta.internal.pc.MetalsInteractive.ExtensionMethodCallSymbol
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.VirtualFileParams
 
@@ -252,10 +251,8 @@ abstract class PcCollector[T](
        *
        * val a = MyIntOut(1).<<un@@even>>
        */
-      case ExtensionMethodCall(sym, app) :: _
-          if app.span.withStart(app.span.point).contains(pos.span) =>
-        val span = app.span.withStart(app.span.point)
-        Some(symbolAlternatives(sym), pos.withSpan(span))
+      case ExtensionMethodCall(id) :: _ if id.span.contains(pos.span) =>
+        Some(symbolAlternatives(id.symbol), id.sourcePos)
       case _ => None
 
     sought match
@@ -474,18 +471,11 @@ abstract class PcCollector[T](
          *
          * val a = MyIntOut(1).<<un@@even>>
          */
-        case ExtensionMethodCallSymbol(tree) =>
-          parent match
-            case Some(a: Apply) =>
-              val span = a.span.withStart(a.span.point)
-              val amendedTree = tree.withSpan(span)
-              if filter(amendedTree) then
-                occurences + collect(
-                  amendedTree,
-                  pos.withSpan(span),
-                )
-              else occurences
-            case _ => occurences
+        case ExtensionMethodCall(id) if filter(id) =>
+          occurences + collect(
+            id,
+            id.sourcePos,
+          )
         /* all definitions:
          * def <<foo>> = ???
          * class <<Foo>> = ???

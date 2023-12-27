@@ -277,9 +277,9 @@ object MetalsInteractive:
        *
        * val a = MyIntOut(1).un@@even
        */
-      case (a @ ExtensionMethodCall(symbol, app)) :: _
-          if app.span.withStart(app.span.point).contains(pos.span) =>
-        List((symbol, a.typeOpt))
+      case (ap @ NestedExtensionMethodCall(id)) :: _
+          if id.span.contains(pos.span) =>
+        List((id.symbol, ap.typeOpt))
 
       case path @ head :: tail =>
         if head.symbol.is(Synthetic) then
@@ -346,7 +346,7 @@ object MetalsInteractive:
   end ApplySelect
 
   object ExtensionMethodCallSymbol:
-    def unapply(tree: Tree)(using Context): Option[(Ident | Select)] =
+    def unapply(tree: Tree)(using Context): Option[Ident | Select] =
       tree match
         case tree: (Ident | Select) if tree.symbol.is(Flags.ExtensionMethod) =>
           Some(tree)
@@ -357,13 +357,30 @@ object MetalsInteractive:
   end ExtensionMethodCallSymbol
 
   object ExtensionMethodCall:
-    def unapply(tree: Tree)(using Context): Option[(Symbol, Apply)] =
+    def unapply(tree: Tree)(using Context): Option[Ident | Select] =
       tree match
-        case app @ Apply(ExtensionMethodCallSymbol(tree), _) =>
-          Some((tree.symbol, app))
-        case Apply(tree, _) => unapply(tree)
+        case Apply(ExtensionMethodCallSymbol(id), _)
+            if !tree.span.isSynthetic =>
+          val span = tree.span.withStart(tree.span.point)
+          Some(id.withSpan(span))
+        case TypeApply(app @ Apply(ExtensionMethodCallSymbol(id), _), tArgs)
+            if tArgs.forall(_.span == app.span) && app.span.isSynthetic =>
+          val span = tree.span.withStart(tree.span.point)
+          Some(id.withSpan(span))
         case _ => None
   end ExtensionMethodCall
+
+  /**
+   * In HoverProvider, path can also contain enclosing apply,
+   * which we need to skip to get the correct symbol.
+   */
+  object NestedExtensionMethodCall:
+    def unapply(tree: Tree)(using Context): Option[Ident | Select] =
+      tree match
+        case ExtensionMethodCall(id) => Some(id)
+        case Apply(tree, _) => unapply(tree)
+        case TypeApply(tree, _) => unapply(tree)
+        case _ => None
 
   object TreeApply:
     def unapply(tree: Tree): Option[(Tree, List[Tree])] =
