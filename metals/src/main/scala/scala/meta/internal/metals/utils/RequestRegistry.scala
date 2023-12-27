@@ -33,22 +33,25 @@ class RequestRegistry(
     new MutableCancelable().addAll(initialCancellables)
 
   private def onTimeout(
-      actionName: String
-  )(duration: Duration): Future[FutureWithTimeout.OnTimeout] = {
-    languageClient
-      .showMessageRequest(
-        RequestTimeout.params(actionName, duration.toMinutes.toInt)
-      )
-      .asScala
-      .map {
-        case RequestTimeout.waitAction => FutureWithTimeout.Wait
-        case RequestTimeout.cancel => FutureWithTimeout.Cancel
-        case RequestTimeout.waitAlways =>
-          requestTimeOutNotification.foreach(_.dismiss(7, TimeUnit.DAYS))
-          FutureWithTimeout.Dismiss
-        case _ => FutureWithTimeout.Dismiss
-      }
-  }
+      actionName: Option[String]
+  )(duration: Duration): Future[FutureWithTimeout.OnTimeout] =
+    actionName match {
+      case Some(actionName) =>
+        languageClient
+          .showMessageRequest(
+            RequestTimeout.params(actionName, duration.toMinutes.toInt)
+          )
+          .asScala
+          .map {
+            case RequestTimeout.waitAction => FutureWithTimeout.Wait
+            case RequestTimeout.cancel => FutureWithTimeout.Cancel
+            case RequestTimeout.waitAlways =>
+              requestTimeOutNotification.foreach(_.dismiss(7, TimeUnit.DAYS))
+              FutureWithTimeout.Dismiss
+            case _ => FutureWithTimeout.Dismiss
+          }
+      case None => Future.successful(FutureWithTimeout.Cancel)
+    }
 
   def register[T](
       action: () => CompletableFuture[T],

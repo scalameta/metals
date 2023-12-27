@@ -5,12 +5,12 @@ import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.duration.FiniteDuration
 
-case class Timeout(id: String, name: String, minTimeout: FiniteDuration)
+case class Timeout(id: String, name: Option[String], minTimeout: FiniteDuration)
 object Timeout {
   def apply(name: String, minTimeout: FiniteDuration): Timeout =
-    Timeout(name, name, minTimeout)
-  def default(name: String, minTimeout: FiniteDuration): Timeout =
-    Timeout("default", name, minTimeout)
+    Timeout(name, Some(name), minTimeout)
+  def default(minTimeout: FiniteDuration): Timeout =
+    Timeout("default", None, minTimeout)
 }
 
 class Timeouts() {

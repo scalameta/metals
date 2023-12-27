@@ -30,7 +30,8 @@ class RequestRegistrySuite extends FunSuite {
       onTimeout: () => MessageActionItem = () => Messages.RequestTimeout.cancel
   ) =
     new RequestRegistry(List(), new RequestRegistrySuite.Client(onTimeout))
-  val defaultTimeout: Some[Timeout] = Some(Timeout.default("request", duration))
+  val defaultTimeout: Some[Timeout] = Some(Timeout.default(duration))
+  val askIfCancelTimeout: Some[Timeout] = Some(Timeout("ask", duration))
 
   test("avg") {
     val requestRegistry = createRegistry()
@@ -122,7 +123,7 @@ class RequestRegistrySuite extends FunSuite {
       err <- requestRegistry
         .register(
           ExampleFutures.infinite(promise1),
-          defaultTimeout,
+          askIfCancelTimeout,
         )
         .future
         .failed

@@ -32,6 +32,8 @@ final class Compilations(
 )(implicit ec: ExecutionContext) {
   private val compileTimeout: Timeout =
     Timeout("compile", Duration(10, TimeUnit.MINUTES))
+  private val cascadeTimeout: Timeout =
+    Timeout("cascade compile", Duration(15, TimeUnit.MINUTES))
   // we are maintaining a separate queue for cascade compilation since those must happen ASAP
   private val compileBatch =
     new BatchedFunction[
@@ -48,7 +50,7 @@ final class Compilations(
       b.BuildTargetIdentifier,
       Map[BuildTargetIdentifier, b.CompileResult],
     ](
-      compile(timeout = None),
+      compile(timeout = Some(cascadeTimeout)),
       "cascadeBatch",
       shouldLogQueue = true,
       Some(Map.empty),

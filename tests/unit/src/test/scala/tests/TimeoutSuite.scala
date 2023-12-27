@@ -55,7 +55,7 @@ class TimeoutSuite extends FunSuite {
 
   test("timeouts") {
     def min(int: Int) = Duration(int, TimeUnit.MINUTES)
-    val defaultTime = Timeout.default("request", min(3))
+    val defaultTime = Timeout.default(min(3))
     val timeouts = new Timeouts()
     val flexTimeout = Timeout("flex", min(6))
     assertEquals(

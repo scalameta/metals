@@ -60,9 +60,9 @@ class BuildServerConnection private (
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
-  private val defaultMinTimeout = FiniteDuration(3, TimeUnit.MINUTES)
-  private def defaultTimeout(name: String) =
-    Some(Timeout.default(name, defaultMinTimeout))
+  private val defaultTimeout = Some(
+    Timeout.default(FiniteDuration(3, TimeUnit.MINUTES))
+  )
 
   @volatile private var connection = Future.successful(initialConnection)
   initialConnection.setReconnect(() => reconnect().ignoreValue)
@@ -226,7 +226,7 @@ class BuildServerConnection private (
       register(
         server => server.buildTargetScalaMainClasses(params),
         onFail,
-        defaultTimeout("main classes"),
+        defaultTimeout,
       ).asScala
     } else Future.successful(resultOnUnsupported)
 
@@ -246,7 +246,7 @@ class BuildServerConnection private (
       register(
         server => server.buildTargetScalaTestClasses(params),
         onFail,
-        defaultTimeout("test classes"),
+        defaultTimeout,
       ).asScala
     } else Future.successful(resultOnUnsupported)
   }
