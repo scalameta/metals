@@ -22,7 +22,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   check(
-    "simple-old-syntax".tag(IgnoreForScala3CompilerPC),
+    "simple-old-syntax",
     """|package example
        |
        |object Test:
@@ -51,7 +51,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   check(
-    "simple2-old-syntax".tag(IgnoreForScala3CompilerPC),
+    "simple2-old-syntax",
     """|package example
        |
        |object enrichments:
@@ -81,7 +81,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   check(
-    "simple-empty-old".tag(IgnoreForScala3CompilerPC),
+    "simple-empty-old",
     """|package example
        |
        |object enrichments:
@@ -113,7 +113,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   check(
-    "filter-by-type-old".tag(IgnoreForScala3CompilerPC),
+    "filter-by-type-old",
     """|package example
        |
        |object enrichments:
@@ -148,7 +148,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   check(
-    "filter-by-type-subtype-old".tag(IgnoreForScala3CompilerPC),
+    "filter-by-type-subtype-old",
     """|package example
        |
        |class A
@@ -188,7 +188,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "simple-edit-old".tag(IgnoreForScala3CompilerPC),
+    "simple-edit-old",
     """|package example
        |
        |object enrichments:
@@ -262,7 +262,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "simple-edit-suffix-old".tag(IgnoreForScala3CompilerPC),
+    "simple-edit-suffix-old",
     """|package example
        |
        |object enrichments:
@@ -302,7 +302,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   check(
     "directly-in-pkg1-old"
       .tag(
-        IgnoreScalaVersion.forLessThan("3.2.2").and(IgnoreForScala3CompilerPC)
+        IgnoreScalaVersion.forLessThan("3.2.2")
       ),
     """|
        |package examples:
@@ -333,7 +333,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   check(
     "directly-in-pkg2-old"
       .tag(
-        IgnoreScalaVersion.forLessThan("3.2.2").and(IgnoreForScala3CompilerPC)
+        IgnoreScalaVersion.forLessThan("3.2.2")
       ),
     """|package examples:
        |  object X:
@@ -367,7 +367,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   checkEdit(
     "directly-in-pkg3-old"
       .tag(
-        IgnoreScalaVersion.forLessThan("3.2.2").and(IgnoreForScala3CompilerPC)
+        IgnoreScalaVersion.forLessThan("3.2.2")
       ),
     """|package examples:
        |  implicit class A (num: Int) { def incr: Int = num + 1 }
@@ -405,7 +405,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   check(
     "nested-pkg-old"
       .tag(
-        IgnoreScalaVersion.forLessThan("3.2.2").and(IgnoreForScala3CompilerPC)
+        IgnoreScalaVersion.forLessThan("3.2.2")
       ),
     """|package aa:  // some comment
        |  package cc: 
