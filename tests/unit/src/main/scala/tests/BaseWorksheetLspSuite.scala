@@ -964,7 +964,7 @@ abstract class BaseWorksheetLspSuite(
   test("semantic-highlighting2") {
     val expected =
       s"""|
-          |<<val>>/*keyword*/ <<hellos>>/*variable,definition,readonly*/ = <<List>>/*class*/(<<hi1>>/*variable,readonly*/, <<hi2>>/*variable,readonly*/)
+          |<<val>>/*keyword*/ <<hellos>>/*variable,definition,readonly*/ = <<List>>/*class*/(hi1, hi2)
           |""".stripMargin
 
     val fileContent =
