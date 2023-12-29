@@ -79,7 +79,7 @@ final class ImplementationProvider(
       document <- documents.documents
       symbolInfo <- document.symbols
     } {
-      if (isClassLike(symbolInfo)) {
+      if (isClassLike(symbolInfo) || symbolInfo.isType) {
         parentImplLocationPairs ++= parentsFromSignature(
           symbolInfo.symbol,
           symbolInfo.signature,
@@ -125,7 +125,9 @@ final class ImplementationProvider(
       val symbolSearch = defaultSymbolSearch(source, currentDocument)
       val sym = symbolOccurrence.symbol
       val dealiased =
-        if (sym.desc.isType) dealiasClass(sym, symbolSearch) else sym
+        if (sym.desc.isType)
+          dealiasClass(sym, symbolSearch)
+        else sym
 
       val definitionDocument =
         if (currentDocument.definesSymbol(dealiased)) {
@@ -307,7 +309,8 @@ final class ImplementationProvider(
             implLocation,
           )
           if !findSymbol(implDocument, implSymbol).exists(
-            _.kind == SymbolInformation.Kind.TYPE
+            // we should not show types if we are looking for a class implementations
+            sym => sym.isType && !parentSymbol.isType
           )
           implOccurrence <- findDefOccurrence(
             implDocument,
@@ -452,7 +455,13 @@ object ImplementationProvider {
   ): String = {
     if (symbol.desc.isType) {
       findSymbol(symbol)
-        .map(inf => dealiasClass(inf, findSymbol).symbol)
+        .map { inf =>
+          val isAbstractType = inf.isAbstract && inf.isType
+          // abstract type will always have Any as upper bound
+          if (isAbstractType) symbol
+          else dealiasClass(inf, findSymbol).symbol
+
+        }
         .getOrElse(symbol)
     } else {
       symbol
@@ -527,6 +536,6 @@ object ImplementationProvider {
   }
 
   def isClassLike(info: SymbolInformation): Boolean =
-    info.isObject || info.isClass || info.isTrait || info.isType || info.isInterface
+    info.isObject || info.isClass || info.isTrait || info.isInterface
 
 }

@@ -28,7 +28,6 @@
       "contributors/releasing"
     ],
     "Integrating with Metals": [
-      "integrations/remote-language-server",
       "integrations/new-build-tool",
       "integrations/new-editor",
       "integrations/test-explorer",

@@ -67,7 +67,7 @@ case class BazelBuildTool(
 
   override val forcesBuildServer = true
 
-  override val buildServerName: Option[String] = Some(BazelBuildTool.bspName)
+  override def buildServerName: String = BazelBuildTool.bspName
 
 }
 

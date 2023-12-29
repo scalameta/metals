@@ -19,6 +19,8 @@ def isScala2(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 2)
 def isScala3(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 3)
 def isScala3WithPresentationCompiler(v: String): Boolean =
   (Version.parse(v), Version.parse(V.firstScala3PCVersion)) match {
+    case (Some(v), _) if V.supportedScalaVersions.contains(v.toString()) =>
+      false
     case (Some(v), Some(firstScala3PCVersion)) => v >= firstScala3PCVersion
     case _ => false
   }
@@ -499,7 +501,7 @@ lazy val metals = project
       "com.outr" %% "scribe-slf4j" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
       "com.lihaoyi" %% "ujson" % "3.1.3",
-      // For remote language server
+      // For fetching projects' templates
       "com.lihaoyi" %% "requests" % "0.8.0",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
       "org.scalameta" %% "scalameta" % V.semanticdb(scalaVersion.value),

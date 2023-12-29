@@ -83,6 +83,10 @@ final class BuildTools(
     _.resolve("build.sc").isFile
   )
   def isMill: Boolean = millProject.isDefined
+  def isMillBsp(path: AbsolutePath): Boolean =
+    isInBsp(path) && path.filename.contains("mill") &&
+      path.filename.endsWith(".json")
+
   def scalaCliProject: Option[AbsolutePath] =
     searchForBuildTool(_.resolve("project.scala").isFile)
       .orElse {
@@ -116,14 +120,14 @@ final class BuildTools(
     _.resolve("pom.xml").isFile
   )
   def isMaven: Boolean = mavenProject.isDefined
-  def pantsProject: Option[AbsolutePath] = searchForBuildTool(
-    _.resolve("pants.ini").isFile
-  )
-  def isPants: Boolean = pantsProject.isDefined
   def bazelProject: Option[AbsolutePath] = searchForBuildTool(
     _.resolve("WORKSPACE").isFile
   )
   def isBazel: Boolean = bazelProject.isDefined
+
+  def isInBsp(path: AbsolutePath): Boolean =
+    path.isFile && path.parent.filename == ".bsp" &&
+      path.filename.endsWith(".json")
 
   private def customBsps: List[BspOnly] = {
     val bspFolders =
@@ -150,7 +154,11 @@ final class BuildTools(
   }
 
   private def knownBsps =
-    Set(SbtBuildTool.name, MillBuildTool.name) ++ ScalaCli.names
+    Set(
+      SbtBuildTool.name,
+      MillBuildTool.bspName,
+      BazelBuildTool.bspName,
+    ) ++ ScalaCli.names
 
   private def customProjectRoot = userConfig().getCustomProjectRoot(workspace)
 
@@ -193,7 +201,6 @@ final class BuildTools(
     if (isMill) buf += "Mill"
     if (isGradle) buf += "Gradle"
     if (isMaven) buf += "Maven"
-    if (isPants) buf += "Pants"
     if (isBazel) buf += "Bazel"
     buf.result()
   }
@@ -231,14 +238,15 @@ final class BuildTools(
       Some(GradleBuildTool.name)
     else if (mavenProject.exists(MavenBuildTool.isMavenRelatedPath(_, path)))
       Some(MavenBuildTool.name)
-    else if (isMill && MillBuildTool.isMillRelatedPath(path))
+    else if (isMill && MillBuildTool.isMillRelatedPath(path) || isMillBsp(path))
       Some(MillBuildTool.name)
-    else if (bazelProject.exists(BazelBuildTool.isBazelRelatedPath(_, path)))
-      Some(BazelBuildTool.name)
     else if (
-      path.isFile && path.filename.endsWith(".json") &&
-      path.parent.filename == ".bsp"
+      bazelProject.exists(
+        BazelBuildTool.isBazelRelatedPath(_, path)
+      ) || isInBsp(path) && path.filename == "bazelbsp.json"
     )
+      Some(BazelBuildTool.name)
+    else if (isInBsp(path))
       Some(path.filename.stripSuffix(".json"))
     else None
   }

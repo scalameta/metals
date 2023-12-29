@@ -6,7 +6,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
-import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
@@ -51,8 +50,6 @@ class BspConnector(
     resolveExplicit().getOrElse {
       if (buildTool.exists(_.isBloopInstallProvider) || buildTools.isBloop)
         ResolvedBloop
-      // WORKSPACE file is found && bsp connection file for Bazel is not yet generated
-      else if (buildTools.isBazel) ResolvedBazel
       else bspServers.resolve()
     }
   }
@@ -135,34 +132,6 @@ class BspConnector(
           statusBar
             .trackFuture("Connecting to sbt", connectionF, showTimer = true)
             .map(Some(_))
-        // NOTE: (jkciesluk) This is a special case where .bazelbsp config is not yet generated.
-        // It can happen if `autoConnectToBuildServer` is called without check if build tool is auto-connectable
-        // eg. in ResetWorkspace or RestartBuildServer commands
-        case ResolvedBazel =>
-          BazelBuildTool
-            .writeBazelConfig(
-              shellRunner,
-              workspace,
-              userConfig().javaHome,
-            )
-            .flatMap { _ =>
-              bspServers
-                .findAvailableServers()
-                .collectFirst {
-                  case details if details.getName == BazelBuildTool.bspName =>
-                    tables.buildServers.chooseServer(BazelBuildTool.bspName)
-                    bspServers
-                      .newServer(
-                        projectRoot,
-                        bspTraceRoot,
-                        details,
-                        bspStatusOpt,
-                      )
-                      .map(Some(_))
-                }
-                .getOrElse(Future.successful(None))
-
-            }
         case ResolvedBspOne(details) =>
           tables.buildServers.chooseServer(details.getName())
           optSetBuildTool(details.getName())
@@ -243,10 +212,7 @@ class BspConnector(
     buildTools.loadSupported
       .find {
         case _: ScalaCliBuildTool if ScalaCli.names(buildServerName) => true
-        case buildTool: BuildServerProvider
-            if buildTool.buildServerName.contains(buildServerName) =>
-          true
-        case buildTool => buildTool.executableName == buildServerName
+        case buildTool => buildTool.buildServerName == buildServerName
       }
       .foreach(buildTool =>
         tables.buildTool.chooseBuildTool(buildTool.executableName)
@@ -320,9 +286,9 @@ class BspConnector(
         case buildTool: BuildServerProvider
             if !foundServers
               .exists(details =>
-                details.getName() == buildTool.getBuildServerName
+                details.getName() == buildTool.buildServerName
               ) =>
-          buildTool.getBuildServerName -> Left(buildTool)
+          buildTool.buildServerName -> Left(buildTool)
       }
       .toMap
 
@@ -360,14 +326,14 @@ class BspConnector(
         status: BspConfigGenerationStatus,
     ): Boolean = status match {
       case BspConfigGenerationStatus.Generated =>
-        tables.buildServers.chooseServer(buildTool.getBuildServerName)
+        tables.buildServers.chooseServer(buildTool.buildServerName)
         true
       case Cancelled => false
       case Failed(exit) =>
         exit match {
           case Left(exitCode) =>
             scribe.error(
-              s"Creation of .bsp/${buildTool.getBuildServerName} failed with exit code: $exitCode"
+              s"Creation of .bsp/${buildTool.buildServerName} failed with exit code: $exitCode"
             )
             client.showMessage(
               Messages.BspProvider.genericUnableToCreateConfig

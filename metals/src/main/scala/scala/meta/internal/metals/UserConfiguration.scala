@@ -44,7 +44,6 @@ case class UserConfiguration(
     showInferredType: Option[String] = None,
     showImplicitArguments: Boolean = false,
     showImplicitConversionsAndClasses: Boolean = false,
-    remoteLanguageServer: Option[String] = None,
     enableStripMarginOnTypeFormatting: Boolean = true,
     enableIndentOnPaste: Boolean = false,
     enableSemanticHighlighting: Boolean = true,
@@ -273,17 +272,6 @@ object UserConfiguration {
         """|When this option is enabled, when a snippet is pasted into a Scala file, Metals will
            |try to adjust the indentation to that of the current cursor.
            |""".stripMargin,
-      ),
-      UserConfigurationOption(
-        "remote-language-server",
-        """empty string `""`.""",
-        """"https://language-server.company.com/message"""",
-        "Remote language server",
-        """A URL pointing to an endpoint that implements a remote language server.
-          |
-          |See https://scalameta.org/metals/docs/integrations/remote-language-server for
-          |documentation on remote language servers.
-          |""".stripMargin,
       ),
       UserConfigurationOption(
         "fallback-scala-version",
@@ -527,8 +515,6 @@ object UserConfiguration {
       getBooleanKey("show-implicit-arguments").getOrElse(false)
     val showImplicitConversionsAndClasses =
       getBooleanKey("show-implicit-conversions-and-classes").getOrElse(false)
-    val remoteLanguageServer =
-      getStringKey("remote-language-server")
     val enableStripMarginOnTypeFormatting =
       getBooleanKey("enable-strip-margin-on-type-formatting").getOrElse(true)
     val enableIndentOnPaste =
@@ -588,7 +574,6 @@ object UserConfiguration {
           showInferredType,
           showImplicitArguments,
           showImplicitConversionsAndClasses,
-          remoteLanguageServer,
           enableStripMarginOnTypeFormatting,
           enableIndentOnPaste,
           enableSemanticHighlighting,

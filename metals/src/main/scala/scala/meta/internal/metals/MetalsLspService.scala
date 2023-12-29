@@ -79,7 +79,6 @@ import scala.meta.internal.parsing.DocumentSymbolProvider
 import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
-import scala.meta.internal.remotels.RemoteLanguageServer
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.tvp._
@@ -237,13 +236,6 @@ class MetalsLspService(
 
   private val scalaVersionSelector = new ScalaVersionSelector(
     () => userConfig,
-    buildTargets,
-  )
-  private val remote = new RemoteLanguageServer(
-    () => folder,
-    () => userConfig,
-    initialServerConfig,
-    buffers,
     buildTargets,
   )
 
@@ -473,7 +465,6 @@ class MetalsLspService(
     semanticdbs,
     warnings,
     () => compilers,
-    remote,
     trees,
     buildTargets,
     scalaVersionSelector,
@@ -558,7 +549,6 @@ class MetalsLspService(
     semanticdbs,
     buffers,
     definitionProvider,
-    remote,
     trees,
     buildTargets,
   )
@@ -918,8 +908,8 @@ class MetalsLspService(
       chosenBuildServer = found match {
         case Some(BuildTool.Found(buildServer, _))
             if buildServer.forcesBuildServer =>
-          tables.buildServers.chooseServer(buildServer.executableName)
-          Some(buildServer.executableName)
+          tables.buildServers.chooseServer(buildServer.buildServerName)
+          Some(buildServer.buildServerName)
         case _ => tables.buildServers.selectedServer()
       }
       _ <- Future
@@ -1333,7 +1323,7 @@ class MetalsLspService(
    */
   private def fileWatchFilter(path: Path): Boolean = {
     val abs = AbsolutePath(path)
-    abs.isScalaOrJava || abs.isSemanticdb || abs.isBazelRelatedPath
+    abs.isScalaOrJava || abs.isSemanticdb || abs.isInBspDirectory(folder)
   }
 
   /**
@@ -1376,8 +1366,6 @@ class MetalsLspService(
             semanticDBIndexer.onOverflow(semanticdbPath)
         }
       }.asJava
-    // } else if (path.isBuild) {
-    //   onBuildChanged(List(path)).asJava
     } else {
       CompletableFuture.completedFuture(())
     }
@@ -1977,7 +1965,7 @@ class MetalsLspService(
     ): Unit =
       status match {
         case Generated =>
-          tables.buildServers.chooseServer(buildTool.getBuildServerName)
+          tables.buildServers.chooseServer(buildTool.buildServerName)
           quickConnectToBuildServer().ignoreValue
         case Cancelled => ()
         case Failed(exit) =>
@@ -2107,14 +2095,13 @@ class MetalsLspService(
     val isBloopOrEmpty = chosenBuildServer.isEmpty || chosenBuildServer.exists(
       _ == BloopServers.name
     )
-
     buildTool match {
       case Some(BuildTool.Found(buildTool: BloopInstallProvider, digest))
           if isBloopOrEmpty =>
         slowConnectToBloopServer(forceImport, buildTool, digest)
       case Some(BuildTool.Found(buildTool: ScalaCliBuildTool, _))
           if !buildTool.isBspGenerated(folder) =>
-        tables.buildServers.chooseServer(buildTool.executableName)
+        tables.buildServers.chooseServer(buildTool.buildServerName)
         buildTool
           .generateBspConfig(
             folder,
@@ -2122,12 +2109,6 @@ class MetalsLspService(
             statusBar,
           )
           .flatMap(_ => quickConnectToBuildServer())
-      case Some(BuildTool.Found(buildTool, _))
-          if !chosenBuildServer.exists(
-            _ == buildTool.executableName
-          ) && buildTool.forcesBuildServer =>
-        tables.buildServers.chooseServer(buildTool.executableName)
-        quickConnectToBuildServer()
       // If there is no .bazelbsp present, we ask user to write bsp config
       // After that, we should fall into the last case and index workspace
       case Some(BuildTool.Found(_: BazelBuildTool, _))
@@ -2142,6 +2123,12 @@ class MetalsLspService(
             forceImport,
           )
           .flatMap(_ => quickConnectToBuildServer())
+      case Some(BuildTool.Found(buildTool, _))
+          if !chosenBuildServer.exists(
+            _ == buildTool.buildServerName
+          ) && buildTool.forcesBuildServer =>
+        tables.buildServers.chooseServer(buildTool.buildServerName)
+        quickConnectToBuildServer()
       case Some(found) =>
         indexer.reloadWorkspaceAndIndex(
           forceImport,
@@ -2381,7 +2368,6 @@ class MetalsLspService(
     )
     bspSession = Some(session)
     for {
-      possibleBuildTool <- supportedBuildTool()
       _ <- importBuild(session)
       _ <- indexer.profiledIndexWorkspace(runDoctorCheck)
       _ = buildTool.foreach(

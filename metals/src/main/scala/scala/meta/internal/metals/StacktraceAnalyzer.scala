@@ -210,7 +210,7 @@ object StacktraceAnalyzer {
     /* Symbol containing `$package$` is a toplevel method and we only need to
      * find any method contained in the same file even if overloaded
      */
-    if (symbol.contains("$package$")) {
+    val symbolToFind = if (symbol.contains("$package$")) {
       symbolIn.split("\\$package\\$") match {
         case Array(filePath, symbol) =>
           val re = filePath.replace('.', '/') + "$package" + symbol
@@ -231,6 +231,11 @@ object StacktraceAnalyzer {
       }
     } else {
       List(symbol :+ '#')
+    }
+    symbolToFind.map {
+      // empty package needs to be added if no package is present
+      case sym if !sym.contains("/") => "_empty_/" + sym
+      case sym => sym
     }
   }
 

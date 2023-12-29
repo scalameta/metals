@@ -376,11 +376,9 @@ object MetalsEnrichments
       }
     }
 
-    def isDependencySource(workspace: AbsolutePath): Boolean = {
+    def isDependencySource(workspace: AbsolutePath): Boolean =
       (isLocalFileSystem(workspace) &&
-        (isInReadonlyDirectory(workspace) || isInTmpDirectory(workspace))) ||
-      isJarFileSystem
-    }
+        isInReadonlyDirectory(workspace)) || isJarFileSystem
 
     def isWorkspaceSource(workspace: AbsolutePath): Boolean =
       isLocalFileSystem(workspace) &&
@@ -398,17 +396,12 @@ object MetalsEnrichments
         workspace.resolve(Directories.readonly).toNIO
       )
 
-    def isInTmpDirectory(workspace: AbsolutePath): Boolean =
-      path.toNIO.startsWith(
-        workspace.resolve(Directories.tmp).toNIO
-      )
-
     def isSrcZipInReadonlyDirectory(workspace: AbsolutePath): Boolean = {
       path.toNIO.startsWith(
         workspace.resolve(Directories.dependencies.resolve("src.zip")).toNIO
       )
     }
-    
+
     def toRelativeInside(prefix: AbsolutePath): Option[RelativePath] = {
       // windows throws an exception on toRelative when on different drives
       if (path.toNIO.getRoot() != prefix.toNIO.getRoot())

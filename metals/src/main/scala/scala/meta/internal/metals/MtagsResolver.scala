@@ -100,17 +100,6 @@ object MtagsResolver {
         original: Option[String],
         resolveType: ResolveType.Value = ResolveType.Regular,
     ): Option[MtagsBinaries] = {
-      def logError(e: Throwable): Unit = {
-        val msg = s"Failed to fetch mtags for ${scalaVersion}"
-        e match {
-          case _: SimpleResolutionError =>
-            // no need to log traces for coursier error
-            // all explanation is in message
-            scribe.error(msg + "\n" + e.getMessage())
-          case _ =>
-            scribe.error(msg, e)
-        }
-      }
 
       def fetch(tries: Int = 0): State = logResolution {
         try {
@@ -138,8 +127,7 @@ object MtagsResolver {
           )
         } catch {
           case NonFatal(e) =>
-            logError(e)
-            State.Failure(System.currentTimeMillis(), tries)
+            State.Failure(System.currentTimeMillis(), tries, e)
         }
       }
       def shouldResolveAgain(failure: State.Failure): Boolean = {
@@ -196,6 +184,18 @@ object MtagsResolver {
           },
         )
 
+        def logError(e: Throwable): Unit = {
+          val msg = s"Failed to fetch mtags for ${scalaVersion}"
+          e match {
+            case _: SimpleResolutionError =>
+              // no need to log traces for coursier error
+              // all explanation is in message
+              scribe.error(msg + "\n" + e.getMessage())
+            case _ =>
+              scribe.error(msg, e)
+          }
+        }
+
         computed match {
           case State.Success(v) =>
             Some(v)
@@ -226,8 +226,10 @@ object MtagsResolver {
                   ResolveType.Nightly,
                 )
             }
-          case _ =>
+          case failure: State.Failure =>
+            logError(failure.exception)
             None
+          case _ => None
         }
       }
     }
@@ -291,7 +293,8 @@ object MtagsResolver {
     object State {
       val maxTriesInARow: Int = 2
       case class Success(v: MtagsBinaries.Artifacts) extends State
-      case class Failure(lastTryMillis: Long, tries: Int) extends State
+      case class Failure(lastTryMillis: Long, tries: Int, exception: Throwable)
+          extends State
     }
   }
 

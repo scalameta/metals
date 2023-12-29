@@ -10,7 +10,7 @@ object V {
   val wrapperMetalsVersion = "3.4.0-RC1-bin-20231127-41e7d95-NIGHTLY"
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
-  val scala3RC: Option[String] = None
+  val scala3RC: Option[String] = Some("3.3.2-RC1")
   val sbtScala = "2.12.17"
   val ammonite212Version = "2.12.18"
   val ammonite213Version = "2.13.12"
@@ -47,7 +47,7 @@ object V {
   val scribe = "3.13.0"
   val qdox = "2.0.3"
 
-  val guava = "com.google.guava" % "guava" % "32.1.3-jre"
+  val guava = "com.google.guava" % "guava" % "33.0.0-jre"
   val lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   val dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
 

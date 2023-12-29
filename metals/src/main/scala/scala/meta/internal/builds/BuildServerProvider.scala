@@ -34,13 +34,4 @@ trait BuildServerProvider extends BuildTool {
    */
   protected def createBspFileArgs(workspace: AbsolutePath): Option[List[String]]
 
-  /**
-   * Name of the build server if different than the actual build-tool that is
-   * serving as a build server.
-   *
-   * Ex. mill isn't mill, but rather mill-bsp
-   */
-  def buildServerName: Option[String] = None
-
-  def getBuildServerName: String = buildServerName.getOrElse(executableName)
 }

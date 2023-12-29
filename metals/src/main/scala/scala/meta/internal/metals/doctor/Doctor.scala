@@ -13,7 +13,6 @@ import scala.util.Try
 
 import scala.meta.internal.bsp.BspResolvedResult
 import scala.meta.internal.bsp.BspSession
-import scala.meta.internal.bsp.ResolvedBazel
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.bsp.ResolvedBloop
 import scala.meta.internal.bsp.ResolvedBspOne
@@ -175,11 +174,6 @@ final class Doctor(
           case ResolvedBspOne(details) =>
             (
               s"Build server currently being used is ${details.getName()}.",
-              false,
-            )
-          case ResolvedBazel =>
-            (
-              "Bazel build server detected, but not connected. Try to run the generate-bsp-config command.",
               false,
             )
           case ResolvedMultiple(_, _) =>

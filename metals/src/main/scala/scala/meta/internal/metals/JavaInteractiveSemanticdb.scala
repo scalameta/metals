@@ -72,7 +72,7 @@ class JavaInteractiveSemanticdb(
       // so can't use Metals SourceJavaFileObject
       val javaFileObject = JavaMetalsGlobal.makeFileObject(localSource.toFile)
 
-      val javacTask = JavaMetalsGlobal.compilationTask(
+      val javacTask = JavaMetalsGlobal.classpathCompilationTask(
         javaFileObject,
         Some(printWriter),
         allOptions,

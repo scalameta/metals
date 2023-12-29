@@ -176,12 +176,26 @@ class ProblemResolver(
       futureMessage,
     ).flatten
 
+    def noSemanticDBMessages = {
+      val javaSemanticDBmsg = JavaSemanticDBDisabled("", false).message
+      allMessages.forall(msg =>
+        semanticdbMessage.contains(msg) || msg == javaSemanticDBmsg
+      )
+    }
+
     allMessages match {
       case single :: Nil => Some(single)
       case Nil => None
       case messages if messages == scalaVersionsMessages =>
         Some(
           s"Your build definition contains multiple unsupported and deprecated Scala versions."
+        )
+      case _
+          if noSemanticDBMessages && currentBuildServer().exists(
+            _.main.isBazel
+          ) =>
+        Some(
+          Messages.CheckDoctor.bazelNavigation
         )
       case _ =>
         Some(

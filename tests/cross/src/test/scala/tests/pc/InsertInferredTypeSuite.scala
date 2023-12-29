@@ -452,7 +452,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
-    "path",
+    "path".tag(IgnoreScalaVersion("3.3.2-RC1")),
     """|import java.nio.file.Paths
        |object ExplicitResultTypesPrefix {
        |  class Path

@@ -256,6 +256,9 @@ object Messages {
     def multipleProblemsDetected: String =
       s"Multiple problems detected in your build."
 
+    def bazelNavigation: String =
+      "Code navigation for Bazel projects is not supported yet."
+
     val misconfiguredTestFrameworks: String =
       "Test Explorer won't work due to mis-configuration." + moreInfo
 

@@ -23,6 +23,7 @@ import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.bsp.ConnectionBspStatus
+import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -89,6 +90,8 @@ class BuildServerConnection private (
   def isSbt: Boolean = name == SbtBuildTool.name
 
   def isMill: Boolean = name == MillBuildTool.bspName
+
+  def isBazel: Boolean = name == BazelBuildTool.bspName
 
   def isScalaCLI: Boolean = ScalaCli.names(name)
 
