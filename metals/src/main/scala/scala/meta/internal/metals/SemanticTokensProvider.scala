@@ -263,21 +263,7 @@ object SemanticTokensProvider {
         case _ => 0
       }
 
-    if (tokenType != -1) (tokenType, tokenModifier)
-    else if (!tk.isWhiteSpaceOrComment) {
-      tokenFallback(tk)
-    } else (-1, 0)
-
-  }
-  def tokenFallback(tk: scala.meta.tokens.Token): (Integer, Integer) = {
-    tk.text.headOption match {
-      case Some(upper) if upper.isUpper =>
-        (getTypeId(SemanticTokenTypes.Class), 0)
-      case Some(lower) if lower.isLower =>
-        val readOnlyMod = 1 << getModifierId(SemanticTokenModifiers.Readonly)
-        (getTypeId(SemanticTokenTypes.Variable), readOnlyMod)
-      case _ => (-1, 0)
-    }
+    (tokenType, tokenModifier)
   }
 
   private val SoftKeywordsUnapply = new SoftKeywords(scala.meta.dialects.Scala3)

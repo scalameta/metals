@@ -53,7 +53,8 @@ final class PcSemanticTokensProvider(
     ): Option[Node] = {
       val sym = symbol.fold(tree.symbol)(identity)
       if (
-        !pos.isDefined || sym == null || sym == compiler.NoSymbol || sym.isConstructor
+        !pos.isDefined || sym == null ||
+        sym == compiler.NoSymbol || sym.isError || sym.isConstructor
       ) {
         None
       } else {
