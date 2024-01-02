@@ -23,6 +23,7 @@ final class DismissedNotifications(conn: () => Connection, time: Time) {
   val ReconnectScalaCli = new Notification(13)
   val ScalaCliImportAuto = new Notification(14)
   val BspErrors = new Notification(15)
+  val RequestTimeout = new Notification(16)
 
   val all: List[Notification] = List(
     Only212Navigation,
