@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.Try
 
 case class CancelableFuture[T](
     future: Future[T],
@@ -9,6 +10,10 @@ case class CancelableFuture[T](
 ) extends Cancelable {
   def map[U](f: T => U)(implicit ec: ExecutionContext): CancelableFuture[U] =
     CancelableFuture(future.map(f), cancelable)
+  def transform[U](f: Try[T] => Try[U])(implicit
+      ec: ExecutionContext
+  ): CancelableFuture[U] =
+    CancelableFuture(future.transform(f), cancelable)
   def cancel(): Unit = {
     cancelable.cancel()
   }

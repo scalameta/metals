@@ -126,9 +126,9 @@ object BazelBuildLayout extends BuildToolLayout {
         |# See https://github.com/bazelbuild/rules_scala/releases for up to date version information.
         |http_archive(
         |    name = "io_bazel_rules_scala",
-        |    sha256 = "71324bef9bc5a885097e2960d5b8effed63399b55572219919d25f43f468c716",
-        |    strip_prefix = "rules_scala-6.2.1",
-        |    url = "https://github.com/bazelbuild/rules_scala/releases/download/v6.2.1/rules_scala-v6.2.1.tar.gz",
+        |    sha256 = "9a23058a36183a556a9ba7229b4f204d3e68c8c6eb7b28260521016b38ef4e00",
+        |    strip_prefix = "rules_scala-6.4.0",
+        |    url = "https://github.com/bazelbuild/rules_scala/releases/download/v6.4.0/rules_scala-v6.4.0.tar.gz",
         |)
         |
         |load("@io_bazel_rules_scala//:scala_config.bzl", "scala_config")

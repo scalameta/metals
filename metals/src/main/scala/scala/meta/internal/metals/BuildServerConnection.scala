@@ -18,9 +18,9 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.concurrent.duration.FiniteDuration
 import scala.reflect.ClassTag
 import scala.util.Success
-import scala.util.Try
 
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.builds.BazelBuildTool
@@ -30,6 +30,8 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.scalacli.ScalaCli
+import scala.meta.internal.metals.utils.RequestRegistry
+import scala.meta.internal.metals.utils.Timeout
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
@@ -52,11 +54,16 @@ class BuildServerConnection private (
     initialConnection: BuildServerConnection.LauncherConnection,
     languageClient: LanguageClient,
     reconnectNotification: DismissedNotifications#Notification,
+    requestTimeOutNotification: DismissedNotifications#Notification,
     config: MetalsServerConfig,
     workspace: AbsolutePath,
     supportsWrappedSources: Boolean,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
+
+  private val defaultTimeout = Some(
+    Timeout.default(FiniteDuration(3, TimeUnit.MINUTES))
+  )
 
   @volatile private var connection = Future.successful(initialConnection)
   initialConnection.setReconnect(() => reconnect().ignoreValue)
@@ -67,6 +74,13 @@ class BuildServerConnection private (
     setupConnection()
   }
 
+  val requestRegistry =
+    new RequestRegistry(
+      initialConnection.cancelables,
+      languageClient,
+      Some(requestTimeOutNotification),
+    )
+
   private val isShuttingDown = new AtomicBoolean(false)
   private val onReconnection =
     new AtomicReference[BuildServerConnection => Future[Unit]](_ =>
@@ -74,9 +88,6 @@ class BuildServerConnection private (
     )
 
   private val _version = new AtomicReference(initialConnection.version)
-
-  private val ongoingRequests =
-    new MutableCancelable().addAll(initialConnection.cancelables)
 
   def version: String = _version.get()
 
@@ -173,7 +184,10 @@ class BuildServerConnection private (
       }
     }
 
-  def compile(params: CompileParams): CompletableFuture[CompileResult] = {
+  def compile(
+      params: CompileParams,
+      timeout: Option[Timeout],
+  ): CompletableFuture[CompileResult] = {
     register(
       server => server.buildTargetCompile(params),
       onFail = Some(
@@ -182,6 +196,7 @@ class BuildServerConnection private (
           s"Cancelling compilation on ${name} server",
         )
       ),
+      timeout = timeout,
     )
   }
 
@@ -214,6 +229,7 @@ class BuildServerConnection private (
       register(
         server => server.buildTargetScalaMainClasses(params),
         onFail,
+        defaultTimeout,
       ).asScala
     } else Future.successful(resultOnUnsupported)
 
@@ -233,6 +249,7 @@ class BuildServerConnection private (
       register(
         server => server.buildTargetScalaTestClasses(params),
         onFail,
+        defaultTimeout,
       ).asScala
     } else Future.successful(resultOnUnsupported)
   }
@@ -365,7 +382,7 @@ class BuildServerConnection private (
 
   override def cancel(): Unit = {
     if (cancelled.compareAndSet(false, true)) {
-      ongoingRequests.cancel()
+      requestRegistry.cancel()
     }
   }
 
@@ -401,7 +418,7 @@ class BuildServerConnection private (
           connection = askUser(original).map { conn =>
             // version can change when reconnecting
             _version.set(conn.version)
-            ongoingRequests.addAll(conn.cancelables)
+            requestRegistry.addOngoingRequest(conn.cancelables)
             conn.setReconnect(() => reconnect().ignoreValue)
             conn
           }
@@ -418,26 +435,21 @@ class BuildServerConnection private (
   private def register[T: ClassTag](
       action: MetalsBuildServer => CompletableFuture[T],
       onFail: => Option[(T, String)] = None,
+      timeout: Option[Timeout] = None,
   ): CompletableFuture[T] = {
     val localCancelable = new MutableCancelable()
     def runWithCanceling(
         launcherConnection: BuildServerConnection.LauncherConnection
     ): Future[T] = {
-      val resultFuture = action(launcherConnection.server)
-      val cancelable = Cancelable { () =>
-        Try(resultFuture.cancel(true))
-      }
-      ongoingRequests.add(cancelable)
+      val CancelableFuture(result, cancelable) = requestRegistry.register(
+        action = () => action(launcherConnection.server),
+        timeout = timeout,
+      )
       localCancelable.add(cancelable)
-
-      val result = resultFuture.asScala
-
-      result.onComplete { _ =>
-        ongoingRequests.remove(cancelable)
-        localCancelable.remove(cancelable)
-      }
+      result.onComplete(_ => localCancelable.remove(cancelable))
       result
     }
+
     val original = connection
     val actionFuture = original
       .flatMap { launcherConnection =>
@@ -500,6 +512,7 @@ object BuildServerConnection {
       localClient: MetalsBuildClient,
       languageClient: MetalsLanguageClient,
       connect: () => Future[SocketConnection],
+      requestTimeOutNotification: DismissedNotifications#Notification,
       reconnectNotification: DismissedNotifications#Notification,
       config: MetalsServerConfig,
       serverName: String,
@@ -572,6 +585,7 @@ object BuildServerConnection {
           setupServer,
           connection,
           languageClient,
+          requestTimeOutNotification,
           reconnectNotification,
           config,
           projectRoot,
@@ -588,6 +602,7 @@ object BuildServerConnection {
             languageClient,
             connect,
             reconnectNotification,
+            requestTimeOutNotification,
             config,
             serverName,
             bspStatusOpt,

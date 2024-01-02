@@ -255,6 +255,7 @@ final class Ammonite(
                 workspace(),
               ),
           tables.dismissedNotifications.ReconnectAmmonite,
+          tables.dismissedNotifications.RequestTimeout,
           config,
           "Ammonite",
         )

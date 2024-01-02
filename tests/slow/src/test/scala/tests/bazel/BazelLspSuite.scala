@@ -49,7 +49,7 @@ class BazelLspSuite
       // Comment changes do not trigger "re-import project" request
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ <- server.didChange(s"BUILD") { text =>
-        text.replace("main", "main1")
+        text.replace("\"main\"", "\"main1\"")
       }
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ = client.importBuildChanges = ImportBuildChanges.yes
@@ -78,7 +78,7 @@ class BazelLspSuite
       // We dismissed the import request, so bsp should not be configured
       _ = assert(!bazelBspConfig.exists)
       _ <- server.didChange(s"BUILD") { text =>
-        text.replace("runner", "runner1")
+        text.replace("\"main\"", "\"main1\"")
       }
       _ <- server.didSave(s"BUILD")(identity)
       _ = assertNoDiff(client.workspaceMessageRequests, "")
@@ -112,7 +112,7 @@ class BazelLspSuite
       // We dismissed the import request, so bsp should not be configured
       _ = assert(!bazelBspConfig.exists)
       _ <- server.didChange(s"BUILD") { text =>
-        text.replace("main", "main1")
+        text.replace("\"main\"", "\"main1\"")
       }
       _ <- server.didSave(s"BUILD")(identity)
       _ = assertNoDiff(client.workspaceMessageRequests, "")
@@ -124,12 +124,43 @@ class BazelLspSuite
       assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          BazelBuildTool.mainClass
+          BazelBuildTool.mainClass,
+          bazelNavigationMessage,
         ).mkString("\n"),
       )
       assert(bazelBspConfig.exists)
       server.assertBuildServerConnection()
     }
+  }
+
+  test("presentation-compiler") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        BazelBuildLayout(workspaceLayout, V.scala213, bazelVersion)
+      )
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        List(
+          importBuildMessage,
+          // create .bazelbsp progress message
+          BazelBuildTool.mainClass,
+          bazelNavigationMessage,
+        ).mkString("\n"),
+      )
+      _ = assert(bazelBspConfig.exists)
+      _ = client.messageRequests.clear() // restart
+      _ = assertStatus(_.isInstalled)
+      _ <- server.didOpen("Main.scala")
+      _ <- server.assertHoverAtLine(
+        "Main.scala",
+        "def msg = new Hello().he@@llo",
+        """|```scala
+           |def hello: String
+           |```
+           |""".stripMargin,
+      )
+    } yield ()
   }
 
   private val workspaceLayout =
@@ -161,7 +192,9 @@ class BazelLspSuite
         |/Main.scala
         |import examples.scala3.Hello
         |
-        |object Main {}
+        |object Main {
+        |def msg = new Hello().hello
+        |}
         |
         |""".stripMargin
 }
