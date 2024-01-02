@@ -548,7 +548,7 @@ final case class Indexer(
           input,
           dialect,
           includeMembers = true,
-          includeIdentifiers = true,
+          collectIdentifiers = true,
         ) { case SemanticdbDefinition(info, occ, owner) =>
           if (info.isExtension) {
             occ.range.foreach { range =>
