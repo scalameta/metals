@@ -44,7 +44,13 @@ class ParentProvider(using Context):
     val foundSym =
       try toSymbols(pkg, names)
       catch case NonFatal(e) => None
-    foundSym.toList.flatMap(_.ownersIterator).map(SemanticdbSymbols.symbolName)
+
+    for
+      sym <- foundSym.toList
+      classSym = if sym.isClass then sym else sym.moduleClass
+      if classSym.isClass
+      parent <- classSym.asClass.parentSyms
+    yield SemanticdbSymbols.symbolName(parent)
   end parents
 
   private def normalizePackage(pkg: String): String =
