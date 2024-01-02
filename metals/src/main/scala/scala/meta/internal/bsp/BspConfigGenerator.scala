@@ -35,7 +35,7 @@ final class BspConfigGenerator(
   ): Future[BspConfigGenerationStatus] =
     shellRunner
       .run(
-        s"${buildTool.getBuildServerName} bspConfig",
+        s"${buildTool.buildServerName} bspConfig",
         args,
         buildTool.projectRoot,
         buildTool.redirectErrorOutput,
@@ -92,7 +92,7 @@ final class BspConfigGenerator(
       .asScala
       .map { choice =>
         buildTools.find(buildTool =>
-          new MessageActionItem(buildTool.getBuildServerName) == choice
+          new MessageActionItem(buildTool.buildServerName) == choice
         )
       }
   }

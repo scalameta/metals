@@ -385,4 +385,109 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |""".stripMargin
   )
 
+  check(
+    "i5977",
+    """
+      |sealed trait ExtensionProvider {
+      |  extension [A] (self: A) {
+      |    def typeArg[B <: A]: B
+      |    def <<inferredTypeArg>>[C](value: C): C
+      |  }
+      |}
+      |
+      |object Repro {
+      |  def usage[A](f: ExtensionProvider ?=> A => Any): Any = ???
+      |
+      |  usage[Int](_.<<infe@@rredTypeArg>>("str"))
+      |  usage[Int](_.<<inferredTypeArg>>[String]("str"))
+      |  usage[Option[Int]](_.typeArg[Some[Int]].value.<<inferredTypeArg>>("str"))
+      |  usage[Option[Int]](_.typeArg[Some[Int]].value.<<inferredTypeArg>>[String]("str"))
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "i5977-1",
+    """
+      |sealed trait ExtensionProvider {
+      |  extension [A] (self: A) {
+      |    def typeArg[B <: A]: B
+      |    def <<inferredTypeArg>>[C](value: C): C
+      |  }
+      |}
+      |
+      |object Repro {
+      |  def usage[A](f: ExtensionProvider ?=> A => Any): Any = ???
+      |
+      |  usage[Int](_.<<inferredTypeArg>>("str"))
+      |  usage[Int](_.<<infe@@rredTypeArg>>[String]("str"))
+      |  usage[Option[Int]](_.typeArg[Some[Int]].value.<<inferredTypeArg>>("str"))
+      |  usage[Option[Int]](_.typeArg[Some[Int]].value.<<inferredTypeArg>>[String]("str"))
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "i5977-2",
+    """
+      |sealed trait ExtensionProvider {
+      |  extension [A] (self: A) {
+      |    def typeArg[B <: A]: B
+      |    def <<inferredTypeArg>>[C](value: C): C
+      |  }
+      |}
+      |
+      |object Repro {
+      |  def usage[A](f: ExtensionProvider ?=> A => Any): Any = ???
+      |
+      |  usage[Int](_.<<inferredTypeArg>>("str"))
+      |  usage[Int](_.<<inferredTypeArg>>[String]("str"))
+      |  usage[Option[Int]](_.typeArg[Some[Int]].value.<<inferr@@edTypeArg>>("str"))
+      |  usage[Option[Int]](_.typeArg[Some[Int]].value.<<inferredTypeArg>>[String]("str"))
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "i5977-3",
+    """
+      |sealed trait ExtensionProvider {
+      |  extension [A] (self: A) {
+      |    def typeArg[B <: A]: B
+      |    def <<inferredTypeArg>>[C](value: C): C
+      |  }
+      |}
+      |
+      |object Repro {
+      |  def usage[A](f: ExtensionProvider ?=> A => Any): Any = ???
+      |
+      |  usage[Int](_.<<inferredTypeArg>>("str"))
+      |  usage[Int](_.<<inferredTypeArg>>[String]("str"))
+      |  usage[Option[Int]](_.typeArg[Some[Int]].value.<<inferredTypeArg>>("str"))
+      |  usage[Option[Int]](_.typeArg[Some[Int]].value.<<inferred@@TypeArg>>[String]("str"))
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "i5977-4",
+    """
+      |sealed trait ExtensionProvider {
+      |  extension [A] (self: A) {
+      |    def typeArg[B <: A]: B
+      |    def <<inferre@@dTypeArg>>[C](value: C): C
+      |  }
+      |}
+      |
+      |object Repro {
+      |  def usage[A](f: ExtensionProvider ?=> A => Any): Any = ???
+      |
+      |  usage[Int](_.<<inferredTypeArg>>("str"))
+      |  usage[Int](_.<<inferredTypeArg>>[String]("str"))
+      |  usage[Option[Int]](_.typeArg[Some[Int]].value.<<inferredTypeArg>>("str"))
+      |  usage[Option[Int]](_.typeArg[Some[Int]].value.<<inferredTypeArg>>[String]("str"))
+      |}
+      |""".stripMargin
+  )
+
 }

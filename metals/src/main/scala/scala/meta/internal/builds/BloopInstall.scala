@@ -67,7 +67,7 @@ final class BloopInstall(
   }
 
   private def runArgumentsUnconditionally(
-      buildTool: BuildTool,
+      buildTool: BloopInstallProvider,
       args: List[String],
       javaHome: Option[String],
   ): Future[WorkspaceLoadedStatus] = {
@@ -155,7 +155,7 @@ final class BloopInstall(
 
   private def persistChecksumStatus(
       status: Status,
-      buildTool: BuildTool,
+      buildTool: BloopInstallProvider,
   ): Unit = {
     buildTool.digest(workspace).foreach { checksum =>
       tables.digests.setStatus(checksum, status)
@@ -164,7 +164,7 @@ final class BloopInstall(
 
   private def requestImport(
       buildTools: BuildTools,
-      buildTool: BuildTool,
+      buildTool: BloopInstallProvider,
       languageClient: MetalsLanguageClient,
       digest: String,
   )(implicit ec: ExecutionContext): Future[Confirmation] = {
