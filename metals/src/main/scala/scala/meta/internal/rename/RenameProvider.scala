@@ -243,7 +243,7 @@ final class RenameProvider(
                     List(implReferences, currentReferences, companionRefs)
                   )
                   .map(
-                    _.reduce(_ ++ _) ++ definitionLocation
+                    _.flatten ++ definitionLocation
                   )
               Future
                 .sequence(allReferences)

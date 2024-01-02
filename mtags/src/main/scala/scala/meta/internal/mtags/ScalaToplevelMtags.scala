@@ -45,7 +45,7 @@ class ScalaToplevelMtags(
     includeInnerClasses: Boolean,
     includeMembers: Boolean,
     dialect: Dialect,
-    includeIdentifiers: Boolean = false
+    collectIdentifiers: Boolean = false
 )(implicit rc: ReportContext)
     extends MtagsIndexer {
 
@@ -65,7 +65,7 @@ class ScalaToplevelMtags(
   implicit class XtensionScanner(scanner: LegacyScanner) {
     def mtagsNextToken(): Any = {
       scanner.nextToken()
-      if (includeIdentifiers)
+      if (collectIdentifiers)
         scanner.curr.token match {
           case IDENTIFIER => identifiers += scanner.curr.name
           case _ =>

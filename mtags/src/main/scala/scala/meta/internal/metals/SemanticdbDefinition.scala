@@ -50,14 +50,14 @@ object SemanticdbDefinition {
       input,
       dialect,
       includeMembers,
-      includeIdentifiers = false
+      collectIdentifiers = false
     )(fn)
 
   def foreachWithReturnMtags(
       input: Input.VirtualFile,
       dialect: Dialect,
       includeMembers: Boolean,
-      includeIdentifiers: Boolean
+      collectIdentifiers: Boolean
   )(
       fn: SemanticdbDefinition => Unit
   )(implicit rc: ReportContext): Option[MtagsIndexer] = {
@@ -68,7 +68,7 @@ object SemanticdbDefinition {
           includeInnerClasses = true,
           includeMembers = includeMembers,
           dialect,
-          includeIdentifiers = includeIdentifiers
+          collectIdentifiers = collectIdentifiers
         ) {
           override def visitOccurrence(
               occ: SymbolOccurrence,

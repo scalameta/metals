@@ -55,7 +55,7 @@ class PcReferencesProvider(
       ): Option[(String, lsp4j.Range)] =
         val (pos, _) = toAdjust.adjust(text)
         tree match
-          case (_: DefTree) if !includeDefinition => None
+          case _: DefTree if !includeDefinition => None
           case t: Tree =>
             val sym = symbol.getOrElse(t.symbol)
             Some(SemanticdbSymbols.symbolName(sym), pos.toLsp)
