@@ -476,9 +476,10 @@ class ScalaToplevelMtags(
           expectTemplate.map(tmpl =>
             withOwner(tmpl.owner) {
               addOverridden(
-                overridden.reverse.map(id =>
-                  UnresolvedOverriddenSymbol(id.name)
-                )
+                overridden.reverse
+                  .map(_.name)
+                  .distinct
+                  .map(UnresolvedOverriddenSymbol(_))
               )
             }
           )

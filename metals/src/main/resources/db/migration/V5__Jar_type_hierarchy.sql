@@ -5,8 +5,7 @@ create table type_hierarchy(
   path varchar not null,
   jar int,
   is_resolved bit,
-  foreign key (jar) references indexed_jar (id) on delete cascade,
-  primary key (jar, path, symbol, parent_name)
+  foreign key (jar) references indexed_jar (id) on delete cascade
 );
 
 create index type_hierarchy_jar on type_hierarchy(jar);
