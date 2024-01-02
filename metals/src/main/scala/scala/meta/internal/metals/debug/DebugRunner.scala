@@ -8,11 +8,13 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.Try
+import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.StacktraceAnalyzer
 
 import ch.epfl.scala.bsp4j.RunResult
+import ch.epfl.scala.bsp4j.StatusCode
 import org.eclipse.lsp4j.debug.Capabilities
 import org.eclipse.lsp4j.debug.ExitedEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
@@ -40,7 +42,10 @@ class DebugRunner(
   private val exitStatus: Future[DebugProxy.ExitStatus] =
     for {
       _ <- clientReady.future
-      res <- runFuture()
+      res <- runFuture().recover { case NonFatal(t) =>
+        scribe.error(s"Error running $sessionName", t)
+        new RunResult(StatusCode.ERROR)
+      }
     } yield {
       val exited = new DebugNotificationMessage
       exited.setMethod("exited")
@@ -95,6 +100,7 @@ class DebugRunner(
       case request @ DebugProtocol.DisconnectRequest(_) =>
         val response = DebugProtocol.EmptyResponse(request)
         clientReady.trySuccess(())
+        cancelling.trySuccess(())
         client.consume(response)
 
       case request @ DebugProtocol.TerminateRequest(_) =>
