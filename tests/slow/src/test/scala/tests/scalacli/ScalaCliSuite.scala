@@ -577,6 +577,13 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
            |  }
            |}
            |
+           |object MyMain2 {
+           |  def main(args: Array[String]): Unit = {
+           |    println("Hello world!")
+           |    System.exit(0)
+           |  }
+           |}
+           |
            |""".stripMargin
       )
       _ <- server.didOpen("MyMain.scala")
@@ -599,6 +606,14 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
             |  }
             |}
             |
+            |<<run>>
+            |object MyMain2 {
+            |  def main(args: Array[String]): Unit = {
+            |    println("Hello world!")
+            |    System.exit(0)
+            |  }
+            |}
+            |
             |""".stripMargin,
       )
       targets <- server.listBuildTargets
@@ -611,6 +626,40 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
       _ <- debugServer.shutdown
       output <- debugServer.allOutput
     } yield assertContains(output, "Hello world!\n")
+  }
+
+  test("cancel-native-run") {
+    cleanWorkspace()
+    for {
+      _ <- scalaCliInitialize(useBsp = true)(
+        s"""/MyMain.scala
+           |//> using scala "$scalaVersion"
+           |//> using platform "native"
+           |
+           |import scala.scalanative._
+           |
+           |object MyMain {
+           |  def main(args: Array[String]): Unit = {
+           |    println("Hello world!")
+           |    while(true){} // infinite loop
+           |    System.exit(0)
+           |  }
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- server.didOpen("MyMain.scala")
+      targets <- server.listBuildTargets
+      mainTarget = targets.find(!_.contains("test"))
+      _ = assert(mainTarget.isDefined, "No main target specified")
+      debugServer <- startDebugging("MyMain", mainTarget.get)
+      _ <- debugServer.initialize
+      _ <- debugServer.launch
+      _ <- debugServer.configurationDone
+      _ <- debugServer.disconnect
+      _ <- debugServer.shutdown
+      output <- debugServer.allOutput
+    } yield ()
   }
 
   test("base-js-run") {

@@ -180,6 +180,13 @@ class DebugProvider(
         stacktraceAnalyzer,
         () => {
           val runParams = new b.RunParams(parameters.getTargets().asScala.head)
+          if (
+            parameters
+              .getDataKind() == b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
+          ) {
+            runParams.setDataKind(parameters.getDataKind())
+            runParams.setData(parameters.getData())
+          }
           buildServer.buildTargetRun(runParams, cancelPromise)
         },
         cancelPromise,
