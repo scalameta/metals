@@ -9,6 +9,7 @@ import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.mtags.WithRenames
 import scala.meta.internal.pc.Compat.EvidenceParamName
 import scala.meta.internal.pc.IndexedContext
 import scala.meta.internal.pc.Params

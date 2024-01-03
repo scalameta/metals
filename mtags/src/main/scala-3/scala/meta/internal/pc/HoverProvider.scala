@@ -5,8 +5,8 @@ import java.{util as ju}
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.mtags.WithRenames
 import scala.meta.internal.pc.printer.MetalsPrinter
-import scala.meta.internal.pc.printer.WithRenames
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
@@ -178,9 +178,10 @@ object HoverProvider:
       def findRefinement(tp: Type): Option[HoverSignature] =
         tp match
           case RefinedType(_, refName, tpe) if name == refName.toString() =>
-            val tpeString =
-              if n == nme.selectDynamic then s": ${printer.tpe(tpe.resultType)}"
-              else printer.tpe(tpe)
+            val WithRenames(tpeString, renames) =
+              if n == nme.selectDynamic then
+                printer.tpeWithRenames(tpe.resultType).map(t => s": $t")
+              else printer.tpeWithRenames(tpe)
 
             val valOrDef =
               if n == nme.selectDynamic && !tpe.isInstanceOf[ExprType]
@@ -191,6 +192,9 @@ object HoverProvider:
               new ScalaHover(
                 expressionType = Some(tpeString),
                 symbolSignature = Some(s"$valOrDef $name$tpeString"),
+                contextInfo = renames.map { case (to, from) =>
+                  s"type $to = $from"
+                }.toList,
               )
             )
           case RefinedType(parent, _, _) =>

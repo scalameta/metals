@@ -6,6 +6,7 @@ import scala.reflect.internal.{Flags => gf}
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.WithRenames
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
@@ -217,13 +218,22 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
         pos.start != pos.end && (symbol == null || symbol == NoSymbol || symbol.isErroneous)
       ) {
         val context = doLocateContext(pos)
+        val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
         val history = new ShortenedNames(
-          lookupSymbol = name => context.lookupSymbol(name, _ => true) :: Nil
+          lookupSymbol = name => context.lookupSymbol(name, _ => true) :: Nil,
+          renames = re
         )
-        val prettyType = metalsToLongString(tpe.widen.finalResultType, history)
+        val prettyType =
+          metalsToLongStringWithRenames(tpe.widen.finalResultType, history)
         val lspRange = if (range.isRange) Some(range.toLsp) else None
         Some(
-          new ScalaHover(expressionType = Some(prettyType), range = lspRange)
+          new ScalaHover(
+            expressionType = Some(prettyType.tpe),
+            range = lspRange,
+            contextInfo = prettyType.renames.map { case (to, from) =>
+              s"type $to = $from"
+            }.toList
+          )
         )
       } else if (symbol == null || tpe.typeSymbol.isAnonymousClass) None
       else if (symbol.hasPackageFlag || symbol.hasModuleFlag) {
@@ -231,13 +241,16 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
           new ScalaHover(
             expressionType = Some(
               s"${symbol.javaClassSymbol.keyString} ${symbol.fullName}"
-            )
+            ),
+            contextInfo = Nil
           )
         )
       } else {
         val context = doLocateContext(pos)
+        val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
         val history = new ShortenedNames(
-          lookupSymbol = name => context.lookupSymbol(name, _ => true) :: Nil
+          lookupSymbol = name => context.lookupSymbol(name, _ => true) :: Nil,
+          renames = re
         )
         val symbolInfo =
           if (seenFrom.isErroneous) symbol.info
@@ -254,12 +267,13 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
         val flags = List(symbolFlagString(symbol), keyword, name)
           .filterNot(_.isEmpty)
           .mkString(" ")
-        val prettyType = metalsToLongString(tpe.widen.finalResultType, history)
+        val WithRenames(prettyType, renames1) =
+          metalsToLongStringWithRenames(tpe.widen.finalResultType, history)
         val macroSuffix =
           if (symbol.isMacro) " = macro"
           else ""
-        val prettySignature =
-          printer.defaultMethodSignature(flags) + macroSuffix
+        val WithRenames(prettySignature, renames2) =
+          printer.defaultMethodSignatureWithRenames(flags).map(_ + macroSuffix)
         val docstring =
           if (metalsConfig.isHoverDocumentationEnabled) {
             symbolDocumentation(symbol).fold("")(_.docstring())
@@ -273,7 +287,10 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
             docstring = Some(docstring),
             forceExpressionType =
               pos.start != pos.end || !prettySignature.endsWith(prettyType),
-            range = if (range.isRange) Some(range.toLsp) else None
+            range = if (range.isRange) Some(range.toLsp) else None,
+            contextInfo = (renames1 ++ renames2).map { case (to, from) =>
+              s"type $to = $from"
+            }.toList
           )
         )
       }
