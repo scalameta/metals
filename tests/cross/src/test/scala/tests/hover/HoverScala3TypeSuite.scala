@@ -546,15 +546,4 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |```
        |""".stripMargin
   )
-
-  check(
-    "i5935",
-    """|import scala.collection.{AbstractMap => AB}
-       |
-       |object Main:
-       |  def test(): AB[?, ?] = ???
-       |  val t@@t = test()
-       |""".stripMargin,
-    """val tt: AB[?, ?]""".stripMargin.hover
-  )
 }

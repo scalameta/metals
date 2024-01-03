@@ -6,6 +6,7 @@ import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.MetalsPrinter
+import scala.meta.internal.pc.printer.WithRenames
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
@@ -117,7 +118,7 @@ object HoverProvider:
           fallbackToDynamics(path, printer)
         case symbolTpes @ ((symbol, tpe) :: _) =>
           val exprTpw = tpe.widenTermRefExpr.metalsDealias
-          val hoverString =
+          val WithRenames(hoverString, renames) =
             tpw match
               // https://github.com/lampepfl/dotty/issues/8891
               case tpw: ImportType =>
@@ -133,7 +134,7 @@ object HoverProvider:
 
                 printer.hoverSymbol(sym, finalTpe)
             end match
-          end hoverString
+          end val
 
           val docString = symbolTpes
             .flatMap(symTpe => search.symbolDocumentation(symTpe._1))
@@ -154,6 +155,9 @@ object HoverProvider:
                   symbolSignature = Some(hoverString),
                   docstring = Some(docString),
                   forceExpressionType = forceExpressionType,
+                  contextInfo = renames.map { case to -> from =>
+                    s"type $to = $from"
+                  }.toList,
                 )
               )
             case _ =>

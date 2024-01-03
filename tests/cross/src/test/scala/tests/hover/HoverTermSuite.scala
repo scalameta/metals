@@ -621,4 +621,44 @@ class HoverTermSuite extends BaseHoverSuite {
        |""".stripMargin
   )
 
+  check(
+    "import-rename".tag(IgnoreScala2),
+    """|package a
+       |
+       |import scala.collection.{AbstractMap => AB}
+       |import scala.collection.{Set => S}
+       |
+       |object Main:
+       |  def test(): AB[?, ?] = ???
+       |  val t@@t = test()
+       |""".stripMargin,
+    """|```scala
+       |type AB = AbstractMap
+       |```
+       |
+       |```scala
+       |val tt: AB[?, ?]
+       |```""".stripMargin
+  )
+
+  check(
+    "import-rename2".tag(IgnoreScala2),
+    """|package a
+       |import scala.collection.{AbstractMap => AB}
+       |import scala.collection.{Set => S}
+       |
+       |object Main {
+       |  def te@@st(d: S[Int], f: S[Char]): AB[?, ?] = ???
+       |}
+       |""".stripMargin,
+    """|```scala
+       |type AB = AbstractMap
+       |type S = Set
+       |```
+       |
+       |```scala
+       |def test(d: S[Int], f: S[Char]): AB[?, ?]
+       |```""".stripMargin
+  )
+
 }
