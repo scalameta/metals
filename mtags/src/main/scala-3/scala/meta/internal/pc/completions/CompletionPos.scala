@@ -3,6 +3,8 @@ package completions
 
 import java.net.URI
 
+import scala.annotation.tailrec
+
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.tokenizers.Chars
 import scala.meta.pc.OffsetParams
@@ -58,6 +60,7 @@ object CompletionPos:
     val kind =
       if query.isEmpty && !prevIsDot then CompletionKind.Empty
       else if prevIsDot then CompletionKind.Members
+      else if isImportSelect(cursorPos, treePath) then CompletionKind.Members
       else CompletionKind.Scope
 
     CompletionPos(
@@ -91,6 +94,19 @@ object CompletionPos:
     do i += 1
     (i, tabIndented)
   end inferIndent
+
+  private def isImportSelect(pos: SourcePosition, path: List[Tree])(using
+      Context
+  ): Boolean =
+    @tailrec
+    def loop(enclosing: List[Tree]): Boolean =
+      enclosing match
+        case head :: tl if !head.sourcePos.contains(pos) => loop(tl)
+        case Import(_, sel) :: _ =>
+          sel.exists(_.imported.sourcePos.contains(pos))
+        case _ => false
+
+    loop(path)
 
   /**
    * Returns the start offset of the identifier starting as the given offset position.

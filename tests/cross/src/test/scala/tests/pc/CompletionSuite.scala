@@ -437,7 +437,6 @@ class CompletionSuite extends BaseCompletionSuite {
     compat = Map(
       "3" ->
         """|*
-           |*: scala
            |""".stripMargin
     )
   )
@@ -2150,6 +2149,31 @@ class CompletionSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     assertSingleItem = false
+  )
+
+  check(
+    "completions-in-multi-imports".tag(IgnoreForScala3CompilerPC),
+    """|import scala.collection.{AbstractMap, Set@@}
+       |""".stripMargin,
+    """|Set scala.collection
+       |SetLike scala.collection
+       |SetProxy scala.collection
+       |SetProxyLike scala.collection
+       |AbstractSet scala.collection
+       |""".stripMargin,
+    topLines = Some(5),
+    compat = Map(
+      "3" ->
+        """|Set scala.collection
+           |SetOps scala.collection
+           |""".stripMargin,
+      "2.13" -> """|Set scala.collection
+                   |SetOps scala.collection
+                   |AbstractSet scala.collection
+                   |BitSet scala.collection
+                   |BitSetOps scala.collection
+                   |""".stripMargin
+    )
   )
 
 }
