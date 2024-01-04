@@ -67,8 +67,8 @@ class Completions(
       case _ :: (withcursor @ Select(fun, name)) :: (appl: GenericApply) :: _
           if appl.fun == withcursor && name.decoded == Cursor.value =>
         false
-      case (_: Import) :: _ => false
-      case _ :: (_: Import) :: _ => false
+      case (_: (Import | Export)) :: _ => false
+      case _ :: (_: (Import | Export)) :: _ => false
       case (_: Ident) :: (_: SeqLiteral) :: _ => false
       case _ => true
   enum CursorPos:
@@ -133,8 +133,8 @@ class Completions(
       path: List[Tree]
   ): CursorPos =
     path match
-      case (_: Import) :: _ => CursorPos.Import
-      case _ :: (_: Import) :: _ => CursorPos.Import
+      case (_: (Import | Export)) :: _ => CursorPos.Import
+      case _ :: (_: (Import | Export)) :: _ => CursorPos.Import
       case (head: (Select | Ident)) :: tail =>
         // https://github.com/lampepfl/dotty/issues/15750
         // due to this issue in dotty, because of which trees after typer lose information,
@@ -515,6 +515,10 @@ class Completions(
           ),
           true,
         )
+
+      case (tree: (Import | Export)) :: _
+          if tree.selectors.exists(_.renamed.sourcePos.contains(pos)) =>
+        (List.empty, true)
 
       // From Scala 3.1.3-RC3 (as far as I know), path contains
       // `Literal(Constant(null))` on head for an incomplete program, in this case, just ignore the head.

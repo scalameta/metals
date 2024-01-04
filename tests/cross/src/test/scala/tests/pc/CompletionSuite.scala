@@ -2152,7 +2152,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "completions-in-multi-imports".tag(IgnoreForScala3CompilerPC),
+    "multi-imports".tag(IgnoreForScala3CompilerPC),
     """|import scala.collection.{AbstractMap, Set@@}
        |""".stripMargin,
     """|Set scala.collection
@@ -2174,6 +2174,41 @@ class CompletionSuite extends BaseCompletionSuite {
                    |BitSetOps scala.collection
                    |""".stripMargin
     )
+  )
+
+  check(
+    "multi-imports-empty-query".tag(IgnoreForScala3CompilerPC),
+    """|import scala.collection.{AbstractMap, @@}
+       |""".stripMargin,
+    """|+: scala.collection
+       |:+ scala.collection
+       |AbstractIterable scala.collection
+       |AbstractIterator scala.collection
+       |AbstractMap scala.collection
+       |""".stripMargin,
+    topLines = Some(5),
+    compat = Map(
+      "3" ->
+        """|GenIterable scala.collection
+           |GenMap scala.collection
+           |GenSeq scala.collection
+           |GenSet scala.collection
+           |GenTraversable scala.collection
+           |""".stripMargin,
+      "2.13" -> """|AbstractIndexedSeqView scala.collection
+                   |AbstractIterable scala.collection
+                   |AbstractIterator scala.collection
+                   |AbstractMap scala.collection
+                   |AbstractMapView scala.collection
+                   |""".stripMargin
+    )
+  )
+
+  check(
+    "import-rename".tag(IgnoreForScala3CompilerPC),
+    """|import scala.collection.{AbstractMap => Set@@}
+       |""".stripMargin,
+    ""
   )
 
 }

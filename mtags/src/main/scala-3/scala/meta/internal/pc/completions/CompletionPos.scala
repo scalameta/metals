@@ -58,9 +58,10 @@ object CompletionPos:
     val prevIsDot =
       if start - 1 >= 0 then text.charAt(start - 1) == '.' else false
     val kind =
-      if query.isEmpty && !prevIsDot then CompletionKind.Empty
-      else if prevIsDot then CompletionKind.Members
-      else if isImportSelect(cursorPos, treePath) then CompletionKind.Members
+      if prevIsDot then CompletionKind.Members
+      else if isImportOrExportSelect(cursorPos, treePath) then
+        CompletionKind.Members
+      else if query.isEmpty then CompletionKind.Empty
       else CompletionKind.Scope
 
     CompletionPos(
@@ -95,15 +96,16 @@ object CompletionPos:
     (i, tabIndented)
   end inferIndent
 
-  private def isImportSelect(pos: SourcePosition, path: List[Tree])(using
-      Context
-  ): Boolean =
+  private def isImportOrExportSelect(
+      pos: SourcePosition,
+      path: List[Tree],
+  )(using Context): Boolean =
     @tailrec
     def loop(enclosing: List[Tree]): Boolean =
       enclosing match
         case head :: tl if !head.sourcePos.contains(pos) => loop(tl)
-        case Import(_, sel) :: _ =>
-          sel.exists(_.imported.sourcePos.contains(pos))
+        case (tree: (Import | Export)) :: _ =>
+          tree.selectors.exists(_.imported.sourcePos.contains(pos))
         case _ => false
 
     loop(path)
