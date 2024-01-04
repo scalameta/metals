@@ -179,7 +179,9 @@ class ShortenedNames(
         case t @ ThisType(tyref) =>
           if tryShortenName(name) then WithRenames(NoPrefix)
           else
-            WithRenames(ThisType.raw(loop(tyref, None).asInstanceOf[TypeRef]))
+            loop(tyref, None).map(short =>
+              ThisType.raw(short.asInstanceOf[TypeRef])
+            )
 
         case mt @ MethodTpe(pnames, ptypes, restpe) if mt.isImplicitMethod =>
           for
