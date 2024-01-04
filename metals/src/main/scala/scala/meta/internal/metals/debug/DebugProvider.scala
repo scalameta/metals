@@ -93,6 +93,8 @@ class DebugProvider(
 
   import DebugProvider._
 
+  private val runningLocal = new ju.concurrent.atomic.AtomicBoolean(false)
+
   private val debugSessions = new MutableCancelable()
 
   private val currentRunner =
@@ -109,7 +111,8 @@ class DebugProvider(
   }
 
   override def cancel(): Unit = {
-    Option(currentRunner.get()).foreach(_.cancel())
+    val runner = currentRunner.get()
+    if (runner != null) runner.cancel()
     debugSessions.cancel()
   }
 
@@ -165,47 +168,61 @@ class DebugProvider(
       buildServer: BuildServerConnection,
       cancelPromise: Promise[Unit],
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
-    val proxyServer = new ServerSocket(0, 50, localAddress)
-    val host = InetAddresses.toUriString(proxyServer.getInetAddress)
-    val port = proxyServer.getLocalPort
-    proxyServer.setSoTimeout(10 * 1000)
-    val uri = URI.create(s"tcp://$host:$port")
+    if (runningLocal.compareAndSet(false, true)) {
+      val proxyServer = new ServerSocket(0, 50, localAddress)
+      val host = InetAddresses.toUriString(proxyServer.getInetAddress)
+      val port = proxyServer.getLocalPort
+      proxyServer.setSoTimeout(10 * 1000)
+      val uri = URI.create(s"tcp://$host:$port")
 
-    val awaitClient = () => Future(proxyServer.accept())
+      val awaitClient = () => Future(proxyServer.accept())
 
-    DebugRunner
-      .open(
-        sessionName,
-        awaitClient,
-        stacktraceAnalyzer,
-        () => {
-          val runParams = new b.RunParams(parameters.getTargets().asScala.head)
-          if (
-            parameters
-              .getDataKind() == b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
-          ) {
-            runParams.setDataKind(parameters.getDataKind())
-            runParams.setData(parameters.getData())
+      DebugRunner
+        .open(
+          sessionName,
+          awaitClient,
+          stacktraceAnalyzer,
+          () => {
+            val runParams =
+              new b.RunParams(parameters.getTargets().asScala.head)
+            runParams.setOriginId(ju.UUID.randomUUID().toString())
+
+            /**
+             * We set data and dataKind with the information about the main class to run,
+             * otherwise if multiple main classes are found we would not know which one to run.
+             */
+            if (
+              parameters
+                .getDataKind() == b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
+            ) {
+              runParams.setDataKind(parameters.getDataKind())
+              runParams.setData(parameters.getData())
+            }
+            val run = buildServer.buildTargetRun(runParams, cancelPromise)
+            run.onComplete(_ => runningLocal.set(false))
+            run
+          },
+          cancelPromise,
+        )
+        .flatMap { runner =>
+          currentRunner.set(runner)
+          runner.listen.map { code =>
+            currentRunner.set(null)
+            code
           }
-          buildServer.buildTargetRun(runParams, cancelPromise)
-        },
-        cancelPromise,
-      )
-      .flatMap { runner =>
-        currentRunner.set(runner)
-        runner.listen.map { code =>
-          currentRunner.set(null)
-          code
         }
-      }
 
-    val server = new DebugServer(
-      sessionName,
-      uri,
-      () => Future.failed(new RuntimeException("No server connected")),
-    )
-
-    Future.successful(server)
+      val server = new DebugServer(
+        sessionName,
+        uri,
+        () => Future.failed(new RuntimeException("No server connected")),
+      )
+      Future.successful(server)
+    } else {
+      Future.failed(
+        new IllegalStateException("Cannot run multiple debug processes.")
+      )
+    }
   }
 
   private def localAddress: InetAddress = InetAddress.getByName("127.0.0.1")

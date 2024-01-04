@@ -1,12 +1,11 @@
 package tests.debug
 
-import java.util.concurrent.CancellationException
-
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import tests.BaseDapSuite
 import tests.QuickBuildInitializer
 import tests.QuickBuildLayout
@@ -58,7 +57,7 @@ class DebugProtocolCancelationSuite
           mainClass,
         )
         .map(_ => "Debugger has been started")
-        .recover { case _: CancellationException =>
+        .recover { case _: ResponseErrorException =>
           expectedMsg
         }
     } yield assertNoDiff(debuggerMsg, expectedMsg)
