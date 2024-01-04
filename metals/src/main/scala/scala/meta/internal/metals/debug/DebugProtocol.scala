@@ -147,12 +147,12 @@ object DebugProtocol {
   object ConfigurationDone {
     def unapply(
         request: DebugRequestMessage
-    ): Option[Option[dap.ConfigurationDoneArguments]] = {
+    ): Option[dap.ConfigurationDoneArguments] = {
       if (request.getMethod != "configurationDone") None
-      else
-        Some(
-          parse[dap.ConfigurationDoneArguments](request.getParams).toOption
-        )
+      else if (request.getParams() == null)
+        Some(new dap.ConfigurationDoneArguments())
+      else parse[dap.ConfigurationDoneArguments](request.getParams).toOption
+
     }
   }
 
