@@ -222,10 +222,6 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|given (commit: '')
-       |given_FromString_Int - scala.util.CommandLineParser.FromString (commit: '')
-       |given_FromString_Byte - scala.util.CommandLineParser.FromString (commit: '')
-       |given_FromString_Long - scala.util.CommandLineParser.FromString (commit: '')
-       |given_FromString_Float - scala.util.CommandLineParser.FromString (commit: '')
        |""".stripMargin,
     includeCommitCharacter = true,
     compat = Map(

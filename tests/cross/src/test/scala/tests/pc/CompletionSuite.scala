@@ -1021,6 +1021,11 @@ class CompletionSuite extends BaseCompletionSuite {
         """|Some(value) scala
            |Some scala
            |Some[A](value: A): Some[A]
+           |""".stripMargin,
+      scala3PresentationCompilerVersion ->
+        """|Some(value) scala
+           |Some scala
+           |Some[A](value: A): Some[A]
            |SomeToExpr(x: Some[T])(using Quotes): Expr[Some[T]]
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
@@ -1038,19 +1043,15 @@ class CompletionSuite extends BaseCompletionSuite {
     """|Some scala
        |""".stripMargin,
     compat = Map(
-      ">=3.1.0" ->
+      "3" ->
+        """|Some scala
+           |Some[A](value: A): Some[A]
+           |""".stripMargin,
+      scala3PresentationCompilerVersion ->
         """|Some scala
            |Some[A](value: A): Some[A]
            |SomeToExpr(x: Some[T])(using Quotes): Expr[Some[T]]
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
-           |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
-           |""".stripMargin,
-      "3" ->
-        """|Some scala
-           |Some[A](value: A): Some[A]
-           |SomeToExpr - scala.quoted.ToExpr
-           |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
-           |SomeFromExpr - scala.quoted.FromExpr
            |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
            |""".stripMargin
     )
