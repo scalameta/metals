@@ -49,8 +49,7 @@ object MetalsInteractive:
             // Note: this overapproximates visibility a bit, since value parameters are only visible
             // in subsequent parameter sections
             localCtx
-          case tree: MemberDef =>
-            assert(tree.symbol.exists)
+          case tree: MemberDef if tree.symbol.exists =>
             outer.localContext(tree, tree.symbol)
           case tree @ Block(stats, expr) =>
             val localCtx = outer.fresh.setNewScope
