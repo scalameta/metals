@@ -873,7 +873,8 @@ class Completions(
       val fuzzyCache = mutable.Map.empty[CompletionValue, Int]
 
       def compareLocalSymbols(s1: Symbol, s2: Symbol): Int =
-        if s1.isLocal && s2.isLocal then
+        if s1.isLocal && s2.isLocal && s1.sourcePos.exists && s2.sourcePos.exists
+        then
           val firstIsAfter = s1.srcPos.isAfter(s2.srcPos)
           if firstIsAfter then -1 else 1
         else 0

@@ -21,6 +21,7 @@ import dotty.tools.dotc.core.SymDenotations.NoDenotation
 import dotty.tools.dotc.core.Symbols
 import dotty.tools.dotc.core.Symbols.NoSymbol
 import dotty.tools.dotc.core.Symbols.Symbol
+import dotty.tools.dotc.core.Symbols.defn
 import dotty.tools.dotc.core.Types.AndType
 import dotty.tools.dotc.core.Types.AppliedType
 import dotty.tools.dotc.core.Types.MethodType
@@ -306,15 +307,17 @@ object NamedArgCompletions:
 
     val completionSymbols = indexedContext.scopeSymbols
     def matchingTypesInScope(paramType: Type): List[String] =
-      completionSymbols
-        .collect {
-          case sym
-              if sym.info <:< paramType && sym.isTerm && !sym.info.isErroneous && !sym.info.isNullType && !sym.info.isNothingType && !sym
-                .is(Flags.Method) && !sym.is(Flags.Synthetic) =>
-            sym.decodedName
-        }
-        .filter(name => name != "Nil" && name != "None")
-        .sorted
+      if paramType != defn.AnyType then
+        completionSymbols
+          .collect {
+            case sym
+                if sym.info <:< paramType && sym.isTerm && !sym.info.isErroneous && !sym.info.isNullType && !sym.info.isNothingType && !sym
+                  .is(Flags.Method) && !sym.is(Flags.Synthetic) =>
+              sym.decodedName
+          }
+          .filter(name => name != "Nil" && name != "None")
+          .sorted
+      else Nil
 
     def findDefaultValue(param: ParamSymbol): String =
       val matchingType = matchingTypesInScope(param.info)
