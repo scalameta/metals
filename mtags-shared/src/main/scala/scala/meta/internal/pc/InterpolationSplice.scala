@@ -21,7 +21,7 @@ object InterpolationSplice {
     ) {
       i -= 1
     }
-    val isCandidate = i > 0 &&
+    val isCandidate = i > 0 && i != offset &&
       chars(i) == '$' && {
         val start = chars(i + 1) match {
           case '{' => i + 2
