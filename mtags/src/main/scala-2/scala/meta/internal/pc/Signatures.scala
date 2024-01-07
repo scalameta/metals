@@ -172,7 +172,7 @@ trait Signatures { compiler: MetalsGlobal =>
                 sym.isStaticMember || // Java static
                 sym.owner.ownerChain.forall { s =>
                   // ensure the symbol can be referenced in a static manner, without any instance
-                  s.isPackageClass || s.isPackageObjectClass || s.isModule
+                  s.isPackageClass || s.isPackageObjectClass || s.isModuleOrModuleClass
                 }
               ) {
                 history(name) = short

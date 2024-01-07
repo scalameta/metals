@@ -4,11 +4,8 @@ import tests.BaseCompletionSuite
 
 class CompletionExtensionMethodSuite extends BaseCompletionSuite {
 
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala2)
-
   check(
-    "simple",
+    "simple".tag(IgnoreScala2),
     """|package example
        |
        |object enrichments:
@@ -25,18 +22,22 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
     "simple-old-syntax",
     """|package example
        |
-       |object Test:
-       |  implicit class TestOps(a: Int):
+       |object Test{
+       |  implicit class TestOps(a: Int){
        |    def testOps(b: Int): String = ???
+       |  }
+       |}
        |
-       |def main = 100.test@@
+       |object O{
+       |  def main = 100.testO@@
+       |}
        |""".stripMargin,
     """|testOps(b: Int): String (implicit)
        |""".stripMargin
   )
 
   check(
-    "simple2",
+    "simple2".tag(IgnoreScala2),
     """|package example
        |
        |object enrichments:
@@ -54,11 +55,15 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
     "simple2-old-syntax",
     """|package example
        |
-       |object enrichments:
-       |  implicit class TestOps(a: Int):
+       |object enrichments{
+       |  implicit class TestOps(a: Int){
        |    def testOps(b: Int): String = ???
+       |  }
+       |}
        |
-       |def main = 100.t@@
+       |object O{
+       |  def main = 100.t@@
+       |}
        |""".stripMargin,
     """|testOps(b: Int): String (implicit)
        |""".stripMargin,
@@ -66,7 +71,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   check(
-    "simple-empty",
+    "simple-empty".tag(IgnoreScala2),
     """|package example
        |
        |object enrichments:
@@ -84,11 +89,14 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
     "simple-empty-old",
     """|package example
        |
-       |object enrichments:
-       |  implicit class TestOps(a: Int):
+       |object enrichments{
+       |  implicit class TestOps(a: Int){
        |    def testOps(b: Int): String = ???
-       |
-       |def main = 100.@@
+       |  }
+       |}
+       |object O{
+       |  def main = 100.@@
+       |}
        |""".stripMargin,
     """|testOps(b: Int): String (implicit)
        |""".stripMargin,
@@ -96,7 +104,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   check(
-    "filter-by-type",
+    "filter-by-type".tag(IgnoreScala2),
     """|package example
        |
        |object enrichments:
@@ -116,21 +124,26 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
     "filter-by-type-old",
     """|package example
        |
-       |object enrichments:
-       |  implicit class A(num: Int):
+       |object enrichments{
+       |  implicit class A(num: Int){
        |    def identity2: Int = num + 1
-       |  implicit class B(str: String):
+       |  }
+       |  implicit class B(str: String){
        |    def identity: String = str
+       |  }
+       |}
        |
-       |def main = "foo".iden@@
+       |object O{
+       |  def main = "foo".iden@@
+       |}
        |""".stripMargin,
     """|identity: String (implicit)
-       |""".stripMargin // identity2 won't be available
-
+       |""".stripMargin,
+    filter = _.contains("(implicit)")
   )
 
   check(
-    "filter-by-type-subtype",
+    "filter-by-type-subtype".tag(IgnoreScala2),
     """|package example
        |
        |class A
@@ -154,11 +167,15 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |class A
        |class B extends A
        |
-       |object enrichments:
-       |  implicit class Test(a: A):
+       |object enrichments{
+       |  implicit class Test(a: A){
        |    def doSomething: A = a
+       |  }
+       |}
        |
-       |def main = (new B).do@@
+       |object O{
+       |  def main = (new B).do@@
+       |}
        |""".stripMargin,
     """|doSomething: A (implicit)
        |""".stripMargin,
@@ -166,7 +183,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "simple-edit",
+    "simple-edit".tag(IgnoreScala2),
     """|package example
        |
        |object enrichments:
@@ -189,28 +206,37 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
 
   checkEdit(
     "simple-edit-old",
-    """|package example
+    """|package example2
        |
-       |object enrichments:
-       |  implicit class A (num: Int):
+       |object enrichments{
+       |  implicit class A (num: Int){
        |    def incr: Int = num + 1
+       |  }
+       |}
        |
-       |def main = 100.inc@@
+       |object O{
+       |  def main = 100.inc@@
+       |}
        |""".stripMargin,
-    """|package example
+    """|package example2
        |
-       |import example.enrichments.A
+       |import example2.enrichments.A
        |
-       |object enrichments:
-       |  implicit class A (num: Int):
+       |object enrichments{
+       |  implicit class A (num: Int){
        |    def incr: Int = num + 1
+       |  }
+       |}
        |
-       |def main = 100.incr
-       |""".stripMargin
+       |object O{
+       |  def main = 100.incr
+       |}
+       |""".stripMargin,
+    filter = str => !str.contains("Instance")
   )
 
   checkEdit(
-    "simple-edit-suffix",
+    "simple-edit-suffix".tag(IgnoreScala2),
     """|package example
        |
        |object enrichments:
@@ -232,7 +258,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "name-conflict",
+    "name-conflict".tag(IgnoreScala2),
     """|package example
        |
        |import example.enrichments.*
@@ -263,23 +289,31 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
 
   checkEdit(
     "simple-edit-suffix-old",
-    """|package example
+    """|package example3
        |
-       |object enrichments:
-       |  implicit class A (val num: Int):
+       |object enrichments{
+       |  implicit class A (val num: Int){
        |    def plus(other: Int): Int = num + other
+       |  }
+       |}
        |
-       |def main = 100.pl@@
+       |object O{
+       |  def main = 100.pl@@
+       |}
        |""".stripMargin,
-    """|package example
+    """|package example3
        |
-       |import example.enrichments.A
+       |import example3.enrichments.A
        |
-       |object enrichments:
-       |  implicit class A (val num: Int):
+       |object enrichments{
+       |  implicit class A (val num: Int){
        |    def plus(other: Int): Int = num + other
+       |  }
+       |}
        |
-       |def main = 100.plus($0)
+       |object O{
+       |  def main = 100.plus
+       |}
        |""".stripMargin
   )
 
@@ -302,18 +336,23 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   check(
     "directly-in-pkg1-old"
       .tag(
-        IgnoreScalaVersion.forLessThan("3.2.2")
+        IgnoreScalaVersion.for3LessThan("3.2.2")
       ),
     """|
-       |package examples:
-       |  implicit class A(num: Int):
+       |package examples{
+       |  implicit class A(num: Int){
        |    def incr: Int = num + 1
-       |
-       |package examples2: 
-       |  def main = 100.inc@@
+       |  }
+       |}
+       |package examples2{
+       |  object O{  
+       |    def main = 100.inc@@
+       |  }
+       |}
        |""".stripMargin,
     """|incr: Int (implicit)
-       |""".stripMargin
+       |""".stripMargin,
+    filter = str => !str.contains("Instance")
   )
 
   check(
@@ -333,18 +372,23 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   check(
     "directly-in-pkg2-old"
       .tag(
-        IgnoreScalaVersion.forLessThan("3.2.2")
+        IgnoreScalaVersion.for3LessThan("3.2.2")
       ),
-    """|package examples:
-       |  object X:
+    """|package examples{
+       |  object X{
        |    def fooBar(num: Int) = num + 1
+       |  }
        |  implicit class A (num: Int) { def incr: Int = num + 1 }
-       |
-       |package examples2: 
-       |  def main = 100.inc@@
+       |}
+       |package examples2{
+       |  object O{
+       |    def main = 100.inc@@
+       |  }
+       |}
        |""".stripMargin,
     """|incr: Int (implicit)
-       |""".stripMargin
+       |""".stripMargin,
+    filter = str => !str.contains("Instance")
   )
 
   checkEdit(
@@ -367,21 +411,39 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   checkEdit(
     "directly-in-pkg3-old"
       .tag(
-        IgnoreScalaVersion.forLessThan("3.2.2")
+        IgnoreScalaVersion.for3LessThan("3.2.2")
       ),
-    """|package examples:
+    """|package examples5{
        |  implicit class A (num: Int) { def incr: Int = num + 1 }
-       |
-       |package examples2: 
-       |  def main = 100.inc@@
+       |}
+       |package examples6{
+       |  object O{
+       |    def main = 100.inc@@
+       |  }
+       |}
        |""".stripMargin,
-    """|import examples.A
-       |package examples:
+    """|import examples5.A
+       |package examples5:
        |  implicit class A (num: Int) { def incr: Int = num + 1 }
        |
-       |package examples2: 
+       |package examples6: 
        |  def main = 100.incr
-       |""".stripMargin
+       |""".stripMargin,
+    filter = str => !str.contains("Instance"),
+    compat = Map(
+      "2" ->
+        """|package examples5{
+           |  implicit class A (num: Int) { def incr: Int = num + 1 }
+           |}
+           |package examples6{
+           |
+           |  import examples5.A
+           |  object O{
+           |    def main = 100.incr
+           |  }
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -405,18 +467,24 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   check(
     "nested-pkg-old"
       .tag(
-        IgnoreScalaVersion.forLessThan("3.2.2")
+        IgnoreScalaVersion.for3LessThan("3.2.2")
       ),
-    """|package aa:  // some comment
-       |  package cc: 
-       |    implicit class A (num: Int):
+    """|package aa{  // some comment
+       |  package cc{
+       |    implicit class A (num: Int){
        |        def increment2 = num + 2
-       |  implicit class A (num: Int):
+       |    }
+       |  }
+       |  implicit class A (num: Int){
        |    def increment = num + 1
+       |  }
+       |}
        |
-       |
-       |package bb:
-       |  def main: Unit = 123.incre@@
+       |package bb{
+       |  object O{
+       |    def main: Unit = 123.incre@@
+       |  }
+       |}
        |""".stripMargin,
     """|increment: Int (implicit)
        |increment2: Int (implicit)

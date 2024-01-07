@@ -101,6 +101,14 @@ class CompletionProvider(
           o.label.getOrElse(labelWithSig)
         case o: WorkspaceMember =>
           s"$ident - ${o.sym.owner.fullName}"
+        case o: WorkspaceImplicitMember =>
+          val printer = new SignaturePrinter(
+            o.sym,
+            history,
+            o.tpe,
+            includeDocs = false
+          )
+          printer.defaultMethodSignature(o.sym.name.decoded) + " (implicit)"
         case _ => labelWithSig
       }
       val item = new CompletionItem(label)
@@ -141,6 +149,30 @@ class CompletionProvider(
         item.setInsertTextFormat(InsertTextFormat.PlainText)
       }
 
+      def importEdits(sym: Symbol): (String, List[l.TextEdit]) = {
+        importPosition match {
+          case Some(value) =>
+            ShortenedNames.synthesize(
+              TypeRef(
+                ThisType(sym.owner),
+                sym,
+                Nil
+              ),
+              pos,
+              context,
+              value
+            )
+          case _ => (sym.fullNameSyntax, Nil)
+        }
+      }
+
+      def createTextEdit(
+          identifier: String,
+          wrap: String => String,
+          completionEditRange: Option[l.Range]
+      ): l.TextEdit =
+        textEdit(wrap(identifier), completionEditRange.getOrElse(editRange))
+
       member match {
         case i: TextEditMember =>
           item.setTextEdit(i.edit)
@@ -153,32 +185,15 @@ class CompletionProvider(
         case d: DependecyMember =>
           item.setTextEdit(d.edit)
         case w: WorkspaceMember =>
-          def createTextEdit(identifier: String) =
-            textEdit(w.wrap(identifier), w.editRange.getOrElse(editRange))
-
-          importPosition match {
-            case None =>
-              if (w.additionalTextEdits.nonEmpty) {
-                item.setAdditionalTextEdits(w.additionalTextEdits.asJava)
-              }
-              // No import position, fully qualify the name in-place.
-              item.setTextEdit(createTextEdit(w.sym.fullNameSyntax + suffix))
-            case Some(value) =>
-              val (short, edits) = ShortenedNames.synthesize(
-                TypeRef(
-                  ThisType(w.sym.owner),
-                  w.sym,
-                  Nil
-                ),
-                pos,
-                context,
-                value
-              )
-              item.setAdditionalTextEdits(
-                (edits ++ w.additionalTextEdits).asJava
-              )
-              item.setTextEdit(createTextEdit(short + suffix))
-          }
+          val (short, edits) = importEdits(w.sym)
+          item.setTextEdit(createTextEdit(short + suffix, w.wrap, w.editRange))
+          item.setAdditionalTextEdits(
+            (edits ++ w.additionalTextEdits).asJava
+          )
+        case w: WorkspaceImplicitMember =>
+          val (_, edits) = importEdits(w.sym.owner)
+          item.setTextEdit(createTextEdit(w.sym.name.decoded, identity, None))
+          item.setAdditionalTextEdits(edits.asJava)
         case _
             if isImportPosition(
               pos
@@ -362,9 +377,9 @@ class CompletionProvider(
     )
     val searchResults =
       if (kind == CompletionListKind.Scope) {
-        workspaceSymbolListMembers(query, pos, visit)
+        workspaceSymbolListMembers(query, pos, visit, implicitOnly = false)
       } else {
-        SymbolSearch.Result.COMPLETE
+        workspaceSymbolListMembers(query, pos, visit, implicitOnly = true)
       }
 
     InterestingMembers(buf.result(), searchResults)

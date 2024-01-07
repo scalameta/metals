@@ -166,7 +166,8 @@ class MetalsGlobal(
   def workspaceSymbolListMembers(
       query: String,
       pos: Position,
-      visit: Member => Boolean
+      visit: Member => Boolean,
+      implicitOnly: Boolean
   ): SymbolSearch.Result = {
 
     def isRelevantWorkspaceSymbol(sym: Symbol): Boolean =
@@ -183,15 +184,35 @@ class MetalsGlobal(
       }
     }
 
-    if (query.isEmpty) SymbolSearch.Result.INCOMPLETE
+    if (query.isEmpty && !implicitOnly) SymbolSearch.Result.INCOMPLETE
     else {
       val context = doLocateContext(pos)
       val visitor = new CompilerSearchVisitor(
         context,
-        sym =>
-          if (isRelevantWorkspaceSymbol(sym))
+        sym => {
+          lazy val isImplicitClass = {
+            lazy val constructorParam =
+              sym.owner.info
+                .membersBasedOnFlags(
+                  0,
+                  gf.PARAMACCESSOR
+                )
+                .headOption
+                .map(_.info)
+
+            sym.owner.isImplicit && sym.owner.isClass &&
+            lastVisitedParentTrees.headOption.zip(constructorParam).exists {
+              case (tree, constrParam) =>
+                tree.tpe.dealiasWiden <:< constrParam.dealiasWiden
+            }
+          }
+          if (isRelevantWorkspaceSymbol(sym) || isImplicitClass)
             visit {
-              if (isInStringInterpolation)
+              if (isImplicitClass) {
+                new WorkspaceImplicitMember(
+                  sym
+                )
+              } else if (isInStringInterpolation)
                 new WorkspaceInterpolationMember(
                   sym,
                   Nil,
@@ -202,14 +223,19 @@ class MetalsGlobal(
                 new WorkspaceMember(sym)
             }
           else false
+        }
       )
-      search.search(query, buildTargetIdentifier, visitor)
+      if (implicitOnly)
+        search.searchMethods(query, buildTargetIdentifier, visitor)
+      else
+        search.search(query, buildTargetIdentifier, visitor)
     }
   }
 
   def workspaceSymbolListMembers(
       query: String,
-      pos: Position
+      pos: Position,
+      implicitOnly: Boolean
   ): List[Member] = {
     val buffer = mutable.ListBuffer.empty[Member]
     workspaceSymbolListMembers(
@@ -218,7 +244,8 @@ class MetalsGlobal(
       mem => {
         buffer.append(mem)
         true
-      }
+      },
+      implicitOnly
     )
     buffer.toList
   }
@@ -292,7 +319,11 @@ class MetalsGlobal(
               backtickify(sym.newErrorSymbol(sym.name).updateInfo(sym.info))
             else backtickify(sym)
           }
-          if (history.isSymbolInScope(sym, pre)) {
+          if (
+            history.isSymbolInScope(sym, pre) || history.tryShortenName(
+              ShortName(sym)
+            )
+          ) {
             TypeRef(
               NoPrefix,
               shortSymbol,

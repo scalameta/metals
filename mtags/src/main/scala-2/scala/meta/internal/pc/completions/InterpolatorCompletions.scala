@@ -129,7 +129,11 @@ trait InterpolatorCompletions { this: MetalsGlobal =>
     }
 
     override def contribute: List[Member] = {
-      (workspaceSymbolListMembers(interpolator.name, pos) ++
+      (workspaceSymbolListMembers(
+        interpolator.name,
+        pos,
+        implicitOnly = false
+      ) ++
         metalsScopeMembers(pos)).collect {
         case s: ScopeMember
             if CompletionFuzzy.matches(interpolator.name, s.sym.name) =>
