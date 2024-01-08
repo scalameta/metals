@@ -81,7 +81,7 @@ abstract class BaseDapSuite(
       workspace.filesBreakpoints
         .filter(_.breakpoints.nonEmpty)
         .map { file =>
-          debugger.setBreakpoints(file.path, file.breakpoints)
+          debugger.setBreakpoints(file.source, file.breakpoints)
         }
     }
   }
@@ -94,7 +94,7 @@ abstract class BaseDapSuite(
       workspace.filesBreakpoints
         .filter(_.breakpoints.nonEmpty)
         .map { file =>
-          debugger.setBreakpoints(file.path, Nil)
+          debugger.setBreakpoints(file.source, Nil)
         }
     }
   }
@@ -148,7 +148,7 @@ abstract class BaseDapSuite(
   ): StepNavigator = {
 
     val expectedBreakpoints = workspaceLayout.filesBreakpoints.flatMap { file =>
-      file.breakpoints.map(line => Breakpoint(file.path.toString(), line))
+      file.breakpoints.map(line => Breakpoint(file.sourcePath, line))
     }
 
     expectedBreakpoints.foldLeft(StepNavigator(workspace)) {
