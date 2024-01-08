@@ -1,8 +1,16 @@
 package tests.debug
 
+import java.io.FileOutputStream
+import java.net.URI
+import java.nio.file.FileSystems
+import java.nio.file.Files
+import java.util.zip.ZipOutputStream
+import java.{util => ju}
+
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
-import scala.meta.internal.metals.debug.LibraryBreakpoints
+import scala.meta.internal.metals.debug.FileBreakpoints
 import scala.meta.internal.metals.debug.Stoppage
+import scala.meta.io.AbsolutePath
 
 import tests.BaseDapSuite
 import tests.BuildServerInitializer
@@ -701,7 +709,7 @@ abstract class BaseBreakpointDapSuite(
   test("library-breakpoints", withoutVirtualDocs = true) {
     def debugLayout = new DebugWorkspaceLayout(
       List(
-        LibraryBreakpoints(
+        FileBreakpoints(
           server
             .toPathFromSymbol("scala.Predef", "scala/Predef.scala"),
           List(404),
@@ -808,5 +816,53 @@ abstract class BaseBreakpointDapSuite(
       _ <- debugger.shutdown
       output <- debugger.allOutput
     } yield assertNoDiff(output, "1\n2\n3\n")
+  }
+
+  test("breakpoint in a deleted jar file") {
+    // an empty jar file
+    val jarFile = Files.createTempFile("metals-test", ".jar")
+    val output = new ZipOutputStream(new FileOutputStream(jarFile.toFile))
+    output.close()
+
+    // a breakpoint in the empty jar filesystem
+    val uri = URI.create(s"jar:${jarFile.toUri}")
+    val fileSystem = FileSystems.newFileSystem(uri, new ju.HashMap[String, Any])
+    val unknownPath = AbsolutePath(fileSystem.getPath("/unknown.scala"))
+    val wrongDebugLayout = new DebugWorkspaceLayout(
+      List(FileBreakpoints(unknownPath, List(404)))
+    )
+
+    // delete the jar file
+    fileSystem.close()
+    Files.delete(jarFile)
+
+    val workspaceLayout = buildToolLayout(
+      """|/a/src/main/scala/a/Main.scala
+         |package a
+         |object Main {
+         |  def main(args: Array[String]): Unit = {
+         |    println(0)
+         |    System.exit(0)
+         |  }
+         |}
+         |""".stripMargin,
+      scalaVersion,
+    )
+
+    try {
+      for {
+        _ <- initialize(workspaceLayout)
+        debugger <- debugMain("a", "a.Main", Stoppage.Handler.Fail)
+        _ <- debugger.initialize
+        _ <- debugger.launch
+        _ <- setBreakpoints(debugger, wrongDebugLayout)
+        _ <- debugger.configurationDone
+        _ <- debugger.shutdown
+        output <- debugger.allOutput
+      } yield assertNoDiff(output, "0\n")
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+    }
   }
 }
