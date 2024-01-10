@@ -5,7 +5,6 @@ import java.{util as ju}
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.internal.mtags.WithRenames
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
@@ -118,7 +117,7 @@ object HoverProvider:
           fallbackToDynamics(path, printer)
         case symbolTpes @ ((symbol, tpe) :: _) =>
           val exprTpw = tpe.widenTermRefExpr.metalsDealias
-          val WithRenames(hoverString, renames) =
+          val hoverString =
             tpw match
               // https://github.com/lampepfl/dotty/issues/8891
               case tpw: ImportType =>
@@ -134,7 +133,7 @@ object HoverProvider:
 
                 printer.hoverSymbol(sym, finalTpe)
             end match
-          end val
+          end hoverString
 
           val docString = symbolTpes
             .flatMap(symTpe => search.symbolDocumentation(symTpe._1))
@@ -155,9 +154,7 @@ object HoverProvider:
                   symbolSignature = Some(hoverString),
                   docstring = Some(docString),
                   forceExpressionType = forceExpressionType,
-                  contextInfo = renames.map { case to -> from =>
-                    s"type $to = $from"
-                  }.toList,
+                  contextInfo = printer.getUsedRenamesInfo(),
                 )
               )
             case _ =>
@@ -178,10 +175,9 @@ object HoverProvider:
       def findRefinement(tp: Type): Option[HoverSignature] =
         tp match
           case RefinedType(_, refName, tpe) if name == refName.toString() =>
-            val WithRenames(tpeString, renames) =
-              if n == nme.selectDynamic then
-                printer.tpeWithRenames(tpe.resultType).map(t => s": $t")
-              else printer.tpeWithRenames(tpe)
+            val tpeString =
+              if n == nme.selectDynamic then s": ${printer.tpe(tpe.resultType)}"
+              else printer.tpe(tpe)
 
             val valOrDef =
               if n == nme.selectDynamic && !tpe.isInstanceOf[ExprType]
@@ -192,9 +188,7 @@ object HoverProvider:
               new ScalaHover(
                 expressionType = Some(tpeString),
                 symbolSignature = Some(s"$valOrDef $name$tpeString"),
-                contextInfo = renames.map { case (to, from) =>
-                  s"type $to = $from"
-                }.toList,
+                contextInfo = printer.getUsedRenamesInfo(),
               )
             )
           case RefinedType(parent, _, _) =>

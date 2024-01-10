@@ -22,7 +22,6 @@ import scala.{meta => m}
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.internal.mtags.WithRenames
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.PresentationCompilerConfig
@@ -272,16 +271,13 @@ class MetalsGlobal(
    * with fully qualified names. This method strips out package prefixes to shorten the names while
    * making sure to not convert two different symbols into same short name.
    */
-  def shortTypeWithRenames(
-      longType: Type,
-      history: ShortenedNames
-  ): WithRenames[Type] = {
+  def shortType(longType: Type, history: ShortenedNames): Type = {
     val isVisited = mutable.Set.empty[(Type, Option[ShortName])]
-    val cached = new ju.HashMap[(Type, Option[ShortName]), WithRenames[Type]]()
-    def loop(tpe: Type, name: Option[ShortName]): WithRenames[Type] = {
+    val cached = new ju.HashMap[(Type, Option[ShortName]), Type]()
+    def loop(tpe: Type, name: Option[ShortName]): Type = {
       val key = tpe -> name
       // NOTE(olafur) Prevent infinite recursion, see https://github.com/scalameta/metals/issues/749
-      if (isVisited(key)) return cached.getOrDefault(key, WithRenames(tpe))
+      if (isVisited(key)) return cached.getOrDefault(key, tpe)
       isVisited += key
       val result = tpe match {
         case TypeRef(pre, sym, args) =>
@@ -297,11 +293,11 @@ class MetalsGlobal(
             else backtickify(sym)
           }
           if (history.isSymbolInScope(sym, pre)) {
-            for {
-              argsShort <- WithRenames.sequence(
-                args.map(arg => loop(arg, None))
-              )
-            } yield TypeRef(NoPrefix, shortSymbol, argsShort)
+            TypeRef(
+              NoPrefix,
+              shortSymbol,
+              args.map(arg => loop(arg, None))
+            )
           } else {
             val ownerSymbol = pre.termSymbol
             def hasConflictingMembersInScope =
@@ -315,7 +311,7 @@ class MetalsGlobal(
                 !metalsConfig.isDefaultSymbolPrefixes || hasConflictingMembersInScope
 
               if (shouldRenamePrefix) {
-                val existingRename = history.renames.get(ownerSym)
+                val existingRename = history.rename(ownerSym)
                 existingRename.isEmpty && history.tryShortenName(
                   ShortName(rename, ownerSymbol)
                 )
@@ -324,30 +320,22 @@ class MetalsGlobal(
 
             history.config.get(ownerSymbol) match {
               case Some(rename) if canRename(rename, ownerSymbol) =>
-                for {
-                  short <- WithRenames(
-                    SingleType(
-                      NoPrefix,
-                      sym.newErrorSymbol(rename)
-                    ),
-                    Map(rename.toString -> ownerSymbol.nameString)
-                  )
-                  argsShort <- WithRenames.sequence(
-                    args.map(arg => loop(arg, None))
-                  )
-                } yield TypeRef(short, shortSymbol, argsShort)
+                TypeRef(
+                  SingleType(
+                    NoPrefix,
+                    sym.newErrorSymbol(rename)
+                  ),
+                  shortSymbol,
+                  args.map(arg => loop(arg, None))
+                )
               case _ =>
-                history.renames.get(sym) match {
+                history.rename(sym) match {
                   case Some(rename) =>
-                    for {
-                      short <- WithRenames(
-                        sym.newErrorSymbol(rename),
-                        Map(rename.toString -> sym.nameString)
-                      )
-                      argsShort <- WithRenames.sequence(
-                        args.map(arg => loop(arg, None))
-                      )
-                    } yield TypeRef(NoPrefix, short, argsShort)
+                    TypeRef(
+                      NoPrefix,
+                      sym.newErrorSymbol(rename),
+                      args.map(arg => loop(arg, None))
+                    )
                   case _ =>
                     if (
                       sym.isAliasType &&
@@ -361,29 +349,24 @@ class MetalsGlobal(
                       loop(tpe.dealias, name)
                     } else if (history.owners(pre.typeSymbol)) {
                       if (history.nameResolvesToSymbol(sym.name, sym)) {
-                        for {
-                          argsShort <- WithRenames.sequence(
-                            args.map(arg => loop(arg, None))
-                          )
-                        } yield TypeRef(NoPrefix, shortSymbol, argsShort)
+                        TypeRef(
+                          NoPrefix,
+                          shortSymbol,
+                          args.map(arg => loop(arg, None))
+                        )
                       } else {
-                        for {
-                          argsShort <- WithRenames.sequence(
-                            args.map(arg => loop(arg, None))
-                          )
-                        } yield TypeRef(
+                        TypeRef(
                           ThisType(pre.typeSymbol),
                           shortSymbol,
-                          argsShort
+                          args.map(arg => loop(arg, None))
                         )
                       }
                     } else {
-                      for {
-                        short <- loop(pre, Some(ShortName(sym)))
-                        argsShort <- WithRenames.sequence(
-                          args.map(arg => loop(arg, None))
-                        )
-                      } yield TypeRef(short, shortSymbol, argsShort)
+                      TypeRef(
+                        loop(pre, Some(ShortName(sym))),
+                        shortSymbol,
+                        args.map(arg => loop(arg, None))
+                      )
                     }
                 }
             }
@@ -405,19 +388,20 @@ class MetalsGlobal(
                 ShortName(name0.symbol.cloneSymbol(sym))
               }
             }
-            if (history.tryShortenName(dotSyntaxFriendlyName))
-              WithRenames(NoPrefix)
-            else WithRenames(SingleType(pre, backtickifiedSymbol))
+            if (history.tryShortenName(dotSyntaxFriendlyName)) NoPrefix
+            else SingleType(pre, backtickifiedSymbol)
           } else {
             if (history.isSymbolInScope(sym, pre))
-              WithRenames(SingleType(NoPrefix, backtickifiedSymbol))
+              SingleType(NoPrefix, backtickifiedSymbol)
             else {
               pre match {
                 case ThisType(psym) if history.isSymbolInScope(psym, pre) =>
-                  WithRenames(SingleType(NoPrefix, backtickifiedSymbol))
+                  SingleType(NoPrefix, backtickifiedSymbol)
                 case _ =>
-                  loop(pre, Some(ShortName(sym)))
-                    .map(SingleType(_, backtickifiedSymbol))
+                  SingleType(
+                    loop(pre, Some(ShortName(sym))),
+                    backtickifiedSymbol
+                  )
               }
             }
           }
@@ -426,9 +410,8 @@ class MetalsGlobal(
           // to make sure we always use renamed package
           // what is saved in renames is actually companion module of a package
           val renamedOwnerIndex =
-            owners.indexWhere(s => history.renames.contains(s.companionModule))
-          if (renamedOwnerIndex < 0 && history.tryShortenName(name))
-            WithRenames(NoPrefix)
+            owners.indexWhere(s => history.rename(s.companionModule).nonEmpty)
+          if (renamedOwnerIndex < 0 && history.tryShortenName(name)) NoPrefix
           else {
             val prefix =
               if (renamedOwnerIndex < 0)
@@ -440,11 +423,9 @@ class MetalsGlobal(
                 }
               else renamedOwnerIndex
             if (prefix < 0) {
-              WithRenames(
-                SingleType(
-                  NoPrefix,
-                  sym.newErrorSymbol(TypeName(history.fullname(sym)))
-                )
+              SingleType(
+                NoPrefix,
+                sym.newErrorSymbol(TypeName(history.fullname(sym)))
               )
             } else {
               val names = owners
@@ -452,8 +433,8 @@ class MetalsGlobal(
                 .reverse
                 .map(s =>
                   m.Term.Name(
-                    history.renames
-                      .get(s.companionModule)
+                    history
+                      .rename(s.companionModule)
                       .map(_.toString())
                       .getOrElse(s.nameSyntax)
                   )
@@ -461,11 +442,9 @@ class MetalsGlobal(
               val ref = names.tail.foldLeft(names.head: m.Term.Ref) {
                 case (qual, name) => m.Term.Select(qual, name)
               }
-              WithRenames(
-                SingleType(
-                  NoPrefix,
-                  sym.newErrorSymbol(TypeName(ref.syntax))
-                )
+              SingleType(
+                NoPrefix,
+                sym.newErrorSymbol(TypeName(ref.syntax))
               )
             }
           }
@@ -473,90 +452,57 @@ class MetalsGlobal(
             if sym.hasFlag(gf.JAVA_ENUM) =>
           loop(SingleType(sym.owner.thisPrefix, sym), None)
         case ConstantType(Constant(tpe: Type)) =>
-          loop(tpe, None).map(t => ConstantType(Constant(t)))
+          ConstantType(Constant(loop(tpe, None)))
         case SuperType(thistpe, supertpe) =>
-          for {
-            thistpeShort <- loop(thistpe, None)
-            supertpeShort <- loop(supertpe, None)
-          } yield SuperType(thistpeShort, supertpeShort)
+          SuperType(loop(thistpe, None), loop(supertpe, None))
         case RefinedType(parents, decls) =>
-          for {
-            parentsShort <- WithRenames.sequence(
-              parents.map(parent => loop(parent, None))
-            )
-          } yield RefinedType(parentsShort, decls)
+          RefinedType(parents.map(parent => loop(parent, None)), decls)
         case AnnotatedType(annotations, underlying) =>
-          loop(underlying, None).map(AnnotatedType(annotations, _))
+          AnnotatedType(annotations, loop(underlying, None))
         case ExistentialType(quantified, underlying) =>
-          for {
-            quantifiedShort <-
-              WithRenames.sequence(
-                quantified.map(sym => loop(sym.info, None).map(sym.setInfo))
-              )
-            underlyingShort <- loop(underlying, None)
-          } yield ExistentialType(quantifiedShort, underlyingShort)
+          ExistentialType(
+            quantified.map(sym => sym.setInfo(loop(sym.info, None))),
+            loop(underlying, None)
+          )
         case PolyType(typeParams, resultType) =>
-          val renamesMap = mutable.Map[String, String]()
-          val resultTypeShort = resultType.map { t =>
-            val WithRenames(tpeShort, currRenames) = loop(t, None)
-            renamesMap ++= currRenames
-            tpeShort
-          }
-          val renames = renamesMap.toMap
-          resultTypeShort match {
+          resultType.map(t => loop(t, None)) match {
             // [x] => F[x] is not printable in the code, we need to use just `F`
             case TypeRef(_, sym, args)
                 if typeParams == args.map(_.typeSymbol) =>
-              WithRenames(
-                TypeRef(
-                  NoPrefix,
-                  sym.newErrorSymbol(sym.name),
-                  Nil
-                ),
-                renames
+              TypeRef(
+                NoPrefix,
+                sym.newErrorSymbol(sym.name),
+                Nil
               )
             case otherType =>
-              WithRenames(PolyType(typeParams, otherType), renames)
+              PolyType(typeParams, otherType)
           }
         case NullaryMethodType(resultType) =>
           loop(resultType, None)
         case TypeBounds(lo, hi) =>
-          for {
-            loShort <- loop(lo, None)
-            hiShort <- loop(hi, None)
-          } yield TypeBounds(loShort, hiShort)
+          TypeBounds(loop(lo, None), loop(hi, None))
         case MethodType(params, resultType) =>
-          loop(resultType, None).map(MethodType(params, _))
+          MethodType(params, loop(resultType, None))
         case ErrorType =>
-          WithRenames(definitions.AnyTpe)
-        case t => WithRenames(t)
+          definitions.AnyTpe
+        case t => t
       }
       cached.putIfAbsent(key, result)
       result
     }
 
     longType match {
-      case ThisType(_) => WithRenames(longType)
+      case ThisType(_) => longType
       case _ => loop(longType, None)
     }
   }
 
-  def shortType(
-      longType: Type,
-      history: ShortenedNames
-  ): Type = shortTypeWithRenames(longType, history).tpe
-
   /**
    * Custom `Type.toLongString` that shortens fully qualified package prefixes.
    */
-  def metalsToLongString(tpe: Type, history: ShortenedNames): String =
-    metalsToLongStringWithRenames(tpe, history).tpe
-
-  def metalsToLongStringWithRenames(
-      tpe: Type,
-      history: ShortenedNames
-  ): WithRenames[String] =
-    shortTypeWithRenames(tpe, history).map(_.toLongString)
+  def metalsToLongString(tpe: Type, history: ShortenedNames): String = {
+    shortType(tpe, history).toLongString
+  }
 
   /**
    * Converts a SemanticDB symbol into a compiler symbol.

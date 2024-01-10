@@ -5,7 +5,6 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.mtags.WithRenames
 import scala.meta.pc
 import scala.meta.pc.SymbolDocumentation
 
@@ -103,9 +102,22 @@ trait Signatures { compiler: MetalsGlobal =>
       val history: mutable.Map[Name, ShortName] = mutable.Map.empty,
       val lookupSymbol: Name => List[NameLookup] = _ => Nil,
       val config: collection.Map[Symbol, Name] = Map.empty,
-      val renames: collection.Map[Symbol, Name] = Map.empty,
+      renames: collection.Map[Symbol, Name] = Map.empty,
       val owners: collection.Set[Symbol] = Set.empty
   ) {
+
+    private val lookedUpRenames = mutable.Set[Symbol]()
+
+    def rename(sym: Symbol): Option[Name] = {
+      lookedUpRenames.add(sym)
+      renames.get(sym)
+    }
+
+    def getUsedRenamesInfo(): List[String] =
+      lookedUpRenames.flatMap { key =>
+        renames.get(key).map(v => s"type $v = ${key.nameString}")
+      }.toList
+
     def this(context: Context) =
       this(lookupSymbol = { name =>
         context.lookupSymbol(name, _ => true) :: Nil
@@ -288,9 +300,7 @@ trait Signatures { compiler: MetalsGlobal =>
     private val infoParams =
       infoParamsA.lift
     private val returnType =
-      shortTypeWithRenames(gtpe.finalResultType, shortenedNames).map(
-        printType(_)
-      )
+      printType(shortType(gtpe.finalResultType, shortenedNames))
 
     def printType(tpe: Type): String = {
       val tpeToPrint = tpe match {
@@ -335,19 +345,13 @@ trait Signatures { compiler: MetalsGlobal =>
         case Nil => gtpe.paramss
         case tparams => tparams :: gtpe.paramss
       }
-
-    def defaultMethodSignature(name: String = ""): String =
-      defaultMethodSignatureWithRenames(name).tpe
-
-    def defaultMethodSignatureWithRenames(
-        name: String = ""
-    ): WithRenames[String] = {
+    def defaultMethodSignature(name: String = ""): String = {
       var i = 0
       val paramss = gtpe.typeParams match {
         case Nil => gtpe.paramss
         case tparams => tparams :: gtpe.paramss
       }
-      val paramsWithRenames = paramss.flatMap { params =>
+      val params = paramss.iterator.flatMap { params =>
         val labels = params.flatMap { param =>
           if (implicitEvidenceTermParams.contains(param)) {
             Nil
@@ -358,19 +362,16 @@ trait Signatures { compiler: MetalsGlobal =>
           }
         }
         if (labels.isEmpty && params.nonEmpty) Nil
-        else WithRenames.sequence(labels).map(_.iterator) :: Nil
+        else labels.iterator :: Nil
       }
-      for {
-        params <- WithRenames.sequence(paramsWithRenames).map(_.iterator)
-        result <- methodSignature(params, name)
-      } yield result
+      methodSignature(params, name)
     }
 
     def methodSignature(
         paramLabels: Iterator[Iterator[String]],
         name: String = gsym.nameString,
         printUnapply: Boolean = true
-    ): WithRenames[String] = {
+    ): String = {
       val params = paramLabels
         .zip(mparamss.iterator)
         .map { case (params, syms) =>
@@ -386,9 +387,9 @@ trait Signatures { compiler: MetalsGlobal =>
         }
 
       if (printUnapply)
-        returnType.map(t => params.mkString(name, "", s": $t"))
+        params.mkString(name, "", s": ${returnType}")
       else
-        WithRenames(params.mkString)
+        params.mkString
     }
     def paramsKind(syms: List[Symbol]): Params.Kind = {
       syms match {
@@ -406,13 +407,9 @@ trait Signatures { compiler: MetalsGlobal =>
       if (isDocs) infoParams(indexInSignature).fold("")(_.docstring())
       else ""
     }
-    def paramLabel(
-        param: Symbol,
-        paramIndex: Option[Int]
-    ): WithRenames[String] = {
+    def paramLabel(param: Symbol, paramIndex: Option[Int]): String = {
       val indexInSignature = paramIndex.getOrElse(indexOfParam(param))
-      val paramTypeString =
-        shortTypeWithRenames(param.info, shortenedNames).map(printType(_))
+      val paramTypeString = printType(shortType(param.info, shortenedNames))
       val name = infoParams(indexInSignature) match {
         case Some(value) if param.name.startsWith("x$") =>
           value.displayName()
@@ -425,7 +422,7 @@ trait Signatures { compiler: MetalsGlobal =>
             case head :: Nil => s":$head"
             case many => many.mkString(": ", ": ", "")
           }
-        paramTypeString.map(t => s"$name$t$contextBounds")
+        s"$name$paramTypeString$contextBounds"
       } else {
         val default =
           if (includeDefaultParam && param.isParamWithDefault) {
@@ -438,7 +435,7 @@ trait Signatures { compiler: MetalsGlobal =>
           } else {
             ""
           }
-        paramTypeString.map(t => s"$name: $t$default")
+        s"$name: ${paramTypeString}$default"
       }
     }
   }

@@ -595,7 +595,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
              * and not parameters.
              */
             if (param.isParameter)
-              printer.paramLabel(param, paramIndex).tpe
+              printer.paramLabel(param, paramIndex)
             else
               printer.printType(param.tpe)
           val docstring = printer.paramDocstring(param, paramIndex)
@@ -630,15 +630,13 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       else labels :: Nil
     }
     val signatureInformation = new SignatureInformation(
-      printer
-        .methodSignature(
-          paramLabels.iterator.map(_.iterator.collect {
-            case i if i.getLabel() != null && i.getLabel().isLeft() =>
-              i.getLabel().getLeft()
-          }),
-          printUnapply = !t.call.isUnapplyMethod
-        )
-        .tpe
+      printer.methodSignature(
+        paramLabels.iterator.map(_.iterator.collect {
+          case i if i.getLabel() != null && i.getLabel().isLeft() =>
+            i.getLabel().getLeft()
+        }),
+        printUnapply = !t.call.isUnapplyMethod
+      )
     )
     if (metalsConfig.isSignatureHelpDocumentationEnabled) {
       signatureInformation.setDocumentation(

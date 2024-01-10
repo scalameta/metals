@@ -9,7 +9,6 @@ import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.internal.mtags.WithRenames
 import scala.meta.internal.pc.Compat.EvidenceParamName
 import scala.meta.internal.pc.IndexedContext
 import scala.meta.internal.pc.Params
@@ -56,6 +55,8 @@ class MetalsPrinter(
 
   def shortenedNames: List[ShortName] = names.namesToImport
 
+  def getUsedRenamesInfo(): List[String] = names.getUsedRenamesInfo
+
   def expressionType(tpw: Type)(using Context): Option[String] =
     tpw match
       case t: PolyType =>
@@ -70,10 +71,8 @@ class MetalsPrinter(
         Some(tpe(tpw))
       case _ => None
 
-  def tpe(tpe: Type): String = tpeWithRenames(tpe).tpe
-
-  def tpeWithRenames(tpe: Type): WithRenames[String] =
-    val short: WithRenames[Type] = Try(names.shortType(tpe)) match
+  def tpe(tpe: Type): String =
+    val short = Try(names.shortType(tpe)) match
       case Success(short) => short
       case Failure(e) =>
         val reportContext = summon[ReportContext]
@@ -87,14 +86,14 @@ class MetalsPrinter(
           error = Some(e),
         )
         reportContext.unsanitized.create(report, ifVerbose = false)
-        WithRenames(tpe)
-    short.map(dotcPrinter.tpe)
-  end tpeWithRenames
+        tpe
+    dotcPrinter.tpe(short)
+  end tpe
 
-  def hoverSymbol(sym: Symbol, info: Type)(using Context): WithRenames[String] =
+  def hoverSymbol(sym: Symbol, info: Type)(using Context): String =
     val typeSymbol = info.typeSymbol
 
-    def shortTypeString: WithRenames[String] = tpeWithRenames(info)
+    def shortTypeString: String = tpe(info)
 
     def ownerTypeString: String =
       typeSymbol.owner.fullNameBackticked
@@ -103,29 +102,27 @@ class MetalsPrinter(
 
     sym match
       case p if p.is(Flags.Package) =>
-        WithRenames(s"package ${p.fullNameBackticked}")
+        s"package ${p.fullNameBackticked}"
       case c if c.is(Flags.EnumVal) =>
-        shortTypeString.map(t => s"case $name: $t")
+        s"case $name: $shortTypeString"
       // enum
       case e if e.is(Flags.Enum) || sym.companionClass.is(Flags.Enum) =>
-        WithRenames(s"enum $name: $ownerTypeString")
+        s"enum $name: $ownerTypeString"
       /* Type cannot be shown on the right since it is already a type
        * let's instead use that space to show the full path.
        */
       case o if typeSymbol.is(Flags.Module) => // enum
-        WithRenames(s"${dotcPrinter.keywords(o)} $name: $ownerTypeString")
+        s"${dotcPrinter.keywords(o)} $name: $ownerTypeString"
       case m if m.is(Flags.Method) =>
-        defaultMethodSignatureWithRenames(m, info)
+        defaultMethodSignature(m, info)
       case _ =>
         val implicitKeyword =
           if sym.is(Flags.Implicit) then List("implicit") else Nil
         val finalKeyword = if sym.is(Flags.Final) then List("final") else Nil
         val keyOrEmpty = dotcPrinter.keywords(sym)
         val keyword = if keyOrEmpty.nonEmpty then List(keyOrEmpty) else Nil
-        shortTypeString.map(t =>
-          (implicitKeyword ::: finalKeyword ::: keyword ::: (s"$name:" :: t :: Nil))
-            .mkString(" ")
-        )
+        (implicitKeyword ::: finalKeyword ::: keyword ::: (s"$name:" :: shortTypeString :: Nil))
+          .mkString(" ")
     end match
   end hoverSymbol
 
@@ -162,19 +159,7 @@ class MetalsPrinter(
       gtpe: Type,
       onlyMethodParams: Boolean = false,
       additionalMods: List[String] = Nil,
-  ): String = defaultMethodSignatureWithRenames(
-    gsym,
-    gtpe,
-    onlyMethodParams,
-    additionalMods,
-  ).tpe
-
-  def defaultMethodSignatureWithRenames(
-      gsym: Symbol,
-      gtpe: Type,
-      onlyMethodParams: Boolean = false,
-      additionalMods: List[String] = Nil,
-  ): WithRenames[String] =
+  ): String =
     val namess = gtpe.paramNamess
     val infoss = gtpe.paramInfoss
     val nameToInfo: Map[Name, Type] = (for
@@ -204,9 +189,9 @@ class MetalsPrinter(
         case _ =>
           Seq.empty
 
-    def label(paramss: List[List[Symbol]]) =
+    def label(paramss: List[List[Symbol]]) = {
       var index = 0
-      val res = paramss.flatMap { params =>
+      paramss.flatMap { params =>
         val labels = params.flatMap { param =>
           // Don't show implicit evidence params
           // e.g.
@@ -228,24 +213,20 @@ class MetalsPrinter(
         }
         // Remove empty params
         if labels.isEmpty then Nil
-        else WithRenames.sequence(labels).map(_.iterator) :: Nil
+        else labels.iterator :: Nil
       }
-      WithRenames.sequence(res).map(_.iterator)
-    end label
+    }.iterator
     val paramLabelss = label(methodParams)
     val extLabelss = label(extParams)
 
-    val returnType = tpeWithRenames(gtpe.finalResultType)
+    val returnType = tpe(gtpe.finalResultType)
     def extensionSignatureString =
-      val extensionSignature = extLabelss.map(paramssString(_, extParams))
+      val extensionSignature = paramssString(extLabelss, extParams)
       if extParams.nonEmpty then
-        extensionSignature.map(_.mkString("extension ", "", " "))
-      else WithRenames("")
-    val paramssSignature =
-      for
-        retStr <- returnType
-        parStr <- paramLabelss.map(paramssString(_, methodParams))
-      yield parStr.mkString("", "", s": $retStr")
+        extensionSignature.mkString("extension ", "", " ")
+      else ""
+    val paramssSignature = paramssString(paramLabelss, methodParams)
+      .mkString("", "", s": ${returnType}")
 
     val flags = (gsym.flags & methodFlags)
     val flagsSeq =
@@ -263,11 +244,10 @@ class MetalsPrinter(
     else
       // For Scala2 compatibility, show "this" instead of <init> for constructor
       val name = if gsym.isConstructor then StdNames.nme.this_ else gsym.name
-      for
-        parStr <- paramssSignature
-        extStr <- extensionSignatureString
-      yield extStr + s"${mods}def $name" + parStr
-  end defaultMethodSignatureWithRenames
+      extensionSignatureString +
+        s"${mods}def $name" +
+        paramssSignature
+  end defaultMethodSignature
 
   def defaultValueSignature(
       gsym: Symbol,
@@ -372,7 +352,7 @@ class MetalsPrinter(
       index: Int,
       defaultValues: => Seq[SymbolDocumentation],
       nameToInfo: Map[Name, Type],
-  ): WithRenames[String] =
+  ): String =
     val docInfo = defaultValues.lift(index)
     val rawKeywordName = dotcPrinter.name(param)
     val keywordName = docInfo match
@@ -392,7 +372,7 @@ class MetalsPrinter(
     // use `nameToInfo.get(param.name)` instead of `param.info` because
     // param.info loses `asSeenFrom` information:
     // parameter `f` of `foreach[U](f: A => U)` in `new scala.Traversable[Int]` should be `foreach[U](f: Int => U)`
-    val paramTypeString = tpeWithRenames(info)
+    val paramTypeString = tpe(info)
     if param.isTypeParam then
       // pretty context bounds
       // e.g. f[A](a: A, b: A)(implicit evidence$1: Ordering[A])
@@ -401,7 +381,7 @@ class MetalsPrinter(
         case Nil => ""
         case head :: Nil => s": $head"
         case many => many.mkString(": ", ": ", "")
-      paramTypeString.map(t => s"$keywordName$t$bounds")
+      s"$keywordName$paramTypeString$bounds"
     else if param.is(Flags.Given) && param.name.toString.contains('$') then
       // For Anonymous Context Parameters
       // print only type string
@@ -421,7 +401,7 @@ class MetalsPrinter(
         else if includeDefaultParam == MetalsPrinter.IncludeDefaultParam.ResolveLater && isDefaultParam
         then " = ..."
         else "" // includeDefaultParam == Never or !isDefaultParam
-      paramTypeString.map(t => s"$keywordName: $t$default")
+      s"$keywordName: ${paramTypeString}$default"
     end if
   end paramLabel
 

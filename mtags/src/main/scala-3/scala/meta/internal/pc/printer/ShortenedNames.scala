@@ -5,7 +5,6 @@ import java.{util as ju}
 import scala.annotation.tailrec
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.internal.mtags.WithRenames
 import scala.meta.internal.pc.AutoImports
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.IndexedContext
@@ -29,6 +28,13 @@ class ShortenedNames(
   import ShortenedNames.*
 
   private val history = collection.mutable.Map.empty[Name, ShortName]
+
+  private val foundRenames = collection.mutable.Map.empty[Symbol, String]
+
+  def getUsedRenamesInfo(using Context): List[String] =
+    foundRenames.map { (from, to) =>
+      s"type $to = ${from.showName}"
+    }.toList
 
   /**
    * Returns a list of shortened names
@@ -91,33 +97,27 @@ class ShortenedNames(
    *
    * @see Scala 3/Internals/Type System https://dotty.epfl.ch/docs/internals/type-system.html
    */
-  def shortType(longType: Type)(using ctx: Context): WithRenames[Type] =
+  def shortType(longType: Type)(using ctx: Context): Type =
     val isVisited = collection.mutable.Set.empty[(Type, Option[ShortName])]
-    val cached = new ju.HashMap[(Type, Option[ShortName]), WithRenames[Type]]()
-    def loopForTypeBounds(tpe: TypeBounds): WithRenames[TypeBounds] =
+    val cached = new ju.HashMap[(Type, Option[ShortName]), Type]()
+    def loopForTypeBounds(tpe: TypeBounds): TypeBounds =
       tpe match
-        case TypeAlias(a) => loop(a, None).map(TypeAlias(_))
-        case MatchAlias(a) => loop(a, None).map(MatchAlias(_))
-        case TypeBounds(lo, hi) =>
-          for
-            t1 <- loop(lo, None)
-            t2 <- loop(hi, None)
-          yield TypeBounds(t1, t2)
+        case TypeAlias(a) => TypeAlias(loop(a, None))
+        case MatchAlias(a) => MatchAlias(loop(a, None))
+        case TypeBounds(lo, hi) => TypeBounds(loop(lo, None), loop(hi, None))
 
-    def loop(tpe: Type, name: Option[ShortName]): WithRenames[Type] =
+    def loop(tpe: Type, name: Option[ShortName]): Type =
       val key = tpe -> name
       // NOTE: Prevent infinite recursion, see https://github.com/scalameta/metals/issues/749
-      if isVisited(key) then return cached.getOrDefault(key, WithRenames(tpe))
+      if isVisited(key) then return cached.getOrDefault(key, tpe)
       isVisited += key
-      val result: WithRenames[Type] = tpe match
+      val result = tpe match
         // special case for types which are not designated by a Symbol
         // example: path-dependent types
         case tr: CachedTypeRef
             if !tr.designator
               .isInstanceOf[Symbol] && tr.typeSymbol == NoSymbol =>
-          loop(tr.prefix, None).map(
-            new CachedTypeRef(_, tr.designator, tr.hash)
-          )
+          new CachedTypeRef(loop(tr.prefix, None), tr.designator, tr.hash)
 
         case TypeRef(prefix, designator) =>
           // designator is not necessarily an instance of `Symbol` and it's an instance of `Name`
@@ -132,24 +132,21 @@ class ShortenedNames(
               sym: Symbol,
               prev: List[Symbol],
               ownersLeft: List[Symbol],
-          ): WithRenames[Type] =
+          ): Type =
             ownersLeft match
               case Nil =>
                 val short = ShortName(sym)
-                if tryShortenName(short) then
-                  WithRenames(TypeRef(NoPrefix, sym))
-                else loop(prefix, Some(short)).map(TypeRef(_, sym))
+                if tryShortenName(short) then TypeRef(NoPrefix, sym)
+                else TypeRef(loop(prefix, Some(short)), sym)
               case h :: tl =>
                 indexedContext.rename(h) match
                   // case where the completing symbol is renamed in the context
                   // for example, we have `import java.lang.{Boolean => JBoolean}` and
                   // complete `java.lang.Boolean`. See `CompletionOverrideSuite`'s `rename'.
                   case Some(rename) =>
-                    WithRenames(
-                      PrettyType(
-                        (rename :: prev.map(_.name)).mkString(".")
-                      ),
-                      Map(rename -> h.showName),
+                    foundRenames += (h -> rename)
+                    PrettyType(
+                      (rename :: prev.map(_.name)).mkString(".")
                     )
                   case None =>
                     processOwners(sym, h :: prev, tl)
@@ -158,12 +155,10 @@ class ShortenedNames(
             processOwners(sym, Nil, sym.ownersIterator.toList)
           renames.get(sym.owner) match
             case Some(rename) =>
+              foundRenames += (sym.owner -> rename)
               val short = ShortName(Names.termName(rename), sym.owner)
               if tryShortenName(short) then
-                WithRenames(
-                  PrettyType(s"$rename.${sym.name.show}"),
-                  Map(rename -> sym.owner.showName),
-                )
+                PrettyType(s"$rename.${sym.name.show}")
               else shortened
             case _ => shortened
 
@@ -173,82 +168,57 @@ class ShortenedNames(
               designator.asInstanceOf[Symbol]
             else tpe.termSymbol
           val short = ShortName(sym)
-          if tryShortenName(short) then WithRenames(TermRef(NoPrefix, sym))
-          else loop(prefix, None).map(TermRef(_, sym))
+          if tryShortenName(short) then TermRef(NoPrefix, sym)
+          else TermRef(loop(prefix, None), sym)
 
         case t @ ThisType(tyref) =>
-          if tryShortenName(name) then WithRenames(NoPrefix)
-          else
-            loop(tyref, None).map(short =>
-              ThisType.raw(short.asInstanceOf[TypeRef])
-            )
+          if tryShortenName(name) then NoPrefix
+          else ThisType.raw(loop(tyref, None).asInstanceOf[TypeRef])
 
         case mt @ MethodTpe(pnames, ptypes, restpe) if mt.isImplicitMethod =>
-          for
-            ptypesR <- WithRenames.sequence(ptypes.map(loop(_, None)))
-            t <- loop(restpe, None)
-          yield ImplicitMethodType(pnames, ptypesR, t)
-
+          ImplicitMethodType(
+            pnames,
+            ptypes.map(loop(_, None)),
+            loop(restpe, None),
+          )
         case mt @ MethodTpe(pnames, ptypes, restpe) =>
-          for
-            ptypesR <- WithRenames.sequence(ptypes.map(loop(_, None)))
-            t <- loop(restpe, None)
-          yield MethodType(pnames, ptypesR, t)
+          MethodType(pnames, ptypes.map(loop(_, None)), loop(restpe, None))
+
         case pl @ PolyType(_, restpe) =>
-          for
-            bounds <- WithRenames.sequence(
-              pl.paramInfos.map(bound =>
-                for
-                  t1 <- loop(bound.lo, None)
-                  t2 <- loop(bound.hi, None)
-                yield TypeBounds(t1, t2)
-              )
-            )
-            t <- loop(restpe, None)
-          yield PolyType(pl.paramNames, bounds, t)
+          PolyType(
+            pl.paramNames,
+            pl.paramInfos.map(bound =>
+              TypeBounds(loop(bound.lo, None), loop(bound.hi, None))
+            ),
+            loop(restpe, None),
+          )
         case SuperType(thistpe, supertpe) =>
-          for
-            t1 <- loop(thistpe, None)
-            t2 <- loop(supertpe, None)
-          yield SuperType(t1, t2)
+          SuperType(loop(thistpe, None), loop(supertpe, None))
         case AppliedType(tycon, args) =>
-          for
-            t <- loop(tycon, None)
-            argsT <- WithRenames.sequence(args.map(a => loop(a, None)))
-          yield AppliedType(t, argsT)
+          AppliedType(loop(tycon, None), args.map(a => loop(a, None)))
         case t: TypeBounds => loopForTypeBounds(t)
         case RefinedType(parent, names, infos) =>
-          for
-            t1 <- loop(parent, None)
-            t2 <- loop(infos, None)
-          yield RefinedType(t1, names, t2)
+          RefinedType(loop(parent, None), names, loop(infos, None))
         case ExprType(res) =>
-          loop(res, None).map(ExprType(_))
+          ExprType(loop(res, None))
         case AnnotatedType(parent, annot) =>
-          loop(parent, None).map(AnnotatedType(_, annot))
+          AnnotatedType(loop(parent, None), annot)
         case AndType(tp1, tp2) =>
-          for
-            t1 <- loop(tp1, None)
-            t2 <- loop(tp2, None)
-          yield AndType(t1, t2)
+          AndType(loop(tp1, None), loop(tp2, None))
         case or @ OrType(tp1, tp2) =>
-          for
-            t1 <- loop(tp1, None)
-            t2 <- loop(tp2, None)
-          yield OrType(t1, t2, or.isSoft)
+          OrType(loop(tp1, None), loop(tp2, None), or.isSoft)
         case h @ HKTypeLambda(params, result) =>
-          for
-            bounds <- WithRenames.sequence(
-              params.map(p => loopForTypeBounds(p.paramInfo))
-            )
-            t <- loop(result, None)
-          yield h.newLikeThis(params.map(_.paramName), bounds, t)
+          h.newLikeThis(
+            params.map(_.paramName),
+            params.map(p => loopForTypeBounds(p.paramInfo)),
+            loop(result, None),
+          )
         // Replace error type into Any
         // Otherwise, DotcPrinter (more specifically, RefinedPrinter in Dotty) print the error type as
         // <error ....>, that is hard to read for users.
         // It'd be ideal to replace error types with type parameter (see: CompletionOverrideSuite#error) though
-        case t if t.isError => WithRenames(ctx.definitions.AnyType)
-        case t => WithRenames(t)
+        case t if t.isError => ctx.definitions.AnyType
+        case t => t
 
       cached.putIfAbsent(key, result)
       result

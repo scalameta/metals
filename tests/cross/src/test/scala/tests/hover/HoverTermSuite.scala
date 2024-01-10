@@ -661,8 +661,8 @@ class HoverTermSuite extends BaseHoverSuite {
        |}
        |""".stripMargin,
     """|```scala
-       |type AB = AbstractMap
        |type S = Set
+       |type AB = AbstractMap
        |```
        |
        |```scala
