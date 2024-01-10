@@ -849,7 +849,8 @@ class WorkspaceLspService(
         folderServices.find(s =>
           targets.forall(s.supportsBuildTarget(_).isDefined)
         ) match {
-          case Some(service) => service.startDebugProvider(params).asJavaObject
+          case Some(service) =>
+            service.startDebugProvider(params).liftToLspError.asJavaObject
           case None =>
             failedRequest(
               s"Could not find folder for build targets: ${targets.mkString(",")}"

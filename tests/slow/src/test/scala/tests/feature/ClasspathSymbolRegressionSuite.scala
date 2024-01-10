@@ -183,7 +183,17 @@ abstract class ClasspathSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
   check(
     "IO",
     """|akka.io.IO Object
+       |akka.stream.IOResult Class
+       |akka.stream.IOResult Object
        |com.typesafe.config.ConfigException#IO Class
+       |java.io.IOError Class
+       |net.razorvine.pyro.IOUtil Class
+       |org.apache.commons.compress.utils.IOUtils Class
+       |org.apache.commons.io.IOCase Class
+       |org.apache.commons.io.IOUtils Class
+       |org.apache.hadoop.io.IOUtils Class
+       |org.apache.spark.network.util.IOMode Class
+       |org.apache.zookeeper.common.IOUtils Class
        |org.eclipse.jetty.util.IO Class
        |org.mortbay.util.IO Class
        |""".stripMargin,

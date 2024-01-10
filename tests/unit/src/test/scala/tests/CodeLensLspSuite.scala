@@ -53,6 +53,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
   checkTestCases(
     "test-suite-with-tests",
     library = Some("org.scalatest::scalatest:3.2.16"),
+    minExpectedLenses = 6,
   )(
     """|package foo.bar
        |<<test>><<debug test>>
@@ -69,7 +70,11 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
        |""".stripMargin
   )
 
-  check("test-suite-object", library = Some("com.lihaoyi::utest:0.7.3"))(
+  check(
+    "test-suite-object",
+    library = Some("com.lihaoyi::utest:0.7.3"),
+    minExpectedLenses = 3,
+  )(
     """|package foo.bar
        |<<test>><<debug test>>
        |object Foo extends utest.TestSuite {

@@ -18,8 +18,8 @@ class ClasspathSearch(
   def search(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor
-  ): SymbolSearch.Result = {
-    if (query.query == "_") return SymbolSearch.Result.COMPLETE
+  ): (SymbolSearch.Result, Int) = {
+    if (query.query == "_") return (SymbolSearch.Result.COMPLETE, 0)
     val classfiles =
       new PriorityQueue[Classfile](new ClassfileComparator(query.query))
     for {
@@ -32,8 +32,9 @@ class ClasspathSearch(
       classfiles.add(classfile)
     }
     var nonExactMatches = 0
+    var exactMatches = 0
     var searchResult =
-      if (query.isExact) SymbolSearch.Result.INCOMPLETE
+      if (query.isShortQuery) SymbolSearch.Result.INCOMPLETE
       else SymbolSearch.Result.COMPLETE
     for {
       hit <- classfiles.pollingIterator
@@ -47,11 +48,12 @@ class ClasspathSearch(
       }
     } {
       val added = visitor.visitClassfile(hit.pkg, hit.filename)
-      if (added > 0 && !hit.isExact(query)) {
-        nonExactMatches += added
+      if (added > 0) {
+        if (!hit.isExact(query)) nonExactMatches += added
+        else exactMatches += added
       }
     }
-    searchResult
+    (searchResult, nonExactMatches + exactMatches)
   }
 
   private def search(
@@ -66,11 +68,7 @@ class ClasspathSearch(
       if query.matches(pkg.bloom)
       classfile <- pkg.members
       if classfile.isClassfile
-      isMatch = {
-        if (query.isExact) Fuzzy.isExactMatch(query.query, classfile.filename)
-        else query.matches(classfile.fullname)
-      }
-      if isMatch
+      if query.matches(classfile.fullname)
     } yield classfile
   }
 }

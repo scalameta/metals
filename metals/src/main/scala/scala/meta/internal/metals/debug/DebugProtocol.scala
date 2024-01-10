@@ -97,6 +97,15 @@ object DebugProtocol {
     response
   }
 
+  object EmptyResponse {
+    def apply(initialize: DebugRequestMessage): DebugResponseMessage = {
+      val response = new DebugResponseMessage
+      response.setId(initialize.getId())
+      response.setMethod(initialize.getMethod())
+      response
+    }
+  }
+
   object SyntheticMessage {
     def unapply(msg: IdentifiableMessage): Option[IdentifiableMessage] = {
       if (msg.getId == null) Some(msg)
@@ -135,6 +144,28 @@ object DebugProtocol {
     }
   }
 
+  object ConfigurationDone {
+    def unapply(
+        request: DebugRequestMessage
+    ): Option[dap.ConfigurationDoneArguments] = {
+      if (request.getMethod != "configurationDone") None
+      else if (request.getParams() == null)
+        Some(new dap.ConfigurationDoneArguments())
+      else parse[dap.ConfigurationDoneArguments](request.getParams).toOption
+
+    }
+  }
+
+  object TerminateRequest {
+    def unapply(
+        request: DebugRequestMessage
+    ): Option[dap.TerminateArguments] = {
+      if (request.getMethod != "terminate") None
+      else
+        parse[dap.TerminateArguments](request.getParams).toOption
+    }
+  }
+
   object SetBreakpointRequest {
     def unapply(request: RequestMessage): Option[SetBreakpointsArguments] = {
       if (request.getMethod != "setBreakpoints") None
@@ -158,15 +189,14 @@ object DebugProtocol {
     }
   }
 
-  object RestartRequest {
-    def unapply(request: RequestMessage): Option[DisconnectArguments] = {
-      if (request.getMethod != "disconnect") None
+  object DisconnectRequest {
+    def unapply(request: DebugRequestMessage): Option[DisconnectArguments] = {
+      if (request.getMethod != DisconnectRequest.name) None
       else {
-        parse[DisconnectArguments](request.getParams)
-          .filter(_.getRestart)
-          .toOption
+        parse[DisconnectArguments](request.getParams).toOption
       }
     }
+    val name = "disconnect"
   }
 
   object OutputNotification {

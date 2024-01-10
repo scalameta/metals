@@ -314,6 +314,17 @@ class BuildServerConnection private (
     }
   }
 
+  def buildTargetRun(
+      params: RunParams,
+      cancelPromise: Promise[Unit],
+  ): Future[RunResult] = {
+    val completableFuture = register(server => server.buildTargetRun(params))
+    cancelPromise.future.foreach { _ =>
+      completableFuture.cancel(true)
+    }
+    completableFuture.asScala
+  }
+
   def buildTargetScalacOptions(
       params: ScalacOptionsParams
   ): Future[ScalacOptionsResult] = {

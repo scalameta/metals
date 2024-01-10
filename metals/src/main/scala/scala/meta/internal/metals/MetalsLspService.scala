@@ -719,6 +719,7 @@ class MetalsLspService(
       testProvider,
     )
   )
+  buildClient.registerLogForwarder(debugProvider)
 
   private val scalafixProvider: ScalafixProvider = ScalafixProvider(
     buffers,

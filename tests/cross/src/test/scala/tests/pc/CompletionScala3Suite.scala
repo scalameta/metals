@@ -88,4 +88,15 @@ class CompletionScala3Suite extends BaseCompletionSuite {
        |""".stripMargin,
     assertSingleItem = false
   )
+
+  check(
+    "multi-export".tag(
+      IgnoreScalaVersion.forLessThan("3.2.2").and(IgnoreForScala3CompilerPC)
+    ),
+    """|export scala.collection.{AbstractMap, Set@@}
+       |""".stripMargin,
+    """|Set scala.collection
+       |SetOps scala.collection
+       |""".stripMargin
+  )
 }

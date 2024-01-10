@@ -20,6 +20,33 @@ class CompletionIssueSuite extends BaseCompletionSuite {
   }
 
   check(
+    "comparison".tag(IgnoreForScala3CompilerPC),
+    """package a
+      |object w {
+      |  abstract class T(x: Int) {
+      |    def met(x: Int): Unit = {
+      |      println(x@@)
+      |    }
+      |  }}
+      |""".stripMargin,
+    """|x: Int
+       |x = : Any""".stripMargin,
+    topLines = Some(4),
+    compat = Map(
+      "2.12" ->
+        """|x: Int
+           |x = : Any
+           |xml scala
+           |""".stripMargin,
+      "2.11" ->
+        """|x: Int
+           |x = : Any
+           |xml scala
+           |""".stripMargin
+    )
+  )
+
+  check(
     "mutate".tag(IgnoreScala3),
     """package a
       |class Foo@@

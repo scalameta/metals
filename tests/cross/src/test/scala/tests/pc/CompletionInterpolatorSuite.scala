@@ -5,6 +5,23 @@ import tests.pc.CrossTestEnrichments._
 
 class CompletionInterpolatorSuite extends BaseCompletionSuite {
 
+  check(
+    "wrong",
+    """|object Main {
+       |  println("Z@@${zScores_y.mkString(", ")}")
+       |}
+       |""".stripMargin,
+    ""
+  )
+  check(
+    "wrong2",
+    """|object Main {
+       |   val idx = if(i.toString.length == 2) s"00$i" else s"00@@$i"
+       |}
+       |""".stripMargin,
+    ""
+  )
+
   checkEdit(
     "string",
     """|object Main {

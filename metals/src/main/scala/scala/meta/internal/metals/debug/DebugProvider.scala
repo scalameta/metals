@@ -42,6 +42,7 @@ import scala.meta.internal.metals.SourceMapper
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.clients.language.LogForwarder
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
@@ -87,13 +88,33 @@ class DebugProvider(
     sourceMapper: SourceMapper,
     userConfig: () => UserConfiguration,
     testProvider: TestSuitesProvider,
-) extends Cancelable {
+) extends Cancelable
+    with LogForwarder {
 
   import DebugProvider._
 
+  private val runningLocal = new ju.concurrent.atomic.AtomicBoolean(false)
+
   private val debugSessions = new MutableCancelable()
 
-  override def cancel(): Unit = debugSessions.cancel()
+  private val currentRunner =
+    new ju.concurrent.atomic.AtomicReference[DebugRunner](null)
+
+  override def info(message: String): Unit = {
+    val runner = currentRunner.get()
+    if (runner != null) runner.stdout(message)
+  }
+
+  override def error(message: String): Unit = {
+    val runner = currentRunner.get()
+    if (runner != null) runner.error(message)
+  }
+
+  override def cancel(): Unit = {
+    val runner = currentRunner.get()
+    if (runner != null) runner.cancel()
+    debugSessions.cancel()
+  }
 
   lazy val buildTargetClassesFinder = new BuildTargetClassesFinder(
     buildTargets,
@@ -102,9 +123,9 @@ class DebugProvider(
   )
 
   def start(
-      parameters: b.DebugSessionParams,
-      cancelPromise: Promise[Unit],
+      parameters: b.DebugSessionParams
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
+    val cancelPromise = Promise[Unit]()
     for {
       sessionName <- Future.fromTry(parseSessionName(parameters))
       jvmOptionsTranslatedParams = translateJvmParams(parameters)
@@ -112,14 +133,99 @@ class DebugProvider(
         .fold[Future[BuildServerConnection]](BuildServerUnavailableError)(
           Future.successful
         )
-      debugServer <- start(
-        sessionName,
-        jvmOptionsTranslatedParams,
-        buildServer,
-        cancelPromise,
-      )
+      isJvm = parameters
+        .getTargets()
+        .asScala
+        .flatMap(buildTargets.scalaTarget)
+        .forall(
+          _.scalaInfo.getPlatform == b.ScalaPlatform.JVM
+        )
+      debugServer <-
+        if (isJvm)
+          statusBar.trackSlowFuture(
+            "Starting debug server",
+            start(
+              sessionName,
+              jvmOptionsTranslatedParams,
+              buildServer,
+              cancelPromise,
+            ),
+            () => cancelPromise.trySuccess(()),
+          )
+        else
+          runLocally(
+            sessionName,
+            jvmOptionsTranslatedParams,
+            buildServer,
+            cancelPromise,
+          )
     } yield debugServer
   }
+
+  private def runLocally(
+      sessionName: String,
+      parameters: b.DebugSessionParams,
+      buildServer: BuildServerConnection,
+      cancelPromise: Promise[Unit],
+  )(implicit ec: ExecutionContext): Future[DebugServer] = {
+    if (runningLocal.compareAndSet(false, true)) {
+      val proxyServer = new ServerSocket(0, 50, localAddress)
+      val host = InetAddresses.toUriString(proxyServer.getInetAddress)
+      val port = proxyServer.getLocalPort
+      proxyServer.setSoTimeout(10 * 1000)
+      val uri = URI.create(s"tcp://$host:$port")
+
+      val awaitClient = () => Future(proxyServer.accept())
+
+      DebugRunner
+        .open(
+          sessionName,
+          awaitClient,
+          stacktraceAnalyzer,
+          () => {
+            val runParams =
+              new b.RunParams(parameters.getTargets().asScala.head)
+            runParams.setOriginId(ju.UUID.randomUUID().toString())
+
+            /**
+             * We set data and dataKind with the information about the main class to run,
+             * otherwise if multiple main classes are found we would not know which one to run.
+             */
+            if (
+              parameters
+                .getDataKind() == b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
+            ) {
+              runParams.setDataKind(parameters.getDataKind())
+              runParams.setData(parameters.getData())
+            }
+            val run = buildServer.buildTargetRun(runParams, cancelPromise)
+            run.onComplete(_ => runningLocal.set(false))
+            run
+          },
+          cancelPromise,
+        )
+        .flatMap { runner =>
+          currentRunner.set(runner)
+          runner.listen.map { code =>
+            currentRunner.set(null)
+            code
+          }
+        }
+
+      val server = new DebugServer(
+        sessionName,
+        uri,
+        () => Future.failed(new RuntimeException("No server connected")),
+      )
+      Future.successful(server)
+    } else {
+      Future.failed(
+        new IllegalStateException("Cannot run multiple debug processes.")
+      )
+    }
+  }
+
+  private def localAddress: InetAddress = InetAddress.getByName("127.0.0.1")
 
   private def start(
       sessionName: String,
@@ -127,8 +233,7 @@ class DebugProvider(
       buildServer: BuildServerConnection,
       cancelPromise: Promise[Unit],
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
-    val inetAddress = InetAddress.getByName("127.0.0.1")
-    val proxyServer = new ServerSocket(0, 50, inetAddress)
+    val proxyServer = new ServerSocket(0, 50, localAddress)
     val host = InetAddresses.toUriString(proxyServer.getInetAddress)
     val port = proxyServer.getLocalPort
     proxyServer.setSoTimeout(10 * 1000)
@@ -395,13 +500,8 @@ class DebugProvider(
   def asSession(
       debugParams: DebugSessionParams
   )(implicit ec: ExecutionContext): Future[DebugSession] = {
-    val cancelPromise = Promise[Unit]()
     for {
-      server <- statusBar.trackSlowFuture(
-        "Starting debug server",
-        start(debugParams, cancelPromise),
-        () => cancelPromise.trySuccess(()),
-      )
+      server <- start(debugParams),
     } yield {
       statusBar.addMessage("Started debug server!")
       DebugSession(server.sessionName, server.uri.toString)

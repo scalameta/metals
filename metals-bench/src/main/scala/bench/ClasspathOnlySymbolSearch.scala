@@ -40,7 +40,7 @@ class ClasspathOnlySymbolSearch(classpath: ClasspathSearch)
       buildTargetIdentifier: String,
       visitor: SymbolSearchVisitor,
   ): SymbolSearch.Result = {
-    classpath.search(WorkspaceSymbolQuery.exact(query), visitor)
+    classpath.search(WorkspaceSymbolQuery.exact(query), visitor)._1
   }
 
   override def searchMethods(

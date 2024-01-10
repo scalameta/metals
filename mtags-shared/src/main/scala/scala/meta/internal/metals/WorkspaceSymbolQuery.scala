@@ -15,21 +15,26 @@ case class WorkspaceSymbolQuery(
     query: String,
     alternatives: Array[AlternativeQuery],
     isTrailingDot: Boolean,
-    isClasspath: Boolean = true
+    isClasspath: Boolean = true,
+    isShortQueryRetry: Boolean = false
 ) {
-  val isExact: Boolean = query.length < Fuzzy.ExactSearchLimit
+  val isShortQuery: Boolean = query.length < Fuzzy.PrefixSearchLimit
   def matches(bloom: StringBloomFilter): Boolean =
     alternatives.exists(_.matches(bloom))
 
   def matches(symbol: CharSequence): Boolean =
-    alternatives.exists(_.matches(symbol, isTrailingDot))
+    if (isShortQuery && !isShortQueryRetry) Fuzzy.prefixMatch(query, symbol)
+    else alternatives.exists(_.matches(symbol, isTrailingDot))
 }
 
 object WorkspaceSymbolQuery {
-  def exact(query: String): WorkspaceSymbolQuery = {
+  def exact(
+      query: String,
+      isShortQueryRetry: Boolean = false
+  ): WorkspaceSymbolQuery = {
     WorkspaceSymbolQuery(
       query,
-      Array(AlternativeQuery(query)),
+      Array(AlternativeQuery(query, isShortQueryRetry)),
       isTrailingDot = false
     )
   }
@@ -57,9 +62,14 @@ object WorkspaceSymbolQuery {
   }
 
   object AlternativeQuery {
-    def apply(query: String): AlternativeQuery = {
+    def apply(
+        query: String,
+        isShortQueryRetry: Boolean = false
+    ): AlternativeQuery = {
       val hasher = new StringBloomFilter(0)
-      val queries = Fuzzy.bloomFilterQueryStrings(query).toArray
+      val queries = Fuzzy
+        .bloomFilterQueryStrings(query, isShortQueryRetry = isShortQueryRetry)
+        .toArray
       val bytes = queries.map { query => hasher.computeHashCode(query) }
       AlternativeQuery(query, queries, bytes)
     }

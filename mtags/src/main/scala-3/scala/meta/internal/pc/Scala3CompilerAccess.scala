@@ -13,6 +13,7 @@ class Scala3CompilerAccess(
     config: PresentationCompilerConfig,
     sh: Option[ScheduledExecutorService],
     newCompiler: () => Scala3CompilerWrapper,
+    additionalReportingData: () => String,
 )(using ec: ExecutionContextExecutor, rc: ReportContext)
     extends CompilerAccess[StoreReporter, MetalsDriver](
       config,
@@ -22,6 +23,7 @@ class Scala3CompilerAccess(
        * Otherwise it will block indefinetely in case of infinite loops.
        */
       shouldResetJobQueue = true,
+      additionalReportingData,
     ):
 
   def newReporter = new StoreReporter(null)

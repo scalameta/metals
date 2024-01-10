@@ -429,7 +429,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "import-star-multi-import",
+    "import-star-multi-import".tag(IgnoreForScala3CompilerPC),
     """
       |import scala.collection.immutable.List.{range => r, *@@}
       |""".stripMargin,
@@ -1020,6 +1020,11 @@ class CompletionSuite extends BaseCompletionSuite {
         """|Some(value) scala
            |Some scala
            |Some[A](value: A): Some[A]
+           |""".stripMargin,
+      scala3PresentationCompilerVersion ->
+        """|Some(value) scala
+           |Some scala
+           |Some[A](value: A): Some[A]
            |SomeToExpr(x: Some[T])(using Quotes): Expr[Some[T]]
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
            |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
@@ -1037,19 +1042,15 @@ class CompletionSuite extends BaseCompletionSuite {
     """|Some scala
        |""".stripMargin,
     compat = Map(
-      ">=3.1.0" ->
+      "3" ->
+        """|Some scala
+           |Some[A](value: A): Some[A]
+           |""".stripMargin,
+      scala3PresentationCompilerVersion ->
         """|Some scala
            |Some[A](value: A): Some[A]
            |SomeToExpr(x: Some[T])(using Quotes): Expr[Some[T]]
            |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
-           |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
-           |""".stripMargin,
-      "3" ->
-        """|Some scala
-           |Some[A](value: A): Some[A]
-           |SomeToExpr - scala.quoted.ToExpr
-           |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
-           |SomeFromExpr - scala.quoted.FromExpr
            |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
            |""".stripMargin
     )
@@ -1798,6 +1799,16 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension (x: Fo@@)
        |""".stripMargin,
     """|Foo extension-definition-scope
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
        |""".stripMargin
   )
 
@@ -1822,6 +1833,16 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension [A <: Fo@@]
        |""".stripMargin,
     """|Foo extension-definition-type-parameter
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
        |""".stripMargin
   )
 
@@ -1846,6 +1867,16 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension (using Fo@@)
        |""".stripMargin,
     """|Foo extension-definition-using-param-clause
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
        |""".stripMargin
   )
 
@@ -1858,6 +1889,16 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension (x: Int)(using Fo@@)
        |""".stripMargin,
     """|Foo extension-definition-mix-1
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
        |""".stripMargin
   )
 
@@ -1870,6 +1911,16 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension (using Fo@@)(x: Int)(using Foo)
        |""".stripMargin,
     """|Foo extension-definition-mix-2
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
        |""".stripMargin
   )
 
@@ -1882,6 +1933,16 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension (using Foo)(x: Int)(using Fo@@)
        |""".stripMargin,
     """|Foo extension-definition-mix-3
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
        |""".stripMargin
   )
 
@@ -1894,6 +1955,16 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension [A](x: Fo@@)
        |""".stripMargin,
     """|Foo extension-definition-mix-4
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
        |""".stripMargin
   )
 
@@ -1906,6 +1977,16 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension [A](using Fo@@)(x: Int)
        |""".stripMargin,
     """|Foo extension-definition-mix-5
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
        |""".stripMargin
   )
 
@@ -1918,6 +1999,16 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension [A](using Foo)(x: Fo@@)
        |""".stripMargin,
     """|Foo extension-definition-mix-6
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
        |""".stripMargin
   )
 
@@ -1930,6 +2021,16 @@ class CompletionSuite extends BaseCompletionSuite {
        |  extension [A](using Foo)(x: Fo@@)(using Foo)
        |""".stripMargin,
     """|Foo extension-definition-mix-7
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event
+       |FontMetrics - java.awt
+       |Found - scala.collection.Searching
        |""".stripMargin
   )
 
@@ -2049,6 +2150,66 @@ class CompletionSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     assertSingleItem = false
+  )
+
+  check(
+    "multi-imports".tag(IgnoreForScala3CompilerPC),
+    """|import scala.collection.{AbstractMap, Set@@}
+       |""".stripMargin,
+    """|Set scala.collection
+       |SetLike scala.collection
+       |SetProxy scala.collection
+       |SetProxyLike scala.collection
+       |AbstractSet scala.collection
+       |""".stripMargin,
+    topLines = Some(5),
+    compat = Map(
+      "3" ->
+        """|Set scala.collection
+           |SetOps scala.collection
+           |""".stripMargin,
+      "2.13" -> """|Set scala.collection
+                   |SetOps scala.collection
+                   |AbstractSet scala.collection
+                   |BitSet scala.collection
+                   |BitSetOps scala.collection
+                   |""".stripMargin
+    )
+  )
+
+  check(
+    "multi-imports-empty-query".tag(IgnoreForScala3CompilerPC),
+    """|import scala.collection.{AbstractMap, @@}
+       |""".stripMargin,
+    """|+: scala.collection
+       |:+ scala.collection
+       |AbstractIterable scala.collection
+       |AbstractIterator scala.collection
+       |AbstractMap scala.collection
+       |""".stripMargin,
+    topLines = Some(5),
+    compat = Map(
+      "3" ->
+        """|GenIterable scala.collection
+           |GenMap scala.collection
+           |GenSeq scala.collection
+           |GenSet scala.collection
+           |GenTraversable scala.collection
+           |""".stripMargin,
+      "2.13" -> """|AbstractIndexedSeqView scala.collection
+                   |AbstractIterable scala.collection
+                   |AbstractIterator scala.collection
+                   |AbstractMap scala.collection
+                   |AbstractMapView scala.collection
+                   |""".stripMargin
+    )
+  )
+
+  check(
+    "import-rename".tag(IgnoreForScala3CompilerPC),
+    """|import scala.collection.{AbstractMap => Set@@}
+       |""".stripMargin,
+    ""
   )
 
 }
