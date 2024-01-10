@@ -32,16 +32,19 @@ object HoverProvider:
     val uri = params.uri
     val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
     driver.run(uri, sourceFile)
+    val unit = driver.compilationUnits.get(uri)
 
-    given ctx: Context = driver.currentCtx
+    given ctx: Context =
+      val ctx = driver.currentCtx
+      unit.map(ctx.fresh.setCompilationUnit).getOrElse(ctx)
     val pos = driver.sourcePosition(params)
-    val trees = driver.openedTrees(uri)
+    val path = unit
+      .map(unit => Interactive.pathTo(unit.tpdTree, pos.span))
+      .getOrElse(Interactive.pathTo(driver.openedTrees(uri), pos))
     val indexedContext = IndexedContext(ctx)
-
     def typeFromPath(path: List[Tree]) =
       if path.isEmpty then NoType else path.head.tpe
 
-    val path = Interactive.pathTo(trees, pos)
     val tp = typeFromPath(path)
     val tpw = tp.widenTermRefExpr
     // For expression we need to find all enclosing applies to get the exact generic type
@@ -67,14 +70,16 @@ object HoverProvider:
               |path:
               |${path
                .map(tree => s"""|```scala
-                                |$tree
+                                |${tree.show}
                                 |```
                                 |""".stripMargin)
                .mkString("\n")}
               |trees:
-              |${trees
+              |${unit
+               .map(u => List(u.tpdTree))
+               .getOrElse(driver.openedTrees(uri).map(_.tree))
                .map(tree => s"""|```scala
-                                |$tree
+                                |${tree.show}
                                 |```
                                 |""".stripMargin)
                .mkString("\n")}
@@ -89,18 +94,9 @@ object HoverProvider:
     else
       val skipCheckOnName =
         !pos.isPoint // don't check isHoveringOnName for RangeHover
-
-      val printerContext =
-        driver.compilationUnits.get(uri) match
-          case Some(unit) =>
-            val newctx =
-              ctx.fresh.setCompilationUnit(unit)
-            val tpdPath =
-              Interactive.pathTo(unit.tpdTree, pos.span)(using newctx)
-            MetalsInteractive.contextOfPath(tpdPath)(using newctx)
-          case None => ctx
+      val printerCtx = MetalsInteractive.contextOfPath(path)
       val printer = MetalsPrinter.standard(
-        IndexedContext(printerContext),
+        IndexedContext(printerCtx),
         search,
         includeDefaultParam = MetalsPrinter.IncludeDefaultParam.Include,
       )
