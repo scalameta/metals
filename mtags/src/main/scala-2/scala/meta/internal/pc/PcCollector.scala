@@ -431,7 +431,7 @@ abstract class PcCollector[T](
          * val opt: Option[<<String>>] =
          */
         case tpe: TypeTree if tpe.original != null =>
-          tpe.original.children.foldLeft(acc)(traverse(_, _))
+          traverse(acc, tpe.original)
         /**
          * Some type trees don't have symbols attached such as:
          * type A = List[_ <: <<Iterable>>[Int]]
