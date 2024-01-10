@@ -84,15 +84,27 @@ object BazelBuildTool {
     version,
   )
 
-  def projectViewArgs(projectRoot: AbsolutePath): List[String] = {
-    val hasProjectView =
-      projectRoot.list.exists(_.filename.endsWith(".bazelproject"))
-    if (hasProjectView) Nil
-    else // we default to all targets view
-      List(
-        "-t",
-        "//...",
-      )
+  private def hasProjectView(dir: AbsolutePath): Option[AbsolutePath] =
+    dir.list.find(_.filename.endsWith(".bazelproject"))
+
+  private def existingProjectView(
+      projectRoot: AbsolutePath
+  ): Option[AbsolutePath] =
+    List(projectRoot, projectRoot.resolve("ijwb"), projectRoot.resolve(".ijwb"))
+      .filter(_.isDirectory)
+      .flatMap(hasProjectView)
+      .headOption
+
+  private def projectViewArgs(projectRoot: AbsolutePath): List[String] = {
+    existingProjectView(projectRoot) match {
+      case Some(projectView) =>
+        List("-p", projectView.toRelative(projectRoot).toString())
+      case None =>
+        List(
+          "-t",
+          "//...",
+        )
+    }
   }
 
   def writeBazelConfig(

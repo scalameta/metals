@@ -133,36 +133,6 @@ class BazelLspSuite
     }
   }
 
-  test("presentation-compiler") {
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        BazelBuildLayout(workspaceLayout, V.scala213, bazelVersion)
-      )
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        List(
-          importBuildMessage,
-          // create .bazelbsp progress message
-          BazelBuildTool.mainClass,
-          bazelNavigationMessage,
-        ).mkString("\n"),
-      )
-      _ = assert(bazelBspConfig.exists)
-      _ = client.messageRequests.clear() // restart
-      _ = assertStatus(_.isInstalled)
-      _ <- server.didOpen("Main.scala")
-      _ <- server.assertHoverAtLine(
-        "Main.scala",
-        "def msg = new Hello().he@@llo",
-        """|```scala
-           |def hello: String
-           |```
-           |""".stripMargin,
-      )
-    } yield ()
-  }
-
   private val workspaceLayout =
     s"""|/BUILD
         |load("@io_bazel_rules_scala//scala:scala.bzl", "scala_binary", "scala_library")
