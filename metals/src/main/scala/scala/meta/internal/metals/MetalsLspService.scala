@@ -1064,7 +1064,7 @@ class MetalsLspService(
     val parser = parseTrees(path)
 
     if (path.isDependencySource(folder)) {
-      CompletableFuture.completedFuture(())
+      parser.asJava
     } else {
       buildServerPromise.future.flatMap { _ =>
         def load(): Future[Unit] = {

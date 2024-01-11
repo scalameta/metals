@@ -75,12 +75,10 @@ class PcInlayHintsProvider(
           )
       case ImplicitParameters(symbols, pos, allImplicit)
           if params.implicitParameters() =>
-        val head :: rest = symbols.map(labelPart): @unchecked
-        val labelParts = (head :: rest.flatMap(LabelPart(", ") :: _ :: Nil))
+        val labelParts = symbols.map(s => List(labelPart(s)))
         val label =
-          if allImplicit then
-            LabelPart("(") :: labelParts ++ List(LabelPart(")"))
-          else labelParts
+          if allImplicit then labelParts.mkLabel("(", ", ", ")")
+          else labelParts.mkLabel(", ")
         inlayHints.add(
           adjustPos(pos).toLsp,
           label,
@@ -94,11 +92,10 @@ class PcInlayHintsProvider(
         )
       case TypeParameters(tpes, pos, sel)
           if params.typeParameters() && !syntheticTupleApply(sel) =>
-        val head :: rest = tpes.map(toLabelParts(_, pos)): @unchecked
-        val label = (head :: rest.map(LabelPart(", ") :: _)).flatten
+        val label = tpes.map(toLabelParts(_, pos)).mkLabel("[", ", ", "]")
         inlayHints.add(
           adjustPos(pos).endPos.toLsp,
-          LabelPart("[") :: label ++ List(LabelPart("]")),
+          label,
           InlayHintKind.Type,
         )
       case InferredType(tpe, pos, defTree) if params.inferredTypes() =>
