@@ -3,6 +3,7 @@ package tests.inlayHints
 import munit.Location
 import munit.TestOptions
 import tests.BaseLspSuite
+import tests.TestInlayHints
 
 class InlayHintsLspSuite extends BaseLspSuite("implicits") {
 
@@ -254,11 +255,6 @@ class InlayHintsLspSuite extends BaseLspSuite("implicits") {
            |val greeting = s"Hello $$name"
            |method
            |""".stripMargin,
-        """|def method(implicit str: String) = str + str
-           |implicit val name: String = "Susan".stripMargin
-           |val greeting = s"Hello $$name"
-           |method
-           |""".stripMargin,
       )
       _ <- server.didChangeConfiguration(
         """{
@@ -270,11 +266,6 @@ class InlayHintsLspSuite extends BaseLspSuite("implicits") {
       )
       _ <- server.assertInlayHints(
         "a/Main.worksheet.sc",
-        """|def method(implicit str: String) = str + str
-           |implicit val name: String = "Susan".stripMargin
-           |val greeting = s"Hello $$name"
-           |method
-           |""".stripMargin,
         """|def method(implicit str: String)/*: String<<java/lang/String#>>*/ = str + str
            |implicit val name: String = /*augmentString<<scala/Predef.augmentString().>>(*/"Susan"/*)*/.stripMargin
            |val greeting/*: String<<java/lang/String#>>*/ = s"Hello $$name"
@@ -375,8 +366,7 @@ class InlayHintsLspSuite extends BaseLspSuite("implicits") {
       if (dependencies.isEmpty) ""
       else
         s""""libraryDependencies": [${dependencies.map(dep => s"\"$dep\"").mkString(",")}]"""
-    val code = expected
-      .replaceAll(raw"\/\*(.*?)\*\/", "")
+    val code = TestInlayHints.removeInlayHints(expected)
     test(name) {
       for {
         _ <- initialize(
@@ -392,6 +382,7 @@ class InlayHintsLspSuite extends BaseLspSuite("implicits") {
           s"a/src/main/scala/a/$fileName",
           code,
           expected,
+          workspace,
         )
       } yield ()
     }

@@ -1418,9 +1418,20 @@ final case class TestingServer(
 
   def assertInlayHints(
       filename: String,
-      fileContent: String,
       expected: String,
       root: AbsolutePath = workspace,
+  )(implicit
+      location: munit.Location
+  ): Future[Unit] = {
+    val fileContent = TestInlayHints.removeInlayHints(expected)
+    assertInlayHints(filename, fileContent, expected, root)
+  }
+
+  def assertInlayHints(
+      filename: String,
+      fileContent: String,
+      expected: String,
+      root: AbsolutePath,
   )(implicit
       location: munit.Location
   ): Future[Unit] = {

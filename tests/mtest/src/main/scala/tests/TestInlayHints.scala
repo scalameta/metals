@@ -64,4 +64,7 @@ object TestInlayHints {
     TextEdits.applyEdits(text, textEdits)
   }
 
+  def removeInlayHints(text: String): String =
+    text.replaceAll(raw"\/\*(.*?)\*\/", "")
+
 }
