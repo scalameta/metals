@@ -393,11 +393,9 @@ class WorkspaceLspService(
   override def inlayHintResolve(
       inlayHint: lsp4j.InlayHint
   ): CompletableFuture[lsp4j.InlayHint] =
-    onCurrentFolder[lsp4j.InlayHint](
-      f = _.inlayHintResolve(inlayHint).asScala,
-      actionName = "inlayHintResolve",
-      default = () => inlayHint,
-    ).asJava
+    currentFolder
+      .map(_.inlayHintResolve(inlayHint))
+      .getOrElse(Future.successful(inlayHint).asJava)
 
   override def documentHighlights(
       params: TextDocumentPositionParams

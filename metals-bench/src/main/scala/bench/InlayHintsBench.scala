@@ -9,7 +9,6 @@ import scala.meta.internal.metals.CompilerInlayHintsParams
 import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 
@@ -24,11 +23,6 @@ import org.openjdk.jmh.annotations.State
 @State(Scope.Benchmark)
 class InlayHintsBench extends PcBenchmark {
   var inlayHintsRequests: Map[String, CodeWithRanges] = Map.empty
-  val userConfig: UserConfiguration = UserConfiguration().copy(
-    showInferredType = Some("true"),
-    showImplicitArguments = true,
-    showImplicitConversionsAndClasses = true,
-  )
 
   private def fromZipPath(zip: AbsolutePath, path: String) = {
     FileIO.withJarFileSystem(zip, create = false, close = true)(root =>

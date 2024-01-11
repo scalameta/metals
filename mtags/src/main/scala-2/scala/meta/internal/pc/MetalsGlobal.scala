@@ -1056,8 +1056,7 @@ class MetalsGlobal(
   def enclosedChildren(tree: Tree, pos: Position): List[Tree] = {
     tree.children
       .filter(c =>
-        !c.pos.isDefined ||
-          c.pos.start <= pos.end && c.pos.end >= pos.start
+        c.pos.isDefined && c.pos.start <= pos.end && c.pos.end >= pos.start
       )
   }
 

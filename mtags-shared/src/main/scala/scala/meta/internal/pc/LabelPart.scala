@@ -22,4 +22,21 @@ object LabelPart {
       case Some(pos) => LabelPart(labelPart, Right(pos))
     }
   }
+
+  implicit class XtensionLabelParts(parts: List[List[LabelPart]]) {
+    def mkLabel(separator: String): List[LabelPart] = {
+      parts match {
+        case Nil => Nil
+        case head :: tail =>
+          head ::: tail.flatMap(LabelPart(separator) :: _)
+      }
+    }
+    
+    def mkLabel(
+        start: String,
+        separator: String,
+        end: String
+    ): List[LabelPart] =
+      (LabelPart(start) :: parts.mkLabel(separator)) ::: List(LabelPart(end))
+  }
 }

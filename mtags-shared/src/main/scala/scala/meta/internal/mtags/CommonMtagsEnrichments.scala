@@ -386,7 +386,7 @@ trait CommonMtagsEnrichments {
       if (text.length() <= maxLength) text
       else s"${text.take(maxLength)}..."
 
-    def allIndexesWhere(
+    def allIndexesOf(
         str: String
     ): List[Int] = {
       val buffer = ListBuffer.empty[Int]

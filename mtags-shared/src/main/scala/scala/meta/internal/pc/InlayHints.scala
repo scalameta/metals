@@ -70,7 +70,7 @@ object InlayHints {
     var current = 0
     parts
       .flatMap { lp =>
-        tpeStr.allIndexesWhere(lp.name).map((_, lp))
+        tpeStr.allIndexesOf(lp.name).map((_, lp))
         // find all occurences of str in tpe
       }
       .sortWith { case ((idx1, lp1), (idx2, lp2)) =>
