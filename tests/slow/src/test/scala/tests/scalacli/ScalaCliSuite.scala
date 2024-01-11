@@ -204,28 +204,6 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
             |import foo.Foo
             |import utest._
             | 
-            |pprint.log(2) // top-level statement should be fine in a script
-            |
-            |object MyTests extends TestSuite {
-            |  pprint.log(2)
-            |  val tests = Tests {
-            |    test("foo") {
-            |      assert(2 + 2 == 4)
-            |    }
-            |    test("nope") {
-            |      assert(2 + 2 == (new Foo).value)
-            |    }
-            |  }
-            |}
-            |""".stripMargin,
-        s"""|#!/usr/bin/env -S scala-cli shebang --java-opt -Xms256m --java-opt -XX:MaxRAMPercentage=80 
-            |//> using scala "$scalaVersion"
-            |//> using lib "com.lihaoyi::utest::0.7.10"
-            |//> using lib com.lihaoyi::pprint::0.6.6
-            |
-            |import foo.Foo
-            |import utest._
-            | 
             |pprint.log/*[Int<<scala/Int#>>]*/(2)/*(generate<<sourcecode/LineMacros#generate().>>, generate<<sourcecode/FileNameMacros#generate().>>)*/ // top-level statement should be fine in a script
             |
             |object MyTests extends TestSuite {

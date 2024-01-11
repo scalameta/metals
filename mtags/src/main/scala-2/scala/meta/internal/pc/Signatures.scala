@@ -114,9 +114,9 @@ trait Signatures { compiler: MetalsGlobal =>
     }
 
     def getUsedRenamesInfo(): List[String] =
-      getUsedRenames.map { case (key, v) =>
+      getUsedRenames.toList.sortBy(_._2).map { case (key, v) =>
         s"type $v = ${key.nameString}"
-      }.toList
+      }
 
     def getUsedRenames: Map[Symbol, String] = lookedUpRenames.flatMap { key =>
       renames.get(key).map(v => key -> v.toString())
