@@ -65,7 +65,7 @@ class PcInlayHintsProvider(
         inlayHints
           .add(
             adjusted.startPos.toLsp,
-            labelPart(symbol) :: LabelPart("(") :: Nil,
+            labelPart(symbol, symbol.decodedName) :: LabelPart("(") :: Nil,
             InlayHintKind.Parameter,
           )
           .add(
@@ -75,7 +75,7 @@ class PcInlayHintsProvider(
           )
       case ImplicitParameters(symbols, pos, allImplicit)
           if params.implicitParameters() =>
-        val labelParts = symbols.map(s => List(labelPart(s)))
+        val labelParts = symbols.map(s => List(labelPart(s, s.decodedName)))
         val label =
           if allImplicit then labelParts.mkLabel("(", ", ", ")")
           else labelParts.mkLabel(", ")
@@ -139,8 +139,10 @@ class PcInlayHintsProvider(
       else tpe.metalsDealias(using indexedCtx.ctx)
 
     val dealiased = optDealias(tpe)
-    val parts = partsFromType(dealiased)
-    InlayHints.makeLabelParts(parts, printer.tpe(dealiased))
+    val tpeStr = printer.tpe(dealiased)
+    val usedRenames = shortenedNames.getUsedRenames
+    val parts = partsFromType(dealiased, usedRenames)
+    InlayHints.makeLabelParts(parts, tpeStr)
   end toLabelParts
 
   private val definitions = IndexedContext(ctx).ctx.definitions
@@ -159,22 +161,28 @@ class PcInlayHintsProvider(
         else false
       case _ => false
 
-  private def labelPart(symbol: Symbol) =
+  private def labelPart(symbol: Symbol, label: String) =
     if symbol.source == pos.source then
       LabelPart(
-        symbol.decodedName,
+        label,
         pos = Some(symbol.sourcePos.toLsp.getStart()),
       )
     else
       LabelPart(
-        symbol.decodedName,
+        label,
         symbol = SemanticdbSymbols.symbolName(symbol),
       )
 
-  private def partsFromType(tpe: Type): List[LabelPart] =
+  private def partsFromType(
+      tpe: Type,
+      usedRenames: Map[Symbol, String],
+  ): List[LabelPart] =
     NamedPartsAccumulator(_ => true)(Nil, tpe)
       .filter(_.symbol != NoSymbol)
-      .map(t => labelPart(t.symbol))
+      .map { t =>
+        val label = usedRenames.get(t.symbol).getOrElse(t.symbol.decodedName)
+        labelPart(t.symbol, label)
+      }
 end PcInlayHintsProvider
 
 object ImplicitConversion:
