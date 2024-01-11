@@ -67,6 +67,71 @@ class InlayHintsHoverSuite extends BaseLspSuite("implicits") {
        |""".stripMargin,
   )
 
+  check(
+    "import-rename",
+    """|import scala.collection.{AbstractMap => AB}
+       |import scala.collection.{Set => S}
+       |
+       |object Main {
+       |  def test(d: S[Int], f: S[Char]): AB[Int, String] = {
+       |    val x = d.map(_.toString)
+       |    val y = f
+       |    ???
+       |  }
+       |  val x<<: AB[Int,String]>> = test(Set(1), Set('a'))
+       |}
+       |""".stripMargin,
+    """|```scala
+       |abstract class AbstractMap[K, V]: AbstractMap
+       |```
+       |Explicit instantiation of the `Map` trait to reduce class file size in subclasses.
+       |
+       |```scala
+       |final abstract class Int: Int
+       |```
+       |`Int`, a 32-bit signed integer (equivalent to Java's `int` primitive type) is a
+       | subtype of [scala.AnyVal](scala.AnyVal). Instances of `Int` are not
+       | represented by an object in the underlying runtime system.
+       |
+       | There is an implicit conversion from [scala.Int](scala.Int) => [scala.runtime.RichInt](scala.runtime.RichInt)
+       | which provides useful non-primitive operations.
+       |
+       |```scala
+       |type String: String
+       |```
+       |The `String` type in Scala has all the methods of the underlying
+       | [java.lang.String](java.lang.String), of which it is just an alias.
+       |
+       | In addition, extension methods in [scala.collection.StringOps](scala.collection.StringOps)
+       | are added implicitly through the conversion [augmentString](augmentString).
+       |""".stripMargin,
+  )
+
+  check(
+    "import-rename2",
+    """|object Main {
+       |  import scala.collection.{Set => S}
+       |  import Foo._
+       |
+       |  def test(d: S[Int])(implicit foo: S[Int]): Int = {
+       |    val x = d.map(_.toString)
+       |    ???
+       |  }
+       |
+       |  val x = test(Set(1))<<(ttt)>>
+       |}
+       |
+       |object Foo {
+       |  implicit val ttt: Set[Int] = Set(1)
+       |}
+       |""".stripMargin,
+    // TODO: We should show info about renames (`val ttt: S[Int]` instead of `val ttt: Set[Int]`)
+    """|```scala
+       |implicit val ttt: Set[Int]
+       |```
+       |""".stripMargin,
+  )
+
   def check(
       name: TestOptions,
       fileContent: String,

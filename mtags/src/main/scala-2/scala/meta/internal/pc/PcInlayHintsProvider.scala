@@ -49,7 +49,7 @@ final class PcInlayHintsProvider(
         inlayHints
           .add(
             adjusted.focusStart.toLsp,
-            labelPart(symbol) :: LabelPart("(") :: Nil,
+            labelPart(symbol, symbol.decodedName) :: LabelPart("(") :: Nil,
             InlayHintKind.Parameter
           )
           .add(
@@ -59,7 +59,7 @@ final class PcInlayHintsProvider(
           )
       case ImplicitParameters(symbols, pos, allImplicit)
           if params.implicitParameters() =>
-        val labelParts = symbols.map(s => List(labelPart(s)))
+        val labelParts = symbols.map(s => List(labelPart(s, s.decodedName)))
         val label =
           if (allImplicit) labelParts.mkLabel("(", ", ", ")")
           else labelParts.mkLabel(", ")
@@ -104,13 +104,18 @@ final class PcInlayHintsProvider(
     tree.children.foldLeft(inlayHints)(traverse(_, _))
   }
 
-  private def partsFromType(tpe: Type): List[LabelPart] = {
+  private def partsFromType(
+      tpe: Type,
+      usedRenames: Map[Symbol, String]
+  ): List[LabelPart] = {
     tpe
       .collect {
         case t: TypeRef if t.sym != NoSymbol =>
-          labelPart(t.sym)
+          val label = usedRenames.get(t.sym).getOrElse(t.sym.decodedName)
+          labelPart(t.sym, label)
         case SingleType(_, sym) if sym != NoSymbol =>
-          labelPart(sym)
+          val label = usedRenames.get(sym).getOrElse(sym.decodedName)
+          labelPart(sym, label)
       }
   }
 
@@ -127,20 +132,21 @@ final class PcInlayHintsProvider(
       renames = re
     )
     val tpeStr = metalsToLongString(tpe, history)
-    val parts = partsFromType(tpe)
+    val usedRenames = history.getUsedRenames
+    val parts = partsFromType(tpe, usedRenames)
     InlayHints.makeLabelParts(parts, tpeStr)
   }
 
-  private def labelPart(symbol: Symbol) =
+  private def labelPart(symbol: Symbol, label: String) =
     if (symbol.pos.source == pos.source) {
       val pos = if (symbol.pos.start != symbol.pos.point) {
         symbol.pos.withStart(symbol.pos.point)
       } else {
         symbol.pos
       }
-      LabelPart(symbol.decodedName, pos = Some(pos.toLsp.getStart()))
+      LabelPart(label, pos = Some(pos.toLsp.getStart()))
     } else {
-      LabelPart(symbol.decodedName, symbol = semanticdbSymbol(symbol))
+      LabelPart(label, symbol = semanticdbSymbol(symbol))
     }
   object ImplicitConversion {
     def unapply(tree: Tree): Option[(Symbol, Position)] = tree match {

@@ -31,7 +31,7 @@ object LabelPart {
           head ::: tail.flatMap(LabelPart(separator) :: _)
       }
     }
-    
+
     def mkLabel(
         start: String,
         separator: String,

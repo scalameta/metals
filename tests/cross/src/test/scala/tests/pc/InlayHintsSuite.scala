@@ -671,4 +671,49 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |}
        |""".stripMargin
   )
+
+  check(
+    "import-rename",
+    """|import scala.collection.{AbstractMap => AB}
+       |import scala.collection.{Set => S}
+       |
+       |object Main {
+       |  def test(d: S[Int], f: S[Char]): AB[Int, String] = {
+       |    val x = d.map(_.toString)
+       |    val y = f
+       |    ???
+       |  }
+       |  val x = test(Set(1), Set('a'))
+       |}
+       |""".stripMargin,
+    """|package `import-rename`
+       |import scala.collection.{AbstractMap => AB}
+       |import scala.collection.{Set => S}
+       |
+       |object Main {
+       |  def test(d: S[Int], f: S[Char]): AB[Int, String] = {
+       |    val x/*: S<<scala/collection/Set#>>[String<<java/lang/String#>>]*/ = d.map/*[String<<java/lang/String#>>]*/(_.toString)
+       |    val y/*: S<<scala/collection/Set#>>[Char<<scala/Char#>>]*/ = f
+       |    ???
+       |  }
+       |  val x/*: AB<<scala/collection/AbstractMap#>>[Int<<scala/Int#>>,String<<scala/Predef.String#>>]*/ = test(Set/*[Int<<scala/Int#>>]*/(1), Set/*[Char<<scala/Char#>>]*/('a'))
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|package `import-rename`
+           |import scala.collection.{AbstractMap => AB}
+           |import scala.collection.{Set => S}
+           |
+           |object Main {
+           |  def test(d: S[Int], f: S[Char]): AB[Int, String] = {
+           |    val x/*: S<<scala/collection/Set#>>[String<<java/lang/String#>>]*/ = d.map/*[String<<java/lang/String#>>]*/(_.toString)
+           |    val y/*: S<<scala/collection/Set#>>[Char<<scala/Char#>>]*/ = f
+           |    ???
+           |  }
+           |  val x/*: AB<<scala/collection/AbstractMap#>>[Int<<scala/Int#>>, String<<scala/Predef.String#>>]*/ = test(Set/*[Int<<scala/Int#>>]*/(1), Set/*[Char<<scala/Char#>>]*/('a'))
+           |}
+           |""".stripMargin
+    )
+  )
 }
