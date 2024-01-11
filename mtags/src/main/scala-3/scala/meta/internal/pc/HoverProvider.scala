@@ -94,7 +94,7 @@ object HoverProvider:
     else
       val skipCheckOnName =
         !pos.isPoint // don't check isHoveringOnName for RangeHover
-      val printerCtx = MetalsInteractive.contextOfPath(path)
+      val printerCtx = Interactive.contextOfPath(path)
       val printer = MetalsPrinter.standard(
         IndexedContext(printerCtx),
         search,

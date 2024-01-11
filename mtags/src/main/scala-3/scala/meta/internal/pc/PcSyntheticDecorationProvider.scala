@@ -108,7 +108,7 @@ class PcSyntheticDecorationsProvider(
   ): String =
     val tpdPath =
       Interactive.pathTo(unit.tpdTree, pos.span)
-    val indexedCtx = IndexedContext(MetalsInteractive.contextOfPath(tpdPath))
+    val indexedCtx = IndexedContext(Interactive.contextOfPath(tpdPath))
     val shortenedNames = new ShortenedNames(indexedCtx)
     val printer = MetalsPrinter.forInferredType(
       shortenedNames,

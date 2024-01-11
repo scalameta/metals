@@ -4,7 +4,6 @@ import scala.annotation.tailrec
 import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters.*
-import scala.meta.internal.pc.MetalsInteractive
 import scala.meta.internal.pc.SemanticdbSymbols
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
@@ -66,7 +65,7 @@ object MtagsEnrichments extends ScalametaCommonEnrichments:
         Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using
           newctx
         )
-      MetalsInteractive.contextOfPath(tpdPath)(using newctx)
+      Interactive.contextOfPath(tpdPath)(using newctx)
     end localContext
 
   end extension
