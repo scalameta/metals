@@ -311,7 +311,7 @@ class MetalsGlobal(
                 !metalsConfig.isDefaultSymbolPrefixes || hasConflictingMembersInScope
 
               if (shouldRenamePrefix) {
-                val existingRename = history.renames.get(ownerSym)
+                val existingRename = history.rename(ownerSym)
                 existingRename.isEmpty && history.tryShortenName(
                   ShortName(rename, ownerSymbol)
                 )
@@ -329,9 +329,8 @@ class MetalsGlobal(
                   args.map(arg => loop(arg, None))
                 )
               case _ =>
-                history.renames.get(sym) match {
-                  case Some(rename)
-                      if history.nameResolvesToSymbol(rename, sym) =>
+                history.rename(sym) match {
+                  case Some(rename) =>
                     TypeRef(
                       NoPrefix,
                       sym.newErrorSymbol(rename),
@@ -411,7 +410,7 @@ class MetalsGlobal(
           // to make sure we always use renamed package
           // what is saved in renames is actually companion module of a package
           val renamedOwnerIndex =
-            owners.indexWhere(s => history.renames.contains(s.companionModule))
+            owners.indexWhere(s => history.rename(s.companionModule).nonEmpty)
           if (renamedOwnerIndex < 0 && history.tryShortenName(name)) NoPrefix
           else {
             val prefix =
@@ -434,8 +433,8 @@ class MetalsGlobal(
                 .reverse
                 .map(s =>
                   m.Term.Name(
-                    history.renames
-                      .get(s.companionModule)
+                    history
+                      .rename(s.companionModule)
                       .map(_.toString())
                       .getOrElse(s.nameSyntax)
                   )

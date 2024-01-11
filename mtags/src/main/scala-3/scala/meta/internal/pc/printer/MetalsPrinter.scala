@@ -55,6 +55,8 @@ class MetalsPrinter(
 
   def shortenedNames: List[ShortName] = names.namesToImport
 
+  def getUsedRenamesInfo(): List[String] = names.getUsedRenamesInfo
+
   def expressionType(tpw: Type)(using Context): Option[String] =
     tpw match
       case t: PolyType =>
