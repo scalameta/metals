@@ -281,10 +281,9 @@ object MtagsEnrichments extends ScalametaCommonEnrichments:
         case Select(This(_), _) => false
         // is a select statement without a dot `qual.name`
         case sel @ Select(qual, _) if !sel.symbol.is(Flags.Synthetic) =>
-          val source = tree.source
-          !(qual.span.end until sel.nameSpan.start)
-            .map(source.apply)
-            .contains('.')
+          val source = tree.source.content()
+          qual.span.end >= sel.nameSpan.start ||
+          !source.slice(qual.span.end, sel.nameSpan.start).contains('.')
         case _ => false
 
     def children(using Context): List[Tree] =

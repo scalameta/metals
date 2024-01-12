@@ -4,6 +4,10 @@ import tests.BaseInlayHintsSuite
 
 class InlayHintsSuite extends BaseInlayHintsSuite {
 
+  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = Some(
+    IgnoreForScala3CompilerPC
+  )
+
   check(
     "local",
     """|object Main {
@@ -571,7 +575,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
-    "val-def-with-bind".tag(IgnoreForScala3CompilerPC),
+    "val-def-with-bind",
     """|object O {
        |  val tupleBound @ (one, two) = ("1", "2")
        |}
@@ -583,7 +587,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
-    "val-def-with-bind-and-comment".tag(IgnoreForScala3CompilerPC),
+    "val-def-with-bind-and-comment",
     """|object O {
        |  val tupleBound /* comment */ @ (one, two) = ("1", "2")
        |}

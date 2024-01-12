@@ -24,7 +24,15 @@ object LabelPart {
   }
 
   implicit class XtensionLabelParts(parts: List[List[LabelPart]]) {
-    def mkLabel(separator: String): List[LabelPart] = {
+
+    /**
+     * Adds separator between each list of label parts
+     *
+     * Example: decoration for `Map(1 -> List("a"))` is `List(Int) :: List(List, [, String, ]) :: Nil`
+     *
+     * Result with `separated(", ")` is `List(Int, ", ", List, [, String, ])`
+     */
+    def separated(separator: String): List[LabelPart] = {
       parts match {
         case Nil => Nil
         case head :: tail =>
@@ -32,11 +40,11 @@ object LabelPart {
       }
     }
 
-    def mkLabel(
+    def separated(
         start: String,
         separator: String,
         end: String
     ): List[LabelPart] =
-      (LabelPart(start) :: parts.mkLabel(separator)) ::: List(LabelPart(end))
+      (LabelPart(start) :: parts.separated(separator)) ::: List(LabelPart(end))
   }
 }
