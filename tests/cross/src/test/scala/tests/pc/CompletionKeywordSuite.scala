@@ -3,8 +3,6 @@ package tests.pc
 import tests.BaseCompletionSuite
 
 class CompletionKeywordSuite extends BaseCompletionSuite {
-  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreForScala3CompilerPC)
 
   check(
     "super-template",
@@ -42,7 +40,10 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     compat = Map(
       "3" -> """|transient scala (commit: '')
                 |transparentTrait(): transparentTrait (commit: '')
-                |transparentTrait - scala.annotation (commit: '')""".stripMargin
+                |transparentTrait - scala.annotation (commit: '')""".stripMargin,
+      "3.4" -> """|transient scala (commit: '')
+                  |transparentTrait - scala.annotation (commit: '')
+                  |""".stripMargin
     ),
     includeCommitCharacter = true
   )
@@ -66,7 +67,11 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     compat = Map(
       "3" -> """|transient scala (commit: '')
                 |transparentTrait(): transparentTrait (commit: '')
-                |transparentTrait - scala.annotation (commit: '')""".stripMargin
+                |transparentTrait - scala.annotation (commit: '')""".stripMargin,
+      "3.4" ->
+        """|transient scala (commit: '')
+           |transparentTrait - scala.annotation (commit: '')
+           |""".stripMargin
     ),
     includeCommitCharacter = true
   )
@@ -493,7 +498,11 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
                 |var
                 |varargs(): varargs
                 |varargs - scala.annotation
-                |""".stripMargin
+                |""".stripMargin,
+      "3.4" -> """|val
+                  |var
+                  |varargs - scala.annotation
+                  |""".stripMargin
     )
   )
 
@@ -555,7 +564,25 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     includeCommitCharacter = true,
     compat = Map(
       "2" -> "",
-      "3.3" -> """|using (commit: '')
+      "3.3.0" -> """|using (commit: '')
+                    |unsafeExceptions scala (commit: '')
+                    |unchecked scala (commit: '')
+                    |unsafe - scala.caps (commit: '')
+                    |unsafeNulls - scala.runtime.stdLibPatches.language (commit: '')
+                    |""".stripMargin,
+      "3.3.1" -> """|using (commit: '')
+                    |unsafeExceptions scala (commit: '')
+                    |unchecked scala (commit: '')
+                    |unsafe - scala.caps (commit: '')
+                    |unsafeNulls - scala.runtime.stdLibPatches.language (commit: '')
+                    |""".stripMargin,
+      "3.3.2" -> """|using (commit: '')
+                    |unsafeExceptions scala (commit: '')
+                    |unchecked scala (commit: '')
+                    |unsafe - caps (commit: '')
+                    |unsafeNulls - scala.runtime.stdLibPatches.language (commit: '')
+                    |""".stripMargin,
+      "3.4" -> """|using (commit: '')
                   |unsafeExceptions scala (commit: '')
                   |unchecked scala (commit: '')
                   |unsafe - scala.caps (commit: '')
@@ -577,11 +604,27 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
                 |unsafeNulls - scala.runtime.stdLibPatches.language
                 |unshared(): unshared
                 |uncheckedStable(): uncheckedStable""".stripMargin,
-      "3.3" -> """|unsafeExceptions scala
+      "3.3.0" -> """|unsafeExceptions scala
+                    |unchecked scala
+                    |unsafe - scala.caps
+                    |unsafeNulls - scala.runtime.stdLibPatches.language
+                    |unshared(): unshared""".stripMargin,
+      "3.3.1" -> """|unsafeExceptions scala
+                    |unchecked scala
+                    |unsafe - scala.caps
+                    |unsafeNulls - scala.runtime.stdLibPatches.language
+                    |unshared(): unshared""".stripMargin,
+      "3.3.2" -> """|unsafeExceptions scala
+                    |unchecked scala
+                    |unsafe - caps
+                    |unsafeNulls - scala.runtime.stdLibPatches.language
+                    |unshared(): unshared""".stripMargin,
+      "3.4" -> """|unsafeExceptions scala
                   |unchecked scala
                   |unsafe - scala.caps
                   |unsafeNulls - scala.runtime.stdLibPatches.language
-                  |unshared(): unshared""".stripMargin
+                  |unused - scala.annotation
+                  |""".stripMargin
     ),
     topLines = Some(5)
   )
