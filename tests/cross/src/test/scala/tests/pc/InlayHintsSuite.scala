@@ -730,4 +730,14 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
            |""".stripMargin
     )
   )
+
+  check(
+    "error-symbol",
+    """|package example
+       |case class ErrorMessage(error)
+       |""".stripMargin,
+    """|package example
+       |case class ErrorMessage(error)
+       |""".stripMargin
+  )
 }
