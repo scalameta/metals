@@ -44,10 +44,26 @@ class BazelLspSuite
       _ = assert(bazelBspConfig.exists)
       _ = client.messageRequests.clear() // restart
       _ = assertStatus(_.isInstalled)
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ <- server.didChange("WORKSPACE")(_ + "\n# comment")
       _ <- server.didSave("WORKSPACE")(identity)
       // Comment changes do not trigger "re-import project" request
       _ = assertNoDiff(client.workspaceMessageRequests, "")
+      _ <- server.didChange("Hello.scala") { text =>
+        text.replace("def hello: String", "def hello: Int")
+      }
+      _ <- server.didSave("Hello.scala")(identity)
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|Hello.scala:4:20: error: type mismatch;
+           | found   : String("Hello")
+           | required: Int
+           |  def hello: Int = "Hello"
+           |                   ^
+           |  def hello: Int = "Hello"
+           |                   ^^^^^^^
+           |""".stripMargin,
+      )
       _ <- server.didChange(s"BUILD") { text =>
         text.replace("\"main\"", "\"main1\"")
       }
@@ -86,6 +102,21 @@ class BazelLspSuite
       _ <- server.executeCommand(ServerCommands.GenerateBspConfig)
       // We need to wait a bit just to ensure the connection is made
       _ <- server.server.buildServerPromise.future
+      _ <- server.didChange("Hello.scala") { text =>
+        text.replace("def hello: String", "def hello: Int")
+      }
+      _ <- server.didSave("Hello.scala")(identity)
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|Hello.scala:4:20: error: type mismatch;
+           | found   : String("Hello")
+           | required: Int
+           |  def hello: Int = "Hello"
+           |                   ^
+           |  def hello: Int = "Hello"
+           |                   ^^^^^^^
+           |""".stripMargin,
+      )
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
