@@ -1818,6 +1818,11 @@ class MetalsLspService(
   def cleanCompile(): Future[Unit] = compilations.recompileAll()
 
   def cancelCompile(): Future[Unit] = Future {
+    // We keep this in here to provide a way for clients that aren't slowTask providers
+    // to be able to cancel a long-running worksheet evaluation by canceling compilation.
+    if (focusedDocument().exists(_.isWorksheet))
+      worksheetProvider.cancel()
+
     compilations.cancel()
     scribe.info("compilation cancelled")
   }
