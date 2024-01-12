@@ -98,7 +98,8 @@ class PcInlayHintsProvider(
           label,
           InlayHintKind.Type,
         )
-      case InferredType(tpe, pos, defTree) if params.inferredTypes() =>
+      case InferredType(tpe, pos, defTree)
+          if params.inferredTypes() && !isErrorTpe(tpe) =>
         val adjustedPos = adjustPos(pos).endPos
         if inlayHints.containsDef(adjustedPos.start) then inlayHints
         else
@@ -183,6 +184,8 @@ class PcInlayHintsProvider(
         val label = usedRenames.get(t.symbol).getOrElse(t.symbol.decodedName)
         labelPart(t.symbol, label)
       }
+
+  private def isErrorTpe(tpe: Type): Boolean = tpe.isError
 end PcInlayHintsProvider
 
 object ImplicitConversion:

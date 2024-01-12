@@ -82,7 +82,8 @@ final class PcInlayHintsProvider(
           label,
           InlayHintKind.Type
         )
-      case InferredType(tpe, pos) if params.inferredTypes() && tpe != null =>
+      case InferredType(tpe, pos)
+          if params.inferredTypes() && tpe != null && !tpe.isError =>
         val adjustedPos = adjustPos(pos).focusEnd
         if (inlayHints.containsDef(adjustedPos.start)) inlayHints
         else
@@ -128,7 +129,6 @@ final class PcInlayHintsProvider(
     val history = new ShortenedNames(
       lookupSymbol = name =>
         context.lookupSymbol(name, sym => !sym.isStale) :: Nil,
-      config = renameConfig,
       renames = re
     )
     val tpeStr = metalsToLongString(tpe, history)
