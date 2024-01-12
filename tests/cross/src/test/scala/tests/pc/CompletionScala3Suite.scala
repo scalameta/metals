@@ -91,7 +91,7 @@ class CompletionScala3Suite extends BaseCompletionSuite {
 
   check(
     "multi-export".tag(
-      IgnoreScalaVersion.forLessThan("3.2.2").and(IgnoreForScala3CompilerPC)
+      IgnoreScalaVersion.forLessThan("3.2.2")
     ),
     """|export scala.collection.{AbstractMap, Set@@}
        |""".stripMargin,

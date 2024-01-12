@@ -429,7 +429,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "import-star-multi-import".tag(IgnoreForScala3CompilerPC),
+    "import-star-multi-import",
     """
       |import scala.collection.immutable.List.{range => r, *@@}
       |""".stripMargin,
@@ -1020,14 +1020,6 @@ class CompletionSuite extends BaseCompletionSuite {
         """|Some(value) scala
            |Some scala
            |Some[A](value: A): Some[A]
-           |""".stripMargin,
-      scala3PresentationCompilerVersion ->
-        """|Some(value) scala
-           |Some scala
-           |Some[A](value: A): Some[A]
-           |SomeToExpr(x: Some[T])(using Quotes): Expr[Some[T]]
-           |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
-           |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
            |""".stripMargin
     )
   )
@@ -1045,13 +1037,6 @@ class CompletionSuite extends BaseCompletionSuite {
       "3" ->
         """|Some scala
            |Some[A](value: A): Some[A]
-           |""".stripMargin,
-      scala3PresentationCompilerVersion ->
-        """|Some scala
-           |Some[A](value: A): Some[A]
-           |SomeToExpr(x: Some[T])(using Quotes): Expr[Some[T]]
-           |SomeToExpr[T: Type: ToExpr]: SomeToExpr[T]
-           |SomeFromExpr[T](using Type[T], FromExpr[T]): SomeFromExpr[T]
            |""".stripMargin
     )
   )
@@ -2153,7 +2138,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "multi-imports".tag(IgnoreForScala3CompilerPC),
+    "multi-imports",
     """|import scala.collection.{AbstractMap, Set@@}
        |""".stripMargin,
     """|Set scala.collection
@@ -2178,7 +2163,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "multi-imports-empty-query".tag(IgnoreForScala3CompilerPC),
+    "multi-imports-empty-query",
     """|import scala.collection.{AbstractMap, @@}
        |""".stripMargin,
     """|+: scala.collection
@@ -2206,7 +2191,7 @@ class CompletionSuite extends BaseCompletionSuite {
   )
 
   check(
-    "import-rename".tag(IgnoreForScala3CompilerPC),
+    "import-rename",
     """|import scala.collection.{AbstractMap => Set@@}
        |""".stripMargin,
     ""

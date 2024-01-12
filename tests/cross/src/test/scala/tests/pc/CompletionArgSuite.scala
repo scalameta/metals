@@ -1149,7 +1149,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   check(
-    "second-first".tag(IgnoreForScala3CompilerPC),
+    "second-first",
     """|object Main {
        |  def foo(aaa: Int, bbb: Int, ccc: Int) = aaa + bbb + ccc
        |  val k = foo (
@@ -1164,7 +1164,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   check(
-    "second-first2".tag(IgnoreForScala3CompilerPC),
+    "second-first2",
     """|object Main {
        |  def foo(aaa: Int, bbb: Int, ccc: Int) = aaa + bbb + ccc
        |  val k = foo (
@@ -1180,7 +1180,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   check(
-    "second-first3".tag(IgnoreForScala3CompilerPC),
+    "second-first3",
     """|object Main {
        |  def foo(ddd: Int)(aaa: Int, bbb: Int, ccc: Int) = aaa + bbb + ccc
        |  val k = foo(123)(
@@ -1196,7 +1196,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   check(
-    "second-first4".tag(IgnoreScala2).tag(IgnoreForScala3CompilerPC),
+    "second-first4".tag(IgnoreScala2),
     """|object O:
        |  val hello: (x: Int, y: Int) => Unit = (x, _) => println(x)
        |val k = O.hello(y = 1, @@)
@@ -1207,7 +1207,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
   )
 
   check(
-    "second-first5".tag(IgnoreScala2).tag(IgnoreForScala3CompilerPC),
+    "second-first5".tag(IgnoreScala2),
     """|val hello: (x: Int) => Int => (str: String, ccc: String) => Unit = x => j => (str, _) => println(str)
        |val k = hello(x = 1)(2)(ccc = "abc", @@)
        |""".stripMargin,

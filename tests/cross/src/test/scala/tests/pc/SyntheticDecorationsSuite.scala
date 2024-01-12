@@ -6,10 +6,6 @@ import tests.BaseSyntheticDecorationsSuite
 
 class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
 
-  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = Some(
-    IgnoreForScala3CompilerPC
-  )
-
   check(
     "type-params",
     """|object Main {
@@ -568,7 +564,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
   )
 
   check(
-    "val-def-with-bind",
+    "val-def-with-bind".tag(IgnoreForScala3CompilerPC),
     """|object O {
        |  val tupleBound @ (one, two) = ("1", "2")
        |}
@@ -580,7 +576,7 @@ class SyntheticDecorationsSuite extends BaseSyntheticDecorationsSuite {
   )
 
   check(
-    "val-def-with-bind-and-comment",
+    "val-def-with-bind-and-comment".tag(IgnoreForScala3CompilerPC),
     """|object O {
        |  val tupleBound /* comment */ @ (one, two) = ("1", "2")
        |}
