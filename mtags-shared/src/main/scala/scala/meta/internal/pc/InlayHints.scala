@@ -62,6 +62,15 @@ case class InlayHints(
 object InlayHints {
   def empty: InlayHints = InlayHints(Nil, Set.empty)
 
+  /**
+   * Creates a label for inlay hint by inserting `parts` on correct positions in `tpeStr`.
+   *
+   * @param parts each contain a single symbol name and its definition position or semanticdb symbol
+   * @param tpeStr correct label for the inlay hint
+   *
+   * Example: for `tpeStr` = `(Int, List[Int])`,
+   * `parts` are `List(("Int", "scala/Int#"), ("List", "scala/collection/immutable/List#"), ("Int", "scala/Int#"))`
+   */
   def makeLabelParts(
       parts: List[LabelPart],
       tpeStr: String

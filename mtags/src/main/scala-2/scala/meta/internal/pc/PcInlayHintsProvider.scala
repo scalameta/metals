@@ -61,8 +61,8 @@ final class PcInlayHintsProvider(
           if params.implicitParameters() =>
         val labelParts = symbols.map(s => List(labelPart(s, s.decodedName)))
         val label =
-          if (allImplicit) labelParts.mkLabel("(", ", ", ")")
-          else labelParts.mkLabel(", ")
+          if (allImplicit) labelParts.separated("(", ", ", ")")
+          else labelParts.separated(", ")
         inlayHints.add(
           adjustPos(pos).focusEnd.toLsp,
           label,
@@ -76,7 +76,7 @@ final class PcInlayHintsProvider(
         )
       case TypeParameters(tpes, pos)
           if params.typeParameters() && tpes.forall(_ != null) =>
-        val label = tpes.map(toLabelParts(_, pos)).mkLabel("[", ", ", "]")
+        val label = tpes.map(toLabelParts(_, pos)).separated("[", ", ", "]")
         inlayHints.add(
           adjustPos(pos).focusEnd.toLsp,
           label,
