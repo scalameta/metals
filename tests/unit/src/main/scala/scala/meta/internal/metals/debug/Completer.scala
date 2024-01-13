@@ -6,7 +6,7 @@ import scala.meta.internal.metals.debug.DebugStep.Complete
 
 import org.eclipse.lsp4j.debug.CompletionsResponse
 
-final class Completer(expression: String) extends Stoppage.Handler {
+final class Completer(expression: String, isLineNullable: Boolean = false) extends Stoppage.Handler {
   var response: CompletionsResponse = _
 
   override def apply(stoppage: Stoppage): DebugStep = {
@@ -24,6 +24,7 @@ final class Completer(expression: String) extends Stoppage.Handler {
       response = _,
       line,
       column,
+      isLineNullable
     )
   }
 
