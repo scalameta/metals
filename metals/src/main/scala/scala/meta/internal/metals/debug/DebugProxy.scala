@@ -146,6 +146,9 @@ private[debug] final class DebugProxy(
       }
 
     case request @ CompletionRequest(args) =>
+      if (args.getLine == null) {
+        args.setLine(1)
+      }
       val completions = for {
         frame <- lastFrames.find(_.getId() == args.getFrameId())
       } yield {
