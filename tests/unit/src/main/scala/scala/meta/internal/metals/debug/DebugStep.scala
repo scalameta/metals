@@ -21,6 +21,6 @@ object DebugStep {
       callback: CompletionsResponse => Unit,
       line: Int,
       character: Int,
-      isLineNullable: Boolean = false
+      isLineNullable: Boolean = false,
   ) extends DebugStep
 }

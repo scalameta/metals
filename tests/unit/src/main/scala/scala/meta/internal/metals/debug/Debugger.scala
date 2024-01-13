@@ -107,7 +107,14 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
           .asScala
           .map(callback)
           .flatMap(_ => step(threadId, nextStep))
-      case DebugStep.Complete(expression, frameId, callback, line, character, isLineNullable) =>
+      case DebugStep.Complete(
+            expression,
+            frameId,
+            callback,
+            line,
+            character,
+            isLineNullable,
+          ) =>
         val args = new CompletionsArguments()
         args.setFrameId(frameId)
         args.setText(expression)

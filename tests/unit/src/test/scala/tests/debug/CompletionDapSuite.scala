@@ -280,7 +280,7 @@ class CompletionDapSuite
                              |toString(): String
                              |""".stripMargin,
     expectedEdit = "1.toShort",
-    isLineNullable = true
+    isLineNullable = true,
   )(
     """|/a/src/main/scala/a/Main.scala
        |package a
