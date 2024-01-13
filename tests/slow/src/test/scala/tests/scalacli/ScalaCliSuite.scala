@@ -463,7 +463,7 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
       _ <- scalaCliInitialize(useBsp = true)(
         s"""|/Main.scala
             |//> using scala 2.13.11
-            |// > using toolkit latest
+            |// > using toolkit default
             |
             |object Main {
             |    println(os.pwd)
