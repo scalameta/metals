@@ -243,13 +243,16 @@ final class Diagnostics(
     for {
       d <- syntaxError.get(path)
       // De-duplicate only the most common and basic syntax errors.
+      isSameMessage = all.asScala.exists(diag =>
+        diag.getRange() == d.getRange() && diag.getMessage() == d.getMessage()
+      )
       isDuplicate =
         d.getMessage.startsWith("identifier expected but") &&
           all.asScala.exists { other =>
             other.getMessage.startsWith("identifier expected") &&
-            other.getRange == d.getRange
+            other.getRange().getStart() == d.getRange().getStart()
           }
-      if !isDuplicate
+      if !isDuplicate && !isSameMessage
     } {
       all.add(d)
     }
@@ -272,7 +275,6 @@ final class Diagnostics(
       snapshot,
       current,
       trees,
-      doNothingWhenUnchanged = false,
     )
     edit match {
       case Right(edit) =>

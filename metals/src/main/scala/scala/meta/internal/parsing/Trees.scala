@@ -14,6 +14,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.parsers.Parse
 import scala.meta.parsers.ParseException
 import scala.meta.parsers.Parsed
+import scala.meta.tokens.Tokens
 
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
@@ -119,8 +120,19 @@ final class Trees(
     }
   }
 
-  def tokenized(input: inputs.Input.VirtualFile): Tokenized =
-    scalaVersionSelector.getDialect(input.path.toAbsolutePath)(input).tokenize
+  def tokenized(path: AbsolutePath): Option[Tokens] = {
+    for {
+      sourceText <- buffers.get(path)
+      virtualFile = Input.VirtualFile(path.toURI.toString(), sourceText)
+      tokens <- tokenized(virtualFile).toOption
+    } yield tokens
+  }
+
+  def tokenized(input: inputs.Input.VirtualFile): Tokenized = {
+    scalaVersionSelector
+      .getDialect(input.path.toAbsolutePath)(input)
+      .tokenize
+  }
 
   private def parse(
       path: AbsolutePath,
