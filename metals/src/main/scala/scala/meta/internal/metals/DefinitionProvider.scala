@@ -139,7 +139,7 @@ final class DefinitionProvider(
       sourceText <- buffers.get(path)
       virtualFile = Input.VirtualFile(path.toURI.toString(), sourceText)
       metaPos <- pos.toMeta(virtualFile)
-      tokens <- trees.tokenized(virtualFile).toOption
+      tokens <- trees.tokenized(path)
       ident <- tokens.collectFirst {
         case id: Token.Ident if id.pos.encloses(metaPos) => id
       }

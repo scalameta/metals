@@ -51,7 +51,6 @@ class RangeFormattingProvider(
       startPos <- range.getStart.toMeta(virtualFile)
       endPos <- range.getEnd.toMeta(virtualFile)
     } yield {
-      val tokensOpt = trees.tokenized(virtualFile).toOption
       val rangeFormatterParams =
         RangeFormatterParams(
           sourceText,
@@ -59,7 +58,7 @@ class RangeFormattingProvider(
           formattingOptions,
           startPos,
           endPos,
-          tokensOpt,
+          trees.tokenized(path),
         )
       formatters.acceptFirst(formater =>
         formater.contribute(rangeFormatterParams)
