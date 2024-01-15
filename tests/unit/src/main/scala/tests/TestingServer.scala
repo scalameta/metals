@@ -671,6 +671,7 @@ final case class TestingServer(
       kind: String,
       parameter: AnyRef,
       stoppageHandler: Stoppage.Handler = Stoppage.Handler.Continue,
+      requestOtherThreadStackTrace: Boolean = false,
   ): Future[TestDebugger] = {
 
     assertSystemExit(parameter)
@@ -682,7 +683,11 @@ final case class TestingServer(
     executeCommandUnsafe(ServerCommands.StartDebugAdapter.id, Seq(params))
       .collect { case DebugSession(_, uri) =>
         scribe.info(s"Starting debug session for $uri")
-        TestDebugger(URI.create(uri), stoppageHandler)
+        TestDebugger(
+          URI.create(uri),
+          stoppageHandler,
+          requestOtherThreadStackTrace,
+        )
       }
   }
 
