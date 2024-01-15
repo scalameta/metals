@@ -158,6 +158,12 @@ class ProblemResolver(
         None
       }
 
+    val bazelSemanticdbMessage = if (isBazelBsp) {
+      Some(Messages.CheckDoctor.bazelNavigation)
+    } else {
+      None
+    }
+
     val allMessages = List(
       deprecatedMessage,
       deprecatedRemovedMessage,
@@ -168,6 +174,7 @@ class ProblemResolver(
       unsupportedSbtMessage,
       futureSbtMessage,
       semanticdbMessage,
+      bazelSemanticdbMessage,
     ).flatten ++ javaIssues
 
     def scalaVersionsMessages = List(
@@ -176,26 +183,12 @@ class ProblemResolver(
       futureMessage,
     ).flatten
 
-    def noSemanticDBMessages = {
-      val javaSemanticDBmsg = JavaSemanticDBDisabled("", false).message
-      allMessages.forall(msg =>
-        semanticdbMessage.contains(msg) || msg == javaSemanticDBmsg
-      )
-    }
-
     allMessages match {
       case single :: Nil => Some(single)
       case Nil => None
       case messages if messages == scalaVersionsMessages =>
         Some(
           s"Your build definition contains multiple unsupported and deprecated Scala versions."
-        )
-      case _
-          if noSemanticDBMessages && currentBuildServer().exists(
-            _.main.isBazel
-          ) =>
-        Some(
-          Messages.CheckDoctor.bazelNavigation
         )
       case _ =>
         Some(
@@ -223,7 +216,7 @@ class ProblemResolver(
           Some(FutureScalaVersion(version))
         else
           Some(UnsupportedScalaVersion(version))
-      case version if !scalaTarget.isSemanticdbEnabled =>
+      case version if !scalaTarget.isSemanticdbEnabled && !isBazelBsp =>
         Some(
           SemanticDBDisabled(
             version,
@@ -233,7 +226,7 @@ class ProblemResolver(
         )
       case _
           if !scalaTarget.isSourcerootDeclared && !ScalaVersions
-            .isScala3Version(scalaTarget.scalaVersion) =>
+            .isScala3Version(scalaTarget.scalaVersion) && !isBazelBsp =>
         Some(MissingSourceRoot(workspace.scalaSourcerootOption))
       case version
           if ScalaVersions.isDeprecatedScalaVersion(version) &&
@@ -326,16 +319,16 @@ class ProblemResolver(
   private def findProblem(
       javaTarget: JavaTarget
   ): Option[JavaProblem] = {
-    if (!javaTarget.isSemanticdbEnabled)
+    if (!javaTarget.isSemanticdbEnabled && !isBazelBsp)
       Some(
         JavaSemanticDBDisabled(
           currentBuildServer().map(_.main.name).getOrElse("<none>"),
           isUnsupportedBloopVersion(),
         )
       )
-    else if (!javaTarget.isSourcerootDeclared)
+    else if (!javaTarget.isSourcerootDeclared && !isBazelBsp)
       Some(MissingJavaSourceRoot(workspace.javaSourcerootOption))
-    else if (!javaTarget.isTargetrootDeclared)
+    else if (!javaTarget.isTargetrootDeclared && !isBazelBsp)
       Some(
         MissingJavaTargetRoot(
           "-Xplugin:semanticdb -targetroot:javac-classes-directory"
@@ -343,6 +336,8 @@ class ProblemResolver(
       )
     else isWrongJavaRelease(javaTarget)
   }
+
+  private def isBazelBsp = currentBuildServer().exists(_.main.isBazel)
 
   private def isWrongJavaRelease(
       javaTarget: JavaTarget
