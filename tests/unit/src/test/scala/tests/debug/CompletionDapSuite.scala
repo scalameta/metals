@@ -268,6 +268,34 @@ class CompletionDapSuite
        |""".stripMargin
   )
 
+  assertCompletion(
+    "basic-with-line-as-null",
+    expression = "1.toS@@",
+    expectedCompletions = """|toShort: Short
+                             |toBinaryString: String
+                             |toDegrees: Double
+                             |toHexString: String
+                             |toOctalString: String
+                             |toRadians: Double
+                             |toString(): String
+                             |""".stripMargin,
+    expectedEdit = "1.toShort",
+    isLineNullable = true,
+  )(
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |
+       |object Main {
+       |  class Preceding
+       |
+       |  def main(args: Array[String]): Unit = {
+       |>>  println()
+       |    System.exit(0)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
   def assertCompletion(
       name: TestOptions,
       expression: String,
@@ -276,6 +304,7 @@ class CompletionDapSuite
       main: Option[String] = None,
       topLines: Option[Int] = None,
       noResults: Boolean = false,
+      isLineNullable: Boolean = false,
   )(
       source: String
   )(implicit loc: Location): Unit = {
@@ -284,7 +313,7 @@ class CompletionDapSuite
 
       val debugLayout = DebugWorkspaceLayout(source, workspace)
       val workspaceLayout = QuickBuildLayout(debugLayout.toString, scalaVersion)
-      val completer = new Completer(expression)
+      val completer = new Completer(expression, isLineNullable = isLineNullable)
 
       for {
         _ <- initialize(workspaceLayout)

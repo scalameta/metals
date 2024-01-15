@@ -270,7 +270,7 @@ lazy val mtagsShared = project
     },
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "3.25.1",
+      "com.google.protobuf" % "protobuf-java" % "3.25.2",
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
   )
@@ -500,7 +500,7 @@ lazy val metals = project
       "com.outr" %% "scribe-file" % V.scribe,
       "com.outr" %% "scribe-slf4j" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "3.1.3",
+      "com.lihaoyi" %% "ujson" % "3.1.4",
       // For fetching projects' templates
       "com.lihaoyi" %% "requests" % "0.8.0",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta

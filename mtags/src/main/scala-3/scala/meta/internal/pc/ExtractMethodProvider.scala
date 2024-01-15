@@ -6,7 +6,6 @@ import scala.meta as m
 
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.internal.pc.MetalsInteractive.*
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.internal.pc.printer.MetalsPrinter.IncludeDefaultParam
 import scala.meta.pc.OffsetParams
@@ -49,7 +48,7 @@ final class ExtractMethodProvider(
       Interactive.pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)
     given locatedCtx: Context =
       val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
-      MetalsInteractive.contextOfPath(path)(using newctx)
+      Interactive.contextOfPath(path)(using newctx)
     val indexedCtx = IndexedContext(locatedCtx)
     val printer =
       MetalsPrinter.standard(indexedCtx, search, IncludeDefaultParam.Never)

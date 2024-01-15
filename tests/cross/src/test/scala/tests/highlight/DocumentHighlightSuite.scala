@@ -1138,4 +1138,22 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |}""".stripMargin
   )
 
+  check(
+    "self-type",
+    """|trait Foo {
+       |  self: <<An@@y>> =>
+       |    def bar(): <<Any>>
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "self-type2",
+    """|trait Foo {
+       |  self: <<Any>> =>
+       |    def bar(): <<An@@y>>
+       |}
+       |""".stripMargin
+  )
+
 }

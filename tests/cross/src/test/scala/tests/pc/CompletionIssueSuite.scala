@@ -20,7 +20,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
   }
 
   check(
-    "comparison".tag(IgnoreForScala3CompilerPC),
+    "comparison",
     """package a
       |object w {
       |  abstract class T(x: Int) {

@@ -171,7 +171,7 @@ class HoverDefnSuite extends BaseHoverSuite {
   )
 
   check(
-    "package",
+    "package".tag(IgnoreForScala3CompilerPC),
     """package b.p@@kg
       |object Main
       |""".stripMargin,
@@ -179,11 +179,7 @@ class HoverDefnSuite extends BaseHoverSuite {
       |package b.pkg
       |```
       |""".stripMargin,
-    automaticPackage = false,
-    compat = Map(
-      // TODO hover doesn't show information on package
-      "3" -> "".hover
-    )
+    automaticPackage = false
   )
 
   check(
