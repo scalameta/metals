@@ -78,7 +78,7 @@ object BazelBuildTool {
 
   val mainClass = "org.jetbrains.bsp.bazel.install.Install"
 
-  private val dependency = Dependency.of(
+  val dependency: Dependency = Dependency.of(
     "org.jetbrains.bsp",
     "bazel-bsp",
     version,
