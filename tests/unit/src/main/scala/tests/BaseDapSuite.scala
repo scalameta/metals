@@ -67,10 +67,17 @@ abstract class BaseDapSuite(
       buildTarget: String,
       main: String,
       stoppageHandler: Stoppage.Handler = Stoppage.Handler.Continue,
+      requestOtherThreadStackTrace: Boolean = false,
   ): Future[TestDebugger] = {
     val kind = DebugSessionParamsDataKind.SCALA_MAIN_CLASS
     val mainClass = new ScalaMainClass(main, emptyList(), emptyList())
-    server.startDebugging(buildTarget, kind, mainClass, stoppageHandler)
+    server.startDebugging(
+      buildTarget,
+      kind,
+      mainClass,
+      stoppageHandler,
+      requestOtherThreadStackTrace,
+    )
   }
 
   def setBreakpoints(

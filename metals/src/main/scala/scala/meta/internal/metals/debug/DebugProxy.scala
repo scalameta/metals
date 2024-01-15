@@ -11,6 +11,7 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
+import scala.collection.concurrent.TrieMap
 
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilers
@@ -59,7 +60,7 @@ private[debug] final class DebugProxy(
 
   @volatile private var clientAdapter =
     ClientConfigurationAdapter.default(sourceMapper)
-  @volatile private var lastFrames: Array[StackFrame] = Array.empty
+  @volatile private var frameIdToFrame: TrieMap[Int, StackFrame] = TrieMap.empty
 
   lazy val listen: Future[ExitStatus] = {
     scribe.info(s"Starting debug proxy for [$sessionName]")
@@ -150,7 +151,7 @@ private[debug] final class DebugProxy(
         args.setLine(1)
       }
       val completions = for {
-        frame <- lastFrames.find(_.getId() == args.getFrameId())
+        frame <- frameIdToFrame.get(args.getFrameId())
       } yield {
         val originalSource = frame.getSource()
         val sourceUri = clientAdapter.toMetalsPath(originalSource.getPath)
@@ -229,7 +230,9 @@ private[debug] final class DebugProxy(
         )
       } frameSource.setPath(clientAdapter.adaptPathForClient(metalsSource))
       response.setResult(args.toJson)
-      lastFrames = args.getStackFrames()
+      for (frame <- args.getStackFrames()) {
+        frameIdToFrame.put(frame.getId, frame)
+      }
       client.consume(response)
     case message @ ErrorOutputNotification(output) =>
       initialized.trySuccess(())
