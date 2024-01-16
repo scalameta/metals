@@ -87,7 +87,6 @@ final class FileSystemSemanticdbs(
         Some(fullRelativePath),
       )
     }
-
   }
 
 }

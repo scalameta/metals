@@ -31,7 +31,9 @@ class SemanticdbIndexer(
     for {
       targetRoot <- buildTargets.allTargetRoots
     } {
-      onChangeDirectory(targetRoot.resolve(Directories.semanticdb).toNIO)
+      onChangeDirectory(
+        targetRoot.resolve(Directories.semanticdb).toNIO
+      )
     }
   }
 

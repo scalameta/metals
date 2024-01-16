@@ -533,6 +533,17 @@ object MetalsEnrichments
       filename.endsWith(".jar") || filename.endsWith(".srcjar")
     }
 
+    def toTargetRoot: AbsolutePath = {
+      if (path.isJar) {
+        val filename = path.toNIO.getFileName.toString
+        val filename0 = filename.stripSuffix(".jar").stripSuffix(".srcjar")
+        val targetroot = path.parent.resolve(s"_semanticdb/$filename0")
+        targetroot
+      } else {
+        path
+      }
+    }
+
     def isZip: Boolean = {
       val filename = path.toNIO.getFileName.toString
       filename.endsWith(".zip")
