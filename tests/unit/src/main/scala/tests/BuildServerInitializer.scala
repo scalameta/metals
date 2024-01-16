@@ -190,3 +190,26 @@ object MillServerInitializer extends BuildServerInitializer {
     }
   }
 }
+
+object BazelServerInitializer extends BuildServerInitializer {
+  this: BaseLspSuite =>
+  override def initialize(
+      workspace: AbsolutePath,
+      server: TestingServer,
+      client: TestingClient,
+      expectError: Boolean,
+      workspaceFolders: List[String] = Nil,
+  )(implicit ec: ExecutionContext): Future[InitializeResult] = {
+    for {
+      initializeResult <- server.initialize()
+      // Import build using Bazel
+      _ = client.importBuild = ImportBuild.yes
+      _ <- server.initialized()
+    } yield {
+      if (!expectError) {
+        server.assertBuildServerConnection()
+      }
+      initializeResult
+    }
+  }
+}

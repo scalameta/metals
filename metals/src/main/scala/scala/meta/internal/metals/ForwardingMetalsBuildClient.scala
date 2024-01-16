@@ -117,21 +117,26 @@ final class ForwardingMetalsBuildClient(
     languageClient.showMessage(params)
 
   def onBuildLogMessage(params: l.MessageParams): Unit = {
-    params.getType match {
-      case l.MessageType.Error =>
-        bspErrorHandler.onError(params.getMessage())
-        forwarders.get().foreach(_.error(params.getMessage()))
-      case l.MessageType.Warning =>
-        forwarders.get().foreach(_.warn(params.getMessage()))
-        scribe.warn(params.getMessage)
-      case l.MessageType.Info =>
-        forwarders.get().foreach(_.info(params.getMessage()))
-        scribe.info(params.getMessage)
-      case l.MessageType.Log =>
-        forwarders.get().foreach(_.log(params.getMessage()))
-        scribe.info(params.getMessage)
+    // NOTE: BazelBsp adds coloring to the log message after `workspaceBuildTargets` request
+    val noANSICodes = filterANSIColorCodes(params.getMessage).trim()
+    if (noANSICodes.nonEmpty) {
+      params.getType match {
+        case l.MessageType.Error =>
+          bspErrorHandler.onError(noANSICodes)
+          forwarders.get().foreach(_.error(params.getMessage()))
+        case l.MessageType.Warning =>
+          forwarders.get().foreach(_.warn(params.getMessage()))
+          scribe.warn(noANSICodes)
+        case l.MessageType.Info =>
+          forwarders.get().foreach(_.info(params.getMessage()))
+          scribe.info(noANSICodes)
+        case l.MessageType.Log =>
+          forwarders.get().foreach(_.log(params.getMessage()))
+          scribe.info(noANSICodes)
+      }
     }
   }
+
   def onBuildPublishDiagnostics(params: b.PublishDiagnosticsParams): Unit = {
     diagnostics.onBuildPublishDiagnostics(params)
   }

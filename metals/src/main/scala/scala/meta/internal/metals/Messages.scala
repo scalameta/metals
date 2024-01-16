@@ -253,6 +253,12 @@ object Messages {
     def multipleMisconfiguredProjects(count: Int): String =
       s"Code navigation will not work for $count build targets in this workspace due to mis-configuration. " + moreInfo
 
+    def multipleProblemsDetected: String =
+      s"Multiple problems detected in your build."
+
+    def bazelNavigation: String =
+      "Code navigation for Bazel projects is not supported yet."
+
     val misconfiguredTestFrameworks: String =
       "Test Explorer won't work due to mis-configuration." + moreInfo
 

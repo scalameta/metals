@@ -27,6 +27,7 @@ import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.bsp.ScalaCliBspScope
+import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BloopInstall
 import scala.meta.internal.builds.BloopInstallProvider
 import scala.meta.internal.builds.BspErrorHandler
@@ -1323,8 +1324,7 @@ class MetalsLspService(
    */
   private def fileWatchFilter(path: Path): Boolean = {
     val abs = AbsolutePath(path)
-    abs.isScalaOrJava || abs.isSemanticdb ||
-    abs.isInBspDirectory(folder)
+    abs.isScalaOrJava || abs.isSemanticdb || abs.isInBspDirectory(folder)
   }
 
   /**
@@ -2101,7 +2101,6 @@ class MetalsLspService(
     val isBloopOrEmpty = chosenBuildServer.isEmpty || chosenBuildServer.exists(
       _ == BloopServers.name
     )
-
     buildTool match {
       case Some(BuildTool.Found(buildTool: BloopInstallProvider, digest))
           if isBloopOrEmpty =>
@@ -2114,6 +2113,20 @@ class MetalsLspService(
             folder,
             args => bspConfigGenerator.runUnconditionally(buildTool, args),
             statusBar,
+          )
+          .flatMap(_ => quickConnectToBuildServer())
+      // If there is no .bazelbsp present, we ask user to write bsp config
+      // After that, we should fall into the last case and index workspace
+      case Some(BuildTool.Found(_: BazelBuildTool, _))
+          if !buildTools.isBazelBsp =>
+        BazelBuildTool
+          .maybeWriteBazelConfig(
+            shellRunner,
+            folder,
+            languageClient,
+            tables,
+            userConfig.javaHome,
+            forceImport,
           )
           .flatMap(_ => quickConnectToBuildServer())
       case Some(BuildTool.Found(buildTool, _))

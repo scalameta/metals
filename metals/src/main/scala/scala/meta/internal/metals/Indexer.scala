@@ -95,7 +95,8 @@ final case class Indexer(
       workspaceReload().persistChecksumStatus(Status.Started, buildTool)
 
       buildTool match {
-        case _: BspOnly => reconnectToBuildServer()
+        case _: BspOnly =>
+          reconnectToBuildServer()
         case _ =>
           session
             .workspaceReload()

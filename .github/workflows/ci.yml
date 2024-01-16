@@ -56,6 +56,7 @@ jobs:
             gradle,
             scalacli,
             mill,
+            bazel,
             feature,
             cross,
             scalafmt,
@@ -90,6 +91,11 @@ jobs:
           - type: mill
             command: bin/test.sh 'slow/testOnly -- tests.mill.*'
             name: Mill integration
+            os: ubuntu-latest
+            java: "17"
+          - type: bazel
+            command: bin/test.sh 'slow/testOnly -- tests.bazel.*'
+            name: Bazel integration
             os: ubuntu-latest
             java: "17"
           - type: scalacli

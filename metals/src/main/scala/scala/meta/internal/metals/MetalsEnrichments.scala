@@ -380,10 +380,9 @@ object MetalsEnrichments
       }
     }
 
-    def isDependencySource(workspace: AbsolutePath): Boolean = {
+    def isDependencySource(workspace: AbsolutePath): Boolean =
       (isLocalFileSystem(workspace) &&
         isInReadonlyDirectory(workspace)) || isJarFileSystem
-    }
 
     def isWorkspaceSource(workspace: AbsolutePath): Boolean =
       isLocalFileSystem(workspace) &&
@@ -400,11 +399,13 @@ object MetalsEnrichments
       path.toNIO.startsWith(
         workspace.resolve(Directories.readonly).toNIO
       )
+
     def isSrcZipInReadonlyDirectory(workspace: AbsolutePath): Boolean = {
       path.toNIO.startsWith(
         workspace.resolve(Directories.dependencies.resolve("src.zip")).toNIO
       )
     }
+
     def toRelativeInside(prefix: AbsolutePath): Option[RelativePath] = {
       // windows throws an exception on toRelative when on different drives
       if (path.toNIO.getRoot() != prefix.toNIO.getRoot())
@@ -1243,6 +1244,6 @@ object MetalsEnrichments
    * anything that is ESC (U+001B) plus [
    */
   def filterANSIColorCodes(str: String): String =
-    str.replaceAll("\u001B\\[[;\\d]*m", "")
+    str.replaceAll("\u001b\\[1A\u001b\\[K|\u001B\\[[;\\d]*m", "")
 
 }

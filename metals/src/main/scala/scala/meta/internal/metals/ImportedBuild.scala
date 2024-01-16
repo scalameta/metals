@@ -72,7 +72,8 @@ object ImportedBuild {
       conn: BuildServerConnection
   )(implicit ec: ExecutionContext): Future[ImportedBuild] =
     for {
-      workspaceBuildTargets <- conn.workspaceBuildTargets()
+      allBuildTargets <- conn.workspaceBuildTargets()
+      workspaceBuildTargets = relevantBuildTargets(allBuildTargets)
       ids = workspaceBuildTargets.getTargets.map(_.getId)
       scalacOptions <- conn.buildTargetScalacOptions(
         new ScalacOptionsParams(ids)
@@ -102,6 +103,18 @@ object ImportedBuild {
         wrappedSources,
       )
     }
+
+  private def relevantBuildTargets(
+      workspaceBuildTargets: WorkspaceBuildTargetsResult
+  ): WorkspaceBuildTargetsResult = {
+    val targets = workspaceBuildTargets.getTargets.asScala.toList
+    val scalaJavaTargets = targets.filter { target =>
+      val langIds = target.getLanguageIds.asScala.toList
+      langIds.contains("scala") || langIds.contains("java")
+    }
+    workspaceBuildTargets.setTargets(scalaJavaTargets.asJava)
+    workspaceBuildTargets
+  }
 
   private def resolveMissingDependencySources(
       dependencySources: DependencySourcesResult,

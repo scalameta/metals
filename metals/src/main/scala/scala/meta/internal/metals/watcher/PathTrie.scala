@@ -58,7 +58,7 @@ object PathTrie {
   private case class Multi(children: Map[String, Node], terminal: Boolean)
       extends Node
 
-  def apply(paths: Set[Path]): PathTrie = {
+  def apply(paths: Set[Path], workspace: Path): PathTrie = {
     def construct(paths: Set[List[String]]): Node = {
       val terminal = paths.contains(Nil)
       val groupedNonEmptyPaths =
@@ -81,11 +81,23 @@ object PathTrie {
       }
     }
 
-    new PathTrie(
-      construct(
-        paths.map(toSegments)
+    /**
+     * NOTE(jkciesluk): If we don't have any paths, PathTrie would represent the entire file system.
+     * PathTrie was introduced as a optimization to not watch the whole workspace,
+     * so when the paths are empty we should just watch the workspace.
+     */
+    if (paths.isEmpty)
+      new PathTrie(
+        construct(
+          Set(workspace).map(toSegments)
+        )
       )
-    )
+    else
+      new PathTrie(
+        construct(
+          paths.map(toSegments)
+        )
+      )
   }
 
   private def toSegments(path: Path): List[String] =

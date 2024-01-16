@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import scala.collection.concurrent.TrieMap
@@ -246,7 +247,9 @@ final class Compilations(
       targets: Seq[b.BuildTargetIdentifier],
       timeout: Option[Timeout],
   ): CancelableFuture[b.CompileResult] = {
+    val originId = "METALS-$" + UUID.randomUUID().toString
     val params = new b.CompileParams(targets.asJava)
+    params.setOriginId(originId)
     if (
       userConfiguration().verboseCompilation && (connection.isBloop || connection.isScalaCLI)
     ) {

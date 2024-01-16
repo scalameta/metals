@@ -3,6 +3,7 @@ package scala.meta.metals
 import java.nio.file.Files
 import java.nio.file.Path
 
+import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.FormattingProvider
@@ -36,7 +37,8 @@ object DownloadDependencies {
       downloadSemanticDBScalac() ++
       downloadSemanticDBJavac() ++
       downloadScala() ++
-      downloadBloop()
+      downloadBloop() ++
+      downloadBazelBsp()
 
     allPaths.distinct.foreach(println)
 
@@ -103,6 +105,14 @@ object DownloadDependencies {
   def downloadSemanticDBJavac(): Seq[Path] = {
     scribe.info("Downloading semanticdb-javac")
     Embedded.downloadSemanticdbJavac
+  }
+
+  def downloadBazelBsp(): Seq[Path] = {
+    scribe.info("Downloading bazel-bsp")
+    Embedded.downloadDependency(
+      BazelBuildTool.dependency,
+      None,
+    )
   }
 
   def downloadBloop(): Seq[Path] = {

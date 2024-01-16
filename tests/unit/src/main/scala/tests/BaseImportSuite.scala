@@ -23,6 +23,9 @@ abstract class BaseImportSuite(
   def progressMessage: String =
     bloopInstallProgress(buildTool.executableName).message
 
+  def bazelNavigationMessage: String =
+    CheckDoctor.bazelNavigation
+
   def currentDigest(workspace: AbsolutePath): Option[String]
 
   def currentChecksum(): String =
