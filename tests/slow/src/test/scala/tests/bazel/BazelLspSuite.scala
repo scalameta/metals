@@ -61,7 +61,7 @@ class BazelLspSuite
            |  def hello: Int = "Hello"
            |                   ^
            |  def hello: Int = "Hello"
-           |                   ^^^^^^^
+           |                   ^
            |""".stripMargin,
       )
       _ <- server.didChange(s"BUILD") { text =>
@@ -114,7 +114,7 @@ class BazelLspSuite
            |  def hello: Int = "Hello"
            |                   ^
            |  def hello: Int = "Hello"
-           |                   ^^^^^^^
+           |                   ^
            |""".stripMargin,
       )
     } yield {
