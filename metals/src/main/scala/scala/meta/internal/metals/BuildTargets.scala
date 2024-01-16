@@ -240,6 +240,16 @@ final class BuildTargets private (
     }
   }
 
+  def inverseSourcesAll(
+      source: AbsolutePath
+  ): Iterable[BuildTargetIdentifier] = {
+    val buildTargets = sourceBuildTargets(source)
+    val orSbtBuildTarget =
+      buildTargets.getOrElse(sbtBuildScalaTarget(source).toIterable)
+    if (orSbtBuildTarget.isEmpty) inferBuildTargets(source)
+    else orSbtBuildTarget
+  }
+
   def inverseSourcesBsp(
       source: AbsolutePath
   )(implicit ec: ExecutionContext): Future[Option[BuildTargetIdentifier]] = {
@@ -308,12 +318,16 @@ final class BuildTargets private (
    */
   def inferBuildTarget(
       source: AbsolutePath
-  ): Option[BuildTargetIdentifier] = {
+  ): Option[BuildTargetIdentifier] = inferBuildTargets(source).headOption
+
+  def inferBuildTargets(
+      source: AbsolutePath
+  ): Iterable[BuildTargetIdentifier] = {
     if (source.isJarFileSystem) {
       for {
-        jarName <- source.jarPath.map(_.filename)
-        sourceJarFile <- sourceJarFile(jarName)
-        buildTargetId <- inverseDependencySource(sourceJarFile).headOption
+        jarName <- source.jarPath.map(_.filename).toIterable
+        sourceJarFile <- sourceJarFile(jarName).toIterable
+        buildTargetId <- inverseDependencySource(sourceJarFile)
       } yield buildTargetId
     } else {
       val readonly = workspace.resolve(Directories.readonly)
@@ -323,8 +337,8 @@ final class BuildTargets private (
           names match {
             case Directories.dependenciesName :: jarName :: _ =>
               // match build target by source jar name
-              sourceJarFile(jarName)
-                .flatMap(inverseDependencySource(_).headOption)
+              sourceJarFile(jarName).toList
+                .flatMap(inverseDependencySource(_))
             case _ => None
           }
         case None =>
@@ -341,6 +355,14 @@ final class BuildTargets private (
           }
       }
     }
+  }
+
+  def belongsToBuildTarget(
+    target: BuildTargetIdentifier,
+    path: AbsolutePath
+  ): Boolean = {
+    val possibleBuildTargets = target :: buildTargetTransitiveDependencies(target).toList
+    inverseSourcesAll(path).exists(possibleBuildTargets.contains)
   }
 
   def findByDisplayName(name: String): Option[BuildTarget] = {

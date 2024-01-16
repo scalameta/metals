@@ -11,6 +11,7 @@ import scala.concurrent.Future
 
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -42,11 +43,12 @@ import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.semanticdb.TypeSignature
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.TextDocumentPositionParams
 
 final class ImplementationProvider(
-    semanticdbs: Semanticdbs, 
+    semanticdbs: Semanticdbs,
     workspace: AbsolutePath,
     index: GlobalSymbolIndex,
     buffer: Buffers,
@@ -54,6 +56,7 @@ final class ImplementationProvider(
     trees: Trees,
     scalaVersionSelector: ScalaVersionSelector,
     compilers: Compilers,
+    buildTargets: BuildTargets
 )(implicit ec: ExecutionContext, rc: ReportContext)
     extends SemanticdbFeatureProvider {
   import ImplementationProvider._
@@ -169,21 +172,22 @@ final class ImplementationProvider(
               _.path.isWorkspaceSource(workspace)
             )
 
+        val workspaceInheritanceContext: InheritanceContext =
+          InheritanceContext.fromDefinitions(
+            implementationsInPath.asScala.toMap
+          )
+
         val inheritanceContext: InheritanceContext =
-          if (!isWorkspaceSymbol) {
-            // symbol is not in workspace, we search both workspace and dependencies for it
-            InheritanceContext
-              .fromDefinitions(implementationsInPath.asScala.toMap)
+          if (isWorkspaceSymbol) workspaceInheritanceContext
+          else
+            // symbol is not defined in the workspace, we search both workspace and dependencies for it
+            workspaceInheritanceContext
               .toGlobal(
                 compilers,
                 implementationsInDependencySources.asScala.toMap,
+                source,
               )
-          } else {
-            // symbol in workspace we search the workspace for it only
-            InheritanceContext.fromDefinitions(
-              implementationsInPath.asScala.toMap
-            )
-          }
+
         symbolLocationsFromContext(
           dealisedSymbol,
           currentDocument,
@@ -210,6 +214,7 @@ final class ImplementationProvider(
         classSymbol: String,
         textDocument: TextDocument,
         implReal: ClassLocation,
+        source: AbsolutePath,
     ): Option[Future[String]] = {
       if (classLikeKinds(info.kind)) Some(Future(implReal.symbol))
       else {
@@ -231,18 +236,14 @@ final class ImplementationProvider(
         def pcSearch = {
           val symbol =
             s"${implReal.symbol}${info.symbol.stripPrefix(classSymbol)}"
-          implReal.file
-            .map(path =>
-              compilers
-                .infoAll(AbsolutePath(path), symbol)
-                .map { allFound =>
-                  allFound
-                    .find(implInfo => implInfo.overridden.contains(info.symbol))
-                    .map(_.symbol)
-                    .getOrElse(symbol)
-                }
-            )
-            .getOrElse(Future.successful(symbol))
+          compilers
+            .infoAll(source, symbol)
+            .map { allFound =>
+              allFound
+                .find(implInfo => implInfo.overridden.contains(info.symbol))
+                .map(_.symbol)
+                .getOrElse(symbol)
+            }
         }
         tryFromDoc.orElse {
           if (implReal.symbol.isLocal) None
@@ -258,11 +259,13 @@ final class ImplementationProvider(
         locationsByFile: Map[Path, Set[ClassLocation]],
         parentSymbol: PcSymbolInformation,
         classSymbol: String,
+        buildTarget: BuildTargetIdentifier
     ) = Future.sequence({
       for {
         file <- files
         locations = locationsByFile(file)
         implPath = AbsolutePath(file)
+        if(buildTargets.belongsToBuildTarget(buildTarget, implPath))
         implDocument <- findSemanticdb(implPath).toList
       } yield {
         for {
@@ -273,6 +276,7 @@ final class ImplementationProvider(
                 classSymbol,
                 implDocument,
                 _,
+                source,
               )
             )
           )
@@ -285,7 +289,7 @@ final class ImplementationProvider(
               implDocument,
               sym,
               implPath,
-              scalaVersionSelector
+              scalaVersionSelector,
             ).toList
             range <- implOccurrence.range
             revised <-
@@ -310,6 +314,7 @@ final class ImplementationProvider(
         (for {
           symbolInfo <- optSymbolInfo
           symbolClass <- classFromSymbol(symbolInfo)
+          target <- buildTargets.inverseSources(source)
         } yield {
           for {
             locationsByFile <- findImplementation(
@@ -328,6 +333,7 @@ final class ImplementationProvider(
                     locationsByFile,
                     symbolInfo,
                     symbolClass,
+                    target
                   )
                 )
               )

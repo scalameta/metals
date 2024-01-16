@@ -655,6 +655,7 @@ class MetalsLspService(
       trees,
       scalaVersionSelector,
       compilers,
+      buildTargets
     )
 
   private val symbolHierarchyOps: SymbolHierarchyOps =
