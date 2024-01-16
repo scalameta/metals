@@ -92,7 +92,7 @@ final class BspConfigGenerator(
       .asScala
       .map { choice =>
         buildTools.find(buildTool =>
-          new MessageActionItem(buildTool.buildServerName) == choice
+          new MessageActionItem(buildTool.executableName) == choice
         )
       }
   }
