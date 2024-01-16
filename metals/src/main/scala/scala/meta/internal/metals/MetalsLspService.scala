@@ -79,6 +79,7 @@ import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.rename.RenameProvider
+import scala.meta.internal.search.SymbolHierarchyOps
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.tvp._
 import scala.meta.internal.worksheets.DecorationWorksheetPublisher
@@ -649,7 +650,6 @@ class MetalsLspService(
       semanticdbs,
       folder,
       definitionIndex,
-      buildTargets,
       buffers,
       definitionProvider,
       trees,
@@ -657,10 +657,21 @@ class MetalsLspService(
       compilers,
     )
 
+  private val symbolHierarchyOps: SymbolHierarchyOps =
+    new SymbolHierarchyOps(
+      folder,
+      buildTargets,
+      semanticdbs,
+      definitionIndex,
+      scalaVersionSelector,
+      buffers,
+      trees
+    )
+
   private val supermethods: Supermethods = new Supermethods(
     languageClient,
     definitionProvider,
-    implementationProvider,
+    symbolHierarchyOps,
   )
 
   private val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
@@ -690,6 +701,7 @@ class MetalsLspService(
   private val renameProvider: RenameProvider = new RenameProvider(
     referencesProvider,
     implementationProvider,
+    symbolHierarchyOps,
     definitionProvider,
     folder,
     languageClient,

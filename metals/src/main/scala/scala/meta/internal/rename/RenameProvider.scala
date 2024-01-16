@@ -20,6 +20,7 @@ import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.Identifier
+import scala.meta.internal.search.SymbolHierarchyOps
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.semanticdb.SymbolOccurrence
@@ -50,6 +51,7 @@ import org.eclipse.lsp4j.{Range => LSPRange}
 final class RenameProvider(
     referenceProvider: ReferenceProvider,
     implementationProvider: ImplementationProvider,
+    symbolHierarchyOps: SymbolHierarchyOps,
     definitionProvider: DefinitionProvider,
     workspace: AbsolutePath,
     client: MetalsLanguageClient,
@@ -177,7 +179,7 @@ final class RenameProvider(
                   path: AbsolutePath,
                   textDocument: TextDocument,
               ) =
-                !symbol.desc.isType && !(symbol.isLocal && implementationProvider
+                !symbol.desc.isType && !(symbol.isLocal && symbolHierarchyOps
                   .defaultSymbolSearch(path, textDocument)(symbol)
                   .exists(info => info.isTrait || info.isClass))
 
@@ -192,7 +194,7 @@ final class RenameProvider(
                     isWorkspaceSymbol(occurence.symbol, definitionPath) &&
                     isNotRenamedSymbol(semanticDb, occurence)
                   parentSymbols =
-                    implementationProvider
+                    symbolHierarchyOps
                       .topMethodParents(occurence.symbol, defSemanticdb)
                   txtParams <- {
                     if (parentSymbols.nonEmpty) parentSymbols.map(toTextParams)

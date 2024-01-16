@@ -11,6 +11,7 @@ import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
+import scala.meta.internal.search.SymbolHierarchyOps
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.io.AbsolutePath
 
@@ -22,7 +23,7 @@ import org.eclipse.lsp4j.TextDocumentPositionParams
 class Supermethods(
     client: MetalsLanguageClient,
     definitionProvider: DefinitionProvider,
-    implementationProvider: ImplementationProvider,
+    symbolHierarchyOps: SymbolHierarchyOps,
 )(implicit
     ec: ExecutionContext,
     reports: ReportContext,
@@ -76,7 +77,7 @@ class Supermethods(
         filePath,
         params.getPosition(),
       )
-      findSymbol = implementationProvider.defaultSymbolSearch(
+      findSymbol = symbolHierarchyOps.defaultSymbolSearch(
         filePath,
         textDocument,
       )
@@ -131,7 +132,7 @@ class Supermethods(
         filePath,
         position,
       )
-      findSymbol = implementationProvider.defaultSymbolSearch(
+      findSymbol = symbolHierarchyOps.defaultSymbolSearch(
         filePath,
         textDocument,
       )

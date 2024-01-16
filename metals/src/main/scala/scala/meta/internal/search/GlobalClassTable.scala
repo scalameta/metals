@@ -1,6 +1,4 @@
-package scala.meta.internal.implementation
-import java.nio.file.Path
-
+package scala.meta.internal.search
 import scala.collection.concurrent.TrieMap
 
 import scala.meta.internal.metals.BuildTargets
@@ -13,8 +11,6 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 final class GlobalClassTable(
     buildTargets: BuildTargets
 ) {
-  type ImplementationCache = Map[Path, Map[String, Set[ClassLocation]]]
-
   private val buildTargetsIndexes =
     TrieMap.empty[BuildTargetIdentifier, GlobalSymbolTable]
 
