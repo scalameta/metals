@@ -13,9 +13,7 @@ trait WorkspaceSymbolSearch { this: MetalsGlobal =>
   def info(symbol: String): List[PcSymbolInformation] = {
     val index = symbol.lastIndexOf("/")
     val pkgString = symbol.take(index + 1)
-    val pkg = packageSymbolFromString(pkgString).getOrElse(
-      throw new NoSuchElementException(pkgString)
-    )
+    val pkg = packageSymbolFromString(pkgString)
 
     def loop(
         symbol: String,
@@ -27,18 +25,22 @@ trait WorkspaceSymbolSearch { this: MetalsGlobal =>
         val rest = symbol.drop(newSymbol.size)
         loop(rest.drop(1), (newSymbol, rest.headOption.exists(_ == '#')) :: acc)
       }
-    
+
     val names =
       loop(symbol.drop(index + 1).takeWhile(_ != '('), List.empty)
-    val compilerSymbols = names.foldLeft(List(pkg)) { case (owners, (name, isClass)) =>
-        owners.flatMap{ owner =>
+
+    val compilerSymbols = names.foldLeft(pkg.toList) {
+      case (owners, (name, isClass)) =>
+        owners.flatMap { owner =>
           val foundChild =
             if (isClass) owner.info.member(TypeName(name))
             else owner.info.member(TermName(name))
-          foundChild.info match {
-            case OverloadedType(_, alts) => alts
-            case _ => List(foundChild)
-          }
+          if (foundChild.exists) {
+            foundChild.info match {
+              case OverloadedType(_, alts) => alts
+              case _ => List(foundChild)
+            }
+          } else Nil
         }
     }
 
@@ -48,16 +50,21 @@ trait WorkspaceSymbolSearch { this: MetalsGlobal =>
         kind = getSymbolKind(compilerSymbol),
         parents = compilerSymbol.parentSymbols.map(semanticdbSymbol),
         dealisedSymbol = semanticdbSymbol(compilerSymbol.dealiased),
-        classOwner = compilerSymbol.ownerChain.find(c => c.isClass || c.isModule).map(semanticdbSymbol),
+        classOwner = compilerSymbol.ownerChain
+          .find(c => c.isClass || c.isModule)
+          .map(semanticdbSymbol),
         overridden = compilerSymbol.overrides.map(semanticdbSymbol),
-        properties = if(compilerSymbol.isAbstractClass || compilerSymbol.isAbstractType) List(PcSymbolProperty.ABSTRACT) else Nil
+        properties =
+          if (compilerSymbol.isAbstractClass || compilerSymbol.isAbstractType)
+            List(PcSymbolProperty.ABSTRACT)
+          else Nil
       )
     )
   }
 
   private def getSymbolKind(sym: Symbol): PcSymbolKind.PcSymbolKind =
-    if(sym.isJavaInterface) PcSymbolKind.INTERFACE
-    else if(sym.isTrait) PcSymbolKind.TRAIT
+    if (sym.isJavaInterface) PcSymbolKind.INTERFACE
+    else if (sym.isTrait) PcSymbolKind.TRAIT
     else if (sym.isConstructor) PcSymbolKind.CONSTRUCTOR
     else if (sym.isPackageObject) PcSymbolKind.PACKAGE_OBJECT
     else if (sym.isClass) PcSymbolKind.CLASS

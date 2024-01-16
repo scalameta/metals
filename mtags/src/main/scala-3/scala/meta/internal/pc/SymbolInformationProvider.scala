@@ -19,13 +19,17 @@ class SymbolInformationProvider(using Context):
   ): List[Symbol] =
     def collectSymbols(denotation: Denotation): List[Symbol] =
       denotation match
-        case MultiDenotation(denot1, denot2) => collectSymbols(denot1) ++ collectSymbols(denot2)
+        case MultiDenotation(denot1, denot2) =>
+          collectSymbols(denot1) ++ collectSymbols(denot2)
         case denot => List(denot.symbol)
-      
-    def loop(owners: List[Symbol], parts: List[(String, Boolean)]): List[Symbol] =
+
+    def loop(
+        owners: List[Symbol],
+        parts: List[(String, Boolean)],
+    ): List[Symbol] =
       parts match
         case (head, isClass) :: tl =>
-          val foundSymbols = 
+          val foundSymbols =
             owners.flatMap { owner =>
               val next =
                 if isClass then owner.info.member(typeName(head))
@@ -60,21 +64,19 @@ class SymbolInformationProvider(using Context):
 
     val foundSymbols =
       try toSymbols(pkg, names)
-      catch case NonFatal(e) =>
-        pprint.log(e)
-        Nil
+      catch case NonFatal(e) => Nil
 
-    for
-      sym <- foundSymbols
-    yield {
+    for sym <- foundSymbols
+    yield
       val classSym = if sym.isClass then sym else sym.moduleClass
       val parents =
-        if(classSym.isClass)
+        if classSym.isClass
         then classSym.asClass.parentSyms.map(SemanticdbSymbols.symbolName)
         else Nil
-      val dealisedSymbol = 
-        if(sym.isAliasType) sym.info.metalsDealias.typeSymbol else sym
-      val classOwner = sym.ownersIterator.drop(1).find(s => s.isClass || s.is(Flags.Module))
+      val dealisedSymbol =
+        if sym.isAliasType then sym.info.metalsDealias.typeSymbol else sym
+      val classOwner =
+        sym.ownersIterator.drop(1).find(s => s.isClass || s.is(Flags.Module))
       val overridden = sym.denot.allOverriddenSymbols.toList
 
       PcSymbolInformation(
@@ -84,9 +86,11 @@ class SymbolInformationProvider(using Context):
         dealisedSymbol = SemanticdbSymbols.symbolName(dealisedSymbol),
         classOwner = classOwner.map(SemanticdbSymbols.symbolName),
         overridden = overridden.map(SemanticdbSymbols.symbolName),
-        properties = if sym.is(Flags.Abstract) then List(PcSymbolProperty.ABSTRACT) else Nil
+        properties =
+          if sym.is(Flags.Abstract) then List(PcSymbolProperty.ABSTRACT)
+          else Nil,
       )
-    }
+    end for
   end info
 
   private def getSymbolKind(sym: Symbol): PcSymbolKind.PcSymbolKind =

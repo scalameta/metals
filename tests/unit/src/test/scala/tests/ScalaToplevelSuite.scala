@@ -635,7 +635,7 @@ class ScalaToplevelSuite extends BaseSuite {
     mode = All,
   )
 
-    check(
+  check(
     "overridden-type-alias",
     """|package a
        |object O {
@@ -650,7 +650,8 @@ class ScalaToplevelSuite extends BaseSuite {
        |      case Iterable[t] => t
        |}
        |""".stripMargin,
-    List("a/", "a/O.", "a/O.A# -> Set", "a/O.H# -> List", "a/O.W# -> Set", "a/O.R# -> Set", "a/O.L# -> List", "a/O.Elem#"),
+    List("a/", "a/O.", "a/O.A# -> Set", "a/O.H# -> List", "a/O.W# -> Set",
+      "a/O.R# -> Set", "a/O.L# -> List", "a/O.Elem#"),
     mode = All,
   )
 

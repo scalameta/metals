@@ -76,8 +76,8 @@ trait Completions { this: MetalsGlobal =>
 
   val packageSymbols: mutable.Map[String, Option[Symbol]] =
     mutable.Map.empty[String, Option[Symbol]]
-  def packageSymbolFromString(symbol: String): Option[Symbol] = 
-    if(symbol == "_empty_/") Some(rootMirror.EmptyPackage)
+  def packageSymbolFromString(symbol: String): Option[Symbol] =
+    if (symbol == "_empty_/") Some(rootMirror.EmptyPackage)
     else {
       packageSymbols.getOrElseUpdate(
         symbol, {

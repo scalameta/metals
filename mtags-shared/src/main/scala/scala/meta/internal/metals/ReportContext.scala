@@ -141,9 +141,9 @@ class StdReporter(
 
       optDuplicate.orElse {
         Try {
-        path.createDirectories()
-        path.writeText(sanitize(report.fullText(withIdAndSummary = true)))
-        path
+          path.createDirectories()
+          path.writeText(sanitize(report.fullText(withIdAndSummary = true)))
+          path
         }.toOption
       }
     }

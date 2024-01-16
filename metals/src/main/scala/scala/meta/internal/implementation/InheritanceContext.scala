@@ -25,12 +25,12 @@ class InheritanceContext(inheritance: Map[String, Set[ClassLocation]]) {
   def toGlobal(
       compilers: Compilers,
       implementationsInDependencySources: Map[String, Set[ClassLocation]],
-      source: AbsolutePath
+      source: AbsolutePath,
   ) = new GlobalInheritanceContext(
     compilers,
     implementationsInDependencySources,
     inheritance,
-    source
+    source,
   )
 }
 
@@ -38,7 +38,7 @@ class GlobalInheritanceContext(
     compilers: Compilers,
     implementationsInDependencySources: Map[String, Set[ClassLocation]],
     localInheritance: Map[String, Set[ClassLocation]],
-    source: AbsolutePath
+    source: AbsolutePath,
 ) extends InheritanceContext(localInheritance) {
   override def getLocations(
       symbol: String
@@ -52,9 +52,11 @@ class GlobalInheritanceContext(
       implementationsInDependencySources
         .getOrElse(shortName, Set.empty)
         .collect { case loc @ ClassLocation(sym, _) =>
-          compilers.info(source, sym).map { 
+          compilers.info(source, sym).map {
             case Some(symInfo) if symInfo.parents.contains(symbol) => Some(loc)
-            case Some(symInfo) if symInfo.dealisedSymbol == symbol && symInfo.symbol != symbol => Some(loc)
+            case Some(symInfo)
+                if symInfo.dealisedSymbol == symbol && symInfo.symbol != symbol =>
+              Some(loc)
             case _ => None
           }
         }
@@ -68,7 +70,9 @@ class GlobalInheritanceContext(
 
 object InheritanceContext {
 
-  def fromDefinitions(localDefinitions: Map[Path, Map[String, Set[ClassLocation]]]): InheritanceContext = {
+  def fromDefinitions(
+      localDefinitions: Map[Path, Map[String, Set[ClassLocation]]]
+  ): InheritanceContext = {
     val inheritance = mutable.Map
       .empty[String, Set[ClassLocation]]
     for {

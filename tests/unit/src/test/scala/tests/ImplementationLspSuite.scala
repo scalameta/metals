@@ -521,8 +521,9 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
        |  case object <<Cat>> extends Animal
        |}
        |""".stripMargin,
-    additionalLibraryDependencies = List("io.circe::circe-generic-extras:0.14.0"),
-    scalacOptions = List("-Ymacro-annotations")
+    additionalLibraryDependencies =
+      List("io.circe::circe-generic-extras:0.14.0"),
+    scalacOptions = List("-Ymacro-annotations"),
   )
 
   check(
@@ -539,7 +540,7 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
        |""".stripMargin,
   )
 
-    check(
+  check(
     "local-methods",
     """|/a/src/main/scala/a/Main.scala
        |object Test {

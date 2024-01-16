@@ -172,7 +172,7 @@ class SymbolHierarchyOps(
         parentDoc,
         symbol,
         source,
-        scalaVersionSelector
+        scalaVersionSelector,
       )
       range <- implOccurrence.range
       distance = buffer.tokenEditDistance(
@@ -210,7 +210,7 @@ object SymbolHierarchyOps {
       semanticDb: TextDocument,
       symbol: String,
       source: AbsolutePath,
-      scalaVersionSelector: ScalaVersionSelector
+      scalaVersionSelector: ScalaVersionSelector,
   ): Option[SymbolOccurrence] = {
     def isDefinitionOccurrence(occ: SymbolOccurrence) =
       occ.role.isDefinition && occ.symbol == symbol

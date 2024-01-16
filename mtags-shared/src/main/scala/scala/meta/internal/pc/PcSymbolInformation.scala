@@ -25,15 +25,21 @@ case class PcSymbolInformation(
 }
 
 object PcSymbolInformation {
-  def from(info: IPcSymbolInformation): PcSymbolInformation = 
+  def from(info: IPcSymbolInformation): PcSymbolInformation =
     PcSymbolInformation(
       info.symbol(),
-      Try(PcSymbolKind.withName(info.kindString())).getOrElse(PcSymbolKind.UNKNOWN_KIND),
+      Try(PcSymbolKind.withName(info.kindString()))
+        .getOrElse(PcSymbolKind.UNKNOWN_KIND),
       info.parentsList().asScala.toList,
       info.dealisedSymbol(),
-      if(info.classOwnerString().nonEmpty) Some(info.classOwnerString()) else None,
+      if (info.classOwnerString().nonEmpty) Some(info.classOwnerString())
+      else None,
       info.overriddenList().asScala.toList,
-      info.propertiesList().asScala.toList.flatMap(name => Try(PcSymbolProperty.withName(name)).toOption)
+      info
+        .propertiesList()
+        .asScala
+        .toList
+        .flatMap(name => Try(PcSymbolProperty.withName(name)).toOption)
     )
 }
 

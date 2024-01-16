@@ -5,7 +5,6 @@ import scala.concurrent.Future
 import munit.Location
 import munit.TestOptions
 
-
 abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
 
   protected def libraryDependencies: List[String] = Nil
@@ -22,7 +21,7 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
       input: String,
       scalaVersion: Option[String] = None,
       additionalLibraryDependencies: List[String] = Nil,
-      scalacOptions: List[String] = Nil
+      scalacOptions: List[String] = Nil,
   )(implicit
       loc: Location
   ): Unit = {

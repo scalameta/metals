@@ -56,7 +56,7 @@ final class ImplementationProvider(
     trees: Trees,
     scalaVersionSelector: ScalaVersionSelector,
     compilers: Compilers,
-    buildTargets: BuildTargets
+    buildTargets: BuildTargets,
 )(implicit ec: ExecutionContext, rc: ReportContext)
     extends SemanticdbFeatureProvider {
   import ImplementationProvider._
@@ -259,13 +259,13 @@ final class ImplementationProvider(
         locationsByFile: Map[Path, Set[ClassLocation]],
         parentSymbol: PcSymbolInformation,
         classSymbol: String,
-        buildTarget: BuildTargetIdentifier
+        buildTarget: BuildTargetIdentifier,
     ) = Future.sequence({
       for {
         file <- files
         locations = locationsByFile(file)
         implPath = AbsolutePath(file)
-        if(buildTargets.belongsToBuildTarget(buildTarget, implPath))
+        if (buildTargets.belongsToBuildTarget(buildTarget, implPath))
         implDocument <- findSemanticdb(implPath).toList
       } yield {
         for {
@@ -333,7 +333,7 @@ final class ImplementationProvider(
                     locationsByFile,
                     symbolInfo,
                     symbolClass,
-                    target
+                    target,
                   )
                 )
               )

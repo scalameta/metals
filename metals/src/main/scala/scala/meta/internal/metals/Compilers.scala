@@ -790,14 +790,18 @@ class Compilers(
       symbol: String,
   ): Future[Seq[PcSymbolInformation]] = {
     loadCompiler(path)
-      .map(_.info(symbol).asScala.map(_.asScala.toSeq.map(PcSymbolInformation.from)))
+      .map(
+        _.info(symbol).asScala
+          .map(_.asScala.toSeq.map(PcSymbolInformation.from))
+      )
       .getOrElse(Future(Nil))
   }
 
   def info(
       path: AbsolutePath,
       symbol: String,
-  ): Future[Option[PcSymbolInformation]] = infoAll(path, symbol).map(_.find(_.symbol == symbol))
+  ): Future[Option[PcSymbolInformation]] =
+    infoAll(path, symbol).map(_.find(_.symbol == symbol))
 
   private def definition(
       params: TextDocumentPositionParams,
