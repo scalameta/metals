@@ -789,7 +789,7 @@ class Compilers(
       path: AbsolutePath,
       symbol: String,
   ): Future[Seq[PcSymbolInformation]] = {
-    loadCompiler(path, forceScala = true)
+    loadCompiler(path)
       .map(_.info(symbol).asScala.map(_.asScala.toSeq.map(PcSymbolInformation.from)))
       .getOrElse(Future(Nil))
   }
@@ -854,10 +854,7 @@ class Compilers(
     }.getOrElse(Future.successful(Nil.asJava))
   }
 
-  def loadCompiler(
-      path: AbsolutePath,
-      forceScala: Boolean = false
-  ): Option[PresentationCompiler] = {
+  def loadCompiler(path: AbsolutePath): Option[PresentationCompiler] = {
 
     def fromBuildTarget: Option[PresentationCompiler] = {
       val target = buildTargets
@@ -867,7 +864,6 @@ class Compilers(
         case None => Some(fallbackCompiler(path))
         case Some(value) =>
           if (path.isScalaFilename) loadCompiler(value)
-          else if (path.isJavaFilename && forceScala) loadCompiler(value).orElse(loadJavaCompiler(value))
           else if (path.isJavaFilename) loadJavaCompiler(value)
           else None
       }
