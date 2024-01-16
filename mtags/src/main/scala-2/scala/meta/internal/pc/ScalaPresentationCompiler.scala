@@ -40,6 +40,7 @@ import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SyntheticDecoration
 import scala.meta.pc.SyntheticDecorationsParams
 import scala.meta.pc.VirtualFileParams
+import scala.meta.pc.{PcSymbolInformation => IPcSymbolInformation}
 
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
@@ -339,14 +340,17 @@ case class ScalaPresentationCompiler(
     ) { pc => new PcDefinitionProvider(pc.compiler(), params).definition() }
   }
 
-  override def findParents(
+  override def info(
       symbol: String
-  ): CompletableFuture[util.List[String]] = {
-    compilerAccess.withNonInterruptableCompiler(None)(
-      List.empty[String].asJava,
+  ): CompletableFuture[ju.List[IPcSymbolInformation]] = {
+    compilerAccess.withNonInterruptableCompiler[ju.List[IPcSymbolInformation]](
+      None
+    )(
+      Nil.asJava,
       EmptyCancelToken
     ) { pc =>
-      pc.compiler().findParents(symbol).asJava
+      val result: List[IPcSymbolInformation] = pc.compiler().info(symbol)
+      result.asJava
     }
   }
 

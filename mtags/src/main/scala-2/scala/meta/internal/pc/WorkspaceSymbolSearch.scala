@@ -10,7 +10,7 @@ import org.eclipse.{lsp4j => l}
 
 trait WorkspaceSymbolSearch { this: MetalsGlobal =>
 
-  def findParents(symbol: String): List[String] = {
+  def info(symbol: String): List[PcSymbolInformation] = {
     val index = symbol.lastIndexOf("/")
     val pkgString = symbol.take(index + 1)
     val pkg = packageSymbolFromString(pkgString).getOrElse(
@@ -27,15 +27,48 @@ trait WorkspaceSymbolSearch { this: MetalsGlobal =>
         val rest = symbol.drop(newSymbol.size)
         loop(rest.drop(1), (newSymbol, rest.headOption.exists(_ == '#')) :: acc)
       }
+    
     val names =
-      loop(symbol.drop(index + 1), List.empty)
-    val compilerSymbol = names.foldLeft(pkg) { case (sym, (name, isClass)) =>
-      if (isClass) sym.info.member(TypeName(name))
-      else sym.info.member(TermName(name))
+      loop(symbol.drop(index + 1).takeWhile(_ != '('), List.empty)
+    val compilerSymbols = names.foldLeft(List(pkg)) { case (owners, (name, isClass)) =>
+        owners.flatMap{ owner =>
+          val foundChild =
+            if (isClass) owner.info.member(TypeName(name))
+            else owner.info.member(TermName(name))
+          foundChild.info match {
+            case OverloadedType(_, alts) => alts
+            case _ => List(foundChild)
+          }
+        }
     }
 
-    compilerSymbol.parentSymbols.map(semanticdbSymbol)
+    compilerSymbols.map(compilerSymbol =>
+      PcSymbolInformation(
+        symbol = semanticdbSymbol(compilerSymbol),
+        kind = getSymbolKind(compilerSymbol),
+        parents = compilerSymbol.parentSymbols.map(semanticdbSymbol),
+        dealisedSymbol = semanticdbSymbol(compilerSymbol.dealiased),
+        classOwner = compilerSymbol.ownerChain.find(c => c.isClass || c.isModule).map(semanticdbSymbol),
+        overridden = compilerSymbol.overrides.map(semanticdbSymbol),
+        properties = if(compilerSymbol.isAbstractClass || compilerSymbol.isAbstractType) List(PcSymbolProperty.ABSTRACT) else Nil
+      )
+    )
   }
+
+  private def getSymbolKind(sym: Symbol): PcSymbolKind.PcSymbolKind =
+    if(sym.isJavaInterface) PcSymbolKind.INTERFACE
+    else if(sym.isTrait) PcSymbolKind.TRAIT
+    else if (sym.isConstructor) PcSymbolKind.CONSTRUCTOR
+    else if (sym.isPackageObject) PcSymbolKind.PACKAGE_OBJECT
+    else if (sym.isClass) PcSymbolKind.CLASS
+    else if (sym.isMacro) PcSymbolKind.MACRO
+    else if (sym.isLocalToBlock) PcSymbolKind.LOCAL
+    else if (sym.isMethod) PcSymbolKind.METHOD
+    else if (sym.isParameter) PcSymbolKind.PARAMETER
+    else if (sym.hasPackageFlag) PcSymbolKind.PACKAGE
+    else if (sym.isTypeParameter) PcSymbolKind.TYPE_PARAMETER
+    else if (sym.isType) PcSymbolKind.TYPE
+    else PcSymbolKind.UNKNOWN_KIND
 
   class CompilerSearchVisitor(
       context: Context,

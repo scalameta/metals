@@ -25,6 +25,7 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.JavaPresentationCompiler
 import scala.meta.internal.pc.LogMessages
+import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.internal.worksheets.WorksheetPcData
 import scala.meta.internal.worksheets.WorksheetProvider
@@ -784,16 +785,19 @@ class Compilers(
     definition(params = params, token = token, findTypeDef = true)
   }
 
-  def findParents(
+  def infoAll(
       path: AbsolutePath,
       symbol: String,
-  ): Future[List[String]] = {
-    loadCompiler(path)
-      .map {
-        _.findParents(symbol).asScala.map(_.asScala.toList)
-      }
-      .getOrElse(Future.successful(Nil))
+  ): Future[Seq[PcSymbolInformation]] = {
+    loadCompiler(path, forceScala = true)
+      .map(_.info(symbol).asScala.map(_.asScala.toSeq.map(PcSymbolInformation.from)))
+      .getOrElse(Future(Nil))
   }
+
+  def info(
+      path: AbsolutePath,
+      symbol: String,
+  ): Future[Option[PcSymbolInformation]] = infoAll(path, symbol).map(_.find(_.symbol == symbol))
 
   private def definition(
       params: TextDocumentPositionParams,
@@ -851,7 +855,8 @@ class Compilers(
   }
 
   def loadCompiler(
-      path: AbsolutePath
+      path: AbsolutePath,
+      forceScala: Boolean = false
   ): Option[PresentationCompiler] = {
 
     def fromBuildTarget: Option[PresentationCompiler] = {
@@ -862,6 +867,7 @@ class Compilers(
         case None => Some(fallbackCompiler(path))
         case Some(value) =>
           if (path.isScalaFilename) loadCompiler(value)
+          else if (path.isJavaFilename && forceScala) loadCompiler(value).orElse(loadJavaCompiler(value))
           else if (path.isJavaFilename) loadJavaCompiler(value)
           else None
       }

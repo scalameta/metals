@@ -288,11 +288,18 @@ class ScalaToplevelMtags(
             currRegion.withTermOwner(owner),
             expectTemplate
           )
-        case DEF | VAL | VAR | GIVEN | TYPE
+        case DEF | VAL | VAR | GIVEN
             if expectTemplate.map(!_.isExtension).getOrElse(true) =>
           if (needEmitTermMember()) {
             withOwner(currRegion.termOwner) {
               emitTerm(currRegion)
+            }
+          } else scanner.nextToken()
+          loop(indent, isAfterNewline = false, currRegion, newExpectIgnoreBody)
+        case TYPE if expectTemplate.map(!_.isExtension).getOrElse(true) =>
+          if (needEmitMember(currRegion)) {
+            withOwner(currRegion.termOwner) {
+              emitType(needEmitTermMember())
             }
           } else scanner.nextToken()
           loop(indent, isAfterNewline = false, currRegion, newExpectIgnoreBody)
@@ -655,8 +662,55 @@ class ScalaToplevelMtags(
     scanner.nextToken()
   }
 
+  def emitType(emitTermMember: Boolean): Option[Unit] = {
+    acceptTrivia()
+    newIdentifier
+      .map { ident =>
+        val typeSymbol = symbol(Descriptor.Type(ident.name))
+        if (emitTermMember) {
+          tpe(ident.name, ident.pos, Kind.TYPE, 0)
+        }
+        nextIsNL()
+        @tailrec
+        def loop(name: Option[String], isAfterEq: Boolean = false): Option[String] = {
+          scanner.curr.token match {
+            case SEMI => name
+            case _ if isNewline | isDone => name
+            case EQUALS =>
+              scanner.nextToken()
+              loop(name, isAfterEq = true)
+            case TYPELAMBDAARROW | WHITESPACE =>
+              scanner.nextToken()
+              loop(name, isAfterEq)
+            case LBRACKET =>
+              acceptBalancedDelimeters(LBRACKET, RBRACKET)
+              scanner.nextToken()
+              loop(name, isAfterEq)
+            case LBRACE =>
+              acceptBalancedDelimeters(LBRACE, RBRACE)
+              scanner.nextToken()
+              loop(name, isAfterEq)
+            case IDENTIFIER if isAfterEq && scanner.curr.name != "|" && scanner.curr.name != "&" =>
+              val optName = selectName()
+              loop(optName, isAfterEq)
+            case _ if isAfterEq => None
+            case _ =>
+              scanner.nextToken()
+              loop(name)
+          }
+        }
+
+        loop(name = None).foreach { rhsName =>
+          overridden += ((
+            typeSymbol,
+            List(UnresolvedOverriddenSymbol(rhsName))
+          ))
+        }
+      }
+  }
+
   /**
-   * Enters a global element (def/val/var/type)
+   * Enters a global element (def/val/var/given)
    */
   def emitTerm(region: Region): Unit = {
     val kind = scanner.curr.token
@@ -682,10 +736,6 @@ class ScalaToplevelMtags(
           )
           resetRegion(region)
         })
-      case TYPE =>
-        newIdentifier.foreach { name =>
-          tpe(name.name, name.pos, Kind.TYPE, 0)
-        }
       case DEF =>
         methodIdentifier.foreach(name =>
           method(
@@ -865,7 +915,24 @@ class ScalaToplevelMtags(
         reportError("identifier")
         None
     }
+  }
 
+  def selectName(): Option[String] = {
+    @tailrec
+    def loop(last: Option[String]): Option[String] = {
+      scanner.curr.token match {
+        case IDENTIFIER =>
+          val name = scanner.curr.name
+          scanner.nextToken()
+          loop(Some(name))
+        case DOT =>
+          scanner.nextToken()
+          loop(last)
+        case _ =>
+          last
+      }
+    }
+    loop(last = None)
   }
 
   /**

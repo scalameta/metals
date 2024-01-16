@@ -5,6 +5,7 @@ import scala.concurrent.Future
 import munit.Location
 import munit.TestOptions
 
+
 abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
 
   protected def libraryDependencies: List[String] = Nil
@@ -20,6 +21,8 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
       name: TestOptions,
       input: String,
       scalaVersion: Option[String] = None,
+      additionalLibraryDependencies: List[String] = Nil,
+      scalacOptions: List[String] = Nil
   )(implicit
       loc: Location
   ): Unit = {
@@ -51,7 +54,8 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
              |{"a":
              |  {
              |    "scalaVersion" : "$actualScalaVersion",
-             |    "libraryDependencies": ${toJsonArray(libraryDependencies)}
+             |    "libraryDependencies": ${toJsonArray(libraryDependencies ++ additionalLibraryDependencies)},
+             |    "scalacOptions": ${toJsonArray(scalacOptions)}
              |  }
              |}
              |${input
@@ -60,6 +64,7 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
         _ <- Future.sequence(
           files.map(file => server.didOpen(s"${file._1}"))
         )
+        _ = pprint.log(server.client.diagnostics)
         _ <- assertCheck(filename, edit, expected, base)
         _ <- server.shutdown()
       } yield ()

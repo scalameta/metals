@@ -53,4 +53,36 @@ class ImplementationCrossLspSuite
     scalaVersion = V.scala3,
   )
 
+  check(
+    "basic-method-params",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |trait LivingBeing{
+       |  def sound: Int
+       |  def s@@ound(times : Int): Int = 1
+       |  def sound(start : Long): Int =  1
+       |}
+       |abstract class Animal extends LivingBeing{}
+       |class Dog extends Animal{
+       |  def sound = 1
+       |  override def sound(times : Long) = 1
+       |  override def <<sound>>(times : Int) = 1
+       |}
+       |class Cat extends Animal{
+       |  override def <<sound>>(times : Int) = 1
+       |  override def sound = 1
+       |}
+       |""".stripMargin,
+    scalaVersion = Some(V.scala3),
+  )
+
+  check(
+    "empty-pkg",
+    """|/a/src/main/scala/a/Main.scala
+       |trait A@@A
+       |class <<B>> extends A@@A
+       |""".stripMargin,
+    scalaVersion = Some(V.scala3),
+  )
+
 }

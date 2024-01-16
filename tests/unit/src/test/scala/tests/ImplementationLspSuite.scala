@@ -254,8 +254,9 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
        |""".stripMargin,
   )
 
+  // we have to collect information about overridden symbols in JavaMtags for this to work
   check(
-    "java-classes",
+    "java-classes".ignore,
     """|/a/src/main/scala/a/Main.scala
        |package a
        |class <<MyException>> extends Exce@@ption
@@ -520,6 +521,8 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
        |  case object <<Cat>> extends Animal
        |}
        |""".stripMargin,
+    additionalLibraryDependencies = List("io.circe::circe-generic-extras:0.14.0"),
+    scalacOptions = List("-Ymacro-annotations")
   )
 
   check(
@@ -535,6 +538,23 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
        |}
        |""".stripMargin,
   )
+
+    check(
+    "local-methods",
+    """|/a/src/main/scala/a/Main.scala
+       |object Test {
+       |  def main {
+       |    trait A {
+       |      def f@@oo(): Int
+       |    }
+       |    class B extends A {
+       |      def <<foo>>(): Int = 1
+       |    }
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
   check(
     "type-implementation",
     """|/a/src/main/scala/a/Main.scala

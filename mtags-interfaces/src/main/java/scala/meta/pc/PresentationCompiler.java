@@ -171,7 +171,7 @@ public abstract class PresentationCompiler {
 		return CompletableFuture.completedFuture(Collections.emptyList());
 	}
 
-	public CompletableFuture<List<String>> findParents(String symbol) {
+	public CompletableFuture<List<PcSymbolInformation>> info(String symbol) {
 		return CompletableFuture.completedFuture(Collections.emptyList());
 	}
 

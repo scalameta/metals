@@ -599,7 +599,7 @@ class ScalaToplevelSuite extends BaseSuite {
     // It is easier to work around this inconstancy in `SemanticdbSymbols.inverseSemanticdbSymbol`
     // than to change symbols emitted by `ScalaTopLevelMtags`,
     // since the object could be placed before type definition.
-    List("s/", "s/Test$package.", "s/Test$package.Cow#", "s/Cow.",
+    List("s/", "s/Test$package.", "s/Test$package.Cow# -> Long", "s/Cow.",
       "s/Cow.apply()."),
     dialect = dialects.Scala3,
     mode = All,
@@ -632,6 +632,25 @@ class ScalaToplevelSuite extends BaseSuite {
        |class A extends B, C
        |""".stripMargin,
     List("a/", "a/A# -> B, C"),
+    mode = All,
+  )
+
+    check(
+    "overridden-type-alias",
+    """|package a
+       |object O {
+       |  type A[X] = Set[X]
+       |  type W[X] = mutable.Set[X]
+       |  type H = [X] =>> List[X]
+       |  type R = Set[Int] { def a: Int }
+       |  opaque type L <: mutable.List[Int] = mutable.List[Int]
+       |  type Elem[X] = X match
+       |      case String => Char
+       |      case Array[t] => t
+       |      case Iterable[t] => t
+       |}
+       |""".stripMargin,
+    List("a/", "a/O.", "a/O.A# -> Set", "a/O.H# -> List", "a/O.W# -> Set", "a/O.R# -> Set", "a/O.L# -> List", "a/O.Elem#"),
     mode = All,
   )
 

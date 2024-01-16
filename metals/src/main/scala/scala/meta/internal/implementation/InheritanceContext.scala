@@ -8,13 +8,9 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.io.AbsolutePath
 
-class InheritanceContext(
-    val findSymbol: String => Option[SymbolInformation],
-    inheritance: Map[String, Set[ClassLocation]],
-) {
+class InheritanceContext(inheritance: Map[String, Set[ClassLocation]]) {
 
   def allClassSymbols = inheritance.keySet
 
@@ -26,26 +22,10 @@ class InheritanceContext(
   protected def getWorkspaceLocations(symbol: String): Set[ClassLocation] =
     inheritance.getOrElse(symbol, Set.empty)
 
-  def withClasspathContext(
-      classpathInheritance: Map[String, Set[ClassLocation]]
-  ): InheritanceContext = {
-    val newInheritance = mutable.Map(inheritance.toSeq: _*)
-    for { (symbol, locations) <- classpathInheritance } {
-      val newLocations =
-        newInheritance.getOrElse(symbol, Set.empty) ++ locations
-      newInheritance += symbol -> newLocations
-    }
-    new InheritanceContext(
-      findSymbol,
-      newInheritance.toMap,
-    )
-  }
-
   def toGlobal(
       compilers: Compilers,
       implementationsInDependencySources: Map[String, Set[ClassLocation]],
   ) = new GlobalInheritanceContext(
-    findSymbol,
     compilers,
     implementationsInDependencySources,
     inheritance,
@@ -53,11 +33,10 @@ class InheritanceContext(
 }
 
 class GlobalInheritanceContext(
-    override val findSymbol: String => Option[SymbolInformation],
     compilers: Compilers,
     implementationsInDependencySources: Map[String, Set[ClassLocation]],
     localInheritance: Map[String, Set[ClassLocation]],
-) extends InheritanceContext(findSymbol, localInheritance) {
+) extends InheritanceContext(localInheritance) {
   override def getLocations(
       symbol: String
   )(implicit ec: ExecutionContext): Future[Set[ClassLocation]] = {
@@ -70,14 +49,10 @@ class GlobalInheritanceContext(
       implementationsInDependencySources
         .getOrElse(shortName, Set.empty)
         .collect { case loc @ ClassLocation(sym, Some(file)) =>
-          compilers.findParents(AbsolutePath(file), sym).map { res =>
-            Option.when(
-              res.exists { sym =>
-                def dealiased =
-                  ImplementationProvider.dealiasClass(sym, findSymbol)
-                sym == symbol || dealiased == symbol
-              }
-            )(loc)
+          compilers.info(AbsolutePath(file), sym).map { 
+            case Some(symInfo) if symInfo.parents.contains(symbol) => Some(loc)
+            case Some(symInfo) if symInfo.dealisedSymbol == symbol && symInfo.symbol != symbol => Some(loc)
+            case _ => None
           }
         }
     Future
@@ -90,10 +65,7 @@ class GlobalInheritanceContext(
 
 object InheritanceContext {
 
-  def fromDefinitions(
-      findSymbol: String => Option[SymbolInformation],
-      localDefinitions: Map[Path, Map[String, Set[ClassLocation]]],
-  ): InheritanceContext = {
+  def fromDefinitions(localDefinitions: Map[Path, Map[String, Set[ClassLocation]]]): InheritanceContext = {
     val inheritance = mutable.Map
       .empty[String, Set[ClassLocation]]
     for {
@@ -103,6 +75,6 @@ object InheritanceContext {
       val updated = inheritance.getOrElse(symbol, Set.empty) ++ locations
       inheritance += symbol -> updated
     }
-    new InheritanceContext(findSymbol, inheritance.toMap)
+    new InheritanceContext(inheritance.toMap)
   }
 }

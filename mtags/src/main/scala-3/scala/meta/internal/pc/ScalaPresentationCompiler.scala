@@ -23,6 +23,7 @@ import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.pc.completions.CompletionProvider
 import scala.meta.internal.pc.completions.OverrideCompletions
 import scala.meta.pc.*
+import scala.meta.pc.{PcSymbolInformation => IPcSymbolInformation}
 
 import dotty.tools.dotc.reporting.StoreReporter
 import org.eclipse.lsp4j.DocumentHighlight
@@ -177,14 +178,14 @@ case class ScalaPresentationCompiler(
   def diagnosticsForDebuggingPurposes(): ju.List[String] =
     List[String]().asJava
 
-  override def findParents(
+  override def info(
       symbol: String
-  ): ju.concurrent.CompletableFuture[ju.List[String]] =
-    compilerAccess.withNonInterruptableCompiler(None)(
-      List.empty[String].asJava,
-      EmptyCancelToken,
+  ): CompletableFuture[ju.List[IPcSymbolInformation]] =
+    compilerAccess.withNonInterruptableCompiler[ju.List[IPcSymbolInformation]](None)(
+      Nil.asJava,
+      EmptyCancelToken
     ) { access =>
-      ParentProvider(using access.compiler().currentCtx).parents(symbol).asJava
+      SymbolInformationProvider(using access.compiler().currentCtx).info(symbol).asJava
     }
 
   def semanticdbTextDocument(
