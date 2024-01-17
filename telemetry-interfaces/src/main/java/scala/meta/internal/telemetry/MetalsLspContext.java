@@ -6,13 +6,16 @@ public class MetalsLspContext implements ReporterContext {
 	final private String metalsVersion;
 	final private MetalsUserConfiguration userConfig;
 	final private MetalsServerConfiguration serverConfig;
+	final private MetalsClientInfo clientInfo;
 	final private List<BuildServerConnection> buildServerConnections;
 
 	public MetalsLspContext(String metalsVersion, MetalsUserConfiguration userConfig,
-			MetalsServerConfiguration serverConfig, List<BuildServerConnection> buildServerConnections) {
+			MetalsServerConfiguration serverConfig, MetalsClientInfo clientInfo,
+			List<BuildServerConnection> buildServerConnections) {
 		this.metalsVersion = metalsVersion;
 		this.userConfig = userConfig;
 		this.serverConfig = serverConfig;
+		this.clientInfo = clientInfo;
 		this.buildServerConnections = buildServerConnections;
 	}
 
@@ -28,6 +31,10 @@ public class MetalsLspContext implements ReporterContext {
 		return serverConfig;
 	}
 
+	public MetalsClientInfo getClientInfo() {
+		return clientInfo;
+	}
+
 	public List<BuildServerConnection> getBuildServerConnections() {
 		return buildServerConnections;
 	}
@@ -39,6 +46,7 @@ public class MetalsLspContext implements ReporterContext {
 		result = prime * result + ((metalsVersion == null) ? 0 : metalsVersion.hashCode());
 		result = prime * result + ((userConfig == null) ? 0 : userConfig.hashCode());
 		result = prime * result + ((serverConfig == null) ? 0 : serverConfig.hashCode());
+		result = prime * result + ((clientInfo == null) ? 0 : clientInfo.hashCode());
 		result = prime * result + ((buildServerConnections == null) ? 0 : buildServerConnections.hashCode());
 		return result;
 	}
@@ -66,6 +74,11 @@ public class MetalsLspContext implements ReporterContext {
 			if (other.serverConfig != null)
 				return false;
 		} else if (!serverConfig.equals(other.serverConfig))
+			return false;
+		if (clientInfo == null) {
+			if (other.clientInfo != null)
+				return false;
+		} else if (!clientInfo.equals(other.clientInfo))
 			return false;
 		if (buildServerConnections == null) {
 			if (other.buildServerConnections != null)

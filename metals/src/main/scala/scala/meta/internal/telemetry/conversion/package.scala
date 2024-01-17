@@ -1,5 +1,7 @@
 package scala.meta.internal.telemetry
 
+import java.util.Optional
+
 import scala.collection.JavaConverters._
 import scala.jdk.OptionConverters._
 
@@ -7,6 +9,8 @@ import scala.meta.internal.bsp
 import scala.meta.internal.metals
 import scala.meta.internal.pc.telemetry.conversion.PresentationCompilerConfig
 import scala.meta.internal.telemetry
+
+import org.eclipse.lsp4j
 
 package object conversion {
   def UserConfiguration(
@@ -63,6 +67,12 @@ package object conversion {
       /* askToReconnect = */ config.askToReconnect,
       /* allowMultilineStringFormatting = */ config.allowMultilineStringFormatting,
       /* compilers = */ PresentationCompilerConfig(config.compilers),
+    )
+
+  def MetalsClientInfo(info: lsp4j.ClientInfo): telemetry.MetalsClientInfo =
+    new telemetry.MetalsClientInfo(
+      /* name = */ Optional.of(info.getName()),
+      /* version =  */ Optional.of(info.getVersion()),
     )
 
 }

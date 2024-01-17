@@ -105,6 +105,10 @@ object SampleReports {
             nextBoolean(),
             presentationCompilerConfig,
           ),
+          new telemetry.MetalsClientInfo(
+            optional("name"),
+            optional("version"),
+          ),
           maybeEmptyList(
             new telemetry.BuildServerConnection(
               "connection.name",

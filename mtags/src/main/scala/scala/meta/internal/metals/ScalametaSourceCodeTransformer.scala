@@ -64,8 +64,10 @@ object ScalametaSourceCodeTransformer
     override def apply(tree: Tree): Tree = {
       tree match {
         case name: Name if isCommonScalaName(name) => name
-        case node: Term.Select if isWellKnownPackageSelector(node.toString()) => node
-        case node: Type.Select if isWellKnownPackageSelector(node.toString()) => node
+        case node: Term.Select if isWellKnownPackageSelector(node.toString()) =>
+          node
+        case node: Type.Select if isWellKnownPackageSelector(node.toString()) =>
+          node
         case node: Type.Name => sanitizeTypeName(node)
         case node: Term.Name => sanitizeTermName(node)
         case node: Name.Indeterminate => sanitizeUnclasifiedName(node)
