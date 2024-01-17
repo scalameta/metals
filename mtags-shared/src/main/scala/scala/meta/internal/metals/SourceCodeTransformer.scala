@@ -14,9 +14,9 @@ trait SourceCodeTransformer[Context, Tree] {
   def parse(source: String, context: Context): Option[Tree]
 
   def toSourceString(value: Tree, ctx: Context): String
-  def transformer: ASTTrasnformer
+  def transformer: ASTTransformer
 
-  trait ASTTrasnformer {
+  trait ASTTransformer {
     protected type Name
     protected type TermName <: Name
     protected type TypeName <: Name

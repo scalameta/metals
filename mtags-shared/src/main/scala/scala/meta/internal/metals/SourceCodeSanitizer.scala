@@ -22,7 +22,7 @@ class SourceCodeSanitizer[ParserCtx, ParserAST](
 
   // Completion marker needs to be escape before parsing the sources, and restored afterwards
   private final val CompletionMarker = "@@"
-  private final val CompletionMarkerReplecement = "__METALS_COMPLETION_MARKER__"
+  private final val CompletionMarkerReplacement = "__METALS_COMPLETION_MARKER__"
 
   private final val MarkdownCodeSnippet = java.util.regex.Pattern
     .compile(
@@ -40,7 +40,7 @@ class SourceCodeSanitizer[ParserCtx, ParserAST](
     Option(source)
       .map(_.trim())
       .filter(_.nonEmpty)
-      .map(_.replaceAll(CompletionMarker, CompletionMarkerReplecement))
+      .map(_.replaceAll(CompletionMarker, CompletionMarkerReplacement))
       .fold[Either[String, String]](Left("no-source")) { source =>
         if (StackTraceLine.findFirstIn(source).isDefined)
           Right(source)
@@ -62,7 +62,7 @@ class SourceCodeSanitizer[ParserCtx, ParserAST](
         } else
           Left("<unknown-source-redacted-out>")
       }
-      .map(_.replace(CompletionMarkerReplecement, CompletionMarker))
+      .map(_.replace(CompletionMarkerReplacement, CompletionMarker))
   }
 
   private def anonimizeMarkdownSnippets(source: String): Option[String] = {

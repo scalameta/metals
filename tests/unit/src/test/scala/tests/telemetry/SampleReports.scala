@@ -86,7 +86,7 @@ object SampleReports {
     )
   }
 
-  def metalsLSPReport(
+  def metalsLspReport(
       emptyOptionals: Boolean = false,
       emptyLists: Boolean = false,
       emptyMaps: Boolean = false,

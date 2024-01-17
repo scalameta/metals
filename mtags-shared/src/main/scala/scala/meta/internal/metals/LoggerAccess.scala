@@ -1,6 +1,6 @@
 package scala.meta.internal.metals
 
-// Proxy for different logging mechanism java.util.logging in PresentatilnCompiler and scribe in metals
+// Proxy for different logging mechanism java.util.logging in PresentationCompiler and scribe in metals
 case class LoggerAccess(
     debug: String => Unit,
     info: String => Unit,

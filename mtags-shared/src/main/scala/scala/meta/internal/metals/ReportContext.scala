@@ -202,7 +202,7 @@ private class MirroredReporter(
     auxilaryReporters: Reporter*
 ) extends Reporter {
   override val name: String =
-    s"${primaryReporter.name}-mirror-${auxilaryReporters.mkString("|")}"
+    s"${primaryReporter.name}-mirror-${auxilaryReporters.map(_.name).mkString("|")}"
   private final def allReporters = primaryReporter :: auxilaryReporters.toList
 
   override def create(report: => Report, ifVerbose: Boolean): Option[Path] = {

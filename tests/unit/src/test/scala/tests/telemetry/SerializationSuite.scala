@@ -13,7 +13,7 @@ class SerializationSuite extends BaseSuite {
   test("serialization") {
     def withConfig(emptyCollections: Boolean) = {
       Seq(
-        SampleReports.metalsLSPReport(
+        SampleReports.metalsLspReport(
           emptyOptionals = emptyCollections,
           emptyLists = emptyCollections,
           emptyMaps = emptyCollections,

@@ -39,11 +39,11 @@ object ScalametaSourceCodeTransformer
     context(source).parse[Source].toOption
 
   override def toSourceString(value: Tree, ctx: Dialect): String =
-    value.show(Tree.showSyntax(ctx))
+    value.syntax
 
-  override def transformer: ASTTrasnformer = ScalaMetaTrasnformer
+  override def transformer: ASTTransformer = ScalaMetaTransformer
 
-  private object ScalaMetaTrasnformer extends Transformer with ASTTrasnformer {
+  private object ScalaMetaTransformer extends Transformer with ASTTransformer {
     override protected type Name = meta.Name
     override protected type TermName = meta.Term.Name
     override protected type TypeName = meta.Type.Name

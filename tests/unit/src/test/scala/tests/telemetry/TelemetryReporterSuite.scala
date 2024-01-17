@@ -27,7 +27,7 @@ class TelemetryReporterSuite extends BaseSuite {
     error = Some(new RuntimeException("A", new NullPointerException())),
   )
 
-  // Ensure that tests by default don't use telemtry reporting, it should be disabled in the build.sbt
+  // Ensure that tests by default don't use telemetry reporting, it should be disabled in the build.sbt
   test("default telemetry level") {
     def getDefault = metals.TelemetryLevel.default
     assertEquals(metals.TelemetryLevel.Off, getDefault)
@@ -47,7 +47,7 @@ class TelemetryReporterSuite extends BaseSuite {
         ),
       telemetryLevel = () => metals.TelemetryLevel.All,
       reporterContext = () =>
-        SampleReports.metalsLSPReport().getReporterContext.getMetalsLSP.get(),
+        SampleReports.metalsLspReport().getReporterContext.getMetalsLSP.get(),
       sanitizers = new metals.TelemetryReportContext.Sanitizers(None, None),
     )
 
@@ -66,7 +66,7 @@ class TelemetryReporterSuite extends BaseSuite {
       val serverEndpoint = MockTelemetryServer.address(server)
       for {
         reporterCtx <- Seq(
-          SampleReports.metalsLSPReport(),
+          SampleReports.metalsLspReport(),
           SampleReports.scalaPresentationCompilerReport(),
           SampleReports.unknownReport(),
         ).map(_.getReporterContext().get())
