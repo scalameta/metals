@@ -28,8 +28,6 @@ import scala.meta.internal.metals.TelemetryLevel
 import scala.meta.internal.metals.TelemetryReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments.given
-import scala.meta.internal.telemetry as telemetryApi
-import scala.meta.internal.pc.{telemetry as pcTelemetryApi}
 import scala.meta.internal.pc.completions.CompletionProvider
 import scala.meta.internal.pc.completions.OverrideCompletions
 import scala.meta.internal.pc.{telemetry as pcTelemetryApi}

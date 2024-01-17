@@ -108,7 +108,6 @@ object SampleReports {
             optional("inferedTypes"),
             nextBoolean(),
             nextBoolean(),
-            optional("remoteServer"),
             nextBoolean(),
             nextBoolean(),
             nextBoolean(),

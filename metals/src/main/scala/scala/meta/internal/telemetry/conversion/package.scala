@@ -22,7 +22,6 @@ package object conversion {
       /* showInferredType = */ config.showInferredType.toJava,
       /* showImplicitArguments = */ config.showImplicitArguments,
       /* showImplicitConversionsAndClasses = */ config.showImplicitConversionsAndClasses,
-      /* remoteLanguageServer = */ config.remoteLanguageServer.toJava,
       /* enableStripMarginOnTypeFormatting = */ config.enableStripMarginOnTypeFormatting,
       /* enableIndentOnPaste = */ config.enableIndentOnPaste,
       /* enableSemanticHighlighting = */ config.enableSemanticHighlighting,
