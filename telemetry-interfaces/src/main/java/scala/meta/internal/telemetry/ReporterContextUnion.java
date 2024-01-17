@@ -5,14 +5,11 @@ import java.util.Optional;
 public class ReporterContextUnion {
 	final private Optional<MetalsLspContext> metalsLSP;
 	final private Optional<ScalaPresentationCompilerContext> scalaPresentationCompiler;
-	final private Optional<UnknownProducerContext> unknown;
 
-	ReporterContextUnion(Optional<MetalsLspContext> metalsLSP,
-			Optional<ScalaPresentationCompilerContext> scalaPresentationCompiler,
-			Optional<UnknownProducerContext> unknown) {
+	public ReporterContextUnion(Optional<MetalsLspContext> metalsLSP,
+			Optional<ScalaPresentationCompilerContext> scalaPresentationCompiler) {
 		this.metalsLSP = metalsLSP;
 		this.scalaPresentationCompiler = scalaPresentationCompiler;
-		this.unknown = unknown;
 	}
 
 	public ReporterContext get() {
@@ -20,21 +17,15 @@ public class ReporterContextUnion {
 			return metalsLSP.get();
 		if (scalaPresentationCompiler.isPresent())
 			return scalaPresentationCompiler.get();
-		if (unknown.isPresent())
-			return unknown.get();
 		throw new IllegalStateException("None of union values is defined");
 	}
 
 	public static ReporterContextUnion metalsLSP(MetalsLspContext ctx) {
-		return new ReporterContextUnion(Optional.of(ctx), Optional.empty(), Optional.empty());
+		return new ReporterContextUnion(Optional.of(ctx), Optional.empty());
 	}
 
 	public static ReporterContextUnion scalaPresentationCompiler(ScalaPresentationCompilerContext ctx) {
-		return new ReporterContextUnion(Optional.empty(), Optional.of(ctx), Optional.empty());
-	}
-
-	public static ReporterContextUnion unknown(UnknownProducerContext ctx) {
-		return new ReporterContextUnion(Optional.empty(), Optional.empty(), Optional.of(ctx));
+		return new ReporterContextUnion(Optional.empty(), Optional.of(ctx));
 	}
 
 	public Optional<MetalsLspContext> getMetalsLSP() {
@@ -45,17 +36,12 @@ public class ReporterContextUnion {
 		return scalaPresentationCompiler;
 	}
 
-	public Optional<UnknownProducerContext> getUnknown() {
-		return unknown;
-	}
-
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((metalsLSP == null) ? 0 : metalsLSP.hashCode());
 		result = prime * result + ((scalaPresentationCompiler == null) ? 0 : scalaPresentationCompiler.hashCode());
-		result = prime * result + ((unknown == null) ? 0 : unknown.hashCode());
 		return result;
 	}
 
@@ -77,11 +63,6 @@ public class ReporterContextUnion {
 			if (other.scalaPresentationCompiler != null)
 				return false;
 		} else if (!scalaPresentationCompiler.equals(other.scalaPresentationCompiler))
-			return false;
-		if (unknown == null) {
-			if (other.unknown != null)
-				return false;
-		} else if (!unknown.equals(other.unknown))
 			return false;
 		return true;
 	}

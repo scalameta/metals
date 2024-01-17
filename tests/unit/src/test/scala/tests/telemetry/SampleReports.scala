@@ -67,25 +67,6 @@ object SampleReports {
     maybeEmptyList("semanticDbOpts"),
   )
 
-  def unknownReport(
-      emptyOptionals: Boolean = false,
-      emptyLists: Boolean = false,
-      emptyMaps: Boolean = false,
-  ): telemetry.ErrorReport = {
-    implicit val ctrl: OptionalControl = OptionalControl(!emptyOptionals)
-    implicit val map: MapControl = MapControl(!emptyMaps)
-    implicit val list: ListControl = ListControl(!emptyLists)
-    reportOf(
-      telemetry.ReporterContextUnion.unknown(
-        new telemetry.UnknownProducerContext(
-          "name",
-          "version",
-          maybeEmptyMap("key" -> "value"),
-        )
-      )
-    )
-  }
-
   def metalsLspReport(
       emptyOptionals: Boolean = false,
       emptyLists: Boolean = false,

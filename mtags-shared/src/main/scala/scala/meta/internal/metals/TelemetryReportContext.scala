@@ -96,8 +96,6 @@ private class TelemetryReporter(
         telemetry.ReporterContextUnion.metalsLSP(ctx)
       case ctx: telemetry.ScalaPresentationCompilerContext =>
         telemetry.ReporterContextUnion.scalaPresentationCompiler(ctx)
-      case ctx: telemetry.UnknownProducerContext =>
-        telemetry.ReporterContextUnion.unknown(ctx)
     }
   )
 

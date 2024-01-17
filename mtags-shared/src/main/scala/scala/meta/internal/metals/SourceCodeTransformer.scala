@@ -84,12 +84,8 @@ trait SourceCodeTransformer[Context, Tree] {
         suffix: => String
     ): String = symbols.getOrElseUpdate(
       originalSymbol, {
-        if (
-          originalSymbol.length() <= ShortSymbolLength &&
-          !symbols.values.exists(_ == originalSymbol)
-        ) originalSymbol
-        else
-          generateSymbol(originalSymbol, suffix)
+        if (originalSymbol.length() <= ShortSymbolLength) originalSymbol
+        else generateSymbol(originalSymbol, suffix)
       }.ensuring(
         _.length() == originalSymbol.length(),
         "new symbol has different length then original"
