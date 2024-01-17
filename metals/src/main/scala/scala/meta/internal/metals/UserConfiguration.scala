@@ -654,6 +654,7 @@ object UserConfiguration {
           scalafixRulesDependencies = scalafixRulesDependencies,
           customProjectRoot = customProjectRoot,
           verboseCompilation = verboseCompilation,
+          scalaCliLauncher = None,
           telemetryLevel = telemetryLevel,
           autoImportBuilds = autoImportBuilds,
           scalaCliLauncher = scalaCliLauncher,
