@@ -3,9 +3,9 @@ package scala.meta.internal.metals
 import java.nio.file.Path
 import java.util.Optional
 
-import scala.meta.internal.jdk.OptionConverters._
 import scala.meta.internal.metals.TelemetryReportContext._
 import scala.meta.internal.metals.utils.TimestampedFile
+import scala.meta.internal.mtags.CommonMtagsEnrichments.XtensionOptionScala
 import scala.meta.internal.telemetry
 
 object TelemetryReportContext {
@@ -86,10 +86,10 @@ private class TelemetryReporter(
     /* text =  */ if (sanitizers.canSanitizeSources)
       Optional.of(sanitize(report.text))
     else Optional.empty(),
-    /* id =  */ report.id.toJava,
+    /* id =  */ report.id.asJava,
     /* error =  */ report.error
       .map(telemetry.ExceptionSummary.fromThrowable(_, sanitize(_)))
-      .toJava,
+      .asJava,
     /* reporterName =  */ name,
     /* reporterContext =  */ reporterContext() match {
       case ctx: telemetry.MetalsLspContext =>

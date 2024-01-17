@@ -2,8 +2,6 @@ package scala.meta.internal.metals
 
 import java.util.regex.Pattern
 
-import scala.meta.internal.ScalaStdlibCompat._
-
 /**
  * Sanitizer ensuring that no original source code can leak through the reports.
  * First it would treat input as the markdown source snippet with 1 or more code snipets.

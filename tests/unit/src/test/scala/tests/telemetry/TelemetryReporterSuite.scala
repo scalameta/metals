@@ -8,8 +8,8 @@ import scala.collection.mutable
 import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.jdk.OptionConverters._
 import scala.meta.internal.metals
+import scala.meta.internal.mtags.CommonMtagsEnrichments.XtensionOptionalJava
 import scala.meta.internal.telemetry
 
 import io.undertow.server.handlers.BlockingHandler
@@ -83,7 +83,7 @@ class TelemetryReporterSuite extends BaseSuite {
       } {
         val createdReport = simpleReport(reporterCtx.toString())
         reporter.incognito.create(createdReport)
-        val received = ctx.errors.filter(_.getId().toScala == createdReport.id)
+        val received = ctx.errors.filter(_.getId().asScala == createdReport.id)
         assert(received.nonEmpty, "Not received matching id")
         assert(received.size == 1, "Found more then 1 received event")
       }
