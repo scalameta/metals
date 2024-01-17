@@ -69,7 +69,7 @@ case class ScalaPresentationCompiler(
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     folderPath: Option[Path] = None,
     reportsLevel: ReportLevel = ReportLevel.Info,
-    telemetryLevel: TelemetryLevel = TelemetryLevel.default
+    telemetryLevel: TelemetryLevel = TelemetryLevel.discover
 ) extends PresentationCompiler {
 
   implicit val executionContext: ExecutionContextExecutor = ec

@@ -288,7 +288,7 @@ class MetalsLanguageServer(
     def maxConfiguredTelemetryLevel(service: WorkspaceLspService) = {
       val entries =
         service.workspaceFolders.getFolderServices.map(_.getTelemetryLevel)
-      if (entries.isEmpty) TelemetryLevel.default
+      if (entries.isEmpty) TelemetryLevel.discover
       else entries.max
     }
     serverState.get() match {
@@ -296,7 +296,7 @@ class MetalsLanguageServer(
         maxConfiguredTelemetryLevel(service)
       case ServerState.ShuttingDown(service) =>
         maxConfiguredTelemetryLevel(service)
-      case _ => TelemetryLevel.default
+      case _ => TelemetryLevel.discover
     }
   }
 

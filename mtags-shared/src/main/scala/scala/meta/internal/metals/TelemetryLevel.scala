@@ -18,10 +18,11 @@ object TelemetryLevel {
   case object Error extends TelemetryLevel(2, "error")
   case object All extends TelemetryLevel(Int.MaxValue, "all")
 
-  def default: TelemetryLevel = sys.props
+  def default: TelemetryLevel = Off
+  def discover: TelemetryLevel = sys.props
     .get(SystemPropertyKey)
     .flatMap(fromString)
-    .getOrElse(All)
+    .getOrElse(default)
 
   final val SystemPropertyKey = "metals.telemetry-level"
 
