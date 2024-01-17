@@ -2,6 +2,8 @@ package scala.meta.internal.metals
 
 import java.util.regex.Pattern
 
+import scala.meta.internal.metals.SourceCodeSanitizer.Language
+
 /**
  * Sanitizer ensuring that no original source code can leak through the reports.
  * First it would treat input as the markdown source snippet with 1 or more code snipets.
@@ -15,7 +17,7 @@ class SourceCodeSanitizer[ParserCtx, ParserAST](
 
   override def sanitize(text: String): String = {
     anonimizeMarkdownSnippets(text)
-      .getOrElse(tryAnonimize(text, languageHint = Some("scala")).merge)
+      .getOrElse(tryAnonimize(text, languageHint = Some(Language.Scala)).merge)
   }
 
   // Completion marker needs to be escape before parsing the sources, and restored afterwards
@@ -33,7 +35,7 @@ class SourceCodeSanitizer[ParserCtx, ParserAST](
   private type FailureReason = String
   private def tryAnonimize(
       source: String,
-      languageHint: Option[String]
+      languageHint: Option[Language]
   ): Either[FailureReason, String] = {
     Option(source)
       .map(_.trim())
@@ -42,7 +44,7 @@ class SourceCodeSanitizer[ParserCtx, ParserAST](
       .fold[Either[String, String]](Left("no-source")) { source =>
         if (StackTraceLine.findFirstIn(source).isDefined)
           Right(source)
-        else if (languageHint.forall(_.toLowerCase() == "scala")) {
+        else if (languageHint.forall(_ == Language.Scala)) {
           parser
             .parse(source)
             .toRight("<unparsable>")
@@ -72,14 +74,15 @@ class SourceCodeSanitizer[ParserCtx, ParserAST](
       val sourceResult = new java.lang.StringBuffer(source.size)
       while (matcher.find()) {
         val matchResult = matcher.toMatchResult()
-        val language = Option(matchResult.group(1)).map(_.trim())
+        val language =
+          Option(matchResult.group(1)).map(_.trim()).flatMap(Language.unapply)
         val result = tryAnonimize(
           languageHint = language,
           source = matchResult.group(2)
         )
         val sanitizedOrFailureReason: String = result.merge.replace("$", "\\$")
         val updatedSnippet =
-          s"""```${language.getOrElse("")}
+          s"""```${language.map(_.stringValue).getOrElse("")}
              |$sanitizedOrFailureReason
              |```
              |""".stripMargin
@@ -96,5 +99,18 @@ class SourceCodeSanitizer[ParserCtx, ParserAST](
           sourceResult.toString()
         }
     }
+  }
+}
+
+object SourceCodeSanitizer {
+  sealed abstract class Language(val stringValue: String)
+  object Language {
+    def unapply(v: String): Option[Language] = v.toLowerCase() match {
+      case "scala" => Some(Scala)
+      case "java" => Some(Java)
+      case _ => None
+    }
+    case object Scala extends Language("scala")
+    case object Java extends Language("java")
   }
 }
