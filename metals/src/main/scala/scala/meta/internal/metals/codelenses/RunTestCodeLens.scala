@@ -337,7 +337,7 @@ final class RunTestCodeLens(
         command("debug", StartDebugSession, params),
       )
     // run provider needs shell command to run currently, we don't support pure run inside metals for JVM
-    else if ((shellCommandAdded || !isJVM) && clientConfig.isRunProvider())
+    else if (shellCommandAdded && clientConfig.isRunProvider() || !isJVM)
       List(command("run", StartRunSession, params))
     else Nil
   }
