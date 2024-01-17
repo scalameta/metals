@@ -67,7 +67,7 @@ class TelemetryReporterSuite extends BaseSuite {
       for {
         reporterCtx <- Seq(
           SampleReports.metalsLspReport(),
-          SampleReports.scalaPresentationCompilerReport()
+          SampleReports.scalaPresentationCompilerReport(),
         ).map(_.getReporterContext().get())
         reporter = new metals.TelemetryReportContext(
           telemetryClientConfig = metals.TelemetryClient.Config.default

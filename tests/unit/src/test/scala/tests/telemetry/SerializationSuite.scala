@@ -22,7 +22,7 @@ class SerializationSuite extends BaseSuite {
           emptyOptionals = emptyCollections,
           emptyLists = emptyCollections,
           emptyMaps = emptyCollections,
-        )
+        ),
       ).foreach { report =>
         val codec = telemetry.GsonCodecs.gson
         assert(!codec.serializeNulls(), "Codec should not serialize nulls")

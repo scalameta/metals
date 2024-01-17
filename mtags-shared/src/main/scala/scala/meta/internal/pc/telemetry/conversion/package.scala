@@ -5,29 +5,24 @@ import java.{util => ju}
 import scala.meta.internal.telemetry
 import scala.meta.pc
 
-// TOOD: scalafmt crashes when maxCollumn=100
 package object conversion {
   def PresentationCompilerConfig(
       config: pc.PresentationCompilerConfig
   ): telemetry.PresentationCompilerConfig =
     new telemetry.PresentationCompilerConfig(
-      /* symbolPrefixes = */ copyOf(config.symbolPrefixes),
-      /* completionCommand = */ config.completionCommand,
-      /* parameterHintsCommand = */ config.parameterHintsCommand(),
-      /* overrideDefFormat = */ config.overrideDefFormat.name(),
-      /* isDefaultSymbolPrefixes = */ config.isDefaultSymbolPrefixes(),
-      /* isCompletionItemDetailEnabled = */ config
-        .isCompletionItemDetailEnabled(),
-      /* isStripMarginOnTypeFormattingEnabled = */ config
-        .isStripMarginOnTypeFormattingEnabled(),
-      /* isCompletionItemDocumentationEnabled = */ config
-        .isCompletionItemDocumentationEnabled(),
-      /* isHoverDocumentationEnabled = */ config.isHoverDocumentationEnabled(),
-      /* snippetAutoIndent = */ config.snippetAutoIndent(),
-      /* isSignatureHelpDocumentationEnabled = */ config
-        .isSignatureHelpDocumentationEnabled(),
-      /* isCompletionSnippetsEnabled = */ config.isCompletionSnippetsEnabled(),
-      /* semanticdbCompilerOptions = */ copyOf(config.semanticdbCompilerOptions)
+      copyOf(config.symbolPrefixes),
+      config.completionCommand,
+      config.parameterHintsCommand(),
+      config.overrideDefFormat.name(),
+      config.isDefaultSymbolPrefixes(),
+      config.isCompletionItemDetailEnabled(),
+      config.isStripMarginOnTypeFormattingEnabled(),
+      config.isCompletionItemDocumentationEnabled(),
+      config.isHoverDocumentationEnabled(),
+      config.snippetAutoIndent(),
+      config.isSignatureHelpDocumentationEnabled(),
+      config.isCompletionSnippetsEnabled(),
+      copyOf(config.semanticdbCompilerOptions)
     )
 
   // Java Collections utilities not available in JDK 8

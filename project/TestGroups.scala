@@ -117,9 +117,10 @@ object TestGroups {
       "tests.codeactions.ConvertSingleLineCommentLspSuite",
       "tests.ServerLivenessMonitorSuite", "tests.ResetWorkspaceLspSuite",
       "tests.ToplevelWithInnerScala3Suite",
-      "tests.telemetry.RemoteReporterSuite", "tests.telemetry.TelemetryReporterSuite",
-      "tests.telemetry.SerializationSuite", "tests.telemetry.SourceCodeSanitizerSuite"
-    )   
+      "tests.telemetry.RemoteReporterSuite",
+      "tests.telemetry.TelemetryReporterSuite",
+      "tests.telemetry.SerializationSuite",
+      "tests.telemetry.SourceCodeSanitizerSuite"),
   )
 
 }
