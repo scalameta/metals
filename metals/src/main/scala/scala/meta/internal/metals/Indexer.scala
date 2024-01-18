@@ -174,6 +174,7 @@ final case class Indexer(
           List(
             ("definition index", definitionIndex),
             ("references index", referencesProvider().index),
+            ("identifier index", referencesProvider().identifierIndex.index),
             ("workspace symbol index", workspaceSymbols().inWorkspace),
             ("build targets", buildTargets),
             (

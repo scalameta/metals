@@ -49,13 +49,22 @@ final class ReferenceProvider(
     scalaVersionSelector: ScalaVersionSelector,
 )(implicit ec: ExecutionContext)
     extends SemanticdbFeatureProvider {
+  val index: TrieMap[Path, IdentifierIndex.IndexEntry] = TrieMap.empty
+  val identifierIndex: IdentifierIndex = new IdentifierIndex
 
-  case class IndexEntry(
-      id: BuildTargetIdentifier,
-      bloom: BloomFilter[CharSequence],
-  )
-  val index: TrieMap[Path, IndexEntry] = TrieMap.empty
-  val tokenIndex: TrieMap[Path, IndexEntry] = TrieMap.empty
+  def addIdentifiers(file: AbsolutePath, set: Iterable[String]): Unit =
+    buildTargets.inverseSources(file).map(id => identifierIndex.addIdentifiers(file, id, set))
+
+  def indexIdentifiers(
+      path: AbsolutePath,
+      text: String,
+  ): Future[Unit] = Future {
+    buildTargets.inverseSources(path).map { id =>
+      val dialect = scalaVersionSelector.getDialect(path)
+      val set = identifierIndex.collectIdentifiers(text, dialect)
+      identifierIndex.addIdentifiers(path, id, set)
+    }
+  }
 
   override def reset(): Unit = {
     index.clear()
@@ -63,54 +72,6 @@ final class ReferenceProvider(
 
   override def onDelete(file: AbsolutePath): Unit = {
     index.remove(file.toNIO)
-  }
-
-  def indexIdentifiers(
-      path: AbsolutePath,
-      text: String,
-  ): Future[Unit] = Future {
-    buildTargets.inverseSources(path).map { id =>
-      val set = collectIdentifiers(path, text)
-      addIdentifiers(path, id, set)
-    }
-  }
-
-  def addIdentifiers(file: AbsolutePath, set: Set[String]): Unit =
-    buildTargets.inverseSources(file).map(id => addIdentifiers(file, id, set))
-
-  private def addIdentifiers(
-      file: AbsolutePath,
-      id: BuildTargetIdentifier,
-      set: Set[String],
-  ): Unit = {
-    val bloom = BloomFilter.create(
-      Funnels.stringFunnel(StandardCharsets.UTF_8),
-      Integer.valueOf(set.size * 2),
-      0.01,
-    )
-
-    val entry = IndexEntry(id, bloom)
-    tokenIndex(file.toNIO) = entry
-    set.foreach(bloom.put)
-  }
-
-  private def collectIdentifiers(
-      path: AbsolutePath,
-      text: String,
-  ): Set[String] = {
-    val dialect = scalaVersionSelector.getDialect(path)
-    val identifiers = Set.newBuilder[String]
-
-    try {
-      new LegacyScanner(Input.String(text), dialect).foreach {
-        case ident if ident.token == IDENTIFIER => identifiers += ident.name
-        case _ =>
-      }
-    } catch {
-      case NonFatal(_) =>
-    }
-
-    identifiers.result()
   }
 
   override def onChange(docs: TextDocuments, file: AbsolutePath): Unit = {
@@ -123,7 +84,7 @@ final class ReferenceProvider(
         0.01,
       )
 
-      val entry = IndexEntry(id, bloom)
+      val entry = IdentifierIndex.IndexEntry(id, bloom)
       index(file.toNIO) = entry
       docs.documents.foreach { d =>
         d.occurrences.foreach { o =>
@@ -406,7 +367,7 @@ final class ReferenceProvider(
     val visited = scala.collection.mutable.Set.empty[AbsolutePath]
     localPath.foreach(visited.add)
     val result = for {
-      (path, entry) <- tokenIndex.iterator
+      (path, entry) <- identifierIndex.index.iterator
       if allowedBuildTargets.contains(entry.id) &&
         entry.bloom.mightContain(name)
       sourcePath = AbsolutePath(path)
