@@ -728,6 +728,11 @@ object MetalsEnrichments
     def lineAtIndex(index: Int): Int =
       indexToLspPosition(index).getLine
 
+    def bazelEscapedDisplayName: String = {
+      if (value.contains('/'))
+        value.replace('/', ':')
+      else value
+    }
   }
 
   implicit class XtensionTextDocumentSemanticdb(textDocument: s.TextDocument) {

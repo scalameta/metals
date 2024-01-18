@@ -4,6 +4,7 @@ import scala.concurrent.Promise
 
 import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BazelDigest
+import scala.meta.internal.metals.FileDecoderProvider
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
@@ -151,6 +152,29 @@ class BazelLspSuite
       _ <- server.executeCommand(ServerCommands.ImportBuild)
       // We need to wait a bit just to ensure the connection is made
       _ <- server.server.buildServerPromise.future
+      targets <- server.listBuildTargets
+      result <- server.executeDecodeFileCommand(
+        FileDecoderProvider
+          .createBuildTargetURI(workspace, targets.head.bazelEscapedDisplayName)
+          .toString
+      )
+      _ = assertNoDiff(
+        result.value.linesIterator.take(14).mkString("\n"),
+        """|Target
+           |  @//:lib
+           |
+           |Tags
+           |  library
+           |
+           |Languages
+           |  scala
+           |
+           |Capabilities
+           |  Debug <- NOT SUPPORTED
+           |  Run <- NOT SUPPORTED
+           |  Test <- NOT SUPPORTED
+           |  Compile""".stripMargin,
+      )
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
@@ -198,4 +222,5 @@ class BazelLspSuite
         |}
         |
         |""".stripMargin
+
 }

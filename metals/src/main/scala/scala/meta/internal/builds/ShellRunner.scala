@@ -1,5 +1,7 @@
 package scala.meta.internal.builds
 
+import java.io.File
+
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -37,6 +39,20 @@ class ShellRunner(
     cancelables.cancel()
   }
 
+  private lazy val mavenLocal = {
+    val str = new File(sys.props("user.home")).toURI.toString
+    val homeUri =
+      if (str.endsWith("/"))
+        str
+      else
+        str + "/"
+    MavenRepository.of(homeUri + ".m2/repository")
+  }
+
+  private lazy val sonatypePublic = MavenRepository.of(
+    "https://oss.sonatype.org/content/repositories/public"
+  )
+
   def runJava(
       dependency: Dependency,
       main: String,
@@ -53,6 +69,12 @@ class ShellRunner(
     val classpath = Fetch
       .create()
       .withDependencies(dependency)
+      .withRepositories(
+        Repository.ivy2Local(),
+        Repository.central(),
+        mavenLocal,
+        sonatypePublic,
+      )
       .fetch()
       .asScala
       .mkString(classpathSeparator)
