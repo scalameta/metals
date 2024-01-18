@@ -16,6 +16,11 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
     buildTargets.all
       .find(_.getName == targetName)
       .orElse(buildTargets.all.find(_.getId.getUri.toString == uri))
+      .orElse(
+        buildTargets.all.find(
+          _.getDisplayName().bazelEscapedDisplayName == targetName
+        )
+      )
       .map(target => buildTargetDetail(target.getId()))
       .getOrElse(s"Build target $targetName not found")
   }
