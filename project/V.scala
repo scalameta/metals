@@ -109,7 +109,6 @@ object V {
   // Scala 3
   def nonDeprecatedScala3Versions =
     Seq(scala3, "3.3.0", "3.2.2", "3.1.3") ++ scala3RC.toSeq
-  // ++ Seq("3.4.0-RC1-bin-SNAPSHOT") // local testing of scala3-presentation-compiler
 
   // whenever version is removed please add it to MtagsResolver under last supported Metals version
   def deprecatedScala3Versions =
