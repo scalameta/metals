@@ -411,7 +411,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |  @param pf Partial function used when applying catch logic to determine result value
            |  @param fin Finally logic which if defined will be invoked after catch logic
            |  @param rethrow Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
 
