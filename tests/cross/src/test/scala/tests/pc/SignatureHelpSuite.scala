@@ -96,7 +96,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
            |Random(seed: Int)
            |Random(seed: Long)
            |Random(self: Random)
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
 
@@ -627,7 +627,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
         """|apply([age: Int], [name: String]): User
            |                  ^^^^^^^^^^^^^^
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
 
@@ -650,7 +650,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
         """|apply(name: String, age: Int): User
            |                    ^^^^^^^^
-           |""".stripMargin,
+           |""".stripMargin
     )
   )
 
