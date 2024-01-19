@@ -333,6 +333,14 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |singleton[T](o: T): java.util.Set[T]
            |             ^^^^
            |  @param o o the sole object to be stored in the returned set.
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
+        """|Returns an immutable set containing only the specified object.
+           |The returned set is serializable.
+           |singleton[T](o: T): java.util.Set[T]
+           |             ^^^^
+           |  @param T <T> the class of the objects in the set
+           |  @param o o the sole object to be stored in the returned set.
            |""".stripMargin
     )
   )
@@ -383,7 +391,27 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |  @param pf Partial function used when applying catch logic to determine result value
            |  @param fin Finally logic which if defined will be invoked after catch logic
            |  @param rethrow Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
-           |""".stripMargin
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
+        """|A container class for catch/finally logic.
+           |
+           | Pass a different value for rethrow if you want to probably
+           | unwisely allow catching control exceptions and other throwables
+           | which the rest of the world may expect to get through.
+           |
+           |**Type Parameters**
+           |- `T`: result type of bodies used in try and catch blocks
+           |
+           |**Parameters**
+           |- `pf`: Partial function used when applying catch logic to determine result value
+           |- `fin`: Finally logic which if defined will be invoked after catch logic
+           |- `rethrow`: Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
+           |Catch[T](pf: Catcher[T], fin: Option[Finally], rethrow: Throwable => Boolean)
+           |         ^^^^^^^^^^^^^^
+           |  @param pf Partial function used when applying catch logic to determine result value
+           |  @param fin Finally logic which if defined will be invoked after catch logic
+           |  @param rethrow Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
+           |""".stripMargin,
     )
   )
 
@@ -405,7 +433,14 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
                 |File(parent: java.io.File, child: String)
                 |File(parent: String, child: String)
                 |File(pathname: String)
-                |""".stripMargin
+                |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
+        """|File(uri: URI)
+           |     ^^^^^^^^
+           |File(parent: File, child: String)
+           |File(parent: String, child: String)
+           |File(pathname: String)
+           |""".stripMargin
     )
   )
 

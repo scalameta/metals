@@ -119,7 +119,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |}
       |
       |object Main {
-      |  val tp = new Two(1, "") 
+      |  val tp = new Two(1, "")
       |  tp match {
       |    case Two(@@) =>
       |  }
@@ -283,6 +283,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
     compat = Map(
       "3.0" -> "",
       "3.1" -> "",
+      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" -> "",
       "3" ->
         """|(String, String)
            |         ^^^^^^
