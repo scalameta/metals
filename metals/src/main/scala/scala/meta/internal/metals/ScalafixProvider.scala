@@ -144,7 +144,7 @@ case class ScalafixProvider(
           )
           Future.failed(exception)
         case Success(results)
-            if !scalafixSucceded(results) && hasStaleSemanticdb(
+            if !scalafixSucceded(results) && hasStaleOrMissingSemanticdb(
               results
             ) && buildClient.buildHasErrors(file) =>
           val msg = "Attempt to organize your imports failed. " +
@@ -170,7 +170,7 @@ case class ScalafixProvider(
           }
 
           scribe.error(scalafixError, exception)
-          if (!retried && hasStaleSemanticdb(results)) {
+          if (!retried && hasStaleOrMissingSemanticdb(results)) {
             // Retry, since the semanticdb might be stale
             runScalafixRules(file, scalaTarget, rules, retried = true)
           } else {
@@ -233,12 +233,15 @@ case class ScalafixProvider(
       .getFileEvaluations()
       .forall(_.isSuccessful)
 
-  private def hasStaleSemanticdb(evaluation: ScalafixEvaluation): Boolean = {
-    evaluation
+  private def hasStaleOrMissingSemanticdb(
+      evaluation: ScalafixEvaluation
+  ): Boolean = {
+    val error = evaluation
       .getFileEvaluations()
       .headOption
       .flatMap(_.getError().asScala)
-      .contains(ScalafixFileEvaluationError.StaleSemanticdbError)
+    error.contains(ScalafixFileEvaluationError.StaleSemanticdbError) || error
+      .contains(ScalafixFileEvaluationError.MissingSemanticdbError)
   }
 
   /**
