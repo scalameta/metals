@@ -96,7 +96,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
            |Random(seed: Int)
            |Random(seed: Long)
            |Random(self: Random)
-           |""".stripMargin
+           |""".stripMargin,
     )
   )
 
@@ -466,8 +466,8 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
            |   ^^^^^^^^
            |to(end: Int, step: Int): Inclusive
            |""".stripMargin,
-      "2.11" -> """|to(end: Int): immutable.Range.Inclusive
-                   |   ^^^^^^^^
+      "2.11" -> """|^^^^^^
+                   |to(end: Int): immutable.Range.Inclusive
                    |to(end: Int, step: Int): immutable.Range.Inclusive
                    |to(end: T): NumericRange.Inclusive[T]
                    |to(end: T): Range.Partial[T,NumericRange[T]]
@@ -627,7 +627,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
         """|apply([age: Int], [name: String]): User
            |                  ^^^^^^^^^^^^^^
-           |""".stripMargin
+           |""".stripMargin,
     )
   )
 
@@ -650,7 +650,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
         """|apply(name: String, age: Int): User
            |                    ^^^^^^^^
-           |""".stripMargin
+           |""".stripMargin,
     )
   )
 
