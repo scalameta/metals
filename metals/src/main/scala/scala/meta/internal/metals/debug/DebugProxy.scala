@@ -4,6 +4,7 @@ import java.net.Socket
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
+import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -11,7 +12,6 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
-import scala.collection.concurrent.TrieMap
 
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilers
