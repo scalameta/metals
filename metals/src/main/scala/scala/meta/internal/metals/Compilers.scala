@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.Collections
@@ -28,6 +29,7 @@ import scala.meta.internal.worksheets.WorksheetPcData
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import scala.meta.pc
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.CancelToken
 import scala.meta.pc.HoverSignature
@@ -109,6 +111,19 @@ class Compilers(
 
   private val outlineFilesProvider =
     new OutlineFilesProvider(buildTargets, buffers)
+
+  val pcBuffers: pc.Buffers = new pc.Buffers {
+    override def getFile(
+        uri: URI,
+        scalaVersion: String,
+    ): ju.Optional[pc.PcAdjustFileParams] =
+      Try(sourceAdjustments(uri.toString(), scalaVersion)).toOption
+        .map[pc.PcAdjustFileParams] { case (vFile, _, adjust) =>
+          PcAdjustFileParams(CompilerVirtualFileParams(uri, vFile.text), adjust)
+        }
+        .asJava
+  }
+
 
   // Not a TrieMap because we want to avoid loading duplicate compilers for the same build target.
   // Not a `j.u.c.ConcurrentHashMap` because it can deadlock in `computeIfAbsent` when the absent
@@ -732,36 +747,20 @@ class Compilers(
 
   def references(
       params: ReferenceParams,
-      targetFiles: Iterator[AbsolutePath],
+      targetFiles: List[AbsolutePath],
       token: CancelToken,
   ): Future[List[ReferencesResult]] = {
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      val targets = targetFiles.map { target =>
-        target.toURI.toString -> {
-          val (vFile, _, adjustLsp) =
-            sourceAdjustments(
-              target.toURI.toString(),
-              pc.scalaVersion(),
-            )
-          val params =
-            CompilerVirtualFileParams(target.toURI, vFile.text, token)
-          (params, adjustLsp)
-        }
-      }.toMap
-      val targetFilesParams: List[VirtualFileParams] =
-        targets.values.map(_._1).toList
-      pc.references(
+    withPCAndAdjustLsp(params) { (pc, pos, _) =>
+      val request = PcReferencesRequest(
         CompilerOffsetParamsUtils.fromPos(pos, token),
-        targetFilesParams.asJava,
         params.getContext().isIncludeDeclaration(),
-      ).asScala
+        targetFiles.map(_.toURI).asJava,
+      )
+      pc.references(request)
+        .asScala
         .map(
           _.asScala.toList.map { defRes =>
-            val locations = defRes
-              .locations()
-              .asScala
-              .toList
-              .map(loc => targets(loc.getUri())._2.adjustLocation(loc))
+            val locations = defRes.locations().asScala.toList
             ReferencesResult(defRes.symbol(), locations)
           }
         )
@@ -1505,4 +1504,12 @@ object Compilers {
         extends PresentationCompilerKey
     case object Default extends PresentationCompilerKey
   }
+}
+
+case class PcAdjustFileParams(
+    params: pc.VirtualFileParams,
+    adjustLsp: AdjustLspData,
+) extends pc.PcAdjustFileParams {
+  override def adjustLocation(location: Location): Location =
+    adjustLsp.adjustLocation(location)
 }

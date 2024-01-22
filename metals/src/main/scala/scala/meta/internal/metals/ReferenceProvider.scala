@@ -1,7 +1,10 @@
 package scala.meta.internal.metals
 
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
@@ -11,6 +14,7 @@ import scala.util.matching.Regex
 
 import scala.meta.Importee
 import scala.meta.inputs.Input
+import scala.meta.internal.async.CompletableCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ResolvedSymbolOccurrence
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
@@ -29,6 +33,8 @@ import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyToken._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.OffsetParams
+import scala.meta.pc.ReferencesRequest
 import scala.meta.tokens.Token.Ident
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -53,7 +59,9 @@ final class ReferenceProvider(
   val identifierIndex: IdentifierIndex = new IdentifierIndex
 
   def addIdentifiers(file: AbsolutePath, set: Iterable[String]): Unit =
-    buildTargets.inverseSources(file).map(id => identifierIndex.addIdentifiers(file, id, set))
+    buildTargets
+      .inverseSources(file)
+      .map(id => identifierIndex.addIdentifiers(file, id, set))
 
   def indexIdentifiers(
       path: AbsolutePath,
@@ -337,8 +345,15 @@ final class ReferenceProvider(
         pathsForName(buildTarget, localPath, name).filter(filterTargetFiles)
       }
       if targetFiles.nonEmpty
+      cancelToken = new CompletableCancelToken
     } yield compilers
-      .references(params, targetFiles, EmptyCancelToken)
+      .references(params, targetFiles.toList, cancelToken)
+      .withTimeout(30, TimeUnit.SECONDS)
+      .recover { case _: TimeoutException =>
+        cancelToken.cancel()
+        scribe.warn("pc references search timed out after 30 seconds")
+        Nil
+      }
     result.getOrElse(Future.successful(Nil))
   }
 
@@ -495,7 +510,7 @@ final class ReferenceProvider(
     val isLocal = occ.symbol.isLocal
     if (isLocal)
       compilers
-        .references(params, Iterator(source), EmptyCancelToken)
+        .references(params, List(source), EmptyCancelToken)
         .map(_.flatMap(_.locations))
     else {
       /* search local in the following cases:
@@ -718,3 +733,9 @@ object SyntheticPackageObject {
   def unapply(str: String): Option[String] =
     Option.when(regex.matches(str))(str)
 }
+
+case class PcReferencesRequest(
+    params: OffsetParams,
+    includeDefinition: Boolean,
+    targetUris: java.util.List[URI],
+) extends ReferencesRequest

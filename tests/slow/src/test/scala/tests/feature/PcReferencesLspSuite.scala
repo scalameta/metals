@@ -73,7 +73,7 @@ class PcReferencesLspSuite
         }
       }
 
-      def refFiles = files.keysIterator.map(server.toPath(_))
+      def refFiles = files.keysIterator.map(server.toPath(_)).toList
 
       val layout = input.replaceAll("<<|>>|@@", "")
 

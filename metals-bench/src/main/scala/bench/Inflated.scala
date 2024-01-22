@@ -7,9 +7,12 @@ import scala.meta.internal.io.FileIO
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 
-case class Inflated(inputs: List[(Input.VirtualFile, AbsolutePath)], linesOfCode: Long) {
+case class Inflated(
+    inputs: List[(Input.VirtualFile, AbsolutePath)],
+    linesOfCode: Long,
+) {
   def filter(f: Input.VirtualFile => Boolean): Inflated = {
-    val newInputs = inputs.filter{case (input, _) => f(input)}
+    val newInputs = inputs.filter { case (input, _) => f(input) }
     val newLinesOfCode = newInputs.foldLeft(0) { case (accum, input) =>
       accum + input._1.text.linesIterator.length
     }
@@ -19,7 +22,7 @@ case class Inflated(inputs: List[(Input.VirtualFile, AbsolutePath)], linesOfCode
     Inflated(other.inputs ++ inputs, other.linesOfCode + linesOfCode)
 
   def foreach(f: Input.VirtualFile => Unit): Unit =
-    inputs.foreach{ case (file, _) => f(file)}
+    inputs.foreach { case (file, _) => f(file) }
 }
 
 object Inflated {

@@ -28,6 +28,7 @@ import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.AutoImportsResult
+import scala.meta.pc.Buffers
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.DisplayableException
 import scala.meta.pc.HoverSignature
@@ -37,6 +38,8 @@ import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
+import scala.meta.pc.ReferencesRequest
+import scala.meta.pc.ReferencesResult
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
 import scala.meta.pc.{PcSymbolInformation => IPcSymbolInformation}
@@ -62,7 +65,8 @@ case class ScalaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     folderPath: Option[Path] = None,
-    reportsLevel: ReportLevel = ReportLevel.Info
+    reportsLevel: ReportLevel = ReportLevel.Info,
+    buffers: Buffers = NoopBuffers
 ) extends PresentationCompiler {
 
   implicit val executionContext: ExecutionContextExecutor = ec
@@ -426,22 +430,24 @@ case class ScalaPresentationCompiler(
         .asJava
     }
 
+  override def withBuffers(buffers: Buffers): PresentationCompiler =
+    copy(buffers = buffers)
+
   override def references(
-      params: OffsetParams,
-      targetFiles: ju.List[VirtualFileParams],
-      includeDefinition: Boolean
-  ): CompletableFuture[ju.List[DefinitionResult]] =
-    compilerAccess.withInterruptableCompiler(Some(params))(
-      List.empty[DefinitionResult].asJava,
-      params.token()
+      params: ReferencesRequest
+  ): CompletableFuture[ju.List[ReferencesResult]] = {
+    compilerAccess.withInterruptableCompiler(Some(params.params()))(
+      List.empty[ReferencesResult].asJava,
+      params.params.token()
     ) { pc =>
       new PcReferencesProvider(
         pc.compiler(),
         params,
-        targetFiles.asScala.toList,
-        includeDefinition
+        buffers,
+        scalaVersion
       ).result().asJava
     }
+  }
 
   override def semanticdbTextDocument(
       fileUri: URI,
