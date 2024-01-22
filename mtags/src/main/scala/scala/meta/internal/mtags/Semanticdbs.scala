@@ -3,6 +3,8 @@ package scala.meta.internal.mtags
 import java.nio.charset.Charset
 import java.nio.file.Files
 
+import scala.util.matching.Regex
+
 import scala.meta.AbsolutePath
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
@@ -68,7 +70,8 @@ object Semanticdbs {
       case None => TextDocumentLookup.NoMatchingUri(scalaPath, sdocs)
       case Some(sdoc) if scalaPath.exists =>
         val text = FileIO.slurp(scalaPath, charset)
-        val md5 = MD5.compute(text)
+        val amendedText = Shebang.adjustContent(text)
+        val md5 = MD5.compute(amendedText)
         val sdocMd5 = sdoc.md5.toUpperCase()
         if (sdocMd5 != md5) {
           fingerprints.lookupText(scalaPath, sdocMd5) match {
@@ -122,4 +125,30 @@ object Semanticdbs {
       path: AbsolutePath,
       nonDefaultRelPath: Option[RelativePath]
   )
+}
+
+object Shebang {
+  private val sheBangRegex: Regex = s"""(^(#!.*(\\r\\n?|\\n)?)+(\\s*!#.*)?)""".r
+
+  /**
+   * This function adjusts file content changing all not-newline characters
+   * in the shebang header into spaces.
+   * This is the same as done in the Scala 3 compiler, so for the same input,
+   * m5d from semanticdb and the one calculated from adjusted content will match.
+   */
+  def adjustContent(content: String): String =
+    if (content.startsWith("#!")) {
+      val regexMatch = sheBangRegex.findFirstMatchIn(content)
+      regexMatch match {
+        case Some(firstMatch) =>
+          val shebangContent = firstMatch.toString()
+          val substitution =
+            shebangContent.map {
+              case c @ ('\n' | '\r') => c
+              case _ => ' '
+            }
+          substitution ++ content.drop(shebangContent.length())
+        case None => content
+      }
+    } else content
 }
