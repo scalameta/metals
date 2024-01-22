@@ -37,7 +37,7 @@ class IdentifierIndex {
 
   def collectIdentifiers(
       text: String,
-      dialect: Dialect
+      dialect: Dialect,
   ): Iterable[String] = {
     val identifiers = Set.newBuilder[String]
 

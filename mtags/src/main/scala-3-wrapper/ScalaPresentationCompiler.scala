@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import java.net.URI
 import java.nio.file.Path
+import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
@@ -15,15 +16,19 @@ import scala.jdk.CollectionConverters._
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.mtags.CommonMtagsEnrichments.*
 import scala.meta.pc.AutoImportsResult
+import scala.meta.pc.Buffers
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.InlayHintsParams
 import scala.meta.pc.Node
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PcSymbolInformation
+import scala.meta.pc.PcAdjustFileParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
+import scala.meta.pc.ReferencesRequest
+import scala.meta.pc.ReferencesResult
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
 
@@ -60,6 +65,7 @@ case class ScalaPresentationCompiler(
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     folderPath: Option[Path] = None,
     reportsLevel: ReportLevel = ReportLevel.Info,
+    buffers: Buffers = NoopBuffers,
 ) extends PresentationCompiler:
   val underlying: DottyPresentationCompiler = new DottyPresentationCompiler(
     buildTargetIdentifier = buildTargetIdentifier,
@@ -184,32 +190,35 @@ case class ScalaPresentationCompiler(
   ): CompletableFuture[ju.List[DocumentHighlight]] =
     underlying.documentHighlight(params)
 
+  override def withBuffers(buffers: Buffers): PresentationCompiler =
+    copy(buffers = buffers)
+
   override def references(
-      params: OffsetParams,
-      targetFiles: ju.List[VirtualFileParams],
-      includeDefinition: Boolean,
-  ): CompletableFuture[ju.List[DefinitionResult]] =
-    targetFiles.asScala.toList match
-      case file :: Nil if file.uri() == params.uri() =>
+      params: ReferencesRequest
+  ): CompletableFuture[ju.List[ReferencesResult]] =
+    FutureConverters
+      .toJava(
         FutureConverters
-          .toJava(
-            FutureConverters
-              .toScala(documentHighlight(params))
-              .map { hightLightResult =>
-                val locations = hightLightResult.asScala.collect {
-                  case highlight
-                      if highlight.getKind() == DocumentHighlightKind.Read || includeDefinition =>
-                    new Location(
-                      params.uri().toString(),
-                      highlight.getRange(),
-                    )
-                }.asJava
-                List(new DefinitionResultImpl("", locations)).asJava
-              }
-          )
-          .toCompletableFuture
-      case _ =>
-        CompletableFuture.completedFuture(Nil.asJava)
+          .toScala(documentHighlight(params.params()))
+          .map { hightLightResult =>
+            val locations = hightLightResult.asScala.collect {
+              case highlight
+                  if highlight.getKind() == DocumentHighlightKind.Read || params
+                    .includeDefinition() =>
+                val location =
+                  new Location(
+                    params.params().uri().toString(),
+                    highlight.getRange(),
+                  )
+                val adjust =
+                  buffers.getFile(params.params().uri(), scalaVersion())
+                if adjust.isPresent() then adjust.get().adjustLocation(location)
+                else location
+            }.asJava
+            List(ReferencesResultImpl("", locations)).asJava
+          }
+      )
+      .toCompletableFuture
 
   override def rename(
       params: OffsetParams,
@@ -282,3 +291,14 @@ case class ScalaPresentationCompiler(
     underlying.inlineValue(params)
 
 end ScalaPresentationCompiler
+
+case class ReferencesResultImpl(
+    symbol: String,
+    locations: ju.List[Location],
+) extends ReferencesResult
+
+object NoopBuffers extends Buffers:
+  override def getFile(
+      uri: URI,
+      scalaVersion: String,
+  ): Optional[PcAdjustFileParams] = Optional.empty()

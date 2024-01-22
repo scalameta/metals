@@ -20,6 +20,7 @@ import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
+import scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion
 import scala.meta.internal.mtags.MtagsEnrichments.given
 import scala.meta.internal.pc.completions.CompletionProvider
 import scala.meta.internal.pc.completions.OverrideCompletions
@@ -42,6 +43,7 @@ case class ScalaPresentationCompiler(
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     folderPath: Option[Path] = None,
     reportsLevel: ReportLevel = ReportLevel.Info,
+    buffers: Buffers = NoopBuffers,
 ) extends PresentationCompiler:
 
   def this() = this("", None, Nil, Nil)
@@ -179,22 +181,18 @@ case class ScalaPresentationCompiler(
       PcDocumentHighlightProvider(driver, params).highlights.asJava
     }
 
+  override def withBuffers(buffers: Buffers): PresentationCompiler =
+    copy(buffers = buffers)
+
   override def references(
-      params: OffsetParams,
-      targetFiles: ju.List[VirtualFileParams],
-      includeDefinition: Boolean,
-  ): CompletableFuture[ju.List[DefinitionResult]] =
-    compilerAccess.withNonInterruptableCompiler(Some(params))(
-      List.empty[DefinitionResult].asJava,
-      params.token,
+      params: ReferencesRequest
+  ): CompletableFuture[ju.List[ReferencesResult]] =
+    compilerAccess.withNonInterruptableCompiler(Some(params.params()))(
+      List.empty[ReferencesResult].asJava,
+      params.params().token,
     ) { access =>
       val driver = access.compiler()
-      PcReferencesProvider(
-        driver,
-        params,
-        targetFiles.asScala.toList,
-        includeDefinition,
-      )
+      PcReferencesProvider(driver, params, buffers, scalaVersion)
         .result()
         .asJava
     }
