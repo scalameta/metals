@@ -536,19 +536,19 @@ final class ReferenceProvider(
           )
         else Seq.empty
 
-    val sourceContainsDefinition =
-      occ.role.isDefinition || snapshot.symbols.exists(
-        _.symbol == occ.symbol
-      )
-    val workspaceRefs =
-      workspaceReferences(
-        source,
-        isSymbol,
-        isIncludeDeclaration,
-        findRealRange,
-        includeSynthetics,
-        sourceContainsDefinition,
-      )
+      val sourceContainsDefinition =
+        occ.role.isDefinition || snapshot.symbols.exists(
+          _.symbol == occ.symbol
+        )
+      val workspaceRefs =
+        workspaceReferences(
+          source,
+          isSymbol,
+          isIncludeDeclaration,
+          findRealRange,
+          includeSynthetics,
+          sourceContainsDefinition,
+        )
       Future.successful(local ++ workspaceRefs)
     }
   }
