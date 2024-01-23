@@ -296,6 +296,34 @@ class CompletionDapSuite
        |""".stripMargin
   )
 
+  assertCompletion(
+    "basic-with-other-thread-stacktrace",
+    expression = "1.toS@@",
+    expectedCompletions = """|toShort: Short
+                             |toBinaryString: String
+                             |toDegrees: Double
+                             |toHexString: String
+                             |toOctalString: String
+                             |toRadians: Double
+                             |toString(): String
+                             |""".stripMargin,
+    expectedEdit = "1.toShort",
+    requestOtherThreadStackTrace = true,
+  )(
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |
+       |object Main {
+       |  class Preceding
+       |
+       |  def main(args: Array[String]): Unit = {
+       |>>  println()
+       |    System.exit(0)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
   def assertCompletion(
       name: TestOptions,
       expression: String,
@@ -305,6 +333,7 @@ class CompletionDapSuite
       topLines: Option[Int] = None,
       noResults: Boolean = false,
       isLineNullable: Boolean = false,
+      requestOtherThreadStackTrace: Boolean = false,
   )(
       source: String
   )(implicit loc: Location): Unit = {
@@ -318,7 +347,12 @@ class CompletionDapSuite
       for {
         _ <- initialize(workspaceLayout)
         _ = assertNoDiagnostics()
-        debugger <- debugMain("a", main.getOrElse("a.Main"), completer)
+        debugger <- debugMain(
+          "a",
+          main.getOrElse("a.Main"),
+          completer,
+          requestOtherThreadStackTrace,
+        )
         _ <- debugger.initialize
         _ <- debugger.launch
         _ <- setBreakpoints(debugger, debugLayout)

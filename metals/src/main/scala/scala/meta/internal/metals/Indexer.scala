@@ -462,7 +462,7 @@ final case class Indexer(
     } {
       isVisited.add(sourceUri)
       try {
-        if (path.isJar) {
+        if (path.isJar && path.exists) {
           usedJars += path
           addSourceJarSymbols(path)
         } else if (path.isDirectory) {

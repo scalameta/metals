@@ -127,6 +127,10 @@ private[debug] final class RemoteServer(
     sendRequest(DebugProtocol.DisconnectRequest.name, args)
   }
 
+  override def threads(): CompletableFuture[ThreadsResponse] = {
+    sendRequest("threads", null)
+  }
+
   private def listen(): Unit = {
     remote.listen {
       case response: Response =>
