@@ -59,7 +59,7 @@ class PcReferencesProvider(
                     )
                   )
                 }
-            compiler.unitOfFile.remove(unit.source.file)
+            compiler.unitOfFile.remove(collector.unit.source.file)
             result
           }
 
