@@ -1150,7 +1150,7 @@ class MetalsLspService(
       buildTargets.inverseSources(path) match {
         case Some(target) =>
           val isAffectedByCurrentCompilation =
-            path.isWorksheet ||
+            !compilations.isCurrentlyCompiling(target) && path.isWorksheet ||
               buildTargets.isInverseDependency(
                 target,
                 compilations.currentlyCompiling.toList,
