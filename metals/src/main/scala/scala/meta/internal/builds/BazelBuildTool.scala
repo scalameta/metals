@@ -74,7 +74,7 @@ case class BazelBuildTool(
 object BazelBuildTool {
   val name: String = "bazel"
   val bspName: String = "bazelbsp"
-  val version: String = "3.1.0"
+  val version: String = "3.1.0-20240130-33760f0-NIGHTLY"
 
   val mainClass = "org.jetbrains.bsp.bazel.install.Install"
 
@@ -101,8 +101,8 @@ object BazelBuildTool {
         List("-p", projectView.toRelative(projectRoot).toString())
       case None =>
         List(
-          "-t",
-          "//...",
+          "-t", "//...", "-enabled-rules", "io_bazel_rules_scala", "rules_java",
+          "rules_jvm",
         )
     }
   }
