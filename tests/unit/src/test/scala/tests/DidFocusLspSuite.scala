@@ -55,6 +55,9 @@ class DidFocusLspSuite extends BaseLspSuite("did-focus") {
       didCompile <- server.didFocus("b/src/main/scala/b/B.scala")
       _ = assert(didCompile == AlreadyCompiled)
       didCompile <- server.didFocus("c/src/main/scala/c/C.scala")
+      // fake delete the diagnostic to see that `c` won't get recompiled
+      _ = client.diagnostics(server.toPath("c/src/main/scala/c/C.scala")) =
+        Seq.empty
       _ <- server.didSave("a/src/main/scala/a/A.scala")(
         _.replace("val x = 1", "val x = \"string\"")
       )

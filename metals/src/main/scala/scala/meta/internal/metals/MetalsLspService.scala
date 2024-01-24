@@ -1095,17 +1095,11 @@ class MetalsLspService(
     } else {
       buildServerPromise.future.flatMap { _ =>
         def load(): Future[Unit] = {
-          val compileAndLoad =
-            Future.sequence(
-              List(
-                compilers.load(List(path)),
-                compilations.compileFile(path),
-              )
-            )
           Future
             .sequence(
               List(
-                compileAndLoad,
+                maybeCompileOnDidFocus(path),
+                compilers.load(List(path)),
                 publishSynthetics0,
               )
             )
@@ -1156,37 +1150,43 @@ class MetalsLspService(
     } else {
       publishSynthetics(path)
       worksheetProvider.onDidFocus(path)
-      buildTargets.inverseSources(path) match {
-        case Some(target) =>
-          val isAffectedByCurrentCompilation =
-            !compilations.isCurrentlyCompiling(target) && path.isWorksheet ||
-              buildTargets.isInverseDependency(
-                target,
-                compilations.currentlyCompiling.toList,
-              )
+      maybeCompileOnDidFocus(path).asJava
+    }
+  }
 
-          def isAffectedByLastCompilation: Boolean =
-            !compilations.wasPreviouslyCompiled(target) &&
-              buildTargets.isInverseDependency(
-                target,
-                compilations.previouslyCompiled.toList,
-              )
-
-          val needsCompile =
-            isAffectedByCurrentCompilation || isAffectedByLastCompilation
-          if (needsCompile) {
-            compilations
-              .compileFile(path)
-              .map(_ => DidFocusResult.Compiled)
-              .asJava
-          } else {
-            CompletableFuture.completedFuture(
-              DidFocusResult.AlreadyCompiled
+  private def maybeCompileOnDidFocus(path: AbsolutePath) = {
+    buildTargets.inverseSources(path) match {
+      case Some(target) =>
+        val wasNeverCompiled = !compilations.wasEverCompiled(target)
+        def isAffectedByCurrentCompilation =
+          !compilations.isCurrentlyCompiling(target) && path.isWorksheet ||
+            buildTargets.isInverseDependency(
+              target,
+              compilations.currentlyCompiling.toList,
             )
-          }
-        case None =>
-          CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
-      }
+
+        def isAffectedByLastCompilation: Boolean =
+          !compilations.wasPreviouslyCompiled(target) &&
+            buildTargets.isInverseDependency(
+              target,
+              compilations.previouslyCompiled.toList,
+            )
+
+        val needsCompile =
+          wasNeverCompiled || isAffectedByCurrentCompilation || isAffectedByLastCompilation
+        if (needsCompile) {
+          compilations
+            .compileFile(path)
+            .map(_ => DidFocusResult.Compiled)
+        } else {
+          Future.successful(DidFocusResult.AlreadyCompiled)
+        }
+      case None if path.isWorksheet =>
+        compilations
+          .compileFile(path)
+          .map(_ => DidFocusResult.Compiled)
+      case None =>
+        Future.successful(DidFocusResult.NoBuildTarget)
     }
   }
 
