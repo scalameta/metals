@@ -60,4 +60,32 @@ class CodeLensesScalaCliSuite
       )
     } yield ()
   }
+
+  test("run-with-shebang-2") {
+    cleanWorkspace()
+    val path = "main.scala"
+    for {
+      _ <- initialize(
+        ScalaCliBuildLayout(
+          s"""|/$path
+              |#!/usr/bin/env -S scala-cli shebang
+              |//> using scala ${V.scala213}
+              |object Main extends App {
+              |    println(12)
+              |}""".stripMargin,
+          V.scala213,
+        )
+      )
+      _ <- server.didOpen(path)
+      _ <- assertCodeLenses(
+        path,
+        s"""|#!/usr/bin/env -S scala-cli shebang
+            |//> using scala ${V.scala213}
+            |<<run>><<debug>>
+            |object Main extends App {
+            |    println(12)
+            |}""".stripMargin,
+      )
+    } yield ()
+  }
 }

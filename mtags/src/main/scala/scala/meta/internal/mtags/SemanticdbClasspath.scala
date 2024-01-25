@@ -40,6 +40,7 @@ final case class SemanticdbClasspath(
     Semanticdbs.loadTextDocument(
       scalaOrJavaPath,
       sourceroot,
+      optScalaVersion = None,
       charset,
       fingerprints,
       path =>
