@@ -10,6 +10,7 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.mtags.Shebang
 import scala.meta.internal.mtags.TextDocumentLookup
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
@@ -61,13 +62,21 @@ final class InteractiveSemanticdbs(
       unsavedContents: Option[String],
   ): TextDocumentLookup = {
     def doesNotBelongToBuildTarget = buildTargets.inverseSources(source).isEmpty
+    lazy val sourceText =
+      buffers.get(source).orElse {
+        if (source.exists) Some(source.readText(charset))
+        else None
+      }
     def shouldTryCalculateInteractiveSemanticdb = {
       source.isLocalFileSystem(workspace) && (
         unsavedContents.isDefined ||
           source.isInReadonlyDirectory(workspace) || // dependencies
           source.isSbt || // sbt files
           source.isWorksheet || // worksheets
-          doesNotBelongToBuildTarget // standalone files
+          doesNotBelongToBuildTarget || // standalone files
+          sourceText.exists(
+            _.startsWith(Shebang.shebang)
+          ) // starts with shebang
       ) || source.isJarFileSystem // dependencies
     }
 
@@ -80,15 +89,16 @@ final class InteractiveSemanticdbs(
       val result = textDocumentCache.compute(
         source,
         (path, existingDoc) => {
-          unsavedContents.orElse(buffers.get(source).orElse {
-            if (source.exists) Some(source.readText(charset))
-            else None
-          }) match {
+          unsavedContents.orElse(sourceText) match {
             case None => null
             case Some(text) =>
-              val sha = MD5.compute(text)
+              val adjustedText =
+                if (text.startsWith(Shebang.shebang))
+                  "//" + text.drop(2)
+                else text
+              val sha = MD5.compute(adjustedText)
               if (existingDoc == null || existingDoc.md5 != sha) {
-                Try(compile(path, text)) match {
+                Try(compile(path, adjustedText)) match {
                   case Success(doc) if doc != null =>
                     if (!source.isDependencySource(workspace))
                       semanticdbIndexer().onChange(source, doc)
