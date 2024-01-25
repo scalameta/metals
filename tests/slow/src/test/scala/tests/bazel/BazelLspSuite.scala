@@ -66,7 +66,7 @@ class BazelLspSuite
            |""".stripMargin,
       )
       _ <- server.didChange(s"BUILD") { text =>
-        text.replace("\"main\"", "\"main1\"")
+        text.replace("\"hello\"", "\"hello1\"")
       }
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ = client.importBuildChanges = ImportBuildChanges.yes
@@ -95,7 +95,7 @@ class BazelLspSuite
       // We dismissed the import request, so bsp should not be configured
       _ = assert(!bazelBspConfig.exists)
       _ <- server.didChange(s"BUILD") { text =>
-        text.replace("\"main\"", "\"main1\"")
+        text.replace("\"hello\"", "\"hello1\"")
       }
       _ <- server.didSave(s"BUILD")(identity)
       _ = assertNoDiff(client.workspaceMessageRequests, "")
@@ -144,7 +144,7 @@ class BazelLspSuite
       // We dismissed the import request, so bsp should not be configured
       _ = assert(!bazelBspConfig.exists)
       _ <- server.didChange(s"BUILD") { text =>
-        text.replace("\"main\"", "\"main1\"")
+        text.replace("\"hello\"", "\"hello1\"")
       }
       _ <- server.didSave(s"BUILD")(identity)
       _ = assertNoDiff(client.workspaceMessageRequests, "")
@@ -161,17 +161,17 @@ class BazelLspSuite
       _ = assertNoDiff(
         result.value.linesIterator.take(14).mkString("\n"),
         """|Target
-           |  @//:lib
+           |  @//:hello1
            |
            |Tags
-           |  library
+           |  application
            |
            |Languages
            |  scala
            |
            |Capabilities
            |  Debug <- NOT SUPPORTED
-           |  Run <- NOT SUPPORTED
+           |  Run
            |  Test <- NOT SUPPORTED
            |  Compile""".stripMargin,
       )
@@ -188,21 +188,72 @@ class BazelLspSuite
     }
   }
 
+  // TODO: Unignore this test
+  test("references".flaky) {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        BazelBuildLayout(workspaceLayout, V.scala213, bazelVersion)
+      )
+      _ <- server.didOpen("Hello.scala")
+      references <- server.references("Hello.scala", "hello")
+      _ = assertNoDiff(
+        references,
+        """|Hello.scala:4:7: info: reference
+           |  def hello: String = "Hello"
+           |      ^^^^^
+           |Bar.scala:5:24: info: reference
+           |  def hi = new Hello().hello
+           |                       ^^^^^
+           |""".stripMargin,
+      )
+      _ <- server.didOpen("Main.scala")
+      references <- server.references("Hello.scala", "hello")
+      _ = assertNoDiff(
+        references,
+        """|Hello.scala:4:7: info: reference
+           |  def hello: String = "Hello"
+           |      ^^^^^
+           |Main.scala:4:23: info: reference
+           |def msg = new Hello().hello
+           |                      ^^^^^
+           |Bar.scala:5:24: info: reference
+           |  def hi = new Hello().hello
+           |                       ^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   private val workspaceLayout =
     s"""|/BUILD
+        |load("@io_bazel_rules_scala//scala:scala_toolchain.bzl", "scala_toolchain")
         |load("@io_bazel_rules_scala//scala:scala.bzl", "scala_binary", "scala_library")
         |
+        |scala_toolchain(
+        |    name = "semanticdb_toolchain_impl",
+        |    enable_semanticdb = True,
+        |    semanticdb_bundle_in_jar = False,
+        |    visibility = ["//visibility:public"],
+        |)
+        |
+        |toolchain(
+        |    name = "semanticdb_toolchain",
+        |    toolchain = "semanticdb_toolchain_impl",
+        |    toolchain_type = "@io_bazel_rules_scala//scala:toolchain_type",
+        |    visibility = ["//visibility:public"],
+        |)
+        |
         |scala_library(
-        |    name = "lib",
-        |    srcs = ["Hello.scala"],
-        |    deps = [],
+        |    name = "hello_lib",
+        |    srcs = ["Hello.scala", "Bar.scala"],
         |)
         |
         |scala_binary(
-        |    name = "main",
+        |    name = "hello",
         |    srcs = ["Main.scala"],
-        |    main_class = "hello",
-        |    deps = [":lib"],
+        |    main_class = "main",
+        |    deps = [":hello_lib"],
         |)
         |
         |/Hello.scala
@@ -213,6 +264,13 @@ class BazelLspSuite
         |
         |}
         |
+        |/Bar.scala
+        |package examples.scala3
+        |
+        |class Bar {
+        |  def bar: String = "bar"
+        |  def hi = new Hello().hello
+        |}
         |
         |/Main.scala
         |import examples.scala3.Hello

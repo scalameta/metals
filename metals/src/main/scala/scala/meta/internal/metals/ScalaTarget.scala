@@ -107,7 +107,7 @@ case class ScalaTarget(
   private def containsSource3 =
     scalac.getOptions().asScala.exists(opt => opt.startsWith("-Xsource:3"))
 
-  def targetroot: AbsolutePath = scalac.targetroot(scalaVersion).toTargetRoot
+  def targetroot: AbsolutePath = scalac.targetroot(scalaVersion).resolveIfJar
 
   def scalaPlatform: ScalaPlatform = scalaInfo.getPlatform()
 
