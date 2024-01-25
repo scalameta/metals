@@ -533,7 +533,13 @@ object MetalsEnrichments
       filename.endsWith(".jar") || filename.endsWith(".srcjar")
     }
 
-    def toTargetRoot: AbsolutePath = {
+    /**
+     * Bazelbsp provides us with a path to a jar.
+     * SemanticDB files are store in the same directory as the jar file.
+     *
+     * Example: `/path/hello.jar -> /path/_semanticdb/hello`
+     */
+    def resolveIfJar: AbsolutePath = {
       if (path.isJar) {
         val filename = path.toNIO.getFileName.toString
         val filename0 = filename.stripSuffix(".jar").stripSuffix(".srcjar")

@@ -49,7 +49,7 @@ case class JavaTarget(
 
   def sourceVersion: Option[String] = javac.sourceVersion
 
-  def targetroot: Option[AbsolutePath] = javac.targetroot.map(_.toTargetRoot)
+  def targetroot: Option[AbsolutePath] = javac.targetroot.map(_.resolveIfJar)
 
   /**
    * Typically to verify that SemanticDB is enabled correctly we check the javacOptions to ensure
