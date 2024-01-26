@@ -5,21 +5,26 @@ import java.io.UncheckedIOException
 import scala.collection.concurrent.TrieMap
 
 import scala.meta.Dialect
+import scala.meta._
+import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReportContext
-import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.ScalaMtags
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.SymbolDefinition
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.internal.semanticdb.TextDocuments
+import scala.meta.internal.trees.Origin
 import scala.meta.io.AbsolutePath
 
-class IndexedSymbols(isStatisticsEnabled: Boolean)(implicit rc: ReportContext)
-    extends SemanticdbFeatureProvider {
+class IndexedSymbols(
+    isStatisticsEnabled: Boolean,
+    trees: Trees,
+)(implicit rc: ReportContext) {
 
   private val mtags = new Mtags()
   // Used for workspace, is eager
@@ -41,31 +46,8 @@ class IndexedSymbols(isStatisticsEnabled: Boolean)(implicit rc: ReportContext)
     TrieMap[ToplevelSymbol, Either[TopLevel, AllSymbols]],
   ]
 
-  private val filteredSymbols: Set[SymbolInformation.Kind] = Set(
-    SymbolInformation.Kind.CONSTRUCTOR,
-    SymbolInformation.Kind.PARAMETER,
-    SymbolInformation.Kind.TYPE_PARAMETER,
-  )
-
-  override def onChange(docs: TextDocuments, path: AbsolutePath): Unit = {
-    val all = docs.documents.flatMap { doc =>
-      val existing = doc.occurrences.collect {
-        case occ if occ.role.isDefinition => occ.symbol
-      }.toSet
-      doc.symbols.distinct.collect {
-        case info if existing(info.symbol) && !filteredSymbols(info.kind) =>
-          TreeViewSymbolInformation(
-            info.symbol,
-            info.kind,
-            info.properties,
-          )
-      }
-    }.toList
-    workspaceCache.put(path, all.toArray)
-  }
-
-  override def onDelete(path: AbsolutePath): Unit = {
-    workspaceCache.remove(path)
+  def onChange(in: AbsolutePath): Unit = {
+    workspaceCache.remove(in)
   }
 
   def reset(): Unit = {
@@ -82,6 +64,40 @@ class IndexedSymbols(isStatisticsEnabled: Boolean)(implicit rc: ReportContext)
     result
   }
 
+  private def workspaceSymbolsFromPath(
+      in: AbsolutePath
+  ): Array[TreeViewSymbolInformation] =
+    trees
+      .get(in)
+      .map { tree =>
+        (tree, tree.origin) match {
+          case (
+                src: Source,
+                Origin.Parsed(input: Input.VirtualFile, dialect, _),
+              ) =>
+            val mtags = new ScalaMtags(input, dialect, Some(src))
+            mtags
+              .index()
+              .symbols
+              .map { info =>
+                TreeViewSymbolInformation(
+                  info.symbol,
+                  info.kind,
+                  info.properties,
+                )
+              }
+              .toArray
+          case (tree, origin) =>
+            // Trees don't return anything else than Source, and it should be impossible to get here
+            scribe.error(
+              s"[$in] Unexpected tree type ${tree.getClass} in IndexedSymbols with origin:\n$origin "
+            )
+            Array.empty[TreeViewSymbolInformation]
+
+        }
+      }
+      .getOrElse(Array.empty)
+
   /**
    * We load all symbols for workspace when semanticdb files are produced.
    *
@@ -92,7 +108,11 @@ class IndexedSymbols(isStatisticsEnabled: Boolean)(implicit rc: ReportContext)
   def workspaceSymbols(
       in: AbsolutePath,
       symbol: String,
-  ): Iterator[TreeViewSymbolInformation] = withTimer(s"$in/!$symbol") {
+  ): Iterator[TreeViewSymbolInformation] = withTimer(s"$in") {
+    workspaceCache.getOrElseUpdate(
+      in,
+      workspaceSymbolsFromPath(in),
+    )
     val syms = workspaceCache
       .getOrElse(in, Array.empty)
     if (Symbol(symbol).isRootPackage) syms.iterator

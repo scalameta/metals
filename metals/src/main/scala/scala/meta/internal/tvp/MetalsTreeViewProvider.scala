@@ -11,11 +11,13 @@ import scala.collection.concurrent.TrieMap
 import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.io.AbsolutePath
@@ -246,8 +248,15 @@ class FolderTreeViewProvider(
     definitionIndex: GlobalSymbolIndex,
     userConfig: () => UserConfiguration,
     scalaVersionSelector: ScalaVersionSelector,
-    classpath: IndexedSymbols,
-) {
+    languageClient: MetalsLanguageClient,
+    clientConfig: ClientConfiguration,
+    trees: Trees,
+)(implicit context: ReportContext) {
+  val classpath = new IndexedSymbols(
+    isStatisticsEnabled = clientConfig.initialConfig.statistics.isTreeView,
+    trees,
+  )
+
   def dialectOf(path: AbsolutePath): Option[Dialect] =
     scalaVersionSelector.dialectFromBuildTarget(path)
   private def maybeUsedJdkVersion =
@@ -277,7 +286,7 @@ class FolderTreeViewProvider(
         path.filename
     },
     valueTooltip = _.toString,
-    toplevels = () => buildTargets.allSourceJars,
+    toplevels = () => buildTargets.allSourceJars.filter(_.exists),
     loadSymbols = (path, symbol) => {
       val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
       classpath.jarSymbols(path, symbol, dialect)
@@ -336,15 +345,21 @@ class FolderTreeViewProvider(
     }
   }
 
-  def onBuildTargetDidCompile(
-      id: BuildTargetIdentifier
-  ): Option[Array[TreeViewNode]] = {
-    if (isCollapsedTarget.getOrElse(id, true) == true) {
-      None // do nothing if the user never expanded the tree view node.
-    } else {
-      pendingProjectUpdates.add(id)
-      flushPendingProjectUpdates()
-
+  def onWorkspaceFileDidChange(
+      path: AbsolutePath
+  ): Unit = {
+    classpath.onChange(path)
+    buildTargets.inverseSources(path).foreach { id =>
+      if (isCollapsedTarget.getOrElse(id, false) == false) {
+        pendingProjectUpdates.add(id)
+      }
+    }
+    flushPendingProjectUpdates() match {
+      case Some(toUpdate) =>
+        languageClient.metalsTreeViewDidChange(
+          TreeViewDidChangeParams(toUpdate)
+        )
+      case None =>
     }
   }
 
