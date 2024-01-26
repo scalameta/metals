@@ -17,6 +17,7 @@ import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.TearDown
 import tests.Library
+import tests.TreeUtils
 
 @State(Scope.Benchmark)
 class ClasspathSymbolsBench {
@@ -36,7 +37,8 @@ class ClasspathSymbolsBench {
   def run(): Unit = {
     implicit val reporting = EmptyReportContext
     val jars = new IndexedSymbols(
-      isStatisticsEnabled = false
+      isStatisticsEnabled = false,
+      TreeUtils.getTrees(scalaVersion = None)._2,
     )
     classpath.foreach { jar =>
       jars.jarSymbols(jar, "cats/", dialects.Scala213)

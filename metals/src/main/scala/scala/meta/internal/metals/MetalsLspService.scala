@@ -400,13 +400,6 @@ class MetalsLspService(
         compilers.didCompile(report)
       },
       onBuildTargetDidCompile = { target =>
-        treeView.onBuildTargetDidCompile(target) match {
-          case Some(toUpdate) =>
-            languageClient.metalsTreeViewDidChange(
-              TreeViewDidChangeParams(toUpdate)
-            )
-          case None =>
-        }
         worksheetProvider.onBuildTargetDidCompile(target)
       },
       onBuildTargetDidChangeFunc = params => {
@@ -565,16 +558,11 @@ class MetalsLspService(
       trees,
     )
 
-  val classpathTreeIndex = new IndexedSymbols(
-    isStatisticsEnabled = clientConfig.initialConfig.statistics.isTreeView
-  )
-
   private val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
     List(
       referencesProvider,
       implementationProvider,
       testProvider,
-      classpathTreeIndex,
     ),
     buildTargets,
     folder,
@@ -804,7 +792,9 @@ class MetalsLspService(
       definitionIndex,
       () => userConfig,
       scalaVersionSelector,
-      classpathTreeIndex,
+      languageClient,
+      clientConfig,
+      trees,
     )
 
   private val popupChoiceReset: PopupChoiceReset = new PopupChoiceReset(
@@ -1203,8 +1193,10 @@ class MetalsLspService(
         val path = params.getTextDocument.getUri.toAbsolutePath
         buffers.put(path, change.getText)
         diagnostics.didChange(path)
+
         parseTrees(path)
           .flatMap { _ =>
+            treeView.onWorkspaceFileDidChange(path)
             publishSynthetics(path)
           }
           .ignoreValue
@@ -1238,6 +1230,9 @@ class MetalsLspService(
             path
           )
       )
+      .map { _ =>
+        treeView.onWorkspaceFileDidChange(path)
+      }
       .ignoreValue
       .asJava
   }
@@ -1397,6 +1392,7 @@ class MetalsLspService(
             .compileFiles(List(path), Option(focusedDocumentBuildTarget.get())),
           Future {
             diagnostics.didDelete(path)
+            treeView.onWorkspaceFileDidChange(path)
             testProvider.onFileDelete(path)
           },
         )

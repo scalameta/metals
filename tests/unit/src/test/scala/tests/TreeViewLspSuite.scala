@@ -150,15 +150,15 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       )
       _ = server.assertTreeViewChildren(
         s"projects-$folder:${server.buildTarget("a")}!/a/First#",
-        """|b symbol-field
-           |a() symbol-method
+        """|a() symbol-method
+           |b symbol-field
            |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
         s"projects-$folder:${server.buildTarget("a")}!/a/Second#",
-        """|c symbol-variable
+        """|a() symbol-method
            |b symbol-field
-           |a() symbol-method
+           |c symbol-variable
            |""".stripMargin,
       )
       _ <- server.didSave("a/src/main/scala/a/Zero.scala") { text =>
