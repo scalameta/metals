@@ -61,18 +61,12 @@ final class Compilations(
 
   private val isCompiling = TrieMap.empty[b.BuildTargetIdentifier, Boolean]
   private var lastCompile: collection.Set[b.BuildTargetIdentifier] = Set.empty
-  private val wasCompiled = TrieMap.empty[b.BuildTargetIdentifier, Boolean]
-
-  def wasEverCompiled(buildTarget: b.BuildTargetIdentifier): Boolean =
-    buildTargets.isInverseDependency(buildTarget, wasCompiled.keySet.toList)
 
   def currentlyCompiling: Iterable[b.BuildTargetIdentifier] = isCompiling.keys
   def isCurrentlyCompiling(buildTarget: b.BuildTargetIdentifier): Boolean =
     isCompiling.contains(buildTarget)
 
   def previouslyCompiled: Iterable[b.BuildTargetIdentifier] = lastCompile
-  def wasPreviouslyCompiled(buildTarget: b.BuildTargetIdentifier): Boolean =
-    lastCompile.contains(buildTarget)
 
   def compilationFinished(targets: Seq[BuildTargetIdentifier]): Future[Unit] =
     if (currentlyCompiling.isEmpty) {
@@ -261,7 +255,6 @@ final class Compilations(
     }
     targets.foreach { target =>
       isCompiling(target) = true
-      wasCompiled(target) = true
     }
     val compilation = connection.compile(params, timeout)
 
