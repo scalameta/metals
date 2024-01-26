@@ -2,13 +2,13 @@ package scala.meta.internal.pc.completions
 
 import scala.collection.mutable.ListBuffer
 
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.CompilerSearchVisitor
 import scala.meta.internal.pc.CompletionFuzzy
 import scala.meta.internal.pc.IndexedContext
 import scala.meta.internal.pc.InterpolationSplice
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.ReportContext
 import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.ast.tpd.*

@@ -16,7 +16,6 @@ import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Report
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.SemanticdbFeatureProvider
@@ -42,6 +41,7 @@ import scala.meta.internal.semanticdb.TypeSignature
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PcSymbolKind
 import scala.meta.pc.PcSymbolProperty
+import scala.meta.pc.ReportContext
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Location

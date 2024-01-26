@@ -8,7 +8,6 @@ import scala.meta.dialects
 import scala.meta.interactive.InteractiveSemanticdb
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.JdkSources
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.mtags.JavaMtags
 import scala.meta.internal.mtags.Mtags
@@ -22,6 +21,7 @@ import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyToken
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
+import scala.meta.pc.ReportContext
 
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode

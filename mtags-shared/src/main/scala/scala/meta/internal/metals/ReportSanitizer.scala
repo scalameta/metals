@@ -2,14 +2,23 @@ package scala.meta.internal.metals
 
 import java.nio.file.Path
 
+import scala.meta.internal.mtags.CommonMtagsEnrichments.XtensionOptionalJava
+import scala.meta.internal.pc.StandardReport
+import scala.meta.pc.Report
+
 trait ReportSanitizer {
-  final def apply(report: Report): Report = report.copy(
-    id = report.id.map(sanitize),
-    name = sanitize(report.name),
-    text = sanitize(report.text),
-    shortSummary = sanitize(report.shortSummary),
-    path = report.path.map(sanitize)
-  )
+  final def apply(report: Report): Report = {
+    val sanitizedPath: Option[String] = report.path.asScala.map(sanitize(_))
+    val sanitizedId: Option[String] = report.id.asScala.map(sanitize(_))
+    StandardReport(
+      name = sanitize(report.name),
+      text = sanitize(report.text),
+      shortSummary = sanitize(report.shortSummary),
+      path = sanitizedPath,
+      id = sanitizedId
+    )
+  }
+
   final def apply(text: String): String = sanitize(text)
 
   def sanitize(text: String): String

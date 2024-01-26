@@ -1,4 +1,4 @@
 package scala.meta.internal.telemetry;
 
-public interface ReporterContext { 
+public interface ReporterContext {
 }

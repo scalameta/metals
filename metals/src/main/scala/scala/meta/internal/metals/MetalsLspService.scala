@@ -49,7 +49,6 @@ import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MirroredReportContext
 import scala.meta.internal.metals.StdReportContext
-import scala.meta.internal.metals.TelemetryReportContext
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
@@ -79,10 +78,12 @@ import scala.meta.internal.parsing.DocumentSymbolProvider
 import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
+import scala.meta.internal.pc.StandardReport
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.search.SymbolHierarchyOps
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.telemetry
+import scala.meta.internal.telemetry.TelemetryReportContext
 import scala.meta.internal.tvp._
 import scala.meta.internal.worksheets.DecorationWorksheetPublisher
 import scala.meta.internal.worksheets.WorksheetProvider
@@ -91,6 +92,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.TextDocumentService
 import scala.meta.parsers.ParseException
 import scala.meta.pc.CancelToken
+import scala.meta.pc.ReportContext
 import scala.meta.tokenizers.TokenizeException
 
 import ch.epfl.scala.bsp4j.CompileReport
@@ -2681,7 +2683,7 @@ class MetalsLspService(
           scribe.error(s"issues while parsing: ${e.path}", e.getCause)
         case e: IndexingExceptions.InvalidSymbolException =>
           reports.incognito.create(
-            Report(
+            StandardReport(
               "invalid-symbol",
               s"""Symbol: ${e.symbol}""".stripMargin,
               e,

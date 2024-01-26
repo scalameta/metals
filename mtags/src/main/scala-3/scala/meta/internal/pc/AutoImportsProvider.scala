@@ -5,10 +5,10 @@ import java.nio.file.Paths
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.*
 import scala.meta.internal.pc.completions.CompletionPos
+import scala.meta.pc.ReportContext
 import scala.meta.pc.*
 
 import dotty.tools.dotc.ast.tpd.*

@@ -228,9 +228,9 @@ public abstract class PresentationCompiler {
 	};
 
 	/**
-	 * Set logger telemetry level for reports.
+	 * Set remote report context that will be added on top of standard, local reporting system.
 	 */
-	public PresentationCompiler withTelemetryLevel(String level) {
+	public PresentationCompiler withAdditionalReportContexts(List<ReportContext> reportContexts) {
 		return this;
 	};
 

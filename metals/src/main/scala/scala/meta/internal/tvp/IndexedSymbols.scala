@@ -11,7 +11,6 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.mtags.JavaMtags
@@ -23,6 +22,7 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.io.AbsolutePath
 import scala.meta.trees.Origin
+import scala.meta.pc.ReportContext
 
 class IndexedSymbols(
     isStatisticsEnabled: Boolean,

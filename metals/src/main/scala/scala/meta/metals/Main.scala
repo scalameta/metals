@@ -8,12 +8,12 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.ScalaVersions
-import scala.meta.internal.metals.TelemetryClient
 import scala.meta.internal.metals.Trace
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.telemetry.CrashReport
 import scala.meta.internal.telemetry.ExceptionSummary
+import scala.meta.internal.telemetry.TelemetryClient
 
 import org.eclipse.lsp4j.jsonrpc.Launcher
 

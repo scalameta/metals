@@ -7,10 +7,10 @@ import scala.meta.internal.metals.BspStatus
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.clients.language.StatusType
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.ReportContext
 
 class ConnectionBspStatus(
     bspStatus: BspStatus,
@@ -102,7 +102,7 @@ class ConnectionBspStatus(
    */
   private def syncWithReportContext(errorReports: Set[String]) =
     errorReports.intersect(
-      rc.bloop.getReports().map(_.toPath.toUri().toString()).toSet
+      rc.bloop.getReports().map(_.toPath.toUri().toString()).asScala.toSet
     )
 }
 

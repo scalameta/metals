@@ -43,6 +43,7 @@ import scala.meta.internal.tvp.TreeViewVisibilityDidChangeParams
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.ScalaLspService
 import scala.meta.pc.DisplayableException
+import scala.meta.pc.ReportContext
 
 import com.google.gson.Gson
 import com.google.gson.JsonPrimitive

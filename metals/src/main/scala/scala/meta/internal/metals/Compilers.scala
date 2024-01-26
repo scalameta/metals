@@ -26,6 +26,10 @@ import scala.meta.internal.pc.JavaPresentationCompiler
 import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.pc.ScalaPresentationCompiler
+import scala.meta.internal.telemetry
+import scala.meta.internal.telemetry.ReporterContext
+import scala.meta.internal.telemetry.ScalaPresentationCompilerContext
+import scala.meta.internal.telemetry.TelemetryReportContext
 import scala.meta.internal.worksheets.WorksheetPcData
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
@@ -34,6 +38,8 @@ import scala.meta.pc.CancelToken
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
+import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.ReportContext
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SyntheticDecorationsParams
 
@@ -1046,7 +1052,7 @@ class Compilers(
   ): Option[PresentationCompiler] = {
     val pc = JavaPresentationCompiler()
     Some(
-      configure(pc, search)
+      configure(pc, search, log)
         .newInstance(
           targetUri,
           classpath.toAbsoluteClasspath.map(_.toNIO).toSeq.asJava,
@@ -1203,29 +1209,70 @@ class Compilers(
     sourceMapper.pcMapping(path, scalaVersion)
   }
 
+  private def createTelemetryReporterContext(
+      scalaVersion: String,
+      config: PresentationCompilerConfig,
+      options: List[String],
+  ): ReporterContext =
+    new ScalaPresentationCompilerContext(
+      scalaVersion,
+      options.asJava,
+      telemetry.conversion.PresentationCompilerConfig(config),
+    )
+
+  private def remoteReporting(
+      createTelemetryReporterContext: () => ReporterContext
+  ): ReportContext = {
+    val logger =
+      ju.logging.Logger.getLogger(classOf[TelemetryReportContext].getName)
+    new TelemetryReportContext(
+      telemetryLevel = () => userConfig().telemetryLevel,
+      reporterContext = createTelemetryReporterContext,
+      sanitizers = new TelemetryReportContext.Sanitizers(
+        workspace = Some(workspace.toNIO),
+        sourceCodeTransformer = Some(ScalametaSourceCodeTransformer),
+      ),
+      logger = LoggerAccess(
+        debug = logger.fine(_),
+        info = logger.info(_),
+        warning = logger.warning(_),
+        error = logger.severe(_),
+      ),
+    )
+  }
+
+  private def getUserConfiguration(): PresentationCompilerConfig = {
+    val options =
+      InitializationOptions.from(initializeParams).compilerOptions
+    config.initialConfig.compilers
+      .update(options)
+      .copy(
+        _symbolPrefixes = userConfig().symbolPrefixes,
+        isCompletionSnippetsEnabled =
+          initializeParams.supportsCompletionSnippets,
+        _isStripMarginOnTypeFormattingEnabled =
+          () => userConfig().enableStripMarginOnTypeFormatting,
+      )
+  }
+
   private def configure(
       pc: PresentationCompiler,
       search: SymbolSearch,
-  ): PresentationCompiler =
+      options: List[String],
+  ): PresentationCompiler = {
+    val config = getUserConfiguration()
+    val remoteReportContext = remoteReporting(() =>
+      createTelemetryReporterContext(pc.scalaVersion, config, options)
+    )
+
     pc.withSearch(search)
       .withExecutorService(ec)
       .withWorkspace(workspace.toNIO)
       .withScheduledExecutorService(sh)
       .withReportsLoggerLevel(MetalsServerConfig.default.loglevel)
-      .withTelemetryLevel(userConfig().telemetryLevel.stringValue)
-      .withConfiguration {
-        val options =
-          InitializationOptions.from(initializeParams).compilerOptions
-        config.initialConfig.compilers
-          .update(options)
-          .copy(
-            _symbolPrefixes = userConfig().symbolPrefixes,
-            isCompletionSnippetsEnabled =
-              initializeParams.supportsCompletionSnippets,
-            _isStripMarginOnTypeFormattingEnabled =
-              () => userConfig().enableStripMarginOnTypeFormatting,
-          )
-      }
+      .withConfiguration(config)
+      .withAdditionalReportContexts(List(remoteReportContext).asJava)
+  }
 
   def newCompiler(
       target: ScalaTarget,
@@ -1267,11 +1314,12 @@ class Compilers(
       }
 
     val filteredOptions = plugins.filterSupportedOptions(options)
-    configure(pc, search)
+    val allOptions = log ++ filteredOptions
+    configure(pc, search, allOptions)
       .newInstance(
         name,
         classpath.asJava,
-        (log ++ filteredOptions).asJava,
+        (allOptions).asJava,
       )
   }
 

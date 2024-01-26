@@ -8,6 +8,7 @@ import scala.util.Try
 import scala.util.matching.Regex
 
 import scala.meta.internal.metals.TimeFormatter
+import scala.meta.pc.TimestampedFile
 
 class LimitedFilesManager(
     directory: Path,
@@ -53,7 +54,7 @@ class LimitedFilesManager(
       reMatch <- prefixRegex.findPrefixMatchOf(file.getName())
       timeStr = reMatch.after.toString.stripSuffix(extension)
       time <- Try(timeStr.toLong).toOption
-    } yield TimestampedFile(file, time)
+    } yield new TimestampedFile(file, time)
   }
 
   private def filesWithDate(dir: File): List[TimestampedFile] = {
@@ -69,7 +70,7 @@ class LimitedFilesManager(
       case WithTimestamp(time) =>
         TimeFormatter
           .parse(time, date)
-          .map(timestamp => TimestampedFile(file, timestamp))
+          .map(timestamp => new TimestampedFile(file, timestamp))
       case _ => None
     }
   }
@@ -82,9 +83,4 @@ class LimitedFilesManager(
       } yield time
     }
   }
-}
-
-case class TimestampedFile(file: File, timestamp: Long) {
-  def toPath: Path = file.toPath()
-  def name: String = file.getName()
 }

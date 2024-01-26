@@ -3,6 +3,8 @@ package tests.telemetry
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.ServerSocket
+import java.nio.file.Path
+import java.util.Optional
 
 import scala.collection.mutable
 import scala.util.control.NonFatal
@@ -10,7 +12,9 @@ import scala.util.control.NonFatal
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals
 import scala.meta.internal.mtags.CommonMtagsEnrichments.XtensionOptionalJava
-import scala.meta.internal.telemetry
+import scala.meta.internal.pc.StandardReport
+import scala.meta.internal.telemetry._
+import scala.meta.pc.Report
 
 import io.undertow.server.handlers.BlockingHandler
 import io.undertow.server.handlers.PathHandler
@@ -18,7 +22,7 @@ import tests.BaseSuite
 import tests.telemetry.SampleReports
 
 class TelemetryReporterSuite extends BaseSuite {
-  def simpleReport(id: String): metals.Report = metals.Report(
+  def simpleReport(id: String): Report = StandardReport(
     name = "name",
     text = "text",
     shortSummary = "sumamry",
@@ -40,19 +44,18 @@ class TelemetryReporterSuite extends BaseSuite {
 
   // Remote telemetry reporter should be treated as best effort, ensure that logging
   test("ignore connectiviy failures") {
-    val reporter = new metals.TelemetryReportContext(
-      telemetryClientConfig =
-        metals.TelemetryClient.Config.default.copy(serverHost =
-          "https://not.existing.endpoint.for.metals.tests:8081"
-        ),
+    val reporter = new TelemetryReportContext(
+      telemetryClientConfig = TelemetryClient.Config.default.copy(serverHost =
+        "https://not.existing.endpoint.for.metals.tests:8081"
+      ),
       telemetryLevel = () => metals.TelemetryLevel.All,
       reporterContext = () =>
         SampleReports.metalsLspReport().getReporterContext.getMetalsLSP.get(),
-      sanitizers = new metals.TelemetryReportContext.Sanitizers(None, None),
+      sanitizers = new TelemetryReportContext.Sanitizers(None, None),
     )
 
     assertEquals(
-      None,
+      Optional.empty[Path](),
       reporter.incognito.create(simpleReport("")),
     )
   }
@@ -69,12 +72,12 @@ class TelemetryReporterSuite extends BaseSuite {
           SampleReports.metalsLspReport(),
           SampleReports.scalaPresentationCompilerReport(),
         ).map(_.getReporterContext().get())
-        reporter = new metals.TelemetryReportContext(
-          telemetryClientConfig = metals.TelemetryClient.Config.default
+        reporter = new TelemetryReportContext(
+          telemetryClientConfig = TelemetryClient.Config.default
             .copy(serverHost = serverEndpoint),
           telemetryLevel = () => metals.TelemetryLevel.All,
           reporterContext = () => reporterCtx,
-          sanitizers = new metals.TelemetryReportContext.Sanitizers(
+          sanitizers = new TelemetryReportContext.Sanitizers(
             None,
             Some(metals.ScalametaSourceCodeTransformer),
           ),
@@ -98,10 +101,8 @@ object MockTelemetryServer {
   import io.undertow.util.Headers
 
   case class Context(
-      errors: mutable.ListBuffer[telemetry.ErrorReport] =
-        mutable.ListBuffer.empty,
-      crashes: mutable.ListBuffer[telemetry.CrashReport] =
-        mutable.ListBuffer.empty,
+      errors: mutable.ListBuffer[ErrorReport] = mutable.ListBuffer.empty,
+      crashes: mutable.ListBuffer[CrashReport] = mutable.ListBuffer.empty,
   )
 
   def apply(
@@ -112,12 +113,12 @@ object MockTelemetryServer {
 
     val baseHandler = path()
       .withEndpoint(
-        telemetry.TelemetryService.SendErrorReportEndpoint,
+        TelemetryService.SendErrorReportEndpoint,
         defaultResponse = null.asInstanceOf[Void],
         _.errors,
       )
       .withEndpoint(
-        telemetry.TelemetryService.SendCrashReportEndpoint,
+        TelemetryService.SendCrashReportEndpoint,
         defaultResponse = null.asInstanceOf[Void],
         _.crashes, /*unused*/
       )
@@ -129,7 +130,7 @@ object MockTelemetryServer {
 
   implicit class EndpointOps(private val handler: PathHandler) extends AnyVal {
     def withEndpoint[I, O](
-        endpoint: telemetry.ServiceEndpoint[I, O],
+        endpoint: ServiceEndpoint[I, O],
         defaultResponse: O,
         eventCollectionsSelector: Context => mutable.ListBuffer[I],
     )(implicit ctx: Context): PathHandler = handler.addExactPath(
@@ -145,14 +146,14 @@ object MockTelemetryServer {
   }
 
   private class SimpleHttpHandler[I, O](
-      endpoint: telemetry.ServiceEndpoint[I, O],
+      endpoint: ServiceEndpoint[I, O],
       response: O,
       receivedEvents: mutable.ListBuffer[I],
   ) extends HttpHandler {
     override def handleRequest(exchange: HttpServerExchange): Unit = {
       exchange.getRequestReceiver().receiveFullString {
         (exchange: HttpServerExchange, json: String) =>
-          receivedEvents += telemetry.GsonCodecs.gson
+          receivedEvents += GsonCodecs.gson
             .fromJson(json, endpoint.getInputType())
           exchange
             .getResponseHeaders()
@@ -160,7 +161,7 @@ object MockTelemetryServer {
           exchange
             .getResponseSender()
             .send(
-              telemetry.GsonCodecs.gson
+              GsonCodecs.gson
                 .toJson(response, endpoint.getOutputType())
             )
       }

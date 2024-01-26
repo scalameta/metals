@@ -43,22 +43,21 @@ class SourceCodeSanitizer[ParserCtx, ParserAST](
         if (StackTraceLine.findFirstIn(source).isDefined)
           Right(source)
         else if (languageHint.forall(_ == Language.Scala)) {
-          parser
-            .parse(source)
-            .toRight("<unparsable>")
-            .flatMap { case (ctx, tree) =>
-              parser.transformer
-                .sanitizeSymbols(tree)
-                .toRight("<ast-transformation-failed>")
-                .flatMap { parsed =>
-                  val sourceString = parser.toSourceString(parsed, ctx)
-                  val isReparsable = parser.parse(sourceString, ctx).isDefined
-                  if (isReparsable) Right(sourceString)
-                  else Left("<invalid-transformation-not-reparsable>")
-                }
+          val maybeParseResult = parser.parse(source)
+          if (maybeParseResult.isEmpty) Left("<unparsable")
+          else {
+            val (ctx, tree) = maybeParseResult.get
+            val maybeSanitizedTree = parser.transformer.sanitizeSymbols(tree)
+            if (maybeSanitizedTree.isEmpty) Left("<ast-transformation-failed>")
+            else {
+              val sanitizedTree = maybeSanitizedTree.get
+              val sourceString = parser.toSourceString(sanitizedTree, ctx)
+              val isReparsable = parser.parse(sourceString, ctx).isDefined
+              if (isReparsable) Right(sourceString)
+              else Left("<invalid-transformation-not-reparsable>")
             }
-        } else
-          Left("<unknown-source-redacted-out>")
+          }
+        } else Left("<unknown-source-redacted-out>")
       }
   }
 

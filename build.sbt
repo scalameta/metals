@@ -193,12 +193,14 @@ def lintingOptions(scalaVersion: String) = {
 }
 
 val sharedJavacOptions = List(
+  packageDoc / publishArtifact := true,
+  packageSrc / publishArtifact := true,
   Compile / javacOptions ++= {
     if (sys.props("java.version").startsWith("1.8"))
       Nil
     else
       Seq("--release", "8")
-  }
+  },
 )
 
 val sharedScalacOptions = List(
@@ -210,7 +212,7 @@ val sharedScalacOptions = List(
             isScala212(partialVersion) && V.scala212 != scalaVersion.value =>
         List("-target:jvm-1.8", "-Yrangepos", "-Xexperimental")
       case partialVersion if isScala3(partialVersion) =>
-        List("-Xtarget:8", "-language:implicitConversions", "-Xsemanticdb")
+        List("-Xtarget:8", "-language:implicitConversions")
       case _ =>
         List("-target:jvm-1.8", "-Yrangepos")
     }
@@ -255,9 +257,8 @@ lazy val interfaces = project
 
 lazy val telemetryInterfaces = project
   .in(file("telemetry-interfaces"))
-  .settings(sharedSettings)
+  .settings(sharedJavacOptions)
   .settings(
-    sharedJavacOptions,
     moduleName := "telemetry-interfaces",
     autoScalaLibrary := false,
     crossVersion := CrossVersion.disabled,
@@ -279,17 +280,21 @@ lazy val mtagsShared = project
     Compile / packageSrc / publishArtifact := true,
     Compile / scalacOptions ++= {
       if (scalaVersion.value == V.scala3)
-        List("-Yexplicit-nulls", "-language:unsafeNulls")
+        List(
+          "-Yexplicit-nulls",
+          "-language:unsafeNulls",
+          "-Xfatal-warnings",
+          "-deprecation",
+        )
       else Nil
     },
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
       "com.google.protobuf" % "protobuf-java" % "3.25.3",
       "io.get-coursier" % "interface" % V.coursierInterfaces,
-      "com.lihaoyi" %% "requests" % V.requests,
     ),
   )
-  .dependsOn(interfaces, telemetryInterfaces)
+  .dependsOn(interfaces)
 
 def multiScalaDirectories(root: File, scalaVersion: String) = {
   val base = root / "src" / "main"
@@ -407,7 +412,7 @@ lazy val mtags3 = project
       (ThisBuild / baseDirectory).value / ".scalafix3.conf"
     ),
   )
-  .dependsOn(interfaces, telemetryInterfaces)
+  .dependsOn(interfaces)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val mtags3WithPresentationCompiler = project
@@ -425,7 +430,7 @@ lazy val mtags3WithPresentationCompiler = project
       (ThisBuild / baseDirectory).value / ".scalafix3.conf"
     ),
   )
-  .dependsOn(interfaces, telemetryInterfaces)
+  .dependsOn(interfaces)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val mtags = project
@@ -574,7 +579,7 @@ lazy val metals = project
       "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
   )
-  .dependsOn(mtags, `mtags-java`)
+  .dependsOn(mtags, `mtags-java`, telemetryInterfaces)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val `sbt-metals` = project

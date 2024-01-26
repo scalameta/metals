@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.telemetry
 
 import java.io.InputStreamReader
 
@@ -6,6 +6,8 @@ import scala.util.Random
 import scala.util.Try
 import scala.util.control.NonFatal
 
+import scala.meta.internal.metals.LoggerAccess
+import scala.meta.internal.metals.TelemetryLevel
 import scala.meta.internal.telemetry
 
 import com.google.gson.JsonSyntaxException
@@ -17,8 +19,10 @@ object TelemetryClient {
 
   case class Config(serverHost: String)
   object Config {
+    // private final val DefaultTelemetryEndpoint =
+    //   "https://scala3.westeurope.cloudapp.azure.com/telemetry"
     private final val DefaultTelemetryEndpoint =
-      "https://scala3.westeurope.cloudapp.azure.com/telemetry"
+      "http://localhost:8081"
 
     val default: Config = Config(DefaultTelemetryEndpoint)
   }
@@ -37,13 +41,13 @@ object TelemetryClient {
     private def execute(
         data: String,
         retries: Int = 3,
-        backoffMillis: Int = 100
+        backoffMillis: Int = 100,
     ): Try[Response] = Try {
       requester(
         url = endpointURL,
         data = data,
         keepAlive = false,
-        check = false
+        check = false,
       )
     }.recoverWith {
       case _: requests.TimeoutException | _: requests.UnknownHostException
@@ -81,7 +85,7 @@ object TelemetryClient {
 private[meta] class TelemetryClient(
     telemetryLevel: () => TelemetryLevel,
     config: TelemetryClient.Config = TelemetryClient.Config.default,
-    logger: LoggerAccess = LoggerAccess.system
+    logger: LoggerAccess = LoggerAccess.system,
 ) extends telemetry.TelemetryService {
   import telemetry.{TelemetryService => api}
   import TelemetryClient._

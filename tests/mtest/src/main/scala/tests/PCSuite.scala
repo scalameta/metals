@@ -14,8 +14,8 @@ import scala.meta.internal.metals.Docstrings
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.ExcludedPackagesHandler
 import scala.meta.internal.metals.JdkSources
-import scala.meta.internal.metals.ReportContext
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.ReportContext
 
 import coursierapi.Fetch
 import coursierapi.Repository

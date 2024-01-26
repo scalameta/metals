@@ -4,15 +4,17 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.FolderReportsZippper
 import scala.meta.internal.metals.Icons
-import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportFileName
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.TimeFormatter
 import scala.meta.internal.metals.ZipReportsProvider
 import scala.meta.internal.metals.doctor.Doctor
+import scala.meta.internal.pc.StandardReport
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.Report
 
 class ReportsSuite extends BaseSuite {
   val workspace: AbsolutePath = AbsolutePath(Paths.get("."))
@@ -33,7 +35,7 @@ class ReportsSuite extends BaseSuite {
         |""".stripMargin
 
   def exampleReport(name: String, path: Option[String] = None): Report =
-    Report(name, exampleText(), "Test error report.", path)
+    StandardReport(name, exampleText(), "Test error report.", path)
 
   override def afterEach(context: AfterEach): Unit = {
     reportsProvider.deleteAll()
@@ -47,13 +49,13 @@ class ReportsSuite extends BaseSuite {
       new String(Files.readAllBytes(path.get), StandardCharsets.UTF_8)
     assertNoDiff(
       s"""|${exampleText(StdReportContext.WORKSPACE_STR)}
-          |#### Short summary: 
+          |#### Short summary:
           |
           |Test error report.
           |""".stripMargin,
       obtained,
     )
-    assert(reportsProvider.incognito.getReports().length == 1)
+    assert(reportsProvider.incognito.getReports().size() == 1)
     val dirsWithDate =
       reportsProvider.reportsDir.resolve("metals").toFile().listFiles()
     assert(dirsWithDate.length == 1)
@@ -71,6 +73,7 @@ class ReportsSuite extends BaseSuite {
     reportsProvider.incognito.create(report2)
     val reports = reportsProvider.incognito
       .getReports()
+      .asScala
       .map { report =>
         val (name, buildTarget) =
           ReportFileName.getReportNameAndBuildTarget(report)
@@ -101,12 +104,12 @@ class ReportsSuite extends BaseSuite {
     reportsProvider.incognito.create(
       exampleReport("some_different_test_error_new")
     )
-    val deleted = reportsProvider.incognito.cleanUpOldReports(2)
+    val deleted = reportsProvider.incognito.cleanUpOldReports(2).asScala.toList
     deleted match {
       case (_ :: _ :: Nil) if deleted.forall(_.name.contains("old")) =>
       case _ => fail(s"deleted: ${deleted.map(_.name)}")
     }
-    val reports = reportsProvider.incognito.getReports()
+    val reports = reportsProvider.incognito.getReports().asScala.toList
     reports match {
       case (_ :: _ :: Nil) if reports.forall(_.name.contains("new")) =>
       case _ => fail(s"reports: ${reports.map(_.name)}")
@@ -117,7 +120,12 @@ class ReportsSuite extends BaseSuite {
     val testId = "test-id"
     val path = reportsProvider.incognito
       .create(
-        Report("test_error", exampleText(), "Test error", id = Some(testId))
+        StandardReport(
+          "test_error",
+          exampleText(),
+          "Test error",
+          id = Some(testId),
+        )
       )
       .map(_.toRealPath())
     val obtained =
@@ -125,14 +133,19 @@ class ReportsSuite extends BaseSuite {
     assertNoDiff(
       s"""|error id: $testId
           |${exampleText(StdReportContext.WORKSPACE_STR)}
-          |#### Short summary: 
+          |#### Short summary:
           |
           |Test error
           |""".stripMargin,
       obtained,
     )
     val none1 = reportsProvider.incognito.create(
-      Report("test_error_again", exampleText(), "Test error", id = Some(testId))
+      StandardReport(
+        "test_error_again",
+        exampleText(),
+        "Test error",
+        id = Some(testId),
+      )
     )
     assertEquals(
       none1.map(_.toRealPath()),
@@ -141,10 +154,15 @@ class ReportsSuite extends BaseSuite {
     val newReportsProvider =
       new StdReportContext(workspace.toNIO, _ => Some("buildTarget"))
     val none2 = newReportsProvider.incognito.create(
-      Report("test_error_again", exampleText(), "Test error", id = Some(testId))
+      StandardReport(
+        "test_error_again",
+        exampleText(),
+        "Test error",
+        id = Some(testId),
+      )
     )
     assertEquals(none2.map(_.toRealPath()), path)
-    val reports = newReportsProvider.incognito.getReports()
+    val reports = newReportsProvider.incognito.getReports().asScala.toList
     reports match {
       case head :: Nil => assert(head.file.getName == path.get.toFile.getName)
       case _ => fail(s"reports: ${reports.map(_.name)}")

@@ -44,7 +44,7 @@ trait SourceCodeTransformer[Context, Tree] {
       val segments = packageName.split('.')
       require(segments.nonEmpty, s"Invalid package name $packageName")
       val minPackageSegments = 2
-      segments
+      segments.toList
         .drop(minPackageSegments)
         .scanLeft(segments.take(minPackageSegments).mkString("."))(_ + "." + _)
     }

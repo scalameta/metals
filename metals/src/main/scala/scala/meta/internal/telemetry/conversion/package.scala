@@ -1,14 +1,14 @@
 package scala.meta.internal.telemetry
 
-import java.util.Optional
+import java.{util => ju}
 
 import scala.collection.JavaConverters._
 import scala.jdk.OptionConverters._
 
 import scala.meta.internal.bsp
 import scala.meta.internal.metals
-import scala.meta.internal.pc.telemetry.conversion.PresentationCompilerConfig
 import scala.meta.internal.telemetry
+import scala.meta.pc
 
 import org.eclipse.lsp4j
 
@@ -34,13 +34,45 @@ package object conversion {
       /* testUserInterface = */ TestUserInterfaceKind(config.testUserInterface),
     )
 
+  def PresentationCompilerConfig(
+      config: pc.PresentationCompilerConfig
+  ): telemetry.PresentationCompilerConfig =
+    new telemetry.PresentationCompilerConfig(
+      copyOf(config.symbolPrefixes),
+      config.completionCommand,
+      config.parameterHintsCommand(),
+      config.overrideDefFormat.name(),
+      config.isDefaultSymbolPrefixes(),
+      config.isCompletionItemDetailEnabled(),
+      config.isStripMarginOnTypeFormattingEnabled(),
+      config.isCompletionItemDocumentationEnabled(),
+      config.isHoverDocumentationEnabled(),
+      config.snippetAutoIndent(),
+      config.isSignatureHelpDocumentationEnabled(),
+      config.isCompletionSnippetsEnabled(),
+      copyOf(config.semanticdbCompilerOptions),
+    )
+
+  // Java Collections utilities not available in JDK 8
+  private def copyOf[T](v: ju.List[T]): ju.List[T] = {
+    val copy = new ju.ArrayList[T](v.size())
+    copy.addAll(v)
+    copy
+  }
+
+  private def copyOf[K, V](v: ju.Map[K, V]): ju.Map[K, V] = {
+    val copy = new ju.HashMap[K, V](v.size())
+    copy.putAll(v)
+    copy
+  }
+
   def BuildServerConnections(
       session: bsp.BspSession
-  ): List[telemetry.BuildServerConnection] = {
+  ): List[BuildServerConnection] = {
     def convert(
         conn: metals.BuildServerConnection,
         isMain: Boolean,
-    ) = new telemetry.BuildServerConnection(
+    ) = new BuildServerConnection(
       /* name = */ conn.name,
       /* version = */ conn.version,
       /* isMain = */ isMain,
@@ -49,17 +81,16 @@ package object conversion {
       session.meta.map(convert(_, isMain = false))
   }
 
-  def TestUserInterfaceKind(
-      kind: metals.TestUserInterfaceKind
-  ): String = kind match {
-    case metals.TestUserInterfaceKind.CodeLenses => "CodeLenses"
-    case metals.TestUserInterfaceKind.TestExplorer => "TestExplorer"
-  }
+  def TestUserInterfaceKind(kind: metals.TestUserInterfaceKind): String =
+    kind match {
+      case metals.TestUserInterfaceKind.CodeLenses => "CodeLenses"
+      case metals.TestUserInterfaceKind.TestExplorer => "TestExplorer"
+    }
 
   def MetalsServerConfig(
       config: metals.MetalsServerConfig
-  ): telemetry.MetalsServerConfiguration =
-    new telemetry.MetalsServerConfiguration(
+  ): MetalsServerConfiguration =
+    new MetalsServerConfiguration(
       /* executeClientCommand = */ config.executeClientCommand.value,
       /* snippetAutoIndent = */ config.snippetAutoIndent,
       /* isHttpEnabled = */ config.isHttpEnabled,
@@ -71,8 +102,8 @@ package object conversion {
 
   def MetalsClientInfo(info: lsp4j.ClientInfo): telemetry.MetalsClientInfo =
     new telemetry.MetalsClientInfo(
-      /* name = */ Optional.of(info.getName()),
-      /* version =  */ Optional.of(info.getVersion()),
+      /* name = */ ju.Optional.of(info.getName()),
+      /* version =  */ ju.Optional.of(info.getVersion()),
     )
 
 }

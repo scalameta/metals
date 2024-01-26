@@ -5,9 +5,9 @@ import java.security.MessageDigest
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.Report
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Tables
+import scala.meta.internal.pc.StandardReport
+import scala.meta.pc.ReportContext
 
 import com.google.common.io.BaseEncoding
 
@@ -19,7 +19,7 @@ class BspErrorHandler(
   def onError(message: String): Unit = {
     if (shouldShowBspError) {
       for {
-        report <- createReport(message)
+        report <- createReport(message).asScala
         if !tables.dismissedNotifications.BspErrors.isDismissed
       } bspStatus.showError(message, report)
     } else logError(message)
@@ -36,7 +36,7 @@ class BspErrorHandler(
     val id = BaseEncoding.base64().encode(digest)
     val sanitized = reportContext.bloop.sanitize(message)
     reportContext.bloop.create(
-      Report(
+      StandardReport(
         sanitized.trimTo(20),
         s"""|### Bloop error:
             |
