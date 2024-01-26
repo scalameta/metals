@@ -51,9 +51,9 @@ class DidFocusLspSuite extends BaseLspSuite("did-focus") {
       _ = assertNoDiagnostics()
       _ = fakeTime.elapseSeconds(10)
       didCompile <- server.didFocus("a/src/main/scala/a/A2.scala")
-      _ = assert(didCompile == AlreadyCompiled)
+      _ = assert(didCompile == Compiled)
       didCompile <- server.didFocus("b/src/main/scala/b/B.scala")
-      _ = assert(didCompile == AlreadyCompiled)
+      _ = assert(didCompile == Compiled)
       didCompile <- server.didFocus("c/src/main/scala/c/C.scala")
       // fake delete the diagnostic to see that `c` won't get recompiled
       _ = client.diagnostics(server.toPath("c/src/main/scala/c/C.scala")) =
@@ -64,7 +64,7 @@ class DidFocusLspSuite extends BaseLspSuite("did-focus") {
       _ = fakeTime.elapseSeconds(10)
       _ = assertNoDiagnostics()
       didCompile <- server.didFocus("a/src/main/scala/a/A2.scala")
-      _ = assert(didCompile == AlreadyCompiled)
+      _ = assert(didCompile == Compiled)
       didCompile <- server.didFocus("b/src/main/scala/b/B.scala")
       _ = assert(didCompile == Compiled)
       _ = assertNoDiff(
@@ -148,7 +148,7 @@ class DidFocusWhileCompilingLspSuite
   }
 
   test(
-    "Trigger compilation by didFocus when current compile may affect focused buffer"
+    "Trigger compilation when current compile may affect the focused buffer"
   ) {
     cleanWorkspace()
     for {
@@ -199,18 +199,8 @@ class DidFocusWhileCompilingLspSuite
         client.workspaceDiagnostics,
         xMismatch,
       )
-      didSaveA = server.didSave("a/src/main/scala/a/A.scala")(
+      _ <- server.didSave("a/src/main/scala/a/A.scala")(
         _.replace("Int", "String")
-      )
-      // Wait until compilation against project a is started (before we invoke didFocus on project b)
-      _ <- server.waitFor(compileDelayMillis / 2)
-      // Focus before compilation of A.scala is complete.
-      // And make sure didFocus during the compilation causes compilation against project b.
-      didCompile <- server.didFocus("b/src/main/scala/b/B.scala")
-      _ <- didSaveA
-      _ = assert(
-        didCompile == Compiled,
-        s"expect 'Compiled', actual: ${didCompile}",
       )
       _ = assertNoDiff(
         client.workspaceDiagnostics,

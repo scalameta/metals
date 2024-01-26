@@ -1051,6 +1051,11 @@ class MetalsLspService(
     // In some cases like peeking definition didOpen might be followed up by close
     // and we would lose the notion of the focused document
     recentlyOpenedFiles.add(path)
+    val prevBuildTarget = focusedDocumentBuildTarget.getAndUpdate { current =>
+      buildTargets
+        .inverseSources(path)
+        .getOrElse(current)
+    }
 
     // Update md5 fingerprint from file contents on disk
     fingerprints.add(path, FileIO.slurp(path, charset))
@@ -1089,7 +1094,7 @@ class MetalsLspService(
           Future
             .sequence(
               List(
-                maybeCompileOnDidFocus(path),
+                maybeCompileOnDidFocus(path, prevBuildTarget),
                 compilers.load(List(path)),
                 publishSynthetics0,
               )
@@ -1128,9 +1133,11 @@ class MetalsLspService(
       uri: String
   ): CompletableFuture[DidFocusResult.Value] = {
     val path = uri.toAbsolutePath
-    buildTargets
-      .inverseSources(path)
-      .foreach(focusedDocumentBuildTarget.set)
+    val prevBuildTarget = focusedDocumentBuildTarget.getAndUpdate { current =>
+      buildTargets
+        .inverseSources(path)
+        .getOrElse(current)
+    }
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
     if (path.isDependencySource(folder)) {
@@ -1141,45 +1148,28 @@ class MetalsLspService(
     } else {
       publishSynthetics(path)
       worksheetProvider.onDidFocus(path)
-      maybeCompileOnDidFocus(path).asJava
+      maybeCompileOnDidFocus(path, prevBuildTarget).asJava
     }
   }
 
-  private def maybeCompileOnDidFocus(path: AbsolutePath) = {
+  private def maybeCompileOnDidFocus(
+      path: AbsolutePath,
+      prevBuildTarget: b.BuildTargetIdentifier,
+  ) =
     buildTargets.inverseSources(path) match {
-      case Some(target) =>
-        val wasNeverCompiled = !compilations.wasEverCompiled(target)
-        def isAffectedByCurrentCompilation =
-          !compilations.isCurrentlyCompiling(target) && path.isWorksheet ||
-            buildTargets.isInverseDependency(
-              target,
-              compilations.currentlyCompiling.toList,
-            )
-
-        def isAffectedByLastCompilation: Boolean =
-          !compilations.wasPreviouslyCompiled(target) &&
-            buildTargets.isInverseDependency(
-              target,
-              compilations.previouslyCompiled.toList,
-            )
-
-        val needsCompile =
-          wasNeverCompiled || isAffectedByCurrentCompilation || isAffectedByLastCompilation
-        if (needsCompile) {
-          compilations
-            .compileFile(path)
-            .map(_ => DidFocusResult.Compiled)
-        } else {
-          Future.successful(DidFocusResult.AlreadyCompiled)
-        }
-      case None if path.isWorksheet =>
+      case Some(target) if prevBuildTarget != target =>
         compilations
           .compileFile(path)
           .map(_ => DidFocusResult.Compiled)
+      case _ if path.isWorksheet =>
+        compilations
+          .compileFile(path)
+          .map(_ => DidFocusResult.Compiled)
+      case Some(_) =>
+        Future.successful(DidFocusResult.AlreadyCompiled)
       case None =>
         Future.successful(DidFocusResult.NoBuildTarget)
     }
-  }
 
   def pause(): Unit = pauseables.pause()
 
