@@ -119,21 +119,23 @@ final class StatusBar(
     if (clientConfig.statusBarState == StatusBarState.Off) {
       val uuid = UUID.randomUUID().toString()
       val token = messages.Either.forLeft[String, Integer](uuid)
-      val notification = new WorkDoneProgressBegin()
-      notification.setTitle(message)
-      val notif = messages.Either.forLeft[WorkDoneProgressNotification, Object](
-        notification
-      )
-      client.createProgress(new WorkDoneProgressCreateParams(token))
-      client.notifyProgress(new ProgressParams(token, notif))
-      // value.map(x => )
 
-      value.map { v =>
+      val begin = new WorkDoneProgressBegin()
+      begin.setTitle(message)
+      val notification =
+        messages.Either.forLeft[WorkDoneProgressNotification, Object](
+          begin
+        )
+
+      client.createProgress(new WorkDoneProgressCreateParams(token))
+      client.notifyProgress(new ProgressParams(token, notification))
+
+      value.map { result =>
         val end = messages.Either.forLeft[WorkDoneProgressNotification, Object](
           new WorkDoneProgressEnd()
         )
         client.notifyProgress(new ProgressParams(token, end))
-        v
+        result
       }
     } else {
       items.add(Progress(message, value, showTimer, progress))
