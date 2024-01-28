@@ -116,7 +116,10 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
   ): CompletableFuture[ju.List[Object]] =
     underlying.configuration(configurationParams)
 
-    override def createProgress(params: WorkDoneProgressCreateParams): CompletableFuture[Void] = underlying.createProgress(params)
+  override def createProgress(
+      params: WorkDoneProgressCreateParams
+  ): CompletableFuture[Void] = underlying.createProgress(params)
 
-  override def notifyProgress(params: ProgressParams): Unit = underlying.notifyProgress(params)
+  override def notifyProgress(params: ProgressParams): Unit =
+    underlying.notifyProgress(params)
 }

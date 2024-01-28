@@ -104,7 +104,9 @@ trait MetalsLanguageClient
     showMessage(params)
   }
 
-  override def createProgress(params: WorkDoneProgressCreateParams): CompletableFuture[Void]
+  override def createProgress(
+      params: WorkDoneProgressCreateParams
+  ): CompletableFuture[Void]
 
   override def notifyProgress(params: ProgressParams): Unit
 
