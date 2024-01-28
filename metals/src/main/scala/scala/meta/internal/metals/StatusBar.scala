@@ -20,6 +20,19 @@ import scala.meta.internal.metals.clients.language.MetalsStatusParams
 
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.ProgressParams
+import scala.meta.internal.metals.config.StatusBarState.LogMessage
+import scala.meta.internal.metals.config.StatusBarState.Off
+import scala.meta.internal.metals.config.StatusBarState.On
+import scala.meta.internal.metals.config.StatusBarState.ShowMessage
+import scala.meta.internal.metals.config.StatusBarState
+import scala.meta.internal.metals.logging.LanguageClientLogger
+import org.eclipse.lsp4j.jsonrpc.messages
+import org.eclipse.lsp4j.WorkDoneProgressBegin
+import org.eclipse.lsp4j.WorkDoneProgressNotification
+import java.util.UUID
+import org.eclipse.lsp4j.WorkDoneProgressCreateParams
+import org.eclipse.lsp4j.WorkDoneProgressEnd
 
 /**
  * Manages sending metals/status notifications to the editor client.
@@ -107,9 +120,31 @@ final class StatusBar(
       showTimer: Boolean = false,
       progress: Option[TaskProgress] = None,
   ): Future[T] = {
+
+      client.logMessage(new MessageParams(MessageType.Error, s"tracking future message $message, progress $progress"))
+    if (clientConfig.statusBarState == StatusBarState.Off) {
+      val uuid = UUID.randomUUID().toString()
+      client.logMessage(new MessageParams(MessageType.Error, "Statusbar support not detected"))
+      val token = messages.Either.forLeft[String, Integer](uuid)
+      val notification = new WorkDoneProgressBegin()
+      notification.setTitle(message)
+      val notif = messages.Either.forLeft[WorkDoneProgressNotification, Object](notification)
+      client.createProgress(new WorkDoneProgressCreateParams(token))
+      client.notifyProgress(new ProgressParams(token, notif))
+      // value.map(x => )
+
+    value.map { v =>
+      val end = messages.Either.forLeft[WorkDoneProgressNotification, Object](new WorkDoneProgressEnd())
+      client.notifyProgress(new ProgressParams(token, end)) 
+      v
+    }
+    } else {
+      client.logMessage(new MessageParams(MessageType.Error, "Statusbar support detected"))
     items.add(Progress(message, value, showTimer, progress))
     tickIfHidden()
+
     value
+    }
   }
 
   def addMessage(params: MetalsStatusParams): Unit = {

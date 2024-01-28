@@ -16,6 +16,8 @@ import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.UnregistrationParams
+import org.eclipse.lsp4j.ProgressParams
+import org.eclipse.lsp4j.WorkDoneProgressCreateParams
 
 class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
     extends MetalsLanguageClient {
@@ -113,4 +115,8 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
       configurationParams: ConfigurationParams
   ): CompletableFuture[ju.List[Object]] =
     underlying.configuration(configurationParams)
+
+    override def createProgress(params: WorkDoneProgressCreateParams): CompletableFuture[Void] = underlying.createProgress(params)
+
+  override def notifyProgress(params: ProgressParams): Unit = underlying.notifyProgress(params)
 }
