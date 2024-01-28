@@ -12,11 +12,11 @@ import scala.meta.internal.tvp._
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.ProgressParams
+import org.eclipse.lsp4j.WorkDoneProgressCreateParams
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageClient
-import org.eclipse.lsp4j.ProgressParams
-import org.eclipse.lsp4j.WorkDoneProgressCreateParams
 
 trait MetalsLanguageClient
     extends LanguageClient

@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
@@ -17,22 +18,16 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
+import scala.meta.internal.metals.config.StatusBarState
 
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ProgressParams
-import scala.meta.internal.metals.config.StatusBarState.LogMessage
-import scala.meta.internal.metals.config.StatusBarState.Off
-import scala.meta.internal.metals.config.StatusBarState.On
-import scala.meta.internal.metals.config.StatusBarState.ShowMessage
-import scala.meta.internal.metals.config.StatusBarState
-import scala.meta.internal.metals.logging.LanguageClientLogger
-import org.eclipse.lsp4j.jsonrpc.messages
 import org.eclipse.lsp4j.WorkDoneProgressBegin
-import org.eclipse.lsp4j.WorkDoneProgressNotification
-import java.util.UUID
 import org.eclipse.lsp4j.WorkDoneProgressCreateParams
 import org.eclipse.lsp4j.WorkDoneProgressEnd
+import org.eclipse.lsp4j.WorkDoneProgressNotification
+import org.eclipse.lsp4j.jsonrpc.messages
 
 /**
  * Manages sending metals/status notifications to the editor client.
