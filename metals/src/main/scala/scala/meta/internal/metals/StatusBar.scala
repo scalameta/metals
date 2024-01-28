@@ -116,17 +116,8 @@ final class StatusBar(
       progress: Option[TaskProgress] = None,
   ): Future[T] = {
 
-    client.logMessage(
-      new MessageParams(
-        MessageType.Error,
-        s"tracking future message $message, progress $progress",
-      )
-    )
     if (clientConfig.statusBarState == StatusBarState.Off) {
       val uuid = UUID.randomUUID().toString()
-      client.logMessage(
-        new MessageParams(MessageType.Error, "Statusbar support not detected")
-      )
       val token = messages.Either.forLeft[String, Integer](uuid)
       val notification = new WorkDoneProgressBegin()
       notification.setTitle(message)
@@ -145,9 +136,6 @@ final class StatusBar(
         v
       }
     } else {
-      client.logMessage(
-        new MessageParams(MessageType.Error, "Statusbar support detected")
-      )
       items.add(Progress(message, value, showTimer, progress))
       tickIfHidden()
 
