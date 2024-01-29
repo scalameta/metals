@@ -195,9 +195,6 @@ object Bill {
     }
     override def workspaceBuildTargets()
         : CompletableFuture[WorkspaceBuildTargetsResult] = {
-      sleepBeforePingResponse.foreach(duration =>
-        Thread.sleep(duration.toMillis)
-      )
       CompletableFuture.completedFuture {
         new WorkspaceBuildTargetsResult(Collections.singletonList(target))
       }
@@ -318,6 +315,11 @@ object Bill {
     override def buildTargetCompile(
         params: CompileParams
     ): CompletableFuture[CompileResult] = {
+      if (params.getTargets().isEmpty()) {
+        sleepBeforePingResponse.foreach(duration =>
+          Thread.sleep(duration.toMillis)
+        )
+      }
       CompletableFuture.completedFuture {
         reporter.reset()
         val run = new g.Run()
