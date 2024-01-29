@@ -546,4 +546,53 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |```
        |""".stripMargin
   )
+
+  check(
+    "i6041",
+    """
+      |object B {
+      |  extension (x: Int)(using Int)
+      |    def foo: Int = ???
+      |    
+      |  given Int = 42
+      |  val bar = 42.fo@@o
+      |}
+      |""".stripMargin,
+    """|```scala
+       |extension (x: Int) def foo(using Int): Int
+       |```
+       |""".stripMargin
+  )
+
+  check(
+    "i6401-1",
+    """
+      |sealed trait ExtensionProvider {
+      |  extension [A] (self: A)(using Int) {
+      |    def typeArg[B <: A]: B
+      |    def inferredTypeArg[C](value: C): C
+      |  }
+      |}
+      |
+      |object Repro {
+      |  given Int = 42
+      |  def usage[A](f: ExtensionProvider ?=> A => Any): Any = ???
+      |
+      |  usage[Int](_.inferredTypeArg("str"))
+      |  usage[Int](_.inferredTypeArg[String]("str"))
+      |  usage[Option[Int]](_.typeArg[Some[Int]].value.inferredTypeArg("str"))
+      |  usage[Option[Int]](_.typeArg[Some[Int]].value.inferre@@dTypeArg[String]("str"))
+      |}
+      |""".stripMargin,
+    """|**Expression type**:
+       |```scala
+       |String
+       |```
+       |**Symbol signature**:
+       |```scala
+       |extension [A](self: A) def inferredTypeArg(using Int)[C](value: C): C
+       |```
+       |""".stripMargin
+  )
+
 }
