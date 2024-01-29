@@ -620,6 +620,10 @@ class MetalsLspService(
     packageProvider,
     scalaVersionSelector,
     clientConfig.icons,
+    onCreate = path => {
+      buildTargets.onCreate(path)
+      onChange(List(path))
+    },
   )
 
   private val symbolSearch: MetalsSymbolSearch = new MetalsSymbolSearch(
