@@ -566,13 +566,21 @@ object BuildServerConnection {
               throw e
           }
 
+        // For Bloop we use the `workspace/buildTargets`,
+        // since the `buildTarget/compile` request with empty targets results in an error
+        val ping: () => Unit =
+          if (serverName == BloopServers.name || ScalaCli.names(serverName))
+            () => server.workspaceBuildTargets()
+          else
+            () => server.buildTargetCompile(new CompileParams(Nil.asJava))
+
         val optServerLivenessMonitor =
           for {
             bspStatus <- bspStatusOpt
             requestMonitor <- requestMonitorOpt
           } yield new ServerLivenessMonitor(
             requestMonitor,
-            () => server.workspaceBuildTargets(),
+            ping,
             config.metalsToIdleTime,
             config.pingInterval,
             bspStatus,
