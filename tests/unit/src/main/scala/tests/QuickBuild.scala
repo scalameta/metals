@@ -284,6 +284,9 @@ object QuickBuild {
     ),
     "org.scalameta::munit" -> Config.TestFramework.munit,
     "junit:junit" -> Config.TestFramework.JUnit,
+    "com.disneystreaming::weaver-cats" -> Config.TestFramework(
+      List("weaver.framework.CatsEffect")
+    ),
   )
 
   /**

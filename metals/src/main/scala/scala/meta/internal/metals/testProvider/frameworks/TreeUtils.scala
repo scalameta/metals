@@ -7,7 +7,6 @@ import scala.meta.Pkg
 import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
-import scala.meta.Type
 
 private[frameworks] object TreeUtils {
 
@@ -31,10 +30,13 @@ private[frameworks] object TreeUtils {
     ): Option[Template] = {
       t match {
         case cls: Defn.Class
-            if isValid(cls.name, currentPackage, fullyQualifiedName) =>
+            if isValid(cls.name.value, currentPackage, fullyQualifiedName) =>
           Some(cls.templ)
+        case obj: Defn.Object
+            if isValid(obj.name.value, currentPackage, fullyQualifiedName) =>
+          Some(obj.templ)
         case trt: Defn.Trait
-            if isValid(trt.name, currentPackage, fullyQualifiedName) =>
+            if isValid(trt.name.value, currentPackage, fullyQualifiedName) =>
           Some(trt.templ)
         // short-circuit to not go deeper into unuseful defns
         case _: Defn => None
@@ -62,11 +64,11 @@ private[frameworks] object TreeUtils {
    * Class definition is valid when package + class name is equal to one we are looking for
    */
   private def isValid(
-      name: Type.Name,
+      name: String,
       currentPackage: Vector[String],
       searched: String,
   ): Boolean = {
-    val fullyQualifiedName = currentPackage.appended(name.value).mkString(".")
+    val fullyQualifiedName = currentPackage.appended(name).mkString(".")
     fullyQualifiedName == searched
   }
 

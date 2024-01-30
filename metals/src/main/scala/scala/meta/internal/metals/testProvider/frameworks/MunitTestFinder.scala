@@ -31,8 +31,12 @@ class MunitTestFinder(
 ) {
 
   // depending on the munit version test method symbol varies.
-  private val baseParentClasses = Set("munit/BaseFunSuite#", "munit/FunSuite#")
-  private val testMethodSymbols = baseParentClasses.map(_ + "test")
+  protected val baseParentClasses: Set[String] =
+    Set("munit/BaseFunSuite#", "munit/FunSuite#")
+  protected val testFunctionsNames: Set[String] = Set("test")
+  private def testMethodSymbols = baseParentClasses.flatMap(base =>
+    testFunctionsNames.map(func => base + func)
+  )
 
   /**
    * Find test cases for the given suite.
@@ -198,7 +202,8 @@ class MunitTestFinder(
     def loop(acc: List[Tree]): Option[(Term.Name, Lit.String)] = acc match {
       case head :: tail =>
         head match {
-          case Term.Apply(term @ Term.Name("test"), args) =>
+          case Term.Apply(term @ Term.Name(name), args)
+              if (testFunctionsNames(name)) =>
             extractLiteralName(args) match {
               case Some(lit) =>
                 Some((term, lit))
@@ -243,7 +248,7 @@ class MunitTestFinder(
     def loop(acc: List[Tree]): Boolean = acc match {
       case head :: tail =>
         head match {
-          case term @ Term.Name("test") =>
+          case term @ Term.Name(name) if (testFunctionsNames(name)) =>
             val range = term.pos.toSemanticdb
             val isValid = occurences
               .exists(occ => occ.range.exists(_.isEqual(range)))
