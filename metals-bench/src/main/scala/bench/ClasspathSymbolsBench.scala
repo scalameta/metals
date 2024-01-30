@@ -36,9 +36,11 @@ class ClasspathSymbolsBench {
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def run(): Unit = {
     implicit val reporting = EmptyReportContext
+    val (buffers, trees) = TreeUtils.getTrees(scalaVersion = None)
     val jars = new IndexedSymbols(
       isStatisticsEnabled = false,
-      TreeUtils.getTrees(scalaVersion = None)._2,
+      trees,
+      buffers,
     )
     classpath.foreach { jar =>
       jars.jarSymbols(jar, "cats/", dialects.Scala213)

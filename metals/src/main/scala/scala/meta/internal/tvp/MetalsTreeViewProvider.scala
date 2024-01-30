@@ -251,10 +251,12 @@ class FolderTreeViewProvider(
     languageClient: MetalsLanguageClient,
     clientConfig: ClientConfiguration,
     trees: Trees,
+    buffers: Buffers,
 )(implicit context: ReportContext) {
   val classpath = new IndexedSymbols(
     isStatisticsEnabled = clientConfig.initialConfig.statistics.isTreeView,
     trees,
+    buffers,
   )
 
   def dialectOf(path: AbsolutePath): Option[Dialect] =
@@ -312,9 +314,7 @@ class FolderTreeViewProvider(
     },
     loadSymbols = { (id, symbol) =>
       val tops = for {
-        scalaTarget <- buildTargets.scalaTarget(id).iterator
-        source <- buildTargets.buildTargetSources(id)
-        dialect = scalaTarget.dialect(source)
+        source <- buildTargets.buildTargetSources(id).iterator
       } yield classpath.workspaceSymbols(source, symbol)
       tops.flatten
     },

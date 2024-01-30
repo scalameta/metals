@@ -8,10 +8,12 @@ import scala.meta.Dialect
 import scala.meta._
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
+import scala.meta.internal.mtags.JavaMtags
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.ScalaMtags
 import scala.meta.internal.mtags.Symbol
@@ -24,6 +26,7 @@ import scala.meta.io.AbsolutePath
 class IndexedSymbols(
     isStatisticsEnabled: Boolean,
     trees: Trees,
+    buffers: Buffers,
 )(implicit rc: ReportContext) {
 
   private val mtags = new Mtags()
@@ -36,6 +39,12 @@ class IndexedSymbols(
   type TopLevel = SymbolDefinition
   type ToplevelSymbol = String
   type AllSymbols = Array[TreeViewSymbolInformation]
+
+  private val filteredSymbols: Set[SymbolInformation.Kind] = Set(
+    SymbolInformation.Kind.CONSTRUCTOR,
+    SymbolInformation.Kind.PARAMETER,
+    SymbolInformation.Kind.TYPE_PARAMETER,
+  )
 
   /* Used for dependencies lazily calculates all symbols in a jar.
    * At the start it only contains the definition of a toplevel Symbol, later
@@ -64,9 +73,7 @@ class IndexedSymbols(
     result
   }
 
-  private def workspaceSymbolsFromPath(
-      in: AbsolutePath
-  ): Array[TreeViewSymbolInformation] =
+  private def scalaSymbols(in: AbsolutePath): Seq[SymbolInformation] = {
     trees
       .get(in)
       .map { tree =>
@@ -79,27 +86,48 @@ class IndexedSymbols(
             mtags
               .index()
               .symbols
-              .map { info =>
-                TreeViewSymbolInformation(
-                  info.symbol,
-                  info.kind,
-                  info.properties,
-                )
-              }
-              .toArray
+
           case (tree, origin) =>
             // Trees don't return anything else than Source, and it should be impossible to get here
             scribe.error(
               s"[$in] Unexpected tree type ${tree.getClass} in IndexedSymbols with origin:\n$origin "
             )
-            Array.empty[TreeViewSymbolInformation]
+            Seq.empty[SymbolInformation]
 
         }
       }
-      .getOrElse(Array.empty)
+      .getOrElse(Seq.empty[SymbolInformation])
+  }
+
+  private def javaSymbols(in: AbsolutePath) = {
+    val mtags = new JavaMtags(
+      Input.VirtualFile(in.toString(), buffers.get(in).getOrElse(in.readText)),
+      includeMembers = true,
+    )
+    mtags
+      .index()
+      .symbols
+  }
+
+  private def workspaceSymbolsFromPath(
+      in: AbsolutePath
+  ): Array[TreeViewSymbolInformation] = {
+    val symbolInfos = if (in.isScala) { scalaSymbols(in) }
+    else if (in.isJava && in.exists) { javaSymbols(in) }
+    else List.empty[SymbolInformation]
+
+    symbolInfos.collect {
+      case info if !filteredSymbols(info.kind) =>
+        TreeViewSymbolInformation(
+          info.symbol,
+          info.kind,
+          info.properties,
+        )
+    }.toArray
+  }
 
   /**
-   * We load all symbols for workspace when semanticdb files are produced.
+   * We load all symbols using the standard mtags indexing mechanisms
    *
    * @param in the input file to get symbols for
    * @param symbol we are looking for
@@ -109,12 +137,10 @@ class IndexedSymbols(
       in: AbsolutePath,
       symbol: String,
   ): Iterator[TreeViewSymbolInformation] = withTimer(s"$in") {
-    workspaceCache.getOrElseUpdate(
+    val syms = workspaceCache.getOrElseUpdate(
       in,
       workspaceSymbolsFromPath(in),
     )
-    val syms = workspaceCache
-      .getOrElse(in, Array.empty)
     if (Symbol(symbol).isRootPackage) syms.iterator
     else
       syms.collect {

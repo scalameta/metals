@@ -795,6 +795,7 @@ class MetalsLspService(
       languageClient,
       clientConfig,
       trees,
+      buffers,
     )
 
   private val popupChoiceReset: PopupChoiceReset = new PopupChoiceReset(
