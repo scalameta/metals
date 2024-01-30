@@ -54,6 +54,7 @@ case class UserConfiguration(
     scalafixRulesDependencies: List[String] = Nil,
     customProjectRoot: Option[String] = None,
     verboseCompilation: Boolean = false,
+    automaticImportBuild: Boolean = false,
     scalaCliLauncher: Option[String] = None,
 ) {
 
@@ -339,6 +340,11 @@ object UserConfiguration {
            |will make the logs contain all the possible debugging information including
            |about incremental compilation in Zinc.""".stripMargin,
       ),
+      UserConfigurationOption(
+        "auto-import-build", "false", "true",
+        "Import build when changes detected without prompting",
+        "Automatically import builds rather than prompting the user to choose.",
+      ),
     )
 
   def fromJson(
@@ -553,6 +559,9 @@ object UserConfiguration {
     val verboseCompilation =
       getBooleanKey("verbose-compilation").getOrElse(false)
 
+    val autoImportBuilds =
+      getBooleanKey("auto-import-builds").getOrElse(false)
+
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -584,6 +593,7 @@ object UserConfiguration {
           scalafixRulesDependencies,
           customProjectRoot,
           verboseCompilation,
+          autoImportBuilds,
         )
       )
     } else {
