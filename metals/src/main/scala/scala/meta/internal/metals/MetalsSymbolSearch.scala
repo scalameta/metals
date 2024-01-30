@@ -10,6 +10,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.ParentSymbols
+import scala.meta.pc.ReportContext
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor

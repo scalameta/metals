@@ -138,6 +138,7 @@ commands ++= Seq(
       runMtagsPublishLocal(st, v, localSnapshotVersion)
     }
     "interfaces/publishLocal" ::
+      "telemetryInterfaces/publishLocal" ::
       s"++${V.scala213} metals/publishLocal" ::
       "mtags-java/publishLocal" ::
       publishMtags
@@ -181,6 +182,7 @@ def lintingOptions(scalaVersion: String) = {
     "-Wconf:src=*.TreeViewProvider.scala&msg=parameter params in method (children|parent) is never used:silent",
     // silence "The outer reference in this type test cannot be checked at run time."
     "-Wconf:src=.*(CompletionProvider|ArgCompletions|Completions|Keywords|IndentOnPaste).scala&msg=The outer reference:silent",
+    "-Wconf:src=.*(SourceCodeSanitizer).scala&msg=Unused import:silent",
   )
   crossSetting(
     scalaVersion,
@@ -191,12 +193,14 @@ def lintingOptions(scalaVersion: String) = {
 }
 
 val sharedJavacOptions = List(
+  packageDoc / publishArtifact := true,
+  packageSrc / publishArtifact := true,
   Compile / javacOptions ++= {
     if (sys.props("java.version").startsWith("1.8"))
       Nil
     else
       Seq("--release", "8")
-  }
+  },
 )
 
 val sharedScalacOptions = List(
@@ -208,7 +212,7 @@ val sharedScalacOptions = List(
             isScala212(partialVersion) && V.scala212 != scalaVersion.value =>
         List("-target:jvm-1.8", "-Yrangepos", "-Xexperimental")
       case partialVersion if isScala3(partialVersion) =>
-        List("-Xtarget:8", "-language:implicitConversions", "-Xsemanticdb")
+        List("-Xtarget:8", "-language:implicitConversions")
       case _ =>
         List("-target:jvm-1.8", "-Yrangepos")
     }
@@ -251,6 +255,17 @@ lazy val interfaces = project
     ),
   )
 
+lazy val telemetryInterfaces = project
+  .in(file("telemetry-interfaces"))
+  .settings(sharedJavacOptions)
+  .settings(
+    moduleName := "telemetry-interfaces",
+    autoScalaLibrary := false,
+    crossVersion := CrossVersion.disabled,
+    crossPaths := false,
+    libraryDependencies += "com.google.code.gson" % "gson" % V.gson,
+  )
+
 lazy val mtagsShared = project
   .in(file("mtags-shared"))
   .settings(sharedSettings)
@@ -265,7 +280,12 @@ lazy val mtagsShared = project
     Compile / packageSrc / publishArtifact := true,
     Compile / scalacOptions ++= {
       if (scalaVersion.value == V.scala3)
-        List("-Yexplicit-nulls", "-language:unsafeNulls")
+        List(
+          "-Yexplicit-nulls",
+          "-language:unsafeNulls",
+          "-Xfatal-warnings",
+          "-deprecation",
+        )
       else Nil
     },
     libraryDependencies ++= List(
@@ -321,6 +341,7 @@ val mtagsSettings = List(
   Compile / doc / sources := Seq.empty,
   libraryDependencies ++= Seq(
     "com.lihaoyi" %% "geny" % V.genyVersion,
+    "com.lihaoyi" %% "requests" % V.requests,
     "com.thoughtworks.qdox" % "qdox" % V.qdox, // for java mtags
     "org.scala-lang.modules" %% "scala-java8-compat" % V.java8Compat,
     "org.jsoup" % "jsoup" % V.jsoup, // for extracting HTML from javadocs
@@ -502,7 +523,8 @@ lazy val metals = project
       // for JSON formatted doctor
       "com.lihaoyi" %% "ujson" % "3.1.4",
       // For fetching projects' templates
-      "com.lihaoyi" %% "requests" % "0.8.0",
+      // For remote language server
+      "com.lihaoyi" %% "requests" % V.requests,
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
       "org.scalameta" %% "scalameta" % V.semanticdb(scalaVersion.value),
       "org.scalameta" % "semanticdb-scalac-core" % V.semanticdb(
@@ -555,7 +577,7 @@ lazy val metals = project
       "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
   )
-  .dependsOn(mtags, `mtags-java`)
+  .dependsOn(mtags, `mtags-java`, telemetryInterfaces)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val `sbt-metals` = project
@@ -615,6 +637,7 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   publish / skip := true,
   fork := true,
   testFrameworks := List(TestFrameworks.MUnit),
+  Test / javaOptions += "-Dmetals.telemetry-level=off",
   Test / testOptions ++= {
     if (isCI) {
       // Enable verbose logging using sbt loggers in CI.
@@ -674,6 +697,7 @@ def publishAllMtags(
 def publishBinaryMtags =
   (interfaces / publishLocal)
     .dependsOn(
+      telemetryInterfaces / publishLocal,
       `mtags-java` / publishLocal,
       publishAllMtags(V.quickPublishScalaVersions),
     )

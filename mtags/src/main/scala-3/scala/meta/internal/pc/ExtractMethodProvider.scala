@@ -4,12 +4,12 @@ import java.nio.file.Paths
 
 import scala.meta as m
 
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.internal.pc.printer.MetalsPrinter.IncludeDefaultParam
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
+import scala.meta.pc.ReportContext
 import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.ast.Trees.*

@@ -7,7 +7,6 @@ import scala.collection.concurrent.TrieMap
 import scala.meta.Dialect
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
@@ -17,6 +16,7 @@ import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.ReportContext
 
 class IndexedSymbols(isStatisticsEnabled: Boolean)(implicit rc: ReportContext)
     extends SemanticdbFeatureProvider {

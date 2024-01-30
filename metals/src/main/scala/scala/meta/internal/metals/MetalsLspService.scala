@@ -47,8 +47,10 @@ import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.LoggerAccess
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MirroredReportContext
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
@@ -79,8 +81,11 @@ import scala.meta.internal.parsing.DocumentSymbolProvider
 import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
+import scala.meta.internal.pc.StandardReport
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.semver.SemVer
+import scala.meta.internal.telemetry
+import scala.meta.internal.telemetry.TelemetryReportContext
 import scala.meta.internal.tvp._
 import scala.meta.internal.worksheets.DecorationWorksheetPublisher
 import scala.meta.internal.worksheets.WorksheetProvider
@@ -89,6 +94,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.TextDocumentService
 import scala.meta.parsers.ParseException
 import scala.meta.pc.CancelToken
+import scala.meta.pc.ReportContext
 import scala.meta.tokenizers.TokenizeException
 
 import ch.epfl.scala.bsp4j.CompileReport
@@ -148,6 +154,7 @@ class MetalsLspService(
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
 
   def getVisibleName: String = folderVisibleName.getOrElse(folder.toString())
+  def getTelemetryLevel: TelemetryLevel = userConfig.telemetryLevel
 
   private val cancelables = new MutableCancelable()
   val isCancelled = new AtomicBoolean(false)
@@ -179,8 +186,7 @@ class MetalsLspService(
   )
 
   val tables: Tables = register(new Tables(folder, time))
-
-  implicit val reports: StdReportContext = new StdReportContext(
+  val localFileReports: StdReportContext = new StdReportContext(
     folder.toNIO,
     _.flatMap { uri =>
       for {
@@ -191,9 +197,29 @@ class MetalsLspService(
     },
     ReportLevel.fromString(MetalsServerConfig.default.loglevel),
   )
+  private val remoteTelemetryReports = new TelemetryReportContext(
+    telemetryLevel = () => userConfig.telemetryLevel,
+    reporterContext = createTelemetryReporterContext,
+    sanitizers = new TelemetryReportContext.Sanitizers(
+      workspace = Some(folder.toNIO),
+      sourceCodeTransformer = Some(ScalametaSourceCodeTransformer),
+    ),
+    logger = {
+      val logger = logging.MetalsLogger.default
+      LoggerAccess(
+        debug = logger.debug(_),
+        info = logger.info(_),
+        warning = logger.warn(_),
+        error = logger.error(_),
+      )
+    },
+  )
+
+  implicit val reports: ReportContext =
+    new MirroredReportContext(localFileReports, remoteTelemetryReports)
 
   val folderReportsZippper: FolderReportsZippper =
-    FolderReportsZippper(doctor.getTargetsInfoForReports, reports)
+    FolderReportsZippper(doctor.getTargetsInfoForReports, localFileReports)
 
   private val buildTools: BuildTools = new BuildTools(
     folder,
@@ -976,7 +1002,10 @@ class MetalsLspService(
       }
     }
 
-    if (userConfig.symbolPrefixes != old.symbolPrefixes) {
+    if (
+      userConfig.symbolPrefixes != old.symbolPrefixes ||
+      userConfig.telemetryLevel != old.telemetryLevel
+    ) {
       compilers.restartAll()
     }
 
@@ -1311,7 +1340,7 @@ class MetalsLspService(
     val (bloopReportDelete, otherDeleteEvents) =
       deleteEvents.partition(
         _.getUri().toAbsolutePath.toNIO
-          .startsWith(reports.bloop.maybeReportsDir)
+          .startsWith(localFileReports.bloop.maybeReportsDir)
       )
     if (bloopReportDelete.nonEmpty) connectionBspStatus.onReportsUpdate()
     otherDeleteEvents.map(_.getUri().toAbsolutePath).foreach(onDelete)
@@ -2652,7 +2681,7 @@ class MetalsLspService(
           scribe.error(s"issues while parsing: ${e.path}", e.getCause)
         case e: IndexingExceptions.InvalidSymbolException =>
           reports.incognito.create(
-            Report(
+            StandardReport(
               "invalid-symbol",
               s"""Symbol: ${e.symbol}""".stripMargin,
               e,
@@ -2821,4 +2850,20 @@ class MetalsLspService(
 
   def runDoctorCheck(): Unit = doctor.check(headDoctor)
 
+  private def createTelemetryReporterContext(): telemetry.ReporterContext =
+    new telemetry.MetalsLspContext(
+      /* metalsVersion = */ BuildInfo.metalsVersion,
+      /* userConfig = */ telemetry.conversion.UserConfiguration(userConfig),
+      /* serverConfig = */ telemetry.conversion.MetalsServerConfig(
+        serverInputs.initialServerConfig
+      ),
+      /* clientInfo =*/ telemetry.conversion.MetalsClientInfo(
+        initializeParams.getClientInfo()
+      ),
+      /* buildServerConnections = */ bspSession.toList
+        .flatMap(
+          telemetry.conversion.BuildServerConnections(_)
+        )
+        .asJava,
+    )
 }

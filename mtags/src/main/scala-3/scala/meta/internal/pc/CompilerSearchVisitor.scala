@@ -5,8 +5,7 @@ import java.util.logging.Logger
 
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.Report
-import scala.meta.internal.metals.ReportContext
+import scala.meta.pc.ReportContext
 import scala.meta.pc.*
 
 import dotty.tools.dotc.core.Contexts.*
@@ -36,7 +35,7 @@ class CompilerSearchVisitor(
       false
     case NonFatal(error) =>
       reports.incognito.create(
-        Report(
+        StandardReport(
           "is_public",
           s"""Symbol: $sym""".stripMargin,
           error,

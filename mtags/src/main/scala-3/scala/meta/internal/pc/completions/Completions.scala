@@ -7,13 +7,13 @@ import java.nio.file.Paths
 import scala.collection.mutable
 
 import scala.meta.internal.metals.Fuzzy
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.completions.OverrideCompletions.OverrideExtractor
 import scala.meta.internal.semver.SemVer
+import scala.meta.pc.ReportContext
 import scala.meta.pc.*
 
 import dotty.tools.dotc.ast.tpd.*

@@ -15,6 +15,7 @@ import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.DescriptorParser
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.ReportContext
 import scala.meta.pc.SymbolSearchVisitor
 
 import org.eclipse.lsp4j.SymbolKind

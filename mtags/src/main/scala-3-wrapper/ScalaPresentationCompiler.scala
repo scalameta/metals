@@ -20,6 +20,7 @@ import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
+import scala.meta.pc.ReportContext
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SyntheticDecoration
 import scala.meta.pc.SyntheticDecorationsParams
@@ -55,19 +56,22 @@ case class ScalaPresentationCompiler(
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     folderPath: Option[Path] = None,
     reportsLevel: ReportLevel = ReportLevel.Info,
+    additionalReportContexts: List[ReportContext] = Nil,
 ) extends PresentationCompiler:
-  val underlying: DottyPresentationCompiler = new DottyPresentationCompiler(
-    buildTargetIdentifier = buildTargetIdentifier,
-    buildTargetName = buildTargetName,
-    classpath = classpath,
-    options = options,
-    search = search,
-    ec = ec,
-    sh = sh,
-    config = config,
-    folderPath = folderPath,
-    reportsLevel = reportsLevel,
-  )
+  val underlying: PresentationCompiler =
+    val pc = new DottyPresentationCompiler(
+      buildTargetIdentifier = buildTargetIdentifier,
+      buildTargetName = buildTargetName,
+      classpath = classpath,
+      options = options,
+      search = search,
+      ec = ec,
+      sh = sh,
+      config = config,
+      folderPath = folderPath,
+      reportsLevel = reportsLevel,
+    )
+    pc.withAdditionalReportContexts(additionalReportContexts.asJava)
 
   def this() = this("", None, Nil, Nil)
 
@@ -236,6 +240,11 @@ case class ScalaPresentationCompiler(
 
   override def withReportsLoggerLevel(level: String): PresentationCompiler =
     copy(reportsLevel = ReportLevel.fromString(level))
+
+  override def withAdditionalReportContexts(
+      additionalReportContexts: ju.List[ReportContext]
+  ): PresentationCompiler =
+    copy(additionalReportContexts = additionalReportContexts.asScala.toList)
 
   override def inlineValue(
       params: OffsetParams

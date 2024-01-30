@@ -2,12 +2,11 @@ package scala.meta.internal.pc
 
 import java.{util as ju}
 
-import scala.meta.internal.metals.Report
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
+import scala.meta.pc.ReportContext
 import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.ast.tpd.*
@@ -57,7 +56,7 @@ object HoverProvider:
           if path.isEmpty || path.head.sourcePos == null || !path.head.sourcePos.exists
           then pos.start
           else path.head.sourcePos.start
-        Report(
+        StandardReport(
           "empty-hover-scala3",
           s"""|pos: ${pos.toLsp}
               |
@@ -89,7 +88,7 @@ object HoverProvider:
           path = Some(uri.toString),
         )
       end report
-      reportContext.unsanitized.create(report, ifVerbose = true)
+      reportContext.unsanitized.create(report)
       ju.Optional.empty()
     else
       val skipCheckOnName =

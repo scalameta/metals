@@ -12,6 +12,7 @@ import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+import scala.meta.pc.ReportContext
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 

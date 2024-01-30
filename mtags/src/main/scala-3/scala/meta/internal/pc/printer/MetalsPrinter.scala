@@ -6,13 +6,13 @@ import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.jdk.CollectionConverters.*
-import scala.meta.internal.metals.Report
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.Compat.EvidenceParamName
 import scala.meta.internal.pc.IndexedContext
 import scala.meta.internal.pc.Params
+import scala.meta.internal.pc.StandardReport
 import scala.meta.internal.pc.printer.ShortenedNames.ShortName
+import scala.meta.pc.ReportContext
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 
@@ -76,16 +76,17 @@ class MetalsPrinter(
       case Success(short) => short
       case Failure(e) =>
         val reportContext = summon[ReportContext]
-        val report = Report(
+        val report = StandardReport(
           "short-name-error",
-          s"""|Error while printing type, could not create short name for type: 
+          s"""|Error while printing type, could not create short name for type:
               |$tpe
               |""".stripMargin,
           e.toString,
-          id = Some(tpe.typeSymbol.name.show),
-          error = Some(e),
+          java.util.Optional.empty(),
+          Some(tpe.typeSymbol.name.show).asJava,
+          Some(e).asJava,
         )
-        reportContext.unsanitized.create(report, ifVerbose = false)
+        reportContext.unsanitized.create(report, /* ifVerbose */ false)
         tpe
     dotcPrinter.tpe(short)
   end tpe

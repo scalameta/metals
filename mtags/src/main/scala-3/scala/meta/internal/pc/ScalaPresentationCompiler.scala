@@ -7,6 +7,7 @@ import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
+import java.util.logging.Logger
 import java.{util as ju}
 
 import scala.collection.JavaConverters.*
@@ -16,13 +17,14 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.EmptyReportContext
-import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.metals.MirroredReportContext
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments.given
 import scala.meta.internal.pc.completions.CompletionProvider
 import scala.meta.internal.pc.completions.OverrideCompletions
+import scala.meta.pc.ReportContext
 import scala.meta.pc.*
 
 import dotty.tools.dotc.reporting.StoreReporter
@@ -41,6 +43,7 @@ case class ScalaPresentationCompiler(
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     folderPath: Option[Path] = None,
     reportsLevel: ReportLevel = ReportLevel.Info,
+    additionalReportContexts: List[ReportContext] = Nil,
 ) extends PresentationCompiler:
 
   def this() = this("", None, Nil, Nil)
@@ -49,16 +52,27 @@ case class ScalaPresentationCompiler(
 
   private val forbiddenOptions = Set("-print-lines", "-print-tasty")
   private val forbiddenDoubleOptions = Set("-release")
+
+  val logger: Logger =
+    Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
+
   given ReportContext =
-    folderPath
-      .map(StdReportContext(_, _ => buildTargetName, reportsLevel))
+    val localReporters = folderPath
+      .map(new StdReportContext(_, _ => buildTargetName, reportsLevel))
       .getOrElse(EmptyReportContext)
+
+    new MirroredReportContext(localReporters, additionalReportContexts*)
 
   override def withBuildTargetName(buildTargetName: String) =
     copy(buildTargetName = Some(buildTargetName))
 
   override def withReportsLoggerLevel(level: String): PresentationCompiler =
     copy(reportsLevel = ReportLevel.fromString(level))
+
+  override def withAdditionalReportContexts(
+      additionalReportContexts: ju.List[ReportContext]
+  ): PresentationCompiler =
+    copy(additionalReportContexts = additionalReportContexts.asScala.toList)
 
   val compilerAccess: CompilerAccess[StoreReporter, MetalsDriver] =
     Scala3CompilerAccess(

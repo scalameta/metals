@@ -1,5 +1,6 @@
 package scala.meta.metals
 
+import java.util.Optional
 import java.util.concurrent.Executors
 
 import scala.concurrent.ExecutionContext
@@ -10,6 +11,9 @@ import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.Trace
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.logging.MetalsLogger
+import scala.meta.internal.telemetry.CrashReport
+import scala.meta.internal.telemetry.ExceptionSummary
+import scala.meta.internal.telemetry.TelemetryClient
 
 import org.eclipse.lsp4j.jsonrpc.Launcher
 
@@ -63,6 +67,7 @@ object Main {
       launcher.startListening().get()
     } catch {
       case NonFatal(e) =>
+        trySendCrashReport(e, server)
         e.printStackTrace(systemOut)
         sys.exit(1)
     } finally {
@@ -72,6 +77,27 @@ object Main {
 
       sys.exit(0)
     }
+  }
+
+  private def trySendCrashReport(
+      error: Throwable,
+      server: MetalsLanguageServer,
+  ): Unit = try {
+    val telemetryLevel = server.getTelemetryLevel()
+    if (telemetryLevel.reportCrash) {
+      val telemetry = new TelemetryClient(() => telemetryLevel)
+      telemetry.sendCrashReport(
+        new CrashReport(
+          ExceptionSummary.fromThrowable(error, identity),
+          this.getClass().getName(),
+          Optional.of(BuildInfo.metalsVersion),
+          Optional.empty(),
+        )
+      )
+    }
+  } catch {
+    case err: Throwable =>
+      System.err.println(s"Failed to send crash report, $err")
   }
 
 }

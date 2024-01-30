@@ -2,10 +2,10 @@ package scala.meta.internal.pc
 
 import java.nio.file.Paths
 
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.internal.pc.printer.ShortenedNames
+import scala.meta.pc.ReportContext
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SyntheticDecoration
 import scala.meta.pc.SyntheticDecorationsParams

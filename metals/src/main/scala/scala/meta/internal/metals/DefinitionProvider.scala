@@ -26,6 +26,7 @@ import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+import scala.meta.pc.ReportContext
 import scala.meta.tokens.Token
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier

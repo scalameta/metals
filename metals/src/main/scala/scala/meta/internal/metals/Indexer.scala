@@ -34,6 +34,7 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tvp.FolderTreeViewProvider
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.ReportContext
 
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.Position

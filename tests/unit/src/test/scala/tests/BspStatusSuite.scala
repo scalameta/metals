@@ -101,10 +101,10 @@ class BspStatusSuite extends BaseLspSuite("bsp-status-suite") {
         s"Bloop 1 ${Icons.default.alert}",
       )
       reports = bloopReports
-      _ = assert(reports.nonEmpty)
-      reportUri = reports.head.file.toURI().toString
+      _ = assert(!reports.isEmpty)
+      reportUri = reports.get(0).file.toURI().toString
       newPath = (reportUri ++ ".seen").toAbsolutePath.toNIO
-      _ = Files.move(reports.head.toPath, newPath)
+      _ = Files.move(reports.get(0).toPath, newPath)
       _ <- server.fullServer
         .didChangeWatchedFiles(
           new DidChangeWatchedFilesParams(
@@ -113,7 +113,7 @@ class BspStatusSuite extends BaseLspSuite("bsp-status-suite") {
         )
         .asScala
       _ = assertNoDiff(client.pollStatusBar(), s"Bloop ${Icons.default.link}")
-      _ = assert(bloopReports.nonEmpty)
+      _ = assert(!bloopReports.isEmpty)
     } yield ()
   }
 

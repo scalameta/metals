@@ -3,12 +3,12 @@ package scala.meta.internal.pc
 import scala.reflect.internal.util.Position
 import scala.reflect.internal.{Flags => gf}
 
-import scala.meta.internal.metals.Report
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
+import scala.meta.pc.Report
+import scala.meta.pc.ReportContext
 
 class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
     reportContext: ReportContext
@@ -53,7 +53,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
         if (tree.pos.isDefined) tree.pos.start
         else pos.start
 
-      Report(
+      StandardReport(
         "empty-hover-scala2",
         s"""|pos: ${pos.toLsp}
             |
@@ -289,7 +289,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
       }
 
     if (result.isEmpty) {
-      report.foreach(reportContext.unsanitized.create(_, ifVerbose = true))
+      report.foreach(reportContext.unsanitized.create(_, true))
     }
     result
   }

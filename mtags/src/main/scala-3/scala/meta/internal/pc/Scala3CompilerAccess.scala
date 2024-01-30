@@ -4,8 +4,8 @@ import java.util.concurrent.ScheduledExecutorService
 
 import scala.concurrent.ExecutionContextExecutor
 
-import scala.meta.internal.metals.ReportContext
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.ReportContext
 
 import dotty.tools.dotc.reporting.StoreReporter
 

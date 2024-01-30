@@ -7,8 +7,8 @@ import scala.tools.nsc.interactive.ShutdownReq
 import scala.tools.nsc.reporters.StoreReporter
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.ReportContext
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.ReportContext
 
 class ScalaCompilerWrapper(global: MetalsGlobal)
     extends CompilerWrapper[StoreReporter, MetalsGlobal] {

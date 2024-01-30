@@ -10,11 +10,10 @@ import java.util.logging.Logger
 import scala.concurrent.ExecutionContextExecutor
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.Report
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
 import scala.meta.pc.CancelToken
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.ReportContext
 import scala.meta.pc.VirtualFileParams
 
 /**
@@ -205,7 +204,7 @@ abstract class CompilerAccess[Reporter, Compiler](
   ): Unit = {
     val error = CompilerThrowable.trimStackTrace(e)
     val report =
-      Report(
+      StandardReport(
         "compiler-error",
         s"""|occurred in the presentation compiler.
             |
@@ -219,7 +218,7 @@ abstract class CompilerAccess[Reporter, Compiler](
         path = params.map(_.uri().toString)
       )
     val pathToReport =
-      rc.unsanitized.create(report)
+      rc.unsanitized.create(report, /* ifVerbose */ false).asScala
     pathToReport match {
       case Some(path) =>
         logger.log(

@@ -6,9 +6,8 @@ import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.inputs._
-import scala.meta.internal.metals.Report
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
+import scala.meta.internal.pc.StandardReport
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala
 import scala.meta.internal.semanticdb.Scala._
@@ -16,6 +15,7 @@ import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyToken._
+import scala.meta.pc.ReportContext
 import scala.meta.tokenizers.TokenizeException
 
 final class Identifier(val name: String, val pos: Position) {
@@ -851,7 +851,7 @@ class ScalaToplevelMtags(
 
   def reportError(expected: String): Unit = {
     rc.incognito.create(
-      Report(
+      StandardReport(
         "scala-toplevel-mtags",
         failMessage(expected),
         s"expected $expected; obtained $currentToken",
