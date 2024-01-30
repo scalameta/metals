@@ -937,7 +937,9 @@ class MetalsLspService(
   }
 
   def onShutdown(): Unit = {
-    tables.fingerprints.save(fingerprints.getAllFingerprints())
+    tables.fingerprints.save(fingerprints.getAllFingerprints().filter {
+      case (path, _) => path.isScalaOrJava && !path.isDependencySource(folder)
+    })
     cancel()
   }
 
