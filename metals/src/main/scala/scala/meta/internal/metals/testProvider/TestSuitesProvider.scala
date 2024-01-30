@@ -26,10 +26,12 @@ import scala.meta.internal.metals.debug.MUnit
 import scala.meta.internal.metals.debug.Scalatest
 import scala.meta.internal.metals.debug.TestFramework
 import scala.meta.internal.metals.debug.Unknown
+import scala.meta.internal.metals.debug.WeaverCatsEffect
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._
 import scala.meta.internal.metals.testProvider.frameworks.JunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.ScalatestTestFinder
+import scala.meta.internal.metals.testProvider.frameworks.WeaverCatsEffectTestFinder
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Semanticdbs
@@ -66,6 +68,8 @@ final class TestSuitesProvider(
     new MunitTestFinder(trees, symbolIndex, semanticdbs)
   private val scalatestTestFinder =
     new ScalatestTestFinder(trees, symbolIndex, semanticdbs)
+  private val weaverCatsEffect =
+    new WeaverCatsEffectTestFinder(trees, symbolIndex, semanticdbs)
 
   private def isExplorerEnabled = clientConfig.isTestExplorerProvider() &&
     userConfig().testUserInterface == TestUserInterfaceKind.TestExplorer
@@ -317,6 +321,13 @@ final class TestSuitesProvider(
               )
             case Scalatest =>
               scalatestTestFinder.findTests(
+                doc = semanticdb,
+                path = path,
+                suiteName = suite.fullyQualifiedName,
+                symbol = suite.symbol,
+              )
+            case WeaverCatsEffect =>
+              weaverCatsEffect.findTests(
                 doc = semanticdb,
                 path = path,
                 suiteName = suite.fullyQualifiedName,
