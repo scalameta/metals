@@ -38,7 +38,7 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
       case None =>
         val srcName = input.filename.stripSuffix(".scala")
         val name = s"$srcName$$package"
-        val value = (s"$name.", new OverloadDisambiguator())
+        val value = (name, new OverloadDisambiguator())
         _toplevelSourceRef = Some(value)
         withOwner(currentOwner) {
           val pos = Position.Range(input, 0, 0)
@@ -407,7 +407,7 @@ class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
 
   private def fileOwner: String =
     if (isPackageOwner)
-      s"$currentOwner$toplevelSourceOwner"
+      symbol(Descriptor.Term(toplevelSourceOwner))
     else currentOwner
 
   private def isPackageOwner: Boolean = currentOwner.endsWith("/")
