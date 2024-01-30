@@ -6,8 +6,10 @@ import scala.concurrent.Promise
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.StatusBarConfig
 
 class StatusBarSuite extends BaseSuite {
   val time = new FakeTime
@@ -16,7 +18,9 @@ class StatusBarSuite extends BaseSuite {
     client,
     time,
     ProgressTicks.dots,
-    ClientConfiguration.default,
+    ClientConfiguration(
+      MetalsServerConfig.base.copy(statusBar = StatusBarConfig.on)
+    ),
   )
   override def beforeEach(context: BeforeEach): Unit = {
     client.statusParams.clear()
