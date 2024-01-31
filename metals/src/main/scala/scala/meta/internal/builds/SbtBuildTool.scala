@@ -86,12 +86,31 @@ case class SbtBuildTool(
     )
   }
 
+  private def findSbtInPath(): Option[String] = {
+    val envPaths =
+      Option(System.getenv("PATH")) match {
+        case Some(paths) if scala.util.Properties.isWin =>
+          paths.split(";").toList
+        case Some(paths) => paths.split(":").toList
+        case None => Nil
+      }
+
+    val allPaths = projectRoot :: envPaths.map(AbsolutePath(_))
+    allPaths.collectFirst { path =>
+      path.resolve("sbt") match {
+        case sbtPath if sbtPath.exists => sbtPath.toString()
+      }
+    }
+  }
+
   private def composeArgs(
       sbtArgs: List[String],
       workspace: AbsolutePath,
       sbtLauncherOutDir: Path,
   ): List[String] = {
-    userConfig().sbtScript match {
+    val sbtScript = userConfig().sbtScript.orElse(findSbtInPath())
+
+    sbtScript match {
       case Some(script) =>
         script :: sbtArgs
       case None =>
