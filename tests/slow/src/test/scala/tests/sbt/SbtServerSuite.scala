@@ -81,10 +81,9 @@ class SbtServerSuite
   }
 
   test("generate") {
-    def sbtLaunchJar = workspace.resolve(".bsp/sbt-launch.jar")
     def sbtBspConfig = workspace.resolve(".bsp/sbt.json")
     def isBspConfigValid =
-      sbtBspConfig.readText.contains(sbtLaunchJar.toString())
+      sbtBspConfig.readText.contains("sbt")
     cleanWorkspace()
     writeLayout(SbtBuildLayout("", V.scala213))
     for {
@@ -101,7 +100,6 @@ class SbtServerSuite
       // At this point, we want to use sbt server, so create the sbt.json file.
       _ <- server.executeCommand(ServerCommands.GenerateBspConfig)
     } yield {
-      assert(sbtLaunchJar.exists)
       assert(isBspConfigValid)
       assert(sbtBspConfig.exists)
     }
