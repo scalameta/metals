@@ -232,6 +232,7 @@ object CompletionValue:
     override def description(printer: MetalsPrinter)(using Context): String =
       if isExtension then s"${printer.completionSymbol(symbol)} (extension)"
       else super.description(printer)
+    override def isExtensionMethod: Boolean = isExtension
   end Interpolator
 
   case class MatchCompletion(
