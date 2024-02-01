@@ -17,7 +17,6 @@ import scala.meta.pc.SymbolSearch
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.core.Definitions
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Symbols.NoSymbol
@@ -68,158 +67,170 @@ object CaseKeywordCompletion:
       patternOnly,
       hasBind,
     )
-    val parents: Parents = selector match
+
+    val selTpe = selector match
       case EmptyTree =>
-        val seenFromType = parent match
+        parent match
           case TreeApply(fun, _) if fun.tpe != null && !fun.tpe.isErroneous =>
-            fun.tpe
-          case _ =>
-            parent.tpe
-        seenFromType.paramInfoss match
-          case (head :: Nil) :: _
-              if definitions.isFunctionType(head) || head.isRef(
-                definitions.PartialFunctionClass
-              ) =>
-            val argTypes =
-              head.argTypes.init
-            new Parents(argTypes, definitions)
-          case _ =>
-            new Parents(NoType, definitions)
+            fun.tpe.paramInfoss match
+              case (head :: Nil) :: _
+                  if definitions.isFunctionType(head) || head.isRef(
+                    definitions.PartialFunctionClass
+                  ) =>
+                val args = head.argTypes.init
+                if args.length > 1 then
+                  Some(definitions.tupleType(args).widen.metalsDealias)
+                else args.headOption.map(_.widen.metalsDealias)
+              case _ => None
+          case _ => None
       case sel =>
-        new Parents(sel.tpe, definitions)
+        Some(sel.tpe.widen.metalsDealias)
 
-    val selectorSym = parents.selector.widen.metalsDealias.typeSymbol
-
-    // Special handle case when selector is a tuple or `FunctionN`.
-    if definitions.isTupleClass(selectorSym) || definitions.isFunctionClass(
-        selectorSym
-      )
-    then
-      if patternOnly.isEmpty then
-        val selectorTpe = parents.selector.show
-        val tpeLabel =
-          if !selectorTpe.contains("x$1") then selectorTpe
-          else selector.symbol.info.show
-        val label = s"case ${tpeLabel} =>"
-        List(
-          CompletionValue.CaseKeyword(
-            selectorSym,
-            label,
-            Some(
-              if config.isCompletionSnippetsEnabled() then "case ($0) =>"
-              else "case () =>"
-            ),
-            Nil,
-            range = Some(completionPos.toEditRange),
-            command = config.parameterHintsCommand().asScala,
+    selTpe
+      .map { selTpe =>
+        val selectorSym = selTpe.typeSymbol
+        // Special handle case when selector is a tuple or `FunctionN`.
+        if definitions.isTupleClass(selectorSym) || definitions.isFunctionClass(
+            selectorSym
           )
-        )
-      else Nil
-    else
-      val result = ListBuffer.empty[SymbolImport]
-      val isVisited = mutable.Set.empty[Symbol]
-      def visit(symImport: SymbolImport): Unit =
-
-        def recordVisit(s: Symbol): Unit =
-          if s != NoSymbol && !isVisited(s) then
-            isVisited += s
-            recordVisit(s.moduleClass)
-            recordVisit(s.sourceModule)
-
-        val sym = symImport.sym
-        if !isVisited(sym) then
-          recordVisit(sym)
-          if completionGenerator.fuzzyMatches(symImport.name) then
-            result += symImport
-      end visit
-
-      // Step 0: case for selector type
-      selectorSym.info match
-        case NoType => ()
-        case _ =>
-          if !(selectorSym.is(Sealed) &&
-              (selectorSym.is(Abstract) || selectorSym.is(Trait)))
-          then visit((autoImportsGen.inferSymbolImport(selectorSym)))
-
-      // Step 1: walk through scope members.
-      def isValid(sym: Symbol) = !parents.isParent(sym)
-        && (sym.is(Case) || sym.is(Flags.Module) || sym.isClass)
-        && parents.isSubClass(sym, false)
-        && (sym.isPublic || sym.isAccessibleFrom(selectorSym.info))
-      indexedContext.scopeSymbols
-        .foreach(s =>
-          val ts = s.info.metalsDealias.typeSymbol
-          if isValid(ts) then visit(autoImportsGen.inferSymbolImport(ts))
-        )
-      // Step 2: walk through known subclasses of sealed types.
-      val sealedDescs = subclassesForType(
-        parents.selector.widen.metalsDealias.bounds.hi
-      )
-      sealedDescs.foreach { sym =>
-        val symbolImport = autoImportsGen.inferSymbolImport(sym)
-        visit(symbolImport)
-      }
-      val res = result.result().flatMap {
-        case si @ SymbolImport(sym, name, importSel) =>
-          completionGenerator.labelForCaseMember(sym, name.value).map { label =>
-            (si, label)
-          }
-      }
-      val caseItems =
-        if res.isEmpty then completionGenerator.caseKeywordOnly
+        then
+          if patternOnly.isEmpty then
+            val selectorTpe = selTpe.show
+            val tpeLabel =
+              if !selectorTpe.contains("x$1") then selectorTpe
+              else selector.symbol.info.show
+            val label = s"case ${tpeLabel} =>"
+            List(
+              CompletionValue.CaseKeyword(
+                selectorSym,
+                label,
+                Some(
+                  if config.isCompletionSnippetsEnabled() then "case ($0) =>"
+                  else "case () =>"
+                ),
+                Nil,
+                range = Some(completionPos.toEditRange),
+                command = config.parameterHintsCommand().asScala,
+              )
+            )
+          else Nil
         else
-          res.map((si, label) =>
-            completionGenerator.toCompletionValue(
-              si.sym,
-              label,
-              autoImportsGen.renderImports(si.importSel.toList),
-            )
+          val result = ListBuffer.empty[SymbolImport]
+          val isVisited = mutable.Set.empty[Symbol]
+
+          val isBottom = Set[Symbol](
+            definitions.NullClass,
+            definitions.NothingClass,
           )
+          val tpes = Set(selectorSym, selectorSym.companion)
+          def isSubclass(sym: Symbol) = tpes.exists(par => sym.isSubClass(par))
 
-      includeExhaustive match
-        // In `List(foo).map { cas@@} we want to provide also `case (exhaustive)` completion
-        // which works like exhaustive match.
-        case Some(NewLineOptions(moveToNewLine, addNewLineAfter)) =>
-          val sealedMembers =
-            val sealedMembers0 =
-              res.filter((si, _) => sealedDescs.contains(si.sym))
-            sortSubclasses(
-              selectorSym.info,
-              sealedMembers0,
-              completionPos.sourceUri,
-              search,
+          def visit(symImport: SymbolImport): Unit =
+
+            def recordVisit(s: Symbol): Unit =
+              if s != NoSymbol && !isVisited(s) then
+                isVisited += s
+                recordVisit(s.moduleClass)
+                recordVisit(s.sourceModule)
+
+            val sym = symImport.sym
+            if !isVisited(sym) then
+              recordVisit(sym)
+              if completionGenerator.fuzzyMatches(symImport.name) then
+                result += symImport
+          end visit
+
+          // Step 0: case for selector type
+          selectorSym.info match
+            case NoType => ()
+            case _ =>
+              if !(selectorSym.is(Sealed) &&
+                  (selectorSym.is(Abstract) || selectorSym.is(Trait)))
+              then visit((autoImportsGen.inferSymbolImport(selectorSym)))
+
+          // Step 1: walk through scope members.
+          def isValid(sym: Symbol) = !tpes(sym) &&
+            !isBottom(sym) &&
+            isSubclass(sym) &&
+            (sym.is(Case) || sym.is(Flags.Module) || sym.isClass) &&
+            (sym.isPublic || sym.isAccessibleFrom(selectorSym.info))
+
+          indexedContext.scopeSymbols
+            .foreach(s =>
+              val ts = s.info.metalsDealias.typeSymbol
+              if isValid(ts) then visit(autoImportsGen.inferSymbolImport(ts))
             )
-          sealedMembers match
-            case Nil => caseItems
-            case (_, label) :: tail =>
-              val (newLine, addIndent) =
-                if moveToNewLine then ("\n\t", "\t") else ("", "")
-              val insertText = Some(
-                tail
-                  .map(_._2)
-                  .mkString(
-                    if clientSupportsSnippets then
-                      s"$newLine${label} $$0\n$addIndent"
-                    else s"$newLine${label}\n$addIndent",
-                    s"\n$addIndent",
-                    if addNewLineAfter then "\n" else "",
-                  )
+          // Step 2: walk through known subclasses of sealed types.
+          val sealedDescs = subclassesForType(
+            selTpe.bounds.hi
+          )
+          sealedDescs.foreach { sym =>
+            val symbolImport = autoImportsGen.inferSymbolImport(sym)
+            visit(symbolImport)
+          }
+          val res = result.result().flatMap {
+            case si @ SymbolImport(sym, name, importSel) =>
+              completionGenerator.labelForCaseMember(sym, name.value).map {
+                label =>
+                  (si, label)
+              }
+          }
+          val caseItems =
+            if res.isEmpty then completionGenerator.caseKeywordOnly
+            else
+              res.map((si, label) =>
+                completionGenerator.toCompletionValue(
+                  si.sym,
+                  label,
+                  autoImportsGen.renderImports(si.importSel.toList),
+                )
               )
-              val allImports =
-                sealedMembers.flatMap(_._1.importSel).distinct
-              val importEdit = autoImportsGen.renderImports(allImports)
-              val exhaustive = CompletionValue.MatchCompletion(
-                s"case (exhaustive)",
-                insertText,
-                importEdit.toList,
-                s" ${selectorSym.decodedName} (${res.length} cases)",
-              )
-              exhaustive :: caseItems
-          end match
-        case None => caseItems
-      end match
-    end if
 
+          includeExhaustive match
+            // In `List(foo).map { cas@@} we want to provide also `case (exhaustive)` completion
+            // which works like exhaustive match.
+            case Some(NewLineOptions(moveToNewLine, addNewLineAfter)) =>
+              val sealedMembers =
+                val sealedMembers0 =
+                  res.filter((si, _) => sealedDescs.contains(si.sym))
+                sortSubclasses(
+                  selectorSym.info,
+                  sealedMembers0,
+                  completionPos.sourceUri,
+                  search,
+                )
+              sealedMembers match
+                case Nil => caseItems
+                case (_, label) :: tail =>
+                  val (newLine, addIndent) =
+                    if moveToNewLine then ("\n\t", "\t") else ("", "")
+                  val insertText = Some(
+                    tail
+                      .map(_._2)
+                      .mkString(
+                        if clientSupportsSnippets then
+                          s"$newLine${label} $$0\n$addIndent"
+                        else s"$newLine${label}\n$addIndent",
+                        s"\n$addIndent",
+                        if addNewLineAfter then "\n" else "",
+                      )
+                  )
+                  val allImports =
+                    sealedMembers.flatMap(_._1.importSel).distinct
+                  val importEdit = autoImportsGen.renderImports(allImports)
+                  val exhaustive = CompletionValue.MatchCompletion(
+                    s"case (exhaustive)",
+                    insertText,
+                    importEdit.toList,
+                    s" ${selectorSym.decodedName} (${res.length} cases)",
+                  )
+                  exhaustive :: caseItems
+              end match
+            case None => caseItems
+          end match
+        end if
+      }
+      .getOrElse(Nil)
   end contribute
 
   /**
@@ -363,34 +374,6 @@ object CaseKeywordCompletion:
   end subclassesForType
 
 end CaseKeywordCompletion
-
-class Parents(val selector: Type, definitions: Definitions)(using Context):
-  def this(tpes: List[Type], definitions: Definitions)(using Context) =
-    this(
-      tpes match
-        case Nil => NoType
-        case head :: Nil => head
-        case _ => definitions.tupleType(tpes)
-      ,
-      definitions,
-    )
-
-  val isParent: Set[Symbol] =
-    Set(selector.typeSymbol, selector.typeSymbol.companion)
-      .filterNot(_ == NoSymbol)
-  val isBottom: Set[Symbol] = Set[Symbol](
-    definitions.NullClass,
-    definitions.NothingClass,
-  )
-  def isSubClass(typeSymbol: Symbol, includeReverse: Boolean)(using
-      Context
-  ): Boolean =
-    !isBottom(typeSymbol) &&
-      isParent.exists { parent =>
-        typeSymbol.isSubClass(parent) ||
-        (includeReverse && parent.isSubClass(typeSymbol))
-      }
-end Parents
 
 class CompletionValueGenerator(
     completionPos: CompletionPos,
