@@ -661,7 +661,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "auto-imports-prefix",
+    "auto-imports-prefix".tag(IgnoreForScala3CompilerPC),
     """|
        |class Paths
        |object Main {
@@ -682,7 +682,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
       "3" ->
         """|class Paths
            |object Main {
-           |  s"this is an interesting {java.nio.file.Paths}"
+           |  s"this is an interesting ${java.nio.file.Paths}"
            |}
            |""".stripMargin
     )
@@ -768,6 +768,29 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |def main = s"  ${aaa.plus($0)}"
        |""".stripMargin,
     filterText = "aaa.plus"
+  )
+
+  checkEdit(
+    "extension3".tag(
+      IgnoreScala2
+        .and(IgnoreScalaVersion.for3LessThan("3.2.2"))
+        .and(IgnoreForScala3CompilerPC)
+    ),
+    """|trait Cursor
+       |
+       |extension (c: Cursor) def spelling: String = "hello"
+       |object Main {
+       |  val c = new Cursor {}
+       |  val x = s"$c.spelli@@"
+       |}
+       |""".stripMargin,
+    """|trait Cursor
+       |
+       |extension (c: Cursor) def spelling: String = "hello"
+       |object Main {
+       |  val c = new Cursor {}
+       |  val x = s"${c.spelling$0}"
+       |}""".stripMargin
   )
 
   check(
