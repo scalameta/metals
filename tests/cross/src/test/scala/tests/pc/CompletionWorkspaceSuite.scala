@@ -1013,4 +1013,18 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
     filter = _.contains("mmmm(x: Int)")
   )
 
+  check(
+    "implicit-class-val".tag(IgnoreForScala3CompilerPC),
+    """|package demo
+       |
+       |object O {
+       |  implicit class CursorOps(val bar: Int)
+       |}
+       |
+       |object Main {
+       |  val x = bar@@
+       |}
+       |""".stripMargin,
+    ""
+  )
 }
