@@ -891,7 +891,9 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   check(
-    "nested-pkg".tag(IgnoreScalaVersion.forLessThan("3.2.2")),
+    "nested-pkg".tag(
+      IgnoreScalaVersion.forLessThan("3.2.2").and(IgnoreForScala3CompilerPC)
+    ),
     """|package a:
        |  package c: // some comment
        |    def increment2 = 2
@@ -905,13 +907,15 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  def main: Unit = incre@@
        |""".stripMargin,
     """|increment3: Int
-       |increment: Int
-       |increment2: Int
+       |increment - a: Int
+       |increment2 - a.c: Int
        |""".stripMargin
   )
 
   check(
-    "indent-method".tag(IgnoreScalaVersion.forLessThan("3.2.2")),
+    "indent-method".tag(
+      IgnoreScalaVersion.forLessThan("3.2.2").and(IgnoreForScala3CompilerPC)
+    ),
     """|package a:
        |  val y = 123
        |  given intGiven: Int = 123
@@ -926,8 +930,8 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |package c:
        |  def main() = foo@@
        |""".stripMargin,
-    """|fooBar(x: Int): Int
-       |fooBar(x: String): Int
+    """|fooBar - a(x: Int): Int
+       |fooBar - a.b(x: String): Int
        |""".stripMargin
   )
 
@@ -989,7 +993,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "method-name-conflict".tag(IgnoreScala2),
+    "method-name-conflict".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
     """|package demo
        |
        |object O {
@@ -1010,7 +1014,23 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    filter = _.contains("mmmm(x: Int)")
+    filter = _.contains("mmmm - demo.O")
+  )
+
+  check(
+    "method-label".tag(IgnoreForScala3CompilerPC),
+    """|package demo
+       |
+       |object O {
+       | def method(i: Int): Int = i + 1
+       |}
+       |
+       |object Main {
+       |  val x = meth@@
+       |}
+       |""".stripMargin,
+    """|method - demo.O(i: Int): Int
+       |""".stripMargin
   )
 
 }

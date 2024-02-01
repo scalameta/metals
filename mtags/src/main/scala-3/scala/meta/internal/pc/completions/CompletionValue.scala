@@ -6,6 +6,7 @@ import scala.meta.internal.pc.printer.MetalsPrinter
 
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags.*
+import dotty.tools.dotc.core.StdNames.nme
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.transform.SymUtils.*
@@ -85,7 +86,9 @@ object CompletionValue:
       else if symbol.isType then labelWithSuffix(printer)
       else s"$label: ${description(printer)}"
 
-    private def labelWithSuffix(printer: MetalsPrinter)(using Context): String =
+    protected def labelWithSuffix(
+        printer: MetalsPrinter
+    )(using Context): String =
       if snippetSuffix.addLabelSnippet
       then
         val printedParams = symbol.info.typeParams.map(p =>
@@ -114,6 +117,12 @@ object CompletionValue:
       override val snippetSuffix: CompletionSuffix,
       override val importSymbol: Symbol,
   ) extends Symbolic:
+    override def labelWithDescription(
+        printer: MetalsPrinter
+    )(using Context): String =
+      if symbol.is(Method) && symbol.name != nme.apply then
+        s"${labelWithSuffix(printer)} - ${printer.fullName(symbol.effectiveOwner)}"
+      else super.labelWithDescription(printer)
     override def isFromWorkspace: Boolean = true
 
   /**
