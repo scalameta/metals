@@ -1038,4 +1038,18 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
+  check(
+    "implicit-class-val".tag(IgnoreForScala3CompilerPC),
+    """|package demo
+       |
+       |object O {
+       |  implicit class CursorOps(val bar: Int)
+       |}
+       |
+       |object Main {
+       |  val x = bar@@
+       |}
+       |""".stripMargin,
+    ""
+  )
 }

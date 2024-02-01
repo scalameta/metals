@@ -25,7 +25,8 @@ class CompilerSearchVisitor(
     val owner = sym.maybeOwner
     owner != NoSymbol && owner.isClass &&
     owner.is(Flags.Implicit) &&
-    owner.isStatic && owner.isPublic
+    owner.isStatic && owner.isPublic &&
+    sym.is(Flags.Method)
 
   private def isAccessible(sym: Symbol): Boolean = try
     sym != NoSymbol && sym.isPublic && sym.isStatic ||
