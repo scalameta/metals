@@ -952,7 +952,12 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
     compat = Map(
       "2" -> """|fooBar: String
                 |fooBar - case_class_param.A: List[Int]
-                |""".stripMargin
+                |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        """|fooBar: String
+           |fooBar: List[Int]
+           |fooBar(n: Int): A
+           |""".stripMargin
     )
   )
 

@@ -73,11 +73,16 @@ class CompletionPatternSuite extends BaseCompletionSuite {
            |macroImpl(referenceToMacroImpl: Any): macroImpl
            |macroImpl - scala.reflect.macros.internal
            |""".stripMargin,
-      "3" -> """|main scala
-                |macros - scala.languageFeature.experimental
-                |macroImpl(referenceToMacroImpl: Any): macroImpl
-                |macroImpl - scala.reflect.macros.internal
-                |""".stripMargin
+      "3" ->
+        """|main scala
+           |macros - scala.languageFeature.experimental
+           |macroImpl(referenceToMacroImpl: Any): macroImpl
+           |macroImpl - scala.reflect.macros.internal
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        """|macros - scala.languageFeature.experimental
+           |macroImpl - scala.reflect.macros.internal
+           |""".stripMargin
     )
   )
 
