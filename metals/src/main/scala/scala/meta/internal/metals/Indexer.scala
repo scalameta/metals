@@ -130,25 +130,21 @@ final case class Indexer(
             scribe.info(s"Skipping reload with status '${status.name}'")
             Future.successful(BuildChange.None)
           case None =>
-            if (userConfig().automaticImportBuild) {
-              reloadAndIndex(session)
-            } else {
-              for {
-                userResponse <- workspaceReload().requestReload(
-                  buildTool,
-                  checksum,
-                )
-                installResult <- {
-                  if (userResponse.isYes) {
-                    reloadAndIndex(session)
-                  } else {
-                    tables.dismissedNotifications.ImportChanges
-                      .dismiss(2, TimeUnit.MINUTES)
-                    Future.successful(BuildChange.None)
-                  }
+            for {
+              userResponse <- workspaceReload().requestReload(
+                buildTool,
+                checksum,
+              )
+              installResult <- {
+                if (userResponse.isYes) {
+                  reloadAndIndex(session)
+                } else {
+                  tables.dismissedNotifications.ImportChanges
+                    .dismiss(2, TimeUnit.MINUTES)
+                  Future.successful(BuildChange.None)
                 }
-              } yield installResult
-            }
+              }
+            } yield installResult
         }
     }
   }
