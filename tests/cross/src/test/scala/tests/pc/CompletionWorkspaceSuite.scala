@@ -1027,4 +1027,38 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |""".stripMargin,
     ""
   )
+
+  check(
+    "implicit-class-def".tag(IgnoreForScala3CompilerPC),
+    """|package demo
+       |
+       |object O {
+       |  implicit class CursorOps(val bar: Int) {
+       |    def fooBar = 42
+       |  }
+       |}
+       |
+       |object Main {
+       |  val x = fooB@@
+       |}
+       |""".stripMargin,
+    ""
+  )
+
+  check(
+    "extension-method".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    """|package demo
+       |
+       |object O {
+       |  extension (bar: Int) {
+       |    def fooBar = 42
+       |  }
+       |}
+       |
+       |object Main {
+       |  val x = fooB@@
+       |}
+       |""".stripMargin,
+    ""
+  )
 }
