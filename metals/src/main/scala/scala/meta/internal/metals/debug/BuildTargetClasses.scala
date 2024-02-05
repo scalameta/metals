@@ -192,6 +192,7 @@ object TestFramework {
       case "JUnit" => JUnit4
       case "munit" => MUnit
       case "ScalaTest" => Scalatest
+      case "weaver-cats-effect" => WeaverCatsEffect
       case _ => Unknown
     }
     .getOrElse(Unknown)
@@ -199,6 +200,7 @@ object TestFramework {
 case object JUnit4 extends TestFramework(true)
 case object MUnit extends TestFramework(true)
 case object Scalatest extends TestFramework(true)
+case object WeaverCatsEffect extends TestFramework(true)
 case object Unknown extends TestFramework(false)
 
 object BuildTargetClasses {

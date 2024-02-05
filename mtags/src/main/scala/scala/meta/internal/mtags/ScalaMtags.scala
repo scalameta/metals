@@ -9,6 +9,7 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.semanticdb.SymbolInformation.Property
 import scala.meta.internal.trees._
+import scala.meta.parsers.Parsed
 import scala.meta.transversers.SimpleTraverser
 
 object ScalaMtags {
@@ -16,12 +17,16 @@ object ScalaMtags {
     new ScalaMtags(input, dialect)
   }
 }
-class ScalaMtags(val input: Input.VirtualFile, dialect: Dialect)
-    extends SimpleTraverser
+class ScalaMtags(
+    val input: Input.VirtualFile,
+    dialect: Dialect,
+    parsedTree: Option[Source] = None
+) extends SimpleTraverser
     with MtagsIndexer {
 
   private val root: Parsed[Source] =
-    dialect(input).parse[Source]
+    parsedTree.map(Parsed.Success(_)).getOrElse(dialect(input).parse[Source])
+
   def source: Source = root.get
   override def language: Language = Language.SCALA
   override def indexRoot(): Unit = {

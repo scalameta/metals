@@ -1104,14 +1104,12 @@ final case class TestingServer(
         }
     }
 
+    client.refreshModelHandler = handler
+
     for {
-      _ <-
-        fullServer
-          .didFocus(uri)
-          .asScala // model is refreshed only for focused document
-      _ = client.refreshModelHandler = handler
-      // first compilation, to trigger the handler
-      _ <- server.compilations.compileFile(path)
+      // model is refreshed only for focused document
+      // this will also trigger compilation
+      _ <- fullServer.didFocus(uri).asScala
       lenses <- getLenses
         .flatMap { lenses =>
           if (lenses.size >= minExpectedLenses) Future.successful(lenses)

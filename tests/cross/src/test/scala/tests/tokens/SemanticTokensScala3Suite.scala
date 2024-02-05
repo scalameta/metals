@@ -168,9 +168,44 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
       |  extension [<<A>>/*typeParameter,definition,abstract*/] (<<self>>/*parameter,declaration,readonly*/: <<A>>/*typeParameter,abstract*/) {
       |    def <<typeArg>>/*method,declaration*/[<<B>>/*typeParameter,definition,abstract*/]: <<B>>/*typeParameter,abstract*/
       |    def <<inferredTypeArg>>/*method,declaration*/[<<C>>/*typeParameter,definition,abstract*/](<<value>>/*parameter,declaration,readonly*/: <<C>>/*typeParameter,abstract*/): <<C>>/*typeParameter,abstract*/
+      |  }
       |}
       |
       |object <<Repro>>/*class*/ {
+      |  def <<usage>>/*method,definition*/[<<A>>/*typeParameter,definition,abstract*/](<<f>>/*parameter,declaration,readonly*/: <<ExtensionProvider>>/*interface,abstract*/ ?=> <<A>>/*typeParameter,abstract*/ => <<Any>>/*class,abstract*/): <<Any>>/*class,abstract*/ = <<???>>/*method*/
+      |
+      |  <<usage>>/*method*/[<<Int>>/*class,abstract*/](<<_>>/*parameter,readonly*/.<<inferredTypeArg>>/*method*/("str"))
+      |  <<usage>>/*method*/[<<Int>>/*class,abstract*/](<<_>>/*parameter,readonly*/.<<inferredTypeArg>>/*method*/[<<String>>/*type*/]("str"))
+      |  <<usage>>/*method*/[<<Option>>/*class,abstract*/[<<Int>>/*class,abstract*/]](<<_>>/*parameter,readonly*/.<<typeArg>>/*method*/[<<Some>>/*class*/[<<Int>>/*class,abstract*/]].<<value>>/*variable,readonly*/.<<inferredTypeArg>>/*method*/("str"))
+      |  <<usage>>/*method*/[<<Option>>/*class,abstract*/[<<Int>>/*class,abstract*/]](<<_>>/*parameter,readonly*/.<<typeArg>>/*method*/[<<Some>>/*class*/[<<Int>>/*class,abstract*/]].<<value>>/*variable,readonly*/.<<inferredTypeArg>>/*method*/[<<String>>/*type*/]("str"))
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "i6041",
+    """
+      |object <<B>>/*class*/ {
+      |  extension (<<x>>/*parameter,declaration,readonly*/: <<Int>>/*class,abstract*/)(using <<Int>>/*class,abstract*/)
+      |    def <<foo>>/*method,definition*/: <<Int>>/*class,abstract*/ = <<???>>/*method*/
+      |    
+      |  given <<Int>>/*class,abstract*/ = 42
+      |  val <<bar>>/*variable,definition,readonly*/ = 42.<<foo>>/*method*/
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "i6401-1",
+    """
+      |sealed trait <<ExtensionProvider>>/*interface,abstract*/ {
+      |  extension [<<A>>/*typeParameter,definition,abstract*/] (<<self>>/*parameter,declaration,readonly*/: <<A>>/*typeParameter,abstract*/)(using <<Int>>/*class,abstract*/) {
+      |    def <<typeArg>>/*method,declaration*/[<<B>>/*typeParameter,definition,abstract*/ <: <<A>>/*typeParameter,abstract*/]: <<B>>/*typeParameter,abstract*/
+      |    def <<inferredTypeArg>>/*method,declaration*/[<<C>>/*typeParameter,definition,abstract*/](<<value>>/*parameter,declaration,readonly*/: <<C>>/*typeParameter,abstract*/): <<C>>/*typeParameter,abstract*/
+      |}
+      |
+      |object <<Repro>>/*class*/ {
+      |  given <<Int>>/*class,abstract*/ = 42
       |  def <<usage>>/*method,definition*/[<<A>>/*typeParameter,definition,abstract*/](<<f>>/*parameter,declaration,readonly*/: <<ExtensionProvider>>/*interface,abstract*/ ?=> <<A>>/*typeParameter,abstract*/ => <<Any>>/*class,abstract*/): <<Any>>/*class,abstract*/ = <<???>>/*method*/
       |
       |  <<usage>>/*method*/[<<Int>>/*class,abstract*/](<<_>>/*parameter,readonly*/.<<inferredTypeArg>>/*method*/("str"))

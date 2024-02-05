@@ -32,6 +32,7 @@ class NewFileProvider(
     packageProvider: PackageProvider,
     selector: ScalaVersionSelector,
     icons: Icons,
+    onCreate: AbsolutePath => Future[Unit],
 )(implicit
     ec: ExecutionContext
 ) {
@@ -73,6 +74,7 @@ class NewFileProvider(
 
           newlyCreatedFile.map {
             case Some((path, cursorRange)) =>
+              onCreate(path)
               openFile(path, cursorRange)
             case None => ()
           }

@@ -67,8 +67,6 @@ final class Compilations(
     isCompiling.contains(buildTarget)
 
   def previouslyCompiled: Iterable[b.BuildTargetIdentifier] = lastCompile
-  def wasPreviouslyCompiled(buildTarget: b.BuildTargetIdentifier): Boolean =
-    lastCompile.contains(buildTarget)
 
   def compilationFinished(targets: Seq[BuildTargetIdentifier]): Future[Unit] =
     if (currentlyCompiling.isEmpty) {
@@ -255,7 +253,9 @@ final class Compilations(
     ) {
       params.setArguments(List("--verbose").asJava)
     }
-    targets.foreach(target => isCompiling(target) = true)
+    targets.foreach { target =>
+      isCompiling(target) = true
+    }
     val compilation = connection.compile(params, timeout)
 
     onStartCompilation()

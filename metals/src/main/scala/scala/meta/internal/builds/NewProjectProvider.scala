@@ -108,6 +108,22 @@ class NewProjectProvider(
       template,
       s"--name=${projectPath.filename}",
     )
+
+    val httpSettingKeys =
+      Set(
+        "https.proxyHost",
+        "https.proxyPort",
+        "http.proxyHost",
+        "http.proxyPort",
+      )
+
+    val javaOpts: Map[String, String] =
+      httpSettingKeys.collect { key =>
+        sys.props.get(key) match {
+          case Some(value) => key -> value
+        }
+      }.toMap
+
     shell
       .runJava(
         giterDependency,
@@ -115,6 +131,7 @@ class NewProjectProvider(
         parent,
         command,
         javaHome,
+        javaOptsMap = javaOpts,
       )
       .flatMap {
         case ExitCodes.Success =>

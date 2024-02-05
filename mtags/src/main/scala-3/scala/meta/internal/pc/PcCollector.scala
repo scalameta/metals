@@ -471,7 +471,7 @@ abstract class PcCollector[T](
          *
          * val a = MyIntOut(1).<<un@@even>>
          */
-        case ExtensionMethodCall(id) if filter(id) =>
+        case ExtensionMethodCall(id) if soughtFilter(_ == id.symbol) =>
           occurences + collect(
             id,
             id.sourcePos,

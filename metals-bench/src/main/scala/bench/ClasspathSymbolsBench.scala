@@ -17,6 +17,7 @@ import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.TearDown
 import tests.Library
+import tests.TreeUtils
 
 @State(Scope.Benchmark)
 class ClasspathSymbolsBench {
@@ -35,8 +36,11 @@ class ClasspathSymbolsBench {
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def run(): Unit = {
     implicit val reporting = EmptyReportContext
+    val (buffers, trees) = TreeUtils.getTrees(scalaVersion = None)
     val jars = new IndexedSymbols(
-      isStatisticsEnabled = false
+      isStatisticsEnabled = false,
+      trees,
+      buffers,
     )
     classpath.foreach { jar =>
       jars.jarSymbols(jar, "cats/", dialects.Scala213)

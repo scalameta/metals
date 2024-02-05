@@ -423,4 +423,45 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
+  check(
+    "implicit-val-var".tag(IgnoreForScala3CompilerPC),
+    """|package example
+       |
+       |object Test:
+       |  implicit class TestOps(val testArg: Int):
+       |    var testVar: Int = 42
+       |    val testVal: Int = 42
+       |    def testOps(b: Int): String = ???
+       |
+       |def main = 100.test@@
+       |""".stripMargin,
+    """|testArg: Int (implicit)
+       |testVal: Int (implicit)
+       |testVar: Int (implicit)
+       |testOps(b: Int): String (implicit)
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "implicit-val-edit".tag(IgnoreForScala3CompilerPC),
+    """|package example
+       |
+       |object Test:
+       |  implicit class TestOps(a: Int):
+       |    val testVal: Int = 42
+       |
+       |def main = 100.test@@
+       |""".stripMargin,
+    """|package example
+       |
+       |import example.Test.TestOps
+       |
+       |object Test:
+       |  implicit class TestOps(a: Int):
+       |    val testVal: Int = 42
+       |
+       |def main = 100.testVal
+       |""".stripMargin
+  )
+
 }

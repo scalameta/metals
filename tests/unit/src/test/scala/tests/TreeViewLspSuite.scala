@@ -81,6 +81,12 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
                         |class Zero {
                         | val a = 1
                         |}
+                        |/a/src/main/java/a/JavaClass.java
+                        |package a;
+                        |public class JavaClass {
+                        | String name;
+                        | String surname;
+                        |}
                         |/a/src/main/scala/a/First.scala
                         |package a
                         |class First {
@@ -144,21 +150,28 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
         s"projects-$folder:${server.buildTarget("a")}!/a/",
         """|First symbol-class -
            |First symbol-object
+           |JavaClass symbol-class -
            |Second symbol-class -
            |Second symbol-object
            |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
         s"projects-$folder:${server.buildTarget("a")}!/a/First#",
-        """|b symbol-field
-           |a() symbol-method
+        """|a() symbol-method
+           |b symbol-field
+           |""".stripMargin,
+      )
+      _ = server.assertTreeViewChildren(
+        s"projects-$folder:${server.buildTarget("a")}!/a/JavaClass#",
+        """|name symbol-field
+           |surname symbol-field
            |""".stripMargin,
       )
       _ = server.assertTreeViewChildren(
         s"projects-$folder:${server.buildTarget("a")}!/a/Second#",
-        """|c symbol-variable
+        """|a() symbol-method
            |b symbol-field
-           |a() symbol-method
+           |c symbol-variable
            |""".stripMargin,
       )
       _ <- server.didSave("a/src/main/scala/a/Zero.scala") { text =>

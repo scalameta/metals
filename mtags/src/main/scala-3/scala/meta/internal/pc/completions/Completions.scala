@@ -572,6 +572,7 @@ class Completions(
       qualType: Type = ctx.definitions.AnyType,
   ): Option[SymbolSearch.Result] =
     val query = completionPos.query
+
     completionPos.kind match
       case CompletionKind.Empty =>
         val filtered = indexedContext.scopeSymbols
@@ -585,17 +586,21 @@ class Completions(
         Some(SymbolSearch.Result.INCOMPLETE)
       case CompletionKind.Scope =>
         val visitor = new CompilerSearchVisitor(sym =>
-          indexedContext.lookupSym(sym) match
-            case IndexedContext.Result.InScope =>
-              visit(
-                CompletionValue.Scope(sym.decodedName, sym, findSuffix(sym))
-              )
-            case _ =>
-              completionsWithSuffix(
-                sym,
-                sym.decodedName,
-                CompletionValue.Workspace(_, _, _, sym),
-              ).map(visit).forall(_ == true),
+          if !(sym.is(Flags.ExtensionMethod) ||
+              (sym.maybeOwner.is(Flags.Implicit) && sym.maybeOwner.isClass))
+          then
+            indexedContext.lookupSym(sym) match
+              case IndexedContext.Result.InScope =>
+                visit(
+                  CompletionValue.Scope(sym.decodedName, sym, findSuffix(sym))
+                )
+              case _ =>
+                completionsWithSuffix(
+                  sym,
+                  sym.decodedName,
+                  CompletionValue.Workspace(_, _, _, sym),
+                ).map(visit).forall(_ == true)
+          else false,
         )
         Some(search.search(query, buildTargetIdentifier, visitor))
       case CompletionKind.Members =>
@@ -604,7 +609,6 @@ class Completions(
             qualType.widenDealias <:< sym.extensionParam.info.widenDealias
 
           def isImplicitClass(owner: Symbol) =
-
             val constructorParam =
               owner.info
                 .membersBasedOnFlags(
@@ -619,16 +623,13 @@ class Completions(
             )
           end isImplicitClass
 
-          def isImplicitClassMethod = sym.is(Flags.Method) &&
-            isImplicitClass(sym.maybeOwner)
-
           if isExtensionMethod then
             completionsWithSuffix(
               sym,
               sym.decodedName,
               CompletionValue.Extension(_, _, _),
             ).map(visit).forall(_ == true)
-          else if isImplicitClassMethod then
+          else if isImplicitClass(sym.maybeOwner) then
             completionsWithSuffix(
               sym,
               sym.decodedName,
