@@ -36,7 +36,7 @@ object V {
   val mavenBloop = "2.0.0"
   val mill = "0.11.6"
   val mdoc = "2.5.2"
-  val munit = "1.0.0-M10"
+  val munit = "1.0.0-M11"
   val pprint = "0.7.3"
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
