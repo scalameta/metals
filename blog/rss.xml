@@ -42,7 +42,7 @@ give Metals a try!</p>
 synthetic decorations such as inferred types or implicit conversions. This was
 not ideal as it meant that the information was not always up to date and could
 be inconsistent with the current state of code.</p>
-<p><img loading="lazy" src="https://i.imgur.com/td11vRH.gif" alt="synthetics" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/td11vRH.gif" alt="synthetics" class="img_ev3q"></p>
 <p>To fix that <a href="https://github.com/jkciesluk" target="_blank" rel="noopener noreferrer">jkciesluk</a> switched to using the
 presentation compiler for this information. This means that each time code
 changes the decorations will be refreshed. This also added a number of new
@@ -61,11 +61,11 @@ work in Scala 3.</p>
 indexing in case of jars and semanticdb for local workspace files. This means
 that Scala 3 is fully supported and this has been the last big feature missing
 for full parity between Scala 2 and 3.</p>
-<p><img loading="lazy" src="https://i.imgur.com/Vun4kJh.gif" alt="tree-view" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/Vun4kJh.gif" alt="tree-view" class="img_ev3q"></p>
 <p>All the existing features should now work for Scala 3 as well. This includes the
 reveal command which allows to quickly reveal the current file in the tree view
 including inside jars.</p>
-<p><img loading="lazy" src="https://i.imgur.com/xW0W3I3.gif" alt="tree-view-reveal" class="img_ev3q"> Additionally, we improved
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/xW0W3I3.gif" alt="tree-view-reveal" class="img_ev3q"> Additionally, we improved
 icons used by the tree view. They will now use the default VS Code icons for the
 most part, which should make them more consistent with the rest of the editor.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="go-to-definition-for-scaladoc">Go to definition for scaladoc<a href="http://scalameta.org/metals/blog/2023/12/12/bismuth#go-to-definition-for-scaladoc" class="hash-link" aria-label="Direct link to Go to definition for scaladoc" title="Direct link to Go to definition for scaladoc">​</a></h2>
@@ -73,7 +73,7 @@ most part, which should make them more consistent with the rest of the editor.</
 of a form <code>[[name.name.ClassName]]</code>. Thanks to
 <a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a> Metals will now allow you to
 navigate to the target of the link via normal go to definition.</p>
-<p><img loading="lazy" src="https://i.imgur.com/TYNMCEm.gif" alt="scaladoc-def" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/TYNMCEm.gif" alt="scaladoc-def" class="img_ev3q"></p>
 <p>To learn more about linking in scaladoc check out the
 <a href="https://docs.scala-lang.org/scala3/guides/scaladoc/linking.html" target="_blank" rel="noopener noreferrer">Scala documentation</a></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="custom-project-root-setting">Custom project root setting<a href="http://scalameta.org/metals/blog/2023/12/12/bismuth#custom-project-root-setting" class="hash-link" aria-label="Direct link to Custom project root setting" title="Direct link to Custom project root setting">​</a></h2>
@@ -86,7 +86,7 @@ dependency open in the same window.</p>
 <p>To help with that we added a new setting <code>metals.customProjectRoot</code> that allows
 you to specify the root directory for your project. This setting is available in
 the settings UI and can be set to a path relative to the workspace root.</p>
-<p><img loading="lazy" src="https://i.imgur.com/sgr1j1T.png" alt="custom-root" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/sgr1j1T.png" alt="custom-root" class="img_ev3q"></p>
 <p>Another amazing feature from <a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="bsp-errors-in-status">Bsp errors in status<a href="http://scalameta.org/metals/blog/2023/12/12/bismuth#bsp-errors-in-status" class="hash-link" aria-label="Direct link to Bsp errors in status" title="Direct link to Bsp errors in status">​</a></h2>
 <p>In the previous release Metals started showing more errors from the build server
@@ -97,7 +97,7 @@ relevant.</p>
 bar item that will show the number of errors in the build server. This will be
 shown only if there are any errors and will be hidden once the reports connected
 to them are removed.</p>
-<p><img loading="lazy" src="https://i.imgur.com/Kdn2347.gif" alt="bsp-status" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/Kdn2347.gif" alt="bsp-status" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="add-back-unintentionally-removed-support-for-211x">Add back unintentionally removed support for 2.11.x<a href="http://scalameta.org/metals/blog/2023/12/12/bismuth#add-back-unintentionally-removed-support-for-211x" class="hash-link" aria-label="Direct link to Add back unintentionally removed support for 2.11.x" title="Direct link to Add back unintentionally removed support for 2.11.x">​</a></h2>
 <p>For the most of the releases Scala 2.11.12 support was not being actively
 tested, which led to some of the features not working properly. This release
@@ -575,21 +575,21 @@ give Metals a try!</p>
 <a href="https://github.com/scala/scala/releases/tag/v2.13.12" target="_blank" rel="noopener noreferrer">https://github.com/scala/scala/releases/tag/v2.13.12</a></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="build-server-connection-status">Build server connection status<a href="http://scalameta.org/metals/blog/2023/10/17/silver#build-server-connection-status" class="hash-link" aria-label="Direct link to Build server connection status" title="Direct link to Build server connection status">​</a></h2>
 <p>Since the previous release metals detects and reports when the build server stops responding. Over the last months this feature was stabilized and the information about the build server connection is now visible in the status bar. For clients that don't support this status bar yet, the error message will be displayed as before.</p>
-<p><img loading="lazy" src="https://user-images.githubusercontent.com/26606662/274277861-de46ff62-db71-4990-ba1d-bfaaadf03499.png" alt="bsp-status-conn" class="img_ev3q">
+<p><img decoding="async" loading="lazy" src="https://user-images.githubusercontent.com/26606662/274277861-de46ff62-db71-4990-ba1d-bfaaadf03499.png" alt="bsp-status-conn" class="img_ev3q">
 <em>Build server connection status in VSCode, when metals is successfully connected to <code>sbt</code> build server.</em></p>
 <p>If you are a maintainer of a metals' client and want to know how to add support for build server status see <a href="http://scalameta.org/metals/blog/2023/10/17/silver#changes-for-clients">Changes for clients</a>.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="enable-run-code-lens-for-mill-build-server">Enable run code lens for Mill build server<a href="http://scalameta.org/metals/blog/2023/10/17/silver#enable-run-code-lens-for-mill-build-server" class="hash-link" aria-label="Direct link to Enable run code lens for Mill build server" title="Direct link to Enable run code lens for Mill build server">​</a></h2>
 <p>Thanks to <a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">Tomasz Godzik</a> now we have run code lens when using Mill build server. As a reminder, it's possible to start using it by running <code>Metals: Switch build server</code> command for a Mill project.</p>
-<p><img loading="lazy" src="https://i.imgur.com/5drObNP.gif" alt="mill-run-lens" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/5drObNP.gif" alt="mill-run-lens" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="convert-single-line-comments-to-multiline">Convert single line comments to multiline<a href="http://scalameta.org/metals/blog/2023/10/17/silver#convert-single-line-comments-to-multiline" class="hash-link" aria-label="Direct link to Convert single line comments to multiline" title="Direct link to Convert single line comments to multiline">​</a></h2>
 <p>Thanks to <a href="https://github.com/ghostbuster91" target="_blank" rel="noopener noreferrer">Kasper Kondzielski</a> we have a new code action that converts a block of single line comments into a multiline comment.</p>
-<p><img loading="lazy" src="https://i.imgur.com/tu3B25s.gif" alt="convert-to-multiline" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/tu3B25s.gif" alt="convert-to-multiline" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="detect-project-root">Detect project root<a href="http://scalameta.org/metals/blog/2023/10/17/silver#detect-project-root" class="hash-link" aria-label="Direct link to Detect project root" title="Direct link to Detect project root">​</a></h2>
 <p>Sometimes your Scala project root is not in the same folder that you open your editor in. Now metals will also detect the Scala project root when it is a child of the workspace/workspace folder root.</p>
 <div class="codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#bfc7d5"><span class="token plain">. *workspace root*</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">├── scalaProject *detected project root*</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">│   ├── .sbt</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">│   ├── src/main/scala</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">│   │   ├── Main.scala</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">│   │   └── ...</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">│   └── ...</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">├── someOtherProject</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">│   └── ...</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">├── .gitignore</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">└── ...</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="error-reports-in-metals-doctor">Error reports in metals doctor<a href="http://scalameta.org/metals/blog/2023/10/17/silver#error-reports-in-metals-doctor" class="hash-link" aria-label="Direct link to Error reports in metals doctor" title="Direct link to Error reports in metals doctor">​</a></h2>
 <p>Error reports are now visible in the metals doctor to help users diagnose the cause of any potential issue. Previously, they would only exist in the <code>.metals/.reports</code> folder.</p>
-<p><img loading="lazy" src="https://user-images.githubusercontent.com/26606662/270966990-86cbd199-8621-4d04-a4ae-41f4bb598668.gif" alt="show-error-reports" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://user-images.githubusercontent.com/26606662/270966990-86cbd199-8621-4d04-a4ae-41f4bb598668.gif" alt="show-error-reports" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="show-bloop-errors">Show bloop errors<a href="http://scalameta.org/metals/blog/2023/10/17/silver#show-bloop-errors" class="hash-link" aria-label="Direct link to Show bloop errors" title="Direct link to Show bloop errors">​</a></h2>
 <p>Before this release Bloop build server errors would only be logged silently into <code>metals.log</code> and the Metals output. Now for the sake of visibility Bloop errors are also shown to the users in form of error messages. The message can be dismissed for the current session of Metals or you can turn off all messages in a workspace.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="changes-for-plugin-authors">Changes for plugin authors<a href="http://scalameta.org/metals/blog/2023/10/17/silver#changes-for-plugin-authors" class="hash-link" aria-label="Direct link to Changes for plugin authors" title="Direct link to Changes for plugin authors">​</a></h2>
@@ -1004,12 +1004,12 @@ give Metals a try!</p>
 <p>Thanks to amazing work done by <a href="https://github.com/VankaTaganai" target="_blank" rel="noopener noreferrer">VankaTaganai</a> and further improvements by <a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>,
 you will be able to get completions in Java files. It should make
 working with Java sources easier, though Metals will not strive to be a full Java language server.</p>
-<p><img loading="lazy" src="https://i.imgur.com/wLlh7ig.gif" alt="java-completion" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/wLlh7ig.gif" alt="java-completion" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="liveness-monitor">Liveness monitor<a href="http://scalameta.org/metals/blog/2023/08/28/silver#liveness-monitor" class="hash-link" aria-label="Direct link to Liveness monitor" title="Direct link to Liveness monitor">​</a></h2>
 <p>Up to the current release, users would not be informed if something happened
 and the build server stopped responding. Thanks to <a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a> Metals will now monitor the state
 of the build server and notify the user if it becomes unresponsive.</p>
-<p><img loading="lazy" src="https://imgur.com/R2T5x3t.png" alt="not-responsive" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://imgur.com/R2T5x3t.png" alt="not-responsive" class="img_ev3q"></p>
 <p>Dismissing the notification will dismiss it for the current connection.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="improvements-for-enums">Improvements for enums<a href="http://scalameta.org/metals/blog/2023/08/28/silver#improvements-for-enums" class="hash-link" aria-label="Direct link to Improvements for enums" title="Direct link to Improvements for enums">​</a></h2>
 <p>This release also brings in multiple fixes connected to enums:</p>
@@ -1019,7 +1019,7 @@ of the build server and notify the user if it becomes unresponsive.</p>
 <li>multiple fixes on enum type parameters</li>
 </ul>
 <p>This great work was done by <a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a></p>
-<p><img loading="lazy" src="https://i.imgur.com/tZrSDYC.gif" alt="enum" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/tZrSDYC.gif" alt="enum" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="semantic-highlighting">Semantic highlighting<a href="http://scalameta.org/metals/blog/2023/08/28/silver#semantic-highlighting" class="hash-link" aria-label="Direct link to Semantic highlighting" title="Direct link to Semantic highlighting">​</a></h2>
 <p>Semantic highlighting enables syntax highlighting based on knowledge from the compiler.
 Thanks to this, users can have specific colors for parameters, methods, mutable <code>var</code>s, packages etc.
@@ -1396,7 +1396,7 @@ This feature is primarily aimed at Scala developers that need to from time to
 time look into Java source and figure out what's going on there. This will not
 provide an experience of a full Java language server, but it will provide some
 basic functionality that will make it easier to work with Java sources.</p>
-<p><img loading="lazy" src="https://i.imgur.com/mp1BKse.gif" alt="java-hover" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/mp1BKse.gif" alt="java-hover" class="img_ev3q"></p>
 <p>Please let us know about any issues! This is a new feature and we expect that it
 might take some time to get it ironed out.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="command-for-running-specified-scalafix-rules">Command for running specified scalafix rules<a href="http://scalameta.org/metals/blog/2023/07/19/silver#command-for-running-specified-scalafix-rules" class="hash-link" aria-label="Direct link to Command for running specified scalafix rules" title="Direct link to Command for running specified scalafix rules">​</a></h2>
@@ -2126,11 +2126,11 @@ Upon receiving most requests metals will redirect them to the entity responsible
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="how-do-i-use-the-multi-root-feature">How do I use the multi-root feature?<a href="http://scalameta.org/metals/blog/2023/07/17/workspace-folders#how-do-i-use-the-multi-root-feature" class="hash-link" aria-label="Direct link to How do I use the multi-root feature?" title="Direct link to How do I use the multi-root feature?">​</a></h2>
 <h3 class="anchor anchorWithStickyNavbar_LWe7" id="vscode">VSCode<a href="http://scalameta.org/metals/blog/2023/07/17/workspace-folders#vscode" class="hash-link" aria-label="Direct link to VSCode" title="Direct link to VSCode">​</a></h3>
 <p>In VSCode workspace folder support is achieved by <a href="https://code.visualstudio.com/docs/editor/multi-root-workspaces" target="_blank" rel="noopener noreferrer">multi-root workspaces</a>. To load multiple projects into a single workspace you can simply open one of the projects and add the other one using <code>File &gt; Add Folder to Workspace</code> and then choosing the correct folder.</p>
-<p><img loading="lazy" src="https://i.imgur.com/LTYrx9V.gif" alt="add-workspace-folder" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/LTYrx9V.gif" alt="add-workspace-folder" class="img_ev3q"></p>
 <p>Now you have two projects loaded side by side, so you can easily see both and switch between them. All of the current metals functionality accommodates multiple projects, so you can use metals the same way as you did before. The biggest changes will be visible in the places where information from the whole workspace is collected, like workspace symbol search, test explorer, or metals doctor.</p>
-<p><img loading="lazy" src="https://i.imgur.com/zWmmsC2.gif" alt="multi-root-tests" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/zWmmsC2.gif" alt="multi-root-tests" class="img_ev3q"></p>
 <p>The target project for a command is usually chosen based on the currently opened file. E.g. if you run <code>Switch build server</code> the command it will be executed for the project in focus. If no project is in focus the editor will explicitly ask for which project the command should be executed.</p>
-<p><img loading="lazy" src="https://i.imgur.com/tV7K822.gif" alt="target-folder" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/tV7K822.gif" alt="target-folder" class="img_ev3q"></p>
 <p>Finally, logs can still be found in the <code>.metals/metals.log</code> in the root of each project. Note, that for the time being all information is logged to all opened workspace folders, so anything logged for <code>project1</code> will also be visible in logs for <code>project2</code>.</p>
 <h3 class="anchor anchorWithStickyNavbar_LWe7" id="nvim-metals-section-written-by-ckipp01">nvim-metals (<em>section written by <a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a></em>)<a href="http://scalameta.org/metals/blog/2023/07/17/workspace-folders#nvim-metals-section-written-by-ckipp01" class="hash-link" aria-label="Direct link to nvim-metals-section-written-by-ckipp01" title="Direct link to nvim-metals-section-written-by-ckipp01">​</a></h3>
 <p>When using nvim-metals, you'll start just like you do with any other project.
@@ -2139,16 +2139,16 @@ just add any new root to have a multi-root workspace. All you'll need to do is
 navigate to a file at the root level of the workspace you'd like to add, and use
 the
 <a href="https://neovim.io/doc/user/lsp.html#vim.lsp.buf.add_workspace_folder()" target="_blank" rel="noopener noreferrer"><code>vim.lsp.buf.add_workspace_folder()</code></a> function to add the folder containing the file you're in as another root.</p>
-<p><img loading="lazy" src="https://i.imgur.com/E8iriR9.gif" alt="add_workspace_folder" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/E8iriR9.gif" alt="add_workspace_folder" class="img_ev3q"></p>
 <p>To make this easier, you can also just create a mapping to use.</p>
 <div class="language-lua codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-lua codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#bfc7d5"><span class="token plain">vim.keymap.set("n", "&lt;leader&gt;awf", vim.lsp.buf.add_workspace_folder)</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
 <p>To verify that this has worked correctly you should be able to now see both
 workspaces reflected in your Metals Doctor.</p>
-<p><img loading="lazy" src="https://i.imgur.com/2u48wDK.gif" alt="nvim-metals doctor" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/2u48wDK.gif" alt="nvim-metals doctor" class="img_ev3q"></p>
 <p>You should also see that some commands, like the
 <a href="https://neovim.io/doc/user/lsp.html#vim.lsp.buf.workspace_symbol()" target="_blank" rel="noopener noreferrer"><code>vim.lsp.buf.workspace_symbol()</code></a>
 now show results from all the added workspaces.</p>
-<p><img loading="lazy" src="https://i.imgur.com/RczJIcp.gif" alt="workspace_symbols" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/RczJIcp.gif" alt="workspace_symbols" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="changes-for-the-clients">Changes for the clients<a href="http://scalameta.org/metals/blog/2023/07/17/workspace-folders#changes-for-the-clients" class="hash-link" aria-label="Direct link to Changes for the clients" title="Direct link to Changes for the clients">​</a></h2>
 <p>Since workspace folders are a part of the LSP for any client implementing this capability the multi-root support should work out of the box, however, there will be a few minor changes to needed accommodate the new approach.</p>
 <ol>
@@ -2192,11 +2192,11 @@ give Metals a try!</p>
 </ul>
 <p>To make it easier to attach reports to github issues the <code>zip-reports</code> command will zip all the <strong>incognito</strong> reports into <code>.metals/.reports/report.zip</code>, while unsanitized reports will have to be browsed and attached by hand. In order not to clutter the workspace too much, only up to 30 last reports of each kind are kept at a time.</p>
 <p>When running into a problem in VSCode (or any editor that implements this command) users can use the <code>Metals: Open new github issue</code> command. This will create a template for an issue with all basic info such as Metals version, used build server etc.. Next, you can browse through reports and drag and drop chosen ones to your GitHub issue. Invoking the <code>Metals: Zip reports</code> command will create a zip of all the incognito that reports can also be included in the issue.</p>
-<p><img loading="lazy" src="https://i.imgur.com/wBwFjpZ.gif" alt="Reports" class="img_ev3q">
-<img loading="lazy" src="https://i.imgur.com/YN3U3N9.gif" alt="Zip reports" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/wBwFjpZ.gif" alt="Reports" class="img_ev3q">
+<img decoding="async" loading="lazy" src="https://i.imgur.com/YN3U3N9.gif" alt="Zip reports" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="new-code-action-for-converting-dependencies-from-sbt-to-scala-cli-compliant-ones">New code action for converting dependencies from sbt to scala-cli compliant ones<a href="http://scalameta.org/metals/blog/2023/04/21/aluminium#new-code-action-for-converting-dependencies-from-sbt-to-scala-cli-compliant-ones" class="hash-link" aria-label="Direct link to New code action for converting dependencies from sbt to scala-cli compliant ones" title="Direct link to New code action for converting dependencies from sbt to scala-cli compliant ones">​</a></h2>
 <p>New code action for scala-cli <code>using (dep | lib | plugin)</code> directives, which allows to convert dependencies from sbt style to scala-cli compliant ones.</p>
-<p><img loading="lazy" src="https://i.imgur.com/G9W7Nox.gif" alt="Convert dependency" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/G9W7Nox.gif" alt="Convert dependency" class="img_ev3q"></p>
 <p>A great contribution by <a href="https://github.com/majk-p" target="_blank" rel="noopener noreferrer">majk-p</a>.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="improvements-to-semantic-highlighting">Improvements to semantic highlighting<a href="http://scalameta.org/metals/blog/2023/04/21/aluminium#improvements-to-semantic-highlighting" class="hash-link" aria-label="Direct link to Improvements to semantic highlighting" title="Direct link to Improvements to semantic highlighting">​</a></h2>
 <p>This release brings a lot of improvements for semantic highlighting thanks to <a href="https://github.com/scalameta/metals/pulls/jkciesluk" target="_blank" rel="noopener noreferrer">jkciesluk</a> and <a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>. This includes:</p>
@@ -2572,7 +2572,7 @@ symbols. For example:</p>
 <div class="language-json codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-json codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#bfc7d5"><span class="token plain">  "editor.semanticTokenColorCustomizations": {</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    "[Adapta Nokto]": {</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">      "rules": {</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">        "variable": "#c95252",</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">        "*.readonly": "#8d91b8",</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">        "*.deprecated": {</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">          "strikethrough": true</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">        }</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">      }</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    }</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">  },</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
 <p>will make vars red and values light blue while also crossing out any deprecated
 methods or classes.</p>
-<p><img loading="lazy" src="https://i.imgur.com/vkllczg.png" alt="semantic-tokens" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/vkllczg.png" alt="semantic-tokens" class="img_ev3q"></p>
 <p>For setting up semantic tokens in editors other than VS Code please consult the
 relevant documentation.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="new-inline-value-code-action">New inline value code action<a href="http://scalameta.org/metals/blog/2023/03/02/aluminium#new-inline-value-code-action" class="hash-link" aria-label="Direct link to New inline value code action" title="Direct link to New inline value code action">​</a></h2>
@@ -2583,13 +2583,13 @@ the same file. This works in two ways:</p>
 <ul>
 <li>if inlining at a reference we will only replace the current value reference</li>
 </ul>
-<p><img loading="lazy" src="https://i.imgur.com/yLuM079.gif" alt="replace-one" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/yLuM079.gif" alt="replace-one" class="img_ev3q"></p>
 <ul>
 <li>if inlining at the definition we will try to replace all the references and
 remove the definition if the definition cannot be accessed from outside the
 current file</li>
 </ul>
-<p><img loading="lazy" src="https://i.imgur.com/LdlSQsB.gif" alt="replace-all" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/LdlSQsB.gif" alt="replace-all" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="expanded-workspace-symbol-search-to-include-fields">Expanded workspace symbol search to include fields<a href="http://scalameta.org/metals/blog/2023/03/02/aluminium#expanded-workspace-symbol-search-to-include-fields" class="hash-link" aria-label="Direct link to Expanded workspace symbol search to include fields" title="Direct link to Expanded workspace symbol search to include fields">​</a></h2>
 <p>Previously, when searching the workspace Metals would only look for classes,
 trait, interfaces, enums and objects. If you wanted to search for a particularly
@@ -2597,7 +2597,7 @@ named method you would need to use normal text search, which would be much less
 convenient. This release adds the ability to also search for method, types or
 values within the workspace. This will not work for dependencies in order to not
 increase indexes used by Metals too much.</p>
-<p><img loading="lazy" src="https://i.imgur.com/YQCinNz.gif" alt="search" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/YQCinNz.gif" alt="search" class="img_ev3q"></p>
 <p>Another great contribution from <a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>!</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="allow-users-to-use-older-scala-versions">Allow users to use older Scala versions<a href="http://scalameta.org/metals/blog/2023/03/02/aluminium#allow-users-to-use-older-scala-versions" class="hash-link" aria-label="Direct link to Allow users to use older Scala versions" title="Direct link to Allow users to use older Scala versions">​</a></h2>
 <p>To provide support for a particular Scala version Metals needs to release a
@@ -3192,7 +3192,7 @@ code and helps them be more productive in daily development.</p>
 <a href="https://scala-cli.virtuslab.org/" target="_blank" rel="noopener noreferrer">Scala CLI</a>. When using the newest Scala CLI
 you will see a warning whenever a library has a newer version available and
 you'll have a quick fix suggested via code action.</p>
-<p><img loading="lazy" src="https://i.imgur.com/3D9WcQb.gif" alt="actionable" class="img_ev3q"> These warnings can be disabled
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/3D9WcQb.gif" alt="actionable" class="img_ev3q"> These warnings can be disabled
 within ScalaCLi using:</p>
 <div class="codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#bfc7d5"><span class="token plain">scala-cli config actions false</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
 <p>NOTE: that if you do this, you'll turn off actionable diagnostics from scala-cli
@@ -3222,7 +3222,7 @@ sometimes also find the definition of the type of that symbol. However, it's not
 always easy and convenient to do that. From now on Metals also allows users to
 use the <code>go to type definition</code> feature within all the supported editors. User
 will be able to go directly to the type of a particular symbol.</p>
-<p><img loading="lazy" src="https://i.imgur.com/t77kB1S.gif" alt="type-def" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/t77kB1S.gif" alt="type-def" class="img_ev3q"></p>
 <p>This feature might work a bit differently depending on the symbol you are
 checking:</p>
 <ul>
@@ -3242,7 +3242,7 @@ takes longer than if you just run it within your terminal.</p>
 Java command to run within the code lenses, that can be used by the editors. It
 currently works with VS Code and it will run main classes within the task
 terminal.</p>
-<p><img loading="lazy" src="https://i.imgur.com/tXfSSj7.gif" alt="run-main" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/tXfSSj7.gif" alt="run-main" class="img_ev3q"></p>
 <p>In next release, we also plan to use the same mechanism for running main classes
 from all the other places. We also want to make tests runnable without the
 debugging infrastructure, but it's a bit more complicated than for main methods.</p>
@@ -3254,13 +3254,13 @@ code. This however is not needed for anything that is defined in a local scope,
 which can't be used outside the current file.</p>
 <p>Metals will now allow users to rename any local code irrelevant of whether the
 workspace was compiled or not.</p>
-<p><img loading="lazy" src="https://i.imgur.com/EEKchJB.gif" alt="rename-local" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/EEKchJB.gif" alt="rename-local" class="img_ev3q"></p>
 <p>When renaming symbols that might be use outside the current file the previous
 limitations will apply.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="enable-run-and-debug-in-scala-cli-scripts-in-metals">Enable run and debug in Scala CLI scripts in Metals<a href="http://scalameta.org/metals/blog/2023/01/02/aluminium#enable-run-and-debug-in-scala-cli-scripts-in-metals" class="hash-link" aria-label="Direct link to Enable run and debug in Scala CLI scripts in Metals" title="Direct link to Enable run and debug in Scala CLI scripts in Metals">​</a></h2>
 <p>Thanks to <a href="https://github.com/lwronski" target="_blank" rel="noopener noreferrer">lwronski</a> it's now possible to run and
 debug scripts when using Scala CLI.</p>
-<p><img loading="lazy" src="https://i.imgur.com/bwfoEFY.gif" alt="script-debug" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/bwfoEFY.gif" alt="script-debug" class="img_ev3q"></p>
 <p>For running scripts without debugging we will also provide the possibility of
 using the explicit Java command to run from code lenses.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="refactor-package-definition-when-moving-files-between-packages">Refactor package definition when moving files between packages<a href="http://scalameta.org/metals/blog/2023/01/02/aluminium#refactor-package-definition-when-moving-files-between-packages" class="hash-link" aria-label="Direct link to Refactor package definition when moving files between packages" title="Direct link to Refactor package definition when moving files between packages">​</a></h2>
@@ -3989,7 +3989,7 @@ have it defined. However, it's also quite common for users to change the
 returned type of the body of a function and in that case any adjustments had to
 be made manually. Now, whenever the compiler shows type mismatch error Metals
 should be able to adjust the type for you automatically.</p>
-<p><img loading="lazy" src="https://i.imgur.com/R7z7JNf.gif" alt="adjust-type" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/R7z7JNf.gif" alt="adjust-type" class="img_ev3q"></p>
 <p>As this feature is quite new and might still require some tinkering, please
 report any issues you find.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="ammonite-completions-for-scala-3">Ammonite completions for Scala 3<a href="http://scalameta.org/metals/blog/2022/10/06/aluminium#ammonite-completions-for-scala-3" class="hash-link" aria-label="Direct link to Ammonite completions for Scala 3" title="Direct link to Ammonite completions for Scala 3">​</a></h2>
@@ -4006,7 +4006,7 @@ a lot of nice features, but one of the main ones is
 Thanks to <a href="https://github.com/alexarchambault" target="_blank" rel="noopener noreferrer">alexarchambault</a>, who is also
 leading the effort on ScalaCLI, Metals now supports ScalaCLI scripts along with
 the Ammonite ones.</p>
-<p><img loading="lazy" src="https://i.imgur.com/ghR1Src.gif" alt="scala-cli" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/ghR1Src.gif" alt="scala-cli" class="img_ev3q"></p>
 <p>Whenever, Metals will be opened on a file with <code>*.sc</code> extension (but not
 <code>*.worksheet.sc</code>), users will be prompted to choose which tool they want to use
 for the script.</p>
@@ -4028,7 +4028,7 @@ currently available symbols in scope. This meant that if you wanted to import
 something from another package, you would need to do it manually.</p>
 <p>This problem is now resolved. Users can easily get such symbols automatically
 imported, which creates a seamless more workflow.</p>
-<p><img loading="lazy" src="https://i.imgur.com/COKtciq.gif" alt="auto-import" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/COKtciq.gif" alt="auto-import" class="img_ev3q"></p>
 <p>These completions will also allow you to automatically import extension methods.</p>
 <p>The feature is already available for Scala 2.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="scala-3-add-autofill-named-arguments-completion">[Scala 3] Add autofill named arguments completion<a href="http://scalameta.org/metals/blog/2022/10/06/aluminium#scala-3-add-autofill-named-arguments-completion" class="hash-link" aria-label="Direct link to [Scala 3] Add autofill named arguments completion" title="Direct link to [Scala 3] Add autofill named arguments completion">​</a></h2>
@@ -4037,7 +4037,7 @@ completions will also show an <code>autofill all</code> completion item, which w
 fill in all the arguments of the current method using the symbol in scope or
 with <code>???</code> if no symbols match. Users can later tabulate over the different
 proposal to adjust them.</p>
-<p><img loading="lazy" src="https://i.imgur.com/tZTKnSw.gif" alt="auto-fill" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/tZTKnSw.gif" alt="auto-fill" class="img_ev3q"></p>
 <p>The feature was already available for Scala 2.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="scala-3-improved-performance">[Scala 3] Improved performance<a href="http://scalameta.org/metals/blog/2022/10/06/aluminium#scala-3-improved-performance" class="hash-link" aria-label="Direct link to [Scala 3] Improved performance" title="Direct link to [Scala 3] Improved performance">​</a></h2>
 <p>We've noticed that previous versions of Metals could cause CPU spikes for anyone
@@ -4063,7 +4063,7 @@ for turning into a more interactive feature, which would use the Scala
 presentation compiler already used in such features as hovers or completions.
 Thanks to this change document highlight should work even if your code doesn't
 compile.</p>
-<p><img loading="lazy" src="https://i.imgur.com/0uhc9P5.gif" alt="document-highlight" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/0uhc9P5.gif" alt="document-highlight" class="img_ev3q"></p>
 <p>This should also make it easier for us to fix any issue that might pop up and it
 has already improved support for locally defined classes.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="scala-3-add-completions-for-case-and-match">[Scala 3] Add completions for case and match<a href="http://scalameta.org/metals/blog/2022/10/06/aluminium#scala-3-add-completions-for-case-and-match" class="hash-link" aria-label="Direct link to [Scala 3] Add completions for case and match" title="Direct link to [Scala 3] Add completions for case and match">​</a></h2>
@@ -4072,7 +4072,7 @@ automatically fill either a single case with one of the possible subtypes or an
 exhaustive completion with all of them. This was previously not available for
 Scala 3, but thanks to (<a href="https://github.com/jkciesluk" target="_blank" rel="noopener noreferrer">jkciesluk</a>) users can now
 benefit from this feature in their Scala 3 codebases.</p>
-<p><img loading="lazy" src="https://i.imgur.com/6wynpRq.gif" alt="exhaustive" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/6wynpRq.gif" alt="exhaustive" class="img_ev3q"></p>
 <p>The Scala 3 version will additionally work with the Scala enums as well as offer
 completions for simple cases with one possible type, which might be useful to
 access values inside it. Moreover, exhaustive completions will also be offered
@@ -4082,7 +4082,7 @@ within partial function, for example in a <code>.map{}</code>.</p>
 is the possibility to extract arbitrary parts of code into a separate function.
 It will also add any values unavailable in the selected scope as parameters in
 the new function.</p>
-<p><img loading="lazy" src="https://i.imgur.com/VMXLKPg.gif" alt="extract-method" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/VMXLKPg.gif" alt="extract-method" class="img_ev3q"></p>
 <p>The code action will currently not turn any methods or classes into parameters
 even if they is not available in the scope into which the code is being
 extracted.</p>
@@ -4092,7 +4092,7 @@ imports such as:</p>
 <div class="language-scala codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-scala codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#bfc7d5"><span class="token plain">import $$ivy.`io.circe::circe-core:0.14.2`</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
 <p>which will bring in the <code>circe-core</code> dependency. Starting in this version it
 will be possible to auto complete group ids, artifact names and their versions.</p>
-<p><img loading="lazy" src="https://i.imgur.com/TWgIIVp.gif" alt="import-dep" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/TWgIIVp.gif" alt="import-dep" class="img_ev3q"></p>
 <p>Thanks to <a href="https://github.com/LaurenceWarne" target="_blank" rel="noopener noreferrer">LaurenceWarne</a> for the great
 feature!</p>
 <p>We are also working on enabling this feature in Mill, sbt, ScalaCLI and later
@@ -4102,7 +4102,7 @@ for Scala 3.</p>
 <a href="https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/#textDocument_prepareCallHierarchy" target="_blank" rel="noopener noreferrer">call hierarchy support</a>,
 which is an LSP feature that enables users to see which method are invoked in a
 current method or which methods invoke the current one.</p>
-<p><img loading="lazy" src="https://i.imgur.com/1lTYFmu.gif" alt="call-hierarchy-dep" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/1lTYFmu.gif" alt="call-hierarchy-dep" class="img_ev3q"></p>
 <p>This non trivial feature was brought to you by
 <a href="https://github.com/riiswa" target="_blank" rel="noopener noreferrer">riiswa</a>, thanks for the great work!</p>
 <p>A current limitation is that it will only work for methods within the workspace.</p>
@@ -4702,21 +4702,21 @@ give Metals a try!</p>
 <p>You might know that Scala 3 has introduced <code>extension methods</code> that allow defining new methods to your existing types.</p>
 <p>Previously, Metals couldn't auto-complete extension methods; so developers had to find an appropriate extension method from their workspace and manually import it. But, this was time-consuming and not always beginner friendly.</p>
 <p>Now, Metals provides auto-completion for extension methods and automatically imports them!</p>
-<p><img loading="lazy" src="https://i.imgur.com/EAbVHeH.gif" alt="extension-methods" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/EAbVHeH.gif" alt="extension-methods" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="scala-3-convert-to-named-parameters-code-action">[Scala 3] Convert to Named Parameters code action<a href="http://scalameta.org/metals/blog/2022/08/10/aluminium#scala-3-convert-to-named-parameters-code-action" class="hash-link" aria-label="Direct link to [Scala 3] Convert to Named Parameters code action" title="Direct link to [Scala 3] Convert to Named Parameters code action">​</a></h2>
 <p><a href="https://scalameta.org/metals/blog/2022/07/04/aluminium#scala-2-add-converttonamedarguments-code-action" target="_blank" rel="noopener noreferrer">Metals 0.11.7 added <code>ConvertToNamedParameters</code> code action to Scala2</a>.</p>
 <p>Thanks to the contribution by <a href="https://github.com/jkciesluk" target="_blank" rel="noopener noreferrer">@jkciesluk</a>, this feature is now available for Scala 3!</p>
-<p><img loading="lazy" src="https://i.imgur.com/9i7MWoQ.gif" alt="convert-to-named" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/9i7MWoQ.gif" alt="convert-to-named" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="scala-3-scaladoc-completion">[Scala 3] Scaladoc completion<a href="http://scalameta.org/metals/blog/2022/08/10/aluminium#scala-3-scaladoc-completion" class="hash-link" aria-label="Direct link to [Scala 3] Scaladoc completion" title="Direct link to [Scala 3] Scaladoc completion">​</a></h2>
 <p>Metals now supports offering Scaladoc completions in Scala 3. When typing <code>/**</code> you get an option to auto-complete a scaladoc template for methods, classes, etc.!</p>
-<p><img loading="lazy" src="https://i.imgur.com/MEJUXr3.gif" alt="scala-doc-completion" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/MEJUXr3.gif" alt="scala-doc-completion" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="scala-3-completions-in-string-interpolation">[Scala 3] Completions in string interpolation<a href="http://scalameta.org/metals/blog/2022/08/10/aluminium#scala-3-completions-in-string-interpolation" class="hash-link" aria-label="Direct link to [Scala 3] Completions in string interpolation" title="Direct link to [Scala 3] Completions in string interpolation">​</a></h2>
 <p>In the previous versions, whenever users wanted to include a value in a string using string interpolation, they would need to do it all manually. Now, it is possible to get an automatic conversion to string interpolation when typing <code>$value</code>, as well as automatic wrapping in <code>{}</code> when accessing members of such value.</p>
-<p><img loading="lazy" src="https://i.imgur.com/EyFKpiv.gif" alt="scala3-interpolation" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/EyFKpiv.gif" alt="scala3-interpolation" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="scala-2-automatically-import-types-in-string-interpolations">[Scala 2] Automatically import types in string interpolations<a href="http://scalameta.org/metals/blog/2022/08/10/aluminium#scala-2-automatically-import-types-in-string-interpolations" class="hash-link" aria-label="Direct link to [Scala 2] Automatically import types in string interpolations" title="Direct link to [Scala 2] Automatically import types in string interpolations">​</a></h2>
 <p>Previously, the only suggestions for string interpolations were coming from the currently available symbols in scope. This meant that if you wanted to import something from another package, you would need to do it manually.</p>
 <p>This problem is now resolved. Users can easily get such symbols automatically imported, which creates a seamless workflow.</p>
-<p><img loading="lazy" src="https://i.imgur.com/cCWTQnj.gif" alt="scala2-inteprolation" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/cCWTQnj.gif" alt="scala2-inteprolation" class="img_ev3q"></p>
 <p>The feature is also being worked on for Scala 3.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="code-action-documentation">Code Action documentation<a href="http://scalameta.org/metals/blog/2022/08/10/aluminium#code-action-documentation" class="hash-link" aria-label="Direct link to Code Action documentation" title="Direct link to Code Action documentation">​</a></h2>
 <p>Have you ever wondered what kind of refactorings are available in Metals?
@@ -5020,11 +5020,11 @@ Metals settings. This could result in two possible notifications:</p>
 <ul>
 <li>Metals changing Java version:</li>
 </ul>
-<p><img loading="lazy" src="https://i.imgur.com/BH8AS5c.png" alt="metals-java-home" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/BH8AS5c.png" alt="metals-java-home" class="img_ev3q"></p>
 <ul>
 <li>Metals detecting an existing Bloop Java configuration:</li>
 </ul>
-<p><img loading="lazy" src="https://i.imgur.com/PCyyNVT.png" alt="metals-java-home-existing" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/PCyyNVT.png" alt="metals-java-home-existing" class="img_ev3q"></p>
 <p>However, this caused a couple of issues:</p>
 <ol>
 <li>In some cases Metals would suggest to change your Java home even if it hasn't
@@ -5056,7 +5056,7 @@ release you should be able to apply all currently defined
 <code>rules in .scalafix.conf</code> you require by running <code>metals.scalafix-run</code> command.</p>
 <p>By default it's bound to <code>alt</code> + <code>ctrl</code> + <code>shift</code> + <code>o</code> shortcut in Visual
 Studio Code.</p>
-<p><img loading="lazy" src="https://i.imgur.com/DLe5sYT.gif" alt="scalafix-run" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/DLe5sYT.gif" alt="scalafix-run" class="img_ev3q"></p>
 <p>One major drawback of the current approach is that we are unable to run some of
 the custom rules. Only the default rules and the contributed Hygiene rules are
 currently available by default. You can see the full list of them
@@ -5077,27 +5077,27 @@ discussion on
 concrete class, you could only see the completion to override particular
 members. However, you needed to add those members one by one. Now you'll see a
 code action to implement all the members at once.</p>
-<p><img loading="lazy" src="https://i.imgur.com/foU3oHL.gif" alt="implement-all" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/foU3oHL.gif" alt="implement-all" class="img_ev3q"></p>
 <p>Great work by <a href="https://github.com/tanishiking" target="_blank" rel="noopener noreferrer">tanishiking</a>.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="scala-3-add-snippet-completions">[Scala 3] Add snippet completions.<a href="http://scalameta.org/metals/blog/2022/07/04/aluminium#scala-3-add-snippet-completions" class="hash-link" aria-label="Direct link to [Scala 3] Add snippet completions." title="Direct link to [Scala 3] Add snippet completions.">​</a></h2>
 <p>Previously, whenever users accepted method completions the only inserted text
 would be the name of the method. With snippets we can now add additional <code>()</code>
 with cursor ending in or after the parenthesis depending on whether the method
 accepts parameters.</p>
-<p><img loading="lazy" src="https://i.imgur.com/QEbPSTd.gif" alt="snippets" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/QEbPSTd.gif" alt="snippets" class="img_ev3q"></p>
 <p>For editors that do not support snippets the previous behaviour is preserved.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="scala-3-add-file-name-completions">[Scala 3] Add file name completions<a href="http://scalameta.org/metals/blog/2022/07/04/aluminium#scala-3-add-file-name-completions" class="hash-link" aria-label="Direct link to [Scala 3] Add file name completions" title="Direct link to [Scala 3] Add file name completions">​</a></h2>
 <p>A file name completion feature has been available only in the Scala 2 project,
 but thanks to the effort by <a href="https://github.com/riiswa" target="_blank" rel="noopener noreferrer">riiswa</a>, Metals 0.11.7
 will complete class name based on the enclosing file, in Scala3!</p>
-<p><img loading="lazy" src="https://i.imgur.com/f10pnJ6.gif" alt="filename-completion" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/f10pnJ6.gif" alt="filename-completion" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="scala-3-expression-evaluation-for-debugger">[Scala 3] Expression evaluation for debugger.<a href="http://scalameta.org/metals/blog/2022/07/04/aluminium#scala-3-expression-evaluation-for-debugger" class="hash-link" aria-label="Direct link to [Scala 3] Expression evaluation for debugger." title="Direct link to [Scala 3] Expression evaluation for debugger.">​</a></h2>
 <p>Expression evaluation was already available for use in your Scala 2 code,
 however it was still missing for Scala 3. Thanks to the main work by
 <a href="https://github.com/tdudzik" target="_blank" rel="noopener noreferrer">tdudzik</a> and later finishing touches and multiple
 bug fixes by <a href="https://github.com/adpi2" target="_blank" rel="noopener noreferrer">adpi2</a> it is now possible to to evaluate
 your code on breakpoints in the Scala 3 code.</p>
-<p><img loading="lazy" src="https://i.imgur.com/jYs7QdM.gif" alt="debug" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/jYs7QdM.gif" alt="debug" class="img_ev3q"></p>
 <p>It was added in the previous 0.11.6 version of Metals, however it was still not
 working correctly enough to promote it. Currently, it should be working
 correctly in most cases, so please do test it out and report any issues you find
@@ -5110,7 +5110,7 @@ being.</p>
 <!-- -->it's sometimes hard to tell which arguments match which parameters at a glance.
 In this situation you may want to make them named arguments. Now you will be
 able to automatically convert all those arguments into named arguments.</p>
-<p><img loading="lazy" src="https://i.imgur.com/SiUYUSY.gif" alt="convert-to-named-vscode" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/SiUYUSY.gif" alt="convert-to-named-vscode" class="img_ev3q"></p>
 <p>We'd like to thank <a href="https://github.com/camgraff" target="_blank" rel="noopener noreferrer">@camgraff</a> for
 <a href="https://github.com/scalameta/metals/pull/3971" target="_blank" rel="noopener noreferrer">implementing this feature</a> 🥳</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="new-flatmap-to-for-comprehension-code-action">New flatMap to for comprehension code action.<a href="http://scalameta.org/metals/blog/2022/07/04/aluminium#new-flatmap-to-for-comprehension-code-action" class="hash-link" aria-label="Direct link to New flatMap to for comprehension code action." title="Direct link to New flatMap to for comprehension code action.">​</a></h2>
@@ -5120,7 +5120,7 @@ your code.</p>
 <p>This is purely a syntactic sugar which gives us an ability to offer a code
 action to automatically convert any chain of the mentioned methods with a for
 comprehensions.</p>
-<p><img loading="lazy" src="https://i.imgur.com/MOZLYi0.gif" alt="for-comp" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/MOZLYi0.gif" alt="for-comp" class="img_ev3q"></p>
 <p>There is currently one known issue with two separate chains being inside one
 another, which might cause unexpected issues. Please report any other issues you
 find!</p>
@@ -5393,13 +5393,13 @@ Now, Metals uses a memory-efficient way to watch files to detect changes and con
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="scala3-override-completions">[Scala3] Override Completions<a href="http://scalameta.org/metals/blog/2022/06/03/aluminium#scala3-override-completions" class="hash-link" aria-label="Direct link to [Scala3] Override Completions" title="Direct link to [Scala3] Override Completions">​</a></h2>
 <p>Override completions for Scala3 are now available with Metals 0.11.6!
 Now, Metals shows the scaladoc on hover for Scala3 projects. (Before this release, Metals was unable to show the scaladoc for the symbols from third-party modules).</p>
-<p><img loading="lazy" src="https://i.imgur.com/Go3sMxy.gif" alt="override-completion" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/Go3sMxy.gif" alt="override-completion" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="scala3-show-scaladoc-on-hover-for-scala-3-project">[Scala3] Show scaladoc on hover for Scala 3 project<a href="http://scalameta.org/metals/blog/2022/06/03/aluminium#scala3-show-scaladoc-on-hover-for-scala-3-project" class="hash-link" aria-label="Direct link to [Scala3] Show scaladoc on hover for Scala 3 project" title="Direct link to [Scala3] Show scaladoc on hover for Scala 3 project">​</a></h2>
 <p>Previously, scaladocs were missing for a lot of classes and methods in Scala 3, especially for the symbols from third-party modules. From this release, Metals will always show the scaladoc on hover for Scala3 projects.</p>
-<p><img loading="lazy" src="https://i.imgur.com/Svzq5DD.png" alt="hover-scala3" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/Svzq5DD.png" alt="hover-scala3" class="img_ev3q"></p>
 <h3 class="anchor anchorWithStickyNavbar_LWe7" id="scala3-support-completionitemresolve">[Scala3] Support <code>completionItem/resolve</code><a href="http://scalameta.org/metals/blog/2022/06/03/aluminium#scala3-support-completionitemresolve" class="hash-link" aria-label="Direct link to scala3-support-completionitemresolve" title="Direct link to scala3-support-completionitemresolve">​</a></h3>
 <p><code>completionItem/resolve</code> is a feature that provides on-demand, more detailed information when moving through the list of suggested completions. It will show documentation, proper parameter names for Java methods, and default values for Scala 3 methods. Now, this is also available for use in Scala 3.</p>
-<p><img loading="lazy" src="https://i.imgur.com/Tz6AOsx.gif" alt="completion-item-resolve" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/Tz6AOsx.gif" alt="completion-item-resolve" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="show-parent-scaladoc-if-implementation-is-returning-empty">Show parent scaladoc if implementation is returning empty<a href="http://scalameta.org/metals/blog/2022/06/03/aluminium#show-parent-scaladoc-if-implementation-is-returning-empty" class="hash-link" aria-label="Direct link to Show parent scaladoc if implementation is returning empty" title="Direct link to Show parent scaladoc if implementation is returning empty">​</a></h2>
 <p>Scaladocs can be inspected whenever you hover, use a completion or signature help. Up until recently we only showed you the documentation if the exact method you are using had the scaladocs written, which meant that if you overrode a method and didn't add the scaladoc comments again we would not show you any documentation. One example of such method is <code>headOption</code> on <code>List</code>.</p>
 <p>From this release we will also search the parent method in case the current method's scaladoc are empty.</p>
@@ -5410,17 +5410,17 @@ Now, Metals shows the scaladoc on hover for Scala3 projects. (Before this releas
 <p>MUnit allows to use <a href="https://scalameta.org/munit/docs/tests.html#declare-tests-inside-a-helper-function" target="_blank" rel="noopener noreferrer">helper functions</a> when declaring tests. Very often those helper methods are extracted to some parent classes which are extended by many test suites.
 Now, Metals can find usages of those helper methods and display them in Test Explorer.</p>
 <p>This feature is available for Bloop and SBT 1.7.0-M2 or later.</p>
-<p><img loading="lazy" src="https://imgur.com/GGRDpXA.gif" alt="MUnit-helper-methods" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://imgur.com/GGRDpXA.gif" alt="MUnit-helper-methods" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="support-cats-effect-stacktraces-in-stacktrace-analyzer">Support Cats Effect stacktraces in stacktrace analyzer<a href="http://scalameta.org/metals/blog/2022/06/03/aluminium#support-cats-effect-stacktraces-in-stacktrace-analyzer" class="hash-link" aria-label="Direct link to Support Cats Effect stacktraces in stacktrace analyzer" title="Direct link to Support Cats Effect stacktraces in stacktrace analyzer">​</a></h2>
 <p>Cats Effect offers <a href="https://typelevel.org/cats-effect/docs/tracing#asynchronous-stack-tracing" target="_blank" rel="noopener noreferrer">asynchronous stack tracing</a> which augments exceptions with additional information.<br>
 <!-- -->Now, Stacktrace Analyzer is able to recognize CE's stacktraces and provide link to location in code. Say no to tedious debugging when you have only stacktrace from the logs!</p>
-<p><img loading="lazy" src="https://imgur.com/5fMvcYd.gif" alt="cats-effect-stacktraces" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://imgur.com/5fMvcYd.gif" alt="cats-effect-stacktraces" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="improve-implement-all-completion-and-code-action">Improve implement all completion and code action<a href="http://scalameta.org/metals/blog/2022/06/03/aluminium#improve-implement-all-completion-and-code-action" class="hash-link" aria-label="Direct link to Improve implement all completion and code action" title="Direct link to Improve implement all completion and code action">​</a></h2>
 <p>Previously, when we invoked the "implement all members" completion and code action, Metals used <code>x$0</code> for Java parameter names. Now, Metals fills these with the correct parameter names.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="improve-rewrite-to-bracesparenthesis-code-action">Improve rewrite to braces/parenthesis code action<a href="http://scalameta.org/metals/blog/2022/06/03/aluminium#improve-rewrite-to-bracesparenthesis-code-action" class="hash-link" aria-label="Direct link to Improve rewrite to braces/parenthesis code action" title="Direct link to Improve rewrite to braces/parenthesis code action">​</a></h2>
 <p>Sometimes, it wasn't clear which code would be affected by <a href="https://scalameta.org/metals/blog/2021/09/06/tungsten#replace--with--in-functions-and-vice-versa" target="_blank" rel="noopener noreferrer">rewrite to braces/parenthesis</a> code action.
 Now, code action's description contains name of the function/method which will be affected by executing action.
-<img loading="lazy" src="https://imgur.com/SkHolsJ.gif" alt="rewrite-braces-parens" class="img_ev3q">
+<img decoding="async" loading="lazy" src="https://imgur.com/SkHolsJ.gif" alt="rewrite-braces-parens" class="img_ev3q">
 Theme: <a href="https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme" target="_blank" rel="noopener noreferrer">One Dark Pro</a></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="automatically-setup-java-home-for-the-bloop-build-server">Automatically setup java home for the Bloop build server<a href="http://scalameta.org/metals/blog/2022/06/03/aluminium#automatically-setup-java-home-for-the-bloop-build-server" class="hash-link" aria-label="Direct link to Automatically setup java home for the Bloop build server" title="Direct link to Automatically setup java home for the Bloop build server">​</a></h2>
 <p>In previous versions of Metals, if users wanted to change the java version of the Bloop build server, they would need to manually update <code>.bloop/bloop.json</code> file in their user home directory. With this version, we ensure that the Bloop Java version will correspond to Metals one to avoid weird compilation issues that could arise from different versions being used.</p>
@@ -5734,11 +5734,11 @@ give Metals a try!</p>
 <li>displays the compilation status of project</li>
 <li>allows to navigate to the build target info for each target</li>
 </ul>
-<p><img loading="lazy" src="https://imgur.com/ByzzlM8.png" alt="new-doctor-view" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://imgur.com/ByzzlM8.png" alt="new-doctor-view" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="create-companion-object-code-action">Create companion object code action<a href="http://scalameta.org/metals/blog/2022/04/26/aluminium#create-companion-object-code-action" class="hash-link" aria-label="Direct link to Create companion object code action" title="Direct link to Create companion object code action">​</a></h2>
 <p>Thanks to the efforts of <a href="https://github.com/zmerr" target="_blank" rel="noopener noreferrer">zmerr</a>, Metals offers a new code action - <code>Create companion object</code>.
 As its name suggests, it can be used to automatically create a companion object for the given class, trait or enum.</p>
-<p><img loading="lazy" src="https://imgur.com/HW5rr5f.gif" alt="create-companion-object-code-action" class="img_ev3q">
+<p><img decoding="async" loading="lazy" src="https://imgur.com/HW5rr5f.gif" alt="create-companion-object-code-action" class="img_ev3q">
 Theme: <a href="https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme" target="_blank" rel="noopener noreferrer">One Dark Pro</a></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="add-status-bar-when-starting-a-debug-session">Add status bar when starting a debug session<a href="http://scalameta.org/metals/blog/2022/04/26/aluminium#add-status-bar-when-starting-a-debug-session" class="hash-link" aria-label="Direct link to Add status bar when starting a debug session" title="Direct link to Add status bar when starting a debug session">​</a></h2>
 <p>Starting a debug session is a complex task, which requires a few steps:</p>
@@ -5749,36 +5749,36 @@ Theme: <a href="https://marketplace.visualstudio.com/items?itemName=zhuangtongfa
 <p>Very often each of these steps takes up to a few seconds in order to complete.
 Until now, the user had no idea what is happening because Metals didn't show any progress indicator.
 <a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a> addressed this problem and added a status bar for each of the steps.</p>
-<p><img loading="lazy" src="https://imgur.com/qh7Jzdy.gif" alt="start-debug-session-status-bar" class="img_ev3q">
+<p><img decoding="async" loading="lazy" src="https://imgur.com/qh7Jzdy.gif" alt="start-debug-session-status-bar" class="img_ev3q">
 Theme: <a href="https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme" target="_blank" rel="noopener noreferrer">One Dark Pro</a></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="ensure-the-no-run-or-test-message-is-shown-to-user">Ensure the "no run or test" message is shown to user.<a href="http://scalameta.org/metals/blog/2022/04/26/aluminium#ensure-the-no-run-or-test-message-is-shown-to-user" class="hash-link" aria-label="Direct link to Ensure the &quot;no run or test&quot; message is shown to user." title="Direct link to Ensure the &quot;no run or test&quot; message is shown to user.">​</a></h2>
 <p>There is a command <code>Run main class or tests in current file</code> which is a convenient way, as name suggests, of running main class:
-<img loading="lazy" src="https://imgur.com/rShZ8L3.gif" alt="run-main" class="img_ev3q">
+<img decoding="async" loading="lazy" src="https://imgur.com/rShZ8L3.gif" alt="run-main" class="img_ev3q">
 Theme: <a href="https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme" target="_blank" rel="noopener noreferrer">One Dark Pro</a></p>
 <p>or running tests in the current file:
-<img loading="lazy" src="https://imgur.com/BtbOubC.gif" alt="run-tests" class="img_ev3q">
+<img decoding="async" loading="lazy" src="https://imgur.com/BtbOubC.gif" alt="run-tests" class="img_ev3q">
 Theme: <a href="https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme" target="_blank" rel="noopener noreferrer">One Dark Pro</a></p>
 <p>It is also possible to just press <code>F5</code> in file and Metals will execute main class or run tests in the current file if no run configuration is defined.</p>
 <p>However, this command was silently failing when there was no class or test to run in the file.
 This is no longer the case, now Metals will display proper error message in this scenario.
-<img loading="lazy" src="https://imgur.com/xda3ApF.gif" alt="no-class-to-run" class="img_ev3q">
+<img decoding="async" loading="lazy" src="https://imgur.com/xda3ApF.gif" alt="no-class-to-run" class="img_ev3q">
 Theme: <a href="https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme" target="_blank" rel="noopener noreferrer">One Dark Pro</a></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="show-better-unnaply-signatures">Show better unnaply signatures<a href="http://scalameta.org/metals/blog/2022/04/26/aluminium#show-better-unnaply-signatures" class="hash-link" aria-label="Direct link to Show better unnaply signatures" title="Direct link to Show better unnaply signatures">​</a></h2>
 <p>Previously, when pattern matching Metals was showing real <code>unnaply</code> method signature, which wasn't very useful.
 Now, Metals properly uses unapply result type to show what types can be matched on.
-<img loading="lazy" src="https://imgur.com/Gzg11YT.png" alt="unnaply-signatures" class="img_ev3q">
+<img decoding="async" loading="lazy" src="https://imgur.com/Gzg11YT.png" alt="unnaply-signatures" class="img_ev3q">
 Theme: <a href="https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme" target="_blank" rel="noopener noreferrer">One Dark Pro</a></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="provide-an-easier-way-to-configure-bloop-settings">Provide an easier way to configure bloop settings<a href="http://scalameta.org/metals/blog/2022/04/26/aluminium#provide-an-easier-way-to-configure-bloop-settings" class="hash-link" aria-label="Direct link to Provide an easier way to configure bloop settings" title="Direct link to Provide an easier way to configure bloop settings">​</a></h2>
 <p>Bloop <a href="https://scalacenter.github.io/bloop/docs/server-reference#custom-java-options" target="_blank" rel="noopener noreferrer">JVM options</a> can be
 configured through a global config file. Thanks to the <a href="https://github.com/zmerr" target="_blank" rel="noopener noreferrer">zmerr</a>, Metals is capable of changing those settings.
 Each modification of <code>Bloop Jvm Properties</code> settings will try to update that global file if possible.
 In case of manually configured settings, Metals will inform user about it and ask for their action.</p>
-<p><img loading="lazy" src="https://imgur.com/Xz2gO0h.gif" alt="update-bloop-settings" class="img_ev3q">
+<p><img decoding="async" loading="lazy" src="https://imgur.com/Xz2gO0h.gif" alt="update-bloop-settings" class="img_ev3q">
 Theme: <a href="https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme" target="_blank" rel="noopener noreferrer">One Dark Pro</a></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="better-munit-support-in-test-explorer">Better MUnit support in Test Explorer<a href="http://scalameta.org/metals/blog/2022/04/26/aluminium#better-munit-support-in-test-explorer" class="hash-link" aria-label="Direct link to Better MUnit support in Test Explorer" title="Direct link to Better MUnit support in Test Explorer">​</a></h2>
 <p>Disclaimer: <strong>this works only when Bloop is a build server</strong></p>
 <p>Test Explorer in Metals is now able to detect some single test cases for <a href="https://scalameta.org/munit/" target="_blank" rel="noopener noreferrer">MUnit</a> test framework.
-<img loading="lazy" src="https://imgur.com/QQMLy6M.png" alt="munit-single-tests" class="img_ev3q">
+<img decoding="async" loading="lazy" src="https://imgur.com/QQMLy6M.png" alt="munit-single-tests" class="img_ev3q">
 Theme: <a href="https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme" target="_blank" rel="noopener noreferrer">One Dark Pro</a></p>
 <p>More information about current MUnit support status can be found at this <a href="https://github.com/scalameta/metals/issues/3771" target="_blank" rel="noopener noreferrer">issue</a>.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="better-sbt-bsp-integration">Better sbt BSP integration<a href="http://scalameta.org/metals/blog/2022/04/26/aluminium#better-sbt-bsp-integration" class="hash-link" aria-label="Direct link to Better sbt BSP integration" title="Direct link to Better sbt BSP integration">​</a></h2>
@@ -6199,16 +6199,16 @@ This brand new feature gathers in one view information such as:</p>
 <li>projects classpath</li>
 <li>and many more</li>
 </ul>
-<p><img loading="lazy" src="https://i.imgur.com/XGyJEsl.gif" alt="display-build-target-info" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/XGyJEsl.gif" alt="display-build-target-info" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="vscode-view-source-jar-files-as-virtual-docs">[vscode] View source jar files as virtual docs<a href="http://scalameta.org/metals/blog/2022/03/08/aluminium#vscode-view-source-jar-files-as-virtual-docs" class="hash-link" aria-label="Direct link to [vscode] View source jar files as virtual docs" title="Direct link to [vscode] View source jar files as virtual docs">​</a></h2>
 <p>Previously, when the client wanted to browse files in source jars source, these files were extracted and saved in the <code>metals/readonly/dependencies</code> directory. With the help of <a href="https://code.visualstudio.com/api/extension-guides/virtual-documents" target="_blank" rel="noopener noreferrer">virtual documents</a> Metals can show you dependencies in readonly files without unnecessary copying.
 Thanks <a href="https://github.com/Arthurm1" target="_blank" rel="noopener noreferrer">Arthurm1</a> for this feature!</p>
 <p>Together with Metals tab, this feature could be used to browse through your dependencies' sources. Just run the <code>Metals: Reveal Active File in Side Bar</code> command and browse through both dependencies and source code seamlessly.</p>
-<p><img loading="lazy" src="https://imgur.com/HsuW8Hn.gif" alt="virtual-docs-navigation" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://imgur.com/HsuW8Hn.gif" alt="virtual-docs-navigation" class="img_ev3q"></p>
 <p>Currently, <code>Metals: Reveal Active File in Side Bar</code> works only for Scala 2.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="improve-completions-for-scala-3">Improve completions for Scala 3<a href="http://scalameta.org/metals/blog/2022/03/08/aluminium#improve-completions-for-scala-3" class="hash-link" aria-label="Direct link to Improve completions for Scala 3" title="Direct link to Improve completions for Scala 3">​</a></h2>
 <p>Completion suggestions for different Scala keywords now work with most of the Scala 3 keywords. This includes for example <code>given</code> and <code>enum</code>, it should also work even if defining things in toplevel without a wrapping class or object.
-<img loading="lazy" src="https://i.imgur.com/4BUxCDK.gif" alt="keyword-completions" class="img_ev3q"></p>
+<img decoding="async" loading="lazy" src="https://i.imgur.com/4BUxCDK.gif" alt="keyword-completions" class="img_ev3q"></p>
 <p>Another improvement for Scala 3 completions is better support for showing scope completions, when writing in an empty line. Previously, we would not show correct completions when no identifier was specified.</p>
 <div class="language-scala codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-scala codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#bfc7d5"><span class="token plain">object Foo:</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">  def bar: Int = 42</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">  def baz: Int =</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    val x = 1</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    val y = 2</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">  @@</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
 <p>In the above situation with cursor position indicated by <code>@@</code> we will now properly show <code>bar</code> and <code>baz</code> completions.</p>
@@ -6216,11 +6216,11 @@ Thanks <a href="https://github.com/Arthurm1" target="_blank" rel="noopener noref
 <p>We're actively working on improving the Test Explorer and making it better with each release.
 From this release, Metals is able to run or debug single test in JUnit4.</p>
 <p>Currently, this feature <strong>only works when using Bloop as your build server</strong>, but in a future release there will be support added for sbt as well.</p>
-<p><img loading="lazy" src="https://imgur.com/FbgSTGr.gif" alt="test-explorer-single-tests" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://imgur.com/FbgSTGr.gif" alt="test-explorer-single-tests" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="vscode-add-mirror-setting-to-help-coursier-set-up">[vscode] Add mirror setting to help coursier set up<a href="http://scalameta.org/metals/blog/2022/03/08/aluminium#vscode-add-mirror-setting-to-help-coursier-set-up" class="hash-link" aria-label="Direct link to [vscode] Add mirror setting to help coursier set up" title="Direct link to [vscode] Add mirror setting to help coursier set up">​</a></h2>
 <p>In order to bootstrap Metals, vscode's extension uses the coursier script which needs access to <code>repo1.maven.org</code>. Previously, this URL couldn't be configured which was causing problems on the machines that didn't have access to repo1.maven.org.</p>
 <p>Thanks to <a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>'s work from now on it's possible to define <code>metals.coursierMirror</code> property.</p>
-<p><img loading="lazy" src="https://imgur.com/iLB079M.png" alt="coursier-mirror" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://imgur.com/iLB079M.png" alt="coursier-mirror" class="img_ev3q"></p>
 <p>More information about mirrors can be found at <a href="https://get-coursier.io/blog/#mirrors" target="_blank" rel="noopener noreferrer">coursier documentation</a>.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="miscellaneous">Miscellaneous<a href="http://scalameta.org/metals/blog/2022/03/08/aluminium#miscellaneous" class="hash-link" aria-label="Direct link to Miscellaneous" title="Direct link to Miscellaneous">​</a></h2>
 <ul>
@@ -6716,7 +6716,7 @@ possible to decompile class files using Lee Benfield's
 <a href="https://www.benf.org/other/cfr/faq.html" target="_blank" rel="noopener noreferrer">CFR (Class File Reader)</a>.</p>
 <p>CFR decompiles class files to java, which is much more readable than using
 <code>javap</code>.</p>
-<p><img loading="lazy" src="https://i.imgur.com/exDFGyT.gif" alt="cfr" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/exDFGyT.gif" alt="cfr" class="img_ev3q"></p>
 <p>In the future this might help in go to definition for jars that do not have a
 corresponding source jar, which is what Metals uses today.</p>
 <p>Editor support: VS Code, nvim-metals, Sublime Text</p>
@@ -6789,7 +6789,7 @@ displays of outputs and diffs than was previously possible.</em></p>
 Lenses. The new UI adds a testing view, which shows all test suites declared in
 project's modules. From this panel it's also possible to run/debug test or to
 navigate to test's definition.</p>
-<p><img loading="lazy" src="https://i.imgur.com/Z3VtS0O.gif" alt="test-explorer" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/Z3VtS0O.gif" alt="test-explorer" class="img_ev3q"></p>
 <p>Code Lenses are still the default in other editors and can be brought back by
 setting <code>"metals.testUserInterface": "Code Lenses"</code></p>
 <p>Editor support: Visual Studio Code</p>
@@ -6802,7 +6802,7 @@ conversions. It wasn't however possible to find their definitions. This
 limitation was mostly due to the lack of proper UI options in different editors.</p>
 <p>Recently, we've managed to work around it by using command links that can be
 rendered in the hover and will bring the user to the right definition.</p>
-<p><img loading="lazy" src="https://i.imgur.com/YyHVmLX.gif" alt="synthetic-def" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/YyHVmLX.gif" alt="synthetic-def" class="img_ev3q"></p>
 <p>Editor support: Visual Studio Code, Sublime Text</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="basic-java-support">Basic Java support<a href="http://scalameta.org/metals/blog/2022/01/12/aluminium#basic-java-support" class="hash-link" aria-label="Direct link to Basic Java support" title="Direct link to Basic Java support">​</a></h2>
 <p>Thanks to the the effort led by <a href="https://github.com/Arthurm1" target="_blank" rel="noopener noreferrer">Arthurm1</a> Metals
@@ -6810,7 +6810,7 @@ now supports a subset of features for Java files and even Java only build
 targets. Currently the biggest missing piece is interactive compiler that would
 allow us to properly support features such as completions, hover or signature
 help.</p>
-<p><img loading="lazy" src="https://i.imgur.com/SJvLTRL.gif" alt="java" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/SJvLTRL.gif" alt="java" class="img_ev3q"></p>
 <p>This was possible thanks to using the Java semanticdb plugin included in
 <a href="https://github.com/sourcegraph/lsif-java" target="_blank" rel="noopener noreferrer">lsif Java project</a> from
 <a href="https://about.sourcegraph.com/" target="_blank" rel="noopener noreferrer">sourcegraph</a> and especially the work by
@@ -6850,7 +6850,7 @@ other language server might be more suitable.</p>
 <p>Due to the other changes in this release the Metals Doctor needed to be reworked
 to better show the different targets that are available in the workspace as well
 as try to explain a bit better what is supported and why it might not work.</p>
-<p><img loading="lazy" src="https://user-images.githubusercontent.com/3807253/147948980-401e3f5a-5130-4f19-b59c-d737d9092208.png" alt="doctor" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://user-images.githubusercontent.com/3807253/147948980-401e3f5a-5130-4f19-b59c-d737d9092208.png" alt="doctor" class="img_ev3q"></p>
 <p>The <code>type</code> column can now have 3 different values <code>Scala &lt;version&gt;</code>,
 <code>sbt &lt;version&gt;</code> or <code>Java</code>. We also replaced some of the columnsm which are now:</p>
 <ul>
