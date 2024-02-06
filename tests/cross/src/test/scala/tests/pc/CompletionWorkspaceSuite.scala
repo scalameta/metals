@@ -891,9 +891,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   check(
-    "nested-pkg".tag(
-      IgnoreScalaVersion.forLessThan("3.2.2").and(IgnoreForScala3CompilerPC)
-    ),
+    "nested-pkg".tag(IgnoreScalaVersion.forLessThan("3.2.2")),
     """|package a:
        |  package c: // some comment
        |    def increment2 = 2
@@ -913,9 +911,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   check(
-    "indent-method".tag(
-      IgnoreScalaVersion.forLessThan("3.2.2").and(IgnoreForScala3CompilerPC)
-    ),
+    "indent-method".tag(IgnoreScalaVersion.forLessThan("3.2.2")),
     """|package a:
        |  val y = 123
        |  given intGiven: Int = 123
@@ -998,7 +994,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "method-name-conflict".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    "method-name-conflict".tag(IgnoreScala2),
     """|package demo
        |
        |object O {
@@ -1023,7 +1019,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   check(
-    "method-label".tag(IgnoreForScala3CompilerPC),
+    "method-label",
     """|package demo
        |
        |object O {
