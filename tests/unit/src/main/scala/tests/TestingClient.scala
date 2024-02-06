@@ -46,12 +46,14 @@ import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.ProgressParams
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.ResourceOperation
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.TextDocumentEdit
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.WorkDoneProgressCreateParams
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
 import tests.MetalsTestEnrichments._
@@ -99,6 +101,9 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   val messageRequests = new ConcurrentLinkedDeque[String]()
   val showMessages = new ConcurrentLinkedQueue[MessageParams]()
   val statusParams = new ConcurrentLinkedQueue[MetalsStatusParams]()
+  val workDoneProgressCreateParams =
+    new ConcurrentLinkedQueue[WorkDoneProgressCreateParams]()
+  val progressParams = new ConcurrentLinkedQueue[ProgressParams]()
   val logMessages = new ConcurrentLinkedQueue[MessageParams]()
   val treeViewChanges = new ConcurrentLinkedQueue[TreeViewDidChangeParams]()
 
@@ -393,6 +398,19 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   override def metalsStatus(params: MetalsStatusParams): Unit = {
     statusParams.add(params)
 
+  }
+
+  override def createProgress(
+      params: WorkDoneProgressCreateParams
+  ): CompletableFuture[Void] = {
+    CompletableFuture.completedFuture[Void] {
+      workDoneProgressCreateParams.add(params)
+      null
+    }
+  }
+
+  override def notifyProgress(params: ProgressParams): Unit = {
+    progressParams.add(params)
   }
 
   override def rawMetalsInputBox(
