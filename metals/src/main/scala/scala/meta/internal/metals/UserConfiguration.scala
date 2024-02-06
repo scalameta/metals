@@ -54,7 +54,7 @@ case class UserConfiguration(
     scalafixRulesDependencies: List[String] = Nil,
     customProjectRoot: Option[String] = None,
     verboseCompilation: Boolean = false,
-    automaticImportBuild: Boolean = false,
+    automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
     scalaCliLauncher: Option[String] = None,
 ) {
 
@@ -341,9 +341,13 @@ object UserConfiguration {
            |about incremental compilation in Zinc.""".stripMargin,
       ),
       UserConfigurationOption(
-        "auto-import-build", "false", "true",
+        "auto-import-build",
+        "off",
+        "all",
         "Import build when changes detected without prompting",
-        "Automatically import builds rather than prompting the user to choose.",
+        """|Automatically import builds rather than prompting the user to choose. "initial" will 
+           |only automatically import a build when a project is first opened, "all" will automate 
+           |build imports after subsequent changes as well.""".stripMargin,
       ),
     )
 
@@ -560,7 +564,11 @@ object UserConfiguration {
       getBooleanKey("verbose-compilation").getOrElse(false)
 
     val autoImportBuilds =
-      getBooleanKey("auto-import-builds").getOrElse(false)
+      getStringKey("auto-import-builds").map(_.toLowerCase()) match {
+        case Some("initial") => AutoImportBuildKind.Initial
+        case Some("all") => AutoImportBuildKind.All
+        case _ => AutoImportBuildKind.Off
+      }
 
     if (errors.isEmpty) {
       Right(
@@ -612,4 +620,11 @@ sealed trait TestUserInterfaceKind
 object TestUserInterfaceKind {
   object CodeLenses extends TestUserInterfaceKind
   object TestExplorer extends TestUserInterfaceKind
+}
+
+sealed trait AutoImportBuildKind
+object AutoImportBuildKind {
+  object Off extends AutoImportBuildKind
+  object Initial extends AutoImportBuildKind
+  object All extends AutoImportBuildKind
 }
