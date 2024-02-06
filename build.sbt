@@ -683,10 +683,14 @@ lazy val mtest = project
   .settings(
     testSettings,
     sharedSettings,
-    libraryDependencies ++= List(
-      "org.scalameta" %% "munit" % V.munit,
-      "io.get-coursier" % "interface" % V.coursierInterfaces,
-    ),
+    libraryDependencies ++=
+      List(
+        "org.scalameta" %% "munit" % {
+          if (scalaVersion.value.startsWith("2.11")) "1.0.0-M10"
+          else V.munit
+        },
+        "io.get-coursier" % "interface" % V.coursierInterfaces,
+      ),
     buildInfoPackage := "tests",
     buildInfoObject := "BuildInfoVersions",
     buildInfoKeys := Seq[BuildInfoKey](
