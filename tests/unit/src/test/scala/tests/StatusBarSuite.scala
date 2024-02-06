@@ -10,6 +10,7 @@ import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.StatusBarConfig
+
 import org.eclipse.lsp4j.WorkDoneProgressBegin
 
 class StatusBarSuite extends BaseSuite {
