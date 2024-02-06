@@ -181,6 +181,9 @@ final class ClientConfiguration(
   def isDoctorVisibilityProvider(): Boolean =
     initializationOptions.doctorVisibilityProvider.getOrElse(false)
 
+  def autoImportBuilds(): AutoImportBuildKind =
+    initializationOptions.autoImportBuild.getOrElse(AutoImportBuildKind.Off)
+
   def codeLenseRefreshSupport(): Boolean = {
     val codeLenseRefreshSupport: Option[Boolean] = for {
       capabilities <- clientCapabilities

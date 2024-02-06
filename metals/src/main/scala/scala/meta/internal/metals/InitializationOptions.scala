@@ -50,6 +50,7 @@ import org.eclipse.{lsp4j => l}
  *                            the output, you can enable this to strip them.
  * @param doctorVisibilityProvider if the clients implements `metals/doctorVisibilityDidChange`
  * @param bspStatusBarProvider if the client supports `metals/status` with "bsp" status type
+ * @param autoImportBuild whether to automatically import the "initial" or "all" builds
  */
 final case class InitializationOptions(
     compilerOptions: CompilerInitializationOptions,
@@ -79,6 +80,7 @@ final case class InitializationOptions(
     disableColorOutput: Option[Boolean],
     doctorVisibilityProvider: Option[Boolean],
     bspStatusBarProvider: Option[String],
+    autoImportBuild: Option[AutoImportBuildKind],
 ) {
   def doctorFormat: Option[DoctorFormat.DoctorFormat] =
     doctorProvider.flatMap(DoctorFormat.fromString)
@@ -95,6 +97,7 @@ object InitializationOptions {
 
   val Default: InitializationOptions = InitializationOptions(
     CompilerInitializationOptions.default,
+    None,
     None,
     None,
     None,
@@ -179,6 +182,9 @@ object InitializationOptions {
       doctorVisibilityProvider =
         jsonObj.getBooleanOption("doctorVisibilityProvider"),
       bspStatusBarProvider = jsonObj.getStringOption("bspStatusBarProvider"),
+      autoImportBuild = jsonObj
+        .getStringOption("autoImportBuild")
+        .flatMap(AutoImportBuildKind.fromString),
     )
   }
 
@@ -272,6 +278,21 @@ object CommandHTMLFormat {
     str.toLowerCase match {
       case Sublime.value => Some(Sublime)
       case VSCode.value => Some(VSCode)
+      case _ => None
+    }
+  }
+}
+
+sealed trait AutoImportBuildKind
+object AutoImportBuildKind {
+  object Off extends AutoImportBuildKind
+  object Initial extends AutoImportBuildKind
+  object All extends AutoImportBuildKind
+
+  def fromString(str: String): Option[AutoImportBuildKind] = {
+    str.toLowerCase match {
+      case "initial" => Some(Initial)
+      case "all" => Some(All)
       case _ => None
     }
   }
