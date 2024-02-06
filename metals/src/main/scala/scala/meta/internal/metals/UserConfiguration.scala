@@ -54,7 +54,7 @@ case class UserConfiguration(
     scalafixRulesDependencies: List[String] = Nil,
     customProjectRoot: Option[String] = None,
     verboseCompilation: Boolean = false,
-    automaticInitialImportBuild: Boolean = false,
+    automaticImportBuild: Boolean = false,
     scalaCliLauncher: Option[String] = None,
 ) {
 
@@ -341,8 +341,8 @@ object UserConfiguration {
            |about incremental compilation in Zinc.""".stripMargin,
       ),
       UserConfigurationOption(
-        "auto-initial-import-build", "false", "true",
-        "Import build on first open without prompting",
+        "auto-import-build", "false", "true",
+        "Import build when changes detected without prompting",
         "Automatically import builds rather than prompting the user to choose.",
       ),
     )
@@ -559,8 +559,8 @@ object UserConfiguration {
     val verboseCompilation =
       getBooleanKey("verbose-compilation").getOrElse(false)
 
-    val autoInitialImportBuilds =
-      getBooleanKey("auto-initial-import-builds").getOrElse(false)
+    val autoImportBuilds =
+      getBooleanKey("auto-import-builds").getOrElse(false)
 
     if (errors.isEmpty) {
       Right(
@@ -593,7 +593,7 @@ object UserConfiguration {
           scalafixRulesDependencies,
           customProjectRoot,
           verboseCompilation,
-          autoInitialImportBuilds,
+          autoImportBuilds,
         )
       )
     } else {
