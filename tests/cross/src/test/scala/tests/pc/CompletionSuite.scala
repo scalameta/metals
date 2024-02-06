@@ -578,7 +578,22 @@ class CompletionSuite extends BaseCompletionSuite {
        |XPathNodes - javax.xml.xpath
        |PathMatcher - java.nio.file
        |XPathResult - org.w3c.dom.xpath
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.11.12" ->
+        """|Path - java.nio.file
+           |Paths - java.nio.file
+           |XPath - javax.xml.xpath
+           |Path2D - java.awt.geom
+           |CertPath - java.security.cert
+           |TreePath - javax.swing.tree
+           |XPathType - javax.xml.crypto.dsig.spec
+           |LayoutPath - java.awt.font
+           |XPathNodes - javax.xml.xpath
+           |PathMatcher - java.nio.file
+           |GeneralPath - java.awt.geom
+           |""".stripMargin
+    )
   )
 
   check(
