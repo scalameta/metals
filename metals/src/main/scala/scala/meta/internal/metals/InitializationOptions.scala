@@ -285,9 +285,9 @@ object CommandHTMLFormat {
 
 sealed trait AutoImportBuildKind
 object AutoImportBuildKind {
-  object Off extends AutoImportBuildKind
-  object Initial extends AutoImportBuildKind
-  object All extends AutoImportBuildKind
+  case object Off extends AutoImportBuildKind
+  case object Initial extends AutoImportBuildKind
+  case object All extends AutoImportBuildKind
 
   def fromString(str: String): Option[AutoImportBuildKind] = {
     str.toLowerCase match {
