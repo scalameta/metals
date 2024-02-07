@@ -11,7 +11,7 @@ import org.eclipse.lsp4j.debug.SetBreakpointsArguments
  * - a file in a build target SourceItem
  * - a file in a build target DependencySourcesItem
  *
- * If it is a file in a DependencySourcesItem, the [[MetalsDebugAdapter2x]] maps it to
+ * If it is a file in a DependencySourcesItem, the [[MetalsDebugAdapter]] maps it to
  * its corresponding file in the .metals/readonly/dependencies/ folder.
  */
 private[debug] class MetalsDebugAdapter(sourcePathAdapter: SourcePathAdapter) {
