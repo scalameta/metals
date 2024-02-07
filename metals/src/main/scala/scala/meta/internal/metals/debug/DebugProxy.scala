@@ -34,6 +34,7 @@ import scala.meta.internal.metals.debug.DebugProtocol.SetBreakpointRequest
 import scala.meta.internal.metals.debug.DebugProxy._
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.debug.Breakpoint
 import org.eclipse.lsp4j.debug.CompletionsResponse
@@ -45,8 +46,6 @@ import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugResponseMessage
 import org.eclipse.lsp4j.jsonrpc.messages.Message
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
-import scala.util.Success
-import scala.util.Failure
 
 private[debug] final class DebugProxy(
     sessionName: String,
@@ -59,6 +58,7 @@ private[debug] final class DebugProxy(
     statusBar: StatusBar,
     sourceMapper: SourceMapper,
     compilations: Compilations,
+    targets: Seq[BuildTargetIdentifier],
 )(implicit ec: ExecutionContext) {
   private val exitStatus = Promise[ExitStatus]()
   @volatile private var outputTerminated = false
@@ -190,23 +190,21 @@ private[debug] final class DebugProxy(
     case HotCodeReplace(req) =>
       scribe.info("Hot code replace triggered")
       compilations
-        .compileAll()
-        .onComplete { res =>
-          res match {
-            case _: Success[?] => server.send(req)
-            case Failure(e) =>
-              val res = new DebugResponseMessage
-              res.setId(req.getId)
-              res.setMethod(req.getMethod)
-              res.setError(
-                new ResponseError(
-                  ResponseErrorCode.InternalError,
-                  s"Failed to compile ${e.getLocalizedMessage()}",
-                  null,
-                )
+        .compileTargets(targets)
+        .onComplete {
+          case _: Success[?] => server.send(req)
+          case Failure(e) =>
+            val res = new DebugResponseMessage
+            res.setId(req.getId)
+            res.setMethod(req.getMethod)
+            res.setError(
+              new ResponseError(
+                ResponseErrorCode.InternalError,
+                s"Failed to compile ${e.getLocalizedMessage()}",
+                null,
               )
-              client.consume(res)
-          }
+            )
+            client.consume(res)
         }
 
     case message => server.send(message)
@@ -317,6 +315,7 @@ private[debug] object DebugProxy {
       status: StatusBar,
       sourceMapper: SourceMapper,
       compilations: Compilations,
+      targets: Seq[BuildTargetIdentifier],
   )(implicit ec: ExecutionContext): Future[DebugProxy] = {
     for {
       server <- connectToServer()
@@ -343,6 +342,7 @@ private[debug] object DebugProxy {
       status,
       sourceMapper,
       compilations,
+      targets,
     )
   }
 
