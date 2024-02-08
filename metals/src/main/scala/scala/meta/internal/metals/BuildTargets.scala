@@ -240,32 +240,65 @@ final class BuildTargets private (
     }
   }
 
+  /**
+   * Returns all build targets containing this source file.
+   */
+  def inverseSourcesAll(
+      source: AbsolutePath
+  ): List[BuildTargetIdentifier] = {
+    val buildTargets = sourceBuildTargets(source)
+    val orSbtBuildTarget =
+      buildTargets.getOrElse(sbtBuildScalaTarget(source).toIterable)
+    if (orSbtBuildTarget.isEmpty) {
+      inferBuildTargets(source)
+    } else orSbtBuildTarget.toList
+  }
+
   def inverseSourcesBsp(
       source: AbsolutePath
   )(implicit ec: ExecutionContext): Future[Option[BuildTargetIdentifier]] = {
     inverseSources(source) match {
       case None =>
-        val identifier = new TextDocumentIdentifier(
-          source.toTextDocumentIdentifier.getUri()
-        )
-        val params = new InverseSourcesParams(identifier)
-        val connections =
-          data.fromIterators(_.targetToConnection.values.toIterator).distinct
-        val queries = connections.map { connection =>
-          connection
-            .buildTargetInverseSources(params)
-            .map(_.getTargets.asScala.toList)
-        }
-        Future.sequence(queries).map { results =>
-          val target = results.flatten.maxByOption(buildTargetsOrder)
-          for {
-            tgt <- target
-            data <- targetData(tgt)
-          } data.addSourceItem(source, tgt)
-          target
+        bspInverseSources(source).map { inverseSourcesAll =>
+          if (inverseSourcesAll.isEmpty) None
+          else Some(inverseSourcesAll.maxBy(buildTargetsOrder))
         }
       case some =>
         Future.successful(some)
+    }
+  }
+
+  def inverseSourcesBspAll(
+      source: AbsolutePath
+  )(implicit ec: ExecutionContext): Future[List[BuildTargetIdentifier]] = {
+    inverseSourcesAll(source) match {
+      case Nil => bspInverseSources(source).map(_.toList)
+      case some =>
+        Future.successful(some)
+    }
+  }
+
+  private def bspInverseSources(
+      source: AbsolutePath
+  )(implicit ec: ExecutionContext) = {
+    val identifier = new TextDocumentIdentifier(
+      source.toTextDocumentIdentifier.getUri()
+    )
+    val params = new InverseSourcesParams(identifier)
+    val connections =
+      data.fromIterators(_.targetToConnection.values.toIterator).distinct
+    val queries = connections.map { connection =>
+      connection
+        .buildTargetInverseSources(params)
+        .map(_.getTargets.asScala.toList)
+    }
+    Future.sequence(queries).map { results =>
+      val target = results.flatten
+      for {
+        tgt <- target
+        data <- targetData(tgt)
+      } data.addSourceItem(source, tgt)
+      target
     }
   }
 
@@ -306,14 +339,14 @@ final class BuildTargets private (
    *
    * This approach is not glamorous but it seems to work reasonably well.
    */
-  def inferBuildTarget(
+  def inferBuildTargets(
       source: AbsolutePath
-  ): Option[BuildTargetIdentifier] = {
+  ): List[BuildTargetIdentifier] = {
     if (source.isJarFileSystem) {
       for {
-        jarName <- source.jarPath.map(_.filename)
-        sourceJarFile <- sourceJarFile(jarName)
-        buildTargetId <- inverseDependencySource(sourceJarFile).headOption
+        jarName <- source.jarPath.map(_.filename).toList
+        sourceJarFile <- sourceJarFile(jarName).toList
+        buildTargetId <- inverseDependencySource(sourceJarFile)
       } yield buildTargetId
     } else {
       val readonly = workspace.resolve(Directories.readonly)
@@ -323,16 +356,18 @@ final class BuildTargets private (
           names match {
             case Directories.dependenciesName :: jarName :: _ =>
               // match build target by source jar name
-              sourceJarFile(jarName)
-                .flatMap(inverseDependencySource(_).headOption)
-            case _ => None
+              sourceJarFile(jarName).toList
+                .flatMap(inverseDependencySource(_))
+            case _ => Nil
           }
         case None =>
           // else it can be a source file inside a jar
-          val fromJar = jarPath(source)
+          val fromJar = jarPath(source).toList
             .flatMap { jar =>
-              allBuildTargetIdsInternal.find { case (_, id) =>
-                targetJarClasspath(id).exists(_.contains(jar))
+              allBuildTargetIdsInternal.collect {
+                case pair @ (_, id)
+                    if targetJarClasspath(id).exists(_.contains(jar)) =>
+                  pair
               }
             }
           fromJar.map { case (data0, id) =>
@@ -342,6 +377,14 @@ final class BuildTargets private (
       }
     }
   }
+
+  def inferBuildTarget(
+      source: AbsolutePath
+  ): Option[BuildTargetIdentifier] =
+    inferBuildTargets(source) match {
+      case Nil => None
+      case nonEmpty => Some(nonEmpty.maxBy(buildTargetsOrder))
+    }
 
   def findByDisplayName(name: String): Option[BuildTarget] = {
     data
