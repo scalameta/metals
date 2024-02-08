@@ -16,6 +16,8 @@ trait CompilerWrapper[Reporter, Compiler] {
 
   def compiler(changeFiles: List[VirtualFileParams]): Compiler
 
+  def compiler(): Compiler = compiler(Nil)
+
   def presentationCompilerThread: Option[Thread]
 
 }

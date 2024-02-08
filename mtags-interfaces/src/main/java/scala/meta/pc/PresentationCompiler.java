@@ -161,12 +161,12 @@ public abstract class PresentationCompiler {
 			List<Integer> argIndices);
 
 	/**
-	 * The text contents of the fiven file changed.
+	 * The text contents of the given file changed.
 	 */
 	public abstract CompletableFuture<List<Diagnostic>> didChange(VirtualFileParams params);
 
 	/**
-	 * Returns decorations for missing type adnotations, inferred type parameters, implicit parameters and conversions.
+	 * Returns decorations for missing type annotations, inferred type parameters, implicit parameters and conversions.
 	 */
 	public CompletableFuture<List<InlayHint>> inlayHints(InlayHintsParams params) {
 		return CompletableFuture.completedFuture(Collections.emptyList());
@@ -218,14 +218,14 @@ public abstract class PresentationCompiler {
 	/**
 	 * Clean the symbol table and other mutable state in the compiler.
 	 */
-	public abstract void restart(Boolean successfulCompilation);
+	public void restart(Boolean successfulCompilation) {
+		restart();
+	}
 
 	/**
 	 * Clean the symbol table and other mutable state in the compiler.
 	 */
-	public void restart(){
-		restart(true);
-	}
+	public abstract void restart();
 
 	/**
 	 * Set logger level for reports.

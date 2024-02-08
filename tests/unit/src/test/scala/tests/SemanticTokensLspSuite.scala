@@ -254,6 +254,57 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
         |""".stripMargin,
   )
 
+  test("new-changes") {
+    val expected =
+      """|<<package>>/*keyword*/ <<a>>/*namespace*/
+         |<<object>>/*keyword*/ <<Main>>/*class*/ {
+         |  <<def>>/*keyword*/ <<a>>/*method,definition*/: <<String>>/*type*/ = {
+         |    <<val>>/*keyword*/ <<b>>/*variable,definition,readonly*/ = <<3>>/*number*/
+         |    <<b>>/*variable,readonly*/ <<+>>/*method,deprecated,abstract*/ <<4>>/*number*/
+         |""".stripMargin
+    val fileContent = expected.replaceAll(raw"<<|>>|/\*.*?\*/", "")
+    for {
+      _ <- initialize(
+        s"""/metals.json
+            |{"a":{}}
+            |/a/src/main/scala/a/Main.scala
+            |
+            |/a/src/main/scala/a/OtherFile.scala
+            |package a
+            |object A
+            |""".stripMargin,
+        expectError = true,
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "enable-semantic-highlighting": true
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didChange("a/src/main/scala/a/Main.scala")(_ => fileContent)
+      _ <- server.didSave("a/src/main/scala/a/Main.scala")(identity)
+      _ <- server.didOpen("a/src/main/scala/a/OtherFile.scala")
+      // triggers outline compile on `Main.scala`
+      _ <- server.assertSemanticHighlight(
+        "a/src/main/scala/a/OtherFile.scala",
+        """|<<package>>/*keyword*/ <<a>>/*namespace*/
+           |<<object>>/*keyword*/ <<A>>/*class*/
+           |""".stripMargin,
+        """|package a
+           |object A
+           |""".stripMargin,
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      // tests if we do full compile after outline compile
+      _ <- server.assertSemanticHighlight(
+        "a/src/main/scala/a/Main.scala",
+        expected,
+        fileContent,
+      )
+    } yield ()
+  }
+
   def check(
       name: TestOptions,
       expected: String,

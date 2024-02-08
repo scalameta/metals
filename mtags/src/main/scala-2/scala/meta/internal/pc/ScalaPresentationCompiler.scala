@@ -2,8 +2,8 @@ package scala.meta.internal.pc
 
 import java.io.File
 import java.net.URI
+import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util
 import java.util.Optional
 import java.util.concurrent.CompletableFuture
@@ -19,18 +19,21 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
+import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.EmptyReportContext
+import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.AutoImportsResult
+import scala.meta.pc.CompilerFiles
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.DisplayableException
 import scala.meta.pc.HoverSignature
@@ -43,7 +46,6 @@ import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SyntheticDecoration
 import scala.meta.pc.SyntheticDecorationsParams
-import scala.meta.pc.CompilerFiles
 import scala.meta.pc.VirtualFileParams
 import scala.meta.pc.{PcSymbolInformation => IPcSymbolInformation}
 
@@ -56,9 +58,6 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
-import scala.util.control.NonFatal
-import scala.meta.internal.metals.Report
-import java.nio.file.Files
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -149,8 +148,8 @@ case class ScalaPresentationCompiler(
     compilerAccess.shutdown()
   }
 
+  def restart(): Unit = restart(true)
   override def restart(wasSuccesful: java.lang.Boolean): Unit = {
-    pprint.log(wasSuccesful)
     compilerAccess
       .withNonInterruptableCompiler(None)(
         (),
