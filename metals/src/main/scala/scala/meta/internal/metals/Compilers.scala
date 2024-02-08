@@ -102,8 +102,7 @@ class Compilers(
 
   import compilerConfiguration._
 
-  // TODO
-  // val wasPreviouslyCompiledSuccesfully = new ConcurrentHashSet[BuildTargetIdentifier]
+  val wasPreviouslyCompiledSuccessfully: ju.Set[BuildTargetIdentifier] = ConcurrentHashSet.empty[BuildTargetIdentifier]
 
   class TargetCompilerFiles(targetId: BuildTargetIdentifier)
       extends CompilerFiles {
@@ -259,16 +258,17 @@ class Compilers(
   def didCompile(report: CompileReport): Unit = {
     if (report.getErrors > 0) {
       buildTargetPCFromCache(report.getTarget).foreach(_.restart(false))
+      wasPreviouslyCompiledSuccessfully.remove(report.getTarget)
     } else {
       // Restart PC for all build targets that depend on this target since the classfiles
       // may have changed.
 
-      // TODO should mark as succesful
+      wasPreviouslyCompiledSuccessfully.add(report.getTarget)
       for {
         target <- buildTargets.allInverseDependencies(report.getTarget)
         compiler <- buildTargetPCFromCache(target)
       } {
-        compiler.restart(true)
+        compiler.restart(wasPreviouslyCompiledSuccessfully.contains(target))
       }
     }
   }

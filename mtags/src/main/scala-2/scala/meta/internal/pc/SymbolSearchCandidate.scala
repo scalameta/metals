@@ -1,8 +1,9 @@
 package scala.meta.internal.pc
 
+import java.nio.file.Path
+
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.semanticdb.Scala._
-import java.nio.file.Path
 
 sealed abstract class SymbolSearchCandidate {
   final def nameLength(): Int = Fuzzy.nameLength(nameString)

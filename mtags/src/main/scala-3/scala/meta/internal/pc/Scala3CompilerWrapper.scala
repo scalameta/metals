@@ -1,14 +1,13 @@
 package scala.meta.internal.pc
 
-import dotty.tools.dotc.reporting.StoreReporter
 import scala.meta.pc.VirtualFileParams
+
+import dotty.tools.dotc.reporting.StoreReporter
 
 class Scala3CompilerWrapper(driver: MetalsDriver)
     extends CompilerWrapper[StoreReporter, MetalsDriver]:
 
   override def compiler(paths: List[VirtualFileParams]): MetalsDriver = driver
-
-  def compiler(): MetalsDriver = compiler(Nil)
 
   override def resetReporter(): Unit =
     val ctx = driver.currentCtx

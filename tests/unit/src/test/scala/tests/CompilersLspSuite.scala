@@ -1,8 +1,9 @@
 package tests
 
 import scala.concurrent.Future
-import scala.meta.internal.metals.codeactions.ImportMissingSymbol
+
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
+import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 
 class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
   test("reset-pc") {
@@ -108,7 +109,7 @@ class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
            |}
            |""".stripMargin,
       )
-      // change the neame of the object and test again
+      // change the name of the object and test again
       _ <-
         server.didChange("a/src/main/scala/b/B.scala") { _ =>
           """|package b
@@ -225,6 +226,63 @@ class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
            |  def completeThisUniqueName(): String = 42
            |}
            |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("never-compiling-reverse-order".ignore) {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |class A {
+          |  // @@
+          |  def completeThisUniqueName(): String = 42
+          |}
+          |/a/src/main/scala/b/B.scala
+          |package b
+          |trait BTrait {
+          |  def completeThisUniqueName3() = 42
+          |}
+          |class B
+          |/a/src/main/scala/c/C.scala
+          |package c
+          |import b.BTrait
+          |import b.B
+          |
+          |object UniqueObject extends BTrait {
+          |  def completeThisUniqueName() = 42
+          |  def completeThisUniqueName2(b: B): String = 42
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ <- server.didOpen("a/src/main/scala/b/B.scala")
+      _ <- server.didOpen("a/src/main/scala/c/C.scala")
+      _ = assertNoDiff(
+        server.client.workspaceDiagnostics,
+        """|a/src/main/scala/a/A.scala:4:42: error: type mismatch;
+           | found   : Int(42)
+           | required: String
+           |  def completeThisUniqueName(): String = 42
+           |                                         ^^
+           |a/src/main/scala/c/C.scala:7:47: error: type mismatch;
+           | found   : Int(42)
+           | required: String
+           |  def completeThisUniqueName2(b: B): String = 42
+           |                                              ^^
+           |""".stripMargin,
+      )
+      _ <- assertCompletion(
+        "c.UniqueObject.completeThisUniqueNa@@",
+        """|completeThisUniqueName(): Int
+           |completeThisUniqueName2(b: B): String
+           |completeThisUniqueName3(): Int""".stripMargin,
       )
     } yield ()
   }

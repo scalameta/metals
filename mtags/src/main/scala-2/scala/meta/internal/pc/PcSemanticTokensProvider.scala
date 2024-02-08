@@ -69,7 +69,7 @@ final class PcSemanticTokensProvider(
       }
     }
   }
-  def provide(): List[Node] =
+  def provide(): List[Node] = {
     Collector
       .result()
       .flatten
@@ -77,6 +77,7 @@ final class PcSemanticTokensProvider(
         if (n1.start() == n2.start()) n1.end() < n2.end()
         else n1.start() < n2.start()
       )
+  }
 
   def makeNode(
       sym: Collector.compiler.Symbol,

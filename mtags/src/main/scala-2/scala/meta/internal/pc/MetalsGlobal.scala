@@ -5,6 +5,7 @@ import java.util
 import java.util.logging.Logger
 import java.{util => ju}
 
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.language.implicitConversions
 import scala.reflect.internal.util.Position
@@ -30,7 +31,6 @@ import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 
 import org.eclipse.{lsp4j => l}
-import scala.collection.concurrent.TrieMap
 
 class MetalsGlobal(
     settings: Settings,
@@ -67,7 +67,10 @@ class MetalsGlobal(
 
   val logger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)
 
-  val richCompilationCache = TrieMap.empty[String, RichCompilationUnit]
+  val richCompilationCache: TrieMap[String,RichCompilationUnit] = TrieMap.empty[String, RichCompilationUnit]
+
+  // for those paths units were
+  val fullyCompiled: mutable.Set[String] = mutable.Set.empty[String]
 
   class MetalsInteractiveAnalyzer(val global: compiler.type)
       extends InteractiveAnalyzer {
@@ -175,7 +178,7 @@ class MetalsGlobal(
    *
    * @param symbol symbol to check
    */
-  def isOutlinedFile(path: Path) = {
+  def isOutlinedFile(path: Path): Boolean = {
     richCompilationCache.contains(path.toUri().toString())
   }
 
@@ -657,28 +660,27 @@ class MetalsGlobal(
 
   def CURSOR = "_CURSOR_"
 
-  def runOutline(files: List[m.pc.VirtualFileParams]) = {
-    this.settings.Youtline.value = true
+  def runOutline(files: List[m.pc.VirtualFileParams]): Unit = {
+    compiler.settings.Youtline.value = true
     files.foreach { params =>
       val unit = compiler.addCompilationUnit(
         params.text(),
         params.uri.toString(),
-        cursor = None
+        cursor = None,
+        isOutline = true
       )
       compiler.typeCheck(unit)
-      compiler.settings.Youtline.value = false
-
-      // TODO make sure we recompile afterwards correctly
-      // TODO make sure it's cleared
       compiler.richCompilationCache.put(params.uri().toString(), unit)
     }
+    compiler.settings.Youtline.value = false
   }
 
   def addCompilationUnit(
       code: String,
       filename: String,
       cursor: Option[Int],
-      cursorName: String = CURSOR
+      cursorName: String = CURSOR,
+      isOutline: Boolean = false,
   ): RichCompilationUnit = {
     val codeWithCursor = cursor match {
       case Some(offset) =>
@@ -697,15 +699,21 @@ class MetalsGlobal(
           if util.Arrays.equals(
             value.source.content,
             richUnit.source.content
-          ) =>
+          ) && (isOutline || fullyCompiled(filename)) =>
         value
       case _ =>
         unitOfFile(richUnit.source.file) = richUnit
+        if(!isOutline) {
+          fullyCompiled += filename
+        } else {
+          fullyCompiled -= filename
+        }
+
         richUnit
     }
   }
 
-  // // Needed for 2.11 where `Name` doesn't extend CharSequence.
+  // Needed for 2.11 where `Name` doesn't extend CharSequence.
   implicit def nameToCharSequence(name: Name): CharSequence =
     name.toString
 

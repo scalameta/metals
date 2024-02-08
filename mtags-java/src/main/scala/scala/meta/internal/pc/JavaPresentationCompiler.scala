@@ -44,7 +44,6 @@ case class JavaPresentationCompiler(
     workspace: Option[Path] = None
 ) extends PresentationCompiler {
 
-  override def restart(x$1: lang.Boolean): Unit = ()
   private val javaCompiler = new JavaMetalsGlobal(search, config, classpath)
 
   override def complete(
