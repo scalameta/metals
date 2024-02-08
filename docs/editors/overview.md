@@ -167,7 +167,7 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center">❌</td>
+    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Formatting</td>
@@ -191,7 +191,7 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center">❌</td>
+    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Metals Extensions</td>
