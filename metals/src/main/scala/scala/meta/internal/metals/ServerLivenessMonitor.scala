@@ -8,7 +8,9 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
 
 import scala.meta.internal.bsp.ConnectionBspStatus
+import scala.meta.internal.metals.scalacli.ScalaCli
 
+import ch.epfl.scala.bsp4j.CompileParams
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.messages.Message
 import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage
@@ -29,8 +31,8 @@ class RequestMonitorImpl(bspStatus: ConnectionBspStatus, serverName: String)
     new MessageConsumer {
       def consume(message: Message): Unit = {
         message match {
-          // we don't count the `buildTargets` request, since it's the one used for pinging
-          case m: RequestMessage if m.getMethod() != "workspace/buildTargets" =>
+          // we don't count the `buildTarget/compile` request with empty targets, since it's the one used for pinging
+          case m: RequestMessage if !isPing(m) =>
             outgoingMessage()
           case _: ResponseMessage => incomingMessage()
           case _: NotificationMessage => incomingMessage()
@@ -40,6 +42,13 @@ class RequestMonitorImpl(bspStatus: ConnectionBspStatus, serverName: String)
       }
 
     }
+
+  private def isPing(message: RequestMessage): Boolean =
+    if (serverName == BloopServers.name || ScalaCli.names(serverName))
+      message.getMethod() == "workspace/buildTargets"
+    else
+      message.getMethod() == "buildTarget/compile" &&
+      message.getParams().asInstanceOf[CompileParams].getTargets().isEmpty()
 
   private def outgoingMessage() = lastOutgoing_ = now
   private def incomingMessage(): Unit = {

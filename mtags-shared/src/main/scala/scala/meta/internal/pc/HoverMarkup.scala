@@ -18,9 +18,16 @@ object HoverMarkup {
       expressionType: String,
       optSymbolSignature: Option[String],
       docstring: String,
-      forceExpressionType: Boolean = false
+      forceExpressionType: Boolean = false,
+      contextInfo: List[String] = Nil
   ): String = {
     val markdown = new StringBuilder()
+    if (contextInfo.nonEmpty) {
+      markdown
+        .append("```scala\n")
+        .append(contextInfo.mkString("\n"))
+        .append("\n```\n\n")
+    }
     if (forceExpressionType || optSymbolSignature.isEmpty) {
       markdown
         .append(

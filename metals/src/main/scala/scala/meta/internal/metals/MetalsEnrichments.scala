@@ -244,8 +244,12 @@ object MetalsEnrichments
 
     def withTimeout(length: Int, unit: TimeUnit)(implicit
         ec: ExecutionContext
-    ): Future[A] = {
-      Future(Await.result(future, FiniteDuration(length, unit)))
+    ): Future[A] = withTimeout(FiniteDuration(length, unit))
+
+    def withTimeout(
+        duration: FiniteDuration
+    )(implicit ec: ExecutionContext): Future[A] = {
+      Future(Await.result(future, duration))
     }
 
     def onTimeout(length: Int, unit: TimeUnit)(
@@ -376,10 +380,9 @@ object MetalsEnrichments
       }
     }
 
-    def isDependencySource(workspace: AbsolutePath): Boolean = {
+    def isDependencySource(workspace: AbsolutePath): Boolean =
       (isLocalFileSystem(workspace) &&
         isInReadonlyDirectory(workspace)) || isJarFileSystem
-    }
 
     def isWorkspaceSource(workspace: AbsolutePath): Boolean =
       isLocalFileSystem(workspace) &&
@@ -396,11 +399,13 @@ object MetalsEnrichments
       path.toNIO.startsWith(
         workspace.resolve(Directories.readonly).toNIO
       )
+
     def isSrcZipInReadonlyDirectory(workspace: AbsolutePath): Boolean = {
       path.toNIO.startsWith(
         workspace.resolve(Directories.dependencies.resolve("src.zip")).toNIO
       )
     }
+
     def toRelativeInside(prefix: AbsolutePath): Option[RelativePath] = {
       // windows throws an exception on toRelative when on different drives
       if (path.toNIO.getRoot() != prefix.toNIO.getRoot())
@@ -526,6 +531,23 @@ object MetalsEnrichments
     def isJar: Boolean = {
       val filename = path.toNIO.getFileName.toString
       filename.endsWith(".jar") || filename.endsWith(".srcjar")
+    }
+
+    /**
+     * Bazelbsp provides us with a path to a jar.
+     * SemanticDB files are store in the same directory as the jar file.
+     *
+     * Example: `/path/hello.jar -> /path/_semanticdb/hello`
+     */
+    def resolveIfJar: AbsolutePath = {
+      if (path.isJar) {
+        val filename = path.toNIO.getFileName.toString
+        val filename0 = filename.stripSuffix(".jar").stripSuffix(".srcjar")
+        val targetroot = path.parent.resolve(s"_semanticdb/$filename0")
+        targetroot
+      } else {
+        path
+      }
     }
 
     def isZip: Boolean = {
@@ -723,6 +745,11 @@ object MetalsEnrichments
     def lineAtIndex(index: Int): Int =
       indexToLspPosition(index).getLine
 
+    def bazelEscapedDisplayName: String = {
+      if (value.contains('/'))
+        value.replace('/', ':')
+      else value
+    }
   }
 
   implicit class XtensionTextDocumentSemanticdb(textDocument: s.TextDocument) {
@@ -1247,6 +1274,6 @@ object MetalsEnrichments
    * anything that is ESC (U+001B) plus [
    */
   def filterANSIColorCodes(str: String): String =
-    str.replaceAll("\u001B\\[[;\\d]*m", "")
+    str.replaceAll("\u001b\\[1A\u001b\\[K|\u001B\\[[;\\d]*m", "")
 
 }

@@ -111,7 +111,17 @@ case class ScalaPresentationCompiler(
     new ScalaCompilerAccess(
       config,
       sh,
-      () => new ScalaCompilerWrapper(newCompiler())
+      () => new ScalaCompilerWrapper(newCompiler()),
+      { () =>
+        s"""|Scala version: $scalaVersion
+            |Classpath:
+            |${classpath
+             .map(path => s"$path [${if (path.exists) "exists" else "missing"} ]")
+             .mkString(", ")}
+            |Options:
+            |${options.mkString(" ")}
+            |""".stripMargin
+      }
     )(
       ec,
       reportContex

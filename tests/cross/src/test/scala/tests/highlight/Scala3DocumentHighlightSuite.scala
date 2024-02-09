@@ -268,7 +268,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
   )
 
   check(
-    "type-params-in-enum".tag(IgnoreForScala3CompilerPC),
+    "type-params-in-enum",
     """|enum MyOption[+<<A@@A>>]:
        |  case MySome(value: <<AA>>)
        |  case MyNone
@@ -276,7 +276,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
   )
 
   check(
-    "type-params-in-enum2".tag(IgnoreForScala3CompilerPC),
+    "type-params-in-enum2",
     """|enum MyOption[+<<AA>>]:
        |  case MySome(value: <<A@@A>>)
        |  case MyNone
@@ -284,7 +284,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
   )
 
   check(
-    "type-params-in-enum3".tag(IgnoreForScala3CompilerPC),
+    "type-params-in-enum3",
     """|enum MyOption[<<AA>>](v: <<AA>>):
        |  def get: <<A@@A>> = ???
        |  case MySome[AA](value: AA) extends MyOption[Int](1)
@@ -292,7 +292,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
   )
 
   check(
-    "type-params-in-enum4".tag(IgnoreForScala3CompilerPC),
+    "type-params-in-enum4",
     """|enum MyOption[+<<AA>>]:
        |  def get: <<A@@A>> = ???
        |  case MySome(value: <<AA>>)
@@ -486,6 +486,41 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  usage[Int](_.<<inferredTypeArg>>[String]("str"))
       |  usage[Option[Int]](_.typeArg[Some[Int]].value.<<inferredTypeArg>>("str"))
       |  usage[Option[Int]](_.typeArg[Some[Int]].value.<<inferredTypeArg>>[String]("str"))
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "i6041",
+    """
+      |object B {
+      |  extension (x: Int)(using Int)
+      |    def <<foo>>: Int = ???
+      |    
+      |  given Int = 42
+      |  val bar = 42.<<fo@@o>>
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "i6041-1",
+    """
+      |sealed trait ExtensionProvider {
+      |  extension [A] (self: A)(using Int) {
+      |    def typeArg[B <: A]: B
+      |    def <<inferredTypeArg>>[C](value: C): C
+      |  }
+      |}
+      |
+      |object Repro {
+      |  given Int = 42
+      |  def usage[A](f: ExtensionProvider ?=> A => Any): Any = ???
+      |
+      |  usage[Int](_.<<inferredTypeArg>>("str"))
+      |  usage[Int](_.<<inferredTypeArg>>[String]("str"))
+      |  usage[Option[Int]](_.typeArg[Some[Int]].value.<<inferredTypeArg>>("str"))
+      |  usage[Option[Int]](_.typeArg[Some[Int]].value.<<inferre@@dTypeArg>>[String]("str"))
       |}
       |""".stripMargin
   )

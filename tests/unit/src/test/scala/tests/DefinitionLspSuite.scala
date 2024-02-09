@@ -714,4 +714,42 @@ class DefinitionLspSuite
     } yield ()
   }
 
+  test("nested-jars") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { 
+           |      "libraryDependencies": [
+           |        "com.daml:bindings-rxjava:2.0.0"
+           |      ]
+           |    }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |import com.daml.ledger.rxjava.DamlLedgerClient
+           |
+           |object O {
+           |  val k: DamlLedgerClient = ???
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        server.workspaceDefinitions,
+        """|/a/src/main/scala/a/Main.scala
+           |package a
+           |import com.daml.ledger.rxjava.DamlLedgerClient/*DamlLedgerClient.java*/
+           |
+           |object O/*L3*/ {
+           |  val k/*L4*/: DamlLedgerClient/*DamlLedgerClient.java*/ = ???/*Predef.scala*/
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
 }

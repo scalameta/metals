@@ -107,10 +107,10 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
         client.workspaceDiagnostics,
         """|a/src/main/scala/Main.scala:1:8: error: identifier expected but 'object' found.
            |object object A
-           |       ^^^^^^
+           |       ^
            |a/src/main/scala/Main.scala:2:8: error: identifier expected but 'object' found.
            |object object B
-           |       ^^^^^^
+           |       ^
            |""".stripMargin,
       )
       _ <- server.didChange("a/src/main/scala/Main.scala")(t => "\n" + t)

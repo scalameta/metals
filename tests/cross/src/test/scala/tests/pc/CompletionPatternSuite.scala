@@ -60,7 +60,30 @@ class CompletionPatternSuite extends BaseCompletionSuite {
       |    case ma@@
       |  }
       |}""".stripMargin,
-    ""
+    "",
+    compat = Map(
+      scala3PresentationCompilerVersion ->
+        """|main scala
+           |macros - scala.languageFeature.experimental
+           |macroImpl - scala.reflect.macros.internal
+           |""".stripMargin,
+      "3.3.2" ->
+        """|main scala
+           |macros - languageFeature.experimental
+           |macroImpl(referenceToMacroImpl: Any): macroImpl
+           |macroImpl - scala.reflect.macros.internal
+           |""".stripMargin,
+      "3" ->
+        """|main scala
+           |macros - scala.languageFeature.experimental
+           |macroImpl(referenceToMacroImpl: Any): macroImpl
+           |macroImpl - scala.reflect.macros.internal
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        """|macros - scala.languageFeature.experimental
+           |macroImpl - scala.reflect.macros.internal
+           |""".stripMargin
+    )
   )
 
   check(

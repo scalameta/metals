@@ -56,6 +56,7 @@ jobs:
             gradle,
             scalacli,
             mill,
+            bazel,
             feature,
             cross,
             scalafmt,
@@ -92,6 +93,11 @@ jobs:
             name: Mill integration
             os: ubuntu-latest
             java: "17"
+          - type: bazel
+            command: bin/test.sh 'slow/testOnly -- tests.bazel.*'
+            name: Bazel integration
+            os: ubuntu-latest
+            java: "17"
           - type: scalacli
             command: bin/test.sh 'slow/testOnly -- tests.scalacli.*'
             name: Scala CLI integration
@@ -121,7 +127,7 @@ jobs:
             command: sbt cross-test-2-11
             name: Scala 2.11 cross tests
             os: ubuntu-latest
-            java: "8"
+            java: "17"
           - type: scalafix
             command: sbt scalafixCheck docs/docusaurusCreateSite
             name: Scalafix and docs

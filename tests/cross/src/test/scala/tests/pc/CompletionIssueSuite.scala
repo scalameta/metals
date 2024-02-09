@@ -20,6 +20,33 @@ class CompletionIssueSuite extends BaseCompletionSuite {
   }
 
   check(
+    "comparison",
+    """package a
+      |object w {
+      |  abstract class T(x: Int) {
+      |    def met(x: Int): Unit = {
+      |      println(x@@)
+      |    }
+      |  }}
+      |""".stripMargin,
+    """|x: Int
+       |x = : Any""".stripMargin,
+    topLines = Some(4),
+    compat = Map(
+      "2.12" ->
+        """|x: Int
+           |x = : Any
+           |xml scala
+           |""".stripMargin,
+      "2.11" ->
+        """|x: Int
+           |x = : Any
+           |xml scala
+           |""".stripMargin
+    )
+  )
+
+  check(
     "mutate".tag(IgnoreScala3),
     """package a
       |class Foo@@
@@ -198,6 +225,10 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       "3" ->
         """|filter(p: A => Boolean): Array[A]
            |filter(pred: A => Boolean): C
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        """|filter(p: Int => Boolean): Array[Int]
+           |filter(pred: Int => Boolean): IndexedSeq[Int @uncheckedVariance]
            |""".stripMargin
     )
   )
@@ -220,6 +251,10 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       "3" ->
         """|filter(p: A => Boolean): Array[A]
            |filter(pred: A => Boolean): C
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        """|filter(p: Int => Boolean): Array[Int]
+           |filter(pred: Int => Boolean): IndexedSeq[Int @uncheckedVariance]
            |""".stripMargin
     )
   )
@@ -242,6 +277,10 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       "3" ->
         """|filter(p: A => Boolean): Array[A]
            |filter(pred: A => Boolean): C
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        """|filter(p: Int => Boolean): Array[Int]
+           |filter(pred: Int => Boolean): IndexedSeq[Int @uncheckedVariance]
            |""".stripMargin
     )
   )

@@ -5,6 +5,23 @@ import tests.pc.CrossTestEnrichments._
 
 class CompletionInterpolatorSuite extends BaseCompletionSuite {
 
+  check(
+    "wrong",
+    """|object Main {
+       |  println("Z@@${zScores_y.mkString(", ")}")
+       |}
+       |""".stripMargin,
+    ""
+  )
+  check(
+    "wrong2",
+    """|object Main {
+       |   val idx = if(i.toString.length == 2) s"00$i" else s"00@@$i"
+       |}
+       |""".stripMargin,
+    ""
+  )
+
   checkEdit(
     "string",
     """|object Main {
@@ -665,7 +682,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
       "3" ->
         """|class Paths
            |object Main {
-           |  s"this is an interesting {java.nio.file.Paths}"
+           |  s"this is an interesting ${java.nio.file.Paths}"
            |}
            |""".stripMargin
     )
@@ -751,6 +768,27 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
        |def main = s"  ${aaa.plus($0)}"
        |""".stripMargin,
     filterText = "aaa.plus"
+  )
+
+  checkEdit(
+    "extension3".tag(
+      IgnoreScala2.and(IgnoreScalaVersion.for3LessThan("3.2.2"))
+    ),
+    """|trait Cursor
+       |
+       |extension (c: Cursor) def spelling: String = "hello"
+       |object Main {
+       |  val c = new Cursor {}
+       |  val x = s"$c.spelli@@"
+       |}
+       |""".stripMargin,
+    """|trait Cursor
+       |
+       |extension (c: Cursor) def spelling: String = "hello"
+       |object Main {
+       |  val c = new Cursor {}
+       |  val x = s"${c.spelling$0}"
+       |}""".stripMargin
   )
 
   check(

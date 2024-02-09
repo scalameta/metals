@@ -452,7 +452,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
-    "path".tag(IgnoreScalaVersion("3.3.2-RC1")),
+    "path".tag(IgnoreScalaVersion("3.3.2-RC3")),
     """|import java.nio.file.Paths
        |object ExplicitResultTypesPrefix {
        |  class Path
@@ -906,6 +906,36 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |  val v: List[Tuple1[Int]] = List.empty[Tuple1[Int]]
        |}
        |""".stripMargin
+  )
+
+  checkEdit(
+    "rename-import",
+    """|package a
+       |import scala.collection.{AbstractMap => AB}
+       |
+       |object Main {
+       |  def test(): AB[Int, String] = ???
+       |  val <<x>> = test()
+       |}
+       |""".stripMargin,
+    """|package a
+       |import scala.collection.{AbstractMap => AB}
+       |
+       |object Main {
+       |  def test(): AB[Int, String] = ???
+       |  val x: AB[Int,String] = test()
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|package a
+                |import scala.collection.{AbstractMap => AB}
+                |
+                |object Main {
+                |  def test(): AB[Int, String] = ???
+                |  val x: AB[Int, String] = test()
+                |}
+                |""".stripMargin
+    )
   )
 
   def checkEdit(

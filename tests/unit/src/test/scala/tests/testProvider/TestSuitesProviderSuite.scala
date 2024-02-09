@@ -963,6 +963,62 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
     },
   )
 
+  checkEvents(
+    "weaver",
+    List(
+      "com.disneystreaming::weaver-cats:0.8.4"
+    ),
+    s"""|/app/src/main/scala/a/b/WeaverTest.scala
+        |package a.b
+        |import cats.effect.IO
+        |import weaver.SimpleIOSuite
+        |
+        |object WeaverTest extends SimpleIOSuite {
+        |
+        |  test("example-test") {
+        |    for {
+        |      _ <- IO.raiseError(new RuntimeException("test"))
+        |    } yield expect.same(true, true)
+        |  }
+        |}
+        |
+        |""".stripMargin,
+    "app/src/main/scala/a/b/WeaverTest.scala",
+    () => {
+      List(
+        rootBuildTargetUpdate(
+          "app",
+          targetUri,
+          List[TestExplorerEvent](
+            AddTestSuite(
+              "a.b.WeaverTest",
+              "WeaverTest",
+              "a/b/WeaverTest.",
+              QuickLocation(
+                classUriFor("app/src/main/scala/a/b/WeaverTest.scala"),
+                (4, 7, 4, 17),
+              ).toLsp,
+              canResolveChildren = true,
+            ),
+            AddTestCases(
+              "a.b.WeaverTest",
+              "WeaverTest",
+              List(
+                TestCaseEntry(
+                  "example-test",
+                  QuickLocation(
+                    classUriFor("app/src/main/scala/a/b/WeaverTest.scala"),
+                    (6, 2, 6, 6),
+                  ).toLsp,
+                )
+              ).asJava,
+            ),
+          ).asJava,
+        )
+      )
+    },
+  )
+
   /**
    * Discovers all tests in project or test cases in file
    *

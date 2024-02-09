@@ -9,7 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
-def localSnapshotVersion = "1.2.1-SNAPSHOT"
+def localSnapshotVersion = "1.2.2-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 
 def isScala211(v: Option[(Long, Long)]): Boolean = v.contains((2, 11))
@@ -238,7 +238,7 @@ lazy val interfaces = project
     moduleName := "mtags-interfaces",
     autoScalaLibrary := false,
     mimaPreviousArtifacts := Set(
-      "org.scalameta" % "mtags-interfaces" % "1.0.1"
+      "org.scalameta" % "mtags-interfaces" % "1.2.0"
     ),
     crossPaths := false,
     libraryDependencies ++= List(
@@ -270,7 +270,7 @@ lazy val mtagsShared = project
     },
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "3.25.1",
+      "com.google.protobuf" % "protobuf-java" % "3.25.2",
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
   )
@@ -500,7 +500,7 @@ lazy val metals = project
       "com.outr" %% "scribe-file" % V.scribe,
       "com.outr" %% "scribe-slf4j" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "3.1.3",
+      "com.lihaoyi" %% "ujson" % "3.1.4",
       // For fetching projects' templates
       "com.lihaoyi" %% "requests" % "0.8.0",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
@@ -596,7 +596,7 @@ lazy val input3 = project
   .settings(
     sharedSettings,
     scalaVersion := V.scala3,
-    target := (ThisBuild / baseDirectory).value / "input" / "target" / "target3",
+    target := (ThisBuild / baseDirectory).value / "tests" / "input" / "target" / "target3",
     Compile / unmanagedSourceDirectories := Seq(
       (input / baseDirectory).value / "src" / "main" / "scala",
       (input / baseDirectory).value / "src" / "main" / "scala-3",
@@ -683,10 +683,14 @@ lazy val mtest = project
   .settings(
     testSettings,
     sharedSettings,
-    libraryDependencies ++= List(
-      "org.scalameta" %% "munit" % V.munit,
-      "io.get-coursier" % "interface" % V.coursierInterfaces,
-    ),
+    libraryDependencies ++=
+      List(
+        "org.scalameta" %% "munit" % {
+          if (scalaVersion.value.startsWith("2.11")) "1.0.0-M10"
+          else V.munit
+        },
+        "io.get-coursier" % "interface" % V.coursierInterfaces,
+      ),
     buildInfoPackage := "tests",
     buildInfoObject := "BuildInfoVersions",
     buildInfoKeys := Seq[BuildInfoKey](

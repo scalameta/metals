@@ -26,6 +26,7 @@ import org.eclipse.lsp4j.debug.StackTraceArguments
 import org.eclipse.lsp4j.debug.StackTraceResponse
 import org.eclipse.lsp4j.debug.StepInArguments
 import org.eclipse.lsp4j.debug.StepOutArguments
+import org.eclipse.lsp4j.debug.ThreadsResponse
 import org.eclipse.lsp4j.debug.VariablesArguments
 import org.eclipse.lsp4j.debug.VariablesResponse
 
@@ -107,11 +108,20 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
           .asScala
           .map(callback)
           .flatMap(_ => step(threadId, nextStep))
-      case DebugStep.Complete(expression, frameId, callback, line, character) =>
+      case DebugStep.Complete(
+            expression,
+            frameId,
+            callback,
+            line,
+            character,
+            isLineNullable,
+          ) =>
         val args = new CompletionsArguments()
         args.setFrameId(frameId)
         args.setText(expression)
-        args.setLine(line)
+        if (!isLineNullable) {
+          args.setLine(line)
+        }
         args.setColumn(character)
         server.completions(args).asScala.flatMap { completions =>
           callback(completions)
@@ -162,6 +172,10 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
     server
       .variables(args)
       .asScala
+  }
+
+  def threads(): Future[ThreadsResponse] = {
+    server.threads().asScala
   }
 
   def shutdown(timeout: Int = 20): Future[Unit] = {

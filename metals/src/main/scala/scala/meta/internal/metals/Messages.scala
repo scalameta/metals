@@ -253,6 +253,12 @@ object Messages {
     def multipleMisconfiguredProjects(count: Int): String =
       s"Code navigation will not work for $count build targets in this workspace due to mis-configuration. " + moreInfo
 
+    def multipleProblemsDetected: String =
+      s"Multiple problems detected in your build."
+
+    def bazelNavigation: String =
+      "Code navigation for Bazel projects is not supported yet."
+
     val misconfiguredTestFrameworks: String =
       "Test Explorer won't work due to mis-configuration." + moreInfo
 
@@ -982,6 +988,29 @@ object Messages {
         List(
           restart,
           notNow,
+        ).asJava
+      )
+      params
+    }
+  }
+
+  object RequestTimeout {
+
+    val cancel = new MessageActionItem("Cancel")
+    val waitAction = new MessageActionItem("Wait")
+    val waitAlways = new MessageActionItem("WaitAlways")
+
+    def params(actionName: String, minutes: Int): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        s"$actionName request is taking longer than expected (over $minutes minutes), do you want to cancel and rerun it?"
+      )
+      params.setType(MessageType.Info)
+      params.setActions(
+        List(
+          cancel,
+          waitAction,
+          waitAlways,
         ).asJava
       )
       params

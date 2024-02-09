@@ -102,9 +102,22 @@ trait Signatures { compiler: MetalsGlobal =>
       val history: mutable.Map[Name, ShortName] = mutable.Map.empty,
       val lookupSymbol: Name => List[NameLookup] = _ => Nil,
       val config: collection.Map[Symbol, Name] = Map.empty,
-      val renames: collection.Map[Symbol, Name] = Map.empty,
+      renames: collection.Map[Symbol, Name] = Map.empty,
       val owners: collection.Set[Symbol] = Set.empty
   ) {
+
+    private val lookedUpRenames = mutable.Set[Symbol]()
+
+    def rename(sym: Symbol): Option[Name] = {
+      lookedUpRenames.add(sym)
+      renames.get(sym)
+    }
+
+    def getUsedRenamesInfo(): List[String] =
+      lookedUpRenames.flatMap { key =>
+        renames.get(key).map(v => s"type $v = ${key.nameString}")
+      }.toList
+
     def this(context: Context) =
       this(lookupSymbol = { name =>
         context.lookupSymbol(name, _ => true) :: Nil

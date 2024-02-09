@@ -3,6 +3,8 @@ package scala.meta.internal.mtags
 import java.nio.charset.Charset
 import java.nio.file.Files
 
+import scala.util.matching.Regex
+
 import scala.meta.AbsolutePath
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
@@ -27,6 +29,7 @@ object Semanticdbs {
   def loadTextDocument(
       scalaOrJavaPath: AbsolutePath,
       sourceroot: AbsolutePath,
+      optScalaVersion: Option[String],
       charset: Charset,
       fingerprints: Md5Fingerprints,
       loader: RelativePath => Option[FoundSemanticDbPath],
@@ -46,6 +49,7 @@ object Semanticdbs {
             scalaOrJavaPath,
             semanticdbPath.nonDefaultRelPath.getOrElse(scalaRelativePath),
             semanticdbPath.path,
+            optScalaVersion,
             charset,
             fingerprints,
             log
@@ -58,6 +62,7 @@ object Semanticdbs {
       scalaPath: AbsolutePath,
       scalaRelativePath: RelativePath,
       semanticdbPath: AbsolutePath,
+      optScalaVersion: Option[String],
       charset: Charset,
       fingerprints: Md5Fingerprints,
       log: String => Unit
@@ -68,22 +73,44 @@ object Semanticdbs {
       case None => TextDocumentLookup.NoMatchingUri(scalaPath, sdocs)
       case Some(sdoc) if scalaPath.exists =>
         val text = FileIO.slurp(scalaPath, charset)
-        val md5 = MD5.compute(text)
-        val sdocMd5 = sdoc.md5.toUpperCase()
-        if (sdocMd5 != md5) {
-          fingerprints.lookupText(scalaPath, sdocMd5) match {
-            case Some(oldText) =>
-              TextDocumentLookup.Stale(scalaPath, md5, sdoc.withText(oldText))
-            case None =>
-              log(s"Could not load snapshot text for $scalaPath")
-              TextDocumentLookup.Stale(scalaPath, md5, sdoc)
-          }
-        } else {
-          TextDocumentLookup.Success(sdoc.withText(text))
-        }
+        if (text.startsWith(Shebang.shebang)) {
+          if (optScalaVersion.exists(_.startsWith("3")))
+            addIfStaleInfo(
+              scalaPath,
+              sdoc,
+              Shebang.adjustContent(text),
+              fingerprints,
+              log
+            )
+          else TextDocumentLookup.NotFound(scalaPath)
+        } else
+          addIfStaleInfo(scalaPath, sdoc, text, fingerprints, log)
       case _ => TextDocumentLookup.NotFound(scalaPath)
     }
   }
+
+  private def addIfStaleInfo(
+      scalaPath: AbsolutePath,
+      sdoc: s.TextDocument,
+      currentText: String,
+      fingerprints: Md5Fingerprints,
+      log: String => Unit
+  ) = {
+    val md5 = MD5.compute(currentText)
+    val sdocMd5 = sdoc.md5.toUpperCase()
+    if (sdocMd5 != md5) {
+      fingerprints.lookupText(scalaPath, sdocMd5) match {
+        case Some(oldText) =>
+          TextDocumentLookup.Stale(scalaPath, md5, sdoc.withText(oldText))
+        case None =>
+          log(s"Could not load snapshot text for $scalaPath")
+          TextDocumentLookup.Stale(scalaPath, md5, sdoc)
+      }
+    } else {
+      TextDocumentLookup.Success(sdoc.withText(currentText))
+    }
+  }
+
   def printTextDocument(doc: s.TextDocument): String = {
     val symtab = doc.symbols.iterator.map(info => info.symbol -> info).toMap
     val sb = new StringBuilder
@@ -122,4 +149,30 @@ object Semanticdbs {
       path: AbsolutePath,
       nonDefaultRelPath: Option[RelativePath]
   )
+}
+
+object Shebang {
+  val shebang = "#!"
+  private val sheBangRegex: Regex = s"""(^(#!.*(\\r\\n?|\\n)?)+(\\s*!#.*)?)""".r
+
+  /**
+   * This function adjusts file content changing all not-newline characters
+   * in the shebang header into spaces.
+   * This is the same as done in the Scala 3 compiler, so for the same input,
+   * m5d from semanticdb and the one calculated from adjusted content will match.
+   */
+  def adjustContent(content: String): String = {
+    val regexMatch = sheBangRegex.findFirstMatchIn(content)
+    regexMatch match {
+      case Some(firstMatch) =>
+        val shebangContent = firstMatch.toString()
+        val substitution =
+          shebangContent.map {
+            case c @ ('\n' | '\r') => c
+            case _ => ' '
+          }
+        substitution ++ content.drop(shebangContent.length())
+      case None => content
+    }
+  }
 }

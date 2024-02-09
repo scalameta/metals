@@ -905,8 +905,8 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  def main: Unit = incre@@
        |""".stripMargin,
     """|increment3: Int
-       |increment: Int
-       |increment2: Int
+       |increment - a: Int
+       |increment2 - a.c: Int
        |""".stripMargin
   )
 
@@ -926,8 +926,8 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |package c:
        |  def main() = foo@@
        |""".stripMargin,
-    """|fooBar(x: Int): Int
-       |fooBar(x: String): Int
+    """|fooBar - a(x: Int): Int
+       |fooBar - a.b(x: String): Int
        |""".stripMargin
   )
 
@@ -952,7 +952,12 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
     compat = Map(
       "2" -> """|fooBar: String
                 |fooBar - case_class_param.A: List[Int]
-                |""".stripMargin
+                |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        """|fooBar: String
+           |fooBar: List[Int]
+           |fooBar(n: Int): A
+           |""".stripMargin
     )
   )
 
@@ -1010,7 +1015,71 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  }
        |}
        |""".stripMargin,
-    filter = _.contains("mmmm(x: Int)")
+    filter = _.contains("mmmm - demo.O")
   )
 
+  check(
+    "method-label",
+    """|package demo
+       |
+       |object O {
+       | def method(i: Int): Int = i + 1
+       |}
+       |
+       |object Main {
+       |  val x = meth@@
+       |}
+       |""".stripMargin,
+    """|method - demo.O(i: Int): Int
+       |""".stripMargin
+  )
+
+  check(
+    "implicit-class-val".tag(IgnoreForScala3CompilerPC),
+    """|package demo
+       |
+       |object O {
+       |  implicit class CursorOps(val bar: Int)
+       |}
+       |
+       |object Main {
+       |  val x = bar@@
+       |}
+       |""".stripMargin,
+    ""
+  )
+
+  check(
+    "implicit-class-def".tag(IgnoreForScala3CompilerPC),
+    """|package demo
+       |
+       |object O {
+       |  implicit class CursorOps(val bar: Int) {
+       |    def fooBar = 42
+       |  }
+       |}
+       |
+       |object Main {
+       |  val x = fooB@@
+       |}
+       |""".stripMargin,
+    ""
+  )
+
+  check(
+    "extension-method".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    """|package demo
+       |
+       |object O {
+       |  extension (bar: Int) {
+       |    def fooBar = 42
+       |  }
+       |}
+       |
+       |object Main {
+       |  val x = fooB@@
+       |}
+       |""".stripMargin,
+    ""
+  )
 }

@@ -262,7 +262,10 @@ final class Doctor(
   ): String =
     goToCommand(
       FileDecoderProvider
-        .createBuildTargetURI(workspace, buildTargetName)
+        .createBuildTargetURI(
+          workspace,
+          buildTargetName.bazelEscapedDisplayName,
+        )
         .toString
     )
 

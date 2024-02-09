@@ -217,13 +217,19 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
         pos.start != pos.end && (symbol == null || symbol == NoSymbol || symbol.isErroneous)
       ) {
         val context = doLocateContext(pos)
+        val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
         val history = new ShortenedNames(
-          lookupSymbol = name => context.lookupSymbol(name, _ => true) :: Nil
+          lookupSymbol = name => context.lookupSymbol(name, _ => true) :: Nil,
+          renames = re
         )
         val prettyType = metalsToLongString(tpe.widen.finalResultType, history)
         val lspRange = if (range.isRange) Some(range.toLsp) else None
         Some(
-          new ScalaHover(expressionType = Some(prettyType), range = lspRange)
+          new ScalaHover(
+            expressionType = Some(prettyType),
+            range = lspRange,
+            contextInfo = history.getUsedRenamesInfo()
+          )
         )
       } else if (symbol == null || tpe.typeSymbol.isAnonymousClass) None
       else if (symbol.hasPackageFlag || symbol.hasModuleFlag) {
@@ -231,13 +237,16 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
           new ScalaHover(
             expressionType = Some(
               s"${symbol.javaClassSymbol.keyString} ${symbol.fullName}"
-            )
+            ),
+            contextInfo = Nil
           )
         )
       } else {
         val context = doLocateContext(pos)
+        val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
         val history = new ShortenedNames(
-          lookupSymbol = name => context.lookupSymbol(name, _ => true) :: Nil
+          lookupSymbol = name => context.lookupSymbol(name, _ => true) :: Nil,
+          renames = re
         )
         val symbolInfo =
           if (seenFrom.isErroneous) symbol.info
@@ -273,7 +282,8 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
             docstring = Some(docstring),
             forceExpressionType =
               pos.start != pos.end || !prettySignature.endsWith(prettyType),
-            range = if (range.isRange) Some(range.toLsp) else None
+            range = if (range.isRange) Some(range.toLsp) else None,
+            contextInfo = history.getUsedRenamesInfo()
           )
         )
       }

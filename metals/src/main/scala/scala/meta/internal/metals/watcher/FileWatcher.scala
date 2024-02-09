@@ -19,7 +19,6 @@ import scala.util.Try
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Directories
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.io.AbsolutePath
 
@@ -111,7 +110,6 @@ object FileWatcher {
     buildTargets.sourceItems.foreach(collect)
 
     buildTargets.allTargetRoots
-      .filterNot(_.isJar)
       .map(_.resolve(Directories.semanticdb).toNIO)
       .foreach(directories.add)
 
@@ -152,7 +150,8 @@ object FileWatcher {
         // However, the events are then filtered to receive only relevant events
 
         val trie = PathTrie(
-          pathsToWatch.files ++ pathsToWatch.directories
+          pathsToWatch.files ++ pathsToWatch.directories,
+          workspace,
         )
         val isWatched = trie.containsPrefixOf _
 

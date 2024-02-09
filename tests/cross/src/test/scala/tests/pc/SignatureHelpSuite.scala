@@ -90,6 +90,12 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
            |Random(seed: Int)
            |Random(seed: Long)
            |Random(self: java.util.Random)
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
+        """|Random()
+           |Random(seed: Int)
+           |Random(seed: Long)
+           |Random(self: Random)
            |""".stripMargin
     )
   )
@@ -153,6 +159,13 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
            |File(x$0: java.io.File, x$1: String)
            |File(x$0: String, x$1: String)
            |File(x$0: String)
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
+        """|File(x$0: URI)
+           |     ^^^^^^^^
+           |File(x$0: File, x$1: String)
+           |File(x$0: String, x$1: String)
+           |File(x$0: String)
            |""".stripMargin
     )
   )
@@ -173,6 +186,13 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
         """|File(x$0: java.net.URI)
            |     ^^^^^^^^^^^^^^^^^
            |File(x$0: java.io.File, x$1: String)
+           |File(x$0: String, x$1: String)
+           |File(x$0: String)
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
+        """|File(x$0: URI)
+           |     ^^^^^^^^
+           |File(x$0: File, x$1: String)
            |File(x$0: String, x$1: String)
            |File(x$0: String)
            |""".stripMargin
@@ -253,14 +273,10 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |""".stripMargin
   )
   check(
-    // https://github.com/lampepfl/dotty/issues/15244
     "vararg",
-    // .tag(
-    // IgnoreScalaVersion.forLaterThan("3.2.0-RC1-bin-20220519-ee9cc8f-NIGHTLY")
-    // ),
     """
       |object a {
-      |  List(1, 2@@
+      |  List(1, 2@@)
       |}
     """.stripMargin,
     """|apply[A](xs: A*): List[A]
@@ -441,9 +457,14 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
            |to(end: T, step: T): NumericRange.Inclusive[T]
            |""".stripMargin,
       "3" ->
-        """|^^^^^^^^
-           |to(end: Int): scala.collection.immutable.Range.Inclusive
+        """|to(end: Int): scala.collection.immutable.Range.Inclusive
+           |   ^^^^^^^^
            |to(end: Int, step: Int): scala.collection.immutable.Range.Inclusive
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
+        """|to(end: Int): Inclusive
+           |   ^^^^^^^^
+           |to(end: Int, step: Int): Inclusive
            |""".stripMargin,
       "2.11" -> """|^^^^^^
                    |to(end: Int): immutable.Range.Inclusive
@@ -532,6 +553,10 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
         """|apply(viewId: String, nodeUri: String, label: String, command: String, icon: String, tooltip: String, collapseState: String): case-class.TreeViewNode
            |      ^^^^^^^^^^^^^^
            |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
+        """|apply(viewId: String, nodeUri: String, label: String, [collapseState: String], [command: String], [icon: String], [tooltip: String]): TreeViewNode
+           |      ^^^^^^^^^^^^^^
+           |""".stripMargin,
       "2.11" -> ""
     )
   )
@@ -575,6 +600,10 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
         """|apply(viewId: String, nodeUri: String, label: String, command: String, collapseState: String): case-class2.TreeViewNode
            |      ^^^^^^^^^^^^^^
            |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
+        """|apply(viewId: String, nodeUri: String, label: String, [collapseState: String], [command: String]): TreeViewNode
+           |      ^^^^^^^^^^^^^^
+           |""".stripMargin,
       "2.11" -> ""
     )
   )
@@ -594,6 +623,10 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       "3" ->
         """|apply(name: String, age: Int): named.User
            |                    ^^^^^^^^
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
+        """|apply([age: Int], [name: String]): User
+           |                  ^^^^^^^^^^^^^^
            |""".stripMargin
     )
   )
@@ -612,6 +645,10 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     compat = Map(
       "3" ->
         """|apply(name: String, age: Int): named1.User
+           |                    ^^^^^^^^
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
+        """|apply(name: String, age: Int): User
            |                    ^^^^^^^^
            |""".stripMargin
     )
@@ -648,6 +685,11 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
         """|user(name: String, age: Int, street: Int): Int
            |                             ^^^^^^^^^^^
            |user(name: String, age: Int): Int
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
+        """|user([street: Int], [name: String], [age: Int]): Int
+           |     ^^^^^^^^^^^^^
+           |user(name: String, age: Int): Int
            |""".stripMargin
     )
   )
@@ -679,6 +721,10 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       "3" ->
         """|Catch[T](pf: scala.util.control.Exception.Catcher[T], fin: Option[scala.util.control.Exception.Finally], rethrow: Throwable => Boolean)
            |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
+        """|Catch[T](pf: Catcher[T], fin: Option[Finally], rethrow: Throwable => Boolean)
+           |         ^^^^^^^^^^^^^^
            |""".stripMargin
     )
   )
@@ -788,6 +834,11 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       "3" ->
         """|map[G[_$3]](fn: Int => G[Int])(using T: last-arg3.TypeClass[F]): G[Int]
            |            ^^^^^^^^^^^^^^^^^
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
+        // ideally this should be G[_]
+        """|map[G[_$3]](fn: Int => G[Int])(using T: TypeClass[F]): G[Int]
+           |            ^^^^^^^^^^^^^^^^^
            |""".stripMargin
     )
   )
@@ -824,6 +875,10 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
     compat = Map(
       "3" ->
         """|conv[T](e: T): implicit-conv.Text[T]
+           |        ^^^^
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
+        """|conv[T](e: T): Text[T]
            |        ^^^^
            |""".stripMargin
     )
@@ -883,7 +938,8 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       "3" ->
         """|identity[A](x: A): A
            |            ^^^^
-           |""".stripMargin
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" -> ""
     )
   )
 
@@ -915,6 +971,10 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       "3" ->
         """|fold[B](ifEmpty: => B)(f: Int => B): B
            |        ^^^^^^^^^^^^^
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
+        """|fold[B](ifEmpty: => B)(f: Int => B): B
+           |                       ^^^^^^^^^^^
            |""".stripMargin
     )
   )

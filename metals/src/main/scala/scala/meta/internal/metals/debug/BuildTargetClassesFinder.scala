@@ -116,7 +116,10 @@ class BuildTargetClassesFinder(
         .findByDisplayName(targetName)
         .fold[Try[List[(A, b.BuildTarget)]]] {
           Failure(
-            new BuildTargetNotFoundException(targetName)
+            new BuildTargetNotFoundException(
+              targetName,
+              buildTargets.all.map(_.getDisplayName()).toList,
+            )
           )
         } { target =>
           classesByBuildTarget(target.getId())
@@ -146,8 +149,12 @@ class BuildTargetClassesFinder(
 
 }
 
-case class BuildTargetNotFoundException(buildTargetName: String)
-    extends Exception(s"Build target not found: $buildTargetName")
+case class BuildTargetNotFoundException(
+    buildTargetName: String,
+    candidates: List[String],
+) extends Exception(
+      s"Build target not found: $buildTargetName, candidates:\n${candidates.mkString("\n")}"
+    )
 
 case class ClassNotFoundInBuildTargetException(
     className: String,

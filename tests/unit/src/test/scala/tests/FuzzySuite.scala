@@ -31,7 +31,7 @@ class FuzzySuite extends BaseSuite {
 
   checkOK("::", "scala/collection/immutable/`::`#")
   checkOK("IO", "scala/IO#")
-  checkOK("IS", "scala/InputOutputStream#")
+  checkOK("ISt", "scala/InputOutputStream#")
   checkNO("Mon", "ModuleKindJS")
   checkNO("Min", "MavenPluginIntegration")
   checkOK("DoSymPro", "DocumentSymbolProvider")
@@ -138,9 +138,5 @@ class FuzzySuite extends BaseSuite {
     // Assert that the expected false positive ratio remains
     // reasonable despite pathological input.
     assert(bloom.bloom.expectedFpp() < 0.02)
-  }
-
-  test("shortClassName") {
-    assert(!Fuzzy.isExactMatch("AA", "A.class"))
   }
 }

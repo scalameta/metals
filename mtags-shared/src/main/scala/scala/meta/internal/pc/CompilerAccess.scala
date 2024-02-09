@@ -28,8 +28,18 @@ abstract class CompilerAccess[Reporter, Compiler](
     config: PresentationCompilerConfig,
     sh: Option[ScheduledExecutorService],
     newCompiler: () => CompilerWrapper[Reporter, Compiler],
-    shouldResetJobQueue: Boolean
+    shouldResetJobQueue: Boolean,
+    additionalReportingData: () => String
 )(implicit ec: ExecutionContextExecutor, rc: ReportContext) {
+
+  def this(
+      config: PresentationCompilerConfig,
+      sh: Option[ScheduledExecutorService],
+      newCompiler: () => CompilerWrapper[Reporter, Compiler],
+      shouldResetJobQueue: Boolean
+  )(implicit ec: ExecutionContextExecutor, rc: ReportContext) =
+    this(config, sh, newCompiler, shouldResetJobQueue, () => "")
+
   private val logger: Logger =
     Logger.getLogger(classOf[CompilerAccess[_, _]].getName)
 
@@ -198,6 +208,9 @@ abstract class CompilerAccess[Reporter, Compiler](
       Report(
         "compiler-error",
         s"""|occurred in the presentation compiler.
+            |
+            |presentation compiler configuration:
+            |${additionalReportingData()}
             |
             |action parameters:
             |${params.map(_.printed()).getOrElse("<NONE>")}

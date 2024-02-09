@@ -12,6 +12,8 @@ import scala.meta.internal.tvp._
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.ProgressParams
+import org.eclipse.lsp4j.WorkDoneProgressCreateParams
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageClient
@@ -101,6 +103,12 @@ trait MetalsLanguageClient
     val params = new MessageParams(messageType, message)
     showMessage(params)
   }
+
+  override def createProgress(
+      params: WorkDoneProgressCreateParams
+  ): CompletableFuture[Void]
+
+  override def notifyProgress(params: ProgressParams): Unit
 
   def shutdown(): Unit = {}
 

@@ -560,7 +560,7 @@ object BuildTargets {
         case Nil => false
         case head :: tail =>
           if (head == query) true
-          else if (isVisited(head)) false
+          else if (isVisited(head)) loop(tail)
           else {
             isVisited += head
             inverseDeps(head) match {

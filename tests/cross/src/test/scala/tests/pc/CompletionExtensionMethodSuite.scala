@@ -292,7 +292,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |  extension (num: Int)
        |    def incr: Int = num + 1
        |
-       |package example2: 
+       |package example2:
        |  def main = 100.inc@@
        |""".stripMargin,
     """|incr: Int (extension)
@@ -309,7 +309,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |  implicit class A(num: Int):
        |    def incr: Int = num + 1
        |
-       |package examples2: 
+       |package examples2:
        |  def main = 100.inc@@
        |""".stripMargin,
     """|incr: Int (implicit)
@@ -323,7 +323,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |    def fooBar(num: Int) = num + 1
        |  extension (num: Int) def incr: Int = num + 1
        |
-       |package example2: 
+       |package example2:
        |  def main = 100.inc@@
        |""".stripMargin,
     """|incr: Int (extension)
@@ -340,7 +340,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |    def fooBar(num: Int) = num + 1
        |  implicit class A (num: Int) { def incr: Int = num + 1 }
        |
-       |package examples2: 
+       |package examples2:
        |  def main = 100.inc@@
        |""".stripMargin,
     """|incr: Int (implicit)
@@ -352,14 +352,14 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
     """|package example:
        |  extension (num: Int) def incr: Int = num + 1
        |
-       |package example2: 
+       |package example2:
        |  def main = 100.inc@@
        |""".stripMargin,
     """|import example.incr
        |package example:
        |  extension (num: Int) def incr: Int = num + 1
        |
-       |package example2: 
+       |package example2:
        |  def main = 100.incr
        |""".stripMargin
   )
@@ -372,14 +372,14 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
     """|package examples:
        |  implicit class A (num: Int) { def incr: Int = num + 1 }
        |
-       |package examples2: 
+       |package examples2:
        |  def main = 100.inc@@
        |""".stripMargin,
     """|import examples.A
        |package examples:
        |  implicit class A (num: Int) { def incr: Int = num + 1 }
        |
-       |package examples2: 
+       |package examples2:
        |  def main = 100.incr
        |""".stripMargin
   )
@@ -387,7 +387,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   check(
     "nested-pkg".tag(IgnoreScalaVersion.forLessThan("3.2.2")),
     """|package a:  // some comment
-       |  package c: 
+       |  package c:
        |    extension (num: Int)
        |        def increment2 = num + 2
        |  extension (num: Int)
@@ -408,7 +408,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
         IgnoreScalaVersion.forLessThan("3.2.2")
       ),
     """|package aa:  // some comment
-       |  package cc: 
+       |  package cc:
        |    implicit class A (num: Int):
        |        def increment2 = num + 2
        |  implicit class A (num: Int):
@@ -420,6 +420,47 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|increment: Int (implicit)
        |increment2: Int (implicit)
+       |""".stripMargin
+  )
+
+  check(
+    "implicit-val-var".tag(IgnoreForScala3CompilerPC),
+    """|package example
+       |
+       |object Test:
+       |  implicit class TestOps(val testArg: Int):
+       |    var testVar: Int = 42
+       |    val testVal: Int = 42
+       |    def testOps(b: Int): String = ???
+       |
+       |def main = 100.test@@
+       |""".stripMargin,
+    """|testArg: Int (implicit)
+       |testVal: Int (implicit)
+       |testVar: Int (implicit)
+       |testOps(b: Int): String (implicit)
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "implicit-val-edit".tag(IgnoreForScala3CompilerPC),
+    """|package example
+       |
+       |object Test:
+       |  implicit class TestOps(a: Int):
+       |    val testVal: Int = 42
+       |
+       |def main = 100.test@@
+       |""".stripMargin,
+    """|package example
+       |
+       |import example.Test.TestOps
+       |
+       |object Test:
+       |  implicit class TestOps(a: Int):
+       |    val testVal: Int = 42
+       |
+       |def main = 100.testVal
        |""".stripMargin
   )
 

@@ -1,8 +1,12 @@
 package scala.meta.internal.metals
 
+import java.util.UUID
+import java.util.concurrent.TimeUnit
+
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -10,6 +14,7 @@ import scala.util.Try
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
+import scala.meta.internal.metals.utils.Timeout
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -27,18 +32,31 @@ final class Compilations(
     onStartCompilation: () => Unit,
     userConfiguration: () => UserConfiguration,
 )(implicit ec: ExecutionContext) {
-
+  private val compileTimeout: Timeout =
+    Timeout("compile", Duration(10, TimeUnit.MINUTES))
+  private val cascadeTimeout: Timeout =
+    Timeout("cascade compile", Duration(15, TimeUnit.MINUTES))
   // we are maintaining a separate queue for cascade compilation since those must happen ASAP
   private val compileBatch =
     new BatchedFunction[
       b.BuildTargetIdentifier,
       Map[BuildTargetIdentifier, b.CompileResult],
-    ](compile, "compileBatch", shouldLogQueue = true, Some(Map.empty))
+    ](
+      compile(timeout = Some(compileTimeout)),
+      "compileBatch",
+      shouldLogQueue = true,
+      Some(Map.empty),
+    )
   private val cascadeBatch =
     new BatchedFunction[
       b.BuildTargetIdentifier,
       Map[BuildTargetIdentifier, b.CompileResult],
-    ](compile, "cascadeBatch", shouldLogQueue = true, Some(Map.empty))
+    ](
+      compile(timeout = Some(cascadeTimeout)),
+      "cascadeBatch",
+      shouldLogQueue = true,
+      Some(Map.empty),
+    )
   def pauseables: List[Pauseable] = List(compileBatch, cascadeBatch)
 
   private val isCompiling = TrieMap.empty[b.BuildTargetIdentifier, Boolean]
@@ -49,8 +67,6 @@ final class Compilations(
     isCompiling.contains(buildTarget)
 
   def previouslyCompiled: Iterable[b.BuildTargetIdentifier] = lastCompile
-  def wasPreviouslyCompiled(buildTarget: b.BuildTargetIdentifier): Boolean =
-    lastCompile.contains(buildTarget)
 
   def compilationFinished(targets: Seq[BuildTargetIdentifier]): Future[Unit] =
     if (currentlyCompiling.isEmpty) {
@@ -150,7 +166,7 @@ final class Compilations(
       for {
         cleanResult <- cleaned
         if cleanResult.getCleaned() == true
-        _ <- compile(targetIds).future
+        _ <- compile(timeout = None)(targetIds).future
       } yield ()
     }
 
@@ -188,7 +204,7 @@ final class Compilations(
     Future.sequence(expansions).map(_.flatten)
   }
 
-  private def compile(
+  private def compile(timeout: Option[Timeout])(
       targets: Seq[b.BuildTargetIdentifier]
   ): CancelableFuture[Map[BuildTargetIdentifier, b.CompileResult]] = {
 
@@ -213,11 +229,11 @@ final class Compilations(
           .successful(Map.empty[BuildTargetIdentifier, b.CompileResult])
           .asCancelable
       case (buildServer, targets) :: Nil =>
-        compile(buildServer, targets)
+        compile(buildServer, targets, timeout)
           .map(res => targets.map(target => target -> res).toMap)
       case targetList =>
         val futures = targetList.map { case (buildServer, targets) =>
-          compile(buildServer, targets).map(res =>
+          compile(buildServer, targets, timeout).map(res =>
             targets.map(target => target -> res)
           )
         }
@@ -227,15 +243,20 @@ final class Compilations(
   private def compile(
       connection: BuildServerConnection,
       targets: Seq[b.BuildTargetIdentifier],
+      timeout: Option[Timeout],
   ): CancelableFuture[b.CompileResult] = {
+    val originId = "METALS-$" + UUID.randomUUID().toString
     val params = new b.CompileParams(targets.asJava)
+    params.setOriginId(originId)
     if (
       userConfiguration().verboseCompilation && (connection.isBloop || connection.isScalaCLI)
     ) {
       params.setArguments(List("--verbose").asJava)
     }
-    targets.foreach(target => isCompiling(target) = true)
-    val compilation = connection.compile(params)
+    targets.foreach { target =>
+      isCompiling(target) = true
+    }
+    val compilation = connection.compile(params, timeout)
 
     onStartCompilation()
 

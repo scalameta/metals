@@ -69,7 +69,12 @@ class CompletionScala3Suite extends BaseCompletionSuite {
        |""".stripMargin,
     """|map[B](f: A => B): Foo[B]
        |""".stripMargin,
-    topLines = Some(1)
+    topLines = Some(1),
+    compat = Map(
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        """|map[B](f: Int => B): Foo[B]
+           |""".stripMargin
+    )
   )
 
   checkEdit(
@@ -87,5 +92,16 @@ class CompletionScala3Suite extends BaseCompletionSuite {
        |  def foo: String = ${0:???}
        |""".stripMargin,
     assertSingleItem = false
+  )
+
+  check(
+    "multi-export".tag(
+      IgnoreScalaVersion.forLessThan("3.2.2")
+    ),
+    """|export scala.collection.{AbstractMap, Set@@}
+       |""".stripMargin,
+    """|Set scala.collection
+       |SetOps scala.collection
+       |""".stripMargin
   )
 }

@@ -49,6 +49,7 @@ example/TypeEnum.scala -> example/TypeEnum#
 example/TypeParameters.scala -> example/TypeParameters#
 example/VarArgs.scala -> example/VarArgs#
 example/Vars.scala -> example/Vars.
+example/dotted.filename.scala -> example/`dotted.filename$package`.
 example/nested/DoublePackage.scala -> example/nested/x/DoublePackage#
 example/nested/DoublePackage.scala -> example/nested2/y/DoublePackage#
 example/nested/ExampleNested.scala -> example/nested/ExampleNested#

@@ -67,10 +67,17 @@ abstract class BaseDapSuite(
       buildTarget: String,
       main: String,
       stoppageHandler: Stoppage.Handler = Stoppage.Handler.Continue,
+      requestOtherThreadStackTrace: Boolean = false,
   ): Future[TestDebugger] = {
     val kind = DebugSessionParamsDataKind.SCALA_MAIN_CLASS
     val mainClass = new ScalaMainClass(main, emptyList(), emptyList())
-    server.startDebugging(buildTarget, kind, mainClass, stoppageHandler)
+    server.startDebugging(
+      buildTarget,
+      kind,
+      mainClass,
+      stoppageHandler,
+      requestOtherThreadStackTrace,
+    )
   }
 
   def setBreakpoints(
@@ -81,7 +88,7 @@ abstract class BaseDapSuite(
       workspace.filesBreakpoints
         .filter(_.breakpoints.nonEmpty)
         .map { file =>
-          debugger.setBreakpoints(file.path, file.breakpoints)
+          debugger.setBreakpoints(file.source, file.breakpoints)
         }
     }
   }
@@ -94,7 +101,7 @@ abstract class BaseDapSuite(
       workspace.filesBreakpoints
         .filter(_.breakpoints.nonEmpty)
         .map { file =>
-          debugger.setBreakpoints(file.path, Nil)
+          debugger.setBreakpoints(file.source, Nil)
         }
     }
   }
@@ -148,7 +155,7 @@ abstract class BaseDapSuite(
   ): StepNavigator = {
 
     val expectedBreakpoints = workspaceLayout.filesBreakpoints.flatMap { file =>
-      file.breakpoints.map(line => Breakpoint(file.path.toString(), line))
+      file.breakpoints.map(line => Breakpoint(file.sourcePath, line))
     }
 
     expectedBreakpoints.foldLeft(StepNavigator(workspace)) {

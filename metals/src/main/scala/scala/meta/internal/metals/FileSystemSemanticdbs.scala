@@ -40,14 +40,19 @@ final class FileSystemSemanticdbs(
           javaRoot orElse buildTargets.scalaTargetRoot(buildTarget)
         }
       } yield {
-        (workspace, targetroot)
+        val optScalaVersion =
+          if (file.toLanguage.isJava) None
+          else buildTargets.scalaTarget(buildTarget).map(_.scalaVersion)
+
+        (workspace, targetroot, optScalaVersion)
       }
 
       paths match {
-        case Some((ws, targetroot)) =>
+        case Some((ws, targetroot, optScalaVersion)) =>
           Semanticdbs.loadTextDocument(
             file,
             ws,
+            optScalaVersion,
             charset,
             fingerprints,
             semanticdbRelativePath =>
@@ -87,7 +92,6 @@ final class FileSystemSemanticdbs(
         Some(fullRelativePath),
       )
     }
-
   }
 
 }

@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.nio.file.Files
 import java.nio.file.Path
 
+import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
 
@@ -31,6 +32,7 @@ final class WorkspaceSymbolProvider(
     classpathSearchIndexer: ClasspathSearch.Indexer =
       ClasspathSearch.Indexer.default,
 )(implicit rc: ReportContext) {
+  val MaxWorkspaceMatchesForShortQuery = 100
   val inWorkspace: TrieMap[Path, WorkspaceSymbolsIndex] =
     TrieMap.empty[Path, WorkspaceSymbolsIndex]
 
@@ -68,7 +70,7 @@ final class WorkspaceSymbolProvider(
       preferredDialect: Option[Dialect],
   ): Seq[l.SymbolInformation] = {
     val query = WorkspaceSymbolQuery.exact(queryString)
-    val visistor =
+    val visitor =
       new WorkspaceSearchVisitor(
         workspace,
         query,
@@ -78,17 +80,18 @@ final class WorkspaceSymbolProvider(
         preferredDialect,
       )
     val targetId = buildTargets.inverseSources(path)
-    search(query, visistor, targetId)
-    visistor.allResults().filter(_.getName() == queryString)
+    search(query, visitor, targetId)
+    visitor.allResults().filter(_.getName() == queryString)
   }
 
   def search(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor,
       target: Option[BuildTargetIdentifier],
-  ): SymbolSearch.Result = {
-    workspaceSearch(query, visitor, target)
-    inDependencies.search(query, visitor)
+  ): (SymbolSearch.Result, Int) = {
+    val workspaceCount = workspaceSearch(query, visitor, target)
+    val (res, inDepsCount) = inDependencies.search(query, visitor)
+    (res, workspaceCount + inDepsCount)
   }
 
   def searchMethods(
@@ -185,8 +188,8 @@ final class WorkspaceSymbolProvider(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor,
       id: Option[BuildTargetIdentifier],
-  ): Unit = {
-    for {
+  ): Int = {
+    val symbols = for {
       (path, index) <- id match {
         case None =>
           inWorkspace.iterator
@@ -202,14 +205,25 @@ final class WorkspaceSymbolProvider(
       if !isDeleted
       symbol <- index.symbols
       if query.matches(symbol.symbol)
-    } {
-      visitor.visitWorkspaceSymbol(
-        path,
-        symbol.symbol,
-        symbol.kind,
-        symbol.range,
-      )
-    }
+    } yield (path, symbol)
+
+    @tailrec
+    def loopSearch(count: Int): Int =
+      if (
+        !symbols.hasNext || (query.isShortQuery && count >= MaxWorkspaceMatchesForShortQuery)
+      ) count
+      else {
+        val (path, symbol) = symbols.next()
+        val added = visitor.visitWorkspaceSymbol(
+          path,
+          symbol.symbol,
+          symbol.kind,
+          symbol.range,
+        )
+        loopSearch(count + added)
+      }
+
+    loopSearch(0)
   }
 
   private def searchUnsafe(

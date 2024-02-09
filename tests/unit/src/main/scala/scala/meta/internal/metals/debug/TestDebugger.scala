@@ -14,18 +14,19 @@ import scala.util.Success
 
 import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.debug.Capabilities
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
+import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.SourceBreakpoint
+import org.eclipse.lsp4j.debug.StackTraceResponse
 import org.eclipse.lsp4j.debug.StoppedEventArguments
-import tests.DapTestEnrichments._
 
 final class TestDebugger(
     connect: RemoteServer.Listener => Debugger,
     onStoppage: Stoppage.Handler,
+    requestOtherThreadStackTrace: Boolean = false,
 )(implicit ec: ExecutionContext)
     extends RemoteServer.Listener {
   @volatile private var debugger = connect(this)
@@ -56,10 +57,9 @@ final class TestDebugger(
   }
 
   def setBreakpoints(
-      path: AbsolutePath,
+      source: Source,
       positions: List[Int],
   ): Future[SetBreakpointsResponse] = {
-    val source = path.toDAP
     val breakpoints = positions.map { line =>
       val breakpoint = new SourceBreakpoint
       breakpoint.setLine(line + 1) // breakpoints are 1-based
@@ -161,6 +161,21 @@ final class TestDebugger(
     val nextStep = for {
       frame <- ifNotFailed(debugger.stackFrame(event.getThreadId))
       cause <- findStoppageCause(event, frame)
+      _ <-
+        if (requestOtherThreadStackTrace) {
+          debugger
+            .threads()
+            .flatMap { threadsResponse =>
+              val otherThreadsId0 = threadsResponse.getThreads
+                .map(_.getId)
+                .find(_ != event.getThreadId)
+              otherThreadsId0
+                .map(debugger.stackTrace(_))
+                .getOrElse(Future.successful(new StackTraceResponse()))
+            }
+        } else {
+          Future.successful(new StackTraceResponse())
+        }
     } yield onStoppage(Stoppage(frame, cause))
 
     nextStep.onComplete {
@@ -233,7 +248,11 @@ final class TestDebugger(
 object TestDebugger {
   private val timeout = TimeUnit.SECONDS.toMillis(60).toInt
 
-  def apply(uri: URI, stoppageHandler: Stoppage.Handler)(implicit
+  def apply(
+      uri: URI,
+      stoppageHandler: Stoppage.Handler,
+      requestOtherThreadStackTrace: Boolean = false,
+  )(implicit
       ec: ExecutionContext
   ): TestDebugger = {
     def connect(listener: RemoteServer.Listener): Debugger = {
@@ -243,6 +262,6 @@ object TestDebugger {
       new Debugger(server)
     }
 
-    new TestDebugger(connect, stoppageHandler)
+    new TestDebugger(connect, stoppageHandler, requestOtherThreadStackTrace)
   }
 }

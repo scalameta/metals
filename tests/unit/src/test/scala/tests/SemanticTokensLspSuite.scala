@@ -127,8 +127,8 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
     "predef",
     """|<<object>>/*keyword*/ <<Main>>/*class*/ {
        |  <<val>>/*keyword*/ <<x>>/*variable,definition,readonly*/ = <<List>>/*class*/(<<1>>/*number*/,<<2>>/*number*/,<<3>>/*number*/)
-       |  <<val>>/*keyword*/ <<y>>/*variable,definition,readonly*/ = <<a>>/*variable,readonly*/ <<match>>/*keyword*/ {
-       |    <<case>>/*keyword*/ <<List>>/*class*/(<<a>>/*variable,readonly*/,<<b>>/*variable,readonly*/,<<c>>/*variable,readonly*/) <<=>>>/*operator*/ <<a>>/*variable,readonly*/
+       |  <<val>>/*keyword*/ <<y>>/*variable,definition,readonly*/ = a <<match>>/*keyword*/ {
+       |    <<case>>/*keyword*/ <<List>>/*class*/(a,b,c) <<=>>>/*operator*/ a
        |    <<case>>/*keyword*/ <<_>>/*variable,readonly*/ <<=>>>/*operator*/ <<0>>/*number*/
        |  }
        |  <<val>>/*keyword*/ <<z>>/*variable,definition,readonly*/ = <<Set>>/*class*/(<<1>>/*number*/,<<2>>/*number*/,<<3>>/*number*/)
@@ -171,7 +171,7 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
     "self-type",
     """|<<package>>/*keyword*/ <<a>>/*namespace*/
        |
-       |<<object>>/*keyword*/ <<Abc>>/*class*/ { <<self>>/*variable,readonly*/: <<Any>>/*class*/ <<=>>>/*operator*/
+       |<<object>>/*keyword*/ <<Abc>>/*class*/ { self: Any <<=>>>/*operator*/
        |  <<val>>/*keyword*/ <<xyz>>/*variable,definition,readonly*/ = <<1>>/*number*/
        |}
        |""".stripMargin,
@@ -189,7 +189,7 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
        |}
        |
        |<<trait>>/*keyword*/ <<Tweeter>>/*interface,abstract*/ {
-       |  <<self>>/*variable,readonly*/: <<User>>/*interface,abstract*/ <<=>>>/*operator*/  <<// reassign this>>/*comment*/
+       |  self: <<User>>/*interface,abstract*/ <<=>>>/*operator*/  <<// reassign this>>/*comment*/
        |  <<def>>/*keyword*/ <<tweet>>/*method,definition*/(<<tweetText>>/*parameter,declaration,readonly*/: <<String>>/*type*/) = <<println>>/*method*/(<<s>>/*keyword*/<<">>/*string*/<<$>>/*keyword*/<<username>>/*method,abstract*/<<: >>/*string*/<<$>>/*keyword*/<<tweetText>>/*parameter,readonly*/<<">>/*string*/)
        |}
        |""".stripMargin,

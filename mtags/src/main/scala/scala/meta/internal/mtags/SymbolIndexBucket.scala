@@ -11,6 +11,7 @@ import scala.util.control.NonFatal
 import scala.meta.Dialect
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
+import scala.meta.internal.mtags.JavaToplevelMtags
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
@@ -66,7 +67,13 @@ class SymbolIndexBucket(
       FileIO.withJarFileSystem(jar, create = false) { root =>
         try {
           root.listRecursive.toList.flatMap {
-            case source if source.isScala => addSourceFile(source, None)
+            case source if source.isScala =>
+              addSourceFile(source, None)
+            case source if source.isJava =>
+              addJavaSourceFile(source) match {
+                case Nil => None
+                case topLevels => Some(IndexingResult(source, topLevels, overrides = Nil))
+              }
             case _ =>
               None
           }
@@ -90,6 +97,33 @@ class SymbolIndexBucket(
           case None => Some(Set(path))
         }
       }
+    }
+  }
+
+  /* Sometimes source jars have additional nested directories,
+   * in that case java toplevel is not "trivial".
+   * See: https://github.com/scalameta/metals/issues/3815
+   */
+  def addJavaSourceFile(source: AbsolutePath): List[String] = {
+    new JavaToplevelMtags(source.toInput).readPackage match {
+      case Nil => Nil
+      case packageParts =>
+        val className = source.filename.stripSuffix(".java")
+        val symbol = packageParts.mkString("", "/", s"/$className#")
+        if (
+          isTrivialToplevelSymbol(
+            source.toURI.toString,
+            symbol,
+            extension = "java"
+          )
+        ) Nil
+        else {
+          toplevels.updateWith(symbol) {
+            case Some(acc) => Some(acc + source)
+            case None => Some(Set(source))
+          }
+          List(symbol)
+        }
     }
   }
 
@@ -129,9 +163,13 @@ class SymbolIndexBucket(
   // Returns true if symbol is com/foo/Bar# and path is /com/foo/Bar.scala
   // Such symbols are "trivial" because their definition location can be computed
   // on the fly.
-  private def isTrivialToplevelSymbol(path: String, symbol: String): Boolean = {
+  private def isTrivialToplevelSymbol(
+      path: String,
+      symbol: String,
+      extension: String = "scala"
+  ): Boolean = {
     val pathBuffer =
-      CharBuffer.wrap(path).subSequence(1, path.length - ".scala".length)
+      CharBuffer.wrap(path).subSequence(1, path.length - extension.length - 1)
     val symbolBuffer =
       CharBuffer.wrap(symbol).subSequence(0, symbol.length - 1)
     pathBuffer.equals(symbolBuffer)

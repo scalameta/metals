@@ -58,7 +58,7 @@ class CompletionProvider(
             newctx
           )
         val locatedCtx =
-          MetalsInteractive.contextOfPath(tpdPath)(using newctx)
+          Interactive.contextOfPath(tpdPath)(using newctx)
         val indexedCtx = IndexedContext(locatedCtx)
         val completionPos =
           CompletionPos.infer(pos, params, path)(using newctx)
@@ -255,21 +255,31 @@ class CompletionProvider(
               r match
                 case IndexedContext.Result.InScope =>
                   mkItem(
-                    ident.backticked(backtickSoftKeyword) + completionTextSuffix
+                    v.insertText.getOrElse(
+                      ident.backticked(
+                        backtickSoftKeyword
+                      ) + completionTextSuffix
+                    ),
+                    range = v.range,
                   )
                 case _ if isInStringInterpolation =>
                   mkItem(
-                    "{" + sym.fullNameBackticked + completionTextSuffix + "}"
+                    "{" + sym.fullNameBackticked + completionTextSuffix + "}",
+                    range = v.range,
                   )
                 case _ if v.isExtensionMethod =>
                   mkItem(
-                    ident.backticked(backtickSoftKeyword) + completionTextSuffix
+                    ident.backticked(
+                      backtickSoftKeyword
+                    ) + completionTextSuffix,
+                    range = v.range,
                   )
                 case _ =>
                   mkItem(
                     sym.fullNameBackticked(
                       backtickSoftKeyword
-                    ) + completionTextSuffix
+                    ) + completionTextSuffix,
+                    range = v.range,
                   )
               end match
           end match

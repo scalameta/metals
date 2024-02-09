@@ -94,6 +94,7 @@ final class BloopServers(
         () =>
           connectToLauncher(bloopVersion, config.bloopPort, userConfiguration),
         tables.dismissedNotifications.ReconnectBsp,
+        tables.dismissedNotifications.RequestTimeout,
         config,
         name,
         bspStatusOpt,

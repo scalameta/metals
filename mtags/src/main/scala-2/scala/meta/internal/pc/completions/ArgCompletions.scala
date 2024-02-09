@@ -120,7 +120,8 @@ trait ArgCompletions { this: MetalsGlobal =>
       }
 
       completions match {
-        case members: CompletionResult.ScopeMembers =>
+        case members: CompletionResult.ScopeMembers
+            if paramType != definitions.AnyTpe =>
           members.results
             .collect {
               case mem

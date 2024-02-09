@@ -20,6 +20,8 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.util.Failure
+import scala.util.Success
 import scala.util.matching.Regex
 import scala.{meta => m}
 
@@ -635,6 +637,18 @@ final case class TestingServer(
     fullServer.executeCommand(command.toExecuteCommandParams()).asScala
   }
 
+  def listBuildTargets: Future[List[String]] = {
+    for {
+      targetsArray <- executeCommand(ServerCommands.ListBuildTargets)
+    } yield targetsArray.toJson.as[Array[String]] match {
+      case Failure(exception) =>
+        scribe.error("Could not read build targets", exception)
+        Nil
+      case Success(targets) =>
+        targets.toList
+    }
+  }
+
   /**
    * Operating on strings can be dangerous, but needed for running unknown commands
    * and for the StartDebugAdapter command, which doesn't have a stable argument.
@@ -657,6 +671,7 @@ final case class TestingServer(
       kind: String,
       parameter: AnyRef,
       stoppageHandler: Stoppage.Handler = Stoppage.Handler.Continue,
+      requestOtherThreadStackTrace: Boolean = false,
   ): Future[TestDebugger] = {
 
     assertSystemExit(parameter)
@@ -668,7 +683,11 @@ final case class TestingServer(
     executeCommandUnsafe(ServerCommands.StartDebugAdapter.id, Seq(params))
       .collect { case DebugSession(_, uri) =>
         scribe.info(s"Starting debug session for $uri")
-        TestDebugger(URI.create(uri), stoppageHandler)
+        TestDebugger(
+          URI.create(uri),
+          stoppageHandler,
+          requestOtherThreadStackTrace,
+        )
       }
   }
 
@@ -1025,11 +1044,15 @@ final case class TestingServer(
     } yield classes
   }
 
-  def codeLensesText(filename: String, printCommand: Boolean = false)(
+  def codeLensesText(
+      filename: String,
+      printCommand: Boolean = false,
+      minExpectedLenses: Int = 1,
+  )(
       maxRetries: Int
   ): Future[String] = {
     for {
-      lenses <- codeLenses(filename, maxRetries)
+      lenses <- codeLenses(filename, maxRetries, minExpectedLenses)
       textEdits = CodeLensesTextEdits(lenses, printCommand)
     } yield TextEdits.applyEdits(textContents(filename), textEdits.toList)
   }
@@ -1037,6 +1060,7 @@ final case class TestingServer(
   def codeLenses(
       filename: String,
       maxRetries: Int = 4,
+      minExpectedLenses: Int = 1,
   ): Future[List[l.CodeLens]] = {
     Debug.printEnclosing(filename)
     val path = toPath(filename)
@@ -1052,21 +1076,24 @@ final case class TestingServer(
     // or fails if it could nat be achieved withing [[maxRetries]] number of tries
     var retries = maxRetries
     val codeLenses = Promise[List[l.CodeLens]]()
+    def getLenses = fullServer
+      .codeLens(params)
+      .asScala
+      .map(_.asScala)
+      .withTimeout(10, util.concurrent.TimeUnit.SECONDS)
+      .recover { _ =>
+        scribe.info(s"Timeout for fetching lenses reached for $filename")
+        Nil
+      }
+
     val handler = { refreshCount: Int =>
       scribe.info(s"Refreshing model for $filename")
       if (refreshCount > 0)
         for {
-          lenses <- fullServer
-            .codeLens(params)
-            .asScala
-            .map(_.asScala)
-            .withTimeout(10, util.concurrent.TimeUnit.SECONDS)
-            .recover { _ =>
-              scribe.info(s"Timeout for fetching lenses reached for $filename")
-              Nil
-            }
+          lenses <- getLenses
         } {
-          if (lenses.nonEmpty) codeLenses.trySuccess(lenses.toList)
+          if (lenses.size >= minExpectedLenses)
+            codeLenses.trySuccess(lenses.toList)
           else if (retries > 0) {
             retries -= 1
             server.compilations.compileFile(path)
@@ -1077,17 +1104,19 @@ final case class TestingServer(
         }
     }
 
+    client.refreshModelHandler = handler
+
     for {
-      _ <-
-        fullServer
-          .didFocus(uri)
-          .asScala // model is refreshed only for focused document
-      _ = client.refreshModelHandler = handler
-      // first compilation, to trigger the handler
-      _ <- server.compilations.compileFile(path)
-      lenses <- codeLenses.future
+      // model is refreshed only for focused document
+      // this will also trigger compilation
+      _ <- fullServer.didFocus(uri).asScala
+      lenses <- getLenses
+        .flatMap { lenses =>
+          if (lenses.size >= minExpectedLenses) Future.successful(lenses)
+          else codeLenses.future
+        }
         .withTimeout(60, util.concurrent.TimeUnit.SECONDS)
-    } yield lenses
+    } yield lenses.toList
   }
 
   def formatCompletion(

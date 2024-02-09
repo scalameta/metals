@@ -470,7 +470,6 @@ object TokenEditDistance {
       originalInput: Input.VirtualFile,
       revisedInput: Input.VirtualFile,
       trees: Trees,
-      doNothingWhenUnchanged: Boolean = true,
   ): Either[String, TokenEditDistance] = {
     val isScala =
       originalInput.path.isScalaFilename &&
@@ -484,7 +483,7 @@ object TokenEditDistance {
       Right(Unchanged)
     } else if (originalInput.value.isEmpty() || revisedInput.value.isEmpty()) {
       Right(NoMatch)
-    } else if (doNothingWhenUnchanged && originalInput == revisedInput) {
+    } else if (originalInput == revisedInput) {
       Right(Unchanged)
     } else if (isJava) {
       val tokenizedRevised = JavaTokens.tokenize(revisedInput)

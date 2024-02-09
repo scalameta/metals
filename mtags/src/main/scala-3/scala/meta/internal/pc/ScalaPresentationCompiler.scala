@@ -20,6 +20,7 @@ import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
+import scala.meta.internal.mtags.MtagsEnrichments.given
 import scala.meta.internal.pc.completions.CompletionProvider
 import scala.meta.internal.pc.completions.OverrideCompletions
 import scala.meta.pc.*
@@ -65,6 +66,15 @@ case class ScalaPresentationCompiler(
       config,
       sh,
       () => new Scala3CompilerWrapper(newDriver),
+      () =>
+        s"""|Scala version: $scalaVersion
+            |Classpath:
+            |${classpath
+             .map(path => s"$path [${if path.exists then "exists" else "missing"} ]")
+             .mkString(", ")}
+            |Options:
+            |${options.mkString(" ")}
+            |""".stripMargin,
     )(using
       ec
     )

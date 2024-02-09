@@ -10,7 +10,6 @@ import scala.util.Random
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsBspException
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.DebugProvider.WorkspaceErrorsException
 
@@ -92,7 +91,7 @@ class DebugProtocolSuite
            |""".stripMargin
       )
       failed = startDebugging()
-      debugger <- failed.recoverWith { case _: MetalsBspException =>
+      debugger <- failed.recoverWith { case _: ResponseErrorException =>
         server
           .didSave("a/src/main/scala/a/Main.scala") { text => text + "}" }
           .flatMap(_ => startDebugging())

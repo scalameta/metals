@@ -55,7 +55,6 @@ class OnTypeFormattingProvider(
       startPos <- range.getStart.toMeta(virtualFile)
       endPos <- range.getEnd.toMeta(virtualFile)
     } yield {
-      val tokensOpt = trees.tokenized(virtualFile).toOption
       val onTypeformatterParams =
         OnTypeFormatterParams(
           sourceText,
@@ -63,7 +62,7 @@ class OnTypeFormattingProvider(
           triggerChar,
           startPos,
           endPos,
-          tokensOpt,
+          trees.tokenized(path),
         )
       formatters.acceptFirst(formater =>
         formater.contribute(onTypeformatterParams)
