@@ -199,6 +199,7 @@ case class ScalaPresentationCompiler(
     ) { access =>
       SymbolInformationProvider(using access.compiler().currentCtx)
         .info(symbol)
+        .map(_.asJava)
         .asJava
     }
 

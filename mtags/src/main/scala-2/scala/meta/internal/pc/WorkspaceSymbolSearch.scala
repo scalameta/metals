@@ -4,6 +4,8 @@ import java.nio.file.Path
 
 import scala.util.control.NonFatal
 
+import scala.meta.pc.PcSymbolKind
+import scala.meta.pc.PcSymbolProperty
 import scala.meta.pc.SymbolSearchVisitor
 
 import org.eclipse.{lsp4j => l}
@@ -49,11 +51,11 @@ trait WorkspaceSymbolSearch { this: MetalsGlobal =>
         symbol = semanticdbSymbol(compilerSymbol),
         kind = getSymbolKind(compilerSymbol),
         parents = compilerSymbol.parentSymbols.map(semanticdbSymbol),
-        dealisedSymbol = semanticdbSymbol(compilerSymbol.dealiased),
+        dealiasedSymbol = semanticdbSymbol(compilerSymbol.dealiased),
         classOwner = compilerSymbol.ownerChain
           .find(c => c.isClass || c.isModule)
           .map(semanticdbSymbol),
-        overridden = compilerSymbol.overrides.map(semanticdbSymbol),
+        overriddenSymbols = compilerSymbol.overrides.map(semanticdbSymbol),
         properties =
           if (compilerSymbol.isAbstractClass || compilerSymbol.isAbstractType)
             List(PcSymbolProperty.ABSTRACT)
@@ -62,7 +64,7 @@ trait WorkspaceSymbolSearch { this: MetalsGlobal =>
     )
   }
 
-  private def getSymbolKind(sym: Symbol): PcSymbolKind.PcSymbolKind =
+  private def getSymbolKind(sym: Symbol): PcSymbolKind =
     if (sym.isJavaInterface) PcSymbolKind.INTERFACE
     else if (sym.isTrait) PcSymbolKind.TRAIT
     else if (sym.isConstructor) PcSymbolKind.CONSTRUCTOR

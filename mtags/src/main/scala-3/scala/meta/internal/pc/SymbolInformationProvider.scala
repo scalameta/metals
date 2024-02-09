@@ -3,6 +3,8 @@ package scala.meta.internal.pc
 import scala.util.control.NonFatal
 
 import scala.meta.internal.mtags.MtagsEnrichments.metalsDealias
+import scala.meta.pc.PcSymbolKind
+import scala.meta.pc.PcSymbolProperty
 
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Denotations.Denotation
@@ -83,9 +85,9 @@ class SymbolInformationProvider(using Context):
         symbol = SemanticdbSymbols.symbolName(sym),
         kind = getSymbolKind(sym),
         parents = parents,
-        dealisedSymbol = SemanticdbSymbols.symbolName(dealisedSymbol),
+        dealiasedSymbol = SemanticdbSymbols.symbolName(dealisedSymbol),
         classOwner = classOwner.map(SemanticdbSymbols.symbolName),
-        overridden = overridden.map(SemanticdbSymbols.symbolName),
+        overriddenSymbols = overridden.map(SemanticdbSymbols.symbolName),
         properties =
           if sym.is(Flags.Abstract) then List(PcSymbolProperty.ABSTRACT)
           else Nil,
@@ -93,7 +95,7 @@ class SymbolInformationProvider(using Context):
     end for
   end info
 
-  private def getSymbolKind(sym: Symbol): PcSymbolKind.PcSymbolKind =
+  private def getSymbolKind(sym: Symbol): PcSymbolKind =
     if sym.isAllOf(Flags.JavaInterface) then PcSymbolKind.INTERFACE
     else if sym.is(Flags.Trait) then PcSymbolKind.TRAIT
     else if sym.isConstructor then PcSymbolKind.CONSTRUCTOR

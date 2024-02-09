@@ -4,10 +4,10 @@ import java.util.List;
 
 public interface PcSymbolInformation {
   String symbol();
-  String kindString();
-  List<String> parentsList();
-  String dealisedSymbol();
-  String classOwnerString();
-  List<String> overriddenList();
-  List<String> propertiesList();
+  PcSymbolKind kind();
+  List<String> parents();
+  String dealiasedSymbol();
+  String classOwner();
+  List<String> overriddenSymbols();
+  List<PcSymbolProperty> properties();
 }

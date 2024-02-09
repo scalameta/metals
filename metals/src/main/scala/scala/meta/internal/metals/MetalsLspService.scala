@@ -541,16 +541,6 @@ class MetalsLspService(
       trees,
     )
 
-  private val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
-    List(
-      referencesProvider,
-      implementationProvider,
-      testProvider,
-    ),
-    buildTargets,
-    folder,
-  )
-
   private val formattingProvider: FormattingProvider = new FormattingProvider(
     folder,
     buffers,
@@ -684,7 +674,6 @@ class MetalsLspService(
       referencesProvider,
       implementationProvider,
       testProvider,
-      classpathTreeIndex,
     ),
     buildTargets,
     folder,

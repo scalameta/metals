@@ -55,7 +55,7 @@ class GlobalInheritanceContext(
           compilers.info(source, sym).map {
             case Some(symInfo) if symInfo.parents.contains(symbol) => Some(loc)
             case Some(symInfo)
-                if symInfo.dealisedSymbol == symbol && symInfo.symbol != symbol =>
+                if symInfo.dealiasedSymbol == symbol && symInfo.symbol != symbol =>
               Some(loc)
             case _ => None
           }

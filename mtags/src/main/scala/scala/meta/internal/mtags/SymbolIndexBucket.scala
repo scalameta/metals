@@ -72,7 +72,8 @@ class SymbolIndexBucket(
             case source if source.isJava =>
               addJavaSourceFile(source) match {
                 case Nil => None
-                case topLevels => Some(IndexingResult(source, topLevels, overrides = Nil))
+                case topLevels =>
+                  Some(IndexingResult(source, topLevels, overrides = Nil))
               }
             case _ =>
               None

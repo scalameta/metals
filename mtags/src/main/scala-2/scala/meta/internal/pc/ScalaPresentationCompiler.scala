@@ -359,7 +359,8 @@ case class ScalaPresentationCompiler(
       Nil.asJava,
       EmptyCancelToken
     ) { pc =>
-      val result: List[IPcSymbolInformation] = pc.compiler().info(symbol)
+      val result: List[IPcSymbolInformation] =
+        pc.compiler().info(symbol).map(_.asJava)
       result.asJava
     }
   }

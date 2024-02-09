@@ -30,8 +30,6 @@ import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
 import scala.meta.internal.mtags.{Symbol => MSymbol}
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.PcSymbolInformation
-import scala.meta.internal.pc.PcSymbolKind
-import scala.meta.internal.pc.PcSymbolProperty
 import scala.meta.internal.search.SymbolHierarchyOps._
 import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.Scala._
@@ -42,6 +40,8 @@ import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.semanticdb.TypeSignature
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.PcSymbolKind
+import scala.meta.pc.PcSymbolProperty
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Location
@@ -158,13 +158,13 @@ final class ImplementationProvider(
       // 2. Search inside workspace
       // 3. Search classpath via GlobalSymbolTable
       val sym = symbolOccurrence.symbol
-      val dealised =
+      val dealiased =
         if (sym.desc.isType) {
           symbolInfo(currentDocument, source, sym).map(
-            _.map(_.dealisedSymbol).getOrElse(sym)
+            _.map(_.dealiasedSymbol).getOrElse(sym)
           )
         } else Future.successful(sym)
-      dealised.flatMap { dealisedSymbol =>
+      dealiased.flatMap { dealisedSymbol =>
         val isWorkspaceSymbol =
           (source.isWorkspaceSource(workspace) &&
             currentDocument.definesSymbol(dealisedSymbol)) ||
@@ -203,7 +203,7 @@ final class ImplementationProvider(
   }
 
   private def symbolLocationsFromContext(
-      dealised: String,
+      dealiased: String,
       textDocument: TextDocument,
       source: AbsolutePath,
       inheritanceContext: InheritanceContext,
@@ -240,7 +240,9 @@ final class ImplementationProvider(
             .infoAll(source, symbol)
             .map { allFound =>
               allFound
-                .find(implInfo => implInfo.overridden.contains(info.symbol))
+                .find(implInfo =>
+                  implInfo.overriddenSymbols.contains(info.symbol)
+                )
                 .map(_.symbol)
                 .getOrElse(symbol)
             }
@@ -310,7 +312,7 @@ final class ImplementationProvider(
 
     lazy val cores = Runtime.getRuntime().availableProcessors()
     val splitJobs =
-      symbolInfo(textDocument, source, dealised).flatMap { optSymbolInfo =>
+      symbolInfo(textDocument, source, dealiased).flatMap { optSymbolInfo =>
         (for {
           symbolInfo <- optSymbolInfo
           symbolClass <- classFromSymbol(symbolInfo)
@@ -413,7 +415,7 @@ final class ImplementationProvider(
   }
 
   private def classFromSymbol(info: PcSymbolInformation): Option[String] =
-    if (classLikeKinds(info.kind)) Some(info.dealisedSymbol)
+    if (classLikeKinds(info.kind)) Some(info.dealiasedSymbol)
     else info.classOwner
 
   private def symbolInfo(
@@ -461,12 +463,12 @@ final class ImplementationProvider(
     PcSymbolInformation(
       symbol = info.symbol,
       kind = PcSymbolKind.values
-        .find(_.id == info.kind.value)
+        .find(_.getValue == info.kind.value)
         .getOrElse(PcSymbolKind.UNKNOWN_KIND),
       parents = parents,
-      dealisedSymbol = info.symbol,
+      dealiasedSymbol = info.symbol,
       classOwner = classOwner,
-      overridden = info.overriddenSymbols.toList,
+      overriddenSymbols = info.overriddenSymbols.toList,
       properties = if (info.isAbstract) List(PcSymbolProperty.ABSTRACT) else Nil,
     )
   }
@@ -510,7 +512,7 @@ object ImplementationProvider {
     }
   }
 
-  val classLikeKinds: Set[PcSymbolKind.Value] = Set(
+  val classLikeKinds: Set[PcSymbolKind] = Set(
     PcSymbolKind.OBJECT,
     PcSymbolKind.CLASS,
     PcSymbolKind.TRAIT,
