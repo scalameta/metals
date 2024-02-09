@@ -571,10 +571,11 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
        |""".stripMargin,
   )
 
-  // missing implementation of `info` for java pc
   check(
-    "java-implementation".ignore,
-    """|/a/src/main/scala/a/Main.java
+    "java-implementation",
+    """|/a/src/main/scala/a/Main.scala
+       |// empty scala file, so Scala pc is loaded
+       |/a/src/main/scala/a/Main.java
        |package a;
        |public class Main {
        |  abstract class A {
@@ -595,7 +596,7 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
   )
 
   check(
-    "java-scala-implementation".ignore,
+    "java-scala-implementation",
     """|/a/src/main/scala/a/Test.scala
        |package a
        |class <<Test>> extends TestJava with TestScala {}
