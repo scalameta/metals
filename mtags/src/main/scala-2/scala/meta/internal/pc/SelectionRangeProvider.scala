@@ -6,6 +6,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.OffsetParams
 
 import org.eclipse.lsp4j.SelectionRange
+import scala.meta.tokens.Token.Comment
 
 /**
  * Provides the functionality necessary for the `textDocument/selectionRange` request.
@@ -39,7 +40,6 @@ class SelectionRangeProvider(
       // lastVisitedParentTrees that will contain the exact tree structure we
       // need to create the selection range, starting from the position
       val _ = locateUntyped(pos)
-
       val bareRanges = lastVisitedParentTrees
         .map { tree: Tree =>
           val selectionRange = new SelectionRange()
@@ -47,7 +47,12 @@ class SelectionRangeProvider(
           selectionRange
         }
 
-      bareRanges.reduceRight(setParent)
+      val commentRanges =
+        getCommentRanges(pos, lastVisitedParentTrees, param.text()).map { x =>
+          new SelectionRange() { setRange(x) }
+        }.toList
+
+      (commentRanges ++ bareRanges).reduceRight(setParent)
     }
 
     selectionRanges
@@ -82,6 +87,55 @@ class SelectionRangeProvider(
       child.setParent(parent)
       child
     }
+  }
+
+  import compiler._
+  def getCommentRanges(
+      cursorPos: Position,
+      path: List[Tree],
+      srcText: String
+  ) = {
+    import scala.meta._
+    val (treeStart, treeEnd) = path.headOption
+      // .map(t => t.pos.start)
+      .map(t => (t.pos.start, t.pos.end))
+      .getOrElse((0, srcText.size))
+
+    // only parse comments from first range to reduce computation
+    val srcSliced = srcText.slice(treeStart, treeEnd)
+
+    val tokens = srcSliced.tokenize.toOption
+    if (tokens.isEmpty) Nil
+    else
+      commentRangesFromTokens(
+        tokens.toList.flatten,
+        cursorPos,
+        treeStart
+      )
+
+  }
+
+  import scala.meta.tokens.Token
+  def commentRangesFromTokens(
+      tokenList: List[Token],
+      cursorStart: Position,
+      offsetStart: Int
+  ) = {
+    val cursorStartShifted = cursorStart.start - offsetStart
+
+    tokenList
+      .collect { case x: Comment =>
+        (x.start, x.end, x.pos)
+      }
+      .collect {
+        case (commentStart, commentEnd, _)
+            if commentStart <= cursorStartShifted && cursorStartShifted <= commentEnd =>
+          cursorStart
+            .withStart(commentStart + offsetStart)
+            .withEnd(commentEnd + offsetStart)
+            .toLsp
+
+      }
   }
 
 }
