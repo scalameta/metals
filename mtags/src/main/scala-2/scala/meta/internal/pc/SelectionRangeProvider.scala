@@ -7,6 +7,8 @@ import scala.meta.pc.OffsetParams
 
 import org.eclipse.lsp4j.SelectionRange
 import scala.meta.tokens.Token.Comment
+import scala.meta.tokens.Token
+import scala.meta._
 
 /**
  * Provides the functionality necessary for the `textDocument/selectionRange` request.
@@ -49,9 +51,8 @@ class SelectionRangeProvider(
 
       val commentRanges =
         getCommentRanges(pos, lastVisitedParentTrees, param.text()).map { x =>
-          new SelectionRange() { setRange(x) }
+          new SelectionRange() { setRange(x.toLsp) }
         }.toList
-
       (commentRanges ++ bareRanges).reduceRight(setParent)
     }
 
@@ -95,9 +96,8 @@ class SelectionRangeProvider(
       path: List[Tree],
       srcText: String
   ) = {
-    import scala.meta._
+
     val (treeStart, treeEnd) = path.headOption
-      // .map(t => t.pos.start)
       .map(t => (t.pos.start, t.pos.end))
       .getOrElse((0, srcText.size))
 
@@ -105,17 +105,25 @@ class SelectionRangeProvider(
     val srcSliced = srcText.slice(treeStart, treeEnd)
 
     val tokens = srcSliced.tokenize.toOption
-    if (tokens.isEmpty) Nil
-    else
-      commentRangesFromTokens(
-        tokens.toList.flatten,
-        cursorPos,
-        treeStart
-      )
+    val rg =
+      if (tokens.isEmpty) Nil
+      else
+        SelectionRangeUtils
+          .commentRangesFromTokens(
+            tokens.toList.flatten,
+            cursorPos.start,
+            treeStart
+          ) map { case (s, e) =>
+          cursorPos
+            .withStart(s)
+            .withEnd(e)
+        }
 
+    // println("cmt range scala 2")
+    // pprint.pprintln(rg map (x => srcText.slice(x.start, x.end)))
+    rg
   }
 
-  import scala.meta.tokens.Token
   def commentRangesFromTokens(
       tokenList: List[Token],
       cursorStart: Position,
@@ -133,7 +141,6 @@ class SelectionRangeProvider(
           cursorStart
             .withStart(commentStart + offsetStart)
             .withEnd(commentEnd + offsetStart)
-            .toLsp
 
       }
   }
