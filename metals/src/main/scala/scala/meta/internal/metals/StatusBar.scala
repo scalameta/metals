@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
@@ -17,9 +18,16 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
+import scala.meta.internal.metals.config.StatusBarState
 
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.ProgressParams
+import org.eclipse.lsp4j.WorkDoneProgressBegin
+import org.eclipse.lsp4j.WorkDoneProgressCreateParams
+import org.eclipse.lsp4j.WorkDoneProgressEnd
+import org.eclipse.lsp4j.WorkDoneProgressNotification
+import org.eclipse.lsp4j.jsonrpc.messages
 
 /**
  * Manages sending metals/status notifications to the editor client.
@@ -107,9 +115,34 @@ final class StatusBar(
       showTimer: Boolean = false,
       progress: Option[TaskProgress] = None,
   ): Future[T] = {
-    items.add(Progress(message, value, showTimer, progress))
-    tickIfHidden()
-    value
+
+    if (clientConfig.statusBarState == StatusBarState.Off) {
+      val uuid = UUID.randomUUID().toString()
+      val token = messages.Either.forLeft[String, Integer](uuid)
+
+      val begin = new WorkDoneProgressBegin()
+      begin.setTitle(message)
+      val notification =
+        messages.Either.forLeft[WorkDoneProgressNotification, Object](
+          begin
+        )
+
+      client.createProgress(new WorkDoneProgressCreateParams(token))
+      client.notifyProgress(new ProgressParams(token, notification))
+
+      value.map { result =>
+        val end = messages.Either.forLeft[WorkDoneProgressNotification, Object](
+          new WorkDoneProgressEnd()
+        )
+        client.notifyProgress(new ProgressParams(token, end))
+        result
+      }
+    } else {
+      items.add(Progress(message, value, showTimer, progress))
+      tickIfHidden()
+
+      value
+    }
   }
 
   def addMessage(params: MetalsStatusParams): Unit = {

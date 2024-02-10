@@ -661,7 +661,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "auto-imports-prefix".tag(IgnoreForScala3CompilerPC),
+    "auto-imports-prefix",
     """|
        |class Paths
        |object Main {
@@ -772,9 +772,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
 
   checkEdit(
     "extension3".tag(
-      IgnoreScala2
-        .and(IgnoreScalaVersion.for3LessThan("3.2.2"))
-        .and(IgnoreForScala3CompilerPC)
+      IgnoreScala2.and(IgnoreScalaVersion.for3LessThan("3.2.2"))
     ),
     """|trait Cursor
        |

@@ -32,6 +32,13 @@ class CompletionSuite extends BaseCompletionSuite {
            |List - java.util
            |List - scala.collection.immutable
            |List[A](elems: A*): CC[A]
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        """|List scala.collection.immutable
+           |List[A](elems: A*): CC[A]
+           |List - java.awt
+           |List - java.util
+           |ListMap[K, V](elems: (K, V)*): CC[K, V]
            |""".stripMargin
     ),
     topLines = Some(5)
@@ -314,6 +321,50 @@ class CompletionSuite extends BaseCompletionSuite {
            |wait(): Unit
            |wait(x$0: Long): Unit
            |wait(x$0: Long, x$1: Int): Unit
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        """|empty[A]: List[A]
+           |from[B](coll: IterableOnce[B]): List[B]
+           |newBuilder[A]: Builder[A, List[A]]
+           |apply[A](elems: A*): List[A]
+           |concat[A](xss: Iterable[A]*): List[A]
+           |fill[A](n1: Int, n2: Int)(elem: => A): List[List[A] @uncheckedVariance]
+           |fill[A](n1: Int, n2: Int, n3: Int)(elem: => A): List[List[List[A]] @uncheckedVariance]
+           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int)(elem: => A): List[List[List[List[A]]] @uncheckedVariance]
+           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): List[List[List[List[List[A]]]] @uncheckedVariance]
+           |fill[A](n: Int)(elem: => A): List[A]
+           |iterate[A](start: A, len: Int)(f: A => A): List[A]
+           |range[A: Integral](start: A, end: A): List[A]
+           |range[A: Integral](start: A, end: A, step: A): List[A]
+           |tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): List[List[A] @uncheckedVariance]
+           |tabulate[A](n1: Int, n2: Int, n3: Int)(f: (Int, Int, Int) => A): List[List[List[A]] @uncheckedVariance]
+           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): List[List[List[List[A]]] @uncheckedVariance]
+           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): List[List[List[List[List[A]]]] @uncheckedVariance]
+           |tabulate[A](n: Int)(f: Int => A): List[A]
+           |unapplySeq[A](x: List[A] @uncheckedVariance): UnapplySeqWrapper[A]
+           |unfold[A, S](init: S)(f: S => Option[(A, S)]): List[A]
+           |->[B](y: B): (List.type, B)
+           |ensuring(cond: Boolean): List.type
+           |ensuring(cond: List.type => Boolean): List.type
+           |ensuring(cond: Boolean, msg: => Any): List.type
+           |ensuring(cond: List.type => Boolean, msg: => Any): List.type
+           |fromSpecific(from: Any)(it: IterableOnce[Nothing]): List[Nothing]
+           |fromSpecific(it: IterableOnce[Nothing]): List[Nothing]
+           |nn: List.type & List.type
+           |toFactory(from: Any): Factory[Nothing, List[Nothing]]
+           |formatted(fmtstr: String): String
+           |→[B](y: B): (List.type, B)
+           |iterableFactory[A]: Factory[A, List[A]]
+           |asInstanceOf[X0]: X0
+           |equals(x$0: Any): Boolean
+           |getClass[X0 >: List.type](): Class[? <: X0]
+           |hashCode(): Int
+           |isInstanceOf[X0]: Boolean
+           |synchronized[X0](x$0: X0): X0
+           |toString(): String
+           |wait(): Unit
+           |wait(x$0: Long): Unit
+           |wait(x$0: Long, x$1: Int): Unit
            |""".stripMargin
       // wait(x$0: Long) won't be replaced with timeoutMills here
       // but it will be replaced in `completionItem/resolve`
@@ -368,6 +419,17 @@ class CompletionSuite extends BaseCompletionSuite {
       "2" ->
         """|ProcessBuilder java.lang
            |ProcessBuilder - scala.sys.process
+           |CertPathBuilder - java.security.cert
+           |CertPathBuilderSpi - java.security.cert
+           |ProcessBuilderImpl - scala.sys.process
+           |CertPathBuilderResult - java.security.cert
+           |PKIXBuilderParameters - java.security.cert
+           |PooledConnectionBuilder - javax.sql
+           |CertPathBuilderException - java.security.cert
+           |PKIXCertPathBuilderResult - java.security.cert
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        """|ProcessBuilder - scala.sys.process
            |CertPathBuilder - java.security.cert
            |CertPathBuilderSpi - java.security.cert
            |ProcessBuilderImpl - scala.sys.process
@@ -516,7 +578,22 @@ class CompletionSuite extends BaseCompletionSuite {
        |XPathNodes - javax.xml.xpath
        |PathMatcher - java.nio.file
        |XPathResult - org.w3c.dom.xpath
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.11.12" ->
+        """|Path - java.nio.file
+           |Paths - java.nio.file
+           |XPath - javax.xml.xpath
+           |Path2D - java.awt.geom
+           |CertPath - java.security.cert
+           |TreePath - javax.swing.tree
+           |XPathType - javax.xml.crypto.dsig.spec
+           |LayoutPath - java.awt.font
+           |XPathNodes - javax.xml.xpath
+           |PathMatcher - java.nio.file
+           |GeneralPath - java.awt.geom
+           |""".stripMargin
+    )
   )
 
   check(
@@ -863,6 +940,12 @@ class CompletionSuite extends BaseCompletionSuite {
            |until(end: Int, step: Int): Range
            |until(end: T): Exclusive[T]
            |until(end: T, step: T): Exclusive[T]
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        """|until(end: Int): Range
+           |until(end: Int, step: Int): Range
+           |until(end: Long): Exclusive[Long]
+           |until(end: Long, step: Long): Exclusive[Long]
            |""".stripMargin
     )
   )
@@ -1321,12 +1404,12 @@ class CompletionSuite extends BaseCompletionSuite {
            |higherKinds scala.languageFeature
            |implicitConversions scala.languageFeature
            |""".stripMargin,
-      ">=3.3.2-RC1" ->
+      ">=3.3.2-RC3" ->
         """|dynamics languageFeature
            |existentials languageFeature
            |experimental languageFeature
-           |higherKinds languageFeature
            |implicitConversions languageFeature
+           |postfixOps languageFeature
            |""".stripMargin,
       ">=3.4.0-RC1-bin-20230921-3d539e6-NIGHTLY" ->
         """|dynamics scala.languageFeature

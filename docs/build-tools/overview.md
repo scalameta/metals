@@ -14,6 +14,7 @@ functionality.
 | Gradle     | Automatic via Bloop |         Automatic         |    Automatic    |
 | Mill       | Automatic via Bloop |         Automatic         |    Automatic    |
 | Bloop      |      Automatic      |      Semi-automatic       | Semi-automatic  |
+| Bazel      |      Automatic      |      Build definition     | Semi-automatic  |
 
 ## Installation
 
@@ -43,6 +44,9 @@ compiler plugin and `-Yrangepos` option enabled.
 the
 [Bloop JSON files](https://scalacenter.github.io/bloop/docs/configuration-format/)
 are populated with `*-sources.jar`.
+
+**Build definition**: navigation in library dependency sources works as long as
+the sources are enabled for library dependencies in the Bazel definition.
 
 ## Find references
 

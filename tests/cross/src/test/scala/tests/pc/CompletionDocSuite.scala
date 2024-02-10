@@ -665,7 +665,21 @@ class CompletionDocSuite extends BaseCompletionSuite {
     includeDocs = true,
     compat = Map(
       "2.13" -> vectorDocs213,
-      "3" -> vectorDocs213
+      "3" -> vectorDocs213,
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        (vectorDocs213 +
+          """|> Creates a collection with the specified elements.
+             |
+             |**Type Parameters**
+             |- `A`: the type of the ${coll}'s elements
+             |
+             |**Parameters**
+             |- `elems`: the elements of the created collection
+             |
+             |**Returns:** a new collection with elements `elems`
+             |Vector[A](elems: A*): CC[A]
+             |
+             |""".stripMargin)
     )
   )
 
@@ -864,6 +878,12 @@ class CompletionDocSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|myNumbers: Vector[Int]
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        """|myNumbers: Vector[Int]
+           |myNumbers(i: Int): A
+           |""".stripMargin
+    )
   )
 }

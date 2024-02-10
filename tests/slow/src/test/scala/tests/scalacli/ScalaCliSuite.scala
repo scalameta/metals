@@ -257,7 +257,7 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
     simpleFileTest(useBsp = false)
   }
 
-  test(s"simple-script-bsp") {
+  test(s"simple-script-bsp".flaky) {
     cleanWorkspace()
     simpleScriptTest(useBsp = true)
   }

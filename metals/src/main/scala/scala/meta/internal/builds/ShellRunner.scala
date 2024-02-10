@@ -63,6 +63,7 @@ class ShellRunner(
       processOut: String => Unit = scribe.info(_),
       processErr: String => Unit = scribe.error(_),
       propagateError: Boolean = false,
+      javaOptsMap: Map[String, String] = Map.empty,
   ): Future[Int] = {
 
     val classpathSeparator = if (Properties.isWin) ";" else ":"
@@ -79,12 +80,19 @@ class ShellRunner(
       .asScala
       .mkString(classpathSeparator)
 
-    val cmd = List(
-      JavaBinary(javaHome),
-      "-classpath",
-      classpath,
-      main,
-    ) ::: arguments
+    val javaOpts = javaOptsMap.map { case (key, value) =>
+      s"-D$key=$value"
+    }.toList
+
+    val cmd =
+      JavaBinary(javaHome) ::
+        javaOpts :::
+        List(
+          "-classpath",
+          classpath,
+          main,
+        ) ::: arguments
+
     run(
       main,
       cmd,

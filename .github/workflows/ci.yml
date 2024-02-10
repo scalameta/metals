@@ -127,7 +127,7 @@ jobs:
             command: sbt cross-test-2-11
             name: Scala 2.11 cross tests
             os: ubuntu-latest
-            java: "8"
+            java: "17"
           - type: scalafix
             command: sbt scalafixCheck docs/docusaurusCreateSite
             name: Scalafix and docs

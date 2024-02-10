@@ -27,6 +27,14 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
     }
   }
 
+  def readPackage: List[String] = {
+    fetchToken // start of file
+    fetchToken match {
+      case Token.Package => readPaths.map(_.value)
+      case _ => Nil
+    }
+  }
+
   private def loop: Unit = {
     val token = fetchToken
     token match {

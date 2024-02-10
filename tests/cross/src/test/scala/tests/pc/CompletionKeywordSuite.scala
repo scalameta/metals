@@ -43,7 +43,10 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
                 |transparentTrait - scala.annotation (commit: '')""".stripMargin,
       "3.4" -> """|transient scala (commit: '')
                   |transparentTrait - scala.annotation (commit: '')
-                  |""".stripMargin
+                  |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        """|transparentTrait - scala.annotation (commit: '')
+           |""".stripMargin
     ),
     includeCommitCharacter = true
   )
@@ -71,6 +74,9 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       "3.4" ->
         """|transient scala (commit: '')
            |transparentTrait - scala.annotation (commit: '')
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        """|transparentTrait - scala.annotation (commit: '')
            |""".stripMargin
     ),
     includeCommitCharacter = true
@@ -477,7 +483,12 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
                 |deprecatedInheritance scala
                 |deprecatedName scala
                 |deprecatedOverriding scala
-                |""".stripMargin
+                |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        """|def
+           |derived - scala.CanEqual
+           |deprecated - scala.runtime.stdLibPatches.language
+           |""".stripMargin
     )
   )
 
@@ -587,7 +598,14 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
                   |unchecked scala (commit: '')
                   |unsafe - scala.caps (commit: '')
                   |unsafeNulls - scala.runtime.stdLibPatches.language (commit: '')
-                  |""".stripMargin
+                  |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        """|using (commit: '')
+           |unsafe - scala.caps (commit: '')
+           |unsafeNulls - scala.runtime.stdLibPatches.language (commit: '')
+           |unused - scala.annotation (commit: '')
+           |unshared - scala.annotation.internal (commit: '')
+           |""".stripMargin
     ),
     topLines = Some(5)
   )
@@ -624,7 +642,14 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
                   |unsafe - scala.caps
                   |unsafeNulls - scala.runtime.stdLibPatches.language
                   |unused - scala.annotation
-                  |""".stripMargin
+                  |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        """|unsafe - scala.caps
+           |unsafeNulls - scala.runtime.stdLibPatches.language
+           |unused - scala.annotation
+           |unshared - scala.annotation.internal
+           |unspecialized - scala.annotation
+           |""".stripMargin
     ),
     topLines = Some(5)
   )
