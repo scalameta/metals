@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import scala.tools.nsc.reporters.Reporter
 import scala.tools.nsc.reporters.StoreReporter
+import scala.meta.pc.VirtualFileParams
 
 trait Compat { this: MetalsGlobal =>
   def metalsFunctionArgTypes(tpe: Type): List[Type] = {
@@ -19,4 +20,8 @@ trait Compat { this: MetalsGlobal =>
   def isAliasCompletion(m: Member): Boolean = false
 
   def constantType(c: ConstantType): ConstantType = c
+
+  def runOutline(files: List[VirtualFileParams]): Unit = {
+    // no outline compilation for 2.11
+  }
 }

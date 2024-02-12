@@ -9,6 +9,7 @@ import scala.meta.pc.PcSymbolProperty
 import scala.meta.pc.SymbolSearchVisitor
 
 import org.eclipse.{lsp4j => l}
+import scala.annotation.tailrec
 
 trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
 
@@ -18,24 +19,27 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
   ) {
 
     def traverseUnit(unit: RichCompilationUnit) = {
-
-      class Traverser extends compiler.Traverser {
-        override def traverse(tree: Tree): Unit = {
-          val sym = tree.symbol
-          def matches = if (sym.isType)
-            CompletionFuzzy.matchesSubCharacters(query, sym.name.toString())
-          else CompletionFuzzy.matches(query, sym.name.toString())
-          if (sym.exists && matches) { // && !sym.isStale
-            try {
-              visitMember(sym)
-            } catch {
-              case _: Throwable =>
-              // with outline compiler there might be situations when things fail
+      @tailrec
+      def loop(trees: List[Tree]): Unit = {
+        trees match {
+          case Nil =>
+          case tree :: tail =>
+            val sym = tree.symbol
+            def matches = if (sym.isType)
+              CompletionFuzzy.matchesSubCharacters(query, sym.name.toString())
+            else CompletionFuzzy.matches(query, sym.name.toString())
+            if (sym.exists && matches) {
+              try {
+                visitMember(sym)
+              } catch {
+                case _: Throwable =>
+                // with outline compiler there might be situations when things fail
+              }
             }
-          }
+            loop(tree.children ++ tail)
         }
       }
-      unit.body.traverse(new Traverser)
+      loop(List(unit.body))
     }
     compiler.richCompilationCache.values.foreach(traverseUnit)
   }
