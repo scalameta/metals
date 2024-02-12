@@ -660,27 +660,12 @@ class MetalsGlobal(
 
   def CURSOR = "_CURSOR_"
 
-  def runOutline(files: List[m.pc.VirtualFileParams]): Unit = {
-    compiler.settings.Youtline.value = true
-    files.foreach { params =>
-      val unit = compiler.addCompilationUnit(
-        params.text(),
-        params.uri.toString(),
-        cursor = None,
-        isOutline = true
-      )
-      compiler.typeCheck(unit)
-      compiler.richCompilationCache.put(params.uri().toString(), unit)
-    }
-    compiler.settings.Youtline.value = false
-  }
-
   def addCompilationUnit(
       code: String,
       filename: String,
       cursor: Option[Int],
       cursorName: String = CURSOR,
-      isOutline: Boolean = false,
+      isOutline: Boolean = false
   ): RichCompilationUnit = {
     val codeWithCursor = cursor match {
       case Some(offset) =>
