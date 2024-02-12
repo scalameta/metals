@@ -9,7 +9,6 @@ import scala.concurrent.Future
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Confirmation
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -34,7 +33,6 @@ final class BloopInstall(
     tables: Tables,
     shellRunner: ShellRunner,
     userConfig: () => UserConfiguration,
-    clientConfig: ClientConfiguration,
 )(implicit ec: ExecutionContext) {
 
   override def toString: String = s"BloopInstall($workspace)"
@@ -136,7 +134,7 @@ final class BloopInstall(
           Future.successful(result)
         case _ =>
           if (
-            clientConfig.autoImportBuilds == AutoImportBuildKind.Initial || clientConfig.autoImportBuilds == AutoImportBuildKind.All
+            userConfig().automaticImportBuild == AutoImportBuildKind.Initial || userConfig().automaticImportBuild == AutoImportBuildKind.All
           ) {
             runUnconditionally(buildTool, isImportInProcess)
           } else {

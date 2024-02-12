@@ -130,7 +130,7 @@ final case class Indexer(
             scribe.info(s"Skipping reload with status '${status.name}'")
             Future.successful(BuildChange.None)
           case None =>
-            if (clientConfig.autoImportBuilds == AutoImportBuildKind.All) {
+            if (userConfig().automaticImportBuild == AutoImportBuildKind.All) {
               reloadAndIndex(session)
             } else {
               for {

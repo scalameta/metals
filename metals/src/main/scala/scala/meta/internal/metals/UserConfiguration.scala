@@ -54,6 +54,7 @@ case class UserConfiguration(
     scalafixRulesDependencies: List[String] = Nil,
     customProjectRoot: Option[String] = None,
     verboseCompilation: Boolean = false,
+    automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
     scalaCliLauncher: Option[String] = None,
 ) {
 
@@ -339,6 +340,15 @@ object UserConfiguration {
            |will make the logs contain all the possible debugging information including
            |about incremental compilation in Zinc.""".stripMargin,
       ),
+      UserConfigurationOption(
+        "auto-import-build",
+        "off",
+        "all",
+        "Import build when changes detected without prompting",
+        """|Automatically import builds rather than prompting the user to choose. "initial" will 
+           |only automatically import a build when a project is first opened, "all" will automate 
+           |build imports after subsequent changes as well.""".stripMargin,
+      ),
     )
 
   def fromJson(
@@ -553,6 +563,13 @@ object UserConfiguration {
     val verboseCompilation =
       getBooleanKey("verbose-compilation").getOrElse(false)
 
+    val autoImportBuilds =
+      getStringKey("auto-import-builds").map(_.toLowerCase()) match {
+        case Some("initial") => AutoImportBuildKind.Initial
+        case Some("all") => AutoImportBuildKind.All
+        case _ => AutoImportBuildKind.Off
+      }
+
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -584,6 +601,7 @@ object UserConfiguration {
           scalafixRulesDependencies,
           customProjectRoot,
           verboseCompilation,
+          autoImportBuilds,
         )
       )
     } else {
@@ -602,4 +620,11 @@ sealed trait TestUserInterfaceKind
 object TestUserInterfaceKind {
   object CodeLenses extends TestUserInterfaceKind
   object TestExplorer extends TestUserInterfaceKind
+}
+
+sealed trait AutoImportBuildKind
+object AutoImportBuildKind {
+  object Off extends AutoImportBuildKind
+  object Initial extends AutoImportBuildKind
+  object All extends AutoImportBuildKind
 }

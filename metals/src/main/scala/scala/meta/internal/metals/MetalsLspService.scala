@@ -316,7 +316,6 @@ class MetalsLspService(
     tables,
     shellRunner,
     () => userConfig,
-    clientConfig,
   )
 
   private val bspConfigGenerator: BspConfigGenerator = new BspConfigGenerator(
