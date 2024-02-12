@@ -559,7 +559,7 @@ class MetalsLspService(
     scalaVersionSelector,
     clientConfig.icons,
     onCreate = path => {
-      buildTargets.onCreate(path)
+      onCreate(path)
       onChange(List(path))
     },
   )
@@ -1272,6 +1272,11 @@ class MetalsLspService(
     abs.isScalaOrJava || abs.isSemanticdb || abs.isInBspDirectory(folder)
   }
 
+  private def onCreate(path: AbsolutePath) {
+    buildTargets.onCreate(path)
+    compilers.didChange(path)
+  }
+
   /**
    * Callback that is executed on a file change event by the file watcher.
    *
@@ -1296,7 +1301,7 @@ class MetalsLspService(
     ) {
       event.eventType match {
         case EventType.CreateOrModify =>
-          buildTargets.onCreate(path)
+          onCreate(path)
         case _ =>
       }
       onChange(List(path)).asJava
