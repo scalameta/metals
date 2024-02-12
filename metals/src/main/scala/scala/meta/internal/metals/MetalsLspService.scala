@@ -403,7 +403,7 @@ abstract class MetalsLspService(
     scalaVersionSelector,
     clientConfig.icons,
     onCreate = path => {
-      buildTargets.onCreate(path)
+      onCreate(path)
       onChange(List(path))
     },
   )
