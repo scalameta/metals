@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import java.nio.file.Path
 
+import scala.annotation.tailrec
 import scala.util.control.NonFatal
 
 import scala.meta.pc.PcSymbolKind
@@ -9,7 +10,6 @@ import scala.meta.pc.PcSymbolProperty
 import scala.meta.pc.SymbolSearchVisitor
 
 import org.eclipse.{lsp4j => l}
-import scala.annotation.tailrec
 
 trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
 

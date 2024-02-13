@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import scala.reflect.internal.Reporter
 import scala.tools.nsc.reporters.StoreReporter
+
 import scala.meta.pc.VirtualFileParams
 
 trait Compat { this: MetalsGlobal =>

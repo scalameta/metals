@@ -102,8 +102,6 @@ class Compilers(
 
   import compilerConfiguration._
 
-  val wasPreviouslyCompiledSuccessfully: ju.Set[BuildTargetIdentifier] = ConcurrentHashSet.empty[BuildTargetIdentifier]
-
   class TargetCompilerFiles(targetId: BuildTargetIdentifier)
       extends CompilerFiles {
     override def allPaths(): ju.List[Path] = {
@@ -256,19 +254,19 @@ class Compilers(
   }
 
   def didCompile(report: CompileReport): Unit = {
-    if (report.getErrors > 0) {
-      buildTargetPCFromCache(report.getTarget).foreach(_.restart(false))
-      wasPreviouslyCompiledSuccessfully.remove(report.getTarget)
-    } else {
+    val isSuccessful = report.getErrors == 0
+    buildTargetPCFromCache(report.getTarget).foreach(_.restart(isSuccessful))
+
+    if (isSuccessful) {
       // Restart PC for all build targets that depend on this target since the classfiles
       // may have changed.
 
-      wasPreviouslyCompiledSuccessfully.add(report.getTarget)
       for {
         target <- buildTargets.allInverseDependencies(report.getTarget)
+        if target != report.getTarget
         compiler <- buildTargetPCFromCache(target)
       } {
-        compiler.restart(wasPreviouslyCompiledSuccessfully.contains(target))
+        compiler.restart()
       }
     }
   }

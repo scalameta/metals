@@ -73,7 +73,7 @@ case class ScalaPresentationCompiler(
     compilerFiles: Option[CompilerFiles] = None
 ) extends PresentationCompiler {
 
-  private val wasCompiled = new util.concurrent.atomic.AtomicBoolean(false)
+  private val wasFirstCompilationSuccessful = new util.concurrent.atomic.AtomicReference[Option[Boolean]](None)
 
   implicit val executionContext: ExecutionContextExecutor = ec
 
@@ -148,39 +148,49 @@ case class ScalaPresentationCompiler(
     compilerAccess.shutdown()
   }
 
-  def restart(): Unit = restart(true)
-  override def restart(wasSuccesful: java.lang.Boolean): Unit = {
+  def restart(): Unit = restoreOutlineAndRestart()
+
+  override def restart(wasSuccessful: java.lang.Boolean): Unit = {
+    wasFirstCompilationSuccessful.updateAndGet {
+      case None => Some(wasSuccessful)
+      case value => value
+    }
+
+    if(wasSuccessful) {
+      changedDocuments.clear()
+      compilerAccess.shutdownCurrentCompiler()
+    } else {
+      restoreOutlineAndRestart()
+    }
+  }
+
+  private def restoreOutlineAndRestart() = {
     compilerAccess
       .withNonInterruptableCompiler(None)(
         (),
         EmptyCancelToken
       ) { pc =>
-        if (wasSuccesful) {
-          wasCompiled.set(true)
-          changedDocuments.clear()
-        } else {
-          /* we will still want outline recompiled if the compilation was not succesful */
-          pc.compiler(Nil).richCompilationCache.foreach {
-            case (uriString, unit) =>
-              try {
-                val text = unit.source.content.mkString
-                val uri = uriString.toAbsolutePath.toURI
-                val params =
-                  CompilerOffsetParams(uri, text, 0, EmptyCancelToken)
-                changedDocuments += uri -> params
-              } catch {
-                case NonFatal(error) =>
-                  reportContex.incognito.create(
-                    Report(
-                      "restoring_cache",
-                      "Error while restoring outline compiler cache",
-                      error
-                    )
+        /* we will still want outline recompiled if the compilation was not succesful */
+        pc.compiler(Nil).richCompilationCache.foreach {
+          case (uriString, unit) =>
+            try {
+              val text = unit.source.content.mkString
+              val uri = uriString.toAbsolutePath.toURI
+              val params =
+                CompilerOffsetParams(uri, text, 0, EmptyCancelToken)
+              changedDocuments += uri -> params
+            } catch {
+              case NonFatal(error) =>
+                reportContex.incognito.create(
+                  Report(
+                    "restoring_cache",
+                    "Error while restoring outline compiler cache",
+                    error
                   )
-                  logger
-                    .log(util.logging.Level.SEVERE, error.getMessage(), error)
-              }
-          }
+                )
+                logger
+                  .log(util.logging.Level.SEVERE, error.getMessage(), error)
+            }
         }
       }
       .get()
@@ -205,7 +215,8 @@ case class ScalaPresentationCompiler(
   private def outlineFiles(
       current: VirtualFileParams
   ): List[VirtualFileParams] = {
-    if (!wasCompiled.getAndSet(true)) {
+    if (wasFirstCompilationSuccessful.getAndSet(Some(true)).exists(!_)) {
+      // if first compilation was unsuccessful we want to outline all files
       compilerFiles.iterator.flatMap(_.allPaths().asScala).foreach { path =>
         val uri = path.toUri()
         if (!changedDocuments.contains(uri)) {
@@ -214,6 +225,7 @@ case class ScalaPresentationCompiler(
         }
       }
     }
+
     val results =
       changedDocuments.values.filterNot(_.uri() == current.uri()).toList
     changedDocuments.clear()
