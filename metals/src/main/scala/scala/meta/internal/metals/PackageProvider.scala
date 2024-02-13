@@ -742,6 +742,7 @@ class PackageProvider(
         path.value,
         decl.symbols,
         isIncludeDeclaration = false,
+        sourceContainsDefinition = true,
       )
       .map { loc =>
         Reference(decl, loc.getRange(), loc.getUri())
