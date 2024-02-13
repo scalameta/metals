@@ -220,7 +220,7 @@ public abstract class PresentationCompiler {
 	/**
 	 * Clean the symbol table and other mutable state in the compiler.
 	 */
-	public void restart(Boolean successfulCompilation) {
+	public void restart(boolean successfulCompilation) {
 		restart();
 	}
 
@@ -337,5 +337,9 @@ public abstract class PresentationCompiler {
 	 * Scala version for the current presentation compiler
 	 */
 	public abstract String scalaVersion();
+
+	public PresentationCompiler withWasSuccessfullyCompiled(boolean wasSuccessful) { 
+		return this;
+	}
 
 }

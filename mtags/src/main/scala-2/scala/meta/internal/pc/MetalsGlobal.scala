@@ -67,7 +67,8 @@ class MetalsGlobal(
 
   val logger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)
 
-  val richCompilationCache: TrieMap[String,RichCompilationUnit] = TrieMap.empty[String, RichCompilationUnit]
+  val richCompilationCache: TrieMap[String, RichCompilationUnit] =
+    TrieMap.empty[String, RichCompilationUnit]
 
   // for those paths units were
   val fullyCompiled: mutable.Set[String] = mutable.Set.empty[String]
@@ -665,7 +666,8 @@ class MetalsGlobal(
       filename: String,
       cursor: Option[Int],
       cursorName: String = CURSOR,
-      isOutline: Boolean = false
+      isOutline: Boolean = false,
+      forceNew: Boolean = false
   ): RichCompilationUnit = {
     val codeWithCursor = cursor match {
       case Some(offset) =>
@@ -684,11 +686,11 @@ class MetalsGlobal(
           if util.Arrays.equals(
             value.source.content,
             richUnit.source.content
-          ) && (isOutline || fullyCompiled(filename)) =>
+          ) && (isOutline || fullyCompiled(filename)) && !forceNew =>
         value
       case _ =>
         unitOfFile(richUnit.source.file) = richUnit
-        if(!isOutline) {
+        if (!isOutline) {
           fullyCompiled += filename
         } else {
           fullyCompiled -= filename

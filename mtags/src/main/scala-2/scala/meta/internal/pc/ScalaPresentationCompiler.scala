@@ -70,10 +70,14 @@ case class ScalaPresentationCompiler(
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     folderPath: Option[Path] = None,
     reportsLevel: ReportLevel = ReportLevel.Info,
-    compilerFiles: Option[CompilerFiles] = None
+    compilerFiles: Option[CompilerFiles] = None,
+    wasSuccessfullyCompiledInitial: Option[Boolean] = None
 ) extends PresentationCompiler {
 
-  private val wasFirstCompilationSuccessful = new util.concurrent.atomic.AtomicReference[Option[Boolean]](None)
+  private val wasSuccessfullyCompiled =
+    new util.concurrent.atomic.AtomicReference[Option[Boolean]](
+      wasSuccessfullyCompiledInitial
+    )
 
   implicit val executionContext: ExecutionContextExecutor = ec
 
@@ -150,13 +154,14 @@ case class ScalaPresentationCompiler(
 
   def restart(): Unit = restoreOutlineAndRestart()
 
-  override def restart(wasSuccessful: java.lang.Boolean): Unit = {
-    wasFirstCompilationSuccessful.updateAndGet {
+  override def restart(wasSuccessful: Boolean): Unit = {
+    wasSuccessfullyCompiled.updateAndGet {
       case None => Some(wasSuccessful)
+      case _ if wasSuccessful => Some(true)
       case value => value
     }
 
-    if(wasSuccessful) {
+    if (wasSuccessful) {
       changedDocuments.clear()
       compilerAccess.shutdownCurrentCompiler()
     } else {
@@ -171,26 +176,25 @@ case class ScalaPresentationCompiler(
         EmptyCancelToken
       ) { pc =>
         /* we will still want outline recompiled if the compilation was not succesful */
-        pc.compiler().richCompilationCache.foreach {
-          case (uriString, unit) =>
-            try {
-              val text = unit.source.content.mkString
-              val uri = uriString.toAbsolutePath.toURI
-              val params =
-                CompilerOffsetParams(uri, text, 0, EmptyCancelToken)
-              changedDocuments += uri -> params
-            } catch {
-              case NonFatal(error) =>
-                reportContex.incognito.create(
-                  Report(
-                    "restoring_cache",
-                    "Error while restoring outline compiler cache",
-                    error
-                  )
+        pc.compiler().richCompilationCache.foreach { case (uriString, unit) =>
+          try {
+            val text = unit.source.content.mkString
+            val uri = uriString.toAbsolutePath.toURI
+            val params =
+              CompilerOffsetParams(uri, text, 0, EmptyCancelToken)
+            changedDocuments += uri -> params
+          } catch {
+            case NonFatal(error) =>
+              reportContex.incognito.create(
+                Report(
+                  "restoring_cache",
+                  "Error while restoring outline compiler cache",
+                  error
                 )
-                logger
-                  .log(util.logging.Level.SEVERE, error.getMessage(), error)
-            }
+              )
+              logger
+                .log(util.logging.Level.SEVERE, error.getMessage(), error)
+          }
         }
       }
       .get()
@@ -215,8 +219,15 @@ case class ScalaPresentationCompiler(
   private def outlineFiles(
       current: VirtualFileParams
   ): OutlineFiles = {
+    val shouldCompileAll = wasSuccessfullyCompiled
+      .getAndUpdate {
+        case Some(false) => Some(true)
+        case value => value
+      }
+      .exists(!_)
+
     val result =
-      if (wasFirstCompilationSuccessful.getAndSet(Some(true)).exists(!_)) {
+      if (shouldCompileAll) {
         // if first compilation was unsuccessful we want to outline all files
         compilerFiles.iterator.flatMap(_.allPaths().asScala).foreach { path =>
           val uri = path.toUri()
@@ -225,9 +236,13 @@ case class ScalaPresentationCompiler(
             changedDocuments += uri -> CompilerOffsetParams(uri, text, 0)
           }
         }
-        OutlineFiles(changedDocuments.values.toList, firstCompileSubstitute = true)
+        OutlineFiles(
+          changedDocuments.values.toList,
+          firstCompileSubstitute = true
+        )
       } else {
-        val files = changedDocuments.values.filterNot(_.uri() == current.uri()).toList
+        val files =
+          changedDocuments.values.filterNot(_.uri() == current.uri()).toList
         OutlineFiles(files)
       }
 
@@ -285,7 +300,7 @@ case class ScalaPresentationCompiler(
 
   override def complete(
       params: OffsetParams
-  ): CompletableFuture[CompletionList] =
+  ): CompletableFuture[CompletionList] = {
     compilerAccess.withInterruptableCompiler(Some(params))(
       EmptyCompletionList(),
       params.token
@@ -293,6 +308,7 @@ case class ScalaPresentationCompiler(
       new CompletionProvider(pc.compiler(outlineFiles(params)), params)
         .completions()
     }
+  }
 
   override def implementAbstractMembers(
       params: OffsetParams
@@ -598,4 +614,11 @@ case class ScalaPresentationCompiler(
       .toList
       .asJava
   }
+
+  override def withWasSuccessfullyCompiled(
+      wasSuccessful: Boolean
+  ): PresentationCompiler = {
+    this.copy(wasSuccessfullyCompiledInitial = Some(wasSuccessful))
+  }
+
 }

@@ -9,7 +9,6 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.ReportContext
 import scala.meta.pc.PresentationCompilerConfig
-import scala.meta.pc.VirtualFileParams
 
 class ScalaCompilerWrapper(global: MetalsGlobal)
     extends CompilerWrapper[StoreReporter, MetalsGlobal] {

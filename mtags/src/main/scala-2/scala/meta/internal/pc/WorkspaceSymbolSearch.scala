@@ -28,7 +28,7 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
             def matches = if (sym.isType)
               CompletionFuzzy.matchesSubCharacters(query, sym.name.toString())
             else CompletionFuzzy.matches(query, sym.name.toString())
-            if (sym.exists && matches) {
+            if (sym != null && sym.exists && matches) {
               try {
                 visitMember(sym)
               } catch {

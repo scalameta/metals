@@ -266,13 +266,13 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
     for {
       _ <- initialize(
         s"""/metals.json
-            |{"a":{}}
-            |/a/src/main/scala/a/Main.scala
-            |
-            |/a/src/main/scala/a/OtherFile.scala
-            |package a
-            |object A
-            |""".stripMargin,
+           |{"a":{}}
+           |/a/src/main/scala/a/Main.scala
+           |
+           |/a/src/main/scala/a/OtherFile.scala
+           |package a
+           |object A
+           |""".stripMargin,
         expectError = true,
       )
       _ <- server.didChangeConfiguration(
