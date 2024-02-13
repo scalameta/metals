@@ -259,10 +259,7 @@ final class BuildTargets private (
   )(implicit ec: ExecutionContext): Future[Option[BuildTargetIdentifier]] = {
     inverseSources(source) match {
       case None =>
-        bspInverseSources(source).map { inverseSourcesAll =>
-          if (inverseSourcesAll.isEmpty) None
-          else Some(inverseSourcesAll.maxBy(buildTargetsOrder))
-        }
+        bspInverseSources(source).map(_.maxByOption(buildTargetsOrder))
       case some =>
         Future.successful(some)
     }
@@ -293,12 +290,12 @@ final class BuildTargets private (
         .map(_.getTargets.asScala.toList)
     }
     Future.sequence(queries).map { results =>
-      val target = results.flatten
+      val targets = results.flatten
       for {
-        tgt <- target
+        tgt <- targets
         data <- targetData(tgt)
       } data.addSourceItem(source, tgt)
-      target
+      targets
     }
   }
 
@@ -381,10 +378,7 @@ final class BuildTargets private (
   def inferBuildTarget(
       source: AbsolutePath
   ): Option[BuildTargetIdentifier] =
-    inferBuildTargets(source) match {
-      case Nil => None
-      case nonEmpty => Some(nonEmpty.maxBy(buildTargetsOrder))
-    }
+    inferBuildTargets(source).maxByOption(buildTargetsOrder)
 
   def findByDisplayName(name: String): Option[BuildTarget] = {
     data
