@@ -14,8 +14,8 @@ import scala.meta.pc.VirtualFileParams
 class ScalaCompilerWrapper(global: MetalsGlobal)
     extends CompilerWrapper[StoreReporter, MetalsGlobal] {
 
-  override def compiler(paths: List[VirtualFileParams]): MetalsGlobal = {
-    global.runOutline(paths)
+  override def compiler(files: OutlineFiles): MetalsGlobal = {
+    global.runOutline(files)
     global
   }
 

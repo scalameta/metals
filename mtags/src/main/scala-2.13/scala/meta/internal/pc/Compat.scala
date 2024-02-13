@@ -26,7 +26,17 @@ trait Compat { this: MetalsGlobal =>
   def constantType(c: ConstantType): ConstantType =
     if (c.value.isSuitableLiteralType) LiteralType(c.value) else c
 
-  def runOutline(files: List[VirtualFileParams]): Unit = {
+  def runOutline(files: OutlineFiles): Unit = {
+    runOutline(files.files)
+    if(files.firstCompileSubstitute) {
+      // if first compilation substitute we compile all files twice
+      // first to emit symbols, second so signatures have information about those symbols
+      // this isn't a perfect strategy but much better than single compile
+      runOutline(files.files, forceNewUnit = true)
+    }
+  }
+
+  private def runOutline(files: List[VirtualFileParams], forceNewUnit: Boolean = false): Unit = {
     this.settings.Youtline.value = true
     files.foreach { params =>
       val unit = this.addCompilationUnit(
