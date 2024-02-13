@@ -230,7 +230,7 @@ class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
     } yield ()
   }
 
-  test("never-compiling-reverse-order".ignore) {
+  test("never-compiling-reverse-order") {
     cleanWorkspace()
     for {
       _ <- initialize(

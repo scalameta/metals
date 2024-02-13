@@ -171,7 +171,7 @@ case class ScalaPresentationCompiler(
         EmptyCancelToken
       ) { pc =>
         /* we will still want outline recompiled if the compilation was not succesful */
-        pc.compiler(Nil).richCompilationCache.foreach {
+        pc.compiler().richCompilationCache.foreach {
           case (uriString, unit) =>
             try {
               val text = unit.source.content.mkString
@@ -214,23 +214,26 @@ case class ScalaPresentationCompiler(
 
   private def outlineFiles(
       current: VirtualFileParams
-  ): List[VirtualFileParams] = {
-    if (wasFirstCompilationSuccessful.getAndSet(Some(true)).exists(!_)) {
-      // if first compilation was unsuccessful we want to outline all files
-      compilerFiles.iterator.flatMap(_.allPaths().asScala).foreach { path =>
-        val uri = path.toUri()
-        if (!changedDocuments.contains(uri)) {
-          val text = Files.readString(path)
-          changedDocuments += uri -> CompilerOffsetParams(uri, text, 0)
+  ): OutlineFiles = {
+    val result =
+      if (wasFirstCompilationSuccessful.getAndSet(Some(true)).exists(!_)) {
+        // if first compilation was unsuccessful we want to outline all files
+        compilerFiles.iterator.flatMap(_.allPaths().asScala).foreach { path =>
+          val uri = path.toUri()
+          if (!changedDocuments.contains(uri)) {
+            val text = Files.readString(path)
+            changedDocuments += uri -> CompilerOffsetParams(uri, text, 0)
+          }
         }
+        OutlineFiles(changedDocuments.values.toList, firstCompileSubstitute = true)
+      } else {
+        val files = changedDocuments.values.filterNot(_.uri() == current.uri()).toList
+        OutlineFiles(files)
       }
-    }
 
-    val results =
-      changedDocuments.values.filterNot(_.uri() == current.uri()).toList
     changedDocuments.clear()
     changedDocuments += current.uri() -> current
-    results
+    result
   }
 
   override def didChange(
@@ -245,7 +248,7 @@ case class ScalaPresentationCompiler(
       (),
       EmptyCancelToken
     ) { pc =>
-      pc.compiler(Nil).richCompilationCache.remove(uri.toString())
+      pc.compiler().richCompilationCache.remove(uri.toString())
     }
   }
 
@@ -399,7 +402,7 @@ case class ScalaPresentationCompiler(
   ): CompletableFuture[CompletionItem] =
     CompletableFuture.completedFuture {
       compilerAccess.withSharedCompiler(None)(item) { pc =>
-        new CompletionItemResolver(pc.compiler(Nil)).resolve(item, symbol)
+        new CompletionItemResolver(pc.compiler()).resolve(item, symbol)
       }
     }
 
@@ -530,7 +533,7 @@ case class ScalaPresentationCompiler(
       compilerAccess.withSharedCompiler(params.asScala.headOption)(
         List.empty[SelectionRange].asJava
       ) { pc =>
-        new SelectionRangeProvider(pc.compiler(Nil), params)
+        new SelectionRangeProvider(pc.compiler(), params)
           .selectionRange()
           .asJava
       }
