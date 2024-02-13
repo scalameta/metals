@@ -33,12 +33,12 @@ class CompletionSuite extends BaseCompletionSuite {
            |List - scala.collection.immutable
            |List[A](elems: A*): CC[A]
            |""".stripMargin,
-      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+      ">=3.4.1-RC1-bin-20240208-hash-NIGHTLY" ->
         """|List scala.collection.immutable
-           |List[A](elems: A*): CC[A]
+           |List[A](elems: A*): List[A]
            |List - java.awt
            |List - java.util
-           |ListMap[K, V](elems: (K, V)*): CC[K, V]
+           |ListMap[K, V](elems: (K, V)*): ListMap[K, V]
            |""".stripMargin
     ),
     topLines = Some(5)
@@ -464,6 +464,10 @@ class CompletionSuite extends BaseCompletionSuite {
       "3" ->
         """|TrieMap scala.collection.concurrent
            |TrieMap[K, V](elems: (K, V)*): CC[K, V]
+           |""".stripMargin,
+      ">=3.4.1-RC1-bin-20240208-hash-NIGHTLY" ->
+        """|TrieMap scala.collection.concurrent
+           |TrieMap[K, V](elems: (K, V)*): TrieMap[K, V]
            |""".stripMargin
     )
   )
