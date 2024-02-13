@@ -28,5 +28,5 @@ case class OutlineFiles(
 )
 
 object OutlineFiles {
-  def empty = OutlineFiles(Nil)
+  def empty: OutlineFiles = OutlineFiles(Nil)
 }

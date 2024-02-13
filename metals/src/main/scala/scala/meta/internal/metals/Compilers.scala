@@ -115,6 +115,8 @@ class Compilers(
     )
 
   private val worksheetsDigests = new TrieMap[AbsolutePath, String]()
+  private val wasSuccessfullyCompiled =
+    new TrieMap[BuildTargetIdentifier, Boolean]()
 
   private val cache = jcache.asScala
   private def buildTargetPCFromCache(
@@ -274,6 +276,11 @@ class Compilers(
   def didCompile(report: CompileReport): Unit = {
     val isSuccessful = report.getErrors == 0
     buildTargetPCFromCache(report.getTarget).foreach(_.restart(isSuccessful))
+
+    wasSuccessfullyCompiled.updateWith(report.getTarget()) {
+      case Some(true) => Some(true)
+      case _ => Some(isSuccessful)
+    }
 
     if (isSuccessful) {
       // Restart PC for all build targets that depend on this target since the classfiles
@@ -1258,7 +1265,7 @@ class Compilers(
       classpath: Seq[Path],
       search: SymbolSearch,
   ): PresentationCompiler = {
-    newCompiler(
+    val pc = newCompiler(
       mtags,
       target.scalac.getOptions().asScala.toSeq,
       classpath,
@@ -1266,6 +1273,11 @@ class Compilers(
       target.scalac.getTarget.getUri,
     ).withBuildTargetName(target.displayName)
       .withCompilerFiles(new TargetCompilerFiles(target.id))
+
+    wasSuccessfullyCompiled
+      .get(target.scalac.getTarget())
+      .map(pc.withWasSuccessfullyCompiled)
+      .getOrElse(pc)
   }
 
   def newCompiler(
