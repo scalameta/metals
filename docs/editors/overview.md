@@ -103,7 +103,7 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
-    <td align="center">❌</td>
+    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Find references</td>
@@ -239,7 +239,7 @@ functionality.
      <td align="center">✅</td>
      <td align="center">✅</td>
      <td align="center">✅</td>
-     <td align="center">✅</td>
+     <td align="center">❌</td>
   </tr>
 </tbody>
 </table>
