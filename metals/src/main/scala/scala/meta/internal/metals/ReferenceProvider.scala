@@ -428,7 +428,7 @@ final class ReferenceProvider(
       includeSynthetics: Synthetic => Boolean,
       isJava: Boolean,
   ): Seq[Location] = {
-    val buf = Seq.newBuilder[Location]
+    val buf = Set.newBuilder[Location]
     def add(range: s.Range): Unit = {
       val revised = distance.toRevised(range.startLine, range.startCharacter)
       val dirtyLocation = range.toLocation(uri)
@@ -470,7 +470,7 @@ final class ReferenceProvider(
       range <- synthetic.range.toList
     } add(range)
 
-    buf.result().sortWith(sortByLocationPosition)
+    buf.result().toSeq.sortWith(sortByLocationPosition)
   }
 
   private def sortByLocationPosition(l1: Location, l2: Location): Boolean = {
