@@ -6,6 +6,10 @@ title: Helix
 
 ![helix demo](https://i.imgur.com/b0sETIY.gif)
 
+```scala mdoc:requirements
+
+```
+
 ## Installation
 
 Helix requires `metals` to be on the user's path, it should then be
@@ -24,3 +28,7 @@ updated.
 
 To manually import a build run the `:lsp-workspace-command` command and then
 select `build-import` from the list.
+
+```scala mdoc:generic
+
+```
