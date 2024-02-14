@@ -87,18 +87,21 @@ case class SbtBuildTool(
   }
 
   private def findSbtInPath(): Option[String] = {
-    val envPaths =
-      Option(System.getenv("PATH")) match {
-        case Some(paths) if scala.util.Properties.isWin =>
-          paths.split(";").toList
-        case Some(paths) => paths.split(":").toList
-        case None => Nil
-      }
+    // on Windows sbt is not an executable
+    // look: https://github.com/scalameta/metals/issues/6104
+    if (scala.util.Properties.isWin) None
+    else {
+      val envPaths =
+        Option(System.getenv("PATH")) match {
+          case Some(paths) => paths.split(":").toList
+          case None => Nil
+        }
 
-    val allPaths = projectRoot :: envPaths.map(AbsolutePath(_))
-    allPaths.collectFirst { path =>
-      path.resolve("sbt") match {
-        case sbtPath if sbtPath.exists => sbtPath.toString()
+      val allPaths = projectRoot :: envPaths.map(AbsolutePath(_))
+      allPaths.collectFirst { path =>
+        path.resolve("sbt") match {
+          case sbtPath if sbtPath.exists => sbtPath.toString()
+        }
       }
     }
   }

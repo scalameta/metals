@@ -21,7 +21,7 @@ object V {
   val bloop = "1.5.15"
   val bloopConfig = "1.5.5"
   val bsp = "2.1.1"
-  val coursier = "2.1.8"
+  val coursier = "2.1.9"
   val coursierInterfaces =
     "1.0.19" // changing coursier interfaces version may be not binary compatible.
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
@@ -34,7 +34,7 @@ object V {
   val kindProjector = "0.13.2"
   val lsp4jV = "0.20.1"
   val mavenBloop = "2.0.0"
-  val mill = "0.11.6"
+  val mill = "0.11.7"
   val mdoc = "2.5.2"
   val munit = "1.0.0-M11"
   val pprint = "0.7.3"

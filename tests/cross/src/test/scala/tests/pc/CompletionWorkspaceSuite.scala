@@ -953,10 +953,10 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
       "2" -> """|fooBar: String
                 |fooBar - case_class_param.A: List[Int]
                 |""".stripMargin,
-      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+      ">=3.4.1-RC1-bin-20240208-hash-NIGHTLY" ->
         """|fooBar: String
            |fooBar: List[Int]
-           |fooBar(n: Int): A
+           |fooBar(n: Int): Int
            |""".stripMargin
     )
   )

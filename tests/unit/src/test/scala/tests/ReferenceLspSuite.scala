@@ -398,6 +398,57 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |""".stripMargin,
   )
 
+  test("i6101") {
+    for {
+      _ <- initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": { "libraryDependencies": ["com.lihaoyi::sourcecode:0.1.7"] },
+          |  "b": { "libraryDependencies": ["com.lihaoyi::sourcecode:0.1.7"] }
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |
+          |import sourcecode.Line
+          |
+          |object A {
+          |  def line = Line
+          |}
+          |/b/src/main/scala/b/B.scala
+          |package b
+          |
+          |//additional line for unambiguous sorting
+          |import sourcecode.Line
+          |
+          |object B {
+          |  def line = Line
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ <- server.didOpen("b/src/main/scala/b/B.scala")
+      _ = assertNoDiagnostics()
+      references <- server.references("a/src/main/scala/a/A.scala", "Line")
+      _ = assertNoDiff(
+        references,
+        """|a/src/main/scala/a/A.scala:3:19: info: reference
+           |import sourcecode.Line
+           |                  ^^^^
+           |b/src/main/scala/b/B.scala:4:19: info: reference
+           |import sourcecode.Line
+           |                  ^^^^
+           |a/src/main/scala/a/A.scala:6:14: info: reference
+           |  def line = Line
+           |             ^^^^
+           |b/src/main/scala/b/B.scala:7:14: info: reference
+           |  def line = Line
+           |             ^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   override def assertCheck(
       filename: String,
       edit: String,

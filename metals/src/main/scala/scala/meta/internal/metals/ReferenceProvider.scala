@@ -262,22 +262,26 @@ final class ReferenceProvider(
    * Return all paths to files which contain at least one symbol from isSymbol set.
    */
   private def pathsFor(
-      buildTarget: BuildTargetIdentifier,
+      buildTargetSet: Set[BuildTargetIdentifier],
       isSymbol: Set[String],
   ): Iterator[AbsolutePath] = {
-    val allowedBuildTargets = buildTargets.allInverseDependencies(buildTarget)
-    val visited = scala.collection.mutable.Set.empty[AbsolutePath]
-    val result = for {
-      (path, entry) <- index.iterator
-      if allowedBuildTargets.contains(entry.id) &&
-        isSymbol.exists(entry.bloom.mightContain)
-      sourcePath = AbsolutePath(path)
-      if !visited(sourcePath)
-      _ = visited.add(sourcePath)
-      if sourcePath.exists
-    } yield sourcePath
+    if (buildTargetSet.isEmpty) Iterator.empty
+    else {
+      val allowedBuildTargets =
+        buildTargetSet.flatMap(buildTargets.allInverseDependencies)
+      val visited = scala.collection.mutable.Set.empty[AbsolutePath]
+      val result = for {
+        (path, entry) <- index.iterator
+        if allowedBuildTargets(entry.id) &&
+          isSymbol.exists(entry.bloom.mightContain)
+        sourcePath = AbsolutePath(path)
+        if !visited(sourcePath)
+        _ = visited.add(sourcePath)
+        if sourcePath.exists
+      } yield sourcePath
 
-    result
+      result
+    }
   }
 
   def workspaceReferences(
@@ -286,44 +290,61 @@ final class ReferenceProvider(
       isIncludeDeclaration: Boolean,
       findRealRange: AdjustRange = noAdjustRange,
       includeSynthetics: Synthetic => Boolean = _ => true,
+      sourceContainsDefinition: Boolean = false,
   ): Seq[Location] = {
-    buildTargets.inverseSources(source) match {
-      case None => Seq.empty
-      case Some(id) =>
-        val result = for {
-          sourcePath <- pathsFor(id, isSymbol)
-          semanticdb <-
-            semanticdbs
-              .textDocument(sourcePath)
-              .documentIncludingStale
-              .iterator
-          semanticdbDistance = buffers.tokenEditDistance(
-            sourcePath,
-            semanticdb.text,
-            trees,
-          )
-          uri = sourcePath.toURI.toString
-          reference <-
-            try {
-              referenceLocations(
-                semanticdb,
-                isSymbol,
-                semanticdbDistance,
-                uri,
-                isIncludeDeclaration,
-                findRealRange,
-                includeSynthetics,
-                sourcePath.isJava,
-              )
-            } catch {
-              case NonFatal(e) =>
-                // Can happen for example if the SemanticDB text is empty for some reason.
-                scribe.error(s"reference: $sourcePath", e)
-                Nil
+    val definitionPaths =
+      if (sourceContainsDefinition) Set(source)
+      else {
+        val foundDefinitionLocations =
+          isSymbol
+            .flatMap { sym =>
+              definition.destinationProvider
+                .definition(sym, Some(source))
+                .map(_.path)
             }
-        } yield reference
-        result.toSeq
-    }
+
+        if (foundDefinitionLocations.isEmpty) Set(source)
+        else foundDefinitionLocations
+      }
+
+    val definitionBuildTargets =
+      definitionPaths.flatMap { path =>
+        buildTargets.inverseSourcesAll(path).toSet
+      }
+
+    val result = for {
+      sourcePath <- pathsFor(definitionBuildTargets, isSymbol)
+      semanticdb <-
+        semanticdbs
+          .textDocument(sourcePath)
+          .documentIncludingStale
+          .iterator
+      semanticdbDistance = buffers.tokenEditDistance(
+        sourcePath,
+        semanticdb.text,
+        trees,
+      )
+      uri = sourcePath.toURI.toString
+      reference <-
+        try {
+          referenceLocations(
+            semanticdb,
+            isSymbol,
+            semanticdbDistance,
+            uri,
+            isIncludeDeclaration,
+            findRealRange,
+            includeSynthetics,
+            sourcePath.isJava,
+          )
+        } catch {
+          case NonFatal(e) =>
+            // Can happen for example if the SemanticDB text is empty for some reason.
+            scribe.error(s"reference: $sourcePath", e)
+            Nil
+        }
+    } yield reference
+    result.toSeq
   }
 
   /**
@@ -334,12 +355,8 @@ final class ReferenceProvider(
       isSymbol: Set[String],
   )(implicit ec: ExecutionContext): Future[Set[AbsolutePath]] = {
     buildTargets
-      .inverseSourcesBsp(source)
-      .map {
-        case None => Set.empty
-        case Some(id) =>
-          pathsFor(id, isSymbol).toSet
-      }
+      .inverseSourcesBspAll(source)
+      .map(buildTargets => pathsFor(buildTargets.toSet, isSymbol).toSet)
   }
 
   private def references(
@@ -380,15 +397,22 @@ final class ReferenceProvider(
       else Seq.empty
 
     val workspaceRefs =
-      if (!isLocal)
+      if (!isLocal) {
+        val sourceContainsDefinition =
+          occ.role.isDefinition || snapshot.symbols.exists(
+            _.symbol == occ.symbol
+          )
+
         workspaceReferences(
           source,
           isSymbol,
           isIncludeDeclaration,
           findRealRange,
           includeSynthetics,
+          sourceContainsDefinition,
         )
-      else
+
+      } else
         Seq.empty
 
     workspaceRefs ++ local
@@ -404,7 +428,7 @@ final class ReferenceProvider(
       includeSynthetics: Synthetic => Boolean,
       isJava: Boolean,
   ): Seq[Location] = {
-    val buf = Seq.newBuilder[Location]
+    val buf = Set.newBuilder[Location]
     def add(range: s.Range): Unit = {
       val revised = distance.toRevised(range.startLine, range.startCharacter)
       val dirtyLocation = range.toLocation(uri)
@@ -446,7 +470,7 @@ final class ReferenceProvider(
       range <- synthetic.range.toList
     } add(range)
 
-    buf.result().sortWith(sortByLocationPosition)
+    buf.result().toSeq.sortWith(sortByLocationPosition)
   }
 
   private def sortByLocationPosition(l1: Location, l2: Location): Boolean = {
