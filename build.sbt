@@ -552,6 +552,7 @@ lazy val metals = project
       "ammonite3" -> V.ammonite3Version,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
+      "firstScala3PCVersion" -> V.firstScala3PCVersion,
       "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
   )
