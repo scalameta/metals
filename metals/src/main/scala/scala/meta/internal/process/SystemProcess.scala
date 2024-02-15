@@ -40,6 +40,7 @@ object SystemProcess {
       builder.directory(cwd.toNIO.toFile)
       val envMap = builder.environment()
       envMap.putAll(env.asJava)
+      envMap.put("PWD", cwd.toString())
 
       builder.redirectErrorStream(redirectErrorOutput)
       val ps = builder.start()
