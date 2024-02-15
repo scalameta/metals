@@ -61,13 +61,13 @@ class ScalaCliBuildTool(
 
   override val forcesBuildServer = true
 
-  def isBspGenerated(workspace: AbsolutePath): Boolean =
-    ScalaCliBuildTool.pathsToScalaCliBsp(workspace).exists(_.isFile)
+  override def possibleBuildServerNames = ScalaCli.names.toList
 
 }
 
 object ScalaCliBuildTool {
   def name = "scala-cli"
+
   def pathsToScalaCliBsp(root: AbsolutePath): List[AbsolutePath] =
     ScalaCli.names.toList.map(name =>
       root.resolve(".bsp").resolve(s"$name.json")

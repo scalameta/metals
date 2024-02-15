@@ -2091,23 +2091,25 @@ class MetalsLspService(
       buildTool: Option[BuildTool.Found],
       chosenBuildServer: Option[String],
   ): Future[BuildChange] = {
-    val isBloopOrEmpty = chosenBuildServer.isEmpty || chosenBuildServer.exists(
+    val preferredList =
+      userConfig.preferredBuildServes.map(_.trim().toLowerCase())
+    def isPreferredAboveBloop(buildServer: String) = {
+      val idx = preferredList.indexOf(buildServer)
+      if (idx >= 0) {
+        val bloopIdx = preferredList.indexOf("bloop")
+        bloopIdx < 0 || bloopIdx > idx
+      } else false
+    }
+    def isBloop = chosenBuildServer.exists(
       _ == BloopServers.name
     )
+
     buildTool match {
       case Some(BuildTool.Found(buildTool: BloopInstallProvider, digest))
-          if isBloopOrEmpty =>
+          if isBloop || (chosenBuildServer.isEmpty && !isPreferredAboveBloop(
+            buildTool.buildServerName
+          )) =>
         slowConnectToBloopServer(forceImport, buildTool, digest)
-      case Some(BuildTool.Found(buildTool: ScalaCliBuildTool, _))
-          if !buildTool.isBspGenerated(folder) =>
-        tables.buildServers.chooseServer(buildTool.buildServerName)
-        buildTool
-          .generateBspConfig(
-            folder,
-            args => bspConfigGenerator.runUnconditionally(buildTool, args),
-            statusBar,
-          )
-          .flatMap(_ => quickConnectToBuildServer())
       // If there is no .bazelbsp present, we ask user to write bsp config
       // After that, we should fall into the last case and index workspace
       case Some(BuildTool.Found(_: BazelBuildTool, _))
@@ -2122,10 +2124,24 @@ class MetalsLspService(
             forceImport,
           )
           .flatMap(_ => quickConnectToBuildServer())
+      case Some(BuildTool.Found(buildTool: BuildServerProvider, _))
+          if !buildTool.isBspGenerated(folder) =>
+        tables.buildServers.chooseServer(buildTool.buildServerName)
+        buildTool
+          .generateBspConfig(
+            folder,
+            args => bspConfigGenerator.runUnconditionally(buildTool, args),
+            statusBar,
+          )
+          .flatMap(_ => quickConnectToBuildServer())
       case Some(BuildTool.Found(buildTool, _))
           if !chosenBuildServer.exists(
             _ == buildTool.buildServerName
           ) && buildTool.forcesBuildServer =>
+        tables.buildServers.chooseServer(buildTool.buildServerName)
+        quickConnectToBuildServer()
+      case Some(BuildTool.Found(buildTool: BloopInstallProvider, _))
+          if chosenBuildServer.isEmpty =>
         tables.buildServers.chooseServer(buildTool.buildServerName)
         quickConnectToBuildServer()
       case Some(found) =>

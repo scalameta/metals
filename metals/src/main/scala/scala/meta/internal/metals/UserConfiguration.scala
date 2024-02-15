@@ -56,6 +56,7 @@ case class UserConfiguration(
     verboseCompilation: Boolean = false,
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
     scalaCliLauncher: Option[String] = None,
+    preferredBuildServes: List[String] = Nil,
 ) {
 
   def currentBloopVersion: String =
@@ -349,6 +350,19 @@ object UserConfiguration {
            |only automatically import a build when a project is first opened, "all" will automate 
            |build imports after subsequent changes as well.""".stripMargin,
       ),
+      UserConfigurationOption(
+        "preferred-build-servers",
+        "[]",
+        """["sbt"]""",
+        "List of preferred build servers.",
+        """|If multiple build servers available, this list provides an order,
+           |that overrides the default partial order, in which the build server should be chosen.
+           |The default partial order is:
+           |1. `bloop`
+           |2. other build servers (asks user)
+           |3. fallback `scala-cli` (if no build server found)
+           |""".stripMargin,
+      ),
     )
 
   def fromJson(
@@ -570,6 +584,11 @@ object UserConfiguration {
         case _ => AutoImportBuildKind.Off
       }
 
+    val scalaCliLauncher = getStringKey("scala-cli-launcher")
+
+    val preferredBuildServes =
+      getStringListKey("preferred-build-servers").getOrElse(Nil)
+
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -602,6 +621,8 @@ object UserConfiguration {
           customProjectRoot,
           verboseCompilation,
           autoImportBuilds,
+          scalaCliLauncher,
+          preferredBuildServes,
         )
       )
     } else {
