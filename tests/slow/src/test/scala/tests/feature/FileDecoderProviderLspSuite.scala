@@ -1145,7 +1145,7 @@ object FileDecoderProviderLspSuite {
         |Text => empty
         |Language => Scala
         |Symbols => 4 entries
-        |Occurrences => 5 entries
+        |Occurrences => 7 entries
         |
         |Symbols:
         |foo/bar/example/Bar# => class Bar extends Object { self: Bar => +1 decls }
@@ -1157,7 +1157,9 @@ object FileDecoderProviderLspSuite {
         |[0:8..0:11) => foo/
         |[0:12..0:15) => foo/bar/
         |[0:16..0:23) <= foo/bar/example/
+        |[1:0..1:0) <= foo/bar/example/Foo#`<init>`().
         |[1:6..1:9) <= foo/bar/example/Foo#
+        |[2:0..2:0) <= foo/bar/example/Bar#`<init>`().
         |[2:6..2:9) <= foo/bar/example/Bar#
         |""".stripMargin
 
@@ -1171,7 +1173,7 @@ object FileDecoderProviderLspSuite {
         |Text => empty
         |Language => Scala
         |Symbols => 5 entries
-        |Occurrences => 7 entries
+        |Occurrences => 9 entries
         |
         |Symbols:
         |foo/bar/example/Bar# => class Bar extends Object { self: Bar => +2 decls }
@@ -1191,8 +1193,10 @@ object FileDecoderProviderLspSuite {
         |[0:8..0:11) => foo/
         |[0:12..0:15) => foo/bar/
         |[0:16..0:23) <= foo/bar/example/
+        |[1:0..1:0) <= foo/bar/example/Foo#`<init>`().
         |[1:6..1:9) <= foo/bar/example/Foo#
         |[2:6..2:9) <= foo/bar/example/Bar#
+        |[3:2..3:2) <= foo/bar/example/Bar#`<init>`().
         |[3:6..3:9) <= foo/bar/example/Bar#foo().
         |[3:13..3:17) => scala/Unit#
         |""".stripMargin
