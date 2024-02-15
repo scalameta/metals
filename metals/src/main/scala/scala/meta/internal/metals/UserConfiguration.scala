@@ -564,7 +564,7 @@ object UserConfiguration {
       getBooleanKey("verbose-compilation").getOrElse(false)
 
     val autoImportBuilds =
-      getStringKey("auto-import-builds").map(_.toLowerCase()) match {
+      getStringKey("auto-import-builds").map(_.trim().toLowerCase()) match {
         case Some("initial") => AutoImportBuildKind.Initial
         case Some("all") => AutoImportBuildKind.All
         case _ => AutoImportBuildKind.Off
