@@ -1,11 +1,11 @@
 package scala.meta.internal.pc.printer
 
 import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.printing.RefinedPrinter
-import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.core.Flags.*
-import dotty.tools.dotc.printing.Texts.Text
 import dotty.tools.dotc.core.StdNames.*
+import dotty.tools.dotc.core.Types.*
+import dotty.tools.dotc.printing.RefinedPrinter
+import dotty.tools.dotc.printing.Texts.Text
 
 /* In 3.4.x some changes were made to printer,
     but haven't managed to port all of them yet to the LTS */
