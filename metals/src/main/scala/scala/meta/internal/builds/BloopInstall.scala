@@ -7,6 +7,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.builds.Digest.Status
+import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Confirmation
 import scala.meta.internal.metals.Messages._
@@ -132,24 +133,30 @@ final class BloopInstall(
           scribe.info(s"skipping build import with status '${result.name}'")
           Future.successful(result)
         case _ =>
-          scribe.debug("Awaiting user response...")
-          for {
-            userResponse <- requestImport(
-              buildTools,
-              buildTool,
-              languageClient,
-              digest,
-            )
-            installResult <- {
-              if (userResponse.isYes) {
-                runUnconditionally(buildTool, isImportInProcess)
-              } else {
-                // Don't spam the user with requests during rapid build changes.
-                notification.dismiss(2, TimeUnit.MINUTES)
-                Future.successful(WorkspaceLoadedStatus.Rejected)
+          if (
+            userConfig().automaticImportBuild == AutoImportBuildKind.Initial || userConfig().automaticImportBuild == AutoImportBuildKind.All
+          ) {
+            runUnconditionally(buildTool, isImportInProcess)
+          } else {
+            scribe.debug("Awaiting user response...")
+            for {
+              userResponse <- requestImport(
+                buildTools,
+                buildTool,
+                languageClient,
+                digest,
+              )
+              installResult <- {
+                if (userResponse.isYes) {
+                  runUnconditionally(buildTool, isImportInProcess)
+                } else {
+                  // Don't spam the user with requests during rapid build changes.
+                  notification.dismiss(2, TimeUnit.MINUTES)
+                  Future.successful(WorkspaceLoadedStatus.Rejected)
+                }
               }
-            }
-          } yield installResult
+            } yield installResult
+          }
       }
     }
 
