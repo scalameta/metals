@@ -16,8 +16,12 @@ import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.ResourceOperation
+import org.eclipse.lsp4j.TextDocumentEdit
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceEdit
+import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 
 class PackageProvider(
     buildTargets: BuildTargets,
@@ -28,12 +32,23 @@ class PackageProvider(
 ) {
   import PackageProvider._
 
-  def workspaceEdit(path: AbsolutePath): Option[WorkspaceEdit] =
-    packageStatement(path).map(template =>
-      workspaceEdit(path, template.fileContent)
-    )
+  def workspaceEdit(
+      path: AbsolutePath,
+      fileContent: String,
+      documentVersion: Option[Int],
+  ): Option[WorkspaceEdit] =
+    packageStatement(path, fileContent).map { template =>
+      workspaceEdit(
+        path,
+        template.fileContent,
+        documentVersion = documentVersion,
+      )
+    }
 
-  def packageStatement(path: AbsolutePath): Option[NewFileTemplate] = {
+  def packageStatement(
+      path: AbsolutePath,
+      fileContent: String = "",
+  ): Option[NewFileTemplate] = {
 
     def packageObjectStatement(
         packageParts: List[String]
@@ -57,7 +72,8 @@ class PackageProvider(
     for {
       packageParts <- Option.when(
         path.isScalaOrJava && !path.isJarFileSystem &&
-          !path.isScalaScript && path.toFile.length() == 0
+          !path.isScalaScript && path.toFile.length() == 0 && fileContent
+            .isEmpty()
       )(deducePackageParts(path))
       if packageParts.size > 0
       newFileTemplate <-
@@ -777,11 +793,24 @@ class PackageProvider(
       path: AbsolutePath,
       replacement: String,
       range: Range = new Range(new Position(0, 0), new Position(0, 0)),
+      documentVersion: Option[Int] = None,
   ): WorkspaceEdit = {
-    val textEdit = new TextEdit(range, replacement)
-    val textEdits = List(textEdit).asJava
-    val changes = Map(path.toURI.toString -> textEdits).asJava
-    new WorkspaceEdit(changes)
+    documentVersion match {
+      case None =>
+        val textEdit = new TextEdit(range, replacement)
+        val textEdits = List(textEdit).asJava
+        val changes = Map(path.toURI.toString -> textEdits).asJava
+        new WorkspaceEdit(changes)
+      case Some(version) =>
+        val textEdit = new TextEdit(range, replacement)
+        val id =
+          new VersionedTextDocumentIdentifier(path.toURI.toString, version)
+        val textDocEdit = new TextDocumentEdit(id, List(textEdit).asJava)
+        val changes = List(
+          JEither.forLeft[TextDocumentEdit, ResourceOperation](textDocEdit)
+        ).asJava
+        new WorkspaceEdit(changes)
+    }
   }
 
   private def deducePackageParts(path: AbsolutePath): List[String] =
