@@ -59,6 +59,9 @@ case class UserConfiguration(
     preferredBuildServes: List[String] = Nil,
 ) {
 
+  def shouldAutoImportNewProject: Boolean =
+    automaticImportBuild != AutoImportBuildKind.Off
+
   def currentBloopVersion: String =
     bloopVersion.getOrElse(BuildInfo.bloopVersion)
 

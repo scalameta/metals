@@ -7,7 +7,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.builds.Digest.Status
-import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Confirmation
 import scala.meta.internal.metals.Messages._
@@ -133,9 +132,7 @@ final class BloopInstall(
           scribe.info(s"skipping build import with status '${result.name}'")
           Future.successful(result)
         case _ =>
-          if (
-            userConfig().automaticImportBuild == AutoImportBuildKind.Initial || userConfig().automaticImportBuild == AutoImportBuildKind.All
-          ) {
+          if (userConfig().shouldAutoImportNewProject) {
             runUnconditionally(buildTool, isImportInProcess)
           } else {
             scribe.debug("Awaiting user response...")

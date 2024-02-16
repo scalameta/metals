@@ -189,6 +189,31 @@ object Messages {
     }
   }
 
+  object GenerateBspAndConnect {
+    def yes = new MessageActionItem("Connect")
+
+    def notNow: MessageActionItem = Messages.notNow
+
+    def params(
+        buildToolName: String,
+        buildServerName: String,
+    ): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        s"New $buildToolName workspace detected, would you like connect to $buildServerName build server?"
+      )
+      params.setType(MessageType.Info)
+      params.setActions(
+        List(
+          yes,
+          notNow,
+          dontShowAgain,
+        ).asJava
+      )
+      params
+    }
+  }
+
   object MainClass {
     val message = "Multiple main classes found. Which would you like to run?"
   }

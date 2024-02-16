@@ -2126,14 +2126,28 @@ class MetalsLspService(
           .flatMap(_ => quickConnectToBuildServer())
       case Some(BuildTool.Found(buildTool: BuildServerProvider, _))
           if !buildTool.isBspGenerated(folder) =>
-        tables.buildServers.chooseServer(buildTool.buildServerName)
-        buildTool
-          .generateBspConfig(
-            folder,
-            args => bspConfigGenerator.runUnconditionally(buildTool, args),
-            statusBar,
-          )
-          .flatMap(_ => quickConnectToBuildServer())
+        val notification = tables.dismissedNotifications.ImportChanges
+        if (userConfig.shouldAutoImportNewProject) {
+          generateBspAndConnect(buildTool)
+        } else if (notification.isDismissed) {
+          Future.successful(BuildChange.None)
+        } else {
+          scribe.debug("Awaiting user response...")
+          languageClient
+            .showMessageRequest(
+              Messages.GenerateBspAndConnect
+                .params(buildTool.executableName, buildTool.buildServerName)
+            )
+            .asScala
+            .flatMap { item =>
+              if (item == Messages.dontShowAgain) {
+                notification.dismissForever()
+                Future.successful(BuildChange.None)
+              } else if (item == Messages.GenerateBspAndConnect.yes) {
+                generateBspAndConnect(buildTool)
+              } else Future.successful(BuildChange.None)
+            }
+        }
       case Some(BuildTool.Found(buildTool, _))
           if !chosenBuildServer.exists(
             _ == buildTool.buildServerName
@@ -2155,6 +2169,19 @@ class MetalsLspService(
       case None =>
         Future.successful(BuildChange.None)
     }
+  }
+
+  def generateBspAndConnect(
+      buildTool: BuildServerProvider
+  ): Future[BuildChange] = {
+    tables.buildServers.chooseServer(buildTool.buildServerName)
+    buildTool
+      .generateBspConfig(
+        folder,
+        args => bspConfigGenerator.runUnconditionally(buildTool, args),
+        statusBar,
+      )
+      .flatMap(_ => quickConnectToBuildServer())
   }
 
   /**

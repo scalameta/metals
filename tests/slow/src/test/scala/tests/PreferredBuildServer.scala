@@ -1,5 +1,6 @@
 package tests
 
+import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 
@@ -9,6 +10,15 @@ class PreferredBuildServer extends BaseLspSuite("preferred-build-server") {
 
   test("start-sbt-when-preferred-no-bsp") {
     cleanWorkspace()
+
+    val importMessage =
+      Messages.GenerateBspAndConnect.params("sbt", "sbt").getMessage()
+
+    client.showMessageRequestHandler = msg => {
+      if (msg.getMessage() == importMessage)
+        Some(Messages.GenerateBspAndConnect.notNow)
+      else None
+    }
 
     val fileLayout =
       s"""|/project/build.properties
@@ -28,12 +38,11 @@ class PreferredBuildServer extends BaseLspSuite("preferred-build-server") {
     for {
       _ <- server.initialize()
       _ <- server.initialized()
-      _ <- server.server.buildServerPromise.future
       _ = assertNoDiff(
-        server.server.tables.buildServers.selectedServer().get,
-        "sbt",
+        client.workspaceMessageRequests,
+        importMessage,
       )
-      _ = assert(server.server.bspSession.exists(_.main.isSbt))
+      _ = assert(server.server.bspSession.isEmpty)
     } yield ()
   }
 
