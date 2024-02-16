@@ -1047,8 +1047,13 @@ class MetalsLspService(
     // Update in-memory buffer contents from LSP client
     buffers.put(path, params.getTextDocument.getText)
 
+    val optVersion =
+      Option.when(initializeParams.supportsVersionedWorkspaceEdits)(
+        params.getTextDocument().getVersion()
+      )
+
     packageProvider
-      .workspaceEdit(path)
+      .workspaceEdit(path, params.getTextDocument().getText(), optVersion)
       .map(new ApplyWorkspaceEditParams(_))
       .foreach(languageClient.applyEdit)
 
