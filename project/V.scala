@@ -10,7 +10,7 @@ object V {
   val wrapperMetalsVersion = "3.4.0-RC1-bin-20231127-41e7d95-NIGHTLY"
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
-  val scala3RC: Option[String] = Some("3.3.2-RC1")
+  val scala3RC: Option[String] = Some("3.3.2-RC3")
   val sbtScala = "2.12.17"
   val ammonite212Version = "2.12.18"
   val ammonite213Version = "2.13.12"
@@ -18,10 +18,10 @@ object V {
 
   val ammonite = "3.0.0-M0-60-89836cd8"
   val betterMonadicFor = "0.3.1"
-  val bloop = "1.5.13"
+  val bloop = "1.5.15"
   val bloopConfig = "1.5.5"
   val bsp = "2.1.1"
-  val coursier = "2.1.8"
+  val coursier = "2.1.9"
   val coursierInterfaces =
     "1.0.19" // changing coursier interfaces version may be not binary compatible.
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
@@ -29,14 +29,14 @@ object V {
   val genyVersion = "1.0.0"
   val gradleBloop = "1.6.2"
   val java8Compat = "1.0.2"
-  val javaSemanticdb = "0.9.8"
+  val javaSemanticdb = "0.9.9"
   val jsoup = "1.17.2"
   val kindProjector = "0.13.2"
   val lsp4jV = "0.20.1"
   val mavenBloop = "2.0.0"
-  val mill = "0.11.6"
+  val mill = "0.11.7"
   val mdoc = "2.5.2"
-  val munit = "1.0.0-M10"
+  val munit = "1.0.0-M11"
   val pprint = "0.7.3"
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
@@ -45,7 +45,7 @@ object V {
   val scalafmt = "3.7.15"
   val scalameta = "4.8.15"
   val scribe = "3.13.0"
-  val qdox = "2.0.3"
+  val qdox = "2.1.0"
 
   val guava = "com.google.guava" % "guava" % "33.0.0-jre"
   val lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
@@ -112,7 +112,7 @@ object V {
 
   // whenever version is removed please add it to MtagsResolver under last supported Metals version
   def deprecatedScala3Versions =
-    Seq("3.2.1", "3.2.0", "3.1.2", "3.1.1", "3.1.0")
+    Seq("3.3.2-RC1", "3.2.1", "3.2.0", "3.1.2", "3.1.1", "3.1.0")
 
   // NOTE if you had a new Scala Version make sure it's contained in quickPublishScalaVersions
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions

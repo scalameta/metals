@@ -6,8 +6,12 @@ import scala.concurrent.Promise
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.StatusBarConfig
+
+import org.eclipse.lsp4j.WorkDoneProgressBegin
 
 class StatusBarSuite extends BaseSuite {
   val time = new FakeTime
@@ -16,7 +20,9 @@ class StatusBarSuite extends BaseSuite {
     client,
     time,
     ProgressTicks.dots,
-    ClientConfiguration.default,
+    ClientConfiguration(
+      MetalsServerConfig.base.copy(statusBar = StatusBarConfig.on)
+    ),
   )
   override def beforeEach(context: BeforeEach): Unit = {
     client.statusParams.clear()
@@ -64,6 +70,32 @@ class StatusBarSuite extends BaseSuite {
          |tick...
          |<hide>
          |""".stripMargin,
+    )
+  }
+
+  test("progress") {
+
+    val noStatus = new StatusBar(
+      client,
+      time,
+      ProgressTicks.dots,
+      ClientConfiguration(
+        MetalsServerConfig.base.copy(statusBar = StatusBarConfig.off)
+      ),
+    )
+
+    val promise = Promise[Unit]()
+    noStatus.trackFuture("future", promise.future)
+    assertEquals(client.workDoneProgressCreateParams.size(), 1)
+    promise.success(())
+    assertEquals(
+      client.progressParams
+        .peek()
+        .getValue()
+        .getLeft()
+        .asInstanceOf[WorkDoneProgressBegin]
+        .getTitle(),
+      "future",
     )
   }
 
