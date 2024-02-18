@@ -15,6 +15,7 @@
     ],
     "Build Tools": [
       "build-tools/overview",
+      "build-tools/bazel",
       "build-tools/bloop",
       "build-tools/gradle",
       "build-tools/maven",

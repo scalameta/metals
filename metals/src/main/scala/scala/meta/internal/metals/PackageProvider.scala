@@ -198,7 +198,7 @@ class PackageProvider(
       oldPackagesParts.dropRight(1) == expectedOldPackageParts
 
     optObj match {
-      case None if oldPackagesMatchOldPath =>
+      case None if oldPackagesMatchOldPath && !oldPackagesMatchNewPath =>
         calcPackageEdit(pkgs, newPackageParts, oldPath)
       case Some(obj) if oldPackagesMatchOldPath =>
         for {
@@ -209,9 +209,12 @@ class PackageProvider(
             lastPart,
             obj.name.pos.toLsp,
           )
-        } yield List(edits, objectEdit).mergeChanges
+        } yield {
+          if (oldPackagesParts == newPackageParts.dropRight(1)) objectEdit
+          else List(edits, objectEdit).mergeChanges
+        }
       case Some(_)
-          if !oldPackagesMatchNewPath && oldPackagesWithoutObjectMatchOldPath =>
+          if !oldPackagesMatchNewPath && oldPackagesWithoutObjectMatchOldPath && !oldPackagesMatchNewPath =>
         calcPackageEdit(pkgs, newPackageParts, oldPath)
       case _ => None
     }
@@ -742,6 +745,7 @@ class PackageProvider(
         path.value,
         decl.symbols,
         isIncludeDeclaration = false,
+        sourceContainsDefinition = true,
       )
       .map { loc =>
         Reference(decl, loc.getRange(), loc.getUri())

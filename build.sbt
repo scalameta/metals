@@ -9,7 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
-def localSnapshotVersion = "1.2.2-SNAPSHOT"
+def localSnapshotVersion = "1.2.3-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 
 def isScala211(v: Option[(Long, Long)]): Boolean = v.contains((2, 11))
@@ -238,7 +238,7 @@ lazy val interfaces = project
     moduleName := "mtags-interfaces",
     autoScalaLibrary := false,
     mimaPreviousArtifacts := Set(
-      "org.scalameta" % "mtags-interfaces" % "1.2.0"
+      "org.scalameta" % "mtags-interfaces" % "1.2.1"
     ),
     crossPaths := false,
     libraryDependencies ++= List(
@@ -270,7 +270,7 @@ lazy val mtagsShared = project
     },
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "3.25.2",
+      "com.google.protobuf" % "protobuf-java" % "3.25.3",
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
   )
@@ -500,7 +500,7 @@ lazy val metals = project
       "com.outr" %% "scribe-file" % V.scribe,
       "com.outr" %% "scribe-slf4j" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "3.1.4",
+      "com.lihaoyi" %% "ujson" % "3.1.5",
       // For fetching projects' templates
       "com.lihaoyi" %% "requests" % "0.8.0",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
@@ -552,6 +552,7 @@ lazy val metals = project
       "ammonite3" -> V.ammonite3Version,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
+      "firstScala3PCVersion" -> V.firstScala3PCVersion,
       "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
   )

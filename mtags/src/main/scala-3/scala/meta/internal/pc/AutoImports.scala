@@ -288,6 +288,7 @@ object AutoImports:
       text: String,
       tree: Tree,
   )(using Context): AutoImportPosition =
+    def isScala3Worksheet = pos.source.path.isWorksheet
 
     @tailrec
     def lastPackageDef(
@@ -321,7 +322,10 @@ object AutoImports:
           case Some(stm) => (stm.endPos.line + 1, false)
           case None if pkg.pid.symbol.isEmptyPackage =>
             val offset =
-              ScriptFirstImportPosition.skipUsingDirectivesOffset(text)
+              ScriptFirstImportPosition.infer(
+                text,
+                isScala3Worksheet,
+              )
             (pos.source.offsetToLine(offset), false)
           case None =>
             val pos = pkg.pid.endPos
@@ -362,7 +366,8 @@ object AutoImports:
 
     def fileStart =
       AutoImportPosition(
-        ScriptFirstImportPosition.skipUsingDirectivesOffset(text),
+        ScriptFirstImportPosition
+          .infer(text, isScala3Worksheet),
         0,
         padTop = false,
       )

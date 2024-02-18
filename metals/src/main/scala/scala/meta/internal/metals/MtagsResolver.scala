@@ -69,11 +69,15 @@ object MtagsResolver {
     "3.3.1-RC5" -> "1.0.0",
     "3.3.1-RC6" -> "1.0.1",
     "3.3.1-RC7" -> "1.0.1",
+    "3.3.0" -> "1.2.2",
+    "3.3.2-RC1" -> "1.2.2",
+    "3.3.2-RC2" -> "1.2.2",
+    "3.3.2-RC3" -> "1.2.2",
   )
 
   class Default extends MtagsResolver {
 
-    private val firstScala3PCVersion = "3.3.2-RC1-bin-20230706-3ae2dbf-NIGHTLY"
+    private val firstScala3PCVersion = BuildInfo.firstScala3PCVersion
     private val states =
       new ConcurrentHashMap[String, State]()
 
