@@ -53,9 +53,13 @@ class SelectionRangeProvider(
         getCommentRanges(pos, lastVisitedParentTrees, param.text()).map { x =>
           new SelectionRange() { setRange(x.toLsp) }
         }.toList
-      (commentRanges ++ bareRanges).reduceRight(setParent)
+      // (commentRanges ++ bareRanges).reduceRight(setParent)
+      (commentRanges ++ bareRanges)
+        .reduceRightOption(setParent)
+        .getOrElse(new SelectionRange())
     }
-
+    println("selectionRanges scala 2")
+    pprint.pprintln(selectionRanges)
     selectionRanges
   }
 
@@ -119,8 +123,11 @@ class SelectionRangeProvider(
             .withEnd(e)
         }
 
-    // println("cmt range scala 2")
-    // pprint.pprintln(rg map (x => srcText.slice(x.start, x.end)))
+    println(
+      "comment range scala 2: " + rg
+        .map(x => srcText.slice(x.start, x.end))
+        .mkString(",")
+    )
     rg
   }
 
