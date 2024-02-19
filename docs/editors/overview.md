@@ -215,7 +215,7 @@ functionality.
      <td align="center">Shown in hover</td>
      <td align="center">✅</td>
      <td align="center">✅</td>
-     <td align="center">❌</td>
+     <td align="center">✅</td>
   </tr>
   <tr>
      <td>Source file analyzer</td>
