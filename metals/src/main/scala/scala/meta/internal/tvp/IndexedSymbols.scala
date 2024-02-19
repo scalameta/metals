@@ -20,8 +20,12 @@ import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.internal.trees.Origin
+import scala.meta.trees.Origin
 import scala.meta.io.AbsolutePath
+import scala.meta.inputs.Input.VirtualFile
+import scala.meta.inputs.Input.File
+import scala.meta.inputs.Input.Ammonite
+import scala.meta.inputs.Input.Slice
 
 class IndexedSymbols(
     isStatisticsEnabled: Boolean,
@@ -80,13 +84,21 @@ class IndexedSymbols(
         (tree, tree.origin) match {
           case (
                 src: Source,
-                Origin.Parsed(input: Input.VirtualFile, dialect, _),
+                parsed: Origin.Parsed,
               ) =>
-            val mtags = new ScalaMtags(input, dialect, Some(src))
-            mtags
-              .index()
-              .symbols
-
+            parsed.input match {
+              case input: VirtualFile =>
+                Seq.empty[SymbolInformation]
+                val mtags = new ScalaMtags(input, parsed.dialect, Some(src))
+                mtags
+                  .index()
+                  .symbols
+              case input =>
+                scribe.error(
+                  s"[$in] Unexpected input type ${input} in IndexedSymbols"
+                )
+                Seq.empty[SymbolInformation]
+            }
           case (tree, origin) =>
             // Trees don't return anything else than Source, and it should be impossible to get here
             scribe.error(

@@ -11,7 +11,7 @@ import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
-import scala.meta.internal.trees.Origin
+import scala.meta.trees.Origin
 import scala.meta.pc.SymbolDocumentation
 
 /**
@@ -29,17 +29,17 @@ class ScaladocIndexer(
       owner: String
   ): Unit = {
     val docstring = currentTree.origin match {
-      case Origin.None => ""
       case parsed: Origin.Parsed =>
         val leadingDocstring =
           ScaladocIndexer.findLeadingDocstring(
             source.tokens,
-            parsed.pos.start - 1
+            parsed.begTokenIdx - 1
           )
         leadingDocstring match {
           case Some(value) => value
           case None => ""
         }
+      case _ => ""
     }
     // Register `@define` macros to use for expanding in later docstrings.
     defines ++= ScaladocParser.extractDefines(docstring)

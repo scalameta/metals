@@ -4,7 +4,7 @@ import java.util
 
 import scala.meta._
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.trees.Origin
+import scala.meta.trees.Origin
 import scala.meta.transversers.SimpleTraverser
 
 import org.eclipse.lsp4j.DocumentSymbol
@@ -29,7 +29,7 @@ final class DocumentSymbolProvider(
       tree <- trees.get(path)
     } yield {
       implicit val dialect = tree.origin match {
-        case Origin.Parsed(_, dialect, _) => dialect
+        case parsed: Origin.Parsed => parsed.dialect
         case Origin.None => dialects.Scala213
         case _ => dialects.Scala213
       }
