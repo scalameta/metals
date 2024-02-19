@@ -123,18 +123,18 @@ class WorkspaceLspService(
     languageClient
   }
 
+  private val slowTaskProvider = new SlowTask(languageClient)
+
   private val userConfigSync =
     new UserConfigurationSync(initializeParams, languageClient, clientConfig)
 
   val statusBar: StatusBar = new StatusBar(
     languageClient,
     time,
-    progressTicks,
-    clientConfig,
   )
 
   private val shellRunner = register {
-    new ShellRunner(languageClient, time, statusBar)
+    new ShellRunner(languageClient, time, slowTaskProvider)
   }
 
   var focusedDocument: Option[AbsolutePath] = None
@@ -181,6 +181,7 @@ class WorkspaceLspService(
           name,
           doctor,
           bspStatus,
+          slowTaskProvider
         )
     }
 
@@ -211,7 +212,7 @@ class WorkspaceLspService(
 
   private val newProjectProvider: NewProjectProvider = new NewProjectProvider(
     languageClient,
-    statusBar,
+    slowTaskProvider,
     clientConfig,
     shellRunner,
     clientConfig.icons,
@@ -612,6 +613,10 @@ class WorkspaceLspService(
       params: FindTextInDependencyJarsRequest
   ): CompletableFuture[ju.List[Location]] =
     collectSeq(_.findTextInDependencyJars(params))(_.flatten.asJava).asJava
+
+  override def didCancelWorkDoneProgress(
+      params: lsp4j.WorkDoneProgressCancelParams
+  ): Unit = slowTaskProvider.canceled(params.getToken())
 
   def doctorVisibilityDidChange(
       params: DoctorVisibilityDidChangeParams

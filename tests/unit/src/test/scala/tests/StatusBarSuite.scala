@@ -1,29 +1,13 @@
 package tests
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Promise
-
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.ClientConfiguration
-import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.StatusBar
-import scala.meta.internal.metals.StatusBarConfig
-
-import org.eclipse.lsp4j.WorkDoneProgressBegin
 
 class StatusBarSuite extends BaseSuite {
   val time = new FakeTime
   val client = new TestingClient(PathIO.workingDirectory, Buffers())
-  var status = new StatusBar(
-    client,
-    time,
-    ProgressTicks.dots,
-    ClientConfiguration(
-      MetalsServerConfig.base.copy(statusBar = StatusBarConfig.on)
-    ),
-  )
+  var status = new StatusBar(client, time)
   override def beforeEach(context: BeforeEach): Unit = {
     client.statusParams.clear()
     status.cancel()
@@ -46,79 +30,6 @@ class StatusBarSuite extends BaseSuite {
       """|
          |<show> - tick 1
          |tick 2
-         |<hide>
-         |""".stripMargin,
-    )
-  }
-
-  test("future") {
-    val promise = Promise[Unit]()
-    status.trackFuture("tick", promise.future)
-    1.to(7).foreach { _ => tickSecond() }
-    promise.success(())
-    status.tick()
-    assertNoDiff(
-      client.statusBarHistory,
-      """|
-         |<show> - tick
-         |tick.
-         |tick..
-         |tick...
-         |tick
-         |tick.
-         |tick..
-         |tick...
-         |<hide>
-         |""".stripMargin,
-    )
-  }
-
-  test("progress") {
-
-    val noStatus = new StatusBar(
-      client,
-      time,
-      ProgressTicks.dots,
-      ClientConfiguration(
-        MetalsServerConfig.base.copy(statusBar = StatusBarConfig.off)
-      ),
-    )
-
-    val promise = Promise[Unit]()
-    noStatus.trackFuture("future", promise.future)
-    assertEquals(client.workDoneProgressCreateParams.size(), 1)
-    promise.success(())
-    assertEquals(
-      client.progressParams
-        .peek()
-        .getValue()
-        .getLeft()
-        .asInstanceOf[WorkDoneProgressBegin]
-        .getTitle(),
-      "future",
-    )
-  }
-
-  test("race") {
-    val promise1 = Promise[Unit]()
-    val promise2 = Promise[Unit]()
-    status.trackFuture("a", promise1.future, showTimer = true)
-    tickSecond()
-    status.trackFuture("b", promise2.future, showTimer = true)
-    1.to(2).foreach { _ => tickSecond() }
-    promise1.success(())
-    1.to(2).foreach { _ => tickSecond() }
-    promise2.success(())
-    status.tick()
-    assertNoDiff(
-      client.statusBarHistory,
-      """|
-         |<show> - a
-         |a 1s
-         |a 2s
-         |b 2s
-         |b 3s
-         |b 4s
          |<hide>
          |""".stripMargin,
     )

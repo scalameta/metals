@@ -1,33 +1,15 @@
 package scala.meta.internal.metals
 
-import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.Promise
-import scala.util.Failure
-import scala.util.Success
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
-import scala.meta.internal.metals.config.StatusBarState
-
-import org.eclipse.lsp4j.MessageParams
-import org.eclipse.lsp4j.MessageType
-import org.eclipse.lsp4j.ProgressParams
-import org.eclipse.lsp4j.WorkDoneProgressBegin
-import org.eclipse.lsp4j.WorkDoneProgressCreateParams
-import org.eclipse.lsp4j.WorkDoneProgressEnd
-import org.eclipse.lsp4j.WorkDoneProgressNotification
-import org.eclipse.lsp4j.jsonrpc.messages
 
 /**
  * Manages sending metals/status notifications to the editor client.
@@ -45,105 +27,7 @@ import org.eclipse.lsp4j.jsonrpc.messages
 final class StatusBar(
     client: MetalsLanguageClient,
     time: Time,
-    progressTicks: ProgressTicks = ProgressTicks.braille,
-    clientConfig: ClientConfiguration,
-)(implicit ec: ExecutionContext)
-    extends Cancelable {
-  def trackBlockingTask[T](message: String)(thunk: => T): T = {
-    val promise = Promise[Unit]()
-    trackFuture(message, promise.future)
-    try {
-      thunk
-    } finally {
-      promise.trySuccess(())
-    }
-  }
-
-  def trackSlowTask[T](message: String)(thunk: => T): T = {
-    if (!clientConfig.slowTaskIsOn)
-      trackBlockingTask(message)(thunk)
-    else {
-      val task = client.metalsSlowTask(MetalsSlowTaskParams(message))
-      try {
-        thunk
-      } catch {
-        case NonFatal(e) =>
-          slowTaskFailed(message, e)
-          throw e
-      } finally {
-        task.cancel(true)
-      }
-    }
-  }
-
-  def trackSlowFuture[T](
-      message: String,
-      thunk: Future[T],
-      onCancel: () => Unit = () => (),
-  ): Future[T] = {
-    if (!clientConfig.slowTaskIsOn)
-      trackFuture(message, thunk)
-    else {
-      val task = client.metalsSlowTask(MetalsSlowTaskParams(message))
-      task.thenApply { response =>
-        if (response.cancel) onCancel()
-      }
-      thunk.onComplete {
-        case Failure(exception) =>
-          slowTaskFailed(message, exception)
-          task.cancel(true)
-        case Success(_) =>
-          task.cancel(true)
-      }
-      thunk
-    }
-  }
-
-  private def slowTaskFailed(message: String, e: Throwable): Unit = {
-    scribe.error(s"failed: $message", e)
-    client.logMessage(
-      new MessageParams(
-        MessageType.Error,
-        s"$message failed, see metals.log for more details.",
-      )
-    )
-  }
-
-  def trackFuture[T](
-      message: String,
-      value: Future[T],
-      showTimer: Boolean = false,
-      progress: Option[TaskProgress] = None,
-  ): Future[T] = {
-
-    if (clientConfig.statusBarState == StatusBarState.Off) {
-      val uuid = UUID.randomUUID().toString()
-      val token = messages.Either.forLeft[String, Integer](uuid)
-
-      val begin = new WorkDoneProgressBegin()
-      begin.setTitle(message)
-      val notification =
-        messages.Either.forLeft[WorkDoneProgressNotification, Object](
-          begin
-        )
-
-      client.createProgress(new WorkDoneProgressCreateParams(token))
-      client.notifyProgress(new ProgressParams(token, notification))
-
-      value.map { result =>
-        val end = messages.Either.forLeft[WorkDoneProgressNotification, Object](
-          new WorkDoneProgressEnd()
-        )
-        client.notifyProgress(new ProgressParams(token, end))
-        result
-      }
-    } else {
-      items.add(Progress(message, value, showTimer, progress))
-      tickIfHidden()
-
-      value
-    }
-  }
+) extends Cancelable {
 
   def addMessage(params: MetalsStatusParams): Unit = {
     items.add(Message(params))
@@ -154,6 +38,7 @@ final class StatusBar(
   }
 
   private var scheduledFuture: ScheduledFuture[_] = _
+
   def start(
       sh: ScheduledExecutorService,
       initialDelay: Long,
@@ -176,20 +61,11 @@ final class StatusBar(
     garbageCollect()
     mostRelevant() match {
       case Some(value) =>
-        val isUnchanged = activeItem.exists {
-          // Don't re-publish static messages.
-          case m: Message => m eq value
-          case _ => false
-        }
+        val isUnchanged = activeItem.exists(_ eq value)
         if (!isUnchanged) {
           activeItem = Some(value)
           val show: java.lang.Boolean = if (isHidden) true else null
-          val params = value match {
-            case Message(p) =>
-              p.copy(show = show)
-            case _ =>
-              MetalsStatusParams(value.formattedMessage, show = show)
-          }
+          val params = value.params.copy(show = show)
           value.show()
           client.metalsStatus(params)
           isHidden = false
@@ -203,13 +79,9 @@ final class StatusBar(
     }
   }
 
-  private var activeItem: Option[Item] = None
-  private def isActiveMessage: Boolean =
-    activeItem.exists {
-      case m: Message => !m.isOutdated
-      case _ => false
-    }
-  private sealed abstract class Item {
+  private var activeItem: Option[Message] = None
+  private def isActiveMessage: Boolean = activeItem.exists(!_.isOutdated)
+  private case class Message(params: MetalsStatusParams) {
     val timer = new Timer(time)
     private var firstShow: Option[Timer] = None
     def show(): Unit = {
@@ -219,55 +91,24 @@ final class StatusBar(
     }
     def priority: Long = timer.elapsedNanos
     def isRecent: Boolean = timer.elapsedSeconds < 3
-    private val dots = new AtomicInteger()
-    def formattedMessage: String =
-      this match {
-        case Message(value) => value.text
-        case Progress(message, _, showTimer, maybeProgress) =>
-          if (showTimer) {
-            val seconds = timer.elapsedSeconds
-            if (seconds == 0) {
-              s"$message   "
-            } else {
-              maybeProgress match {
-                case Some(TaskProgress(percentage)) if seconds > 3 =>
-                  s"$message ${Timer.readableSeconds(seconds)} ($percentage%)"
-                case _ =>
-                  s"$message ${Timer.readableSeconds(seconds)}"
-              }
-            }
-          } else {
-            message + progressTicks.format(dots.getAndIncrement())
-          }
-      }
+    def formattedMessage: String = params.text
     def isOutdated: Boolean =
       timer.elapsedSeconds > 10 ||
         firstShow.exists(_.elapsedSeconds > 5)
-    def isStale: Boolean =
-      this match {
-        case _: Message => (firstShow.isDefined && !isRecent) || isOutdated
-        case p: Progress => p.job.isCompleted
-      }
+    def isStale: Boolean = (firstShow.isDefined && !isRecent) || isOutdated
   }
-  private case class Message(params: MetalsStatusParams) extends Item
-  private case class Progress(
-      message: String,
-      job: Future[_],
-      showTimer: Boolean,
-      taskProgress: Option[TaskProgress],
-  ) extends Item
 
   private var isHidden: Boolean = true
   private def tickIfHidden(): Unit = {
     if (isHidden) tick()
   }
 
-  private val items = new ConcurrentLinkedQueue[Item]()
+  private val items = new ConcurrentLinkedQueue[Message]()
   def pendingItems: Iterable[String] = items.asScala.map(_.formattedMessage)
   private def garbageCollect(): Unit = {
     items.removeIf(_.isStale)
   }
-  private def mostRelevant(): Option[Item] = {
+  private def mostRelevant(): Option[Message] = {
     if (items.isEmpty) None
     else {
       Some(items.asScala.maxBy { item => (item.isRecent, item.priority) })

@@ -19,9 +19,9 @@ import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.SlowTask
 import scala.meta.internal.metals.SourceMapper
 import scala.meta.internal.metals.StacktraceAnalyzer
-import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Trace
 import scala.meta.internal.metals.debug.DebugProtocol.CompletionRequest
 import scala.meta.internal.metals.debug.DebugProtocol.DisconnectRequest
@@ -55,7 +55,7 @@ private[debug] final class DebugProxy(
     stackTraceAnalyzer: StacktraceAnalyzer,
     compilers: Compilers,
     stripColor: Boolean,
-    statusBar: StatusBar,
+    slowTaskProvider: SlowTask,
     sourceMapper: SourceMapper,
     compilations: Compilations,
     targets: Seq[BuildTargetIdentifier],
@@ -94,7 +94,7 @@ private[debug] final class DebugProxy(
     case _ if cancelled.get() =>
       () // ignore
     case request @ InitializeRequest(args) =>
-      statusBar.trackFuture(
+      slowTaskProvider.trackFuture(
         "Initializing debugger",
         initialized.future,
       )
@@ -313,7 +313,7 @@ private[debug] object DebugProxy {
       compilers: Compilers,
       workspace: AbsolutePath,
       stripColor: Boolean,
-      status: StatusBar,
+      slowTaskProvider: SlowTask,
       sourceMapper: SourceMapper,
       compilations: Compilations,
       targets: Seq[BuildTargetIdentifier],
@@ -340,7 +340,7 @@ private[debug] object DebugProxy {
       stackTraceAnalyzer,
       compilers,
       stripColor,
-      status,
+      slowTaskProvider,
       sourceMapper,
       compilations,
       targets,

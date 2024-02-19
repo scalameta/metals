@@ -17,6 +17,7 @@ import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.BspSwitch
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.SlowTask
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.UserConfiguration
@@ -36,6 +37,7 @@ class BspConnector(
     tables: Tables,
     userConfig: () => UserConfiguration,
     statusBar: StatusBar,
+    slowTaskProvider: SlowTask,
     bspConfigGenerator: BspConfigGenerator,
     currentConnection: () => Option[BuildServerConnection],
     restartBspServer: () => Future[Boolean],
@@ -129,8 +131,8 @@ class BspConnector(
                 if (shouldReload) connection.workspaceReload()
                 else Future.successful(())
             } yield connection
-          statusBar
-            .trackFuture("Connecting to sbt", connectionF, showTimer = true)
+          slowTaskProvider
+            .trackFuture("Connecting to sbt", connectionF)//TODO: show time
             .map(Some(_))
         case ResolvedBspOne(details) =>
           tables.buildServers.chooseServer(details.getName())

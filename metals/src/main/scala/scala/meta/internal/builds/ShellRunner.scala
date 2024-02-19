@@ -15,7 +15,7 @@ import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
-import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.SlowTask
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -29,7 +29,7 @@ import coursierapi._
 class ShellRunner(
     languageClient: MetalsLanguageClient,
     time: Time,
-    statusBar: StatusBar,
+    slowTaskProvider: SlowTask,
 )(implicit
     executionContext: scala.concurrent.ExecutionContext
 ) extends Cancelable {
@@ -133,7 +133,7 @@ class ShellRunner(
     newCancelables.foreach(cancelables.add)
 
     val processFuture = ps.complete
-    statusBar.trackFuture(
+    slowTaskProvider.trackFuture(
       s"Running '$commandRun'",
       processFuture,
     )

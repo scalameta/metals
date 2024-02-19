@@ -121,7 +121,7 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
     underlying.configuration(configurationParams)
 
   override def createProgress(
-      params: WorkDoneProgressCreateParams
+      params: WorkDoneProgressCreateParams //TODO:: check that has valid capabilities
   ): CompletableFuture[Void] = underlying.createProgress(params)
 
   override def notifyProgress(params: ProgressParams): Unit =

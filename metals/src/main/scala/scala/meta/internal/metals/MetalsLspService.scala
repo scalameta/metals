@@ -134,6 +134,7 @@ class MetalsLspService(
     folderVisibleName: Option[String],
     headDoctor: HeadDoctor,
     bspStatus: BspStatus,
+    slowTaskProvider: SlowTask
 ) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
     with Cancelable
     with TextDocumentService {
@@ -172,9 +173,7 @@ class MetalsLspService(
   private implicit val executionContext: ExecutionContextExecutorService = ec
 
   private val embedded: Embedded = register(
-    new Embedded(
-      statusBar
-    )
+    new Embedded(slowTaskProvider)
   )
 
   val tables: Tables = register(new Tables(folder, time))
@@ -418,6 +417,7 @@ class MetalsLspService(
         onBuildTargetChanges(params)
       },
       bspErrorHandler,
+      slowTaskProvider
     )
 
   private val bloopServers: BloopServers = new BloopServers(
@@ -446,6 +446,7 @@ class MetalsLspService(
     tables,
     () => userConfig,
     statusBar,
+    slowTaskProvider,
     bspConfigGenerator,
     () => bspSession.map(_.mainConnection),
     restartBspServer,
@@ -547,6 +548,7 @@ class MetalsLspService(
     languageClient,
     clientConfig,
     statusBar,
+    slowTaskProvider,
     clientConfig.icons,
     tables,
     buildTargets,
@@ -600,7 +602,7 @@ class MetalsLspService(
         buildTargets,
         languageClient,
         () => userConfig,
-        statusBar,
+        slowTaskProvider,
         diagnostics,
         embedded,
         worksheetPublisher,
@@ -619,7 +621,7 @@ class MetalsLspService(
       buffers,
       symbolSearch,
       embedded,
-      statusBar,
+      slowTaskProvider,
       sh,
       initializeParams,
       () => excludedPackageHandler,
@@ -719,6 +721,7 @@ class MetalsLspService(
       semanticdbs,
       compilers,
       statusBar,
+      slowTaskProvider,
       sourceMapper,
       () => userConfig,
       testProvider,
@@ -730,7 +733,7 @@ class MetalsLspService(
     buffers,
     () => userConfig,
     folder,
-    statusBar,
+    slowTaskProvider,
     compilations,
     languageClient,
     buildTargets,
@@ -841,7 +844,7 @@ class MetalsLspService(
       buffers,
       compilers,
       compilations,
-      statusBar,
+      slowTaskProvider,
       diagnostics,
       tables,
       languageClient,
@@ -2434,7 +2437,7 @@ class MetalsLspService(
       session.importBuilds()
     }
     for {
-      bspBuilds <- statusBar.trackFuture("Importing build", importedBuilds0)
+      bspBuilds <- slowTaskProvider.trackFuture("Importing build", importedBuilds0)
       _ = {
         val idToConnection = bspBuilds.flatMap { bspBuild =>
           val targets =
@@ -2474,7 +2477,7 @@ class MetalsLspService(
     new ScalaCli(
       () => compilers,
       compilations,
-      () => statusBar,
+      slowTaskProvider,
       buffers,
       () => indexer.profiledIndexWorkspace(() => ()),
       () => diagnostics,
@@ -2496,6 +2499,7 @@ class MetalsLspService(
     executionContext,
     tables,
     () => statusBar,
+    slowTaskProvider,
     timerProvider,
     () => scalafixProvider,
     () => indexingPromise,

@@ -72,7 +72,7 @@ class Compilers(
     buffers: Buffers,
     search: SymbolSearch,
     embedded: Embedded,
-    statusBar: StatusBar,
+    slowTaskProvider: SlowTask,
     sh: ScheduledExecutorService,
     initializeParams: InitializeParams,
     excludedPackages: () => ExcludedPackagesHandler,
@@ -938,7 +938,7 @@ class Compilers(
     } yield {
       jworksheetsCache.put(
         path,
-        statusBar.trackBlockingTask(
+        slowTaskProvider.trackBlocking(
           s"${config.icons.sync}Loading worksheet presentation compiler"
         ) {
           ScalaLazyCompiler.forWorksheet(
@@ -1001,7 +1001,7 @@ class Compilers(
         val out = jcache.computeIfAbsent(
           PresentationCompilerKey.ScalaBuildTarget(scalaTarget.info.getId),
           { _ =>
-            statusBar.trackBlockingTask(
+            slowTaskProvider.trackBlocking(
               s"${config.icons.sync}Loading presentation compiler"
             ) {
               ScalaLazyCompiler(scalaTarget, mtags, search)
