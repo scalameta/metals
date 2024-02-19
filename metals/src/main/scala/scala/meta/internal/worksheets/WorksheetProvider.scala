@@ -26,7 +26,7 @@ import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
-import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.SlowTask
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.UserConfiguration
@@ -61,7 +61,7 @@ class WorksheetProvider(
     buildTargets: BuildTargets,
     languageClient: MetalsLanguageClient,
     userConfig: () => UserConfiguration,
-    statusBar: StatusBar,
+    slowTaskProvider: SlowTask,
     diagnostics: Diagnostics,
     embedded: Embedded,
     publisher: WorksheetPublisher,
@@ -246,10 +246,10 @@ class WorksheetProvider(
         )
       }
       cancelables.add(Cancelable(() => completeEmptyResult()))
-      statusBar.trackFuture(
+      slowTaskProvider.trackFuture(
         s"Evaluating ${path.filename}",
-        result.asScala,
-        showTimer = true,
+        result.asScala
+       // TODO:: showTimer = true,
       )
       token.checkCanceled()
       // NOTE(olafurpg) Run evaluation in a custom thread so that we can

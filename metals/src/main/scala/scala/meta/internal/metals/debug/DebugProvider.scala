@@ -38,6 +38,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.ScalaTestSuitesDebugRequest
+import scala.meta.internal.metals.SlowTask
 import scala.meta.internal.metals.SourceMapper
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.StatusBar
@@ -85,6 +86,7 @@ class DebugProvider(
     semanticdbs: Semanticdbs,
     compilers: Compilers,
     statusBar: StatusBar,
+    slowTaskProvider: SlowTask,
     sourceMapper: SourceMapper,
     userConfig: () => UserConfiguration,
     testProvider: TestSuitesProvider,
@@ -142,7 +144,7 @@ class DebugProvider(
         )
       debugServer <-
         if (isJvm)
-          statusBar.trackSlowFuture(
+          slowTaskProvider.trackFuture(
             "Starting debug server",
             start(
               sessionName,
@@ -150,7 +152,7 @@ class DebugProvider(
               buildServer,
               cancelPromise,
             ),
-            () => cancelPromise.trySuccess(()),
+            Some(() => cancelPromise.trySuccess(())),
           )
         else
           runLocally(
@@ -296,7 +298,7 @@ class DebugProvider(
         compilers,
         workspace,
         clientConfig.disableColorOutput(),
-        statusBar,
+        slowTaskProvider,
         sourceMapper,
         compilations,
         targets,

@@ -4,16 +4,13 @@ import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MtagsBinaries
-import scala.meta.internal.metals.ProgressTicks
-import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.SlowTask
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.pc.PresentationCompiler
 
-import tests.FakeTime
 import tests.InputProperties
 import tests.TestMtagsResolver
 import tests.TestingClient
@@ -25,13 +22,9 @@ object TestScala3Compiler {
     val resolver = new TestMtagsResolver()
     resolver.resolve(V.scala3) match {
       case Some(mtags: MtagsBinaries.Artifacts) =>
-        val time = new FakeTime
         val client = new TestingClient(PathIO.workingDirectory, Buffers())
-        val status = new StatusBar(
+        val status = new SlowTask(
           client,
-          time,
-          ProgressTicks.dots,
-          ClientConfiguration.default,
         )(ec)
         val embedded = new Embedded(status)
         val pc = embedded

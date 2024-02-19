@@ -13,7 +13,7 @@ import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.SlowTask
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsOpenWindowParams
@@ -26,11 +26,11 @@ import coursierapi._
 
 class NewProjectProvider(
     client: MetalsLanguageClient,
-    statusBar: StatusBar,
+    slowTaskProvider: SlowTask,
     config: ClientConfiguration,
     shell: ShellRunner,
     icons: Icons,
-    workspace: AbsolutePath,
+    workspace: AbsolutePath
 )(implicit context: ExecutionContext) {
 
   private val templatesUrl =
@@ -46,7 +46,7 @@ class NewProjectProvider(
       if (allTemplates.nonEmpty) {
         allTemplates
       } else {
-        statusBar.trackBlockingTask(
+        slowTaskProvider.trackBlocking(
           "Fetching template information from Github"
         ) {
           // Matches:
