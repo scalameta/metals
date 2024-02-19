@@ -16,13 +16,12 @@ import scala.jdk.CollectionConverters._
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.HoverSignature
+import scala.meta.pc.InlayHintsParams
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolSearch
-import scala.meta.pc.SyntheticDecoration
-import scala.meta.pc.SyntheticDecorationsParams
 import scala.meta.pc.VirtualFileParams
 
 import org.eclipse.lsp4j
@@ -132,9 +131,9 @@ case class JavaPresentationCompiler(
   ): CompletableFuture[util.List[TextEdit]] =
     CompletableFuture.completedFuture(Nil.asJava)
 
-  override def syntheticDecorations(
-      params: SyntheticDecorationsParams
-  ): CompletableFuture[util.List[SyntheticDecoration]] =
+  override def inlayHints(
+      params: InlayHintsParams
+  ): CompletableFuture[util.List[lsp4j.InlayHint]] =
     CompletableFuture.completedFuture(Nil.asJava)
 
   override def didChange(

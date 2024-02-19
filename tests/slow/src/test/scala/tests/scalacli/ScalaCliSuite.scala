@@ -194,30 +194,30 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
       )
 
       _ <- server.didOpen("MyTests.sc")
-      _ = assertNoDiff(
-        client.syntheticDecorations,
-        s"""#!/usr/bin/env -S scala-cli shebang --java-opt -Xms256m --java-opt -XX:MaxRAMPercentage=80 
-           |//> using scala "$scalaVersion"
-           |//> using lib "com.lihaoyi::utest::0.7.10"
-           |//> using lib com.lihaoyi::pprint::0.6.6
-           |
-           |import foo.Foo
-           |import utest._
-           | 
-           |pprint.log[Int](2)(generate, generate) // top-level statement should be fine in a script
-           |
-           |object MyTests extends TestSuite {
-           |  pprint.log[Int](2)(generate, generate)
-           |  val tests: Tests = Tests {
-           |    test("foo") {
-           |      assert(2 + 2 == 4)
-           |    }
-           |    test("nope") {
-           |      assert(2 + 2 == (new Foo).value)
-           |    }
-           |  }
-           |}
-           |""".stripMargin,
+      _ <- server.assertInlayHints(
+        "MyTests.sc",
+        s"""|#!/usr/bin/env -S scala-cli shebang --java-opt -Xms256m --java-opt -XX:MaxRAMPercentage=80 
+            |//> using scala "$scalaVersion"
+            |//> using lib "com.lihaoyi::utest::0.7.10"
+            |//> using lib com.lihaoyi::pprint::0.6.6
+            |
+            |import foo.Foo
+            |import utest._
+            | 
+            |pprint.log/*[Int<<scala/Int#>>]*/(2)/*(generate<<sourcecode/LineMacros#generate().>>, generate<<sourcecode/FileNameMacros#generate().>>)*/ // top-level statement should be fine in a script
+            |
+            |object MyTests extends TestSuite {
+            |  pprint.log/*[Int<<scala/Int#>>]*/(2)/*(generate<<sourcecode/LineMacros#generate().>>, generate<<sourcecode/FileNameMacros#generate().>>)*/
+            |  val tests/*: Tests<<utest/Tests#>>*/ = Tests {
+            |    test("foo") {
+            |      assert(2 + 2 == 4)
+            |    }
+            |    test("nope") {
+            |      assert(2 + 2 == (new Foo).value)
+            |    }
+            |  }
+            |}
+            |""".stripMargin,
       )
     } yield ()
 

@@ -16,6 +16,7 @@ case class JavaHover(
 ) extends HoverSignature {
 
   def signature(): Optional[String] = symbolSignature.asJava
+
   def toLsp(): lsp4j.Hover = {
     val markdown =
       HoverMarkup.javaHoverMarkup(

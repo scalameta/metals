@@ -41,8 +41,6 @@ import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.builds.VersionRecommendation
 import scala.meta.internal.builds.WorkspaceReload
-import scala.meta.internal.decorations.PublishDecorationsParams
-import scala.meta.internal.decorations.SyntheticHoverProvider
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
@@ -546,18 +544,6 @@ class MetalsLspService(
     buildTargets,
   )
 
-  private val syntheticHoverProvider: SyntheticHoverProvider =
-    new SyntheticHoverProvider(
-      folder,
-      semanticdbs,
-      buffers,
-      fingerprints,
-      charset,
-      clientConfig,
-      () => userConfig,
-      trees,
-    )
-
   private val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
     List(
       referencesProvider,
@@ -734,6 +720,12 @@ class MetalsLspService(
     diagnostics,
     languageClient,
   )
+
+  private val inlayHintResolveProvider: InlayHintResolveProvider =
+    new InlayHintResolveProvider(
+      definitionProvider,
+      compilers,
+    )
 
   val doctor: Doctor = new Doctor(
     folder,
@@ -990,21 +982,8 @@ class MetalsLspService(
         userConfig.showImplicitConversionsAndClasses != old.showImplicitConversionsAndClasses ||
         userConfig.showInferredType != old.showInferredType
       ) {
-        for {
-          _ <- buildServerPromise.future
-          _ <- focusedDocument()
-            .map { path =>
-              Future.sequence(
-                List(
-                  publishSynthetics(path, force = true)
-                )
-              )
-            }
-            .getOrElse(Future.successful(()))
-        } yield ()
-      } else {
-        Future.successful(())
-      }
+        languageClient.refreshInlayHints().asScala
+      } else Future.successful(())
 
     val restartBuildServer = bspSession
       .map { session =>
@@ -1068,8 +1047,13 @@ class MetalsLspService(
     // Update in-memory buffer contents from LSP client
     buffers.put(path, params.getTextDocument.getText)
 
+    val optVersion =
+      Option.when(initializeParams.supportsVersionedWorkspaceEdits)(
+        params.getTextDocument().getVersion()
+      )
+
     packageProvider
-      .workspaceEdit(path)
+      .workspaceEdit(path, params.getTextDocument().getText(), optVersion)
       .map(new ApplyWorkspaceEditParams(_))
       .foreach(languageClient.applyEdit)
 
@@ -1082,18 +1066,10 @@ class MetalsLspService(
       interactiveSemanticdbs.textDocument(path)
     }
 
-    val publishSynthetics0 = for {
-      _ <- Future.sequence(List(parseTrees(path), interactive))
-      _ <- Future.sequence(
-        List(
-          publishSynthetics(path),
-          testProvider.didOpen(path),
-        )
-      )
-    } yield ()
+    val parser = parseTrees(path)
 
     if (path.isDependencySource(folder)) {
-      CompletableFuture.completedFuture(())
+      parser.asJava
     } else {
       buildServerPromise.future.flatMap { _ =>
         def load(): Future[Unit] = {
@@ -1102,7 +1078,9 @@ class MetalsLspService(
               List(
                 maybeCompileOnDidFocus(path, prevBuildTarget),
                 compilers.load(List(path)),
-                publishSynthetics0,
+                parser,
+                interactive,
+                testProvider.didOpen(path),
               )
             )
             .ignoreValue
@@ -1113,26 +1091,6 @@ class MetalsLspService(
         } yield ()
       }.asJava
     }
-  }
-
-  def publishSynthetics(
-      path: AbsolutePath,
-      force: Boolean = false,
-  ): Future[Unit] = {
-    CancelTokens.future { token =>
-      val shouldShow = (force || userConfig.areSyntheticsEnabled()) &&
-        clientConfig.isInlineDecorationProvider()
-      if (shouldShow) {
-        compilers.syntheticDecorations(path, token).map { decorations =>
-          val params = new PublishDecorationsParams(
-            path.toURI.toString(),
-            decorations.asScala.toArray,
-            if (clientConfig.isInlineDecorationProvider()) true else null,
-          )
-          languageClient.metalsPublishDecorations(params)
-        }
-      } else Future.successful(())
-    }.asScala
   }
 
   def didFocus(
@@ -1147,12 +1105,10 @@ class MetalsLspService(
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
     if (path.isDependencySource(folder)) {
-      publishSynthetics(path)
       CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
     } else if (recentlyOpenedFiles.isRecentlyActive(path)) {
       CompletableFuture.completedFuture(DidFocusResult.RecentlyActive)
     } else {
-      publishSynthetics(path)
       worksheetProvider.onDidFocus(path)
       maybeCompileOnDidFocus(path, prevBuildTarget).asJava
     }
@@ -1192,9 +1148,8 @@ class MetalsLspService(
         diagnostics.didChange(path)
 
         parseTrees(path)
-          .flatMap { _ =>
+          .map { _ =>
             treeView.onWorkspaceFileDidChange(path)
-            publishSynthetics(path)
           }
           .ignoreValue
           .asJava
@@ -1422,12 +1377,7 @@ class MetalsLspService(
     CancelTokens.future { token =>
       compilers
         .hover(params, token)
-        .map { hover =>
-          syntheticHoverProvider.addSyntheticsHover(
-            params,
-            hover.map(_.toLsp()),
-          )
-        }
+        .map(_.map(_.toLsp()))
         .map(
           _.orElse {
             val path = params.textDocument.getUri.toAbsolutePath
@@ -1437,6 +1387,24 @@ class MetalsLspService(
               None
           }.orNull
         )
+    }
+  }
+
+  def inlayHints(
+      params: InlayHintParams
+  ): CompletableFuture[util.List[InlayHint]] = {
+    CancelTokens.future { token =>
+      compilers.inlayHints(params, token)
+    }
+  }
+
+  def inlayHintResolve(
+      inlayHint: InlayHint
+  ): CompletableFuture[InlayHint] = {
+    CancelTokens.future { token =>
+      focusedDocument()
+        .map(path => inlayHintResolveProvider.resolve(inlayHint, path, token))
+        .getOrElse(Future.successful(inlayHint))
     }
   }
 

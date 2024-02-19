@@ -36,6 +36,8 @@ class ShortenedNames(
       s"type $to = ${from.showName}"
     }.toList
 
+  def getUsedRenames: Map[Symbol, String] = foundRenames.toMap
+
   /**
    * Returns a list of shortened names
    */

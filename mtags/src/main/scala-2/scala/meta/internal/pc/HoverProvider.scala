@@ -211,6 +211,17 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
       range: Position,
       report: => Option[Report] = None
   ): Option[HoverSignature] = {
+
+    def docstring =
+      if (metalsConfig.isHoverDocumentationEnabled) {
+        symbolDocumentation(symbol)
+          .filter(docs => !docs.docstring().isEmpty())
+          .orElse(symbolDocumentation(symbol.companion))
+          .fold("")(_.docstring())
+      } else {
+        ""
+      }
+
     val result =
       if (tpe == null || tpe.isErroneous || tpe == NoType) None
       else if (
@@ -238,7 +249,8 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
             expressionType = Some(
               s"${symbol.javaClassSymbol.keyString} ${symbol.fullName}"
             ),
-            contextInfo = Nil
+            contextInfo = Nil,
+            docstring = if (symbol.hasModuleFlag) Some(docstring) else None
           )
         )
       } else {
@@ -269,12 +281,6 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
           else ""
         val prettySignature =
           printer.defaultMethodSignature(flags) + macroSuffix
-        val docstring =
-          if (metalsConfig.isHoverDocumentationEnabled) {
-            symbolDocumentation(symbol).fold("")(_.docstring())
-          } else {
-            ""
-          }
         Some(
           ScalaHover(
             expressionType = Some(prettyType),

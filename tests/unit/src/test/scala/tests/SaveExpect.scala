@@ -17,7 +17,7 @@ object SaveExpect {
       new FoldingRangeScala3Suite,
       new WorkspaceSymbolExpectSuite,
       new SemanticTokensExpectSuite,
-      new decorations.SyntheticDecorationsExpectSuite,
+      new inlayHints.InlayHintsExpectSuite,
     ).foreach { suite =>
       val header = suite.suiteName.length + 2
       println("=" * header)

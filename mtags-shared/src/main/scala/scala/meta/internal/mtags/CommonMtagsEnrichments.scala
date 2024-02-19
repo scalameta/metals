@@ -13,6 +13,7 @@ import java.{util => ju}
 
 import scala.annotation.tailrec
 import scala.collection.AbstractIterator
+import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
@@ -384,6 +385,18 @@ trait CommonMtagsEnrichments {
     def trimTo(maxLength: Int): String =
       if (text.length() <= maxLength) text
       else s"${text.take(maxLength)}..."
+
+    def allIndexesOf(
+        str: String
+    ): List[Int] = {
+      val buffer = ListBuffer.empty[Int]
+      var index = text.indexOf(str)
+      while (index >= 0) {
+        buffer += index
+        index = text.indexOf(str, index + 1)
+      }
+      buffer.toList
+    }
   }
 
 }

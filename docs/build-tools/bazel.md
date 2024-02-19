@@ -164,3 +164,13 @@ targets manually in `projectview.bazel`. This will speed up the import process
 significantly.
 
 There is work ongoing to improve the performance of Bazel in Metals.
+
+## Troubleshooting
+
+### Bazel is restarting between CLI and Metals
+
+This possibly means that some of the environment variables are set to different
+values between what Metals and Bazel are using. Some of the variables that
+influence this are PATH, PWD, JAVA_HOME and others. Make sure that these are set
+to the same values in both environments. If possible let us know if we can improve
+the default behaviour of Metals to avoid this issue.
