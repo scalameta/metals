@@ -34,6 +34,7 @@ import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
+import scala.meta.pc.SyntheticDecorationsParams
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
@@ -45,6 +46,7 @@ import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InlayHint
+import org.eclipse.lsp4j.InlayHintKind
 import org.eclipse.lsp4j.InlayHintParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRange
@@ -568,8 +570,24 @@ class Compilers(
       token: CancelToken,
   ): Future[ju.List[InlayHint]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      val rangeParams =
-        CompilerRangeParamsUtils.fromPos(pos, token)
+      def inlayHintsFallback(
+          params: SyntheticDecorationsParams
+      ): Future[ju.List[InlayHint]] = {
+        pc.syntheticDecorations(params)
+          .asScala
+          .map(
+            _.map { d =>
+              val hint = new InlayHint()
+              hint.setPosition(d.range().getStart())
+              hint.setLabel(d.label())
+              val kind =
+                if (d.kind() <= 2) InlayHintKind.Type
+                else InlayHintKind.Parameter
+              hint.setKind(kind)
+              hint
+            }
+          )
+      }
 
       def adjustInlayHints(
           inlayHints: ju.List[InlayHint]
@@ -587,6 +605,8 @@ class Compilers(
           .asJava
       }
 
+      val rangeParams =
+        CompilerRangeParamsUtils.fromPos(pos, token)
       val pcParams = CompilerInlayHintsParams(
         rangeParams,
         typeParameters = userConfig().showInferredType.contains("true"),
@@ -595,10 +615,18 @@ class Compilers(
         implicitParameters = userConfig().showImplicitArguments,
         implicitConversions = userConfig().showImplicitConversionsAndClasses,
       )
+
       pc
         .inlayHints(pcParams)
         .asScala
-        .map(adjustInlayHints)
+        .flatMap { hints =>
+          if (hints.isEmpty) {
+            inlayHintsFallback(pcParams.toSyntheticDecorationsParams)
+              .map(adjustInlayHints)
+          } else {
+            Future.successful(adjustInlayHints(hints))
+          }
+        }
     }
       .getOrElse(Future.successful(Nil.asJava))
   }

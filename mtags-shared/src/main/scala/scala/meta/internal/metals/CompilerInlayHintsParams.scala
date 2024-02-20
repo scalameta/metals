@@ -17,4 +17,14 @@ case class CompilerInlayHintsParams(
   override def token(): CancelToken = rangeParams.token
   override def offset(): Int = rangeParams.offset
   override def endOffset(): Int = rangeParams.endOffset
+
+  def toSyntheticDecorationsParams: CompilerSyntheticDecorationsParams = {
+    CompilerSyntheticDecorationsParams(
+      rangeParams,
+      inferredTypes = inferredTypes,
+      typeParameters = typeParameters,
+      implicitConversions = implicitConversions,
+      implicitParameters = implicitParameters
+    )
+  }
 }
