@@ -19,6 +19,12 @@ class DebugProtocolCancelationSuite
     ) {
 
   test("start") {
+    cleanWorkspace()
+    client.onBeginSlowTask = (message, cancelParams) => {
+      if(message == "Starting debug server") {
+        server.fullServer.didCancelWorkDoneProgress(cancelParams)
+      }
+    }
     val mainClass = new ScalaMainClass(
       "a.Main",
       List("Bar").asJava,

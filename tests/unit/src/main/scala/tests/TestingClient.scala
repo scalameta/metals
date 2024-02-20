@@ -56,6 +56,8 @@ import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
 import tests.MetalsTestEnrichments._
 import tests.TestOrderings._
+import org.eclipse.lsp4j.WorkDoneProgressBegin
+import org.eclipse.lsp4j.WorkDoneProgressCancelParams
 
 /**
  * Fake LSP client that responds to notifications/requests initiated by the server.
@@ -91,7 +93,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   var importScalaCliScript = new MessageActionItem(ImportScalaScript.dismiss)
   var resetWorkspace = new MessageActionItem(ResetWorkspace.cancel)
   var regenerateAndRestartScalaCliBuildSever = FileOutOfScalaCliBspScope.ignore
-
+  var onBeginSlowTask: (String, WorkDoneProgressCancelParams) => Unit = (_, _) => { }
   val resources = new ResourceOperations(buffers)
   val diagnostics: TrieMap[AbsolutePath, Seq[Diagnostic]] =
     TrieMap.empty[AbsolutePath, Seq[Diagnostic]]
@@ -405,6 +407,15 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   }
 
   override def notifyProgress(params: ProgressParams): Unit = {
+    if(params.getValue().isLeft()) {
+      params.getValue().getLeft() match {
+        case begin: WorkDoneProgressBegin =>
+          val cancelParams = new WorkDoneProgressCancelParams(params.getToken())
+          onBeginSlowTask(begin.getTitle(), cancelParams)
+          messageRequests.addLast(begin.getTitle())
+        case _ =>
+      }
+    }
     progressParams.add(params)
   }
 

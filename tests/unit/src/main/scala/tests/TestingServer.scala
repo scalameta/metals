@@ -547,6 +547,8 @@ final case class TestingServer(
     val params = new InitializeParams
     val workspaceCapabilities = new WorkspaceClientCapabilities()
     val textDocumentCapabilities = new TextDocumentClientCapabilities
+    val windowCapabilities = new l.WindowClientCapabilities()
+    windowCapabilities.setWorkDoneProgress(true)
     textDocumentCapabilities.setFoldingRange(new FoldingRangeCapabilities)
     val completionItemCapabilities = new l.CompletionItemCapabilities(true)
     textDocumentCapabilities.setCompletion(
@@ -579,6 +581,7 @@ final case class TestingServer(
       new ClientCapabilities(
         workspaceCapabilities,
         textDocumentCapabilities,
+        windowCapabilities,
         Map.empty.asJava.toJson,
       )
     )

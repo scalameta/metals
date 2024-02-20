@@ -20,7 +20,9 @@ import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.ProgressParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
+import org.eclipse.lsp4j.WorkDoneProgressCreateParams
 
 /**
  * Delegates requests/notifications to the underlying language client according to the user configuration.
@@ -199,5 +201,17 @@ final class ConfiguredLanguageClient(
     result.setType(MessageType.Info)
     result
   }
+
+  override def createProgress(
+      params: WorkDoneProgressCreateParams
+  ): CompletableFuture[Void] = 
+    if(clientConfig.slowTaskIsOn()) {
+      underlying.createProgress(params)
+    } else CompletableFuture.completedFuture(null)
+
+  override def notifyProgress(params: ProgressParams): Unit =
+    if(clientConfig.slowTaskIsOn()) {
+      underlying.notifyProgress(params)
+    }
 
 }

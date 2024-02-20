@@ -19,6 +19,7 @@ import com.google.gson.JsonPrimitive
 import tests.BaseImportSuite
 import tests.ScriptsAssertions
 import tests.TestSemanticTokens
+import java.util.concurrent.TimeUnit
 
 class SbtBloopLspSuite
     extends BaseImportSuite("sbt-bloop-import")
@@ -275,6 +276,12 @@ class SbtBloopLspSuite
 
   test("cancel") {
     cleanWorkspace()
+    client.onBeginSlowTask = (name, cancelParams) => {
+      if (name == progressMessage) {
+        Thread.sleep(TimeUnit.SECONDS.toMillis(2))
+        server.fullServer.didCancelWorkDoneProgress(cancelParams)
+      }
+    }
     for {
       _ <- initialize(
         s"""
@@ -287,6 +294,7 @@ class SbtBloopLspSuite
         expectError = true,
       )
       _ = assertStatus(!_.isInstalled)
+      _ = client.onBeginSlowTask = (_, _) => { }
       _ <- server.didSave("build.sbt")(_ + "\n// comment")
       _ = assertNoDiff(client.workspaceShowMessages, "")
       _ = assertStatus(!_.isInstalled)

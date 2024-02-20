@@ -181,12 +181,12 @@ final class ForwardingMetalsBuildClient(
               "Start no-op compilation"
             )
           val token =
-            if (isNoOp) None
-            else
+            Option.when(isNoOp) {
               slowTaskProvider.startSlowTask(
                 s"Compiling $name",
                 withProgress = true,
               )
+            }
           val compilation = new Compilation(new Timer(time), isNoOp, token)
           compilations(task.getTarget) = compilation
         }

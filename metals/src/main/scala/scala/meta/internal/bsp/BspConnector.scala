@@ -132,7 +132,7 @@ class BspConnector(
                 else Future.successful(())
             } yield connection
           slowTaskProvider
-            .trackFuture("Connecting to sbt", connectionF) //TODO: show time
+            .trackFuture("Connecting to sbt", connectionF)
             .map(Some(_))
         case ResolvedBspOne(details) =>
           tables.buildServers.chooseServer(details.getName())
