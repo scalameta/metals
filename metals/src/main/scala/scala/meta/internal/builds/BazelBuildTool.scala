@@ -87,7 +87,7 @@ object BazelBuildTool {
   private def hasProjectView(dir: AbsolutePath): Option[AbsolutePath] =
     dir.list.find(_.filename.endsWith(".bazelproject"))
 
-  private def existingProjectView(
+  def existingProjectView(
       projectRoot: AbsolutePath
   ): Option[AbsolutePath] =
     List(projectRoot, projectRoot.resolve("ijwb"), projectRoot.resolve(".ijwb"))
