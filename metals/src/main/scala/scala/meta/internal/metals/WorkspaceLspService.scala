@@ -123,7 +123,7 @@ class WorkspaceLspService(
     languageClient
   }
 
-  private val slowTaskProvider = new SlowTask(languageClient)
+  private val slowTaskProvider = new SlowTask(languageClient, slowTaskIsOn = false)
 
   private val userConfigSync =
     new UserConfigurationSync(initializeParams, languageClient, clientConfig)
@@ -134,7 +134,7 @@ class WorkspaceLspService(
   )
 
   private val shellRunner = register {
-    new ShellRunner(languageClient, time, slowTaskProvider)
+    new ShellRunner(time, slowTaskProvider)
   }
 
   var focusedDocument: Option[AbsolutePath] = None
@@ -1194,8 +1194,6 @@ class WorkspaceLspService(
         languageClient.underlying,
         () => server.reload(),
         clientConfig.icons,
-        time,
-        sh,
         clientConfig,
       )
       render = () => newClient.renderHtml

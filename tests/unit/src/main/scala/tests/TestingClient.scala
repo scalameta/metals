@@ -27,8 +27,6 @@ import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.WorkspaceChoicePopup
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
-import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
-import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.clients.language.RawMetalsInputBoxResult
@@ -113,9 +111,6 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   val clientCommands = new ConcurrentLinkedDeque[ExecuteCommandParams]()
   val decorations =
     new ConcurrentHashMap[AbsolutePath, Set[PublishDecorationsParams]]()
-  var slowTaskHandler: MetalsSlowTaskParams => Option[MetalsSlowTaskResult] = {
-    _: MetalsSlowTaskParams => None
-  }
   var showMessageHandler: MessageParams => Unit = { _: MessageParams =>
     ()
   }
@@ -402,19 +397,6 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   }
   override def logMessage(params: MessageParams): Unit = {
     logMessages.add(params)
-  }
-  override def metalsSlowTask(
-      params: MetalsSlowTaskParams
-  ): CompletableFuture[MetalsSlowTaskResult] = {
-    CompletableFuture.completedFuture {
-      messageRequests.addLast(params.message)
-      slowTaskHandler(params) match {
-        case Some(result) =>
-          result
-        case None =>
-          MetalsSlowTaskResult(cancel = false)
-      }
-    }
   }
 
   override def metalsStatus(params: MetalsStatusParams): Unit = {

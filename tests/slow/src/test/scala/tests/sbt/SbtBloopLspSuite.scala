@@ -1,7 +1,5 @@
 package tests.sbt
 
-import java.util.concurrent.TimeUnit
-
 import scala.concurrent.Future
 
 import scala.meta.internal.builds.SbtBuildTool
@@ -13,7 +11,6 @@ import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
@@ -279,14 +276,6 @@ class SbtBloopLspSuite
   }
 
   test("cancel") {
-    client.slowTaskHandler = params => {
-      if (params == bloopInstallProgress("sbt")) {
-        Thread.sleep(TimeUnit.SECONDS.toMillis(2))
-        Some(MetalsSlowTaskResult(cancel = true))
-      } else {
-        None
-      }
-    }
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -300,7 +289,6 @@ class SbtBloopLspSuite
         expectError = true,
       )
       _ = assertStatus(!_.isInstalled)
-      _ = client.slowTaskHandler = _ => None
       _ <- server.didSave("build.sbt")(_ + "\n// comment")
       _ = assertNoDiff(client.workspaceShowMessages, "")
       _ = assertStatus(!_.isInstalled)

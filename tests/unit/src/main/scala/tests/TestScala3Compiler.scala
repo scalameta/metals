@@ -25,6 +25,7 @@ object TestScala3Compiler {
         val client = new TestingClient(PathIO.workingDirectory, Buffers())
         val status = new SlowTask(
           client,
+          slowTaskIsOn = false
         )(ec)
         val embedded = new Embedded(status)
         val pc = embedded

@@ -48,12 +48,6 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
     underlying.metalsStatus(params)
   }
 
-  override def metalsSlowTask(
-      params: MetalsSlowTaskParams
-  ): CompletableFuture[MetalsSlowTaskResult] = {
-    underlying.metalsSlowTask(params)
-  }
-
   override def telemetryEvent(value: Any): Unit = {
     underlying.telemetryEvent(value)
   }
@@ -121,7 +115,7 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
     underlying.configuration(configurationParams)
 
   override def createProgress(
-      params: WorkDoneProgressCreateParams //TODO:: check that has valid capabilities
+      params: WorkDoneProgressCreateParams
   ): CompletableFuture[Void] = underlying.createProgress(params)
 
   override def notifyProgress(params: ProgressParams): Unit =

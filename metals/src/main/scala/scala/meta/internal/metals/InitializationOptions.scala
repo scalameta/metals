@@ -39,7 +39,6 @@ import org.eclipse.{lsp4j => l}
  * @param quickPickProvider if the client implements `metals/quickPick`.
  * @param renameFileThreshold amount of files that should be opened during rename if client
  *                            is a `openFilesOnRenameProvider`.
- * @param slowTaskProvider if the client implements `metals/slowTask`.
  * @param statusBarProvider if the client implements `metals/status`.
  * @param treeViewProvider if the client implements the Metals Tree View Protocol.
  * @param testExplorerProvider if the client implements the Test Explorer UI.
@@ -70,7 +69,6 @@ final case class InitializationOptions(
     openFilesOnRenameProvider: Option[Boolean],
     quickPickProvider: Option[Boolean],
     renameFileThreshold: Option[Int],
-    slowTaskProvider: Option[Boolean],
     statusBarProvider: Option[String],
     treeViewProvider: Option[Boolean],
     testExplorerProvider: Option[Boolean],
@@ -95,7 +93,6 @@ object InitializationOptions {
 
   val Default: InitializationOptions = InitializationOptions(
     CompilerInitializationOptions.default,
-    None,
     None,
     None,
     None,
@@ -168,7 +165,6 @@ object InitializationOptions {
         jsonObj.getBooleanOption("openFilesOnRenameProvider"),
       quickPickProvider = jsonObj.getBooleanOption("quickPickProvider"),
       renameFileThreshold = jsonObj.getIntOption("renameFileThreshold"),
-      slowTaskProvider = jsonObj.getBooleanOption("slowTaskProvider"),
       statusBarProvider = jsonObj.getStringOption("statusBarProvider"),
       treeViewProvider = jsonObj.getBooleanOption("treeViewProvider"),
       testExplorerProvider = jsonObj.getBooleanOption("testExplorerProvider"),

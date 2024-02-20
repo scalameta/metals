@@ -21,7 +21,7 @@ abstract class BaseImportSuite(
     ImportBuildChanges.params(buildTool.toString()).getMessage
 
   def progressMessage: String =
-    bloopInstallProgress(buildTool.executableName).message
+    s"${buildTool.executableName} bloopInstall"
 
   def bazelNavigationMessage: String =
     CheckDoctor.bazelNavigation

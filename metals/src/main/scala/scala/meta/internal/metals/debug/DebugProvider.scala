@@ -258,12 +258,7 @@ class DebugProvider(
             socket
           }
 
-        val connWithTimeout =
-          // if slow task is supported users can stop it themselves
-          if (clientConfig.slowTaskIsOn()) conn
-          else conn.withTimeout(60, TimeUnit.SECONDS)
-
-        connWithTimeout
+        conn.withTimeout(60, TimeUnit.SECONDS)
           .recover { case exception =>
             connectedToServer.tryFailure(exception)
             cancelPromise.trySuccess(())

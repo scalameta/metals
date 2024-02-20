@@ -1,7 +1,6 @@
 package tests.debug
 
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
@@ -20,9 +19,6 @@ class DebugProtocolCancelationSuite
     ) {
 
   test("start") {
-    client.slowTaskHandler = { _ =>
-      Some(MetalsSlowTaskResult(cancel = true))
-    }
     val mainClass = new ScalaMainClass(
       "a.Main",
       List("Bar").asJava,

@@ -183,11 +183,9 @@ final class ForwardingMetalsBuildClient(
           val token =
             if (isNoOp) None
             else
-              Some(
-                slowTaskProvider.startSlowTask(
-                  s"Compiling $name",
-                  withProgress = true,
-                )
+              slowTaskProvider.startSlowTask(
+                s"Compiling $name",
+                withProgress = true,
               )
           val compilation = new Compilation(new Timer(time), isNoOp, token)
           compilations(task.getTarget) = compilation
