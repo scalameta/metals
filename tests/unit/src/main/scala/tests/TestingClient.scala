@@ -51,13 +51,13 @@ import org.eclipse.lsp4j.ResourceOperation
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.TextDocumentEdit
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.WorkDoneProgressBegin
+import org.eclipse.lsp4j.WorkDoneProgressCancelParams
 import org.eclipse.lsp4j.WorkDoneProgressCreateParams
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
 import tests.MetalsTestEnrichments._
 import tests.TestOrderings._
-import org.eclipse.lsp4j.WorkDoneProgressBegin
-import org.eclipse.lsp4j.WorkDoneProgressCancelParams
 
 /**
  * Fake LSP client that responds to notifications/requests initiated by the server.

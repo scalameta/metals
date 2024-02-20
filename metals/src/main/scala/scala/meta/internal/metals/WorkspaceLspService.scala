@@ -123,15 +123,19 @@ class WorkspaceLspService(
     languageClient
   }
 
-  private val slowTaskProvider = new SlowTask(languageClient)
+  private val slowTaskProvider = register {
+    new SlowTask(languageClient, time)
+  }
 
   private val userConfigSync =
     new UserConfigurationSync(initializeParams, languageClient, clientConfig)
 
-  val statusBar: StatusBar = new StatusBar(
-    languageClient,
-    time,
-  )
+  val statusBar: StatusBar = register {
+    new StatusBar(
+      languageClient,
+      time,
+    )
+  }
 
   private val shellRunner = register {
     new ShellRunner(time, slowTaskProvider)
@@ -181,7 +185,7 @@ class WorkspaceLspService(
           name,
           doctor,
           bspStatus,
-          slowTaskProvider
+          slowTaskProvider,
         )
     }
 
@@ -1160,6 +1164,7 @@ class WorkspaceLspService(
 
   def initialized(): Future[Unit] = {
     statusBar.start(sh, 0, 1, ju.concurrent.TimeUnit.SECONDS)
+    slowTaskProvider.start(sh, 0, 1, ju.concurrent.TimeUnit.SECONDS)
     for {
       _ <- userConfigSync.initSyncUserConfiguration(folderServices)
       _ <- Future.sequence(folderServices.map(_.initialized()))

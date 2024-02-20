@@ -1,5 +1,7 @@
 package tests.sbt
 
+import java.util.concurrent.TimeUnit
+
 import scala.concurrent.Future
 
 import scala.meta.internal.builds.SbtBuildTool
@@ -19,7 +21,6 @@ import com.google.gson.JsonPrimitive
 import tests.BaseImportSuite
 import tests.ScriptsAssertions
 import tests.TestSemanticTokens
-import java.util.concurrent.TimeUnit
 
 class SbtBloopLspSuite
     extends BaseImportSuite("sbt-bloop-import")

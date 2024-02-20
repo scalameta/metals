@@ -22,8 +22,9 @@ object TestScala3Compiler {
     val resolver = new TestMtagsResolver()
     resolver.resolve(V.scala3) match {
       case Some(mtags: MtagsBinaries.Artifacts) =>
+        val time = new FakeTime
         val client = new TestingClient(PathIO.workingDirectory, Buffers())
-        val status = new SlowTask(client)(ec)
+        val status = new SlowTask(client, time)(ec)
         val embedded = new Embedded(status)
         val pc = embedded
           .presentationCompiler(mtags, mtags.jars)

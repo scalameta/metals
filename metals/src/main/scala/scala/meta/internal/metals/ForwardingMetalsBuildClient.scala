@@ -77,11 +77,14 @@ final class ForwardingMetalsBuildClient(
 
     def progressPercentage = taskProgress.percentage
 
-    def end(): Unit = token.foreach(slowTaskProvider.endSlowTask)
+    def end(): Unit = token.foreach(slowTaskProvider.endSlowTask(_))
 
     def updateProgress(progress: Long, total: Long = 100): Unit = {
+      val prev = taskProgress.percentage
       taskProgress.update(progress, total)
-      token.foreach(slowTaskProvider.notifyProgress(_, progressPercentage))
+      if(prev != taskProgress.percentage) {
+        token.foreach(slowTaskProvider.notifyProgress(_, progressPercentage))
+      }
     }
   }
 
@@ -181,7 +184,7 @@ final class ForwardingMetalsBuildClient(
               "Start no-op compilation"
             )
           val token =
-            Option.when(isNoOp) {
+            Option.when(!isNoOp) {
               slowTaskProvider.startSlowTask(
                 s"Compiling $name",
                 withProgress = true,
