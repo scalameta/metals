@@ -82,7 +82,7 @@ final class ForwardingMetalsBuildClient(
     def updateProgress(progress: Long, total: Long = 100): Unit = {
       val prev = taskProgress.percentage
       taskProgress.update(progress, total)
-      if(prev != taskProgress.percentage) {
+      if (prev != taskProgress.percentage) {
         token.foreach(slowTaskProvider.notifyProgress(_, progressPercentage))
       }
     }

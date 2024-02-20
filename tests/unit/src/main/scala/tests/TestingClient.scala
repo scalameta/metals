@@ -94,7 +94,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   var resetWorkspace = new MessageActionItem(ResetWorkspace.cancel)
   var regenerateAndRestartScalaCliBuildSever = FileOutOfScalaCliBspScope.ignore
   var shouldReloadAfterJavaHomeUpdate = ProjectJavaHomeUpdate.notNow
-  var onBeginSlowTask: (String, WorkDoneProgressCancelParams) => Unit = (_, _) => { }
+  var onBeginSlowTask: (String, WorkDoneProgressCancelParams) => Unit =
+    (_, _) => {}
   val resources = new ResourceOperations(buffers)
   val diagnostics: TrieMap[AbsolutePath, Seq[Diagnostic]] =
     TrieMap.empty[AbsolutePath, Seq[Diagnostic]]
@@ -416,7 +417,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   }
 
   override def notifyProgress(params: ProgressParams): Unit = {
-    if(params.getValue().isLeft()) {
+    if (params.getValue().isLeft()) {
       params.getValue().getLeft() match {
         case begin: WorkDoneProgressBegin =>
           val cancelParams = new WorkDoneProgressCancelParams(params.getToken())

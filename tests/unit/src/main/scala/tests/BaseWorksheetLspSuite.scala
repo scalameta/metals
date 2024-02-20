@@ -261,7 +261,7 @@ abstract class BaseWorksheetLspSuite(
     cleanWorkspace()
     val cancelled = Promise[Unit]()
     client.onBeginSlowTask = { (message, cancelParams) =>
-      if(message.startsWith("Evaluating worksheet")) {
+      if (message.startsWith("Evaluating worksheet")) {
         cancelled.trySuccess(())
         server.fullServer.didCancelWorkDoneProgress(cancelParams)
       }

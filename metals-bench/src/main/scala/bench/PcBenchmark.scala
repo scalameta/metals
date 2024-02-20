@@ -29,7 +29,9 @@ abstract class PcBenchmark {
     TrieMap.empty[String, PresentationCompiler]
   protected implicit val ec: ExecutionContextExecutor =
     scala.concurrent.ExecutionContext.global
-  protected val embedded = new Embedded(new metals.SlowTask(NoopLanguageClient, metals.Time.system))
+  protected val embedded = new Embedded(
+    new metals.SlowTask(NoopLanguageClient, metals.Time.system)
+  )
 
   protected final val benchmarkedScalaVersions: Array[String] = Array(
     metals.BuildInfo.scala3,

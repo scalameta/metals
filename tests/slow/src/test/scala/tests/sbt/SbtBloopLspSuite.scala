@@ -297,7 +297,7 @@ class SbtBloopLspSuite
         expectError = true,
       )
       _ = assertStatus(!_.isInstalled)
-      _ = client.onBeginSlowTask = (_, _) => { }
+      _ = client.onBeginSlowTask = (_, _) => {}
       _ <- server.didSave("build.sbt")(_ + "\n// comment")
       _ = assertNoDiff(client.workspaceShowMessages, "")
       _ = assertStatus(!_.isInstalled)

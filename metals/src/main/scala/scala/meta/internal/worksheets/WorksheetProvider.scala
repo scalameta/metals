@@ -250,7 +250,10 @@ class WorksheetProvider(
         )
       }
       cancelables.add(Cancelable(() => completeEmptyResult()))
-      slowTaskProvider.trackFuture(s"Evaluating ${path.filename}", result.asScala)
+      slowTaskProvider.trackFuture(
+        s"Evaluating ${path.filename}",
+        result.asScala,
+      )
       token.checkCanceled()
       // NOTE(olafurpg) Run evaluation in a custom thread so that we can
       // `Thread.stop()` it in case of infinite loop. I'm not aware of any
