@@ -11,8 +11,8 @@ import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
-import scala.meta.trees.Origin
 import scala.meta.pc.SymbolDocumentation
+import scala.meta.trees.Origin
 
 /**
  * Extracts Scaladoc from Scala source code.

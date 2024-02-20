@@ -7,6 +7,7 @@ import scala.collection.concurrent.TrieMap
 import scala.meta.Dialect
 import scala.meta._
 import scala.meta.inputs.Input
+import scala.meta.inputs.Input.VirtualFile
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -20,12 +21,8 @@ import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.trees.Origin
 import scala.meta.io.AbsolutePath
-import scala.meta.inputs.Input.VirtualFile
-import scala.meta.inputs.Input.File
-import scala.meta.inputs.Input.Ammonite
-import scala.meta.inputs.Input.Slice
+import scala.meta.trees.Origin
 
 class IndexedSymbols(
     isStatisticsEnabled: Boolean,

@@ -18,7 +18,7 @@ class PatternMatchRefactor(trees: Trees) extends CodeAction {
   override val kind: String = l.CodeActionKind.RefactorRewrite
 
   private def convert(
-      block: Term.Block,
+      block: Term.ArgClause,
       patternMatch: Term.Match,
       path: AbsolutePath,
   ): Seq[l.CodeAction] = patternMatch match {
@@ -102,7 +102,7 @@ class PatternMatchRefactor(trees: Trees) extends CodeAction {
       .map {
         case func @ Term.AnonymousFunction(head: Term.Match) =>
           func.parent match {
-            case Some(block: Term.Block) =>
+            case Some(block: Term.ArgClause) =>
               convert(block, head, path)
             case _ => Nil
           }

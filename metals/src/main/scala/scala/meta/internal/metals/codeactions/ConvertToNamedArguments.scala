@@ -3,6 +3,7 @@ package scala.meta.internal.metals.codeactions
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.Init
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.internal.metals.Compilers
@@ -56,33 +57,42 @@ class ConvertToNamedArguments(
   }
 
   def getTermWithArgs(
-      apply: Term,
-      args: List[Tree],
+      argClause: Term.ArgClause
   ): Option[ApplyTermWithArgIndices] = {
-    val argIndices = args.zipWithIndex.collect {
-      case (arg, index)
-          if !arg.isInstanceOf[Term.Assign] && !arg
-            .isInstanceOf[Term.Block] =>
+    val children = argClause.parent
+      .collect {
+        case t: Term.Apply => t.argClause.children
+        // get all the arguments from the Init
+        case t: Init =>
+          t.argClauses.flatMap(_.children)
+      }
+      .getOrElse(List.empty)
+    val argIndices = children.zipWithIndex.collect {
+      case (arg, index) if !arg.isInstanceOf[Term.Assign] =>
         index
-    }
-    if (argIndices.isEmpty) firstApplyWithUnnamedArgs(apply.parent)
-    else Some(ApplyTermWithArgIndices(apply, argIndices))
+    }.toList
+    if (argIndices.isEmpty) firstApplyWithUnnamedArgs(argClause.parent)
+    else
+      argClause.parent.flatMap {
+        case parent: Tree =>
+          Some(ApplyTermWithArgIndices(parent, argIndices))
+        case _ => None
+      }
   }
 
   def firstApplyWithUnnamedArgs(
       term: Option[Tree]
   ): Option[ApplyTermWithArgIndices] = {
     term match {
-      case Some(apply: Term.Apply) =>
-        getTermWithArgs(apply, apply.args)
-      case Some(newAppl @ Term.New(init)) =>
-        getTermWithArgs(newAppl, init.argss.flatten)
+      case Some(argClause: Term.ArgClause)
+          if !argClause.toString.startsWith("{") =>
+        getTermWithArgs(argClause)
       case Some(t) => firstApplyWithUnnamedArgs(t.parent)
       case _ => None
     }
   }
 
-  private def methodName(t: Term, isFirst: Boolean = false): String = {
+  private def methodName(t: Tree, isFirst: Boolean = false): String = {
     t match {
       // a.foo(a)
       case Term.Select(_, name) =>
@@ -96,7 +106,7 @@ class ConvertToNamedArguments(
       // foo(a)
       case Term.Name(name) =>
         name
-      case Term.New(init) =>
+      case init: Init =>
         init.tpe.syntax + "(...)"
       case _ =>
         t.syntax
@@ -109,14 +119,15 @@ class ConvertToNamedArguments(
 
     val path = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()
-    def predicate(t: Term): Boolean =
-      t match {
+    def predicate(t: Term.ArgClause): Boolean = {
+      t.parent.exists {
         case Term.Apply(fun, _) => !fun.pos.encloses(range)
-        case Term.New(init) => init.pos.encloses(range)
+        case init: Init => init.pos.encloses(range)
         case _ => false
       }
+    }
     val maybeApply = for {
-      term <- trees.findLastEnclosingAt[Term](
+      term <- trees.findLastEnclosingAt[Term.ArgClause](
         path,
         range.getStart(),
         term => predicate(term),
@@ -155,7 +166,7 @@ class ConvertToNamedArguments(
 }
 
 object ConvertToNamedArguments {
-  case class ApplyTermWithArgIndices(app: Term, argIndices: List[Int])
+  case class ApplyTermWithArgIndices(app: Tree, argIndices: List[Int])
   def title(funcName: String): String =
     s"Convert '$funcName' to named arguments"
 }
