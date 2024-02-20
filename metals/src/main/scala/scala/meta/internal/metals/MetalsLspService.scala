@@ -901,11 +901,22 @@ class MetalsLspService(
     buildTools.initialize()
     for {
       found <- supportedBuildTool()
+      chosenBuildServer = found match {
+        case Some(BuildTool.Found(buildServer, _))
+            if buildServer.forcesBuildServer =>
+          tables.buildServers.chooseServer(buildServer.buildServerName)
+          Some(buildServer.buildServerName)
+        case _ => tables.buildServers.selectedServer()
+      }
       _ <- Future
         .sequence(
           List(
             quickConnectToBuildServer(),
-            slowConnectToBuildServer(forceImport = false, found),
+            slowConnectToBuildServer(
+              forceImport = false,
+              found,
+              chosenBuildServer,
+            ),
           )
         )
     } yield ()
@@ -2067,18 +2078,19 @@ class MetalsLspService(
       forceImport: Boolean
   ): Future[BuildChange] = for {
     buildTool <- supportedBuildTool()
+    chosenBuildServer = tables.buildServers.selectedServer()
     buildChange <- slowConnectToBuildServer(
       forceImport,
       buildTool,
+      chosenBuildServer,
     )
   } yield buildChange
 
   def slowConnectToBuildServer(
       forceImport: Boolean,
       buildTool: Option[BuildTool.Found],
+      chosenBuildServer: Option[String],
   ): Future[BuildChange] = {
-    val chosenBuildServer = tables.buildServers.selectedServer()
-
     def isBloopOrEmpty = chosenBuildServer.exists(
       _ == BloopServers.name
     ) || chosenBuildServer.isEmpty
@@ -2116,7 +2128,6 @@ class MetalsLspService(
           ) && buildTool.forcesBuildServer =>
         tables.buildServers.chooseServer(buildTool.buildServerName)
         quickConnectToBuildServer()
-      // can happen if the user manually deletes `.bsp`
       case Some(BuildTool.Found(buildTool: BuildServerProvider, _))
           if chosenBuildServer.contains(buildTool.buildServerName) && !buildTool
             .isBspGenerated(folder) =>
