@@ -247,6 +247,7 @@ class InlayHintsLspSuite extends BaseLspSuite("implicits") {
            |method
            |""".stripMargin
       )
+      _ <- server.didChangeConfiguration("{}")
       _ <- server.didOpen("a/Main.worksheet.sc")
       _ <- server.assertInlayHints(
         "a/Main.worksheet.sc",
