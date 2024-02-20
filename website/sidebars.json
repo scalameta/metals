@@ -6,6 +6,7 @@
       "editors/vim",
       "editors/sublime",
       "editors/emacs",
+      "editors/helix",
       "editors/online-ides",
       "editors/user-configuration"
     ],
