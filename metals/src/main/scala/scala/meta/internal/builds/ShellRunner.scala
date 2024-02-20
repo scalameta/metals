@@ -110,7 +110,7 @@ class ShellRunner(time: Time, slowTaskProvider: SlowTask)(implicit
 
     val processFuture = ps.complete
     slowTaskProvider.trackFuture(
-      s"Running '$commandRun'",
+      commandRun,
       processFuture,
       onCancel = Some(() => {
         result.trySuccess(ExitCodes.Cancel)

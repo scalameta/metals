@@ -250,11 +250,7 @@ class WorksheetProvider(
         )
       }
       cancelables.add(Cancelable(() => completeEmptyResult()))
-      slowTaskProvider.trackFuture(
-        s"Evaluating ${path.filename}",
-        result.asScala,
-        // TODO:: showTimer = true,
-      )
+      slowTaskProvider.trackFuture(s"Evaluating ${path.filename}", result.asScala)
       token.checkCanceled()
       // NOTE(olafurpg) Run evaluation in a custom thread so that we can
       // `Thread.stop()` it in case of infinite loop. I'm not aware of any
@@ -340,16 +336,12 @@ class WorksheetProvider(
       def run(): Unit = {
         if (!result.isDone()) {
           //TODO: what about worksheet timeout ???
-          slowTaskProvider.startSlowTask(
-            s"Evaluating worksheet '${path.filename}'"
-          )
-
-          val optToken = slowTaskProvider.startSlowTask(
+          val token = slowTaskProvider.startSlowTask(
             s"Evaluating worksheet '${path.filename}'",
             onCancel = Some(cancellable.cancel),
           )
 
-          result.asScala.onComplete(_ => optToken.foreach(slowTaskProvider.endSlowTask))
+          result.asScala.onComplete(_ => slowTaskProvider.endSlowTask(token))
         }
       }
     }

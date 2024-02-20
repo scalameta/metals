@@ -1,8 +1,8 @@
 package scala.meta.internal.metals
 
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -18,97 +18,103 @@ import org.eclipse.lsp4j.jsonrpc.messages
 import org.eclipse.lsp4j.services.LanguageClient
 
 class SlowTask(
-    client: LanguageClient,
-    slowTaskIsOn: Boolean
+    client: LanguageClient
 )(implicit ec: ExecutionContext) {
   type Token = messages.Either[String, Integer]
-  private def onCancelMap = mutable.Map[Token, () => Unit]()
+  case class Task(onCancel: Option[() => Unit])
+  private val taskMap = new ConcurrentHashMap[Token, Task]()
 
   def startSlowTask(
       message: String,
       withProgress: Boolean = false,
       onCancel: Option[() => Unit] = None,
-  ): Option[Future[Token]] =
-    Option.when(slowTaskIsOn) {
-      val uuid = UUID.randomUUID().toString()
-      val token = messages.Either.forLeft[String, Integer](uuid)
+  ): Future[Token] = {
+    val uuid = UUID.randomUUID().toString()
+    val token = messages.Either.forLeft[String, Integer](uuid)
 
-      onCancel match {
-        case Some(onCancel) =>
-          onCancelMap(token) = onCancel
-        case None =>
-      }
+    taskMap.put(token, Task(onCancel))
 
-      client
-        .createProgress(new WorkDoneProgressCreateParams(token))
-        .asScala
-        .map { _ =>
-          val begin = new WorkDoneProgressBegin()
-          begin.setTitle(message)
-          if (withProgress) {
-            begin.setPercentage(0)
-          }
-          if (onCancel.isDefined) {
-            begin.setCancellable(true)
-          }
-          val notification =
-            messages.Either.forLeft[WorkDoneProgressNotification, Object](
-              begin
-            )
-          client.notifyProgress(new ProgressParams(token, notification))
-          token
-
+    client
+      .createProgress(new WorkDoneProgressCreateParams(token))
+      .asScala
+      .map { _ =>
+        val begin = new WorkDoneProgressBegin()
+        begin.setTitle(message)
+        if (withProgress) {
+          begin.setPercentage(0)
         }
-    }
+        if (onCancel.isDefined) {
+          begin.setCancellable(true)
+        }
+        val notification =
+          messages.Either.forLeft[WorkDoneProgressNotification, Object](
+            begin
+          )
+        client.notifyProgress(new ProgressParams(token, notification))
+        token
+      }
+  }
 
   def notifyProgress(
       token: Future[Token],
       percentage: Int,
-      additionalMessage: Option[String] = None,
   ): Future[Unit] = {
-    token.map { token =>
-      val report = new WorkDoneProgressReport()
-      report.setPercentage(percentage)
-      additionalMessage.foreach(msg => report.setMessage(msg))
-      val notification =
-        messages.Either.forLeft[WorkDoneProgressNotification, Object](
-          report
+    if (taskMap.contains(token)) {
+      token.map { token =>
+        val report = new WorkDoneProgressReport()
+        report.setPercentage(percentage)
+        report.setMessage(s"$percentage%")
+        val notification =
+          messages.Either.forLeft[WorkDoneProgressNotification, Object](
+            report
+          )
+        client.notifyProgress(new ProgressParams(token, notification))
+      }
+    } else Future.successful(())
+  }
+
+  def endSlowTask(token: Future[Token]): Future[Unit] =
+    try {
+      taskMap.remove(token)
+      token.map { token =>
+        val end = messages.Either.forLeft[WorkDoneProgressNotification, Object](
+          new WorkDoneProgressEnd()
         )
-      client.notifyProgress(new ProgressParams(token, notification))
+        client.notifyProgress(new ProgressParams(token, end))
+      }
+    } catch {
+      case _: NullPointerException =>
+        // no such value in map
+        Future.unit
     }
-  }
 
-  def endSlowTask(token: Future[Token]): Future[Unit] = {
-    token.map { token =>
-      val end = messages.Either.forLeft[WorkDoneProgressNotification, Object](
-        new WorkDoneProgressEnd()
-      )
-      client.notifyProgress(new ProgressParams(token, end))
-    }
-  }
-
-  // TODO: add possibility to show time
   def trackFuture[T](
       message: String,
       value: Future[T],
       onCancel: Option[() => Unit] = None,
   )(implicit ec: ExecutionContext): Future[T] = {
-    val optToken = startSlowTask(message, onCancel = onCancel)
+    val token = startSlowTask(message, onCancel = onCancel)
     value.map { result =>
-      // TODO:: probably shouldn't do it if it was already cancelled
-      optToken.foreach(endSlowTask)
+      endSlowTask(token)
       result
     }
   }
 
   def trackBlocking[T](message: String)(thunk: => T): T = {
-    val optToken = startSlowTask(message)
+    val token = startSlowTask(message)
     val result = thunk
-    optToken.foreach(endSlowTask)
+    endSlowTask(token)
     result
   }
 
-  def canceled(token: Token): Unit = onCancelMap.get(token).foreach(_())
+  def canceled(token: Token): Unit =
+    try {
+      val task = taskMap.remove(token)
+      task.onCancel.foreach(_())
+    } catch {
+      case _: NullPointerException =>
+      // no such value in map
+    }
 }
 
 object SlowTask {

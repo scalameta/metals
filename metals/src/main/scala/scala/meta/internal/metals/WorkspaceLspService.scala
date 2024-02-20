@@ -123,7 +123,7 @@ class WorkspaceLspService(
     languageClient
   }
 
-  private val slowTaskProvider = new SlowTask(languageClient, slowTaskIsOn = false)
+  private val slowTaskProvider = new SlowTask(languageClient)
 
   private val userConfigSync =
     new UserConfigurationSync(initializeParams, languageClient, clientConfig)
