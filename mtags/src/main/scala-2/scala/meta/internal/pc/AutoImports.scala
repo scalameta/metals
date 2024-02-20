@@ -106,7 +106,7 @@ trait AutoImports { this: MetalsGlobal =>
 
         def fileStart =
           AutoImportPosition(
-            ScriptFirstImportPosition.skipUsingDirectivesOffset(text),
+            ScriptFirstImportPosition.infer(text),
             0,
             padTop = false
           )

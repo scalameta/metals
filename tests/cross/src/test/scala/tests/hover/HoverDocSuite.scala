@@ -452,4 +452,79 @@ class HoverDocSuite extends BaseHoverSuite {
        |""".stripMargin
   )
 
+  check(
+    "doc-static-java",
+    """
+      |import java.nio.file.Paths
+      |
+      |class A {
+      |  <<Pa@@ths>>.get("");
+      |}
+      |""".stripMargin,
+    """|```scala
+       |class java.nio.file.Paths
+       |```
+       |
+       |This class consists exclusively of static methods that return a [Path](Path)
+       |by converting a path string or [URI](URI).
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|```scala
+                |object Paths: java.nio.file
+                |```
+                |This class consists exclusively of static methods that return a [Path](Path)
+                |by converting a path string or [URI](URI).
+                |""".stripMargin
+    )
+  )
+
+  check(
+    "doc-static-scala",
+    """
+      |import scala.concurrent.Future
+      |
+      |class A {
+      |  <<F@@uture>>.apply("");
+      |}
+      |""".stripMargin,
+    """|```scala
+       |object scala.concurrent.Future
+       |```
+       |
+       |Future companion object.
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|```scala
+                |object Future: scala.concurrent
+                |```
+                |Future companion object.
+                |""".stripMargin
+    )
+  )
+
+  check(
+    "doc-case-scala",
+    """
+      |import scala.concurrent.Future
+      |
+      |class A {
+      |  <<S@@ome>>.apply("");
+      |}
+      |""".stripMargin,
+    """|```scala
+       |object scala.Some
+       |```
+       |
+       |Class `Some[A]` represents existing values of type
+       | `A`.
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|```scala
+                |final case class Some: Some
+                |```
+                |Class `Some[A]` represents existing values of type
+                | `A`.
+                |""".stripMargin
+    )
+  )
 }

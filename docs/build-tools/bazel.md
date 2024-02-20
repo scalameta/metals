@@ -14,6 +14,14 @@ Metals is able to work with Bazel via the
 work by the JetBrains team, Metals is able to work almost directly with Bazel
 and reuse all its perks.
 
+:::caution
+
+Currently, newest Bazel 7.x.y is not supported by Bazel BSP, so it will also not
+work with Metals. For updates on this issue, please check the
+[Bazel BSP repository](https://github.com/JetBrains/bazel-bsp)
+
+:::
+
 ## Automatic installation
 
 The first time you open Metals in a new Bazel workspace you will be prompted to
@@ -140,10 +148,12 @@ anyway, here is a short guide:
 cs launch org.jetbrains.bsp:bazel-bsp:<version> -M org.jetbrains.bsp.bazel.install.Install -- --targets //...
 ```
 
-Please check [release](https://github.com/JetBrains/bazel-bsp/releases) to find the newest available version or check for the latest nightly using `cs complete-dep org.jetbrains.bsp:bazel-bsp:` command.
+Please check [release](https://github.com/JetBrains/bazel-bsp/releases) to find
+the newest available version or check for the latest nightly using
+`cs complete-dep org.jetbrains.bsp:bazel-bsp:` command.
 
-3. Use `Metals: Connect to build server` command if Metals didn't pick up the new bsp configuration automatically.
-
+3. Use `Metals: Connect to build server` command if Metals didn't pick up the
+   new bsp configuration automatically.
 
 ## Additional remarks
 
@@ -154,3 +164,13 @@ targets manually in `projectview.bazel`. This will speed up the import process
 significantly.
 
 There is work ongoing to improve the performance of Bazel in Metals.
+
+## Troubleshooting
+
+### Bazel is restarting between CLI and Metals
+
+This possibly means that some of the environment variables are set to different
+values between what Metals and Bazel are using. Some of the variables that
+influence this are PATH, PWD, JAVA_HOME and others. Make sure that these are set
+to the same values in both environments. If possible let us know if we can improve
+the default behaviour of Metals to avoid this issue.

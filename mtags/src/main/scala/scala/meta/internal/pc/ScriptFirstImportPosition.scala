@@ -5,10 +5,6 @@ import scala.annotation.tailrec
 import scala.meta._
 
 /**
- * Used to determine the position for the first import for scala-cli `.scala` and `.sc` files.
- * For scala-cli sources we need to skip `//> using` comments.  Similarly with Ammonite
- * scripts we need to skip any comments starting with `// scala` or `// ammonite`.
- *
  * For `.sc` Ammonite and Scala-Cli wraps the code for such files.
  * The following code:
  * ```scala
@@ -26,86 +22,48 @@ import scala.meta._
  */
 object ScriptFirstImportPosition {
 
-  val usingDirectives: List[String] = List("// using", "//> using")
   val shebang = "#!"
-  val ammHeaders: List[String] = List("// scala", "// ammonite")
 
   private def adjustShebang(text: String): String =
     text.replaceFirst(shebang, s"//$shebang")
 
-  def ammoniteScStartOffset(text: String): Option[Int] = {
-    val it = tokenize(adjustShebang(text)).iterator
-    startMarkerOffset(it, "/*<start>*/").map { startOffset =>
-      val offset =
-        skipPrefixesOffset(ammHeaders, it, None)
-          .getOrElse(startOffset)
+  def ammoniteScStartOffset(text: String): Option[Int] =
+    scriptStartOffset(text, "/*<start>*/")
 
-      offset + 1
-    }
-  }
+  def scalaCliScStartOffset(text: String): Option[Int] =
+    scriptStartOffset(text, "/*<script>*/")
 
-  def scalaCliScStartOffset(text: String): Option[Int] = {
+  private def scriptStartOffset(text: String, marker: String) = {
     val iterator = tokenize(adjustShebang(text)).iterator
-    startMarkerOffset(iterator, "/*<script>*/").map { startOffset =>
-      val offset =
-        skipPrefixesOffset(usingDirectives, iterator, None)
-          .getOrElse(startOffset)
-
-      offset + 1
-    }
+    startMarkerOffset(iterator, t => t.is[Token.Comment] && t.text == marker)
+      .map { startOffset =>
+        skipComments(iterator, startOffset)
+      }
   }
 
-  def skipUsingDirectivesOffset(text: String): Int =
-    skipPrefixesOffset(usingDirectives, adjustShebang(text))
-
-  def skipPrefixesOffset(prefixes: List[String], text: String): Int = {
-    val it = tokenize(text).iterator
-    if (it.hasNext) {
-      it.next() match {
-        case _: Token.BOF =>
-          skipPrefixesOffset(prefixes, it, None)
-            .map(_ + 1)
-            .getOrElse(0)
-        case _ => 0
-      }
-    } else 0
+  def infer(
+      text: String,
+      isScala3Worksheet: Boolean = false
+  ): Int = {
+    val iterator = tokenize(adjustShebang(text)).iterator
+    val startOffset =
+      if (isScala3Worksheet)
+        startMarkerOffset(iterator, _.is[Token.LeftBrace]).getOrElse(-1)
+      else -1
+    skipComments(iterator, startOffset)
   }
 
   @tailrec
   private def startMarkerOffset(
       it: Iterator[Token],
-      comment: String
+      isStart: Token => Boolean
   ): Option[Int] = {
     if (it.hasNext) {
       it.next() match {
-        case t: Token.Comment =>
-          if (t.text == comment) Some(t.pos.end)
-          else startMarkerOffset(it, comment)
-        case _ => startMarkerOffset(it, comment)
+        case t if isStart(t) => Some(t.pos.end)
+        case _ => startMarkerOffset(it, isStart)
       }
     } else None
-  }
-
-  @tailrec
-  private def skipPrefixesOffset(
-      prefixes: List[String],
-      it: Iterator[Token],
-      lastOffset: Option[Int],
-      foundShebang: Boolean = false
-  ): Option[Int] = {
-    if (it.hasNext) {
-      it.next match {
-        case t: Token.Comment
-            if prefixes.exists(prefix => t.text.startsWith(prefix)) =>
-          skipPrefixesOffset(prefixes, it, Some(t.pos.end), foundShebang)
-        case t: Token.Comment if t.value.startsWith(shebang) =>
-          skipPrefixesOffset(prefixes, it, Some(t.pos.end), foundShebang = true)
-        case t if isWhitespace(t) =>
-          skipPrefixesOffset(prefixes, it, lastOffset, foundShebang)
-        case _ if foundShebang => lastOffset.map(_ - 2)
-        case _ => lastOffset
-      }
-    } else lastOffset
   }
 
   private def tokenize(text: String): Tokens = {
@@ -115,6 +73,69 @@ object ScriptFirstImportPosition {
       case Some(v) => v
     }
   }
+
+  private def skipComments(it: Iterator[Token], startOffset: Int): Int =
+    skipComments(it, startOffset, startOffset, 0, false) + 1
+
+  @tailrec
+  private def skipComments(
+      it: Iterator[Token],
+      beforeComment: Int,
+      lastOffset: Int,
+      newLines: Int,
+      foundShebang: Boolean
+  ): Int = {
+    if (it.hasNext) {
+      it.next match {
+        case t: Token.Comment if t.value.startsWith(shebang) =>
+          skipComments(
+            it,
+            beforeComment,
+            t.pos.end,
+            newLines = 0,
+            foundShebang = true
+          )
+        case t: Token.Comment if newLines > 1 =>
+          skipComments(
+            it,
+            lastOffset,
+            t.pos.end,
+            newLines = 0,
+            foundShebang
+          )
+        case t: Token.Comment =>
+          skipComments(
+            it,
+            beforeComment,
+            t.pos.end,
+            newLines = 0,
+            foundShebang
+          )
+        case t if isNewLine(t) =>
+          skipComments(
+            it,
+            beforeComment,
+            lastOffset,
+            newLines + 1,
+            foundShebang
+          )
+        case t if isWhitespace(t) =>
+          skipComments(it, beforeComment, lastOffset, newLines, foundShebang)
+        case _: Token.BOF =>
+          skipComments(it, beforeComment, lastOffset, newLines, foundShebang)
+        case _ =>
+          // There is an empty line between the comment and the code, so its not a doc
+          val maybeOffset =
+            if (newLines > 1) lastOffset
+            else beforeComment
+          if (foundShebang) maybeOffset - 2
+          else maybeOffset
+      }
+    } else lastOffset
+  }
+
+  private def isNewLine(t: Token): Boolean =
+    t.is[Token.LF] || t.is[Token.LFLF]
 
   private def isWhitespace(t: Token): Boolean =
     t.is[Token.Space] || t.is[Token.Tab] || t.is[Token.CR] ||

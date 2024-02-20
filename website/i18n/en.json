@@ -5,6 +5,9 @@
     "previous": "Previous",
     "tagline": "Scala language server with rich IDE features",
     "docs": {
+      "build-tools/bazel": {
+        "title": "Bazel"
+      },
       "build-tools/bloop": {
         "title": "Bloop"
       },

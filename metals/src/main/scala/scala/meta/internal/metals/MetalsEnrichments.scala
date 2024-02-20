@@ -1101,6 +1101,14 @@ object MetalsEnrichments
   implicit class XtensionClientCapabilities(
       params: l.InitializeParams
   ) {
+    def supportsVersionedWorkspaceEdits: Boolean =
+      (for {
+        capabilities <- Option(params.getCapabilities)
+        workspace <- Option(capabilities.getWorkspace)
+        workspaceEdit <- Option(workspace.getWorkspaceEdit)
+        docChanges <- Option(workspaceEdit.getDocumentChanges)
+      } yield docChanges.booleanValue).getOrElse(false)
+
     def supportsHierarchicalDocumentSymbols: Boolean =
       (for {
         capabilities <- Option(params.getCapabilities)

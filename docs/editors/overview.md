@@ -29,6 +29,7 @@ functionality.
     <td align="center">Vim</td>
     <td align="center">Sublime Text</td>
     <td align="center">Emacs</td>
+    <td align="center">Helix</td>
   </tr>
 </thead>
 <tbody>
@@ -38,9 +39,11 @@ functionality.
     <td align="center">Single click</td>
     <td align="center">Single click</td>
     <td align="center">Single click</td>
+    <td align="center">Manual</td>
   </tr>
   <tr>
     <td>Build import</td>
+    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -52,9 +55,11 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
+    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Goto definition</td>
+    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -66,6 +71,7 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
+    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Completions</td>
@@ -73,9 +79,11 @@ functionality.
     <td align="center">✅*</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
+    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Hover</td>
+    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -87,9 +95,11 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">❌</td>
+    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Parameter hints</td>
+    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -101,6 +111,7 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
+    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Run/Debug</td>
@@ -108,9 +119,11 @@ functionality.
     <td align="center"></td>
     <td align="center"></td>
     <td align="center">✅</td>
+    <td align="center">❌</td>
   </tr>
   <tr>
     <td>Find implementations</td>
+    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -122,9 +135,11 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
+    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Code actions</td>
+    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -136,6 +151,7 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
+    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Document symbols</td>
@@ -143,9 +159,11 @@ functionality.
     <td align="center">Flat</td>
     <td align="center">Flat</td>
     <td align="center">✅</td>
+    <td align="center">Flat</td>
   </tr>
   <tr>
     <td>Workspace symbols</td>
+    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -157,6 +175,7 @@ functionality.
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
+    <td align="center">✅</td>
   </tr>
   <tr>
     <td>Folding</td>
@@ -164,9 +183,11 @@ functionality.
     <td align="center">✅</td>
     <td align="center"> </td>
     <td align="center">✅</td>
+    <td align="center">❌</td>
   </tr>
   <tr>
     <td>Highlight</td>
+    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
@@ -178,6 +199,7 @@ functionality.
     <td align="center">✅</td>
     <td align="center">Status bar, Input box, Decoration protocol, Did focus</td>
     <td align="center">✅</td>
+    <td align="center">❌</td>
   </tr>
   <tr>
      <td>Organize imports</td>
@@ -185,11 +207,13 @@ functionality.
      <td align="center">✅</td>
      <td align="center">✅</td>
      <td align="center">✅</td>
+     <td align="center">❌</td>
   </tr>
   <tr>
      <td>Implicit decorations</td>
      <td align="center">✅</td>
      <td align="center">Shown in hover</td>
+     <td align="center">✅</td>
      <td align="center">✅</td>
      <td align="center">✅</td>
   </tr>
@@ -199,6 +223,7 @@ functionality.
      <td align="center">✅</td>
      <td align="center">✅</td>
      <td align="center">✅</td>
+     <td align="center">❌</td>
   </tr>
   <tr>
      <td>Find text in dependency JAR files</td>
@@ -206,6 +231,7 @@ functionality.
      <td align="center">✅</td>
      <td align="center">✅</td>
      <td align="center">❌</td>
+     <td align="center">✅</td>
   </tr>
   <tr>
      <td>Run scalafix rules</td>
@@ -213,6 +239,7 @@ functionality.
      <td align="center">✅</td>
      <td align="center">✅</td>
      <td align="center">✅</td>
+     <td align="center">❌</td>
   </tr>
 </tbody>
 </table>
@@ -388,9 +415,9 @@ using the Metals sidebar. This feature is only implemented in VS Code.
 Test Explorer is a feature that allows editors to display tests as a separate
 tree representation of tests. Although it was implemented in order to use Visual
 Studio Code's
-[Testing API](https://code.visualstudio.com/api/extension-guides/testing). The Test
-Explorer API is editor agnostic and can be used by other editors than just VS
-Code. ![test-explorer](https://i.imgur.com/Z3VtS0O.gif)
+[Testing API](https://code.visualstudio.com/api/extension-guides/testing). The
+Test Explorer API is editor agnostic and can be used by other editors than just
+VS Code. ![test-explorer](https://i.imgur.com/Z3VtS0O.gif)
 
 Work on the Test Explorer is still in progress and the feature has some known
 limitations:

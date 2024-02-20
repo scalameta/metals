@@ -111,6 +111,10 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
   override def refreshModel(): CompletableFuture[Unit] =
     underlying.refreshModel()
 
+  override def refreshInlayHints(): CompletableFuture[Void] = {
+    underlying.refreshInlayHints()
+  }
+
   override def configuration(
       configurationParams: ConfigurationParams
   ): CompletableFuture[ju.List[Object]] =

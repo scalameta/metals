@@ -1416,6 +1416,53 @@ final case class TestingServer(
     }
   }
 
+  def assertInlayHints(
+      filename: String,
+      expected: String,
+      root: AbsolutePath = workspace,
+  )(implicit
+      location: munit.Location
+  ): Future[Unit] = {
+    val fileContent = TestInlayHints.removeInlayHints(expected)
+    assertInlayHints(filename, fileContent, expected, root)
+  }
+
+  def assertInlayHints(
+      filename: String,
+      fileContent: String,
+      expected: String,
+      root: AbsolutePath,
+  )(implicit
+      location: munit.Location
+  ): Future[Unit] = {
+    for {
+      hints <- inlayHints(filename, fileContent, root)
+    } yield {
+      Assertions.assertNoDiff(
+        TestInlayHints.applyInlayHints(fileContent, hints),
+        expected,
+      )
+    }
+  }
+
+  def inlayHints(
+      filename: String,
+      fileContent: String,
+      root: AbsolutePath = workspace,
+  ): Future[List[l.InlayHint]] = {
+    val path = root.resolve(filename)
+    val input = m.Input.String(fileContent)
+    path.touch()
+    val pos = m.Position.Range(input, 0, fileContent.length)
+    val uri = path.toTextDocumentIdentifier
+    val range = pos.toLsp
+    val params = new org.eclipse.lsp4j.InlayHintParams(uri, range)
+    for {
+      _ <- didSave(filename)(_ => fileContent)
+      inlayHints <- fullServer.inlayHints(params).asScala
+    } yield inlayHints.asScala.toList
+  }
+
   def assertHighlight(
       filename: String,
       query: String,

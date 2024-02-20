@@ -870,6 +870,11 @@ abstract class BaseWorksheetLspSuite(
              |/metals.json
              |{"a": {"scalaVersion": "${scalaVersion}"}}
              |/$path
+             |//> using scala $scalaVersion
+             |
+             |// Some comment
+             |
+             |// Object comment
              |object A {
              |  val f = Future.successful(42)
              |}
@@ -881,10 +886,15 @@ abstract class BaseWorksheetLspSuite(
           server
             .assertCodeAction(
               path,
-              """|object A {
-                 |  val f = <<Future>>.successful(42)
-                 |}
-                 |""".stripMargin,
+              s"""|//> using scala $scalaVersion
+                  |
+                  |// Some comment
+                  |
+                  |// Object comment
+                  |object A {
+                  |  val f = <<Future>>.successful(42)
+                  |}
+                  |""".stripMargin,
               expectedActions,
               Nil,
             )
@@ -895,11 +905,16 @@ abstract class BaseWorksheetLspSuite(
         // Assert if indentation is correct. See `AutoImports.renderImport`
         _ = assertNoDiff(
           server.bufferContents(path),
-          """|import scala.concurrent.Future
-             |object A {
-             |  val f = Future.successful(42)
-             |}
-             |""".stripMargin,
+          s"""|//> using scala $scalaVersion
+              |
+              |// Some comment
+              |import scala.concurrent.Future
+              |
+              |// Object comment
+              |object A {
+              |  val f = Future.successful(42)
+              |}
+              |""".stripMargin,
         )
       } yield ()
     }
