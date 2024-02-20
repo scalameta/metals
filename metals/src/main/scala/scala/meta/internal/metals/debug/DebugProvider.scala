@@ -258,7 +258,8 @@ class DebugProvider(
             socket
           }
 
-        conn.withTimeout(60, TimeUnit.SECONDS)
+        conn
+          .withTimeout(60, TimeUnit.SECONDS)
           .recover { case exception =>
             connectedToServer.tryFailure(exception)
             cancelPromise.trySuccess(())

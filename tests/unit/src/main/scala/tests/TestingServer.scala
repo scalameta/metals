@@ -2091,7 +2091,7 @@ object TestingServer {
     InitializationOptions.Default.copy(
       debuggingProvider = Some(true),
       runProvider = Some(true),
-      treeViewProvider = Some(true)
+      treeViewProvider = Some(true),
     )
 
   // Caching is done using a key: dependency jars + excludedPackages setting + bucket size

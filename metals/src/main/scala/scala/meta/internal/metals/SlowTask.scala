@@ -23,7 +23,8 @@ import org.eclipse.lsp4j.services.LanguageClient
 class SlowTask(
     client: LanguageClient,
     time: Time,
-)(implicit ec: ExecutionContext) extends Cancelable {
+)(implicit ec: ExecutionContext)
+    extends Cancelable {
   type Token = messages.Either[String, Integer]
   case class Task(
       onCancel: Option[() => Unit],
@@ -52,7 +53,8 @@ class SlowTask(
   }
 
   object Task {
-    def empty: Task = Task(onCancel = None, showTimer = false, maybeProgress = None)
+    def empty: Task =
+      Task(onCancel = None, showTimer = false, maybeProgress = None)
   }
 
   private val taskMap = new ConcurrentHashMap[Token, Task]()
@@ -145,15 +147,17 @@ class SlowTask(
   }
 
   def endSlowTask(token: Future[Token]): Future[Unit] =
-    token.map { token =>
-      taskMap.remove(token)
-      val end = new WorkDoneProgressEnd()
-      val params = messages.Either.forLeft[WorkDoneProgressNotification, Object](end)
-      client.notifyProgress(new ProgressParams(token, params))
-    }.recover{
-      case _: NullPointerException =>
-        // no such value in map
-    }
+    token
+      .map { token =>
+        taskMap.remove(token)
+        val end = new WorkDoneProgressEnd()
+        val params =
+          messages.Either.forLeft[WorkDoneProgressNotification, Object](end)
+        client.notifyProgress(new ProgressParams(token, params))
+      }
+      .recover { case _: NullPointerException =>
+      // no such value in map
+      }
 
   def trackFuture[T](
       message: String,

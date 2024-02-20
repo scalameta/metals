@@ -133,7 +133,7 @@ class MetalsLspService(
     folderVisibleName: Option[String],
     headDoctor: HeadDoctor,
     bspStatus: BspStatus,
-    slowTaskProvider: SlowTask
+    slowTaskProvider: SlowTask,
 ) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
     with Cancelable
     with TextDocumentService {
@@ -403,7 +403,7 @@ class MetalsLspService(
         onBuildTargetChanges(params)
       },
       bspErrorHandler,
-      slowTaskProvider
+      slowTaskProvider,
     )
 
   private val bloopServers: BloopServers = new BloopServers(
@@ -2346,7 +2346,10 @@ class MetalsLspService(
       session.importBuilds()
     }
     for {
-      bspBuilds <- slowTaskProvider.trackFuture("Importing build", importedBuilds0)
+      bspBuilds <- slowTaskProvider.trackFuture(
+        "Importing build",
+        importedBuilds0,
+      )
       _ = {
         val idToConnection = bspBuilds.flatMap { bspBuild =>
           val targets =

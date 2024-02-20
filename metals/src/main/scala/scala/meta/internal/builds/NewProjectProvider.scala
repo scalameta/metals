@@ -30,7 +30,7 @@ class NewProjectProvider(
     config: ClientConfiguration,
     shell: ShellRunner,
     icons: Icons,
-    workspace: AbsolutePath
+    workspace: AbsolutePath,
 )(implicit context: ExecutionContext) {
 
   private val templatesUrl =

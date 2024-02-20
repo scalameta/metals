@@ -75,7 +75,7 @@ final class ClientConfiguration(
       .map(Icons.fromString)
       .getOrElse(initialConfig.icons)
 
-  def slowTaskIsOn(): Boolean = 
+  def slowTaskIsOn(): Boolean =
     (for {
       params <- initializeParams
       capabilities <- Option(params.getCapabilities())
