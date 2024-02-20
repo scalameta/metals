@@ -10,7 +10,7 @@ class TaskProgress(
     var progress: Long,
     var total: Long,
 ) {
-  def update(newProgress: Long, newTotal: Long): Unit = {
+  def update(newProgress: Long, newTotal: Long = 100): Unit = {
     progress = newProgress
     total = newTotal
   }
