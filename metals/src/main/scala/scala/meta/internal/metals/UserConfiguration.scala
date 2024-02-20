@@ -56,7 +56,7 @@ case class UserConfiguration(
     verboseCompilation: Boolean = false,
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
     scalaCliLauncher: Option[String] = None,
-    preferredBuildServes: List[String] = Nil,
+    defaultBSPToBuildTool: Boolean = false,
 ) {
 
   def shouldAutoImportNewProject: Boolean =
@@ -354,16 +354,12 @@ object UserConfiguration {
            |build imports after subsequent changes as well.""".stripMargin,
       ),
       UserConfigurationOption(
-        "preferred-build-servers",
-        "[]",
-        """["sbt"]""",
-        "List of preferred build servers.",
-        """|If multiple build servers available, this list provides an order,
-           |that overrides the default partial order, in which the build server should be chosen.
-           |The default partial order is:
-           |1. `bloop`
-           |2. other build servers (asks user)
-           |3. fallback `scala-cli` (if no build server found)
+        "default-bsp-to-build-tool",
+        "false",
+        "true",
+        "If used build server should default to build tool.",
+        """|If used build server should default to the one provided by the build tool
+           |instead of the default Bloop.
            |""".stripMargin,
       ),
     )
@@ -589,8 +585,8 @@ object UserConfiguration {
 
     val scalaCliLauncher = getStringKey("scala-cli-launcher")
 
-    val preferredBuildServes =
-      getStringListKey("preferred-build-servers").getOrElse(Nil)
+    val defaultBSPToBuildTool =
+      getBooleanKey("default-bsp-to-build-tool").getOrElse(false)
 
     if (errors.isEmpty) {
       Right(
@@ -625,7 +621,7 @@ object UserConfiguration {
           verboseCompilation,
           autoImportBuilds,
           scalaCliLauncher,
-          preferredBuildServes,
+          defaultBSPToBuildTool,
         )
       )
     } else {

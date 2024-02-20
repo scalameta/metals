@@ -6,7 +6,7 @@ import scala.meta.internal.metals.{BuildInfo => V}
 
 class PreferredBuildServer extends BaseLspSuite("preferred-build-server") {
   override def userConfig: UserConfiguration =
-    super.userConfig.copy(preferredBuildServes = List("sbt"))
+    super.userConfig.copy(defaultBSPToBuildTool = true)
 
   test("start-sbt-when-preferred-no-bsp") {
     cleanWorkspace()
