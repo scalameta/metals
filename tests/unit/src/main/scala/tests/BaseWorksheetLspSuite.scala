@@ -6,7 +6,6 @@ import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.{BuildInfo => V}
@@ -261,10 +260,6 @@ abstract class BaseWorksheetLspSuite(
   test("cancel") {
     cleanWorkspace()
     val cancelled = Promise[Unit]()
-    client.slowTaskHandler = { _ =>
-      cancelled.trySuccess(())
-      Some(MetalsSlowTaskResult(cancel = true))
-    }
     for {
       _ <- initialize(
         s"""
@@ -277,7 +272,6 @@ abstract class BaseWorksheetLspSuite(
       )
       _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
       _ <- cancelled.future
-      _ = client.slowTaskHandler = (_ => None)
       _ <- server.didSave("a/src/main/scala/Main.worksheet.sc")(
         _.replace("Stream", "// Stream")
       )
@@ -400,7 +394,6 @@ abstract class BaseWorksheetLspSuite(
 
   test("update-classpath") {
     cleanWorkspace()
-    client.slowTaskHandler = _ => None
     for {
       _ <- initialize(
         s"""

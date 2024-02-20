@@ -86,15 +86,6 @@ final class ConfiguredLanguageClient(
       case _ =>
     }
   }
-  override def metalsSlowTask(
-      params: MetalsSlowTaskParams
-  ): CompletableFuture[MetalsSlowTaskResult] = {
-    if (clientConfig.slowTaskIsOn) {
-      underlying.metalsSlowTask(params)
-    } else {
-      new CompletableFuture[MetalsSlowTaskResult]()
-    }
-  }
   override def showMessage(params: MessageParams): Unit = {
     underlying.showMessage(params)
   }

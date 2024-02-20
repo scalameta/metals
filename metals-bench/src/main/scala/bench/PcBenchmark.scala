@@ -30,7 +30,7 @@ abstract class PcBenchmark {
   protected implicit val ec: ExecutionContextExecutor =
     scala.concurrent.ExecutionContext.global
   protected val embedded = new Embedded(
-    new metals.SlowTask(NoopLanguageClient)
+    new metals.SlowTask(NoopLanguageClient, slowTaskIsOn = false)
   )
 
   protected final val benchmarkedScalaVersions: Array[String] = Array(

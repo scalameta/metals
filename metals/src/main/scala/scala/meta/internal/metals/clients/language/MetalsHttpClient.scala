@@ -2,12 +2,9 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentLinkedDeque
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
-import scala.concurrent.CancellationException
 import scala.concurrent.ExecutionContext
 import scala.util.Try
 
@@ -16,8 +13,6 @@ import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
-import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.io.AbsolutePath
 
@@ -53,8 +48,6 @@ final class MetalsHttpClient(
     initial: MetalsLanguageClient,
     triggerReload: () => Unit,
     icons: Icons,
-    time: Time,
-    sh: ScheduledExecutorService,
     clientConfig: ClientConfiguration,
 )(implicit ec: ExecutionContext)
     extends DelegatingLanguageClient(initial) {
@@ -76,50 +69,6 @@ final class MetalsHttpClient(
     else status.set(params.text)
     triggerReload()
     underlying.metalsStatus(params)
-  }
-
-  // ===============
-  // metals/slowTask
-  // ===============
-  private case class SlowTask(
-      id: String,
-      value: MetalsSlowTaskParams,
-      promise: CompletableFuture[MetalsSlowTaskResult],
-      timer: Timer,
-  )
-  private val slowTasks = new ConcurrentLinkedDeque[SlowTask]()
-  private def slowTasksFormatted(html: HtmlBuilder): HtmlBuilder = {
-    slowTasks.removeIf(_.promise.isDone)
-    html.unorderedList(slowTasks.asScala) { task =>
-      html
-        .text(task.value.message)
-        .text(" ")
-        .text(task.timer.toString)
-        .submitButton(s"id=${task.id}", "Cancel")
-    }
-  }
-  override def metalsSlowTask(
-      params: MetalsSlowTaskParams
-  ): CompletableFuture[MetalsSlowTaskResult] = {
-    val fromEditorCompletable = underlying.metalsSlowTask(params)
-    slowTasks.add(
-      SlowTask(nextId(), params, fromEditorCompletable, new Timer(time))
-    )
-    sh.scheduleAtFixedRate(
-      new Runnable {
-        override def run(): Unit = {
-          triggerReload()
-          if (fromEditorCompletable.isDone) {
-            throw new CancellationException
-          }
-        }
-      },
-      0,
-      1,
-      TimeUnit.SECONDS,
-    )
-    fromEditorCompletable.asScala.onComplete { _ => triggerReload() }
-    fromEditorCompletable
   }
 
   // ==================
@@ -246,7 +195,6 @@ final class MetalsHttpClient(
           "metals/status",
           _.element("p")(_.text("Status: ").raw(statusFormatted)),
         )
-        .section("metals/slowTask", slowTasksFormatted)
         .section("workspace/executeCommand", serverCommands)
         .section("window/showMessageRequests", showMessageRequestsFormatted)
         .section("window/showMessage", showMessagesFormatted)
@@ -291,12 +239,6 @@ final class MetalsHttpClient(
   def completeCommand(exchange: HttpServerExchange): Unit = {
     val id = exchange.getQuery("id").getOrElse("<unknown>")
     showMessages.removeIf(_.id == id)
-    slowTasks.forEach { task =>
-      if (task.id == id) {
-        task.promise.complete(MetalsSlowTaskResult(cancel = true))
-        triggerReload()
-      }
-    }
     for {
       messageRequest <- showMessageRequests.asScala
       if id == messageRequest.id

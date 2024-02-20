@@ -31,7 +31,6 @@ import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.pc.CompilerJobQueue
 import scala.meta.internal.pc.InterruptException
@@ -248,8 +247,8 @@ class WorksheetProvider(
       cancelables.add(Cancelable(() => completeEmptyResult()))
       slowTaskProvider.trackFuture(
         s"Evaluating ${path.filename}",
-        result.asScala
-       // TODO:: showTimer = true,
+        result.asScala,
+        // TODO:: showTimer = true,
       )
       token.checkCanceled()
       // NOTE(olafurpg) Run evaluation in a custom thread so that we can
@@ -309,15 +308,12 @@ class WorksheetProvider(
     val interruptThread = new Runnable {
       def run(): Unit = {
         if (!result.isDone()) {
-          val cancel = languageClient.metalsSlowTask(
-            new MetalsSlowTaskParams(
-              s"Evaluating worksheet '${path.filename}'",
-              quietLogs = true,
-              secondsElapsed = userConfig().worksheetCancelTimeout,
-            )
+          //TODO: what about worksheet timeout ???
+          slowTaskProvider.startSlowTask(
+            s"Evaluating worksheet '${path.filename}'"
           )
-          cancel.asScala.foreach { c =>
-            if (c.cancel && thread.isAlive()) {
+          val onCancel = () =>
+            if (thread.isAlive()) {
               // User has requested to cancel a running program. first line of
               // defense is `Thread.interrupt()`. Fingers crossed it's enough.
               result.complete(None)
@@ -325,8 +321,13 @@ class WorksheetProvider(
               scribe.warn(s"thread interrupt: ${thread.getName()}")
               thread.interrupt()
             }
-          }
-          result.asScala.onComplete(_ => cancel.cancel(true))
+
+          val optToken = slowTaskProvider.startSlowTask(
+            s"Evaluating worksheet '${path.filename}'",
+            onCancel = Some(onCancel),
+          )
+
+          result.asScala.onComplete(_ => optToken.foreach(slowTaskProvider.endSlowTask))
         }
       }
     }
