@@ -2127,7 +2127,7 @@ class MetalsLspService(
       case Some(BuildTool.Found(buildTool: BuildServerProvider, _))
           if !buildTool.isBspGenerated(folder) =>
         val notification = tables.dismissedNotifications.ImportChanges
-        if (userConfig.shouldAutoImportNewProject) {
+        if (userConfig.shouldAutoImportNewProject || buildTool.forcesBuildServer) {
           generateBspAndConnect(buildTool)
         } else if (notification.isDismissed) {
           Future.successful(BuildChange.None)
