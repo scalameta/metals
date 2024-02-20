@@ -1394,7 +1394,13 @@ class MetalsLspService(
       params: InlayHintParams
   ): CompletableFuture[util.List[InlayHint]] = {
     CancelTokens.future { token =>
-      compilers.inlayHints(params, token)
+      for {
+        _ <- userConfigPromise.future
+        hints <-
+          if (userConfig.areSyntheticsEnabled())
+            compilers.inlayHints(params, token)
+          else Future.successful(List.empty[l.InlayHint].asJava)
+      } yield hints
     }
   }
 
