@@ -1,11 +1,11 @@
 package tests.inlayHints
 
-import munit.Location
-import munit.TestOptions
-import tests.BaseLspSuite
-import tests.TestInlayHints
+import scala.meta.internal.metals.{BuildInfo => V}
 
-class InlayHintsLspSuite extends BaseLspSuite("implicits") {
+import tests.BaseInlayHintsLspSuite
+
+class InlayHintsLspSuite
+    extends BaseInlayHintsLspSuite("implicits", V.scala213) {
 
   check(
     "all-synthetics",
@@ -342,49 +342,4 @@ class InlayHintsLspSuite extends BaseLspSuite("implicits") {
     dependencies = List("co.fs2::fs2-core:3.9.0"),
   )
 
-  def check(
-      name: TestOptions,
-      expected: String,
-      config: Option[String] = None,
-      dependencies: List[String] = Nil,
-  )(implicit
-      loc: Location
-  ): Unit = {
-    val initConfig = config
-      .map(config => s"""{
-                        |$config
-                        |}
-                        |""".stripMargin)
-      .getOrElse("""{
-                   |  "show-implicit-arguments": true,
-                   |  "show-implicit-conversions-and-classes": true,
-                   |  "show-inferred-type": "true"
-                   |}
-                   |""".stripMargin)
-    val fileName = "Main.scala"
-    val libraryDependencies =
-      if (dependencies.isEmpty) ""
-      else
-        s""""libraryDependencies": [${dependencies.map(dep => s"\"$dep\"").mkString(",")}]"""
-    val code = TestInlayHints.removeInlayHints(expected)
-    test(name) {
-      for {
-        _ <- initialize(
-          s"""/metals.json
-             |{"a":{$libraryDependencies}}
-             |/a/src/main/scala/a/$fileName
-             |$code
-        """.stripMargin
-        )
-        _ <- server.didOpen(s"a/src/main/scala/a/$fileName")
-        _ <- server.didChangeConfiguration(initConfig)
-        _ <- server.assertInlayHints(
-          s"a/src/main/scala/a/$fileName",
-          code,
-          expected,
-          workspace,
-        )
-      } yield ()
-    }
-  }
 }

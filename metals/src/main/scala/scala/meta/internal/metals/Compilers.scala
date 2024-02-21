@@ -584,6 +584,7 @@ class Compilers(
                 if (d.kind() <= 2) InlayHintKind.Type
                 else InlayHintKind.Parameter
               hint.setKind(kind)
+              hint.setData(Array(""))
               hint
             }
           )
