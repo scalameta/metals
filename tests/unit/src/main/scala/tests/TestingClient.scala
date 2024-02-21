@@ -134,6 +134,19 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   val testExplorerUpdates: Promise[List[JsonObject]] =
     Promise[List[JsonObject]]()
 
+  def beginProgressMessages: String =
+    progressParams.asScala
+      .flatMap { params =>
+        if (params.getValue().isLeft()) {
+          params.getValue().getLeft() match {
+            case begin: WorkDoneProgressBegin =>
+              Some(begin.getTitle())
+            case _ => None
+          }
+        } else None
+      }
+      .mkString("\n")
+
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
   ): Unit = {
@@ -422,7 +435,6 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
         case begin: WorkDoneProgressBegin =>
           val cancelParams = new WorkDoneProgressCancelParams(params.getToken())
           onBeginSlowTask(begin.getTitle(), cancelParams)
-          messageRequests.addLast(begin.getTitle())
         case _ =>
       }
     }

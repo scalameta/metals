@@ -2438,7 +2438,7 @@ class MetalsLspService(
     }
     for {
       bspBuilds <- slowTaskProvider.trackFuture(
-        "Importing build",
+        Messages.importingBuild,
         importedBuilds0,
       )
       _ = {

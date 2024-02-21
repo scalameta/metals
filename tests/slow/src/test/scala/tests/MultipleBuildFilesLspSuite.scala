@@ -43,7 +43,6 @@ class MultipleBuildFilesLspSuite
           // Project has no .bloop directory so user is asked to "import via bloop"
           chooseBuildToolMessage,
           importBuildMessage,
-          progressMessage,
         ).mkString("\n"),
       )
       _ = client.messageRequests.clear() // restart
@@ -56,12 +55,9 @@ class MultipleBuildFilesLspSuite
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          // Ensure that after a choice was made, the user doesn't get re-prompted
-          // to choose their build tool again
-          importBuildChangesMessage,
-          progressMessage,
-        ).mkString("\n"),
+        // Ensure that after a choice was made, the user doesn't get re-prompted
+        // to choose their build tool again
+        importBuildChangesMessage,
       )
     }
   }

@@ -1034,6 +1034,9 @@ object Messages {
        |See: https://scalameta.org/metals/docs/troubleshooting/faq#i-see-spurious-errors-or-worksheet-fails-to-evaluate
        |""".stripMargin
 
+  val indexing = "Indexing"
+  val importingBuild = "Importing build"
+
 }
 
 object FileOutOfScalaCliBspScope {
