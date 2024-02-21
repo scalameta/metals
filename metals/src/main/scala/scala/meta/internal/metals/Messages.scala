@@ -1038,6 +1038,9 @@ object Messages {
     }
   }
 
+  val indexing = "Indexing"
+  val importingBuild = "Importing build"
+
 }
 
 object FileOutOfScalaCliBspScope {

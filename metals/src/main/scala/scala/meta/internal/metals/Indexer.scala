@@ -161,7 +161,7 @@ final case class Indexer(
 
   def profiledIndexWorkspace(check: () => Unit): Future[Unit] = {
     val tracked = slowTaskProvider.trackFuture(
-      s"Indexing",
+      Messages.indexing,
       Future {
         timerProvider.timedThunk("indexed workspace", onlyIf = true) {
           try indexWorkspace(check)

@@ -30,11 +30,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          // Project has no .bloop directory so user is asked to "import via bloop"
-          importBuildMessage,
-          progressMessage,
-        ).mkString("\n"),
+        importBuildMessage,
       )
       _ = client.messageRequests.clear() // restart
       _ = assertStatus(_.isInstalled)
@@ -57,11 +53,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          // Project has .bloop directory so user is asked to "re-import project"
-          importBuildChangesMessage,
-          progressMessage,
-        ).mkString("\n"),
+        importBuildChangesMessage,
       )
     }
   }
@@ -114,10 +106,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          importBuildMessage,
-          progressMessage,
-        ).mkString("\n"),
+        importBuildMessage,
       )
       _ = assertNoDiff(
         client.workspaceShowMessages,
@@ -135,10 +124,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
       }
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          importBuildMessage,
-          progressMessage,
-        ).mkString("\n"),
+        importBuildMessage,
       )
       _ = assertStatus(_.isInstalled)
     } yield ()
