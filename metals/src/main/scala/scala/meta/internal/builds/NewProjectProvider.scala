@@ -7,6 +7,7 @@ import scala.concurrent.Future
 import scala.util.Try
 import scala.util.matching.Regex
 
+import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Icons
@@ -35,7 +36,7 @@ class NewProjectProvider(
   private val templatesUrl =
     "https://github.com/foundweekends/giter8/wiki/giter8-templates.md"
   private val giterDependency = Dependency
-    .of("org.foundweekends.giter8", "giter8_2.12", "0.13.0-M1")
+    .of("org.foundweekends.giter8", "giter8_2.12", BuildInfo.gitter8Version)
   // equal to cmd's: g8 playframework/play-scala-seed.g8 --name=../<<name>>
   private val giterMain = "giter8.Giter8"
 
