@@ -7,10 +7,13 @@ import scala.collection.JavaConverters.*
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.AutoImports.SymbolImport
 import scala.meta.internal.pc.MetalsInteractive.*
+import scala.meta.internal.pc.printer.MetalsPrinter
+import scala.meta.internal.pc.printer.MetalsPrinter.IncludeDefaultParam
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.SymbolSearch
 
@@ -23,7 +26,6 @@ import dotty.tools.dotc.core.Symbols.NoSymbol
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Types.AndType
 import dotty.tools.dotc.core.Types.ClassInfo
-import dotty.tools.dotc.core.Types.NoType
 import dotty.tools.dotc.core.Types.OrType
 import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.core.Types.TypeRef
@@ -57,7 +59,7 @@ object CaseKeywordCompletion:
       patternOnly: Option[String] = None,
       hasBind: Boolean = false,
       includeExhaustive: Option[NewLineOptions] = None,
-  ): List[CompletionValue] =
+  )(using ReportContext): List[CompletionValue] =
     import indexedContext.ctx
     val definitions = indexedContext.ctx.definitions
     val clientSupportsSnippets = config.isCompletionSnippetsEnabled()
@@ -66,6 +68,11 @@ object CaseKeywordCompletion:
       clientSupportsSnippets,
       patternOnly,
       hasBind,
+    )
+    val printer = MetalsPrinter.standard(
+      indexedContext,
+      search,
+      IncludeDefaultParam.Never,
     )
 
     val selTpe = selector match
@@ -140,14 +147,6 @@ object CaseKeywordCompletion:
                 result += symImport
           end visit
 
-          // Step 0: case for selector type
-          selectorSym.info match
-            case NoType => ()
-            case _ =>
-              if !(selectorSym.is(Sealed) &&
-                  (selectorSym.is(Abstract) || selectorSym.is(Trait)))
-              then visit((autoImportsGen.inferSymbolImport(selectorSym)))
-
           // Step 1: walk through scope members.
           def isValid(sym: Symbol) = !tpes(sym) &&
             !isBottom(sym) &&
@@ -200,8 +199,7 @@ object CaseKeywordCompletion:
                   search,
                 )
               sealedMembers match
-                case Nil => caseItems
-                case (_, label) :: tail =>
+                case (_, label) :: tail if tail.length > 0 =>
                   val (newLine, addIndent) =
                     if moveToNewLine then ("\n\t", "\t") else ("", "")
                   val insertText = Some(
@@ -222,9 +220,10 @@ object CaseKeywordCompletion:
                     s"case (exhaustive)",
                     insertText,
                     importEdit.toList,
-                    s" ${selectorSym.decodedName} (${res.length} cases)",
+                    s" ${printer.tpe(selTpe)} (${res.length} cases)",
                   )
                   exhaustive :: caseItems
+                case _ => caseItems
               end match
             case None => caseItems
           end match
@@ -249,14 +248,22 @@ object CaseKeywordCompletion:
       search: SymbolSearch,
       autoImportsGen: AutoImportsGenerator,
       noIndent: Boolean,
-  ): List[CompletionValue] =
+  )(using ReportContext): List[CompletionValue] =
     import indexedContext.ctx
     val clientSupportsSnippets = config.isCompletionSnippetsEnabled()
+
+    val printer = MetalsPrinter.standard(
+      indexedContext,
+      search,
+      IncludeDefaultParam.Never,
+    )
 
     val completionGenerator = CompletionValueGenerator(
       completionPos,
       clientSupportsSnippets,
     )
+
+    val tpeStr = printer.tpe(selector.tpe.widen.metalsDealias.bounds.hi)
     val tpe = selector.tpe.widen.metalsDealias.bounds.hi match
       case tr @ TypeRef(_, _) => tr.underlying
       case t => t
@@ -302,7 +309,7 @@ object CaseKeywordCompletion:
           "match (exhaustive)",
           insertText,
           importEdit.toList,
-          s" ${tpe.typeSymbol.decodedName} (${labels.length} cases)",
+          s" ${tpeStr} (${labels.length} cases)",
         )
         List(basicMatch, exhaustive)
     completions
@@ -351,19 +358,20 @@ object CaseKeywordCompletion:
      * because `A <:< (B & C) == false`.
      */
     def isExhaustiveMember(sym: Symbol): Boolean =
-      val symTpe = sym.info match
+      sym.info match
         case cl: ClassInfo =>
-          cl.parents
+          val parentsMerged = cl.parents
             .reduceLeftOption((tp1, tp2) => tp1.&(tp2))
             .getOrElse(sym.info)
-        case simple => simple
-      symTpe <:< tpe
+
+          cl.selfType <:< tpe || parentsMerged <:< tpe
+        case simple => simple <:< tpe
 
     val parents = getParentTypes(tpe, List.empty)
     parents.toList.map { parent =>
       // There is an issue in Dotty, `sealedStrictDescendants` ends in an exception for java enums. https://github.com/lampepfl/dotty/issues/15908
       if parent.isAllOf(JavaEnumTrait) then parent.children
-      else MetalsSealedDesc.sealedStrictDescendants(parent)
+      else MetalsSealedDesc.sealedDescendants(parent)
     } match
       case Nil => Nil
       case subcls :: Nil => subcls

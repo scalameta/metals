@@ -10,23 +10,18 @@ class CompletionMatchSuite extends BaseCompletionSuite {
   )
 
   check(
-    "match",
+    "match".tag(IgnoreForScala3CompilerPC),
     """
       |object A {
       |  Option(1) match@@
       |}""".stripMargin,
     """|match
        |match (exhaustive) Option[Int] (2 cases)
-       |""".stripMargin,
-    compat = Map(
-      "3" -> """|match
-                |match (exhaustive) Option (2 cases)
-                |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
-    "trailing-expression",
+    "trailing-expression".tag(IgnoreForScala3CompilerPC),
     """
       |object A {
       |  Option(1) match@@
@@ -34,17 +29,12 @@ class CompletionMatchSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|match
        |match (exhaustive) Option[Int] (2 cases)
-       |""".stripMargin,
-    compat = Map(
-      "3" -> """|match
-                |match (exhaustive) Option (2 cases)
-                |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   // In Scala3 it's allowed to write xxx.match
   check(
-    "dot",
+    "dot".tag(IgnoreForScala3CompilerPC),
     """
       |object A {
       |  Option(1).match@@
@@ -52,7 +42,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     "",
     compat = Map(
       "3" -> """|match
-                |match (exhaustive) Option (2 cases)
+                |match (exhaustive) Option[Int] (2 cases)
                 |""".stripMargin
     )
   )
@@ -467,7 +457,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     )
   )
   check(
-    "exhaustive-map",
+    "exhaustive-map".tag(IgnoreForScala3CompilerPC),
     """
       |object A {
       |  List(Option(1)).map{ ca@@ }
@@ -475,9 +465,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     """|case (exhaustive) Option[A] (2 cases)
        |""".stripMargin,
     compat = Map(
-      "3" ->
-        """|case (exhaustive) Option (2 cases)
-           |""".stripMargin
+      "3" -> "case (exhaustive) Option[Int] (2 cases)"
     ),
     filter = _.contains("exhaustive")
   )
@@ -850,6 +838,45 @@ class CompletionMatchSuite extends BaseCompletionSuite {
            |}
            |""".stripMargin
     ),
+    filter = _.contains("exhaustive")
+  )
+
+  check(
+    "union-type".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    """
+      |case class Foo(a: Int)
+      |case class Bar(b: Int)
+      |
+      |object O {
+      |  val x: Foo | Bar = ???
+      |  val y  = x match@@
+      |}""".stripMargin,
+    """|match
+       |match (exhaustive) Foo | Bar (2 cases)
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "union-type-edit".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    """
+      |case class Foo(a: Int)
+      |case class Bar(b: Int)
+      |
+      |object O {
+      |  val x: Foo | Bar = ???
+      |  val y  = x match@@
+      |}""".stripMargin,
+    s"""|case class Foo(a: Int)
+        |case class Bar(b: Int)
+        |
+        |object O {
+        |  val x: Foo | Bar = ???
+        |  val y  = x match
+        |\tcase Foo(a) => $$0
+        |\tcase Bar(b) =>
+        |
+        |}
+        |""".stripMargin,
     filter = _.contains("exhaustive")
   )
 
