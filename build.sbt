@@ -526,9 +526,9 @@ lazy val metals = project
       "bloopConfigVersion" -> V.bloopConfig,
       "bloopNightlyVersion" -> V.bloop,
       "sbtBloopVersion" -> V.sbtBloop,
+      "gitter8Version" -> V.gitter8Version,
       "gradleBloopVersion" -> V.gradleBloop,
       "mavenBloopVersion" -> V.mavenBloop,
-      "gradleBloopVersion" -> V.gradleBloop,
       "scalametaVersion" -> V.scalameta,
       "semanticdbVersion" -> V.semanticdb(scalaVersion.value),
       "javaSemanticdbVersion" -> V.javaSemanticdb,
@@ -782,6 +782,7 @@ lazy val metalsDependencies = project
       "ch.epfl.scala" %% "gradle-bloop" % V.gradleBloop,
       "com.sourcegraph" % "semanticdb-java" % V.javaSemanticdb,
       "ch.epfl.scala" %% "scala-debug-adapter" % V.debugAdapter intransitive (),
+      "org.foundweekends.giter8" %% "giter8" % V.gitter8Version intransitive (),
     ),
   )
   .disablePlugins(ScalafixPlugin)
