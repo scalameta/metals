@@ -279,7 +279,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
   )
 
   check(
-    "lambda",
+    "lambda".tag(IgnoreForScala3CompilerPC),
     """
       |object A {
       |  List(Option(1)).foreach {
@@ -292,7 +292,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map("3" -> """|case None => scala
                            |case Some(value) => scala
-                           |case (exhaustive) Option (2 cases)
+                           |case (exhaustive) Option[Int] (2 cases)
                            |""".stripMargin)
   )
 
@@ -325,7 +325,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
   )
 
   check(
-    "lambda-curry",
+    "lambda-curry".tag(IgnoreForScala3CompilerPC),
     """
       |object A {
       |  List(Option(1)).map {
@@ -338,12 +338,12 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map("3" -> """|case None => scala
                            |case Some(value) => scala
-                           |case (exhaustive) Option (2 cases)
+                           |case (exhaustive) Option[Int] (2 cases)
                            |""".stripMargin)
   )
 
   check(
-    "partial",
+    "partial".tag(IgnoreForScala3CompilerPC),
     """
       |object A {
       |  List(Option(1)).collect {
@@ -356,7 +356,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map("3" -> """|case None => scala
                            |case Some(value) => scala
-                           |case (exhaustive) Option (2 cases)
+                           |case (exhaustive) Option[Int] (2 cases)
                            |""".stripMargin)
   )
 
@@ -581,7 +581,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
   )
 
   check(
-    "private-member".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    "private-member1".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
     """
       |package example
       |import scala.collection.immutable.Vector
@@ -791,6 +791,46 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case
        |""".stripMargin
+  )
+
+  check(
+    "union-type".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    """
+      |case class Foo(a: Int)
+      |case class Bar(b: Int)
+      |
+      |object O {
+      |  val x: Foo | Bar = ???
+      |  val y  = List(x).map{ ca@@ }
+      |}""".stripMargin,
+    """|case Bar(b) => union-type
+       |case Foo(a) => union-type
+       |case (exhaustive) Foo | Bar (2 cases)
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "union-type-edit".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    """
+      |case class Foo(a: Int)
+      |case class Bar(b: Int)
+      |
+      |object O {
+      |  val x: Foo | Bar = ???
+      |  val y  = List(x).map{ ca@@ }
+      |}""".stripMargin,
+    s"""|case class Foo(a: Int)
+        |case class Bar(b: Int)
+        |
+        |object O {
+        |  val x: Foo | Bar = ???
+        |  val y  = List(x).map{ 
+        |\tcase Foo(a) => $$0
+        |\tcase Bar(b) =>
+        | }
+        |}
+        |""".stripMargin,
+    filter = _.contains("exhaustive")
   )
 
 }
