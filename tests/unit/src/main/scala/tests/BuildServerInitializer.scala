@@ -133,7 +133,7 @@ object SbtServerInitializer extends BuildServerInitializer {
     }
   }
 
-  private def generateBspConfig(
+  def generateBspConfig(
       workspace: AbsolutePath,
       sbtVersion: String,
   ): Unit = {

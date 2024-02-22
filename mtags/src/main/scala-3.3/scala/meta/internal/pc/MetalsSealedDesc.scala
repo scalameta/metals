@@ -6,9 +6,10 @@ import dotty.tools.dotc.core.StdNames.*
 import dotty.tools.dotc.core.Symbols.Symbol
 
 object MetalsSealedDesc:
-  def sealedStrictDescendants(sym: Symbol)(using Context): List[Symbol] =
-    sym.sealedStrictDescendants.filter(child =>
+  def sealedDescendants(sym: Symbol)(using Context): List[Symbol] =
+    sym.sealedDescendants.filter(child =>
       !(child.is(Sealed) && (child.is(Abstract) || child.is(Trait)))
-        && (child.isPublic || child.isAccessibleFrom(sym.info)) &&
-        child.name != tpnme.LOCAL_CHILD
+        && child.maybeOwner.exists
+        && (child.isPublic || child.isAccessibleFrom(sym.info))
+        && child.name != tpnme.LOCAL_CHILD
     )

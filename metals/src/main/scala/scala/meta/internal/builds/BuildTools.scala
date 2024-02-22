@@ -61,9 +61,13 @@ final class BuildTools(
   private def hasJsonFile(dir: AbsolutePath): Boolean = {
     dir.list.exists(_.extension == "json")
   }
+
   def isBazelBsp: Boolean = {
-    workspace.resolve(".bazelbsp").isDirectory
+    workspace.resolve(".bazelbsp").isDirectory &&
+    BazelBuildTool.existingProjectView(workspace).nonEmpty &&
+    isBsp
   }
+
   // Returns true if there's a build.sbt file or project/build.properties with sbt.version
   def sbtProject: Option[AbsolutePath] = searchForBuildTool { root =>
     root.resolve("build.sbt").isFile || {

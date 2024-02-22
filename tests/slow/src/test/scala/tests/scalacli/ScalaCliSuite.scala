@@ -312,6 +312,7 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
   }
 
   test("inner") {
+    cleanWorkspace()
     for {
       _ <- scalaCliInitialize(useBsp = false)(
         s"""|/inner/project.scala

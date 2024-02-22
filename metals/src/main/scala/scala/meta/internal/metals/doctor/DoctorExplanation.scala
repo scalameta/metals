@@ -150,7 +150,8 @@ object DoctorExplanation {
     val correctMessage: String =
       s"${Icons.unicode.check} - build tool automatically creating needed semanticdb files"
     val incorrectMessage: String =
-      s"${Icons.unicode.error} - semanticdb not being produced"
+      s"""|${Icons.unicode.alert} - semanticdb index files not present currently
+          |${Icons.unicode.error} - semanticdb index not being produced""".stripMargin
 
     def show(allTargetsInfo: Seq[DoctorTargetInfo]): Boolean =
       allTargetsInfo.exists(_.indexesStatus.isCorrect == false)

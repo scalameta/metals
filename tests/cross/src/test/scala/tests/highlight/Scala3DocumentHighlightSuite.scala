@@ -525,4 +525,12 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |""".stripMargin
   )
 
+  check(
+    "simple-extension",
+    """|object O {
+       |  extension (x: Int) def <<fooBar>>(a: Int) = x + a
+       |  val x = 123.<<fooB@@ar>>(1)
+       |}
+       |""".stripMargin
+  )
 }

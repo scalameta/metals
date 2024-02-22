@@ -56,7 +56,11 @@ case class UserConfiguration(
     verboseCompilation: Boolean = false,
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
     scalaCliLauncher: Option[String] = None,
+    defaultBspToBuildTool: Boolean = false,
 ) {
+
+  def shouldAutoImportNewProject: Boolean =
+    automaticImportBuild != AutoImportBuildKind.Off
 
   def currentBloopVersion: String =
     bloopVersion.getOrElse(BuildInfo.bloopVersion)
@@ -349,6 +353,15 @@ object UserConfiguration {
            |only automatically import a build when a project is first opened, "all" will automate 
            |build imports after subsequent changes as well.""".stripMargin,
       ),
+      UserConfigurationOption(
+        "default-bsp-to-build-tool",
+        "false",
+        "true",
+        "Default to using build tool as your build server.",
+        """|If your build tool can also serve as a build server,
+           |default to using it instead of Bloop.
+           |""".stripMargin,
+      ),
     )
 
   def fromJson(
@@ -570,6 +583,11 @@ object UserConfiguration {
         case _ => AutoImportBuildKind.Off
       }
 
+    val scalaCliLauncher = getStringKey("scala-cli-launcher")
+
+    val defaultBspToBuildTool =
+      getBooleanKey("default-bsp-to-build-tool").getOrElse(false)
+
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -602,6 +620,8 @@ object UserConfiguration {
           customProjectRoot,
           verboseCompilation,
           autoImportBuilds,
+          scalaCliLauncher,
+          defaultBspToBuildTool,
         )
       )
     } else {

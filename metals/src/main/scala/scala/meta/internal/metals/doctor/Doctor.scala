@@ -568,7 +568,10 @@ final class Doctor(
 
     val isSemanticdbNeeded = !scalaTarget.isSemanticdbEnabled
     val indexes =
-      if (isSemanticdbNeeded) DoctorStatus.error else DoctorStatus.check
+      if (isSemanticdbNeeded) DoctorStatus.error
+      else if (scalaTarget.semanticdbFilesPresent())
+        DoctorStatus.check
+      else DoctorStatus.alert
 
     val compilationStatus = extractCompilationStatus(scalaTarget.info.getId())
 
