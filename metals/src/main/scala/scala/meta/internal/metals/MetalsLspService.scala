@@ -2097,7 +2097,7 @@ class MetalsLspService(
 
     def useBuildToolBsp(buildTool: BuildServerProvider) =
       buildTool match {
-        case _: BloopInstallProvider => userConfig.defaultBSPToBuildTool
+        case _: BloopInstallProvider => userConfig.defaultBspToBuildTool
         case _ => true
       }
 

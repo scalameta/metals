@@ -56,7 +56,7 @@ case class UserConfiguration(
     verboseCompilation: Boolean = false,
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
     scalaCliLauncher: Option[String] = None,
-    defaultBSPToBuildTool: Boolean = false,
+    defaultBspToBuildTool: Boolean = false,
 ) {
 
   def shouldAutoImportNewProject: Boolean =
@@ -585,7 +585,7 @@ object UserConfiguration {
 
     val scalaCliLauncher = getStringKey("scala-cli-launcher")
 
-    val defaultBSPToBuildTool =
+    val defaultBspToBuildTool =
       getBooleanKey("default-bsp-to-build-tool").getOrElse(false)
 
     if (errors.isEmpty) {
@@ -621,7 +621,7 @@ object UserConfiguration {
           verboseCompilation,
           autoImportBuilds,
           scalaCliLauncher,
-          defaultBSPToBuildTool,
+          defaultBspToBuildTool,
         )
       )
     } else {
