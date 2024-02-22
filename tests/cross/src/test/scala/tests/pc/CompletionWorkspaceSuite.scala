@@ -1082,4 +1082,62 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |""".stripMargin,
     ""
   )
+
+  check(
+    "implicit-class",
+    """|package example
+       |object Test {
+       |  implicit class TestOps(a: Int) {
+       |    def testOps(b: Int) = ???
+       |  }
+       |  implicit class TestOps2(a: String) {
+       |    def testOps2(b: Int) = ???
+       |  }
+       |  implicit class TestOps4[A](a: List[A]) {
+       |    def testOps4(b: Int) = ???
+       |  }
+       |  class TestOps3(a: String) {
+       |    def testOps3(b: Int) = ???
+       |  }
+       |}
+       |
+       |object ActualTest {
+       |  1.tes@@
+       |}
+       |""".stripMargin,
+    "testOps(b: Int): Nothing (implicit)",
+    filter = _.contains("testOps")
+  )
+
+  checkEdit(
+    "implicit-class-edit",
+    """|package example
+       |
+       |object Test {
+       |  implicit class TestOps(a: Int) {
+       |    def testOps(b: Int) = ???
+       |  }
+       |}
+       |
+       |object ActualTest {
+       |  1.tes@@
+       |}
+       |""".stripMargin,
+    """|package example
+       |
+       |import example.Test.TestOps
+       |
+       |object Test {
+       |  implicit class TestOps(a: Int) {
+       |    def testOps(b: Int) = ???
+       |  }
+       |}
+       |
+       |object ActualTest {
+       |  1.testOps($0)
+       |}
+       |""".stripMargin,
+    filter = _.contains("testOps")
+  )
+
 }

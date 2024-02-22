@@ -41,6 +41,8 @@ trait Completions { this: MetalsGlobal =>
     def editRange: Option[l.Range] = None
   }
 
+  class ExtensionMethod(sym: Symbol) extends WorkspaceMember(sym)
+
   class WorkspaceInterpolationMember(
       sym: Symbol,
       override val additionalTextEdits: List[l.TextEdit],

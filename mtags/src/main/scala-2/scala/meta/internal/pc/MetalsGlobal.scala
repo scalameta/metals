@@ -361,6 +361,13 @@ class MetalsGlobal(
                           args.map(arg => loop(arg, None))
                         )
                       }
+                    } else if (sym.isMethod && sym.safeOwner.isImplicit) {
+                      history.tryShortenName(ShortName(sym.safeOwner))
+                      TypeRef(
+                        NoPrefix,
+                        shortSymbol,
+                        args.map(arg => loop(arg, None))
+                      )
                     } else {
                       TypeRef(
                         loop(pre, Some(ShortName(sym))),

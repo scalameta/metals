@@ -99,6 +99,8 @@ class CompletionProvider(
           d.label
         case o: TextEditMember =>
           o.label.getOrElse(labelWithSig)
+        case _: ExtensionMethod =>
+          s"$labelWithSig (implicit)"
         case o: WorkspaceMember =>
           s"$ident - ${o.sym.owner.fullName}"
         case _ => labelWithSig
@@ -152,6 +154,31 @@ class CompletionProvider(
           item.setAdditionalTextEdits(i.autoImports.asJava)
         case d: DependecyMember =>
           item.setTextEdit(d.edit)
+        case e: ExtensionMethod =>
+          val impPos = importPosition.getOrElse(AutoImportPosition(0, 0, false))
+          val suffix =
+            if (
+              clientSupportsSnippets && e.sym.paramss.headOption.exists(
+                _.nonEmpty
+              )
+            ) "($0)"
+            else ""
+          val (short, edits) = ShortenedNames.synthesize(
+            TypeRef(
+              ThisType(e.sym.owner),
+              e.sym,
+              Nil
+            ),
+            pos,
+            context,
+            impPos
+          )
+          val edit: l.TextEdit = textEdit(
+            short + suffix,
+            e.editRange.getOrElse(editRange)
+          )
+          item.setTextEdit(edit)
+          item.setAdditionalTextEdits(edits.asJava)
         case w: WorkspaceMember =>
           def createTextEdit(identifier: String) =
             textEdit(w.wrap(identifier), w.editRange.getOrElse(editRange))
@@ -364,10 +391,40 @@ class CompletionProvider(
       if (kind == CompletionListKind.Scope) {
         workspaceSymbolListMembers(query, pos, visit)
       } else {
-        SymbolSearch.Result.COMPLETE
+        val selectType = latestParentTrees match {
+          case (i: Ident) :: _ => Option(i.tpe)
+          case (s: Select) :: _ => Option(s.tpe)
+          case (l: Literal) :: _ => Option(l.tpe)
+          case _ => None
+        }
+        selectType
+          .map(workspaceExtensionMethods(query, pos, visit, _))
+          .getOrElse(SymbolSearch.Result.COMPLETE)
       }
 
     InterestingMembers(buf.result(), searchResults)
+  }
+
+  private def workspaceExtensionMethods(
+      query: String,
+      pos: Position,
+      visit: Member => Boolean,
+      selectType: Type
+  ): SymbolSearch.Result = {
+    val context = doLocateContext(pos)
+    val visitor = new CompilerSearchVisitor(
+      context,
+      sym =>
+        if (sym.safeOwner.isImplicit) {
+          val ownerConstructor = sym.owner.info.member(nme.CONSTRUCTOR)
+          ownerConstructor.info.paramss match {
+            case List(List(param)) if selectType <:< param.info =>
+              visit(new ExtensionMethod(sym))
+            case _ => false
+          }
+        } else false
+    )
+    search.searchMethods(query, buildTargetIdentifier, visitor)
   }
 
   private def isFunction(symbol: Symbol): Boolean = {
