@@ -9,4 +9,9 @@ class SbtStepDapSuite
       s"sbt-debug-step",
       SbtServerInitializer,
       SbtBuildLayout,
-    )
+    ) {
+
+  // otherwise we get both Scala 2.12 and 2.13 dependencies, whchich is more tricky for the tests
+  override def scalaVersion: String = BuildInfo.scala212
+
+}

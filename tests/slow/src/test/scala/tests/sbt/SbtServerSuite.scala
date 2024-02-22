@@ -32,7 +32,7 @@ class SbtServerSuite
     extends BaseImportSuite("sbt-server", SbtServerInitializer) {
 
   val preBspVersion = "1.3.13"
-  val supportedMetaBuildVersion = "1.6.0-M1"
+  val supportedMetaBuildVersion = "1.7.0"
   val supportedBspVersion = V.sbtVersion
   val scalaVersion = V.scala213
   val buildTool: SbtBuildTool = SbtBuildTool(None, workspace, () => userConfig)
