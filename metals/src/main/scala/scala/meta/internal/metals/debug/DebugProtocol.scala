@@ -29,7 +29,7 @@ import org.eclipse.lsp4j.{debug => dap}
 import org.eclipse.{lsp4j => l}
 
 object DebugProtocol {
-  import scala.meta.internal.metals.JsonParser._
+  import scala.meta.internal.metals.debug.DapJsonParser._
   val FirstMessageId = 1
 
   val serverName = "dap-server"

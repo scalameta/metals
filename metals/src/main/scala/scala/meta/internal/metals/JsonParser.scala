@@ -19,7 +19,7 @@ object JsonParser {
 
   implicit class XtensionSerializableToJson(data: Any) {
     def toJson: JsonElement = {
-      JsonParser.gson.toJsonTree(data)
+      gson.toJsonTree(data)
     }
 
     def toJsonObject: JsonObject = {
@@ -30,7 +30,7 @@ object JsonParser {
   implicit class XtensionSerializedAsJson(json: JsonElement) {
     def as[A: ClassTag]: Try[A] = {
       val targetType = classTag[A].runtimeClass.asInstanceOf[Class[A]]
-      Try(JsonParser.gson.fromJson(json, targetType))
+      Try(gson.fromJson(json, targetType))
     }
   }
 
