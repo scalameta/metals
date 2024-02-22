@@ -13,7 +13,7 @@ import org.eclipse.lsp4j.jsonrpc.debug.adapters.DebugEnumTypeAdapter
 object DapJsonParser {
   private val gson: Gson = new GsonBuilder()
     .registerTypeAdapterFactory(
-      // seriliaze Java enum to lower case
+      // serialize Java enum to lower case
       new DebugEnumTypeAdapter.Factory
     )
     .create
