@@ -357,9 +357,9 @@ object UserConfiguration {
         "default-bsp-to-build-tool",
         "false",
         "true",
-        "If used build server should default to build tool.",
-        """|If used build server should default to the one provided by the build tool
-           |instead of the default Bloop.
+        "Default to using build tool as your build server.",
+        """|If your build tool can also serve as a build server,
+           |default to using it instead of Bloop.
            |""".stripMargin,
       ),
     )

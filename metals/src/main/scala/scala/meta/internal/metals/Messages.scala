@@ -200,7 +200,7 @@ object Messages {
     ): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(
-        s"New $buildToolName workspace detected, would you like connect to $buildServerName build server?"
+        s"New $buildToolName workspace detected, would you like connect to the $buildServerName build server?"
       )
       params.setType(MessageType.Info)
       params.setActions(
