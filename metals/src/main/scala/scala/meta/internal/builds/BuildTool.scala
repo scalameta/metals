@@ -34,6 +34,12 @@ trait BuildTool {
    */
   def buildServerName = executableName
 
+  def possibleBuildServerNames: List[String] = List(buildServerName)
+
+  def isBspGenerated(workspace: AbsolutePath): Boolean =
+    possibleBuildServerNames
+      .map(name => workspace.resolve(".bsp").resolve(s"$name.json"))
+      .exists(_.isFile)
 }
 
 object BuildTool {
