@@ -300,6 +300,9 @@ object MetalsInteractive:
               ) =>
             val span = tree.span.withStart(tree.span.point)
             Some(fun.withSpan(span))
+          case Apply(id: Ident, _)
+              if !id.span.isSynthetic && id.symbol.is(Flags.ExtensionMethod) =>
+            Some(id)
           case _ => None
   end ExtensionMethodCall
 

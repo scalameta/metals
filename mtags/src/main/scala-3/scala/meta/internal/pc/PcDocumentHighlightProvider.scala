@@ -14,7 +14,6 @@ final class PcDocumentHighlightProvider(
     driver: InteractiveDriver,
     params: OffsetParams,
 ) extends PcCollector[DocumentHighlight](driver, params):
-
   def collect(
       parent: Option[Tree]
   )(

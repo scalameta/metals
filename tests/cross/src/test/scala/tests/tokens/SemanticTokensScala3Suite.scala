@@ -216,4 +216,13 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
       |""".stripMargin
   )
 
+  check(
+    "simple-extension",
+    """|object <<O>>/*class*/ {
+       |  extension (<<x>>/*parameter,declaration,readonly*/: <<Int>>/*class,abstract*/) def <<fooBar>>/*method,definition*/(<<a>>/*parameter,declaration,readonly*/: <<Int>>/*class,abstract*/) = <<x>>/*parameter,readonly*/ <<+>>/*method*/ <<a>>/*parameter,readonly*/
+       |  val <<x>>/*variable,definition,readonly*/ = 123.<<fooBar>>/*method*/(1)
+       |}
+       |""".stripMargin
+  )
+
 }
