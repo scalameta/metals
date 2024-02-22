@@ -3,7 +3,7 @@ import sbt._
 object V {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
-  val scala212 = "2.12.18"
+  val scala212 = "2.12.19"
   val scala213 = "2.13.12"
   val scala3 = "3.3.1"
   val firstScala3PCVersion = "3.3.2-RC1-bin-20230721-492f777-NIGHTLY"
@@ -73,10 +73,10 @@ object V {
   // whenever version is removed please add it to MtagsResolver under last supported Metals version
   def deprecatedScala2Versions = Seq(
     scala211,
-    "2.12.11",
     "2.12.12",
     "2.12.13",
     "2.12.14",
+    "2.12.15",
     "2.13.5",
     "2.13.6",
     "2.13.7",
@@ -86,9 +86,9 @@ object V {
   def nonDeprecatedScala2Versions = Seq(
     scala213,
     scala212,
+    "2.12.18",
     "2.12.17",
     "2.12.16",
-    "2.12.15",
     "2.13.9",
     "2.13.10",
     "2.13.11",
@@ -96,12 +96,12 @@ object V {
 
   def minimumSupportedSbtVersion = {
     // Update when deprecating a Scala version together with sbt version
-    val sbtScalaVersion = "2.12.15"
+    val sbtScalaVersion = "2.12.16"
     if (!nonDeprecatedScala2Versions.contains(sbtScalaVersion))
       throw new RuntimeException(
         "Please change minimalSupportedSbtVersion when removing support for a particular Scala version"
       )
-    "1.6.0"
+    "1.7.0"
   }
 
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
