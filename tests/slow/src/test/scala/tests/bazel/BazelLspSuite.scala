@@ -31,7 +31,7 @@ class BazelLspSuite
     cleanWorkspace()
     for {
       _ <- initialize(
-        BazelBuildLayout(workspaceLayout, V.scala213, bazelVersion)
+        BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -85,7 +85,7 @@ class BazelLspSuite
   test("generate-bsp-config") {
     cleanWorkspace()
     writeLayout(
-      BazelBuildLayout(workspaceLayout, V.scala213, bazelVersion)
+      BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
     )
     for {
       _ <- server.initialize()
@@ -134,7 +134,7 @@ class BazelLspSuite
   test("import-build") {
     cleanWorkspace()
     writeLayout(
-      BazelBuildLayout(workspaceLayout, V.scala213, bazelVersion)
+      BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
     )
     for {
       _ <- server.initialize()
@@ -193,7 +193,7 @@ class BazelLspSuite
     cleanWorkspace()
     for {
       _ <- initialize(
-        BazelBuildLayout(workspaceLayout, V.scala213, bazelVersion)
+        BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
       )
       _ <- server.didOpen("Hello.scala")
       references <- server.references("Hello.scala", "hello")

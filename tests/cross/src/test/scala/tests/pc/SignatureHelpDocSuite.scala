@@ -165,28 +165,66 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
             |                  ^^^^^^^^^^^^^^^^^
             |  @param op (Int, Int) => Int
             |""".stripMargin,
+      "2.13.13" ->
+        s"""|Applies the given binary operator `op` to the given initial value `z` and all
+            | elements of this collection, going left to right. Returns the initial value if this collection
+            | is empty.
+            |
+            | "Going left to right" only makes sense if this collection is ordered: then if
+            | `x`, `x`, ..., `x` are the elements of this collection, the result is
+            | `op( op( ... op( op(z, x), x) ... ), x)`.
+            |
+            | If this collection is not ordered, then for each application of the operator, each
+            | right operand is an element. In addition, the leftmost operand is the initial
+            | value, and each other left operand is itself an application of the operator. The
+            | elements of this collection and the initial value all appear exactly once in the
+            | computation.
+            |
+            | Note: might return different results for different runs, unless the underlying collection type is ordered.
+            | Note: will not terminate for infinite-sized collections.
+            |
+            |
+            |**Type Parameters**
+            |- `B`: The result type of the binary operator.
+            |
+            |**Parameters**
+            |- `z`: An initial value.
+            |- `op`: A binary operator.
+            |
+            |**Returns:** The result of applying `op` to `z` and all elements of this collection,
+            |                   going left to right. Returns `z` if this collection is empty.
+            |foldLeft[B](z: B)(op: (B, Int) => B): B
+            |                  ^^^^^^^^^^^^^^^^^
+            |  @param op (Int, Int) => Int
+            |""".stripMargin,
       "3" ->
-        """|Applies a binary operator to a start value and all elements of this collection,
-           | going left to right.
+        """|Applies the given binary operator `op` to the given initial value `z` and all
+           | elements of this collection, going left to right. Returns the initial value if this collection
+           | is empty.
            |
+           | "Going left to right" only makes sense if this collection is ordered: then if
+           | `x`, `x`, ..., `x` are the elements of this collection, the result is
+           | `op( op( ... op( op(z, x), x) ... ), x)`.
+           |
+           | If this collection is not ordered, then for each application of the operator, each
+           | right operand is an element. In addition, the leftmost operand is the initial
+           | value, and each other left operand is itself an application of the operator. The
+           | elements of this collection and the initial value all appear exactly once in the
+           | computation.
+           |
+           | Note: might return different results for different runs, unless the underlying collection type is ordered.
            | Note: will not terminate for infinite-sized collections.
-           | Note: might return different results for different runs, unless the
-           |underlying collection type is ordered or the operator is associative
-           |and commutative.
            |
            |
            |**Type Parameters**
-           |- `B`: the result type of the binary operator.
+           |- `B`: The result type of the binary operator.
            |
            |**Parameters**
-           |- `z`: the start value.
-           |- `op`: the binary operator.
+           |- `z`: An initial value.
+           |- `op`: A binary operator.
            |
-           |**Returns:** the result of inserting `op` between consecutive elements of this collection,
-           |          going left to right with the start value `z` on the left:
-           |          `op(...op(z, x), x, ..., x)` where `x, ..., x`
-           |          are the elements of this collection.
-           |          Returns `z` if this collection is empty.
+           |**Returns:** The result of applying `op` to `z` and all elements of this collection,
+           |                   going left to right. Returns `z` if this collection is empty.
            |foldLeft[B](z: B)(op: (B, Int) => B): B
            |                  ^^^^^^^^^^^^^^^^^
            |""".stripMargin

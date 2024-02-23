@@ -147,9 +147,11 @@ case class QuickBuild(
           scalaVersion
         ) && !ScalaVersions.isScala3Version(scalaVersion)
       ) {
-        val semanticdbVersion = BuildInfoVersions.lastSupportedSemanticdb(
-          scalaVersion
-        )
+        val semanticdbVersion =
+          BuildInfoVersions.lastSupportedSemanticdb.getOrElse(
+            scalaVersion,
+            V.scalametaVersion,
+          )
         s"org.scalameta:::semanticdb-scalac:$semanticdbVersion" :: compilerPlugins.toList
       } else compilerPlugins.toList
     val pluginDependencies = allPlugins.map(plugin =>
