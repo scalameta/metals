@@ -46,7 +46,7 @@ class MacroCompletionSuite extends BaseCompletionSuite {
 
   // @tgodzik macros will not work in Dotty
   override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala3)
+    Some(IgnoreScala3.and(IgnoreScala213))
 
   override def scalacOptions(classpath: Seq[Path]): Seq[String] =
     classpath

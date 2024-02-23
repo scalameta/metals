@@ -273,6 +273,8 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
         version.startsWith("2.") && version.contains("-bin-")
       )
 
+  object IgnoreScala213 extends IgnoreScalaVersion(_.startsWith("2.13"))
+
   object IgnoreScala212 extends IgnoreScalaVersion(_.startsWith("2.12"))
 
   object IgnoreScala211 extends IgnoreScalaVersion(_.startsWith("2.11"))
