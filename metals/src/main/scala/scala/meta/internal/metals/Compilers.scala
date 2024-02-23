@@ -775,23 +775,17 @@ class Compilers(
     definition(params = params, token = token, findTypeDef = true)
   }
 
-  def infoAll(
-      path: AbsolutePath,
-      symbol: String,
-  ): Future[Seq[PcSymbolInformation]] = {
-    loadCompiler(path, forceScala = true)
-      .map(
-        _.info(symbol).asScala
-          .map(_.asScala.toSeq.map(PcSymbolInformation.from))
-      )
-      .getOrElse(Future(Nil))
-  }
-
   def info(
       path: AbsolutePath,
       symbol: String,
-  ): Future[Option[PcSymbolInformation]] =
-    infoAll(path, symbol).map(_.find(_.symbol == symbol))
+  ): Future[Option[PcSymbolInformation]] = {
+    loadCompiler(path, forceScala = true)
+      .map(
+        _.info(symbol).asScala
+          .map(_.asScala.map(PcSymbolInformation.from))
+      )
+      .getOrElse(Future(None))
+  }
 
   private def definition(
       params: TextDocumentPositionParams,
@@ -848,6 +842,13 @@ class Compilers(
     }.getOrElse(Future.successful(Nil.asJava))
   }
 
+  /**
+   * Gets presentation compiler for a file.
+   * @param path for which presentation compiler should be loaded,
+   *             resolves build target based on this file
+   * @param forceScala if should use Scala pc for `.java` files that are in a Scala build target,
+   *                   useful when Scala pc can handle Java files and Java pc implementation of a feature is missing
+   */
   def loadCompiler(
       path: AbsolutePath,
       forceScala: Boolean = false,

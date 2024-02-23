@@ -9,5 +9,7 @@ public interface PcSymbolInformation {
   String dealiasedSymbol();
   String classOwner();
   List<String> overriddenSymbols();
+  // overloaded methods
+  List<String> alternativeSymbols();
   List<PcSymbolProperty> properties();
 }

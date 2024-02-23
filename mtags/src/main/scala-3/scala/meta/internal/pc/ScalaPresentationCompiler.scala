@@ -190,11 +190,11 @@ case class ScalaPresentationCompiler(
 
   override def info(
       symbol: String
-  ): CompletableFuture[ju.List[IPcSymbolInformation]] =
-    compilerAccess.withNonInterruptableCompiler[ju.List[IPcSymbolInformation]](
+  ): CompletableFuture[Optional[IPcSymbolInformation]] =
+    compilerAccess.withNonInterruptableCompiler[Optional[IPcSymbolInformation]](
       None
     )(
-      Nil.asJava,
+      Optional.empty(),
       EmptyCancelToken,
     ) { access =>
       SymbolInformationProvider(using access.compiler().currentCtx)

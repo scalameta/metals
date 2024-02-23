@@ -352,14 +352,14 @@ case class ScalaPresentationCompiler(
 
   override def info(
       symbol: String
-  ): CompletableFuture[ju.List[IPcSymbolInformation]] = {
-    compilerAccess.withNonInterruptableCompiler[ju.List[IPcSymbolInformation]](
+  ): CompletableFuture[Optional[IPcSymbolInformation]] = {
+    compilerAccess.withNonInterruptableCompiler[Optional[IPcSymbolInformation]](
       None
     )(
-      Nil.asJava,
+      Optional.empty(),
       EmptyCancelToken
     ) { pc =>
-      val result: List[IPcSymbolInformation] =
+      val result: Option[IPcSymbolInformation] =
         pc.compiler().info(symbol).map(_.asJava)
       result.asJava
     }

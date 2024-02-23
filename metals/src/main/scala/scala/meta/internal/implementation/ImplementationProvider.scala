@@ -32,6 +32,7 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.search.SymbolHierarchyOps._
 import scala.meta.internal.semanticdb.ClassSignature
+import scala.meta.internal.semanticdb.Scala.Descriptor.Method
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.Signature
 import scala.meta.internal.semanticdb.SymbolInformation
@@ -234,18 +235,32 @@ final class ImplementationProvider(
             }
           } yield Future.successful(found)
         def pcSearch = {
-          val symbol =
-            s"${implReal.symbol}${info.symbol.stripPrefix(classSymbol)}"
-          compilers
-            .infoAll(source, symbol)
-            .map { allFound =>
-              allFound
-                .find(implInfo =>
-                  implInfo.overriddenSymbols.contains(info.symbol)
-                )
-                .map(_.symbol)
-                .getOrElse(symbol)
+          val symbol = {
+            val inferredSymbol =
+              s"${implReal.symbol}${info.symbol.stripPrefix(classSymbol)}"
+            inferredSymbol.desc match {
+              case Method(value, _) => new Method(value, "()").toString()
+              case _ => inferredSymbol
             }
+          }
+          def overridesSym(info: PcSymbolInformation) =
+            info.overriddenSymbols.contains(info.symbol)
+          compilers.info(source, symbol).flatMap {
+            case Some(info) if overridesSym(info) =>
+              Future.successful(info.symbol)
+            case Some(info) =>
+              // look if one of the alternatives overrides `info.symbol`
+              Future
+                .sequence(
+                  info.alternativeSymbols.map(compilers.info(source, _))
+                )
+                .map {
+                  _.collectFirst {
+                    case Some(info) if overridesSym(info) => info.symbol
+                  }.getOrElse(symbol)
+                }
+            case None => Future.successful(symbol)
+          }
         }
         tryFromDoc.orElse {
           if (implReal.symbol.isLocal) None
@@ -451,14 +466,32 @@ final class ImplementationProvider(
           parents.collect { case t: TypeRef => t.symbol }.toList
         case _ => Nil
       }
-    val classOwner =
+
+    val classOwnerInfoOpt =
       textDocument.symbols.collectFirst { classInfo =>
         classInfo.signature match {
           case ClassSignature(_, _, _, declarations)
               if declarations.exists(_.symlinks.contains(info.symbol)) =>
-            classInfo.symbol
+            classInfo
         }
       }
+
+    def getMethodPrefix(symbol: String) = symbol.desc match {
+      case Method(searchedSym, _) => Some(searchedSym)
+      case _ => None
+    }
+
+    val alternativeSymbols =
+      for {
+        classOwnerInfo <- classOwnerInfoOpt.toList
+        searchedSym <- getMethodPrefix(info.symbol).toList
+        decl <- classOwnerInfo.signature match {
+          case ClassSignature(_, _, _, declarations) => declarations
+          case _ => Nil
+        }
+        sym <- decl.symlinks
+        if (sym != searchedSym && getMethodPrefix(sym).contains(searchedSym))
+      } yield sym
 
     PcSymbolInformation(
       symbol = info.symbol,
@@ -467,7 +500,8 @@ final class ImplementationProvider(
         .getOrElse(PcSymbolKind.UNKNOWN_KIND),
       parents = parents,
       dealiasedSymbol = info.symbol,
-      classOwner = classOwner,
+      classOwner = classOwnerInfoOpt.map(_.symbol),
+      alternativeSymbols = alternativeSymbols.toList,
       overriddenSymbols = info.overriddenSymbols.toList,
       properties = if (info.isAbstract) List(PcSymbolProperty.ABSTRACT) else Nil,
     )

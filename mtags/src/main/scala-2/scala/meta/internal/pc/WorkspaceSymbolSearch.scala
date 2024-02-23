@@ -12,7 +12,7 @@ import org.eclipse.{lsp4j => l}
 
 trait WorkspaceSymbolSearch { this: MetalsGlobal =>
 
-  def info(symbol: String): List[PcSymbolInformation] = {
+  def info(symbol: String): Option[PcSymbolInformation] = {
     val index = symbol.lastIndexOf("/")
     val pkgString = symbol.take(index + 1)
     val pkg = packageSymbolFromString(pkgString)
@@ -46,22 +46,34 @@ trait WorkspaceSymbolSearch { this: MetalsGlobal =>
         }
     }
 
-    compilerSymbols.map(compilerSymbol =>
-      PcSymbolInformation(
-        symbol = semanticdbSymbol(compilerSymbol),
-        kind = getSymbolKind(compilerSymbol),
-        parents = compilerSymbol.parentSymbols.map(semanticdbSymbol),
-        dealiasedSymbol = semanticdbSymbol(compilerSymbol.dealiased),
-        classOwner = compilerSymbol.ownerChain
-          .find(c => c.isClass || c.isModule)
-          .map(semanticdbSymbol),
-        overriddenSymbols = compilerSymbol.overrides.map(semanticdbSymbol),
-        properties =
-          if (compilerSymbol.isAbstractClass || compilerSymbol.isAbstractType)
-            List(PcSymbolProperty.ABSTRACT)
-          else Nil
+    val (searchedSymbol, alternativeSymbols) =
+      compilerSymbols.partition(compilerSymbol =>
+        semanticdbSymbol(compilerSymbol) == symbol
       )
-    )
+
+    searchedSymbol match {
+      case compilerSymbol :: _ =>
+        Some(
+          PcSymbolInformation(
+            symbol = symbol,
+            kind = getSymbolKind(compilerSymbol),
+            parents = compilerSymbol.parentSymbols.map(semanticdbSymbol),
+            dealiasedSymbol = semanticdbSymbol(compilerSymbol.dealiased),
+            classOwner = compilerSymbol.ownerChain
+              .find(c => c.isClass || c.isModule)
+              .map(semanticdbSymbol),
+            overriddenSymbols = compilerSymbol.overrides.map(semanticdbSymbol),
+            alternativeSymbols = alternativeSymbols.map(semanticdbSymbol),
+            properties =
+              if (
+                compilerSymbol.isAbstractClass || compilerSymbol.isAbstractType
+              )
+                List(PcSymbolProperty.ABSTRACT)
+              else Nil
+          )
+        )
+      case _ => None
+    }
   }
 
   private def getSymbolKind(sym: Symbol): PcSymbolKind =

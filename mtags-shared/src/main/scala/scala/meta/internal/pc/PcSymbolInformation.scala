@@ -14,6 +14,7 @@ case class PcSymbolInformation(
     dealiasedSymbol: String,
     classOwner: Option[String],
     overriddenSymbols: List[String],
+    alternativeSymbols: List[String],
     properties: List[PcSymbolProperty]
 ) {
   def asJava: PcSymbolInformationJava =
@@ -24,6 +25,7 @@ case class PcSymbolInformation(
       dealiasedSymbol,
       classOwner.getOrElse(""),
       overriddenSymbols.asJava,
+      alternativeSymbols.asJava,
       properties.asJava
     )
 }
@@ -35,6 +37,7 @@ case class PcSymbolInformationJava(
     dealiasedSymbol: String,
     classOwner: String,
     overriddenSymbols: ju.List[String],
+    alternativeSymbols: ju.List[String],
     properties: ju.List[PcSymbolProperty]
 ) extends IPcSymbolInformation
 
@@ -48,6 +51,7 @@ object PcSymbolInformation {
       if (info.classOwner().nonEmpty) Some(info.classOwner())
       else None,
       info.overriddenSymbols().asScala.toList,
+      info.alternativeSymbols().asScala.toList,
       info.properties().asScala.toList
     )
 }

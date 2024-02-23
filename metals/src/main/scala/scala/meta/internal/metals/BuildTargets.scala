@@ -380,8 +380,8 @@ final class BuildTargets private (
       path: AbsolutePath,
   ): Boolean = {
     val possibleBuildTargets =
-      target :: buildTargetTransitiveDependencies(target).toList
-    inverseSourcesAll(path).exists(possibleBuildTargets.contains)
+      buildTargetTransitiveDependencies(target).toSet + target
+    inverseSourcesAll(path).exists(possibleBuildTargets(_))
   }
 
   def inferBuildTarget(
