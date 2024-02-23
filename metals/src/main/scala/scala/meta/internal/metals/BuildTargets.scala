@@ -116,6 +116,18 @@ final class BuildTargets private (
   def javaTarget(id: BuildTargetIdentifier): Option[JavaTarget] =
     data.fromOptions(_.javaTarget(id))
 
+  def fullClasspath(
+      id: BuildTargetIdentifier
+  )(implicit ec: ExecutionContext): Option[Future[List[AbsolutePath]]] =
+    targetClasspath(id).map { lazyClasspath =>
+      lazyClasspath.map { classpath =>
+        classpath.map(_.toAbsolutePath).collect {
+          case path if path.isJar || path.isDirectory =>
+            path
+        }
+      }
+    }
+
   def targetJarClasspath(
       id: BuildTargetIdentifier
   ): Option[List[AbsolutePath]] =
@@ -123,7 +135,7 @@ final class BuildTargets private (
 
   def targetClasspath(
       id: BuildTargetIdentifier
-  ): Option[List[String]] =
+  )(implicit executionContext: ExecutionContext): Option[Future[List[String]]] =
     data.fromOptions(_.targetClasspath(id))
 
   def targetClassDirectories(
@@ -465,8 +477,8 @@ final class BuildTargets private (
     lazy val classpaths: Seq[(BuildTargetIdentifier, Iterator[AbsolutePath])] =
       allBuildTargetIdsInternal.toVector.map { case (data, id) =>
         id -> data
-          .targetClasspath(id)
-          .map(_.toAbsoluteClasspath)
+          .targetJarClasspath(id)
+          .map(_.iterator)
           .getOrElse(Iterator.empty)
       }
 

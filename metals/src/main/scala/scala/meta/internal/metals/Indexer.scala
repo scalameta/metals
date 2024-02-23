@@ -165,7 +165,7 @@ final case class Indexer(
         timerProvider.timedThunk("indexed workspace", onlyIf = true) {
           try indexWorkspace(check)
           finally {
-            Future(scalafixProvider().load())
+            scalafixProvider().load()
             indexingPromise().trySuccess(())
           }
         }

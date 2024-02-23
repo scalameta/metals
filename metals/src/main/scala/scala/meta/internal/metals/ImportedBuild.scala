@@ -95,6 +95,7 @@ object ImportedBuild {
         bspProvidedDependencySources,
         javacOptions,
         scalacOptions,
+        conn.supportsLazyClasspathResolution,
       )
       wrappedSources <- conn.buildTargetWrappedSources(
         new WrappedSourcesParams(ids)
@@ -130,34 +131,39 @@ object ImportedBuild {
       dependencySources: DependencySourcesResult,
       javacOptions: JavacOptionsResult,
       scalacOptions: ScalacOptionsResult,
-  )(implicit ec: ExecutionContext): Future[DependencySourcesResult] = {
-    val dependencySourcesItems = dependencySources.getItems().asScala.toList
-    val idsLookup = dependencySourcesItems.map(_.getTarget()).toSet
-    val classpaths = javacOptions
-      .getItems()
-      .asScala
-      .map(item => (item.getTarget(), item.getClasspath())) ++
-      scalacOptions
+      shouldResolveClasspathLazily: Boolean,
+  )(implicit ec: ExecutionContext): Future[DependencySourcesResult] =
+    // we don't want to resolve dependencies eagerly if the build tools supports lazy classpath resolution
+    if (!shouldResolveClasspathLazily) {
+      val dependencySourcesItems = dependencySources.getItems().asScala.toList
+      val idsLookup = dependencySourcesItems.map(_.getTarget()).toSet
+      val classpaths = javacOptions
         .getItems()
         .asScala
-        .map(item => (item.getTarget(), item.getClasspath()))
+        .map(item => (item.getTarget(), item.getClasspath())) ++
+        scalacOptions
+          .getItems()
+          .asScala
+          .map(item => (item.getTarget(), item.getClasspath()))
 
-    val newItemsFuture =
-      Future.sequence {
-        classpaths.collect {
-          case (id, classpath) if !idsLookup(id) =>
-            for {
-              items <- JarSourcesProvider.fetchSources(
-                classpath.asScala.filter(_.endsWith(".jar")).toSeq
-              )
-            } yield new DependencySourcesItem(id, items.asJava)
+      val newItemsFuture =
+        Future.sequence {
+          classpaths.collect {
+            case (id, classpath) if !idsLookup(id) =>
+              for {
+                items <- JarSourcesProvider.fetchSources(
+                  classpath.asScala.filter(_.endsWith(".jar")).toSeq
+                )
+              } yield new DependencySourcesItem(id, items.asJava)
+          }
         }
-      }
 
-    newItemsFuture.map { newItems =>
-      new DependencySourcesResult((dependencySourcesItems ++ newItems).asJava)
+      newItemsFuture.map { newItems =>
+        new DependencySourcesResult((dependencySourcesItems ++ newItems).asJava)
+      }
+    } else {
+      Future.successful(dependencySources)
     }
-  }
 
   def fromList(data: Seq[ImportedBuild]): ImportedBuild =
     if (data.isEmpty) empty
