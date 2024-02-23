@@ -62,7 +62,7 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
            |^^^^^^^^^^^^^^^^^^^
            |a/src/main/scala/Main.scala:7:15: warning: private val notUsed in object Main is never used
            |  private val notUsed = 123 
-           |              ^
+           |              ^^^^^^^
            |""".stripMargin,
       )
       textParams =

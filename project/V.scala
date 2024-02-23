@@ -4,16 +4,18 @@ object V {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
   val scala212 = "2.12.19"
-  val scala213 = "2.13.12"
+  val scala213 = "2.13.13"
   val scala3 = "3.3.2"
   val firstScala3PCVersion = "3.3.3"
   val wrapperMetalsVersion = "3.4.0-RC1-bin-20231127-41e7d95-NIGHTLY"
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
   val scala3RC: Option[String] = None
-  val sbtScala = "2.12.17"
+  val sbtScala = "2.12.18"
   val ammonite212Version = "2.12.18"
   val ammonite213Version = "2.13.12"
+  // Rules need to be manually updated to support
+  val bazelScalaVersion = "2.13.12"
   val ammonite3Version = "3.3.1"
 
   val ammonite = "3.0.0-M0-60-89836cd8"
@@ -78,10 +80,10 @@ object V {
     "2.12.13",
     "2.12.14",
     "2.12.15",
-    "2.13.5",
     "2.13.6",
     "2.13.7",
     "2.13.8",
+    "2.13.9",
   )
 
   def nonDeprecatedScala2Versions = Seq(
@@ -90,9 +92,9 @@ object V {
     "2.12.18",
     "2.12.17",
     "2.12.16",
-    "2.13.9",
     "2.13.10",
     "2.13.11",
+    "2.13.12",
   )
 
   def minimumSupportedSbtVersion = {
