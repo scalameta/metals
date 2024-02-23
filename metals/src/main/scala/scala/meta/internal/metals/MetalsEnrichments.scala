@@ -86,6 +86,21 @@ object MetalsEnrichments
     with AsScalaExtensions
     with MtagsEnrichments {
 
+  implicit class XtensionFutureOpt[T](future: Future[Option[Future[T]]]) {
+    def getOrElse(default: => T)(implicit ec: ExecutionContext): Future[T] =
+      future.flatMap {
+        case Some(value) => value
+        case None => Future.successful(default)
+      }
+  }
+  implicit class XtensionDependencyModule(module: b.DependencyModule) {
+    def asMavenDependencyModule: Option[b.MavenDependencyModule] = {
+      if (module.getDataKind() == b.DependencyModuleDataKind.MAVEN)
+        decodeJson(module.getData, classOf[b.MavenDependencyModule])
+      else
+        None
+    }
+  }
   implicit class XtensionBuildTarget(buildTarget: b.BuildTarget) {
 
     def isSbtBuild: Boolean = dataKind == "sbt"
@@ -128,15 +143,6 @@ object MetalsEnrichments
         name.replaceAll("[^a-zA-Z0-9]+", "-")
       } else
         buildTarget.getDisplayName
-    }
-  }
-
-  implicit class XtensionDependencyModule(module: b.DependencyModule) {
-    def asMavenDependencyModule: Option[b.MavenDependencyModule] = {
-      if (module.getDataKind() == b.DependencyModuleDataKind.MAVEN)
-        decodeJson(module.getData, classOf[b.MavenDependencyModule])
-      else
-        None
     }
   }
 
@@ -1020,14 +1026,6 @@ object MetalsEnrichments
         .getOrElse(false)
     }
 
-    def classpath: List[String] =
-      item.getClasspath.asScala.toList
-
-    def jarClasspath: List[AbsolutePath] =
-      classpath
-        .filter(_.endsWith(".jar"))
-        .map(_.toAbsolutePath)
-
     def releaseVersion: Option[String] =
       item.getOptions.asScala
         .dropWhile(_ != "--release")
@@ -1102,18 +1100,6 @@ object MetalsEnrichments
         .find(_.startsWith(flag))
         .map(_.stripPrefix(flag))
     }
-
-    def classpath: List[String] = {
-      val outputClasses = item.getClassDirectory
-      val classes = item.getClasspath.asScala.toList
-      if (classes.contains(outputClasses)) classes
-      else outputClasses :: classes
-    }
-
-    def jarClasspath: List[AbsolutePath] =
-      classpath
-        .filter(_.endsWith(".jar"))
-        .map(_.toAbsolutePath)
   }
 
   implicit class XtensionChar(ch: Char) {

@@ -597,84 +597,87 @@ final class FileDecoderProvider(
           )
           .map(_.id)
       )
-    val classpaths = buildTarget
-      .flatMap(id =>
-        buildTargets
-          .targetClasspath(id)
-          .map(path => path.toAbsoluteClasspath.toList)
-      )
-      .getOrElse(Nil)
-    val classesDirs = buildTarget
-      .map(id =>
-        buildTargets.targetClassDirectories(id).toAbsoluteClasspath.toList
-      )
-      .getOrElse(Nil)
-    val extraClassPaths = classesDirs ::: classpaths
-    val extraClassPath =
-      if (extraClassPaths.nonEmpty)
-        List("--extraclasspath", extraClassPaths.mkString(File.pathSeparator))
-      else Nil
+    buildTarget
+      .flatMap(id => buildTargets.targetClasspath(id))
+      .getOrElse(Future.successful(Nil))
+      .map(_.map(_.toAbsolutePath))
+      .flatMap { classpaths =>
+        val classesDirs = buildTarget
+          .map(id =>
+            buildTargets.targetClassDirectories(id).toAbsoluteClasspath.toList
+          )
+          .getOrElse(Nil)
+        val extraClassPaths = classesDirs ::: classpaths
 
-    // if the class file is in the classes dir then use that classes dir to allow CFR to use the other classes
-    val (parent, className) = classesDirs
-      .find(classesPath => path.isInside(classesPath))
-      .map(classesPath => {
-        val classPath = path.toRelative(classesPath)
-        val className = classPath.toString
-        (classesPath, className)
-      })
-      .getOrElse({
-        val parent = path.parent
-        val className = path.filename
-        (parent, className)
-      })
-
-    val args = extraClassPath :::
-      List(
-        // elideScala - must be lowercase - hide @@ScalaSignature and serialVersionUID for aesthetic reasons
-        "--elidescala",
-        "true",
-        // analyseAs - must be lowercase
-        "--analyseas",
-        "CLASS",
-        s"$className",
-      )
-
-    val sbOut = new StringBuilder()
-    val sbErr = new StringBuilder()
-    try {
-      shellRunner
-        .runJava(
-          cfrDependency,
-          cfrMain,
-          parent,
-          args,
-          userConfig().javaHome,
-          redirectErrorOutput = false,
-          s => {
-            sbOut.append(s)
-            sbOut.append(Properties.lineSeparator)
-          },
-          s => {
-            sbErr.append(s)
-            sbErr.append(Properties.lineSeparator)
-          },
-          propagateError = true,
-        )
-        .map(_ => {
-          if (sbOut.isEmpty && sbErr.nonEmpty)
-            DecoderResponse.failed(
-              path.toURI,
-              s"$cfrDependency\n$cfrMain\n$parent\n$args\n${sbErr.toString}",
+        val extraClassPath =
+          if (extraClassPaths.nonEmpty)
+            List(
+              "--extraclasspath",
+              extraClassPaths.mkString(File.pathSeparator),
             )
-          else
-            DecoderResponse.success(path.toURI, sbOut.toString)
-        })
-    } catch {
-      case NonFatal(e) =>
-        scribe.error(e.toString())
-        Future.successful(DecoderResponse.failed(path.toURI, e))
-    }
+          else Nil
+
+        // if the class file is in the classes dir then use that classes dir to allow CFR to use the other classes
+        val (parent, className) = classesDirs
+          .find(classesPath => path.isInside(classesPath))
+          .map(classesPath => {
+            val classPath = path.toRelative(classesPath)
+            val className = classPath.toString
+            (classesPath, className)
+          })
+          .getOrElse({
+            val parent = path.parent
+            val className = path.filename
+            (parent, className)
+          })
+
+        val args = extraClassPath :::
+          List(
+            // elideScala - must be lowercase - hide @@ScalaSignature and serialVersionUID for aesthetic reasons
+            "--elidescala",
+            "true",
+            // analyseAs - must be lowercase
+            "--analyseas",
+            "CLASS",
+            s"$className",
+          )
+
+        val sbOut = new StringBuilder()
+        val sbErr = new StringBuilder()
+        try {
+          shellRunner
+            .runJava(
+              cfrDependency,
+              cfrMain,
+              parent,
+              args,
+              userConfig().javaHome,
+              redirectErrorOutput = false,
+              s => {
+                sbOut.append(s)
+                sbOut.append(Properties.lineSeparator)
+              },
+              s => {
+                sbErr.append(s)
+                sbErr.append(Properties.lineSeparator)
+              },
+              propagateError = true,
+            )
+            .map(_ => {
+              if (sbOut.isEmpty && sbErr.nonEmpty)
+                DecoderResponse.failed(
+                  path.toURI,
+                  s"$cfrDependency\n$cfrMain\n$parent\n$args\n${sbErr.toString}",
+                )
+              else
+                DecoderResponse.success(path.toURI, sbOut.toString)
+            })
+        } catch {
+          case NonFatal(e) =>
+            scribe.error(e.toString())
+            Future.successful(DecoderResponse.failed(path.toURI, e))
+        }
+      }
   }
 
   private def decodeFromSemanticDB(
@@ -739,12 +742,14 @@ final class FileDecoderProvider(
       pathInfo: PathInfo
   ): Future[DecoderResponse] =
     compilers.loadCompiler(pathInfo.targetId) match {
-      case Some(pc) =>
-        pc.getTasty(
-          pathInfo.path.toURI,
-          clientConfig.isHttpEnabled(),
-        ).asScala
-          .map(DecoderResponse.success(pathInfo.path.toURI, _))
+      case Some(lazyPc) =>
+        lazyPc.flatMap {
+          _.getTasty(
+            pathInfo.path.toURI,
+            clientConfig.isHttpEnabled(),
+          ).asScala
+            .map(DecoderResponse.success(pathInfo.path.toURI, _))
+        }
       case None =>
         Future.successful(
           DecoderResponse.failed(

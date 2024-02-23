@@ -804,7 +804,7 @@ class MetalsLspService(
     tables,
   )
 
-  def loadedPresentationCompilerCount(): Int =
+  def loadedPresentationCompilerCount(): Future[Int] =
     compilers.loadedPresentationCompilerCount()
 
   val treeView =

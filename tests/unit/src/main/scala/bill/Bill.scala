@@ -73,6 +73,9 @@ object Bill {
   val logName = ".bill-metals.log"
 
   class Server() extends BuildServer with ScalaBuildServer {
+
+    override def onRunReadStdin(params: ReadParams): Unit = ()
+
     private var sleepBeforePingResponse: Option[Duration] = None
     val languages: util.List[String] = Collections.singletonList("scala")
     var client: BuildClient = _
@@ -525,6 +528,11 @@ object Bill {
     import scala.meta.internal.metals.MetalsEnrichments._
     val server = new Server()
     val client = new BuildClient {
+
+      override def onRunPrintStdout(params: PrintParams): Unit = ???
+
+      override def onRunPrintStderr(params: PrintParams): Unit = ???
+
       override def onBuildShowMessage(params: ShowMessageParams): Unit = ???
       override def onBuildLogMessage(params: LogMessageParams): Unit = ???
       override def onBuildTaskStart(params: TaskStartParams): Unit = ???

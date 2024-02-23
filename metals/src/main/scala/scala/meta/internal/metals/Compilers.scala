@@ -92,13 +92,16 @@ class Compilers(
   // Not a TrieMap because we want to avoid loading duplicate compilers for the same build target.
   // Not a `j.u.c.ConcurrentHashMap` because it can deadlock in `computeIfAbsent` when the absent
   // function is expensive, which is the case here.
-  val jcache: ju.Map[PresentationCompilerKey, PresentationCompiler] =
+  val jcache: ju.Map[PresentationCompilerKey, Future[PresentationCompiler]] =
     Collections.synchronizedMap(
-      new java.util.HashMap[PresentationCompilerKey, PresentationCompiler]
+      new java.util.HashMap[PresentationCompilerKey, Future[
+        PresentationCompiler
+      ]]
     )
-  private val jworksheetsCache: ju.Map[AbsolutePath, PresentationCompiler] =
+  private val jworksheetsCache
+      : ju.Map[AbsolutePath, Future[PresentationCompiler]] =
     Collections.synchronizedMap(
-      new java.util.HashMap[AbsolutePath, PresentationCompiler]
+      new java.util.HashMap[AbsolutePath, Future[PresentationCompiler]]
     )
 
   private val worksheetsDigests = new TrieMap[AbsolutePath, String]()
@@ -159,7 +162,7 @@ class Compilers(
   private val cache = jcache.asScala
   private def buildTargetPCFromCache(
       id: BuildTargetIdentifier
-  ): Option[PresentationCompiler] =
+  ): Option[Future[PresentationCompiler]] =
     cache.get(PresentationCompilerKey.BuildTarget(id)).filter(_ != null)
 
   private val worksheetsCache = jworksheetsCache.asScala
@@ -189,52 +192,55 @@ class Compilers(
   }
 
   // The "fallback" compiler is used for source files that don't belong to a build target.
-  def fallbackCompiler(path: AbsolutePath): PresentationCompiler = {
+  def fallbackCompiler(path: AbsolutePath): Future[PresentationCompiler] = {
     jcache.compute(
       PresentationCompilerKey.Default,
       (_, value) => {
         val scalaVersion =
           scalaVersionSelector.fallbackScalaVersion(isAmmonite = false)
-        val existingPc = Option(value).flatMap { pc =>
-          if (pc.scalaVersion == scalaVersion) {
-            Some(pc)
-          } else {
-            pc.shutdown()
-            None
-          }
-        }
-        existingPc match {
-          case Some(pc) => pc
+        def newStandalone = Future.successful(
+          createStandaloneCompiler(
+            scalaVersion,
+            List.empty,
+            Try(
+              StandaloneSymbolSearch(
+                scalaVersion,
+                workspace,
+                buffers,
+                excludedPackages,
+                userConfig,
+                trees,
+                buildTargets,
+                saveSymbolFileToDisk = !config.isVirtualDocumentSupported(),
+                sourceMapper,
+              )
+            ).getOrElse(EmptySymbolSearch),
+            "default",
+            path,
+          )
+        )
+        Option(value) match {
+          case Some(pcFuture) =>
+            pcFuture.flatMap {
+              case pc if pc.scalaVersion == scalaVersion =>
+                Future.successful(pc)
+              case other =>
+                other.shutdown()
+                newStandalone
+            }
           case None =>
-            createStandaloneCompiler(
-              scalaVersion,
-              List.empty,
-              Try(
-                StandaloneSymbolSearch(
-                  scalaVersion,
-                  workspace,
-                  buffers,
-                  excludedPackages,
-                  userConfig,
-                  trees,
-                  buildTargets,
-                  saveSymbolFileToDisk = !config.isVirtualDocumentSupported(),
-                  sourceMapper,
-                )
-              ).getOrElse(EmptySymbolSearch),
-              "default",
-              path,
-            )
+            newStandalone
         }
       },
     )
   }
 
-  def loadedPresentationCompilerCount(): Int = cache.values.count(_.isLoaded())
+  def loadedPresentationCompilerCount(): Future[Int] =
+    Future.sequence(cache.values).map(_.count(_.isLoaded()))
 
   override def cancel(): Unit = {
-    Cancelable.cancelEach(cache.values)(_.shutdown())
-    Cancelable.cancelEach(worksheetsCache.values)(_.shutdown())
+    Cancelable.cancelEach(cache.values)(_.map(_.shutdown()))
+    Cancelable.cancelEach(worksheetsCache.values)(_.map(_.shutdown()))
     cache.clear()
     worksheetsCache.clear()
     worksheetsDigests.clear()
@@ -257,23 +263,27 @@ class Compilers(
           .flatMap(path => buildTargets.inverseSources(path).toList)
           .distinct
         targets.foreach { target =>
-          loadCompiler(target).foreach { pc =>
-            pc.hover(
-              CompilerOffsetParams(
-                Paths.get("Main.scala").toUri(),
-                "object Ma\n",
-                "object Ma".length(),
-              )
-            ).thenApply(_.map(_.toLsp()))
+          loadCompiler(target).foreach { pcFuture =>
+            pcFuture.map(
+              _.hover(
+                CompilerOffsetParams(
+                  Paths.get("Main.scala").toUri(),
+                  "object Ma\n",
+                  "object Ma".length(),
+                )
+              ).thenApply(_.map(_.toLsp()))
+            )
           }
         }
       }
     }
 
-  def didClose(path: AbsolutePath): Unit = {
-    loadCompiler(path).foreach { pc =>
-      pc.didClose(path.toNIO.toUri())
-    }
+  def didClose(path: AbsolutePath): Future[Unit] = {
+    loadCompiler(path)
+      .map { pc =>
+        pc.map(_.didClose(path.toNIO.toUri()))
+      }
+      .getOrElse(Future.successful(()))
   }
 
   def didChange(path: AbsolutePath): Future[List[Diagnostic]] = {
@@ -282,30 +292,34 @@ class Compilers(
         .toInputFromBuffers(buffers)
 
     loadCompiler(path)
-      .map { pc =>
-        val inputAndAdjust =
-          if (
-            path.isWorksheet && ScalaVersions.isScala3Version(pc.scalaVersion())
-          ) {
-            WorksheetProvider.worksheetScala3AdjustmentsForPC(originInput)
-          } else {
-            None
-          }
-
-        val (input, adjust) = inputAndAdjust.getOrElse(
-          originInput,
-          AdjustedLspData.default,
-        )
-
-        for {
-          ds <-
-            pc
-              .didChange(
-                CompilerVirtualFileParams(path.toNIO.toUri(), input.value)
+      .map { pcFuture =>
+        pcFuture.flatMap { pc =>
+          val inputAndAdjust =
+            if (
+              path.isWorksheet && ScalaVersions.isScala3Version(
+                pc.scalaVersion()
               )
-              .asScala
-        } yield {
-          ds.asScala.map(adjust.adjustDiagnostic).toList
+            ) {
+              WorksheetProvider.worksheetScala3AdjustmentsForPC(originInput)
+            } else {
+              None
+            }
+
+          val (input, adjust) = inputAndAdjust.getOrElse(
+            originInput,
+            AdjustedLspData.default,
+          )
+
+          for {
+            ds <-
+              pc
+                .didChange(
+                  CompilerVirtualFileParams(path.toNIO.toUri(), input.value)
+                )
+                .asScala
+          } yield {
+            ds.asScala.map(adjust.adjustDiagnostic).toList
+          }
         }
       }
       .getOrElse(Future.successful(Nil))
@@ -313,7 +327,7 @@ class Compilers(
 
   def didCompile(report: CompileReport): Unit = {
     if (report.getErrors > 0) {
-      buildTargetPCFromCache(report.getTarget).foreach(_.restart())
+      buildTargetPCFromCache(report.getTarget).foreach(_.foreach(_.restart()))
     } else {
       // Restart PC for all build targets that depend on this target since the classfiles
       // may have changed.
@@ -321,7 +335,7 @@ class Compilers(
         target <- buildTargets.allInverseDependencies(report.getTarget)
         compiler <- buildTargetPCFromCache(target)
       } {
-        compiler.restart()
+        compiler.foreach(_.restart())
       }
     }
   }
@@ -332,7 +346,7 @@ class Compilers(
     for {
       data <- item.data
       compiler <- buildTargetPCFromCache(new BuildTargetIdentifier(data.target))
-    } yield compiler.completionItemResolve(item, data.symbol).asScala
+    } yield compiler.flatMap(_.completionItemResolve(item, data.symbol).asScala)
   }.getOrElse(Future.successful(item))
 
   def log: List[String] =
@@ -446,23 +460,23 @@ class Compilers(
               // for one line we only need to adjust column with indentation + ; that was added to the expression
               else -(1 + indentationSize)
 
-            compiler
-              .complete(offsetParams)
-              .asScala
-              .map(list =>
-                list.getItems.asScala.toSeq
-                  .map(
-                    toDebugCompletionItem(
-                      _,
-                      adjustStart,
-                      Position.Range(
-                        input.copy(value = modified),
-                        insertStart,
-                        rangeEnd,
-                      ),
+            compiler.flatMap {
+              _.complete(offsetParams).asScala
+                .map(list =>
+                  list.getItems.asScala.toSeq
+                    .map(
+                      toDebugCompletionItem(
+                        _,
+                        adjustStart,
+                        Position.Range(
+                          input.copy(value = modified),
+                          insertStart,
+                          rangeEnd,
+                        ),
+                      )
                     )
-                  )
-              )
+                )
+            }
           case None =>
             scribe.debug(s"$breakpointPosition was not found in $path ")
             Future.successful(Nil)
@@ -480,141 +494,149 @@ class Compilers(
       Future { new SemanticTokens(emptyTokens) }
     } else {
       val path = params.getTextDocument.getUri.toAbsolutePath
-      loadCompiler(path)
-        .map { compiler =>
-          val (input, _, adjust) =
-            sourceAdjustments(
-              params.getTextDocument().getUri(),
-              compiler.scalaVersion(),
-            )
+      loadCompiler(path) match {
+        case Some(compilerFuture) =>
+          compilerFuture.flatMap { compiler =>
+            val (input, _, adjust) =
+              sourceAdjustments(
+                params.getTextDocument().getUri(),
+                compiler.scalaVersion(),
+              )
 
-          /**
-           * Find the start that is actually contained in the file and not
-           * in the added parts such as imports in sbt.
-           *
-           * @param line line within the adjusted source
-           * @param character line within the adjusted source
-           * @param remaining the rest of the tokens to analyze
-           * @return the first found that should be contained with the rest
-           */
-          @tailrec
-          def findCorrectStart(
-              line: Integer,
-              character: Integer,
-              remaining: List[Integer],
-          ): List[Integer] = {
-            remaining match {
-              case lineDelta :: charDelta :: next =>
-                val newCharacter: Integer =
-                  // only increase character delta if the same line
-                  if (lineDelta == 0) character + charDelta
-                  else charDelta
-
-                val adjustedTokenPos = adjust.adjustPos(
-                  new LspPosition(line + lineDelta, newCharacter),
-                  adjustToZero = false,
-                )
-                if (
-                  adjustedTokenPos.getLine() >= 0 &&
-                  adjustedTokenPos.getCharacter() >= 0
-                )
-                  (adjustedTokenPos.getLine(): Integer) ::
-                    (adjustedTokenPos.getCharacter(): Integer) :: next
-                else
-                  findCorrectStart(
-                    line + lineDelta,
-                    newCharacter,
-                    next.drop(3),
-                  )
-              case _ => Nil
-            }
-          }
-
-          def adjustForScala3Worksheet(tokens: List[Integer]): List[Integer] = {
+            /**
+             * Find the start that is actually contained in the file and not
+             * in the added parts such as imports in sbt.
+             *
+             * @param line line within the adjusted source
+             * @param character line within the adjusted source
+             * @param remaining the rest of the tokens to analyze
+             * @return the first found that should be contained with the rest
+             */
             @tailrec
-            @nowarn
-            def loop(
+            def findCorrectStart(
+                line: Integer,
+                character: Integer,
                 remaining: List[Integer],
-                acc: List[List[Integer]],
-                adjustColumnDelta: Int =
-                  0, // after multiline string we need to adjust column delta of the next token in line
             ): List[Integer] = {
               remaining match {
-                case Nil => acc.reverse.flatten
-                // we need to remove additional indent
-                case deltaLine :: deltaColumn :: len :: next
-                    if deltaLine != 0 =>
-                  if (deltaColumn - 2 >= 0) {
-                    val adjustedColumn: Integer = deltaColumn - 2
-                    val adjusted: List[Integer] =
-                      List(deltaLine, adjustedColumn, len) ++ next.take(2)
-                    loop(
-                      next.drop(2),
-                      adjusted :: acc,
-                    )
-                  }
-                  // for multiline strings, we highlight the entire line inluding leading whitespace
-                  // so we need to adjust the length after removing additional indent
-                  else {
-                    val deltaLen = deltaColumn - 2
-                    val adjustedLen: Integer = Math.max(0, len + deltaLen)
-                    val adjusted: List[Integer] =
-                      List(deltaLine, deltaColumn, adjustedLen) ++ next.take(2)
-                    loop(
-                      next.drop(2),
-                      adjusted :: acc,
-                      deltaLen,
-                    )
-                  }
-                case deltaLine :: deltaColumn :: next =>
-                  val adjustedColumn: Integer = deltaColumn + adjustColumnDelta
-                  val adjusted: List[Integer] =
-                    List(deltaLine, adjustedColumn) ++ next.take(3)
-                  loop(
-                    next.drop(3),
-                    adjusted :: acc,
+                case lineDelta :: charDelta :: next =>
+                  val newCharacter: Integer =
+                    // only increase character delta if the same line
+                    if (lineDelta == 0) character + charDelta
+                    else charDelta
+
+                  val adjustedTokenPos = adjust.adjustPos(
+                    new LspPosition(line + lineDelta, newCharacter),
+                    adjustToZero = false,
                   )
+                  if (
+                    adjustedTokenPos.getLine() >= 0 &&
+                    adjustedTokenPos.getCharacter() >= 0
+                  )
+                    (adjustedTokenPos.getLine(): Integer) ::
+                      (adjustedTokenPos.getCharacter(): Integer) :: next
+                  else
+                    findCorrectStart(
+                      line + lineDelta,
+                      newCharacter,
+                      next.drop(3),
+                    )
+                case _ => Nil
               }
             }
 
-            // Delta for first token was already adjusted in `findCorrectStart`
-            loop(tokens.drop(5), List(tokens.take(5)))
-          }
-
-          val vFile =
-            CompilerVirtualFileParams(path.toNIO.toUri(), input.text, token)
-          val isScala3 = ScalaVersions.isScala3Version(compiler.scalaVersion())
-
-          compiler
-            .semanticTokens(vFile)
-            .asScala
-            .map { nodes =>
-              val plist =
-                try {
-                  SemanticTokensProvider.provide(
-                    nodes.asScala.toList,
-                    vFile,
-                    isScala3,
-                  )
-                } catch {
-                  case NonFatal(e) =>
-                    scribe.error(
-                      s"Failed to tokenize input for semantic tokens for $path",
-                      e,
+            def adjustForScala3Worksheet(
+                tokens: List[Integer]
+            ): List[Integer] = {
+              @tailrec
+              @nowarn
+              def loop(
+                  remaining: List[Integer],
+                  acc: List[List[Integer]],
+                  adjustColumnDelta: Int =
+                    0, // after multiline string we need to adjust column delta of the next token in line
+              ): List[Integer] = {
+                remaining match {
+                  case Nil => acc.reverse.flatten
+                  // we need to remove additional indent
+                  case deltaLine :: deltaColumn :: len :: next
+                      if deltaLine != 0 =>
+                    if (deltaColumn - 2 >= 0) {
+                      val adjustedColumn: Integer = deltaColumn - 2
+                      val adjusted: List[Integer] =
+                        List(deltaLine, adjustedColumn, len) ++ next.take(2)
+                      loop(
+                        next.drop(2),
+                        adjusted :: acc,
+                      )
+                    }
+                    // for multiline strings, we highlight the entire line inluding leading whitespace
+                    // so we need to adjust the length after removing additional indent
+                    else {
+                      val deltaLen = deltaColumn - 2
+                      val adjustedLen: Integer = Math.max(0, len + deltaLen)
+                      val adjusted: List[Integer] =
+                        List(deltaLine, deltaColumn, adjustedLen) ++ next.take(
+                          2
+                        )
+                      loop(
+                        next.drop(2),
+                        adjusted :: acc,
+                        deltaLen,
+                      )
+                    }
+                  case deltaLine :: deltaColumn :: next =>
+                    val adjustedColumn: Integer =
+                      deltaColumn + adjustColumnDelta
+                    val adjusted: List[Integer] =
+                      List(deltaLine, adjustedColumn) ++ next.take(3)
+                    loop(
+                      next.drop(3),
+                      adjusted :: acc,
                     )
-                    Nil
                 }
-
-              val tokens =
-                findCorrectStart(0, 0, plist.toList)
-              if (isScala3 && path.isWorksheet) {
-                new SemanticTokens(adjustForScala3Worksheet(tokens).asJava)
-              } else {
-                new SemanticTokens(tokens.asJava)
               }
+
+              // Delta for first token was already adjusted in `findCorrectStart`
+              loop(tokens.drop(5), List(tokens.take(5)))
             }
-        }
-        .getOrElse(Future.successful(new SemanticTokens(emptyTokens)))
+
+            val vFile =
+              CompilerVirtualFileParams(path.toNIO.toUri(), input.text, token)
+            val isScala3 =
+              ScalaVersions.isScala3Version(compiler.scalaVersion())
+
+            compiler
+              .semanticTokens(vFile)
+              .asScala
+              .map { nodes =>
+                val plist =
+                  try {
+                    SemanticTokensProvider.provide(
+                      nodes.asScala.toList,
+                      vFile,
+                      isScala3,
+                    )
+                  } catch {
+                    case NonFatal(e) =>
+                      scribe.error(
+                        s"Failed to tokenize input for semantic tokens for $path",
+                        e,
+                      )
+                      Nil
+                  }
+
+                val tokens =
+                  findCorrectStart(0, 0, plist.toList)
+                if (isScala3 && path.isWorksheet) {
+                  new SemanticTokens(adjustForScala3Worksheet(tokens).asJava)
+                } else {
+                  new SemanticTokens(tokens.asJava)
+                }
+              }
+          }
+        case _ => Future { new SemanticTokens(emptyTokens) }
+      }
     }
 
   }
@@ -683,8 +705,7 @@ class Compilers(
             Future.successful(adjustInlayHints(hints))
           }
         }
-    }
-      .getOrElse(Future.successful(Nil.asJava))
+    }.getOrElse(Nil.asJava)
   }
 
   def completions(
@@ -700,7 +721,7 @@ class Compilers(
           adjust.adjustCompletionListInPlace(list)
           list
         }
-    }.getOrElse(Future.successful(new CompletionList(Nil.asJava)))
+    }.getOrElse(new CompletionList(Nil.asJava))
 
   def autoImports(
       params: TextDocumentPositionParams,
@@ -719,7 +740,7 @@ class Compilers(
           list
         }
     }
-  }.getOrElse(Future.successful(Nil.asJava))
+  }.getOrElse(Nil.asJava)
 
   def insertInferredType(
       params: TextDocumentPositionParams,
@@ -732,7 +753,7 @@ class Compilers(
           adjust.adjustTextEdits(edits)
         }
     }
-  }.getOrElse(Future.successful(Nil.asJava))
+  }.getOrElse(Nil.asJava)
 
   def inlineEdits(
       params: TextDocumentPositionParams,
@@ -742,7 +763,7 @@ class Compilers(
       pc.inlineValue(CompilerOffsetParamsUtils.fromPos(pos, token))
         .asScala
         .map(adjust.adjustTextEdits)
-    }.getOrElse(Future.successful(Nil.asJava))
+    }.getOrElse(Nil.asJava)
 
   def documentHighlight(
       params: TextDocumentPositionParams,
@@ -755,7 +776,7 @@ class Compilers(
           adjust.adjustDocumentHighlight(highlights)
         }
     }
-  }.getOrElse(Future.successful(Nil.asJava))
+  }.getOrElse(Nil.asJava)
 
   def extractMethod(
       doc: TextDocumentIdentifier,
@@ -773,7 +794,7 @@ class Compilers(
             adjust.adjustTextEdits(edits)
           }
     }
-  }.getOrElse(Future.successful(Nil.asJava))
+  }.getOrElse(Nil.asJava)
 
   def convertToNamedArguments(
       position: TextDocumentPositionParams,
@@ -789,7 +810,7 @@ class Compilers(
           adjust.adjustTextEdits(edits)
         }
     }
-  }.getOrElse(Future.successful(Nil.asJava))
+  }.getOrElse(Nil.asJava)
 
   def implementAbstractMembers(
       params: TextDocumentPositionParams,
@@ -802,7 +823,7 @@ class Compilers(
           adjust.adjustTextEdits(edits)
         }
     }
-  }.getOrElse(Future.successful(Nil.asJava))
+  }.getOrElse(Nil.asJava)
 
   def hover(
       params: HoverExtParams,
@@ -813,7 +834,7 @@ class Compilers(
         .asScala
         .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
     }
-  }.getOrElse(Future.successful(None))
+  }.getOrElse(None)
 
   def prepareRename(
       params: TextDocumentPositionParams,
@@ -827,7 +848,7 @@ class Compilers(
           range.map(adjust.adjustRange(_))
         }
     }
-  }.getOrElse(Future.successful(None.asJava))
+  }.getOrElse(None.asJava)
 
   def rename(
       params: RenameParams,
@@ -842,7 +863,7 @@ class Compilers(
           adjust.adjustTextEdits(edits)
         }
     }
-  }.getOrElse(Future.successful(Nil.asJava))
+  }.getOrElse(Nil.asJava)
 
   def definition(
       params: TextDocumentPositionParams,
@@ -863,9 +884,11 @@ class Compilers(
       symbol: String,
   ): Future[Option[PcSymbolInformation]] = {
     loadCompiler(path, forceScala = true)
-      .map(
-        _.info(symbol).asScala
-          .map(_.asScala.map(PcSymbolInformation.from))
+      .map(compilerLazy =>
+        compilerLazy.flatMap(
+          _.info(symbol).asScala
+            .map(_.asScala.map(PcSymbolInformation.from))
+        )
       )
       .getOrElse(Future(None))
   }
@@ -904,7 +927,7 @@ class Compilers(
             None,
           )
         }
-    }.getOrElse(Future.successful(DefinitionResult.empty))
+    }.getOrElse(DefinitionResult.empty)
 
   def signatureHelp(
       params: TextDocumentPositionParams,
@@ -912,7 +935,7 @@ class Compilers(
   ): Future[SignatureHelp] =
     withPCAndAdjustLsp(params) { (pc, pos, _) =>
       pc.signatureHelp(CompilerOffsetParamsUtils.fromPos(pos, token)).asScala
-    }.getOrElse(Future.successful(new SignatureHelp()))
+    }.getOrElse(new SignatureHelp())
 
   def selectionRange(
       params: SelectionRangeParams,
@@ -922,7 +945,7 @@ class Compilers(
       val offsetPositions: ju.List[OffsetParams] =
         positions.map(CompilerOffsetParamsUtils.fromPos(_, token))
       pc.selectionRange(offsetPositions).asScala
-    }.getOrElse(Future.successful(Nil.asJava))
+    }.map(_.flatten).getOrElse(Future.successful(Nil.asJava))
   }
 
   /**
@@ -935,9 +958,9 @@ class Compilers(
   def loadCompiler(
       path: AbsolutePath,
       forceScala: Boolean = false,
-  ): Option[PresentationCompiler] = {
+  ): Option[Future[PresentationCompiler]] = {
 
-    def fromBuildTarget: Option[PresentationCompiler] = {
+    def fromBuildTarget: Option[Future[PresentationCompiler]] = {
       val target = buildTargets
         .inverseSources(path)
 
@@ -960,7 +983,7 @@ class Compilers(
 
   def loadWorksheetCompiler(
       path: AbsolutePath
-  ): Option[PresentationCompiler] = {
+  ): Option[Future[PresentationCompiler]] = {
     worksheetProvider.getWorksheetPCData(path).flatMap { data =>
       maybeRestartWorksheetPresentationCompiler(path, data)
       worksheetsCache.get(path)
@@ -1016,11 +1039,13 @@ class Compilers(
             sourceMapper,
             workspaceFallback = Some(search),
           )
-          newCompiler(
-            scalaTarget,
-            mtags,
-            classpath,
-            worksheetSearch,
+          Future.successful(
+            newCompiler(
+              scalaTarget,
+              mtags,
+              classpath,
+              worksheetSearch,
+            )
           )
         },
       )
@@ -1031,24 +1056,26 @@ class Compilers(
         path, {
           val scalaVersion =
             scalaVersionSelector.fallbackScalaVersion(isAmmonite = false)
-          createStandaloneCompiler(
-            scalaVersion,
-            classpath,
-            StandaloneSymbolSearch(
+          Future.successful(
+            createStandaloneCompiler(
               scalaVersion,
-              workspace,
-              buffers,
-              sources,
               classpath,
-              excludedPackages,
-              userConfig,
-              trees,
-              buildTargets,
-              saveSymbolFileToDisk = !config.isVirtualDocumentSupported(),
-              sourceMapper,
-            ),
-            path.toString(),
-            path,
+              StandaloneSymbolSearch(
+                scalaVersion,
+                workspace,
+                buffers,
+                sources,
+                classpath,
+                excludedPackages,
+                userConfig,
+                trees,
+                buildTargets,
+                saveSymbolFileToDisk = !config.isVirtualDocumentSupported(),
+                sourceMapper,
+              ),
+              path.toString(),
+              path,
+            )
           )
         },
       )
@@ -1057,23 +1084,25 @@ class Compilers(
 
   def loadCompiler(
       targetId: BuildTargetIdentifier
-  ): Option[PresentationCompiler] = {
+  ): Option[Future[PresentationCompiler]] = {
     val target = buildTargets.scalaTarget(targetId)
     target.flatMap(loadCompilerForTarget)
   }
 
   def loadJavaCompiler(
       targetId: BuildTargetIdentifier
-  ): Option[PresentationCompiler] = {
+  ): Option[Future[PresentationCompiler]] = {
     val targetClasspath = buildTargets.targetClasspath(targetId)
-    targetClasspath.flatMap(classpath =>
-      loadJavaCompilerForTarget(targetId.getUri, classpath)
+    targetClasspath.map(lazyClasspath =>
+      lazyClasspath.map {
+        loadJavaCompilerForTarget(targetId.getUri, _)
+      }
     )
   }
 
   def loadCompilerForTarget(
       scalaTarget: ScalaTarget
-  ): Option[PresentationCompiler] = {
+  ): Option[Future[PresentationCompiler]] = {
     val scalaVersion = scalaTarget.scalaVersion
     mtagsResolver.resolve(scalaVersion) match {
       case Some(mtags) =>
@@ -1097,21 +1126,20 @@ class Compilers(
   def loadJavaCompilerForTarget(
       targetUri: String,
       classpath: List[String],
-  ): Option[PresentationCompiler] = {
+  ): PresentationCompiler = {
     val pc = JavaPresentationCompiler()
-    Some(
-      configure(pc, search)
-        .newInstance(
-          targetUri,
-          classpath.toAbsoluteClasspath.map(_.toNIO).toSeq.asJava,
-          log.asJava,
-        )
-    )
+    configure(pc, search)
+      .newInstance(
+        targetUri,
+        classpath.toAbsoluteClasspath.map(_.toNIO).toSeq.asJava,
+        log.asJava,
+      )
+
   }
 
   private def withPCAndAdjustLsp[T](
       params: SelectionRangeParams
-  )(fn: (PresentationCompiler, ju.List[Position]) => T): Option[T] = {
+  )(fn: (PresentationCompiler, ju.List[Position]) => T): Option[Future[T]] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     loadCompiler(path).map { compiler =>
       val input = path
@@ -1120,37 +1148,50 @@ class Compilers(
 
       val positions =
         params.getPositions().asScala.flatMap(_.toMeta(input)).asJava
-
-      fn(compiler, positions)
+      compiler.map {
+        fn(_, positions)
+      }
     }
   }
 
   private def withPCAndAdjustLsp[T](
       params: TextDocumentPositionParams
-  )(fn: (PresentationCompiler, Position, AdjustLspData) => T): Option[T] = {
+  )(
+      fn: (PresentationCompiler, Position, AdjustLspData) => T
+  ): Future[Option[T]] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    loadCompiler(path).flatMap { compiler =>
-      val (input, pos, adjust) =
-        sourceAdjustments(
-          params,
-          compiler.scalaVersion(),
-        )
-      pos.toMeta(input).map(metaPos => fn(compiler, metaPos, adjust))
-    }
+    loadCompiler(path)
+      .map { compilerFuture =>
+        compilerFuture.map { compiler =>
+          val (input, pos, adjust) =
+            sourceAdjustments(
+              params,
+              compiler.scalaVersion(),
+            )
+          pos.toMeta(input).map(metaPos => fn(compiler, metaPos, adjust))
+        }
+      }
+      .getOrElse(Future.successful(None))
   }
 
   private def withPCAndAdjustLsp[T](
       params: InlayHintParams
-  )(fn: (PresentationCompiler, Position, AdjustLspData) => T): Option[T] = {
+  )(
+      fn: (PresentationCompiler, Position, AdjustLspData) => T
+  ): Future[Option[T]] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    loadCompiler(path).flatMap { compiler =>
-      val (input, pos, adjust) =
-        sourceAdjustments(
-          params,
-          compiler.scalaVersion(),
-        )
-      pos.toMeta(input).map(metaPos => fn(compiler, metaPos, adjust))
-    }
+    loadCompiler(path)
+      .map { compilerFuture =>
+        compilerFuture.map { compiler =>
+          val (input, pos, adjust) =
+            sourceAdjustments(
+              params,
+              compiler.scalaVersion(),
+            )
+          pos.toMeta(input).map(metaPos => fn(compiler, metaPos, adjust))
+        }
+      }
+      .getOrElse(Future.successful(None))
   }
 
   private def withPCAndAdjustLsp[T](
@@ -1164,50 +1205,60 @@ class Compilers(
           Position,
           AdjustLspData,
       ) => T
-  ): Option[T] = {
+  ): Future[Option[T]] = {
     val path = uri.toAbsolutePath
-    loadCompiler(path).flatMap { compiler =>
-      val (input, adjustRequest, adjustResponse) =
-        sourceAdjustments(
-          uri,
-          compiler.scalaVersion(),
-        )
-      for {
-        metaRange <- new LspRange(
-          adjustRequest(range.getStart()),
-          adjustRequest(range.getEnd()),
-        ).toMeta(input)
-        metaExtractionPos <- adjustRequest(extractionPos).toMeta(input)
-      } yield fn(compiler, metaRange, metaExtractionPos, adjustResponse)
-    }
+    loadCompiler(path)
+      .map { lazyCompiler =>
+        lazyCompiler.map { compiler =>
+          val (input, adjustRequest, adjustResponse) =
+            sourceAdjustments(
+              uri,
+              compiler.scalaVersion(),
+            )
+          for {
+            metaRange <- new LspRange(
+              adjustRequest(range.getStart()),
+              adjustRequest(range.getEnd()),
+            ).toMeta(input)
+            metaExtractionPos <- adjustRequest(extractionPos).toMeta(input)
+          } yield fn(compiler, metaRange, metaExtractionPos, adjustResponse)
+        }
+      }
+      .getOrElse(Future.successful(None))
   }
 
   private def withPCAndAdjustLsp[T](
       params: HoverExtParams
-  )(fn: (PresentationCompiler, Position, AdjustLspData) => T): Option[T] = {
+  )(
+      fn: (PresentationCompiler, Position, AdjustLspData) => T
+  ): Future[Option[T]] = {
 
     val path = params.textDocument.getUri.toAbsolutePath
-    loadCompiler(path).flatMap { compiler =>
-      if (params.range != null) {
-        val (input, range, adjust) = sourceAdjustments(
-          params,
-          compiler.scalaVersion(),
-        )
-        range.toMeta(input).map(fn(compiler, _, adjust))
+    loadCompiler(path)
+      .map { compiler =>
+        compiler.map { compiler =>
+          if (params.range != null) {
+            val (input, range, adjust) = sourceAdjustments(
+              params,
+              compiler.scalaVersion(),
+            )
+            range.toMeta(input).map(fn(compiler, _, adjust))
 
-      } else {
-        val positionParams =
-          new TextDocumentPositionParams(
-            params.textDocument,
-            params.getPosition,
-          )
-        val (input, pos, adjust) = sourceAdjustments(
-          positionParams,
-          compiler.scalaVersion(),
-        )
-        pos.toMeta(input).map(fn(compiler, _, adjust))
+          } else {
+            val positionParams =
+              new TextDocumentPositionParams(
+                params.textDocument,
+                params.getPosition,
+              )
+            val (input, pos, adjust) = sourceAdjustments(
+              positionParams,
+              compiler.scalaVersion(),
+            )
+            pos.toMeta(input).map(fn(compiler, _, adjust))
+          }
+        }
       }
-    }
+      .getOrElse(Future.successful(None))
   }
 
   private def sourceAdjustments(
@@ -1284,11 +1335,18 @@ class Compilers(
       target: ScalaTarget,
       mtags: MtagsBinaries,
       search: SymbolSearch,
-  ): PresentationCompiler = {
-    val classpath =
-      target.scalac.classpath.toAbsoluteClasspath.map(_.toNIO).toSeq
-    newCompiler(target, mtags, classpath, search)
-  }
+  ): Future[PresentationCompiler] =
+    buildTargets
+      .targetClasspath(target.id)
+      .getOrElse(Future.successful(Nil))
+      .map { classpath =>
+        newCompiler(
+          target,
+          mtags,
+          classpath.toAbsoluteClasspath.map(_.toNIO).toSeq,
+          search,
+        )
+      }
 
   def newCompiler(
       target: ScalaTarget,

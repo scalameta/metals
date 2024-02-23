@@ -52,12 +52,12 @@ case class ScalafixProvider(
     TrieMap.empty[ScalafixRulesClasspathKey, URLClassLoader]
 
   // Warms up the Scalafix instance so that the first organize imports request responds faster.
-  def load(): Unit = {
+  def load(): Future[Unit] = {
     if (!Testing.isEnabled) {
       val tmp = workspace
         .resolve(Directories.tmp)
         .resolve(s"Main${Random.nextLong()}.scala")
-      try {
+      Future {
         val targets =
           buildTargets.allScala.toList.groupBy(_.scalaVersion).flatMap {
             case (_, targets) => targets.headOption
@@ -73,21 +73,25 @@ case class ScalafixProvider(
               produceSemanticdb = true,
               List(organizeImportRuleName),
             )
-        val evaluatedCorrectly = testEvaluation.forall {
-          case Success(evaluation) => evaluation.isSuccessful()
-          case _ => false
+        Future.sequence(testEvaluation)
+      }.flatten
+        .map { results =>
+          results.forall(_.isSuccessful())
         }
-        if (!evaluatedCorrectly) scribe.debug("Could not warm up Scalafix")
-      } catch {
-        case e: Throwable =>
+        .map { evaluated =>
+          if (!evaluated) scribe.debug("Could not warm up Scalafix")
+
+        }
+        .recover { e: Throwable =>
           scribe.debug(
             s"Scalafix issue while warming up due to issue: ${e.getMessage()}",
             e,
           )
-      } finally {
-        if (tmp.exists) tmp.delete()
-      }
-    }
+        }
+        .andThen { case _ =>
+          if (tmp.exists) tmp.delete()
+        }
+    } else Future.successful(())
   }
 
   def runAllRules(file: AbsolutePath): Future[List[l.TextEdit]] = {
@@ -136,56 +140,58 @@ case class ScalafixProvider(
           rules,
         )
 
-      scalafixEvaluation match {
-        case Failure(exception) =>
+      scalafixEvaluation
+        .recover { case exception =>
           reportScalafixError(
             "Unable to run scalafix, please check logs for more info.",
             exception,
           )
-          Future.failed(exception)
-        case Success(results)
-            if !scalafixSucceded(results) && hasStaleOrMissingSemanticdb(
-              results
-            ) && buildClient.buildHasErrors(file) =>
-          val msg = "Attempt to organize your imports failed. " +
-            "It looks like you have compilation issues causing your semanticdb to be stale. " +
-            "Ensure everything is compiling and try again."
-          scribe.warn(
-            msg
-          )
-          languageClient.showMessage(
-            MessageType.Warning,
-            msg,
-          )
-          Future.successful(Nil)
-        case Success(results) if !scalafixSucceded(results) =>
-          val scalafixError = getMessageErrorFromScalafix(results)
-          val exception = ScalafixRunException(scalafixError)
-          if (
-            scalafixError.startsWith("Unknown rule") ||
-            scalafixError.startsWith("Class not found")
-          ) {
-            languageClient
-              .showMessage(Messages.unknownScalafixRules(scalafixError))
-          }
+          throw exception
+        }
+        .flatMap {
+          case results
+              if !scalafixSucceded(results) && hasStaleOrMissingSemanticdb(
+                results
+              ) && buildClient.buildHasErrors(file) =>
+            val msg = "Attempt to organize your imports failed. " +
+              "It looks like you have compilation issues causing your semanticdb to be stale. " +
+              "Ensure everything is compiling and try again."
+            scribe.warn(
+              msg
+            )
+            languageClient.showMessage(
+              MessageType.Warning,
+              msg,
+            )
+            Future.successful(Nil)
+          case results if !scalafixSucceded(results) =>
+            val scalafixError = getMessageErrorFromScalafix(results)
+            val exception = ScalafixRunException(scalafixError)
+            if (
+              scalafixError.startsWith("Unknown rule") ||
+              scalafixError.startsWith("Class not found")
+            ) {
+              languageClient
+                .showMessage(Messages.unknownScalafixRules(scalafixError))
+            }
 
-          scribe.error(scalafixError, exception)
-          if (!retried && hasStaleOrMissingSemanticdb(results)) {
-            // Retry, since the semanticdb might be stale
-            runScalafixRules(file, scalaTarget, rules, retried = true)
-          } else {
-            Future.failed(exception)
-          }
-        case Success(results) =>
-          Future.successful {
-            val edits = for {
-              fileEvaluation <- results.getFileEvaluations().headOption
-              patches <- fileEvaluation.previewPatches().asScala
-            } yield textEditsFrom(patches, inBuffers)
-            edits.getOrElse(Nil)
-          }
+            scribe.error(scalafixError, exception)
+            if (!retried && hasStaleOrMissingSemanticdb(results)) {
+              // Retry, since the semanticdb might be stale
+              runScalafixRules(file, scalaTarget, rules, retried = true)
+            } else {
+              Future.failed(exception)
+            }
+          case results =>
+            Future.successful {
+              val edits = for {
+                fileEvaluation <- results.getFileEvaluations().headOption
+                patches <- fileEvaluation.previewPatches().asScala
+              } yield textEditsFrom(patches, inBuffers)
+              edits.getOrElse(Nil)
+            }
 
-      }
+        }
     }
   }
 
@@ -337,7 +343,7 @@ case class ScalafixProvider(
       inBuffers: String,
       produceSemanticdb: Boolean,
       rules: List[String],
-  ): Try[ScalafixEvaluation] = {
+  ): Future[ScalafixEvaluation] = {
     val isScala3 = ScalaVersions.isScala3Version(scalaTarget.scalaVersion)
     val scalaBinaryVersion =
       if (isScala3) "2.13" else scalaTarget.scalaBinaryVersion
@@ -374,11 +380,15 @@ case class ScalafixProvider(
       )
     // It seems that Scalafix ignores the targetroot parameter and searches the classpath
     // Prepend targetroot to make sure that it's picked up first always
-    val classpath =
-      (targetRoot.toList ++ scalaTarget.fullClasspath).asJava
+    val lazyClasspath = buildTargets
+      .fullClasspath(scalaTarget.id)
+      .getOrElse(Future.successful(Nil))
+      .map { classpath =>
+        (targetRoot.toList ++ classpath.map(_.toNIO)).asJava
+      }
 
     val isSource3 = scalaTarget.scalac.getOptions().contains("-Xsource:3")
-    for {
+    val result = for {
       api <- getScalafix(scalaBinaryVersion)
       urlClassLoaderWithExternalRule <- getRuleClassLoader(
         scalafixRulesKey,
@@ -399,22 +409,25 @@ case class ScalafixProvider(
         list
       }
 
-      val evaluated = api
-        .newArguments()
-        .withScalaVersion(scalaVersion)
-        .withClasspath(classpath)
-        .withToolClasspath(urlClassLoaderWithExternalRule)
-        .withConfig(scalafixConf(isScala3 || isSource3).asJava)
-        .withRules(rules.asJava)
-        .withPaths(List(diskFilePath.toNIO).asJava)
-        .withSourceroot(sourceroot.toNIO)
-        .withScalacOptions(scalacOptions)
-        .evaluate()
+      lazyClasspath.map { classpath =>
+        val evaluated = api
+          .newArguments()
+          .withScalaVersion(scalaVersion)
+          .withClasspath(classpath)
+          .withToolClasspath(urlClassLoaderWithExternalRule)
+          .withConfig(scalafixConf(isScala3 || isSource3).asJava)
+          .withRules(rules.asJava)
+          .withPaths(List(diskFilePath.toNIO).asJava)
+          .withSourceroot(sourceroot.toNIO)
+          .withScalacOptions(scalacOptions)
+          .evaluate()
 
-      if (produceSemanticdb)
-        targetRoot.foreach(AbsolutePath(_).deleteRecursively())
-      evaluated
+        if (produceSemanticdb)
+          targetRoot.foreach(AbsolutePath(_).deleteRecursively())
+        evaluated
+      }
     }
+    result.flatten
   }
 
   private def reportScalafixError(
@@ -440,15 +453,15 @@ case class ScalafixProvider(
 
   private def getScalafix(
       scalaBinaryVersion: ScalaBinaryVersion
-  ): Try[Scalafix] = {
+  ): Future[Scalafix] = {
     scalafixCache.get(scalaBinaryVersion) match {
-      case Some(value) => Success(value)
+      case Some(value) => Future.successful(value)
       case None =>
         statusBar.trackBlockingTask("Downloading scalafix") {
           val scalafix =
-            if (scalaBinaryVersion == "2.11") Try(scala211Fallback)
+            if (scalaBinaryVersion == "2.11") Future(scala211Fallback)
             else
-              Try(Scalafix.fetchAndClassloadInstance(scalaBinaryVersion))
+              Future(Scalafix.fetchAndClassloadInstance(scalaBinaryVersion))
           scalafix.foreach(api => scalafixCache.update(scalaBinaryVersion, api))
           scalafix
         }
@@ -475,9 +488,9 @@ case class ScalafixProvider(
   private def getRuleClassLoader(
       scalfixRulesKey: ScalafixRulesClasspathKey,
       scalafixClassLoader: ClassLoader,
-  ): Try[URLClassLoader] = {
+  ): Future[URLClassLoader] = {
     rulesClassloaderCache.get(scalfixRulesKey) match {
-      case Some(value) => Success(value)
+      case Some(value) => Future.successful(value)
       case None =>
         statusBar.trackBlockingTask(
           "Downloading scalafix rules' dependencies"
@@ -496,7 +509,7 @@ case class ScalafixProvider(
             else None
 
           val allRules =
-            Try(
+            Future(
               Embedded.rulesClasspath(
                 rulesDependencies.toList ++ organizeImportRule
               )
@@ -583,8 +596,8 @@ object ScalafixProvider {
       userConfig: UserConfiguration,
       rules: List[String],
   ): Set[Dependency] = {
-    val fromSettings = userConfig.scalafixRulesDependencies.flatMap {
-      dependencyString =>
+    val fromSettings =
+      userConfig.scalafixRulesDependencies.flatMap { dependencyString =>
         Try {
           Dependency.parse(
             dependencyString,
@@ -597,7 +610,7 @@ object ScalafixProvider {
           case Success(dep) =>
             Some(dep)
         }
-    }
+      }
     val builtInRuleDeps = builtInRules(scalaBinaryVersion)
 
     val allDeps = fromSettings ++ rules.flatMap(builtInRuleDeps.get)

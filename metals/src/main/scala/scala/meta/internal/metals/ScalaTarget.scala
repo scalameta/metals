@@ -1,7 +1,5 @@
 package scala.meta.internal.metals
 
-import java.nio.file.Path
-
 import scala.meta.Dialect
 import scala.meta.dialects._
 import scala.meta.internal.builds.BazelBuildTool
@@ -97,11 +95,44 @@ case class ScalaTarget(
   def isSourcerootDeclared: Boolean =
     scalac.isSourcerootDeclared(scalaVersion) || semanticDbEnabledAlternatively
 
-  def fullClasspath: List[Path] =
-    scalac.classpath.map(_.toAbsolutePath).collect {
-      case path if path.isJar || path.isDirectory =>
-        path.toNIO
-    }
+  /**
+   * If the build server supports lazy classpath resolution, we will
+   * not get any classpath data eagerly and we should not
+   * use this endpoint. It should only be used as a fallback.
+   *
+   * This is due to the fact that we don't request classpath as it
+   * can be resonably expensive.
+   *
+   * @return non empty classpath only if it was resolved prior
+   */
+  def lazyClasspath: Option[List[String]] =
+    if (scalac.getClasspath().isEmpty)
+      None
+    else
+      Some(scalac.getClasspath().asScala.toList)
+
+  /**
+   * This method collects jars from classpath defined in scalacOptions.
+   *
+   * If the build server supports lazy classpath resolution, we will
+   * not get any classpath data eagerly and we should not
+   * use this endpoint. It should only be used as a fallback.
+   *
+   * This is due to the fact that we don't request classpath as it
+   * can be resonably expensive.
+   *
+   * We should use the buildTargetDependencyModules information
+   * from the indexer instead.
+   *
+   * @return non empty classpath jar list if it was resolved prior
+   */
+  def lazyJarClasspath: Option[List[AbsolutePath]] =
+    lazyClasspath.map(collectJars)
+
+  private def collectJars(paths: List[String]) =
+    paths
+      .filter(_.endsWith(".jar"))
+      .map(_.toAbsolutePath)
 
   def classDirectory: String = scalac.getClassDirectory()
 

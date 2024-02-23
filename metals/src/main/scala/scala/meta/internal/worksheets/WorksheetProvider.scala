@@ -81,32 +81,37 @@ class WorksheetProvider(
   private lazy val threadStopper: ScheduledExecutorService =
     Executors.newSingleThreadScheduledExecutor()
   private val cancelables = new MutableCancelable()
-  private val mdocs = new TrieMap[MdocKey, MdocRef]()
+  private val mdocs = new TrieMap[MdocKey, Future[MdocRef]]()
   private val exportableEvaluations =
     new TrieMap[VirtualFile, EvaluatedWorksheet]()
   private val worksheetPcData =
     new TrieMap[AbsolutePath, WorksheetPcData]()
 
-  private def fallabackMdoc: Mdoc = {
+  private def fallbackMdoc: Future[Mdoc] = {
     val scalaVersion =
       scalaVersionSelector.fallbackScalaVersion(isAmmonite = false)
     mdocs
       .get(MdocKey.Default)
-      .flatMap(ref =>
-        if (ref.scalaVersion == scalaVersion) Some(ref.value)
-        else {
-          ref.value.shutdown()
-          None
+      .map(futureRef =>
+        futureRef.map { ref =>
+          if (ref.scalaVersion == scalaVersion) Some(ref.value)
+          else {
+            ref.value.shutdown()
+            None
+          }
         }
       )
-      .getOrElse {
-        val mdoc =
-          embedded
-            .mdoc(scalaVersion)
-            .withClasspath(Embedded.scalaLibrary(scalaVersion).asJava)
-        val ref = MdocRef(scalaVersion, mdoc)
-        mdocs.update(MdocKey.Default, ref)
-        ref.value
+      .getOrElse(Future.successful(None))
+      .map { mdoc =>
+        mdoc.getOrElse {
+          val mdoc =
+            embedded
+              .mdoc(scalaVersion)
+              .withClasspath(Embedded.scalaLibrary(scalaVersion).asJava)
+          val ref = MdocRef(scalaVersion, mdoc)
+          mdocs.update(MdocKey.Default, Future.successful(ref))
+          ref.value
+        }
       }
   }
 
@@ -115,7 +120,7 @@ class WorksheetProvider(
   }
 
   private def clearBuildTarget(key: MdocKey): Unit = {
-    mdocs.remove(key).foreach(_.value.shutdown())
+    mdocs.remove(key).foreach(_.map(_.value.shutdown()))
   }
 
   def reset(): Unit = {
@@ -238,7 +243,7 @@ class WorksheetProvider(
         scribe.error(s"worksheet: $path", e)
         None
     }
-    def runEvaluation(): Unit = {
+    def runEvaluation(mdoc: Mdoc): Unit = {
       cancelables.cancel() // Cancel previous worksheet evaluations.
       val timer = new Timer(Time.system)
       result.asScala.foreach { _ =>
@@ -260,7 +265,7 @@ class WorksheetProvider(
       val thread = new Thread(s"Evaluating Worksheet ${path.filename}") {
         override def run(): Unit = {
           result.complete(
-            try Some(evaluateWorksheet(path))
+            try Some(evaluateWorksheet(path, mdoc))
             catch onError
           )
         }
@@ -278,18 +283,22 @@ class WorksheetProvider(
         )
       }
     }
-    jobs.submit(
-      result,
-      () => {
-        try runEvaluation()
-        catch {
-          case e: Throwable =>
-            onError(e)
-            ()
-        }
-      },
-    )
-    result.asScala.recover(onError)
+
+    getMdoc(path).flatMap { mdoc =>
+      jobs.submit(
+        result,
+        () => {
+          try runEvaluation(mdoc)
+          catch {
+            case e: Throwable =>
+              onError(e)
+              ()
+          }
+        },
+      )
+
+      result.asScala.recover(onError)
+    }
   }
 
   private def toCancellable(
@@ -372,9 +381,9 @@ class WorksheetProvider(
   }
 
   private def evaluateWorksheet(
-      path: AbsolutePath
+      path: AbsolutePath,
+      mdoc: Mdoc,
   ): EvaluatedWorksheet = {
-    val mdoc = getMdoc(path)
     val input = path.toInputFromBuffers(buffers)
     val relativePath = path.toRelative(workspace)
     val evaluatedWorksheet =
@@ -422,20 +431,22 @@ class WorksheetProvider(
       evaluatedWorksheet.dependencies().asScala.toSeq
     ).filter(_.toString().endsWith("-sources.jar"))
 
-  private def getMdoc(path: AbsolutePath): Mdoc = {
+  private def getMdoc(path: AbsolutePath): Future[Mdoc] = {
     val mdoc = for {
       target <- buildTargets.inverseSources(path)
       mdoc <- getMdoc(target)
     } yield mdoc
-    mdoc.getOrElse(fallabackMdoc)
+    mdoc.getOrElse(fallbackMdoc)
   }
 
-  private def getMdoc(target: BuildTargetIdentifier): Option[Mdoc] = {
+  private def getMdoc(target: BuildTargetIdentifier): Option[Future[Mdoc]] = {
 
     val key = MdocKey.BuildTarget(target)
-    mdocs.get(key).map(_.value).orElse {
+    mdocs.get(key).map(_.map(_.value)).orElse {
       for {
-        info <- buildTargets.scalaTarget(target)
+        (info, fullClasspathLazy) <- buildTargets
+          .scalaTarget(target)
+          .zip(buildTargets.fullClasspath(target))
         scalaVersion = info.scalaVersion
       } yield {
         // We filter out NonUnitStatements from wartremover or you'll get an
@@ -448,12 +459,15 @@ class WorksheetProvider(
           .filterNot(_.contains("Ycheck-reentrant"))
           .filterNot(_.contains("org.wartremover.warts.NonUnitStatements"))
           .asJava
-        val mdoc = embedded
-          .mdoc(info.scalaVersion)
-          .withClasspath(info.fullClasspath.distinct.asJava)
-          .withScalacOptions(scalacOptions)
-        mdocs(key) = MdocRef(scalaVersion, mdoc)
+        val mdoc = fullClasspathLazy.map { fullClasspath =>
+          embedded
+            .mdoc(info.scalaVersion)
+            .withClasspath(fullClasspath.distinct.map(_.toNIO).asJava)
+            .withScalacOptions(scalacOptions)
+        }
+        mdocs(key) = mdoc.map(MdocRef(scalaVersion, _))
         mdoc
+
       }
     }
   }
