@@ -1,7 +1,5 @@
 package scala.meta.internal.metals
 
-import java.nio.file.Path
-
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -131,20 +129,13 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
       )
     }
 
-    val scalaClassPath = scalaInfo.map(_.fullClasspath).getOrElse(Nil)
-    val javaClassPath = javaInfo.map(_.fullClasspath).getOrElse(Nil)
-    if (scalaClassPath == javaClassPath)
-      output ++= getSection("Classpath", getClassPath(scalaClassPath, targetId))
-    else {
-      output ++= getSection(
-        "Java Classpath",
-        getClassPath(javaClassPath, targetId),
-      )
-      output ++= getSection(
-        "Scala Classpath",
-        getClassPath(scalaClassPath, targetId),
-      )
+    val scalaClassPath = scalaInfo
+      .flatMap(_.lazyClasspath) match {
+      case None => List("<unresolved>")
+      case Some(classpath) =>
+        getClassPath(classpath.map(_.toAbsolutePath), targetId)
     }
+    output ++= getSection("Classpath", scalaClassPath)
     output += ""
     output.mkString(System.lineSeparator())
   }
@@ -166,18 +157,17 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
     if (hasCapability) capability else s"$capability <- NOT SUPPORTED"
 
   private def getSingleClassPathInfo(
-      path: Path,
-      shortPath: Path,
+      path: AbsolutePath,
+      filename: String,
       maxFilenameSize: Int,
       buildTargetId: BuildTargetIdentifier,
   ): String = {
-    val filename = shortPath.toString()
     val padding = " " * (maxFilenameSize - filename.size)
     val status = if (path.toFile.exists) {
       val blankWarning = " " * 9
       if (
-        path.toFile().isDirectory() || buildTargets
-          .sourceJarFor(buildTargetId, AbsolutePath(path))
+        path.isDirectory || buildTargets
+          .sourceJarFor(buildTargetId, path)
           .nonEmpty
       )
         blankWarning
@@ -189,14 +179,14 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
   }
 
   private def getClassPath(
-      classPath: List[Path],
+      classPath: List[AbsolutePath],
       buildTargetId: BuildTargetIdentifier,
   ): List[String] = {
-    def shortenPath(path: Path): Path = {
+    def shortenPath(path: AbsolutePath): String = {
       if (path.toFile.isFile)
-        path.getFileName()
+        path.filename
       else
-        path
+        path.toString()
     }
     if (classPath.nonEmpty) {
       val maxFilenameSize =

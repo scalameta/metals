@@ -1,7 +1,5 @@
 package scala.meta.internal.metals
 
-import java.nio.file.Path
-
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.semver.SemVer
@@ -21,12 +19,6 @@ case class JavaTarget(
   def dataKind: String = info.dataKind
 
   def baseDirectory: String = info.baseDirectory
-
-  def fullClasspath: List[Path] =
-    javac.classpath.map(_.toAbsolutePath).collect {
-      case path if path.isJar || path.isDirectory =>
-        path.toNIO
-    }
 
   def options: List[String] = javac.getOptions().asScala.toList
 

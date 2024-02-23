@@ -108,6 +108,13 @@ class BuildServerConnection private (
 
   def isAmmonite: Boolean = name == Ammonite.name
 
+  def supportsLazyClasspathResolution: Boolean =
+    capabilities.getJvmCompileClasspathProvider()
+
+  // Scala breaks when we try to use the `buildTarget/dependencyModules` request
+  def isDependencyModulesSupported: Boolean =
+    capabilities.getDependencyModulesProvider() && !isScalaCLI
+
   def supportsLanguage(id: String): Boolean =
     Option(capabilities.getCompileProvider())
       .exists(_.getLanguageIds().contains(id)) ||
@@ -130,11 +137,7 @@ class BuildServerConnection private (
     capabilities.getJvmRunEnvironmentProvider()
 
   def isDependencySourcesSupported: Boolean =
-    capabilities.getDependencySourcesProvider()
-
-  // Scala CLI breaks when we try to use the `buildTarget/dependencyModules` request
-  def isDependencyModulesSupported: Boolean =
-    capabilities.getDependencyModulesProvider() && !isScalaCLI
+    capabilities.getDependencySourcesProvider() && !isScalaCLI
 
   /* Currently only Bloop and sbt support running single test cases
    * and ScalaCLI uses Bloop underneath.
@@ -327,6 +330,27 @@ class BuildServerConnection private (
       completableFuture.cancel(true)
     }
     completableFuture.asScala
+  }
+
+  def buildTargetJvmClasspath(
+      params: JvmCompileClasspathParams
+  ): Future[JvmCompileClasspathResult] = {
+    val resultOnScalaOptionsUnsupported = new JvmCompileClasspathResult(
+      List.empty[JvmCompileClasspathItem].asJava
+    )
+    if (supportsLazyClasspathResolution) {
+      val onFail =
+        Some(
+          (
+            resultOnScalaOptionsUnsupported,
+            "Jvm compile classpath request not supported by server",
+          )
+        )
+      register(
+        server => server.buildTargetJvmCompileClasspath(params),
+        onFail,
+      ).asScala
+    } else Future.successful(resultOnScalaOptionsUnsupported)
   }
 
   def buildTargetScalacOptions(
@@ -668,15 +692,17 @@ object BuildServerConnection {
       BuildInfo.supportedScala2Versions.asJava,
     )
 
+    val capabilities = new BuildClientCapabilities(
+      List("scala", "java").asJava
+    )
+    capabilities.setJvmCompileClasspathReceiver(true)
     val initializeResult = server.buildInitialize {
       val params = new InitializeBuildParams(
         "Metals",
         BuildInfo.metalsVersion,
         BuildInfo.bspVersion,
         workspace.toURI.toString,
-        new BuildClientCapabilities(
-          List("scala", "java").asJava
-        ),
+        capabilities,
       )
       val gson = new Gson
       val data = gson.toJsonTree(extraParams)
