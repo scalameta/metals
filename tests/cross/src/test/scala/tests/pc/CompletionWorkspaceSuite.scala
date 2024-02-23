@@ -652,20 +652,12 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  Implicits@@
        |}
        |""".stripMargin,
-    """|import scala.concurrent.ExecutionContext
+    """|import scala.concurrent.ExecutionContext.Implicits
        |object Main {
-       |  ExecutionContext.Implicits
+       |  Implicits
        |}
        |""".stripMargin,
-    filter = _ == "Implicits - scala.concurrent.ExecutionContext",
-    compat = Map {
-      "3" ->
-        """|import scala.concurrent.ExecutionContext.Implicits
-           |object Main {
-           |  Implicits
-           |}
-           |""".stripMargin
-    }
+    filter = _ == "Implicits - scala.concurrent.ExecutionContext"
   )
 
   // this test was intended to check that import is rendered correctly - without `$` symbol
@@ -844,29 +836,12 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |
        |package b {
        |
-       |  import a.A
+       |  import a.A.Beta
        |  object B{
-       |    val x: A.Beta
+       |    val x: Beta
        |  }
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|import a.A.Beta
-           |package a {
-           |  object A {
-           |    type Beta = String
-           |    def m(): Int = ???
-           |  }
-           |}
-           |
-           |package b {
-           |  object B{
-           |    val x: Beta
-           |  }
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   checkEdit(
@@ -1137,6 +1112,62 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  1.testOps($0)
        |}
        |""".stripMargin,
+    filter = _.contains("testOps")
+  )
+
+  check(
+    "implicit-class-edit-bound2",
+    """|package example
+       |
+       |object Test {
+       |  implicit class TestOps(a: List[Int]) {
+       |    def testOps(b: Int) = ???
+       |  }
+       |}
+       |
+       |object ActualTest {
+       |  List(1).tes@@
+       |}
+       |""".stripMargin,
+    "testOps(b: Int): Nothing (implicit)",
+    filter = _.contains("testOps")
+  )
+
+  check(
+    "implicit-class-edit-bound3".tag(IgnoreScala3),
+    """|package example
+       |
+       |object Test {
+       |  implicit class TestOps[T](a: List[T]) {
+       |    def testOps(b: Int) = ???
+       |  }
+       |}
+       |
+       |object ActualTest {
+       |  List(1).tes@@
+       |}
+       |""".stripMargin,
+    "testOps(b: Int): Nothing (implicit)",
+    filter = _.contains("testOps")
+  )
+
+  check(
+    "implicit-class-edit-bound4".tag(IgnoreScala3),
+    """|package example
+       |
+       |case class A[-T](t: T)
+       |
+       |object Test {
+       |  implicit class TestOps[T](a: A[T]) {
+       |    def testOps(b: Int) = ???
+       |  }
+       |}
+       |
+       |object ActualTest {
+       |  A(1).tes@@
+       |}
+       |""".stripMargin,
+    "testOps(b: Int): Nothing (implicit)",
     filter = _.contains("testOps")
   )
 

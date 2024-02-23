@@ -387,19 +387,17 @@ class CompletionProvider(
       text,
       isAmmoniteScript
     )
+
     val searchResults =
       if (kind == CompletionListKind.Scope) {
         workspaceSymbolListMembers(query, pos, visit)
       } else {
-        val selectType = latestParentTrees match {
-          case (i: Ident) :: _ => Option(i.tpe)
-          case (s: Select) :: _ => Option(s.tpe)
-          case (l: Literal) :: _ => Option(l.tpe)
-          case _ => None
+        typedTreeAt(pos) match {
+          case Select(qualifier, _)
+              if qualifier.tpe != null && !qualifier.tpe.isError =>
+            workspaceExtensionMethods(query, pos, visit, qualifier.tpe)
+          case _ => SymbolSearch.Result.COMPLETE
         }
-        selectType
-          .map(workspaceExtensionMethods(query, pos, visit, _))
-          .getOrElse(SymbolSearch.Result.COMPLETE)
       }
 
     InterestingMembers(buf.result(), searchResults)
@@ -417,8 +415,13 @@ class CompletionProvider(
       sym =>
         if (sym.safeOwner.isImplicit) {
           val ownerConstructor = sym.owner.info.member(nme.CONSTRUCTOR)
+          def typeParams = sym.owner.info.typeParams
           ownerConstructor.info.paramss match {
-            case List(List(param)) if selectType <:< param.info =>
+            case List(List(param))
+                if selectType fuzzy_<:< TypeWithParams(
+                  param.info,
+                  typeParams
+                ) =>
               visit(new ExtensionMethod(sym))
             case _ => false
           }

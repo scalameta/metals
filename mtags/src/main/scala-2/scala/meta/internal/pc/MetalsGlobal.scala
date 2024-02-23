@@ -55,6 +55,7 @@ class MetalsGlobal(
     with completions.MillIvyCompletions
     with completions.SbtLibCompletions
     with completions.MultilineCommentCompletions
+    with completions.FuzzyUpperBound
     with Signatures
     with Compat
     with GlobalProxy
