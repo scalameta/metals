@@ -59,7 +59,7 @@ class SelectionRangeProvider(
         .getOrElse(new SelectionRange())
     }
     println("selectionRanges scala 2")
-    pprint.pprintln(selectionRanges)
+    println(selectionRanges map (_.getRange().toString()))
     selectionRanges
   }
 
