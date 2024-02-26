@@ -27,7 +27,7 @@ class BazelLspSuite
       workspace: AbsolutePath
   ): Option[String] = BazelDigest.current(workspace)
 
-  val importMessage =
+  val importMessage: String =
     GenerateBspAndConnect.params("bazel", "bazelbsp").getMessage()
 
   test("basic") {

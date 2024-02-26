@@ -314,7 +314,10 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     def isSameGenerateBspAndConnectMessage(): Boolean = {
       val buildTools = BuildTools.default().allAvailable
       buildTools.exists(tool =>
-        GenerateBspAndConnect.params(tool.executableName, tool.buildServerName) == params
+        GenerateBspAndConnect.params(
+          tool.executableName,
+          tool.buildServerName,
+        ) == params
       )
     }
 
@@ -339,7 +342,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       showMessageRequestHandler(params).getOrElse {
         if (isSameMessage(ImportBuildChanges.params)) {
           importBuildChanges
-        } else if(isSameGenerateBspAndConnectMessage) {
+        } else if (isSameGenerateBspAndConnectMessage) {
           generateBspAndConnect
         } else if (isSameMessage(ImportBuild.params)) {
           importBuild
