@@ -236,17 +236,15 @@ final class BuildTools(
       Some(GradleBuildTool.name)
     else if (mavenProject.exists(MavenBuildTool.isMavenRelatedPath(_, path)))
       Some(MavenBuildTool.name)
-    else if (isMill && MillBuildTool.isMillRelatedPath(path) || isMillBsp(path))
+    else if (isMill && MillBuildTool.isMillRelatedPath(path))
       Some(MillBuildTool.name)
-    else if (
-      bazelProject.exists(
-        BazelBuildTool.isBazelRelatedPath(_, path)
-      ) || isInBsp(path) && path.filename == "bazelbsp.json"
-    )
+    else if (bazelProject.exists(BazelBuildTool.isBazelRelatedPath(_, path)))
       Some(BazelBuildTool.name)
-    else if (isInBsp(path))
-      Some(path.filename.stripSuffix(".json"))
-    else None
+    else if (isInBsp(path)) {
+      val name = path.filename.stripSuffix(".json")
+      if (knownBsps(name)) None
+      else Some(name)
+    } else None
   }
 
   def initialize(): Set[String] = {

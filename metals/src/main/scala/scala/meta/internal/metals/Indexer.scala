@@ -124,8 +124,10 @@ final case class Indexer(
 
     bspSession() match {
       case None =>
-        scribe.warn("No build session currently active to reload.")
-        Future.successful(BuildChange.None)
+        scribe.warn(
+          "No build session currently active to reload. Attempting to reconnect."
+        )
+        reconnectToBuildServer()
       case Some(session) if forceRefresh => reloadAndIndex(session)
       case Some(session) =>
         workspaceReload().oldReloadResult(checksum) match {

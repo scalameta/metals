@@ -6,8 +6,8 @@ import scala.util.Properties
 
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.SbtBuildTool
-import scala.meta.internal.metals.Messages.ImportBuild
 import scala.meta.internal.metals.Messages.GenerateBspAndConnect
+import scala.meta.internal.metals.Messages.ImportBuild
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}

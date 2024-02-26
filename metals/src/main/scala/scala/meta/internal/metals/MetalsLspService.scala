@@ -913,18 +913,12 @@ class MetalsLspService(
           Some(buildTool.buildServerName)
         case _ => tables.buildServers.selectedServer()
       }
-      _ <- Future
-        .sequence(
-          List(
-            quickConnectToBuildServer(),
-            slowConnectToBuildServer(
-              forceImport = false,
-              found,
-              chosenBuildServer,
-            ),
-          )
-        )
-    } yield ()
+      _ <- slowConnectToBuildServer(
+        forceImport = false,
+        found,
+        chosenBuildServer,
+      ),
+    } yield buildServerPromise.trySuccess(())
   }
 
   def initialized(): Future[Unit] = {
@@ -2070,7 +2064,10 @@ class MetalsLspService(
       buildTool,
       chosenBuildServer,
     )
-  } yield buildChange
+  } yield {
+    buildServerPromise.trySuccess(())
+    buildChange
+  }
 
   def slowConnectToBuildServer(
       forceImport: Boolean,
@@ -2111,7 +2108,7 @@ class MetalsLspService(
           quickConnectToBuildServer,
         )
       case None =>
-        Future.successful(BuildChange.None)
+        quickConnectToBuildServer()
     }
   }
 
