@@ -1610,12 +1610,19 @@ final case class TestingServer(
       base: Map[String, String],
   ): Future[Map[String, String]] = {
     Debug.printEnclosing()
+    implementation(filename, query).map(
+      TestRanges.renderLocationsAsString(base, _)
+    )
+  }
+
+  def implementation(
+      filename: String,
+      query: String,
+  ): Future[List[Location]] = {
     for {
       (_, params) <- offsetParams(filename, query, workspace)
       implementations <- fullServer.implementation(params).asScala
-    } yield {
-      TestRanges.renderLocationsAsString(base, implementations.asScala.toList)
-    }
+    } yield implementations.asScala.toList
   }
 
   def getReferenceLocations(

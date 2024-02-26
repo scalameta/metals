@@ -78,6 +78,7 @@ import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.rename.RenameProvider
+import scala.meta.internal.search.SymbolHierarchyOps
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.tvp._
 import scala.meta.internal.worksheets.DecorationWorksheetPublisher
@@ -517,24 +518,6 @@ class MetalsLspService(
     )
   }
 
-  private val implementationProvider: ImplementationProvider =
-    new ImplementationProvider(
-      semanticdbs,
-      folder,
-      definitionIndex,
-      buildTargets,
-      buffers,
-      definitionProvider,
-      trees,
-      scalaVersionSelector,
-    )
-
-  private val supermethods: Supermethods = new Supermethods(
-    languageClient,
-    definitionProvider,
-    implementationProvider,
-  )
-
   private val referencesProvider: ReferenceProvider = new ReferenceProvider(
     folder,
     semanticdbs,
@@ -542,16 +525,6 @@ class MetalsLspService(
     definitionProvider,
     trees,
     buildTargets,
-  )
-
-  private val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
-    List(
-      referencesProvider,
-      implementationProvider,
-      testProvider,
-    ),
-    buildTargets,
-    folder,
   )
 
   private val formattingProvider: FormattingProvider = new FormattingProvider(
@@ -565,26 +538,6 @@ class MetalsLspService(
     tables,
     buildTargets,
   )
-
-  private val javaFormattingProvider: JavaFormattingProvider =
-    new JavaFormattingProvider(
-      buffers,
-      () => userConfig,
-      buildTargets,
-    )
-
-  private val callHierarchyProvider: CallHierarchyProvider =
-    new CallHierarchyProvider(
-      folder,
-      semanticdbs,
-      definitionProvider,
-      referencesProvider,
-      clientConfig.icons,
-      () => compilers,
-      trees,
-      buildTargets,
-      supermethods,
-    )
 
   private val javaHighlightProvider: JavaDocumentHighlightProvider =
     new JavaDocumentHighlightProvider(
@@ -665,9 +618,70 @@ class MetalsLspService(
     )
   )
 
+  private val javaFormattingProvider: JavaFormattingProvider =
+    new JavaFormattingProvider(
+      buffers,
+      () => userConfig,
+      buildTargets,
+    )
+
+  private val implementationProvider: ImplementationProvider =
+    new ImplementationProvider(
+      semanticdbs,
+      folder,
+      definitionIndex,
+      buffers,
+      definitionProvider,
+      trees,
+      scalaVersionSelector,
+      compilers,
+      buildTargets,
+    )
+
+  private val symbolHierarchyOps: SymbolHierarchyOps =
+    new SymbolHierarchyOps(
+      folder,
+      buildTargets,
+      semanticdbs,
+      definitionIndex,
+      scalaVersionSelector,
+      buffers,
+      trees,
+    )
+
+  private val supermethods: Supermethods = new Supermethods(
+    languageClient,
+    definitionProvider,
+    symbolHierarchyOps,
+  )
+
+  private val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
+    List(
+      referencesProvider,
+      implementationProvider,
+      testProvider,
+    ),
+    buildTargets,
+    folder,
+  )
+
+  private val callHierarchyProvider: CallHierarchyProvider =
+    new CallHierarchyProvider(
+      folder,
+      semanticdbs,
+      definitionProvider,
+      referencesProvider,
+      clientConfig.icons,
+      () => compilers,
+      trees,
+      buildTargets,
+      supermethods,
+    )
+
   private val renameProvider: RenameProvider = new RenameProvider(
     referencesProvider,
     implementationProvider,
+    symbolHierarchyOps,
     definitionProvider,
     folder,
     languageClient,
@@ -2473,6 +2487,7 @@ class MetalsLspService(
     scalaVersionSelector,
     sourceMapper,
     folder,
+    implementationProvider,
   )
 
   private def checkRunningBloopVersion(bspServerVersion: String) = {

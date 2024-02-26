@@ -39,6 +39,7 @@ import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
+import scala.meta.pc.{PcSymbolInformation => IPcSymbolInformation}
 
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
@@ -347,6 +348,21 @@ case class ScalaPresentationCompiler(
       DefinitionResultImpl.empty,
       params.token
     ) { pc => new PcDefinitionProvider(pc.compiler(), params).definition() }
+  }
+
+  override def info(
+      symbol: String
+  ): CompletableFuture[Optional[IPcSymbolInformation]] = {
+    compilerAccess.withNonInterruptableCompiler[Optional[IPcSymbolInformation]](
+      None
+    )(
+      Optional.empty(),
+      EmptyCancelToken
+    ) { pc =>
+      val result: Option[IPcSymbolInformation] =
+        pc.compiler().info(symbol).map(_.asJava)
+      result.asJava
+    }
   }
 
   override def typeDefinition(

@@ -24,6 +24,7 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.JavaPresentationCompiler
 import scala.meta.internal.pc.LogMessages
+import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.internal.worksheets.WorksheetPcData
 import scala.meta.internal.worksheets.WorksheetProvider
@@ -774,6 +775,18 @@ class Compilers(
     definition(params = params, token = token, findTypeDef = true)
   }
 
+  def info(
+      path: AbsolutePath,
+      symbol: String,
+  ): Future[Option[PcSymbolInformation]] = {
+    loadCompiler(path, forceScala = true)
+      .map(
+        _.info(symbol).asScala
+          .map(_.asScala.map(PcSymbolInformation.from))
+      )
+      .getOrElse(Future(None))
+  }
+
   private def definition(
       params: TextDocumentPositionParams,
       token: CancelToken,
@@ -829,8 +842,16 @@ class Compilers(
     }.getOrElse(Future.successful(Nil.asJava))
   }
 
+  /**
+   * Gets presentation compiler for a file.
+   * @param path for which presentation compiler should be loaded,
+   *             resolves build target based on this file
+   * @param forceScala if should use Scala pc for `.java` files that are in a Scala build target,
+   *                   useful when Scala pc can handle Java files and Java pc implementation of a feature is missing
+   */
   def loadCompiler(
-      path: AbsolutePath
+      path: AbsolutePath,
+      forceScala: Boolean = false,
   ): Option[PresentationCompiler] = {
 
     def fromBuildTarget: Option[PresentationCompiler] = {
@@ -841,6 +862,8 @@ class Compilers(
         case None => Some(fallbackCompiler(path))
         case Some(value) =>
           if (path.isScalaFilename) loadCompiler(value)
+          else if (path.isJavaFilename && forceScala)
+            loadCompiler(value).orElse(loadJavaCompiler(value))
           else if (path.isJavaFilename) loadJavaCompiler(value)
           else None
       }

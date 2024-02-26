@@ -24,6 +24,7 @@ import scala.meta.internal.mtags.MtagsEnrichments.given
 import scala.meta.internal.pc.completions.CompletionProvider
 import scala.meta.internal.pc.completions.OverrideCompletions
 import scala.meta.pc.*
+import scala.meta.pc.{PcSymbolInformation as IPcSymbolInformation}
 
 import dotty.tools.dotc.reporting.StoreReporter
 import org.eclipse.lsp4j.DocumentHighlight
@@ -186,6 +187,21 @@ case class ScalaPresentationCompiler(
 
   def diagnosticsForDebuggingPurposes(): ju.List[String] =
     List[String]().asJava
+
+  override def info(
+      symbol: String
+  ): CompletableFuture[Optional[IPcSymbolInformation]] =
+    compilerAccess.withNonInterruptableCompiler[Optional[IPcSymbolInformation]](
+      None
+    )(
+      Optional.empty(),
+      EmptyCancelToken,
+    ) { access =>
+      SymbolInformationProvider(using access.compiler().currentCtx)
+        .info(symbol)
+        .map(_.asJava)
+        .asJava
+    }
 
   def semanticdbTextDocument(
       filename: URI,

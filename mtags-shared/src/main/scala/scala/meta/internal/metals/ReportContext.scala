@@ -6,6 +6,7 @@ import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.util.Try
 import scala.util.matching.Regex
 
 import scala.meta.internal.metals.utils.LimitedFilesManager
@@ -139,9 +140,11 @@ class StdReporter(
         } yield duplicate
 
       optDuplicate.orElse {
-        path.createDirectories()
-        path.writeText(sanitize(report.fullText(withIdAndSummary = true)))
-        Some(path)
+        Try {
+          path.createDirectories()
+          path.writeText(sanitize(report.fullText(withIdAndSummary = true)))
+          path
+        }.toOption
       }
     }
 

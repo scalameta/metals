@@ -20,6 +20,8 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
       name: TestOptions,
       input: String,
       scalaVersion: Option[String] = None,
+      additionalLibraryDependencies: List[String] = Nil,
+      scalacOptions: List[String] = Nil,
   )(implicit
       loc: Location
   ): Unit = {
@@ -51,7 +53,8 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
              |{"a":
              |  {
              |    "scalaVersion" : "$actualScalaVersion",
-             |    "libraryDependencies": ${toJsonArray(libraryDependencies)}
+             |    "libraryDependencies": ${toJsonArray(libraryDependencies ++ additionalLibraryDependencies)},
+             |    "scalacOptions": ${toJsonArray(scalacOptions)}
              |  }
              |}
              |${input

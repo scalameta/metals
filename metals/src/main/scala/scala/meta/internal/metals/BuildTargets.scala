@@ -375,6 +375,15 @@ final class BuildTargets private (
     }
   }
 
+  def belongsToBuildTarget(
+      target: BuildTargetIdentifier,
+      path: AbsolutePath,
+  ): Boolean = {
+    val possibleBuildTargets =
+      buildTargetTransitiveDependencies(target).toSet + target
+    inverseSourcesAll(path).exists(possibleBuildTargets(_))
+  }
+
   def inferBuildTarget(
       source: AbsolutePath
   ): Option[BuildTargetIdentifier] =

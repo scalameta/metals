@@ -47,29 +47,36 @@ class SymbolIndexBucket(
 
   def close(): Unit = sourceJars.close()
 
-  def addSourceDirectory(dir: AbsolutePath): List[(String, AbsolutePath)] = {
+  def addSourceDirectory(
+      dir: AbsolutePath
+  ): List[IndexingResult] = {
     if (sourceJars.addEntry(dir.toNIO)) {
       dir.listRecursive.toList.flatMap {
         case source if source.isScala =>
-          addSourceFile(source, Some(dir)).map(sym => (sym, source))
+          addSourceFile(source, Some(dir))
         case _ =>
-          List.empty
+          None
       }
-    } else
-      List.empty
+    } else List.empty
   }
 
-  def addSourceJar(jar: AbsolutePath): List[(String, AbsolutePath)] = {
+  def addSourceJar(
+      jar: AbsolutePath
+  ): List[IndexingResult] = {
     if (sourceJars.addEntry(jar.toNIO)) {
       FileIO.withJarFileSystem(jar, create = false) { root =>
         try {
           root.listRecursive.toList.flatMap {
             case source if source.isScala =>
-              addSourceFile(source, None).map(sym => (sym, source))
+              addSourceFile(source, None)
             case source if source.isJava =>
-              addJavaSourceFile(source).map(sym => (sym, source))
+              addJavaSourceFile(source) match {
+                case Nil => None
+                case topLevels =>
+                  Some(IndexingResult(source, topLevels, overrides = Nil))
+              }
             case _ =>
-              List.empty
+              None
           }
         } catch {
           // this happens in broken jars since file from FileWalker should exists
@@ -124,28 +131,34 @@ class SymbolIndexBucket(
   def addSourceFile(
       source: AbsolutePath,
       sourceDirectory: Option[AbsolutePath]
-  ): List[String] = {
-    val symbols = indexSource(source, dialect, sourceDirectory)
-    symbols.foreach { symbol =>
+  ): Option[IndexingResult] = {
+    val IndexingResult(path, topLevels, overrides) =
+      indexSource(source, dialect, sourceDirectory)
+    topLevels.foreach { symbol =>
       toplevels.updateWith(symbol) {
         case Some(acc) => Some(acc + source)
         case None => Some(Set(source))
       }
     }
-    symbols
+    Some(IndexingResult(path, topLevels, overrides))
   }
 
   private def indexSource(
       source: AbsolutePath,
       dialect: Dialect,
       sourceDirectory: Option[AbsolutePath]
-  ): List[String] = {
+  ): IndexingResult = {
     val uri = source.toIdeallyRelativeURI(sourceDirectory)
-    val sourceToplevels = mtags.topLevelSymbols(source, dialect)
-    if (source.isAmmoniteScript)
-      sourceToplevels
-    else
-      sourceToplevels.filter(sym => !isTrivialToplevelSymbol(uri, sym))
+    val (doc, overrides) = mtags.indexWithOverrides(source, dialect)
+    val sourceTopLevels =
+      doc.occurrences.iterator
+        .filterNot(_.symbol.isPackage)
+        .map(_.symbol)
+    val topLevels =
+      if (source.isAmmoniteScript) sourceTopLevels.toList
+      else
+        sourceTopLevels.filter(sym => !isTrivialToplevelSymbol(uri, sym)).toList
+    IndexingResult(source, topLevels, overrides)
   }
 
   // Returns true if symbol is com/foo/Bar# and path is /com/foo/Bar.scala

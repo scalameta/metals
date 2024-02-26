@@ -101,6 +101,20 @@ class MetalsBench {
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
+  def typeHierarchyIndex(): Unit = {
+    scalaDependencySources.inputs.foreach { input =>
+      implicit val rc: ReportContext = EmptyReportContext
+      new ScalaToplevelMtags(
+        input,
+        includeInnerClasses = true,
+        includeMembers = false,
+        dialects.Scala213,
+      ).index()
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
   def scalaTokenize(): Unit = {
     scalaDependencySources.inputs.foreach { input =>
       val scanner = new LegacyScanner(input, Trees.defaultTokenizerDialect)

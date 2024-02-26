@@ -1,7 +1,6 @@
 package tests
-import scala.concurrent.Future
 
-class ImplementationLspSuite extends BaseRangesSuite("implementation") {
+class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
 
   check(
     "basic",
@@ -255,8 +254,9 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |""".stripMargin,
   )
 
+  // we currently don't collect information about overridden symbols in JavaMtags
   check(
-    "java-classes",
+    "java-classes".ignore,
     """|/a/src/main/scala/a/Main.scala
        |package a
        |class <<MyException>> extends Exce@@ption
@@ -521,6 +521,9 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |  case object <<Cat>> extends Animal
        |}
        |""".stripMargin,
+    additionalLibraryDependencies =
+      List("io.circe::circe-generic-extras:0.14.0"),
+    scalacOptions = List("-Ymacro-annotations"),
   )
 
   check(
@@ -536,6 +539,23 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |}
        |""".stripMargin,
   )
+
+  check(
+    "local-methods",
+    """|/a/src/main/scala/a/Main.scala
+       |object Test {
+       |  def main {
+       |    trait A {
+       |      def f@@oo(): Int
+       |    }
+       |    class B extends A {
+       |      def <<foo>>(): Int = 1
+       |    }
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
   check(
     "type-implementation",
     """|/a/src/main/scala/a/Main.scala
@@ -553,7 +573,9 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
 
   check(
     "java-implementation",
-    """|/a/src/main/scala/a/Main.java
+    """|/a/src/main/scala/a/Main.scala
+       |// empty scala file, so Scala pc is loaded
+       |/a/src/main/scala/a/Main.java
        |package a;
        |public class Main {
        |  abstract class A {
@@ -585,20 +607,59 @@ class ImplementationLspSuite extends BaseRangesSuite("implementation") {
        |""".stripMargin,
   )
 
+  checkSymbols(
+    "set",
+    """|package a
+       |class MySet[A] extends S@@et[A] {
+       |  override def iterator: Iterator[A] = ???
+       |  override def contains(elem: A): Boolean = ???
+       |  override def incl(elem: A): Set[A] = ???
+       |  override def excl(elem: A): Set[A] = ???
+       |}
+       |""".stripMargin,
+    """|a/MySet#
+       |scala/Enumeration#ValueSet#
+       |scala/collection/immutable/AbstractSet#
+       |scala/collection/immutable/BitSet#
+       |scala/collection/immutable/BitSet.BitSet1#
+       |scala/collection/immutable/BitSet.BitSet2#
+       |scala/collection/immutable/BitSet.BitSetN#
+       |scala/collection/immutable/HashMap#HashKeySet#
+       |scala/collection/immutable/HashSet#
+       |scala/collection/immutable/ListSet#
+       |scala/collection/immutable/ListSet#Node#
+       |scala/collection/immutable/ListSet.EmptyListSet.
+       |scala/collection/immutable/MapOps#ImmutableKeySet#
+       |scala/collection/immutable/Set.EmptySet.
+       |scala/collection/immutable/Set.Set1#
+       |scala/collection/immutable/Set.Set2#
+       |scala/collection/immutable/Set.Set3#
+       |scala/collection/immutable/Set.Set4#
+       |scala/collection/immutable/SortedMapOps#ImmutableKeySortedSet#
+       |scala/collection/immutable/SortedSet#
+       |scala/collection/immutable/TreeSet#
+       |""".stripMargin,
+  )
+
+  checkSymbols(
+    "exception",
+    """package a
+      |class MyException extends Excep@@tion
+      |""".stripMargin,
+    """|a/MyException#
+       |scala/ScalaReflectionException#
+       |scala/reflect/internal/FatalError#
+       |scala/reflect/internal/MissingRequirementError#
+       |scala/reflect/internal/Positions#ValidateException#
+       |scala/reflect/macros/Enclosures#EnclosureException#
+       |scala/reflect/macros/ParseException#
+       |scala/reflect/macros/ReificationException#
+       |scala/reflect/macros/TypecheckException#
+       |scala/reflect/macros/UnexpectedReificationException#
+       |""".stripMargin,
+  )
+
   override protected def libraryDependencies: List[String] =
     List("org.scalatest::scalatest:3.2.16", "io.circe::circe-generic:0.12.0")
 
-  override def assertCheck(
-      filename: String,
-      edit: String,
-      expected: Map[String, String],
-      base: Map[String, String],
-  ): Future[Unit] = {
-    server.assertImplementation(
-      filename,
-      edit,
-      expected.toMap,
-      base.toMap,
-    )
-  }
 }
