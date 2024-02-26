@@ -69,6 +69,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     extends NoopLanguageClient {
   // Customization of the window/showMessageRequest response
   var importBuildChanges: MessageActionItem = ImportBuildChanges.notNow
+  var generateBspAndConnect: MessageActionItem = GenerateBspAndConnect.notNow
   var importBuild: MessageActionItem = ImportBuild.notNow
   var switchBuildTool: MessageActionItem = NewBuildToolDetected.dontSwitch
   var restartBloop: MessageActionItem = BloopVersionChange.notNow
@@ -310,6 +311,13 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
         .contains(params)
     }
 
+    def isSameGenerateBspAndConnectMessage(): Boolean = {
+      val buildTools = BuildTools.default().allAvailable
+      buildTools.exists(tool =>
+        GenerateBspAndConnect.params(tool.executableName, tool.buildServerName) == params
+      )
+    }
+
     def isNewBuildToolDetectedMessage(): Boolean = {
       val buildTools = BuildTools.default().allAvailable
       buildTools.exists(newBuildTool =>
@@ -331,6 +339,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       showMessageRequestHandler(params).getOrElse {
         if (isSameMessage(ImportBuildChanges.params)) {
           importBuildChanges
+        } else if(isSameGenerateBspAndConnectMessage) {
+          generateBspAndConnect
         } else if (isSameMessage(ImportBuild.params)) {
           importBuild
         } else if (BloopVersionChange.params() == params) {

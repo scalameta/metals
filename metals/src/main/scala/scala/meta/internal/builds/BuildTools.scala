@@ -48,7 +48,7 @@ final class BuildTools(
       .map(isBloop)
       .getOrElse(
         isBloop
-      ) || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade()) || isBazelBsp
+      ) || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade())
   }
   def isBloop(root: AbsolutePath): Boolean = hasJsonFile(root.resolve(".bloop"))
   def bloopProject: Option[AbsolutePath] = searchForBuildTool(isBloop)
@@ -60,12 +60,6 @@ final class BuildTools(
   }
   private def hasJsonFile(dir: AbsolutePath): Boolean = {
     dir.list.exists(_.extension == "json")
-  }
-
-  def isBazelBsp: Boolean = {
-    workspace.resolve(".bazelbsp").isDirectory &&
-    BazelBuildTool.existingProjectView(workspace).nonEmpty &&
-    isBsp
   }
 
   // Returns true if there's a build.sbt file or project/build.properties with sbt.version
