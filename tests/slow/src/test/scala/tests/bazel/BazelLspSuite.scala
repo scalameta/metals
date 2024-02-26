@@ -27,6 +27,9 @@ class BazelLspSuite
       workspace: AbsolutePath
   ): Option[String] = BazelDigest.current(workspace)
 
+  val importMessage =
+    GenerateBspAndConnect.params("bazel", "bazelbsp").getMessage()
+
   test("basic") {
     cleanWorkspace()
     for {
@@ -36,9 +39,8 @@ class BazelLspSuite
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          importBuildMessage,
-          // create .bazelbsp progress message
-          BazelBuildTool.mainClass,
+          importMessage,
+          "bazelbsp bspConfig",
           bazelNavigationMessage,
         ).mkString("\n"),
       )
@@ -69,7 +71,7 @@ class BazelLspSuite
         text.replace("\"hello\"", "\"hello1\"")
       }
       _ = assertNoDiff(client.workspaceMessageRequests, "")
-      _ = client.importBuildChanges = ImportBuildChanges.yes
+      _ = client.generateBspAndConnect = GenerateBspAndConnect.yes
       _ <- server.didSave(s"BUILD")(identity)
     } yield {
       assertNoDiff(
@@ -90,7 +92,7 @@ class BazelLspSuite
     for {
       _ <- server.initialize()
       _ <- server.initialized()
-      _ = assertNoDiff(client.workspaceMessageRequests, importBuildMessage)
+      _ = assertNoDiff(client.workspaceMessageRequests, importMessage)
       _ = client.messageRequests.clear()
       // We dismissed the import request, so bsp should not be configured
       _ = assert(!bazelBspConfig.exists)
@@ -139,7 +141,7 @@ class BazelLspSuite
     for {
       _ <- server.initialize()
       _ <- server.initialized()
-      _ = assertNoDiff(client.workspaceMessageRequests, importBuildMessage)
+      _ = assertNoDiff(client.workspaceMessageRequests, importMessage)
       _ = client.messageRequests.clear()
       // We dismissed the import request, so bsp should not be configured
       _ = assert(!bazelBspConfig.exists)
@@ -179,7 +181,7 @@ class BazelLspSuite
       assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          BazelBuildTool.mainClass,
+          "bazelbsp bspConfig",
           bazelNavigationMessage,
         ).mkString("\n"),
       )

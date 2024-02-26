@@ -27,7 +27,6 @@ import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.bsp.ScalaCliBspScope
-import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BloopInstall
 import scala.meta.internal.builds.BloopInstallProvider
 import scala.meta.internal.builds.BspErrorHandler
@@ -894,10 +893,10 @@ class MetalsLspService(
     for {
       found <- supportedBuildTool()
       chosenBuildServer = found match {
-        case Some(BuildTool.Found(buildServer, _))
-            if buildServer.forcesBuildServer =>
-          tables.buildServers.chooseServer(buildServer.buildServerName)
-          Some(buildServer.buildServerName)
+        case Some(BuildTool.Found(buildTool, _))
+            if buildTool.isAutoConnectable =>
+          tables.buildServers.chooseServer(buildTool.buildServerName)
+          Some(buildTool.buildServerName)
         case _ => tables.buildServers.selectedServer()
       }
       _ <- Future
@@ -2074,32 +2073,16 @@ class MetalsLspService(
         case _: BloopInstallProvider => userConfig.defaultBspToBuildTool
         case _ => true
       }
-
     buildTool match {
-      // If there is no .bazelbsp present, we ask user to write bsp config
-      // After that, we should fall into the last case and index workspace
-      case Some(BuildTool.Found(_: BazelBuildTool, _))
-          if !buildTools.isBazelBsp =>
-        BazelBuildTool
-          .maybeWriteBazelConfig(
-            shellRunner,
-            folder,
-            languageClient,
-            tables,
-            userConfig.javaHome,
-            forceImport,
-          )
-          .flatMap(_ => quickConnectToBuildServer())
       case Some(BuildTool.Found(buildTool: BuildServerProvider, _))
           if chosenBuildServer.isEmpty && useBuildToolBsp(buildTool) =>
-        slowConnectToBuildToolBsp(buildTool)
+        slowConnectToBuildToolBsp(buildTool, forceImport)
       case Some(BuildTool.Found(buildTool: BloopInstallProvider, digest))
           if isBloopOrEmpty =>
         slowConnectToBloopServer(forceImport, buildTool, digest)
       case Some(BuildTool.Found(buildTool, _))
-          if !chosenBuildServer.exists(
-            _ == buildTool.buildServerName
-          ) && buildTool.forcesBuildServer =>
+          if !chosenBuildServer.contains(buildTool.buildServerName) &&
+            (buildTool.isAutoConnectable || forceImport) =>
         tables.buildServers.chooseServer(buildTool.buildServerName)
         quickConnectToBuildServer()
       case Some(BuildTool.Found(buildTool: BuildServerProvider, _))
@@ -2120,14 +2103,15 @@ class MetalsLspService(
   }
 
   private def slowConnectToBuildToolBsp(
-      buildTool: BuildServerProvider
+      buildTool: BuildServerProvider,
+      forceImport: Boolean,
   ) = {
     val notification = tables.dismissedNotifications.ImportChanges
     if (buildTool.isBspGenerated(folder)) {
       tables.buildServers.chooseServer(buildTool.buildServerName)
       quickConnectToBuildServer()
     } else if (
-      userConfig.shouldAutoImportNewProject || buildTool.forcesBuildServer
+      userConfig.shouldAutoImportNewProject || buildTool.isAutoConnectable || forceImport
     ) {
       generateBspAndConnect(buildTool)
     } else if (notification.isDismissed) {
@@ -2146,7 +2130,10 @@ class MetalsLspService(
             Future.successful(BuildChange.None)
           } else if (item == Messages.GenerateBspAndConnect.yes) {
             generateBspAndConnect(buildTool)
-          } else Future.successful(BuildChange.None)
+          } else {
+            notification.dismiss(2, TimeUnit.MINUTES)
+            Future.successful(BuildChange.None)
+          }
         }
     }
   }
