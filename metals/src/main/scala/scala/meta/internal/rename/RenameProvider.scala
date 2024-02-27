@@ -16,6 +16,7 @@ import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferenceProvider
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.parsing.Trees
@@ -60,7 +61,7 @@ final class RenameProvider(
     compilers: Compilers,
     clientConfig: ClientConfiguration,
     trees: Trees,
-)(implicit executionContext: ExecutionContext) {
+)(implicit executionContext: ExecutionContext, reportContext: ReportContext) {
 
   private val awaitingSave = new ConcurrentLinkedQueue[() => Future[Unit]]
 
