@@ -75,7 +75,7 @@ final class FileSystemSemanticdbs(
     if (semanticdbpath.isFile) Some(FoundSemanticDbPath(semanticdbpath, None))
     else {
       // needed in case sources are symlinked,
-      for {
+      val result = for {
         sourceRoot <- buildTargets.originalInverseSourceItem(file)
         relativeSourceRoot = sourceRoot.toRelative(workspace)
         relativeFile = file.toRelative(sourceRoot.dealias)
@@ -91,7 +91,13 @@ final class FileSystemSemanticdbs(
         alternativeSemanticdbPath,
         Some(fullRelativePath),
       )
+      if (result.isEmpty)
+        scribe.debug(
+          s"No text document found at for $file expected at ${semanticdbpath}"
+        )
+      result
     }
+
   }
 
 }
