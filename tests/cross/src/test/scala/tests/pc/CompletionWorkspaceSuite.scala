@@ -841,7 +841,24 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |    val x: Beta
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|import a.A.Beta
+           |package a {
+           |  object A {
+           |    type Beta = String
+           |    def m(): Int = ???
+           |  }
+           |}
+           |
+           |package b {
+           |  object B{
+           |    val x: Beta
+           |  }
+           |}
+           |""".stripMargin
+    )
   )
 
   checkEdit(
