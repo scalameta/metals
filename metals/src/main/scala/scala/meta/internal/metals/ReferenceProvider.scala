@@ -166,7 +166,8 @@ final class ReferenceProvider(
           )
           ReferencesResult(occurrence.symbol, locations)
         }
-      case None => Nil
+      case None => 
+        Nil
     }
   }
 
