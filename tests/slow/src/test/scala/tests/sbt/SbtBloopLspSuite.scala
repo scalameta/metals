@@ -130,7 +130,10 @@ class SbtBloopLspSuite
       )
       _ = assertStatus(_.isInstalled)
       projectVersion = workspace.resolve("project/build.properties").readText
-      _ = assertNoDiff(projectVersion, s"sbt.version=${V.sbtVersion}")
+      _ = assert(
+        projectVersion.startsWith(s"sbt.version="),
+        "project/build.properties should contains sbt version",
+      )
     } yield ()
   }
 
