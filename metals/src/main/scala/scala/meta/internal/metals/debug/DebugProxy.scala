@@ -60,7 +60,7 @@ private[debug] final class DebugProxy(
 
   @volatile private var clientAdapter =
     ClientConfigurationAdapter.default(sourceMapper)
-  @volatile private var frameIdToFrame: TrieMap[Int, StackFrame] = TrieMap.empty
+  private val frameIdToFrame: TrieMap[Int, StackFrame] = TrieMap.empty
 
   lazy val listen: Future[ExitStatus] = {
     scribe.info(s"Starting debug proxy for [$sessionName]")

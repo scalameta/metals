@@ -195,7 +195,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
 
   private def renderLocation(
       loc: l.Location,
-      folderRoot: AbsolutePath = workspace,
+      folderRoot: AbsolutePath,
   ): String = {
     val path = AbsolutePath.fromAbsoluteUri(URI.create(loc.getUri()))
     val relativePath =
