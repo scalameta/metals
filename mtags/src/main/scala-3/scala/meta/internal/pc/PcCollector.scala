@@ -609,8 +609,6 @@ abstract class PcCollector[T](
     all
   end traverseSought
 
-  // @note (tgodzik) Not sure currently how to get rid of the warning, but looks to correctly
-  // @nowarn
   private def collectTrees(trees: Iterable[Positioned]): Iterable[Tree] =
     trees.collect { case t: Tree =>
       t
