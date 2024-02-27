@@ -271,6 +271,7 @@ class Compilers(
       for {
         target <- buildTargets.allInverseDependencies(report.getTarget)
         if target != report.getTarget
+        if wasSuccessfullyCompiled.getOrElse(target, true)
         compiler <- buildTargetPCFromCache(target)
       } {
         compiler.restart()

@@ -75,8 +75,12 @@ case class ScalaPresentationCompiler(
 ) extends PresentationCompiler {
 
   private val wasSuccessfullyCompiled =
-    new util.concurrent.atomic.AtomicReference[Option[Boolean]](
-      wasSuccessfullyCompiledInitial
+    new util.concurrent.atomic.AtomicReference[
+      CompilationStatus.WasSuccessfullyCompiled
+    ](
+      CompilationStatus.fromWasSuccessfullyCompiled(
+        wasSuccessfullyCompiledInitial
+      )
     )
 
   implicit val executionContext: ExecutionContextExecutor = ec
@@ -155,16 +159,20 @@ case class ScalaPresentationCompiler(
   def restart(): Unit = restoreOutlineAndRestart()
 
   override def restart(wasSuccessful: Boolean): Unit = {
-    wasSuccessfullyCompiled.updateAndGet {
-      case None => Some(wasSuccessful)
-      case _ if wasSuccessful => Some(true)
+    val prevCompilationStatus = wasSuccessfullyCompiled.getAndUpdate {
+      case _ if wasSuccessful =>
+        CompilationStatus.SuccessfullyCompiled
+      case CompilationStatus.WaitingForCompilationResult =>
+        CompilationStatus.UnSuccessfullyCompiled
       case value => value
     }
 
     if (wasSuccessful) {
       changedDocuments.clear()
       compilerAccess.shutdownCurrentCompiler()
-    } else {
+    } else if (
+      prevCompilationStatus == CompilationStatus.WaitingForCompilationResult
+    ) {
       restoreOutlineAndRestart()
     }
   }
@@ -221,10 +229,10 @@ case class ScalaPresentationCompiler(
   ): OutlineFiles = {
     val shouldCompileAll = wasSuccessfullyCompiled
       .getAndUpdate {
-        case Some(false) => Some(true)
+        case CompilationStatus.UnSuccessfullyCompiled =>
+          CompilationStatus.OutlinedByPC
         case value => value
-      }
-      .exists(!_)
+      } == CompilationStatus.UnSuccessfullyCompiled
 
     val result =
       if (shouldCompileAll) {
@@ -621,4 +629,21 @@ case class ScalaPresentationCompiler(
     this.copy(wasSuccessfullyCompiledInitial = Some(wasSuccessful))
   }
 
+}
+
+object CompilationStatus {
+  sealed trait WasSuccessfullyCompiled
+  case object SuccessfullyCompiled extends WasSuccessfullyCompiled
+  case object UnSuccessfullyCompiled extends WasSuccessfullyCompiled
+  case object WaitingForCompilationResult extends WasSuccessfullyCompiled
+  case object OutlinedByPC extends WasSuccessfullyCompiled
+
+  def fromWasSuccessfullyCompiled(
+      wasSuccessfullyCompiled: Option[Boolean]
+  ): WasSuccessfullyCompiled =
+    wasSuccessfullyCompiled match {
+      case None => WaitingForCompilationResult
+      case Some(true) => SuccessfullyCompiled
+      case Some(false) => UnSuccessfullyCompiled
+    }
 }
