@@ -36,7 +36,8 @@ class ShortenedNames(
       s"type $to = ${from.showName}"
     }.toList
 
-  def getUsedRenames: Map[Symbol, String] = foundRenames.toMap
+  def getUsedRenames(using Context): Map[Symbol, String] =
+    foundRenames.toMap.filter { case (k, v) => k.showName != v }
 
   /**
    * Returns a list of shortened names
