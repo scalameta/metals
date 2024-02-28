@@ -119,7 +119,9 @@ trait Signatures { compiler: MetalsGlobal =>
       }
 
     def getUsedRenames: Map[Symbol, String] = lookedUpRenames.flatMap { key =>
-      renames.get(key).map(v => key -> v.toString())
+      renames.get(key).collect {
+        case v if key.nameString != v.toString => key -> v.toString()
+      }
     }.toMap
 
     def this(context: Context) =

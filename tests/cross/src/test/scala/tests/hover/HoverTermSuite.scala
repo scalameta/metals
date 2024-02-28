@@ -680,4 +680,24 @@ class HoverTermSuite extends BaseHoverSuite {
     )
   )
 
+  check(
+    "import-no-rename",
+    """
+      |import scala.collection
+      |
+      |object O {
+      |  <<val ab@@c = collection.Map(1 -> 2)>>
+      |}
+      |""".stripMargin,
+    """|```scala
+       |val abc: collection.Map[Int,Int]
+       |```
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|```scala
+                |val abc: scala.collection.Map[Int, Int]
+                |```
+                |""".stripMargin
+    )
+  )
 }
