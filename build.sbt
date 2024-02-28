@@ -498,7 +498,7 @@ lazy val metals = project
       // for logging
       "com.outr" %% "scribe" % V.scribe,
       "com.outr" %% "scribe-file" % V.scribe,
-      "com.outr" %% "scribe-slf4j" % V.scribe, // needed for flyway database migrations
+      "com.outr" %% "scribe-slf4j2" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
       "com.lihaoyi" %% "ujson" % "3.1.5",
       // For fetching projects' templates
