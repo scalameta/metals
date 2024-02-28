@@ -99,7 +99,7 @@ class CompletionProvider(
           d.label
         case o: TextEditMember =>
           o.label.getOrElse(labelWithSig)
-        case _: ExtensionMethod =>
+        case _: WorkspaceImplicitMember =>
           s"$labelWithSig (implicit)"
         case o: WorkspaceMember =>
           s"$ident - ${o.sym.owner.fullName}"
@@ -154,19 +154,19 @@ class CompletionProvider(
           item.setAdditionalTextEdits(i.autoImports.asJava)
         case d: DependecyMember =>
           item.setTextEdit(d.edit)
-        case e: ExtensionMethod =>
+        case m: WorkspaceImplicitMember =>
           val impPos = importPosition.getOrElse(AutoImportPosition(0, 0, false))
           val suffix =
             if (
-              clientSupportsSnippets && e.sym.paramss.headOption.exists(
+              clientSupportsSnippets && m.sym.paramss.headOption.exists(
                 _.nonEmpty
               )
             ) "($0)"
             else ""
           val (short, edits) = ShortenedNames.synthesize(
             TypeRef(
-              ThisType(e.sym.owner),
-              e.sym,
+              ThisType(m.sym.owner),
+              m.sym,
               Nil
             ),
             pos,
@@ -175,7 +175,7 @@ class CompletionProvider(
           )
           val edit: l.TextEdit = textEdit(
             short + suffix,
-            e.editRange.getOrElse(editRange)
+            editRange
           )
           item.setTextEdit(edit)
           item.setAdditionalTextEdits(edits.asJava)
@@ -422,7 +422,7 @@ class CompletionProvider(
                   param.info,
                   typeParams
                 ) =>
-              visit(new ExtensionMethod(sym))
+              visit(new WorkspaceImplicitMember(sym))
             case _ => false
           }
         } else false

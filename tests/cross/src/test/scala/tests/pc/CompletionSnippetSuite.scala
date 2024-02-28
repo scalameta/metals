@@ -219,7 +219,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       "2.13" ->
         """|Iterable
            |Iterable[$0] {}
-           |IterableOnce[$0] {}
+           |IterableOnce[$0]
            |""".stripMargin,
       "3" ->
         """|Iterable[$0] {}
