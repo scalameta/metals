@@ -381,8 +381,9 @@ object MetalsEnrichments
     }
 
     def isDependencySource(workspace: AbsolutePath): Boolean =
-      (isLocalFileSystem(workspace) &&
-        isInReadonlyDirectory(workspace)) || isJarFileSystem
+      isLocalFileSystem(workspace) &&
+        (isInReadonlyDirectory(workspace) || isInTmpDirectory(workspace)) ||
+        isJarFileSystem
 
     def isWorkspaceSource(workspace: AbsolutePath): Boolean =
       isLocalFileSystem(workspace) &&
@@ -398,6 +399,11 @@ object MetalsEnrichments
     def isInReadonlyDirectory(workspace: AbsolutePath): Boolean =
       path.toNIO.startsWith(
         workspace.resolve(Directories.readonly).toNIO
+      )
+
+    def isInTmpDirectory(workspace: AbsolutePath): Boolean =
+      path.toNIO.startsWith(
+        workspace.resolve(Directories.tmp).toNIO
       )
 
     def isSrcZipInReadonlyDirectory(workspace: AbsolutePath): Boolean = {
