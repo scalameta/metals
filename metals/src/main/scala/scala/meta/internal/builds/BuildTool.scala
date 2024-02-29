@@ -22,8 +22,6 @@ trait BuildTool {
 
   def projectRoot: AbsolutePath
 
-  def isAutoConnectable: Boolean = false
-
   val forcesBuildServer = false
 
   val isBloopInstallProvider = false

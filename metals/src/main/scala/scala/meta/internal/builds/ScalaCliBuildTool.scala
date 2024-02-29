@@ -62,8 +62,6 @@ class ScalaCliBuildTool(
   override val forcesBuildServer = true
 
   override def possibleBuildServerNames = ScalaCli.names.toList
-
-  override def isAutoConnectable: Boolean = true
 }
 
 object ScalaCliBuildTool {

@@ -891,19 +891,10 @@ class MetalsLspService(
   def fullConnect(): Future[Unit] = {
     buildTools.initialize()
     for {
-      found <- supportedBuildTool()
-      chosenBuildServer = found match {
-        case Some(BuildTool.Found(buildTool, _))
-            if buildTool.isAutoConnectable =>
-          tables.buildServers.chooseServer(buildTool.buildServerName)
-          Some(buildTool.buildServerName)
-        case _ => tables.buildServers.selectedServer()
-      }
-      _ <- slowConnectToBuildServer(
-        forceImport = false,
-        found,
-        chosenBuildServer,
-      ),
+      _ <-
+        if (buildTools.isAutoConnectable(optProjectRoot()))
+          autoConnectToBuildServer()
+        else slowConnectToBuildServer(forceImport = false)
     } yield buildServerPromise.trySuccess(())
   }
 
@@ -2043,50 +2034,30 @@ class MetalsLspService(
 
   def slowConnectToBuildServer(
       forceImport: Boolean
-  ): Future[BuildChange] = for {
-    buildTool <- supportedBuildTool()
-    chosenBuildServer = tables.buildServers.selectedServer()
-    buildChange <- slowConnectToBuildServer(
-      forceImport,
-      buildTool,
-      chosenBuildServer,
-    )
-  } yield {
-    buildServerPromise.trySuccess(())
-    buildChange
-  }
-
-  def slowConnectToBuildServer(
-      forceImport: Boolean,
-      buildTool: Option[BuildTool.Found],
-      chosenBuildServer: Option[String],
   ): Future[BuildChange] = {
-    def isBloopOrEmpty = chosenBuildServer.exists(
-      _ == BloopServers.name
-    ) || chosenBuildServer.isEmpty
-
-    def useBuildToolBsp(buildTool: BuildServerProvider) =
+    val chosenBuildServer = tables.buildServers.selectedServer()
+    def useBuildToolBsp(buildTool: BuildTool) =
       buildTool match {
         case _: BloopInstallProvider => userConfig.defaultBspToBuildTool
-        case _ => true
+        case _: BuildServerProvider => true
+        case _ => false
       }
-    buildTool match {
-      case Some(BuildTool.Found(buildTool: BuildServerProvider, _))
-          if chosenBuildServer.isEmpty && useBuildToolBsp(buildTool) =>
-        slowConnectToBuildToolBsp(buildTool, forceImport)
+
+    def isSelected(buildTool: BuildTool) =
+      buildTool match {
+        case _: BuildServerProvider =>
+          chosenBuildServer.contains(buildTool.buildServerName)
+        case _ => false
+      }
+
+    supportedBuildTool().flatMap {
       case Some(BuildTool.Found(buildTool: BloopInstallProvider, digest))
-          if isBloopOrEmpty =>
+          if chosenBuildServer.contains(BloopServers.name) ||
+            chosenBuildServer.isEmpty && !useBuildToolBsp(buildTool) =>
         slowConnectToBloopServer(forceImport, buildTool, digest)
-      case Some(BuildTool.Found(buildTool, _))
-          if !chosenBuildServer.contains(buildTool.buildServerName) &&
-            (buildTool.isAutoConnectable || forceImport) =>
-        tables.buildServers.chooseServer(buildTool.buildServerName)
-        quickConnectToBuildServer()
-      case Some(BuildTool.Found(buildTool: BuildServerProvider, _))
-          if chosenBuildServer.contains(buildTool.buildServerName) && !buildTool
-            .isBspGenerated(folder) =>
-        generateBspAndConnect(buildTool)
-      case Some(found) =>
+      case Some(found)
+          if isSelected(found.buildTool) &&
+            found.buildTool.isBspGenerated(folder) =>
         indexer.reloadWorkspaceAndIndex(
           forceImport,
           found.buildTool,
@@ -2094,22 +2065,27 @@ class MetalsLspService(
           importBuild,
           quickConnectToBuildServer,
         )
-      case None =>
-        quickConnectToBuildServer()
+      case Some(BuildTool.Found(buildTool: BuildServerProvider, _)) =>
+        slowConnectToBuildToolBsp(buildTool, forceImport, isSelected(buildTool))
+      // Used in tests, `.bloop` folder exists but no build tool is detected
+      case _ => quickConnectToBuildServer()
     }
   }
 
   private def slowConnectToBuildToolBsp(
       buildTool: BuildServerProvider,
       forceImport: Boolean,
+      isSelected: Boolean,
   ) = {
     val notification = tables.dismissedNotifications.ImportChanges
     if (buildTool.isBspGenerated(folder)) {
-      tables.buildServers.chooseServer(buildTool.buildServerName)
+      maybeChooseServer(buildTool.buildServerName, isSelected)
       quickConnectToBuildServer()
     } else if (
-      userConfig.shouldAutoImportNewProject || buildTool.isAutoConnectable || forceImport
+      userConfig.shouldAutoImportNewProject || forceImport || isSelected ||
+      buildTool.isInstanceOf[ScalaCliBuildTool]
     ) {
+      maybeChooseServer(buildTool.buildServerName, isSelected)
       generateBspAndConnect(buildTool)
     } else if (notification.isDismissed) {
       Future.successful(BuildChange.None)
@@ -2126,6 +2102,7 @@ class MetalsLspService(
             notification.dismissForever()
             Future.successful(BuildChange.None)
           } else if (item == Messages.GenerateBspAndConnect.yes) {
+            maybeChooseServer(buildTool.buildServerName, isSelected)
             generateBspAndConnect(buildTool)
           } else {
             notification.dismiss(2, TimeUnit.MINUTES)
@@ -2135,10 +2112,13 @@ class MetalsLspService(
     }
   }
 
+  private def maybeChooseServer(name: String, alreadySelected: Boolean) =
+    if (alreadySelected) Future.successful(())
+    else tables.buildServers.chooseServer(name)
+
   private def generateBspAndConnect(
       buildTool: BuildServerProvider
   ): Future[BuildChange] = {
-    tables.buildServers.chooseServer(buildTool.buildServerName)
     buildTool
       .generateBspConfig(
         folder,
