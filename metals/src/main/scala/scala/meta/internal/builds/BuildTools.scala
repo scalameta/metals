@@ -242,7 +242,7 @@ final class BuildTools(
       Some(BazelBuildTool.name)
     else if (isInBsp(path)) {
       val name = path.filename.stripSuffix(".json")
-      if (knownBsps(name)) None
+      if (knownBsps(name) && !ScalaCli.names(name)) None
       else Some(name)
     } else None
   }

@@ -185,7 +185,8 @@ final class Compilations(
   ): Future[Option[b.BuildTargetIdentifier]] = {
     val isCompilable =
       (path.isScalaOrJava || path.isSbt) &&
-        !path.isDependencySource(workspace())
+        !path.isDependencySource(workspace()) &&
+        !path.isInTmpDirectory(workspace())
 
     if (isCompilable) {
       val targetOpt = buildTargets.inverseSourcesBsp(path)

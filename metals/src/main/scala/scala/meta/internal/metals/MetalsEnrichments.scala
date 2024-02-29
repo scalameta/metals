@@ -381,9 +381,8 @@ object MetalsEnrichments
     }
 
     def isDependencySource(workspace: AbsolutePath): Boolean =
-      isLocalFileSystem(workspace) &&
-        (isInReadonlyDirectory(workspace) || isInTmpDirectory(workspace)) ||
-        isJarFileSystem
+      (isLocalFileSystem(workspace) &&
+        isInReadonlyDirectory(workspace)) || isJarFileSystem
 
     def isWorkspaceSource(workspace: AbsolutePath): Boolean =
       isLocalFileSystem(workspace) &&

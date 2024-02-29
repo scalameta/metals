@@ -202,7 +202,6 @@ class BillLspSuite extends BaseLspSuite("bill") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          Messages.ChooseBuildTool.message,
           Messages.BspSwitch.message,
           Messages.CheckDoctor.allProjectsMisconfigured,
         ).mkString("\n"),
