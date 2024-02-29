@@ -587,7 +587,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
                     |unsafe - scala.caps (commit: '')
                     |unsafeNulls - scala.runtime.stdLibPatches.language (commit: '')
                     |""".stripMargin,
-      "3.3.2" -> """|using (commit: '')
+      "3.3.3" -> """|using (commit: '')
                     |unsafeExceptions scala (commit: '')
                     |unchecked scala (commit: '')
                     |unsafe - caps (commit: '')
@@ -632,7 +632,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
                     |unsafe - scala.caps
                     |unsafeNulls - scala.runtime.stdLibPatches.language
                     |unshared(): unshared""".stripMargin,
-      "3.3.2" -> """|unsafeExceptions scala
+      "3.3.3" -> """|unsafeExceptions scala
                     |unchecked scala
                     |unsafe - caps
                     |unsafeNulls - scala.runtime.stdLibPatches.language
