@@ -418,10 +418,7 @@ class CompletionProvider(
           def typeParams = sym.owner.info.typeParams
           ownerConstructor.info.paramss match {
             case List(List(param))
-                if selectType fuzzy_<:< TypeWithParams(
-                  param.info,
-                  typeParams
-                ) =>
+                if selectType <:< boundedWildcardType(param.info, typeParams) =>
               visit(new WorkspaceImplicitMember(sym))
             case _ => false
           }

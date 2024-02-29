@@ -55,7 +55,6 @@ class MetalsGlobal(
     with completions.MillIvyCompletions
     with completions.SbtLibCompletions
     with completions.MultilineCommentCompletions
-    with completions.FuzzyUpperBound
     with Signatures
     with Compat
     with GlobalProxy
@@ -1078,6 +1077,37 @@ class MetalsGlobal(
         case AppliedTypeTree(qual, args) => Some(qual -> args)
         case _ => None
       }
+  }
+
+  /**
+   * Creates a bounded wildcard type for a type of parameter
+   * using information about type parameters.
+   *
+   * E.g. for class A[T](x: List[T])
+   * List[Int] <:< List[T] is false,
+   * this method for List[T] will return List[_ >: Nothing <: Any],
+   * and List[Int] <:< List[_ >: Nothing <: Any] is true.
+   */
+  def boundedWildcardType(
+      tpe: Type,
+      typeParams: List[Symbol]
+  ): Type = {
+    if (typeParams.isEmpty) tpe
+    else {
+      typeParams.find(_ == tpe.typeSymbol) match {
+        case Some(tpeDef) =>
+          tpeDef.info match {
+            case bounds: TypeBounds => BoundedWildcardType(bounds)
+            case tpe => tpe
+          }
+        case None =>
+          tpe match {
+            case TypeRef(pre, sym, args) =>
+              TypeRef(pre, sym, args.map(boundedWildcardType(_, typeParams)))
+            case t => t
+          }
+      }
+    }
   }
 
 }

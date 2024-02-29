@@ -582,7 +582,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "testOps(b: Int): Nothing (implicit)",
-    filter = _.contains("testOps")
+    filter = _.contains("(implicit)")
   )
 
   check(
@@ -600,7 +600,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "testOps(b: Int): Nothing (implicit)",
-    filter = _.contains("testOps")
+    filter = _.contains("(implicit)")
   )
 
   check(
@@ -620,7 +620,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     "testOps(b: Int): Nothing (implicit)",
-    filter = _.contains("testOps")
+    filter = _.contains("(implicit)")
   )
 
 }
