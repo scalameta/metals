@@ -43,5 +43,5 @@ val f/*: Float<<scala/Float#>>*/ = given_Float
 val g/*: Long<<scala/Long#>>*/ = `* *`
 val i/*: Option<<scala/Option#>>[Int<<scala/Int#>>]*/ = X.of[Int]
 val x/*: given_Xg<<(27:6)>>.type*/ = given_Xg
-val y/*: given_Yg<<(30:6)>>*/ = given_Yg/*(given_Xg<<(27:0)>>)*/
+val y/*: given_Yg<<(30:6)>>*/ = given_Yg/*(using given_Xg<<(27:0)>>)*/
 val z/*: given_Zg_T<<(33:6)>>[String<<scala/Predef.String#>>]*/ = given_Zg_T[String]

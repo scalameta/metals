@@ -9,7 +9,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
-    "local",
+    "local".tag(IgnoreForScala3CompilerPC),
     """|object Main {
        |  def foo() = {
        |    implicit val imp: Int = 2
@@ -25,7 +25,18 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |    val x/*: Int<<scala/Int#>>*/ = addOne(1)/*(imp<<(3:17)>>)*/
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|object Main {
+           |  def foo()/*: Unit<<scala/Unit#>>*/ = {
+           |    implicit val imp: Int = 2
+           |    def addOne(x: Int)(implicit one: Int)/*: Int<<scala/Int#>>*/ = x + one
+           |    val x/*: Int<<scala/Int#>>*/ = addOne(1)/*(using imp<<(3:17)>>)*/
+           |  }
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -65,7 +76,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
-    "implicit-param",
+    "implicit-param".tag(IgnoreForScala3CompilerPC),
     """|case class User(name: String)
        |object Main {
        |  implicit val imp: Int = 2
@@ -79,7 +90,17 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |  def addOne(x: Int)(implicit one: Int)/*: Int<<scala/Int#>>*/ = x + one
        |  val x/*: Int<<scala/Int#>>*/ = addOne(1)/*(imp<<(3:15)>>)*/
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|case class User(name: String)
+           |object Main {
+           |  implicit val imp: Int = 2
+           |  def addOne(x: Int)(implicit one: Int)/*: Int<<scala/Int#>>*/ = x + one
+           |  val x/*: Int<<scala/Int#>>*/ = addOne(1)/*(using imp<<(3:15)>>)*/
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -99,7 +120,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
-    "using-param".tag(IgnoreScala2),
+    "using-param".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
     """|case class User(name: String)
        |object Main {
        |  implicit val imp: Int = 2
@@ -111,7 +132,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |object Main {
        |  implicit val imp: Int = 2
        |  def addOne(x: Int)(using one: Int)/*: Int<<scala/Int#>>*/ = x + one
-       |  val x/*: Int<<scala/Int#>>*/ = addOne(1)/*(imp<<(3:15)>>)*/
+       |  val x/*: Int<<scala/Int#>>*/ = addOne(1)/*(using imp<<(3:15)>>)*/
        |}
        |""".stripMargin
   )
@@ -545,7 +566,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
-    "ord",
+    "ord".tag(IgnoreForScala3CompilerPC),
     """|object Main {
        |  val ordered = "acb".sorted
        |}
@@ -553,7 +574,14 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
     """|object Main {
        |  val ordered/*: String<<scala/Predef.String#>>*/ = /*augmentString<<scala/Predef.augmentString().>>(*/"acb"/*)*/.sorted/*[Char<<scala/Char#>>]*//*(Char<<scala/math/Ordering.Char.>>)*/
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|object Main {
+           |  val ordered/*: String<<scala/Predef.String#>>*/ = /*augmentString<<scala/Predef.augmentString().>>(*/"acb"/*)*/.sorted/*[Char<<scala/Char#>>]*//*(using Char<<scala/math/Ordering.Char.>>)*/
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -599,7 +627,9 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
-    "complex".tag(IgnoreScalaVersion.forLessThan("2.12.16")),
+    "complex".tag(
+      IgnoreScalaVersion.forLessThan("2.12.16").and(IgnoreForScala3CompilerPC)
+    ),
     """|object ScalatestMock {
        |  class SRF
        |  implicit val subjectRegistrationFunction: SRF = new SRF()
@@ -673,7 +703,47 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |  def checkThing1[A](implicit ev: Eq[A])/*: Nothing<<scala/Nothing#>>*/ = ???
        |  def checkThing2[A](implicit ev: Eq[A], sem: Semigroup[A])/*: Nothing<<scala/Nothing#>>*/ = ???
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|object ScalatestMock {
+           |  class SRF
+           |  implicit val subjectRegistrationFunction: SRF = new SRF()
+           |  class Position
+           |  implicit val here: Position = new Position()
+           |  implicit class StringTestOps(name: String) {
+           |    def should(right: => Unit)(implicit config: SRF): Unit = ()
+           |    def in(f: => Unit)(implicit pos: Position): Unit = ()
+           |  }
+           |  implicit def instancesString: Eq[String] with Semigroup[String] = ???
+           |}
+           |
+           |trait Eq[A]
+           |trait Semigroup[A]
+           |
+           |class DemoSpec {
+           |  import ScalatestMock._
+           |
+           |  /*StringTestOps<<(6:17)>>(*/"foo"/*)*/ should {
+           |    /*StringTestOps<<(6:17)>>(*/"checkThing1"/*)*/ in {
+           |      checkThing1[String]/*(using instancesString<<(10:15)>>)*/
+           |    }/*(using here<<(5:15)>>)*/
+           |    /*StringTestOps<<(6:17)>>(*/"checkThing2"/*)*/ in {
+           |      checkThing2[String]/*(using instancesString<<(10:15)>>, instancesString<<(10:15)>>)*/
+           |    }/*(using here<<(5:15)>>)*/
+           |  }/*(using subjectRegistrationFunction<<(3:15)>>)*/
+           |
+           |  /*StringTestOps<<(6:17)>>(*/"bar"/*)*/ should {
+           |    /*StringTestOps<<(6:17)>>(*/"checkThing1"/*)*/ in {
+           |      checkThing1[String]/*(using instancesString<<(10:15)>>)*/
+           |    }/*(using here<<(5:15)>>)*/
+           |  }/*(using subjectRegistrationFunction<<(3:15)>>)*/
+           |
+           |  def checkThing1[A](implicit ev: Eq[A])/*: Nothing<<scala/Nothing#>>*/ = ???
+           |  def checkThing2[A](implicit ev: Eq[A], sem: Semigroup[A])/*: Nothing<<scala/Nothing#>>*/ = ???
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -743,5 +813,124 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
     """|package example
        |case class ErrorMessage(error)
        |""".stripMargin
+  )
+
+  // NOTE: We don't show inlayHints for anonymous given instances
+  check(
+    "anonymous-given".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    """|package example
+       |
+       |trait Ord[T]:
+       |  def compare(x: T, y: T): Int
+       |
+       |given intOrd: Ord[Int] with
+       |  def compare(x: Int, y: Int) =
+       |    if x < y then -1 else if x > y then +1 else 0
+       |
+       |given Ord[String] with
+       |  def compare(x: String, y: String) =
+       |    x.compare(y)
+       |
+       |""".stripMargin,
+    """|package example
+       |
+       |trait Ord[T]:
+       |  def compare(x: T, y: T): Int
+       |
+       |given intOrd: Ord[Int] with
+       |  def compare(x: Int, y: Int)/*: Int<<scala/Int#>>*/ =
+       |    if x < y then -1 else if x > y then +1 else 0
+       |
+       |given Ord[String] with
+       |  def compare(x: String, y: String)/*: Int<<scala/Int#>>*/ =
+       |    /*augmentString<<scala/Predef.augmentString().>>(*/x/*)*/.compare(y)
+       |
+       |""".stripMargin
+  )
+
+  // TODO: Add a separate option for hints for context bounds
+  check(
+    "context-bounds1".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    """|package example
+       |object O {
+       |  given Int = 1
+       |  def test[T: Ordering](x: T)(using Int) = ???
+       |  test(1)
+       |}
+       |""".stripMargin,
+    """|package example
+       |object O {
+       |  given Int = 1
+       |  def test[T: Ordering](x: T)(using Int)/*: Nothing<<scala/Nothing#>>*/ = ???
+       |  test/*[Int<<scala/Int#>>]*/(1)/*(using Int<<scala/math/Ordering.Int.>>, given_Int<<(2:8)>>)*/
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "context-bounds2".tag(IgnoreForScala3CompilerPC),
+    """|package example
+       |object O {
+       |  def test[T: Ordering](x: T) = ???
+       |  test(1)
+       |}
+       |""".stripMargin,
+    """|package example
+       |object O {
+       |  def test[T: Ordering](x: T)/*: Nothing<<scala/Nothing#>>*/ = ???
+       |  test/*[Int<<scala/Int#>>]*/(1)/*(Int<<scala/math/Ordering.Int.>>)*/
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|package example
+                |object O {
+                |  def test[T: Ordering](x: T)/*: Nothing<<scala/Nothing#>>*/ = ???
+                |  test/*[Int<<scala/Int#>>]*/(1)/*(using Int<<scala/math/Ordering.Int.>>)*/
+                |}
+                |""".stripMargin
+    )
+  )
+
+  check(
+    "context-bounds3".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    """|package example
+       |object O {
+       |  def test[T: Ordering](x: T)(using Int) = ???
+       |  test(1)
+       |}
+       |""".stripMargin,
+    """|package example
+       |object O {
+       |  def test[T: Ordering](x: T)(using Int)/*: Nothing<<scala/Nothing#>>*/ = ???
+       |  test/*[Int<<scala/Int#>>]*/(1)/*(using Int<<scala/math/Ordering.Int.>>)*/
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "context-bounds4".tag(IgnoreForScala3CompilerPC),
+    """|package example
+       |object O {
+       |  implicit val i: Int = 123
+       |  def test[T: Ordering](x: T)(implicit v: Int) = ???
+       |  test(1)
+       |}
+       |""".stripMargin,
+    """|package example
+       |object O {
+       |  implicit val i: Int = 123
+       |  def test[T: Ordering](x: T)(implicit v: Int)/*: Nothing<<scala/Nothing#>>*/ = ???
+       |  test/*[Int<<scala/Int#>>]*/(1)/*(Int<<scala/math/Ordering.Int.>>, i<<(2:15)>>)*/
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|package example
+                |object O {
+                |  implicit val i: Int = 123
+                |  def test[T: Ordering](x: T)(implicit v: Int)/*: Nothing<<scala/Nothing#>>*/ = ???
+                |  test/*[Int<<scala/Int#>>]*/(1)/*(using Int<<scala/math/Ordering.Int.>>, i<<(2:15)>>)*/
+                |}
+                |""".stripMargin
+    )
   )
 }
