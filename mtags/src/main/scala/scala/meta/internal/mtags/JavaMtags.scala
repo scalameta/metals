@@ -82,9 +82,11 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)
     )
   }
 
-  def visitMembers[T <: JavaMember](fields: java.util.List[T]): Unit =
+  def visitMembers[T <: JavaMember](cls: JavaClass): Unit = {
+    val fields = cls.getFields
     if (fields == null) ()
-    else fields.asScala.foreach(visitMember)
+    else fields.asScala.foreach(visitMember(cls, _))
+  }
 
   def visitClasses(classes: java.util.List[JavaClass]): Unit =
     if (classes == null) ()
@@ -116,7 +118,7 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)
       if (includeMembers) {
         visitMethods(cls)
         visitConstructors(cls)
-        visitMembers(cls.getFields)
+        visitMembers(cls)
       }
     }
 
@@ -166,14 +168,16 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)
     methods.asScala.foreach { method =>
       val name = method.getName
       val disambiguator = overloads.disambiguator(name)
-      val pos = toRangePosition(method.lineNumber, name)
+      val line =
+        if (method.lineNumber == -1) cls.lineNumber else method.lineNumber
+      val pos = toRangePosition(line, name)
       withOwner() {
         visitMethod(method, name, disambiguator, pos, 0)
       }
     }
   }
 
-  def visitMember[T <: JavaMember](m: T): Unit =
+  def visitMember[T <: JavaMember](cls: JavaClass, m: T): Unit =
     withOwner(owner) {
       val name = m.getName
       val line = m match {
@@ -181,7 +185,10 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)
         case c: JavaField => c.lineNumber
         case _ => 0
       }
-      val pos = toRangePosition(line, name)
+      val actualLine =
+        if (line == -1) cls.lineNumber
+        else line
+      val pos = toRangePosition(actualLine, name)
       val (kind: Kind, properties: Int) = m match {
         case _: JavaMethod => (Kind.METHOD, 0)
         case field: JavaField if field.isEnumConstant() =>
