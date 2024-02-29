@@ -23,7 +23,6 @@ import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans.Span
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintKind
-import org.eclipse.{lsp4j as l}
 
 class PcInlayHintsProvider(
     driver: InteractiveDriver,
@@ -77,7 +76,7 @@ class PcInlayHintsProvider(
           if params.implicitParameters() =>
         val labelParts = symbols.map(s => List(labelPart(s, s.decodedName)))
         val label =
-          if allImplicit then labelParts.separated("(", ", ", ")")
+          if allImplicit then labelParts.separated("(using ", ", ", ")")
           else labelParts.separated(", ")
         inlayHints.add(
           adjustPos(pos).toLsp,
@@ -215,7 +214,10 @@ object ImplicitParameters:
       case Apply(fun, args)
           if args.exists(isSyntheticArg) && !tree.sourcePos.span.isZeroExtent =>
         val (implicitArgs, providedArgs) = args.partition(isSyntheticArg)
-        val allImplicit = providedArgs.isEmpty
+        val allImplicit = providedArgs.isEmpty || providedArgs.forall {
+          case Ident(name) => name == nme.MISSING
+          case _ => false
+        }
         val pos = implicitArgs.head.sourcePos
         Some(implicitArgs.map(_.symbol), pos, allImplicit)
       case _ => None
