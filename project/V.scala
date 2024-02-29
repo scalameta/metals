@@ -3,10 +3,10 @@ import sbt._
 object V {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
-  val scala212 = "2.12.18"
-  val scala213 = "2.13.12"
-  val scala3 = "3.3.1"
-  val firstScala3PCVersion = "3.3.2-RC1-bin-20230721-492f777-NIGHTLY"
+  val scala212 = "2.12.19"
+  val scala213 = "2.13.13"
+  val scala3 = "3.3.3"
+  val firstScala3PCVersion = "3.3.4"
   val wrapperMetalsVersion = "3.4.0-RC1-bin-20231127-41e7d95-NIGHTLY"
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
@@ -112,7 +112,7 @@ object V {
 
   // whenever version is removed please add it to MtagsResolver under last supported Metals version
   def deprecatedScala3Versions =
-    Seq("3.3.2-RC1", "3.2.1", "3.2.0", "3.1.2", "3.1.1", "3.1.0")
+    Seq("3.3.2", "3.2.1", "3.2.0", "3.1.2", "3.1.1", "3.1.0")
 
   // NOTE if you had a new Scala Version make sure it's contained in quickPublishScalaVersions
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
