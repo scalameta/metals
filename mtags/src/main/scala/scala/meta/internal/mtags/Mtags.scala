@@ -31,7 +31,7 @@ final class Mtags(implicit rc: ReportContext) {
     if (language.isJava || language.isScala) {
       val mtags =
         if (language.isJava)
-          new JavaToplevelMtags(input)
+          new JavaToplevelMtags(input, includeInnerClasses = false)
         else
           new ScalaToplevelMtags(
             input,
@@ -59,7 +59,7 @@ final class Mtags(implicit rc: ReportContext) {
     if (language.isJava || language.isScala) {
       val mtags =
         if (language.isJava)
-          new JavaToplevelMtags(input)
+          new JavaToplevelMtags(input, includeInnerClasses = true)
         else
           new ScalaToplevelMtags(
             input,

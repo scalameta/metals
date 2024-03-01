@@ -10,7 +10,10 @@ import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.tokenizers.Chars._
 import scala.meta.internal.tokenizers.Reporter
 
-class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
+class JavaToplevelMtags(
+    val input: Input.VirtualFile,
+    includeInnerClasses: Boolean
+) extends MtagsIndexer {
 
   import JavaToplevelMtags._
 
@@ -18,12 +21,20 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
   val reader: CharArrayReader =
     new CharArrayReader(input, dialects.Scala213, reporter)
 
+  override def overrides(): List[(String, List[OverriddenSymbol])] =
+    overridden.result
+
+  private val overridden = List.newBuilder[(String, List[OverriddenSymbol])]
+
+  private def addOverridden(symbols: List[OverriddenSymbol]) =
+    overridden += ((currentOwner, symbols))
+
   override def language: Language = Language.JAVA
 
   override def indexRoot(): Unit = {
     if (!input.path.endsWith("module-info.java")) {
       reader.nextRawChar()
-      loop
+      loop(None)
     }
   }
 
@@ -35,14 +46,15 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
     }
   }
 
-  private def loop: Unit = {
+  @tailrec
+  private def loop(region: Option[Region]): Unit = {
     val token = fetchToken
     token match {
       case Token.EOF =>
       case Token.Package =>
         val paths = readPaths
         paths.foreach { path => pkg(path.value, path.pos) }
-        loop
+        loop(region)
       case Token.Class | Token.Interface | _: Token.Enum | _: Token.Record =>
         fetchToken match {
           case Token.Word(v, pos) =>
@@ -50,14 +62,74 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
               case Token.Interface => SymbolInformation.Kind.INTERFACE
               case _ => SymbolInformation.Kind.CLASS
             }
-            withOwner(currentOwner)(tpe(v, pos, kind, 0))
-            skipBody
-            loop
+            val previousOwner = currentOwner
+            tpe(v, pos, kind, 0)
+            if (includeInnerClasses) {
+              collectTypeHierarchyInformation
+              loop(Some(Region(region, currentOwner, lBraceCount = 1)))
+            } else {
+              skipBody
+              currentOwner = previousOwner
+              loop(region)
+            }
+          case Token.LBrace =>
+            loop(region.map(_.lBrace()))
+          case Token.RBrace =>
+            val newRegion = region.flatMap(_.rBrace())
+            newRegion.foreach(reg => currentOwner = reg.owner)
+            loop(newRegion)
           case _ =>
-            loop
+            loop(region)
         }
+      case Token.LBrace =>
+        loop(region.map(_.lBrace()))
+      case Token.RBrace =>
+        val newRegion = region.flatMap(_.rBrace())
+        newRegion.foreach(reg => currentOwner = reg.owner)
+        loop(newRegion)
       case _ =>
-        loop
+        loop(region)
+    }
+  }
+
+  private def collectTypeHierarchyInformation: Unit = {
+    val implementsOrExtends = List.newBuilder[String]
+    @tailrec
+    def skipUntilOptImplementsOrExtends: Token = {
+      fetchToken match {
+        case t @ (Token.Implements | Token.Extends) => t
+        case Token.EOF => Token.EOF
+        case Token.LBrace => Token.LBrace
+        case _ => skipUntilOptImplementsOrExtends
+      }
+    }
+
+    @tailrec
+    def collectHierarchy: Unit = {
+      fetchToken match {
+        case Token.Word(v, _) =>
+          // emit here
+          implementsOrExtends += v
+          collectHierarchy
+        case Token.LBrace =>
+        case Token.LParen =>
+          skipBalanced(Token.LParen, Token.RParen)
+          collectHierarchy
+        case Token.LessThan =>
+          skipBalanced(Token.LessThan, Token.GreaterThan)
+          collectHierarchy
+        case Token.EOF =>
+        case _ => collectHierarchy
+      }
+    }
+
+    skipUntilOptImplementsOrExtends match {
+      case Token.Implements | Token.Extends =>
+        collectHierarchy
+        addOverridden(
+          implementsOrExtends.result.distinct.map(UnresolvedOverriddenSymbol(_))
+        )
+      case _ =>
     }
   }
 
@@ -103,6 +175,8 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
           case "interface" => Token.Interface
           case "record" => Token.Record(pos)
           case "enum" => Token.Enum(pos)
+          case "extends" => Token.Extends
+          case "implements" => Token.Implements
           case ident =>
             Token.Word(ident, pos)
         }
@@ -113,8 +187,8 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
     def parseToken: (Token, Boolean) = {
       val first = reader.ch
       first match {
-        case ',' | '<' | '>' | '&' | '|' | '!' | '=' | '+' | '-' | '*' | '@' |
-            ':' | '?' | '%' | '^' | '~' =>
+        case ',' | '&' | '|' | '!' | '=' | '+' | '-' | '*' | '@' | ':' | '?' |
+            '%' | '^' | '~' =>
           (Token.SpecialSym, false)
         case SU => (Token.EOF, false)
         case '.' => (Token.Dot, false)
@@ -125,6 +199,8 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
         case ')' => (Token.RParen, false)
         case '[' => (Token.LBracket, false)
         case ']' => (Token.RBracket, false)
+        case '<' => (Token.LessThan, false)
+        case '>' => (Token.GreaterThan, false)
         case '"' => (quotedLiteral('"'), false)
         case '\'' => (quotedLiteral('\''), false)
         case '/' =>
@@ -190,22 +266,26 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
           skipToFirstBrace
       }
 
-    @tailrec
-    def skipToRbrace(open: Int): Unit = {
-      fetchToken match {
-        case Token.RBrace if open == 1 => ()
-        case Token.RBrace =>
-          skipToRbrace(open - 1)
-        case Token.LBrace =>
-          skipToRbrace(open + 1)
-        case Token.EOF => ()
-        case _ =>
-          skipToRbrace(open)
-      }
-    }
-
     skipToFirstBrace
-    skipToRbrace(1)
+    skipBalanced(Token.LBrace, Token.RBrace)
+  }
+
+  @tailrec
+  private def skipBalanced(
+      openingToken: Token,
+      closingToken: Token,
+      open: Int = 1
+  ): Unit = {
+    fetchToken match {
+      case t if t == closingToken && open == 1 => ()
+      case t if t == closingToken =>
+        skipBalanced(openingToken, closingToken, open - 1)
+      case t if t == openingToken =>
+        skipBalanced(openingToken, closingToken, open + 1)
+      case Token.EOF => ()
+      case _ =>
+        skipBalanced(openingToken, closingToken, open)
+    }
   }
 
   private def skipLine: Unit =
@@ -260,12 +340,16 @@ object JavaToplevelMtags {
     case class Record(pos: Position) extends WithPos {
       val value: String = "record"
     }
+    case object Implements extends Token
+    case object Extends extends Token
     case object RBrace extends Token
     case object LBrace extends Token
     case object RParen extends Token
     case object LParen extends Token
     case object RBracket extends Token
     case object LBracket extends Token
+    case object LessThan extends Token
+    case object GreaterThan extends Token
     case object Semicolon extends Token
     // any allowed symbol like `=` , `-` and others
     case object SpecialSym extends Token
@@ -276,5 +360,16 @@ object JavaToplevelMtags {
         s"Word($value)"
     }
 
+  }
+
+  case class Region(
+      previousRegion: Option[Region],
+      owner: String,
+      lBraceCount: Int
+  ) {
+    def lBrace(): Region = Region(previousRegion, owner, lBraceCount + 1)
+    def rBrace(): Option[Region] =
+      if (lBraceCount == 1) previousRegion
+      else Some(Region(previousRegion, owner, lBraceCount - 1))
   }
 }
