@@ -8,6 +8,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.ResolvedOverriddenSymbol
 import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
+import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.io.AbsolutePath
 
 import munit.TestOptions
@@ -655,12 +656,38 @@ class ScalaToplevelSuite extends BaseSuite {
     mode = All,
   )
 
+  check(
+    "implicit-class-with-val",
+    """|package a
+       |object Foo {
+       |  implicit class IntOps(private val i: Int) extends AnyVal {
+       |    def inc: Int = i + 1
+       |  }
+       |}
+       |""".stripMargin,
+    List(
+      "a/", "a/Foo.", "a/Foo.IntOps# -> AnyVal", "a/Foo.IntOps#i.",
+      "a/Foo.IntOps#inc().",
+    ),
+    mode = All,
+    additionalSymbolCheck = syms =>
+      assert(
+        syms
+          .find(_.symbol == "a/Foo.IntOps#inc()")
+          .map(_.isExtension)
+          .getOrElse(
+            true
+          ) // if the symbol doesn't exit it should fail on a different assert
+      ),
+  )
+
   def check(
       options: TestOptions,
       code: String,
       expected: List[String],
       mode: Mode = Toplevel,
       dialect: Dialect = dialects.Scala3,
+      additionalSymbolCheck: Seq[SymbolInformation] => Unit = _ => (),
   )(implicit location: munit.Location): Unit = {
     test(options) {
       val dir = AbsolutePath(Files.createTempDirectory("mtags"))
@@ -672,7 +699,8 @@ class ScalaToplevelSuite extends BaseSuite {
             val includeMembers = mode == All
             val (doc, overrides) =
               Mtags.indexWithOverrides(input, dialect, includeMembers)
-            val symbols = doc.occurrences.map(_.symbol).toList
+            additionalSymbolCheck(doc.symbols)
+            val symbols = doc.symbols.map(_.symbol).toList
             val overriddenMap = overrides.toMap
             symbols.map { symbol =>
               overriddenMap.get(symbol) match {

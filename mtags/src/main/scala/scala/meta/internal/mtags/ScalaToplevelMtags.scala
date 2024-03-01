@@ -290,12 +290,27 @@ class ScalaToplevelMtags(
           )
         case DEF | VAL | VAR | GIVEN
             if expectTemplate.map(!_.isExtension).getOrElse(true) =>
+          val isInParen =
+            region match {
+              case (_: Region.InParenCaseClass) | (_: Region.InParenClass) =>
+                true
+              case _ => false
+            }
+          val isImplicit =
+            (isInParen && expectTemplate.exists(
+              _.isImplicit
+            )) || (!isInParen && region.isImplicit)
           if (needEmitTermMember()) {
             withOwner(currRegion.termOwner) {
-              emitTerm(currRegion)
+              emitTerm(currRegion, isImplicit)
             }
           } else scanner.nextToken()
-          loop(indent, isAfterNewline = false, currRegion, newExpectIgnoreBody)
+          loop(
+            indent,
+            isAfterNewline = false,
+            currRegion,
+            if (isInParen) expectTemplate else newExpectIgnoreBody
+          )
         case TYPE if expectTemplate.map(!_.isExtension).getOrElse(true) =>
           if (needEmitMember(currRegion) && !prevWasDot) {
             withOwner(currRegion.termOwner) {
@@ -716,7 +731,8 @@ class ScalaToplevelMtags(
   /**
    * Enters a global element (def/val/var/given)
    */
-  def emitTerm(region: Region): Unit = {
+  def emitTerm(region: Region, isParentImplicit: Boolean): Unit = {
+    val extensionProperty = if (isParentImplicit) EXTENSION else 0
     val kind = scanner.curr.token
     acceptTrivia()
     kind match {
@@ -726,7 +742,7 @@ class ScalaToplevelMtags(
             name.name,
             name.pos,
             Kind.METHOD,
-            SymbolInformation.Property.VAL.value
+            SymbolInformation.Property.VAL.value | extensionProperty
           )
           resetRegion(region)
         })
@@ -736,7 +752,7 @@ class ScalaToplevelMtags(
             name.name,
             "()",
             name.pos,
-            SymbolInformation.Property.VAR.value
+            SymbolInformation.Property.VAR.value | extensionProperty
           )
           resetRegion(region)
         })
@@ -746,7 +762,7 @@ class ScalaToplevelMtags(
             name.name,
             region.overloads.disambiguator(name.name),
             name.pos,
-            0
+            extensionProperty
           )
         )
       case GIVEN =>
