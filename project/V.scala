@@ -5,7 +5,7 @@ object V {
   val scala211 = "2.11.12"
   val scala212 = "2.12.19"
   val scala213 = "2.13.13"
-  val scala3 = "3.3.2"
+  val scala3 = "3.3.3"
   val firstScala3PCVersion = "3.3.3"
   val wrapperMetalsVersion = "3.4.0-RC1-bin-20231127-41e7d95-NIGHTLY"
 
