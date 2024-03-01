@@ -83,7 +83,7 @@ class CompletionPatternSuite extends BaseCompletionSuite {
         """|macros - scala.languageFeature.experimental
            |macroImpl - scala.reflect.macros.internal
            |""".stripMargin,
-      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" -> ""
+      ">=3.4.2-RC1-bin-20240301-hash-NIGHTLY" -> ""
     )
   )
 

@@ -47,7 +47,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
         """|transparentTrait - scala.annotation (commit: '')
            |""".stripMargin,
-      ">=3.4.2-RC1-bin-20240228-hash-NIGHTLY" -> ""
+      ">=3.4.2-RC1-bin-20240301-hash-NIGHTLY" -> ""
     ),
     includeCommitCharacter = true
   )
@@ -79,7 +79,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
         """|transparentTrait - scala.annotation (commit: '')
            |""".stripMargin,
-      ">=3.4.2-RC1-bin-20240228-hash-NIGHTLY" -> ""
+      ">=3.4.2-RC1-bin-20240301-hash-NIGHTLY" -> ""
     ),
     includeCommitCharacter = true
   )
@@ -491,7 +491,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
            |derived - scala.CanEqual
            |deprecated - scala.runtime.stdLibPatches.language
            |""".stripMargin,
-      ">=3.4.2-RC1-bin-20240228-hash-NIGHTLY" -> "def"
+      ">=3.4.2-RC1-bin-20240301-hash-NIGHTLY" -> "def"
     )
   )
 
@@ -517,7 +517,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
                   |var
                   |varargs - scala.annotation
                   |""".stripMargin,
-      ">=3.4.2-RC1-bin-20240228-hash-NIGHTLY" ->
+      ">=3.4.2-RC1-bin-20240301-hash-NIGHTLY" ->
         """|val
            |var""".stripMargin
     )
@@ -612,7 +612,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
            |unused - scala.annotation (commit: '')
            |unshared - scala.annotation.internal (commit: '')
            |""".stripMargin,
-      ">=3.4.2-RC1-bin-20240228-hash-NIGHTLY" -> "using (commit: '')"
+      ">=3.4.2-RC1-bin-20240301-hash-NIGHTLY" -> "using (commit: '')"
     ),
     topLines = Some(5)
   )
@@ -650,7 +650,14 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
                   |unsafeNulls - scala.runtime.stdLibPatches.language
                   |unused - scala.annotation
                   |""".stripMargin,
-      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" -> ""
+      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
+        """|unsafe - scala.caps
+           |unsafeNulls - scala.runtime.stdLibPatches.language
+           |unused - scala.annotation
+           |unshared - scala.annotation.internal
+           |unspecialized - scala.annotation
+           |""".stripMargin,
+      ">=3.4.2-RC1-bin-20240301-hash-NIGHTLY" -> ""
     ),
     topLines = Some(5)
   )
