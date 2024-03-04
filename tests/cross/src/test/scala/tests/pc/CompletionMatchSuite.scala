@@ -10,7 +10,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
   )
 
   check(
-    "match".tag(IgnoreForScala3CompilerPC),
+    "match",
     """
       |object A {
       |  Option(1) match@@
@@ -21,7 +21,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
   )
 
   check(
-    "trailing-expression".tag(IgnoreForScala3CompilerPC),
+    "trailing-expression",
     """
       |object A {
       |  Option(1) match@@
@@ -34,7 +34,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
 
   // In Scala3 it's allowed to write xxx.match
   check(
-    "dot".tag(IgnoreForScala3CompilerPC),
+    "dot",
     """
       |object A {
       |  Option(1).match@@
@@ -457,7 +457,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     )
   )
   check(
-    "exhaustive-map".tag(IgnoreForScala3CompilerPC),
+    "exhaustive-map",
     """
       |object A {
       |  List(Option(1)).map{ ca@@ }
@@ -842,7 +842,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
   )
 
   check(
-    "union-type".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    "union-type".tag(IgnoreScala2),
     """
       |case class Foo(a: Int)
       |case class Bar(b: Int)
@@ -857,7 +857,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "union-type-edit".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    "union-type-edit".tag(IgnoreScala2),
     """
       |case class Foo(a: Int)
       |case class Bar(b: Int)
