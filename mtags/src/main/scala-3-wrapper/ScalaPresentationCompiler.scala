@@ -18,6 +18,7 @@ import scala.meta.pc.HoverSignature
 import scala.meta.pc.InlayHintsParams
 import scala.meta.pc.Node
 import scala.meta.pc.OffsetParams
+import scala.meta.pc.PcSymbolInformation
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
@@ -109,6 +110,11 @@ case class ScalaPresentationCompiler(
       params: OffsetParams
   ): CompletableFuture[ju.Optional[HoverSignature]] =
     underlying.hover(params)
+
+  override def info(
+      symbol: String
+  ): CompletableFuture[ju.Optional[PcSymbolInformation]] =
+    underlying.info(symbol)
 
   override def convertToNamedArguments(
       params: OffsetParams,
