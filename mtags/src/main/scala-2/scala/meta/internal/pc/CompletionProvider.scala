@@ -99,6 +99,8 @@ class CompletionProvider(
           d.label
         case o: TextEditMember =>
           o.label.getOrElse(labelWithSig)
+        case _: WorkspaceImplicitMember =>
+          s"$labelWithSig (implicit)"
         case o: WorkspaceMember =>
           s"$ident - ${o.sym.owner.fullName}"
         case _ => labelWithSig
@@ -152,6 +154,31 @@ class CompletionProvider(
           item.setAdditionalTextEdits(i.autoImports.asJava)
         case d: DependecyMember =>
           item.setTextEdit(d.edit)
+        case m: WorkspaceImplicitMember =>
+          val impPos = importPosition.getOrElse(AutoImportPosition(0, 0, false))
+          val suffix =
+            if (
+              clientSupportsSnippets && m.sym.paramss.headOption.exists(
+                _.nonEmpty
+              )
+            ) "($0)"
+            else ""
+          val (short, edits) = ShortenedNames.synthesize(
+            TypeRef(
+              ThisType(m.sym.owner),
+              m.sym,
+              Nil
+            ),
+            pos,
+            context,
+            impPos
+          )
+          val edit: l.TextEdit = textEdit(
+            short + suffix,
+            editRange
+          )
+          item.setTextEdit(edit)
+          item.setAdditionalTextEdits(edits.asJava)
         case w: WorkspaceMember =>
           def createTextEdit(identifier: String) =
             textEdit(w.wrap(identifier), w.editRange.getOrElse(editRange))
@@ -360,14 +387,44 @@ class CompletionProvider(
       text,
       isAmmoniteScript
     )
+
     val searchResults =
       if (kind == CompletionListKind.Scope) {
         workspaceSymbolListMembers(query, pos, visit)
       } else {
-        SymbolSearch.Result.COMPLETE
+        typedTreeAt(pos) match {
+          case Select(qualifier, _)
+              if qualifier.tpe != null && !qualifier.tpe.isError =>
+            workspaceExtensionMethods(query, pos, visit, qualifier.tpe)
+          case _ => SymbolSearch.Result.COMPLETE
+        }
       }
 
     InterestingMembers(buf.result(), searchResults)
+  }
+
+  private def workspaceExtensionMethods(
+      query: String,
+      pos: Position,
+      visit: Member => Boolean,
+      selectType: Type
+  ): SymbolSearch.Result = {
+    val context = doLocateContext(pos)
+    val visitor = new CompilerSearchVisitor(
+      context,
+      sym =>
+        if (sym.safeOwner.isImplicit) {
+          val ownerConstructor = sym.owner.info.member(nme.CONSTRUCTOR)
+          def typeParams = sym.owner.info.typeParams
+          ownerConstructor.info.paramss match {
+            case List(List(param))
+                if selectType <:< boundedWildcardType(param.info, typeParams) =>
+              visit(new WorkspaceImplicitMember(sym))
+            case _ => false
+          }
+        } else false
+    )
+    search.searchMethods(query, buildTargetIdentifier, visitor)
   }
 
   private def isFunction(symbol: Symbol): Boolean = {

@@ -652,20 +652,12 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |  Implicits@@
        |}
        |""".stripMargin,
-    """|import scala.concurrent.ExecutionContext
+    """|import scala.concurrent.ExecutionContext.Implicits
        |object Main {
-       |  ExecutionContext.Implicits
+       |  Implicits
        |}
        |""".stripMargin,
-    filter = _ == "Implicits - scala.concurrent.ExecutionContext",
-    compat = Map {
-      "3" ->
-        """|import scala.concurrent.ExecutionContext.Implicits
-           |object Main {
-           |  Implicits
-           |}
-           |""".stripMargin
-    }
+    filter = _ == "Implicits - scala.concurrent.ExecutionContext"
   )
 
   // this test was intended to check that import is rendered correctly - without `$` symbol
@@ -844,9 +836,9 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |
        |package b {
        |
-       |  import a.A
+       |  import a.A.Beta
        |  object B{
-       |    val x: A.Beta
+       |    val x: Beta
        |  }
        |}
        |""".stripMargin,
@@ -1082,4 +1074,31 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
        |""".stripMargin,
     ""
   )
+
+  check(
+    "implicit-class",
+    """|package example
+       |object Test {
+       |  implicit class TestOps(a: Int) {
+       |    def testOps(b: Int) = ???
+       |  }
+       |  implicit class TestOps2(a: String) {
+       |    def testOps2(b: Int) = ???
+       |  }
+       |  implicit class TestOps4[A](a: List[A]) {
+       |    def testOps4(b: Int) = ???
+       |  }
+       |  class TestOps3(a: String) {
+       |    def testOps3(b: Int) = ???
+       |  }
+       |}
+       |
+       |object ActualTest {
+       |  1.tes@@
+       |}
+       |""".stripMargin,
+    "testOps(b: Int): Nothing (implicit)",
+    filter = _.contains("testOps")
+  )
+
 }

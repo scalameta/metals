@@ -95,29 +95,17 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       |  NestedLea@@
       |}""".stripMargin,
     """|package a
+       |
+       |import a.A.Nested.NestedLeaf
        |object A {
        |  object Nested{
        |    object NestedLeaf
        |  }
        |}
        |object B {
-       |  A.Nested.NestedLeaf
+       |  NestedLeaf
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" -> """|package a
-                |
-                |import a.A.Nested.NestedLeaf
-                |object A {
-                |  object Nested{
-                |    object NestedLeaf
-                |  }
-                |}
-                |object B {
-                |  NestedLeaf
-                |}
-                |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   checkEdit(
@@ -146,6 +134,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
        |  Sweden,
        |  USA
        |}
+       |import all.World.Countries.Norway
        |
        |object World {
        |  object Countries{
@@ -157,32 +146,9 @@ class CompletionIssueSuite extends BaseCompletionSuite {
        |}
        |import all.World.Countries.France
        |object B {
-       |  val allCountries = Sweden + France + USA + World.Countries.Norway
+       |  val allCountries = Sweden + France + USA + Norway
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|package all
-           |import all.World.Countries.{
-           |  Sweden,
-           |  USA
-           |}
-           |import all.World.Countries.Norway
-           |
-           |object World {
-           |  object Countries{
-           |    object Sweden
-           |    object Norway
-           |    object France
-           |    object USA
-           |  }
-           |}
-           |import all.World.Countries.France
-           |object B {
-           |  val allCountries = Sweden + France + USA + Norway
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
