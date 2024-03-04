@@ -1027,7 +1027,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   check(
-    "implicit-class-val".tag(IgnoreForScala3CompilerPC),
+    "implicit-class-val",
     """|package demo
        |
        |object O {
@@ -1042,7 +1042,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   check(
-    "implicit-class-def".tag(IgnoreForScala3CompilerPC),
+    "implicit-class-def",
     """|package demo
        |
        |object O {
@@ -1059,7 +1059,7 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   check(
-    "extension-method".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    "extension-method".tag(IgnoreScala2),
     """|package demo
        |
        |object O {

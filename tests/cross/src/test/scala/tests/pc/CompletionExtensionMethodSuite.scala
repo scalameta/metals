@@ -505,7 +505,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   check(
-    "implicit-val-var".tag(IgnoreForScala3CompilerPC),
+    "implicit-val-var",
     """|package example
        |
        |object Test {
@@ -537,7 +537,7 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "implicit-val-edit".tag(IgnoreForScala3CompilerPC),
+    "implicit-val-edit",
     """|package example
        |
        |object Test {
