@@ -261,7 +261,7 @@ class SbtBloopLspSuite
 
   test("cancel") {
     cleanWorkspace()
-    client.onBeginSlowTask = (name, cancelParams) => {
+    client.onWorkDoneProgressStart = (name, cancelParams) => {
       if (name == progressMessage) {
         Thread.sleep(TimeUnit.SECONDS.toMillis(2))
         server.fullServer.didCancelWorkDoneProgress(cancelParams)
@@ -279,7 +279,7 @@ class SbtBloopLspSuite
         expectError = true,
       )
       _ = assertStatus(!_.isInstalled)
-      _ = client.onBeginSlowTask = (_, _) => {}
+      _ = client.onWorkDoneProgressStart = (_, _) => {}
       _ <- server.didSave("build.sbt")(_ + "\n// comment")
       _ = assertNoDiff(client.workspaceShowMessages, "")
       _ = assertStatus(!_.isInstalled)

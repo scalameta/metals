@@ -34,11 +34,11 @@ import scala.meta.internal.metals.ImportedBuild
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.SlowTask
 import scala.meta.internal.metals.SocketConnection
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.TargetData
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
@@ -50,7 +50,7 @@ import coursier.core.Version
 class ScalaCli(
     compilers: () => Compilers,
     compilations: Compilations,
-    slowTaskProvider: SlowTask,
+    workDoneProgress: WorkDoneProgress,
     buffers: Buffers,
     indexWorkspace: () => Future[Unit],
     diagnostics: () => Diagnostics,
@@ -112,7 +112,7 @@ class ScalaCli(
     ifConnectedOrElse { st =>
       compilers().cancel()
 
-      slowTaskProvider
+      workDoneProgress
         .trackFuture(
           "Importing Scala CLI sources",
           ImportedBuild.fromConnection(st.connection),

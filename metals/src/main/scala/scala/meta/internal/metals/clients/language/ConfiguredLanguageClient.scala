@@ -205,12 +205,12 @@ final class ConfiguredLanguageClient(
   override def createProgress(
       params: WorkDoneProgressCreateParams
   ): CompletableFuture[Void] =
-    if (clientConfig.slowTaskIsOn()) {
+    if (clientConfig.hasWorkDoneProgressCapability()) {
       underlying.createProgress(params)
     } else CompletableFuture.completedFuture(null)
 
   override def notifyProgress(params: ProgressParams): Unit =
-    if (clientConfig.slowTaskIsOn()) {
+    if (clientConfig.hasWorkDoneProgressCapability()) {
       underlying.notifyProgress(params)
     }
 

@@ -30,10 +30,10 @@ import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
-import scala.meta.internal.metals.SlowTask
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.pc.CompilerJobQueue
@@ -65,7 +65,7 @@ class WorksheetProvider(
     buildTargets: BuildTargets,
     languageClient: MetalsLanguageClient,
     userConfig: () => UserConfiguration,
-    slowTaskProvider: SlowTask,
+    workDoneProgress: WorkDoneProgress,
     diagnostics: Diagnostics,
     embedded: Embedded,
     publisher: WorksheetPublisher,
@@ -250,7 +250,7 @@ class WorksheetProvider(
         )
       }
       cancelables.add(Cancelable(() => completeEmptyResult()))
-      slowTaskProvider.trackFuture(
+      workDoneProgress.trackFuture(
         s"Evaluating ${path.filename}",
         result.asScala,
       )
@@ -338,13 +338,12 @@ class WorksheetProvider(
     val interruptThread = new Runnable {
       def run(): Unit = {
         if (!result.isDone()) {
-          //TODO: what about worksheet timeout ???
-          val token = slowTaskProvider.startSlowTask(
+          val token = workDoneProgress.startProgress(
             s"Evaluating worksheet '${path.filename}'",
             onCancel = Some(cancellable.cancel),
           )
 
-          result.asScala.onComplete(_ => slowTaskProvider.endSlowTask(token))
+          result.asScala.onComplete(_ => workDoneProgress.endProgress(token))
         }
       }
     }

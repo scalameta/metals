@@ -8,9 +8,7 @@ import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.SlowTaskConfig
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.{BuildInfo => V}
@@ -19,8 +17,6 @@ import org.eclipse.{lsp4j => l}
 import tests.FileLayout
 
 class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
-  override def serverConfig: MetalsServerConfig =
-    MetalsServerConfig.default.copy(slowTask = SlowTaskConfig.on)
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(

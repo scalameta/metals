@@ -16,11 +16,11 @@ import scala.meta.internal.metals.ConcurrentHashSet
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.SlowTask
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
+import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.tvp._
 import scala.meta.io.AbsolutePath
 
@@ -56,7 +56,7 @@ final class ForwardingMetalsBuildClient(
     onBuildTargetDidCompile: b.BuildTargetIdentifier => Unit,
     onBuildTargetDidChangeFunc: b.DidChangeBuildTarget => Unit,
     bspErrorHandler: BspErrorHandler,
-    slowTaskProvider: SlowTask,
+    workDoneProgress: WorkDoneProgress,
 ) extends MetalsBuildClient
     with Cancelable {
 
@@ -71,19 +71,19 @@ final class ForwardingMetalsBuildClient(
   private class Compilation(
       val timer: Timer,
       val isNoOp: Boolean,
-      token: Option[Future[SlowTask.Token]],
+      token: Option[Future[WorkDoneProgress.Token]],
       taskProgress: TaskProgress = TaskProgress.empty,
   ) extends TreeViewCompilation {
 
     def progressPercentage = taskProgress.percentage
 
-    def end(): Unit = token.foreach(slowTaskProvider.endSlowTask(_))
+    def end(): Unit = token.foreach(workDoneProgress.endProgress(_))
 
     def updateProgress(progress: Long, total: Long = 100): Unit = {
       val prev = taskProgress.percentage
       taskProgress.update(progress, total)
       if (prev != taskProgress.percentage) {
-        token.foreach(slowTaskProvider.notifyProgress(_, progressPercentage))
+        token.foreach(workDoneProgress.notifyProgress(_, progressPercentage))
       }
     }
   }
@@ -185,7 +185,7 @@ final class ForwardingMetalsBuildClient(
             )
           val token =
             Option.when(!isNoOp) {
-              slowTaskProvider.startSlowTask(
+              workDoneProgress.startProgress(
                 s"Compiling $name",
                 withProgress = true,
               )

@@ -94,7 +94,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   var resetWorkspace = new MessageActionItem(ResetWorkspace.cancel)
   var regenerateAndRestartScalaCliBuildSever = FileOutOfScalaCliBspScope.ignore
   var shouldReloadAfterJavaHomeUpdate = ProjectJavaHomeUpdate.notNow
-  var onBeginSlowTask: (String, WorkDoneProgressCancelParams) => Unit =
+  var onWorkDoneProgressStart: (String, WorkDoneProgressCancelParams) => Unit =
     (_, _) => {}
   val resources = new ResourceOperations(buffers)
   val diagnostics: TrieMap[AbsolutePath, Seq[Diagnostic]] =
@@ -434,7 +434,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       params.getValue().getLeft() match {
         case begin: WorkDoneProgressBegin =>
           val cancelParams = new WorkDoneProgressCancelParams(params.getToken())
-          onBeginSlowTask(begin.getTitle(), cancelParams)
+          onWorkDoneProgressStart(begin.getTitle(), cancelParams)
         case _ =>
       }
     }

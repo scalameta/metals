@@ -20,7 +20,7 @@ class DebugProtocolCancelationSuite
 
   test("start") {
     cleanWorkspace()
-    client.onBeginSlowTask = (message, cancelParams) => {
+    client.onWorkDoneProgressStart = (message, cancelParams) => {
       if (message == "Starting debug server") {
         server.fullServer.didCancelWorkDoneProgress(cancelParams)
       }

@@ -115,7 +115,6 @@ The currently available settings for `InitializationOptions` are listed below.
       openFilesOnRenameProvider?: boolean;
       quickPickProvider?: boolean;
       renameFileThreshold?: number;
-      slowTaskProvider?: boolean;
       statusBarProvider?: "on" | "off" | "log-message" | "show-message";
       treeViewProvider?: boolean;
       testExplorerProvider?: boolean;
@@ -366,13 +365,6 @@ a `openFilesOnRenameProvider`.
 
 Default value: `300`
 
-##### `slowTaskProvider`
-
-Possible values:
-
-- `off` (default): the `metals/slowTask` request is not supported.
-- `on`: the `metals/slowTask` request is fully supported.
-
 ##### `statusBarProvider`
 
 Possible values:
@@ -425,10 +417,6 @@ Metals to clean up open resources.
 ### `exit`
 
 Kills the process using `System.exit`.
-
-### `$/cancelRequest`
-
-Used by `metals/slowTask` to notify when a long-running process has finished.
 
 ### `client/registerCapability`
 
@@ -561,8 +549,7 @@ non-critical notifications, see `metals/status`.
 ### `window/showMessageRequest`
 
 Used to send critical and actionable notifications to the user. To notify the
-user about long running tasks that can be cancelled, the extension
-`metals/slowTask` is used instead.
+user about long running tasks that can be cancelled.
 
 ## Metals server properties
 
@@ -713,54 +700,6 @@ views in the editor client, the
 
 Metals implements an LSP extension to display non-editable text in the editor,
 see the [Decoration Protocol](../integrations/decoration-protocol.md).
-
-### `metals/slowTask`
-
-The Metals slow task request is sent from the server to the client to notify the
-start of a long running process with unknown estimated total time. A
-`cancel: true` response from the client cancels the task. A `$/cancelRequest`
-request from the server indicates that the task has completed.
-
-![Metals slow task](https://i.imgur.com/nsjWHWR.gif)
-
-The difference between `metals/slowTask` and `window/showMessageRequest` is that
-`slowTask` is time-sensitive and the interface should display a timer for how
-long the task has been running while `showMessageRequest` is static.
-
-_Request_:
-
-- method: `metals/slowTask`
-- params: `MetalsSlowTaskParams` defined as follows:
-
-```ts
-interface MetalsSlowTaskParams {
-  /** The name of this slow task */
-  message: string;
-  /**
-   * If true, the log output from this task does not need to be displayed to the user.
-   *
-   * In VS Code, the Metals "Output channel" is not toggled when this flag is true.
-   */
-  quietLogs?: boolean;
-  /** Time that has elapsed since the begging of the task. */
-  secondsElapsed?: number;
-}
-```
-
-_Response_:
-
-- result: `MetalsSlowTaskResponse` defined as follows
-
-```ts
-interface MetalsSlowTaskResult {
-  /**
-   * If true, cancel the running task.
-   * If false, the user dismissed the dialogue but want to
-   * continue running the task.
-   */
-  cancel: boolean;
-}
-```
 
 ### `metals/status`
 

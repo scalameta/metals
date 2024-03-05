@@ -20,7 +20,7 @@ import org.eclipse.lsp4j.WorkDoneProgressReport
 import org.eclipse.lsp4j.jsonrpc.messages
 import org.eclipse.lsp4j.services.LanguageClient
 
-class SlowTask(
+class WorkDoneProgress(
     client: LanguageClient,
     time: Time,
 )(implicit ec: ExecutionContext)
@@ -74,7 +74,7 @@ class SlowTask(
 
   private def updateTimers() = taskMap.keys.asScala.foreach(notifyProgress(_))
 
-  def startSlowTask(
+  def startProgress(
       message: String,
       withProgress: Boolean = false,
       showTimer: Boolean = true,
@@ -146,7 +146,7 @@ class SlowTask(
     } else Future.successful(())
   }
 
-  def endSlowTask(token: Future[Token]): Future[Unit] =
+  def endProgress(token: Future[Token]): Future[Unit] =
     token
       .map { token =>
         taskMap.remove(token)
@@ -166,17 +166,17 @@ class SlowTask(
       showTimer: Boolean = true,
   )(implicit ec: ExecutionContext): Future[T] = {
     val token =
-      startSlowTask(message, onCancel = onCancel, showTimer = showTimer)
+      startProgress(message, onCancel = onCancel, showTimer = showTimer)
     value.map { result =>
-      endSlowTask(token)
+      endProgress(token)
       result
     }
   }
 
   def trackBlocking[T](message: String)(thunk: => T): T = {
-    val token = startSlowTask(message)
+    val token = startProgress(message)
     val result = thunk
-    endSlowTask(token)
+    endProgress(token)
     result
   }
 
@@ -196,6 +196,6 @@ class SlowTask(
   }
 }
 
-object SlowTask {
+object WorkDoneProgress {
   type Token = messages.Either[String, Integer]
 }
