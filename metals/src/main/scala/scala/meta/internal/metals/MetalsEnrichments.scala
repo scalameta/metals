@@ -42,11 +42,11 @@ import scala.meta.internal.mtags.MtagsEnrichments
 import scala.meta.internal.parsing.EmptyResult
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
-import scala.meta.internal.trees.Origin
-import scala.meta.internal.trees.Origin.Parsed
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
+import scala.meta.trees.Origin
+import scala.meta.trees.Origin.Parsed
 
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.Gson
@@ -1187,17 +1187,17 @@ object MetalsEnrichments
 
     def leadingTokens: Iterator[m.Token] =
       tree.origin match {
-        case Origin.Parsed(input, dialect, pos) =>
-          val tokens = dialect(input).tokenize.get
-          tokens.slice(0, pos.start - 1).reverseIterator
+        case Origin.Parsed(parsed, start, _) =>
+          val tokens = parsed.dialect(parsed.input).tokenize.get
+          tokens.slice(0, start - 1).reverseIterator
         case _ => Iterator.empty
       }
 
     def trailingTokens: Iterator[m.Token] =
       tree.origin match {
-        case Origin.Parsed(input, dialect, pos) =>
-          val tokens = dialect(input).tokenize.get
-          tokens.slice(pos.end, tokens.length).iterator
+        case Origin.Parsed(parsed, _, end) =>
+          val tokens = parsed.dialect(parsed.input).tokenize.get
+          tokens.slice(end, tokens.length).iterator
         case _ => Iterator.empty
       }
 
