@@ -79,6 +79,13 @@ class ScalaToplevelMtags(
       case _ => region
     }
 
+  private def isInParenthesis(region: Region): Boolean =
+    region match {
+      case (_: Region.InParenCaseClass) | (_: Region.InParenClass) =>
+        true
+      case _ => false
+    }
+
   @tailrec
   private def loop(
       indent: Int,
@@ -290,16 +297,12 @@ class ScalaToplevelMtags(
           )
         case DEF | VAL | VAR | GIVEN
             if expectTemplate.map(!_.isExtension).getOrElse(true) =>
-          val isInParen =
-            region match {
-              case (_: Region.InParenCaseClass) | (_: Region.InParenClass) =>
-                true
-              case _ => false
-            }
           val isImplicit =
-            (isInParen && expectTemplate.exists(
-              _.isImplicit
-            )) || (!isInParen && region.isImplicit)
+            if (isInParenthesis(region))
+              expectTemplate.exists(
+                _.isImplicit
+              )
+            else region.isImplicit
           if (needEmitTermMember()) {
             withOwner(currRegion.termOwner) {
               emitTerm(currRegion, isImplicit)
@@ -309,7 +312,7 @@ class ScalaToplevelMtags(
             indent,
             isAfterNewline = false,
             currRegion,
-            if (isInParen) expectTemplate else newExpectIgnoreBody
+            if (isInParenthesis(region)) expectTemplate else newExpectIgnoreBody
           )
         case TYPE if expectTemplate.map(!_.isExtension).getOrElse(true) =>
           if (needEmitMember(currRegion) && !prevWasDot) {
@@ -423,15 +426,24 @@ class ScalaToplevelMtags(
           expectTemplate match {
             case Some(expect)
                 if needToParseBody(expect) || needToParseExtension(expect) =>
-              val next =
-                expect.startInBraceRegion(
-                  currRegion,
-                  expect.isExtension,
-                  expect.isImplicit
-                )
-              resetRegion(next)
-              scanner.nextToken()
-              loop(indent, isAfterNewline = false, next, None)
+              if (isInParenthesis(region)) {
+                // inside of a class constructor
+                // e.g. class A(val foo: Foo { type T = Int })
+                //                           ^
+                acceptBalancedDelimeters(LBRACE, RBRACE)
+                scanner.nextToken()
+                loop(indent, isAfterNewline = false, currRegion, expectTemplate)
+              } else {
+                val next =
+                  expect.startInBraceRegion(
+                    currRegion,
+                    expect.isExtension,
+                    expect.isImplicit
+                  )
+                resetRegion(next)
+                scanner.nextToken()
+                loop(indent, isAfterNewline = false, next, None)
+              }
             case _ =>
               acceptBalancedDelimeters(LBRACE, RBRACE)
               scanner.nextToken()
