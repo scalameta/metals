@@ -1,6 +1,6 @@
 package scala.meta.internal.pc.printer
 
-import java.{util as ju}
+import java.util as ju
 
 import scala.annotation.tailrec
 
