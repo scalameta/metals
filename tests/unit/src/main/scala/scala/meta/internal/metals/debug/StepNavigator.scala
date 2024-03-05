@@ -32,18 +32,9 @@ final class StepNavigator(
           throw new Exception(s"${expected.file} does not exist")
         }
       } else {
-        // workaround for https://github.com/scalameta/metals/issues/6155
-        val regex = raw"2\.\d+\.\d+"
-        val expectWithoutVersion =
-          expected.file.replaceAll(regex, "").stripPrefix("file://")
-        val obtainedWithoutVersion = actualPath.replaceAll(regex, "")
-        if (expectWithoutVersion == obtainedWithoutVersion) {
-          nextStep
-        } else {
-          val error =
-            s"Obtained [$actualPath, $actualLine], expected [${expected.file}, ${expected.line}]"
-          throw new Exception(error)
-        }
+        val error =
+          s"Obtained [$actualPath, $actualLine], expected [${expected.file}, ${expected.line}]"
+        throw new Exception(error)
       }
     }
   }

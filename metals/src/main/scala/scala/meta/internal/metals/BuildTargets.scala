@@ -306,6 +306,13 @@ final class BuildTargets private (
     } yield target.scalaVersion
   }
 
+  def possibleScalaVersions(source: AbsolutePath): List[String] = {
+    for {
+      id <- inverseSourcesAll(source)
+      target <- scalaTarget(id).toList
+    } yield target.scalaVersion
+  }
+
   /**
    * Resolves sbt auto imports if a file belongs to a Sbt build target.
    */
