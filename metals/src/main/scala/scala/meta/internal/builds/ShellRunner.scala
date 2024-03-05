@@ -14,16 +14,16 @@ import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
-import scala.meta.internal.metals.SlowTask
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
+import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.process.ExitCodes
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
 import coursierapi._
 
-class ShellRunner(time: Time, slowTaskProvider: SlowTask)(implicit
+class ShellRunner(time: Time, workDoneProvider: WorkDoneProgress)(implicit
     executionContext: scala.concurrent.ExecutionContext
 ) extends Cancelable {
 
@@ -127,7 +127,7 @@ class ShellRunner(time: Time, slowTaskProvider: SlowTask)(implicit
     cancelables.add(newCancelable)
 
     val processFuture = ps.complete
-    slowTaskProvider.trackFuture(
+    workDoneProvider.trackFuture(
       commandRun,
       processFuture,
       onCancel = Some(() => {

@@ -123,8 +123,8 @@ class WorkspaceLspService(
     languageClient
   }
 
-  private val slowTaskProvider = register {
-    new SlowTask(languageClient, time)
+  private val workDoneProgress = register {
+    new WorkDoneProgress(languageClient, time)
   }
 
   private val userConfigSync =
@@ -138,7 +138,7 @@ class WorkspaceLspService(
   }
 
   private val shellRunner = register {
-    new ShellRunner(time, slowTaskProvider)
+    new ShellRunner(time, workDoneProgress)
   }
 
   var focusedDocument: Option[AbsolutePath] = None
@@ -185,7 +185,7 @@ class WorkspaceLspService(
           name,
           doctor,
           bspStatus,
-          slowTaskProvider,
+          workDoneProgress,
         )
     }
 
@@ -216,7 +216,7 @@ class WorkspaceLspService(
 
   private val newProjectProvider: NewProjectProvider = new NewProjectProvider(
     languageClient,
-    slowTaskProvider,
+    workDoneProgress,
     clientConfig,
     shellRunner,
     clientConfig.icons,
@@ -620,7 +620,7 @@ class WorkspaceLspService(
 
   override def didCancelWorkDoneProgress(
       params: lsp4j.WorkDoneProgressCancelParams
-  ): Unit = slowTaskProvider.canceled(params.getToken())
+  ): Unit = workDoneProgress.canceled(params.getToken())
 
   def doctorVisibilityDidChange(
       params: DoctorVisibilityDidChangeParams
@@ -1164,7 +1164,7 @@ class WorkspaceLspService(
 
   def initialized(): Future[Unit] = {
     statusBar.start(sh, 0, 1, ju.concurrent.TimeUnit.SECONDS)
-    slowTaskProvider.start(sh, 0, 1, ju.concurrent.TimeUnit.SECONDS)
+    workDoneProgress.start(sh, 0, 1, ju.concurrent.TimeUnit.SECONDS)
     for {
       _ <- userConfigSync.initSyncUserConfiguration(folderServices)
       _ <- Future.sequence(folderServices.map(_.initialized()))

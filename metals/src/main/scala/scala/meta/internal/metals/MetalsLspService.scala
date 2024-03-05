@@ -133,7 +133,7 @@ class MetalsLspService(
     folderVisibleName: Option[String],
     headDoctor: HeadDoctor,
     bspStatus: BspStatus,
-    slowTaskProvider: SlowTask,
+    workDoneProgress: WorkDoneProgress,
 ) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
     with Cancelable
     with TextDocumentService {
@@ -172,7 +172,7 @@ class MetalsLspService(
   private implicit val executionContext: ExecutionContextExecutorService = ec
 
   private val embedded: Embedded = register(
-    new Embedded(slowTaskProvider)
+    new Embedded(workDoneProgress)
   )
 
   val tables: Tables = register(new Tables(folder, time))
@@ -403,7 +403,7 @@ class MetalsLspService(
         onBuildTargetChanges(params)
       },
       bspErrorHandler,
-      slowTaskProvider,
+      workDoneProgress,
     )
 
   private val bloopServers: BloopServers = new BloopServers(
@@ -432,7 +432,7 @@ class MetalsLspService(
     tables,
     () => userConfig,
     statusBar,
-    slowTaskProvider,
+    workDoneProgress,
     bspConfigGenerator,
     () => bspSession.map(_.mainConnection),
     restartBspServer,
@@ -534,7 +534,7 @@ class MetalsLspService(
     languageClient,
     clientConfig,
     statusBar,
-    slowTaskProvider,
+    workDoneProgress,
     clientConfig.icons,
     tables,
     buildTargets,
@@ -588,7 +588,7 @@ class MetalsLspService(
         buildTargets,
         languageClient,
         () => userConfig,
-        slowTaskProvider,
+        workDoneProgress,
         diagnostics,
         embedded,
         worksheetPublisher,
@@ -607,7 +607,7 @@ class MetalsLspService(
       buffers,
       symbolSearch,
       embedded,
-      slowTaskProvider,
+      workDoneProgress,
       sh,
       initializeParams,
       () => excludedPackageHandler,
@@ -707,7 +707,7 @@ class MetalsLspService(
       semanticdbs,
       compilers,
       statusBar,
-      slowTaskProvider,
+      workDoneProgress,
       sourceMapper,
       () => userConfig,
       testProvider,
@@ -719,7 +719,7 @@ class MetalsLspService(
     buffers,
     () => userConfig,
     folder,
-    slowTaskProvider,
+    workDoneProgress,
     compilations,
     languageClient,
     buildTargets,
@@ -833,7 +833,7 @@ class MetalsLspService(
       buffers,
       compilers,
       compilations,
-      slowTaskProvider,
+      workDoneProgress,
       diagnostics,
       tables,
       languageClient,
@@ -1785,7 +1785,7 @@ class MetalsLspService(
   def cleanCompile(): Future[Unit] = compilations.recompileAll()
 
   def cancelCompile(): Future[Unit] = Future {
-    // We keep this in here to provide a way for clients that aren't slowTask providers
+    // We keep this in here to provide a way for clients that aren't work done progress cancel providers
     // to be able to cancel a long-running worksheet evaluation by canceling compilation.
     if (focusedDocument().exists(_.isWorksheet))
       worksheetProvider.cancel()
@@ -2346,7 +2346,7 @@ class MetalsLspService(
       session.importBuilds()
     }
     for {
-      bspBuilds <- slowTaskProvider.trackFuture(
+      bspBuilds <- workDoneProgress.trackFuture(
         Messages.importingBuild,
         importedBuilds0,
       )
@@ -2388,7 +2388,7 @@ class MetalsLspService(
     new ScalaCli(
       () => compilers,
       compilations,
-      slowTaskProvider,
+      workDoneProgress,
       buffers,
       () => indexer.profiledIndexWorkspace(() => ()),
       () => diagnostics,
@@ -2410,7 +2410,7 @@ class MetalsLspService(
     executionContext,
     tables,
     () => statusBar,
-    slowTaskProvider,
+    workDoneProgress,
     timerProvider,
     () => scalafixProvider,
     () => indexingPromise,

@@ -2,7 +2,6 @@ package tests
 
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.SlowTaskConfig
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import ch.epfl.scala.bsp4j.StatusCode
@@ -11,10 +10,7 @@ class CancelCompileSuite
     extends BaseLspSuite("compile-cancel", SbtServerInitializer) {
 
   override def serverConfig: MetalsServerConfig =
-    MetalsServerConfig.default.copy(
-      slowTask = SlowTaskConfig.on,
-      loglevel = "debug",
-    )
+    MetalsServerConfig.default.copy(loglevel = "debug")
 
   test("basic") {
     cleanWorkspace()

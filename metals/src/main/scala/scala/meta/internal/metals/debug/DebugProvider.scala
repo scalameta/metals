@@ -38,11 +38,11 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.ScalaTestSuitesDebugRequest
-import scala.meta.internal.metals.SlowTask
 import scala.meta.internal.metals.SourceMapper
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.LogForwarder
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
@@ -86,7 +86,7 @@ class DebugProvider(
     semanticdbs: Semanticdbs,
     compilers: Compilers,
     statusBar: StatusBar,
-    slowTaskProvider: SlowTask,
+    workDoneProgress: WorkDoneProgress,
     sourceMapper: SourceMapper,
     userConfig: () => UserConfiguration,
     testProvider: TestSuitesProvider,
@@ -144,7 +144,7 @@ class DebugProvider(
         )
       debugServer <-
         if (isJvm)
-          slowTaskProvider.trackFuture(
+          workDoneProgress.trackFuture(
             "Starting debug server",
             start(
               sessionName,
@@ -294,7 +294,7 @@ class DebugProvider(
         compilers,
         workspace,
         clientConfig.disableColorOutput(),
-        slowTaskProvider,
+        workDoneProgress,
         sourceMapper,
         compilations,
         targets,
