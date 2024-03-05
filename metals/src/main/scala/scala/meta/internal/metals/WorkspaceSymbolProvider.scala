@@ -7,8 +7,8 @@ import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
 
-import scala.meta.Dialect
 import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -44,19 +44,19 @@ final class WorkspaceSymbolProvider(
 
   def search(
       query: String,
-      preferredDialect: Option[Dialect],
+      fileInFocus: Option[AbsolutePath],
   ): Seq[l.SymbolInformation] = {
-    search(query, () => (), preferredDialect)
+    search(query, () => (), fileInFocus)
   }
 
   def search(
       query: String,
       token: CancelChecker,
-      preferredDialect: Option[Dialect],
+      fileInFocus: Option[AbsolutePath],
   ): Seq[l.SymbolInformation] = {
     if (query.isEmpty) return Nil
     try {
-      searchUnsafe(query, token, preferredDialect)
+      searchUnsafe(query, token, fileInFocus)
     } catch {
       case InterruptException() =>
         Nil
@@ -67,7 +67,7 @@ final class WorkspaceSymbolProvider(
       queryString: String,
       path: AbsolutePath,
       token: CancelToken,
-      preferredDialect: Option[Dialect],
+      fileInFocus: Option[AbsolutePath],
   ): Seq[l.SymbolInformation] = {
     val query = WorkspaceSymbolQuery.exact(queryString)
     val visitor =
@@ -77,7 +77,7 @@ final class WorkspaceSymbolProvider(
         token,
         index,
         saveClassFileToDisk,
-        preferredDialect,
+        SymbolDefinitionOrdering.fromOptPath(fileInFocus),
       )
     val targetId = buildTargets.inverseSources(path)
     search(query, visitor, targetId)
@@ -229,7 +229,7 @@ final class WorkspaceSymbolProvider(
   private def searchUnsafe(
       textQuery: String,
       token: CancelChecker,
-      preferredDialect: Option[Dialect],
+      fileInFocus: Option[AbsolutePath],
   ): Seq[l.SymbolInformation] = {
     val query = WorkspaceSymbolQuery.fromTextQuery(textQuery)
     val visitor =
@@ -239,9 +239,39 @@ final class WorkspaceSymbolProvider(
         token,
         index,
         saveClassFileToDisk,
-        preferredDialect,
+        SymbolDefinitionOrdering.fromOptPath(fileInFocus),
       )
     search(query, visitor, None)
     visitor.allResults()
+  }
+
+  class PreferredScalaVersionOrdering(preferredScalaVersions: Set[String])
+      extends Ordering[SymbolDefinition] {
+    private def pathMatchesPreferred(path: AbsolutePath) =
+      buildTargets
+        .possibleScalaVersions(path)
+        .exists(preferredScalaVersions(_))
+
+    private def pathLength(symbolDef: SymbolDefinition) =
+      symbolDef.path.toURI.toString().length()
+
+    override def compare(x: SymbolDefinition, y: SymbolDefinition): Int = {
+      val xVersionMatches = pathMatchesPreferred(x.path)
+      val yVersionMatches = pathMatchesPreferred(y.path)
+
+      if (xVersionMatches && !yVersionMatches) -1
+      else if (yVersionMatches && !xVersionMatches) 1
+      else pathLength(x) - pathLength(y)
+    }
+  }
+
+  object SymbolDefinitionOrdering {
+    def fromOptPath(path: Option[AbsolutePath]): Ordering[SymbolDefinition] = {
+      path.toList.flatMap(buildTargets.possibleScalaVersions(_)) match {
+        case Nil => DefaultSymbolDefinitionOrdering
+        case preferredScalaVersions =>
+          new PreferredScalaVersionOrdering(preferredScalaVersions.toSet)
+      }
+    }
   }
 }

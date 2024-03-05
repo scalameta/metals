@@ -1689,7 +1689,9 @@ class MetalsLspService(
     indexingPromise.future.map { _ =>
       val timer = new Timer(time)
       val result =
-        workspaceSymbols.search(params.getQuery, token, currentDialect).toList
+        workspaceSymbols
+          .search(params.getQuery, token, focusedDocument())
+          .toList
       if (clientConfig.initialConfig.statistics.isWorkspaceSymbol) {
         scribe.info(
           s"time: found ${result.length} results for query '${params.getQuery}' in $timer"
@@ -1699,11 +1701,8 @@ class MetalsLspService(
     }
 
   def workspaceSymbol(query: String): Seq[SymbolInformation] = {
-    workspaceSymbols.search(query, currentDialect)
+    workspaceSymbols.search(query, focusedDocument())
   }
-
-  private def currentDialect =
-    focusedDocument().flatMap(scalaVersionSelector.dialectFromBuildTarget)
 
   def indexSources(): Future[Unit] = Future {
     indexer.indexWorkspaceSources(buildTargets.allWritableData)
