@@ -438,9 +438,11 @@ class FolderTreeViewProvider(
       val result = buildTargets
         .inferBuildTarget(List(closestToplevel))
         .map { inferred =>
-          val sourceJar = inferred.jar.parent.resolve(
+          val sourcesJarName =
             inferred.jar.filename.replace(".jar", "-sources.jar")
-          )
+          val sourceJar = buildTargets.sourceJarFile(sourcesJarName).getOrElse {
+            inferred.jar.parent.resolve(sourcesJarName)
+          }
           libraries.toUri(sourceJar, inferred.symbol).parentChain
         }
       result.orElse(jdkSources)

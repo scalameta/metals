@@ -154,21 +154,18 @@ class IndexedSymbols(
    * @param in the input jar
    * @param symbol symbol we want to calculate members for
    * @param dialect dialect to use for the jar
-   * @return all topelevels for root and up to grandchildren for other symbols
+   * @return all toplevels for root and up to grandchildren for other symbols
    */
   def jarSymbols(
       in: AbsolutePath,
       symbol: String,
       dialect: Dialect,
   ): Iterator[TreeViewSymbolInformation] = withTimer(s"$in/!$symbol") {
-    lazy val potentialSourceJar =
-      in.parent.resolve(in.filename.replace(".jar", "-sources.jar"))
-    if (!in.isSourcesJar && !potentialSourceJar.exists) {
+    if (!in.isSourcesJar) {
       Iterator.empty[TreeViewSymbolInformation]
     } else {
-      val realIn = if (!in.isSourcesJar) potentialSourceJar else in
       val jarSymbols = jarCache.getOrElseUpdate(
-        realIn, {
+        in, {
           val toplevels = toplevelsAt(in, dialect)
             .map(defn => defn.definitionSymbol.value -> Left(defn))
 
