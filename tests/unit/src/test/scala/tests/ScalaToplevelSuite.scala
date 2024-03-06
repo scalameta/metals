@@ -708,8 +708,6 @@ class ScalaToplevelSuite extends BaseSuite {
             val includeMembers = mode == All
             val (doc, overrides) =
               Mtags.indexWithOverrides(input, dialect, includeMembers)
-            // additionalSymbolCheck(doc.symbols)
-            // val symbols = doc.symbols.map(_.symbol).toList
             val overriddenMap = overrides.toMap
             doc.symbols.map { symbolInfo =>
               val symbol = symbolInfo.symbol
