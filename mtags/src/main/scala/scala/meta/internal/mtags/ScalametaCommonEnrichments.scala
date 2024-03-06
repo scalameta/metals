@@ -345,21 +345,6 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
           path.toURI.toString
       }
 
-    def isBazelRelatedPath: Boolean = {
-      val filename = path.toNIO.getFileName.toString
-      filename == "WORKSPACE" ||
-      filename == "BUILD" ||
-      filename == "BUILD.bazel" ||
-      filename.endsWith(".bzl") ||
-      filename.endsWith(".bazelproject")
-    }
-
-    def isInBazelBspDirectory(workspace: AbsolutePath): Boolean =
-      path.toNIO.startsWith(workspace.resolve(".bazelbsp").toNIO)
-
-    def isInBspDirectory(workspace: AbsolutePath): Boolean =
-      path.toNIO.startsWith(workspace.resolve(".bsp").toNIO)
-
     /*
      * This checks if the file has an extension that indicates it's a
      * Java or Scala file.

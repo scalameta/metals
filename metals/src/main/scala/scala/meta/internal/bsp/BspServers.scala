@@ -14,6 +14,7 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ClosableOutputStream
+import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -183,8 +184,8 @@ final class BspServers(
           buf += p
         }
       }
-    visit(mainWorkspace.resolve(".bsp"))
-    customProjectRoot.map(_.resolve(".bsp")).foreach(visit)
+    visit(mainWorkspace.resolve(Directories.bsp))
+    customProjectRoot.map(_.resolve(Directories.bsp)).foreach(visit)
     bspGlobalInstallDirectories.foreach(visit)
     buf.result()
   }

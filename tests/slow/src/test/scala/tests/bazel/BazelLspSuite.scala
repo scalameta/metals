@@ -5,12 +5,14 @@ import scala.concurrent.Promise
 import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BazelDigest
 import scala.meta.internal.metals.FileDecoderProvider
+import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
+import org.eclipse.lsp4j.MessageActionItem
 import tests.BaseImportSuite
 import tests.BazelBuildLayout
 import tests.BazelServerInitializer
@@ -133,11 +135,21 @@ class BazelLspSuite
     }
   }
 
-  test("import-build") {
+  test("import-reset-build") {
     cleanWorkspace()
     writeLayout(
       BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
     )
+
+    def getTargetInfo(target: String) = {
+      server
+        .executeDecodeFileCommand(
+          FileDecoderProvider
+            .createBuildTargetURI(workspace, target)
+            .toString
+        )
+        .map(_.value.linesIterator.take(14).mkString("\n"))
+    }
     for {
       _ <- server.initialize()
       _ <- server.initialized()
@@ -155,13 +167,8 @@ class BazelLspSuite
       // We need to wait a bit just to ensure the connection is made
       _ <- server.server.buildServerPromise.future
       targets <- server.listBuildTargets
-      result <- server.executeDecodeFileCommand(
-        FileDecoderProvider
-          .createBuildTargetURI(workspace, targets.head.bazelEscapedDisplayName)
-          .toString
-      )
-      _ = assertNoDiff(
-        result.value.linesIterator.take(14).mkString("\n"),
+      result <- getTargetInfo(targets.head.bazelEscapedDisplayName)
+      expectedTarget =
         """|Target
            |  @//:hello1
            |
@@ -175,14 +182,23 @@ class BazelLspSuite
            |  Debug <- NOT SUPPORTED
            |  Run
            |  Test <- NOT SUPPORTED
-           |  Compile""".stripMargin,
-      )
+           |  Compile""".stripMargin
+      _ = assertNoDiff(result, expectedTarget)
+      _ = server.server.buildServerPromise = Promise()
+      _ = client.resetWorkspace =
+        new MessageActionItem(Messages.ResetWorkspace.resetWorkspace)
+      _ <- server.executeCommand(ServerCommands.ResetWorkspace)
+      _ <- server.server.buildServerPromise.future
+      resultAfter <- getTargetInfo(targets.head.bazelEscapedDisplayName)
+      _ = assertNoDiff(resultAfter, expectedTarget)
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
         List(
           "bazelbsp bspConfig",
           bazelNavigationMessage,
+          Messages.ResetWorkspace.message,
+          "bazelbsp bspConfig",
         ).mkString("\n"),
       )
       assert(bazelBspConfig.exists)

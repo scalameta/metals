@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.meta.internal.bsp.ScalaCliBspScope
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.BloopServers
+import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.scalacli.ScalaCli
@@ -54,12 +55,20 @@ final class BuildTools(
   def bloopProject: Option[AbsolutePath] = searchForBuildTool(isBloop)
   def isBloop: Boolean = bloopProject.isDefined
   def isBsp: Boolean = {
-    hasJsonFile(workspace.resolve(".bsp")) ||
-    customProjectRoot.exists(root => hasJsonFile(root.resolve(".bsp"))) ||
+    hasJsonFile(workspace.resolve(Directories.bsp)) ||
+    customProjectRoot.exists(root =>
+      hasJsonFile(root.resolve(Directories.bsp))
+    ) ||
     bspGlobalDirectories.exists(hasJsonFile)
   }
   private def hasJsonFile(dir: AbsolutePath): Boolean = {
     dir.list.exists(_.extension == "json")
+  }
+
+  def isBazelBsp: Boolean = {
+    workspace.resolve(Directories.bazelBsp).isDirectory &&
+    BazelBuildTool.existingProjectView(workspace).nonEmpty &&
+    isBsp
   }
 
   // Returns true if there's a build.sbt file or project/build.properties with sbt.version
@@ -130,7 +139,7 @@ final class BuildTools(
   private def customBsps: List[BspOnly] = {
     val bspFolders =
       (workspace :: customProjectRoot.toList).distinct
-        .map(_.resolve(".bsp")) ++ bspGlobalDirectories
+        .map(_.resolve(Directories.bsp)) ++ bspGlobalDirectories
     val root = customProjectRoot.getOrElse(workspace)
     for {
       bspFolder <- bspFolders

@@ -62,7 +62,7 @@ class BspStatusSuite extends BaseLspSuite("bsp-status-suite") {
 
   test("bsp-error") {
     cleanWorkspace()
-    Bill.installWorkspace(workspace.resolve("billWorkspace").toNIO, "Bill")
+    Bill.installWorkspace(workspace.resolve("billWorkspace"), "Bill")
     def bloopReports = server.server.reports.bloop.getReports()
     for {
       _ <- initialize(
