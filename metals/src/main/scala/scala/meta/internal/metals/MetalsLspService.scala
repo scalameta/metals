@@ -2797,17 +2797,42 @@ class MetalsLspService(
     }
   }
 
+  private def clearFolders(folders: AbsolutePath*): Unit = {
+    try {
+      folders.foreach(_.deleteRecursively())
+    } catch {
+      case e: Throwable =>
+        languageClient.showMessage(Messages.ResetWorkspaceFailed)
+        scribe.error(
+          s"Error while deleting directories inside ${folders.mkString(", ")}",
+          e,
+        )
+    }
+  }
+
   def resetWorkspace(): Future[Unit] =
     for {
       _ <- disconnectOldBuildServer()
-      _ = optProjectRoot match {
+      shouldImport = optProjectRoot match {
         case Some(path) if buildTools.isBloop(path) =>
           bloopServers.shutdownServer()
           clearBloopDir(path)
-        case _ =>
+          false
+        case Some(path) if buildTools.isBazelBsp =>
+          clearFolders(
+            path.resolve(Directories.bazelBsp),
+            path.resolve(Directories.bsp),
+          )
+          true
+        case Some(path) if buildTools.isBsp =>
+          clearFolders(path.resolve(Directories.bsp))
+          true
+        case _ => false
       }
       _ = tables.cleanAll()
-      _ <- autoConnectToBuildServer().map(_ => ())
+      _ <-
+        if (shouldImport) slowConnectToBuildServer(true)
+        else autoConnectToBuildServer().map(_ => ())
     } yield ()
 
   def getTastyForURI(uri: URI): Future[Either[String, String]] =

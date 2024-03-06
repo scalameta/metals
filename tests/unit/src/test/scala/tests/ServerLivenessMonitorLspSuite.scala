@@ -23,7 +23,7 @@ class ServerLivenessMonitorLspSuite extends BaseLspSuite("liveness-monitor") {
   test("handle-not-responding-server") {
     val sleepTime = pingInterval.toMillis * 4
     cleanWorkspace()
-    Bill.installWorkspace(workspace.toNIO)
+    Bill.installWorkspace(workspace)
 
     def isServerResponsive =
       server.server.doctor.buildTargetsJson().header.isBuildServerResponsive

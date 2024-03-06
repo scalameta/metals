@@ -342,6 +342,18 @@ object MetalsEnrichments
 
   implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
 
+    def isBazelRelatedPath: Boolean = {
+      val filename = path.toNIO.getFileName.toString
+      filename == "WORKSPACE" ||
+      filename == "BUILD" ||
+      filename == "BUILD.bazel" ||
+      filename.endsWith(".bzl") ||
+      filename.endsWith(".bazelproject")
+    }
+    def isInBspDirectory(workspace: AbsolutePath): Boolean =
+      path.toNIO.startsWith(workspace.resolve(Directories.bsp).toNIO)
+    def isInBazelBspDirectory(workspace: AbsolutePath): Boolean =
+      path.toNIO.startsWith(workspace.resolve(Directories.bazelBsp).toNIO)
     def isScalaProject(): Boolean =
       containsProjectFilesSatisfying(_.isScala)
     def isMetalsProject(): Boolean =

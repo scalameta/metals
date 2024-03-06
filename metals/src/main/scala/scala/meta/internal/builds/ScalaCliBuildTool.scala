@@ -6,6 +6,7 @@ import scala.concurrent.Future
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.UserConfiguration
@@ -30,7 +31,8 @@ class ScalaCliBuildTool(
   ): Future[BspConfigGenerationStatus] =
     createBspFileArgs(workspace).map(systemProcess).getOrElse {
       // fallback to creating `.bsp/scala-cli.json` that starts JVM launcher
-      val bspConfig = workspace.resolve(".bsp").resolve("scala-cli.json")
+      val bspConfig =
+        workspace.resolve(Directories.bsp).resolve("scala-cli.json")
       statusBar.addMessage("scala-cli bspConfig")
       bspConfig.writeText(
         ScalaCli.scalaCliBspJsonContent(projectRoot = projectRoot.toString())
@@ -69,7 +71,7 @@ object ScalaCliBuildTool {
 
   def pathsToScalaCliBsp(root: AbsolutePath): List[AbsolutePath] =
     ScalaCli.names.toList.map(name =>
-      root.resolve(".bsp").resolve(s"$name.json")
+      root.resolve(Directories.bsp).resolve(s"$name.json")
     )
 
   def apply(

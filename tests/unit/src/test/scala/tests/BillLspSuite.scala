@@ -48,13 +48,13 @@ class BillLspSuite extends BaseLspSuite("bill") {
 
   test("diagnostics") {
     cleanWorkspace()
-    Bill.installWorkspace(workspace.toNIO)
+    Bill.installWorkspace(workspace)
     testRoundtripCompilation()
   }
 
   test("reconnect-manual") {
     cleanWorkspace()
-    Bill.installWorkspace(workspace.toNIO)
+    Bill.installWorkspace(workspace)
     for {
       _ <- initialize(
         """
@@ -90,7 +90,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
 
   test("reconnect") {
     cleanWorkspace()
-    Bill.installWorkspace(workspace.toNIO)
+    Bill.installWorkspace(workspace)
     for {
       _ <- initialize(
         """
@@ -130,7 +130,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
 
   test("automatic-reconnect".flaky) {
     cleanWorkspace()
-    Bill.installWorkspace(workspace.toNIO)
+    Bill.installWorkspace(workspace)
     for {
       _ <- initialize(
         """
@@ -183,7 +183,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
   test("global") {
     RecursivelyDelete(globalBsp)
     cleanWorkspace()
-    Bill.installGlobal(globalBsp.toNIO)
+    Bill.installGlobal(globalBsp)
     testRoundtripCompilation()
   }
 
@@ -211,16 +211,16 @@ class BillLspSuite extends BaseLspSuite("bill") {
 
   test("conflict") {
     cleanWorkspace()
-    Bill.installWorkspace(workspace.toNIO, "Bill")
-    Bill.installWorkspace(workspace.toNIO, "Bob")
+    Bill.installWorkspace(workspace, "Bill")
+    Bill.installWorkspace(workspace, "Bob")
     testSelectServerDialogue()
   }
 
   test("mix") {
     cleanWorkspace()
     RecursivelyDelete(globalBsp)
-    Bill.installWorkspace(workspace.toNIO, "Bill")
-    Bill.installGlobal(globalBsp.toNIO, "Bob")
+    Bill.installWorkspace(workspace, "Bill")
+    Bill.installGlobal(globalBsp, "Bob")
     testSelectServerDialogue()
   }
 
@@ -228,7 +228,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
     val cancelPattern =
       """Sending notification '\$\/cancelRequest'\s*Params: \{\s*\"id\": \"([0-9]+)\"\s*\}""".r
     cleanWorkspace()
-    Bill.installWorkspace(workspace.toNIO, "Bill")
+    Bill.installWorkspace(workspace, "Bill")
     def trace = workspace.resolve(".metals/bsp.trace.json").readText
     for {
       _ <- initialize(
