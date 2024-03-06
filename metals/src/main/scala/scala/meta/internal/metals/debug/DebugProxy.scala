@@ -239,7 +239,7 @@ private[debug] final class DebugProxy(
     // output window gets refreshed resulting in stale messages being printed on top, before
     // any actual logs from the restarted process
     case response @ DebugProtocol.StackTraceResponse(args) =>
-      import scala.meta.internal.metals.JsonParser._
+      import DapJsonParser._
       for {
         stackFrame <- args.getStackFrames
         frameSource <- Option(stackFrame.getSource)
@@ -256,7 +256,8 @@ private[debug] final class DebugProxy(
           mappedSourcePath
         )
       } frameSource.setPath(clientAdapter.adaptPathForClient(metalsSource))
-      response.setResult(args.toJson)
+      val result = clientAdapter.adaptStackTraceResponse(args.toJsonObject)
+      response.setResult(result)
       for (frame <- args.getStackFrames()) {
         frameIdToFrame.put(frame.getId, frame)
       }
