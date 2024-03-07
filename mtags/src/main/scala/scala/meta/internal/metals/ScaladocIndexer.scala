@@ -12,7 +12,6 @@ import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.pc.SymbolDocumentation
-import scala.meta.trees.Origin
 
 /**
  * Extracts Scaladoc from Scala source code.
@@ -29,7 +28,7 @@ class ScaladocIndexer(
       owner: String
   ): Unit = {
     val docstring = currentTree.origin match {
-      case Origin.Parsed(_, start, _) =>
+      case ScalametaCompat.ParsedOrigin(start, _) =>
         val leadingDocstring =
           ScaladocIndexer.findLeadingDocstring(
             source.tokens,
