@@ -979,7 +979,10 @@ class MetalsLspService(
       }
     }
 
-    if (userConfig.symbolPrefixes != old.symbolPrefixes) {
+    if (
+      userConfig.symbolPrefixes != old.symbolPrefixes ||
+      userConfig.javaHome != old.javaHome
+    ) {
       compilers.restartAll()
     }
 
