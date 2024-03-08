@@ -15,7 +15,7 @@ import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.StdNames.*
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
-import org.eclipse.{lsp4j as l}
+import org.eclipse.lsp4j as l
 
 enum CompletionKind:
   case Empty, Scope, Members
