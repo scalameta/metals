@@ -722,7 +722,10 @@ lazy val mtest = project
     Compile / unmanagedSourceDirectories ++= {
       val base = (mtags / Compile / sourceDirectory).value
       if (isScala3WithPresentationCompiler(scalaVersion.value)) {
-        List(base / "scala")
+        List(
+          base / "scala",
+          base / "scala-3" / "scala" / "meta" / "internal" / "metals",
+        )
       } else {
         Nil
       }

@@ -16,7 +16,7 @@ import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
-import org.eclipse.{lsp4j as l}
+import org.eclipse.lsp4j as l
 
 final class AutoImportsProvider(
     search: SymbolSearch,

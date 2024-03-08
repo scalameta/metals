@@ -27,7 +27,7 @@ import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.Spans.Span
-import org.eclipse.{lsp4j as l}
+import org.eclipse.lsp4j as l
 
 object MtagsEnrichments extends ScalametaCommonEnrichments:
 

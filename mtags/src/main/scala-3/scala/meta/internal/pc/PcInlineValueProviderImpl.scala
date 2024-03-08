@@ -14,7 +14,7 @@ import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
-import org.eclipse.{lsp4j as l}
+import org.eclipse.lsp4j as l
 
 final class PcInlineValueProviderImpl(
     val driver: InteractiveDriver,

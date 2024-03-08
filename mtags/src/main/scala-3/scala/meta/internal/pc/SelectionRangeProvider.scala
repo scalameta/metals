@@ -1,7 +1,7 @@
 package scala.meta.internal.pc
 
 import java.nio.file.Paths
-import java.{util as ju}
+import java.util as ju
 
 import scala.jdk.CollectionConverters.*
 

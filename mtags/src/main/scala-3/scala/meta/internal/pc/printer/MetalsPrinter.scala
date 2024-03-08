@@ -24,8 +24,8 @@ import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.core.Symbols.NoSymbol
 import dotty.tools.dotc.core.Symbols.Symbol
-import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.core.Types.*
+import dotty.tools.dotc.core.Types.Type
 
 class MetalsPrinter(
     names: ShortenedNames,
