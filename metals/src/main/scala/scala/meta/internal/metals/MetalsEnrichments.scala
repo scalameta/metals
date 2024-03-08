@@ -131,6 +131,15 @@ object MetalsEnrichments
     }
   }
 
+  implicit class XtensionDependencyModule(module: b.DependencyModule) {
+    def asMavenDependencyModule: Option[b.MavenDependencyModule] = {
+      if (module.getDataKind() == b.DependencyModuleDataKind.MAVEN)
+        decodeJson(module.getData, classOf[b.MavenDependencyModule])
+      else
+        None
+    }
+  }
+
   implicit class XtensionTaskStart(task: b.TaskStartParams) {
     def asCompileTask: Option[b.CompileTask] = {
       decodeJson(task.getData, classOf[b.CompileTask])

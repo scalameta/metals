@@ -236,7 +236,7 @@ object StandaloneSymbolSearch {
 
     download(scalaVersion).toSeq
       .map(path => AbsolutePath(path))
-      .partition(_.toString.endsWith("-sources.jar"))
+      .partition(_.isSourcesJar)
   }
 
 }

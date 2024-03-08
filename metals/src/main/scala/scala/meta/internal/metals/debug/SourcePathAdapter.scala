@@ -26,7 +26,7 @@ private[debug] final class SourcePathAdapter(
       )
     ) {
       // if sourcePath is a dependency source file
-      // we retrieve the original source jar and we build the uri innside the source jar filesystem
+      // we retrieve the original source jar and we build the uri inside the source jar filesystem
       for {
         dependencySource <- sourcePath.toRelativeInside(dependencies)
         dependencyFolder <- dependencySource.toNIO.iterator.asScala.headOption
