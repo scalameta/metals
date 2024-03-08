@@ -132,6 +132,10 @@ class BuildServerConnection private (
   def isDependencySourcesSupported: Boolean =
     capabilities.getDependencySourcesProvider()
 
+  // Scala CLI breaks when we try to use the `buildTarget/dependencyModules` request
+  def isDependencyModulesSupported: Boolean =
+    capabilities.getDependencyModulesProvider() && !isScalaCLI
+
   /* Currently only Bloop and sbt support running single test cases
    * and ScalaCLI uses Bloop underneath.
    */
@@ -386,6 +390,17 @@ class BuildServerConnection private (
     else
       Future.successful(
         new WrappedSourcesResult(List.empty[WrappedSourcesItem].asJava)
+      )
+  }
+
+  def buildTargetDependencyModules(
+      params: DependencyModulesParams
+  ): Future[DependencyModulesResult] = {
+    if (isDependencyModulesSupported)
+      register(server => server.buildTargetDependencyModules(params)).asScala
+    else
+      Future.successful(
+        new DependencyModulesResult(List.empty[DependencyModulesItem].asJava)
       )
   }
 

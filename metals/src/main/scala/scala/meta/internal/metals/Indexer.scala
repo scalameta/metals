@@ -226,6 +226,10 @@ final case class Indexer(
           bspSession().map(_.mainConnection),
         )
 
+        data.addDependencyModules(
+          importedBuild.dependencyModules
+        )
+
         // For "wrapped sources", we create dedicated TargetData.MappedSource instances,
         // able to convert back and forth positions from the user-facing file to
         // the compiler-facing actual underlying source.

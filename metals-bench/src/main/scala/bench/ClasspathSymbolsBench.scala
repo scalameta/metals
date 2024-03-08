@@ -3,6 +3,7 @@ package bench
 import java.util.concurrent.TimeUnit
 
 import scala.meta.dialects
+import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.tvp.IndexedSymbols
@@ -41,6 +42,7 @@ class ClasspathSymbolsBench {
       isStatisticsEnabled = false,
       trees,
       buffers,
+      BuildTargets.empty,
     )
     classpath.foreach { jar =>
       jars.jarSymbols(jar, "cats/", dialects.Scala213)
