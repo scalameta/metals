@@ -19,6 +19,7 @@ import scala.meta.tokens.Tokens
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.{lsp4j => l}
+import scala.meta.tokens.Tokens
 
 /**
  * Manages parsing of Scala source files into Scalameta syntax trees.
@@ -33,6 +34,7 @@ final class Trees(
 )(implicit reports: ReportContext) {
 
   private val trees = TrieMap.empty[AbsolutePath, Tree]
+  private val tokens = TrieMap.empty[AbsolutePath, Tokens]
 
   def get(path: AbsolutePath): Option[Tree] =
     trees.get(path).orElse {
