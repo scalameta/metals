@@ -15,6 +15,7 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
@@ -25,9 +26,7 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OverriddenSymbol
 import scala.meta.internal.mtags.ResolvedOverriddenSymbol
 import scala.meta.internal.mtags.Semanticdbs
-import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
-import scala.meta.internal.mtags.{Symbol => MSymbol}
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.search.SymbolHierarchyOps._
@@ -155,9 +154,6 @@ final class ImplementationProvider(
           )
           .toIterable
     } yield {
-      // 1. Search locally for symbol
-      // 2. Search inside workspace
-      // 3. Search classpath via GlobalSymbolTable
       val sym = symbolOccurrence.symbol
       val dealiased =
         if (sym.desc.isType) {
@@ -165,13 +161,35 @@ final class ImplementationProvider(
             _.map(_.dealiasedSymbol).getOrElse(sym)
           )
         } else Future.successful(sym)
+
       dealiased.flatMap { dealisedSymbol =>
-        val isWorkspaceSymbol =
-          (source.isWorkspaceSource(workspace) &&
-            currentDocument.definesSymbol(dealisedSymbol)) ||
-            findSymbolDefinition(dealisedSymbol).exists(
-              _.path.isWorkspaceSource(workspace)
+        val currentContainsDefinition =
+          currentDocument.definesSymbol(dealisedSymbol)
+        val sourceFiles: Set[AbsolutePath] =
+          if (currentContainsDefinition) Set(source)
+          else
+            definitionProvider
+              .fromSymbol(dealisedSymbol, Some(source))
+              .asScala
+              .map(_.getUri().toAbsolutePath)
+              .toSet
+
+        if (sourceFiles.isEmpty) {
+          rc.unsanitized.create(
+            Report(
+              "missing-definition",
+              s"""|Missing definition symbol for:
+                  |$dealisedSymbol
+                  |""".stripMargin,
+              s"missing def: $dealisedSymbol",
+              Some(source.toURI.toString()),
             )
+          )
+        }
+
+        val isWorkspaceSymbol =
+          (currentContainsDefinition && source.isWorkspaceSource(workspace)) ||
+            sourceFiles.forall(_.isWorkspaceSource(workspace))
 
         val workspaceInheritanceContext: InheritanceContext =
           InheritanceContext.fromDefinitions(
@@ -193,6 +211,7 @@ final class ImplementationProvider(
           dealisedSymbol,
           currentDocument,
           source,
+          sourceFiles,
           inheritanceContext,
         )
       }
@@ -207,6 +226,7 @@ final class ImplementationProvider(
       dealiased: String,
       textDocument: TextDocument,
       source: AbsolutePath,
+      definitionFiles: Set[AbsolutePath],
       inheritanceContext: InheritanceContext,
   ): Future[Seq[Location]] = {
 
@@ -276,13 +296,20 @@ final class ImplementationProvider(
         locationsByFile: Map[Path, Set[ClassLocation]],
         parentSymbol: PcSymbolInformation,
         classSymbol: String,
-        buildTarget: BuildTargetIdentifier,
+        definitionBuildTargets: Set[BuildTargetIdentifier],
     ) = Future.sequence({
+      def allDependencyBuildTargets(implPath: AbsolutePath) = {
+        val targets = buildTargets.inverseSourcesAll(implPath)
+        buildTargets.buildTargetTransitiveDependencies(targets).toSet ++ targets
+      }
+
       for {
         file <- files
         locations = locationsByFile(file)
         implPath = AbsolutePath(file)
-        if (buildTargets.belongsToBuildTarget(buildTarget, implPath))
+        if (definitionBuildTargets.isEmpty || allDependencyBuildTargets(
+          implPath
+        ).exists(definitionBuildTargets(_)))
         implDocument <- findSemanticdb(implPath).toList
       } yield {
         for {
@@ -331,7 +358,6 @@ final class ImplementationProvider(
         (for {
           symbolInfo <- optSymbolInfo
           symbolClass <- classFromSymbol(symbolInfo)
-          target <- buildTargets.inverseSources(source)
         } yield {
           for {
             locationsByFile <- findImplementation(
@@ -350,7 +376,9 @@ final class ImplementationProvider(
                     locationsByFile,
                     symbolInfo,
                     symbolClass,
-                    target,
+                    definitionFiles.flatMap(
+                      buildTargets.inverseSourcesAll(_).toSet
+                    ),
                   )
                 )
               )
@@ -423,10 +451,6 @@ final class ImplementationProvider(
       case (Some(path), locs) =>
         path -> locs
     })
-  }
-
-  private def findSymbolDefinition(symbol: String): Option[SymbolDefinition] = {
-    index.definition(MSymbol(symbol))
   }
 
   private def classFromSymbol(info: PcSymbolInformation): Option[String] =
