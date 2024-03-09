@@ -271,6 +271,7 @@ case class ScalafixProvider(
           |  OrganizeImports
           |]
           |OrganizeImports.removeUnused = false
+          |OrganizeImports.targetDialect = Scala3
           |
           |""".stripMargin
     )
@@ -376,6 +377,7 @@ case class ScalafixProvider(
     val classpath =
       (targetRoot.toList ++ scalaTarget.fullClasspath).asJava
 
+    val isSource3 = scalaTarget.scalac.getOptions().contains("-Xsource:3")
     for {
       api <- getScalafix(scalaBinaryVersion)
       urlClassLoaderWithExternalRule <- getRuleClassLoader(
@@ -389,7 +391,7 @@ case class ScalafixProvider(
         if (scalaBinaryVersion == "2.13") list.add("-Wunused:imports")
         else list.add("-Ywarn-unused-import")
 
-        if (!isScala3 && scalaTarget.scalac.getOptions().contains("-Xsource:3"))
+        if (!isScala3 && isSource3)
           list.add("-Xsource:3")
 
         // We always compile with synthetics:on but scalafix will fail if we don't set it here
@@ -402,7 +404,7 @@ case class ScalafixProvider(
         .withScalaVersion(scalaVersion)
         .withClasspath(classpath)
         .withToolClasspath(urlClassLoaderWithExternalRule)
-        .withConfig(scalafixConf(isScala3).asJava)
+        .withConfig(scalafixConf(isScala3 || isSource3).asJava)
         .withRules(rules.asJava)
         .withPaths(List(diskFilePath.toNIO).asJava)
         .withSourceroot(sourceroot.toNIO)
