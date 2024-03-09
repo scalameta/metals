@@ -5,11 +5,11 @@ import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
-import java.{util as ju}
+import java.{util => ju}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
-import scala.jdk.CollectionConverters.*
+import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.pc.AutoImportsResult
@@ -24,7 +24,7 @@ import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
 
-import dotty.tools.pc.{ScalaPresentationCompiler as DottyPresentationCompiler}
+import dotty.tools.pc.{ScalaPresentationCompiler => DottyPresentationCompiler}
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic

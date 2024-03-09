@@ -212,23 +212,29 @@ class OrganizeImportsLspSuite
       |import scala.concurrent.duration.*
       |import scala.concurrent.{Future<<>> as ScalaFuture}
       |import scala.concurrent.ExecutionContext.global
+      |import scala.concurrent.ExecutionContext
       |
       |object A {
+      |  implicit val ec: ExecutionContext = global
       |  val d = Duration(10, MICROSECONDS)
       |  val k = ScalaFuture.successful(1)
+      |  ScalaFuture{ println("Hello!") }
       |}
       |""".stripMargin,
     s"${SourceOrganizeImports.title}",
-    """
-      |package a
-      |import scala.concurrent.duration.*
-      |import scala.concurrent.{Future as ScalaFuture}
-      |
-      |object A {
-      |  val d = Duration(10, MICROSECONDS)
-      |  val k = ScalaFuture.successful(1)
-      |}
-      |""".stripMargin,
+    """|package a
+       |import scala.concurrent.ExecutionContext
+       |import scala.concurrent.ExecutionContext.global
+       |import scala.concurrent.Future as ScalaFuture
+       |import scala.concurrent.duration.*
+       |
+       |object A {
+       |  implicit val ec: ExecutionContext = global
+       |  val d = Duration(10, MICROSECONDS)
+       |  val k = ScalaFuture.successful(1)
+       |  ScalaFuture{ println("Hello!") }
+       |}
+       |""".stripMargin,
     kind = List(sourceKind),
     scalacOptions = scalacOption ++ List("-Xsource:3"),
   )
