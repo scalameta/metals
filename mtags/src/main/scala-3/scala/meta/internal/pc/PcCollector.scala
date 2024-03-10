@@ -44,7 +44,7 @@ abstract class PcCollector[T](
   driver.run(uri, source)
   given ctx: Context = driver.currentCtx
 
-  val unit = driver.currentCtx.run.units.head
+  val unit = driver.latestRun
   val compilatonUnitContext = ctx.fresh.setCompilationUnit(unit)
   val offset = params match
     case op: OffsetParams => op.offset()

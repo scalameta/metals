@@ -27,7 +27,7 @@ final class ConvertToNamedArgumentsProvider(
       uri,
       SourceFile.virtual(filePath.toString, params.text),
     )
-    val unit = driver.currentCtx.run.units.head
+    val unit = driver.latestRun
     val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
     val pos = driver.sourcePosition(params)
     val trees = driver.openedTrees(uri)

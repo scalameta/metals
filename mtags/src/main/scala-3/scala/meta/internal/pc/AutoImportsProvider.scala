@@ -34,7 +34,7 @@ final class AutoImportsProvider(
       uri,
       SourceFile.virtual(filePath.toString, params.text),
     )
-    val unit = driver.currentCtx.run.units.head
+    val unit = driver.latestRun
     val tree = unit.tpdTree
 
     val pos = driver.sourcePosition(params)

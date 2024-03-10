@@ -69,7 +69,7 @@ final class InferredTypeProvider(
     val source =
       SourceFile.virtual(filePath.toString, sourceText)
     driver.run(uri, source)
-    val unit = driver.currentCtx.run.units.head
+    val unit = driver.latestRun
     val pos = driver.sourcePosition(params)
     val path =
       Interactive.pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)

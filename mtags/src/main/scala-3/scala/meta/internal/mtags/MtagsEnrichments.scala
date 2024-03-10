@@ -53,12 +53,15 @@ object MtagsEnrichments extends ScalametaCommonEnrichments:
       new SourcePosition(source, span)
     end sourcePosition
 
-    def localContext(params: OffsetParams): Context =
-      if driver.currentCtx.run.units.isEmpty then
+    def latestRun = 
+      if driver.currentCtx.run.units.nonEmpty then
+        driver.currentCtx.run.units.head
+      else
         throw new RuntimeException(
-          "No source files were passed to the Scala 3 presentation compiler"
+          "No source files were compiled. Might be an error in the compiler itself."
         )
-      val unit = driver.currentCtx.run.units.head
+    def localContext(params: OffsetParams): Context =
+      val unit = driver.latestRun
       val pos = driver.sourcePosition(params)
       val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
       val tpdPath =

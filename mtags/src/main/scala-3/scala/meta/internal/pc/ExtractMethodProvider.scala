@@ -42,7 +42,7 @@ final class ExtractMethodProvider(
     val filePath = Paths.get(uri)
     val source = SourceFile.virtual(filePath.toString, text)
     driver.run(uri, source)
-    val unit = driver.currentCtx.run.units.head
+    val unit = driver.latestRun
     val pos = driver.sourcePosition(range).startPos
     val path =
       Interactive.pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)

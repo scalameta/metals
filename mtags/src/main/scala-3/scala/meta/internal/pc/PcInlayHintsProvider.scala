@@ -39,7 +39,7 @@ class PcInlayHintsProvider(
     SourceFile.virtual(filePath.toString, sourceText)
   driver.run(uri, source)
   given ctx: Context = driver.currentCtx
-  val unit = driver.currentCtx.run.units.head
+  val unit = driver.latestRun
   given InferredType.Text = InferredType.Text(text)
   val pos = driver.sourcePosition(params)
 
