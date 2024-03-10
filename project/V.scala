@@ -12,13 +12,13 @@ object V {
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
   val scala3RC: Option[String] = None
   val sbtScala = "2.12.18"
-  val ammonite212Version = "2.12.18"
-  val ammonite213Version = "2.13.12"
+  val ammonite212Version = "2.12.19"
+  val ammonite213Version = "2.13.13"
   // Rules need to be manually updated to support
   val bazelScalaVersion = "2.13.12"
-  val ammonite3Version = "3.3.1"
+  val ammonite3Version = "3.3.3"
 
-  val ammonite = "3.0.0-M0-60-89836cd8"
+  val ammonite = "3.0.0-M1-8-35694880"
   val betterMonadicFor = "0.3.1"
   val bloop = "1.5.15"
   val bloopConfig = "1.5.5"
