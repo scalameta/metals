@@ -8,6 +8,7 @@ import java.nio.file.Paths
 import scala.util.Properties
 
 import scala.meta.internal.mtags.MD5
+import scala.meta.internal.mtags.MtagsEnrichments.*
 
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.semanticdb.ExtractSemanticDB
@@ -32,7 +33,7 @@ class SemanticdbTextDocumentProvider(
       uri,
       SourceFile.virtual(filePath.toString, validCode),
     )
-    val tree = driver.currentCtx.run.units.head.tpdTree
+    val tree = driver.latestRun.tpdTree
     val extract = ExtractSemanticDB()
     val extractor = extract.Extractor()
     extractor.traverse(tree)(using driver.currentCtx)

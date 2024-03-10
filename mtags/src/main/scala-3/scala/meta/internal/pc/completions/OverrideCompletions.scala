@@ -177,7 +177,7 @@ object OverrideCompletions:
       uri,
       SourceFile.virtual(uri.toASCIIString, params.text),
     )
-    val unit = driver.currentCtx.run.units.head
+    val unit = driver.latestRun
     val pos = driver.sourcePosition(params)
 
     val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
