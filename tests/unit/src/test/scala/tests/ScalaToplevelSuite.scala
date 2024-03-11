@@ -349,8 +349,8 @@ class ScalaToplevelSuite extends BaseSuite {
     List(
       "a/",
       "a/A.",
-      "a/A.bar().",
-      "a/A.foo().",
+      "a/A.bar(). EXT",
+      "a/A.foo(). EXT",
     ),
     mode = All,
     dialect = dialects.Scala3,
@@ -370,8 +370,8 @@ class ScalaToplevelSuite extends BaseSuite {
     List(
       "a/",
       "a/Test$package.",
-      "a/Test$package.bar().",
-      "a/Test$package.foo().",
+      "a/Test$package.bar(). EXT",
+      "a/Test$package.foo(). EXT",
     ),
     mode = All,
     dialect = dialects.Scala3,
@@ -387,8 +387,8 @@ class ScalaToplevelSuite extends BaseSuite {
        |  def baz: Long = ???
        |""".stripMargin,
     List(
-      "a/", "a/Test$package.", "a/Test$package.foo().", "a/Test$package.bar().",
-      "a/Test$package.baz().",
+      "a/", "a/Test$package.", "a/Test$package.foo(). EXT",
+      "a/Test$package.bar(). EXT", "a/Test$package.baz(). EXT",
     ),
     mode = All,
     dialect = dialects.Scala3,
@@ -655,6 +655,42 @@ class ScalaToplevelSuite extends BaseSuite {
     mode = All,
   )
 
+  check(
+    "refined-type",
+    """|package a
+       |object O {
+       |  trait Foo {
+       |    type T
+       |  }
+       |
+       |  implicit class A(val foo: Foo { type T = Int }) {
+       |    def get: Int = 1
+       |  }
+       |}
+       |""".stripMargin,
+    List(
+      "a/", "a/O.", "a/O.A#", "a/O.A#foo. EXT", "a/O.A#get(). EXT", "a/O.Foo#",
+      "a/O.Foo#T#",
+    ),
+    mode = All,
+  )
+
+  check(
+    "implicit-class-with-val",
+    """|package a
+       |object Foo {
+       |  implicit class IntOps(private val i: Int) extends AnyVal {
+       |    def inc: Int = i + 1
+       |  }
+       |}
+       |""".stripMargin,
+    List(
+      "a/", "a/Foo.", "a/Foo.IntOps# -> AnyVal", "a/Foo.IntOps#i. EXT",
+      "a/Foo.IntOps#inc(). EXT",
+    ),
+    mode = All,
+  )
+
   def check(
       options: TestOptions,
       code: String,
@@ -672,11 +708,12 @@ class ScalaToplevelSuite extends BaseSuite {
             val includeMembers = mode == All
             val (doc, overrides) =
               Mtags.indexWithOverrides(input, dialect, includeMembers)
-            val symbols = doc.occurrences.map(_.symbol).toList
             val overriddenMap = overrides.toMap
-            symbols.map { symbol =>
+            doc.symbols.map { symbolInfo =>
+              val symbol = symbolInfo.symbol
+              val suffix = if (symbolInfo.isExtension) " EXT" else ""
               overriddenMap.get(symbol) match {
-                case None => symbol
+                case None => s"$symbol$suffix"
                 case Some(symbols) =>
                   val overridden =
                     symbols
@@ -685,7 +722,7 @@ class ScalaToplevelSuite extends BaseSuite {
                         case UnresolvedOverriddenSymbol(name) => name
                       }
                       .mkString(", ")
-                  s"$symbol -> $overridden"
+                  s"$symbol$suffix -> $overridden"
               }
             }
           case Toplevel => Mtags.topLevelSymbols(input, dialect)

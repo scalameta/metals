@@ -79,6 +79,13 @@ class ScalaToplevelMtags(
       case _ => region
     }
 
+  private def isInParenthesis(region: Region): Boolean =
+    region match {
+      case (_: Region.InParenCaseClass) | (_: Region.InParenClass) =>
+        true
+      case _ => false
+    }
+
   @tailrec
   private def loop(
       indent: Int,
@@ -290,12 +297,23 @@ class ScalaToplevelMtags(
           )
         case DEF | VAL | VAR | GIVEN
             if expectTemplate.map(!_.isExtension).getOrElse(true) =>
+          val isImplicit =
+            if (isInParenthesis(region))
+              expectTemplate.exists(
+                _.isImplicit
+              )
+            else region.isImplicit
           if (needEmitTermMember()) {
             withOwner(currRegion.termOwner) {
-              emitTerm(currRegion)
+              emitTerm(currRegion, isImplicit)
             }
           } else scanner.nextToken()
-          loop(indent, isAfterNewline = false, currRegion, newExpectIgnoreBody)
+          loop(
+            indent,
+            isAfterNewline = false,
+            currRegion,
+            if (isInParenthesis(region)) expectTemplate else newExpectIgnoreBody
+          )
         case TYPE if expectTemplate.map(!_.isExtension).getOrElse(true) =>
           if (needEmitMember(currRegion) && !prevWasDot) {
             withOwner(currRegion.termOwner) {
@@ -408,15 +426,24 @@ class ScalaToplevelMtags(
           expectTemplate match {
             case Some(expect)
                 if needToParseBody(expect) || needToParseExtension(expect) =>
-              val next =
-                expect.startInBraceRegion(
-                  currRegion,
-                  expect.isExtension,
-                  expect.isImplicit
-                )
-              resetRegion(next)
-              scanner.nextToken()
-              loop(indent, isAfterNewline = false, next, None)
+              if (isInParenthesis(region)) {
+                // inside of a class constructor
+                // e.g. class A(val foo: Foo { type T = Int })
+                //                           ^
+                acceptBalancedDelimeters(LBRACE, RBRACE)
+                scanner.nextToken()
+                loop(indent, isAfterNewline = false, currRegion, expectTemplate)
+              } else {
+                val next =
+                  expect.startInBraceRegion(
+                    currRegion,
+                    expect.isExtension,
+                    expect.isImplicit
+                  )
+                resetRegion(next)
+                scanner.nextToken()
+                loop(indent, isAfterNewline = false, next, None)
+              }
             case _ =>
               acceptBalancedDelimeters(LBRACE, RBRACE)
               scanner.nextToken()
@@ -716,7 +743,8 @@ class ScalaToplevelMtags(
   /**
    * Enters a global element (def/val/var/given)
    */
-  def emitTerm(region: Region): Unit = {
+  def emitTerm(region: Region, isParentImplicit: Boolean): Unit = {
+    val extensionProperty = if (isParentImplicit) EXTENSION else 0
     val kind = scanner.curr.token
     acceptTrivia()
     kind match {
@@ -726,7 +754,7 @@ class ScalaToplevelMtags(
             name.name,
             name.pos,
             Kind.METHOD,
-            SymbolInformation.Property.VAL.value
+            SymbolInformation.Property.VAL.value | extensionProperty
           )
           resetRegion(region)
         })
@@ -736,7 +764,7 @@ class ScalaToplevelMtags(
             name.name,
             "()",
             name.pos,
-            SymbolInformation.Property.VAR.value
+            SymbolInformation.Property.VAR.value | extensionProperty
           )
           resetRegion(region)
         })
@@ -746,7 +774,7 @@ class ScalaToplevelMtags(
             name.name,
             region.overloads.disambiguator(name.name),
             name.pos,
-            0
+            extensionProperty
           )
         )
       case GIVEN =>
