@@ -1019,6 +1019,11 @@ class MetalsLspService(
                 () => autoConnectToBuildServer(),
               )
             }
+            .flatMap{ _ =>
+              if(userConfig.javaHome != old.javaHome) {
+                slowConnectToBuildServer(forceImport = true)
+              } else Future.unit
+            }
         } else if (
           userConfig.ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
             .exists(Ammonite.isAmmBuildTarget)
@@ -1034,7 +1039,9 @@ class MetalsLspService(
                 Future.successful(())
             }
         } else {
-          Future.successful(())
+          if(userConfig.javaHome != old.javaHome) {
+            restartBspServer()
+          } else Future.successful(())
         }
       }
       .getOrElse(Future.successful(()))
