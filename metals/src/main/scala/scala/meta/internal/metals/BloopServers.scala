@@ -146,7 +146,7 @@ final class BloopServers(
 
   private def writeJVMPropertiesToBloopGlobalJsonFile(
       maybeBloopJvmProperties: List[String],
-      maybeJavaHome: Option[String],
+      maybeJavaHome: Option[String] = None,
   ): Try[Unit] = Try {
     if (maybeJavaHome.isDefined || maybeBloopJvmProperties.nonEmpty) {
       val javaOptionsField =
@@ -173,15 +173,13 @@ final class BloopServers(
   private def processUserPreferenceForBloopJvmProperties(
       messageActionItem: MessageActionItem,
       maybeBloopJvmProperties: List[String],
-      maybeJavaHome: Option[String],
       reconnect: () => Future[BuildChange],
   ): Future[Unit] = {
     (messageActionItem, bloopJsonPath) match {
       case (item, _)
           if item == Messages.BloopGlobalJsonFilePremodified.applyAndRestart =>
         writeJVMPropertiesToBloopGlobalJsonFile(
-          maybeBloopJvmProperties,
-          maybeJavaHome,
+          maybeBloopJvmProperties
         ) match {
           case Failure(exception) => Future.failed(exception)
           case Success(_) =>
@@ -212,7 +210,6 @@ final class BloopServers(
 
   private def updateBloopGlobalJsonFileThenRestart(
       maybeBloopJvmProperties: List[String],
-      maybeJavaHome: Option[String],
       reconnect: () => Future[BuildChange],
       bloopJsonUpdateCause: BloopJsonUpdateCause,
   ): Future[Unit] = {
@@ -226,7 +223,6 @@ final class BloopServers(
             if messageActionItem == Messages.BloopJvmPropertiesChange.reconnect =>
           writeJVMPropertiesToBloopGlobalJsonFile(
             maybeBloopJvmProperties,
-            maybeJavaHome,
           ) match {
             case Failure(exception) => Future.failed(exception)
             case Success(_) =>
@@ -267,18 +263,7 @@ final class BloopServers(
    * @param bloopJavaHome bloop javaHome that is in the global config
    * @return whether or not the javaHome needs to be updated
    */
-  private def needsJavaHomeUpdate(
-      metalsJavaHome: Option[String],
-      bloopJavaHome: Option[String],
-  ) = {
-    (metalsJavaHome, bloopJavaHome) match {
-      // Metals is set but Bloop isn't
-      case (Some(_), None) => true
-      // Metals and Bloop are set, but they aren't the same
-      case (Some(m), Some(b)) if m != b => true
-      case _ => false
-    }
-  }
+  
 
   /**
    * First we check if the user requested to update the Bloop JVM
@@ -299,12 +284,11 @@ final class BloopServers(
    * @param reconnect                        function to connect back to the
    *                                         build server.
    * @return `Future.successful` if the purpose is achieved or `Future.failure`
-   *         if a problem occured such as lacking enough permissions to open or
+   *         if a problem occurred such as lacking enough permissions to open or
    *         write to files
    */
   def ensureDesiredJvmSettings(
       maybeRequestedBloopJvmProperties: Option[List[String]],
-      maybeRequestedMetalsJavaHome: Option[String],
       reconnect: () => Future[BuildChange],
   ): Future[Unit] = {
     val result =
@@ -320,20 +304,12 @@ final class BloopServers(
                 requested != maybeBloopGlobalJsonJvmProperties
               )
           ) Some(BloopJsonUpdateCause.JVM_OPTS)
-          else if (
-            needsJavaHomeUpdate(
-              maybeRequestedMetalsJavaHome,
-              maybeBloopGlobalJsonJavaHome,
-            )
-          )
-            Some(BloopJsonUpdateCause.JAVA_HOME)
           else None
         maybeBloopJvmProperties = maybeRequestedBloopJvmProperties.getOrElse(
           maybeBloopGlobalJsonJvmProperties
         )
       } yield updateBloopJvmProperties(
         maybeBloopJvmProperties,
-        maybeRequestedMetalsJavaHome,
         reconnect,
         bloopJsonUpdateCause,
       )
@@ -345,7 +321,6 @@ final class BloopServers(
 
   private def updateBloopJvmProperties(
       maybeBloopJvmProperties: List[String],
-      maybeJavaHome: Option[String],
       reconnect: () => Future[BuildChange],
       bloopJsonUpdateCause: BloopJsonUpdateCause,
   ): Future[Unit] = {
@@ -367,7 +342,6 @@ final class BloopServers(
           processUserPreferenceForBloopJvmProperties(
             _,
             maybeBloopJvmProperties,
-            maybeJavaHome,
             reconnect,
           ) andThen {
             case Failure(exception) =>
@@ -384,7 +358,6 @@ final class BloopServers(
       // about overriding the user preferred settings
       updateBloopGlobalJsonFileThenRestart(
         maybeBloopJvmProperties,
-        maybeJavaHome,
         reconnect,
         bloopJsonUpdateCause,
       ) andThen {
@@ -402,9 +375,8 @@ final class BloopServers(
       userConfiguration: UserConfiguration
   ) = {
     def metalsJavaHome =
-      userConfiguration.javaHome
-        .orElse(sys.env.get("JAVA_HOME"))
-        .orElse(sys.props.get("java.home"))
+      sys.env.get("JAVA_HOME")
+      .orElse(sys.props.get("java.home"))
     // we should set up Java before running Bloop in order to not restart it
     bloopJsonPath match {
       case Some(bloopPath) if !bloopPath.exists =>
