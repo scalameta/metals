@@ -1,9 +1,5 @@
 package tests
 
-import scala.concurrent.Future
-
-import scala.meta.internal.metals.MetalsEnrichments._
-
 class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
 
   check(
@@ -663,56 +659,32 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
        |""".stripMargin,
   )
 
-  test("multi-module") {
-    val fileName = "a/src/main/scala/com/example/foo/Foo.scala"
-    val fileContents =
-      """|package com.example.foo
-         |trait F@@oo {
-         |  def transform(input: Int): Int
+  check(
+    "multi-module",
+    """|/a/src/main/scala/com/example/foo/Foo.scala
+       |package com.example.foo
+       |trait F@@oo {
+       |  def transform(input: Int): Int
+       |}
+       |/b/src/main/scala/com/example/bar/Bar.scala
+       |package com.example.bar
+       |
+       |import com.example.foo.Foo
+       |
+       |class <<Bar>> extends Foo {
+       |  override def transform(input: Int): Int = input * 2
+       |}
+       |""".stripMargin,
+    customMetalsJson = Some(
+      """|{
+         |  "a":{ },
+         |  "b":{
+         |    "dependsOn": ["a"]
+         |  }
          |}
          |""".stripMargin
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{
-           |  "a":{ },
-           |  "b":{
-           |    "dependsOn": ["a"]
-           |  }
-           |}
-           |/$fileName
-           |${fileContents.replaceAll("@@", "")}
-           |/b/src/main/scala/com/example/bar/Bar.scala
-           |package com.example.bar
-           |
-           |import com.example.foo.Foo
-           |
-           |class Bar extends Foo {
-           |  override def transform(input: Int): Int = input * 2
-           |}
-        """.stripMargin
-      )
-      _ <- server.didOpen("b/src/main/scala/com/example/bar/Bar.scala")
-      _ <- server.didOpen(fileName)
-      _ = assertNoDiagnostics()
-      locations <- server.implementation(fileName, fileContents)
-      definitions <-
-        Future.sequence(
-          locations.map(location =>
-            server.server.definitionResult(
-              location.toTextDocumentPositionParams
-            )
-          )
-        )
-      symbols = definitions.map(_.symbol).sorted
-      _ = assertNoDiff(
-        symbols.mkString("\n"),
-        "com/example/bar/Bar#",
-      )
-      _ <- server.shutdown()
-    } yield ()
-  }
+    ),
+  )
 
   override protected def libraryDependencies: List[String] =
     List("org.scalatest::scalatest:3.2.16", "io.circe::circe-generic:0.12.0")
