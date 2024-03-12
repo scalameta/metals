@@ -29,4 +29,8 @@ public interface InlayHintsParams extends RangeParams {
    */
   boolean implicitConversions();
 
+  default boolean contextBounds() {
+    return false;
+  }
+
 }

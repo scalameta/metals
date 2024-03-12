@@ -616,6 +616,7 @@ class Compilers(
           userConfig().showInferredType.contains("true"),
         implicitParameters = userConfig().showImplicitArguments,
         implicitConversions = userConfig().showImplicitConversionsAndClasses,
+        contextBounds = userConfig().showEvidenceParams,
       )
 
       pc

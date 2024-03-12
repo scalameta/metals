@@ -44,6 +44,7 @@ case class UserConfiguration(
     showInferredType: Option[String] = None,
     showImplicitArguments: Boolean = false,
     showImplicitConversionsAndClasses: Boolean = false,
+    showEvidenceParams: Boolean = false,
     enableStripMarginOnTypeFormatting: Boolean = true,
     enableIndentOnPaste: Boolean = false,
     enableSemanticHighlighting: Boolean = true,
@@ -256,6 +257,16 @@ object UserConfiguration {
         "false",
         "Should display implicit conversion at usage sites",
         """|When this option is enabled, each place where an implicit method or class is used has it 
+           |displayed either as additional decorations if they are supported by the editor or 
+           |shown in the hover.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "show-evidence-params",
+        "false",
+        "false",
+        "Should display context bounds evidence parameters at usage sites",
+        """|When this option is enabled, each place where a context bound is used has it 
            |displayed either as additional decorations if they are supported by the editor or 
            |shown in the hover.
            |""".stripMargin,
@@ -538,6 +549,8 @@ object UserConfiguration {
       getBooleanKey("show-implicit-arguments").getOrElse(false)
     val showImplicitConversionsAndClasses =
       getBooleanKey("show-implicit-conversions-and-classes").getOrElse(false)
+    val showEvidenceParams =
+      getBooleanKey("show-evidence-params").getOrElse(false)
     val enableStripMarginOnTypeFormatting =
       getBooleanKey("enable-strip-margin-on-type-formatting").getOrElse(true)
     val enableIndentOnPaste =
@@ -609,6 +622,7 @@ object UserConfiguration {
           showInferredType,
           showImplicitArguments,
           showImplicitConversionsAndClasses,
+          showEvidenceParams,
           enableStripMarginOnTypeFormatting,
           enableIndentOnPaste,
           enableSemanticHighlighting,

@@ -848,7 +848,25 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |""".stripMargin
   )
 
-  // TODO: Add a separate option for hints for context bounds
+  check(
+    "context-bounds".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    """|package example
+       |object O {
+       |  given Int = 1
+       |  def test[T: Ordering](x: T)(using Int) = ???
+       |  test(1)
+       |}
+       |""".stripMargin,
+    """|package example
+       |object O {
+       |  given Int = 1
+       |  def test[T: Ordering](x: T)(using Int)/*: Nothing<<scala/Nothing#>>*/ = ???
+       |  test/*[Int<<scala/Int#>>]*/(1)/*(using given_Int<<(2:8)>>)*/
+       |}
+       |""".stripMargin,
+    showContextBounds = false
+  )
+
   check(
     "context-bounds1".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
     """|package example
@@ -892,7 +910,24 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
-    "context-bounds3".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    "context-bounds3".tag(IgnoreForScala3CompilerPC),
+    """|package example
+       |object O {
+       |  def test[T: Ordering](x: T) = ???
+       |  test(1)
+       |}
+       |""".stripMargin,
+    """|package example
+       |object O {
+       |  def test[T: Ordering](x: T)/*: Nothing<<scala/Nothing#>>*/ = ???
+       |  test/*[Int<<scala/Int#>>]*/(1)
+       |}
+       |""".stripMargin,
+    showContextBounds = false
+  )
+
+  check(
+    "context-bounds4".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
     """|package example
        |object O {
        |  def test[T: Ordering](x: T)(using Int) = ???
@@ -908,7 +943,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
-    "context-bounds4".tag(IgnoreForScala3CompilerPC),
+    "context-bounds5".tag(IgnoreForScala3CompilerPC),
     """|package example
        |object O {
        |  implicit val i: Int = 123
@@ -920,7 +955,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |object O {
        |  implicit val i: Int = 123
        |  def test[T: Ordering](x: T)(implicit v: Int)/*: Nothing<<scala/Nothing#>>*/ = ???
-       |  test/*[Int<<scala/Int#>>]*/(1)/*(Int<<scala/math/Ordering.Int.>>, i<<(2:15)>>)*/
+       |  test/*[Int<<scala/Int#>>]*/(1)/*(Int<<scala/math/Ordering.Int.>>)*/
        |}
        |""".stripMargin,
     compat = Map(
@@ -928,9 +963,38 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
                 |object O {
                 |  implicit val i: Int = 123
                 |  def test[T: Ordering](x: T)(implicit v: Int)/*: Nothing<<scala/Nothing#>>*/ = ???
-                |  test/*[Int<<scala/Int#>>]*/(1)/*(using Int<<scala/math/Ordering.Int.>>, i<<(2:15)>>)*/
+                |  test/*[Int<<scala/Int#>>]*/(1)/*(using Int<<scala/math/Ordering.Int.>>)*/
                 |}
                 |""".stripMargin
-    )
+    ),
+    showImplicitArguments = false
+  )
+
+  check(
+    "context-bounds6".tag(IgnoreForScala3CompilerPC),
+    """|package example
+       |object O {
+       |  implicit val i: Int = 123
+       |  def test[T: Ordering](x: T)(y: T) = ???
+       |  test(1)(2)
+       |}
+       |""".stripMargin,
+    """|package example
+       |object O {
+       |  implicit val i: Int = 123
+       |  def test[T: Ordering](x: T)(y: T)/*: Nothing<<scala/Nothing#>>*/ = ???
+       |  test/*[Int<<scala/Int#>>]*/(1)(2)/*(Int<<scala/math/Ordering.Int.>>)*/
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|package example
+                |object O {
+                |  implicit val i: Int = 123
+                |  def test[T: Ordering](x: T)(y: T)/*: Nothing<<scala/Nothing#>>*/ = ???
+                |  test/*[Int<<scala/Int#>>]*/(1)(2)/*(using Int<<scala/math/Ordering.Int.>>)*/
+                |}
+                |""".stripMargin
+    ),
+    showImplicitArguments = false
   )
 }

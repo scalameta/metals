@@ -15,7 +15,12 @@ class BaseInlayHintsSuite extends BasePCSuite {
       name: TestOptions,
       base: String,
       expected: String,
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, String] = Map.empty,
+      showInferredType: Boolean = true,
+      showTypeArguments: Boolean = true,
+      showImplicitArguments: Boolean = true,
+      showImplicitConversions: Boolean = true,
+      showContextBounds: Boolean = true
   )(implicit location: Location): Unit =
     test(name) {
       def pkgWrap(text: String) =
@@ -31,10 +36,11 @@ class BaseInlayHintsSuite extends BasePCSuite {
       )
       val pcParams = CompilerInlayHintsParams(
         rangeParams,
-        true,
-        true,
-        true,
-        true
+        showInferredType,
+        showTypeArguments,
+        showImplicitArguments,
+        showImplicitConversions,
+        showContextBounds
       )
 
       val inlayHints = presentationCompiler
