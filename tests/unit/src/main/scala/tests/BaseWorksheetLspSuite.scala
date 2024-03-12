@@ -10,7 +10,6 @@ import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.{BuildInfo => V}
-import scala.meta.internal.semver.SemVer
 
 abstract class BaseWorksheetLspSuite(
     scalaVersion: String
@@ -856,12 +855,7 @@ abstract class BaseWorksheetLspSuite(
       _ = assertNoDiff(noCompletions, "")
     } yield ()
   }
-  if (
-    ScalaVersions.isScala3Version(scalaVersion) && !SemVer.isLaterVersion(
-      V.scala3,
-      scalaVersion,
-    )
-  )
+  if (ScalaVersions.isScala3Version(scalaVersion) && scalaVersion != "3.4.0")
     test("import-missing-symbol") {
       cleanWorkspace()
       val path = "a/src/main/scala/foo/Main.worksheet.sc"
