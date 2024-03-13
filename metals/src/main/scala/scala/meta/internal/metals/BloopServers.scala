@@ -257,14 +257,6 @@ final class BloopServers(
   }
 
   /**
-   * Determine whether or not we need to update the javaHome setting in the bloop.json file.
-   *
-   * @param metalsJavaHome javaHome being passed in from the user
-   * @param bloopJavaHome bloop javaHome that is in the global config
-   * @return whether or not the javaHome needs to be updated
-   */
-
-  /**
    * First we check if the user requested to update the Bloop JVM
    * properties through the extension.
    * <p>If so, we also check if the Bloop's Global Json file exists
