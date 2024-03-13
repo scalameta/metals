@@ -50,10 +50,7 @@ final class AutoImportsProvider(
     }
 
     def namePos: l.Range =
-      pos
-        .withStart(pos.start - name.length())
-        .withEnd(pos.end)
-        .toLsp
+      pos.withEnd(pos.start + name.length()).toLsp
 
     def isExactMatch(sym: Symbol, name: String): Boolean =
       sym.name.dropLocal.decoded == name
