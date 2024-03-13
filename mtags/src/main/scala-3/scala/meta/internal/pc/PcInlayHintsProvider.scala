@@ -225,8 +225,13 @@ object ImplicitParameters:
 
   private def isSyntheticArg(tree: Tree)(using Context) = tree match
     case tree: Ident =>
-      tree.span.isSynthetic && tree.symbol.isOneOf(Flags.GivenOrImplicit)
+      tree.span.isSynthetic && tree.symbol.isOneOf(Flags.GivenOrImplicit) &&
+        !isQuotes(tree)
     case _ => false
+  // Decorations for Quotes are rarely useful
+  private def isQuotes(tree: Tree)(using Context) = 
+    tree.tpe.typeSymbol.name.toString() == "Quotes"
+
 end ImplicitParameters
 
 object ValueOf:
@@ -288,7 +293,7 @@ object InferredType:
       case bd @ Bind(
             name,
             Ident(nme.WILDCARD),
-          ) =>
+          ) if !bd.span.isZeroExtent && bd.symbol.isTerm =>
         Some(bd.symbol.info, bd.namePos, bd)
       case _ => None
 
