@@ -13,7 +13,9 @@ import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags
+import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.core.StdNames.*
+import dotty.tools.dotc.core.Symbols
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.interactive.Interactive
@@ -229,8 +231,13 @@ object ImplicitParameters:
 
   private def isSyntheticArg(tree: Tree)(using Context) = tree match
     case tree: Ident =>
-      tree.span.isSynthetic && tree.symbol.isOneOf(Flags.GivenOrImplicit)
+      tree.span.isSynthetic && tree.symbol.isOneOf(Flags.GivenOrImplicit) &&
+        !isQuotes(tree)
     case _ => false
+  // Decorations for Quotes are rarely useful
+  private def isQuotes(tree: Tree)(using Context) =
+    tree.tpe.typeSymbol.fullName.toString() == "scala.quoted.Quotes"
+
 end ImplicitParameters
 
 object ValueOf:
@@ -297,7 +304,7 @@ object InferredType:
         case bd @ Bind(
               name,
               Ident(nme.WILDCARD),
-            ) if params.hintsInPatternMatch() =>
+            ) if !bd.span.isZeroExtent && bd.symbol.isTerm && params.hintsInPatternMatch() =>
           Some(bd.symbol.info, bd.namePos, bd)
         case _ => None
     } else None
