@@ -82,7 +82,10 @@ trait BaseAutoImportsSuite extends BaseCodeActionSuite {
       original: String,
       filename: String
   ): List[AutoImportsResult] = {
-    val (code, symbol, offset) = params(original)
+    val (code, symbol, _) = params(original)
+    val offset =
+      if (isScala3Version(scalaVersion)) original.indexOf(">>") - 2
+      else original.indexOf("<<")
     val result = presentationCompiler
       .autoImports(
         symbol,
