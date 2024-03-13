@@ -20,7 +20,7 @@ final class BuildTargetClasses(
     buildTargets: BuildTargets
 )(implicit val ec: ExecutionContext) {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
-  val jvmRunEnvironment
+  private val jvmRunEnvironments
       : TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem] =
     TrieMap.empty[b.BuildTargetIdentifier, b.JvmEnvironmentItem]
   val rebuildIndex: BatchedFunction[b.BuildTargetIdentifier, Unit] =
@@ -36,6 +36,10 @@ final class BuildTargetClasses(
 
   def invalidate(target: b.BuildTargetIdentifier): Unit = {
     index.put(target, new Classes)
+  }
+
+  def clear(): Unit = {
+    jvmRunEnvironments.clear()
   }
 
   def findMainClassByName(
@@ -88,14 +92,9 @@ final class BuildTargetClasses(
                 .map(cacheTestClasses(classes, _))
             else Future.unit
 
-          val jvmRunEnvironment = connection
-            .jvmRunEnvironment(new b.JvmRunEnvironmentParams(targetsList))
-            .map(cacheJvmRunEnvironment)
-
           for {
             _ <- updateMainClasses
             _ <- updateTestClasses
-            _ <- jvmRunEnvironment
           } yield {
             classes.foreach { case (id, classes) =>
               index.put(id, classes)
@@ -105,6 +104,33 @@ final class BuildTargetClasses(
       .ignoreValue
   }
 
+  def jvmRunEnvironmentSync(
+      buildTargetId: b.BuildTargetIdentifier
+  ): Option[b.JvmEnvironmentItem] = jvmRunEnvironments.get(buildTargetId)
+
+  def jvmRunEnvironment(
+      buildTargetId: b.BuildTargetIdentifier
+  ): Future[Option[b.JvmEnvironmentItem]] = {
+    jvmRunEnvironments.get(buildTargetId) match {
+      case None =>
+        buildTargets.buildServerOf(buildTargetId) match {
+          case None => Future.successful(None)
+          case Some(connection) =>
+            connection
+              .jvmRunEnvironment(
+                new b.JvmRunEnvironmentParams(List(buildTargetId).asJava)
+              )
+              .map { env =>
+                cacheJvmRunEnvironment(env)
+                env.getItems().asScala.headOption
+              }
+
+        }
+      case jvmRunEnv: Some[b.JvmEnvironmentItem] =>
+        Future.successful(jvmRunEnv)
+    }
+  }
+
   private def cacheJvmRunEnvironment(
       result: b.JvmRunEnvironmentResult
   ): Unit = {
@@ -112,7 +138,7 @@ final class BuildTargetClasses(
       item <- result.getItems().asScala
       target = item.getTarget
     } {
-      jvmRunEnvironment.put(target, item)
+      jvmRunEnvironments.put(target, item)
     }
   }
 

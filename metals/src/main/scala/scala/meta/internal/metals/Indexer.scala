@@ -216,6 +216,7 @@ final case class Indexer(
         val data = buildTool.data
         val importedBuild = buildTool.importedBuild
         data.reset()
+        buildTargetClasses.clear()
         data.addWorkspaceBuildTargets(importedBuild.workspaceBuildTargets)
         data.addScalacOptions(
           importedBuild.scalacOptions,

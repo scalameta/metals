@@ -2,6 +2,9 @@ package scala.meta.internal.metals.codelenses
 
 import java.util.Collections.singletonList
 
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+
 import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.BaseCommand
 import scala.meta.internal.metals.Buffers
@@ -50,14 +53,31 @@ final class RunTestCodeLens(
     userConfig: () => UserConfiguration,
     trees: Trees,
     workspace: AbsolutePath,
-) extends CodeLens {
+)(implicit val ec: ExecutionContext)
+    extends CodeLens {
 
   override def isEnabled: Boolean =
     clientConfig.isDebuggingProvider() || clientConfig.isRunProvider()
 
   override def codeLenses(
       textDocumentWithPath: TextDocumentWithPath
-  ): Seq[l.CodeLens] = {
+  ): Future[Seq[l.CodeLens]] = {
+
+    /**
+     * Jvm environment needs to be requested lazily.
+     * This requests and caches it for later use, otherwise we
+     * would need to forward Future across different methods
+     * which would make things way too complex.
+     */
+    def requestJvmEnvironment(
+        buildTargetId: BuildTargetIdentifier,
+        isJvm: Boolean,
+    ): Future[Unit] = {
+      if (isJvm)
+        buildTargetClasses.jvmRunEnvironment(buildTargetId).map(_ => ())
+      else
+        Future.unit
+    }
     val textDocument = textDocumentWithPath.textDocument
     val path = textDocumentWithPath.filePath
     val distance = buffers.tokenEditDistance(path, textDocument.text, trees)
@@ -71,8 +91,9 @@ final class RunTestCodeLens(
       // although hasDebug is already available in BSP capabilities
       // see https://github.com/build-server-protocol/build-server-protocol/pull/161
       // most of the bsp servers such as bloop and sbt might not support it.
-    } yield {
+    } yield requestJvmEnvironment(buildTargetId, isJVM).map { _ =>
       val classes = buildTargetClasses.classesOf(buildTargetId)
+
       // sbt doesn't declare debugging provider
       def buildServerCanDebug =
         connection.isDebuggingProvider || connection.isSbt
@@ -100,7 +121,7 @@ final class RunTestCodeLens(
 
     }
 
-    lenses.getOrElse(Seq.empty)
+    lenses.getOrElse(Future.successful(Nil))
   }
 
   /**
@@ -315,8 +336,8 @@ final class RunTestCodeLens(
     val (data, shellCommandAdded) =
       if (!isJVM) (main.toJson, false)
       else
-        buildTargetClasses.jvmRunEnvironment
-          .get(target)
+        buildTargetClasses
+          .jvmRunEnvironmentSync(target)
           .zip(javaBinary) match {
           case None =>
             (main.toJson, false)
