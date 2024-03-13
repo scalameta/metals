@@ -112,4 +112,35 @@ class ImportMissingSymbolCrossLspSuite
         |  println(1.incr)
         |""".stripMargin,
   )
+
+  checkEdit(
+    "6180",
+    s"""|/metals.json
+        |{
+        |  "a":{"scalaVersion" : "${V.scala3}"},
+        |  "b":{
+        |    "scalaVersion" : "${V.scala3}",
+        |    "dependsOn": ["a"]
+        |  }
+        |}
+        |/a/src/main/scala/example/Foo.scala
+        |package example
+        |
+        |trait Foo
+        |
+        |/b/src/main/scala/x/B.scala
+        |package x
+        |case class B(
+        |) extends <<F>>oo
+        |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("Foo", "example")}
+        |${CreateNewSymbol.title("Foo")}
+        |""".stripMargin,
+    s"""|package x
+        |
+        |import example.Foo
+        |case class B(
+        |) extends Foo
+        |""".stripMargin,
+  )
 }
