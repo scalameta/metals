@@ -1631,13 +1631,13 @@ class MetalsLspService(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
     CancelTokens.future { _ =>
-      buildServerPromise.future.map { _ =>
+      buildServerPromise.future.flatMap { _ =>
         timerProvider.timedThunk(
           "code lens generation",
           thresholdMillis = 1.second.toMillis,
         ) {
           val path = params.getTextDocument.getUri.toAbsolutePath
-          codeLensProvider.findLenses(path).toList.asJava
+          codeLensProvider.findLenses(path).map(_.toList.asJava)
         }
       }
     }

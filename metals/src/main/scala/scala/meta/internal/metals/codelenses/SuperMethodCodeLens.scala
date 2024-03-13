@@ -1,5 +1,8 @@
 package scala.meta.internal.metals.codelenses
 
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+
 import scala.meta.internal.implementation.SuperMethodProvider
 import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.Buffers
@@ -21,13 +24,14 @@ final class SuperMethodCodeLens(
     userConfig: () => UserConfiguration,
     clientConfig: ClientConfiguration,
     trees: Trees,
-) extends CodeLens {
+)(implicit val ec: ExecutionContext)
+    extends CodeLens {
 
   override def isEnabled: Boolean = userConfig().superMethodLensesEnabled
 
   override def codeLenses(
       textDocumentWithPath: TextDocumentWithPath
-  ): Seq[l.CodeLens] = {
+  ): Future[Seq[l.CodeLens]] = Future {
     val textDocument = textDocumentWithPath.textDocument
     val path = textDocumentWithPath.filePath
 
