@@ -1019,6 +1019,29 @@ object Messages {
     }
   }
 
+  object ProjectJavaHomeUpdate {
+    val restart: MessageActionItem =
+      new MessageActionItem("Restart/Reconnect to the build server")
+
+    val notNow: MessageActionItem =
+      new MessageActionItem("Not now")
+
+    def params(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        s"Java home has been updated, do you want to restart/reconnect to the BSP server?"
+      )
+      params.setType(MessageType.Info)
+      params.setActions(
+        List(
+          restart,
+          notNow,
+        ).asJava
+      )
+      params
+    }
+  }
+
   object RequestTimeout {
 
     val cancel = new MessageActionItem("Cancel")

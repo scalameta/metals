@@ -222,7 +222,7 @@ final class BloopServers(
         case messageActionItem
             if messageActionItem == Messages.BloopJvmPropertiesChange.reconnect =>
           writeJVMPropertiesToBloopGlobalJsonFile(
-            maybeBloopJvmProperties,
+            maybeBloopJvmProperties
           ) match {
             case Failure(exception) => Future.failed(exception)
             case Success(_) =>
@@ -263,7 +263,6 @@ final class BloopServers(
    * @param bloopJavaHome bloop javaHome that is in the global config
    * @return whether or not the javaHome needs to be updated
    */
-  
 
   /**
    * First we check if the user requested to update the Bloop JVM
@@ -375,8 +374,9 @@ final class BloopServers(
       userConfiguration: UserConfiguration
   ) = {
     def metalsJavaHome =
-      sys.env.get("JAVA_HOME")
-      .orElse(sys.props.get("java.home"))
+      sys.env
+        .get("JAVA_HOME")
+        .orElse(sys.props.get("java.home"))
     // we should set up Java before running Bloop in order to not restart it
     bloopJsonPath match {
       case Some(bloopPath) if !bloopPath.exists =>

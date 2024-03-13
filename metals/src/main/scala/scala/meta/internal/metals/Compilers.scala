@@ -113,18 +113,21 @@ class Compilers(
     if (existsReleaseSetting) scalacOptions
     else {
       def optBuildTargetJvmVersion =
-        scalaTarget.jvmVersion.flatMap(version => JdkVersion.parse(version)).orElse{
-          val javaHome =
-              scalaTarget.jvmHome.flatMap(_.toAbsolutePathSafe)
-                .orElse{
+        scalaTarget.jvmVersion
+          .flatMap(version => JdkVersion.parse(version))
+          .orElse {
+            val javaHome =
+              scalaTarget.jvmHome
+                .flatMap(_.toAbsolutePathSafe)
+                .orElse {
                   for {
                     javaHomeString <- userConfig().javaHome.map(_.trim())
                     if (javaHomeString.nonEmpty)
                     javaHome <- Try(AbsolutePath(javaHomeString)).toOption
                   } yield javaHome
                 }
-          JdkVersion.maybeJdkVersionFromJavaHome(javaHome)
-        }
+            JdkVersion.maybeJdkVersionFromJavaHome(javaHome)
+          }
 
       val releaseVersion =
         for {

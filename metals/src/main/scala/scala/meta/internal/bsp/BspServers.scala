@@ -99,10 +99,7 @@ final class BspServers(
         args,
         projectDirectory,
         redirectErrorOutput = false,
-        JdkSources
-          .defaultJavaHome(userConfig().javaHome)
-          .map("JAVA_HOME" -> _.toString())
-          .toMap,
+        JdkSources.envVariables(userConfig().javaHome),
         processOut = None,
         processErr = Some(l => scribe.info("BSP server: " + l)),
         discardInput = false,

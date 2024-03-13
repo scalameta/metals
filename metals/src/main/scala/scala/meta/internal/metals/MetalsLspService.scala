@@ -1019,9 +1019,9 @@ class MetalsLspService(
                 () => autoConnectToBuildServer(),
               )
             }
-            .flatMap{ _ =>
-              if(userConfig.javaHome != old.javaHome) {
-                slowConnectToBuildServer(forceImport = true)
+            .flatMap { _ =>
+              if (userConfig.javaHome != old.javaHome) {
+                updateBspJavaHome(session)
               } else Future.unit
             }
         } else if (
@@ -1036,20 +1036,43 @@ class MetalsLspService(
                   if item == Messages.AmmoniteJvmParametersChange.restart =>
                 ammonite.reload()
               case _ =>
-                Future.successful(())
+                Future.unit
             }
-        } else {
-          if(userConfig.javaHome != old.javaHome) {
-            restartBspServer()
-          } else Future.successful(())
-        }
+        } else if (userConfig.javaHome != old.javaHome) {
+          updateBspJavaHome(session)
+        } else Future.unit
       }
-      .getOrElse(Future.successful(()))
+      .getOrElse(Future.unit)
 
     for {
       _ <- slowConnect
       _ <- Future.sequence(List(restartBuildServer, resetDecorations))
     } yield ()
+  }
+
+  private def updateBspJavaHome(session: BspSession) = {
+    languageClient
+      .showMessageRequest(Messages.ProjectJavaHomeUpdate.params())
+      .asScala
+      .flatMap {
+        case Messages.ProjectJavaHomeUpdate.restart =>
+          buildTool match {
+            case Some(sbt: SbtBuildTool) if session.main.isSbt =>
+              for {
+                _ <- disconnectOldBuildServer()
+                _ <- sbt.shutdownBspServer(shellRunner)
+                _ <- sbt.generateBspConfig(
+                  folder,
+                  bspConfigGenerator.runUnconditionally(sbt, _),
+                  statusBar,
+                )
+                _ <- autoConnectToBuildServer()
+              } yield ()
+            case _ => slowConnectToBuildServer(forceImport = true)
+          }
+        case Messages.ProjectJavaHomeUpdate.notNow =>
+          Future.successful(())
+      }
   }
 
   override def didOpen(
