@@ -150,7 +150,8 @@ final class Embedded(
       pathString.contains("mdoc") ||
       pathString.contains("scalameta") ||
       pathString.contains("metaconfig") ||
-      pathString.contains("diffutils")
+      pathString.contains("diffutils") ||
+      pathString.contains("scala-sbt")
     }
     val urls = runtimeClasspath.iterator.map(_.toUri().toURL()).toArray
     new URLClassLoader(urls, parent)
