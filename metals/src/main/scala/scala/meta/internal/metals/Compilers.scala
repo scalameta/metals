@@ -132,9 +132,7 @@ class Compilers(
       val releaseVersion =
         for {
           jvmVersion <- optBuildTargetJvmVersion
-          metalsJavaVersion <- JdkVersion.maybeJdkVersionFromJavaHome(
-            JdkSources.defaultJavaHome(None).headOption
-          )
+          metalsJavaVersion <- Option(sys.props("java.version")).flatMap(JdkVersion.parse)
           if (jvmVersion.major < metalsJavaVersion.major)
         } yield jvmVersion.major
 
