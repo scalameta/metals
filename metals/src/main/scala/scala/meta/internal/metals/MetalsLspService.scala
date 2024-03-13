@@ -1014,10 +1014,12 @@ class MetalsLspService(
               () => autoConnectToBuildServer,
             )
             .flatMap { _ =>
-              bloopServers.ensureDesiredJvmSettings(
-                userConfig.bloopJvmProperties,
-                () => autoConnectToBuildServer(),
-              )
+              userConfig.bloopJvmProperties.map(
+                bloopServers.ensureDesiredJvmSettings(
+                  _,
+                  () => autoConnectToBuildServer(),
+                )
+              ).getOrElse(Future.unit)
             }
             .flatMap { _ =>
               if (userConfig.javaHome != old.javaHome) {
