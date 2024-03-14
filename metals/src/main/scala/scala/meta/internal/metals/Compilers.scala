@@ -132,8 +132,20 @@ class Compilers(
       val releaseVersion =
         for {
           jvmVersion <- optBuildTargetJvmVersion
-          metalsJavaVersion <- Option(sys.props("java.version")).flatMap(JdkVersion.parse)
-          if (jvmVersion.major < metalsJavaVersion.major)
+          metalsJavaVersion <- Option(sys.props("java.version"))
+            .flatMap(JdkVersion.parse)
+          _ <-
+            if (jvmVersion.major < metalsJavaVersion.major) Some(())
+            else if (metalsJavaVersion.major > jvmVersion.major) {
+              scribe.warn(
+                s"""|Your project uses JDK version ${jvmVersion.major} and
+                    |Metals server is running on JDK version ${metalsJavaVersion.major}.
+                    |This might cause incorrect completions, since
+                    |Metals JDK version should be greater or equal the project's JDK version.
+                    |""".stripMargin
+              )
+              None
+            } else None
         } yield jvmVersion.major
 
       releaseVersion match {
