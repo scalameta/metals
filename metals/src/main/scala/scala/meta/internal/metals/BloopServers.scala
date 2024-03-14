@@ -244,7 +244,7 @@ final class BloopServers(
         if bloopPath.canWrite
         (maybeBloopGlobalJsonJavaHome, maybeBloopGlobalJsonJvmProperties) =
           maybeLoadBloopGlobalJsonFile(bloopPath)
-        if(requestedBloopJvmProperties != maybeBloopGlobalJsonJvmProperties)
+        if (requestedBloopJvmProperties != maybeBloopGlobalJsonJvmProperties)
       } yield updateBloopJvmProperties(
         requestedBloopJvmProperties,
         reconnect,

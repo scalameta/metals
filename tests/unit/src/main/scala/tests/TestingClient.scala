@@ -92,6 +92,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   var importScalaCliScript = new MessageActionItem(ImportScalaScript.dismiss)
   var resetWorkspace = new MessageActionItem(ResetWorkspace.cancel)
   var regenerateAndRestartScalaCliBuildSever = FileOutOfScalaCliBspScope.ignore
+  var shouldReloadAfterJavaHomeUpdate = ProjectJavaHomeUpdate.notNow
 
   val resources = new ResourceOperations(buffers)
   val diagnostics: TrieMap[AbsolutePath, Seq[Diagnostic]] =
@@ -372,6 +373,10 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
           params.getMessage().startsWith("For which folder would you like to")
         ) {
           chooseWorkspaceFolder(params.getActions().asScala.toSeq)
+        } else if (
+          params.getMessage() == ProjectJavaHomeUpdate.params().getMessage()
+        ) {
+          shouldReloadAfterJavaHomeUpdate
         } else {
           throw new IllegalArgumentException(params.toString)
         }

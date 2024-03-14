@@ -36,6 +36,7 @@ import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildToolSelector
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.Digest
+import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
@@ -1014,12 +1015,14 @@ class MetalsLspService(
               () => autoConnectToBuildServer,
             )
             .flatMap { _ =>
-              userConfig.bloopJvmProperties.map(
-                bloopServers.ensureDesiredJvmSettings(
-                  _,
-                  () => autoConnectToBuildServer(),
+              userConfig.bloopJvmProperties
+                .map(
+                  bloopServers.ensureDesiredJvmSettings(
+                    _,
+                    () => autoConnectToBuildServer(),
+                  )
                 )
-              ).getOrElse(Future.unit)
+                .getOrElse(Future.unit)
             }
             .flatMap { _ =>
               if (userConfig.javaHome != old.javaHome) {
@@ -1070,7 +1073,18 @@ class MetalsLspService(
                 )
                 _ <- autoConnectToBuildServer()
               } yield ()
-            case _ => slowConnectToBuildServer(forceImport = true)
+            case Some(mill: MillBuildTool) if session.main.isMill =>
+              for {
+                _ <- mill.generateBspConfig(
+                  folder,
+                  bspConfigGenerator.runUnconditionally(mill, _),
+                  statusBar,
+                )
+                _ <- autoConnectToBuildServer()
+              } yield ()
+            case _ if session.main.isBloop =>
+              slowConnectToBuildServer(forceImport = true)
+            case _ => Future.successful(())
           }
         case Messages.ProjectJavaHomeUpdate.notNow =>
           Future.successful(())
