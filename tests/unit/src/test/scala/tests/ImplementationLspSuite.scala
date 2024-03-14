@@ -659,6 +659,33 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
        |""".stripMargin,
   )
 
+  check(
+    "multi-module",
+    """|/a/src/main/scala/com/example/foo/Foo.scala
+       |package com.example.foo
+       |trait F@@oo {
+       |  def transform(input: Int): Int
+       |}
+       |/b/src/main/scala/com/example/bar/Bar.scala
+       |package com.example.bar
+       |
+       |import com.example.foo.Foo
+       |
+       |class <<Bar>> extends Foo {
+       |  override def transform(input: Int): Int = input * 2
+       |}
+       |""".stripMargin,
+    customMetalsJson = Some(
+      """|{
+         |  "a":{ },
+         |  "b":{
+         |    "dependsOn": ["a"]
+         |  }
+         |}
+         |""".stripMargin
+    ),
+  )
+
   override protected def libraryDependencies: List[String] =
     List("org.scalatest::scalatest:3.2.16", "io.circe::circe-generic:0.12.0")
 

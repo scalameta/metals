@@ -51,8 +51,8 @@ class GlobalInheritanceContext(
     val resolveGlobal =
       implementationsInDependencySources
         .getOrElse(shortName, Set.empty)
-        .collect { case loc @ ClassLocation(sym, _) =>
-          compilers.info(source, sym).map {
+        .collect { case loc @ ClassLocation(sym, Some(filePath)) =>
+          compilers.info(AbsolutePath(filePath), sym).map {
             case Some(symInfo) if symInfo.parents.contains(symbol) => Some(loc)
             case Some(symInfo)
                 if symInfo.dealiasedSymbol == symbol && symInfo.symbol != symbol =>

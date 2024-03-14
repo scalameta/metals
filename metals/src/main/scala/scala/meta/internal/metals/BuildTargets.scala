@@ -171,10 +171,15 @@ final class BuildTargets private (
 
   def buildTargetTransitiveDependencies(
       id: BuildTargetIdentifier
+  ): Iterable[BuildTargetIdentifier] =
+    buildTargetTransitiveDependencies(List(id))
+
+  def buildTargetTransitiveDependencies(
+      ids: List[BuildTargetIdentifier]
   ): Iterable[BuildTargetIdentifier] = {
     val isVisited = mutable.Set.empty[BuildTargetIdentifier]
     val toVisit = new java.util.ArrayDeque[BuildTargetIdentifier]
-    toVisit.add(id)
+    ids.foreach(toVisit.add(_))
     while (!toVisit.isEmpty) {
       val next = toVisit.pop()
       if (!isVisited(next)) {
@@ -380,15 +385,6 @@ final class BuildTargets private (
           }
       }
     }
-  }
-
-  def belongsToBuildTarget(
-      target: BuildTargetIdentifier,
-      path: AbsolutePath,
-  ): Boolean = {
-    val possibleBuildTargets =
-      buildTargetTransitiveDependencies(target).toSet + target
-    inverseSourcesAll(path).exists(possibleBuildTargets(_))
   }
 
   def inferBuildTarget(
