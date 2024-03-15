@@ -128,6 +128,7 @@ final case class DoctorHeader(
 }
 
 /**
+ * @param projectsJavaInfo information about java used for project
  * @param buildTool if Metals detected multiple build tools, this specifies
  *        the one the user has chosen
  * @param buildServer the build server that is being used
@@ -135,6 +136,7 @@ final case class DoctorHeader(
  *        will include a message on how to get it back.
  */
 final case class DoctorFolderHeader(
+    projectsJavaInfo: Option[String],
     buildTool: Option[String],
     buildServer: String,
     importBuildStatus: Option[String],

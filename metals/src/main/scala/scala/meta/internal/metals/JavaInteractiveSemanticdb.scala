@@ -189,7 +189,8 @@ object JavaInteractiveSemanticdb {
 }
 
 case class JdkVersion(
-    major: Int
+    major: Int,
+    full: String,
 ) {
 
   def hasJigsaw: Boolean = major >= 9
@@ -252,9 +253,9 @@ object JdkVersion {
 
     numbers match {
       case Some(1 :: minor :: _) =>
-        Some(JdkVersion(minor))
+        Some(JdkVersion(minor, v))
       case Some(single :: _) =>
-        Some(JdkVersion(single))
+        Some(JdkVersion(single, v))
       case _ => None
     }
   }

@@ -27,6 +27,7 @@ import scala.meta.internal.metals.FileDecoderProvider
 import scala.meta.internal.metals.HtmlBuilder
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.JavaTarget
+import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.JdkVersion
 import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -185,6 +186,12 @@ final class Doctor(
     }
   }
 
+  def getJavaInfo(): Option[String] =
+    for {
+      home <- JdkSources.defaultJavaHome(javaHome()).headOption
+      version <- JdkVersion.maybeJdkVersionFromJavaHome(Some(home))
+    } yield s"${version.full} located at $home"
+
   def buildTargetsJson(): DoctorFolderResults = {
     val targetIds = allTargetIds()
     val buildToolHeading = selectedBuildToolMessage().map(_._1)
@@ -193,6 +200,7 @@ final class Doctor(
     val importBuildHeading = selectedImportBuildMessage()
     val header =
       DoctorFolderHeader(
+        getJavaInfo(),
         buildToolHeading,
         buildServerHeading,
         importBuildHeading,
@@ -304,6 +312,13 @@ final class Doctor(
     if (includeWorkspaceFolderName) {
       html.element("h2")(_.text(folderName))
     }
+    getJavaInfo().foreach { jdkMsg =>
+      html.element("p") { builder =>
+        builder.bold("Project's Java: ")
+        builder.text(jdkMsg)
+      }
+    }
+
     selectedBuildToolMessage().foreach { case (msg, explicitChoice) =>
       html.element("p")(
         _.text(msg)
