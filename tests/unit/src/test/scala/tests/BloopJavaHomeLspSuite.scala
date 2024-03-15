@@ -11,8 +11,7 @@ class BloopJavaHomeLspSuite extends BaseLspSuite("java-home") {
   val jsonFile: Option[AbsolutePath] = jsonFilePath.filter(_.exists)
   val contents: Option[String] = jsonFile.map(_.readText)
 
-  val javaHome: String =
-    sys.env.get("JAVA_HOME").orElse(sys.props.get("java.home")).getOrElse("")
+  val javaHome: String = sys.props.get("java.home").getOrElse("")
 
   def stashBloopJson(): Unit = {
     jsonFile.foreach(_.delete())
