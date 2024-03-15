@@ -517,16 +517,6 @@ class MetalsLspService(
     )
   }
 
-  private val referencesProvider: ReferenceProvider = new ReferenceProvider(
-    folder,
-    semanticdbs,
-    buffers,
-    definitionProvider,
-    trees,
-    buildTargets,
-    compilers,
-  )
-
   private val formattingProvider: FormattingProvider = new FormattingProvider(
     folder,
     buffers,
@@ -544,26 +534,6 @@ class MetalsLspService(
       definitionProvider,
       semanticdbs,
     )
-
-  private val packageProvider: PackageProvider =
-    new PackageProvider(
-      buildTargets,
-      trees,
-      referencesProvider,
-      buffers,
-      definitionProvider,
-    )
-
-  private val newFileProvider: NewFileProvider = new NewFileProvider(
-    languageClient,
-    packageProvider,
-    scalaVersionSelector,
-    clientConfig.icons,
-    onCreate = path => {
-      buildTargets.onCreate(path)
-      onChange(List(path))
-    },
-  )
 
   private val symbolSearch: MetalsSymbolSearch = new MetalsSymbolSearch(
     symbolDocs,
@@ -597,7 +567,7 @@ class MetalsLspService(
     )
   }
 
-  private val compilers: Compilers = register(
+  val compilers: Compilers = register(
     new Compilers(
       folder,
       clientConfig,
@@ -616,6 +586,37 @@ class MetalsLspService(
       sourceMapper,
       worksheetProvider,
     )
+  )
+
+  private val referencesProvider: ReferenceProvider = new ReferenceProvider(
+    folder,
+    semanticdbs,
+    buffers,
+    definitionProvider,
+    trees,
+    buildTargets,
+    compilers,
+    scalaVersionSelector,
+  )
+
+  private val packageProvider: PackageProvider =
+    new PackageProvider(
+      buildTargets,
+      trees,
+      referencesProvider,
+      buffers,
+      definitionProvider,
+    )
+
+  private val newFileProvider: NewFileProvider = new NewFileProvider(
+    languageClient,
+    packageProvider,
+    scalaVersionSelector,
+    clientConfig.icons,
+    onCreate = path => {
+      buildTargets.onCreate(path)
+      onChange(List(path))
+    },
   )
 
   private val javaFormattingProvider: JavaFormattingProvider =

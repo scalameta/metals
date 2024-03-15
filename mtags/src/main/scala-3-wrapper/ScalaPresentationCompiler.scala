@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.ReportLevel
-import scala.meta.internal.mtags.CommonMtagsEnrichments.*
+import scala.meta.internal.mtags.CommonMtagsEnrichments._
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.Buffers
 import scala.meta.pc.DefinitionResult
@@ -22,8 +22,8 @@ import scala.meta.pc.HoverSignature
 import scala.meta.pc.InlayHintsParams
 import scala.meta.pc.Node
 import scala.meta.pc.OffsetParams
-import scala.meta.pc.PcSymbolInformation
 import scala.meta.pc.PcAdjustFileParams
+import scala.meta.pc.PcSymbolInformation
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
