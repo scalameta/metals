@@ -40,20 +40,6 @@ class ShellRunner(
     cancelables.cancel()
   }
 
-  private lazy val mavenLocal = {
-    val str = new File(sys.props("user.home")).toURI.toString
-    val homeUri =
-      if (str.endsWith("/"))
-        str
-      else
-        str + "/"
-    MavenRepository.of(homeUri + ".m2/repository")
-  }
-
-  private lazy val sonatypePublic = MavenRepository.of(
-    "https://oss.sonatype.org/content/repositories/public"
-  )
-
   def runJava(
       dependency: Dependency,
       main: String,
@@ -71,12 +57,7 @@ class ShellRunner(
     val classpath = Fetch
       .create()
       .withDependencies(dependency)
-      .withRepositories(
-        Repository.ivy2Local(),
-        Repository.central(),
-        mavenLocal,
-        sonatypePublic,
-      )
+      .withRepositories(ShellRunner.defaultRepositories: _*)
       .fetch()
       .asScala
       .mkString(classpathSeparator)
@@ -169,6 +150,28 @@ class ShellRunner(
 }
 
 object ShellRunner {
+
+  private lazy val mavenLocal = {
+    val str = new File(sys.props("user.home")).toURI.toString
+    val homeUri =
+      if (str.endsWith("/"))
+        str
+      else
+        str + "/"
+    MavenRepository.of(homeUri + ".m2/repository")
+  }
+
+  private lazy val sonatypePublic = MavenRepository.of(
+    "https://oss.sonatype.org/content/repositories/public"
+  )
+
+  val defaultRepositories: List[Repository] =
+    List(
+      Repository.ivy2Local(),
+      Repository.central(),
+      mavenLocal,
+      sonatypePublic,
+    )
 
   def runSync(
       args: List[String],
