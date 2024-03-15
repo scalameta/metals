@@ -9,7 +9,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
-    "local".tag(IgnoreForScala3CompilerPC),
+    "local",
     """|object Main {
        |  def foo() = {
        |    implicit val imp: Int = 2
@@ -76,7 +76,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
-    "implicit-param".tag(IgnoreForScala3CompilerPC),
+    "implicit-param",
     """|case class User(name: String)
        |object Main {
        |  implicit val imp: Int = 2
@@ -120,7 +120,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
-    "using-param".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    "using-param".tag(IgnoreScala2),
     """|case class User(name: String)
        |object Main {
        |  implicit val imp: Int = 2
@@ -566,7 +566,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
-    "ord".tag(IgnoreForScala3CompilerPC),
+    "ord",
     """|object Main {
        |  val ordered = "acb".sorted
        |}
@@ -628,7 +628,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
 
   check(
     "complex".tag(
-      IgnoreScalaVersion.forLessThan("2.12.16").and(IgnoreForScala3CompilerPC)
+      IgnoreScalaVersion.forLessThan("2.12.16")
     ),
     """|object ScalatestMock {
        |  class SRF
@@ -817,7 +817,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
 
   // NOTE: We don't show inlayHints for anonymous given instances
   check(
-    "anonymous-given".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    "anonymous-given".tag(IgnoreScala2),
     """|package example
        |
        |trait Ord[T]:
@@ -850,7 +850,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
 
   // TODO: Add a separate option for hints for context bounds
   check(
-    "context-bounds1".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    "context-bounds1".tag(IgnoreScala2),
     """|package example
        |object O {
        |  given Int = 1
@@ -868,7 +868,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
-    "context-bounds2".tag(IgnoreForScala3CompilerPC),
+    "context-bounds2",
     """|package example
        |object O {
        |  def test[T: Ordering](x: T) = ???
@@ -892,7 +892,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
-    "context-bounds3".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    "context-bounds3".tag(IgnoreScala2),
     """|package example
        |object O {
        |  def test[T: Ordering](x: T)(using Int) = ???
@@ -908,7 +908,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
-    "context-bounds4".tag(IgnoreForScala3CompilerPC),
+    "context-bounds4",
     """|package example
        |object O {
        |  implicit val i: Int = 123
