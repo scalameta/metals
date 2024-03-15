@@ -10,6 +10,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.WorkDoneProgress.Token
 
 import org.eclipse.lsp4j.ProgressParams
 import org.eclipse.lsp4j.WorkDoneProgressBegin
@@ -25,7 +26,6 @@ class WorkDoneProgress(
     time: Time,
 )(implicit ec: ExecutionContext)
     extends Cancelable {
-  type Token = messages.Either[String, Integer]
   case class Task(
       onCancel: Option[() => Unit],
       showTimer: Boolean,

@@ -113,6 +113,8 @@ class ShellRunner(time: Time, workDoneProvider: WorkDoneProgress)(implicit
       commandRun,
       processFuture,
       onCancel = Some(() => {
+        if (logInfo)
+          scribe.info(s"user cancelled $commandRun")
         result.trySuccess(ExitCodes.Cancel)
         ps.cancel
       }),
