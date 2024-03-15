@@ -148,6 +148,7 @@ final case class DoctorFolderHeader(
         "buildServer" -> buildServer
       )
 
+    projectsJavaInfo.foreach(base.update("projectsJavaInfo", _))
     buildTool.foreach { bt => base.update("buildTool", bt) }
     importBuildStatus.foreach { ibs => base.update("importBuildStatus", ibs) }
     isBuildServerResponsive.foreach { ibsr =>
