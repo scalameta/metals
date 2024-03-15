@@ -34,6 +34,7 @@ case class BazelBuildTool(
     val classpath = Fetch
       .create()
       .withDependencies(BazelBuildTool.dependency)
+      .withRepositories(ShellRunner.defaultRepositories: _*)
       .fetch()
       .asScala
       .mkString(classpathSeparator)
