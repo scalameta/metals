@@ -10,7 +10,8 @@ case class CompilerInlayHintsParams(
     inferredTypes: Boolean,
     typeParameters: Boolean,
     implicitParameters: Boolean,
-    implicitConversions: Boolean
+    implicitConversions: Boolean,
+    override val contextBounds: Boolean
 ) extends InlayHintsParams {
   override def uri(): URI = rangeParams.uri
   override def text(): String = rangeParams.text

@@ -57,17 +57,24 @@ final class PcInlayHintsProvider(
             LabelPart(")") :: Nil,
             InlayHintKind.Parameter
           )
-      case ImplicitParameters(symbols, pos, allImplicit)
-          if params.implicitParameters() =>
-        val labelParts = symbols.map(s => List(labelPart(s, s.decodedName)))
-        val label =
-          if (allImplicit) labelParts.separated("(", ", ", ")")
-          else labelParts.separated(", ")
-        inlayHints.add(
-          adjustPos(pos).focusEnd.toLsp,
-          label,
-          InlayHintKind.Parameter
-        )
+      case ImplicitParameters(args, pos, allImplicit)
+          if params.implicitParameters() || params.contextBounds() =>
+        val symbols = args.collect {
+          case Param(sym) if params.implicitParameters() => sym
+          case ContextBound(sym) if params.contextBounds() => sym
+        }
+        if (symbols.isEmpty) inlayHints
+        else {
+          val labelParts = symbols.map(s => List(labelPart(s, s.decodedName)))
+          val label =
+            if (allImplicit) labelParts.separated("(", ", ", ")")
+            else labelParts.separated(", ")
+          inlayHints.add(
+            adjustPos(pos).focusEnd.toLsp,
+            label,
+            InlayHintKind.Parameter
+          )
+        }
       case ValueOf(label, pos) if params.implicitParameters() =>
         inlayHints.add(
           adjustPos(pos).focusEnd.toLsp,
@@ -160,25 +167,43 @@ final class PcInlayHintsProvider(
       fun.pos.isOffset && fun.symbol != null && fun.symbol.isImplicit
   }
   object ImplicitParameters {
-    def unapply(tree: Tree): Option[(List[Symbol], Position, Boolean)] =
+    def unapply(
+        tree: Tree
+    ): Option[(List[ImplicitParamSym], Position, Boolean)] =
       tree match {
-        case Apply(_, args)
+        case Apply(fun, args)
             if args.exists(isSyntheticArg) && !tree.pos.isOffset =>
-          val (implicitArgs, providedArgs) = args.partition(isSyntheticArg)
-          val allImplicit = providedArgs.isEmpty
-          val pos = providedArgs.lastOption.fold(tree.pos)(_.pos)
-          Some(
-            implicitArgs.map(_.symbol),
-            pos,
-            allImplicit
-          )
+          fun.tpe.widen match {
+            case mt: MethodType if mt.params.nonEmpty =>
+              val (implicitArgs0, providedArgs) =
+                args.zip(mt.params).partition { case (arg, _) =>
+                  isSyntheticArg(arg)
+                }
+              val implicitArgs = implicitArgs0.map(ImplicitParamSym(_))
+              val allImplicit = providedArgs.isEmpty
+              val pos = providedArgs.lastOption.fold(tree.pos)(_._1.pos)
+              Some((implicitArgs, pos, allImplicit))
+            case _ => None
+          }
+
         case _ => None
       }
-
     private def isSyntheticArg(arg: Tree): Boolean =
       arg.pos.isOffset && arg.symbol != null && arg.symbol.isImplicit
-  }
 
+  }
+  sealed trait ImplicitParamSym
+  case class Param(sym: Symbol) extends ImplicitParamSym
+  case class ContextBound(sym: Symbol) extends ImplicitParamSym
+  object ImplicitParamSym {
+    def apply(argWithName: (Tree, Symbol)): ImplicitParamSym = {
+      val (arg, name) = argWithName
+      if (isContextBoundParam(name)) ContextBound(arg.symbol)
+      else Param(arg.symbol)
+    }
+    private def isContextBoundParam(sym: Symbol) =
+      sym.name.toString.startsWith(nme.EVIDENCE_PARAM_PREFIX)
+  }
   object ValueOf {
     def unapply(tree: Tree): Option[(String, Position)] = tree match {
       case Apply(ta: TypeApply, Apply(fun, _) :: _)

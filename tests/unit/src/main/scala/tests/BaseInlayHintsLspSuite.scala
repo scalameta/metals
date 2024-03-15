@@ -23,7 +23,8 @@ abstract class BaseInlayHintsLspSuite(name: String, scalaVersion: String)
       .getOrElse("""{
                    |  "show-implicit-arguments": true,
                    |  "show-implicit-conversions-and-classes": true,
-                   |  "show-inferred-type": "true"
+                   |  "show-inferred-type": "true",
+                   |  "show-evidence-params": true
                    |}
                    |""".stripMargin)
     val fileName = "Main.scala"

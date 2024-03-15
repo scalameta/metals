@@ -13,6 +13,7 @@ import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags
+import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.StdNames.*
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.core.Types.*
@@ -73,17 +74,23 @@ class PcInlayHintsProvider(
             LabelPart(")") :: Nil,
             InlayHintKind.Parameter,
           )
-      case ImplicitParameters(symbols, pos, allImplicit)
-          if params.implicitParameters() =>
-        val labelParts = symbols.map(s => List(labelPart(s, s.decodedName)))
-        val label =
-          if allImplicit then labelParts.separated("(using ", ", ", ")")
-          else labelParts.separated(", ")
-        inlayHints.add(
-          adjustPos(pos).toLsp,
-          label,
-          InlayHintKind.Parameter,
-        )
+      case ImplicitParameters(args, pos, allImplicit)
+          if params.implicitParameters() || params.contextBounds() =>
+        val symbols = args.collect {
+          case Param(sym) if params.implicitParameters() => sym
+          case ContextBound(sym) if params.contextBounds() => sym
+        }
+        if symbols.isEmpty then inlayHints
+        else
+          val labelParts = symbols.map(s => List(labelPart(s, s.decodedName)))
+          val label =
+            if allImplicit then labelParts.separated("(using ", ", ", ")")
+            else labelParts.separated(", ")
+          inlayHints.add(
+            adjustPos(pos).toLsp,
+            label,
+            InlayHintKind.Parameter,
+          )
       case ValueOf(label, pos) if params.implicitParameters() =>
         inlayHints.add(
           adjustPos(pos).toLsp,
@@ -210,17 +217,20 @@ object ImplicitConversion:
 end ImplicitConversion
 
 object ImplicitParameters:
-  def unapply(tree: Tree)(using Context) =
+  def unapply(tree: Tree)(using Context): Option[(List[ImplicitParamSym], SourcePosition, Boolean)] =
     tree match
       case Apply(fun, args)
           if args.exists(isSyntheticArg) && !tree.sourcePos.span.isZeroExtent =>
-        val (implicitArgs, providedArgs) = args.partition(isSyntheticArg)
-        val allImplicit = providedArgs.isEmpty || providedArgs.forall {
-          case Ident(name) => name == nme.MISSING
-          case _ => false
+        fun.typeOpt.widen.paramNamess.headOption.map {paramNames => 
+          val (implicitArgs0, providedArgs) = args.zip(paramNames).partition((arg, _) => isSyntheticArg(arg))
+          val firstImplicitPos = implicitArgs0.head._1.sourcePos
+          val implicitArgs = implicitArgs0.map(ImplicitParamSym(_))
+          val allImplicit = providedArgs.isEmpty || providedArgs.forall {
+            case (Ident(name), _) => name == nme.MISSING
+            case _ => false
+          }
+          (implicitArgs, firstImplicitPos, allImplicit)
         }
-        val pos = implicitArgs.head.sourcePos
-        Some(implicitArgs.map(_.symbol), pos, allImplicit)
       case _ => None
 
   private def isSyntheticArg(tree: Tree)(using Context) = tree match
@@ -228,6 +238,19 @@ object ImplicitParameters:
       tree.span.isSynthetic && tree.symbol.isOneOf(Flags.GivenOrImplicit)
     case _ => false
 end ImplicitParameters
+
+sealed trait ImplicitParamSym extends Any
+case class Param(sym: Symbol) extends AnyVal with ImplicitParamSym
+case class ContextBound(sym: Symbol) extends AnyVal with ImplicitParamSym
+
+object ImplicitParamSym:
+  def apply(argWithName: (Tree, Name))(using Context) =
+    val (arg, name) = argWithName
+    if isContextBoundParam(name) then ContextBound(arg.symbol)
+    else Param(arg.symbol)
+  private def isContextBoundParam(name: Name) =
+    // In 3.1.3 NameKinds.ContextBoundParamName.separator is not available
+    name.toString.startsWith("evidence$")
 
 object ValueOf:
   def unapply(tree: Tree)(using Context) =
