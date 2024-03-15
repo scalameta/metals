@@ -20,7 +20,7 @@ final case class DoctorResults(
 
 object DoctorResults {
   // Version of the Doctor json that is returned.
-  val version = 5
+  val version = 6
 }
 
 final case class DoctorFolderResults(
