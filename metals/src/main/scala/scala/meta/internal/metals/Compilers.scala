@@ -37,8 +37,7 @@ import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SyntheticDecorationsParams
-import scala.meta.pc.SyntheticDecoration
-import scala.meta.pc.VirtualFileParams
+
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
 import org.eclipse.lsp4j.CompletionItem
