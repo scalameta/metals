@@ -1,9 +1,9 @@
 package scala.meta.internal.pc.printer
 
 import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.core.Flags._
-import dotty.tools.dotc.core.StdNames._
-import dotty.tools.dotc.core.Types._
+import dotty.tools.dotc.core.Flags.*
+import dotty.tools.dotc.core.StdNames.*
+import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.printing.RefinedPrinter
 import dotty.tools.dotc.printing.Texts.Text
 

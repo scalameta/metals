@@ -53,7 +53,7 @@ object MtagsEnrichments extends ScalametaCommonEnrichments:
       new SourcePosition(source, span)
     end sourcePosition
 
-    def latestRun = 
+    def latestRun =
       if driver.currentCtx.run.units.nonEmpty then
         driver.currentCtx.run.units.head
       else
