@@ -6,6 +6,9 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.OffsetParams
 
 import org.eclipse.lsp4j.SelectionRange
+import scala.meta.tokens.Token.Comment
+import scala.meta.tokens.Token
+import scala.meta._
 
 /**
  * Provides the functionality necessary for the `textDocument/selectionRange` request.
@@ -39,7 +42,6 @@ class SelectionRangeProvider(
       // lastVisitedParentTrees that will contain the exact tree structure we
       // need to create the selection range, starting from the position
       val _ = locateUntyped(pos)
-
       val bareRanges = lastVisitedParentTrees
         .map { tree: Tree =>
           val selectionRange = new SelectionRange()
@@ -47,9 +49,17 @@ class SelectionRangeProvider(
           selectionRange
         }
 
-      bareRanges.reduceRight(setParent)
+      val commentRanges =
+        getCommentRanges(pos, lastVisitedParentTrees, param.text()).map { x =>
+          new SelectionRange() { setRange(x.toLsp) }
+        }.toList
+      // (commentRanges ++ bareRanges).reduceRight(setParent)
+      (commentRanges ++ bareRanges)
+        .reduceRightOption(setParent)
+        .getOrElse(new SelectionRange())
     }
-
+    println("selectionRanges scala 2")
+    println(selectionRanges map (_.getRange().toString()))
     selectionRanges
   }
 
@@ -82,6 +92,64 @@ class SelectionRangeProvider(
       child.setParent(parent)
       child
     }
+  }
+
+  import compiler._
+  def getCommentRanges(
+      cursorPos: Position,
+      path: List[Tree],
+      srcText: String
+  ) = {
+
+    val (treeStart, treeEnd) = path.headOption
+      .map(t => (t.pos.start, t.pos.end))
+      .getOrElse((0, srcText.size))
+
+    // only parse comments from first range to reduce computation
+    val srcSliced = srcText.slice(treeStart, treeEnd)
+
+    val tokens = srcSliced.tokenize.toOption
+    val rg =
+      if (tokens.isEmpty) Nil
+      else
+        SelectionRangeUtils
+          .commentRangesFromTokens(
+            tokens.toList.flatten,
+            cursorPos.start,
+            treeStart
+          ) map { case (s, e) =>
+          cursorPos
+            .withStart(s)
+            .withEnd(e)
+        }
+
+    println(
+      "comment range scala 2: " + rg
+        .map(x => srcText.slice(x.start, x.end))
+        .mkString(",")
+    )
+    rg
+  }
+
+  def commentRangesFromTokens(
+      tokenList: List[Token],
+      cursorStart: Position,
+      offsetStart: Int
+  ) = {
+    val cursorStartShifted = cursorStart.start - offsetStart
+
+    tokenList
+      .collect { case x: Comment =>
+        (x.start, x.end, x.pos)
+      }
+      .collect {
+        case (commentStart, commentEnd, _)
+            if commentStart <= cursorStartShifted && cursorStartShifted <= commentEnd =>
+          cursorStart
+            .withStart(commentStart + offsetStart)
+            .withEnd(commentEnd + offsetStart)
+
+      }
   }
 
 }
