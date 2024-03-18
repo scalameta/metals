@@ -286,4 +286,56 @@ class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
       )
     } yield ()
   }
+
+  test("never-compiling2") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |case class A(bar: String)
+          |object O {
+          |  type T = A
+          |}
+          |/a/src/main/scala/b/B.scala
+          |package b
+          |import a.O.T
+          |
+          |object B {
+          |  def getT: T = ???
+          |}
+          |/a/src/main/scala/c/C.scala
+          |package c
+          |import b.B
+          |
+          |object C {
+          |  val i: Int = "aaa"
+          |  def foo = B.getT
+          |  def bar = foo.bar
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ <- server.didOpen("a/src/main/scala/b/B.scala")
+      _ <- server.didOpen("a/src/main/scala/c/C.scala")
+      _ = assertNoDiff(
+        server.client.workspaceDiagnostics,
+        """|a/src/main/scala/c/C.scala:5:16: error: type mismatch;
+           | found   : String("aaa")
+           | required: Int
+           |  val i: Int = "aaa"
+           |               ^^^^^
+           |""".stripMargin
+      )
+      _ <- assertCompletion(
+        "  def bar = foo.bar@@",
+        "bar: String",
+        filename = Some("a/src/main/scala/c/C.scala")
+      )
+    } yield ()
+  }
 }
