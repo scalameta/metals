@@ -108,6 +108,12 @@ class ScalatestFinderSuite extends FunSuite {
        |  ignore should "have size 1" in {
        |    assert(Set.empty.size == 1)
        |  }
+       |
+       |  behavior of "Non-empty Set"
+       |
+       |  it should "have size greater than 0" in {
+       |    assert(Set(1).size > 0)
+       |  }
        |}
        |""".stripMargin,
     FullyQualifiedName("FlatSpec"),
@@ -118,6 +124,7 @@ class ScalatestFinderSuite extends FunSuite {
         QuickRange(8, 2, 8, 65),
       ),
       ("An empty Set should have size 0", QuickRange(4, 2, 4, 37)),
+      ("Non-empty Set should have size greater than 0", QuickRange(20, 2, 20, 38)),
     ),
     ScalatestStyle.AnyFlatSpec,
   )
