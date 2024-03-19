@@ -197,6 +197,14 @@ public abstract class PresentationCompiler {
 	public abstract CompletableFuture<byte[]> semanticdbTextDocument(URI filename, String code);
 
 	/**
+	 * Returns the Protobuf byte array representation of a SemanticDB
+	 * <code>TextDocument</code> for the given source.
+	 */
+	public CompletableFuture<byte[]> semanticdbTextDocument(VirtualFileParams params) {
+		return semanticdbTextDocument(params.uri(), params.text());
+	}
+
+	/**
 	 * Return the selections ranges for the given positions.
 	 */
 	public abstract CompletableFuture<List<SelectionRange>> selectionRange(List<OffsetParams> params);
@@ -220,13 +228,6 @@ public abstract class PresentationCompiler {
 	/**
 	 * Clean the symbol table and other mutable state in the compiler.
 	 */
-	public void restart(boolean successfulCompilation) {
-		restart();
-	}
-
-	/**
-	 * Clean the symbol table and other mutable state in the compiler.
-	 */
 	public abstract void restart();
 
 	/**
@@ -240,13 +241,6 @@ public abstract class PresentationCompiler {
 	 * Set build target name.
 	 */
 	public PresentationCompiler withBuildTargetName(String buildTargetName) {
-		return this;
-	};
-
-	/**
-	 * Set an ability to search for all files within the compiler
-	 */
-	public PresentationCompiler withCompilerFiles(CompilerFiles files) {
 		return this;
 	};
 
@@ -337,9 +331,5 @@ public abstract class PresentationCompiler {
 	 * Scala version for the current presentation compiler
 	 */
 	public abstract String scalaVersion();
-
-	public PresentationCompiler withWasSuccessfullyCompiled(boolean wasSuccessful) { 
-		return this;
-	}
 
 }

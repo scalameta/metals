@@ -2,7 +2,6 @@ package scala.meta.internal.pc
 
 import java.io.File
 import java.net.URI
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util
 import java.util.Optional
@@ -13,27 +12,22 @@ import java.util.logging.Logger
 import java.{util => ju}
 
 import scala.collection.Seq
-import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
 import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
-import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.EmptyReportContext
-import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.AutoImportsResult
-import scala.meta.pc.CompilerFiles
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.DisplayableException
 import scala.meta.pc.HoverSignature
@@ -44,8 +38,6 @@ import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolSearch
-import scala.meta.pc.SyntheticDecoration
-import scala.meta.pc.SyntheticDecorationsParams
 import scala.meta.pc.VirtualFileParams
 import scala.meta.pc.{PcSymbolInformation => IPcSymbolInformation}
 
@@ -69,25 +61,13 @@ case class ScalaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     folderPath: Option[Path] = None,
-    reportsLevel: ReportLevel = ReportLevel.Info,
-    compilerFiles: Option[CompilerFiles] = None,
-    wasSuccessfullyCompiledInitial: Option[Boolean] = None
+    reportsLevel: ReportLevel = ReportLevel.Info
 ) extends PresentationCompiler {
-
-  private val wasSuccessfullyCompiled =
-    new util.concurrent.atomic.AtomicReference[
-      CompilationStatus.WasSuccessfullyCompiled
-    ](
-      CompilationStatus.fromWasSuccessfullyCompiled(
-        wasSuccessfullyCompiledInitial
-      )
-    )
 
   implicit val executionContext: ExecutionContextExecutor = ec
 
   val scalaVersion = BuildInfo.scalaCompilerVersion
 
-  private val changedDocuments = TrieMap.empty[URI, VirtualFileParams]
   val logger: Logger =
     Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
 
@@ -120,11 +100,6 @@ case class ScalaPresentationCompiler(
   ): PresentationCompiler =
     copy(sh = Some(sh))
 
-  override def withCompilerFiles(
-      compilerFiles: CompilerFiles
-  ): PresentationCompiler =
-    copy(compilerFiles = Some(compilerFiles))
-
   override def withConfiguration(
       config: PresentationCompilerConfig
   ): PresentationCompiler =
@@ -156,57 +131,7 @@ case class ScalaPresentationCompiler(
     compilerAccess.shutdown()
   }
 
-  def restart(): Unit = restoreOutlineAndRestart()
-
-  override def restart(wasSuccessful: Boolean): Unit = {
-    val prevCompilationStatus = wasSuccessfullyCompiled.getAndUpdate {
-      case _ if wasSuccessful =>
-        CompilationStatus.SuccessfullyCompiled
-      case CompilationStatus.WaitingForCompilationResult =>
-        CompilationStatus.UnSuccessfullyCompiled
-      case value => value
-    }
-
-    if (wasSuccessful) {
-      changedDocuments.clear()
-      compilerAccess.shutdownCurrentCompiler()
-    } else if (
-      prevCompilationStatus == CompilationStatus.WaitingForCompilationResult
-    ) {
-      restoreOutlineAndRestart()
-    }
-  }
-
-  private def restoreOutlineAndRestart() = {
-    compilerAccess
-      .withNonInterruptableCompiler(None)(
-        (),
-        EmptyCancelToken
-      ) { pc =>
-        /* we will still want outline recompiled if the compilation was not succesful */
-        pc.compiler().richCompilationCache.foreach { case (uriString, unit) =>
-          try {
-            val text = unit.source.content.mkString
-            val uri = uriString.toAbsolutePath.toURI
-            val params =
-              CompilerOffsetParams(uri, text, 0, EmptyCancelToken)
-            changedDocuments += uri -> params
-          } catch {
-            case NonFatal(error) =>
-              reportContex.incognito.create(
-                Report(
-                  "restoring_cache",
-                  "Error while restoring outline compiler cache",
-                  error
-                )
-              )
-              logger
-                .log(util.logging.Level.SEVERE, error.getMessage(), error)
-          }
-        }
-      }
-      .get()
-
+  def restart(): Unit = {
     compilerAccess.shutdownCurrentCompiler()
   }
 
@@ -224,45 +149,9 @@ case class ScalaPresentationCompiler(
     )
   }
 
-  private def outlineFiles(
-      current: VirtualFileParams
-  ): OutlineFiles = {
-    val shouldCompileAll = wasSuccessfullyCompiled
-      .getAndUpdate {
-        case CompilationStatus.UnSuccessfullyCompiled =>
-          CompilationStatus.OutlinedByPC
-        case value => value
-      } == CompilationStatus.UnSuccessfullyCompiled
-
-    val result =
-      if (shouldCompileAll) {
-        // if first compilation was unsuccessful we want to outline all files
-        compilerFiles.iterator.flatMap(_.allPaths().asScala).foreach { path =>
-          val uri = path.toUri()
-          if (!changedDocuments.contains(uri)) {
-            val text = Files.readString(path)
-            changedDocuments += uri -> CompilerOffsetParams(uri, text, 0)
-          }
-        }
-        OutlineFiles(
-          changedDocuments.values.toList,
-          firstCompileSubstitute = true
-        )
-      } else {
-        val files =
-          changedDocuments.values.filterNot(_.uri() == current.uri()).toList
-        OutlineFiles(files)
-      }
-
-    changedDocuments.clear()
-    changedDocuments += current.uri() -> current
-    result
-  }
-
   override def didChange(
       params: VirtualFileParams
   ): CompletableFuture[ju.List[Diagnostic]] = {
-    changedDocuments += params.uri() -> params
     CompletableFuture.completedFuture(Nil.asJava)
   }
 
@@ -284,7 +173,7 @@ case class ScalaPresentationCompiler(
       params.token
     ) { pc =>
       new PcSemanticTokensProvider(
-        pc.compiler(outlineFiles(params)),
+        pc.compiler(params),
         params
       ).provide().asJava
     }
@@ -313,7 +202,7 @@ case class ScalaPresentationCompiler(
       EmptyCompletionList(),
       params.token
     ) { pc =>
-      new CompletionProvider(pc.compiler(outlineFiles(params)), params)
+      new CompletionProvider(pc.compiler(params), params)
         .completions()
     }
   }
@@ -326,7 +215,7 @@ case class ScalaPresentationCompiler(
       empty,
       params.token
     ) { pc =>
-      new CompletionProvider(pc.compiler(outlineFiles(params)), params)
+      new CompletionProvider(pc.compiler(params), params)
         .implementAll()
     }
   }
@@ -339,7 +228,7 @@ case class ScalaPresentationCompiler(
       empty,
       params.token
     ) { pc =>
-      new InferredTypeProvider(pc.compiler(outlineFiles(params)), params)
+      new InferredTypeProvider(pc.compiler(params), params)
         .inferredTypeEdits()
         .asJava
     }
@@ -352,7 +241,7 @@ case class ScalaPresentationCompiler(
     (compilerAccess
       .withInterruptableCompiler(Some(params))(empty, params.token) { pc =>
         new PcInlineValueProviderImpl(
-          pc.compiler(outlineFiles(params)),
+          pc.compiler(params),
           params
         ).getInlineTextEdits
       })
@@ -370,7 +259,7 @@ case class ScalaPresentationCompiler(
     compilerAccess.withInterruptableCompiler(Some(range))(empty, range.token) {
       pc =>
         new ExtractMethodProvider(
-          pc.compiler(outlineFiles(range)),
+          pc.compiler(range),
           range,
           extractionPos
         ).extractMethod.asJava
@@ -385,7 +274,7 @@ case class ScalaPresentationCompiler(
     (compilerAccess
       .withInterruptableCompiler(Some(params))(empty, params.token) { pc =>
         new ConvertToNamedArgumentsProvider(
-          pc.compiler(outlineFiles(params)),
+          pc.compiler(params),
           params,
           argIndices.asScala.map(_.toInt).toSet
         ).convertToNamedArguments
@@ -405,7 +294,7 @@ case class ScalaPresentationCompiler(
       List.empty[AutoImportsResult].asJava,
       params.token
     ) { pc =>
-      new AutoImportsProvider(pc.compiler(outlineFiles(params)), name, params)
+      new AutoImportsProvider(pc.compiler(params), name, params)
         .autoImports()
         .asJava
     }
@@ -437,7 +326,7 @@ case class ScalaPresentationCompiler(
       new SignatureHelp(),
       params.token
     ) { pc =>
-      new SignatureHelpProvider(pc.compiler(outlineFiles(params)))
+      new SignatureHelpProvider(pc.compiler(params))
         .signatureHelp(params)
     }
 
@@ -448,7 +337,7 @@ case class ScalaPresentationCompiler(
       Optional.empty[Range](),
       params.token
     ) { pc =>
-      new PcRenameProvider(pc.compiler(outlineFiles(params)), params, None)
+      new PcRenameProvider(pc.compiler(params), params, None)
         .prepareRename()
         .asJava
     }
@@ -462,7 +351,7 @@ case class ScalaPresentationCompiler(
       params.token
     ) { pc =>
       new PcRenameProvider(
-        pc.compiler(outlineFiles(params)),
+        pc.compiler(params),
         params,
         Some(name)
       ).rename().asJava
@@ -476,7 +365,7 @@ case class ScalaPresentationCompiler(
       params.token
     ) { pc =>
       Optional.ofNullable(
-        new HoverProvider(pc.compiler(outlineFiles(params)), params, config.hoverContentType())
+        new HoverProvider(pc.compiler(params), params, config.hoverContentType())
           .hover()
           .orNull
       )
@@ -488,7 +377,7 @@ case class ScalaPresentationCompiler(
       DefinitionResultImpl.empty,
       params.token
     ) { pc =>
-      new PcDefinitionProvider(pc.compiler(outlineFiles(params)), params)
+      new PcDefinitionProvider(pc.compiler(params), params)
         .definition()
     }
   }
@@ -515,7 +404,7 @@ case class ScalaPresentationCompiler(
       DefinitionResultImpl.empty,
       params.token
     ) { pc =>
-      new PcDefinitionProvider(pc.compiler(outlineFiles(params)), params)
+      new PcDefinitionProvider(pc.compiler(params), params)
         .typeDefinition()
     }
   }
@@ -527,7 +416,7 @@ case class ScalaPresentationCompiler(
       List.empty[DocumentHighlight].asJava,
       params.token()
     ) { pc =>
-      new PcDocumentHighlightProvider(pc.compiler(outlineFiles(params)), params)
+      new PcDocumentHighlightProvider(pc.compiler(params), params)
         .highlights()
         .asJava
     }
@@ -537,15 +426,21 @@ case class ScalaPresentationCompiler(
       code: String
   ): CompletableFuture[Array[Byte]] = {
     val virtualFile = CompilerVirtualFileParams(fileUri, code)
+    semanticdbTextDocument(virtualFile)
+  }
+
+  override def semanticdbTextDocument(
+      virtualFile: VirtualFileParams
+  ): CompletableFuture[Array[Byte]] = {
     compilerAccess.withInterruptableCompiler(Some(virtualFile))(
       Array.emptyByteArray,
       EmptyCancelToken
     ) { pc =>
       new SemanticdbTextDocumentProvider(
-        pc.compiler(outlineFiles(CompilerOffsetParams(fileUri, code, 0))),
+        pc.compiler(virtualFile),
         config.semanticdbCompilerOptions().asScala.toList
       )
-        .textDocument(fileUri, code)
+        .textDocument(virtualFile.uri(), virtualFile.text())
         .toByteArray
     }
   }
@@ -623,27 +518,4 @@ case class ScalaPresentationCompiler(
       .asJava
   }
 
-  override def withWasSuccessfullyCompiled(
-      wasSuccessful: Boolean
-  ): PresentationCompiler = {
-    this.copy(wasSuccessfullyCompiledInitial = Some(wasSuccessful))
-  }
-
-}
-
-object CompilationStatus {
-  sealed trait WasSuccessfullyCompiled
-  case object SuccessfullyCompiled extends WasSuccessfullyCompiled
-  case object UnSuccessfullyCompiled extends WasSuccessfullyCompiled
-  case object WaitingForCompilationResult extends WasSuccessfullyCompiled
-  case object OutlinedByPC extends WasSuccessfullyCompiled
-
-  def fromWasSuccessfullyCompiled(
-      wasSuccessfullyCompiled: Option[Boolean]
-  ): WasSuccessfullyCompiled =
-    wasSuccessfullyCompiled match {
-      case None => WaitingForCompilationResult
-      case Some(true) => SuccessfullyCompiled
-      case Some(false) => UnSuccessfullyCompiled
-    }
 }

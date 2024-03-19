@@ -14,19 +14,10 @@ trait CompilerWrapper[Reporter, Compiler] {
 
   def stop(): Unit
 
-  def compiler(changeFiles: OutlineFiles): Compiler
+  def compiler(params: VirtualFileParams): Compiler = compiler()
 
-  def compiler(): Compiler = compiler(OutlineFiles.empty)
+  def compiler(): Compiler
 
   def presentationCompilerThread: Option[Thread]
 
-}
-
-case class OutlineFiles(
-    files: List[VirtualFileParams],
-    firstCompileSubstitute: Boolean = false
-)
-
-object OutlineFiles {
-  def empty: OutlineFiles = OutlineFiles(Nil)
 }

@@ -9,14 +9,18 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.ReportContext
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.VirtualFileParams
 
 class ScalaCompilerWrapper(global: MetalsGlobal)
     extends CompilerWrapper[StoreReporter, MetalsGlobal] {
 
-  override def compiler(files: OutlineFiles): MetalsGlobal = {
-    global.runOutline(files)
+  override def compiler(params: VirtualFileParams): MetalsGlobal = {
+    if (params.outlineFiles().isPresent()) {
+      global.runOutline(params.outlineFiles().get())
+    }
     global
   }
+  override def compiler(): MetalsGlobal = global
 
   override def resetReporter(): Unit = global.reporter.reset()
 

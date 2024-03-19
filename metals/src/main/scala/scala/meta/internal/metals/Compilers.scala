@@ -27,7 +27,6 @@ import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.CancelToken
-import scala.meta.pc.CompilerFiles
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
@@ -114,6 +113,9 @@ class Compilers(
     }
   }
 
+  val plugins = new CompilerPlugins()
+  val outlineFilesProvider = new OutlineFilesProvider(buildTargets, buffers)
+
   // Not a TrieMap because we want to avoid loading duplicate compilers for the same build target.
   // Not a `j.u.c.ConcurrentHashMap` because it can deadlock in `computeIfAbsent` when the absent
   // function is expensive, which is the case here.
@@ -128,8 +130,6 @@ class Compilers(
     )
 
   private val worksheetsDigests = new TrieMap[AbsolutePath, String]()
-  private val wasSuccessfullyCompiled =
-    new TrieMap[BuildTargetIdentifier, Boolean]()
 
   private val cache = jcache.asScala
   private def buildTargetPCFromCache(
@@ -176,6 +176,7 @@ class Compilers(
     cache.clear()
     worksheetsCache.clear()
     worksheetsDigests.clear()
+    outlineFilesProvider.clear()
   }
 
   def restartAll(): Unit = {
@@ -211,10 +212,9 @@ class Compilers(
     }
 
   def didClose(path: AbsolutePath): Unit = {
-    loadCompiler(path)
-      .map { pc =>
-        pc.didClose(path.toNIO.toUri())
-      }
+    loadCompiler(path).foreach { case (pc, _) =>
+      pc.didClose(path.toNIO.toUri())
+    }
   }
 
   def didChange(path: AbsolutePath): Future[List[Diagnostic]] = {
@@ -223,7 +223,7 @@ class Compilers(
         .toInputFromBuffers(buffers)
 
     loadCompiler(path)
-      .map { pc =>
+      .map { case (pc, id) =>
         val inputAndAdjust =
           if (
             path.isWorksheet && ScalaVersions.isScala3Version(
@@ -239,6 +239,8 @@ class Compilers(
           originInput,
           AdjustedLspData.default,
         )
+
+        id.foreach(outlineFilesProvider.didChange(_, path))
 
         for {
           ds <-
@@ -257,12 +259,18 @@ class Compilers(
 
   def didCompile(report: CompileReport): Unit = {
     val isSuccessful = report.getErrors == 0
-    buildTargetPCFromCache(report.getTarget).foreach(_.restart(isSuccessful))
-
-    wasSuccessfullyCompiled.updateWith(report.getTarget()) {
-      case Some(true) => Some(true)
-      case _ => Some(isSuccessful)
+    buildTargetPCFromCache(report.getTarget).foreach { pc =>
+      if (
+        outlineFilesProvider.shouldRestartPc(
+          report.getTarget,
+          DidCompile(isSuccessful),
+        )
+      ) {
+        pc.restart()
+      }
     }
+
+    outlineFilesProvider.onDidCompile(report.getTarget(), isSuccessful)
 
     if (isSuccessful) {
       // Restart PC for all build targets that depend on this target since the classfiles
@@ -271,7 +279,7 @@ class Compilers(
       for {
         target <- buildTargets.allInverseDependencies(report.getTarget)
         if target != report.getTarget
-        if wasSuccessfullyCompiled.getOrElse(target, true)
+        if outlineFilesProvider.shouldRestartPc(target, InverseDependency)
         compiler <- buildTargetPCFromCache(target)
       } {
         compiler.restart()
@@ -328,7 +336,7 @@ class Compilers(
       }
     }
     loadCompiler(path)
-      .map { compiler =>
+      .map { case (compiler, buildTargetId) =>
         val input = path.toInputFromBuffers(buffers)
         breakpointPosition.toMeta(input) match {
           case Some(metaPos) =>
@@ -363,12 +371,14 @@ class Compilers(
               if (isZeroBased) i else i + 1
             }
 
-            val offsetParams = CompilerOffsetParams(
-              path.toURI,
-              modified,
-              rangeEnd,
-              token,
-            )
+            val offsetParams =
+              CompilerOffsetParams(
+                path.toURI,
+                modified,
+                rangeEnd,
+                token,
+                outlineFilesProvider.getOutlineFiles(buildTargetId),
+              )
 
             val previousLines = expression
               .getText()
@@ -422,7 +432,7 @@ class Compilers(
     } else {
       val path = params.getTextDocument.getUri.toAbsolutePath
       loadCompiler(path)
-        .map { compiler =>
+        .map { case (compiler, buildTargetId) =>
           val (input, _, adjust) =
             sourceAdjustments(
               params.getTextDocument().getUri(),
@@ -523,7 +533,12 @@ class Compilers(
           }
 
           val vFile =
-            CompilerVirtualFileParams(path.toNIO.toUri(), input.text, token)
+            CompilerVirtualFileParams(
+              path.toNIO.toUri(),
+              input.text,
+              token,
+              outlineFilesProvider.getOutlineFiles(buildTargetId),
+            )
           val isScala3 = ScalaVersions.isScala3Version(compiler.scalaVersion())
 
           compiler
@@ -564,7 +579,7 @@ class Compilers(
       params: InlayHintParams,
       token: CancelToken,
   ): Future[ju.List[InlayHint]] = {
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+    withPCAndAdjustLsp(params) { (pc, pos, adjust, buildTargetId) =>
       def inlayHintsFallback(
           params: SyntheticDecorationsParams
       ): Future[ju.List[InlayHint]] = {
@@ -602,7 +617,11 @@ class Compilers(
       }
 
       val rangeParams =
-        CompilerRangeParamsUtils.fromPos(pos, token)
+        CompilerRangeParamsUtils.fromPos(
+          pos,
+          token,
+          outlineFilesProvider.getOutlineFiles(buildTargetId),
+        )
       val options = userConfig().inlayHintsOptions
       val pcParams = CompilerInlayHintsParams(
         rangeParams,
@@ -632,9 +651,10 @@ class Compilers(
       params: CompletionParams,
       token: CancelToken,
   ): Future[CompletionList] =
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+    withPCAndAdjustLsp(params) { (pc, pos, adjust, buildTargetId) =>
+      val outlineFiles = outlineFilesProvider.getOutlineFiles(buildTargetId)
       val offsetParams =
-        CompilerOffsetParamsUtils.fromPos(pos, token)
+        CompilerOffsetParamsUtils.fromPos(pos, token, outlineFiles)
       pc.complete(offsetParams)
         .asScala
         .map { list =>
@@ -649,10 +669,14 @@ class Compilers(
       findExtensionMethods: Boolean,
       token: CancelToken,
   ): Future[ju.List[AutoImportsResult]] = {
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+    withPCAndAdjustLsp(params) { (pc, pos, adjust, buildTargetId) =>
       pc.autoImports(
         name,
-        CompilerOffsetParamsUtils.fromPos(pos, token),
+        CompilerOffsetParamsUtils.fromPos(
+          pos,
+          token,
+          outlineFilesProvider.getOutlineFiles(buildTargetId),
+        ),
         findExtensionMethods,
       ).asScala
         .map { list =>
@@ -666,9 +690,14 @@ class Compilers(
       params: TextDocumentPositionParams,
       token: CancelToken,
   ): Future[ju.List[TextEdit]] = {
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.insertInferredType(CompilerOffsetParamsUtils.fromPos(pos, token))
-        .asScala
+    withPCAndAdjustLsp(params) { (pc, pos, adjust, buildTargetId) =>
+      pc.insertInferredType(
+        CompilerOffsetParamsUtils.fromPos(
+          pos,
+          token,
+          outlineFilesProvider.getOutlineFiles(buildTargetId),
+        )
+      ).asScala
         .map { edits =>
           adjust.adjustTextEdits(edits)
         }
@@ -679,9 +708,14 @@ class Compilers(
       params: TextDocumentPositionParams,
       token: CancelToken,
   ): Future[ju.List[TextEdit]] =
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.inlineValue(CompilerOffsetParamsUtils.fromPos(pos, token))
-        .asScala
+    withPCAndAdjustLsp(params) { (pc, pos, adjust, buildTargetId) =>
+      pc.inlineValue(
+        CompilerOffsetParamsUtils.fromPos(
+          pos,
+          token,
+          outlineFilesProvider.getOutlineFiles(buildTargetId),
+        )
+      ).asScala
         .map(adjust.adjustTextEdits)
     }.getOrElse(Future.successful(Nil.asJava))
 
@@ -689,9 +723,14 @@ class Compilers(
       params: TextDocumentPositionParams,
       token: CancelToken,
   ): Future[ju.List[DocumentHighlight]] = {
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.documentHighlight(CompilerOffsetParamsUtils.fromPos(pos, token))
-        .asScala
+    withPCAndAdjustLsp(params) { (pc, pos, adjust, buildTargetId) =>
+      pc.documentHighlight(
+        CompilerOffsetParamsUtils.fromPos(
+          pos,
+          token,
+          outlineFilesProvider.getOutlineFiles(buildTargetId),
+        )
+      ).asScala
         .map { highlights =>
           adjust.adjustDocumentHighlight(highlights)
         }
@@ -705,9 +744,13 @@ class Compilers(
       token: CancelToken,
   ): Future[ju.List[TextEdit]] = {
     withPCAndAdjustLsp(doc.getUri(), range, extractionPos) {
-      (pc, metaRange, metaExtractionPos, adjust) =>
+      (pc, metaRange, metaExtractionPos, adjust, buildTargetId) =>
         pc.extractMethod(
-          CompilerRangeParamsUtils.fromPos(metaRange, token),
+          CompilerRangeParamsUtils.fromPos(
+            metaRange,
+            token,
+            outlineFilesProvider.getOutlineFiles(buildTargetId),
+          ),
           CompilerOffsetParamsUtils.fromPos(metaExtractionPos, token),
         ).asScala
           .map { edits =>
@@ -721,9 +764,13 @@ class Compilers(
       argIndices: ju.List[Integer],
       token: CancelToken,
   ): Future[ju.List[TextEdit]] = {
-    withPCAndAdjustLsp(position) { (pc, pos, adjust) =>
+    withPCAndAdjustLsp(position) { (pc, pos, adjust, buildTargetId) =>
       pc.convertToNamedArguments(
-        CompilerOffsetParamsUtils.fromPos(pos, token),
+        CompilerOffsetParamsUtils.fromPos(
+          pos,
+          token,
+          outlineFilesProvider.getOutlineFiles(buildTargetId),
+        ),
         argIndices,
       ).asScala
         .map { edits =>
@@ -736,9 +783,14 @@ class Compilers(
       params: TextDocumentPositionParams,
       token: CancelToken,
   ): Future[ju.List[TextEdit]] = {
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.implementAbstractMembers(CompilerOffsetParamsUtils.fromPos(pos, token))
-        .asScala
+    withPCAndAdjustLsp(params) { (pc, pos, adjust, buildTargetId) =>
+      pc.implementAbstractMembers(
+        CompilerOffsetParamsUtils.fromPos(
+          pos,
+          token,
+          outlineFilesProvider.getOutlineFiles(buildTargetId),
+        )
+      ).asScala
         .map { edits =>
           adjust.adjustTextEdits(edits)
         }
@@ -749,9 +801,13 @@ class Compilers(
       params: HoverExtParams,
       token: CancelToken,
   ): Future[Option[HoverSignature]] = {
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+    withPCAndAdjustLsp(params) { (pc, pos, adjust, buildTargetId) =>
       pc.hover(
-        CompilerRangeParamsUtils.offsetOrRange(pos, token)
+        CompilerRangeParamsUtils.offsetOrRange(
+          pos,
+          token,
+          outlineFilesProvider.getOutlineFiles(buildTargetId),
+        )
       ).asScala
         .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
     }
@@ -761,9 +817,13 @@ class Compilers(
       params: TextDocumentPositionParams,
       token: CancelToken,
   ): Future[ju.Optional[LspRange]] = {
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+    withPCAndAdjustLsp(params) { (pc, pos, adjust, buildTargetId) =>
       pc.prepareRename(
-        CompilerRangeParamsUtils.offsetOrRange(pos, token)
+        CompilerRangeParamsUtils.offsetOrRange(
+          pos,
+          token,
+          outlineFilesProvider.getOutlineFiles(buildTargetId),
+        )
       ).asScala
         .map { range =>
           range.map(adjust.adjustRange(_))
@@ -775,9 +835,13 @@ class Compilers(
       params: RenameParams,
       token: CancelToken,
   ): Future[ju.List[TextEdit]] = {
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+    withPCAndAdjustLsp(params) { (pc, pos, adjust, buildTargetId) =>
       pc.rename(
-        CompilerRangeParamsUtils.offsetOrRange(pos, token),
+        CompilerRangeParamsUtils.offsetOrRange(
+          pos,
+          token,
+          outlineFilesProvider.getOutlineFiles(buildTargetId),
+        ),
         params.getNewName(),
       ).asScala
         .map { edits =>
@@ -805,10 +869,11 @@ class Compilers(
       symbol: String,
   ): Future[Option[PcSymbolInformation]] = {
     loadCompiler(path, forceScala = true)
-      .map(
-        _.info(symbol).asScala
+      .map { case (pc, _) =>
+        pc.info(symbol)
+          .asScala
           .map(_.asScala.map(PcSymbolInformation.from))
-      )
+      }
       .getOrElse(Future(None))
   }
 
@@ -817,8 +882,12 @@ class Compilers(
       token: CancelToken,
       findTypeDef: Boolean,
   ): Future[DefinitionResult] =
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      val params = CompilerOffsetParamsUtils.fromPos(pos, token)
+    withPCAndAdjustLsp(params) { (pc, pos, adjust, buildTargetId) =>
+      val params = CompilerOffsetParamsUtils.fromPos(
+        pos,
+        token,
+        outlineFilesProvider.getOutlineFiles(buildTargetId),
+      )
       val defResult =
         if (findTypeDef) pc.typeDefinition(params)
         else
@@ -853,17 +922,29 @@ class Compilers(
       params: TextDocumentPositionParams,
       token: CancelToken,
   ): Future[SignatureHelp] =
-    withPCAndAdjustLsp(params) { (pc, pos, _) =>
-      pc.signatureHelp(CompilerOffsetParamsUtils.fromPos(pos, token)).asScala
+    withPCAndAdjustLsp(params) { (pc, pos, _, buildTargetId) =>
+      pc.signatureHelp(
+        CompilerOffsetParamsUtils.fromPos(
+          pos,
+          token,
+          outlineFilesProvider.getOutlineFiles(buildTargetId),
+        )
+      ).asScala
     }.getOrElse(Future.successful(new SignatureHelp()))
 
   def selectionRange(
       params: SelectionRangeParams,
       token: CancelToken,
   ): Future[ju.List[SelectionRange]] = {
-    withPCAndAdjustLsp(params) { (pc, positions) =>
+    withPCAndAdjustLsp(params) { (pc, positions, buildTargetId) =>
       val offsetPositions: ju.List[OffsetParams] =
-        positions.map(CompilerOffsetParamsUtils.fromPos(_, token))
+        positions.map(
+          CompilerOffsetParamsUtils.fromPos(
+            _,
+            token,
+            outlineFilesProvider.getOutlineFiles(buildTargetId),
+          )
+        )
       pc.selectionRange(offsetPositions).asScala
     }.getOrElse(Future.successful(Nil.asJava))
   }
@@ -890,34 +971,29 @@ class Compilers(
   def loadCompiler(
       path: AbsolutePath,
       forceScala: Boolean = false,
-  ): Option[PresentationCompiler] = {
+  ): Option[(PresentationCompiler, Option[BuildTargetIdentifier])] = {
 
-    def fromBuildTarget: Option[PresentationCompiler] = {
+    def fromBuildTarget: Option[(PresentationCompiler, Option[BuildTargetIdentifier])] = {
       val target = buildTargets
         .inverseSources(path)
 
       target match {
-        case None =>
-          val tmpDirectory = workspace.resolve(Directories.tmp)
-          val scalaVersion =
-            scalaVersionSelector.fallbackScalaVersion(isAmmonite = false)
-          if (!path.toNIO.startsWith(tmpDirectory.toNIO))
-            scribe.info(
-              s"no build target found for $path. Using presentation compiler with project's scala-library version: ${scalaVersion}"
-            )
-          Some(fallbackCompiler)
+        case None => Some((fallbackCompiler(path), None))
         case Some(value) =>
-          if (path.isScalaFilename) loadCompiler(value)
+          if (path.isScalaFilename) loadCompiler(value).map((_, Some(value)))
           else if (path.isJavaFilename && forceScala)
-            loadCompiler(value).orElse(Some(loadJavaCompiler(value)))
-          else if (path.isJavaFilename) Some(loadJavaCompiler(value))
+            loadCompiler(value)
+              .orElse(loadJavaCompiler(value))
+              .map((_, Some(value)))
+          else if (path.isJavaFilename)
+            loadJavaCompiler(value).map((_, Some(value)))
           else None
       }
     }
 
     if (!path.isScalaFilename && !path.isJavaFilename) None
     else if (path.isWorksheet)
-      loadWorksheetCompiler(path).orElse(fromBuildTarget)
+      loadWorksheetCompiler(path).map((_, None)).orElse(fromBuildTarget)
     else fromBuildTarget
   }
 
@@ -1043,9 +1119,15 @@ class Compilers(
 
   private def withPCAndAdjustLsp[T](
       params: SelectionRangeParams
-  )(fn: (PresentationCompiler, ju.List[Position]) => T): Option[T] = {
+  )(
+      fn: (
+          PresentationCompiler,
+          ju.List[Position],
+          Option[BuildTargetIdentifier],
+      ) => T
+  ): Option[T] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    loadCompiler(path).map { compiler =>
+    loadCompiler(path).map { case (compiler, buildTargetId) =>
       val input = path
         .toInputFromBuffers(buffers)
         .copy(path = params.getTextDocument.getUri)
@@ -1053,35 +1135,53 @@ class Compilers(
       val positions =
         params.getPositions().asScala.flatMap(_.toMeta(input)).asJava
 
-      fn(compiler, positions)
+      fn(compiler, positions, buildTargetId)
     }
   }
 
   private def withPCAndAdjustLsp[T](
       params: TextDocumentPositionParams
-  )(fn: (PresentationCompiler, Position, AdjustLspData) => T): Option[T] = {
+  )(
+      fn: (
+          PresentationCompiler,
+          Position,
+          AdjustLspData,
+          Option[BuildTargetIdentifier],
+      ) => T
+  ): Option[T] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    loadCompiler(path).flatMap { compiler =>
+    loadCompiler(path).flatMap { case (compiler, buildTargetId) =>
       val (input, pos, adjust) =
         sourceAdjustments(
           params,
           compiler.scalaVersion(),
         )
-      pos.toMeta(input).map(metaPos => fn(compiler, metaPos, adjust))
+      pos
+        .toMeta(input)
+        .map(metaPos => fn(compiler, metaPos, adjust, buildTargetId))
     }
   }
 
   private def withPCAndAdjustLsp[T](
       params: InlayHintParams
-  )(fn: (PresentationCompiler, Position, AdjustLspData) => T): Option[T] = {
+  )(
+      fn: (
+          PresentationCompiler,
+          Position,
+          AdjustLspData,
+          Option[BuildTargetIdentifier],
+      ) => T
+  ): Option[T] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    loadCompiler(path).flatMap { compiler =>
+    loadCompiler(path).flatMap { case (compiler, buildTargetId) =>
       val (input, pos, adjust) =
         sourceAdjustments(
           params,
           compiler.scalaVersion(),
         )
-      pos.toMeta(input).map(metaPos => fn(compiler, metaPos, adjust))
+      pos
+        .toMeta(input)
+        .map(metaPos => fn(compiler, metaPos, adjust, buildTargetId))
     }
   }
 
@@ -1095,10 +1195,11 @@ class Compilers(
           Position,
           Position,
           AdjustLspData,
+          Option[BuildTargetIdentifier],
       ) => T
   ): Option[T] = {
     val path = uri.toAbsolutePath
-    loadCompiler(path).flatMap { compiler =>
+    loadCompiler(path).flatMap { case (compiler, buildTargetId) =>
       val (input, adjustRequest, adjustResponse) =
         sourceAdjustments(
           uri,
@@ -1110,22 +1211,35 @@ class Compilers(
           adjustRequest(range.getEnd()),
         ).toMeta(input)
         metaExtractionPos <- adjustRequest(extractionPos).toMeta(input)
-      } yield fn(compiler, metaRange, metaExtractionPos, adjustResponse)
+      } yield fn(
+        compiler,
+        metaRange,
+        metaExtractionPos,
+        adjustResponse,
+        buildTargetId,
+      )
     }
   }
 
   private def withPCAndAdjustLsp[T](
       params: HoverExtParams
-  )(fn: (PresentationCompiler, Position, AdjustLspData) => T): Option[T] = {
+  )(
+      fn: (
+          PresentationCompiler,
+          Position,
+          AdjustLspData,
+          Option[BuildTargetIdentifier],
+      ) => T
+  ): Option[T] = {
 
     val path = params.textDocument.getUri.toAbsolutePath
-    loadCompiler(path).flatMap { compiler =>
+    loadCompiler(path).flatMap { case (compiler, buildTargetId) =>
       if (params.range != null) {
         val (input, range, adjust) = sourceAdjustments(
           params,
           compiler.scalaVersion(),
         )
-        range.toMeta(input).map(fn(compiler, _, adjust))
+        range.toMeta(input).map(fn(compiler, _, adjust, buildTargetId))
 
       } else {
         val positionParams =
@@ -1137,7 +1251,7 @@ class Compilers(
           positionParams,
           compiler.scalaVersion(),
         )
-        pos.toMeta(input).map(fn(compiler, _, adjust))
+        pos.toMeta(input).map(fn(compiler, _, adjust, buildTargetId))
       }
     }
   }

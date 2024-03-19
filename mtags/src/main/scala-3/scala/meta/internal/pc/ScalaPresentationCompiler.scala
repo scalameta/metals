@@ -182,7 +182,7 @@ case class ScalaPresentationCompiler(
   def shutdown(): Unit =
     compilerAccess.shutdown()
 
-  override def restart(): Unit =
+  def restart(): Unit =
     compilerAccess.shutdownCurrentCompiler()
 
   def diagnosticsForDebuggingPurposes(): ju.List[String] =

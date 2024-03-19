@@ -70,7 +70,7 @@ class MetalsGlobal(
   val richCompilationCache: TrieMap[String, RichCompilationUnit] =
     TrieMap.empty[String, RichCompilationUnit]
 
-  // for those paths units were
+  // for those paths units were fully compiled (not just outlined)
   val fullyCompiled: mutable.Set[String] = mutable.Set.empty[String]
 
   class MetalsInteractiveAnalyzer(val global: compiler.type)

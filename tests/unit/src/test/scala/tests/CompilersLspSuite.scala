@@ -329,12 +329,12 @@ class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
            | required: Int
            |  val i: Int = "aaa"
            |               ^^^^^
-           |""".stripMargin
+           |""".stripMargin,
       )
       _ <- assertCompletion(
         "  def bar = foo.bar@@",
         "bar: String",
-        filename = Some("a/src/main/scala/c/C.scala")
+        filename = Some("a/src/main/scala/c/C.scala"),
       )
     } yield ()
   }
