@@ -138,7 +138,7 @@ commands ++= Seq(
       runMtagsPublishLocal(st, v, localSnapshotVersion)
     }
     "interfaces/publishLocal" ::
-      "telemetryInterfaces/publishLocal" ::
+      "+telemetryInterfaces/publishLocal" ::
       s"++${V.scala213} metals/publishLocal" ::
       "mtags-java/publishLocal" ::
       publishMtags
@@ -193,8 +193,6 @@ def lintingOptions(scalaVersion: String) = {
 }
 
 val sharedJavacOptions = List(
-  packageDoc / publishArtifact := true,
-  packageSrc / publishArtifact := true,
   Compile / javacOptions ++= {
     if (sys.props("java.version").startsWith("1.8"))
       Nil
@@ -257,13 +255,20 @@ lazy val interfaces = project
 
 lazy val telemetryInterfaces = project
   .in(file("telemetry-interfaces"))
-  .settings(sharedJavacOptions)
+  .settings(sharedSettings)
   .settings(
     moduleName := "telemetry-interfaces",
-    autoScalaLibrary := false,
-    crossVersion := CrossVersion.disabled,
-    crossPaths := false,
-    libraryDependencies += "com.google.code.gson" % "gson" % V.gson,
+    crossScalaVersions := List(V.scala213, V.scala3),
+    crossVersion := CrossVersion.binary,
+    Compile / scalacOptions ++= {
+      if (scalaVersion.value == V.scala3)
+        List("-Xmax-inlines", "64")
+      else Nil
+    },
+    libraryDependencies := List(
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.27.7",
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.27.7" % "compile-internal"
+    )
   )
 
 lazy val mtagsShared = project
@@ -699,7 +704,6 @@ def publishAllMtags(
 def publishBinaryMtags =
   (interfaces / publishLocal)
     .dependsOn(
-      telemetryInterfaces / publishLocal,
       `mtags-java` / publishLocal,
       publishAllMtags(V.quickPublishScalaVersions),
     )

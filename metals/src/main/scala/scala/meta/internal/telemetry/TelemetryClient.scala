@@ -1,48 +1,45 @@
 package scala.meta.internal.telemetry
 
-import java.io.InputStreamReader
-
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.Random
-import scala.util.Try
-import scala.util.control.NonFatal
+import scala.util.Success
 
 import scala.meta.internal.metals.LoggerAccess
 import scala.meta.internal.metals.TelemetryLevel
 import scala.meta.internal.telemetry
 
-import com.google.gson.JsonSyntaxException
 import requests.Response
 
 object TelemetryClient {
-  private class DeserializationException(message: String)
-      extends RuntimeException(message)
 
   case class Config(serverHost: String)
   object Config {
     // private final val DefaultTelemetryEndpoint =
     //   "https://scala3.westeurope.cloudapp.azure.com/telemetry"
-    private final val DefaultTelemetryEndpoint =
-      "http://localhost:8081"
-
+    private final val DefaultTelemetryEndpoint = "http://localhost:8081"
     val default: Config = Config(DefaultTelemetryEndpoint)
   }
 
-  private class Endpoint[-In, +Out](
-      endpoint: telemetry.ServiceEndpoint[In, Out]
-  )(implicit config: Config) {
-    def apply(data: In): Try[Out] = {
-      val json = encodeRequest(data)
-      execute(json).map(decodeResponse)
-    }
+  private class TelemetryRequest[In](
+      endpoint: telemetry.FireAndForgetEndpoint[In],
+      logger: LoggerAccess,
+  )(implicit config: Config, ec: ExecutionContext) {
+    private val endpointURL = s"${config.serverHost}${endpoint.uri}"
+    private val requester = requests.send(endpoint.method)
+    println(s"TelemetryClient: sending $endpointURL")
 
-    private val endpointURL = s"${config.serverHost}${endpoint.getUri()}"
-    private val requester = requests.send(endpoint.getMethod())
+    def apply(data: In): Unit = {
+      val json = endpoint.encodeInput(data)
+      val response = execute(json)
+      acknowledgeResponse(response)
+    }
 
     private def execute(
         data: String,
         retries: Int = 3,
         backoffMillis: Int = 100,
-    ): Try[Response] = Try {
+    ): Future[Response] = Future {
       requester(
         url = endpointURL,
         data = data,
@@ -56,29 +53,14 @@ object TelemetryClient {
         execute(data, retries - 1, backoffMillis + Random.nextInt(1000))
     }
 
-    private def encodeRequest(request: In): String =
-      telemetry.GsonCodecs.gson.toJson(request)
-
-    private def decodeResponse(response: Response): Out = {
-      if (response.is2xx) {
-        val outputType = endpoint.getOutputType()
-        if (outputType == classOf[Void]) ().asInstanceOf[Out]
-        else {
-          response.readBytesThrough { is =>
-            try
-              telemetry.GsonCodecs.gson
-                .fromJson(new InputStreamReader(is), outputType)
-            catch {
-              case err: JsonSyntaxException =>
-                throw new DeserializationException(err.getMessage())
-            }
-          }
-        }
-      } else
-        throw new IllegalStateException(
-          s"${endpoint.getMethod()}:${endpoint.getUri()} should never result in error, got ${response}"
-        )
-    }
+    private def acknowledgeResponse(response: Future[Response]): Unit =
+      response.onComplete {
+        case Success(value) if value.is2xx =>
+        case _ =>
+          logger.debug(
+            s"${endpoint.method}:${endpoint.uri} should never result in error, got ${response}"
+          )
+      }
   }
 }
 
@@ -86,32 +68,22 @@ private[meta] class TelemetryClient(
     telemetryLevel: () => TelemetryLevel,
     config: TelemetryClient.Config = TelemetryClient.Config.default,
     logger: LoggerAccess = LoggerAccess.system,
-) extends telemetry.TelemetryService {
-  import telemetry.{TelemetryService => api}
+)(implicit ec: ExecutionContext)
+    extends telemetry.TelemetryService {
   import TelemetryClient._
+  import telemetry.TelemetryService._
 
   implicit private def clientConfig: Config = config
 
-  private val SendErrorReport = new Endpoint(api.SendErrorReportEndpoint)
-  private val SendCrashReport = new Endpoint(api.SendCrashReportEndpoint)
+  private val sendErrorReport0 =
+    new TelemetryRequest(sendErrorReportEndpoint, logger)
+  private val sendCrashReport0 =
+    new TelemetryRequest(sendCrashReportEndpoint, logger)
 
-  override def sendErrorReport(report: telemetry.ErrorReport): Unit =
-    if (telemetryLevel().reportErrors) {
-      SendErrorReport(report)
-        .recover { case NonFatal(err) =>
-          logSendFailure(reportType = "error")(err)
-        }
-    }
+  def sendErrorReport(report: telemetry.ErrorReport): Unit =
+    if (telemetryLevel().enabled) sendErrorReport0(report)
 
-  override def sendCrashReport(report: telemetry.CrashReport): Unit =
-    if (telemetryLevel().reportCrash) {
-      SendCrashReport(report)
-        .recover { case NonFatal(err) =>
-          logSendFailure(reportType = "crash")(err)
-        }
-    }
-
-  private def logSendFailure(reportType: String)(error: Throwable) =
-    logger.debug(s"Failed to send $reportType report: ${error}")
+  def sendCrashReport(report: telemetry.CrashReport): Unit =
+    if (telemetryLevel().enabled) sendCrashReport0(report)
 
 }

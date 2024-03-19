@@ -246,8 +246,8 @@ object UserConfiguration {
         "false",
         "false",
         "Should display implicit parameter at usage sites",
-        """|When this option is enabled, each method that has implicit arguments has them 
-           |displayed either as additional decorations if they are supported by the editor or 
+        """|When this option is enabled, each method that has implicit arguments has them
+           |displayed either as additional decorations if they are supported by the editor or
            |shown in the hover.
            |""".stripMargin,
       ),
@@ -256,8 +256,8 @@ object UserConfiguration {
         "false",
         "false",
         "Should display implicit conversion at usage sites",
-        """|When this option is enabled, each place where an implicit method or class is used has it 
-           |displayed either as additional decorations if they are supported by the editor or 
+        """|When this option is enabled, each place where an implicit method or class is used has it
+           |displayed either as additional decorations if they are supported by the editor or
            |shown in the hover.
            |""".stripMargin,
       ),
@@ -284,7 +284,7 @@ object UserConfiguration {
         BuildInfo.scala3,
         BuildInfo.scala3,
         "Default fallback Scala version",
-        """|The Scala compiler version that is used as the default or fallback in case a file 
+        """|The Scala compiler version that is used as the default or fallback in case a file
            |doesn't belong to any build target or the specified Scala version isn't supported by Metals.
            |This applies to standalone Scala files, worksheets, and Ammonite scripts.
         """.stripMargin,
@@ -347,14 +347,14 @@ object UserConfiguration {
       ),
       UserConfigurationOption(
         "telemetry-level",
-        TelemetryLevel.default.stringValue,
-        TelemetryLevel.All.stringValue,
+        TelemetryLevel.default.textValue,
+        TelemetryLevel.Anonymous.textValue,
         "Scope of reported telemetry data",
         s"""Control what kind of telemetry events can be send to maintainers of Metals.
-           |With `${TelemetryLevel.Off.stringValue}` no telemetry data would be send.
-           |Minimal recommended level is `${TelemetryLevel.Error.stringValue}` which would collect diagnostic information when Metals components would crash or fail unexpectedly, allowing to understand why the problem occoured.
-           |The highest telemtetry level `${TelemetryLevel.All.stringValue}` allows to collect all information including how features are used to help us priortize future improvements."
-           |Defaults to `${TelemetryLevel.default.stringValue}`.
+           |With `${TelemetryLevel.Off.textValue}` no telemetry data would be send.
+           |Minimal recommended level is `${TelemetryLevel.Anonymous.textValue}` which would collect diagnostic information when Metals components would crash or fail unexpectedly, allowing to understand why the problem occoured.
+           |The highest telemtetry level `${TelemetryLevel.Full.textValue}` allows to collect all information including how features are used to help us priortize future improvements."
+           |Defaults to `${TelemetryLevel.default.textValue}`.
            |""".stripMargin,
       ),
       UserConfigurationOption(
@@ -620,8 +620,8 @@ object UserConfiguration {
       getBooleanKey("default-bsp-to-build-tool").getOrElse(false)
 
     val telemetryLevel = getStringKey("telemetry-level")
-      .flatMap(TelemetryLevel.fromString)
-      .getOrElse(TelemetryLevel.discover)
+      .map(TelemetryLevel.fromString)
+      .getOrElse(TelemetryLevel.default)
 
     if (errors.isEmpty) {
       Right(

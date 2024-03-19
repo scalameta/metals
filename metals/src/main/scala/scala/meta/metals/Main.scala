@@ -1,6 +1,5 @@
 package scala.meta.metals
 
-import java.util.Optional
 import java.util.concurrent.Executors
 
 import scala.concurrent.ExecutionContext
@@ -67,7 +66,7 @@ object Main {
       launcher.startListening().get()
     } catch {
       case NonFatal(e) =>
-        trySendCrashReport(e, server)
+        trySendCrashReport(e, server, ec)
         e.printStackTrace(systemOut)
         sys.exit(1)
     } finally {
@@ -82,16 +81,16 @@ object Main {
   private def trySendCrashReport(
       error: Throwable,
       server: MetalsLanguageServer,
+      ec: ExecutionContext,
   ): Unit = try {
     val telemetryLevel = server.getTelemetryLevel()
-    if (telemetryLevel.reportCrash) {
-      val telemetry = new TelemetryClient(() => telemetryLevel)
+    if (telemetryLevel.enabled) {
+      val telemetry = new TelemetryClient(() => telemetryLevel)(ec)
       telemetry.sendCrashReport(
-        new CrashReport(
-          ExceptionSummary.fromThrowable(error, identity),
-          this.getClass().getName(),
-          Optional.of(BuildInfo.metalsVersion),
-          Optional.empty(),
+        CrashReport(
+          error = ExceptionSummary.from(error, identity),
+          componentName = this.getClass().getName(),
+          componentVersion = Some(BuildInfo.metalsVersion),
         )
       )
     }

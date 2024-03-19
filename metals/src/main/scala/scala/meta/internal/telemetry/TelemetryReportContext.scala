@@ -3,12 +3,15 @@ package scala.meta.internal.telemetry
 import java.nio.file.Path
 import java.{util => ju}
 
+import scala.concurrent.ExecutionContext
+
 import scala.meta.internal.metals.LoggerAccess
 import scala.meta.internal.metals.ReportSanitizer
 import scala.meta.internal.metals.SourceCodeSanitizer
 import scala.meta.internal.metals.SourceCodeTransformer
 import scala.meta.internal.metals.TelemetryLevel
 import scala.meta.internal.metals.WorkspaceSanitizer
+import scala.meta.internal.mtags.CommonMtagsEnrichments.XtensionOptionalJava
 import scala.meta.internal.telemetry
 import scala.meta.pc.Report
 import scala.meta.pc.ReportContext
@@ -48,7 +51,7 @@ class TelemetryReportContext(
     telemetryClientConfig: TelemetryClient.Config =
       TelemetryClient.Config.default,
     logger: LoggerAccess = LoggerAccess.system,
-) extends ReportContext {
+)(implicit ec: ExecutionContext) extends ReportContext {
 
   // Don't send reports with fragile user data - sources etc
   override lazy val unsanitized: Reporter = reporter("unsanitized")
@@ -59,7 +62,7 @@ class TelemetryReportContext(
     config = telemetryClientConfig,
     telemetryLevel = telemetryLevel,
     logger = logger,
-  )
+  )(ec)
 
   private def reporter(name: String) = new TelemetryReporter(
     name = name,
@@ -82,44 +85,39 @@ private class TelemetryReporter(
 
   override def getReports(): ju.List[TimestampedFile] =
     ju.Collections.emptyList()
-  override def cleanUpOldReports(
-      maxReportsNumber: Int
-  ): ju.List[TimestampedFile] =
+
+  override def cleanUpOldReports(maxReportsNumber: Int): ju.List[TimestampedFile] =
     ju.Collections.emptyList()
+
   override def deleteAll(): Unit = ()
 
   override def sanitize(message: String): String =
     sanitizers.all.foldRight(message)(_.apply(_))
 
-  private def createSanitizedReport(report: Report) = new telemetry.ErrorReport(
-    /* name =  */ report.name,
-    /* text =  */ if (sanitizers.canSanitizeSources)
-      ju.Optional.of(sanitize(report.text))
-    else ju.Optional.empty(),
-    /* id =  */ report.id,
-    /* error =  */ report.error.map(
-      telemetry.ExceptionSummary.fromThrowable(_, sanitize(_))
-    ),
-    /* reporterName =  */ name,
-    /* reporterContext =  */ reporterContext() match {
-      case ctx: telemetry.MetalsLspContext =>
-        telemetry.ReporterContextUnion.metalsLSP(ctx)
-      case ctx: telemetry.ScalaPresentationCompilerContext =>
-        telemetry.ReporterContextUnion.scalaPresentationCompiler(ctx)
-    },
-  )
+  private def createSanitizedReport(report: Report) = {
+    new telemetry.ErrorReport(
+      name = report.name,
+      reporterName = name,
+      reporterContext = reporterContext(),
+      id = report.id.asScala,
+      text = Option.when(sanitizers.canSanitizeSources)(sanitize(report.text)),
+      error = report.error
+        .map(telemetry.ExceptionSummary.from(_, sanitize(_)))
+        .asScala,
+    )
+  }
 
   override def create(
       unsanitizedReport: Report,
       ifVerbose: Boolean,
   ): ju.Optional[Path] = {
-    if (telemetryLevel().reportErrors) {
+    if (telemetryLevel() == TelemetryLevel.Full) {
       val report = createSanitizedReport(unsanitizedReport)
-      if (report.getText().isPresent() || report.getError().isPresent())
+      if (report.text.isDefined || report.error.isDefined)
         client.sendErrorReport(report)
       else
         logger.info(
-          "Skiped reporting remotely unmeaningful report, no context or error, reportId=" +
+          "Skipped reporting remotely unmeaningful report, no context or error, reportId=" +
             unsanitizedReport.id.orElse("null")
         )
     }

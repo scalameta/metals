@@ -284,19 +284,24 @@ class MetalsLanguageServer(
     case _ => throw new IllegalStateException("Server is not initialized")
   }
 
-  private[metals] def getTelemetryLevel() = {
-    def maxConfiguredTelemetryLevel(service: WorkspaceLspService) = {
-      val entries =
-        service.workspaceFolders.getFolderServices.map(_.getTelemetryLevel)
-      if (entries.isEmpty) TelemetryLevel.discover
-      else entries.max
+  /**
+   * Telemetry level used only for initialisation purpose.
+   * It will return the minimal level set, within all workspaces e.g.
+   * - WorkspaceA - telemetry off,
+   * - WorkspaceB - telemetry full,
+   * the method will return telemetry off
+   */
+  private[metals] def getTelemetryLevel(): TelemetryLevel = {
+    serverState.get()
+    def lowestSettingWithinWorkspaces(service: WorkspaceLspService) = {
+      service.workspaceFolders.getFolderServices.map(_.getTelemetryLevel).min
     }
     serverState.get() match {
       case ServerState.Initialized(service) =>
-        maxConfiguredTelemetryLevel(service)
+        lowestSettingWithinWorkspaces(service)
       case ServerState.ShuttingDown(service) =>
-        maxConfiguredTelemetryLevel(service)
-      case _ => TelemetryLevel.discover
+        lowestSettingWithinWorkspaces(service)
+      case _ => TelemetryLevel.Off
     }
   }
 

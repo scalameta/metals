@@ -39,12 +39,12 @@ class SourceCodeSanitizer[ParserCtx, ParserAST](
       .map(_.trim())
       .filter(_.nonEmpty)
       .map(_.replaceAll(OffsetMarker, ""))
-      .fold[Either[String, String]](Left("no-source")) { source =>
+      .fold[Either[String, String]](Left("<no-source>")) { source =>
         if (StackTraceLine.findFirstIn(source).isDefined)
           Right(source)
         else if (languageHint.forall(_ == Language.Scala)) {
           val maybeParseResult = parser.parse(source)
-          if (maybeParseResult.isEmpty) Left("<unparsable")
+          if (maybeParseResult.isEmpty) Left("<unparsable>")
           else {
             val (ctx, tree) = maybeParseResult.get
             val maybeSanitizedTree = parser.transformer.sanitizeSymbols(tree)

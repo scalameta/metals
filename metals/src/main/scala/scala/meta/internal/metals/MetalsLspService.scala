@@ -2878,19 +2878,15 @@ class MetalsLspService(
   def runDoctorCheck(): Unit = doctor.check(headDoctor)
 
   private def createTelemetryReporterContext(): telemetry.ReporterContext =
-    new telemetry.MetalsLspContext(
-      /* metalsVersion = */ BuildInfo.metalsVersion,
-      /* userConfig = */ telemetry.conversion.UserConfiguration(userConfig),
-      /* serverConfig = */ telemetry.conversion.MetalsServerConfig(
+    telemetry.MetalsLspContext(
+      metalsVersion = BuildInfo.metalsVersion,
+      userConfig = telemetry.conversion.UserConfiguration(userConfig),
+      serverConfig = telemetry.conversion.MetalsServerConfig(
         serverInputs.initialServerConfig
       ),
-      /* clientInfo =*/ telemetry.conversion.MetalsClientInfo(
-        initializeParams.getClientInfo()
-      ),
-      /* buildServerConnections = */ bspSession.toList
-        .flatMap(
-          telemetry.conversion.BuildServerConnections(_)
-        )
-        .asJava,
+      clientInfo =
+        telemetry.conversion.MetalsClientInfo(initializeParams.getClientInfo()),
+      buildServerConnections = bspSession.toList
+        .flatMap(telemetry.conversion.BuildServerConnections(_)),
     )
 }

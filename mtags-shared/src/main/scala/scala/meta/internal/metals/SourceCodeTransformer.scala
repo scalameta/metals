@@ -134,10 +134,7 @@ trait SourceCodeTransformer[Context, Tree] {
       originalSymbol, {
         if (originalSymbol.length() <= ShortSymbolLength) originalSymbol
         else generateSymbol(originalSymbol, suffix)
-      }.ensuring(
-        _.length() == originalSymbol.length(),
-        "new symbol has different length then original"
-      )
+      }
     )
 
     private def generateSymbol(

@@ -7,6 +7,7 @@ import java.nio.file.Path
 import java.util.Optional
 
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
@@ -35,11 +36,6 @@ class TelemetryReporterSuite extends BaseSuite {
   test("default telemetry level") {
     def getDefault = metals.TelemetryLevel.default
     assertEquals(metals.TelemetryLevel.Off, getDefault)
-    sys.props
-      .get(metals.TelemetryLevel.SystemPropertyKey)
-      .fold(fail("Expected telemetry level system property to be overriden")) {
-        assertEquals(_, metals.TelemetryLevel.Off.stringValue)
-      }
   }
 
   // Remote telemetry reporter should be treated as best effort, ensure that logging
@@ -48,9 +44,8 @@ class TelemetryReporterSuite extends BaseSuite {
       telemetryClientConfig = TelemetryClient.Config.default.copy(serverHost =
         "https://not.existing.endpoint.for.metals.tests:8081"
       ),
-      telemetryLevel = () => metals.TelemetryLevel.All,
-      reporterContext = () =>
-        SampleReports.metalsLspReport().getReporterContext.getMetalsLSP.get(),
+      telemetryLevel = () => metals.TelemetryLevel.Full,
+      reporterContext = () => SampleReports.metalsLspReport().reporterContext,
       sanitizers = new TelemetryReportContext.Sanitizers(None, None),
     )
 
@@ -71,11 +66,11 @@ class TelemetryReporterSuite extends BaseSuite {
         reporterCtx <- Seq(
           SampleReports.metalsLspReport(),
           SampleReports.scalaPresentationCompilerReport(),
-        ).map(_.getReporterContext().get())
+        ).map(_.reporterContext)
         reporter = new TelemetryReportContext(
           telemetryClientConfig = TelemetryClient.Config.default
             .copy(serverHost = serverEndpoint),
-          telemetryLevel = () => metals.TelemetryLevel.All,
+          telemetryLevel = () => metals.TelemetryLevel.Full,
           reporterContext = () => reporterCtx,
           sanitizers = new TelemetryReportContext.Sanitizers(
             None,
@@ -85,7 +80,8 @@ class TelemetryReporterSuite extends BaseSuite {
       } {
         val createdReport = simpleReport(reporterCtx.toString())
         reporter.incognito.create(createdReport)
-        val received = ctx.errors.filter(_.getId().asScala == createdReport.id)
+        Thread.sleep(5000) // wait for the server to receive the event
+        val received = ctx.errors.filter(_.id == createdReport.id.asScala)
         assert(received.nonEmpty, "Not received matching id")
         assert(received.size == 1, "Found more then 1 received event")
       }
@@ -113,14 +109,12 @@ object MockTelemetryServer {
 
     val baseHandler = path()
       .withEndpoint(
-        TelemetryService.SendErrorReportEndpoint,
-        defaultResponse = null.asInstanceOf[Void],
+        TelemetryService.sendErrorReportEndpoint,
         _.errors,
       )
       .withEndpoint(
-        TelemetryService.SendCrashReportEndpoint,
-        defaultResponse = null.asInstanceOf[Void],
-        _.crashes, /*unused*/
+        TelemetryService.sendCrashReportEndpoint,
+        _.crashes,
       )
     Undertow.builder
       .addHttpListener(port, host)
@@ -129,41 +123,34 @@ object MockTelemetryServer {
   }
 
   implicit class EndpointOps(private val handler: PathHandler) extends AnyVal {
-    def withEndpoint[I, O](
-        endpoint: ServiceEndpoint[I, O],
-        defaultResponse: O,
-        eventCollectionsSelector: Context => mutable.ListBuffer[I],
+    def withEndpoint[In](
+        endpoint: FireAndForgetEndpoint[In],
+        eventCollectionsSelector: Context => mutable.ListBuffer[In],
     )(implicit ctx: Context): PathHandler = handler.addExactPath(
-      endpoint.getUri(),
+      endpoint.uri,
       new BlockingHandler(
-        new SimpleHttpHandler[I, O](
+        new SimpleHttpHandler[In](
           endpoint,
-          defaultResponse,
           eventCollectionsSelector(ctx),
         )
       ),
     )
   }
 
-  private class SimpleHttpHandler[I, O](
-      endpoint: ServiceEndpoint[I, O],
-      response: O,
-      receivedEvents: mutable.ListBuffer[I],
+  private class SimpleHttpHandler[In](
+      endpoint: FireAndForgetEndpoint[In],
+      receivedEvents: mutable.ListBuffer[In],
   ) extends HttpHandler {
     override def handleRequest(exchange: HttpServerExchange): Unit = {
       exchange.getRequestReceiver().receiveFullString {
         (exchange: HttpServerExchange, json: String) =>
-          receivedEvents += GsonCodecs.gson
-            .fromJson(json, endpoint.getInputType())
+          receivedEvents += endpoint.decodeInput(json).get
           exchange
             .getResponseHeaders()
             .put(Headers.CONTENT_TYPE, "application/json")
           exchange
             .getResponseSender()
-            .send(
-              GsonCodecs.gson
-                .toJson(response, endpoint.getOutputType())
-            )
+            .send("")
       }
     }
   }

@@ -1,35 +1,41 @@
 package scala.meta.internal.metals
 
-sealed class TelemetryLevel(
-    private[TelemetryLevel] val level: Int,
-    val stringValue: String
-) {
-  def enabled: Boolean = level > TelemetryLevel.Off.level
-  def reportCrash: Boolean = level >= TelemetryLevel.Crash.level
-  def reportErrors: Boolean = level >= TelemetryLevel.Error.level
-  def reportAll: Boolean = level >= TelemetryLevel.All.level
+trait TelemetryLevel {
+  val textValue: String
+  val enabled: Boolean
+  protected val level: Int
 }
 
 object TelemetryLevel {
-  implicit lazy val ordering: Ordering[TelemetryLevel] = Ordering.by(_.level)
 
-  case object Off extends TelemetryLevel(0, "off")
-  case object Crash extends TelemetryLevel(1, "crash")
-  case object Error extends TelemetryLevel(2, "error")
-  case object All extends TelemetryLevel(Int.MaxValue, "all")
+  implicit val levelOrdering: Ordering[TelemetryLevel] = Ordering.by(_.level)
 
-  def default: TelemetryLevel = Off
-  def discover: TelemetryLevel = sys.props
-    .get(SystemPropertyKey)
-    .flatMap(fromString)
-    .getOrElse(default)
+  case object Off extends TelemetryLevel {
+    val textValue: String = "off"
+    val level: Int = 0
+    val enabled = false
+  }
 
-  final val SystemPropertyKey = "metals.telemetry-level"
+  case object Anonymous extends TelemetryLevel {
+    val textValue: String = "anonymous"
+    val level: Int = 1
+    val enabled = true
+  }
 
-  def fromString(value: String): Option[TelemetryLevel] =
-    Option(value).map(_.trim().toLowerCase()).collect {
-      case Off.stringValue => Off
-      case Error.stringValue => Error
-      case All.stringValue => All
+  case object Full extends TelemetryLevel {
+    val textValue: String = "full"
+    val level: Int = 2
+    val enabled = true
+  }
+
+  val default = Off
+
+  def fromString(textValue: String): TelemetryLevel = {
+    textValue match {
+      case Anonymous.textValue => Anonymous
+      case Full.textValue => Full
+      case _ => Off
     }
+  }
 }
+
