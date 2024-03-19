@@ -96,7 +96,7 @@ class OrganizeImportsLspSuite
   )
 
   check(
-    "basic-unsaved-error",
+    "basic-unsaved-2",
     """
       |package a
       |import scala.concurrent.duration._
@@ -110,8 +110,6 @@ class OrganizeImportsLspSuite
       |""".stripMargin,
     s"${SourceOrganizeImports.title}",
     """|package a
-       |import java.nio.file.ClassDoNotExist
-       |import scala.concurrent.ExecutionContext.global
        |import scala.concurrent.Future
        |import scala.concurrent.duration._
        |// comment

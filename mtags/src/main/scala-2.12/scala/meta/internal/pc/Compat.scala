@@ -1,8 +1,12 @@
 package scala.meta.internal.pc
 
-import scala.tools.nsc.reporters.Reporter
+import java.{util => ju}
+
+import scala.reflect.internal.Reporter
 import scala.tools.nsc.reporters.StoreReporter
 
+import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.pc.OutlineFiles
 import scala.meta.pc.VirtualFileParams
 
 trait Compat { this: MetalsGlobal =>
@@ -22,7 +26,7 @@ trait Compat { this: MetalsGlobal =>
   def runOutline(files: OutlineFiles): Unit = {
     this.settings.Youtline.value = true
     runOutline(files.files)
-    if (files.firstCompileSubstitute) {
+    if (files.isFirstCompileSubstitute()) {
       // if first compilation substitute we compile all files twice
       // first to emit symbols, second so signatures have information about those symbols
       // this isn't a perfect strategy but much better than single compile
@@ -32,10 +36,10 @@ trait Compat { this: MetalsGlobal =>
   }
 
   private def runOutline(
-      files: List[VirtualFileParams],
+      files: ju.List[VirtualFileParams],
       forceNewUnit: Boolean = false
   ): Unit = {
-    files.foreach { params =>
+    files.asScala.foreach { params =>
       val unit = this.addCompilationUnit(
         params.text(),
         params.uri.toString(),

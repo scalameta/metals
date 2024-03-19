@@ -3,6 +3,8 @@ package scala.meta.internal.pc
 import scala.tools.nsc.reporters.Reporter
 import scala.tools.nsc.reporters.StoreReporter
 
+import scala.meta.pc.OutlineFiles
+
 trait Compat { this: MetalsGlobal =>
   def metalsFunctionArgTypes(tpe: Type): List[Type] = {
     val dealiased = tpe.dealiasWiden
