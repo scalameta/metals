@@ -12,5 +12,6 @@ sealed trait ServerState
 object ServerState {
   case object Started extends ServerState
   final case class Initialized(service: WorkspaceLspService) extends ServerState
-  final case class ShuttingDown(service: WorkspaceLspService) extends ServerState
+  final case class ShuttingDown(service: WorkspaceLspService)
+      extends ServerState
 }

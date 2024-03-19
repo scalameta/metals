@@ -2,17 +2,17 @@ package scala.meta.internal.telemetry
 
 sealed trait ReporterContext
 case class ScalaPresentationCompilerContext(
-  scalaVersion: String, 
-  options: List[String],
-   config: PresentationCompilerConfig
+    scalaVersion: String,
+    options: List[String],
+    config: PresentationCompilerConfig,
 ) extends ReporterContext
 
 case class MetalsLspContext(
-  metalsVersion: String,
-  userConfig: MetalsUserConfiguration,
-  serverConfig: MetalsServerConfiguration, 
-  clientInfo: MetalsClientInfo,
-  buildServerConnections: List[BuildServerConnection]
+    metalsVersion: String,
+    userConfig: MetalsUserConfiguration,
+    serverConfig: MetalsServerConfiguration,
+    clientInfo: MetalsClientInfo,
+    buildServerConnections: List[BuildServerConnection],
 ) extends ReporterContext
 
 case class MetalsClientInfo(name: Option[String], version: Option[String])

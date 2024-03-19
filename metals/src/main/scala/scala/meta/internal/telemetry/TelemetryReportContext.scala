@@ -51,7 +51,8 @@ class TelemetryReportContext(
     telemetryClientConfig: TelemetryClient.Config =
       TelemetryClient.Config.default,
     logger: LoggerAccess = LoggerAccess.system,
-)(implicit ec: ExecutionContext) extends ReportContext {
+)(implicit ec: ExecutionContext)
+    extends ReportContext {
 
   // Don't send reports with fragile user data - sources etc
   override lazy val unsanitized: Reporter = reporter("unsanitized")
@@ -86,7 +87,9 @@ private class TelemetryReporter(
   override def getReports(): ju.List[TimestampedFile] =
     ju.Collections.emptyList()
 
-  override def cleanUpOldReports(maxReportsNumber: Int): ju.List[TimestampedFile] =
+  override def cleanUpOldReports(
+      maxReportsNumber: Int
+  ): ju.List[TimestampedFile] =
     ju.Collections.emptyList()
 
   override def deleteAll(): Unit = ()
