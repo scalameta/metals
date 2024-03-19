@@ -4,11 +4,11 @@ import com.github.plokhotnyuk.jsoniter_scala.core._
 import com.github.plokhotnyuk.jsoniter_scala.macros._
 
 case class CrashReport(
-  error: ExceptionSummary,
-  componentName: String,
-  env: Environment = Environment.instance,
-  componentVersion: Option[String] = None,
-  reporterContext: Option[ReporterContext] = None
+    error: ExceptionSummary,
+    componentName: String,
+    env: Environment = Environment.instance,
+    componentVersion: Option[String] = None,
+    reporterContext: Option[ReporterContext] = None,
 )
 
 object CrashReport {
@@ -16,16 +16,15 @@ object CrashReport {
 }
 
 case class ErrorReport(
-  name: String,
-  reporterName: String,
-  reporterContext: ReporterContext,
-  env: Environment = Environment.instance,
-  id: Option[String] = None,
-  text: Option[String] = None,
-  error: Option[ExceptionSummary] = None,
+    name: String,
+    reporterName: String,
+    reporterContext: ReporterContext,
+    env: Environment = Environment.instance,
+    id: Option[String] = None,
+    text: Option[String] = None,
+    error: Option[ExceptionSummary] = None,
 )
 
 object ErrorReport {
   implicit val codec: JsonValueCodec[ErrorReport] = JsonCodecMaker.make
 }
-

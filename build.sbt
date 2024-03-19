@@ -198,7 +198,7 @@ val sharedJavacOptions = List(
       Nil
     else
       Seq("--release", "8")
-  },
+  }
 )
 
 val sharedScalacOptions = List(
@@ -267,8 +267,8 @@ lazy val telemetryInterfaces = project
     },
     libraryDependencies := List(
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.27.7",
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.27.7" % "compile-internal"
-    )
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.27.7" % "compile-internal",
+    ),
   )
 
 lazy val mtagsShared = project
@@ -644,7 +644,6 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   publish / skip := true,
   fork := true,
   testFrameworks := List(TestFrameworks.MUnit),
-  Test / javaOptions += "-Dmetals.telemetry-level=off",
   Test / testOptions ++= {
     if (isCI) {
       // Enable verbose logging using sbt loggers in CI.

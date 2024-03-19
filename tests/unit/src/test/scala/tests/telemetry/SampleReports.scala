@@ -21,7 +21,14 @@ object SampleReports {
       error = Some(
         telemetry.ExceptionSummary(
           "ExceptionType",
-          List(telemetry.StackTraceElement("fullyQualifiedName", "methodName", "fileName", 0)),
+          List(
+            telemetry.StackTraceElement(
+              "fullyQualifiedName",
+              "methodName",
+              "fileName",
+              0,
+            )
+          ),
         )
       ),
       reporterName = "reporterName",

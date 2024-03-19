@@ -1209,7 +1209,7 @@ class Compilers(
     sourceMapper.pcMapping(path, scalaVersion)
   }
 
-  private def createTelemetryReporterContext(
+  private def createPresentationCompilerContext(
       scalaVersion: String,
       config: PresentationCompilerConfig,
       options: List[String],
@@ -1262,7 +1262,7 @@ class Compilers(
   ): PresentationCompiler = {
     val config = getUserConfiguration()
     val remoteReportContext = remoteReporting(() =>
-      createTelemetryReporterContext(pc.scalaVersion, config, options)
+      createPresentationCompilerContext(pc.scalaVersion, config, options)
     )
 
     pc.withSearch(search)
@@ -1315,6 +1315,7 @@ class Compilers(
 
     val filteredOptions = plugins.filterSupportedOptions(options)
     val allOptions = log ++ filteredOptions
+
     configure(pc, search, allOptions)
       .newInstance(
         name,
