@@ -1053,10 +1053,12 @@ class MetalsGlobal(
       case Select(_, name: TermName) if infixNames(name) => false
       case Select(This(_), _) => false
       // is a select statement without a dot `qual.name`
-      case Select(qual, _) => {
-        val pos = qual.pos.end
-        pos < text.length() && text(pos) != '.'
-      }
+      case sel: Select if !sel.qualifier.pos.isOffset =>
+        val qualEnd = sel.qualifier.pos.end
+        val qualStart = sel.qualifier.pos.start
+        val nameStart = sel.namePosition.start
+        qualStart != nameStart && nameStart < text.length() &&
+        !text.slice(qualEnd, nameStart).contains(".")
       case _ => false
     }
 

@@ -44,7 +44,7 @@ final class PcInlayHintsProvider(
       inlayHints: InlayHints
   ): InlayHints =
     tree match {
-      case ImplicitConversion(symbol, range) if params.implicitConversions() =>
+      case ImplicitConversion(symbol, range) =>
         val adjusted = adjustPos(range)
         inlayHints
           .add(
@@ -57,8 +57,7 @@ final class PcInlayHintsProvider(
             LabelPart(")") :: Nil,
             InlayHintKind.Parameter
           )
-      case ImplicitParameters(symbols, pos, allImplicit)
-          if params.implicitParameters() =>
+      case ImplicitParameters(symbols, pos, allImplicit) =>
         val labelParts = symbols.map(s => List(labelPart(s, s.decodedName)))
         val label =
           if (allImplicit) labelParts.separated("(", ", ", ")")
@@ -68,22 +67,20 @@ final class PcInlayHintsProvider(
           label,
           InlayHintKind.Parameter
         )
-      case ValueOf(label, pos) if params.implicitParameters() =>
+      case ValueOf(label, pos) =>
         inlayHints.add(
           adjustPos(pos).focusEnd.toLsp,
           LabelPart("(") :: LabelPart(label) :: List(LabelPart(")")),
           InlayHintKind.Parameter
         )
-      case TypeParameters(tpes, pos)
-          if params.typeParameters() && tpes.forall(_ != null) =>
+      case TypeParameters(tpes, pos) if tpes.forall(_ != null) =>
         val label = tpes.map(toLabelParts(_, pos)).separated("[", ", ", "]")
         inlayHints.add(
           adjustPos(pos).focusEnd.toLsp,
           label,
           InlayHintKind.Type
         )
-      case InferredType(tpe, pos)
-          if params.inferredTypes() && tpe != null && !tpe.isError =>
+      case InferredType(tpe, pos) if tpe != null && !tpe.isError =>
         val adjustedPos = adjustPos(pos).focusEnd
         if (inlayHints.containsDef(adjustedPos.start)) inlayHints
         else
@@ -149,88 +146,103 @@ final class PcInlayHintsProvider(
       LabelPart(label, symbol = semanticdbSymbol(symbol))
     }
   object ImplicitConversion {
-    def unapply(tree: Tree): Option[(Symbol, Position)] = tree match {
-      case Apply(fun, args)
-          if isImplicitConversion(fun) && args.exists(_.pos.isRange) =>
-        val lastArgPos = args.lastOption.fold(fun.pos)(_.pos)
-        Some((fun.symbol, lastArgPos))
-      case _ => None
-    }
+    def unapply(tree: Tree): Option[(Symbol, Position)] =
+      if (params.implicitConversions())
+        tree match {
+          case Apply(fun, args)
+              if isImplicitConversion(fun) && args.exists(_.pos.isRange) =>
+            val lastArgPos = args.lastOption.fold(fun.pos)(_.pos)
+            Some((fun.symbol, lastArgPos))
+          case _ => None
+        }
+      else None
     private def isImplicitConversion(fun: Tree) =
       fun.pos.isOffset && fun.symbol != null && fun.symbol.isImplicit
   }
   object ImplicitParameters {
     def unapply(tree: Tree): Option[(List[Symbol], Position, Boolean)] =
-      tree match {
-        case Apply(_, args)
-            if args.exists(isSyntheticArg) && !tree.pos.isOffset =>
-          val (implicitArgs, providedArgs) = args.partition(isSyntheticArg)
-          val allImplicit = providedArgs.isEmpty
-          val pos = providedArgs.lastOption.fold(tree.pos)(_.pos)
-          Some(
-            implicitArgs.map(_.symbol),
-            pos,
-            allImplicit
-          )
-        case _ => None
-      }
+      if (params.implicitParameters())
+        tree match {
+          case Apply(_, args)
+              if args.exists(isSyntheticArg) && !tree.pos.isOffset =>
+            val (implicitArgs, providedArgs) = args.partition(isSyntheticArg)
+            val allImplicit = providedArgs.isEmpty
+            val pos = providedArgs.lastOption.fold(tree.pos)(_.pos)
+            Some(
+              implicitArgs.map(_.symbol),
+              pos,
+              allImplicit
+            )
+          case _ => None
+        }
+      else None
 
     private def isSyntheticArg(arg: Tree): Boolean =
       arg.pos.isOffset && arg.symbol != null && arg.symbol.isImplicit
   }
 
   object ValueOf {
-    def unapply(tree: Tree): Option[(String, Position)] = tree match {
-      case Apply(ta: TypeApply, Apply(fun, _) :: _)
-          if fun.pos.isOffset && isValueOf(fun.symbol) =>
-        Some(
-          "new " + nme.valueOf.decoded.capitalize + "(...)",
-          ta.pos
-        )
-      case _ => None
-    }
+    def unapply(tree: Tree): Option[(String, Position)] =
+      if (params.implicitParameters())
+        tree match {
+          case Apply(ta: TypeApply, Apply(fun, _) :: _)
+              if fun.pos.isOffset && isValueOf(fun.symbol) =>
+            Some(
+              "new " + nme.valueOf.decoded.capitalize + "(...)",
+              ta.pos
+            )
+          case _ => None
+        }
+      else None
     private def isValueOf(symbol: Symbol) =
       symbol != null && symbol.safeOwner.decodedName == nme.valueOf.decoded.capitalize
 
   }
 
   object TypeParameters {
-    def unapply(tree: Tree): Option[(List[Type], Position)] = tree match {
-      case TypeApply(sel: Select, _)
-          if isForComprehensionMethod(sel) || syntheticTupleApply(sel) =>
-        None
-      case TypeApply(fun, args)
-          if args.exists(_.pos.isOffset) && tree.pos.isRange =>
-        val pos = fun match {
-          case sel: Select if isInfix(sel, textStr) =>
-            sel.namePosition
-          case _ => fun.pos
+    def unapply(tree: Tree): Option[(List[Type], Position)] =
+      if (params.typeParameters())
+        tree match {
+          case TypeApply(sel: Select, _)
+              if isForComprehensionMethod(sel) || syntheticTupleApply(sel) ||
+                isInfix(sel, textStr) || sel.symbol.name == nme.unapply =>
+            None
+          case TypeApply(fun, args)
+              if args.exists(_.pos.isOffset) && tree.pos.isRange =>
+            val pos = fun match {
+              case sel: Select if isInfix(sel, textStr) =>
+                sel.namePosition
+              case _ => fun.pos
+            }
+            Some(args.map(_.tpe.widen), pos)
+          case _ => None
         }
-        Some(args.map(_.tpe.widen), pos)
-      case _ => None
-    }
+      else None
   }
 
   object InferredType {
-    def unapply(tree: Tree): Option[(Type, Position)] = tree match {
-      case vd @ ValDef(_, _, tpt, _)
-          if hasMissingTypeAnnot(vd, tpt) &&
-            !primaryConstructorParam(vd.symbol) &&
-            isNotInUnapply(vd) &&
-            !isCompilerGeneratedSymbol(vd.symbol) &&
-            !isValDefBind(vd) =>
-        Some(vd.symbol.tpe.widen, vd.namePosition)
-      case dd @ DefDef(_, _, _, _, tpt, _)
-          if hasMissingTypeAnnot(dd, tpt) &&
-            !dd.symbol.isConstructor &&
-            !dd.symbol.isMutable &&
-            !samePosAsOwner(dd.symbol) =>
-        Some(dd.symbol.tpe.widen, findTpePos(dd))
-      case bb @ Bind(name, Ident(nme.WILDCARD))
-          if name != nme.WILDCARD && name != nme.DEFAULT_CASE =>
-        Some(bb.symbol.tpe.widen, bb.namePosition)
-      case _ => None
-    }
+    def unapply(tree: Tree): Option[(Type, Position)] =
+      if (params.inferredTypes())
+        tree match {
+          case vd @ ValDef(_, _, tpt, _)
+              if hasMissingTypeAnnot(vd, tpt) &&
+                !primaryConstructorParam(vd.symbol) &&
+                maybeShowUnapply(vd) &&
+                !isCompilerGeneratedSymbol(vd.symbol) &&
+                !isValDefBind(vd) =>
+            Some(vd.symbol.tpe.widen, vd.namePosition)
+          case dd @ DefDef(_, _, _, _, tpt, _)
+              if hasMissingTypeAnnot(dd, tpt) &&
+                !dd.symbol.isConstructor &&
+                !dd.symbol.isMutable &&
+                !samePosAsOwner(dd.symbol) =>
+            Some(dd.symbol.tpe.widen, findTpePos(dd))
+          case bb @ Bind(name, Ident(nme.WILDCARD))
+              if params.hintsInPatternMatch && name != nme.WILDCARD && name != nme.DEFAULT_CASE =>
+            Some(bb.symbol.tpe.widen, bb.namePosition)
+          case _ => None
+        }
+      else None
     private def hasMissingTypeAnnot(tree: MemberDef, tpt: Tree) =
       tree.pos.isRange && tree.namePosition.isRange && tpt.pos.isOffset && tpt.pos.start != 0
 
@@ -255,8 +267,15 @@ final class PcInlayHintsProvider(
     private def isCompilerGeneratedSymbol(sym: Symbol) =
       sym.decodedName.matches("x\\$\\d+")
 
-    private def isNotInUnapply(vd: ValDef) =
-      !vd.rhs.pos.isRange || vd.rhs.pos.start > vd.namePosition.end
+    private def maybeShowUnapply(vd: ValDef) =
+      (!vd.rhs.pos.isDefined && params.hintsInPatternMatch()) ||
+        (isNotInUnapply(vd) || isValidUnapply(vd)) &&
+        vd.rhs.pos.start > vd.namePosition.end
+
+    private def isNotInUnapply(vd: ValDef) = vd.rhs.pos.isRange
+
+    private def isValidUnapply(vd: ValDef) =
+      params.hintsInPatternMatch() && vd.rhs.pos.isOffset
 
     /* If is left part of val definition bind:
      * val <<t>> @ ... =

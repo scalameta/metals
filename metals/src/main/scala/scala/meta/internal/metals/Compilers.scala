@@ -662,13 +662,14 @@ class Compilers(
 
       val rangeParams =
         CompilerRangeParamsUtils.fromPos(pos, token)
+      val options = userConfig().inlayHintsOptions
       val pcParams = CompilerInlayHintsParams(
         rangeParams,
-        typeParameters = userConfig().showInferredType.contains("true"),
-        inferredTypes = userConfig().showInferredType.contains("minimal") ||
-          userConfig().showInferredType.contains("true"),
-        implicitParameters = userConfig().showImplicitArguments,
-        implicitConversions = userConfig().showImplicitConversionsAndClasses,
+        inferredTypes = options.inferredType,
+        implicitParameters = options.implicitArguments,
+        implicitConversions = options.implicitConversions,
+        typeParameters = options.typeParameters,
+        hintsInPatternMatch = options.hintsInPatternMatch,
       )
 
       pc

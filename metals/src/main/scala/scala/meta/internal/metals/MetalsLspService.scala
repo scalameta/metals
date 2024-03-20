@@ -979,11 +979,7 @@ class MetalsLspService(
       } else Future.successful(())
 
     val resetDecorations =
-      if (
-        userConfig.showImplicitArguments != old.showImplicitArguments ||
-        userConfig.showImplicitConversionsAndClasses != old.showImplicitConversionsAndClasses ||
-        userConfig.showInferredType != old.showInferredType
-      ) {
+      if (userConfig.inlayHintsOptions != old.inlayHintsOptions) {
         languageClient.refreshInlayHints().asScala
       } else Future.successful(())
 
