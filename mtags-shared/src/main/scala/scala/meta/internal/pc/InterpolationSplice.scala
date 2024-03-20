@@ -35,11 +35,13 @@ object InterpolationSplice {
         }
       }
     if (isCandidate) {
-      val name = chars(i + 1) match {
-        case '{' => originalText.substring(i + 2, offset)
-        case _ => originalText.substring(i + 1, offset)
+      val nameOpt = chars(i + 1) match {
+        case '{' if i + 2 <= offset =>
+          Some(originalText.substring(i + 2, offset))
+        case _ if i + 1 <= offset => Some(originalText.substring(i + 1, offset))
+        case _ => None
       }
-      Some(
+      nameOpt.map(name =>
         InterpolationSplice(
           i,
           name,
