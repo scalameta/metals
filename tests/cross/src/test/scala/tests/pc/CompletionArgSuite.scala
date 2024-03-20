@@ -1216,4 +1216,26 @@ class CompletionArgSuite extends BaseCompletionSuite {
     topLines = Some(1)
   )
 
+  check(
+    "null-symbol",
+    """|object O {
+       |  val t1 = true
+       |  val t2 = true
+       |  val f1 = false
+       |
+       |  (t1, t2, f1) match {
+       |    case (_, false, false) => prinl=t@@n()
+       |    case (true, _, true) => println("KO")
+       |    case _ => println("OK")
+       |  }
+       |}
+       |""".stripMargin,
+    "",
+    compat = Map(
+      "3" -> """|t1: Boolean
+                |""".stripMargin
+    ),
+    topLines = Some(1)
+  )
+
 }
