@@ -29,4 +29,11 @@ public interface InlayHintsParams extends RangeParams {
    */
   boolean implicitConversions();
 
+  /**
+   * Response should contain decorations in pattern matches.
+   */
+  default boolean hintsInPatternMatch() {
+    return false;
+  }
+
 }
