@@ -124,7 +124,10 @@ class ScalatestFinderSuite extends FunSuite {
         QuickRange(8, 2, 8, 65),
       ),
       ("An empty Set should have size 0", QuickRange(4, 2, 4, 37)),
-      ("Non-empty Set should have size greater than 0", QuickRange(20, 2, 20, 38)),
+      (
+        "Non-empty Set should have size greater than 0",
+        QuickRange(20, 2, 20, 38),
+      ),
     ),
     ScalatestStyle.AnyFlatSpec,
   )
