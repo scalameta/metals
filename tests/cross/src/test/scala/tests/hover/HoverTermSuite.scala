@@ -700,4 +700,22 @@ class HoverTermSuite extends BaseHoverSuite {
                 |""".stripMargin
     )
   )
+
+  check(
+    "notAssignedType".tag(IgnoreScala2),
+    """
+      |import scala.language.experimental.genericNumberLiterals
+      |import scala.util.FromDigits
+      |
+      |final case class Nanometer(val value: Double)
+      |object Nanometer:
+      |  given FromDigits[Nanometer] with
+      |    def fromDigits(s: String) = Nanometer(s.toDouble)
+      |extension(i: Int)
+      |  def nm = Nanometer(i.toDouble)
+      |  @targetNam@@e("nm_")
+      |  infix def nm() = Nanometer(i.toDouble)
+      |""".stripMargin,
+    "".stripMargin
+  )
 }
