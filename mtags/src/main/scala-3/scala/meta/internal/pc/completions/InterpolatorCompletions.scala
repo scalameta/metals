@@ -46,7 +46,7 @@ object InterpolatorCompletions:
           completions,
           snippetsEnabled,
           hasStringInterpolator =
-            path.tail.headOption.exists(_.isInstanceOf[SeqLiteral]),
+            path.drop(1).headOption.exists(_.isInstanceOf[SeqLiteral]),
           search,
           buildTargetIdentifier,
         )
@@ -177,7 +177,7 @@ object InterpolatorCompletions:
       }.flatten
 
     val qualType = for
-      parent <- path.tail.headOption.toList
+      parent <- path.drop(1).headOption.toList
       if lit.span.exists && text.charAt(lit.span.point - 1) != '}'
       identOrSelect <- path
         .collectFirst(interpolatorMemberArg(lit, parent))
