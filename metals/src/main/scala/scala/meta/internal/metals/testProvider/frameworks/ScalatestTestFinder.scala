@@ -115,7 +115,7 @@ object ScalatestTestFinder {
     // collect all entries like test("testname") { ... }
     template.stats.collect {
           // format: off
-          case Term.Apply(appl @ Term.Apply(Term.Name(funName), Lit.String(testname) :: _), _) 
+          case Term.Apply(appl @ Term.Apply(Term.Name(funName), Lit.String(testname) :: _), _)
               if style.leafMethods.contains(funName) =>
           // format: on
         TestCaseEntry(testname, appl.pos.toLsp.toLocation(path.toURI))
@@ -139,7 +139,7 @@ object ScalatestTestFinder {
       stats.flatMap {
         // format: off
         // gather intermediate name parts
-        case Term.ApplyInfix(Lit.String(lhs), Term.Name(infixOp), _, List(Term.Block(stats))) 
+        case Term.ApplyInfix(Lit.String(lhs), Term.Name(infixOp), _, List(Term.Block(stats)))
           if style.intermediateMethods.contains(infixOp) =>
         // format: on
           val newNamePrefix =
@@ -149,8 +149,8 @@ object ScalatestTestFinder {
 
         // format: off
         // gather leaf name part and collect test entry
-        case Term.ApplyInfix(lhs: Lit.String, Term.Name(infixOp), _, _) 
-          if style.leafMethods.contains(infixOp) => 
+        case Term.ApplyInfix(lhs: Lit.String, Term.Name(infixOp), _, _)
+          if style.leafMethods.contains(infixOp) =>
         // format: on
           val testname = namePrefix.appended(lhs.value).mkString(" ")
           TestCaseEntry(testname, lhs.pos.toLsp.toLocation(path.toURI)) :: acc
@@ -174,8 +174,14 @@ object ScalatestTestFinder {
     ) { case ((acc, namePrefix), stat) =>
       stat match {
         // format: off
+        // behavior of "An empty Set"
+        case Term.ApplyInfix(Term.Name("behavior"), Term.Name("of"), _, List(Lit.String(newPrefix))) =>
+          (acc, Some(newPrefix))
+        // format: on
+
+        // format: off
         // "An empty Set" should "have size 0" in { ... }
-        case Term.ApplyInfix(appl @ Term.ApplyInfix(Lit.String(newPrefix), Term.Name(infixOp), _, List(Lit.String(right))), _: Term.Name, _, _) => 
+        case Term.ApplyInfix(appl @ Term.ApplyInfix(Lit.String(newPrefix), Term.Name(infixOp), _, List(Lit.String(right))), _: Term.Name, _, _) =>
         // format: on
           val testname = s"$newPrefix $infixOp $right"
           val test =
@@ -184,7 +190,7 @@ object ScalatestTestFinder {
 
         // format: off
         // it should "have size 0" in { ... } - replace it with encountered name or leave empty
-        case Term.ApplyInfix(appl @ Term.ApplyInfix(Term.Name("it") | Term.Name("ignore"), Term.Name(infixOp), _, List(Lit.String(right))), _: Term.Name, _, _) => 
+        case Term.ApplyInfix(appl @ Term.ApplyInfix(Term.Name("it") | Term.Name("ignore"), Term.Name(infixOp), _, List(Lit.String(right))), _: Term.Name, _, _) =>
         // format: on
           val prefix = namePrefix.fold("")(_ + " ")
           val testname = s"$prefix$infixOp $right"
@@ -215,14 +221,14 @@ object ScalatestTestFinder {
       stats.flatMap {
         // format: off
         // gather name part from describe
-        case Term.Apply(Term.Apply(Term.Name("describe") | Term.Name("ignore"), (prefix: Lit.String) :: Nil), (block: Term.Block) :: Nil) => 
+        case Term.Apply(Term.Apply(Term.Name("describe") | Term.Name("ignore"), (prefix: Lit.String) :: Nil), (block: Term.Block) :: Nil) =>
         // format: on
           (acc, sharedPrefix :+ prefix.value)
           loop(block.stats, sharedPrefix :+ prefix.value, acc)
 
         // format: off
         // collect test entry from it
-        case Term.Apply(appl @ Term.Apply(Term.Name("it"), (name: Lit.String) :: Nil), _) => 
+        case Term.Apply(appl @ Term.Apply(Term.Name("it"), (name: Lit.String) :: Nil), _) =>
         // format: on
           val testname = s"$prefix ${name.value}"
           val test =
