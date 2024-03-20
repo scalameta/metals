@@ -65,7 +65,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
     val lineStart: RunId = pos.source.lineToOffset(pos.line - 1)
 
     override def contribute: List[Member] = {
-      if (start < 0) {
+      if (start < 0 || typed.tpe == null) {
         Nil
       } else {
         val overrideMembers = getMembers(
