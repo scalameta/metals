@@ -833,4 +833,37 @@ class CompletionCaseSuite extends BaseCompletionSuite {
     filter = _.contains("exhaustive")
   )
 
+  check(
+    "summonFrom".tag(IgnoreScala2),
+    """
+      |object A {
+      |  import scala.compiletime.summonFrom
+      |  class A
+      |  
+      |  inline def f: Any = summonFrom {
+      |    case x@@: A => ???  // error: ambiguous givens
+      |  }
+      |}
+      |""".stripMargin,
+    ""
+  )
+
+  check(
+    "summonFrom1".tag(IgnoreScala2),
+    """
+      |object A {
+      |  import scala.compiletime.summonFrom
+      |  
+      |  class A
+      |  given a1: A = new A
+      |  given a2: A = new A
+      |  
+      |  inline def f: Any = summonFrom {
+      |    case x@@: A => ???  // error: ambiguous givens
+      |  }
+      |}
+      |""".stripMargin,
+    ""
+  )
+
 }
