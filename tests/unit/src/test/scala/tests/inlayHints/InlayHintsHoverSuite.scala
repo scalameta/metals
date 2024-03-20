@@ -141,11 +141,13 @@ class InlayHintsHoverSuite extends BaseLspSuite("implicits") {
       loc: Location
   ): Unit = {
     val config =
-      """|{
-         |  "show-implicit-arguments": true,
-         |  "show-implicit-conversions-and-classes": true,
-         |  "show-inferred-type": "true"
-         |}
+      """|{"inlayHints": {
+         |  "inferredTypes": {"enable":true},
+         |  "implicitConversions": {"enable":true},
+         |  "implicitArguments": {"enable":true},
+         |  "typeParameters": {"enable":true},
+         |  "hintsInPatternMatch": {"enable":true}
+         |}}
          |""".stripMargin
     val fileName = "Main.scala"
     val libraryDependencies =

@@ -32,9 +32,10 @@ class InlayHintsLspSuite
        |}
        |""".stripMargin,
     config = Some(
-      """|"show-implicit-arguments": true,
-         |"show-implicit-conversions-and-classes": true,
-         |"show-inferred-type": minimal
+      """|"implicitArguments": {"enable": true},
+         |"implicitConversions": {"enable": true},
+         |"inferredTypes": {"enable": true},
+         |"hintsInPatternMatch": {"enable": true}
          |""".stripMargin
     ),
   )
@@ -77,8 +78,7 @@ class InlayHintsLspSuite
        |}
        |""".stripMargin,
     config = Some(
-      """|"show-implicit-arguments": true  
-         |""".stripMargin
+      """"implicitArguments": {"enable": true}"""
     ),
   )
 
@@ -94,7 +94,7 @@ class InlayHintsLspSuite
        |}
        |""".stripMargin,
     config = Some(
-      """"show-implicit-conversions-and-classes": true"""
+      """"implicitConversions": {"enable": true}"""
     ),
   )
 
@@ -106,11 +106,11 @@ class InlayHintsLspSuite
        |  }
        |  implicit val andy : String = "Andy"
        |  hello()
-       |  ("1" + "2").map/*[Double<<scala/Double#>>]*/(c/*: Char<<scala/Char#>>*/ => c.toDouble)
+       |  ("1" + "2").map(c => c.toDouble)
        |}
        |""".stripMargin,
     config = Some(
-      """"show-inferred-type": true"""
+      """"inferredTypes": {"enable": true}"""
     ),
   )
 
@@ -124,7 +124,7 @@ class InlayHintsLspSuite
        |}
        |""".stripMargin,
     config = Some(
-      """"show-implicit-conversions-and-classes": true"""
+      """"implicitConversions": {"enable": true}"""
     ),
   )
 
@@ -171,7 +171,10 @@ class InlayHintsLspSuite
        |}
        |""".stripMargin,
     config = Some(
-      """"show-inferred-type": true"""
+      """|"typeParameters": {"enable": true},
+         |"inferredTypes": {"enable": true},
+         |"hintsInPatternMatch": {"enable": true}
+         |""".stripMargin
     ),
   )
 
@@ -198,7 +201,7 @@ class InlayHintsLspSuite
        |}
        |""".stripMargin,
     config = Some(
-      """"show-inferred-type": true"""
+      """"inferredTypes": {"enable": true}"""
     ),
   )
 
@@ -222,14 +225,14 @@ class InlayHintsLspSuite
        |  // The actual tested method:
        |  def serve[F[_]: ConcurrentEffect: ContextShift: Timer: Parallel]()/*: Resource<<cats/effect/Resource#>>[F<<(16:12)>>,Unit<<scala/Unit#>>]*/ =
        |    for {
-       |      logger/*: Logger<<(11:8)>>[F<<(16:12)>>]*/ <- mkLogger[F]
+       |      logger <- mkLogger[F]
        |    } yield ()
        |
        |  def run(args: List[String]): IO[ExitCode] = ???
        |}
        |""".stripMargin,
     config = Some(
-      """"show-inferred-type": true"""
+      """"inferredTypes": {"enable": true}"""
     ),
     dependencies = List("org.typelevel::cats-effect:2.4.0"),
   )
@@ -258,12 +261,13 @@ class InlayHintsLspSuite
            |""".stripMargin,
       )
       _ <- server.didChangeConfiguration(
-        """{
-          |  "show-implicit-arguments": true,
-          |  "show-implicit-conversions-and-classes": true,
-          |  "show-inferred-type": true
-          |}
-          |""".stripMargin
+        """|{"inlayHints": {
+           |  "inferredTypes": {"enable":true},
+           |  "implicitConversions": {"enable":true},
+           |  "implicitArguments": {"enable":true},
+           |  "typeParameters": {"enable":true}
+           |}}
+           |""".stripMargin
       )
       _ <- server.assertInlayHints(
         "a/Main.worksheet.sc",
@@ -327,7 +331,7 @@ class InlayHintsLspSuite
        |  val m = foo[500]/*(new ValueOf(...))*/
        |}
        |""".stripMargin,
-    Some(""""show-implicit-arguments": true"""),
+    config = Some(""""implicitArguments": {"enable": true}"""),
   )
 
   check(
@@ -339,7 +343,7 @@ class InlayHintsLspSuite
        |    str.compile.to(/*supportsIterableFactory<<fs2/CollectorPlatform#supportsIterableFactory().>>(*/Set/*)*/)
        |}
        |""".stripMargin,
-    config = Some(""""show-implicit-conversions-and-classes": true"""),
+    config = Some(""""implicitConversions": {"enable": true}"""),
     dependencies = List("co.fs2::fs2-core:3.9.0"),
   )
 

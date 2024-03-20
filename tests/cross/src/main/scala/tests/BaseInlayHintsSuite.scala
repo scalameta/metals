@@ -15,7 +15,8 @@ class BaseInlayHintsSuite extends BasePCSuite {
       name: TestOptions,
       base: String,
       expected: String,
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, String] = Map.empty,
+      hintsInPatternMatch: Boolean = false
   )(implicit location: Location): Unit =
     test(name) {
       def pkgWrap(text: String) =
@@ -34,7 +35,8 @@ class BaseInlayHintsSuite extends BasePCSuite {
         true,
         true,
         true,
-        true
+        true,
+        hintsInPatternMatch
       )
 
       val inlayHints = presentationCompiler

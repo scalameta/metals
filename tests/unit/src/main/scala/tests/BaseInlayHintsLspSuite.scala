@@ -16,16 +16,18 @@ abstract class BaseInlayHintsLspSuite(name: String, scalaVersion: String)
       loc: Location
   ): Unit = {
     val initConfig = config
-      .map(config => s"""{
-                        |$config
-                        |}
-                        |""".stripMargin)
-      .getOrElse("""{
-                   |  "show-implicit-arguments": true,
-                   |  "show-implicit-conversions-and-classes": true,
-                   |  "show-inferred-type": "true"
-                   |}
-                   |""".stripMargin)
+      .map(config => s"""|{"inlayHints": {
+                         |$config
+                         |}}
+                         |""".stripMargin)
+      .getOrElse("""|{"inlayHints": {
+                    |  "inferredTypes": {"enable":true},
+                    |  "implicitConversions": {"enable":true},
+                    |  "implicitArguments": {"enable":true},
+                    |  "typeParameters": {"enable":true},
+                    |  "hintsInPatternMatch": {"enable":true}
+                    |}}
+                    |""".stripMargin)
     val fileName = "Main.scala"
     val code = TestInlayHints.removeInlayHints(expected)
     test(name) {
