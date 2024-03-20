@@ -2281,4 +2281,15 @@ class CompletionSuite extends BaseCompletionSuite {
     ""
   )
 
+  // This checks if inferStart doesn't crash
+  check(
+    "infer-correct-start".tag(IgnoreScala3),
+    """|object O {
+       |  val alpha = (((hex >> 24) / 0xff & 1@@).toInt
+       |  val red = ((hex >> 16) & 0xff).toInt
+       |}
+       |""".stripMargin,
+    ""
+  )
+
 }
