@@ -208,9 +208,11 @@ trait ArgCompletions { this: MetalsGlobal =>
     }
 
     override def contribute: List[Member] = {
-      params.distinct.map(param =>
-        new NamedArgMember(param)
-      ) ::: findPossibleDefaults() ::: fillAllFields()
+      if (methodSym == null) Nil
+      else
+        params.distinct.map(param =>
+          new NamedArgMember(param)
+        ) ::: findPossibleDefaults() ::: fillAllFields()
     }
 
     case class MethodParams(params: List[Symbol], isNamed: Set[Name]) {
