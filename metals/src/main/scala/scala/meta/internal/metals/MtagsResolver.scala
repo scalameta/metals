@@ -83,6 +83,12 @@ object MtagsResolver {
     private val states =
       new ConcurrentHashMap[String, State]()
 
+    def hasStablePresentationCompiler(scalaVersion: String): Boolean =
+      SemVer.isCompatibleVersion(
+        firstScala3PCVersion,
+        scalaVersion,
+      )
+
     def isSupportedInOlderVersion(version: String): Boolean =
       removedScalaVersions.contains(version)
 
@@ -153,7 +159,8 @@ object MtagsResolver {
                 s"Resolved latest nightly mtags version: $scalaVersion"
             }
             scribe.debug(msg)
-          case _: State.Failure =>
+          case _: State.Failure
+              if !hasStablePresentationCompiler(scalaVersion) =>
             val errorMsg = resolveType match {
               case ResolveType.Regular =>
                 s"Failed to resolve mtags for $scalaVersion"
@@ -163,6 +170,7 @@ object MtagsResolver {
                 s"Failed to resolve latest nightly mtags version: $scalaVersion"
             }
             scribe.info(errorMsg)
+          case _ =>
         }
         state
       }
@@ -208,10 +216,7 @@ object MtagsResolver {
           // Fallback to Stable PC version
           case _: State.Failure
               if resolveType != ResolveType.StablePC &&
-                SemVer.isCompatibleVersion(
-                  firstScala3PCVersion,
-                  scalaVersion,
-                ) =>
+                hasStablePresentationCompiler(scalaVersion) =>
             resolve(
               scalaVersion,
               None,
