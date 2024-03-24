@@ -5,6 +5,40 @@ import tests.pc.BaseHoverSuite
 class HoverTermSuite extends BaseHoverSuite {
 
   check(
+    "dealias type members in val definition",
+    """object Obj {
+      |  trait A extends Sup { self =>
+      |    type T
+      |    def member : T 
+      |  }
+      |  val x: A { type T = Int} = ???
+      |
+      |  <<x.mem@@ber>>
+      |
+      |}""".stripMargin,
+    """def member: Int""".stripMargin.hover
+  )
+  check(
+    "dealias type members in argument of anonymous function",
+    """object Obj {
+      |  trait A extends Sup { self =>
+      |    type T
+      |    def fun(
+      |        body: A { type T = self.T} => Unit
+      |    ) =
+      |      ()
+      |  }
+      |  val x: A { type T = Int} = ???
+      |
+      |  x.fun { <<y@@y>> =>
+      |  ()
+      |  }
+      |
+      |}""".stripMargin,
+    """yy: A{type T = Int}""".stripMargin.hover
+  )
+
+  check(
     "map",
     """object a {
       |  <<List(1).ma@@p(x => x.toString)>>
@@ -224,8 +258,11 @@ class HoverTermSuite extends BaseHoverSuite {
       |  } yield x
       |}
       |""".stripMargin,
-    """|x: Int
-       |""".stripMargin.hover
+    """|implicit def intWrapper(x: Int): RichInt
+       |""".stripMargin.hover,
+    compat = Map(
+      "2.13" -> """x: Int""".stripMargin.hover
+    )
   )
 
   check(
