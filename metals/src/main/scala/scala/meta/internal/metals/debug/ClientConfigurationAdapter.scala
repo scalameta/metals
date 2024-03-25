@@ -50,16 +50,20 @@ private[debug] final case class ClientConfigurationAdapter(
    */
   def adaptStackTraceResponse(result: JsonObject): JsonObject = {
     if (clientId.contains("vscode")) {
-      // For VSCode only, we hack the json result of the stack trace response
-      // to replace all occurrences of 'subtle' by 'deemphasize'.
-      val frames = result.get("stackFrames").getAsJsonArray()
-      for (i <- 0.until(frames.size)) {
-        val frame = frames.get(i).getAsJsonObject()
-        val presentationHint = Option(frame.get("presentationHint"))
-          .map(_.getAsJsonPrimitive.getAsString)
-        if (presentationHint.contains("subtle")) {
-          frame.add("presentationHint", new JsonPrimitive("deemphasize"))
+      try {
+        // For VSCode only, we hack the json result of the stack trace response
+        // to replace all occurrences of 'subtle' by 'deemphasize'.
+        val frames = result.get("stackFrames").getAsJsonArray()
+        for (i <- 0.until(frames.size)) {
+          val frame = frames.get(i).getAsJsonObject()
+          val presentationHint = Option(frame.get("presentationHint"))
+            .map(_.getAsJsonPrimitive.getAsString)
+          if (presentationHint.contains("subtle")) {
+            frame.add("presentationHint", new JsonPrimitive("deemphasize"))
+          }
         }
+      } catch {
+        case _: IllegalStateException => ()
       }
     }
     result
