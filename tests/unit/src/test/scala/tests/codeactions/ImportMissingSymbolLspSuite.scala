@@ -281,7 +281,32 @@ class ImportMissingSymbolLspSuite
        |  val f = Future.successful(2)
        |}
        |""".stripMargin,
-    scalaVersion = "3.3.1",
+    scalaVersion = "3.3.3",
     scalacOptions = List("-explain"),
+  )
+
+  check(
+    "6180-0",
+    s"""|package example {
+        |  trait Foo
+        |}
+        |package x {
+        |  case class B(
+        |  ) extends <<F>>oo
+        |}
+        |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("Foo", "example")}
+        |${CreateNewSymbol.title("Foo")}
+        |""".stripMargin,
+    """|package example {
+       |  trait Foo
+       |}
+       |package x {
+       |
+       |  import example.Foo
+       |  case class B(
+       |  ) extends Foo
+       |}
+       |""".stripMargin,
   )
 }
