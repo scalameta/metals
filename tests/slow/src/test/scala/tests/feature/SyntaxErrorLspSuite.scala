@@ -64,7 +64,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """
-          |Main.scala:1:8: error: identifier expected but object found
+          |Main.scala:1:8: error: `identifier` expected but `object` found
           |object object A
           |       ^^^^^^
           |project/plugins.sbt:1:6: error: repeated modifier
@@ -247,7 +247,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
          | required: Int
          |  "".
          |    ^
-         |a/src/main/scala/A.scala:3:1: error: identifier expected but } found
+         |a/src/main/scala/A.scala:3:1: error: `identifier` expected but `}` found
          |}
          |^
          |""".stripMargin,
