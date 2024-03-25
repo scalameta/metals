@@ -247,9 +247,11 @@ final class Diagnostics(
         diag.getRange() == d.getRange() && diag.getMessage() == d.getMessage()
       )
       isDuplicate =
-        d.getMessage.startsWith("identifier expected but") &&
+        d.getMessage.replace("`", "").startsWith("identifier expected but") &&
           all.asScala.exists { other =>
-            other.getMessage.startsWith("identifier expected") &&
+            other.getMessage
+              .replace("`", "")
+              .startsWith("identifier expected") &&
             other.getRange().getStart() == d.getRange().getStart()
           }
       if !isDuplicate && !isSameMessage

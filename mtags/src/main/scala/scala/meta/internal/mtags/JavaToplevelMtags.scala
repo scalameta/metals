@@ -7,7 +7,6 @@ import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.internal.tokenizers.Chars._
 import scala.meta.internal.tokenizers.Reporter
 
 class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
@@ -87,7 +86,7 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
     @tailrec
     def kwOrIdent(start: Int, builder: StringBuilder): Token = {
       val ch = reader.ch
-      if (ch != SU && Character.isJavaIdentifierPart(ch)) {
+      if (ch != Chars.SU && Character.isJavaIdentifierPart(ch)) {
         reader.nextChar()
         kwOrIdent(start, builder.append(ch.toChar))
       } else if (builder.isEmpty) {
@@ -116,7 +115,7 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
         case ',' | '<' | '>' | '&' | '|' | '!' | '=' | '+' | '-' | '*' | '@' |
             ':' | '?' | '%' | '^' | '~' =>
           (Token.SpecialSym, false)
-        case SU => (Token.EOF, false)
+        case Chars.SU => (Token.EOF, false)
         case '.' => (Token.Dot, false)
         case '{' => (Token.LBrace, false)
         case '}' => (Token.RBrace, false)
@@ -176,7 +175,7 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
 
   private def isWhitespace(ch: Char): Boolean = {
     ch match {
-      case ' ' | '\t' | CR | LF | FF => true
+      case ' ' | '\t' | Chars.CR | Chars.LF | Chars.FF => true
       case _ => false
     }
   }
@@ -209,7 +208,8 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
   }
 
   private def skipLine: Unit =
-    while ({ val ch = reader.ch; ch != SU && ch != '\n' }) reader.nextChar()
+    while ({ val ch = reader.ch; ch != Chars.SU && ch != '\n' })
+      reader.nextChar()
 
   @tailrec
   private def toNextNonWhiteSpace(): Unit = {
@@ -222,7 +222,7 @@ class JavaToplevelMtags(val input: Input.VirtualFile) extends MtagsIndexer {
   private def readCurrentLine: String = {
     def loop(builder: StringBuilder): String = {
       val ch = reader.ch.toChar
-      if (ch == '\n' || ch == SU)
+      if (ch == '\n' || ch == Chars.SU)
         builder.mkString
       else {
         val next = builder.append(ch)

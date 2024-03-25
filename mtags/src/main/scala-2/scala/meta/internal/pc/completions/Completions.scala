@@ -5,6 +5,7 @@ import java.util.logging.Level
 
 import scala.collection.immutable.Nil
 import scala.collection.mutable
+import scala.reflect.internal.Chars
 import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
@@ -16,7 +17,6 @@ import scala.meta.internal.pc.InterpolationSplice
 import scala.meta.internal.pc.MemberOrdering
 import scala.meta.internal.pc.MetalsGlobal
 import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.tokenizers.Chars
 
 import org.eclipse.{lsp4j => l}
 

@@ -2,7 +2,6 @@ package scala.meta.internal.mtags
 
 import scala.meta.Dialect
 import scala.meta.inputs._
-import scala.meta.internal.tokenizers.Chars._
 import scala.meta.internal.tokenizers.Reporter
 
 private[meta] case class CharArrayReader private (
@@ -10,7 +9,7 @@ private[meta] case class CharArrayReader private (
     dialect: Dialect,
     reporter: Reporter,
     /** the last read character */
-    var ch: Int = SU,
+    var ch: Int = Chars.SU,
     /** The offset one past the last read character */
     var begCharOffset: Int = -1, // included
     var endCharOffset: Int = 0, // excluded
@@ -42,7 +41,7 @@ private[meta] case class CharArrayReader private (
 
   final def nextCommentChar(): Unit = {
     if (endCharOffset >= buf.length) {
-      ch = SU
+      ch = Chars.SU
     } else {
       ch = buf(endCharOffset)
       begCharOffset = endCharOffset
@@ -57,7 +56,7 @@ private[meta] case class CharArrayReader private (
    */
   final def nextRawChar(): Unit = {
     if (endCharOffset >= buf.length) {
-      ch = SU
+      ch = Chars.SU
     } else {
       begCharOffset = endCharOffset
       val (hi, hiEnd) = readUnicodeChar(endCharOffset)
@@ -113,7 +112,7 @@ private[meta] case class CharArrayReader private (
       return (c, firstOffset)
 
     def udigit: Int =
-      try digit2int(buf(escapedOffset), 16)
+      try Chars.digit2int(buf(escapedOffset), 16)
       finally escapedOffset += 1
 
     val code = udigit << 12 | udigit << 8 | udigit << 4 | udigit
@@ -122,10 +121,12 @@ private[meta] case class CharArrayReader private (
 
   /** replace CR;LF by LF */
   private def skipCR() =
-    if (ch == CR && endCharOffset < buf.length && buf(endCharOffset) == '\\') {
+    if (
+      ch == Chars.CR && endCharOffset < buf.length && buf(endCharOffset) == '\\'
+    ) {
       val (c, nextOffset) = readUnicodeChar(endCharOffset)
-      if (c == LF) {
-        ch = LF
+      if (c == Chars.LF) {
+        ch = Chars.LF
         endCharOffset = nextOffset
       }
     }
@@ -141,7 +142,7 @@ private[meta] case class CharArrayReader private (
   }
 
   private def checkLineEnd(): Boolean = {
-    val ok = ch == LF || ch == FF
+    val ok = ch == Chars.LF || ch == Chars.FF
     if (ok) {
       lastLineStartOffset = lineStartOffset
       lineStartOffset = endCharOffset
