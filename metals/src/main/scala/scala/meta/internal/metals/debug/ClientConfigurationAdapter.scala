@@ -2,16 +2,18 @@ package scala.meta.internal.metals.debug
 
 import java.nio.file.Paths
 
+import scala.util.control.NonFatal
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SourceMapper
 import scala.meta.io.AbsolutePath
 
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArgumentsPathFormat
 import org.eclipse.lsp4j.debug.SourceBreakpoint
-import com.google.gson.JsonObject
-import com.google.gson.JsonPrimitive
 
 /**
  * The [[ClientConfigurationAdapter]] uses the client configuration coming from the initialize request
@@ -63,7 +65,8 @@ private[debug] final case class ClientConfigurationAdapter(
           }
         }
       } catch {
-        case _: IllegalStateException => ()
+        case NonFatal(t) =>
+          scribe.error("unexpected error when adapting stack trace response", t)
       }
     }
     result
