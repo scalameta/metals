@@ -77,13 +77,8 @@ private[meta] class TelemetryClient(
 
   private val sendErrorReport0 =
     new TelemetryRequest(sendErrorReportEndpoint, logger)
-  private val sendCrashReport0 =
-    new TelemetryRequest(sendCrashReportEndpoint, logger)
 
   def sendErrorReport(report: telemetry.ErrorReport): Unit =
     if (telemetryLevel().enabled) sendErrorReport0(report)
-
-  def sendCrashReport(report: telemetry.CrashReport): Unit =
-    if (telemetryLevel().enabled) sendCrashReport0(report)
 
 }

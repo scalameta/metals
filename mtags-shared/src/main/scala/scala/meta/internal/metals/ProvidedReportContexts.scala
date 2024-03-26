@@ -168,7 +168,7 @@ object StdReportContext {
 }
 
 /**
- * Fan-out report context delegating reporting to all underlyin reporters of given type.
+ * Fan-out report context delegating reporting to all underlying reporters of given type.
  */
 class MirroredReportContext(primary: ReportContext, auxilary: ReportContext*)
     extends ReportContext {

@@ -17,6 +17,7 @@ import scala.meta.pc.Report
 import scala.meta.pc.ReportContext
 import scala.meta.pc.Reporter
 import scala.meta.pc.TimestampedFile
+import scala.meta.internal.metals.EmptyReporter
 
 object TelemetryReportContext {
   case class Sanitizers(
@@ -54,10 +55,16 @@ class TelemetryReportContext(
 )(implicit ec: ExecutionContext)
     extends ReportContext {
 
+  val telemetryLevel0 = telemetryLevel()
+
   // Don't send reports with fragile user data - sources etc
-  override lazy val unsanitized: Reporter = reporter("unsanitized")
-  override lazy val incognito: Reporter = reporter("incognito")
-  override lazy val bloop: Reporter = reporter("bloop")
+  override lazy val unsanitized: Reporter =
+    if (telemetryLevel0 == TelemetryLevel.Full) reporter("incognito")
+    else EmptyReporter
+  override lazy val incognito: Reporter =
+    if (telemetryLevel0.enabled) reporter("incognito") else EmptyReporter
+  override lazy val bloop: Reporter =
+    if (telemetryLevel0.enabled) reporter("bloop") else EmptyReporter
 
   private val client = new TelemetryClient(
     config = telemetryClientConfig,
@@ -68,7 +75,6 @@ class TelemetryReportContext(
   private def reporter(name: String) = new TelemetryReporter(
     name = name,
     client = client,
-    telemetryLevel = telemetryLevel,
     reporterContext = reporterContext,
     sanitizers = sanitizers,
     logger = logger,
@@ -78,7 +84,6 @@ class TelemetryReportContext(
 private class TelemetryReporter(
     override val name: String,
     client: TelemetryClient,
-    telemetryLevel: () => TelemetryLevel,
     reporterContext: () => telemetry.ReporterContext,
     sanitizers: TelemetryReportContext.Sanitizers,
     logger: LoggerAccess,
@@ -114,16 +119,14 @@ private class TelemetryReporter(
       unsanitizedReport: Report,
       ifVerbose: Boolean,
   ): ju.Optional[Path] = {
-    if (telemetryLevel() == TelemetryLevel.Full) {
-      val report = createSanitizedReport(unsanitizedReport)
-      if (report.text.isDefined || report.error.isDefined)
-        client.sendErrorReport(report)
-      else
-        logger.info(
-          "Skipped reporting remotely unmeaningful report, no context or error, reportId=" +
-            unsanitizedReport.id.orElse("null")
-        )
-    }
+    val report = createSanitizedReport(unsanitizedReport)
+    if (report.text.isDefined || report.error.isDefined)
+      client.sendErrorReport(report)
+    else
+      logger.info(
+        "Skipped reporting remotely unmeaningful report, no context or error, reportId=" +
+          unsanitizedReport.id.orElse("null")
+      )
     ju.Optional.empty()
   }
 }
