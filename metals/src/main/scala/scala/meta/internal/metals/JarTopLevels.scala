@@ -230,7 +230,7 @@ final class JarTopLevels(conn: () => Connection) {
     val statement1 = conn().prepareStatement("truncate table toplevel_symbol")
     statement1.execute()
     val statement2 =
-      conn().prepareStatement("truncate table type_hierarchy_jar")
+      conn().prepareStatement("truncate table type_hierarchy")
     statement2.execute()
     val statement3 = conn().prepareStatement("delete from indexed_jar")
     statement3.execute()
