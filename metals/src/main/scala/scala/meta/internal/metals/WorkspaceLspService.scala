@@ -44,6 +44,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.ScalaLspService
 import scala.meta.pc.DisplayableException
 
+import ch.epfl.scala.bsp4j.DebugSessionParams
 import com.google.gson.Gson
 import com.google.gson.JsonPrimitive
 import io.undertow.server.HttpServerExchange
@@ -93,6 +94,7 @@ import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceSymbolParams
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages
+import scala.meta.internal.metals.debug.NoClassFoundException
 
 class WorkspaceLspService(
     ec: ExecutionContextExecutorService,
@@ -793,9 +795,28 @@ class WorkspaceLspService(
               .asJavaObject
         }
       case ServerCommands.DiscoverMainClasses(unresolvedParams) =>
-        getServiceFor(unresolvedParams.path)
-          .discoverMainClasses(unresolvedParams)
-          .asJavaObject
+        val discovered = Option(unresolvedParams.path) match {
+          case None =>
+            Future
+              .sequence {
+                folderServices
+                  .map {
+                    _.discoverMainClasses(unresolvedParams)
+                  }
+              }
+              .flatMap { mains =>
+                mains.headOption.fold(
+                  Future.failed[DebugSessionParams](
+                    NoClassFoundException(unresolvedParams.mainClass)
+                  )
+                )(Future.successful(_))
+              }
+
+          case Some(path) =>
+            getServiceFor(path)
+              .discoverMainClasses(unresolvedParams)
+        }
+        discovered.liftToLspError.asJavaObject
       case ServerCommands.ResetWorkspace() =>
         maybeResetWorkspace().asJavaObject
       case ServerCommands.RunScalafix(params) =>
