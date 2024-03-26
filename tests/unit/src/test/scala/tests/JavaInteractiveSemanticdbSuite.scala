@@ -27,10 +27,13 @@ class JavaInteractiveSemanticdbSuite extends FunSuite {
     JdkVersion.maybeJdkVersionFromJavaHome(optJavaHome)
 
   test("parse jdk-version") {
-    assertEquals(JdkVersion.parse("17-ea"), Some(JdkVersion(17)))
-    assertEquals(JdkVersion.parse("9"), Some(JdkVersion(9)))
-    assertEquals(JdkVersion.parse("1.8.0_312"), Some(JdkVersion(8)))
-    assertEquals(JdkVersion.parse("11.0.13"), Some(JdkVersion(11)))
+    assertEquals(JdkVersion.parse("17-ea"), Some(JdkVersion(17, "17-ea")))
+    assertEquals(JdkVersion.parse("9"), Some(JdkVersion(9, "9")))
+    assertEquals(
+      JdkVersion.parse("1.8.0_312"),
+      Some(JdkVersion(8, "1.8.0_312")),
+    )
+    assertEquals(JdkVersion.parse("11.0.13"), Some(JdkVersion(11, "11.0.13")))
   }
 
   test("compile jdk-class") {
