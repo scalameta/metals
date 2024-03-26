@@ -1137,8 +1137,15 @@ class MetalsLspService(
 
   override def didChange(
       params: DidChangeTextDocumentParams
-  ): CompletableFuture[Unit] =
-    params.getContentChanges.asScala.headOption match {
+  ): CompletableFuture[Unit] = {
+    val changesSize = params.getContentChanges.size()
+    if (changesSize != 1) {
+      scribe.debug(
+        s"did change notification contained $changesSize content changes, expected 1"
+      )
+    }
+
+    params.getContentChanges.asScala.lastOption match {
       case None => CompletableFuture.completedFuture(())
       case Some(change) =>
         val path = params.getTextDocument.getUri.toAbsolutePath
@@ -1152,6 +1159,7 @@ class MetalsLspService(
           .ignoreValue
           .asJava
     }
+  }
 
   override def didClose(params: DidCloseTextDocumentParams): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath
