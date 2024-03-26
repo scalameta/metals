@@ -4,14 +4,18 @@ import java.util.concurrent.TimeUnit
 
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.debug.BuildTargetContainsNoMainException
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.debug.DebugProvider.SemanticDbNotFoundException
 import scala.meta.internal.metals.debug.DebugProvider.WorkspaceErrorsException
 import scala.meta.internal.metals.debug.DotEnvFileParser.InvalidEnvFileException
+import scala.meta.internal.metals.debug.ExtendedScalaMainClass
 import scala.meta.internal.metals.debug.NoTestsFoundException
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.DebugSessionParams
+import com.google.gson.JsonObject
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 
 // note(@tgodzik) all test have `System.exit(0)` added to avoid occasional issue due to:
@@ -58,6 +62,48 @@ class DebugDiscoverySuite
       _ <- debugger.shutdown
       output <- debugger.allOutput
     } yield assertNoDiff(output, "oranges are nice")
+  }
+
+  test("discover-class-run") {
+    import scala.meta.internal.metals.JsonParser._
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/${mainPath}
+           |package a
+           |object Main {
+           |  def main(args: Array[String]) = {
+           |    print("oranges are nice")
+           |    System.exit(0)
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(mainPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      result <- server
+        .executeCommand(
+          ServerCommands.DiscoverMainClasses,
+          new DebugDiscoveryParams(
+            null,
+            "run",
+            "a.Main",
+          ),
+        )
+        .map(_.asInstanceOf[DebugSessionParams])
+      mainClass =
+        result.getData().asInstanceOf[JsonObject].as[ExtendedScalaMainClass]
+      _ = assert(
+        mainClass.isSuccess,
+        "Server should return ExtendedScalaMainClass object",
+      )
+    } yield assert(
+      mainClass.get.shellCommand.nonEmpty,
+      "Shell command should be available in response for discovery",
+    )
   }
 
   test("run-file-main") {
@@ -215,6 +261,7 @@ class DebugDiscoverySuite
           new DebugDiscoveryParams(
             server.toPath(mainPath).toURI.toString,
             "run",
+            buildTarget = "a",
           ).toJson
         )
         .recover { case e: ResponseErrorException => e.getMessage }

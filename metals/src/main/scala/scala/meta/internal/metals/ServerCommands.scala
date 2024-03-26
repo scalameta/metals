@@ -836,8 +836,10 @@ case class DebugUnresolvedAttachRemoteParams(
 )
 
 case class DebugDiscoveryParams(
-    path: String,
+    @Nullable path: String,
     runType: String,
+    @Nullable mainClass: String = null,
+    @Nullable buildTarget: String = null,
     @Nullable args: java.util.List[String] = null,
     @Nullable jvmOptions: java.util.List[String] = null,
     @Nullable env: java.util.Map[String, String] = null,
