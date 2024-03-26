@@ -482,13 +482,29 @@ class DebugProvider(
       .getOrElse(Future.successful(List.empty))
 
   private def createMainParams(
+      params: DebugDiscoveryParams,
+      main: ScalaMainClass,
+      buildTargetIdentifier: BuildTargetIdentifier,
+  )(implicit ec: ExecutionContext): Future[DebugSessionParams] = {
+    val env = Option(params.env).toList.flatMap(createEnvList)
+    createMainParams(
+      main,
+      buildTargetIdentifier,
+      Option(params.args),
+      Option(params.jvmOptions),
+      env,
+      Option(params.envFile),
+    )
+  }
+
+  private def createMainParams(
       main: ScalaMainClass,
       target: BuildTargetIdentifier,
       args: Option[ju.List[String]],
       jvmOptions: Option[ju.List[String]],
       env: List[String],
       envFile: Option[String],
-  )(implicit ec: ExecutionContext) = {
+  )(implicit ec: ExecutionContext): Future[DebugSessionParams] = {
     main.setArguments(args.getOrElse(ju.Collections.emptyList()))
     main.setJvmOptions(
       jvmOptions.getOrElse(ju.Collections.emptyList())
@@ -509,37 +525,27 @@ class DebugProvider(
   }
 
   private def verifyMain(
-      buildTarget: BuildTargetIdentifier,
-      classes: List[ScalaMainClass],
+      classes: Map[BuildTargetIdentifier, List[ScalaMainClass]],
       params: DebugDiscoveryParams,
   )(implicit ec: ExecutionContext): Future[DebugSessionParams] = {
-    val env = Option(params.env).toList.flatMap(createEnvList)
 
-    classes match {
-      case Nil =>
-        Future.failed(
-          BuildTargetContainsNoMainException(displayName(buildTarget))
-        )
-      case main :: Nil =>
+    classes.toList match {
+      case (buildTarget, main :: Nil) :: Nil =>
         createMainParams(
+          params,
           main,
           buildTarget,
-          Option(params.args),
-          Option(params.jvmOptions),
-          env,
-          Option(params.envFile),
         )
       case multiple =>
-        requestMain(multiple).flatMap { main =>
+        requestMain(multiple.flatMap(_._2)).flatMap { main =>
+          val buildTarget = classes.find(_._2.contains(main)).map(_._1)
           createMainParams(
+            params,
             main,
-            buildTarget,
-            Option(params.args),
-            Option(params.jvmOptions),
-            env,
-            Option(params.envFile),
+            buildTarget.get,
           )
         }
+
     }
   }
 
@@ -580,7 +586,7 @@ class DebugProvider(
           }
         } yield mainClass
         if (mains.nonEmpty) {
-          verifyMain(buildTarget, mains.toList, params)
+          verifyMain(Map(buildTarget -> mains.toList), params)
         } else if (tests.nonEmpty) {
           Future {
             val params = new b.DebugSessionParams(singletonList(buildTarget))
@@ -687,8 +693,12 @@ class DebugProvider(
       params: DebugDiscoveryParams
   )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
     val runTypeO = RunType.fromString(params.runType)
-    val path = params.path.toAbsolutePath
-    val buildTargetO = buildTargets.inverseSources(path)
+    val pathOpt = Option(params.path).map(_.toAbsolutePath)
+    val buildTargetO = pathOpt.flatMap(buildTargets.inverseSources(_)).orElse {
+      Option(params.buildTarget)
+        .flatMap(buildTargets.findByDisplayName)
+        .map(_.getId())
+    }
 
     lazy val mainClasses = (bti: BuildTargetIdentifier) =>
       buildTargetClasses.classesOf(bti).mainClasses
@@ -696,66 +706,109 @@ class DebugProvider(
     lazy val testClasses = (bti: BuildTargetIdentifier) =>
       buildTargetClasses.classesOf(bti).testClasses
 
-    val result: Future[DebugSessionParams] = (runTypeO, buildTargetO) match {
-      case (_, Some(buildTarget)) if buildClient.buildHasErrors(buildTarget) =>
-        Future.failed(WorkspaceErrorsException)
-      case (_, None) =>
-        Future.failed(BuildTargetNotFoundForPathException(path))
-      case (None, _) =>
-        Future.failed(RunType.UnknownRunTypeException(params.runType))
-      case (Some(Run), Some(target)) =>
-        verifyMain(target, mainClasses(target).values.toList, params)
-      case (Some(RunOrTestFile), Some(target)) =>
-        resolveInFile(target, mainClasses(target), testClasses(target), params)
-      case (Some(TestFile), Some(target)) if testClasses(target).isEmpty =>
-        Future.failed(
-          NoTestsFoundException("file", path.toString())
-        )
-      case (Some(TestTarget), Some(target)) if testClasses(target).isEmpty =>
-        Future.failed(
-          NoTestsFoundException("build target", displayName(target))
-        )
-      case (Some(TestFile), Some(target)) =>
-        semanticdbs()
-          .textDocument(path)
-          .documentIncludingStale
-          .fold[Future[Seq[BuildTargetClasses.FullyQualifiedClassName]]] {
-            Future.failed(SemanticDbNotFoundException)
-          } { textDocument =>
-            Future {
-              for {
-                symbolInfo <- textDocument.symbols
-                symbol = symbolInfo.symbol
-                testSymbolInfo <- testClasses(target).get(symbol)
-              } yield testSymbolInfo.fullyQualifiedName
-            }
+    val result: Future[DebugSessionParams] =
+      (runTypeO, buildTargetO, pathOpt) match {
+        case (_, Some(buildTarget), _)
+            if buildClient.buildHasErrors(buildTarget) =>
+          Future.failed(WorkspaceErrorsException)
+        case (_, None, Some(path)) =>
+          Future.failed(BuildTargetNotFoundForPathException(path))
+        case (None, _, _) =>
+          Future.failed(RunType.UnknownRunTypeException(params.runType))
+        case (Some(Run), target, _) =>
+          val targetIds = target match {
+            case None => buildTargets.allBuildTargetIds
+            case Some(value) => List(value)
           }
-          .map { tests =>
+          val requestedMain = Option(params.mainClass)
+          val targetToMainClasses = targetIds
+            .map { target =>
+              target ->
+                mainClasses(target).values.toList.filter(cls =>
+                  requestedMain.isEmpty || requestedMain.contains(
+                    cls.getClassName()
+                  )
+                )
+
+            }
+            .filter { case (_, mains) => mains.nonEmpty }
+            .toMap
+          if (targetToMainClasses.nonEmpty)
+            verifyMain(
+              targetToMainClasses,
+              params,
+            )
+          else
+            Future.failed(
+              MainClassException(
+                params,
+                targetIds.nonEmpty,
+                buildTargets.all.map(_.getDisplayName).toSeq,
+              )
+            )
+        case (Some(RunOrTestFile), Some(target), _) =>
+          resolveInFile(
+            target,
+            mainClasses(target),
+            testClasses(target),
+            params,
+          )
+        case (Some(TestFile), Some(target), path)
+            if testClasses(target).isEmpty =>
+          Future.failed(
+            NoTestsFoundException("file", path.toString())
+          )
+        case (Some(TestTarget), Some(target), _)
+            if testClasses(target).isEmpty =>
+          Future.failed(
+            NoTestsFoundException("build target", displayName(target))
+          )
+        case (Some(TestTarget), None, _) =>
+          Future.failed(NoBuildTargetSpecified)
+        case (Some(TestFile), Some(target), Some(path)) =>
+          semanticdbs()
+            .textDocument(path)
+            .documentIncludingStale
+            .fold[Future[Seq[BuildTargetClasses.FullyQualifiedClassName]]] {
+              Future.failed(SemanticDbNotFoundException)
+            } { textDocument =>
+              Future {
+                for {
+                  symbolInfo <- textDocument.symbols
+                  symbol = symbolInfo.symbol
+                  testSymbolInfo <- testClasses(target).get(symbol)
+                } yield testSymbolInfo.fullyQualifiedName
+              }
+            }
+            .map { tests =>
+              val params = new b.DebugSessionParams(
+                singletonList(target)
+              )
+              params.setDataKind(
+                b.TestParamsDataKind.SCALA_TEST_SUITES
+              )
+              params.setData(tests.asJava.toJson)
+              params
+            }
+        case (Some(TestTarget), Some(target), _) =>
+          Future {
             val params = new b.DebugSessionParams(
               singletonList(target)
             )
-            params.setDataKind(
-              b.TestParamsDataKind.SCALA_TEST_SUITES
+            params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES)
+            params.setData(
+              testClasses(target).values
+                .map(_.fullyQualifiedName)
+                .toList
+                .asJava
+                .toJson
             )
-            params.setData(tests.asJava.toJson)
             params
           }
-      case (Some(TestTarget), Some(target)) =>
-        Future {
-          val params = new b.DebugSessionParams(
-            singletonList(target)
-          )
-          params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES)
-          params.setData(
-            testClasses(target).values
-              .map(_.fullyQualifiedName)
-              .toList
-              .asJava
-              .toJson
-          )
-          params
-        }
-    }
+        case (Some(tpe @ (TestFile | RunOrTestFile)), _, None) =>
+          Future.failed(UndefinedPathException(tpe))
+
+      }
 
     result.failed.foreach(reportErrors)
     result
@@ -1018,7 +1071,8 @@ class DebugProvider(
   ): Future[Try[A]] =
     previousResult match {
       case Failure(ClassNotFoundInBuildTargetException(_, buildTarget)) =>
-        val target = Seq(buildTarget.getId())
+        val target =
+          buildTargets.findByDisplayName(buildTarget).map(_.getId()).toSeq
         for {
           _ <- compilations.compileTargets(target)
           _ <- buildTargetClasses.rebuildIndex(target)
@@ -1147,6 +1201,15 @@ object DebugProvider {
   case object WorkspaceErrorsException
       extends Exception(
         s"Cannot run class, since the workspace has errors."
+      )
+
+  case class UndefinedPathException(runType: RunType)
+      extends Exception(
+        s"Cannot run since the $runType required a path to be defined."
+      )
+  case class NoMainClassDefined(runType: RunType)
+      extends Exception(
+        s"Cannot run since the $runType required a mainClass to be defined."
       )
   case object NoRunOptionException
       extends Exception(

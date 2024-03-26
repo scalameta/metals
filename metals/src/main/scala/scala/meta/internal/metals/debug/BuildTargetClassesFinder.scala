@@ -6,6 +6,7 @@ import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala.Descriptor
@@ -38,7 +39,10 @@ class BuildTargetClassesFinder(
       val found = ex match {
         // We check whether there is a main in dependencies that is not reported via BSP
         case ClassNotFoundInBuildTargetException(className, target) =>
-          revertToDependencies(className, Some(target))
+          revertToDependencies(
+            className,
+            buildTargets.findByDisplayName(target),
+          )
         case _: NoClassFoundException =>
           revertToDependencies(className, buildTarget = None)
         case _ => Nil
@@ -130,7 +134,7 @@ class BuildTargetClassesFinder(
               Failure(
                 ClassNotFoundInBuildTargetException(
                   className,
-                  target,
+                  target.getDisplayName(),
                 )
               )
             } { clazz =>
@@ -149,18 +153,41 @@ class BuildTargetClassesFinder(
 
 }
 
+object MainClassException {
+  def apply(
+      params: DebugDiscoveryParams,
+      isTargetFound: Boolean,
+      allTargets: Seq[String],
+  ): Throwable = {
+    (
+      Option(params.mainClass),
+      Option(params.buildTarget),
+    ) match {
+      case (None, Some(target)) if !isTargetFound =>
+        BuildTargetNotFoundException(target, allTargets)
+      case (None, None) => NoBuildTargetSpecified
+      case (None, Some(target)) =>
+        BuildTargetContainsNoMainException(target)
+      case (Some(main), Some(target)) =>
+        ClassNotFoundInBuildTargetException(main, target)
+      case (Some(main), None) =>
+        NoClassFoundException(main)
+    }
+  }
+}
+
 case class BuildTargetNotFoundException(
     buildTargetName: String,
-    candidates: List[String],
+    candidates: Seq[String],
 ) extends Exception(
       s"Build target not found: $buildTargetName, candidates:\n${candidates.mkString("\n")}"
     )
 
 case class ClassNotFoundInBuildTargetException(
     className: String,
-    buildTarget: b.BuildTarget,
+    buildTarget: String,
 ) extends Exception(
-      s"Class '$className' not found in build target '${buildTarget.getDisplayName()}'"
+      s"Class '$className' not found in build target '${buildTarget}'"
     )
 
 case class NoClassFoundException(
@@ -182,4 +209,9 @@ case class NoTestsFoundException(
     name: String,
 ) extends Exception(
       s"No tests could be found in ${testType}: $name"
+    )
+
+case object NoBuildTargetSpecified
+    extends Exception(
+      s"No build target was specified."
     )
