@@ -17,13 +17,8 @@ object TelemetryService {
     "POST",
     "/v1/telemetry/sendErrorReport",
   )
-  val sendCrashReportEndpoint = new FireAndForgetEndpoint[CrashReport](
-    "POST",
-    "/v1/telemetry/sendCrashReport",
-  )
 }
 
 trait TelemetryService {
   def sendErrorReport(errorReport: ErrorReport): Unit
-  def sendCrashReport(crashReport: CrashReport): Unit
 }

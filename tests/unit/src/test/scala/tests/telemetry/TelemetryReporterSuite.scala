@@ -26,7 +26,7 @@ class TelemetryReporterSuite extends BaseSuite {
   def simpleReport(id: String): Report = StandardReport(
     name = "name",
     text = "text",
-    shortSummary = "sumamry",
+    shortSummary = "summmary",
     path = None,
     id = Some(id),
     error = Some(new RuntimeException("A", new NullPointerException())),
@@ -80,13 +80,65 @@ class TelemetryReporterSuite extends BaseSuite {
       } {
         val createdReport = simpleReport(reporterCtx.toString())
         reporter.incognito.create(createdReport)
-        Thread.sleep(5000) // wait for the server to receive the event
+        Thread.sleep(1000) // wait for the server to receive the event
         val received = ctx.errors.filter(_.id == createdReport.id.asScala)
         assert(received.nonEmpty, "Not received matching id")
         assert(received.size == 1, "Found more then 1 received event")
       }
     } finally server.stop()
   }
+
+  locally {
+    implicit val ctx = new MockTelemetryServer.Context()
+    val server = MockTelemetryServer("127.0.0.1", 8081)
+
+    def testCase(level: metals.TelemetryLevel, expected: Set[String]): Unit =
+      test(
+        s"Telemetry level: ${level} sends telemetry for ${expected.mkString("(", ", ", ")")}"
+      ) {
+        ctx.errors.clear()
+
+        try {
+          server.start()
+          val serverEndpoint = MockTelemetryServer.address(server)
+          for {
+            reporterCtx <- Seq(
+              SampleReports.metalsLspReport(),
+              SampleReports.scalaPresentationCompilerReport(),
+            ).map(_.reporterContext)
+            reporter = new TelemetryReportContext(
+              telemetryClientConfig = TelemetryClient.Config.default
+                .copy(serverHost = serverEndpoint),
+              telemetryLevel = () => level,
+              reporterContext = () => reporterCtx,
+              sanitizers = new TelemetryReportContext.Sanitizers(
+                None,
+                Some(metals.ScalametaSourceCodeTransformer),
+              ),
+            )
+          } {
+
+            reporter.incognito.create(simpleReport("incognito"))
+            reporter.bloop.create(simpleReport("bloop"))
+            reporter.unsanitized.create(simpleReport("unsanitized"))
+
+            def received = ctx.errors.map(_.id.get).toSet
+            Thread.sleep(1000)
+            assertEquals(received, expected)
+          }
+        } finally {
+          server.stop()
+        }
+      }
+
+    testCase(metals.TelemetryLevel.Off, Set())
+    testCase(metals.TelemetryLevel.Anonymous, Set("incognito", "bloop"))
+    testCase(
+      metals.TelemetryLevel.Full,
+      Set("incognito", "bloop", "unsanitized"),
+    )
+  }
+
 }
 
 object MockTelemetryServer {
@@ -97,8 +149,7 @@ object MockTelemetryServer {
   import io.undertow.util.Headers
 
   case class Context(
-      errors: mutable.ListBuffer[ErrorReport] = mutable.ListBuffer.empty,
-      crashes: mutable.ListBuffer[CrashReport] = mutable.ListBuffer.empty,
+      errors: mutable.ListBuffer[ErrorReport] = mutable.ListBuffer.empty
   )
 
   def apply(
@@ -111,10 +162,6 @@ object MockTelemetryServer {
       .withEndpoint(
         TelemetryService.sendErrorReportEndpoint,
         _.errors,
-      )
-      .withEndpoint(
-        TelemetryService.sendCrashReportEndpoint,
-        _.crashes,
       )
     Undertow.builder
       .addHttpListener(port, host)
