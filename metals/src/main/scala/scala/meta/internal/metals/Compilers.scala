@@ -64,6 +64,7 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.{Position => LspPosition}
 import org.eclipse.lsp4j.{Range => LspRange}
 import org.eclipse.lsp4j.{debug => d}
+import scala.util.Try
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.

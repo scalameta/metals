@@ -366,10 +366,8 @@ final class ReferenceProvider(
       input = Input.String(text)
       pos <- position.toMeta(input)
       tree <- trees.get(path)
-      token <- tree.tokens.find { t => t.pos.encloses(pos) }
-      ident <- token match {
-        case _: Ident => Some(token)
-        case _ => None
+      ident <- tree.tokens.collectFirst {
+        case t: Ident if t.pos.encloses(pos) => t
       }
     } yield ident.text
 
