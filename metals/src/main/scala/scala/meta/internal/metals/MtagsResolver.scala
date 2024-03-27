@@ -103,7 +103,7 @@ object MtagsResolver {
     }
 
     private object ResolveType extends Enumeration {
-      val Regular, StablePC, Nightly = Value
+      val Regular, StablePC = Value
     }
 
     /**
@@ -160,8 +160,6 @@ object MtagsResolver {
               case ResolveType.Regular => s"Resolved mtags for $scalaVersion"
               case ResolveType.StablePC =>
                 s"Resolved Scala 3 presentation compiler for $scalaVersion"
-              case ResolveType.Nightly =>
-                s"Resolved latest nightly mtags version: $scalaVersion"
             }
             scribe.debug(msg)
           case fail: State.Failure =>
@@ -170,8 +168,6 @@ object MtagsResolver {
                 s"Failed to resolve mtags for $scalaVersion"
               case ResolveType.StablePC =>
                 s"Failed to resolve Scala 3 presentation compiler for $scalaVersion"
-              case ResolveType.Nightly =>
-                s"Failed to resolve latest nightly mtags version: $scalaVersion"
             }
             scribe.error(errorMsg, fail.exception)
           case _ =>
