@@ -15,8 +15,8 @@ final class PcInlineValueProviderImpl(
 ) extends InlineValueProvider {
   import cp._
 
-  val pcCollector: PcCollector[Occurence] =
-    new PcCollector[Occurence](cp, params) {
+  val pcCollector: WithSymbolSearchCollector[Occurence] =
+    new WithSymbolSearchCollector[Occurence](cp, params) {
       def collect(
           parent: Option[compiler.Tree]
       )(

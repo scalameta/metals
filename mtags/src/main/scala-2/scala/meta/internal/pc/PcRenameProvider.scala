@@ -9,7 +9,7 @@ class PcRenameProvider(
     override val compiler: MetalsGlobal,
     params: OffsetParams,
     name: Option[String]
-) extends PcCollector[l.TextEdit](compiler, params) {
+) extends WithSymbolSearchCollector[l.TextEdit](compiler, params) {
   import compiler._
   private val forbiddenMethods =
     Set("equals", "hashCode", "unapply", "unary_!", "!")

@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.Collections
@@ -29,6 +30,7 @@ import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.internal.worksheets.WorksheetPcData
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
+import scala.meta.pc
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.CancelToken
 import scala.meta.pc.HoverSignature
@@ -49,6 +51,8 @@ import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintKind
 import org.eclipse.lsp4j.InlayHintParams
+import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SelectionRangeParams
@@ -88,6 +92,18 @@ class Compilers(
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Cancelable {
   val plugins = new CompilerPlugins()
+
+  val pcBuffers: pc.Buffers = new pc.Buffers {
+    override def getFile(
+        uri: URI,
+        scalaVersion: String,
+    ): ju.Optional[pc.PcAdjustFileParams] =
+      Try(sourceAdjustments(uri.toString(), scalaVersion)).toOption
+        .map[pc.PcAdjustFileParams] { case (vFile, _, adjust) =>
+          PcAdjustFileParams(CompilerVirtualFileParams(uri, vFile.text), adjust)
+        }
+        .asJava
+  }
 
   // Not a TrieMap because we want to avoid loading duplicate compilers for the same build target.
   // Not a `j.u.c.ConcurrentHashMap` because it can deadlock in `computeIfAbsent` when the absent
@@ -703,6 +719,28 @@ class Compilers(
     }
   }.getOrElse(Future.successful(Nil.asJava))
 
+  def references(
+      params: ReferenceParams,
+      targetFiles: List[AbsolutePath],
+      token: CancelToken,
+  ): Future[List[ReferencesResult]] = {
+    withPCAndAdjustLsp(params) { (pc, pos, _) =>
+      val request = PcReferencesRequest(
+        CompilerOffsetParamsUtils.fromPos(pos, token),
+        params.getContext().isIncludeDeclaration(),
+        targetFiles.map(_.toURI).asJava,
+      )
+      pc.references(request)
+        .asScala
+        .map(
+          _.asScala.toList.map { defRes =>
+            val locations = defRes.locations().asScala.toList
+            ReferencesResult(defRes.symbol(), locations)
+          }
+        )
+    }
+  }.getOrElse(Future.successful(Nil))
+
   def extractMethod(
       doc: TextDocumentIdentifier,
       range: LspRange,
@@ -1212,6 +1250,7 @@ class Compilers(
       .withWorkspace(workspace.toNIO)
       .withScheduledExecutorService(sh)
       .withReportsLoggerLevel(MetalsServerConfig.default.loglevel)
+      .withBuffers(pcBuffers)
       .withConfiguration {
         val options =
           InitializationOptions.from(initializeParams).compilerOptions
@@ -1361,4 +1400,12 @@ object Compilers {
         extends PresentationCompilerKey
     case object Default extends PresentationCompilerKey
   }
+}
+
+case class PcAdjustFileParams(
+    params: pc.VirtualFileParams,
+    adjustLsp: AdjustLspData,
+) extends pc.PcAdjustFileParams {
+  override def adjustLocation(location: Location): Location =
+    adjustLsp.adjustLocation(location)
 }

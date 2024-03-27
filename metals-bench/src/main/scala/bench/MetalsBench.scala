@@ -7,6 +7,7 @@ import scala.tools.nsc.interactive.Global
 import scala.meta.dialects
 import scala.meta.interactive.InteractiveSemanticdb
 import scala.meta.internal.metals.EmptyReportContext
+import scala.meta.internal.metals.IdentifierIndex
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.logging.MetalsLogger
@@ -23,6 +24,7 @@ import scala.meta.internal.tokenizers.LegacyToken
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
 import org.openjdk.jmh.annotations.Mode
@@ -77,10 +79,11 @@ class MetalsBench {
       .flatMap(_.sources.entries)
       .filter(_.toNIO.getFileName.toString.endsWith(".jar"))
   )
+
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def mtagsScalaIndex(): Unit = {
-    scalaDependencySources.inputs.foreach { input =>
+    scalaDependencySources.foreach { input =>
       ScalaMtags.index(input, dialects.Scala213).index()
     }
   }
@@ -88,7 +91,7 @@ class MetalsBench {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def toplevelsScalaIndex(): Unit = {
-    scalaDependencySources.inputs.foreach { input =>
+    scalaDependencySources.foreach { input =>
       implicit val rc: ReportContext = EmptyReportContext
       new ScalaToplevelMtags(
         input,
@@ -102,7 +105,7 @@ class MetalsBench {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def typeHierarchyIndex(): Unit = {
-    scalaDependencySources.inputs.foreach { input =>
+    scalaDependencySources.inputs.foreach { case (input, _) =>
       implicit val rc: ReportContext = EmptyReportContext
       new ScalaToplevelMtags(
         input,
@@ -116,7 +119,7 @@ class MetalsBench {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def scalaTokenize(): Unit = {
-    scalaDependencySources.inputs.foreach { input =>
+    scalaDependencySources.foreach { input =>
       val scanner = new LegacyScanner(input, Trees.defaultTokenizerDialect)
       var i = 0
       scanner.foreach(_ => i += 1)
@@ -127,7 +130,7 @@ class MetalsBench {
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def scalacTokenize(): Unit = {
     val g = global
-    scalaDependencySources.inputs.foreach { input =>
+    scalaDependencySources.foreach { input =>
       val unit = new g.CompilationUnit(
         new BatchSourceFile(new VirtualFile(input.path), input.chars)
       )
@@ -142,7 +145,7 @@ class MetalsBench {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def scalametaParse(): Unit = {
-    scalaDependencySources.inputs.foreach { input =>
+    scalaDependencySources.foreach { input =>
       import scala.meta._
       Trees.defaultTokenizerDialect(input).parse[Source].get
     }
@@ -154,7 +157,7 @@ class MetalsBench {
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def scalacParse(): Unit = {
     val g = global
-    scalaDependencySources.inputs.foreach { input =>
+    scalaDependencySources.foreach { input =>
       val unit = new g.CompilationUnit(
         new BatchSourceFile(new VirtualFile(input.path), input.chars)
       )
@@ -172,7 +175,7 @@ class MetalsBench {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def mtagsJavaParse(): Unit = {
-    javaDependencySources.inputs.foreach { input =>
+    javaDependencySources.foreach { input =>
       JavaMtags
         .index(input, includeMembers = true)
         .index()
@@ -191,8 +194,54 @@ class MetalsBench {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def alltoplevelsScalaIndex(): Unit = {
-    scalaDependencySources.inputs.foreach { input =>
-      Mtags.allToplevels(input, dialects.Scala3)
+    scalaDependencySources.foreach { input =>
+      Mtags.allToplevels(input, dialects.Scala213)
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def alltoplevelsScalaIndexWithCollectIdents(): Unit = {
+    scalaDependencySources.foreach { input =>
+      new ScalaToplevelMtags(
+        input,
+        includeInnerClasses = true,
+        includeMembers = true,
+        dialects.Scala213,
+        collectIdentifiers = true,
+      )(EmptyReportContext).indexRoot()
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def alltoplevelsScalaIndexWithBuildIdentifierIndex(): Unit = {
+    val buildTargetIdent = List(
+      new BuildTargetIdentifier("id1"),
+      new BuildTargetIdentifier("id2"),
+      new BuildTargetIdentifier("id3"),
+    )
+    var btIndex = 0
+    val index = new IdentifierIndex
+    scalaDependencySources.inputs.foreach { case (input, path) =>
+      val mtags = new ScalaToplevelMtags(
+        input,
+        includeInnerClasses = true,
+        includeMembers = true,
+        dialects.Scala213,
+        collectIdentifiers = true,
+      )(EmptyReportContext)
+
+      mtags.indexRoot()
+
+      val identifiers = mtags.maybeAllIdentifiers
+      if (identifiers.nonEmpty)
+        index.addIdentifiers(
+          path,
+          buildTargetIdent(btIndex),
+          identifiers,
+        )
+      btIndex = (btIndex + 1) % 3
     }
   }
 

@@ -1,7 +1,10 @@
 package scala.meta.internal.metals
 
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
@@ -10,6 +13,8 @@ import scala.util.control.NonFatal
 import scala.util.matching.Regex
 
 import scala.meta.Importee
+import scala.meta.inputs.Input
+import scala.meta.internal.async.CompletableCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ResolvedSymbolOccurrence
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
@@ -25,11 +30,15 @@ import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.OffsetParams
+import scala.meta.pc.ReferencesRequest
+import scala.meta.tokens.Token.Ident
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.ReferenceParams
 
 final class ReferenceProvider(
@@ -39,15 +48,28 @@ final class ReferenceProvider(
     definition: DefinitionProvider,
     trees: Trees,
     buildTargets: BuildTargets,
-) extends SemanticdbFeatureProvider {
-  private var referencedPackages: BloomFilter[CharSequence] =
-    BloomFilters.create(10000)
+    compilers: Compilers,
+    scalaVersionSelector: ScalaVersionSelector,
+)(implicit ec: ExecutionContext)
+    extends SemanticdbFeatureProvider {
+  val index: TrieMap[Path, IdentifierIndex.IndexEntry] = TrieMap.empty
+  val identifierIndex: IdentifierIndex = new IdentifierIndex
 
-  case class IndexEntry(
-      id: BuildTargetIdentifier,
-      bloom: BloomFilter[CharSequence],
-  )
-  val index: TrieMap[Path, IndexEntry] = TrieMap.empty
+  def addIdentifiers(file: AbsolutePath, set: Iterable[String]): Unit =
+    buildTargets
+      .inverseSources(file)
+      .map(id => identifierIndex.addIdentifiers(file, id, set))
+
+  def indexIdentifiers(
+      path: AbsolutePath,
+      text: String,
+  ): Future[Unit] = Future {
+    buildTargets.inverseSources(path).map { id =>
+      val dialect = scalaVersionSelector.getDialect(path)
+      val set = identifierIndex.collectIdentifiers(text, dialect)
+      identifierIndex.addIdentifiers(path, id, set)
+    }
+  }
 
   override def reset(): Unit = {
     index.clear()
@@ -67,13 +89,10 @@ final class ReferenceProvider(
         0.01,
       )
 
-      val entry = IndexEntry(id, bloom)
+      val entry = IdentifierIndex.IndexEntry(id, bloom)
       index(file.toNIO) = entry
       docs.documents.foreach { d =>
         d.occurrences.foreach { o =>
-          if (o.symbol.endsWith("/")) {
-            referencedPackages.put(o.symbol)
-          }
           bloom.put(o.symbol)
         }
         d.synthetics.foreach { synthetic =>
@@ -83,7 +102,6 @@ final class ReferenceProvider(
           }
         }
       }
-      resizeReferencedPackages()
     }
   }
 
@@ -131,7 +149,7 @@ final class ReferenceProvider(
       params: ReferenceParams,
       findRealRange: AdjustRange = noAdjustRange,
       includeSynthetics: Synthetic => Boolean = _ => true,
-  )(implicit report: ReportContext): List[ReferencesResult] = {
+  )(implicit report: ReportContext): Future[List[ReferencesResult]] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     semanticdbs.textDocument(source).documentIncludingStale match {
       case Some(doc) =>
@@ -140,7 +158,7 @@ final class ReferenceProvider(
             definition.positionOccurrences(source, params.getPosition, doc)
           if (posOccurrences.isEmpty)
             // handling case `import a.{A as @@B}`
-            occerencesForRenamedImport(source, params, doc)
+            occurrencesForRenamedImport(source, params, doc)
           else posOccurrences
         }
         if (results.isEmpty) {
@@ -148,55 +166,81 @@ final class ReferenceProvider(
             s"No symbol found at ${params.getPosition()} for $source"
           )
         }
-        results.map { result =>
-          val occurrence = result.occurrence.get
-          val distance = result.distance
-          val alternatives =
-            referenceAlternatives(occurrence.symbol, source, doc)
-          val locations = references(
+        val semanticdbResult = Future.sequence {
+          results.map { result =>
+            val occurrence = result.occurrence.get
+            val distance = result.distance
+            val alternatives =
+              referenceAlternatives(occurrence.symbol, source, doc)
+            references(
+              source,
+              params,
+              doc,
+              distance,
+              occurrence,
+              alternatives,
+              params.getContext.isIncludeDeclaration,
+              findRealRange,
+              includeSynthetics,
+            ).map { locations =>
+              // It's possible to return nothing is we exclude declaration
+              if (
+                locations.isEmpty && params.getContext().isIncludeDeclaration()
+              ) {
+                val fileInIndex =
+                  if (index.contains(source.toNIO))
+                    s"Current file ${source} is present"
+                  else s"Missing current file ${source}"
+                scribe.debug(
+                  s"No references found, index size ${index.size}\n" + fileInIndex
+                )
+                report.unsanitized.create(
+                  Report(
+                    "empty-references",
+                    index
+                      .map { case (path, entry) =>
+                        s"$path -> ${entry.bloom.approximateElementCount()}"
+                      }
+                      .mkString("\n"),
+                    s"Could not find any locations for ${result.occurrence}, printing index state",
+                    Some(source.toString()),
+                    Some(
+                      source.toString() + ":" + result.occurrence.getOrElse("")
+                    ),
+                  )
+                )
+              }
+              ReferencesResult(occurrence.symbol, locations)
+            }
+          }
+        }
+        val pcResult =
+          pcReferences(
             source,
             params,
-            doc,
-            distance,
-            occurrence,
-            alternatives,
-            params.getContext.isIncludeDeclaration,
-            findRealRange,
-            includeSynthetics,
+            forceIncludeLocalSearch = false,
+            path => !index.contains(path.toNIO),
           )
-          // It's possible to return nothing is we exclude declaration
-          if (locations.isEmpty && params.getContext().isIncludeDeclaration()) {
-            val fileInIndex =
-              if (index.contains(source.toNIO))
-                s"Current file ${source} is present"
-              else s"Missing current file ${source}"
-            scribe.debug(
-              s"No references found, index size ${index.size}\n" + fileInIndex
-            )
-            report.unsanitized.create(
-              Report(
-                "empty-references",
-                index
-                  .map { case (path, entry) =>
-                    s"$path -> ${entry.bloom.approximateElementCount()}"
-                  }
-                  .mkString("\n"),
-                s"Could not find any locations for ${result.occurrence}, printing index state",
-                Some(source.toString()),
-                Some(source.toString() + ":" + result.occurrence.getOrElse("")),
-              )
-            )
-          }
-          ReferencesResult(occurrence.symbol, locations)
-        }
+
+        Future
+          .sequence(List(semanticdbResult, pcResult))
+          .map(
+            _.flatten
+              .groupBy(_.symbol)
+              .map { case (symbol, refs) =>
+                ReferencesResult(symbol, refs.flatMap(_.locations))
+              }
+              .toList
+          )
       case None =>
-        Nil
+        scribe.debug(s"No semanticdb for $source")
+        pcReferences(source, params, forceIncludeLocalSearch = true)
     }
   }
 
-  // for `import package.{AA as B@@B}` we look for occurences at `import package.{@@AA as BB}`,
-  // since rename is not a position occurence in semanticDB
-  private def occerencesForRenamedImport(
+  // for `import package.{AA as B@@B}` we look for occurrences at `import package.{@@AA as BB}`,
+  // since rename is not a position occurrence in semanticDB
+  private def occurrencesForRenamedImport(
       source: AbsolutePath,
       params: ReferenceParams,
       document: TextDocument,
@@ -280,6 +324,67 @@ final class ReferenceProvider(
           isCandidate -- nonSyntheticSymbols
       case None => Set.empty
     }
+  }
+
+  private def pcReferences(
+      path: AbsolutePath,
+      params: ReferenceParams,
+      forceIncludeLocalSearch: Boolean,
+      filterTargetFiles: AbsolutePath => Boolean = _ => true,
+  ): Future[List[ReferencesResult]] = {
+    val result = for {
+      name <- nameAtPosition(path, params.getPosition())
+      buildTarget <- buildTargets.inverseSources(path)
+      targetFiles = {
+        val localPath = Option.when(forceIncludeLocalSearch)(path)
+        pathsForName(buildTarget, localPath, name).filter(filterTargetFiles)
+      }
+      if targetFiles.nonEmpty
+      cancelToken = new CompletableCancelToken
+    } yield compilers
+      .references(params, targetFiles.toList, cancelToken)
+      .withTimeout(30, TimeUnit.SECONDS)
+      .recover { case _: TimeoutException =>
+        cancelToken.cancel()
+        scribe.warn("pc references search timed out after 30 seconds")
+        Nil
+      }
+    result.getOrElse(Future.successful(Nil))
+  }
+
+  private def nameAtPosition(
+      path: AbsolutePath,
+      position: Position,
+  ) =
+    for {
+      text <- buffers.get(path)
+      input = Input.String(text)
+      pos <- position.toMeta(input)
+      tree <- trees.get(path)
+      ident <- tree.tokens.collectFirst {
+        case t: Ident if t.pos.encloses(pos) => t
+      }
+    } yield ident.text
+
+  private def pathsForName(
+      buildTarget: BuildTargetIdentifier,
+      localPath: Option[AbsolutePath],
+      name: String,
+  ): Iterator[AbsolutePath] = {
+    val allowedBuildTargets = buildTargets.allInverseDependencies(buildTarget)
+    val visited = scala.collection.mutable.Set.empty[AbsolutePath]
+    localPath.foreach(visited.add)
+    val result = for {
+      (path, entry) <- identifierIndex.index.iterator
+      if allowedBuildTargets.contains(entry.id) &&
+        entry.bloom.mightContain(name)
+      sourcePath = AbsolutePath(path)
+      if !visited(sourcePath)
+      _ = visited.add(sourcePath)
+      if sourcePath.exists
+    } yield sourcePath
+
+    result ++ localPath
   }
 
   /**
@@ -393,40 +498,42 @@ final class ReferenceProvider(
       isIncludeDeclaration: Boolean,
       findRealRange: AdjustRange,
       includeSynthetics: Synthetic => Boolean,
-  ): Seq[Location] = {
+  ): Future[Seq[Location]] = {
     val isSymbol = alternatives + occ.symbol
     val isLocal = occ.symbol.isLocal
+    if (isLocal)
+      compilers
+        .references(params, List(source), EmptyCancelToken)
+        .map(_.flatMap(_.locations))
+    else {
+      /* search local in the following cases:
+       * - it's a dependency source.
+       *   We can't search references inside dependencies so at least show them in a source file.
+       * - it's a standalone file that doesn't belong to any build target
+       */
+      val searchLocal =
+        source.isDependencySource(workspace) ||
+          buildTargets.inverseSources(source).isEmpty
 
-    /* search local in the following cases:
-     * - it's local symbol
-     * - it's a dependency source.
-     *   We can't search references inside dependencies so at least show them in a source file.
-     * - it's a standalone file that doesn't belong to any build target
-     */
-    val searchLocal =
-      isLocal || source.isDependencySource(workspace) ||
-        buildTargets.inverseSources(source).isEmpty
-    val local =
-      if (searchLocal)
-        referenceLocations(
-          snapshot,
-          isSymbol,
-          distance,
-          params.getTextDocument.getUri,
-          isIncludeDeclaration,
-          findRealRange,
-          includeSynthetics,
-          source.isJava,
-        )
-      else Seq.empty
-
-    val workspaceRefs =
-      if (!isLocal) {
-        val sourceContainsDefinition =
-          occ.role.isDefinition || snapshot.symbols.exists(
-            _.symbol == occ.symbol
+      val local =
+        if (searchLocal)
+          referenceLocations(
+            snapshot,
+            isSymbol,
+            distance,
+            params.getTextDocument.getUri,
+            isIncludeDeclaration,
+            findRealRange,
+            includeSynthetics,
+            source.isJava,
           )
+        else Seq.empty
 
+      val sourceContainsDefinition =
+        occ.role.isDefinition || snapshot.symbols.exists(
+          _.symbol == occ.symbol
+        )
+      val workspaceRefs =
         workspaceReferences(
           source,
           isSymbol,
@@ -435,11 +542,8 @@ final class ReferenceProvider(
           includeSynthetics,
           sourceContainsDefinition,
         )
-
-      } else
-        Seq.empty
-
-    workspaceRefs ++ local
+      Future.successful(local ++ workspaceRefs)
+    }
   }
 
   private def referenceLocations(
@@ -504,14 +608,6 @@ final class ReferenceProvider(
   private val noAdjustRange: AdjustRange =
     (range: s.Range, _: String, _: String) => Some(range)
   type AdjustRange = (s.Range, String, String) => Option[s.Range]
-
-  private def resizeReferencedPackages(): Unit = {
-    // Increase the size of the set of referenced packages if the false positive ratio is too high.
-    if (referencedPackages.expectedFpp() > 0.05) {
-      referencedPackages =
-        BloomFilters.create(referencedPackages.approximateElementCount() * 2)
-    }
-  }
 
 }
 
@@ -630,3 +726,9 @@ object SyntheticPackageObject {
   def unapply(str: String): Option[String] =
     Option.when(regex.matches(str))(str)
 }
+
+case class PcReferencesRequest(
+    params: OffsetParams,
+    includeDefinition: Boolean,
+    targetUris: java.util.List[URI],
+) extends ReferencesRequest

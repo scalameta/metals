@@ -38,6 +38,8 @@ object Memory {
         val elements = i.values.foldLeft(0L) {
           case (n, b: BloomFilter[_]) =>
             n + b.approximateElementCount()
+          case (n, i: IdentifierIndex.IndexEntry) =>
+            n + i.bloom.approximateElementCount()
           case (n, c: CompressedPackageIndex) =>
             n + c.bloom.approximateElementCount()
           case (n, _) =>

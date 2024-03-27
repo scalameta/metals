@@ -20,7 +20,7 @@ object TestRanges extends RangeReplace {
     } yield file -> validLocations
       .foldLeft((code, List.empty[(Int, Int)])) {
         case ((base, alreadyAddedMarkings), location) =>
-          replaceInRangeWithAdjustmens(
+          replaceInRangeWithAdjustments(
             code,
             base,
             location.getRange,
