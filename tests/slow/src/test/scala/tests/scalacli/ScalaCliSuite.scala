@@ -185,12 +185,14 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
       )
 
       _ <- server.didChangeConfiguration(
-        """{
-          |  "show-implicit-arguments": true,
-          |  "show-implicit-conversions-and-classes": true,
-          |  "show-inferred-type": true
-          |}
-          |""".stripMargin
+        """|{"inlayHints": {
+           |  "inferredTypes": {"enable":true},
+           |  "implicitConversions": {"enable":true},
+           |  "implicitArguments": {"enable":true},
+           |  "typeParameters": {"enable":true},
+           |  "hintsInPatternMatch": {"enable":true}
+           |}}
+           |""".stripMargin
       )
 
       _ <- server.didOpen("MyTests.sc")

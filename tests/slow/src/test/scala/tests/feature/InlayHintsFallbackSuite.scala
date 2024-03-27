@@ -33,9 +33,11 @@ class InlayHintsFallbackSuite
        |}
        |""".stripMargin,
     config = Some(
-      """|"show-implicit-arguments": true,
-         |"show-implicit-conversions-and-classes": true,
-         |"show-inferred-type": minimal
+      """|"inferredTypes": {"enable":true},
+         |"implicitConversions": {"enable":true},
+         |"implicitArguments": {"enable":true},
+         |"typeParameters": {"enable":false},
+         |"hintsInPatternMatch": {"enable":true}
          |""".stripMargin
     ),
   )
