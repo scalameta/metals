@@ -11,6 +11,7 @@ import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.mtags.JavaMtags
+import scala.meta.internal.mtags.JavaToplevelMtags
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.ScalaMtags
@@ -176,6 +177,14 @@ class MetalsBench {
       JavaMtags
         .index(input, includeMembers = true)
         .index()
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def toplevelJavaMtags(): Unit = {
+    javaDependencySources.inputs.foreach { input =>
+      new JavaToplevelMtags(input, includeInnerClasses = true).index()
     }
   }
 

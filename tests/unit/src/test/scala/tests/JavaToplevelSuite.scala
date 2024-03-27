@@ -1,15 +1,9 @@
 package tests
 
-import java.nio.file.Files
+class JavaToplevelSuite extends BaseToplevelSuite {
 
-import scala.meta.dialects
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags.Mtags
-import scala.meta.io.AbsolutePath
-
-import munit._
-
-class JavaToplevelSuite extends BaseSuite {
+  override def filename: String = "Test.java"
+  override def allowedModes: Set[Mode] = Set(Toplevel, ToplevelWithInner)
 
   check(
     "base",
@@ -35,9 +29,7 @@ class JavaToplevelSuite extends BaseSuite {
         |
         |
         |""".stripMargin,
-    s"""|sample/pkg/Abc#
-        |sample/pkg/Enum#
-        |""".stripMargin,
+    List("sample/pkg/Abc#", "sample/pkg/Enum#"),
   )
 
   check(
@@ -49,8 +41,7 @@ class JavaToplevelSuite extends BaseSuite {
        |
        |}
        |""".stripMargin,
-    s"""|dot/clz/Abc#
-        |""".stripMargin,
+    List("dot/clz/Abc#"),
   )
 
   check(
@@ -61,8 +52,7 @@ class JavaToplevelSuite extends BaseSuite {
        |
        |}
        |""".stripMargin,
-    s"""|dot/record/Abc#
-        |""".stripMargin,
+    List("dot/record/Abc#"),
   )
 
   check(
@@ -73,26 +63,103 @@ class JavaToplevelSuite extends BaseSuite {
        |
        |}
        |""".stripMargin,
-    s"""|dot/enum/Abc#
-        |""".stripMargin,
+    List("dot/enum/Abc#"),
   )
 
-  def check(
-      name: TestOptions,
-      code: String,
-      expected: String,
-  )(implicit loc: Location) {
-    test(name) {
-      val input = AbsolutePath(Files.createTempFile("mtags", ".java"))
-      input.writeText(code)
-      val obtained =
-        Mtags.topLevelSymbols(input, dialects.Scala213)
+  check(
+    "extends",
+    """|package dot.example;
+       |
+       |public class JavaClass extends Exception {
+       |
+       |    private JavaClass() {
+       |
+       |    }
+       |    public JavaClass(int d) {
+       |        this.d = d;
+       |    }
+       |
+       |    public static void a() {
+       |    }
+       |
+       |    public int b() {
+       |        return 1;
+       |    }
+       |
+       |    public static int c = 2;
+       |    public int d = 2;
+       |
+       |    public class InnerClass {
+       |        public int b() {
+       |            return 1;
+       |        }
+       |
+       |        public int d = 2;
+       |    }
+       |
+       |    public static class InnerStaticClass implements InnerInterface {
+       |        public static void a() {
+       |        }
+       |
+       |        public int b() {
+       |            return 1;
+       |        }
+       |
+       |        public static int c = 2;
+       |        public int d = 2;
+       |    }
+       |
+       |    public static interface InnerInterface {
+       |        public static void a() {
+       |        }
+       |
+       |        public int b();
+       |    }
+       |
+       |    public String publicName() {
+       |        return "name";
+       |    }
+       |
+       |    // Weird formatting
+       |    @Override
+       |    public String
+       |    toString() {
+       |        return "";
+       |    }
+       |}
+       |""".stripMargin,
+    List("dot/", "dot/example/", "dot/example/JavaClass# -> Exception",
+      "dot/example/JavaClass#InnerClass#",
+      "dot/example/JavaClass#InnerInterface#",
+      "dot/example/JavaClass#InnerStaticClass# -> InnerInterface"),
+    mode = ToplevelWithInner,
+  )
 
-      assertNoDiff(
-        obtained.sorted.mkString("\n"),
-        expected,
-      )
-      input.delete()
-    }
-  }
+  check(
+    "implements",
+    """|package example;
+       |
+       |public class ExampleClass {
+       |  public static interface SomeInterface<T, E> { }
+       |
+       |  public static interface SomeOtherInterface { }
+       |
+       |  public static class SomeClass extends SomeAbstractClass implements SomeInterface<Integer, Integer>, SomeOtherInterface {
+       |    public static class InnerClass implements SomeOtherInterface { }
+       |  }
+       |
+       |  public static abstract class SomeAbstractClass { }
+       |}
+       |""".stripMargin,
+    List(
+      "example/", "example/ExampleClass#",
+      "example/ExampleClass#SomeClass# -> SomeAbstractClass, SomeInterface, SomeOtherInterface",
+      "example/ExampleClass#SomeClass#InnerClass# -> SomeOtherInterface",
+      "example/ExampleClass#SomeAbstractClass#",
+      "example/ExampleClass#SomeInterface#",
+      "example/ExampleClass#SomeOtherInterface#",
+    ),
+    mode = ToplevelWithInner,
+  )
+
 }

@@ -26,6 +26,7 @@ abstract class BaseImplementationSuite(name: String)
       fileContents: String,
       expectedSymbols: String,
       scalaVersion: String = BuildInfo.scalaVersion,
+      topLines: Option[Int] = None,
   ): Unit =
     test(name) {
       val fileName = "a/src/main/scala/a/Main.scala"
@@ -53,7 +54,8 @@ abstract class BaseImplementationSuite(name: String)
             )
           )
         symbols = definitions.map(_.symbol).sorted
-        _ = assertNoDiff(symbols.mkString("\n"), expectedSymbols)
+        foundSymbols = topLines.map(num => symbols.take(num)).getOrElse(symbols)
+        _ = assertNoDiff(foundSymbols.mkString("\n"), expectedSymbols)
         _ <- server.shutdown()
       } yield ()
     }

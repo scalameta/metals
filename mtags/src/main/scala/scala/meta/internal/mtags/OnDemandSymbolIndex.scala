@@ -114,7 +114,8 @@ final class OnDemandSymbolIndex(
       source,
       None, {
         indexedSources += 1
-        getOrCreateBucket(dialect).addSourceFile(source, sourceDirectory)
+        getOrCreateBucket(dialect)
+          .addSourceFile(source, sourceDirectory, isJava = false)
       }
     )
 
