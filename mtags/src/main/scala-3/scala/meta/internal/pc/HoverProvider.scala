@@ -29,6 +29,36 @@ object HoverProvider:
       driver: InteractiveDriver,
       search: SymbolSearch,
   )(implicit reportContext: ReportContext): ju.Optional[HoverSignature] =
+    def dealias(tpe: Type)(using Context): Type = {
+      val maxRecursionDepth = 10
+
+      def dealias2(tpe: Type) : Type = 
+          tpe match {
+            case x: TypeBounds =>
+                TypeBounds(lo=dealias2(x.lo),hi=dealias2(x.hi))
+            case x:RefinedType =>
+                RefinedType(parent = dealias2(x.parent),
+                name = x.refinedName,
+                info = dealias2(x.refinedInfo))
+              case _ => tpe.metalsDealias
+          }
+
+      def recurse(tpe: Type, depth: Int)(using Context): Type =
+        if (tpe == null || tpe.isErroneous || tpe == NoType) tpe
+        else           
+          {
+            val (symbols,types) = tpe.typeMembers.toList.map{ case denot =>
+              val symbol = denot.symbol     
+              val dealiased = dealias2(denot.info)
+              if ((dealiased eq denot.info) || depth >= maxRecursionDepth) (symbol,denot.info)
+              else (symbol,dealiased )  
+            }.unzip
+            tpe.substApprox(symbols,types)
+          }
+          
+         
+      recurse(tpe, 0)
+    }
     val uri = params.uri
     val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
     driver.run(uri, sourceFile)
@@ -127,7 +157,7 @@ object HoverProvider:
                   if tpe != NoType then tpe
                   else tpw
 
-                printer.hoverSymbol(sym, finalTpe)
+                printer.hoverSymbol(sym, dealias(finalTpe))
             end match
           end hoverString
 
@@ -135,7 +165,8 @@ object HoverProvider:
             .flatMap(symTpe => search.symbolDocumentation(symTpe._1))
             .map(_.docstring)
             .mkString("\n")
-          printer.expressionType(exprTpw) match
+        
+          printer.expressionType(dealias(exprTpw)) match
             case Some(expressionType) =>
               val forceExpressionType =
                 !pos.span.isZeroExtent || (

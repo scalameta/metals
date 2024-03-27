@@ -202,6 +202,23 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
     toHover(symbol, symbol.keyString, symbol.info, symbol.info, pos, pos)
   }
 
+  private def dealias(tpe: Type): Type = {
+    val maxRecursionDepth = 10
+    def recurse(tpe: Type, depth: Int): Type =
+      if (tpe == null || tpe.isErroneous || tpe == NoType) tpe
+      else
+        tpe.map { tpe0 =>
+          tpe0 match {
+            case _: TypeRef =>
+              val dealiased = tpe0.dealias
+              if ((dealiased eq tpe0) || depth >= maxRecursionDepth) tpe0
+              else recurse(dealiased, depth + 1)
+            case _ => tpe0
+          }
+        }
+    recurse(tpe, 0)
+  }
+
   def toHover(
       symbol: Symbol,
       keyword: String,
@@ -233,7 +250,8 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
           lookupSymbol = name => context.lookupSymbol(name, _ => true) :: Nil,
           renames = re
         )
-        val prettyType = metalsToLongString(tpe.widen.finalResultType, history)
+        val prettyType =
+          metalsToLongString(dealias(tpe).widen.finalResultType, history)
         val lspRange = if (range.isRange) Some(range.toLsp) else None
         Some(
           new ScalaHover(
@@ -266,7 +284,7 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
         val printer = new SignaturePrinter(
           symbol,
           history,
-          symbolInfo.widen,
+          dealias(symbolInfo.widen),
           includeDocs = true
         )
         val name =
@@ -275,7 +293,8 @@ class HoverProvider(val compiler: MetalsGlobal, params: OffsetParams)(implicit
         val flags = List(symbolFlagString(symbol), keyword, name)
           .filterNot(_.isEmpty)
           .mkString(" ")
-        val prettyType = metalsToLongString(tpe.widen.finalResultType, history)
+        val prettyType =
+          metalsToLongString(dealias(tpe).widen.finalResultType, history)
         val macroSuffix =
           if (symbol.isMacro) " = macro"
           else ""
