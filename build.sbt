@@ -66,6 +66,7 @@ inThisBuild(
     resolvers ++= Resolver.sonatypeOssRepos("public"),
     resolvers ++= Resolver.sonatypeOssRepos("snapshot"),
     dependencyOverrides += V.guava,
+    semanticdbVersion := V.semanticdb(scalaVersion.value),
     // faster publishLocal:
     packageDoc / publishArtifact := sys.env.contains("CI"),
     packageSrc / publishArtifact := sys.env.contains("CI"),

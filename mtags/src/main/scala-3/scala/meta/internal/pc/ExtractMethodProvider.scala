@@ -24,8 +24,8 @@ import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
-import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j as l
 
 final class ExtractMethodProvider(
     range: RangeParams,

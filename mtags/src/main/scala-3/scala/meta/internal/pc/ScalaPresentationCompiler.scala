@@ -3,11 +3,11 @@ package scala.meta.internal.pc
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
-import java.util as ju
 import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
+import java.util as ju
 
 import scala.collection.JavaConverters.*
 import scala.concurrent.ExecutionContext
@@ -27,9 +27,9 @@ import scala.meta.pc.*
 import scala.meta.pc.PcSymbolInformation as IPcSymbolInformation
 
 import dotty.tools.dotc.reporting.StoreReporter
-import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j as l
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
