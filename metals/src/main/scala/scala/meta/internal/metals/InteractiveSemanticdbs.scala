@@ -152,17 +152,19 @@ final class InteractiveSemanticdbs(
     def fromTarget = for {
       buildTarget <- buildTargets.inverseSources(source)
       pc <- compilers().loadCompiler(buildTarget)
-    } yield pc
+    } yield (pc, Some(buildTarget))
 
-    val pc = worksheetCompiler
+    val (pc, optBuildTarget) = worksheetCompiler
+      .map((_, None))
       .orElse(fromTarget)
       .orElse {
         // load presentation compiler for sources that were create by a worksheet definition request
         tables.worksheetSources
           .getWorksheet(source)
           .flatMap(compilers().loadWorksheetCompiler)
+          .map((_, None))
       }
-      .getOrElse(compilers().fallbackCompiler(source))
+      .getOrElse((compilers().fallbackCompiler(source), None))
 
     val (prependedLinesSize, modifiedText) =
       Option
@@ -178,8 +180,15 @@ final class InteractiveSemanticdbs(
     // NOTE(olafur): it's unfortunate that we block on `semanticdbTextDocument`
     // here but to avoid it we would need to refactor the `Semanticdbs` trait,
     // which requires more effort than it's worth.
+    val params = new CompilerVirtualFileParams(
+      source.toURI,
+      modifiedText,
+      token = EmptyCancelToken,
+      outlineFiles =
+        compilers().outlineFilesProvider.getOutlineFiles(optBuildTarget),
+    )
     val bytes = pc
-      .semanticdbTextDocument(source.toURI, modifiedText)
+      .semanticdbTextDocument(params)
       .get(
         clientConfig.initialConfig.compilers.timeoutDelay,
         clientConfig.initialConfig.compilers.timeoutUnit,

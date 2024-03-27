@@ -55,7 +55,7 @@ object Compression {
             pkg = in.readString()
           case 0 =>
             isDone = true
-          case _ =>
+          case tag =>
             in.skipField(tag)
         }
       }

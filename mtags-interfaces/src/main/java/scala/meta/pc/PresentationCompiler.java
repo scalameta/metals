@@ -161,12 +161,12 @@ public abstract class PresentationCompiler {
 			List<Integer> argIndices);
 
 	/**
-	 * The text contents of the fiven file changed.
+	 * The text contents of the given file changed.
 	 */
 	public abstract CompletableFuture<List<Diagnostic>> didChange(VirtualFileParams params);
 
 	/**
-	 * Returns decorations for missing type adnotations, inferred type parameters, implicit parameters and conversions.
+	 * Returns decorations for missing type annotations, inferred type parameters, implicit parameters and conversions.
 	 */
 	public CompletableFuture<List<InlayHint>> inlayHints(InlayHintsParams params) {
 		return CompletableFuture.completedFuture(Collections.emptyList());
@@ -193,6 +193,14 @@ public abstract class PresentationCompiler {
 	 * <code>TextDocument</code> for the given source.
 	 */
 	public abstract CompletableFuture<byte[]> semanticdbTextDocument(URI filename, String code);
+
+	/**
+	 * Returns the Protobuf byte array representation of a SemanticDB
+	 * <code>TextDocument</code> for the given source.
+	 */
+	public CompletableFuture<byte[]> semanticdbTextDocument(VirtualFileParams params) {
+		return semanticdbTextDocument(params.uri(), params.text());
+	}
 
 	/**
 	 * Return the selections ranges for the given positions.
