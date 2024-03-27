@@ -149,6 +149,9 @@ class MetalsLspService(
 
   private val cancelables = new MutableCancelable()
   val isCancelled = new AtomicBoolean(false)
+  val ignoreFileEvents = new AtomicReference(
+    Set.empty[(String, FileChangeType)]
+  )
 
   override def cancel(): Unit = {
     if (isCancelled.compareAndSet(false, true)) {
@@ -214,6 +217,7 @@ class MetalsLspService(
   private val symbolDocs = new Docstrings(definitionIndex)
   var bspSession: Option[BspSession] =
     Option.empty[BspSession]
+  val isConnecting = new AtomicBoolean(false)
   private val savedFiles = new ActiveFiles(time)
   private val recentlyOpenedFiles = new ActiveFiles(time)
   val isImportInProcess = new AtomicBoolean(false)
@@ -322,6 +326,7 @@ class MetalsLspService(
     shellRunner,
     statusBar,
     () => userConfig,
+    willCreateBspJson,
   )
 
   private val diagnostics: Diagnostics = new Diagnostics(
@@ -436,6 +441,7 @@ class MetalsLspService(
     () => bspSession.map(_.mainConnection),
     restartBspServer,
     connectionBspStatus,
+    willCreateBspJson,
   )
 
   private val workspaceSymbols: WorkspaceSymbolProvider =
@@ -1220,6 +1226,7 @@ class MetalsLspService(
                 folder,
                 bspConfigGenerator.runUnconditionally(buildTool, _),
                 statusBar,
+                willCreateBspJson,
               )
               _ <- quickConnectToBuildServer()
             } yield ()
@@ -1246,6 +1253,9 @@ class MetalsLspService(
     }
   }
 
+  def willCreateBspJson(name: String): Set[(String, FileChangeType)] =
+    ignoreFileEvents.getAndUpdate(_ + ((s"$name.json", FileChangeType.Created)))
+
   def didChangeWatchedFiles(
       events: List[FileEvent]
   ): Future[Unit] = {
@@ -1268,7 +1278,19 @@ class MetalsLspService(
       )
     if (bloopReportDelete.nonEmpty) connectionBspStatus.onReportsUpdate()
     otherDeleteEvents.map(_.getUri().toAbsolutePath).foreach(onDelete)
-    onChange(changeAndCreateEvents.map(_.getUri().toAbsolutePath))
+    // when metals creates `.bsp/<name>.json` files we want to ignore
+    // create event for those files
+    def info(fileEvent: FileEvent) =
+      (fileEvent.getUri().toAbsolutePath.filename, fileEvent.getType())
+    val ignoreEvents = ignoreFileEvents.get()
+    val (expectedEvents, otherEvents) =
+      changeAndCreateEvents
+        .partition(fileEvent => ignoreEvents(info(fileEvent)))
+    if (expectedEvents.nonEmpty) {
+      val expectedInfo = expectedEvents.map(info)
+      ignoreFileEvents.getAndUpdate(_.filterNot(expectedInfo.contains))
+    }
+    onChange(otherEvents.map(_.getUri().toAbsolutePath))
   }
 
   /**
@@ -1979,6 +2001,7 @@ class MetalsLspService(
                 args,
               ),
             statusBar,
+            willCreateBspJson,
           )
           .map(status => ensureAndConnect(buildTool, status))
       case buildTools =>
@@ -2145,6 +2168,7 @@ class MetalsLspService(
         folder,
         args => bspConfigGenerator.runUnconditionally(buildTool, args),
         statusBar,
+        willCreateBspJson,
       )
       .flatMap(_ => quickConnectToBuildServer())
   }
@@ -2158,8 +2182,10 @@ class MetalsLspService(
       !buildTools.isAutoConnectable()
       && buildTools.loadSupported.isEmpty
       && folder.isScalaProject()
-    ) scalaCli.setupIDE(folder)
-    else Future.successful(())
+    ) {
+      ScalaCli.names.foreach(willCreateBspJson)
+      scalaCli.setupIDE(folder)
+    } else Future.successful(())
   }
 
   private def slowConnectToBloopServer(
@@ -2280,6 +2306,7 @@ class MetalsLspService(
     }
 
     val scalaCliPath = scalaCli.path
+    isConnecting.set(true)
 
     (for {
       _ <- disconnectOldBuildServer()
@@ -2374,6 +2401,7 @@ class MetalsLspService(
       workspaceReload.persistChecksumStatus(Digest.Status.Started, _)
     )
     bspSession = Some(session)
+    isConnecting.set(false)
     for {
       _ <- importBuild(session)
       _ <- indexer.profiledIndexWorkspace(runDoctorCheck)
@@ -2459,6 +2487,7 @@ class MetalsLspService(
     sourceMapper,
     folder,
     implementationProvider,
+    () => isConnecting.get(),
   )
 
   private def checkRunningBloopVersion(bspServerVersion: String) = {

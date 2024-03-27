@@ -28,7 +28,9 @@ class ScalaCliBuildTool(
       workspace: AbsolutePath,
       systemProcess: List[String] => Future[BspConfigGenerationStatus],
       statusBar: StatusBar,
-  ): Future[BspConfigGenerationStatus] =
+      willGenerateBspJson: String => Unit,
+  ): Future[BspConfigGenerationStatus] = {
+    willGenerateBspJson(buildServerName)
     createBspFileArgs(workspace).map(systemProcess).getOrElse {
       // fallback to creating `.bsp/scala-cli.json` that starts JVM launcher
       val bspConfig =
@@ -39,6 +41,7 @@ class ScalaCliBuildTool(
       )
       Future.successful(Generated)
     }
+  }
 
   override def createBspFileArgs(
       workspace: AbsolutePath
