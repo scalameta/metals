@@ -3,6 +3,9 @@ package scala.meta.internal.metals
 import java.nio.charset.Charset
 import java.util.Collections
 
+import scala.concurrent.Await
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
 import scala.util.Success
 import scala.util.Try
 
@@ -34,7 +37,8 @@ final class InteractiveSemanticdbs(
     semanticdbIndexer: () => SemanticdbIndexer,
     javaInteractiveSemanticdb: Option[JavaInteractiveSemanticdb],
     buffers: Buffers,
-) extends Cancelable
+)(implicit executionContext: ExecutionContext)
+    extends Cancelable
     with Semanticdbs {
 
   private val textDocumentCache = Collections.synchronizedMap(
@@ -178,11 +182,16 @@ final class InteractiveSemanticdbs(
     // NOTE(olafur): it's unfortunate that we block on `semanticdbTextDocument`
     // here but to avoid it we would need to refactor the `Semanticdbs` trait,
     // which requires more effort than it's worth.
-    val bytes = pc
-      .semanticdbTextDocument(source.toURI, modifiedText)
-      .get(
-        clientConfig.initialConfig.compilers.timeoutDelay,
-        clientConfig.initialConfig.compilers.timeoutUnit,
+    val bytes = Await
+      .result(
+        pc
+          .flatMap {
+            _.semanticdbTextDocument(source.toURI, modifiedText).asScala
+          },
+        Duration(
+          clientConfig.initialConfig.compilers.timeoutDelay,
+          clientConfig.initialConfig.compilers.timeoutUnit,
+        ),
       )
     val textDocument = {
       val doc = s.TextDocument.parseFrom(bytes)
