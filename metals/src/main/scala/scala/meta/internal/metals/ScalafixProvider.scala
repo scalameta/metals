@@ -39,7 +39,7 @@ case class ScalafixProvider(
     buffers: Buffers,
     userConfig: () => UserConfiguration,
     workspace: AbsolutePath,
-    statusBar: StatusBar,
+    workDoneProgress: WorkDoneProgress,
     compilations: Compilations,
     languageClient: MetalsLanguageClient,
     buildTargets: BuildTargets,
@@ -444,7 +444,7 @@ case class ScalafixProvider(
     scalafixCache.get(scalaBinaryVersion) match {
       case Some(value) => Success(value)
       case None =>
-        statusBar.trackBlockingTask("Downloading scalafix") {
+        workDoneProgress.trackBlocking("Downloading scalafix") {
           val scalafix =
             if (scalaBinaryVersion == "2.11") Try(scala211Fallback)
             else
@@ -479,7 +479,7 @@ case class ScalafixProvider(
     rulesClassloaderCache.get(scalfixRulesKey) match {
       case Some(value) => Success(value)
       case None =>
-        statusBar.trackBlockingTask(
+        workDoneProgress.trackBlocking(
           "Downloading scalafix rules' dependencies"
         ) {
           val rulesDependencies = scalfixRulesKey.usedRulesWithClasspath

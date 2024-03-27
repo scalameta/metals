@@ -20,6 +20,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
@@ -36,6 +37,7 @@ class BspConnector(
     tables: Tables,
     userConfig: () => UserConfiguration,
     statusBar: StatusBar,
+    workDoneProgress: WorkDoneProgress,
     bspConfigGenerator: BspConfigGenerator,
     currentConnection: () => Option[BuildServerConnection],
     restartBspServer: () => Future[Boolean],
@@ -129,8 +131,8 @@ class BspConnector(
                 if (shouldReload) connection.workspaceReload()
                 else Future.successful(())
             } yield connection
-          statusBar
-            .trackFuture("Connecting to sbt", connectionF, showTimer = true)
+          workDoneProgress
+            .trackFuture("Connecting to sbt", connectionF)
             .map(Some(_))
         case ResolvedBspOne(details) =>
           tables.buildServers.chooseServer(details.getName())

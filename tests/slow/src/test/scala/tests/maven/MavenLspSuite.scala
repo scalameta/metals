@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets
 import scala.meta.internal.builds.MavenBuildTool
 import scala.meta.internal.builds.MavenDigest
 import scala.meta.internal.io.InputStreamIO
+import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
@@ -40,10 +41,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          importBuildMessage,
-          progressMessage,
-        ).mkString("\n"),
+        importBuildMessage,
       )
       _ = client.messageRequests.clear() // restart
       _ = assertStatus(_.isInstalled)
@@ -64,11 +62,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          // Project has .bloop directory so user is asked to "re-import project"
-          importBuildChangesMessage,
-          progressMessage,
-        ).mkString("\n"),
+        importBuildChangesMessage,
       )
     }
   }
@@ -84,17 +78,16 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
       _ <- server.server.buildServerPromise.future
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          importBuildMessage,
-          progressMessage,
-        ).mkString("\n"),
+        importBuildMessage,
       )
-      _ = client.messageRequests.clear() // restart
+      _ = client.progressParams.clear() // restart
       _ <- server.executeCommand(ServerCommands.ImportBuild)
       _ = assertNoDiff(
-        client.workspaceMessageRequests,
+        client.beginProgressMessages,
         List(
-          progressMessage
+          progressMessage,
+          Messages.importingBuild,
+          Messages.indexing,
         ).mkString("\n"),
       )
     } yield ()
@@ -120,10 +113,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          importBuildMessage,
-          progressMessage,
-        ).mkString("\n"),
+        importBuildMessage,
       )
       debugger <- server.startDebugging(
         "maven-test-repo",
@@ -201,10 +191,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          importBuildMessage,
-          progressMessage,
-        ).mkString("\n"),
+        importBuildMessage,
       )
       _ = assertNoDiff(
         client.workspaceShowMessages,
@@ -215,10 +202,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
       _ <- server.didSave("pom.xml")(_ => defaultPom)
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          importBuildMessage,
-          progressMessage,
-        ).mkString("\n"),
+        importBuildMessage,
       )
       _ = assertStatus(_.isInstalled)
     } yield ()

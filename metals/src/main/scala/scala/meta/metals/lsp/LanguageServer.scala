@@ -47,3 +47,4 @@ trait ScalaLspService
     extends TextDocumentService
     with WorkspaceService
     with MetalsService
+    with WindowService

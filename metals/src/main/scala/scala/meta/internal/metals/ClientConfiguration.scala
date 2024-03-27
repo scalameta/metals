@@ -75,12 +75,13 @@ final class ClientConfiguration(
       .map(Icons.fromString)
       .getOrElse(initialConfig.icons)
 
-  def slowTaskIsOn(): Boolean =
-    extract(
-      initializationOptions.slowTaskProvider,
-      experimentalCapabilities.slowTaskProvider,
-      initialConfig.slowTask.isOn,
-    )
+  def hasWorkDoneProgressCapability(): Boolean =
+    (for {
+      params <- initializeParams
+      capabilities <- Option(params.getCapabilities())
+      window <- Option(capabilities.getWindow())
+      workDoneProgress <- Option(window.getWorkDoneProgress())
+    } yield workDoneProgress.booleanValue()).getOrElse(false)
 
   def isExecuteClientCommandProvider(): Boolean =
     extract(

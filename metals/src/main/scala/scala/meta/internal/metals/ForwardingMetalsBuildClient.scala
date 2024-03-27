@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.Promise
+import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.BspErrorHandler
@@ -20,6 +20,7 @@ import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
+import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.tvp._
 import scala.meta.io.AbsolutePath
 
@@ -55,6 +56,7 @@ final class ForwardingMetalsBuildClient(
     onBuildTargetDidCompile: b.BuildTargetIdentifier => Unit,
     onBuildTargetDidChangeFunc: b.DidChangeBuildTarget => Unit,
     bspErrorHandler: BspErrorHandler,
+    workDoneProgress: WorkDoneProgress,
 ) extends MetalsBuildClient
     with Cancelable {
 
@@ -66,13 +68,24 @@ final class ForwardingMetalsBuildClient(
   ): List[LogForwarder] = {
     forwarders.getAndUpdate(_.prepended(logForwarder))
   }
-  private case class Compilation(
-      timer: Timer,
-      promise: Promise[b.CompileReport],
-      isNoOp: Boolean,
-      progress: TaskProgress = TaskProgress.empty,
+  private class Compilation(
+      val timer: Timer,
+      val isNoOp: Boolean,
+      token: Option[Future[WorkDoneProgress.Token]],
+      taskProgress: TaskProgress = TaskProgress.empty,
   ) extends TreeViewCompilation {
-    def progressPercentage = progress.percentage
+
+    def progressPercentage = taskProgress.percentage
+
+    def end(): Unit = token.foreach(workDoneProgress.endProgress(_))
+
+    def updateProgress(progress: Long, total: Long = 100): Unit = {
+      val prev = taskProgress.percentage
+      taskProgress.update(progress, total)
+      if (prev != taskProgress.percentage) {
+        token.foreach(workDoneProgress.notifyProgress(_, progressPercentage))
+      }
+    }
   }
 
   private val compilations = TrieMap.empty[b.BuildTargetIdentifier, Compilation]
@@ -109,7 +122,7 @@ final class ForwardingMetalsBuildClient(
       key <- compilations.keysIterator
       compilation <- compilations.remove(key)
     } {
-      compilation.promise.cancel()
+      compilation.end()
     }
   }
 
@@ -163,23 +176,22 @@ final class ForwardingMetalsBuildClient(
         } {
           diagnostics.onStartCompileBuildTarget(target)
           // cancel ongoing compilation for the current target, if any.
-          compilations.remove(target).foreach(_.promise.cancel())
+          compilations.remove(target).foreach(_.end())
 
           val name = info.getDisplayName
-          val promise = Promise[b.CompileReport]()
           val isNoOp =
             params.getMessage != null && params.getMessage.startsWith(
               "Start no-op compilation"
             )
-          val compilation = Compilation(new Timer(time), promise, isNoOp)
+          val token =
+            Option.when(!isNoOp) {
+              workDoneProgress.startProgress(
+                s"Compiling $name",
+                withProgress = true,
+              )
+            }
+          val compilation = new Compilation(new Timer(time), isNoOp, token)
           compilations(task.getTarget) = compilation
-
-          statusBar.trackFuture(
-            s"Compiling $name",
-            promise.future,
-            showTimer = true,
-            progress = Some(compilation.progress),
-          )
         }
       case _ =>
     }
@@ -201,7 +213,7 @@ final class ForwardingMetalsBuildClient(
               scribe.error(s"failed to process compile report", e)
           }
           val target = report.getTarget
-          compilation.promise.trySuccess(report)
+          compilation.end()
           val name = buildTargets.info(report.getTarget) match {
             case Some(i) => i.getDisplayName
             case None => report.getTarget.getUri
@@ -264,7 +276,7 @@ final class ForwardingMetalsBuildClient(
           buildTarget <- buildTargetFromParams
           report <- compilations.get(buildTarget)
         } yield {
-          report.progress.update(params.getProgress, params.getTotal)
+          report.updateProgress(params.getProgress, params.getTotal)
         }
       case "compile-progress" =>
         // "compile-progress" is from sbt, however its progress field is actually a percentage,
@@ -273,7 +285,7 @@ final class ForwardingMetalsBuildClient(
           buildTarget <- buildTargetFromParams
           report <- compilations.get(buildTarget)
         } yield {
-          report.progress.update(params.getProgress, newTotal = 100)
+          report.updateProgress(params.getProgress)
         }
       case _ =>
     }

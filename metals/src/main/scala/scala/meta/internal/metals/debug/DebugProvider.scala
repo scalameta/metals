@@ -42,6 +42,7 @@ import scala.meta.internal.metals.SourceMapper
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.LogForwarder
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
@@ -85,6 +86,7 @@ class DebugProvider(
     semanticdbs: Semanticdbs,
     compilers: Compilers,
     statusBar: StatusBar,
+    workDoneProgress: WorkDoneProgress,
     sourceMapper: SourceMapper,
     userConfig: () => UserConfiguration,
     testProvider: TestSuitesProvider,
@@ -142,7 +144,7 @@ class DebugProvider(
         )
       debugServer <-
         if (isJvm)
-          statusBar.trackSlowFuture(
+          workDoneProgress.trackFuture(
             "Starting debug server",
             start(
               sessionName,
@@ -150,7 +152,7 @@ class DebugProvider(
               buildServer,
               cancelPromise,
             ),
-            () => cancelPromise.trySuccess(()),
+            Some(() => cancelPromise.trySuccess(())),
           )
         else
           runLocally(
@@ -256,12 +258,8 @@ class DebugProvider(
             socket
           }
 
-        val connWithTimeout =
-          // if slow task is supported users can stop it themselves
-          if (clientConfig.slowTaskIsOn()) conn
-          else conn.withTimeout(60, TimeUnit.SECONDS)
-
-        connWithTimeout
+        conn
+          .withTimeout(60, TimeUnit.SECONDS)
           .recover { case exception =>
             connectedToServer.tryFailure(exception)
             cancelPromise.trySuccess(())
@@ -296,7 +294,7 @@ class DebugProvider(
         compilers,
         workspace,
         clientConfig.disableColorOutput(),
-        statusBar,
+        workDoneProgress,
         sourceMapper,
         compilations,
         targets,

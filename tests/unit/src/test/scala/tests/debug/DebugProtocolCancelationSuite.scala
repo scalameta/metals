@@ -1,7 +1,6 @@
 package tests.debug
 
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
@@ -20,8 +19,11 @@ class DebugProtocolCancelationSuite
     ) {
 
   test("start") {
-    client.slowTaskHandler = { _ =>
-      Some(MetalsSlowTaskResult(cancel = true))
+    cleanWorkspace()
+    client.onWorkDoneProgressStart = (message, cancelParams) => {
+      if (message == "Starting debug server") {
+        server.fullServer.didCancelWorkDoneProgress(cancelParams)
+      }
     }
     val mainClass = new ScalaMainClass(
       "a.Main",

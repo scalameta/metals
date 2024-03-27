@@ -9,11 +9,11 @@ import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
@@ -55,11 +55,7 @@ class SbtBloopLspSuite
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          // Project has no .bloop directory so user is asked to "import via bloop"
-          importBuildMessage,
-          progressMessage,
-        ).mkString("\n"),
+        importBuildMessage,
       )
       _ = client.messageRequests.clear() // restart
       _ = assertStatus(_.isInstalled)
@@ -77,11 +73,7 @@ class SbtBloopLspSuite
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          // Project has .bloop directory so user is asked to "re-import project"
-          importBuildChangesMessage,
-          progressMessage,
-        ).mkString("\n"),
+        importBuildChangesMessage,
       )
     }
   }
@@ -150,18 +142,16 @@ class SbtBloopLspSuite
       _ <- server.server.buildServerPromise.future
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          // Project has no .bloop directory so user is asked to "import via bloop"
-          importBuildMessage,
-          progressMessage,
-        ).mkString("\n"),
+        importBuildMessage,
       )
-      _ = client.messageRequests.clear() // restart
+      _ = client.progressParams.clear() // restart
       _ <- server.executeCommand(ServerCommands.ImportBuild)
       _ = assertNoDiff(
-        client.workspaceMessageRequests,
+        client.beginProgressMessages,
         List(
-          progressMessage
+          progressMessage,
+          Messages.importingBuild,
+          Messages.indexing,
         ).mkString("\n"),
       )
     } yield ()
@@ -180,11 +170,7 @@ class SbtBloopLspSuite
       _ <- server.server.buildServerPromise.future
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          // Project has no .bloop directory so user is asked to "import via bloop"
-          importBuildMessage,
-          progressMessage,
-        ).mkString("\n"),
+        importBuildMessage,
       )
       _ = client.messageRequests.clear() // restart
       _ <- server.didChangeConfiguration(
@@ -196,10 +182,7 @@ class SbtBloopLspSuite
       _ <- server.executeCommand(ServerCommands.ImportBuild)
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          BloopVersionChange.msg,
-          progressMessage,
-        ).mkString("\n"),
+        BloopVersionChange.msg,
       )
       _ = assertStatus(_.isInstalled)
     } yield ()
@@ -217,20 +200,18 @@ class SbtBloopLspSuite
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          // Project has no .bloop directory so user is asked to "import via bloop"
-          importBuildMessage,
-          progressMessage,
-        ).mkString("\n"),
+        importBuildMessage,
       )
-      _ = client.messageRequests.clear() // restart
+      _ = client.progressParams.clear() // restart
       _ <- server
         .executeCommand(ServerCommands.ImportBuild)
         .zip(server.executeCommand(ServerCommands.ImportBuild))
       _ = assertNoDiff(
-        client.workspaceMessageRequests,
+        client.beginProgressMessages,
         List(
-          progressMessage
+          progressMessage,
+          Messages.importingBuild,
+          Messages.indexing,
         ).mkString("\n"),
       )
       _ = assertNoDiff(
@@ -277,15 +258,13 @@ class SbtBloopLspSuite
   }
 
   test("cancel") {
-    client.slowTaskHandler = params => {
-      if (params == bloopInstallProgress("sbt")) {
+    cleanWorkspace()
+    client.onWorkDoneProgressStart = (name, cancelParams) => {
+      if (name == progressMessage) {
         Thread.sleep(TimeUnit.SECONDS.toMillis(2))
-        Some(MetalsSlowTaskResult(cancel = true))
-      } else {
-        None
+        server.fullServer.didCancelWorkDoneProgress(cancelParams)
       }
     }
-    cleanWorkspace()
     for {
       _ <- initialize(
         s"""
@@ -298,7 +277,7 @@ class SbtBloopLspSuite
         expectError = true,
       )
       _ = assertStatus(!_.isInstalled)
-      _ = client.slowTaskHandler = _ => None
+      _ = client.onWorkDoneProgressStart = (_, _) => {}
       _ <- server.didSave("build.sbt")(_ + "\n// comment")
       _ = assertNoDiff(client.workspaceShowMessages, "")
       _ = assertStatus(!_.isInstalled)
@@ -321,10 +300,7 @@ class SbtBloopLspSuite
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          importBuildMessage,
-          progressMessage,
-        ).mkString("\n"),
+        importBuildMessage,
       )
       _ = assertNoDiff(
         client.workspaceShowMessages,
@@ -337,10 +313,7 @@ class SbtBloopLspSuite
       }
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          importBuildMessage,
-          progressMessage,
-        ).mkString("\n"),
+        importBuildMessage,
       )
       _ = assertStatus(_.isInstalled)
     } yield ()

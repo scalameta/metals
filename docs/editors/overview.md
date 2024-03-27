@@ -455,8 +455,6 @@ website.
 **Did focus**: Editor client implements the `metals/didFocusTextDocument`
 notification.
 
-**Slow task**: Editor client implements the `metals/slowTask` request.
-
 **Input box**: Editor client implements the `metals/inputBox` request.
 
 **Quick pick**: Editor client implements the `metals/quickPick` request.

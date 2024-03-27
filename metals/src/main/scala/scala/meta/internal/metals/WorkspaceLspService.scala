@@ -123,18 +123,22 @@ class WorkspaceLspService(
     languageClient
   }
 
+  private val workDoneProgress = register {
+    new WorkDoneProgress(languageClient, time)
+  }
+
   private val userConfigSync =
     new UserConfigurationSync(initializeParams, languageClient, clientConfig)
 
-  val statusBar: StatusBar = new StatusBar(
-    languageClient,
-    time,
-    progressTicks,
-    clientConfig,
-  )
+  val statusBar: StatusBar = register {
+    new StatusBar(
+      languageClient,
+      time,
+    )
+  }
 
   private val shellRunner = register {
-    new ShellRunner(languageClient, time, statusBar)
+    new ShellRunner(time, workDoneProgress)
   }
 
   var focusedDocument: Option[AbsolutePath] = None
@@ -181,6 +185,7 @@ class WorkspaceLspService(
           name,
           doctor,
           bspStatus,
+          workDoneProgress,
         )
     }
 
@@ -211,7 +216,7 @@ class WorkspaceLspService(
 
   private val newProjectProvider: NewProjectProvider = new NewProjectProvider(
     languageClient,
-    statusBar,
+    workDoneProgress,
     clientConfig,
     shellRunner,
     clientConfig.icons,
@@ -612,6 +617,10 @@ class WorkspaceLspService(
       params: FindTextInDependencyJarsRequest
   ): CompletableFuture[ju.List[Location]] =
     collectSeq(_.findTextInDependencyJars(params))(_.flatten.asJava).asJava
+
+  override def didCancelWorkDoneProgress(
+      params: lsp4j.WorkDoneProgressCancelParams
+  ): Unit = workDoneProgress.canceled(params.getToken())
 
   def doctorVisibilityDidChange(
       params: DoctorVisibilityDidChangeParams
@@ -1155,6 +1164,7 @@ class WorkspaceLspService(
 
   def initialized(): Future[Unit] = {
     statusBar.start(sh, 0, 1, ju.concurrent.TimeUnit.SECONDS)
+    workDoneProgress.start(sh, 0, 1, ju.concurrent.TimeUnit.SECONDS)
     for {
       _ <- userConfigSync.initSyncUserConfiguration(folderServices)
       _ <- Future.sequence(folderServices.map(_.initialized()))
@@ -1189,8 +1199,6 @@ class WorkspaceLspService(
         languageClient.underlying,
         () => server.reload(),
         clientConfig.icons,
-        time,
-        sh,
         clientConfig,
       )
       render = () => newClient.renderHtml

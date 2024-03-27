@@ -40,7 +40,7 @@ final class Ammonite(
     buffers: Buffers,
     compilers: Compilers,
     compilations: Compilations,
-    statusBar: StatusBar,
+    workDoneProgress: WorkDoneProgress,
     diagnostics: Diagnostics,
     tables: Tables,
     languageClient: MetalsLanguageClient,
@@ -98,7 +98,7 @@ final class Ammonite(
       case Some(conn) =>
         compilers.cancel()
         for {
-          build0 <- statusBar.trackFuture(
+          build0 <- workDoneProgress.trackFuture(
             "Importing Ammonite scripts",
             ImportedBuild.fromConnection(conn),
           )

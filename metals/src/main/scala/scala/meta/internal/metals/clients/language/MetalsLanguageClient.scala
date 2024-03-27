@@ -33,17 +33,6 @@ trait MetalsLanguageClient
   @JsonNotification("metals/status")
   def metalsStatus(params: MetalsStatusParams): Unit
 
-  /**
-   * Starts a long running task with no estimate for how long it will take to complete.
-   *
-   * - request cancellation from the server indicates that the task has completed
-   * - response with cancel=true indicates the client wishes to cancel the slow task
-   */
-  @JsonRequest("metals/slowTask")
-  def metalsSlowTask(
-      params: MetalsSlowTaskParams
-  ): CompletableFuture[MetalsSlowTaskResult]
-
   @JsonNotification("metals/executeClientCommand")
   def metalsExecuteClientCommand(params: ExecuteCommandParams): Unit
 
@@ -174,13 +163,6 @@ object StatusType extends Enumeration {
   type StatusType = Value
   val metals, bsp = Value
 }
-
-case class MetalsSlowTaskParams(
-    message: String,
-    quietLogs: java.lang.Boolean = null,
-    secondsElapsed: java.lang.Integer = null,
-)
-case class MetalsSlowTaskResult(cancel: Boolean)
 
 case class MetalsInputBoxParams(
     // The value to prefill in the input box

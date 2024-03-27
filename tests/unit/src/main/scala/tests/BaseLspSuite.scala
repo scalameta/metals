@@ -17,7 +17,6 @@ import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.RecursivelyDelete
-import scala.meta.internal.metals.SlowTaskConfig
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.logging.MetalsLogger
@@ -38,8 +37,7 @@ abstract class BaseLspSuite(
   MetalsLogger.updateDefaultFormat()
   def icons: Icons = Icons.default
   def userConfig: UserConfiguration = UserConfiguration()
-  def serverConfig: MetalsServerConfig =
-    MetalsServerConfig.default.copy(slowTask = SlowTaskConfig.on)
+  def serverConfig: MetalsServerConfig = MetalsServerConfig.default
   def time: Time = Time.system
   implicit val ex: ExecutionContextExecutorService =
     ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())

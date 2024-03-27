@@ -8,13 +8,10 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals
 import scala.meta.internal.metals.ClasspathSearch
-import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.ExcludedPackagesHandler
 import scala.meta.internal.metals.MtagsBinaries
 import scala.meta.internal.metals.MtagsResolver
-import scala.meta.internal.metals.StatusBar
-import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
@@ -33,11 +30,7 @@ abstract class PcBenchmark {
   protected implicit val ec: ExecutionContextExecutor =
     scala.concurrent.ExecutionContext.global
   protected val embedded = new Embedded(
-    new StatusBar(
-      NoopLanguageClient,
-      Time.system,
-      clientConfig = ClientConfiguration.default,
-    )
+    new metals.WorkDoneProgress(NoopLanguageClient, metals.Time.system)
   )
 
   protected final val benchmarkedScalaVersions: Array[String] = Array(
