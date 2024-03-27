@@ -310,7 +310,22 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
         "new Fo@@o",
         "foo.sc",
       )
-    } yield ()
+    } yield {
+      val indexingCount = client.progressParams
+        .stream()
+        .filter { params =>
+          if (params.getValue().isLeft()) {
+            params.getValue().getLeft() match {
+              case begin: l.WorkDoneProgressBegin =>
+                begin.getTitle() == "Indexing"
+              case _ => false
+            }
+          } else false
+        }
+        .count()
+        .toInt
+      assertEquals(indexingCount, 1, "should index only once")
+    }
   }
 
   test("inner") {
