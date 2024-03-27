@@ -268,9 +268,11 @@ object SbtBuildTool {
       plugins: PluginDetails*
   ): Boolean = {
     val content =
-      s"""|// DO NOT EDIT! This file is auto-generated.
+      s"""|// format: off
+          |// DO NOT EDIT! This file is auto-generated.
           |
           |${plugins.map(sbtPlugin).mkString("\n")}
+          |// format: on
           |""".stripMargin
     val bytes = content.getBytes(StandardCharsets.UTF_8)
     projectDir.toFile.mkdirs()
