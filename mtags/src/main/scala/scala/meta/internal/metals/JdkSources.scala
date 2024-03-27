@@ -4,6 +4,7 @@ import java.nio.file.Paths
 import java.util.logging.Logger
 
 import scala.util.Failure
+import scala.util.Properties
 import scala.util.Success
 import scala.util.Try
 
@@ -49,6 +50,32 @@ object JdkSources {
     userJavaHome.flatMap(fromString).toList ++
       fromString(System.getenv("JAVA_HOME")).toList ++
       fromString(System.getProperty("java.home")).toList
+  }
+
+  def envVariables(userJavaHome: Option[String]): Map[String, String] = {
+    JdkSources
+      .defaultJavaHome(userJavaHome)
+      .flatMap(path =>
+        List(
+          (path, path.resolve("bin")),
+          (path, path.resolve("jre/bin"))
+        )
+      )
+      .collectFirst {
+        case (javaHome, javaBin) if javaHome.exists && javaBin.exists =>
+          val oldPath = System.getenv().getOrDefault("PATH", "")
+          val newPath =
+            if (oldPath.isEmpty()) javaBin.toString()
+            else {
+              val sep = if (Properties.isWin) ";" else ":"
+              s"$javaBin$sep$oldPath"
+            }
+          Map(
+            "JAVA_HOME" -> javaHome.toString(),
+            "PATH" -> newPath
+          )
+      }
+      .getOrElse(Map.empty)
   }
 
   private def candidates(userJavaHome: Option[String]): List[AbsolutePath] = {

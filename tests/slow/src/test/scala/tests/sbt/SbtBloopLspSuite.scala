@@ -20,12 +20,14 @@ import scala.meta.io.AbsolutePath
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import tests.BaseImportSuite
+import tests.JavaHomeChangeTest
 import tests.ScriptsAssertions
 import tests.TestSemanticTokens
 
 class SbtBloopLspSuite
     extends BaseImportSuite("sbt-bloop-import")
-    with ScriptsAssertions {
+    with ScriptsAssertions
+    with JavaHomeChangeTest {
 
   val sbtVersion = V.sbtVersion
   val scalaVersion = V.scala213
@@ -880,5 +882,22 @@ class SbtBloopLspSuite
       )
     } yield ()
   }
+
+  checkJavaHomeUpdate(
+    "bloop-java-home-update",
+    fileContent => s"""|/build.sbt
+                       |scalaVersion := "$scalaVersion"
+                       |val a = project.in(file("a"))
+                       |$fileContent
+                       |""".stripMargin,
+    errorMessage =
+      """|a/src/main/scala/a/A.scala:2:8: error: object random is not a member of package java.util
+         |import java.util.random.RandomGenerator
+         |       ^^^^^^^^^^^^^^^^
+         |a/src/main/scala/a/A.scala:4:13: error: not found: value RandomGenerator
+         |  val gen = RandomGenerator.of("name")
+         |            ^^^^^^^^^^^^^^^
+         |""".stripMargin,
+  )
 
 }

@@ -286,3 +286,13 @@ final class PcInlayHintsProvider(
   }
 
 }
+
+sealed trait ImplicitParamSym extends Any {
+  def isContextBound: Boolean
+}
+case class Param(sym: Symbol) extends AnyVal with ImplicitParamSym {
+  def isContextBound: Boolean = false
+}
+case class ContextBound(sym: Symbol) extends AnyVal {
+  def isContextBound: Boolean = true
+}

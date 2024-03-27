@@ -12,6 +12,7 @@ import scala.util.Properties
 
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.JavaBinary
+import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.StatusBar
@@ -118,7 +119,7 @@ class ShellRunner(
       logInfo: Boolean = true,
   ): Future[Int] = {
     val elapsed = new Timer(time)
-    val env = additionalEnv ++ javaHome.map("JAVA_HOME" -> _).toMap
+    val env = additionalEnv ++ JdkSources.envVariables(javaHome)
     val ps = SystemProcess.run(
       args,
       directory,

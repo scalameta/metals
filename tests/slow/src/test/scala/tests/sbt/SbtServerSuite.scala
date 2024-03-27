@@ -21,6 +21,7 @@ import scribe.output.LogOutput
 import scribe.output.format.OutputFormat
 import scribe.writer.Writer
 import tests.BaseImportSuite
+import tests.JavaHomeChangeTest
 import tests.SbtBuildLayout
 import tests.SbtServerInitializer
 import tests.ScriptsAssertions
@@ -31,7 +32,8 @@ import tests.TestSemanticTokens
  */
 class SbtServerSuite
     extends BaseImportSuite("sbt-server", SbtServerInitializer)
-    with ScriptsAssertions {
+    with ScriptsAssertions
+    with JavaHomeChangeTest {
 
   val preBspVersion = "1.3.13"
   val supportedMetaBuildVersion = "1.7.0"
@@ -523,5 +525,10 @@ class SbtServerSuite
       _ = assertNoDiff(res.head.getUri().toAbsolutePath.filename, "Keys.scala")
     } yield ()
   }
+
+  checkJavaHomeUpdate(
+    "sbt-java-home-update",
+    fileContent => SbtBuildLayout(fileContent, V.scala213),
+  )
 
 }

@@ -13,6 +13,7 @@ import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
 import tests.BaseImportSuite
+import tests.JavaHomeChangeTest
 import tests.MillBuildLayout
 import tests.MillServerInitializer
 
@@ -20,7 +21,8 @@ import tests.MillServerInitializer
  * Basic suite to ensure that a connection to a Mill server can be made.
  */
 class MillServerSuite
-    extends BaseImportSuite("mill-server", MillServerInitializer) {
+    extends BaseImportSuite("mill-server", MillServerInitializer)
+    with JavaHomeChangeTest {
 
   val preBspVersion = "0.9.10"
   val supportedBspVersion = V.millVersion
@@ -172,4 +174,16 @@ class MillServerSuite
 
     } yield {}
   }
+
+  checkJavaHomeUpdate(
+    "mill-java-home-update",
+    fileContent => s"""|/build.sc
+                       |import mill._, scalalib._
+                       |object a extends ScalaModule {
+                       |  def scalaVersion = "${V.scala213}"
+                       |}
+                       |$fileContent
+                       |""".stripMargin,
+  )
+
 }

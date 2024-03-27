@@ -103,6 +103,59 @@ class Compilers(
 
   private val worksheetsDigests = new TrieMap[AbsolutePath, String]()
 
+  private def enrichWithReleaseOption(scalaTarget: ScalaTarget) = {
+    val scalacOptions = scalaTarget.scalac.getOptions().asScala.toSeq
+    def existsReleaseSetting = scalacOptions.exists(opt =>
+      opt.startsWith("-release") ||
+        opt.startsWith("--release") ||
+        opt.startsWith("-java-output-version")
+    )
+    if (existsReleaseSetting) scalacOptions
+    else {
+      def optBuildTargetJvmVersion =
+        scalaTarget.jvmVersion
+          .flatMap(version => JdkVersion.parse(version))
+          .orElse {
+            val javaHome =
+              scalaTarget.jvmHome
+                .flatMap(_.toAbsolutePathSafe)
+                .orElse {
+                  for {
+                    javaHomeString <- userConfig().javaHome.map(_.trim())
+                    if (javaHomeString.nonEmpty)
+                    javaHome <- Try(AbsolutePath(javaHomeString)).toOption
+                  } yield javaHome
+                }
+            JdkVersion.maybeJdkVersionFromJavaHome(javaHome)
+          }
+
+      val releaseVersion =
+        for {
+          jvmVersion <- optBuildTargetJvmVersion
+          metalsJavaVersion <- Option(sys.props("java.version"))
+            .flatMap(JdkVersion.parse)
+          _ <-
+            if (jvmVersion.major < metalsJavaVersion.major) Some(())
+            else if (metalsJavaVersion.major > jvmVersion.major) {
+              scribe.warn(
+                s"""|Your project uses JDK version ${jvmVersion.major} and
+                    |Metals server is running on JDK version ${metalsJavaVersion.major}.
+                    |This might cause incorrect completions, since
+                    |Metals JDK version should be greater or equal the project's JDK version.
+                    |""".stripMargin
+              )
+              None
+            } else None
+        } yield jvmVersion.major
+
+      releaseVersion match {
+        case Some(version) =>
+          scalacOptions ++ List("-release", version.toString())
+        case _ => scalacOptions
+      }
+    }
+  }
+
   private val cache = jcache.asScala
   private def buildTargetPCFromCache(
       id: BuildTargetIdentifier
@@ -1244,7 +1297,7 @@ class Compilers(
   ): PresentationCompiler = {
     newCompiler(
       mtags,
-      target.scalac.getOptions().asScala.toSeq,
+      enrichWithReleaseOption(target),
       classpath,
       search,
       target.scalac.getTarget.getUri,
