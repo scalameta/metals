@@ -81,24 +81,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
       |  java.util.OptionalInt@@
       |}
     """.stripMargin,
-    if (isJava8)
-      """|> A container object which may or may not contain a `int` value.
-         |If a value is present, `isPresent()` will return `true` and
-         |`getAsInt()` will return the value.
-         |
-         |Additional methods that depend on the presence or absence of a contained
-         |value are provided, such as [orElse()](#orElse(int))
-         |(return a default value if value not present) and
-         |[ifPresent()](#ifPresent(java.util.function.IntConsumer)) (execute a block
-         |of code if the value is present).
-         |
-         |This is a [value-based]()
-         |class; use of identity-sensitive operations (including reference equality
-         |(`==`), identity hash code, or synchronization) on instances of
-         |`OptionalInt` may have unpredictable results and should be avoided.
-         |OptionalInt java.util
-         |""".stripMargin
-    else if (isJava17)
+    if (isJava17)
       """|> A container object which may or may not contain an `int` value.
          |If a value is present, `isPresent()` returns `true`. If no
          |value is present, the object is considered *empty* and

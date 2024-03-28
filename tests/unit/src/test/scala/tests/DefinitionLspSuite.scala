@@ -512,66 +512,64 @@ class DefinitionLspSuite
     } yield ()
   }
 
-  // The tested library is released with JDK 11
-  if (!isJava8)
-    test("jar-with-plus", withoutVirtualDocs = true) {
-      import scala.meta.internal.metals.MetalsEnrichments._
-      val testCase =
-        """|package a
+  test("jar-with-plus", withoutVirtualDocs = true) {
+    import scala.meta.internal.metals.MetalsEnrichments._
+    val testCase =
+      """|package a
+         |
+         |import com.thoughtworks.dsl.D@@sl
+         |class Main {
+         |  val foo = ""
+         |}""".stripMargin
+    val fileContents = testCase.replace("@@", "")
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { 
+           |    "libraryDependencies" : ["com.thoughtworks.dsl::dsl:2.0.0-M0+1-b691cde8"] 
+           |  }
+           |}
+           |/a/src/main/scala/example/MainA.scala
+           |$fileContents
+           |""".stripMargin
+      )
+      _ = server.didOpen("a/src/main/scala/example/MainA.scala")
+      _ = assertNoDiff(
+        server.workspaceDefinitions,
+        """|/a/src/main/scala/example/MainA.scala
+           |package a
            |
-           |import com.thoughtworks.dsl.D@@sl
-           |class Main {
-           |  val foo = ""
-           |}""".stripMargin
-      val fileContents = testCase.replace("@@", "")
-      for {
-        _ <- initialize(
-          s"""
-             |/metals.json
-             |{
-             |  "a": { 
-             |    "libraryDependencies" : ["com.thoughtworks.dsl::dsl:2.0.0-M0+1-b691cde8"] 
-             |  }
-             |}
-             |/a/src/main/scala/example/MainA.scala
-             |$fileContents
-             |""".stripMargin
-        )
-        _ = server.didOpen("a/src/main/scala/example/MainA.scala")
-        _ = assertNoDiff(
-          server.workspaceDefinitions,
-          """|/a/src/main/scala/example/MainA.scala
-             |package a
-             |
-             |import com.thoughtworks.dsl.Dsl/*Dsl.scala*/
-             |class Main/*L3*/ {
-             |  val foo/*L4*/ = ""
-             |}
-             |""".stripMargin,
-        )
-        definition <- server.definition(
-          "a/src/main/scala/example/MainA.scala",
-          testCase,
-          workspace,
-        )
-        _ = assert(definition.nonEmpty, "Definition for Dsl class not found")
-        mainDefUri = definition.head.getUri()
-        contents <-
-          // jar is returned if virtual files are supported
-          if (mainDefUri.startsWith("jar"))
-            server.executeDecodeFileCommand(mainDefUri).map { result =>
-              assert(
-                result.value != null,
-                "No file contents returned for Dsl.scala",
-              )
-              result.value
+           |import com.thoughtworks.dsl.Dsl/*Dsl.scala*/
+           |class Main/*L3*/ {
+           |  val foo/*L4*/ = ""
+           |}
+           |""".stripMargin,
+      )
+      definition <- server.definition(
+        "a/src/main/scala/example/MainA.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(definition.nonEmpty, "Definition for Dsl class not found")
+      mainDefUri = definition.head.getUri()
+      contents <-
+        // jar is returned if virtual files are supported
+        if (mainDefUri.startsWith("jar"))
+          server.executeDecodeFileCommand(mainDefUri).map { result =>
+            assert(
+              result.value != null,
+              "No file contents returned for Dsl.scala",
+            )
+            result.value
 
-            }
-          else Future.successful(mainDefUri.toAbsolutePath.readText)
-      } yield {
-        assertContains(contents, "trait Dsl[-Keyword, Domain, +Value]")
-      }
+          }
+        else Future.successful(mainDefUri.toAbsolutePath.readText)
+    } yield {
+      assertContains(contents, "trait Dsl[-Keyword, Domain, +Value]")
     }
+  }
 
   test("init-args") {
     for {
