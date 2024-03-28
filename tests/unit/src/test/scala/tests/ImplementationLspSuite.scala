@@ -641,7 +641,7 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
        |""".stripMargin,
   )
 
-  if (!isJava8) {
+  if (!isJava11) {
     checkSymbols(
       "exception",
       """package a

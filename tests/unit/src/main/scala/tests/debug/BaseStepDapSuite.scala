@@ -129,7 +129,6 @@ abstract class BaseStepDapSuite(
     instrument = steps => {
       val (javaLibFile, javaLibLine) =
         if (isJava17) ("java.base/java/io/PrintStream.java", 1027)
-        else if (isJava8) ("java/io/PrintStream.java", 805)
         else ("java.base/java/io/PrintStream.java", 881)
       steps
         .at("a/src/main/scala/Main.scala", line = 5)(StepIn)

@@ -21,10 +21,10 @@ jobs:
         shard: [1, 2]
         include:
           - os: ubuntu-latest
-            java: "8"
+            java: "11"
             shard: 1
           - os: ubuntu-latest
-            java: "8"
+            java: "11"
             shard: 2
     steps:
       - uses: actions/checkout@v4

@@ -236,19 +236,19 @@ class CompletionDapSuite
     "java-member",
     expression = "name.s@@",
     expectedCompletions =
-      if (isJava8)
-        """|serialVersionUID
-           |serialPersistentFields
-           |startsWith(java.lang.String arg0, int arg1)
-           |startsWith(java.lang.String arg0)
-           |substring(int arg0)
-           |""".stripMargin
-      else
+      if (isJava17)
         """|serialVersionUID
            |serialPersistentFields
            |safeTrim(byte[] arg0, int arg1, boolean arg2)
            |scale(int arg0, float arg1)
            |startsWith(java.lang.String arg0, int arg1)
+           |""".stripMargin
+      else
+        """|serialVersionUID
+           |serialPersistentFields
+           |startsWith(java.lang.String arg0, int arg1)
+           |startsWith(java.lang.String arg0)
+           |substring(int arg0)
            |""".stripMargin,
     expectedEdit = "name.serialVersionUID",
     topLines = Some(5),
