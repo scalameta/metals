@@ -48,6 +48,7 @@ import coursierapi.error.SimpleResolutionError
 import mdoc.interfaces.EvaluatedWorksheet
 import mdoc.interfaces.Mdoc
 import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.Position
 
 /**
@@ -264,9 +265,18 @@ class WorksheetProvider(
           )
         }
       }
-      interruptThreadOnCancel(path, result, thread)
+      val cancellable = toCancellable(thread, result)
+      interruptThreadOnCancel(path, result, cancellable)
       thread.start()
-      thread.join()
+      val timeout = userConfig().worksheetTimeout * 1000
+      thread.join(timeout)
+      if (!result.isDone()) {
+        cancellable.cancel()
+        languageClient.showMessage(
+          MessageType.Warning,
+          Messages.worksheetTimeout,
+        )
+      }
     }
     jobs.submit(
       result,
@@ -282,6 +292,32 @@ class WorksheetProvider(
     result.asScala.recover(onError)
   }
 
+  private def toCancellable(
+      thread: Thread,
+      result: CompletableFuture[Option[EvaluatedWorksheet]],
+  ): Cancelable = {
+    // Last resort, if everything else fails we use `Thread.stop()`.
+    val stopThread = new Runnable {
+      def run(): Unit = {
+        if (thread.isAlive()) {
+          scribe.warn(s"thread stop: ${thread.getName()}")
+          thread.stop()
+        }
+      }
+    }
+    new Cancelable {
+      def cancel() =
+        if (thread.isAlive()) {
+          // Canceling a running program. first line of
+          // defense is `Thread.interrupt()`. Fingers crossed it's enough.
+          result.complete(None)
+          threadStopper.schedule(stopThread, 3, TimeUnit.SECONDS)
+          scribe.warn(s"thread interrupt: ${thread.getName()}")
+          thread.interrupt()
+        }
+    }
+  }
+
   /**
    * Prompts the user to cancel the task after a few seconds.
    *
@@ -292,17 +328,8 @@ class WorksheetProvider(
   private def interruptThreadOnCancel(
       path: AbsolutePath,
       result: CompletableFuture[Option[EvaluatedWorksheet]],
-      thread: Thread,
+      cancellable: Cancelable,
   ): Unit = {
-    // Last resort, if everything else fails we use `Thread.stop()`.
-    val stopThread = new Runnable {
-      def run(): Unit = {
-        if (thread.isAlive()) {
-          scribe.warn(s"thread stop: ${thread.getName()}")
-          thread.stop()
-        }
-      }
-    }
     // If the program is running for more than
     // `userConfig().worksheetCancelTimeout`, then display a prompt for the user
     // to cancel the program.
@@ -317,14 +344,7 @@ class WorksheetProvider(
             )
           )
           cancel.asScala.foreach { c =>
-            if (c.cancel && thread.isAlive()) {
-              // User has requested to cancel a running program. first line of
-              // defense is `Thread.interrupt()`. Fingers crossed it's enough.
-              result.complete(None)
-              threadStopper.schedule(stopThread, 3, TimeUnit.SECONDS)
-              scribe.warn(s"thread interrupt: ${thread.getName()}")
-              thread.interrupt()
-            }
+            if (c.cancel) cancellable.cancel()
           }
           result.asScala.onComplete(_ => cancel.cancel(true))
         }
