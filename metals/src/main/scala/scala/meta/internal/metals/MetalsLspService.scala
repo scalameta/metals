@@ -150,7 +150,9 @@ class MetalsLspService(
 
   private val cancelables = new MutableCancelable()
   val isCancelled = new AtomicBoolean(false)
-  private val expectBspConfigCreation = new AtomicBoolean(false)
+  val ignoreFileEvents = new AtomicReference(
+    Set.empty[(String, FileChangeType)]
+  )
 
   override def cancel(): Unit = {
     if (isCancelled.compareAndSet(false, true)) {
@@ -1307,8 +1309,8 @@ class MetalsLspService(
     }
   }
 
-  def willCreateBspJson() =
-    expectBspConfigCreation.set(true)
+  def willCreateBspJson(name: String): Set[(String, FileChangeType)] =
+    ignoreFileEvents.getAndUpdate(_ + ((s"$name.json", FileChangeType.Created)))
 
   def didChangeWatchedFiles(
       events: List[FileEvent]
@@ -1331,21 +1333,20 @@ class MetalsLspService(
           .startsWith(reports.bloop.maybeReportsDir)
       )
     if (bloopReportDelete.nonEmpty) connectionBspStatus.onReportsUpdate()
-    def toPath(event: FileEvent) = event.getUri().toAbsolutePath
-    otherDeleteEvents.map(toPath).foreach(onDelete)
+    otherDeleteEvents.map(_.getUri().toAbsolutePath).foreach(onDelete)
     // when metals creates `.bsp/<name>.json` files we want to ignore
     // create event for those files
-    val ignoreJsonCreation = expectBspConfigCreation.get
-    val filteredEvents =
-      if (ignoreJsonCreation) {
-        changeAndCreateEvents.filterNot(e =>
-          e.getType().equals(FileChangeType.Created) && toPath(e).filename
-            .endsWith(".json") && toPath(e).parent.filename == ".bsp"
-        )
-      } else changeAndCreateEvents
-    if (filteredEvents.size < changeAndCreateEvents.size)
-      expectBspConfigCreation.set(false)
-    onChange(filteredEvents.map(toPath))
+    def info(fileEvent: FileEvent) =
+      (fileEvent.getUri().toAbsolutePath.filename, fileEvent.getType())
+    val ignoreEvents = ignoreFileEvents.get()
+    val (expectedEvents, otherEvents) =
+      changeAndCreateEvents
+        .partition(fileEvent => ignoreEvents(info(fileEvent)))
+    if (expectedEvents.nonEmpty) {
+      val expectedInfo = expectedEvents.map(info)
+      ignoreFileEvents.getAndUpdate(_.filterNot(expectedInfo.contains))
+    }
+    onChange(otherEvents.map(_.getUri().toAbsolutePath))
   }
 
   /**
@@ -2243,7 +2244,7 @@ class MetalsLspService(
       && buildTools.loadSupported.isEmpty
       && (folder.isScalaProject() || focusedDocument().exists(_.isScala))
     ) {
-      willCreateBspJson()
+      ScalaCli.names.foreach(willCreateBspJson)
       scalaCli.setupIDE(folder)
     } else Future.successful(())
   }

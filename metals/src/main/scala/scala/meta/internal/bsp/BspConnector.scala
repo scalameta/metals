@@ -40,7 +40,7 @@ class BspConnector(
     currentConnection: () => Option[BuildServerConnection],
     restartBspServer: () => Future[Boolean],
     bspStatus: ConnectionBspStatus,
-    willCreateBspJson: () => Unit,
+    willCreateBspJson: String => Unit,
 )(implicit ec: ExecutionContext) {
 
   /**
