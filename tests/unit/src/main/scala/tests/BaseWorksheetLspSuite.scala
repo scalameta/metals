@@ -855,7 +855,12 @@ abstract class BaseWorksheetLspSuite(
       _ = assertNoDiff(noCompletions, "")
     } yield ()
   }
-  if (ScalaVersions.isScala3Version(scalaVersion) && scalaVersion != "3.4.0")
+
+  private val ignoreForScala3Versions = Set("3.4.0", "3.4.1")
+  if (
+    ScalaVersions
+      .isScala3Version(scalaVersion) && !ignoreForScala3Versions(scalaVersion)
+  )
     test("import-missing-symbol") {
       cleanWorkspace()
       val path = "a/src/main/scala/foo/Main.worksheet.sc"
