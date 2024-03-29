@@ -374,7 +374,11 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
         ) {
           chooseWorkspaceFolder(params.getActions().asScala.toSeq)
         } else if (
-          params.getMessage() == ProjectJavaHomeUpdate.params().getMessage()
+          List(true, false)
+            .map(isRestart =>
+              ProjectJavaHomeUpdate.params(isRestart).getMessage()
+            )
+            .contains(params.getMessage())
         ) {
           shouldReloadAfterJavaHomeUpdate
         } else {

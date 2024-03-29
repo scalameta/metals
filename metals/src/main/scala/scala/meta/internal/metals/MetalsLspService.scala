@@ -1056,39 +1056,50 @@ class MetalsLspService(
   }
 
   private def updateBspJavaHome(session: BspSession) = {
-    languageClient
-      .showMessageRequest(Messages.ProjectJavaHomeUpdate.params())
-      .asScala
-      .flatMap {
-        case Messages.ProjectJavaHomeUpdate.restart =>
-          buildTool match {
-            case Some(sbt: SbtBuildTool) if session.main.isSbt =>
-              for {
-                _ <- disconnectOldBuildServer()
-                _ <- sbt.shutdownBspServer(shellRunner)
-                _ <- sbt.generateBspConfig(
-                  folder,
-                  bspConfigGenerator.runUnconditionally(sbt, _),
-                  statusBar,
-                )
-                _ <- autoConnectToBuildServer()
-              } yield ()
-            case Some(mill: MillBuildTool) if session.main.isMill =>
-              for {
-                _ <- mill.generateBspConfig(
-                  folder,
-                  bspConfigGenerator.runUnconditionally(mill, _),
-                  statusBar,
-                )
-                _ <- autoConnectToBuildServer()
-              } yield ()
-            case _ if session.main.isBloop =>
-              slowConnectToBuildServer(forceImport = true)
-            case _ => Future.successful(())
-          }
-        case Messages.ProjectJavaHomeUpdate.notNow =>
-          Future.successful(())
-      }
+    if (session.main.isBazel) {
+      languageClient.showMessage(
+        MessageType.Warning,
+        "Java home setting is not available for Bazel bsp, please use env var instead.",
+      )
+      Future.successful(())
+    } else {
+      languageClient
+        .showMessageRequest(
+          Messages.ProjectJavaHomeUpdate
+            .params(isRestart = !session.main.isBloop)
+        )
+        .asScala
+        .flatMap {
+          case Messages.ProjectJavaHomeUpdate.restart =>
+            buildTool match {
+              case Some(sbt: SbtBuildTool) if session.main.isSbt =>
+                for {
+                  _ <- disconnectOldBuildServer()
+                  _ <- sbt.shutdownBspServer(shellRunner)
+                  _ <- sbt.generateBspConfig(
+                    folder,
+                    bspConfigGenerator.runUnconditionally(sbt, _),
+                    statusBar,
+                  )
+                  _ <- autoConnectToBuildServer()
+                } yield ()
+              case Some(mill: MillBuildTool) if session.main.isMill =>
+                for {
+                  _ <- mill.generateBspConfig(
+                    folder,
+                    bspConfigGenerator.runUnconditionally(mill, _),
+                    statusBar,
+                  )
+                  _ <- autoConnectToBuildServer()
+                } yield ()
+              case _ if session.main.isBloop =>
+                slowConnectToBuildServer(forceImport = true)
+              case _ => Future.successful(())
+            }
+          case Messages.ProjectJavaHomeUpdate.notNow =>
+            Future.successful(())
+        }
+    }
   }
 
   override def didOpen(

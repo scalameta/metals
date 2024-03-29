@@ -993,10 +993,11 @@ object Messages {
     val notNow: MessageActionItem =
       new MessageActionItem("Not now")
 
-    def params(): ShowMessageRequestParams = {
+    def params(isRestart: Boolean): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(
-        s"Java home has been updated, do you want to restart/reconnect to the BSP server?"
+        s"Java home has been updated, do you want to ${if (isRestart) "restart"
+          else "reconnect"} to the BSP server?"
       )
       params.setType(MessageType.Info)
       params.setActions(
