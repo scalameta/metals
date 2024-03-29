@@ -22,9 +22,9 @@ trait BuildServerProvider extends BuildTool {
       workspace: AbsolutePath,
       systemProcess: List[String] => Future[BspConfigGenerationStatus],
       statusBar: StatusBar,
-      willGenerateBspJson: String => Unit,
+      willGenerateBspJson: () => Unit,
   ): Future[BspConfigGenerationStatus] = {
-    willGenerateBspJson(buildServerName)
+    willGenerateBspJson()
     createBspFileArgs(workspace).map(systemProcess).getOrElse {
       Future.successful(
         Failed(Right(Messages.NoBspSupport.toString()))

@@ -29,7 +29,7 @@ final class BspConfigGenerator(
     shellRunner: ShellRunner,
     statusBar: StatusBar,
     userConfig: () => UserConfiguration,
-    willCreateBspJson: String => Unit,
+    willCreateBspJson: () => Unit,
 )(implicit ec: ExecutionContext) {
   def runUnconditionally(
       buildTool: BuildServerProvider,
