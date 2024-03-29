@@ -29,7 +29,6 @@ final class BspConfigGenerator(
     shellRunner: ShellRunner,
     statusBar: StatusBar,
     userConfig: () => UserConfiguration,
-    willCreateBspJson: String => Unit,
 )(implicit ec: ExecutionContext) {
   def runUnconditionally(
       buildTool: BuildServerProvider,
@@ -81,7 +80,6 @@ final class BspConfigGenerator(
         workspace,
         args => runUnconditionally(buildTool, args),
         statusBar,
-        willCreateBspJson,
       )
     } yield (buildTool, status)
   }

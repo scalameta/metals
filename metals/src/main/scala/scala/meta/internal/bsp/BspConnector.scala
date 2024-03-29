@@ -40,7 +40,6 @@ class BspConnector(
     currentConnection: () => Option[BuildServerConnection],
     restartBspServer: () => Future[Boolean],
     bspStatus: ConnectionBspStatus,
-    willCreateBspJson: String => Unit,
 )(implicit ec: ExecutionContext) {
 
   /**
@@ -363,7 +362,6 @@ class BspConnector(
                   args =>
                     bspConfigGenerator.runUnconditionally(buildTool, args),
                   statusBar,
-                  willCreateBspJson,
                 )
                 .map(status => handleGenerationStatus(buildTool, status))
             case Right(details) if details.getName == BloopServers.name =>
@@ -397,7 +395,6 @@ class BspConnector(
                 workspace,
                 args => bspConfigGenerator.runUnconditionally(buildTool, args),
                 statusBar,
-                willCreateBspJson,
               )
               .map(status => handleGenerationStatus(buildTool, status))
           case Right(connectionDetails) =>
