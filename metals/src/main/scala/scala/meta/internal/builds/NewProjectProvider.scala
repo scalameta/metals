@@ -23,6 +23,7 @@ import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
 
 import coursierapi._
+import sttp.client3._
 
 class NewProjectProvider(
     client: MetalsLanguageClient,
@@ -34,13 +35,15 @@ class NewProjectProvider(
 )(implicit context: ExecutionContext) {
 
   private val templatesUrl =
-    "https://github.com/foundweekends/giter8/wiki/giter8-templates.md"
+    uri"https://github.com/foundweekends/giter8/wiki/giter8-templates.md"
   private val giterDependency = Dependency
     .of("org.foundweekends.giter8", "giter8_2.12", BuildInfo.gitter8Version)
   // equal to cmd's: g8 playframework/play-scala-seed.g8 --name=../<<name>>
   private val giterMain = "giter8.Giter8"
 
+  val backend = HttpClientSyncBackend()
   private var allTemplates = Seq.empty[MetalsQuickPickItem]
+
   def allTemplatesFromWeb: Seq[MetalsQuickPickItem] =
     synchronized {
       if (allTemplates.nonEmpty) {
@@ -53,14 +56,17 @@ class NewProjectProvider(
           // - [jimschubert/finatra.g8](https://github.com/jimschubert/finatra.g8)
           // (A simple Finatra 2.5 template with sbt-revolver and sbt-native-packager)
           val all = for {
-            result <- Try(requests.get(templatesUrl)).toOption.toIterable
-            _ = if (result.statusCode != 200)
+            result <- Try(
+              basicRequest.get(templatesUrl).send(backend)
+            ).toOption.toIterable
+            _ = if (!result.is200)
               client.showMessage(
-                NewScalaProject.templateDownloadFailed(result.statusMessage)
+                NewScalaProject.templateDownloadFailed(result.statusText)
               )
-            if result.statusCode == 200
+            if result.is200
+            text <- result.body.toOption
           } yield {
-            NewProjectProvider.templatesFromText(result.text(), icons.github)
+            NewProjectProvider.templatesFromText(text, icons.github)
           }
           allTemplates = all.flatten.toSeq
         }

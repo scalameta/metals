@@ -31,6 +31,7 @@ object V {
   val genyVersion = "1.0.0"
   val gitter8Version = "0.16.2"
   val gradleBloop = "1.6.2"
+  val gson = "2.10.1"
   val java8Compat = "1.0.2"
   val javaSemanticdb = "0.9.9"
   val jsoup = "1.17.2"
@@ -41,6 +42,7 @@ object V {
   val mdoc = "2.5.2"
   val munit = "1.0.0-M11"
   val pprint = "0.7.3"
+  val requests = "0.8.0"
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
   val scalaCli = "1.2.0"

@@ -7,13 +7,13 @@ import scala.meta._
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.Report
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ScalaVersionSelector
+import scala.meta.internal.pc.StandardReport
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.Parse
 import scala.meta.parsers.ParseException
 import scala.meta.parsers.Parsed
+import scala.meta.pc.ReportContext
 import scala.meta.tokens.Tokens
 
 import org.eclipse.lsp4j.Diagnostic
@@ -154,7 +154,7 @@ final class Trees(
       // if the parsers breaks we should not throw the exception further
       case _: StackOverflowError =>
         val newPathCopy = reports.unsanitized.create(
-          Report(
+          StandardReport(
             s"stackoverflow_${path.filename}",
             text,
             s"Stack overflow in ${path.filename}",

@@ -228,6 +228,13 @@ public abstract class PresentationCompiler {
 	};
 
 	/**
+	 * Set remote report context that will be added on top of standard, local reporting system.
+	 */
+	public PresentationCompiler withAdditionalReportContexts(List<ReportContext> reportContexts) {
+		return this;
+	};
+
+	/**
 	 * Set build target name.
 	 */
 	public PresentationCompiler withBuildTargetName(String buildTargetName) {

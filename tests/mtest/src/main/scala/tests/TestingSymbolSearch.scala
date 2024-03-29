@@ -7,7 +7,6 @@ import java.{util => ju}
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.Docstrings
 import scala.meta.internal.metals.EmptyReportContext
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.WorkspaceSymbolInformation
 import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -16,6 +15,7 @@ import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.pc.ParentSymbols
+import scala.meta.pc.ReportContext
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor

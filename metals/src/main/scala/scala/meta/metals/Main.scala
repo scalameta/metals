@@ -73,5 +73,4 @@ object Main {
       sys.exit(0)
     }
   }
-
 }

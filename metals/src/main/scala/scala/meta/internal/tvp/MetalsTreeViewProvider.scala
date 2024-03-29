@@ -11,7 +11,6 @@ import scala.collection.concurrent.TrieMap
 import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -21,6 +20,7 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.ReportContext
 
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier

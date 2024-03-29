@@ -11,6 +11,7 @@ import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.{semanticdb => s}
+import scala.meta.pc.ReportContext
 import scala.meta.tokenizers.TokenizeException
 
 import org.eclipse.{lsp4j => l}

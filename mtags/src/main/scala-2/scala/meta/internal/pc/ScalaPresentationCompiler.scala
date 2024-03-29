@@ -22,7 +22,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.EmptyReportContext
-import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.metals.MirroredReportContext
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
@@ -37,6 +37,7 @@ import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
+import scala.meta.pc.ReportContext
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
 import scala.meta.pc.{PcSymbolInformation => IPcSymbolInformation}
@@ -61,7 +62,8 @@ case class ScalaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     folderPath: Option[Path] = None,
-    reportsLevel: ReportLevel = ReportLevel.Info
+    reportsLevel: ReportLevel = ReportLevel.Info,
+    additionalReportContexts: List[ReportContext] = Nil
 ) extends PresentationCompiler {
 
   implicit val executionContext: ExecutionContextExecutor = ec
@@ -71,10 +73,13 @@ case class ScalaPresentationCompiler(
   val logger: Logger =
     Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
 
-  implicit val reportContex: ReportContext =
-    folderPath
+  implicit val implicitReportContex: ReportContext = {
+    val localReporters = folderPath
       .map(new StdReportContext(_, _ => buildTargetName, reportsLevel))
       .getOrElse(EmptyReportContext)
+
+    new MirroredReportContext(localReporters, additionalReportContexts: _*)
+  }
 
   override def withBuildTargetName(
       buildTargetName: String
@@ -83,6 +88,11 @@ case class ScalaPresentationCompiler(
 
   override def withReportsLoggerLevel(level: String): PresentationCompiler =
     copy(reportsLevel = ReportLevel.fromString(level))
+
+  override def withAdditionalReportContexts(
+      additionalReportContexts: ju.List[ReportContext]
+  ): PresentationCompiler =
+    copy(additionalReportContexts = additionalReportContexts.asScala.toList)
 
   override def withSearch(search: SymbolSearch): PresentationCompiler =
     copy(search = search)
@@ -124,7 +134,7 @@ case class ScalaPresentationCompiler(
       }
     )(
       ec,
-      reportContex
+      implicitReportContex
     )
 
   override def shutdown(): Unit = {

@@ -50,7 +50,6 @@ import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.ParametrizedCommand
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.ProgressTicks
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.StdReportContext
@@ -73,6 +72,7 @@ import scala.meta.internal.tvp.TreeViewVisibilityDidChangeParams
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
+import scala.meta.pc.ReportContext
 
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement

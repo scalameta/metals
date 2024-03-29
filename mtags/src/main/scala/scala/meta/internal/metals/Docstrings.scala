@@ -21,6 +21,7 @@ import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.ParentSymbols
+import scala.meta.pc.ReportContext
 import scala.meta.pc.SymbolDocumentation
 
 /**

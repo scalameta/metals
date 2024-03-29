@@ -12,6 +12,8 @@ import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintLabelPart
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.{lsp4j => l}
+import scala.meta.pc.ReportContext
+import scala.meta.internal.pc.StandardReport
 
 final class InlayHintResolveProvider(
     definitionProvider: DefinitionProvider,
@@ -30,7 +32,7 @@ final class InlayHintResolveProvider(
         resolve(inlayHint, labelParts, path, token)
       case Left(error) =>
         scribe.warn(s"Failed to resolve inlay hint: $error")
-        rc.unsanitized.create(report(inlayHint, path, error), ifVerbose = true)
+        rc.unsanitized.create(report(inlayHint, path, error), true)
         Future.successful(inlayHint)
     }
   }
@@ -109,7 +111,7 @@ final class InlayHintResolveProvider(
       error: Throwable,
   ) = {
     val pos = inlayHint.getPosition()
-    Report(
+    StandardReport(
       "inlayHint-resolve",
       s"""|pos: $pos
           |

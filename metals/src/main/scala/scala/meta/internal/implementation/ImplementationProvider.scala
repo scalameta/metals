@@ -15,8 +15,6 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.Report
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.SemanticdbFeatureProvider
@@ -42,10 +40,12 @@ import scala.meta.internal.semanticdb.TypeSignature
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PcSymbolKind
 import scala.meta.pc.PcSymbolProperty
+import scala.meta.pc.ReportContext
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.TextDocumentPositionParams
+import scala.meta.internal.pc.StandardReport
 
 final class ImplementationProvider(
     semanticdbs: Semanticdbs,
@@ -176,7 +176,7 @@ final class ImplementationProvider(
 
         if (sourceFiles.isEmpty) {
           rc.unsanitized.create(
-            Report(
+            StandardReport(
               "missing-definition",
               s"""|Missing definition symbol for:
                   |$dealisedSymbol

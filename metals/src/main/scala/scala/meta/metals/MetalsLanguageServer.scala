@@ -17,6 +17,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerInputs
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.StdReportContext
+import scala.meta.internal.metals.TelemetryLevel
 import scala.meta.internal.metals.ThreadPools
 import scala.meta.internal.metals.WorkspaceLspService
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -281,6 +282,27 @@ class MetalsLanguageServer(
   def getOldMetalsLanguageServer: WorkspaceLspService = serverState.get match {
     case ServerState.Initialized(service) => service
     case _ => throw new IllegalStateException("Server is not initialized")
+  }
+
+  /**
+   * Telemetry level used only for initialisation purpose.
+   * It will return the minimal level set, within all workspaces e.g.
+   * - WorkspaceA - telemetry off,
+   * - WorkspaceB - telemetry full,
+   * the method will return telemetry off
+   */
+  private[metals] def getTelemetryLevel(): TelemetryLevel = {
+    serverState.get()
+    def lowestSettingWithinWorkspaces(service: WorkspaceLspService) = {
+      service.workspaceFolders.getFolderServices.map(_.getTelemetryLevel).min
+    }
+    serverState.get() match {
+      case ServerState.Initialized(service) =>
+        lowestSettingWithinWorkspaces(service)
+      case ServerState.ShuttingDown(service) =>
+        lowestSettingWithinWorkspaces(service)
+      case _ => TelemetryLevel.Off
+    }
   }
 
 }

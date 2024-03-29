@@ -32,16 +32,16 @@ import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.PopupChoiceReset
-import scala.meta.internal.metals.Report
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ReportFileName
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.metals.utils.TimestampedFile
+import scala.meta.internal.pc.StandardReport
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.ReportContext
+import scala.meta.pc.TimestampedFile
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.{lsp4j => l}
@@ -241,8 +241,8 @@ final class Doctor(
 
   private def getErrorReports(): List[ErrorReportInfo] =
     for {
-      provider <- rc.all
-      report <- provider.getReports()
+      provider <- rc.all().asScala.toList
+      report <- provider.getReports().asScala.toList
     } yield {
       val (name, buildTarget) =
         ReportFileName.getReportNameAndBuildTarget(report)
@@ -665,7 +665,7 @@ object Doctor {
       text.replace(StdReportContext.WORKSPACE_STR, root.toString())
     for {
       lines <- Try(Files.readAllLines(file.toPath).asScala.toList).toOption
-      index = lines.lastIndexWhere(_.startsWith(Report.summaryTitle))
+      index = lines.lastIndexWhere(_.startsWith(StandardReport.summaryTitle))
       if index >= 0
     } yield lines
       .drop(index + 1)

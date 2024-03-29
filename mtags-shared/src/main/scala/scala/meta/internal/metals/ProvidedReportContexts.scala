@@ -5,36 +5,18 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import java.{util => ju}
 
-import scala.util.Try
 import scala.util.matching.Regex
 
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.utils.LimitedFilesManager
-import scala.meta.internal.metals.utils.TimestampedFile
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
-
-trait ReportContext {
-  def unsanitized: Reporter
-  def incognito: Reporter
-  def bloop: Reporter
-  def all: List[Reporter] = List(unsanitized, incognito, bloop)
-  def allToZip: List[Reporter] = List(incognito, bloop)
-  def cleanUpOldReports(
-      maxReportsNumber: Int = StdReportContext.MAX_NUMBER_OF_REPORTS
-  ): Unit = all.foreach(_.cleanUpOldReports(maxReportsNumber))
-  def deleteAll(): Unit = all.foreach(_.deleteAll())
-}
-
-trait Reporter {
-  def name: String
-  def create(report: => Report, ifVerbose: Boolean = false): Option[Path]
-  def cleanUpOldReports(
-      maxReportsNumber: Int = StdReportContext.MAX_NUMBER_OF_REPORTS
-  ): List[TimestampedFile]
-  def getReports(): List[TimestampedFile]
-  def deleteAll(): Unit
-  def sanitize(message: String) = message
-}
+import scala.meta.internal.pc.StandardReport
+import scala.meta.pc.Report
+import scala.meta.pc.ReportContext
+import scala.meta.pc.Reporter
+import scala.meta.pc.TimestampedFile
 
 class StdReportContext(
     workspace: Path,
@@ -70,12 +52,11 @@ class StdReportContext(
 
   override def cleanUpOldReports(
       maxReportsNumber: Int = StdReportContext.MAX_NUMBER_OF_REPORTS
-  ): Unit = {
-    all.foreach(_.cleanUpOldReports(maxReportsNumber))
-  }
+  ): Unit =
+    super.cleanUpOldReports(maxReportsNumber)
 
   override def deleteAll(): Unit = {
-    all.foreach(_.deleteAll())
+    all.forEach(_.deleteAll())
     val zipFile = reportsDir.resolve(StdReportContext.ZIP_FILE_NAME)
     if (Files.exists(zipFile)) Files.delete(zipFile)
   }
@@ -88,6 +69,9 @@ class StdReporter(
     level: ReportLevel,
     override val name: String
 ) extends Reporter {
+  private val sanitizer: ReportSanitizer = new WorkspaceSanitizer(
+    Some(workspace)
+  )
   val maybeReportsDir: Path =
     workspace.resolve(pathToReports).resolve(name)
   private lazy val reportsDir = maybeReportsDir.createDirectories()
@@ -99,18 +83,16 @@ class StdReporter(
       ".md"
     )
 
-  private lazy val userHome = Option(System.getProperty("user.home"))
-
   private val initialized = new AtomicBoolean(false)
   private val reported = new AtomicReference(Map[String, Path]())
 
   def readInIds(): Unit = {
-    val reports = getReports().flatMap { report =>
+    val reports = getReports().asScala.flatMap { report =>
       val lines = Files.readAllLines(report.file.toPath())
       if (lines.size() > 0) {
         lines.get(0) match {
-          case id if id.startsWith(Report.idPrefix) =>
-            Some((id.stripPrefix(Report.idPrefix) -> report.toPath))
+          case id if id.startsWith(StandardReport.idPrefix) =>
+            Some((id.stripPrefix(StandardReport.idPrefix) -> report.toPath))
           case _ => None
         }
       } else None
@@ -119,61 +101,56 @@ class StdReporter(
   }
 
   override def create(
-      report: => Report,
+      report: Report,
       ifVerbose: Boolean = false
-  ): Option[Path] =
-    if (ifVerbose && !level.isVerbose) None
+  ): ju.Optional[Path] =
+    if (ifVerbose && !level.isVerbose) ju.Optional.empty()
     else {
       if (initialized.compareAndSet(false, true)) {
         readInIds()
       }
-      val sanitizedId = report.id.map(sanitize)
+      val sanitizedId: Option[String] = report.id.asScala.map(sanitize(_))
       val path = reportPath(report)
 
-      val optDuplicate =
-        for {
-          id <- sanitizedId
-          reportedMap = reported.getAndUpdate(map =>
-            if (map.contains(id)) map else map + (id -> path)
-          )
-          duplicate <- reportedMap.get(id)
-        } yield duplicate
-
-      optDuplicate.orElse {
-        Try {
-          path.createDirectories()
-          path.writeText(sanitize(report.fullText(withIdAndSummary = true)))
-          path
-        }.toOption
+      val optDuplicate = sanitizedId.flatMap { id =>
+        val reportedMap = reported.getAndUpdate(map =>
+          if (map.contains(id)) map else map + (id -> path)
+        )
+        reportedMap.get(id)
       }
+
+      ju.Optional.of(
+        optDuplicate.getOrElse {
+          path.createDirectories()
+          path.writeText(sanitize(report.fullText(true)))
+          path
+        }
+      )
     }
 
-  override def sanitize(text: String): String = {
-    val textAfterWokspaceReplace =
-      text.replace(workspace.toString(), StdReportContext.WORKSPACE_STR)
-    userHome
-      .map(textAfterWokspaceReplace.replace(_, StdReportContext.HOME_STR))
-      .getOrElse(textAfterWokspaceReplace)
-  }
+  override def sanitize(text: String): String = sanitizer(text)
 
   private def reportPath(report: Report): Path = {
     val date = TimeFormatter.getDate()
     val time = TimeFormatter.getTime()
     val buildTargetPart =
-      resolveBuildTarget(report.path).map("_(" ++ _ ++ ")").getOrElse("")
+      resolveBuildTarget(report.path.asScala)
+        .map("_(" ++ _ ++ ")")
+        .getOrElse("")
     val filename = s"r_${report.name}${buildTargetPart}_${time}.md"
     reportsDir.resolve(date).resolve(filename)
   }
 
   override def cleanUpOldReports(
       maxReportsNumber: Int = StdReportContext.MAX_NUMBER_OF_REPORTS
-  ): List[TimestampedFile] = limitedFilesManager.deleteOld(maxReportsNumber)
+  ): ju.List[TimestampedFile] =
+    limitedFilesManager.deleteOld(maxReportsNumber).asJava
 
-  override def getReports(): List[TimestampedFile] =
-    limitedFilesManager.getAllFiles()
+  override def getReports(): ju.List[TimestampedFile] =
+    limitedFilesManager.getAllFiles().asJava
 
   override def deleteAll(): Unit = {
-    getReports().foreach(r => Files.delete(r.toPath))
+    getReports().forEach(r => Files.delete(r.toPath))
     limitedFilesManager.directoriesWithDate.foreach { d =>
       Files.delete(d.toPath)
     }
@@ -190,16 +167,57 @@ object StdReportContext {
   def reportsDir: Path = Paths.get(".metals").resolve(".reports")
 }
 
+/**
+ * Fan-out report context delegating reporting to all underlying reporters of given type.
+ */
+class MirroredReportContext(primary: ReportContext, auxilary: ReportContext*)
+    extends ReportContext {
+  private def mirror(selector: ReportContext => Reporter): Reporter =
+    new MirroredReporter(selector(primary), auxilary.map(selector): _*)
+  override lazy val unsanitized: Reporter = mirror(_.unsanitized)
+  override lazy val incognito: Reporter = mirror(_.incognito)
+  override lazy val bloop: Reporter = mirror(_.bloop)
+}
+
+private class MirroredReporter(
+    primaryReporter: Reporter,
+    auxilaryReporters: Reporter*
+) extends Reporter {
+  override val name: String =
+    s"${primaryReporter.name}-mirror-${auxilaryReporters.map(_.name).mkString("|")}"
+  private final def allReporters = primaryReporter :: auxilaryReporters.toList
+
+  override def create(report: Report, ifVerbose: Boolean): ju.Optional[Path] = {
+    auxilaryReporters.foreach(_.create(report, ifVerbose))
+    primaryReporter.create(report, ifVerbose)
+  }
+
+  override def cleanUpOldReports(
+      maxReportsNumber: Int = StdReportContext.MAX_NUMBER_OF_REPORTS
+  ): ju.List[TimestampedFile] =
+    allReporters.flatMap(_.cleanUpOldReports(maxReportsNumber).asScala).asJava
+
+  override def getReports(): ju.List[TimestampedFile] =
+    allReporters.flatMap(_.getReports().asScala).asJava
+
+  override def deleteAll(): Unit =
+    allReporters.foreach(_.deleteAll())
+}
+
 object EmptyReporter extends Reporter {
 
+  Boolean
   override def name = "empty-reporter"
-  override def create(report: => Report, ifVerbose: Boolean): Option[Path] =
-    None
+  override def create(report: Report, ifVerbose: Boolean): ju.Optional[Path] =
+    ju.Optional.empty()
 
-  override def cleanUpOldReports(maxReportsNumber: Int): List[TimestampedFile] =
-    List()
+  override def cleanUpOldReports(
+      maxReportsNumber: Int = StdReportContext.MAX_NUMBER_OF_REPORTS
+  ): ju.List[TimestampedFile] =
+    ju.Collections.emptyList()
 
-  override def getReports(): List[TimestampedFile] = List()
+  override def getReports(): ju.List[TimestampedFile] =
+    ju.Collections.emptyList()
 
   override def deleteAll(): Unit = {}
 }
@@ -211,73 +229,6 @@ object EmptyReportContext extends ReportContext {
   override def incognito: Reporter = EmptyReporter
 
   override def bloop: Reporter = EmptyReporter
-}
-
-case class Report(
-    name: String,
-    text: String,
-    shortSummary: String,
-    path: Option[String] = None,
-    id: Option[String] = None,
-    error: Option[Throwable] = None
-) {
-  def extend(moreInfo: String): Report =
-    this.copy(
-      text = s"""|${this.text}
-                 |$moreInfo"""".stripMargin
-    )
-
-  def fullText(withIdAndSummary: Boolean): String = {
-    val sb = new StringBuilder
-    if (withIdAndSummary) {
-      id.foreach(id => sb.append(s"${Report.idPrefix}$id\n"))
-    }
-    path.foreach(path => sb.append(s"$path\n"))
-    error match {
-      case Some(error) =>
-        sb.append(
-          s"""|### $error
-              |
-              |$text
-              |
-              |#### Error stacktrace:
-              |
-              |```
-              |${error.getStackTrace().mkString("\n\t")}
-              |```
-              |""".stripMargin
-        )
-      case None => sb.append(s"$text\n")
-    }
-    if (withIdAndSummary)
-      sb.append(s"""|${Report.summaryTitle}
-                    |
-                    |$shortSummary""".stripMargin)
-    sb.result()
-  }
-}
-
-object Report {
-
-  def apply(
-      name: String,
-      text: String,
-      error: Throwable,
-      path: Option[String]
-  ): Report =
-    Report(
-      name,
-      text,
-      shortSummary = error.toString(),
-      path = path,
-      error = Some(error)
-    )
-
-  def apply(name: String, text: String, error: Throwable): Report =
-    Report(name, text, error, path = None)
-
-  val idPrefix = "error id: "
-  val summaryTitle = "#### Short summary: "
 }
 
 sealed trait ReportLevel {

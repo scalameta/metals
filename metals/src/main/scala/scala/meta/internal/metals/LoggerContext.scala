@@ -1,23 +1,30 @@
 package scala.meta.internal.metals
 
 import java.nio.file.Path
+import java.{util => ju}
 
-import scala.meta.internal.metals.utils.TimestampedFile
+import scala.meta.pc.Report
+import scala.meta.pc.ReportContext
+import scala.meta.pc.Reporter
+import scala.meta.pc.TimestampedFile
 
 object LoggerReporter extends Reporter {
 
   override def name: String = "logger-report"
-  override def create(report: => Report, ifVerbose: Boolean): Option[Path] = {
+  override def create(report: Report, ifVerbose: Boolean): ju.Optional[Path] = {
     scribe.info(
-      s"Report ${report.name}: ${report.fullText(withIdAndSummary = false)}"
+      s"Report ${report.name}: ${report.fullText(false)}"
     )
-    None
+    ju.Optional.empty()
   }
 
-  override def cleanUpOldReports(maxReportsNumber: Int): List[TimestampedFile] =
-    List()
+  override def cleanUpOldReports(
+      maxReportsNumber: Int
+  ): ju.List[TimestampedFile] =
+    ju.Collections.emptyList()
 
-  override def getReports(): List[TimestampedFile] = List()
+  override def getReports(): ju.List[TimestampedFile] =
+    ju.Collections.emptyList()
 
   override def deleteAll(): Unit = {}
 }

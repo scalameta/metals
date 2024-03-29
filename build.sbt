@@ -138,6 +138,7 @@ commands ++= Seq(
       runMtagsPublishLocal(st, v, localSnapshotVersion)
     }
     "interfaces/publishLocal" ::
+      "+telemetryInterfaces/publishLocal" ::
       s"++${V.scala213} metals/publishLocal" ::
       "mtags-java/publishLocal" ::
       publishMtags
@@ -181,6 +182,7 @@ def lintingOptions(scalaVersion: String) = {
     "-Wconf:src=*.TreeViewProvider.scala&msg=parameter params in method (children|parent) is never used:silent",
     // silence "The outer reference in this type test cannot be checked at run time."
     "-Wconf:src=.*(CompletionProvider|ArgCompletions|Completions|Keywords|IndentOnPaste).scala&msg=The outer reference:silent",
+    "-Wconf:src=.*(SourceCodeSanitizer).scala&msg=Unused import:silent",
   )
   crossSetting(
     scalaVersion,
@@ -208,7 +210,7 @@ val sharedScalacOptions = List(
             isScala212(partialVersion) && V.scala212 != scalaVersion.value =>
         List("-target:jvm-1.8", "-Yrangepos", "-Xexperimental")
       case partialVersion if isScala3(partialVersion) =>
-        List("-Xtarget:8", "-language:implicitConversions", "-Xsemanticdb")
+        List("-Xtarget:8", "-language:implicitConversions")
       case _ =>
         List("-target:jvm-1.8", "-Yrangepos")
     }
@@ -251,6 +253,26 @@ lazy val interfaces = project
     ),
   )
 
+lazy val telemetryInterfaces = project
+  .in(file("telemetry-interfaces"))
+  .settings(sharedSettings)
+  .settings(
+    moduleName := "telemetry-interfaces",
+    crossScalaVersions := List(V.scala213, V.scala3),
+    crossVersion := CrossVersion.binary,
+    Compile / scalacOptions ++= {
+      if (scalaVersion.value == V.scala3)
+        List("-Xmax-inlines", "64")
+      else Nil
+    },
+    libraryDependencies := List(
+      "com.softwaremill.sttp.tapir" %% "tapir-core" % "1.10.0",
+      "com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % "1.10.0",
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.27.7",
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.27.7" % "compile-internal",
+    ),
+  )
+
 lazy val mtagsShared = project
   .in(file("mtags-shared"))
   .settings(sharedSettings)
@@ -265,7 +287,12 @@ lazy val mtagsShared = project
     Compile / packageSrc / publishArtifact := true,
     Compile / scalacOptions ++= {
       if (scalaVersion.value == V.scala3)
-        List("-Yexplicit-nulls", "-language:unsafeNulls")
+        List(
+          "-Yexplicit-nulls",
+          "-language:unsafeNulls",
+          "-Xfatal-warnings",
+          "-deprecation",
+        )
       else Nil
     },
     libraryDependencies ++= List(
@@ -502,7 +529,9 @@ lazy val metals = project
       // for JSON formatted doctor
       "com.lihaoyi" %% "ujson" % "3.1.5",
       // For fetching projects' templates
-      "com.lihaoyi" %% "requests" % "0.8.0",
+      // telemetry client
+      "com.softwaremill.sttp.client3" %% "core" % "3.9.5",
+      "com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % "1.10.0",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
       "org.scalameta" %% "scalameta" % V.semanticdb(scalaVersion.value),
       "org.scalameta" % "semanticdb-scalac-core" % V.semanticdb(
@@ -557,7 +586,7 @@ lazy val metals = project
       "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
   )
-  .dependsOn(mtags, `mtags-java`)
+  .dependsOn(mtags, `mtags-java`, telemetryInterfaces)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val `sbt-metals` = project
@@ -805,6 +834,7 @@ lazy val unit = project
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       "org.scalameta" %% "munit" % V.munit,
+      "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.0",
     ),
     buildInfoPackage := "tests",
     Compile / resourceGenerators += InputProperties

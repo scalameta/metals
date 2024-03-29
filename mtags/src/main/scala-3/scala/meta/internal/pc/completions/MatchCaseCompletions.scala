@@ -7,7 +7,6 @@ import scala.collection.JavaConverters.*
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.AutoImports.SymbolImport
@@ -32,6 +31,7 @@ import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.core.Types.TypeRef
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.lsp4j as l
+import scala.meta.pc.ReportContext
 
 object CaseKeywordCompletion:
 

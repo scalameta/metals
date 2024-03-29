@@ -4,6 +4,8 @@ import java.nio.file.Files
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
+import scala.jdk.CollectionConverters._
+
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.io.AbsolutePath
 
@@ -71,8 +73,8 @@ object ZipReportsProvider {
 
     for {
       (folder, id) <- folders.zipWithIndex
-      reportsProvider <- folder.reportContext.allToZip
-      report <- reportsProvider.getReports()
+      reportsProvider <- folder.reportContext.allToZip.asScala
+      report <- reportsProvider.getReports().asScala
     } {
       val zipEntry = new ZipEntry(s"$id-${report.name}")
       zipOut.putNextEntry(zipEntry)

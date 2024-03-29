@@ -8,6 +8,7 @@ import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.TelemetryLevel
 import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig
@@ -57,6 +58,7 @@ case class UserConfiguration(
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
     scalaCliLauncher: Option[String] = None,
     defaultBspToBuildTool: Boolean = false,
+    telemetryLevel: TelemetryLevel = TelemetryLevel.default,
 ) {
 
   def shouldAutoImportNewProject: Boolean =
@@ -245,8 +247,8 @@ object UserConfiguration {
         "false",
         "false",
         "Should display implicit parameter at usage sites",
-        """|When this option is enabled, each method that has implicit arguments has them 
-           |displayed either as additional decorations if they are supported by the editor or 
+        """|When this option is enabled, each method that has implicit arguments has them
+           |displayed either as additional decorations if they are supported by the editor or
            |shown in the hover.
            |""".stripMargin,
       ),
@@ -255,8 +257,8 @@ object UserConfiguration {
         "false",
         "false",
         "Should display implicit conversion at usage sites",
-        """|When this option is enabled, each place where an implicit method or class is used has it 
-           |displayed either as additional decorations if they are supported by the editor or 
+        """|When this option is enabled, each place where an implicit method or class is used has it
+           |displayed either as additional decorations if they are supported by the editor or
            |shown in the hover.
            |""".stripMargin,
       ),
@@ -283,7 +285,7 @@ object UserConfiguration {
         BuildInfo.scala3,
         BuildInfo.scala3,
         "Default fallback Scala version",
-        """|The Scala compiler version that is used as the default or fallback in case a file 
+        """|The Scala compiler version that is used as the default or fallback in case a file
            |doesn't belong to any build target or the specified Scala version isn't supported by Metals.
            |This applies to standalone Scala files, worksheets, and Ammonite scripts.
         """.stripMargin,
@@ -345,12 +347,42 @@ object UserConfiguration {
            |about incremental compilation in Zinc.""".stripMargin,
       ),
       UserConfigurationOption(
+        "telemetry-level",
+        TelemetryLevel.default.textValue,
+        TelemetryLevel.Anonymous.textValue,
+        "Scope of reported telemetry data",
+        s"""Control what kind of telemetry events can be send to maintainers of Metals.
+           |With `${TelemetryLevel.Off.textValue}` no telemetry data would be send.
+           |Minimal recommended level is `${TelemetryLevel.Anonymous.textValue}` which would collect diagnostic information when Metals components would crash or fail unexpectedly, allowing to understand why the problem occoured.
+           |The highest telemtetry level `${TelemetryLevel.Full.textValue}` allows to collect all information including how features are used to help us priortize future improvements."
+           |Defaults to `${TelemetryLevel.default.textValue}`.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
         "auto-import-build",
         "off",
         "all",
         "Import build when changes detected without prompting",
-        """|Automatically import builds rather than prompting the user to choose. "initial" will 
-           |only automatically import a build when a project is first opened, "all" will automate 
+        """|Automatically import builds rather than prompting the user to choose. "initial" will
+           |only automatically import a build when a project is first opened, "all" will automate
+           |build imports after subsequent changes as well.""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "default-bsp-to-build-tool",
+        "false",
+        "true",
+        "Default to using build tool as your build server.",
+        """|If your build tool can also serve as a build server,
+           |default to using it instead of Bloop.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "auto-import-build",
+        "off",
+        "all",
+        "Import build when changes detected without prompting",
+        """|Automatically import builds rather than prompting the user to choose. "initial" will
+           |only automatically import a build when a project is first opened, "all" will automate
            |build imports after subsequent changes as well.""".stripMargin,
       ),
       UserConfigurationOption(
@@ -588,40 +620,45 @@ object UserConfiguration {
     val defaultBspToBuildTool =
       getBooleanKey("default-bsp-to-build-tool").getOrElse(false)
 
+    val telemetryLevel = getStringKey("telemetry-level")
+      .map(TelemetryLevel.fromString)
+      .getOrElse(TelemetryLevel.default)
+
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
-          javaHome,
-          sbtScript,
-          gradleScript,
-          mavenScript,
-          millScript,
-          scalafmtConfigPath,
-          scalafixConfigPath,
-          symbolPrefixes,
-          worksheetScreenWidth,
-          worksheetCancelTimeout,
-          bloopSbtAlreadyInstalled,
-          bloopVersion,
-          bloopJvmProperties,
-          ammoniteProperties,
-          superMethodLensesEnabled,
-          showInferredType,
-          showImplicitArguments,
-          showImplicitConversionsAndClasses,
-          enableStripMarginOnTypeFormatting,
-          enableIndentOnPaste,
-          enableSemanticHighlighting,
-          excludedPackages,
-          defaultScalaVersion,
-          disableTestCodeLenses,
-          javaFormatConfig,
-          scalafixRulesDependencies,
-          customProjectRoot,
-          verboseCompilation,
-          autoImportBuilds,
-          scalaCliLauncher,
-          defaultBspToBuildTool,
+          javaHome = javaHome,
+          sbtScript = sbtScript,
+          gradleScript = gradleScript,
+          mavenScript = mavenScript,
+          millScript = millScript,
+          scalafmtConfigPath = scalafmtConfigPath,
+          scalafixConfigPath = scalafixConfigPath,
+          symbolPrefixes = symbolPrefixes,
+          worksheetScreenWidth = worksheetScreenWidth,
+          worksheetCancelTimeout = worksheetCancelTimeout,
+          bloopSbtAlreadyInstalled = bloopSbtAlreadyInstalled,
+          bloopVersion = bloopVersion,
+          bloopJvmProperties = bloopJvmProperties,
+          ammoniteJvmProperties = ammoniteProperties,
+          superMethodLensesEnabled = superMethodLensesEnabled,
+          showInferredType = showInferredType,
+          showImplicitArguments = showImplicitArguments,
+          showImplicitConversionsAndClasses = showImplicitConversionsAndClasses,
+          enableStripMarginOnTypeFormatting = enableStripMarginOnTypeFormatting,
+          enableIndentOnPaste = enableIndentOnPaste,
+          enableSemanticHighlighting = enableSemanticHighlighting,
+          excludedPackages = excludedPackages,
+          fallbackScalaVersion = defaultScalaVersion,
+          testUserInterface = disableTestCodeLenses,
+          javaFormatConfig = javaFormatConfig,
+          scalafixRulesDependencies = scalafixRulesDependencies,
+          customProjectRoot = customProjectRoot,
+          verboseCompilation = verboseCompilation,
+          telemetryLevel = telemetryLevel,
+          scalaCliLauncher = scalaCliLauncher,
+          automaticImportBuild = autoImportBuilds,
+          defaultBspToBuildTool = defaultBspToBuildTool,
         )
       )
     } else {

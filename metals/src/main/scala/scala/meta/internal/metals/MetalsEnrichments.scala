@@ -40,6 +40,7 @@ import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.MtagsEnrichments
 import scala.meta.internal.parsing.EmptyResult
+import scala.meta.internal.pc.StandardReport
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.{semanticdb => s}
@@ -47,6 +48,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 import scala.meta.trees.Origin
 import scala.meta.trees.Origin.Parsed
+import scala.meta.pc.ReportContext
 
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.Gson
@@ -716,7 +718,7 @@ object MetalsEnrichments
       } catch {
         case NonFatal(error) =>
           reports.incognito.create(
-            Report(
+            StandardReport(
               "absolute-path",
               s"""|Uri: $value
                   |""".stripMargin,
