@@ -35,6 +35,7 @@ import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildToolSelector
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.Digest
+import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
@@ -963,7 +964,10 @@ class MetalsLspService(
       }
     }
 
-    if (userConfig.symbolPrefixes != old.symbolPrefixes) {
+    if (
+      userConfig.symbolPrefixes != old.symbolPrefixes ||
+      userConfig.javaHome != old.javaHome
+    ) {
       compilers.restartAll()
     }
 
@@ -995,11 +999,19 @@ class MetalsLspService(
               () => autoConnectToBuildServer,
             )
             .flatMap { _ =>
-              bloopServers.ensureDesiredJvmSettings(
-                userConfig.bloopJvmProperties,
-                userConfig.javaHome,
-                () => autoConnectToBuildServer(),
-              )
+              userConfig.bloopJvmProperties
+                .map(
+                  bloopServers.ensureDesiredJvmSettings(
+                    _,
+                    () => autoConnectToBuildServer(),
+                  )
+                )
+                .getOrElse(Future.unit)
+            }
+            .flatMap { _ =>
+              if (userConfig.javaHome != old.javaHome) {
+                updateBspJavaHome(session)
+              } else Future.unit
             }
         } else if (
           userConfig.ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
@@ -1013,18 +1025,65 @@ class MetalsLspService(
                   if item == Messages.AmmoniteJvmParametersChange.restart =>
                 ammonite.reload()
               case _ =>
-                Future.successful(())
+                Future.unit
             }
-        } else {
-          Future.successful(())
-        }
+        } else if (userConfig.javaHome != old.javaHome) {
+          updateBspJavaHome(session)
+        } else Future.unit
       }
-      .getOrElse(Future.successful(()))
+      .getOrElse(Future.unit)
 
     for {
       _ <- slowConnect
       _ <- Future.sequence(List(restartBuildServer, resetDecorations))
     } yield ()
+  }
+
+  private def updateBspJavaHome(session: BspSession) = {
+    if (session.main.isBazel) {
+      languageClient.showMessage(
+        MessageType.Warning,
+        "Java home setting is not available for Bazel bsp, please use env var instead.",
+      )
+      Future.successful(())
+    } else {
+      languageClient
+        .showMessageRequest(
+          Messages.ProjectJavaHomeUpdate
+            .params(isRestart = !session.main.isBloop)
+        )
+        .asScala
+        .flatMap {
+          case Messages.ProjectJavaHomeUpdate.restart =>
+            buildTool match {
+              case Some(sbt: SbtBuildTool) if session.main.isSbt =>
+                for {
+                  _ <- disconnectOldBuildServer()
+                  _ <- sbt.shutdownBspServer(shellRunner)
+                  _ <- sbt.generateBspConfig(
+                    folder,
+                    bspConfigGenerator.runUnconditionally(sbt, _),
+                    statusBar,
+                  )
+                  _ <- autoConnectToBuildServer()
+                } yield ()
+              case Some(mill: MillBuildTool) if session.main.isMill =>
+                for {
+                  _ <- mill.generateBspConfig(
+                    folder,
+                    bspConfigGenerator.runUnconditionally(mill, _),
+                    statusBar,
+                  )
+                  _ <- autoConnectToBuildServer()
+                } yield ()
+              case _ if session.main.isBloop =>
+                slowConnectToBuildServer(forceImport = true)
+              case _ => Future.successful(())
+            }
+          case Messages.ProjectJavaHomeUpdate.notNow =>
+            Future.successful(())
+        }
+    }
   }
 
   override def didOpen(
