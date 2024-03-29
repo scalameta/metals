@@ -15,7 +15,7 @@ object SampleReports {
   private def reportOf(ctx: telemetry.ReporterContext): telemetry.ErrorReport =
     new telemetry.ErrorReport(
       name = "name",
-      text = Some("text"),
+      text = "text",
       reporterContext = ctx,
       id = Some("id"),
       error = Some(

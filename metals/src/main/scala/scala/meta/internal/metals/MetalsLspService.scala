@@ -195,22 +195,24 @@ class MetalsLspService(
     },
     ReportLevel.fromString(MetalsServerConfig.default.loglevel),
   )
+  private val logger = logging.MetalsLogger.default
+
+  private val loggerAccess =
+    LoggerAccess(
+      debug = logger.debug(_),
+      info = logger.info(_),
+      warning = logger.warn(_),
+      error = logger.error(_),
+    )
+
+  val client = new telemetry.TelemetryClient(logger = loggerAccess)
+
   private val remoteTelemetryReports = new TelemetryReportContext(
     telemetryLevel = () => userConfig.telemetryLevel,
     reporterContext = createTelemetryReporterContext,
-    sanitizers = new TelemetryReportContext.Sanitizers(
-      workspace = Some(folder.toNIO),
-      sourceCodeTransformer = Some(ScalametaSourceCodeTransformer),
-    ),
-    logger = {
-      val logger = logging.MetalsLogger.default
-      LoggerAccess(
-        debug = logger.debug(_),
-        info = logger.info(_),
-        warning = logger.warn(_),
-        error = logger.error(_),
-      )
-    },
+    workspaceSanitizer = new WorkspaceSanitizer(Some(folder.toNIO)),
+    telemetryClient = client,
+    logger = loggerAccess,
   )
 
   implicit val reports: ReportContext =

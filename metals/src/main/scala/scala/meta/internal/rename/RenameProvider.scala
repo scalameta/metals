@@ -16,7 +16,6 @@ import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferenceProvider
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.parsing.Trees
@@ -30,6 +29,7 @@ import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+import scala.meta.pc.ReportContext
 
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.MessageParams

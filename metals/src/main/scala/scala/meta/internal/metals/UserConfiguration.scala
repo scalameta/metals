@@ -57,6 +57,7 @@ case class UserConfiguration(
     verboseCompilation: Boolean = false,
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
     scalaCliLauncher: Option[String] = None,
+    defaultBspToBuildTool: Boolean = false,
     telemetryLevel: TelemetryLevel = TelemetryLevel.default,
 ) {
 
@@ -362,8 +363,8 @@ object UserConfiguration {
         "off",
         "all",
         "Import build when changes detected without prompting",
-        """|Automatically import builds rather than prompting the user to choose. "initial" will 
-           |only automatically import a build when a project is first opened, "all" will automate 
+        """|Automatically import builds rather than prompting the user to choose. "initial" will
+           |only automatically import a build when a project is first opened, "all" will automate
            |build imports after subsequent changes as well.""".stripMargin,
       ),
       UserConfigurationOption(
@@ -380,8 +381,8 @@ object UserConfiguration {
         "off",
         "all",
         "Import build when changes detected without prompting",
-        """|Automatically import builds rather than prompting the user to choose. "initial" will 
-           |only automatically import a build when a project is first opened, "all" will automate 
+        """|Automatically import builds rather than prompting the user to choose. "initial" will
+           |only automatically import a build when a project is first opened, "all" will automate
            |build imports after subsequent changes as well.""".stripMargin,
       ),
       UserConfigurationOption(
@@ -654,10 +655,9 @@ object UserConfiguration {
           scalafixRulesDependencies = scalafixRulesDependencies,
           customProjectRoot = customProjectRoot,
           verboseCompilation = verboseCompilation,
-          scalaCliLauncher = None,
           telemetryLevel = telemetryLevel,
-          autoImportBuilds = autoImportBuilds,
           scalaCliLauncher = scalaCliLauncher,
+          automaticImportBuild = autoImportBuilds,
           defaultBspToBuildTool = defaultBspToBuildTool,
         )
       )

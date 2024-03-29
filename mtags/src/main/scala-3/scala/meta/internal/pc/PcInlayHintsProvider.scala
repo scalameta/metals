@@ -2,7 +2,6 @@ package scala.meta.internal.pc
 
 import java.nio.file.Paths
 
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.internal.pc.printer.ShortenedNames
@@ -24,6 +23,7 @@ import dotty.tools.dotc.util.Spans.Span
 import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintKind
+import scala.meta.pc.ReportContext
 
 class PcInlayHintsProvider(
     driver: InteractiveDriver,

@@ -266,6 +266,8 @@ lazy val telemetryInterfaces = project
       else Nil
     },
     libraryDependencies := List(
+      "com.softwaremill.sttp.tapir" %% "tapir-core" % "1.10.0",
+      "com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % "1.10.0",
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.27.7",
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.27.7" % "compile-internal",
     ),
@@ -346,7 +348,6 @@ val mtagsSettings = List(
   Compile / doc / sources := Seq.empty,
   libraryDependencies ++= Seq(
     "com.lihaoyi" %% "geny" % V.genyVersion,
-    "com.lihaoyi" %% "requests" % V.requests,
     "com.thoughtworks.qdox" % "qdox" % V.qdox, // for java mtags
     "org.scala-lang.modules" %% "scala-java8-compat" % V.java8Compat,
     "org.jsoup" % "jsoup" % V.jsoup, // for extracting HTML from javadocs
@@ -528,8 +529,9 @@ lazy val metals = project
       // for JSON formatted doctor
       "com.lihaoyi" %% "ujson" % "3.1.5",
       // For fetching projects' templates
-      // For remote language server
-      "com.lihaoyi" %% "requests" % V.requests,
+      // telemetry client
+      "com.softwaremill.sttp.client3" %% "core" % "3.9.5",
+      "com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % "1.10.0",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
       "org.scalameta" %% "scalameta" % V.semanticdb(scalaVersion.value),
       "org.scalameta" % "semanticdb-scalac-core" % V.semanticdb(
@@ -832,6 +834,7 @@ lazy val unit = project
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       "org.scalameta" %% "munit" % V.munit,
+      "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "1.10.0",
     ),
     buildInfoPackage := "tests",
     Compile / resourceGenerators += InputProperties

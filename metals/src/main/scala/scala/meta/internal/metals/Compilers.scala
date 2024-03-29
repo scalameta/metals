@@ -1225,19 +1225,20 @@ class Compilers(
   ): ReportContext = {
     val logger =
       ju.logging.Logger.getLogger(classOf[TelemetryReportContext].getName)
+
+    val loggerAccess = LoggerAccess(
+      debug = logger.fine(_),
+      info = logger.info(_),
+      warning = logger.warning(_),
+      error = logger.severe(_),
+    )
+
     new TelemetryReportContext(
       telemetryLevel = () => userConfig().telemetryLevel,
       reporterContext = createTelemetryReporterContext,
-      sanitizers = new TelemetryReportContext.Sanitizers(
-        workspace = Some(workspace.toNIO),
-        sourceCodeTransformer = Some(ScalametaSourceCodeTransformer),
-      ),
-      logger = LoggerAccess(
-        debug = logger.fine(_),
-        info = logger.info(_),
-        warning = logger.warning(_),
-        error = logger.severe(_),
-      ),
+      workspaceSanitizer = new WorkspaceSanitizer(Some(workspace.toNIO)),
+      telemetryClient = new telemetry.TelemetryClient(logger = loggerAccess),
+      logger = loggerAccess,
     )
   }
 

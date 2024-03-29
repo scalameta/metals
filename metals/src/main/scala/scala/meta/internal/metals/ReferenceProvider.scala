@@ -31,6 +31,8 @@ import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.ReferenceParams
+import scala.meta.internal.pc.StandardReport
+import scala.meta.pc.ReportContext
 
 final class ReferenceProvider(
     workspace: AbsolutePath,
@@ -174,7 +176,7 @@ final class ReferenceProvider(
               s"No references found, index size ${index.size}\n" + fileInIndex
             )
             report.unsanitized.create(
-              Report(
+              StandardReport(
                 "empty-references",
                 index
                   .map { case (path, entry) =>

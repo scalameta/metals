@@ -20,8 +20,8 @@ case class ErrorReport(
     reporterName: String,
     reporterContext: ReporterContext,
     env: Environment = Environment.instance,
+    text: String,
     id: Option[String] = None,
-    text: Option[String] = None,
     error: Option[ExceptionSummary] = None,
 )
 
