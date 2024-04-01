@@ -10,7 +10,7 @@
   "devDependencies": {},
   "dependencies": {
     "@docusaurus/core": "3.1.1",
-    "@docusaurus/plugin-client-redirects": "3.1.1",
+    "@docusaurus/plugin-client-redirects": "3.2.0",
     "@docusaurus/preset-classic": "3.1.1",
     "@easyops-cn/docusaurus-search-local": "0.40.1",
     "clsx": "^2.0.0",
