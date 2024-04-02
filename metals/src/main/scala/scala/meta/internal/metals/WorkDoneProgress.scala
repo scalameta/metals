@@ -118,32 +118,28 @@ class WorkDoneProgress(
       task.maybeProgress match {
         case Some(progress) =>
           progress.update(percentage)
-          val report = new WorkDoneProgressReport()
-          report.setPercentage(progress.percentage)
-          task.additionalMessage.foreach(report.setMessage)
-          val notification =
-            messages.Either.forLeft[WorkDoneProgressNotification, Object](
-              report
-            )
-          client.notifyProgress(new ProgressParams(token, notification))
+          notifyProgress(token, task)
         case None =>
       }
     }
 
   def notifyProgress(token: Token): Unit = {
     val task = taskMap.getOrDefault(token, Task.empty)
-    if (task.showTimer) {
-      val report = new WorkDoneProgressReport()
-      task.maybeProgress.foreach { progress =>
-        report.setPercentage(progress.percentage)
-      }
-      task.additionalMessage.foreach(report.setMessage)
-      val notification =
-        messages.Either.forLeft[WorkDoneProgressNotification, Object](
-          report
-        )
-      client.notifyProgress(new ProgressParams(token, notification))
-    } else Future.successful(())
+    if (task.showTimer) notifyProgress(token, task)
+    else Future.successful(())
+  }
+
+  private def notifyProgress(token: Token, task: Task): Unit = {
+    val report = new WorkDoneProgressReport()
+    task.maybeProgress.foreach { progress =>
+      report.setPercentage(progress.percentage)
+    }
+    task.additionalMessage.foreach(report.setMessage)
+    val notification =
+      messages.Either.forLeft[WorkDoneProgressNotification, Object](
+        report
+      )
+    client.notifyProgress(new ProgressParams(token, notification))
   }
 
   def endProgress(token: Future[Token]): Future[Unit] =
