@@ -20,7 +20,7 @@ final case class DoctorResults(
 
 object DoctorResults {
   // Version of the Doctor json that is returned.
-  val version = 5
+  val version = 6
 }
 
 final case class DoctorFolderResults(
@@ -128,6 +128,7 @@ final case class DoctorHeader(
 }
 
 /**
+ * @param projectsJavaInfo information about java used for project
  * @param buildTool if Metals detected multiple build tools, this specifies
  *        the one the user has chosen
  * @param buildServer the build server that is being used
@@ -135,6 +136,7 @@ final case class DoctorHeader(
  *        will include a message on how to get it back.
  */
 final case class DoctorFolderHeader(
+    projectsJavaInfo: Option[String],
     buildTool: Option[String],
     buildServer: String,
     importBuildStatus: Option[String],
@@ -146,6 +148,7 @@ final case class DoctorFolderHeader(
         "buildServer" -> buildServer
       )
 
+    projectsJavaInfo.foreach(base.update("projectsJavaInfo", _))
     buildTool.foreach { bt => base.update("buildTool", bt) }
     importBuildStatus.foreach { ibs => base.update("importBuildStatus", ibs) }
     isBuildServerResponsive.foreach { ibsr =>
