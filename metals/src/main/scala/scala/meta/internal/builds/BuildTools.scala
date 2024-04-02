@@ -1,9 +1,12 @@
 package scala.meta.internal.builds
 
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.ScalaCliBspScope
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.BloopServers
@@ -32,6 +35,7 @@ final class BuildTools(
     bspGlobalDirectories: List[AbsolutePath],
     userConfig: () => UserConfiguration,
     explicitChoiceMade: () => Boolean,
+    charset: Charset,
 ) {
   private val lastDetectedBuildTools = new AtomicReference(Set.empty[String])
   // NOTE: We do a couple extra check here before we say a workspace with a
@@ -146,16 +150,19 @@ final class BuildTools(
       if (bspFolder.exists && bspFolder.isDirectory)
       buildTool <- bspFolder.toFile
         .listFiles()
-        .collect {
-          case file
-              if file.isFile() && file.getName().endsWith(".json") &&
-                !knownBsps(file.getName().stripSuffix(".json")) =>
-            BspOnly(
-              file.getName().stripSuffix(".json"),
+        .flatMap(file =>
+          if (file.isFile() && file.getName().endsWith(".json")) {
+            val absolutePath = AbsolutePath(file.toPath())
+            for {
+              config <- BspServers.readInBspConfig(absolutePath, charset)
+              if !knownBsps(config.getName())
+            } yield BspOnly(
+              config.getName(),
               root,
-              AbsolutePath(file.toPath()),
+              absolutePath,
             )
-        }
+          } else None
+        )
         .toList
     } yield buildTool
   }
@@ -276,5 +283,6 @@ object BuildTools {
       Nil,
       () => UserConfiguration(),
       explicitChoiceMade = () => false,
+      charset = StandardCharsets.UTF_8,
     )
 }

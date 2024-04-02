@@ -22,4 +22,6 @@ case class BspOnly(
     else None
   }
   override val forcesBuildServer = true
+
+  override def isBspGenerated(workspace: AbsolutePath): Boolean = true
 }

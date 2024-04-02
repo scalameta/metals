@@ -10,6 +10,7 @@ import scala.concurrent.Promise
 import scala.util.Properties
 import scala.util.Try
 
+import scala.meta.internal.bsp.BspServers.readInBspConfig
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Cancelable
@@ -153,25 +154,8 @@ final class BspServers(
    *  entries. Notes that this will not return Bloop even though it
    *  may be a server in the current workspace
    */
-  def findAvailableServers(): List[BspConnectionDetails] = {
-    val jsonFiles = findJsonFiles()
-    val gson = new Gson()
-    for {
-      candidate <- jsonFiles
-      text = FileIO.slurp(candidate, charset)
-      details <- Try(gson.fromJson(text, classOf[BspConnectionDetails])).fold(
-        e => {
-          scribe.error(s"parse error: $candidate", e)
-          List()
-        },
-        details => {
-          List(details)
-        },
-      )
-    } yield {
-      details
-    }
-  }
+  def findAvailableServers(): List[BspConnectionDetails] =
+    findJsonFiles().flatMap(readInBspConfig(_, charset))
 
   private def findJsonFiles(): List[AbsolutePath] = {
     val buf = List.newBuilder[AbsolutePath]
@@ -206,4 +190,22 @@ object BspServers {
       .map(path => Try(AbsolutePath(path)).toOption)
       .flatten
   }
+
+  def readInBspConfig(
+      path: AbsolutePath,
+      charset: Charset,
+  ): Option[BspConnectionDetails] = {
+    val text = FileIO.slurp(path, charset)
+    val gson = new Gson()
+    Try(gson.fromJson(text, classOf[BspConnectionDetails])).fold(
+      e => {
+        scribe.error(s"parse error: $path", e)
+        None
+      },
+      details => {
+        Some(details)
+      },
+    )
+  }
+
 }

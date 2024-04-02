@@ -199,6 +199,7 @@ class MetalsLspService(
     bspGlobalDirectories,
     () => userConfig,
     () => tables.buildServers.selectedServer().nonEmpty,
+    charset,
   )
 
   def javaHome = userConfig.javaHome
@@ -2147,6 +2148,11 @@ class MetalsLspService(
         )
       case Some(BuildTool.Found(buildTool: BuildServerProvider, _)) =>
         slowConnectToBuildToolBsp(buildTool, forceImport, isSelected(buildTool))
+      // Used when there are multiple `.bsp/<name>.json` configs and a known build tool (e.g. sbt)
+      case Some(BuildTool.Found(buildTool, _))
+          if buildTool.isBspGenerated(folder) =>
+        maybeChooseServer(buildTool.buildServerName, isSelected(buildTool))
+        quickConnectToBuildServer()
       // Used in tests, `.bloop` folder exists but no build tool is detected
       case _ => quickConnectToBuildServer()
     }
