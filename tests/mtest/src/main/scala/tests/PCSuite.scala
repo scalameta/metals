@@ -7,7 +7,6 @@ import java.nio.file.Path
 import scala.util.control.NonFatal
 
 import scala.meta.Dialect
-import scala.meta.dialects
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.Docstrings
@@ -38,7 +37,7 @@ trait PCSuite {
     .withRepositories(allRepos: _*)
 
   protected def indexJdkSources: Unit = JdkSources() match {
-    case Right(jdk) => index.addSourceJar(jdk, dialects.Scala213)
+    case Right(jdk) => index.addJDKSources(jdk)
     case _ =>
   }
 

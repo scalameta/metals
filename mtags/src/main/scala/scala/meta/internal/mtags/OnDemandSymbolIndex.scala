@@ -94,6 +94,23 @@ final class OnDemandSymbolIndex(
       }
     )
 
+  override def addJDKSources(jar: AbsolutePath): Unit =
+    tryRun(
+      jar,
+      List.empty, {
+        try {
+          getOrCreateBucket(dialects.Scala213Source3).addJDKSources(jar)
+        } catch {
+          case e: ZipError =>
+            onError(new IndexingExceptions.InvalidJarException(jar, e))
+            List.empty
+          case e: ZipException =>
+            onError(new IndexingExceptions.InvalidJarException(jar, e))
+            List.empty
+        }
+      }
+    )
+
   // Used to add cached toplevel symbols to index
   def addIndexedSourceJar(
       jar: AbsolutePath,
