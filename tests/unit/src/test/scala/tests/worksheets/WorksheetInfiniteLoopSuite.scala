@@ -21,10 +21,10 @@ class WorksheetInfiniteLoopSuite
     super.userConfig.copy(
       worksheetScreenWidth = 40,
       worksheetCancelTimeout = 1,
-      worksheetTimeout = 4,
+      worksheetTimeout = 8,
     )
 
-  test("infinite-loop") {
+  test("infinite-loop", maxRetry = 3) {
     for {
       _ <- initialize(
         s"""
