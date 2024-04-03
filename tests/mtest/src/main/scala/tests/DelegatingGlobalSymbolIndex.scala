@@ -35,6 +35,11 @@ class DelegatingGlobalSymbolIndex(
   ): List[mtags.IndexingResult] = {
     underlying.addSourceJar(jar, dialect)
   }
+
+  def addJDKSources(jar: AbsolutePath): Unit = {
+    underlying.addJDKSources(jar)
+  }
+
   def addSourceDirectory(
       dir: AbsolutePath,
       dialect: Dialect

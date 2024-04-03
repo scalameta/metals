@@ -515,7 +515,7 @@ final case class Indexer(
       case Right(zip) =>
         scribe.debug(s"Indexing JDK sources from $zip")
         usedJars += zip
-        addSourceJarSymbols(zip)
+        definitionIndex.addJDKSources(zip)
       case Left(notFound) =>
         val candidates = notFound.candidates.mkString(", ")
         scribe.warn(
