@@ -132,6 +132,7 @@ object StandaloneSymbolSearch {
       buildTargets: BuildTargets,
       saveSymbolFileToDisk: Boolean,
       sourceMapper: SourceMapper,
+      workspaceFallback: Option[SymbolSearch] = None,
   )(implicit rc: ReportContext): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(
@@ -151,32 +152,7 @@ object StandaloneSymbolSearch {
       buildTargets,
       saveSymbolFileToDisk,
       sourceMapper,
-    )
-  }
-  def apply(
-      scalaVersion: String,
-      workspace: AbsolutePath,
-      buffers: Buffers,
-      excludedPackages: () => ExcludedPackagesHandler,
-      userConfig: () => UserConfiguration,
-      trees: Trees,
-      buildTargets: BuildTargets,
-      saveSymbolFileToDisk: Boolean,
-      sourceMapper: SourceMapper,
-  )(implicit rc: ReportContext): StandaloneSymbolSearch = {
-    val (sourcesWithExtras, classpathWithExtras) =
-      addScalaAndJava(scalaVersion, Nil, Nil, userConfig().javaHome)
-
-    new StandaloneSymbolSearch(
-      workspace,
-      classpathWithExtras,
-      sourcesWithExtras,
-      buffers,
-      excludedPackages,
-      trees,
-      buildTargets,
-      saveSymbolFileToDisk,
-      sourceMapper,
+      workspaceFallback,
     )
   }
 

@@ -13,7 +13,7 @@ case class JavaTarget(
     info: BuildTarget,
     javac: JavacOptionsItem,
     bspConnection: Option[BuildServerConnection],
-) {
+) extends JvmTarget {
   def displayName: String = info.getName
 
   def dataKind: String = info.dataKind
@@ -42,6 +42,22 @@ case class JavaTarget(
   def sourceVersion: Option[String] = javac.sourceVersion
 
   def targetroot: Option[AbsolutePath] = javac.targetroot.map(_.resolveIfJar)
+
+  /**
+   * If the build server supports lazy classpath resolution, we will
+   * not get any classpath data eagerly and we should not
+   * use this endpoint. It should only be used as a fallback.
+   *
+   * This is due to the fact that we don't request classpath as it
+   * can be resonably expensive.
+   *
+   * @return non empty classpath only if it was resolved prior
+   */
+  def classpath: Option[List[String]] =
+    if (javac.getClasspath().isEmpty)
+      None
+    else
+      Some(javac.getClasspath().asScala.toList)
 
   /**
    * Typically to verify that SemanticDB is enabled correctly we check the javacOptions to ensure

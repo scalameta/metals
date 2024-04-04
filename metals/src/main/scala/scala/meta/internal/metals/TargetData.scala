@@ -106,6 +106,8 @@ final class TargetData {
     scalaTargetInfo.get(id)
   def javaTarget(id: BuildTargetIdentifier): Option[JavaTarget] =
     javaTargetInfo.get(id)
+  def jvmTarget(id: BuildTargetIdentifier): Option[JvmTarget] =
+    scalaTarget(id).orElse(javaTarget(id))
 
   private val sourceBuildTargetsCache =
     new util.concurrent.ConcurrentHashMap[AbsolutePath, Option[
@@ -150,9 +152,8 @@ final class TargetData {
   ): Option[List[AbsolutePath]] = {
     buildTargetDependencyModules.get(id) match {
       case None =>
-        buildTargetClasspath.get(id)
         scalaTarget(id).flatMap { target =>
-          target.lazyJarClasspath
+          target.jarClasspath
         }
       case Some(value) =>
         Some(value.flatMap(_.getArtifacts().asScala).collect {
@@ -166,10 +167,10 @@ final class TargetData {
   def targetClasspath(
       id: BuildTargetIdentifier
   )(implicit ec: ExecutionContext): Option[Future[List[String]]] = {
-    targetToConnection.get(id).zip(scalaTarget(id)).map {
-      case (bspConnection, scalaTarget) =>
+    targetToConnection.get(id).zip(jvmTarget(id)).map {
+      case (bspConnection, jvmTarget) =>
         val classpath =
-          scalaTarget.lazyClasspath.orElse(buildTargetClasspath.get(id)) match {
+          jvmTarget.classpath.orElse(buildTargetClasspath.get(id)) match {
             case None =>
               bspConnection
                 .buildTargetJvmClasspath(
@@ -189,7 +190,7 @@ final class TargetData {
           }
 
         classpath.map { classes =>
-          val outputClasses = scalaTarget.classDirectory
+          val outputClasses = jvmTarget.classDirectory
           if (classes.contains(outputClasses)) classes
           else outputClasses :: classes
         }

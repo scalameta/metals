@@ -130,7 +130,7 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
     }
 
     val scalaClassPath = scalaInfo
-      .flatMap(_.lazyClasspath) match {
+      .flatMap(_.classpath) match {
       case None => List("<unresolved>")
       case Some(classpath) =>
         getClassPath(classpath.map(_.toAbsolutePath), targetId)

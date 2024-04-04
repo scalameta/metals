@@ -22,7 +22,7 @@ case class ScalaTarget(
     autoImports: Option[Seq[String]],
     sbtVersion: Option[String],
     bspConnection: Option[BuildServerConnection],
-) {
+) extends JvmTarget {
 
   def isSbt = sbtVersion.isDefined
 
@@ -105,7 +105,7 @@ case class ScalaTarget(
    *
    * @return non empty classpath only if it was resolved prior
    */
-  def lazyClasspath: Option[List[String]] =
+  def classpath: Option[List[String]] =
     if (scalac.getClasspath().isEmpty)
       None
     else
@@ -126,8 +126,8 @@ case class ScalaTarget(
    *
    * @return non empty classpath jar list if it was resolved prior
    */
-  def lazyJarClasspath: Option[List[AbsolutePath]] =
-    lazyClasspath.map(collectJars)
+  def jarClasspath: Option[List[AbsolutePath]] =
+    classpath.map(collectJars)
 
   private def collectJars(paths: List[String]) =
     paths

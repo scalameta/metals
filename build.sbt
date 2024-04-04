@@ -203,14 +203,26 @@ val sharedScalacOptions = List(
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case partialVersion
+          // Scala 2.12.16 aand lower break within the tests if target is set to 11
           if isScala211(partialVersion) ||
-            // Scala 2.12 has a bug on older version that break with `-release`
-            isScala212(partialVersion) && V.scala212 != scalaVersion.value =>
-        List("-target:jvm-1.8", "-Yrangepos", "-Xexperimental")
+            scalaVersion.value == "2.12.16" ||
+            isScala212(partialVersion) && V.deprecatedScala2Versions
+              .contains(scalaVersion.value) =>
+        List(
+          "-target:jvm-1.8",
+          "-Yrangepos",
+          "-Xexperimental",
+        ) // TODO after release drop 2.11.12
+      /* Scala 2.12 has a bug on older version that break with `-release, but target
+       * is enough and we will confirm the compilation on latest Scala 2.12
+       */
+      case partialVersion
+          if isScala212(partialVersion) && V.scala212 != scalaVersion.value =>
+        List("-target:11", "-Yrangepos", "-Xexperimental")
       case partialVersion if isScala3(partialVersion) =>
-        List("-Xtarget:8", "-language:implicitConversions", "-Xsemanticdb")
+        List("-Xtarget:11", "-language:implicitConversions", "-Xsemanticdb")
       case _ =>
-        List("-target:jvm-1.8", "-Yrangepos")
+        List("-target:11", "-Yrangepos")
     }
   }
 )
@@ -831,6 +843,8 @@ lazy val slow = project
   .settings(
     testSettings,
     sharedSettings,
+    // Test / javaOptions += "-Xmx2G",
+    // Test / javaOptions += "-XX:+HeapDumpOnOutOfMemoryError",
     Test / testOnly := (Test / testOnly)
       .dependsOn((`sbt-metals` / publishLocal), publishBinaryMtags)
       .evaluated,
