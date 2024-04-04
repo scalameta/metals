@@ -138,8 +138,11 @@ class MetalsLspService(
     maxScalaCliServers: Int,
 ) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
     with Cancelable
-    with TextDocumentService {
+    with TextDocumentService
+    with FolderService {
   import serverInputs._
+
+  def service: MetalsLspService = this
 
   @volatile
   private var userConfig: UserConfiguration = initialUserConfig

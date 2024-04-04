@@ -222,6 +222,8 @@ class WorkspaceLspService(
     )
 
   def folderServices = workspaceFolders.getFolderServices
+  def allHandlers: List[Folder with FolderService] =
+    workspaceFolders.getFolderServices ++ workspaceFolders.delegatingServices
   def nonScalaProjects = workspaceFolders.nonScalaProjects
 
   val treeView: TreeViewProvider =
@@ -281,7 +283,7 @@ class WorkspaceLspService(
     }
 
   def getServiceForOpt(path: AbsolutePath): Option[MetalsLspService] =
-    getFolderForOpt(path, folderServices)
+    getFolderForOpt(path, allHandlers).map(_.service)
 
   def getServiceFor(path: AbsolutePath): MetalsLspService =
     getServiceForOpt(path).getOrElse(fallbackService)
@@ -345,9 +347,9 @@ class WorkspaceLspService(
       folderUri: String
   ): Option[MetalsLspService] =
     for {
-      workSpaceFolder <- folderServices
+      workSpaceFolder <- allHandlers
         .find(service => service.path.toString == folderUri)
-    } yield workSpaceFolder
+    } yield workSpaceFolder.service
 
   def foreachSeq[A](
       f: MetalsLspService => Future[A],
@@ -580,23 +582,26 @@ class WorkspaceLspService(
 
   override def didChangeWorkspaceFolders(
       params: lsp4j.DidChangeWorkspaceFoldersParams
-  ): CompletableFuture[Unit] =
+  ): CompletableFuture[Unit] = {
+    val removed =
+      params
+        .getEvent()
+        .getRemoved()
+        .map(Folder(_, isKnownMetalsProject = false))
+        .asScala
+        .toList
+    val added =
+      params
+        .getEvent()
+        .getAdded()
+        .map(Folder(_, isKnownMetalsProject = false))
+        .asScala
+        .toList
+
     workspaceFolders
-      .changeFolderServices(
-        params
-          .getEvent()
-          .getRemoved()
-          .map(Folder(_, isKnownMetalsProject = false))
-          .asScala
-          .toList,
-        params
-          .getEvent()
-          .getAdded()
-          .map(Folder(_, isKnownMetalsProject = false))
-          .asScala
-          .toList,
-      )
+      .changeFolderServices(removed, added)
       .asJava
+  }
 
   override def treeViewChildren(
       params: TreeViewChildrenParams

@@ -74,7 +74,7 @@ object BloopImportInitializer extends BuildServerInitializer {
       workspaceFolders: Option[List[String]] = None,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     for {
-      initializeResult <- server.initialize()
+      initializeResult <- server.initialize(workspaceFolders)
       // Import build using Bloop
       _ = client.importBuild = ImportBuild.yes
       _ <- server.initialized()
