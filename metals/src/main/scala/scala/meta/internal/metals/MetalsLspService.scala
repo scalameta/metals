@@ -789,7 +789,6 @@ class MetalsLspService(
       fileSystemSemanticdbs,
       interactiveSemanticdbs,
       languageClient,
-      clientConfig,
       new ClassFinder(trees),
     )
 
@@ -804,7 +803,7 @@ class MetalsLspService(
     tables,
   )
 
-  def loadedPresentationCompilerCount(): Future[Int] =
+  def loadedPresentationCompilerCount(): Int =
     compilers.loadedPresentationCompilerCount()
 
   val treeView =

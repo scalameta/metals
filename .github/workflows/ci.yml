@@ -75,9 +75,9 @@ jobs:
             java: "17"
           - type: sbt-metals jdk8
             command: bin/test.sh sbt-metals/scripted
-            name: Sbt-metals/scripted jdk8
+            name: Sbt-metals/scripted jdk11
             os: ubuntu-latest
-            java: "8"
+            java: "11"
           - type: maven
             command: bin/test.sh 'slow/testOnly -- tests.maven.*'
             name: Maven integration

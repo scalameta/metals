@@ -4,7 +4,6 @@ import java.nio.charset.Charset
 import java.util.Collections
 
 import scala.concurrent.Await
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 import scala.util.Success
 import scala.util.Try
@@ -37,8 +36,7 @@ final class InteractiveSemanticdbs(
     semanticdbIndexer: () => SemanticdbIndexer,
     javaInteractiveSemanticdb: Option[JavaInteractiveSemanticdb],
     buffers: Buffers,
-)(implicit executionContext: ExecutionContext)
-    extends Cancelable
+) extends Cancelable
     with Semanticdbs {
 
   private val textDocumentCache = Collections.synchronizedMap(
@@ -102,7 +100,7 @@ final class InteractiveSemanticdbs(
                 else text
               val sha = MD5.compute(adjustedText)
               if (existingDoc == null || existingDoc.md5 != sha) {
-                Try(compile(path, adjustedText)) match {
+                compile(path, adjustedText) match {
                   case Success(doc) if doc != null =>
                     if (!source.isDependencySource(workspace))
                       semanticdbIndexer().onChange(source, doc)
@@ -138,35 +136,34 @@ final class InteractiveSemanticdbs(
     }
   }
 
-  private def compile(source: AbsolutePath, text: String): s.TextDocument = {
-    if (source.isJavaFilename)
-      javaInteractiveSemanticdb.fold(s.TextDocument())(
-        _.textDocument(source, text)
-      )
-    else scalaCompile(source, text)
-  }
+  private def compile(source: AbsolutePath, text: String): Try[s.TextDocument] =
+    Try {
+      if (source.isJavaFilename)
+        javaInteractiveSemanticdb.fold(s.TextDocument())(
+          _.textDocument(source, text)
+        )
+      else scalaCompile(source, text)
+    }
 
   private def scalaCompile(
       source: AbsolutePath,
       text: String,
   ): s.TextDocument = {
-    def worksheetCompiler =
-      if (source.isWorksheet) compilers().loadWorksheetCompiler(source)
-      else None
-    def fromTarget = for {
-      buildTarget <- buildTargets.inverseSources(source)
-      pc <- compilers().loadCompiler(buildTarget)
-    } yield pc
 
-    val pc = worksheetCompiler
-      .orElse(fromTarget)
+    val pc = compilers()
+      .loadCompiler(source)
       .orElse {
         // load presentation compiler for sources that were create by a worksheet definition request
         tables.worksheetSources
           .getWorksheet(source)
           .flatMap(compilers().loadWorksheetCompiler)
       }
-      .getOrElse(compilers().fallbackCompiler(source))
+      .getOrElse {
+        // this is highly unlikely since None is only returned for non scala/java files
+        throw new RuntimeException(
+          s"No presentation compiler found for $source"
+        )
+      }
 
     val (prependedLinesSize, modifiedText) =
       Option
@@ -184,10 +181,7 @@ final class InteractiveSemanticdbs(
     // which requires more effort than it's worth.
     val bytes = Await
       .result(
-        pc
-          .flatMap {
-            _.semanticdbTextDocument(source.toURI, modifiedText).asScala
-          },
+        pc.semanticdbTextDocument(source.toURI, modifiedText).asScala,
         Duration(
           clientConfig.initialConfig.compilers.timeoutDelay,
           clientConfig.initialConfig.compilers.timeoutUnit,

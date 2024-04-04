@@ -87,7 +87,6 @@ final class FileDecoderProvider(
     fileSystemSemanticdbs: FileSystemSemanticdbs,
     interactiveSemanticdbs: InteractiveSemanticdbs,
     languageClient: MetalsLanguageClient,
-    clientConfig: ClientConfiguration,
     classFinder: ClassFinder,
 )(implicit ec: ExecutionContext) {
 
@@ -741,15 +740,11 @@ final class FileDecoderProvider(
   private def decodeFromTastyFile(
       pathInfo: PathInfo
   ): Future[DecoderResponse] =
-    compilers.loadCompiler(pathInfo.targetId) match {
-      case Some(lazyPc) =>
-        lazyPc.flatMap {
-          _.getTasty(
-            pathInfo.path.toURI,
-            clientConfig.isHttpEnabled(),
-          ).asScala
-            .map(DecoderResponse.success(pathInfo.path.toURI, _))
-        }
+    compilers.getTasty(pathInfo.targetId, pathInfo.path) match {
+      case Some(tasty) =>
+        tasty
+          .map(DecoderResponse.success(pathInfo.path.toURI, _))
+
       case None =>
         Future.successful(
           DecoderResponse.failed(
