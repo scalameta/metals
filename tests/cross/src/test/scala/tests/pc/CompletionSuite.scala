@@ -2292,4 +2292,24 @@ class CompletionSuite extends BaseCompletionSuite {
     ""
   )
 
+  // currently because of the way indexing works
+  // the potentially correct completion symbol `a/A.Xtension#foofoo().` won't be created
+  // this test just checks that `a/A#Xtension#foofoo().` is not shown
+  check(
+    "implicit-class-owner-must-be-static",
+    """|package a
+       |object A extends A {}
+       |class A {
+       |  implicit class Xtension(i: Int){
+       |    def foofoo() = ???
+       |  }
+       |}
+       |
+       |object O {
+       |  val f = 1.foofoo@@
+       |}
+       |""".stripMargin,
+    ""
+  )
+
 }
