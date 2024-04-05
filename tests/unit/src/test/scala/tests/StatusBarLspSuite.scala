@@ -16,7 +16,9 @@ class StatusBarLspSuite extends BaseLspSuite("status-bar") {
           |}
         """.stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/A.scala")
+      _ <- server.didSave("a/src/main/scala/A.scala") { text =>
+        text.replace("A", "AA")
+      }
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         "",
@@ -36,7 +38,7 @@ class StatusBarLspSuite extends BaseLspSuite("status-bar") {
         s"${icons.alert}Compiled a",
       )
       _ <- server.didSave("a/src/main/scala/A.scala")(
-        _.replaceFirst("val x: String = 42", "val x = 42")
+        _.replaceFirst("val x: String = 42", "val x: Long = 42")
       )
       // Successful compilation is reported in the status bar when following a failed compilation.
       _ = assertContains(
