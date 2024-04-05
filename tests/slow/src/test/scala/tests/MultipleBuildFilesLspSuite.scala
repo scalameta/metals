@@ -86,4 +86,26 @@ class MultipleBuildFilesLspSuite
     } yield ()
   }
 
+  test("custom-bsp-2") {
+    cleanWorkspace()
+    client.chooseBuildTool = actions =>
+      actions
+        .find(_.getTitle == "Custom")
+        .getOrElse(throw new Exception("no Custom as build tool"))
+    for {
+      _ <- initialize(
+        s"""|/.bsp/custom.json
+            |${ScalaCli.scalaCliBspJsonContent(bspName = "Custom")}
+            |/.bsp/other-custom.json
+            |${ScalaCli.scalaCliBspJsonContent(bspName = "Other custom")}
+            |/build.sbt
+            |scalaVersion := "${V.scala213}"
+            |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      _ = assert(server.server.bspSession.nonEmpty)
+      _ = assert(server.server.bspSession.get.main.name == "Custom")
+    } yield ()
+  }
+
 }

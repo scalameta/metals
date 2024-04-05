@@ -4,7 +4,6 @@ import scala.meta.internal.metals.CompilerInlayHintsParams
 import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.pc.PresentationCompiler
 
 abstract class BaseInlayHintsExpectSuite(
@@ -14,11 +13,6 @@ abstract class BaseInlayHintsExpectSuite(
   def compiler: PresentationCompiler
 
   override lazy val input: InputProperties = inputProperties
-  val userConfig: UserConfiguration = UserConfiguration().copy(
-    showInferredType = Some("true"),
-    showImplicitArguments = true,
-    showImplicitConversionsAndClasses = true,
-  )
 
   override def testCases(): List[ExpectTestCase] = {
     input.scalaFiles.map { file =>
@@ -34,6 +28,7 @@ abstract class BaseInlayHintsExpectSuite(
           )
           val pcParams = CompilerInlayHintsParams(
             rangeParams,
+            true,
             true,
             true,
             true,

@@ -27,7 +27,7 @@ import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.Spans.Span
-import org.eclipse.{lsp4j as l}
+import org.eclipse.lsp4j as l
 
 object MtagsEnrichments extends ScalametaCommonEnrichments:
 
@@ -53,12 +53,15 @@ object MtagsEnrichments extends ScalametaCommonEnrichments:
       new SourcePosition(source, span)
     end sourcePosition
 
-    def localContext(params: OffsetParams): Context =
-      if driver.currentCtx.run.units.isEmpty then
+    def latestRun = 
+      if driver.currentCtx.run.units.nonEmpty then
+        driver.currentCtx.run.units.head
+      else
         throw new RuntimeException(
-          "No source files were passed to the Scala 3 presentation compiler"
+          "No source files were compiled. Might be an error in the compiler itself."
         )
-      val unit = driver.currentCtx.run.units.head
+    def localContext(params: OffsetParams): Context =
+      val unit = driver.latestRun
       val pos = driver.sourcePosition(params)
       val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
       val tpdPath =
@@ -270,7 +273,7 @@ object MtagsEnrichments extends ScalametaCommonEnrichments:
     def seenFrom(sym: Symbol)(using Context): (Type, Symbol) =
       try
         val pre = tree.qual
-        val denot = sym.denot.asSeenFrom(pre.tpe.widenTermRefExpr)
+        val denot = sym.denot.asSeenFrom(pre.typeOpt.widenTermRefExpr)
         (denot.info, sym.withUpdatedTpe(denot.info))
       catch case NonFatal(e) => (sym.info, sym)
 
@@ -343,7 +346,7 @@ object MtagsEnrichments extends ScalametaCommonEnrichments:
               case t: GenericApply
                   if t.fun.srcPos.span.contains(
                     pos.span
-                  ) && !t.tpe.isErroneous =>
+                  ) && !t.typeOpt.isErroneous =>
                 tryTail(tail).orElse(Some(enclosing))
               case in: Inlined =>
                 tryTail(tail).orElse(Some(enclosing))

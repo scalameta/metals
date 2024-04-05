@@ -15,6 +15,8 @@ trait MtagsIndexer {
   def language: Language
   def indexRoot(): Unit
   def input: Input.VirtualFile
+  // should only be called after `index`/`indexRoot`
+  def overrides(): MtagsIndexer.AllOverrides = Nil
   def index(): s.TextDocument = {
     indexRoot()
     s.TextDocument(
@@ -169,4 +171,8 @@ trait MtagsIndexer {
     if (currentOwner.eq(Symbols.EmptyPackage) && signature.isPackage)
       Symbols.Global(Symbols.RootPackage, signature)
     else Symbols.Global(currentOwner, signature)
+}
+
+object MtagsIndexer {
+  type AllOverrides = List[(String, List[OverriddenSymbol])]
 }

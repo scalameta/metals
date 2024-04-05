@@ -84,6 +84,8 @@ object ClientCommands {
         |```
         |```json
         |export interface DoctorFolderHeader {
+        |  /** information about java used for project */
+        |  projectsJavaInfo?: string;
         |  /** if Metals detected multiple build tools, this specifies the one the user has chosen */
         |  buildTool?: string;
         |  /** the build server that is being used */

@@ -21,6 +21,7 @@ case class ImportedBuild(
     sources: SourcesResult,
     dependencySources: DependencySourcesResult,
     wrappedSources: WrappedSourcesResult,
+    dependencyModules: DependencyModulesResult,
 ) {
   def ++(other: ImportedBuild): ImportedBuild = {
     val updatedBuildTargets = new WorkspaceBuildTargetsResult(
@@ -41,6 +42,9 @@ case class ImportedBuild(
     val updatedWrappedSources = new WrappedSourcesResult(
       (wrappedSources.getItems.asScala ++ other.wrappedSources.getItems.asScala).asJava
     )
+    val updatedDependencyModules = new DependencyModulesResult(
+      (dependencyModules.getItems.asScala ++ other.dependencyModules.getItems.asScala).asJava
+    )
     ImportedBuild(
       updatedBuildTargets,
       updatedScalacOptions,
@@ -48,6 +52,7 @@ case class ImportedBuild(
       updatedSources,
       updatedDependencySources,
       updatedWrappedSources,
+      updatedDependencyModules,
     )
   }
 
@@ -66,6 +71,7 @@ object ImportedBuild {
       new SourcesResult(ju.Collections.emptyList()),
       new DependencySourcesResult(ju.Collections.emptyList()),
       new WrappedSourcesResult(ju.Collections.emptyList()),
+      new DependencyModulesResult(ju.Collections.emptyList()),
     )
 
   def fromConnection(
@@ -93,6 +99,9 @@ object ImportedBuild {
       wrappedSources <- conn.buildTargetWrappedSources(
         new WrappedSourcesParams(ids)
       )
+      dependencyModules <- conn.buildTargetDependencyModules(
+        new DependencyModulesParams(ids)
+      )
     } yield {
       ImportedBuild(
         workspaceBuildTargets,
@@ -101,6 +110,7 @@ object ImportedBuild {
         sources,
         dependencySources,
         wrappedSources,
+        dependencyModules,
       )
     }
 

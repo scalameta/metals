@@ -257,6 +257,7 @@ class FolderTreeViewProvider(
     isStatisticsEnabled = clientConfig.initialConfig.statistics.isTreeView,
     trees,
     buffers,
+    buildTargets,
   )
 
   def dialectOf(path: AbsolutePath): Option[Dialect] =
@@ -437,11 +438,10 @@ class FolderTreeViewProvider(
 
       val result = buildTargets
         .inferBuildTarget(List(closestToplevel))
-        .map { inferred =>
-          val sourceJar = inferred.jar.parent.resolve(
-            inferred.jar.filename.replace(".jar", "-sources.jar")
-          )
-          libraries.toUri(sourceJar, inferred.symbol).parentChain
+        .flatMap { inferred =>
+          inferred.sourceJar.map { sourceJar =>
+            libraries.toUri(sourceJar, inferred.symbol).parentChain
+          }
         }
       result.orElse(jdkSources)
     } else {

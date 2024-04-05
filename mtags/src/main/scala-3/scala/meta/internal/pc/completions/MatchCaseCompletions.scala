@@ -26,11 +26,12 @@ import dotty.tools.dotc.core.Symbols.NoSymbol
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Types.AndType
 import dotty.tools.dotc.core.Types.ClassInfo
+import dotty.tools.dotc.core.Types.NoType
 import dotty.tools.dotc.core.Types.OrType
 import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.core.Types.TypeRef
 import dotty.tools.dotc.util.SourcePosition
-import org.eclipse.{lsp4j as l}
+import org.eclipse.lsp4j as l
 
 object CaseKeywordCompletion:
 
@@ -94,7 +95,7 @@ object CaseKeywordCompletion:
         Some(sel.tpe.widen.metalsDealias)
 
     selTpe
-      .map { selTpe =>
+      .collect { case selTpe if selTpe != NoType =>
         val selectorSym = selTpe.typeSymbol
         // Special handle case when selector is a tuple or `FunctionN`.
         if definitions.isTupleClass(selectorSym) || definitions.isFunctionClass(

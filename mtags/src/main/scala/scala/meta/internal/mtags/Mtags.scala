@@ -31,7 +31,7 @@ final class Mtags(implicit rc: ReportContext) {
     if (language.isJava || language.isScala) {
       val mtags =
         if (language.isJava)
-          new JavaToplevelMtags(input)
+          new JavaToplevelMtags(input, includeInnerClasses = false)
         else
           new ScalaToplevelMtags(
             input,
@@ -47,6 +47,35 @@ final class Mtags(implicit rc: ReportContext) {
     } else {
       TextDocument()
     }
+  }
+
+  def indexWithOverrides(
+      path: AbsolutePath,
+      dialect: Dialect = dialects.Scala213,
+      includeMembers: Boolean = false
+  ): (TextDocument, MtagsIndexer.AllOverrides) = {
+    val input = path.toInput
+    val language = input.toLanguage
+    if (language.isJava || language.isScala) {
+      val mtags =
+        if (language.isJava)
+          new JavaToplevelMtags(input, includeInnerClasses = true)
+        else
+          new ScalaToplevelMtags(
+            input,
+            includeInnerClasses = true,
+            includeMembers,
+            dialect
+          )
+      addLines(language, input.text)
+      val doc =
+        Mtags.stdLibPatches.patchDocument(
+          path,
+          mtags.index()
+        )
+      val overrides = mtags.overrides()
+      (doc, overrides)
+    } else (TextDocument(), Nil)
   }
 
   def topLevelSymbols(
@@ -115,7 +144,7 @@ object Mtags {
       input: Input.VirtualFile,
       dialect: Dialect,
       includeMembers: Boolean = true
-  )(implicit rc: ReportContext = EmptyReportContext): TextDocument = {
+  )(implicit rc: ReportContext = EmptyReportContext): TextDocument =
     input.toLanguage match {
       case Language.JAVA =>
         new JavaMtags(input, includeMembers = true).index()
@@ -126,13 +155,22 @@ object Mtags {
       case _ =>
         TextDocument()
     }
-  }
 
   def toplevels(
       path: AbsolutePath,
       dialect: Dialect = dialects.Scala213
   )(implicit rc: ReportContext = EmptyReportContext): TextDocument = {
     new Mtags().toplevels(path, dialect)
+  }
+
+  def indexWithOverrides(
+      path: AbsolutePath,
+      dialect: Dialect = dialects.Scala213,
+      includeMembers: Boolean = false
+  )(implicit
+      rc: ReportContext = EmptyReportContext
+  ): (TextDocument, MtagsIndexer.AllOverrides) = {
+    new Mtags().indexWithOverrides(path, dialect, includeMembers)
   }
 
   def topLevelSymbols(
@@ -175,4 +213,5 @@ object Mtags {
     }
 
   }
+
 }

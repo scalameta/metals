@@ -42,11 +42,11 @@ import scala.meta.internal.mtags.MtagsEnrichments
 import scala.meta.internal.parsing.EmptyResult
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
-import scala.meta.internal.trees.Origin
-import scala.meta.internal.trees.Origin.Parsed
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
+import scala.meta.trees.Origin
+import scala.meta.trees.Origin.Parsed
 
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.Gson
@@ -128,6 +128,15 @@ object MetalsEnrichments
         name.replaceAll("[^a-zA-Z0-9]+", "-")
       } else
         buildTarget.getDisplayName
+    }
+  }
+
+  implicit class XtensionDependencyModule(module: b.DependencyModule) {
+    def asMavenDependencyModule: Option[b.MavenDependencyModule] = {
+      if (module.getDataKind() == b.DependencyModuleDataKind.MAVEN)
+        decodeJson(module.getData, classOf[b.MavenDependencyModule])
+      else
+        None
     }
   }
 
@@ -342,6 +351,18 @@ object MetalsEnrichments
 
   implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
 
+    def isBazelRelatedPath: Boolean = {
+      val filename = path.toNIO.getFileName.toString
+      filename == "WORKSPACE" ||
+      filename == "BUILD" ||
+      filename == "BUILD.bazel" ||
+      filename.endsWith(".bzl") ||
+      filename.endsWith(".bazelproject")
+    }
+    def isInBspDirectory(workspace: AbsolutePath): Boolean =
+      path.toNIO.startsWith(workspace.resolve(Directories.bsp).toNIO)
+    def isInBazelBspDirectory(workspace: AbsolutePath): Boolean =
+      path.toNIO.startsWith(workspace.resolve(Directories.bazelBsp).toNIO)
     def isScalaProject(): Boolean =
       containsProjectFilesSatisfying(_.isScala)
     def isMetalsProject(): Boolean =
@@ -398,6 +419,11 @@ object MetalsEnrichments
     def isInReadonlyDirectory(workspace: AbsolutePath): Boolean =
       path.toNIO.startsWith(
         workspace.resolve(Directories.readonly).toNIO
+      )
+
+    def isInTmpDirectory(workspace: AbsolutePath): Boolean =
+      path.toNIO.startsWith(
+        workspace.resolve(Directories.tmp).toNIO
       )
 
     def isSrcZipInReadonlyDirectory(workspace: AbsolutePath): Boolean = {
@@ -1182,17 +1208,17 @@ object MetalsEnrichments
 
     def leadingTokens: Iterator[m.Token] =
       tree.origin match {
-        case Origin.Parsed(input, dialect, pos) =>
-          val tokens = dialect(input).tokenize.get
-          tokens.slice(0, pos.start - 1).reverseIterator
+        case Origin.Parsed(parsed, start, _) =>
+          val tokens = parsed.dialect(parsed.input).tokenize.get
+          tokens.slice(0, start - 1).reverseIterator
         case _ => Iterator.empty
       }
 
     def trailingTokens: Iterator[m.Token] =
       tree.origin match {
-        case Origin.Parsed(input, dialect, pos) =>
-          val tokens = dialect(input).tokenize.get
-          tokens.slice(pos.end, tokens.length).iterator
+        case Origin.Parsed(parsed, _, end) =>
+          val tokens = parsed.dialect(parsed.input).tokenize.get
+          tokens.slice(end, tokens.length).iterator
         case _ => Iterator.empty
       }
 
@@ -1266,6 +1292,14 @@ object MetalsEnrichments
         .asJava
       new l.WorkspaceEdit(changes)
     }
+  }
+
+  implicit class XtensionLocation(location: l.Location) {
+    def toTextDocumentPositionParams =
+      new l.TextDocumentPositionParams(
+        new l.TextDocumentIdentifier(location.getUri()),
+        location.getRange().getStart(),
+      )
   }
 
   /**

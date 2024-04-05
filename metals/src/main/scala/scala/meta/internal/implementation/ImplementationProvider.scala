@@ -1,5 +1,6 @@
 package scala.meta.internal.implementation
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -7,33 +8,42 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.util.control.NonFatal
 
+import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ScalaVersionSelector
+import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.mtags.IndexingResult
 import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.OverriddenSymbol
+import scala.meta.internal.mtags.ResolvedOverriddenSymbol
 import scala.meta.internal.mtags.Semanticdbs
-import scala.meta.internal.mtags.SymbolDefinition
-import scala.meta.internal.mtags.{Symbol => MSymbol}
+import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
 import scala.meta.internal.parsing.Trees
+import scala.meta.internal.pc.PcSymbolInformation
+import scala.meta.internal.search.SymbolHierarchyOps._
 import scala.meta.internal.semanticdb.ClassSignature
+import scala.meta.internal.semanticdb.Scala.Descriptor.Method
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.Signature
 import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.semanticdb.TypeSignature
-import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.PcSymbolKind
+import scala.meta.pc.PcSymbolProperty
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.TextDocumentPositionParams
 
@@ -41,18 +51,19 @@ final class ImplementationProvider(
     semanticdbs: Semanticdbs,
     workspace: AbsolutePath,
     index: GlobalSymbolIndex,
-    buildTargets: BuildTargets,
     buffer: Buffers,
     definitionProvider: DefinitionProvider,
     trees: Trees,
     scalaVersionSelector: ScalaVersionSelector,
+    compilers: Compilers,
+    buildTargets: BuildTargets,
 )(implicit ec: ExecutionContext, rc: ReportContext)
     extends SemanticdbFeatureProvider {
   import ImplementationProvider._
-
-  private val globalTable = new GlobalClassTable(buildTargets)
   private val implementationsInPath =
     new ConcurrentHashMap[Path, Map[String, Set[ClassLocation]]]
+  private val implementationsInDependencySources =
+    new ConcurrentHashMap[String, Set[ClassLocation]]
 
   override def reset(): Unit = {
     implementationsInPath.clear()
@@ -68,6 +79,44 @@ final class ImplementationProvider(
         path.toNIO,
         { (_, _) => computeInheritance(docs) },
       )
+  }
+
+  def addTypeHierarchy(results: List[IndexingResult]): Unit = for {
+    IndexingResult(path, _, overrides) <- results
+    (overridesSymbol, overriddenSymbols) <- overrides
+    overridden <- overriddenSymbols
+  } addTypeHierarchyElement(path, overridesSymbol, overridden)
+
+  def addTypeHierarchyElements(
+      elements: List[(AbsolutePath, String, OverriddenSymbol)]
+  ): Unit = elements.foreach { case (path, overridesSymbol, overridden) =>
+    addTypeHierarchyElement(path, overridesSymbol, overridden)
+  }
+
+  private def addTypeHierarchyElement(
+      path: AbsolutePath,
+      overridesSymbol: String,
+      overridden: OverriddenSymbol,
+  ): Unit = {
+    def createUpdate(
+        newSymbol: ClassLocation
+    ): (String, Set[ClassLocation]) => Set[ClassLocation] = {
+      case (_, null) => Set(newSymbol)
+      case (_, previous) => previous + newSymbol
+    }
+    overridden match {
+      case ResolvedOverriddenSymbol(symbol) =>
+        val update = createUpdate(
+          ClassLocation(overridesSymbol, Some(path.toNIO))
+        )
+        implementationsInDependencySources.compute(symbol, update(_, _))
+      case UnresolvedOverriddenSymbol(name) =>
+        val update =
+          createUpdate(
+            ClassLocation(overridesSymbol, Some(path.toNIO))
+          )
+        implementationsInDependencySources.compute(name, update(_, _))
+    }
   }
 
   private def computeInheritance(
@@ -92,20 +141,6 @@ final class ImplementationProvider(
     }
   }
 
-  def defaultSymbolSearch(
-      anyWorkspacePath: AbsolutePath,
-      textDocument: TextDocument,
-  ): String => Option[SymbolInformation] = {
-    lazy val global =
-      globalTable.globalSymbolTableFor(anyWorkspacePath)
-    symbol => {
-      textDocument.symbols
-        .find(_.symbol == symbol)
-        .orElse(findSymbolInformation(symbol))
-        .orElse(global.flatMap(_.safeInfo(symbol)))
-    }
-  }
-
   def implementations(
       params: TextDocumentPositionParams
   ): Future[List[Location]] = {
@@ -119,168 +154,138 @@ final class ImplementationProvider(
           )
           .toIterable
     } yield {
-      // 1. Search locally for symbol
-      // 2. Search inside workspace
-      // 3. Search classpath via GlobalSymbolTable
-      val symbolSearch = defaultSymbolSearch(source, currentDocument)
       val sym = symbolOccurrence.symbol
       val dealiased =
-        if (sym.desc.isType)
-          dealiasClass(sym, symbolSearch)
-        else sym
-
-      val definitionDocument =
-        if (currentDocument.definesSymbol(dealiased)) {
-          Some(currentDocument)
-        } else {
-          findSemanticDbForSymbol(dealiased)
-        }
-
-      val inheritanceContext = definitionDocument match {
-        // symbol is not in workspace, we only search classpath for it
-        case None =>
-          globalTable.globalContextFor(
-            source,
-            implementationsInPath.asScala.toMap,
+        if (sym.desc.isType) {
+          symbolInfo(currentDocument, source, sym).map(
+            _.map(_.dealiasedSymbol).getOrElse(sym)
           )
-        // symbol is in workspace,
-        // we might need to search different places for related symbols
-        case Some(_) =>
-          Some(
-            InheritanceContext.fromDefinitions(
-              symbolSearch,
-              implementationsInPath.asScala.toMap,
+        } else Future.successful(sym)
+
+      dealiased.flatMap { dealisedSymbol =>
+        val currentContainsDefinition =
+          currentDocument.definesSymbol(dealisedSymbol)
+        val sourceFiles: Set[AbsolutePath] =
+          if (currentContainsDefinition) Set(source)
+          else
+            definitionProvider
+              .fromSymbol(dealisedSymbol, Some(source))
+              .asScala
+              .map(_.getUri().toAbsolutePath)
+              .toSet
+
+        if (sourceFiles.isEmpty) {
+          rc.unsanitized.create(
+            Report(
+              "missing-definition",
+              s"""|Missing definition symbol for:
+                  |$dealisedSymbol
+                  |""".stripMargin,
+              s"missing def: $dealisedSymbol",
+              Some(source.toURI.toString()),
             )
           )
+        }
+
+        val isWorkspaceSymbol =
+          (currentContainsDefinition && source.isWorkspaceSource(workspace)) ||
+            sourceFiles.forall(_.isWorkspaceSource(workspace))
+
+        val workspaceInheritanceContext: InheritanceContext =
+          InheritanceContext.fromDefinitions(
+            implementationsInPath.asScala.toMap
+          )
+
+        val inheritanceContext: InheritanceContext =
+          if (isWorkspaceSymbol) workspaceInheritanceContext
+          else
+            // symbol is not defined in the workspace, we search both workspace and dependencies for it
+            workspaceInheritanceContext
+              .toGlobal(
+                compilers,
+                implementationsInDependencySources.asScala.toMap,
+                source,
+              )
+
+        symbolLocationsFromContext(
+          dealisedSymbol,
+          currentDocument,
+          source,
+          sourceFiles,
+          inheritanceContext,
+        )
       }
-      symbolLocationsFromContext(
-        dealiased,
-        source,
-        inheritanceContext,
-      )
     }
+
     Future.sequence(locations).map {
       _.flatten.toList
     }
   }
 
-  def topMethodParents(
-      symbol: String,
-      textDocument: TextDocument,
-  ): Seq[Location] = {
-
-    def findClassInfo(owner: String) = {
-      if (owner.nonEmpty) {
-        findSymbol(textDocument, owner)
-      } else {
-        textDocument.symbols.find { sym =>
-          sym.signature match {
-            case sig: ClassSignature =>
-              sig.declarations.exists(_.symlinks.contains(symbol))
-            case _ => false
-          }
-        }
-      }
-    }
-
-    val results = for {
-      currentInfo <- findSymbol(textDocument, symbol)
-      if !isClassLike(currentInfo)
-      classInfo <- findClassInfo(symbol.owner)
-    } yield {
-      classInfo.signature match {
-        case sig: ClassSignature =>
-          methodInParentSignature(sig, currentInfo, sig)
-        case _ => Nil
-      }
-    }
-    results.getOrElse(Seq.empty)
-  }
-
-  private def methodInParentSignature(
-      currentClassSig: ClassSignature,
-      bottomSymbol: SymbolInformation,
-      bottomClassSig: ClassSignature,
-  ): Seq[Location] = {
-    currentClassSig.parents.flatMap {
-      case parentSym: TypeRef =>
-        val parentTextDocument = findSemanticDbForSymbol(parentSym.symbol)
-        def search(symbol: String) =
-          parentTextDocument.flatMap(findSymbol(_, symbol))
-        search(parentSym.symbol).map(_.signature) match {
-          case Some(parenClassSig: ClassSignature) =>
-            val fromParent = methodInParentSignature(
-              parenClassSig,
-              bottomSymbol,
-              bottomClassSig,
-            )
-            if (fromParent.isEmpty) {
-              locationFromClass(
-                bottomSymbol,
-                parenClassSig,
-                search,
-                parentTextDocument,
-              )
-            } else {
-              fromParent
-            }
-          case _ => Nil
-        }
-
-      case _ => Nil
-    }
-  }
-
-  private def locationFromClass(
-      bottomSymbolInformation: SymbolInformation,
-      parentClassSig: ClassSignature,
-      search: String => Option[SymbolInformation],
-      parentTextDocument: Option[TextDocument],
-  ): Option[Location] = {
-    val matchingSymbol = MethodImplementation.findParentSymbol(
-      bottomSymbolInformation,
-      parentClassSig,
-      search,
-    )
-    for {
-      symbol <- matchingSymbol
-      parentDoc <- parentTextDocument
-      source = workspace.resolve(parentDoc.uri)
-      implOccurrence <- findDefOccurrence(
-        parentDoc,
-        symbol,
-        source,
-      )
-      range <- implOccurrence.range
-      distance = buffer.tokenEditDistance(
-        source,
-        parentDoc.text,
-        trees,
-      )
-      revised <- distance.toRevised(range.toLsp)
-    } yield new Location(source.toNIO.toUri().toString(), revised)
-  }
-
   private def symbolLocationsFromContext(
-      symbol: String,
+      dealiased: String,
+      textDocument: TextDocument,
       source: AbsolutePath,
-      inheritanceContext: Option[InheritanceContext],
+      definitionFiles: Set[AbsolutePath],
+      inheritanceContext: InheritanceContext,
   ): Future[Seq[Location]] = {
 
     def findImplementationSymbol(
-        parentSymbolInfo: SymbolInformation,
-        implDocument: TextDocument,
+        info: PcSymbolInformation,
+        classSymbol: String,
+        textDocument: TextDocument,
         implReal: ClassLocation,
-    ): Option[String] = {
-      if (isClassLike(parentSymbolInfo))
-        Some(implReal.symbol)
+        source: AbsolutePath,
+    ): Option[Future[String]] = {
+      if (classLikeKinds(info.kind)) Some(Future(implReal.symbol))
       else {
-        val symbolSearch = defaultSymbolSearch(source, implDocument)
-        MethodImplementation.findInherited(
-          parentSymbolInfo,
-          implReal,
-          symbolSearch,
-        )
+        def tryFromDoc =
+          for {
+            classInfo <- findSymbol(textDocument, implReal.symbol)
+            declarations <- classInfo.signature match {
+              case ClassSignature(_, _, _, declarations) => declarations
+              case _ => None
+            }
+            found <- declarations.symlinks.collectFirst { sym =>
+              findSymbol(textDocument, sym) match {
+                case Some(implInfo)
+                    if implInfo.overriddenSymbols.contains(info.symbol) =>
+                  sym
+              }
+            }
+          } yield Future.successful(found)
+        def pcSearch = {
+          val symbol = {
+            val inferredSymbol =
+              s"${implReal.symbol}${info.symbol.stripPrefix(classSymbol)}"
+            inferredSymbol.desc match {
+              case Method(value, _) => new Method(value, "()").toString()
+              case _ => inferredSymbol
+            }
+          }
+          def overridesSym(info: PcSymbolInformation) =
+            info.overriddenSymbols.contains(info.symbol)
+          compilers.info(source, symbol).flatMap {
+            case Some(info) if overridesSym(info) =>
+              Future.successful(info.symbol)
+            case Some(info) =>
+              // look if one of the alternatives overrides `info.symbol`
+              Future
+                .sequence(
+                  info.alternativeSymbols.map(compilers.info(source, _))
+                )
+                .map {
+                  _.collectFirst {
+                    case Some(info) if overridesSym(info) => info.symbol
+                  }.getOrElse(symbol)
+                }
+            case None => Future.successful(symbol)
+          }
+        }
+        tryFromDoc.orElse {
+          if (implReal.symbol.isLocal) None
+          else Some(pcSearch)
+        }
       }
     }
 
@@ -289,215 +294,245 @@ final class ImplementationProvider(
     def findImplementationLocations(
         files: Set[Path],
         locationsByFile: Map[Path, Set[ClassLocation]],
-        parentSymbol: SymbolInformation,
-    ) =
-      Future {
-        for {
-          file <- files
-          locations = locationsByFile(file)
-          implPath = AbsolutePath(file)
-          implDocument <- findSemanticdb(implPath).toIterable
-          distance = buffer.tokenEditDistance(
-            implPath,
-            implDocument.text,
-            trees,
-          )
-          implLocation <- locations
-          implSymbol <- findImplementationSymbol(
-            parentSymbol,
-            implDocument,
-            implLocation,
-          )
-          if !findSymbol(implDocument, implSymbol).exists(
-            // we should not show types if we are looking for a class implementations
-            sym => sym.isType && !parentSymbol.isType
-          )
-          implOccurrence <- findDefOccurrence(
-            implDocument,
-            implSymbol,
-            source,
-          )
-          range <- implOccurrence.range
-          revised <- distance.toRevised(range.toLsp)
-        } { allLocations.add(new Location(file.toUri.toString, revised)) }
+        parentSymbol: PcSymbolInformation,
+        classSymbol: String,
+        definitionBuildTargets: Set[BuildTargetIdentifier],
+    ) = Future.sequence({
+      def allDependencyBuildTargets(implPath: AbsolutePath) = {
+        val targets = buildTargets.inverseSourcesAll(implPath)
+        buildTargets.buildTargetTransitiveDependencies(targets).toSet ++ targets
       }
 
+      for {
+        file <- files
+        locations = locationsByFile(file)
+        implPath = AbsolutePath(file)
+        if (definitionBuildTargets.isEmpty || allDependencyBuildTargets(
+          implPath
+        ).exists(definitionBuildTargets(_)))
+        implDocument <- findSemanticdb(implPath).toList
+      } yield {
+        for {
+          symbols <- Future.sequence(
+            locations.flatMap(
+              findImplementationSymbol(
+                parentSymbol,
+                classSymbol,
+                implDocument,
+                _,
+                source,
+              )
+            )
+          )
+        } yield {
+          for {
+            sym <- symbols
+            symInfo <- implDocument.symbols.find(_.symbol == sym)
+            if (!symInfo.isType || parentSymbol.kind == PcSymbolKind.TYPE)
+            implOccurrence <- findDefOccurrence(
+              implDocument,
+              sym,
+              implPath,
+              scalaVersionSelector,
+            ).toList
+            range <- implOccurrence.range
+            revised <-
+              if (implPath.isJarFileSystem) {
+                Some(range.toLsp)
+              } else {
+                val distance = buffer.tokenEditDistance(
+                  implPath,
+                  implDocument.text,
+                  trees,
+                )
+                distance.toRevised(range.toLsp)
+              }
+          } { allLocations.add(new Location(file.toUri.toString, revised)) }
+        }
+      }
+    })
+
     lazy val cores = Runtime.getRuntime().availableProcessors()
-    val splitJobs = for {
-      classContext <- inheritanceContext.toIterable
-      parentSymbol <- classContext.findSymbol(symbol).toIterable
-      symbolClass <- classFromSymbol(parentSymbol, classContext.findSymbol)
-      locationsByFile = findImplementation(
-        symbolClass.symbol,
-        classContext,
-        source.toNIO,
-      )
-      files <- locationsByFile.keySet.grouped(
-        Math.max(locationsByFile.size / cores, 1)
-      )
-    } yield findImplementationLocations(files, locationsByFile, parentSymbol)
-    Future.sequence(splitJobs).map { _ =>
-      allLocations.asScala.toSeq
-    }
+    val splitJobs =
+      symbolInfo(textDocument, source, dealiased).flatMap { optSymbolInfo =>
+        (for {
+          symbolInfo <- optSymbolInfo
+          symbolClass <- classFromSymbol(symbolInfo)
+        } yield {
+          for {
+            locationsByFile <- findImplementation(
+              symbolClass,
+              inheritanceContext,
+              source.toNIO,
+            )
+            files = locationsByFile.keySet.grouped(
+              Math.max(locationsByFile.size / cores, 1)
+            )
+            collected <-
+              Future.sequence(
+                files.map(
+                  findImplementationLocations(
+                    _,
+                    locationsByFile,
+                    symbolInfo,
+                    symbolClass,
+                    definitionFiles.flatMap(
+                      buildTargets.inverseSourcesAll(_).toSet
+                    ),
+                  )
+                )
+              )
+          } yield collected
+        }).getOrElse(Future.successful(Iterator.empty))
+      }
+    splitJobs.map(_ => allLocations.asScala.toSeq)
   }
 
   private def findSemanticdb(fileSource: AbsolutePath): Option[TextDocument] = {
     if (fileSource.isJarFileSystem)
-      None
+      Some(semanticdbForJarFile(fileSource))
     else
       semanticdbs
         .textDocument(fileSource)
         .documentIncludingStale
   }
 
+  private def semanticdbForJarFile(fileSource: AbsolutePath) = {
+    val dialect = ScalaVersions.dialectForDependencyJar(fileSource.filename)
+    FileIO.slurp(fileSource, StandardCharsets.UTF_8)
+    val textDocument = Mtags.index(fileSource, dialect)
+    textDocument
+  }
+
   private def findImplementation(
       symbol: String,
       classContext: InheritanceContext,
       file: Path,
-  ): Map[Path, Set[ClassLocation]] = {
+  ): Future[Map[Path, Set[ClassLocation]]] = {
+    val visited = mutable.Set.empty[String]
 
-    def loop(symbol: String, currentPath: Option[Path]): Set[ClassLocation] = {
+    def loop(
+        symbol: String,
+        currentPath: Option[Path],
+    ): Future[Set[ClassLocation]] = {
+      visited.add(symbol)
+      scribe.debug(s"searching for implementations for symbol $symbol")
       val directImplementations =
-        classContext.getLocations(symbol).filterNot { loc =>
-          // we are not interested in local symbols from outside the workspace
-          (loc.symbol.isLocal && loc.file.isEmpty) ||
-          // for local symbols, inheritance should only be picked up in the same file
-          // otherwise there can be a name collision between files
-          // local1' is from file A, local2 extends local1''
-          // but both local2 and local1'' are from file B
-          // clearly, local2 shouldn't be considered for local1'
-          (symbol.isLocal && loc.symbol.isLocal && loc.file != currentPath)
-        }
-      directImplementations ++ directImplementations
-        .flatMap { loc => loop(loc.symbol, loc.file) }
+        classContext
+          .getLocations(symbol)
+          .map(_.filterNot { loc =>
+            // we are not interested in local symbols from outside the workspace
+            (loc.symbol.isLocal && loc.file.isEmpty) ||
+            // for local symbols, inheritance should only be picked up in the same file
+            // otherwise there can be a name collision between files
+            // local1' is from file A, local2 extends local1''
+            // but both local2 and local1'' are from file B
+            // clearly, local2 shouldn't be considered for local1'
+            (symbol.isLocal && loc.symbol.isLocal && loc.file != currentPath)
+          })
+      directImplementations.flatMap { directImplementations =>
+        Future
+          .sequence(
+            directImplementations
+              .withFilter(loc =>
+                (!visited(
+                  loc.symbol
+                ) && loc.symbol.desc.isType) || loc.symbol.isLocal
+              )
+              .map { loc =>
+                loop(loc.symbol, loc.file)
+              }
+          )
+          .map(rec => directImplementations ++ rec.flatten)
+      }
     }
 
-    loop(symbol, Some(file)).groupBy(_.file).collect {
+    loop(symbol, Some(file)).map(_.groupBy(_.file).collect {
       case (Some(path), locs) =>
         path -> locs
-    }
+    })
   }
 
-  private def findSymbolInformation(
-      symbol: String
-  ): Option[SymbolInformation] = {
-    findSemanticDbForSymbol(symbol).flatMap(findSymbol(_, symbol))
-  }
+  private def classFromSymbol(info: PcSymbolInformation): Option[String] =
+    if (classLikeKinds(info.kind)) Some(info.dealiasedSymbol)
+    else info.classOwner
 
-  def findSemanticDbWithPathForSymbol(
-      symbol: String
-  ): Option[TextDocumentWithPath] = {
-    for {
-      symbolDefinition <- findSymbolDefinition(symbol)
-      document <- findSemanticdb(symbolDefinition.path)
-    } yield TextDocumentWithPath(document, symbolDefinition.path)
-  }
-
-  private def findSymbolDefinition(symbol: String): Option[SymbolDefinition] = {
-    index.definition(MSymbol(symbol))
-  }
-
-  private def findSemanticDbForSymbol(symbol: String): Option[TextDocument] = {
-    for {
-      symbolDefinition <- findSymbolDefinition(symbol)
-      document <- findSemanticdb(symbolDefinition.path)
-    } yield {
-      document
-    }
-  }
-
-  private def classFromSymbol(
-      info: SymbolInformation,
-      findSymbol: String => Option[SymbolInformation],
-  ): Iterable[SymbolInformation] = {
-    val classInfo = if (isClassLike(info)) {
-      Some(info)
-    } else {
-      findSymbol(info.symbol.owner)
-        .filter(info => isClassLike(info))
-    }
-    classInfo.map(inf => dealiasClass(inf, findSymbol))
-  }
-
-  private def findDefOccurrence(
-      semanticDb: TextDocument,
-      symbol: String,
+  private def symbolInfo(
+      textDocument: TextDocument,
       source: AbsolutePath,
-  ): Option[SymbolOccurrence] = {
-    def isDefinitionOccurrence(occ: SymbolOccurrence) =
-      occ.role.isDefinition && occ.symbol == symbol
+      symbol: String,
+  ): Future[Option[PcSymbolInformation]] =
+    if (symbol.isLocal) {
+      (for {
+        info <- findSymbol(textDocument, symbol)
+      } yield {
+        info.signature match {
+          case typeSig: TypeSignature =>
+            typeSig.upperBound match {
+              case tr: TypeRef =>
+                symbolInfo(textDocument, source, tr.symbol).map(
+                  _.map(_.copy(symbol = symbol))
+                )
+              case _ => Future.successful(None)
+            }
+          case _ => Future.successful(Some(toPcSymbolInfo(textDocument, info)))
+        }
+      }).getOrElse(Future.successful(None))
+    } else compilers.info(source, symbol)
 
-    semanticDb.occurrences
-      .find(isDefinitionOccurrence)
-      .orElse(
-        Mtags
-          .allToplevels(source.toInput, scalaVersionSelector.getDialect(source))
-          .occurrences
-          .find(isDefinitionOccurrence)
-      )
+  private def toPcSymbolInfo(
+      textDocument: TextDocument,
+      info: SymbolInformation,
+  ): PcSymbolInformation = {
+    val parents =
+      info.signature match {
+        case ClassSignature(_, parents, _, _) =>
+          parents.collect { case t: TypeRef => t.symbol }.toList
+        case _ => Nil
+      }
+
+    val classOwnerInfoOpt =
+      textDocument.symbols.collectFirst { classInfo =>
+        classInfo.signature match {
+          case ClassSignature(_, _, _, declarations)
+              if declarations.exists(_.symlinks.contains(info.symbol)) =>
+            classInfo
+        }
+      }
+
+    def getMethodPrefix(symbol: String) = symbol.desc match {
+      case Method(searchedSym, _) => Some(searchedSym)
+      case _ => None
+    }
+
+    val alternativeSymbols =
+      for {
+        classOwnerInfo <- classOwnerInfoOpt.toList
+        searchedSym <- getMethodPrefix(info.symbol).toList
+        decl <- classOwnerInfo.signature match {
+          case ClassSignature(_, _, _, declarations) => declarations
+          case _ => Nil
+        }
+        sym <- decl.symlinks
+        if (sym != searchedSym && getMethodPrefix(sym).contains(searchedSym))
+      } yield sym
+
+    PcSymbolInformation(
+      symbol = info.symbol,
+      kind = PcSymbolKind.values
+        .find(_.getValue == info.kind.value)
+        .getOrElse(PcSymbolKind.UNKNOWN_KIND),
+      parents = parents,
+      dealiasedSymbol = info.symbol,
+      classOwner = classOwnerInfoOpt.map(_.symbol),
+      alternativeSymbols = alternativeSymbols.toList,
+      overriddenSymbols = info.overriddenSymbols.toList,
+      properties = if (info.isAbstract) List(PcSymbolProperty.ABSTRACT) else Nil,
+    )
   }
 }
 
 object ImplementationProvider {
-
-  implicit class XtensionGlobalSymbolTable(symtab: GlobalSymbolTable) {
-    def safeInfo(symbol: String): Option[SymbolInformation] =
-      try {
-        symtab.info(symbol)
-      } catch {
-        case NonFatal(_) => None
-      }
-  }
-
-  def dealiasClass(
-      symbol: String,
-      findSymbol: String => Option[SymbolInformation],
-  ): String = {
-    if (symbol.desc.isType) {
-      findSymbol(symbol)
-        .map { inf =>
-          val isAbstractType = inf.isAbstract && inf.isType
-          // abstract type will always have Any as upper bound
-          if (isAbstractType) symbol
-          else dealiasClass(inf, findSymbol).symbol
-
-        }
-        .getOrElse(symbol)
-    } else {
-      symbol
-    }
-  }
-
-  def dealiasClass(
-      info: SymbolInformation,
-      findSymbol: String => Option[SymbolInformation],
-  ): SymbolInformation = {
-    if (info.isType) {
-      info.signature match {
-        case ts: TypeSignature =>
-          ts.upperBound match {
-            case tr: TypeRef =>
-              findSymbol(tr.symbol)
-                .map(dealiasClass(_, findSymbol))
-                .getOrElse(info)
-            case _ =>
-              info
-          }
-        case _ => info
-      }
-    } else {
-      info
-    }
-  }
-
-  private def findSymbol(
-      semanticDb: TextDocument,
-      symbol: String,
-  ): Option[SymbolInformation] = {
-    semanticDb.symbols
-      .find(sym => sym.symbol == symbol)
-  }
-
   def parentsFromSignature(
       symbol: String,
       signature: Signature,
@@ -535,7 +570,11 @@ object ImplementationProvider {
     }
   }
 
-  def isClassLike(info: SymbolInformation): Boolean =
-    info.isObject || info.isClass || info.isTrait || info.isInterface
+  val classLikeKinds: Set[PcSymbolKind] = Set(
+    PcSymbolKind.OBJECT,
+    PcSymbolKind.CLASS,
+    PcSymbolKind.TRAIT,
+    PcSymbolKind.INTERFACE,
+  )
 
 }

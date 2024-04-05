@@ -171,10 +171,15 @@ final class BuildTargets private (
 
   def buildTargetTransitiveDependencies(
       id: BuildTargetIdentifier
+  ): Iterable[BuildTargetIdentifier] =
+    buildTargetTransitiveDependencies(List(id))
+
+  def buildTargetTransitiveDependencies(
+      ids: List[BuildTargetIdentifier]
   ): Iterable[BuildTargetIdentifier] = {
     val isVisited = mutable.Set.empty[BuildTargetIdentifier]
     val toVisit = new java.util.ArrayDeque[BuildTargetIdentifier]
-    toVisit.add(id)
+    ids.foreach(toVisit.add(_))
     while (!toVisit.isEmpty) {
       val next = toVisit.pop()
       if (!isVisited(next)) {
@@ -306,6 +311,13 @@ final class BuildTargets private (
     } yield target.scalaVersion
   }
 
+  def possibleScalaVersions(source: AbsolutePath): List[String] = {
+    for {
+      id <- inverseSourcesAll(source)
+      target <- scalaTarget(id).toList
+    } yield target.scalaVersion
+  }
+
   /**
    * Resolves sbt auto imports if a file belongs to a Sbt build target.
    */
@@ -341,8 +353,7 @@ final class BuildTargets private (
   ): List[BuildTargetIdentifier] = {
     if (source.isJarFileSystem) {
       for {
-        jarName <- source.jarPath.map(_.filename).toList
-        sourceJarFile <- sourceJarFile(jarName).toList
+        sourceJarFile <- source.jarPath.toList
         buildTargetId <- inverseDependencySource(sourceJarFile)
       } yield buildTargetId
     } else {
@@ -386,12 +397,31 @@ final class BuildTargets private (
       .find(_.getDisplayName() == name)
   }
 
+  @deprecated("Jar and source jar might not always be in the same directory")
   private def jarPath(source: AbsolutePath): Option[AbsolutePath] = {
     source.jarPath.map { sourceJarPath =>
       sourceJarPath.parent.resolve(
         source.filename.replace("-sources.jar", ".jar")
       )
     }
+  }
+
+  /**
+   * Try to resolve source jar for a jar, this should not be use
+   * in other capacity than as a fallback, since both source jar
+   * and normal jar might not be in the same directory.
+   *
+   * @param sourceJarPath path to the nromaljar
+   * @return path to the source jar for that jar
+   */
+  private def sourceJarPathFallback(
+      sourceJarPath: AbsolutePath
+  ): Option[AbsolutePath] = {
+    val fallback = sourceJarPath.parent.resolve(
+      sourceJarPath.filename.replace(".jar", "-sources.jar")
+    )
+    if (fallback.exists) Some(fallback)
+    else None
   }
 
   /**
@@ -423,6 +453,7 @@ final class BuildTargets private (
       jar: AbsolutePath,
       symbol: String,
       id: BuildTargetIdentifier,
+      sourceJar: Option[AbsolutePath],
   )
   def inferBuildTarget(
       toplevels: Iterable[Symbol]
@@ -453,7 +484,12 @@ final class BuildTargets private (
           val path = resource.toAbsolutePath
           classpaths.collectFirst {
             case (id, classpath) if classpath.contains(path) =>
-              InferredBuildTarget(path, toplevel.value, id)
+              InferredBuildTarget(
+                path,
+                toplevel.value,
+                id,
+                sourceJarFor(id, path),
+              )
           }
       }
     } catch {
@@ -506,8 +542,28 @@ final class BuildTargets private (
     )
   }
 
+  @deprecated(
+    "This might return false positives since names of jars could repeat."
+  )
   def sourceJarFile(sourceJarName: String): Option[AbsolutePath] =
     data.fromOptions(_.sourceJarNameToJarFile.get(sourceJarName))
+
+  def sourceJarFor(
+      id: BuildTargetIdentifier,
+      jar: AbsolutePath,
+  ): Option[AbsolutePath] = {
+    data
+      .fromOptions(_.findSourceJarOf(jar, Some(id)))
+      .orElse(sourceJarPathFallback(jar))
+  }
+
+  def sourceJarFor(
+      jar: AbsolutePath
+  ): Option[AbsolutePath] = {
+    data
+      .fromOptions(_.findSourceJarOf(jar, targetId = None))
+      .orElse(sourceJarPathFallback(jar))
+  }
 
   def inverseDependencySource(
       sourceJar: AbsolutePath

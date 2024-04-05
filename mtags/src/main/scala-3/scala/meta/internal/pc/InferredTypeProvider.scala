@@ -26,8 +26,8 @@ import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.Spans.Span
-import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j as l
+import org.eclipse.lsp4j.TextEdit
 
 /**
  * Tries to calculate edits needed to insert the inferred type annotation
@@ -69,7 +69,7 @@ final class InferredTypeProvider(
     val source =
       SourceFile.virtual(filePath.toString, sourceText)
     driver.run(uri, source)
-    val unit = driver.currentCtx.run.units.head
+    val unit = driver.latestRun
     val pos = driver.sourcePosition(params)
     val path =
       Interactive.pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)

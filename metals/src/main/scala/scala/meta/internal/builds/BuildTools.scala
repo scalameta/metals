@@ -1,12 +1,16 @@
 package scala.meta.internal.builds
 
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.ScalaCliBspScope
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.BloopServers
+import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.scalacli.ScalaCli
@@ -31,6 +35,7 @@ final class BuildTools(
     bspGlobalDirectories: List[AbsolutePath],
     userConfig: () => UserConfiguration,
     explicitChoiceMade: () => Boolean,
+    charset: Charset,
 ) {
   private val lastDetectedBuildTools = new AtomicReference(Set.empty[String])
   // NOTE: We do a couple extra check here before we say a workspace with a
@@ -48,14 +53,16 @@ final class BuildTools(
       .map(isBloop)
       .getOrElse(
         isBloop
-      ) || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade()) || isBazelBsp
+      ) || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade())
   }
   def isBloop(root: AbsolutePath): Boolean = hasJsonFile(root.resolve(".bloop"))
   def bloopProject: Option[AbsolutePath] = searchForBuildTool(isBloop)
   def isBloop: Boolean = bloopProject.isDefined
   def isBsp: Boolean = {
-    hasJsonFile(workspace.resolve(".bsp")) ||
-    customProjectRoot.exists(root => hasJsonFile(root.resolve(".bsp"))) ||
+    hasJsonFile(workspace.resolve(Directories.bsp)) ||
+    customProjectRoot.exists(root =>
+      hasJsonFile(root.resolve(Directories.bsp))
+    ) ||
     bspGlobalDirectories.exists(hasJsonFile)
   }
   private def hasJsonFile(dir: AbsolutePath): Boolean = {
@@ -63,7 +70,7 @@ final class BuildTools(
   }
 
   def isBazelBsp: Boolean = {
-    workspace.resolve(".bazelbsp").isDirectory &&
+    workspace.resolve(Directories.bazelBsp).isDirectory &&
     BazelBuildTool.existingProjectView(workspace).nonEmpty &&
     isBsp
   }
@@ -136,23 +143,26 @@ final class BuildTools(
   private def customBsps: List[BspOnly] = {
     val bspFolders =
       (workspace :: customProjectRoot.toList).distinct
-        .map(_.resolve(".bsp")) ++ bspGlobalDirectories
+        .map(_.resolve(Directories.bsp)) ++ bspGlobalDirectories
     val root = customProjectRoot.getOrElse(workspace)
     for {
       bspFolder <- bspFolders
       if (bspFolder.exists && bspFolder.isDirectory)
       buildTool <- bspFolder.toFile
         .listFiles()
-        .collect {
-          case file
-              if file.isFile() && file.getName().endsWith(".json") &&
-                !knownBsps(file.getName().stripSuffix(".json")) =>
-            BspOnly(
-              file.getName().stripSuffix(".json"),
+        .flatMap(file =>
+          if (file.isFile() && file.getName().endsWith(".json")) {
+            val absolutePath = AbsolutePath(file.toPath())
+            for {
+              config <- BspServers.readInBspConfig(absolutePath, charset)
+              if !knownBsps(config.getName())
+            } yield BspOnly(
+              config.getName(),
               root,
-              AbsolutePath(file.toPath()),
+              absolutePath,
             )
-        }
+          } else None
+        )
         .toList
     } yield buildTool
   }
@@ -242,17 +252,15 @@ final class BuildTools(
       Some(GradleBuildTool.name)
     else if (mavenProject.exists(MavenBuildTool.isMavenRelatedPath(_, path)))
       Some(MavenBuildTool.name)
-    else if (isMill && MillBuildTool.isMillRelatedPath(path) || isMillBsp(path))
+    else if (isMill && MillBuildTool.isMillRelatedPath(path))
       Some(MillBuildTool.name)
-    else if (
-      bazelProject.exists(
-        BazelBuildTool.isBazelRelatedPath(_, path)
-      ) || isInBsp(path) && path.filename == "bazelbsp.json"
-    )
+    else if (bazelProject.exists(BazelBuildTool.isBazelRelatedPath(_, path)))
       Some(BazelBuildTool.name)
-    else if (isInBsp(path))
-      Some(path.filename.stripSuffix(".json"))
-    else None
+    else if (isInBsp(path)) {
+      val name = path.filename.stripSuffix(".json")
+      if (knownBsps(name) && !ScalaCli.names(name)) None
+      else Some(name)
+    } else None
   }
 
   def initialize(): Set[String] = {
@@ -275,5 +283,6 @@ object BuildTools {
       Nil,
       () => UserConfiguration(),
       explicitChoiceMade = () => false,
+      charset = StandardCharsets.UTF_8,
     )
 }

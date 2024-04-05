@@ -6,6 +6,8 @@ import scala.util.Properties
 
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.SbtBuildTool
+import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.Messages.GenerateBspAndConnect
 import scala.meta.internal.metals.Messages.ImportBuild
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
@@ -137,7 +139,7 @@ object SbtServerInitializer extends BuildServerInitializer {
       workspace: AbsolutePath,
       sbtVersion: String,
   ): Unit = {
-    val bspFolder = workspace.resolve(".bsp")
+    val bspFolder = workspace.resolve(Directories.bsp)
     val sbtJson = bspFolder.resolve("sbt.json")
     // don't overwrite existing BSP config
     if (!sbtJson.isFile) {
@@ -203,7 +205,7 @@ object BazelServerInitializer extends BuildServerInitializer {
     for {
       initializeResult <- server.initialize()
       // Import build using Bazel
-      _ = client.importBuild = ImportBuild.yes
+      _ = client.generateBspAndConnect = GenerateBspAndConnect.yes
       _ <- server.initialized()
     } yield {
       if (!expectError) {

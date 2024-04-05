@@ -94,6 +94,8 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
   }
 
   test("multi-stage") {
+    cleanWorkspace()
+    client.importBuildChanges = Messages.ImportBuildChanges.yes
     for {
       _ <- initialize(
         s"""|/metals.json
@@ -556,6 +558,8 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
   }
 
   test("ignore build.sc") {
+    cleanWorkspace()
+    client.importBuildChanges = Messages.ImportBuildChanges.yes
     for {
       _ <- initialize(
         s"""

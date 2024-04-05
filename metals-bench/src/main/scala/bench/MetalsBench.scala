@@ -11,6 +11,7 @@ import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.mtags.JavaMtags
+import scala.meta.internal.mtags.JavaToplevelMtags
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.ScalaMtags
@@ -101,6 +102,20 @@ class MetalsBench {
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
+  def typeHierarchyIndex(): Unit = {
+    scalaDependencySources.inputs.foreach { input =>
+      implicit val rc: ReportContext = EmptyReportContext
+      new ScalaToplevelMtags(
+        input,
+        includeInnerClasses = true,
+        includeMembers = false,
+        dialects.Scala213,
+      ).index()
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
   def scalaTokenize(): Unit = {
     scalaDependencySources.inputs.foreach { input =>
       val scanner = new LegacyScanner(input, Trees.defaultTokenizerDialect)
@@ -162,6 +177,14 @@ class MetalsBench {
       JavaMtags
         .index(input, includeMembers = true)
         .index()
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def toplevelJavaMtags(): Unit = {
+    javaDependencySources.inputs.foreach { input =>
+      new JavaToplevelMtags(input, includeInnerClasses = true).index()
     }
   }
 

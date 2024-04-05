@@ -185,12 +185,14 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
       )
 
       _ <- server.didChangeConfiguration(
-        """{
-          |  "show-implicit-arguments": true,
-          |  "show-implicit-conversions-and-classes": true,
-          |  "show-inferred-type": true
-          |}
-          |""".stripMargin
+        """|{"inlayHints": {
+           |  "inferredTypes": {"enable":true},
+           |  "implicitConversions": {"enable":true},
+           |  "implicitArguments": {"enable":true},
+           |  "typeParameters": {"enable":true},
+           |  "hintsInPatternMatch": {"enable":true}
+           |}}
+           |""".stripMargin
       )
 
       _ <- server.didOpen("MyTests.sc")
@@ -204,10 +206,10 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
             |import foo.Foo
             |import utest._
             | 
-            |pprint.log/*[Int<<scala/Int#>>]*/(2)/*(generate<<sourcecode/LineMacros#generate().>>, generate<<sourcecode/FileNameMacros#generate().>>)*/ // top-level statement should be fine in a script
+            |pprint.log/*[Int<<scala/Int#>>]*/(2)/*(using generate<<sourcecode/LineMacros#generate().>>, generate<<sourcecode/FileNameMacros#generate().>>)*/ // top-level statement should be fine in a script
             |
             |object MyTests extends TestSuite {
-            |  pprint.log/*[Int<<scala/Int#>>]*/(2)/*(generate<<sourcecode/LineMacros#generate().>>, generate<<sourcecode/FileNameMacros#generate().>>)*/
+            |  pprint.log/*[Int<<scala/Int#>>]*/(2)/*(using generate<<sourcecode/LineMacros#generate().>>, generate<<sourcecode/FileNameMacros#generate().>>)*/
             |  val tests/*: Tests<<utest/Tests#>>*/ = Tests {
             |    test("foo") {
             |      assert(2 + 2 == 4)

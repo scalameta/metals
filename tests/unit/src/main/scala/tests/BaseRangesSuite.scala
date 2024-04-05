@@ -20,6 +20,9 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
       name: TestOptions,
       input: String,
       scalaVersion: Option[String] = None,
+      additionalLibraryDependencies: List[String] = Nil,
+      scalacOptions: List[String] = Nil,
+      customMetalsJson: Option[String] = None,
   )(implicit
       loc: Location
   ): Unit = {
@@ -42,18 +45,24 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
     }
 
     val actualScalaVersion = scalaVersion.getOrElse(BuildInfo.scalaVersion)
+    val metalsJson =
+      customMetalsJson.getOrElse(
+        s"""|{"a":
+            |  {
+            |    "scalaVersion" : "$actualScalaVersion",
+            |    "libraryDependencies": ${toJsonArray(libraryDependencies ++ additionalLibraryDependencies)},
+            |    "scalacOptions": ${toJsonArray(scalacOptions)}
+            |  }
+            |}
+            |""".stripMargin
+      )
 
     test(name) {
       cleanWorkspace()
       for {
         _ <- initialize(
           s"""/metals.json
-             |{"a":
-             |  {
-             |    "scalaVersion" : "$actualScalaVersion",
-             |    "libraryDependencies": ${toJsonArray(libraryDependencies)}
-             |  }
-             |}
+             |$metalsJson
              |${input
               .replaceAll("(<<|>>|@@)", "")}""".stripMargin
         )

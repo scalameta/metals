@@ -54,11 +54,11 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
 
   checkEdit(
     "string2",
-    s"""|object Main {
-        |  val myName = ""
-        |  def message = "$$myNa@@me"
-        |}
-        |""".stripMargin,
+    """|object Main {
+       |  val myName = ""
+       |  def message = "$myNa@@me"
+       |}
+       |""".stripMargin,
     """|object Main {
        |  val myName = ""
        |  def message = s"${myName$0}me"
@@ -371,7 +371,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
       )
     ),
     """|object Main {
-       |  
+       |
        |  s"Hello $List.e@@ "
        |}
        |""".stripMargin,
@@ -593,8 +593,10 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
     filter = _.contains("hello")
   )
 
+  // This case will not be supported as every modern editor automatically insterts closing brace
+  // and it is non trivial to correctly find completion query for this scenario.
   checkEditLine(
-    "brace-token-error-pos",
+    "brace-token-error-pos".tag(IgnoreForScala3CompilerPC),
     """|object Main {
        |  val hello = ""
        |  ___

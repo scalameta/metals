@@ -5,11 +5,11 @@ import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
-import java.{util as ju}
+import java.{util => ju}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
-import scala.jdk.CollectionConverters.*
+import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.pc.AutoImportsResult
@@ -18,13 +18,14 @@ import scala.meta.pc.HoverSignature
 import scala.meta.pc.InlayHintsParams
 import scala.meta.pc.Node
 import scala.meta.pc.OffsetParams
+import scala.meta.pc.PcSymbolInformation
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
 
-import dotty.tools.pc.{ScalaPresentationCompiler as DottyPresentationCompiler}
+import dotty.tools.pc.{ScalaPresentationCompiler => DottyPresentationCompiler}
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
@@ -109,6 +110,11 @@ case class ScalaPresentationCompiler(
       params: OffsetParams
   ): CompletableFuture[ju.Optional[HoverSignature]] =
     underlying.hover(params)
+
+  override def info(
+      symbol: String
+  ): CompletableFuture[ju.Optional[PcSymbolInformation]] =
+    underlying.info(symbol)
 
   override def convertToNamedArguments(
       params: OffsetParams,

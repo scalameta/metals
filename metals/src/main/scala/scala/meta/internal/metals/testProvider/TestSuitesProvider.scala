@@ -130,7 +130,7 @@ final class TestSuitesProvider(
 
   override def codeLenses(
       textDocumentWithPath: TextDocumentWithPath
-  ): Seq[l.CodeLens] = {
+  ): Future[Seq[l.CodeLens]] = Future {
     val path = textDocumentWithPath.filePath
     for {
       target <- buildTargets.inverseSources(path).toList

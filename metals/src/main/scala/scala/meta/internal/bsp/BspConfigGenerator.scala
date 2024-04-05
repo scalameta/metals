@@ -10,6 +10,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
 import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.Messages.BspProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StatusBar
@@ -45,10 +46,9 @@ final class BspConfigGenerator(
       .map {
         case Generated if buildTool.projectRoot != workspace =>
           try {
-            val bsp = ".bsp"
-            workspace.resolve(bsp).createDirectories()
-            val buildToolBspDir = buildTool.projectRoot.resolve(bsp)
-            val workspaceBspDir = workspace.resolve(bsp).toNIO
+            workspace.resolve(Directories.bsp).createDirectories()
+            val buildToolBspDir = buildTool.projectRoot.resolve(Directories.bsp)
+            val workspaceBspDir = workspace.resolve(Directories.bsp).toNIO
             buildToolBspDir.toFile.listFiles().foreach { file =>
               val path = file.toPath()
               if (!file.isDirectory() && path.filename.endsWith(".json")) {

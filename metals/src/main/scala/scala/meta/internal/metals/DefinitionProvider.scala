@@ -8,6 +8,7 @@ import scala.concurrent.Future
 import scala.meta.Term
 import scala.meta.Type
 import scala.meta.inputs.Input
+import scala.meta.inputs.Position.Range
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
@@ -33,6 +34,7 @@ import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.SymbolKind
+import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 
 /**
@@ -120,6 +122,23 @@ final class DefinitionProvider(
     }
   }
 
+  def definition(
+      path: AbsolutePath,
+      pos: Int,
+  ): Future[DefinitionResult] = {
+    val text = path.readText
+    val input = new Input.VirtualFile(path.toURI.toString(), text)
+    val range = Range(input, pos, pos)
+    definition(
+      path,
+      new TextDocumentPositionParams(
+        new TextDocumentIdentifier(path.toURI.toString()),
+        range.toLsp.getStart(),
+      ),
+      EmptyCancelToken,
+    )
+  }
+
   /**
    *  Tries to find an identifier token at the current position
    *  to use it for symbol search. This is the last possibility for
@@ -166,9 +185,8 @@ final class DefinitionProvider(
         else true
       }
 
-      val dialect = scalaVersionSelector.dialectFromBuildTarget(path)
       val locs = workspaceSearch
-        .searchExactFrom(ident.value, path, token, dialect)
+        .searchExactFrom(ident.value, path, token, Some(path))
 
       val reducedGuesses =
         if (locs.size > 1)

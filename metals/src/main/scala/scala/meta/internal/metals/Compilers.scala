@@ -24,6 +24,7 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.JavaPresentationCompiler
 import scala.meta.internal.pc.LogMessages
+import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.internal.worksheets.WorksheetPcData
 import scala.meta.internal.worksheets.WorksheetProvider
@@ -34,6 +35,7 @@ import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
+import scala.meta.pc.SyntheticDecorationsParams
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
@@ -45,6 +47,7 @@ import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InlayHint
+import org.eclipse.lsp4j.InlayHintKind
 import org.eclipse.lsp4j.InlayHintParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRange
@@ -99,6 +102,59 @@ class Compilers(
     )
 
   private val worksheetsDigests = new TrieMap[AbsolutePath, String]()
+
+  private def enrichWithReleaseOption(scalaTarget: ScalaTarget) = {
+    val scalacOptions = scalaTarget.scalac.getOptions().asScala.toSeq
+    def existsReleaseSetting = scalacOptions.exists(opt =>
+      opt.startsWith("-release") ||
+        opt.startsWith("--release") ||
+        opt.startsWith("-java-output-version")
+    )
+    if (existsReleaseSetting) scalacOptions
+    else {
+      def optBuildTargetJvmVersion =
+        scalaTarget.jvmVersion
+          .flatMap(version => JdkVersion.parse(version))
+          .orElse {
+            val javaHome =
+              scalaTarget.jvmHome
+                .flatMap(_.toAbsolutePathSafe)
+                .orElse {
+                  for {
+                    javaHomeString <- userConfig().javaHome.map(_.trim())
+                    if (javaHomeString.nonEmpty)
+                    javaHome <- Try(AbsolutePath(javaHomeString)).toOption
+                  } yield javaHome
+                }
+            JdkVersion.maybeJdkVersionFromJavaHome(javaHome)
+          }
+
+      val releaseVersion =
+        for {
+          jvmVersion <- optBuildTargetJvmVersion
+          metalsJavaVersion <- Option(sys.props("java.version"))
+            .flatMap(JdkVersion.parse)
+          _ <-
+            if (jvmVersion.major < metalsJavaVersion.major) Some(())
+            else if (metalsJavaVersion.major > jvmVersion.major) {
+              scribe.warn(
+                s"""|Your project uses JDK version ${jvmVersion.major} and
+                    |Metals server is running on JDK version ${metalsJavaVersion.major}.
+                    |This might cause incorrect completions, since
+                    |Metals JDK version should be greater or equal the project's JDK version.
+                    |""".stripMargin
+              )
+              None
+            } else None
+        } yield jvmVersion.major
+
+      releaseVersion match {
+        case Some(version) =>
+          scalacOptions ++ List("-release", version.toString())
+        case _ => scalacOptions
+      }
+    }
+  }
 
   private val cache = jcache.asScala
   private def buildTargetPCFromCache(
@@ -568,8 +624,25 @@ class Compilers(
       token: CancelToken,
   ): Future[ju.List[InlayHint]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      val rangeParams =
-        CompilerRangeParamsUtils.fromPos(pos, token)
+      def inlayHintsFallback(
+          params: SyntheticDecorationsParams
+      ): Future[ju.List[InlayHint]] = {
+        pc.syntheticDecorations(params)
+          .asScala
+          .map(
+            _.map { d =>
+              val hint = new InlayHint()
+              hint.setPosition(d.range().getStart())
+              hint.setLabel(d.label())
+              val kind =
+                if (d.kind() <= 2) InlayHintKind.Type
+                else InlayHintKind.Parameter
+              hint.setKind(kind)
+              hint.setData(Array(""))
+              hint
+            }
+          )
+      }
 
       def adjustInlayHints(
           inlayHints: ju.List[InlayHint]
@@ -587,18 +660,29 @@ class Compilers(
           .asJava
       }
 
+      val rangeParams =
+        CompilerRangeParamsUtils.fromPos(pos, token)
+      val options = userConfig().inlayHintsOptions
       val pcParams = CompilerInlayHintsParams(
         rangeParams,
-        typeParameters = userConfig().showInferredType.contains("true"),
-        inferredTypes = userConfig().showInferredType.contains("minimal") ||
-          userConfig().showInferredType.contains("true"),
-        implicitParameters = userConfig().showImplicitArguments,
-        implicitConversions = userConfig().showImplicitConversionsAndClasses,
+        inferredTypes = options.inferredType,
+        implicitParameters = options.implicitArguments,
+        implicitConversions = options.implicitConversions,
+        typeParameters = options.typeParameters,
+        hintsInPatternMatch = options.hintsInPatternMatch,
       )
+
       pc
         .inlayHints(pcParams)
         .asScala
-        .map(adjustInlayHints)
+        .flatMap { hints =>
+          if (hints.isEmpty) {
+            inlayHintsFallback(pcParams.toSyntheticDecorationsParams)
+              .map(adjustInlayHints)
+          } else {
+            Future.successful(adjustInlayHints(hints))
+          }
+        }
     }
       .getOrElse(Future.successful(Nil.asJava))
   }
@@ -774,6 +858,18 @@ class Compilers(
     definition(params = params, token = token, findTypeDef = true)
   }
 
+  def info(
+      path: AbsolutePath,
+      symbol: String,
+  ): Future[Option[PcSymbolInformation]] = {
+    loadCompiler(path, forceScala = true)
+      .map(
+        _.info(symbol).asScala
+          .map(_.asScala.map(PcSymbolInformation.from))
+      )
+      .getOrElse(Future(None))
+  }
+
   private def definition(
       params: TextDocumentPositionParams,
       token: CancelToken,
@@ -829,8 +925,16 @@ class Compilers(
     }.getOrElse(Future.successful(Nil.asJava))
   }
 
+  /**
+   * Gets presentation compiler for a file.
+   * @param path for which presentation compiler should be loaded,
+   *             resolves build target based on this file
+   * @param forceScala if should use Scala pc for `.java` files that are in a Scala build target,
+   *                   useful when Scala pc can handle Java files and Java pc implementation of a feature is missing
+   */
   def loadCompiler(
-      path: AbsolutePath
+      path: AbsolutePath,
+      forceScala: Boolean = false,
   ): Option[PresentationCompiler] = {
 
     def fromBuildTarget: Option[PresentationCompiler] = {
@@ -841,6 +945,8 @@ class Compilers(
         case None => Some(fallbackCompiler(path))
         case Some(value) =>
           if (path.isScalaFilename) loadCompiler(value)
+          else if (path.isJavaFilename && forceScala)
+            loadCompiler(value).orElse(loadJavaCompiler(value))
           else if (path.isJavaFilename) loadJavaCompiler(value)
           else None
       }
@@ -1192,7 +1298,7 @@ class Compilers(
   ): PresentationCompiler = {
     newCompiler(
       mtags,
-      target.scalac.getOptions().asScala.toSeq,
+      enrichWithReleaseOption(target),
       classpath,
       search,
       target.scalac.getTarget.getUri,

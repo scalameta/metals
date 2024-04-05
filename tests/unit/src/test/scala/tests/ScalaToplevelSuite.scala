@@ -1,17 +1,8 @@
 package tests
 
-import java.nio.file.Files
-
-import scala.meta.Dialect
 import scala.meta.dialects
-import scala.meta.inputs.Input
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags.Mtags
-import scala.meta.io.AbsolutePath
 
-import munit.TestOptions
-
-class ScalaToplevelSuite extends BaseSuite {
+class ScalaToplevelSuite extends BaseToplevelSuite {
 
   check(
     "basic-indented",
@@ -55,7 +46,7 @@ class ScalaToplevelSuite extends BaseSuite {
     List(
       "_empty_/A.", "_empty_/A.foo().", "_empty_/A.Z#", "_empty_/B#",
       "_empty_/B#X#", "_empty_/B#foo().", "_empty_/B#v.", "_empty_/C#",
-      "_empty_/C#i.", "_empty_/D#", "_empty_/D.Da.", "_empty_/D.Db.",
+      "_empty_/C#i.", "_empty_/D#", "_empty_/D.Da. -> D", "_empty_/D.Db. -> D",
       "_empty_/D#getI().", "_empty_/D#i.",
     ),
     mode = All,
@@ -103,7 +94,7 @@ class ScalaToplevelSuite extends BaseSuite {
     List(
       "_empty_/A.", "_empty_/A.foo().", "_empty_/A.Z#", "_empty_/B#",
       "_empty_/B#X#", "_empty_/B#foo().", "_empty_/C#", "_empty_/D#",
-      "_empty_/D.Da.", "_empty_/D.Db.",
+      "_empty_/D.Da. -> _empty_/D#", "_empty_/D.Db. -> _empty_/D#",
     ),
     mode = All,
   )
@@ -348,8 +339,8 @@ class ScalaToplevelSuite extends BaseSuite {
     List(
       "a/",
       "a/A.",
-      "a/A.bar().",
-      "a/A.foo().",
+      "a/A.bar(). EXT",
+      "a/A.foo(). EXT",
     ),
     mode = All,
     dialect = dialects.Scala3,
@@ -369,8 +360,8 @@ class ScalaToplevelSuite extends BaseSuite {
     List(
       "a/",
       "a/Test$package.",
-      "a/Test$package.bar().",
-      "a/Test$package.foo().",
+      "a/Test$package.bar(). EXT",
+      "a/Test$package.foo(). EXT",
     ),
     mode = All,
     dialect = dialects.Scala3,
@@ -386,8 +377,8 @@ class ScalaToplevelSuite extends BaseSuite {
        |  def baz: Long = ???
        |""".stripMargin,
     List(
-      "a/", "a/Test$package.", "a/Test$package.foo().", "a/Test$package.bar().",
-      "a/Test$package.baz().",
+      "a/", "a/Test$package.", "a/Test$package.foo(). EXT",
+      "a/Test$package.bar(). EXT", "a/Test$package.baz(). EXT",
     ),
     mode = All,
     dialect = dialects.Scala3,
@@ -475,9 +466,10 @@ class ScalaToplevelSuite extends BaseSuite {
        |
        |enum NotPlanets{ case Vase }
        |""".stripMargin,
-    List("a/", "a/Planets#", "a/Planets.Earth.", "a/Planets.Mercury.",
-      "a/Planets#num.", "a/Planets.Venus.", "a/NotPlanets#",
-      "a/NotPlanets.Vase."),
+    List("a/", "a/Planets#", "a/Planets.Earth. -> Planets",
+      "a/Planets.Mercury. -> Planets", "a/Planets#num.",
+      "a/Planets.Venus. -> Planets", "a/NotPlanets#",
+      "a/NotPlanets.Vase. -> a/NotPlanets#"),
     dialect = dialects.Scala3,
     mode = All,
   )
@@ -498,9 +490,10 @@ class ScalaToplevelSuite extends BaseSuite {
        |enum NotPlanets:
        |  case Vase
        |""".stripMargin,
-    List("a/", "a/Planets#", "a/Planets.Earth.", "a/Planets.Mercury.",
-      "a/Planets#num.", "a/Planets.Venus.", "a/NotPlanets#",
-      "a/NotPlanets.Vase."),
+    List("a/", "a/Planets#", "a/Planets.Earth. -> Planets",
+      "a/Planets.Mercury. -> Planets", "a/Planets#num.",
+      "a/Planets.Venus. -> Planets", "a/NotPlanets#",
+      "a/NotPlanets.Vase. -> a/NotPlanets#"),
     dialect = dialects.Scala3,
     mode = All,
   )
@@ -517,9 +510,10 @@ class ScalaToplevelSuite extends BaseSuite {
        |enum NotPlanets:
        |  case Vase
        |""".stripMargin,
-    List("a/", "a/Planets#", "a/Planets#mmm().", "a/Planets.Earth#",
-      "a/Planets.Earth#v.", "a/Planets.Mercury#", "a/Planets#num.",
-      "a/Planets.Venus#", "a/NotPlanets#", "a/NotPlanets.Vase."),
+    List("a/", "a/Planets#", "a/Planets#mmm().", "a/Planets.Earth# -> Planets",
+      "a/Planets.Earth#v.", "a/Planets.Mercury# -> Planets", "a/Planets#num.",
+      "a/Planets.Venus# -> Planets", "a/NotPlanets#",
+      "a/NotPlanets.Vase. -> a/NotPlanets#"),
     dialect = dialects.Scala3,
     mode = All,
   )
@@ -534,7 +528,7 @@ class ScalaToplevelSuite extends BaseSuite {
        |  }
        |}
        |""".stripMargin,
-    List("a/", "a/TypeProxy#"),
+    List("a/", "a/TypeProxy# -> Type"),
     dialect = dialects.Scala3,
     mode = ToplevelWithInner,
   )
@@ -595,62 +589,95 @@ class ScalaToplevelSuite extends BaseSuite {
     // It is easier to work around this inconstancy in `SemanticdbSymbols.inverseSemanticdbSymbol`
     // than to change symbols emitted by `ScalaTopLevelMtags`,
     // since the object could be placed before type definition.
-    List("s/", "s/Test$package.", "s/Test$package.Cow#", "s/Cow.",
+    List("s/", "s/Test$package.", "s/Test$package.Cow# -> Long", "s/Cow.",
       "s/Cow.apply()."),
     dialect = dialects.Scala3,
     mode = All,
   )
 
-  def check(
-      options: TestOptions,
-      code: String,
-      expected: List[String],
-      mode: Mode = Toplevel,
-      dialect: Dialect = dialects.Scala3,
-  )(implicit location: munit.Location): Unit = {
-    test(options) {
-      val obtained =
-        mode match {
-          case All | ToplevelWithInner =>
-            val input = Input.VirtualFile("Test.scala", code)
-            val includeMembers = mode == All
-            Mtags
-              .allToplevels(input, dialect, includeMembers)
-              .occurrences
-              .map(_.symbol)
-              .toList
-          case Toplevel =>
-            val dir = AbsolutePath(Files.createTempDirectory("mtags"))
-            val input = dir.resolve("Test.scala")
-            input.writeText(code)
-            val obtained = Mtags.topLevelSymbols(input, dialect)
-            input.delete()
-            dir.delete()
-            obtained
-        }
-      assertNoDiff(
-        obtained.sorted.mkString("\n"),
-        expected.sorted.mkString("\n"),
-      )
-    }
-  }
+  check(
+    "overridden",
+    """|package a
+       |case class A[T](v: Int)(using Context) extends B[Int](2) with C:
+       |  object O extends H
+       |class M(ctx: Context) extends W(1)(ctx)
+       |""".stripMargin,
+    List("a/", "a/A# -> B, C", "a/A#v.", "a/A#O. -> H", "a/M# -> W"),
+    dialect = dialects.Scala3,
+    mode = All,
+  )
 
-  def assertToplevelsNoDiff(
-      obtained: List[String],
-      expected: List[String],
-  ): Unit = {
-    assertNoDiff(obtained.sorted.mkString("\n"), expected.sorted.mkString("\n"))
-  }
+  check(
+    "overridden2",
+    """|package a
+       |class A extends b.B
+       |""".stripMargin,
+    List("a/", "a/A# -> B"),
+    mode = All,
+  )
 
-  sealed trait Mode
-  // includeInnerClasses = false
-  // includeMembers = false
-  case object Toplevel extends Mode
-  // includeInnerClasses = true
-  // includeMembers = false
-  case object ToplevelWithInner extends Mode
-  // includeInnerClasses = true
-  // includeMembers = true
-  case object All extends Mode
+  check(
+    "overridden3",
+    """|package a
+       |class A extends B, C
+       |""".stripMargin,
+    List("a/", "a/A# -> B, C"),
+    mode = All,
+  )
 
+  check(
+    "overridden-type-alias",
+    """|package a
+       |object O {
+       |  type A[X] = Set[X]
+       |  type W[X] = mutable.Set[X]
+       |  type H = [X] =>> List[X]
+       |  type R = Set[Int] { def a: Int }
+       |  opaque type L <: mutable.List[Int] = mutable.List[Int]
+       |  type Elem[X] = X match
+       |      case String => Char
+       |      case Array[t] => t
+       |      case Iterable[t] => t
+       |}
+       |""".stripMargin,
+    List("a/", "a/O.", "a/O.A# -> Set", "a/O.H# -> List", "a/O.W# -> Set",
+      "a/O.R# -> Set", "a/O.L# -> List", "a/O.Elem#"),
+    mode = All,
+  )
+
+  check(
+    "refined-type",
+    """|package a
+       |object O {
+       |  trait Foo {
+       |    type T
+       |  }
+       |
+       |  implicit class A(val foo: Foo { type T = Int }) {
+       |    def get: Int = 1
+       |  }
+       |}
+       |""".stripMargin,
+    List(
+      "a/", "a/O.", "a/O.A#", "a/O.A#foo. EXT", "a/O.A#get(). EXT", "a/O.Foo#",
+      "a/O.Foo#T#",
+    ),
+    mode = All,
+  )
+
+  check(
+    "implicit-class-with-val",
+    """|package a
+       |object Foo {
+       |  implicit class IntOps(private val i: Int) extends AnyVal {
+       |    def inc: Int = i + 1
+       |  }
+       |}
+       |""".stripMargin,
+    List(
+      "a/", "a/Foo.", "a/Foo.IntOps# -> AnyVal", "a/Foo.IntOps#i. EXT",
+      "a/Foo.IntOps#inc(). EXT",
+    ),
+    mode = All,
+  )
 }

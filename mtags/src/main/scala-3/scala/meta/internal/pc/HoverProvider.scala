@@ -1,6 +1,6 @@
 package scala.meta.internal.pc
 
-import java.{util as ju}
+import java.util as ju
 
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext

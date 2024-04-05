@@ -9,16 +9,12 @@ class BloopJavaHomeLspSuite extends BaseLspSuite("java-home") {
   val jsonFilePath: Option[AbsolutePath] =
     BloopServers.getBloopFilePath("bloop.json")
   val jsonFile: Option[AbsolutePath] = jsonFilePath.filter(_.exists)
-  val lockFile: Option[AbsolutePath] =
-    BloopServers.getBloopFilePath("created_by_metals.lock").filter(_.exists)
   val contents: Option[String] = jsonFile.map(_.readText)
 
-  val javaHome: String =
-    sys.env.get("JAVA_HOME").orElse(sys.props.get("java.home")).getOrElse("")
+  val javaHome: String = sys.props.get("java.home").getOrElse("")
 
   def stashBloopJson(): Unit = {
     jsonFile.foreach(_.delete())
-    lockFile.foreach(_.delete())
   }
 
   def unStashBloopJson(): Unit = {
@@ -26,11 +22,6 @@ class BloopJavaHomeLspSuite extends BaseLspSuite("java-home") {
       file.delete()
       file.touch()
       file.writeText(content)
-    }
-    lockFile.zip(jsonFile).foreach { case (lockfile, jsonFile) =>
-      lockfile.delete()
-      lockfile.touch()
-      lockfile.writeText(jsonFile.toNIO.toFile().lastModified().toString())
     }
   }
 
@@ -44,7 +35,7 @@ class BloopJavaHomeLspSuite extends BaseLspSuite("java-home") {
     super.beforeEach(context)
   }
 
-  test("broken-home") {
+  test("incorrect-home") {
     cleanWorkspace()
     jsonFilePath.foreach(
       _.writeText(

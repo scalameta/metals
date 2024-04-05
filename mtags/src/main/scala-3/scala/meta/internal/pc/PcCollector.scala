@@ -44,7 +44,7 @@ abstract class PcCollector[T](
   driver.run(uri, source)
   given ctx: Context = driver.currentCtx
 
-  val unit = driver.currentCtx.run.units.head
+  val unit = driver.latestRun
   val compilatonUnitContext = ctx.fresh.setCompilationUnit(unit)
   val offset = params match
     case op: OffsetParams => op.offset()
@@ -609,8 +609,6 @@ abstract class PcCollector[T](
     all
   end traverseSought
 
-  // @note (tgodzik) Not sure currently how to get rid of the warning, but looks to correctly
-  // @nowarn
   private def collectTrees(trees: Iterable[Positioned]): Iterable[Tree] =
     trees.collect { case t: Tree =>
       t

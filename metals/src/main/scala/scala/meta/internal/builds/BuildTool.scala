@@ -4,6 +4,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 
+import scala.meta.internal.metals.Directories
 import scala.meta.io.AbsolutePath
 
 trait BuildTool {
@@ -38,7 +39,7 @@ trait BuildTool {
 
   def isBspGenerated(workspace: AbsolutePath): Boolean =
     possibleBuildServerNames
-      .map(name => workspace.resolve(".bsp").resolve(s"$name.json"))
+      .map(name => workspace.resolve(Directories.bsp).resolve(s"$name.json"))
       .exists(_.isFile)
 }
 

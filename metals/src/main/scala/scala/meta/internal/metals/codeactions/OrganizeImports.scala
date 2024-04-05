@@ -5,7 +5,6 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Diagnostics
-import scala.meta.internal.metals.MetalsEnrichments.XtensionString
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalacDiagnostic
@@ -67,7 +66,7 @@ sealed abstract class OrganizeImports(
   }
 
   protected def isScalaOrSbt(file: AbsolutePath): Boolean =
-    Seq("scala", "sbt").contains(file.extension)
+    Seq("scala", "sbt", "sc").contains(file.extension)
 }
 
 object OrganizeImports {}

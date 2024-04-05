@@ -14,6 +14,7 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.JsonParser._
@@ -25,6 +26,7 @@ import scala.meta.internal.metals.Trace
 import scala.meta.internal.metals.debug.DebugProtocol.CompletionRequest
 import scala.meta.internal.metals.debug.DebugProtocol.DisconnectRequest
 import scala.meta.internal.metals.debug.DebugProtocol.ErrorOutputNotification
+import scala.meta.internal.metals.debug.DebugProtocol.HotCodeReplace
 import scala.meta.internal.metals.debug.DebugProtocol.InitializeRequest
 import scala.meta.internal.metals.debug.DebugProtocol.LaunchRequest
 import scala.meta.internal.metals.debug.DebugProtocol.OutputNotification
@@ -32,6 +34,7 @@ import scala.meta.internal.metals.debug.DebugProtocol.SetBreakpointRequest
 import scala.meta.internal.metals.debug.DebugProxy._
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.debug.Breakpoint
 import org.eclipse.lsp4j.debug.CompletionsResponse
@@ -41,6 +44,8 @@ import org.eclipse.lsp4j.debug.StackFrame
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugResponseMessage
 import org.eclipse.lsp4j.jsonrpc.messages.Message
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 
 private[debug] final class DebugProxy(
     sessionName: String,
@@ -52,6 +57,8 @@ private[debug] final class DebugProxy(
     stripColor: Boolean,
     statusBar: StatusBar,
     sourceMapper: SourceMapper,
+    compilations: Compilations,
+    targets: Seq[BuildTargetIdentifier],
 )(implicit ec: ExecutionContext) {
   private val exitStatus = Promise[ExitStatus]()
   @volatile private var outputTerminated = false
@@ -60,7 +67,7 @@ private[debug] final class DebugProxy(
 
   @volatile private var clientAdapter =
     ClientConfigurationAdapter.default(sourceMapper)
-  @volatile private var frameIdToFrame: TrieMap[Int, StackFrame] = TrieMap.empty
+  private val frameIdToFrame: TrieMap[Int, StackFrame] = TrieMap.empty
 
   lazy val listen: Future[ExitStatus] = {
     scribe.info(s"Starting debug proxy for [$sessionName]")
@@ -180,6 +187,26 @@ private[debug] final class DebugProxy(
         }
         .withTimeout(5, TimeUnit.SECONDS)
 
+    case HotCodeReplace(req) =>
+      scribe.info("Hot code replace triggered")
+      compilations
+        .compileTargets(targets)
+        .onComplete {
+          case _: Success[?] => server.send(req)
+          case Failure(e) =>
+            val res = new DebugResponseMessage
+            res.setId(req.getId)
+            res.setMethod(req.getMethod)
+            res.setError(
+              new ResponseError(
+                ResponseErrorCode.InternalError,
+                s"Failed to compile ${e.getLocalizedMessage()}",
+                null,
+              )
+            )
+            client.consume(res)
+        }
+
     case message => server.send(message)
   }
 
@@ -212,7 +239,7 @@ private[debug] final class DebugProxy(
     // output window gets refreshed resulting in stale messages being printed on top, before
     // any actual logs from the restarted process
     case response @ DebugProtocol.StackTraceResponse(args) =>
-      import scala.meta.internal.metals.JsonParser._
+      import DapJsonParser._
       for {
         stackFrame <- args.getStackFrames
         frameSource <- Option(stackFrame.getSource)
@@ -229,7 +256,8 @@ private[debug] final class DebugProxy(
           mappedSourcePath
         )
       } frameSource.setPath(clientAdapter.adaptPathForClient(metalsSource))
-      response.setResult(args.toJson)
+      val result = clientAdapter.adaptStackTraceResponse(args.toJsonObject)
+      response.setResult(result)
       for (frame <- args.getStackFrames()) {
         frameIdToFrame.put(frame.getId, frame)
       }
@@ -287,6 +315,8 @@ private[debug] object DebugProxy {
       stripColor: Boolean,
       status: StatusBar,
       sourceMapper: SourceMapper,
+      compilations: Compilations,
+      targets: Seq[BuildTargetIdentifier],
   )(implicit ec: ExecutionContext): Future[DebugProxy] = {
     for {
       server <- connectToServer()
@@ -312,6 +342,8 @@ private[debug] object DebugProxy {
       stripColor,
       status,
       sourceMapper,
+      compilations,
+      targets,
     )
   }
 

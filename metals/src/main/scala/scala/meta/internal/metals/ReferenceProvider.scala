@@ -131,7 +131,7 @@ final class ReferenceProvider(
       params: ReferenceParams,
       findRealRange: AdjustRange = noAdjustRange,
       includeSynthetics: Synthetic => Boolean = _ => true,
-  ): List[ReferencesResult] = {
+  )(implicit report: ReportContext): List[ReferencesResult] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     semanticdbs.textDocument(source).documentIncludingStale match {
       case Some(doc) =>
@@ -164,9 +164,33 @@ final class ReferenceProvider(
             findRealRange,
             includeSynthetics,
           )
+          // It's possible to return nothing is we exclude declaration
+          if (locations.isEmpty && params.getContext().isIncludeDeclaration()) {
+            val fileInIndex =
+              if (index.contains(source.toNIO))
+                s"Current file ${source} is present"
+              else s"Missing current file ${source}"
+            scribe.debug(
+              s"No references found, index size ${index.size}\n" + fileInIndex
+            )
+            report.unsanitized.create(
+              Report(
+                "empty-references",
+                index
+                  .map { case (path, entry) =>
+                    s"$path -> ${entry.bloom.approximateElementCount()}"
+                  }
+                  .mkString("\n"),
+                s"Could not find any locations for ${result.occurrence}, printing index state",
+                Some(source.toString()),
+                Some(source.toString() + ":" + result.occurrence.getOrElse("")),
+              )
+            )
+          }
           ReferencesResult(occurrence.symbol, locations)
         }
-      case None => Nil
+      case None =>
+        Nil
     }
   }
 

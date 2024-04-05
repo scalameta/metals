@@ -12,6 +12,7 @@ import scala.util.Properties
 
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.JavaBinary
+import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.StatusBar
@@ -39,20 +40,6 @@ class ShellRunner(
     cancelables.cancel()
   }
 
-  private lazy val mavenLocal = {
-    val str = new File(sys.props("user.home")).toURI.toString
-    val homeUri =
-      if (str.endsWith("/"))
-        str
-      else
-        str + "/"
-    MavenRepository.of(homeUri + ".m2/repository")
-  }
-
-  private lazy val sonatypePublic = MavenRepository.of(
-    "https://oss.sonatype.org/content/repositories/public"
-  )
-
   def runJava(
       dependency: Dependency,
       main: String,
@@ -70,12 +57,7 @@ class ShellRunner(
     val classpath = Fetch
       .create()
       .withDependencies(dependency)
-      .withRepositories(
-        Repository.ivy2Local(),
-        Repository.central(),
-        mavenLocal,
-        sonatypePublic,
-      )
+      .withRepositories(ShellRunner.defaultRepositories: _*)
       .fetch()
       .asScala
       .mkString(classpathSeparator)
@@ -118,7 +100,7 @@ class ShellRunner(
       logInfo: Boolean = true,
   ): Future[Int] = {
     val elapsed = new Timer(time)
-    val env = additionalEnv ++ javaHome.map("JAVA_HOME" -> _).toMap
+    val env = additionalEnv ++ JdkSources.envVariables(javaHome)
     val ps = SystemProcess.run(
       args,
       directory,
@@ -168,6 +150,28 @@ class ShellRunner(
 }
 
 object ShellRunner {
+
+  private lazy val mavenLocal = {
+    val str = new File(sys.props("user.home")).toURI.toString
+    val homeUri =
+      if (str.endsWith("/"))
+        str
+      else
+        str + "/"
+    MavenRepository.of(homeUri + ".m2/repository")
+  }
+
+  private lazy val sonatypePublic = MavenRepository.of(
+    "https://oss.sonatype.org/content/repositories/public"
+  )
+
+  val defaultRepositories: List[Repository] =
+    List(
+      Repository.ivy2Local(),
+      Repository.central(),
+      mavenLocal,
+      sonatypePublic,
+    )
 
   def runSync(
       args: List[String],

@@ -4,16 +4,98 @@ import java.nio.file.Path
 
 import scala.util.control.NonFatal
 
+import scala.meta.pc.PcSymbolKind
+import scala.meta.pc.PcSymbolProperty
 import scala.meta.pc.SymbolSearchVisitor
 
 import org.eclipse.{lsp4j => l}
 
 trait WorkspaceSymbolSearch { this: MetalsGlobal =>
 
+  def info(symbol: String): Option[PcSymbolInformation] = {
+    val index = symbol.lastIndexOf("/")
+    val pkgString = symbol.take(index + 1)
+    val pkg = packageSymbolFromString(pkgString)
+
+    def loop(
+        symbol: String,
+        acc: List[(String, Boolean)]
+    ): List[(String, Boolean)] =
+      if (symbol.isEmpty()) acc.reverse
+      else {
+        val newSymbol = symbol.takeWhile(c => c != '.' && c != '#')
+        val rest = symbol.drop(newSymbol.size)
+        loop(rest.drop(1), (newSymbol, rest.headOption.exists(_ == '#')) :: acc)
+      }
+
+    val names =
+      loop(symbol.drop(index + 1).takeWhile(_ != '('), List.empty)
+
+    val compilerSymbols = names.foldLeft(pkg.toList) {
+      case (owners, (name, isClass)) =>
+        owners.flatMap { owner =>
+          val foundChild =
+            if (isClass) owner.info.member(TypeName(name))
+            else owner.info.member(TermName(name))
+          if (foundChild.exists) {
+            foundChild.info match {
+              case OverloadedType(_, alts) => alts
+              case _ => List(foundChild)
+            }
+          } else Nil
+        }
+    }
+
+    val (searchedSymbol, alternativeSymbols) =
+      compilerSymbols.partition(compilerSymbol =>
+        semanticdbSymbol(compilerSymbol) == symbol
+      )
+
+    searchedSymbol match {
+      case compilerSymbol :: _ =>
+        Some(
+          PcSymbolInformation(
+            symbol = symbol,
+            kind = getSymbolKind(compilerSymbol),
+            parents = compilerSymbol.parentSymbols.map(semanticdbSymbol),
+            dealiasedSymbol = semanticdbSymbol(compilerSymbol.dealiased),
+            classOwner = compilerSymbol.ownerChain
+              .find(c => c.isClass || c.isModule)
+              .map(semanticdbSymbol),
+            overriddenSymbols = compilerSymbol.overrides.map(semanticdbSymbol),
+            alternativeSymbols = alternativeSymbols.map(semanticdbSymbol),
+            properties =
+              if (
+                compilerSymbol.isAbstractClass || compilerSymbol.isAbstractType
+              )
+                List(PcSymbolProperty.ABSTRACT)
+              else Nil
+          )
+        )
+      case _ => None
+    }
+  }
+
+  private def getSymbolKind(sym: Symbol): PcSymbolKind =
+    if (sym.isJavaInterface) PcSymbolKind.INTERFACE
+    else if (sym.isTrait) PcSymbolKind.TRAIT
+    else if (sym.isConstructor) PcSymbolKind.CONSTRUCTOR
+    else if (sym.isPackageObject) PcSymbolKind.PACKAGE_OBJECT
+    else if (sym.isClass) PcSymbolKind.CLASS
+    else if (sym.isMacro) PcSymbolKind.MACRO
+    else if (sym.isLocalToBlock) PcSymbolKind.LOCAL
+    else if (sym.isMethod) PcSymbolKind.METHOD
+    else if (sym.isParameter) PcSymbolKind.PARAMETER
+    else if (sym.hasPackageFlag) PcSymbolKind.PACKAGE
+    else if (sym.isTypeParameter) PcSymbolKind.TYPE_PARAMETER
+    else if (sym.isType) PcSymbolKind.TYPE
+    else PcSymbolKind.UNKNOWN_KIND
+
   class CompilerSearchVisitor(
       context: Context,
       visitMember: Symbol => Boolean
   ) extends SymbolSearchVisitor {
+
     def visit(top: SymbolSearchCandidate): Int = {
       var added = 0
       for {

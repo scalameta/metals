@@ -1,7 +1,7 @@
 package scala.meta.internal.pc
 package completions
 
-import java.{util as ju}
+import java.util as ju
 
 import scala.collection.JavaConverters.*
 
@@ -15,8 +15,8 @@ import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 import scala.meta.pc.SymbolSearch
 
-import dotty.tools.dotc.ast.tpd.Tree
 import dotty.tools.dotc.ast.tpd.*
+import dotty.tools.dotc.ast.tpd.Tree
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
@@ -30,7 +30,7 @@ import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
-import org.eclipse.{lsp4j as l}
+import org.eclipse.lsp4j as l
 
 object OverrideCompletions:
   private type TargetDef = TypeDef | DefDef
@@ -177,7 +177,7 @@ object OverrideCompletions:
       uri,
       SourceFile.virtual(uri.toASCIIString, params.text),
     )
-    val unit = driver.currentCtx.run.units.head
+    val unit = driver.latestRun
     val pos = driver.sourcePosition(params)
 
     val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)

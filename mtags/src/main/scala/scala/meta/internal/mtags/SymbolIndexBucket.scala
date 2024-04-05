@@ -11,7 +11,7 @@ import scala.util.control.NonFatal
 import scala.meta.Dialect
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.mtags.JavaToplevelMtags
+import scala.meta.internal.io.PlatformFileIO
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
@@ -47,29 +47,39 @@ class SymbolIndexBucket(
 
   def close(): Unit = sourceJars.close()
 
-  def addSourceDirectory(dir: AbsolutePath): List[(String, AbsolutePath)] = {
+  def addSourceDirectory(
+      dir: AbsolutePath
+  ): List[IndexingResult] = {
     if (sourceJars.addEntry(dir.toNIO)) {
       dir.listRecursive.toList.flatMap {
         case source if source.isScala =>
-          addSourceFile(source, Some(dir)).map(sym => (sym, source))
+          addSourceFile(source, Some(dir), isJava = false)
         case _ =>
-          List.empty
+          None
       }
-    } else
-      List.empty
+    } else List.empty
   }
 
-  def addSourceJar(jar: AbsolutePath): List[(String, AbsolutePath)] = {
+  def addJDKSources(
+      jar: AbsolutePath
+  ): Unit = {
+    sourceJars.addEntry(jar.toNIO)
+    PlatformFileIO.newJarFileSystem(jar, create = false)
+  }
+
+  def addSourceJar(
+      jar: AbsolutePath
+  ): List[IndexingResult] = {
     if (sourceJars.addEntry(jar.toNIO)) {
       FileIO.withJarFileSystem(jar, create = false) { root =>
         try {
           root.listRecursive.toList.flatMap {
             case source if source.isScala =>
-              addSourceFile(source, None).map(sym => (sym, source))
+              addSourceFile(source, None, isJava = false)
             case source if source.isJava =>
-              addJavaSourceFile(source).map(sym => (sym, source))
+              addSourceFile(source, None, isJava = true)
             case _ =>
-              List.empty
+              None
           }
         } catch {
           // this happens in broken jars since file from FileWalker should exists
@@ -94,58 +104,46 @@ class SymbolIndexBucket(
     }
   }
 
-  /* Sometimes source jars have additional nested directories,
-   * in that case java toplevel is not "trivial".
-   * See: https://github.com/scalameta/metals/issues/3815
-   */
-  def addJavaSourceFile(source: AbsolutePath): List[String] = {
-    new JavaToplevelMtags(source.toInput).readPackage match {
-      case Nil => Nil
-      case packageParts =>
-        val className = source.filename.stripSuffix(".java")
-        val symbol = packageParts.mkString("", "/", s"/$className#")
-        if (
-          isTrivialToplevelSymbol(
-            source.toURI.toString,
-            symbol,
-            extension = "java"
-          )
-        ) Nil
-        else {
-          toplevels.updateWith(symbol) {
-            case Some(acc) => Some(acc + source)
-            case None => Some(Set(source))
-          }
-          List(symbol)
-        }
-    }
-  }
-
   def addSourceFile(
       source: AbsolutePath,
-      sourceDirectory: Option[AbsolutePath]
-  ): List[String] = {
-    val symbols = indexSource(source, dialect, sourceDirectory)
-    symbols.foreach { symbol =>
+      sourceDirectory: Option[AbsolutePath],
+      isJava: Boolean
+  ): Option[IndexingResult] = {
+    val IndexingResult(path, topLevels, overrides) =
+      indexSource(source, dialect, sourceDirectory, isJava)
+    topLevels.foreach { symbol =>
       toplevels.updateWith(symbol) {
         case Some(acc) => Some(acc + source)
         case None => Some(Set(source))
       }
     }
-    symbols
+    Some(IndexingResult(path, topLevels, overrides))
   }
 
   private def indexSource(
       source: AbsolutePath,
       dialect: Dialect,
-      sourceDirectory: Option[AbsolutePath]
-  ): List[String] = {
+      sourceDirectory: Option[AbsolutePath],
+      isJava: Boolean
+  ): IndexingResult = {
     val uri = source.toIdeallyRelativeURI(sourceDirectory)
-    val sourceToplevels = mtags.topLevelSymbols(source, dialect)
-    if (source.isAmmoniteScript)
-      sourceToplevels
-    else
-      sourceToplevels.filter(sym => !isTrivialToplevelSymbol(uri, sym))
+    val (doc, overrides) = mtags.indexWithOverrides(source, dialect)
+    val sourceTopLevels =
+      doc.occurrences.iterator
+        .filterNot(_.symbol.isPackage)
+        .map(_.symbol)
+    val topLevels =
+      if (source.isAmmoniteScript) sourceTopLevels.toList
+      else if (isJava) {
+        sourceTopLevels.toList.headOption
+          .filter(sym => !isTrivialToplevelSymbol(uri, sym, "java"))
+          .toList
+      } else {
+        sourceTopLevels
+          .filter(sym => !isTrivialToplevelSymbol(uri, sym, "scala"))
+          .toList
+      }
+    IndexingResult(source, topLevels, overrides)
   }
 
   // Returns true if symbol is com/foo/Bar# and path is /com/foo/Bar.scala

@@ -24,11 +24,13 @@ import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.builds.WorkspaceReload
+import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
 import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.watcher.FileWatcher
+import scala.meta.internal.mtags.IndexingResult
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tvp.FolderTreeViewProvider
@@ -80,6 +82,7 @@ final case class Indexer(
     scalaVersionSelector: ScalaVersionSelector,
     sourceMapper: SourceMapper,
     workspaceFolder: AbsolutePath,
+    implementationProvider: ImplementationProvider,
 )(implicit rc: ReportContext) {
 
   private implicit def ec: ExecutionContextExecutorService = executionContext
@@ -121,8 +124,10 @@ final case class Indexer(
 
     bspSession() match {
       case None =>
-        scribe.warn("No build session currently active to reload.")
-        Future.successful(BuildChange.None)
+        scribe.warn(
+          "No build session currently active to reload. Attempting to reconnect."
+        )
+        reconnectToBuildServer()
       case Some(session) if forceRefresh => reloadAndIndex(session)
       case Some(session) =>
         workspaceReload().oldReloadResult(checksum) match {
@@ -211,6 +216,7 @@ final case class Indexer(
         val data = buildTool.data
         val importedBuild = buildTool.importedBuild
         data.reset()
+        buildTargetClasses.clear()
         data.addWorkspaceBuildTargets(importedBuild.workspaceBuildTargets)
         data.addScalacOptions(
           importedBuild.scalacOptions,
@@ -219,6 +225,10 @@ final case class Indexer(
         data.addJavacOptions(
           importedBuild.javacOptions,
           bspSession().map(_.mainConnection),
+        )
+
+        data.addDependencyModules(
+          importedBuild.dependencyModules
         )
 
         // For "wrapped sources", we create dedicated TargetData.MappedSource instances,
@@ -479,6 +489,7 @@ final case class Indexer(
               )
             )
             .getOrElse(Scala213)
+
           definitionIndex.addSourceDirectory(path, dialect)
         } else {
           scribe.warn(s"unexpected dependency: $path")
@@ -504,7 +515,7 @@ final case class Indexer(
       case Right(zip) =>
         scribe.debug(s"Indexing JDK sources from $zip")
         usedJars += zip
-        addSourceJarSymbols(zip)
+        definitionIndex.addJDKSources(zip)
       case Left(notFound) =>
         val candidates = notFound.candidates.mkString(", ")
         scribe.warn(
@@ -608,14 +619,36 @@ final case class Indexer(
    * @param path JAR path
    */
   private def addSourceJarSymbols(path: AbsolutePath): Unit = {
+    val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
+    def indexJar() = {
+      val indexResult = definitionIndex.addSourceJar(path, dialect)
+      val toplevels = indexResult.flatMap {
+        case IndexingResult(path, toplevels, _) =>
+          toplevels.map((_, path))
+      }
+      val overrides = indexResult.flatMap {
+        case IndexingResult(path, _, list) =>
+          list.flatMap { case (symbol, overridden) =>
+            overridden.map((path, symbol, _))
+          }
+      }
+      implementationProvider.addTypeHierarchyElements(overrides)
+      (toplevels, overrides)
+    }
+
     tables.jarSymbols.getTopLevels(path) match {
       case Some(toplevels) =>
-        val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
-        definitionIndex.addIndexedSourceJar(path, toplevels, dialect)
+        tables.jarSymbols.getTypeHierarchy(path) match {
+          case Some(overrides) =>
+            definitionIndex.addIndexedSourceJar(path, toplevels, dialect)
+            implementationProvider.addTypeHierarchyElements(overrides)
+          case None =>
+            val (_, overrides) = indexJar()
+            tables.jarSymbols.addTypeHierarchyInfo(path, overrides)
+        }
       case None =>
-        val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
-        val toplevels = definitionIndex.addSourceJar(path, dialect)
-        tables.jarSymbols.putTopLevels(path, toplevels)
+        val (toplevels, overrides) = indexJar()
+        tables.jarSymbols.putJarIndexingInfo(path, toplevels, overrides)
     }
   }
 

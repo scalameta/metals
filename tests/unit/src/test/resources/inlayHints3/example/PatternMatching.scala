@@ -3,7 +3,7 @@ package example
 class PatternMatching {
   val some/*: Some<<scala/Some#>>[Int<<scala/Int#>>]*/ = Some/*[Int<<scala/Int#>>]*/(1)
   some match {
-    case Some/*[Int<<scala/Int#>>]*/(number/*: Int<<scala/Int#>>*/) =>
+    case Some(number/*: Int<<scala/Int#>>*/) =>
       number
   }
 
@@ -12,12 +12,12 @@ class PatternMatching {
   (left, right)
 
   // val deconstruction
-  val Some/*[Int<<scala/Int#>>]*/(number1/*: Int<<scala/Int#>>*/) =
+  val Some(number1/*: Int<<scala/Int#>>*/) =
     some
   println(number1)
 
   def localDeconstruction/*: Int<<scala/Int#>>*/ = {
-    val Some/*[Int<<scala/Int#>>]*/(number2/*: Int<<scala/Int#>>*/) =
+    val Some(number2/*: Int<<scala/Int#>>*/) =
       some
     number2
   }

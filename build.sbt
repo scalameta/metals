@@ -498,7 +498,7 @@ lazy val metals = project
       // for logging
       "com.outr" %% "scribe" % V.scribe,
       "com.outr" %% "scribe-file" % V.scribe,
-      "com.outr" %% "scribe-slf4j" % V.scribe, // needed for flyway database migrations
+      "com.outr" %% "scribe-slf4j2" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
       "com.lihaoyi" %% "ujson" % "3.1.5",
       // For fetching projects' templates
@@ -550,6 +550,7 @@ lazy val metals = project
       "ammonite212" -> V.ammonite212Version,
       "ammonite213" -> V.ammonite213Version,
       "ammonite3" -> V.ammonite3Version,
+      "bazelScalaVersion" -> V.bazelScalaVersion,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
       "firstScala3PCVersion" -> V.firstScala3PCVersion,
@@ -721,7 +722,10 @@ lazy val mtest = project
     Compile / unmanagedSourceDirectories ++= {
       val base = (mtags / Compile / sourceDirectory).value
       if (isScala3WithPresentationCompiler(scalaVersion.value)) {
-        List(base / "scala")
+        List(
+          base / "scala",
+          base / "scala-3" / "scala" / "meta" / "internal" / "metals",
+        )
       } else {
         Nil
       }
@@ -774,7 +778,8 @@ lazy val metalsDependencies = project
       // The dependencies listed below are only listed so Scala Steward
       // will pick them up and update them. They aren't actually used.
       "com.lihaoyi" %% "ammonite-util" % V.ammonite,
-      "org.typelevel" % "kind-projector" % V.kindProjector cross CrossVersion.full,
+      // not available for Scala 2.13.13
+      // "org.typelevel" % "kind-projector" % V.kindProjector cross CrossVersion.full,
       "com.olegpy" %% "better-monadic-for" % V.betterMonadicFor,
       "com.lihaoyi" % "mill-contrib-testng" % V.mill,
       "org.virtuslab.scala-cli" % "cli_3" % V.scalaCli intransitive (),

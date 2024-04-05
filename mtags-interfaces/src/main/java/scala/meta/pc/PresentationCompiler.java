@@ -179,6 +179,10 @@ public abstract class PresentationCompiler {
 		return CompletableFuture.completedFuture(Collections.emptyList());
 	}
 
+	public CompletableFuture<Optional<PcSymbolInformation>> info(String symbol) {
+		return CompletableFuture.completedFuture(Optional.empty());
+	}
+
 	/**
 	 * File was closed.
 	 */

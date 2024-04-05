@@ -67,7 +67,7 @@ case class SbtBuildTool(
   ): Option[List[String]] =
     Option.when(workspaceSupportsBsp(projectRoot)) {
       val bspConfigArgs = List[String]("bspConfig")
-      val bspDir = workspace.resolve(".bsp").toNIO
+      val bspDir = workspace.resolve(Directories.bsp).toNIO
       composeArgs(bspConfigArgs, projectRoot, bspDir)
     }
 
@@ -268,9 +268,11 @@ object SbtBuildTool {
       plugins: PluginDetails*
   ): Boolean = {
     val content =
-      s"""|// DO NOT EDIT! This file is auto-generated.
+      s"""|// format: off
+          |// DO NOT EDIT! This file is auto-generated.
           |
           |${plugins.map(sbtPlugin).mkString("\n")}
+          |// format: on
           |""".stripMargin
     val bytes = content.getBytes(StandardCharsets.UTF_8)
     projectDir.toFile.mkdirs()
@@ -449,7 +451,7 @@ object SbtBuildTool {
       workspace: AbsolutePath,
       userJavaHome: Option[String],
   ): Boolean = {
-    val bspConfigFile = workspace.resolve(".bsp").resolve("sbt.json")
+    val bspConfigFile = workspace.resolve(Directories.bsp).resolve("sbt.json")
     if (bspConfigFile.isFile) {
       val matchesSbtJavaHome =
         for {

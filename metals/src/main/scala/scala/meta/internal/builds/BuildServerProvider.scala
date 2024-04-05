@@ -1,5 +1,6 @@
 package scala.meta.internal.builds
 
+import scala.annotation.nowarn
 import scala.concurrent.Future
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
@@ -16,6 +17,7 @@ trait BuildServerProvider extends BuildTool {
    * Method used to generate a bsp config file for the build
    * tool if one doesn't exist yet.
    */
+  @nowarn("msg=parameter statusBar in method generateBspConfig is never used")
   def generateBspConfig(
       workspace: AbsolutePath,
       systemProcess: List[String] => Future[BspConfigGenerationStatus],

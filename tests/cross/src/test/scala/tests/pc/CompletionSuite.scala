@@ -380,11 +380,8 @@ class CompletionSuite extends BaseCompletionSuite {
       |  }
       |  Xtension@@
       |}""".stripMargin,
-    """|XtensionMethod(a: Int): A.XtensionMethod
-       |""".stripMargin,
-    compat = Map(
-      "3" -> "XtensionMethod(a: Int): XtensionMethod"
-    )
+    """|XtensionMethod(a: Int): XtensionMethod
+       |""".stripMargin
   )
 
   check(
@@ -1793,7 +1790,7 @@ class CompletionSuite extends BaseCompletionSuite {
         | val t: TT@@
         |}
         |""".stripMargin,
-    "TTT[A] = O.TTT",
+    "TTT[A] = TTT",
     compat = Map(
       "3" -> "TTT[A <: Int] = List[A]"
     )

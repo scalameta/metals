@@ -29,7 +29,7 @@ import org.eclipse.lsp4j.{debug => dap}
 import org.eclipse.{lsp4j => l}
 
 object DebugProtocol {
-  import scala.meta.internal.metals.debug.DapJsonParser._
+  import DapJsonParser._
   val FirstMessageId = 1
 
   val serverName = "dap-server"
@@ -177,6 +177,13 @@ object DebugProtocol {
     def unapply(request: RequestMessage): Option[CompletionsArguments] = {
       if (request.getMethod != "completions") None
       else parse[CompletionsArguments](request.getParams).toOption
+    }
+  }
+
+  object HotCodeReplace {
+    def unapply(request: RequestMessage): Option[RequestMessage] = {
+      if (request.getMethod != "redefineClasses") None
+      else Some(request)
     }
   }
 

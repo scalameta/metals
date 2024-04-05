@@ -81,6 +81,10 @@ project. If you create your worksheet in the root of your project, you will be
 on the default Scala version (2.12.12), and you won't have access to anything
 except for the standard lib on your classpath.
 
+## I see spurious errors or worksheet fails to evaluate
+
+Worksheet code is entirely wrapped in a class (`class MdocApp`). The class wrapper is needed as a counter measure to dead locks issues, however the wrapper can cause issues for some valid Scala code snippets. Issues like getting stuck in a infinite loop while evaluating or throwing a `StackOverflowException`. Full description of the issue - [mdoc/#853](https://github.com/scalameta/mdoc/issues/853).
+
 ## Ammonite scripts
 
 ### How do I use Scala 2.x.x for my script?

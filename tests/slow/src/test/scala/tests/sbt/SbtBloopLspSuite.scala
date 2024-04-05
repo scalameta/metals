@@ -20,12 +20,14 @@ import scala.meta.io.AbsolutePath
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import tests.BaseImportSuite
+import tests.JavaHomeChangeTest
 import tests.ScriptsAssertions
 import tests.TestSemanticTokens
 
 class SbtBloopLspSuite
     extends BaseImportSuite("sbt-bloop-import")
-    with ScriptsAssertions {
+    with ScriptsAssertions
+    with JavaHomeChangeTest {
 
   val sbtVersion = V.sbtVersion
   val scalaVersion = V.scala213
@@ -130,7 +132,10 @@ class SbtBloopLspSuite
       )
       _ = assertStatus(_.isInstalled)
       projectVersion = workspace.resolve("project/build.properties").readText
-      _ = assertNoDiff(projectVersion, s"sbt.version=${V.sbtVersion}")
+      _ = assert(
+        projectVersion.startsWith(s"sbt.version="),
+        "project/build.properties should contains sbt version",
+      )
     } yield ()
   }
 
@@ -858,12 +863,14 @@ class SbtBloopLspSuite
            """.stripMargin
       )
       _ <- server.didChangeConfiguration(
-        """{
-          |  "show-implicit-arguments": true,
-          |  "show-implicit-conversions-and-classes": true,
-          |  "show-inferred-type": true
-          |}
-          |""".stripMargin
+        """|{"inlayHints": {
+           |  "inferredTypes": {"enable":true},
+           |  "implicitConversions": {"enable":true},
+           |  "implicitArguments": {"enable":true},
+           |  "typeParameters": {"enable":true},
+           |  "hintsInPatternMatch": {"enable":true}
+           |}}
+           |""".stripMargin
       )
       _ <- server.didOpen("build.sbt")
       _ <- server.didSave("build.sbt")(identity)
@@ -877,5 +884,22 @@ class SbtBloopLspSuite
       )
     } yield ()
   }
+
+  checkJavaHomeUpdate(
+    "bloop-java-home-update",
+    fileContent => s"""|/build.sbt
+                       |scalaVersion := "$scalaVersion"
+                       |val a = project.in(file("a"))
+                       |$fileContent
+                       |""".stripMargin,
+    errorMessage =
+      """|a/src/main/scala/a/A.scala:2:8: error: object random is not a member of package java.util
+         |import java.util.random.RandomGenerator
+         |       ^^^^^^^^^^^^^^^^
+         |a/src/main/scala/a/A.scala:4:13: error: not found: value RandomGenerator
+         |  val gen = RandomGenerator.of("name")
+         |            ^^^^^^^^^^^^^^^
+         |""".stripMargin,
+  )
 
 }

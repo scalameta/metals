@@ -279,7 +279,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
   )
 
   check(
-    "lambda".tag(IgnoreForScala3CompilerPC),
+    "lambda",
     """
       |object A {
       |  List(Option(1)).foreach {
@@ -325,7 +325,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
   )
 
   check(
-    "lambda-curry".tag(IgnoreForScala3CompilerPC),
+    "lambda-curry",
     """
       |object A {
       |  List(Option(1)).map {
@@ -343,7 +343,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
   )
 
   check(
-    "partial".tag(IgnoreForScala3CompilerPC),
+    "partial",
     """
       |object A {
       |  List(Option(1)).collect {
@@ -581,7 +581,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
   )
 
   check(
-    "private-member1".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    "private-member1".tag(IgnoreScala2),
     """
       |package example
       |import scala.collection.immutable.Vector
@@ -781,7 +781,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
   )
 
   check(
-    "keyword-only".tag(IgnoreForScala3CompilerPC),
+    "keyword-only",
     """
       |sealed trait Alpha
       |object A {
@@ -794,7 +794,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
   )
 
   check(
-    "union-type".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    "union-type".tag(IgnoreScala2),
     """
       |case class Foo(a: Int)
       |case class Bar(b: Int)
@@ -810,7 +810,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "union-type-edit".tag(IgnoreScala2.and(IgnoreForScala3CompilerPC)),
+    "union-type-edit".tag(IgnoreScala2),
     """
       |case class Foo(a: Int)
       |case class Bar(b: Int)
@@ -831,6 +831,39 @@ class CompletionCaseSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     filter = _.contains("exhaustive")
+  )
+
+  check(
+    "summonFrom".tag(IgnoreScala2),
+    """
+      |object A {
+      |  import scala.compiletime.summonFrom
+      |  class A
+      |  
+      |  inline def f: Any = summonFrom {
+      |    case x@@: A => ???  // error: ambiguous givens
+      |  }
+      |}
+      |""".stripMargin,
+    ""
+  )
+
+  check(
+    "summonFrom1".tag(IgnoreScala2),
+    """
+      |object A {
+      |  import scala.compiletime.summonFrom
+      |  
+      |  class A
+      |  given a1: A = new A
+      |  given a2: A = new A
+      |  
+      |  inline def f: Any = summonFrom {
+      |    case x@@: A => ???  // error: ambiguous givens
+      |  }
+      |}
+      |""".stripMargin,
+    ""
   )
 
 }

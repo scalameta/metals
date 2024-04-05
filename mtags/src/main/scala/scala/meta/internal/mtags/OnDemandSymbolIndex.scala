@@ -65,7 +65,7 @@ final class OnDemandSymbolIndex(
   override def addSourceDirectory(
       dir: AbsolutePath,
       dialect: Dialect
-  ): List[(String, AbsolutePath)] =
+  ): List[IndexingResult] =
     tryRun(
       dir,
       List.empty,
@@ -77,12 +77,29 @@ final class OnDemandSymbolIndex(
   override def addSourceJar(
       jar: AbsolutePath,
       dialect: Dialect
-  ): List[(String, AbsolutePath)] =
+  ): List[IndexingResult] =
     tryRun(
       jar,
       List.empty, {
         try {
           getOrCreateBucket(dialect).addSourceJar(jar)
+        } catch {
+          case e: ZipError =>
+            onError(new IndexingExceptions.InvalidJarException(jar, e))
+            List.empty
+          case e: ZipException =>
+            onError(new IndexingExceptions.InvalidJarException(jar, e))
+            List.empty
+        }
+      }
+    )
+
+  override def addJDKSources(jar: AbsolutePath): Unit =
+    tryRun(
+      jar,
+      List.empty, {
+        try {
+          getOrCreateBucket(dialects.Scala213Source3).addJDKSources(jar)
         } catch {
           case e: ZipError =>
             onError(new IndexingExceptions.InvalidJarException(jar, e))
@@ -109,12 +126,13 @@ final class OnDemandSymbolIndex(
       source: AbsolutePath,
       sourceDirectory: Option[AbsolutePath],
       dialect: Dialect
-  ): List[String] =
+  ): Option[IndexingResult] =
     tryRun(
       source,
-      List.empty, {
+      None, {
         indexedSources += 1
-        getOrCreateBucket(dialect).addSourceFile(source, sourceDirectory)
+        getOrCreateBucket(dialect)
+          .addSourceFile(source, sourceDirectory, isJava = false)
       }
     )
 

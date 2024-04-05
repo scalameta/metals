@@ -1,22 +1,12 @@
 package scala.meta.internal.builds
 
-import java.util.concurrent.TimeUnit
-
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-
 import scala.meta.internal.metals.JavaBinary
-import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.Messages.ImportBuild
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
 
 import coursierapi.Dependency
 import coursierapi.Fetch
-import org.eclipse.lsp4j.services.LanguageClient
 
 case class BazelBuildTool(
     userConfig: () => UserConfiguration,
@@ -44,6 +34,7 @@ case class BazelBuildTool(
     val classpath = Fetch
       .create()
       .withDependencies(BazelBuildTool.dependency)
+      .withRepositories(ShellRunner.defaultRepositories: _*)
       .fetch()
       .asScala
       .mkString(classpathSeparator)
@@ -61,7 +52,7 @@ case class BazelBuildTool(
 
   override def version: String = BazelBuildTool.version
 
-  override def toString: String = "Bazel"
+  override def toString: String = "bazel"
 
   override def executableName = BazelBuildTool.name
 
@@ -74,7 +65,7 @@ case class BazelBuildTool(
 object BazelBuildTool {
   val name: String = "bazel"
   val bspName: String = "bazelbsp"
-  val version: String = "3.1.0-20240207-7439f14-NIGHTLY"
+  val version: String = "3.1.0-20240313-89141af-NIGHTLY"
 
   val mainClass = "org.jetbrains.bsp.bazel.install.Install"
 
@@ -104,73 +95,6 @@ object BazelBuildTool {
           "-t", "//...", "-enabled-rules", "io_bazel_rules_scala", "rules_java",
           "rules_jvm",
         )
-    }
-  }
-
-  def writeBazelConfig(
-      shellRunner: ShellRunner,
-      projectDirectory: AbsolutePath,
-      javaHome: Option[String],
-  )(implicit
-      ec: ExecutionContext
-  ): Future[WorkspaceLoadedStatus] = {
-    def run() =
-      shellRunner.runJava(
-        dependency,
-        mainClass,
-        projectDirectory,
-        projectViewArgs(projectDirectory),
-        javaHome,
-        false,
-      )
-    run()
-      .flatMap { code =>
-        scribe.info(s"Generate Bazel-BSP process returned code $code")
-        if (code != 0) run()
-        else Future.successful(0)
-      }
-      .map {
-        case ExitCodes.Success => WorkspaceLoadedStatus.Installed
-        case ExitCodes.Cancel => WorkspaceLoadedStatus.Cancelled
-        case result =>
-          scribe.error("Failed to write Bazel-BSP config to .bsp")
-          WorkspaceLoadedStatus.Failed(result)
-      }
-  }
-
-  def maybeWriteBazelConfig(
-      shellRunner: ShellRunner,
-      projectDirectory: AbsolutePath,
-      languageClient: LanguageClient,
-      tables: Tables,
-      javaHome: Option[String],
-      forceImport: Boolean = false,
-  )(implicit
-      ec: ExecutionContext
-  ): Future[WorkspaceLoadedStatus] = {
-    val notification = tables.dismissedNotifications.ImportChanges
-    if (forceImport) {
-      writeBazelConfig(shellRunner, projectDirectory, javaHome)
-    } else if (!notification.isDismissed) {
-      languageClient
-        .showMessageRequest(ImportBuild.params("Bazel"))
-        .asScala
-        .flatMap {
-          case item if item == Messages.dontShowAgain =>
-            notification.dismissForever()
-            Future.successful(WorkspaceLoadedStatus.Rejected)
-          case item if item == ImportBuild.yes =>
-            writeBazelConfig(shellRunner, projectDirectory, javaHome)
-          case _ =>
-            notification.dismiss(2, TimeUnit.MINUTES)
-            Future.successful(WorkspaceLoadedStatus.Rejected)
-
-        }
-    } else {
-      scribe.info(
-        s"skipping build import with status ${WorkspaceLoadedStatus.Dismissed}"
-      )
-      Future.successful(WorkspaceLoadedStatus.Dismissed)
     }
   }
 

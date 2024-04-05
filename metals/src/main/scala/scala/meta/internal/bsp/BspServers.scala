@@ -10,10 +10,12 @@ import scala.concurrent.Promise
 import scala.util.Properties
 import scala.util.Try
 
+import scala.meta.internal.bsp.BspServers.readInBspConfig
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ClosableOutputStream
+import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -99,10 +101,7 @@ final class BspServers(
         args,
         projectDirectory,
         redirectErrorOutput = false,
-        JdkSources
-          .defaultJavaHome(userConfig().javaHome)
-          .map("JAVA_HOME" -> _.toString())
-          .toMap,
+        JdkSources.envVariables(userConfig().javaHome),
         processOut = None,
         processErr = Some(l => scribe.info("BSP server: " + l)),
         discardInput = false,
@@ -155,25 +154,8 @@ final class BspServers(
    *  entries. Notes that this will not return Bloop even though it
    *  may be a server in the current workspace
    */
-  def findAvailableServers(): List[BspConnectionDetails] = {
-    val jsonFiles = findJsonFiles()
-    val gson = new Gson()
-    for {
-      candidate <- jsonFiles
-      text = FileIO.slurp(candidate, charset)
-      details <- Try(gson.fromJson(text, classOf[BspConnectionDetails])).fold(
-        e => {
-          scribe.error(s"parse error: $candidate", e)
-          List()
-        },
-        details => {
-          List(details)
-        },
-      )
-    } yield {
-      details
-    }
-  }
+  def findAvailableServers(): List[BspConnectionDetails] =
+    findJsonFiles().flatMap(readInBspConfig(_, charset))
 
   private def findJsonFiles(): List[AbsolutePath] = {
     val buf = List.newBuilder[AbsolutePath]
@@ -183,8 +165,8 @@ final class BspServers(
           buf += p
         }
       }
-    visit(mainWorkspace.resolve(".bsp"))
-    customProjectRoot.map(_.resolve(".bsp")).foreach(visit)
+    visit(mainWorkspace.resolve(Directories.bsp))
+    customProjectRoot.map(_.resolve(Directories.bsp)).foreach(visit)
     bspGlobalInstallDirectories.foreach(visit)
     buf.result()
   }
@@ -208,4 +190,22 @@ object BspServers {
       .map(path => Try(AbsolutePath(path)).toOption)
       .flatten
   }
+
+  def readInBspConfig(
+      path: AbsolutePath,
+      charset: Charset,
+  ): Option[BspConnectionDetails] = {
+    val text = FileIO.slurp(path, charset)
+    val gson = new Gson()
+    Try(gson.fromJson(text, classOf[BspConnectionDetails])).fold(
+      e => {
+        scribe.error(s"parse error: $path", e)
+        None
+      },
+      details => {
+        Some(details)
+      },
+    )
+  }
+
 }

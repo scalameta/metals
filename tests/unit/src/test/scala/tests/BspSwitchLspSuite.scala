@@ -10,7 +10,7 @@ class BspSwitchLspSuite extends BaseLspSuite("bsp-switch") {
 
   test("switch".flaky) {
     cleanWorkspace()
-    Bill.installWorkspace(workspace.toNIO)
+    Bill.installWorkspace(workspace)
     for {
       _ <- initialize("")
       _ = {
@@ -28,7 +28,7 @@ class BspSwitchLspSuite extends BaseLspSuite("bsp-switch") {
       _ = {
         client.messageRequests.clear()
         assertConnectedToBuildServer("Bill")
-        Bill.installWorkspace(workspace.toNIO, "Bob")
+        Bill.installWorkspace(workspace, "Bob")
       }
       _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
       _ = {

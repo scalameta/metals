@@ -24,8 +24,8 @@ import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
+import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.TextEdit
-import org.eclipse.{lsp4j as l}
 
 final class ExtractMethodProvider(
     range: RangeParams,
@@ -42,7 +42,7 @@ final class ExtractMethodProvider(
     val filePath = Paths.get(uri)
     val source = SourceFile.virtual(filePath.toString, text)
     driver.run(uri, source)
-    val unit = driver.currentCtx.run.units.head
+    val unit = driver.latestRun
     val pos = driver.sourcePosition(range).startPos
     val path =
       Interactive.pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)

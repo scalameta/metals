@@ -9,6 +9,7 @@ import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.{Map => MMap}
+import scala.util.Properties
 
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -16,7 +17,9 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.bsp4j.DependencyModulesResult
 import ch.epfl.scala.bsp4j.JavacOptionsResult
+import ch.epfl.scala.bsp4j.MavenDependencyModule
 import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import ch.epfl.scala.bsp4j.SourceItem
 import ch.epfl.scala.bsp4j.SourceItemKind.DIRECTORY
@@ -40,6 +43,9 @@ final class TargetData {
     TrieMap.empty[BuildTargetIdentifier, ListBuffer[BuildTargetIdentifier]]
   val buildTargetSources: MMap[BuildTargetIdentifier, util.Set[AbsolutePath]] =
     TrieMap.empty[BuildTargetIdentifier, util.Set[AbsolutePath]]
+  val buildTargetDependencyModules
+      : MMap[BuildTargetIdentifier, List[MavenDependencyModule]] =
+    TrieMap.empty[BuildTargetIdentifier, List[MavenDependencyModule]]
   val inverseDependencySources: MMap[AbsolutePath, Set[BuildTargetIdentifier]] =
     TrieMap.empty[AbsolutePath, Set[BuildTargetIdentifier]]
   val buildTargetGeneratedDirs: MMap[AbsolutePath, Unit] =
@@ -138,6 +144,35 @@ final class TargetData {
     scalacData
       .flatMap(s => javacData.map(j => (s ::: j).distinct).orElse(scalacData))
       .orElse(javacData)
+  }
+
+  def findSourceJarOf(
+      jar: AbsolutePath,
+      targetId: Option[BuildTargetIdentifier],
+  ): Option[AbsolutePath] = {
+    val jarUri = jar.toURI.toString()
+    def depModules: Iterator[MavenDependencyModule] = targetId match {
+      case None => buildTargetDependencyModules.values.flatten.iterator
+      case Some(id) => buildTargetDependencyModules.get(id).iterator.flatten
+    }
+
+    /**
+     * For windows file:///C:/Users/runneradmin/AppData/Local/Coursier/Cache and
+     * file:///C:/Users/runneradmin/AppData/Local/Coursier/cache is equivalent
+     */
+    def isUriEqual(uri: String, otherUri: String) = {
+      Properties.isWin && uri.toLowerCase() == otherUri
+        .toLowerCase() || uri == otherUri
+    }
+    val allFound = for {
+      module <- depModules
+      artifacts = module.getArtifacts().asScala
+      if artifacts.exists(artifact => isUriEqual(artifact.getUri(), jarUri))
+      sourceJar <- artifacts.find(_.getClassifier() == "sources")
+      sourceJarPath = sourceJar.getUri().toAbsolutePath
+      if sourceJarPath.exists
+    } yield sourceJarPath
+    allFound.headOption
   }
 
   def targetClassDirectories(id: BuildTargetIdentifier): List[String] = {
@@ -290,6 +325,18 @@ final class TargetData {
       mapped: TargetData.MappedSource,
   ): Unit =
     actualSources(path) = mapped
+
+  def addDependencyModules(
+      dependencyModules: DependencyModulesResult
+  ): Unit = {
+    dependencyModules.getItems().asScala.groupBy(_.getTarget()).foreach {
+      case (id, items) =>
+        val modules = items
+          .flatMap(_.getModules().asScala)
+          .flatMap(_.asMavenDependencyModule)
+        buildTargetDependencyModules.put(id, modules.toList)
+    }
+  }
 
   def resetConnections(
       idToConn: List[(BuildTargetIdentifier, BuildServerConnection)]

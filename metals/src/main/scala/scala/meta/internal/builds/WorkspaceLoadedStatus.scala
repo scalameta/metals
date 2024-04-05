@@ -12,7 +12,8 @@ sealed abstract class WorkspaceLoadedStatus extends Product with Serializable {
       case Duplicate(status) => status.toString
       case _ => this.toString
     }
-  def isInstalled: Boolean = this == Installed
+  def isInstalled: Boolean =
+    this == Installed || this == Duplicate(Status.Installed)
   def isFailed: Boolean = this.isInstanceOf[Failed]
   def toChecksumStatus: Option[Status] =
     Option(this).collect {

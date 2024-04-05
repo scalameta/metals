@@ -1,11 +1,11 @@
 package tests.inlayHints
 
-import munit.Location
-import munit.TestOptions
-import tests.BaseLspSuite
-import tests.TestInlayHints
+import scala.meta.internal.metals.{BuildInfo => V}
 
-class InlayHintsLspSuite extends BaseLspSuite("implicits") {
+import tests.BaseInlayHintsLspSuite
+
+class InlayHintsLspSuite
+    extends BaseInlayHintsLspSuite("implicits", V.scala213) {
 
   check(
     "all-synthetics",
@@ -32,9 +32,10 @@ class InlayHintsLspSuite extends BaseLspSuite("implicits") {
        |}
        |""".stripMargin,
     config = Some(
-      """|"show-implicit-arguments": true,
-         |"show-implicit-conversions-and-classes": true,
-         |"show-inferred-type": minimal
+      """|"implicitArguments": {"enable": true},
+         |"implicitConversions": {"enable": true},
+         |"inferredTypes": {"enable": true},
+         |"hintsInPatternMatch": {"enable": true}
          |""".stripMargin
     ),
   )
@@ -77,8 +78,7 @@ class InlayHintsLspSuite extends BaseLspSuite("implicits") {
        |}
        |""".stripMargin,
     config = Some(
-      """|"show-implicit-arguments": true  
-         |""".stripMargin
+      """"implicitArguments": {"enable": true}"""
     ),
   )
 
@@ -94,7 +94,7 @@ class InlayHintsLspSuite extends BaseLspSuite("implicits") {
        |}
        |""".stripMargin,
     config = Some(
-      """"show-implicit-conversions-and-classes": true"""
+      """"implicitConversions": {"enable": true}"""
     ),
   )
 
@@ -106,11 +106,11 @@ class InlayHintsLspSuite extends BaseLspSuite("implicits") {
        |  }
        |  implicit val andy : String = "Andy"
        |  hello()
-       |  ("1" + "2").map/*[Double<<scala/Double#>>]*/(c/*: Char<<scala/Char#>>*/ => c.toDouble)
+       |  ("1" + "2").map(c => c.toDouble)
        |}
        |""".stripMargin,
     config = Some(
-      """"show-inferred-type": true"""
+      """"inferredTypes": {"enable": true}"""
     ),
   )
 
@@ -124,7 +124,7 @@ class InlayHintsLspSuite extends BaseLspSuite("implicits") {
        |}
        |""".stripMargin,
     config = Some(
-      """"show-implicit-conversions-and-classes": true"""
+      """"implicitConversions": {"enable": true}"""
     ),
   )
 
@@ -171,7 +171,10 @@ class InlayHintsLspSuite extends BaseLspSuite("implicits") {
        |}
        |""".stripMargin,
     config = Some(
-      """"show-inferred-type": true"""
+      """|"typeParameters": {"enable": true},
+         |"inferredTypes": {"enable": true},
+         |"hintsInPatternMatch": {"enable": true}
+         |""".stripMargin
     ),
   )
 
@@ -198,7 +201,7 @@ class InlayHintsLspSuite extends BaseLspSuite("implicits") {
        |}
        |""".stripMargin,
     config = Some(
-      """"show-inferred-type": true"""
+      """"inferredTypes": {"enable": true}"""
     ),
   )
 
@@ -222,14 +225,14 @@ class InlayHintsLspSuite extends BaseLspSuite("implicits") {
        |  // The actual tested method:
        |  def serve[F[_]: ConcurrentEffect: ContextShift: Timer: Parallel]()/*: Resource<<cats/effect/Resource#>>[F<<(16:12)>>,Unit<<scala/Unit#>>]*/ =
        |    for {
-       |      logger/*: Logger<<(11:8)>>[F<<(16:12)>>]*/ <- mkLogger[F]
+       |      logger <- mkLogger[F]
        |    } yield ()
        |
        |  def run(args: List[String]): IO[ExitCode] = ???
        |}
        |""".stripMargin,
     config = Some(
-      """"show-inferred-type": true"""
+      """"inferredTypes": {"enable": true}"""
     ),
     dependencies = List("org.typelevel::cats-effect:2.4.0"),
   )
@@ -258,12 +261,13 @@ class InlayHintsLspSuite extends BaseLspSuite("implicits") {
            |""".stripMargin,
       )
       _ <- server.didChangeConfiguration(
-        """{
-          |  "show-implicit-arguments": true,
-          |  "show-implicit-conversions-and-classes": true,
-          |  "show-inferred-type": true
-          |}
-          |""".stripMargin
+        """|{"inlayHints": {
+           |  "inferredTypes": {"enable":true},
+           |  "implicitConversions": {"enable":true},
+           |  "implicitArguments": {"enable":true},
+           |  "typeParameters": {"enable":true}
+           |}}
+           |""".stripMargin
       )
       _ <- server.assertInlayHints(
         "a/Main.worksheet.sc",
@@ -327,7 +331,7 @@ class InlayHintsLspSuite extends BaseLspSuite("implicits") {
        |  val m = foo[500]/*(new ValueOf(...))*/
        |}
        |""".stripMargin,
-    Some(""""show-implicit-arguments": true"""),
+    config = Some(""""implicitArguments": {"enable": true}"""),
   )
 
   check(
@@ -339,53 +343,8 @@ class InlayHintsLspSuite extends BaseLspSuite("implicits") {
        |    str.compile.to(/*supportsIterableFactory<<fs2/CollectorPlatform#supportsIterableFactory().>>(*/Set/*)*/)
        |}
        |""".stripMargin,
-    config = Some(""""show-implicit-conversions-and-classes": true"""),
+    config = Some(""""implicitConversions": {"enable": true}"""),
     dependencies = List("co.fs2::fs2-core:3.9.0"),
   )
 
-  def check(
-      name: TestOptions,
-      expected: String,
-      config: Option[String] = None,
-      dependencies: List[String] = Nil,
-  )(implicit
-      loc: Location
-  ): Unit = {
-    val initConfig = config
-      .map(config => s"""{
-                        |$config
-                        |}
-                        |""".stripMargin)
-      .getOrElse("""{
-                   |  "show-implicit-arguments": true,
-                   |  "show-implicit-conversions-and-classes": true,
-                   |  "show-inferred-type": "true"
-                   |}
-                   |""".stripMargin)
-    val fileName = "Main.scala"
-    val libraryDependencies =
-      if (dependencies.isEmpty) ""
-      else
-        s""""libraryDependencies": [${dependencies.map(dep => s"\"$dep\"").mkString(",")}]"""
-    val code = TestInlayHints.removeInlayHints(expected)
-    test(name) {
-      for {
-        _ <- initialize(
-          s"""/metals.json
-             |{"a":{$libraryDependencies}}
-             |/a/src/main/scala/a/$fileName
-             |$code
-        """.stripMargin
-        )
-        _ <- server.didOpen(s"a/src/main/scala/a/$fileName")
-        _ <- server.didChangeConfiguration(initConfig)
-        _ <- server.assertInlayHints(
-          s"a/src/main/scala/a/$fileName",
-          code,
-          expected,
-          workspace,
-        )
-      } yield ()
-    }
-  }
 }

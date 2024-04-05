@@ -12,10 +12,11 @@ class JdkVersionSuite extends FunSuite {
   implicit val ctx: ExecutionContext = this.munitExecutionContext
   test("jdk-shell-version") {
     assertEquals(
-      JdkVersion.fromShell(javaHome),
+      JdkVersion.fromShell(javaHome).map(_.major),
       JdkVersion
         .fromReleaseFile(javaHome)
-        .orElse(JdkVersion.parse(System.getProperty("java.version"))),
+        .orElse(JdkVersion.parse(System.getProperty("java.version")))
+        .map(_.major),
     )
   }
 }

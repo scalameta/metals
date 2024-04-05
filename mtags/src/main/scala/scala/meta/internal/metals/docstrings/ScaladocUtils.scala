@@ -1,6 +1,6 @@
 package scala.meta.internal.docstrings
 
-import scala.meta.internal.tokenizers.Chars._
+import scala.meta.internal.mtags.Chars
 
 /**
  * Utility methods for doc comment strings
@@ -9,7 +9,7 @@ object ScaladocUtils {
 
   /** Is character a whitespace character (but not a new line)? */
   def isWhitespace(c: Char): Boolean =
-    c == ' ' || c == '\t' || c == CR
+    c == ' ' || c == '\t' || c == Chars.CR
 
   /**
    * Returns index of string `str` following `start` skipping longest
@@ -25,7 +25,7 @@ object ScaladocUtils {
    *  sequence of identifier characters.
    */
   def skipIdent(str: String, start: Int): Int =
-    if (start < str.length && isIdentifierPart(str charAt start))
+    if (start < str.length && Chars.isIdentifierPart(str charAt start))
       skipIdent(str, start + 1)
     else start
 
@@ -143,7 +143,7 @@ object ScaladocUtils {
     startsWithTag(str, section._1, tag)
 
   def startsWithTag(str: String, start: Int, tag: String): Boolean =
-    str.startsWith(tag, start) && !isIdentifierPart(
+    str.startsWith(tag, start) && !Chars.isIdentifierPart(
       str charAt (start + tag.length)
     )
 

@@ -11,6 +11,6 @@ class Miscellaneous {
   // infix + inferred apply/implicits/tparams
   (List/*[Int<<scala/Int#>>]*/(1)
     .map/*[Int<<scala/Int#>>]*/(_ + 1)
-    ++/*[Int<<scala/Int#>>]*/
+    ++
       List/*[Int<<scala/Int#>>]*/(3))
 }

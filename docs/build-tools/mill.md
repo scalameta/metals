@@ -24,7 +24,7 @@ Using Mill with Bloop is the current preferred way by Metals.
 
 Metals requires the Bloop config files, which you can generate with the following command:
 
-``mill --import "ivy:com.lihaoyi::mill-contrib-bloop::" mill.contrib.bloop.Bloop/install``
+``mill --import "ivy:com.lihaoyi::mill-contrib-bloop:" mill.contrib.bloop.Bloop/install``
 
 Afterwards, you can just open Metals and start working on your code.
 

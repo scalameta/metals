@@ -22,6 +22,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   private def resolvedCompletions(
       params: CompilerOffsetParams
   ): CompletionList = {
+    presentationCompiler.restart()
     val result = presentationCompiler.complete(params).get()
     val newItems = result.getItems.asScala.map { item =>
       item.data
