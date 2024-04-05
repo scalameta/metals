@@ -2,13 +2,13 @@ package scala.meta.internal.pc
 
 import java.{util => ju}
 
+import scala.meta._
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.OffsetParams
+import scala.meta.tokens.Token
+import scala.meta.tokens.Token.Comment
 
 import org.eclipse.lsp4j.SelectionRange
-import scala.meta.tokens.Token.Comment
-import scala.meta.tokens.Token
-import scala.meta._
 
 /**
  * Provides the functionality necessary for the `textDocument/selectionRange` request.
@@ -99,7 +99,7 @@ class SelectionRangeProvider(
       cursorPos: Position,
       path: List[Tree],
       srcText: String
-  ) = {
+  ): List[Position] = {
 
     val (treeStart, treeEnd) = path.headOption
       .map(t => (t.pos.start, t.pos.end))
@@ -135,7 +135,7 @@ class SelectionRangeProvider(
       tokenList: List[Token],
       cursorStart: Position,
       offsetStart: Int
-  ) = {
+  ): List[Position] = {
     val cursorStartShifted = cursorStart.start - offsetStart
 
     tokenList
