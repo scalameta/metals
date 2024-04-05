@@ -2,6 +2,7 @@ package tests.sbt
 
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest
+import scala.meta.internal.metals.DelegateSetting
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
@@ -21,7 +22,7 @@ class WorkspaceFolderSuite extends BaseImportSuite("sbt-workspace-suite") {
   override def currentDigest(workspace: AbsolutePath): Option[String] =
     SbtDigest.current(projectRoot)
 
-  test("add-workspace-project") {
+  test("add-delegating-service") {
     cleanWorkspace()
     val libraryFolder = "library-folder"
 
@@ -116,6 +117,74 @@ class WorkspaceFolderSuite extends BaseImportSuite("sbt-workspace-suite") {
            |  val i: String = 3
            |                  ^
            |""".stripMargin,
+      )
+      _ = assertEquals(
+        DelegateSetting.readDeleteSetting(workspace.resolve(libraryFolder)),
+        Some(workspace.resolve("main-folder")),
+      )
+    } yield ()
+  }
+
+  test("open-delegating-service") {
+    cleanWorkspace()
+    val libraryFolder = "library-folder"
+
+    writeLayout(
+      s"""|/$libraryFolder/project/build.properties
+          |sbt.version=${V.sbtVersion}
+          |/$libraryFolder/project/plugins.sbt
+          |addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "${V.sbtBloopVersion}")
+          |/$libraryFolder/build.sbt
+          |scalaVersion := "${V.scala213}"
+          |lazy val libraryProject = project.in(file("."))
+          |/$libraryFolder/metals.json
+          |{
+          |  "libraryProject": {
+          |    "scalaVersion": "${V.scala213}"
+          |  }
+          |}
+          |/$libraryFolder/src/main/scala/example/A.scala
+          |package example
+          |object A {
+          |  val i = 3
+          |}
+          |""".stripMargin
+    )
+
+    DelegateSetting.writeDeleteSetting(
+      workspace.resolve(libraryFolder),
+      workspace.resolve("main-folder"),
+    )
+
+    QuickBuild.bloopInstall(workspace.resolve(libraryFolder))
+
+    for {
+      _ <- initialize(
+        Map(
+          libraryFolder ->
+            "",
+          "main-folder" ->
+            s"""|/project/build.properties
+                |sbt.version=${V.sbtVersion}
+                |/build.sbt
+                |scalaVersion := "${V.scala213}"
+                |lazy val root = project.in(file(".")).dependsOn(ProjectRef(file("../$libraryFolder"), "libraryProject"))
+                |/src/main/scala/a/Main.scala
+                |package a
+                |import example.A
+                |object Main {
+                |  val j: Int = A.i
+                |}
+                |""".stripMargin,
+        ),
+        expectError = false,
+      )
+      _ <- server.didOpen("main-folder/src/main/scala/a/Main.scala")
+      _ = assertNoDiagnostics()
+      _ = assertEquals(
+        server.fullServer.folderServices.size,
+        1,
+        "should not create folder service for project ref",
       )
     } yield ()
   }

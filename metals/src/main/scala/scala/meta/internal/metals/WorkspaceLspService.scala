@@ -1321,6 +1321,10 @@ class Folder(
   lazy val isMetalsProject: Boolean =
     isKnownMetalsProject || path.resolve(".metals").exists || path
       .isMetalsProject()
+
+  lazy val optDelegatePath: Option[AbsolutePath] =
+    DelegateSetting.readDeleteSetting(path)
+
   def nameOrUri: String = visibleName.getOrElse(path.toString())
 }
 

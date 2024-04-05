@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.MetalsEnrichments.XtensionBuildTarget
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.logging.MetalsLogger
 
 class WorkspaceFolders(
@@ -20,9 +20,22 @@ class WorkspaceFolders(
   private val folderServices: AtomicReference[WorkspaceFoldersServices] = {
     val (scalaProjects, nonScalaProjects) =
       initialFolders.partition(_.isMetalsProject)
-    val services = scalaProjects.map(createService(_))
+    val scalaServices =
+      scalaProjects.filter(_.optDelegatePath.isEmpty).map(createService)
+    val delegating = scalaProjects.flatMap { folder =>
+      for {
+        delegate <- folder.optDelegatePath
+        service <- scalaServices.find(_.path == delegate)
+      } yield DelegatingFolderService(folder, service)
+    }
+    val allServices = scalaServices ++ delegating
+    val other = scalaProjects.filterNot(isIn(allServices, _)).map(createService)
     new AtomicReference(
-      WorkspaceFoldersServices(services, Nil, nonScalaProjects)
+      WorkspaceFoldersServices(
+        scalaServices ++ other,
+        delegating,
+        nonScalaProjects,
+      )
     )
   }
 
@@ -41,7 +54,7 @@ class WorkspaceFolders(
     def shouldBeRemoved(folder: Folder) =
       actualToRemove.exists(_.path == folder.path)
 
-    val WorkspaceFoldersServices(prev, _, _) =
+    val WorkspaceFoldersServices(prev, prevDel, _) =
       folderServices.getAndUpdate {
         case WorkspaceFoldersServices(
               services,
@@ -96,6 +109,7 @@ class WorkspaceFolders(
       shutdownMetals()
     } else {
       setupLogger()
+      delegatingServices.filterNot(isIn(prevDel, _)).foreach(_.writeSetting())
 
       val services = getFolderServices.filterNot(isIn(prev, _))
       for {
@@ -140,9 +154,9 @@ class WorkspaceFolders(
           .map(_ => service.initialized())
         Some(service)
       case None =>
-        delegating.collectFirst {
-          case del if del.path == folder.path => del.service
-        }
+        val delService = delegating.find(_.path == folder.path)
+        delService.foreach(_.writeSetting())
+        delService.map(_.service)
     }
   }
 
@@ -159,12 +173,15 @@ class WorkspaceFolders(
   private def findDelegate(
       services: List[MetalsLspService],
       folder: Folder,
-  ): Option[MetalsLspService] = {
-    val uriString = folder.path.toURI.toString
-    services.find(
-      _.buildTargets.all.exists(_.baseDirectory == uriString)
-    )
-  }
+  ): Option[MetalsLspService] =
+    folder.optDelegatePath
+      .flatMap(delegate => services.find(_.path == delegate))
+      .orElse {
+        val uriString = folder.path.toURI.toString
+        services.find(
+          _.buildTargets.all.exists(_.baseDirectory == uriString)
+        )
+      }
 }
 
 case class WorkspaceFoldersServices(
