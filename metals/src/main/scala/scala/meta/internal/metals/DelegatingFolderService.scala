@@ -8,3 +8,8 @@ class DelegatingFolderService(
     val service: MetalsLspService,
 ) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
     with FolderService
+
+object DelegatingFolderService {
+  def apply(folder: Folder, service: MetalsLspService) =
+    new DelegatingFolderService(folder.path, folder.visibleName, service)
+}

@@ -376,7 +376,7 @@ class WorkspaceLspService(
       .orElse {
         if (path.filename.isScalaOrJavaFilename) {
           getFolderForOpt(path, nonScalaProjects)
-            .map(workspaceFolders.convertToScalaProject)
+            .flatMap(workspaceFolders.convertToScalaProject)
         } else None
       }
       .getOrElse(fallbackService)
