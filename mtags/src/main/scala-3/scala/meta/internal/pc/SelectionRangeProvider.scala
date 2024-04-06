@@ -5,11 +5,9 @@ import java.util as ju
 
 import scala.jdk.CollectionConverters.*
 
-import scala.meta.inputs.Position
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.SelectionRangeProvider.*
 import scala.meta.pc.OffsetParams
-import scala.meta.tokens.Token
 
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.interactive.Interactive
@@ -103,30 +101,8 @@ object SelectionRangeProvider:
 
   import scala.meta.dialects.Scala3
   import scala.meta.*
-  import scala.meta.Token.Comment
   import dotty.tools.dotc.ast.tpd
 
-  def commentRangesFromTokens(
-      tokenList: List[Token],
-      cursorStart: SourcePosition,
-      offsetStart: Int,
-  ) =
-    val cursorStartShifted = cursorStart.start - offsetStart
-
-    tokenList
-      .collect { case x: Comment =>
-        (x.start, x.end, x.pos)
-      }
-      .collect {
-        case (commentStart, commentEnd, _)
-            if commentStart <= cursorStartShifted && cursorStartShifted <= commentEnd =>
-          cursorStart
-            .withStart(commentStart + offsetStart)
-            .withEnd(commentEnd + offsetStart)
-            .toLsp
-
-      }
-  end commentRangesFromTokens
 
   /** get comments under cursor */
   def getCommentRanges(
@@ -144,10 +120,15 @@ object SelectionRangeProvider:
     val tokens = srcSliced.tokenize.toOption
     if tokens.isEmpty then Nil
     else
-      commentRangesFromTokens(
-        tokens.toList.flatten,
-        cursor,
-        treeStart,
-      )
+      SelectionRangeUtils
+          .commentRangesFromTokens(
+            tokens.toList.flatten,
+            cursor.start,
+            treeStart
+          ) map { case (s, e) =>
+          cursor
+            .withStart(s)
+            .withEnd(e).toLsp
+        }
   end getCommentRanges
 end SelectionRangeProvider

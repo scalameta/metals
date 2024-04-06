@@ -5,8 +5,6 @@ import java.{util => ju}
 import scala.meta._
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.OffsetParams
-import scala.meta.tokens.Token
-import scala.meta.tokens.Token.Comment
 
 import org.eclipse.lsp4j.SelectionRange
 
@@ -53,7 +51,7 @@ class SelectionRangeProvider(
         getCommentRanges(pos, lastVisitedParentTrees, param.text()).map { x =>
           new SelectionRange() { setRange(x.toLsp) }
         }.toList
-      // (commentRanges ++ bareRanges).reduceRight(setParent)
+
       (commentRanges ++ bareRanges)
         .reduceRightOption(setParent)
         .getOrElse(new SelectionRange())
@@ -122,27 +120,6 @@ class SelectionRangeProvider(
         }
 
     rg
-  }
-
-  def commentRangesFromTokens(
-      tokenList: List[Token],
-      cursorStart: Position,
-      offsetStart: Int
-  ): List[Position] = {
-    val cursorStartShifted = cursorStart.start - offsetStart
-
-    tokenList
-      .collect { case x: Comment =>
-        (x.start, x.end, x.pos)
-      }
-      .collect {
-        case (commentStart, commentEnd, _)
-            if commentStart <= cursorStartShifted && cursorStartShifted <= commentEnd =>
-          cursorStart
-            .withStart(commentStart + offsetStart)
-            .withEnd(commentEnd + offsetStart)
-
-      }
   }
 
 }
