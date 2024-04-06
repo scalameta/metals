@@ -58,8 +58,6 @@ class SelectionRangeProvider(
         .reduceRightOption(setParent)
         .getOrElse(new SelectionRange())
     }
-    println("selectionRanges scala 2")
-    println(selectionRanges map (_.getRange().toString()))
     selectionRanges
   }
 
@@ -123,11 +121,6 @@ class SelectionRangeProvider(
             .withEnd(e)
         }
 
-    println(
-      "comment range scala 2: " + rg
-        .map(x => srcText.slice(x.start, x.end))
-        .mkString(",")
-    )
     rg
   }
 
