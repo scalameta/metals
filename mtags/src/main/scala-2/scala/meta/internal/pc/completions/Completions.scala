@@ -906,7 +906,8 @@ trait Completions { this: MetalsGlobal =>
             }
           }
       }
-    loop(lastVisitedParentTrees)
+    val start = loop(lastVisitedParentTrees)
+    Math.min(start, pos.point)
   }
 
   /** Can character form part of an alphanumeric Scala identifier? */
