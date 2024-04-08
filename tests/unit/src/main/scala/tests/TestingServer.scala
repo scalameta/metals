@@ -123,6 +123,7 @@ import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.{lsp4j => l}
 import tests.MetalsTestEnrichments._
+import scala.meta.internal.metals.MetalsLspService
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purposes.
@@ -167,7 +168,9 @@ final case class TestingServer(
   languageServer.connectToLanguageClient(client)
 
   lazy val fullServer = languageServer.getOldMetalsLanguageServer
-  def server = fullServer.folderServices.head
+  def server: MetalsLspService =
+    if (fullServer.folderServices.isEmpty) fullServer.fallbackService
+    else fullServer.folderServices.head
 
   implicit val reports: ReportContext =
     new StdReportContext(workspace.toNIO, _ => None)

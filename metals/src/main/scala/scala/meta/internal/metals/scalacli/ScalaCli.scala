@@ -61,6 +61,7 @@ class ScalaCli(
     cliCommand: List[String],
     parseTreesAndPublishDiags: Seq[AbsolutePath] => Future[Unit],
     val path: AbsolutePath,
+    val customWorkspace: Option[AbsolutePath],
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
@@ -170,7 +171,13 @@ class ScalaCli(
       case Success(()) =>
     }
 
-    val command = cliCommand :+ "bsp" :+ path.toString()
+    val command =
+      customWorkspace match {
+        case Some(workspace) =>
+          cliCommand :+ "bsp" :+ "--workspace" :+ workspace.toString() :+ path
+            .toString()
+        case None => cliCommand :+ "bsp" :+ path.toString()
+      }
 
     val connDir = if (path.isDirectory) path else path.parent
 

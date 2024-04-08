@@ -31,7 +31,7 @@ class FallbackMetalsLspService(
     folder: AbsolutePath,
     folderVisibleName: Option[String],
     headDoctor: HeadDoctor,
-    bspStatus: BspStatus
+    bspStatus: BspStatus,
 ) extends MetalsLspService(
       ec,
       sh,

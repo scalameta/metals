@@ -378,6 +378,7 @@ class MetalsLspService(
         () => semanticDBIndexer,
         javaInteractiveSemanticdb,
         buffers,
+        scalaCli,
       )
     )
   }
@@ -2320,7 +2321,9 @@ class MetalsLspService(
       val connOpt = buildTargets.buildServerOf(change.getTarget)
       connOpt.flatMap(conn => scalaCliServers.find(_ == conn))
     }
-    val scalaCliAffectedServers = groupedByServer.collect { case (Some(server), _) => server }
+    val scalaCliAffectedServers = groupedByServer.collect {
+      case (Some(server), _) => server
+    }
     val mainConnectionChanges = groupedByServer.get(None)
 
     if (ammoniteChanges.nonEmpty)
@@ -2331,7 +2334,8 @@ class MetalsLspService(
       }
 
     scalaCliAffectedServers.map { server =>
-      server.importBuild()
+      server
+        .importBuild()
         .onComplete {
           case Success(()) =>
           case Failure(exception) =>

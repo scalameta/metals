@@ -4,6 +4,14 @@ class SingleFileSuite extends BaseCompletionLspSuite("workspaceFolderSuite") {
 
   test("basic") {
     cleanWorkspace()
+    val newFileContent =
+      """|/A.scala
+         |case class MyObjectA() {
+         |  val <<foo@@>>: String = "aaa"
+         |  val j = <<foo>> + "a"
+         |}
+         |""".stripMargin
+
     writeLayout(
       """|/A.scala
          |case class MyObjectA() {
@@ -21,6 +29,15 @@ class SingleFileSuite extends BaseCompletionLspSuite("workspaceFolderSuite") {
            |  val i: Int = "aaa"
            |               ^^^^^
            |""".stripMargin,
+      )
+      _ <- server.didChange("A.scala")(_ =>
+        newFileContent.replaceAll("<<|>>|@@", "")
+      )
+      _ <- server.assertReferences(
+        "A.scala",
+        newFileContent.replaceAll("<<|>>", ""),
+        Map("A.scala" -> newFileContent.replaceAll("@@", "")),
+        Map("A.scala" -> newFileContent.replaceAll("<<|>>|@@", "")),
       )
     } yield ()
   }

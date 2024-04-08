@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.scalacli
 
 import java.io.File
+import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.collection.immutable.Queue
@@ -43,6 +44,13 @@ class ScalaCliServers(
     maxServers: Int,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
+
+  private def localTmpWorkspace(path: AbsolutePath) = {
+    val root = if (path.isDirectory) path else path.parent
+    root.resolve(s".metals-scala-cli/")
+  }
+  private val scalaCliBuildDirectory =
+    new AtomicReference[Option[AbsolutePath]](None)
 
   private val serversRef: AtomicReference[Queue[ScalaCli]] =
     new AtomicReference(Queue.empty)
@@ -104,14 +112,47 @@ class ScalaCliServers(
   def cancel(): Unit = {
     val servers = serversRef.getAndSet(Queue.empty)
     servers.foreach(_.cancel())
+    servers.foreach(_.customWorkspace.foreach(_.deleteRecursively))
   }
 
   def loaded(path: AbsolutePath): Boolean =
     servers.exists(_.path.toNIO.startsWith(path.toNIO))
 
+  def loadedExactly(path: AbsolutePath): Boolean =
+    servers.exists(_.path == path)
+
   def paths: Iterable[AbsolutePath] = servers.map(_.path)
 
   def start(path: AbsolutePath): Future[Unit] = {
+    val customWorkspace =
+      if (path.isDirectory) None
+      else
+        Some {
+          val globalTmpDir =
+            scalaCliBuildDirectory.get() match {
+              case Some(workspace) => workspace
+              case None =>
+                val tmpFile =
+                  AbsolutePath(
+                    Files.createTempDirectory(s"metals-scala-cli")
+                  )
+                val Some(workspace) =
+                  scalaCliBuildDirectory.updateAndGet {
+                    case None => Some(tmpFile)
+                    case some => some
+                  }
+                workspace
+            }
+
+          // When path and workspace have different roots on Windows `scala-cli` throws an error,
+          // so we fallback to creating a tmp dir relative to `path`.
+          if (globalTmpDir.toNIO.getRoot() == path.toNIO.getRoot()) globalTmpDir
+          else {
+            val workspace = localTmpWorkspace(path)
+            if (!workspace.exists) Files.createDirectory(workspace.toNIO)
+            workspace
+          }
+        }
     val scalaCli =
       new ScalaCli(
         compilers,
@@ -127,6 +168,7 @@ class ScalaCliServers(
         cliCommand,
         parseTreesAndPublishDiags,
         path,
+        customWorkspace,
       )
 
     val prevServers = serversRef.getAndUpdate { servers =>
