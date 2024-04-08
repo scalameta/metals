@@ -203,7 +203,7 @@ object BazelServerInitializer extends BuildServerInitializer {
       server: TestingServer,
       client: TestingClient,
       expectError: Boolean,
-      workspaceFolders: List[String] = Nil,
+      workspaceFolders: Option[List[String]] = None,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     for {
       initializeResult <- server.initialize()

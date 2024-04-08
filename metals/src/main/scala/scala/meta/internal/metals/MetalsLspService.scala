@@ -1174,8 +1174,6 @@ class MetalsLspService(
         .inverseSources(path)
         .getOrElse(current)
     }
-    // unpublish diagnostic for dependencies
-    interactiveSemanticdbs.didFocus(path)
     scalaCli.didFocus(path)
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.

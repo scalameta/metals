@@ -162,32 +162,7 @@ class ScalaCli(
       st.path == path || path.toNIO.startsWith(st.path.toNIO)
     )(false)
 
-  def setupIDE(path: AbsolutePath): Future[Unit] = {
-    localScalaCli
-      .map { cliCommand =>
-        val command = cliCommand ++ Seq("setup-ide", path.toString())
-        scribe.info(s"Running $command")
-        val proc = SystemProcess.run(
-          command.toList,
-          path,
-          redirectErrorOutput = false,
-          env = Map(),
-          processOut = None,
-          processErr = Some(line => scribe.info("Scala CLI: " + line)),
-          discardInput = false,
-          threadNamePrefix = "scala-cli-setup-ide",
-        )
-        proc.complete.ignoreValue
-      }
-      .getOrElse {
-        start(path)
-      }
-  }
-
-  def path: Option[AbsolutePath] =
-    ifConnectedOrElse(st => Option(st.path))(None)
-
-  def start(path: AbsolutePath): Future[Unit] = {
+  def start(): Future[Unit] = {
 
     disconnectOldBuildServer().onComplete {
       case Failure(e) =>

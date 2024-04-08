@@ -183,6 +183,7 @@ class WorkspaceLspService(
       fallbackServicePath,
       Some("fallback-service"),
       doctor,
+      bspStatus
     )
 
   def createService(folder: Folder): MetalsLspService =
@@ -205,6 +206,7 @@ class WorkspaceLspService(
           doctor,
           bspStatus,
           workDoneProgress,
+          maxScalaCliServers = 3
         )
     }
 
