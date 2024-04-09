@@ -308,6 +308,7 @@ class WorkspaceLspService(
   ): Future[A] = {
     def currentService(): Future[Option[MetalsLspService]] =
       folderServices match {
+        case Nil => Future { Some(fallbackService) }
         case head :: Nil => Future { Some(head) }
         case _ =>
           focusedDocument.flatMap(getServiceForOpt) match {
