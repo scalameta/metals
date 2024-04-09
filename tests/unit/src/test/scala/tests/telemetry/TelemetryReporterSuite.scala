@@ -2,7 +2,7 @@ package tests.telemetry
 
 import scala.collection.mutable
 
-import scala.meta.internal.metals
+import scala.meta.internal.metals._
 import scala.meta.internal.pc.StandardReport
 import scala.meta.internal.telemetry._
 import scala.meta.pc.Report
@@ -20,17 +20,15 @@ class TelemetryReporterSuite extends BaseSuite {
     error = Some(new RuntimeException("A", new NullPointerException())),
   )
 
-  // Ensure that tests by default don't use telemetry reporting, it should be disabled in the build.sbt
-  test("default telemetry level") {
-    def getDefault = metals.TelemetryLevel.default
-    assertEquals(metals.TelemetryLevel.Off, getDefault)
-  }
-
-  def testCase(level: metals.TelemetryLevel, expected: Set[String]): Unit =
+  def testSendError(
+      configuration: TelemetryConfiguration,
+      expected: Set[String],
+  ): Unit =
     test(
-      s"Telemetry level: ${level} sends telemetry for ${expected.mkString("(", ", ", ")")}"
+      s"Telemetry configuration: ${configuration} sends errors for ${expected
+          .mkString("(", ", ", ")")}"
     ) {
-      val client = new TestTelemetryClient()
+      val client = new TestTelemetryClient(configuration.telemetryLevel)
       val reportContexts = Seq(
         SampleReports.metalsLspReport(),
         SampleReports.scalaPresentationCompilerReport(),
@@ -39,9 +37,9 @@ class TelemetryReporterSuite extends BaseSuite {
       for {
         reporterCtx <- reportContexts
         reporter = new TelemetryReportContext(
-          telemetryLevel = () => level,
+          telemetryConfiguration = () => configuration,
           reporterContext = () => reporterCtx,
-          workspaceSanitizer = new metals.WorkspaceSanitizer(None),
+          workspaceSanitizer = new WorkspaceSanitizer(None),
           telemetryClient = client,
         )
       } {
@@ -55,15 +53,62 @@ class TelemetryReporterSuite extends BaseSuite {
       }
     }
 
-  testCase(metals.TelemetryLevel.Off, Set())
-  testCase(metals.TelemetryLevel.Anonymous, Set("incognito", "bloop"))
-  testCase(metals.TelemetryLevel.Full, Set("incognito", "bloop", "unsanitized"))
+  def testSendCrash(
+      telemetryLevel: TelemetryLevel,
+      expected: Set[String],
+  ): Unit =
+    test(
+      s"Telemetry configuration: ${telemetryLevel} sends crashes for ${expected
+          .mkString("(", ", ", ")")}"
+    ) {
+      val client = new TestTelemetryClient(telemetryLevel)
+      client.sendCrashReport(
+        CrashReport(ExceptionSummary("message", Nil), "testCrash")
+      )
+
+      val received = client.crashBuffer.map(_.componentName).toSet
+      assertEquals(received, expected)
+    }
+
+  testSendError(TelemetryConfiguration(TelemetryLevel.Off, false), Set())
+  testSendError(TelemetryConfiguration(TelemetryLevel.Off, true), Set())
+
+  testSendError(TelemetryConfiguration(TelemetryLevel.Crash, false), Set())
+  testSendError(TelemetryConfiguration(TelemetryLevel.Crash, true), Set())
+
+  testSendError(
+    TelemetryConfiguration(TelemetryLevel.Error, false),
+    Set("incognito", "bloop"),
+  )
+  testSendError(
+    TelemetryConfiguration(TelemetryLevel.Error, true),
+    Set("incognito", "bloop", "unsanitized"),
+  )
+
+  testSendError(
+    TelemetryConfiguration(TelemetryLevel.All, false),
+    Set("incognito", "bloop"),
+  )
+  testSendError(
+    TelemetryConfiguration(TelemetryLevel.All, true),
+    Set("incognito", "bloop", "unsanitized"),
+  )
+
+  testSendCrash(TelemetryLevel.Off, Set())
+  testSendCrash(TelemetryLevel.Crash, Set("testCrash"))
+  testSendCrash(TelemetryLevel.Error, Set("testCrash"))
+  testSendCrash(TelemetryLevel.All, Set("testCrash"))
+
 }
 
-class TestTelemetryClient extends TelemetryClient {
+class TestTelemetryClient(val telemetryLevel: TelemetryLevel)
+    extends TelemetryClient {
   val reportsBuffer = mutable.ListBuffer.empty[ErrorReport]
+  val crashBuffer = mutable.ListBuffer.empty[CrashReport]
 
-  override val sendReport: ErrorReport => Unit = error => {
+  override protected val sendErrorReportImpl: ErrorReport => Unit = error =>
     reportsBuffer += error
-  }
+
+  override protected val sendCrashReportImpl: CrashReport => Unit = crash =>
+    crashBuffer += crash
 }

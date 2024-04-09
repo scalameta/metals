@@ -8,8 +8,8 @@ import scala.jdk.CollectionConverters.*
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.*
 import scala.meta.internal.pc.completions.CompletionPos
-import scala.meta.pc.ReportContext
 import scala.meta.pc.*
+import scala.meta.pc.ReportContext
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Symbols.*

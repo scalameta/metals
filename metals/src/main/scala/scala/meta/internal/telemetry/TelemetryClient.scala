@@ -1,12 +1,11 @@
 package scala.meta.internal.telemetry
 
-import sttp.client3._
+import scala.meta.internal.metals.TelemetryLevel
 
-import scala.meta.internal.metals.LoggerAccess
-
-import sttp.tapir.client.sttp.SttpClientInterpreter
-import sttp.model.Uri
 import com.google.common.util.concurrent.RateLimiter
+import sttp.client3._
+import sttp.model.Uri
+import sttp.tapir.client.sttp.SttpClientInterpreter
 
 object TelemetryClient {
 
@@ -18,29 +17,58 @@ object TelemetryClient {
     val default: Config = Config(DefaultTelemetryEndpoint)
   }
 
-  private val interpreter = SttpClientInterpreter()
+  protected[telemetry] val interpreter: SttpClientInterpreter =
+    SttpClientInterpreter()
 
 }
 
-class TelemetryClient(
-    config: TelemetryClient.Config = TelemetryClient.Config.default,
-    logger: LoggerAccess = LoggerAccess.system,
-) {
-  import TelemetryClient._
-  val rateLimiter = RateLimiter.create(1.0 / 5.0)
+trait TelemetryClient {
+  val telemetryLevel: TelemetryLevel
 
-  val backend = HttpClientFutureBackend()
-  val sendReport: ErrorReport => Unit = report => {
+  protected val sendErrorReportImpl: ErrorReport => Unit
+  protected val sendCrashReportImpl: CrashReport => Unit
+
+  val sendErrorReport: ErrorReport => Unit = report =>
+    if (telemetryLevel.sendErrors) {
+      scribe.debug("Sending remote error report.")
+      sendErrorReportImpl(report)
+    }
+
+  val sendCrashReport: CrashReport => Unit = report => {
+    if (telemetryLevel.sendCrashes) {
+      scribe.debug("Sending remote crash report.")
+      sendCrashReportImpl(report)
+    }
+  }
+
+}
+
+class TelemetryClientImpl(
+    val telemetryLevel: TelemetryLevel,
+    config: TelemetryClient.Config = TelemetryClient.Config.default,
+) extends TelemetryClient {
+  import TelemetryClient._
+  private val backend = HttpClientFutureBackend()
+  private val rateLimiter = RateLimiter.create(1.0 / 5.0)
+
+  protected val sendErrorReportImpl: ErrorReport => Unit = report =>
     if (rateLimiter.tryAcquire()) {
-      logger.debug("Sending telemetry report.")
       interpreter
         .toClient(
-          TelemetryEndpoints.sendReport,
+          TelemetryEndpoints.sendErrorReport,
           baseUri = Some(config.serverHost),
           backend = backend,
         )
         .apply(report)
-    } else logger.debug("Report was omitted, because of quota")
-    ()
-  }
+    } else scribe.debug("Report not send because of quota.")
+
+  protected val sendCrashReportImpl: CrashReport => Unit = report =>
+    interpreter
+      .toClient(
+        TelemetryEndpoints.sendCrashReport,
+        baseUri = Some(config.serverHost),
+        backend = backend,
+      )
+      .apply(report)
+
 }

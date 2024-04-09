@@ -13,8 +13,8 @@ import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.completions.OverrideCompletions.OverrideExtractor
 import scala.meta.internal.semver.SemVer
-import scala.meta.pc.ReportContext
 import scala.meta.pc.*
+import scala.meta.pc.ReportContext
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Constants.Constant

@@ -1220,29 +1220,7 @@ class Compilers(
       config = telemetry.conversion.PresentationCompilerConfig(config),
     )
 
-  private def remoteReporting(
-      createTelemetryReporterContext: () => ReporterContext
-  ): ReportContext = {
-    val logger =
-      ju.logging.Logger.getLogger(classOf[TelemetryReportContext].getName)
-
-    val loggerAccess = LoggerAccess(
-      debug = logger.fine(_),
-      info = logger.info(_),
-      warning = logger.warning(_),
-      error = logger.severe(_),
-    )
-
-    new TelemetryReportContext(
-      telemetryLevel = () => userConfig().telemetryLevel,
-      reporterContext = createTelemetryReporterContext,
-      workspaceSanitizer = new WorkspaceSanitizer(Some(workspace.toNIO)),
-      telemetryClient = new telemetry.TelemetryClient(logger = loggerAccess),
-      logger = loggerAccess,
-    )
-  }
-
-  private def getUserConfiguration(): PresentationCompilerConfig = {
+  private def getPcConfiguration(): PresentationCompilerConfig = {
     val options =
       InitializationOptions.from(initializeParams).compilerOptions
     config.initialConfig.compilers
@@ -1261,17 +1239,26 @@ class Compilers(
       search: SymbolSearch,
       options: List[String],
   ): PresentationCompiler = {
-    val config = getUserConfiguration()
-    val remoteReportContext = remoteReporting(() =>
-      createPresentationCompilerContext(pc.scalaVersion, config, options)
-    )
+    val pcConfig = getPcConfiguration()
+    val config = userConfig()
+
+    val remoteReportContext: ReportContext =
+      new TelemetryReportContext(
+        telemetryConfiguration = () => config.telemetryConfiguration,
+        reporterContext = () =>
+          createPresentationCompilerContext(pc.scalaVersion, pcConfig, options),
+        workspaceSanitizer = new WorkspaceSanitizer(Some(workspace.toNIO)),
+        telemetryClient = new telemetry.TelemetryClientImpl(
+          config.telemetryConfiguration.telemetryLevel
+        ),
+      )
 
     pc.withSearch(search)
       .withExecutorService(ec)
       .withWorkspace(workspace.toNIO)
       .withScheduledExecutorService(sh)
       .withReportsLoggerLevel(MetalsServerConfig.default.loglevel)
-      .withConfiguration(config)
+      .withConfiguration(pcConfig)
       .withAdditionalReportContexts(List(remoteReportContext).asJava)
   }
 

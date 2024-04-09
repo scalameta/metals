@@ -27,6 +27,7 @@ import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.PcSymbolInformation
+import scala.meta.internal.pc.StandardReport
 import scala.meta.internal.search.SymbolHierarchyOps._
 import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.Scala.Descriptor.Method
@@ -45,7 +46,6 @@ import scala.meta.pc.ReportContext
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.TextDocumentPositionParams
-import scala.meta.internal.pc.StandardReport
 
 final class ImplementationProvider(
     semanticdbs: Semanticdbs,

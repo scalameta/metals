@@ -5,8 +5,8 @@ import java.util.logging.Logger
 
 import scala.util.control.NonFatal
 
-import scala.meta.pc.ReportContext
 import scala.meta.pc.*
+import scala.meta.pc.ReportContext
 
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Flags

@@ -21,8 +21,8 @@ import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.io.AbsolutePath
-import scala.meta.trees.Origin
 import scala.meta.pc.ReportContext
+import scala.meta.trees.Origin
 
 class IndexedSymbols(
     isStatisticsEnabled: Boolean,

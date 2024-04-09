@@ -10,6 +10,9 @@ import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.Trace
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.logging.MetalsLogger
+import scala.meta.internal.telemetry.CrashReport
+import scala.meta.internal.telemetry.ExceptionSummary
+import scala.meta.internal.telemetry.TelemetryClientImpl
 
 import org.eclipse.lsp4j.jsonrpc.Launcher
 
@@ -63,6 +66,7 @@ object Main {
       launcher.startListening().get()
     } catch {
       case NonFatal(e) =>
+        trySendingCrashReport(e, server)
         e.printStackTrace(systemOut)
         sys.exit(1)
     } finally {
@@ -73,4 +77,26 @@ object Main {
       sys.exit(0)
     }
   }
+
+  private def trySendingCrashReport(
+      error: Throwable,
+      server: MetalsLanguageServer,
+  ): Unit = try {
+    val telemetry = new TelemetryClientImpl(server.getTelemetryLevel())
+    telemetry.sendCrashReport(
+      CrashReport(
+        // We strip message as it can contain personal data such as path to the file.
+        // It may be changed in the future depending on how usefull the reports will
+        // be with ommitted message.
+        error = ExceptionSummary
+          .from(error, sanitize = _ => error.getClass().getName()),
+        componentName = this.getClass().getName(),
+        componentVersion = Some(BuildInfo.metalsVersion),
+      )
+    )
+  } catch {
+    case err: Throwable =>
+      scribe.error(s"Failed to send crash report, $err")
+  }
+
 }

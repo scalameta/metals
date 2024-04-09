@@ -4,16 +4,16 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.pc.StandardReport
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+import scala.meta.pc.ReportContext
 
 import com.google.gson.JsonArray
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintLabelPart
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.{lsp4j => l}
-import scala.meta.pc.ReportContext
-import scala.meta.internal.pc.StandardReport
 
 final class InlayHintResolveProvider(
     definitionProvider: DefinitionProvider,

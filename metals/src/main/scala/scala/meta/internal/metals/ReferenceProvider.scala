@@ -17,6 +17,7 @@ import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
+import scala.meta.internal.pc.StandardReport
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
@@ -25,14 +26,13 @@ import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.ReportContext
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.ReferenceParams
-import scala.meta.internal.pc.StandardReport
-import scala.meta.pc.ReportContext
 
 final class ReferenceProvider(
     workspace: AbsolutePath,

@@ -41,7 +41,7 @@ class NewProjectProvider(
   // equal to cmd's: g8 playframework/play-scala-seed.g8 --name=../<<name>>
   private val giterMain = "giter8.Giter8"
 
-  val backend = HttpClientSyncBackend()
+  val backend: SttpBackend[Identity, Any] = HttpClientSyncBackend()
   private var allTemplates = Seq.empty[MetalsQuickPickItem]
 
   def allTemplatesFromWeb: Seq[MetalsQuickPickItem] =

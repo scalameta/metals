@@ -8,7 +8,6 @@ import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.TelemetryLevel
 import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig
@@ -58,7 +57,8 @@ case class UserConfiguration(
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
     scalaCliLauncher: Option[String] = None,
     defaultBspToBuildTool: Boolean = false,
-    telemetryLevel: TelemetryLevel = TelemetryLevel.default,
+    telemetryConfiguration: TelemetryConfiguration =
+      TelemetryConfiguration.default,
 ) {
 
   def shouldAutoImportNewProject: Boolean =
@@ -349,12 +349,12 @@ object UserConfiguration {
       UserConfigurationOption(
         "telemetry-level",
         TelemetryLevel.default.textValue,
-        TelemetryLevel.Anonymous.textValue,
+        TelemetryLevel.All.textValue,
         "Scope of reported telemetry data",
         s"""Control what kind of telemetry events can be send to maintainers of Metals.
            |With `${TelemetryLevel.Off.textValue}` no telemetry data would be send.
-           |Minimal recommended level is `${TelemetryLevel.Anonymous.textValue}` which would collect diagnostic information when Metals components would crash or fail unexpectedly, allowing to understand why the problem occoured.
-           |The highest telemtetry level `${TelemetryLevel.Full.textValue}` allows to collect all information including how features are used to help us priortize future improvements."
+           |Minimal recommended level is `${TelemetryLevel.Crash.textValue}` which would collect diagnostic information when Metals components would crash or fail unexpectedly, allowing to understand why the problem occoured.
+           |The highest telemtetry level `${TelemetryLevel.All.textValue}` allows to collect all information including how features are used to help us priortize future improvements."
            |Defaults to `${TelemetryLevel.default.textValue}`.
            |""".stripMargin,
       ),
@@ -402,6 +402,7 @@ object UserConfiguration {
       properties: Properties = System.getProperties,
   ): Either[List[String], UserConfiguration] = {
     val errors = ListBuffer.empty[String]
+    scribe.info(json.toString)
 
     def getKey[A](
         key: String,
@@ -620,9 +621,17 @@ object UserConfiguration {
     val defaultBspToBuildTool =
       getBooleanKey("default-bsp-to-build-tool").getOrElse(false)
 
-    val telemetryLevel = getStringKey("telemetry-level")
-      .map(TelemetryLevel.fromString)
-      .getOrElse(TelemetryLevel.default)
+    val telemetryConfiguration = {
+      val telemetryLevel =
+        getStringKey("telemetry-level")
+          .map(TelemetryLevel.fromString)
+          .getOrElse(TelemetryLevel.default)
+      val includeCodeSnippets =
+        getBooleanKey("include-code-snippets")
+          .getOrElse(false)
+
+      TelemetryConfiguration(telemetryLevel, includeCodeSnippets)
+    }
 
     if (errors.isEmpty) {
       Right(
@@ -655,7 +664,7 @@ object UserConfiguration {
           scalafixRulesDependencies = scalafixRulesDependencies,
           customProjectRoot = customProjectRoot,
           verboseCompilation = verboseCompilation,
-          telemetryLevel = telemetryLevel,
+          telemetryConfiguration = telemetryConfiguration,
           scalaCliLauncher = scalaCliLauncher,
           automaticImportBuild = autoImportBuilds,
           defaultBspToBuildTool = defaultBspToBuildTool,

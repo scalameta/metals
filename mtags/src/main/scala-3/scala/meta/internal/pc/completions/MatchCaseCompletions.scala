@@ -14,6 +14,7 @@ import scala.meta.internal.pc.MetalsInteractive.*
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.internal.pc.printer.MetalsPrinter.IncludeDefaultParam
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.ReportContext
 import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.ast.tpd.*
@@ -31,7 +32,6 @@ import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.core.Types.TypeRef
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.lsp4j as l
-import scala.meta.pc.ReportContext
 
 object CaseKeywordCompletion:
 

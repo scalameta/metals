@@ -6,6 +6,7 @@ import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.internal.pc.printer.ShortenedNames
 import scala.meta.pc.InlayHintsParams
+import scala.meta.pc.ReportContext
 import scala.meta.pc.SymbolSearch
 
 import dotty.tools.dotc.ast.tpd
@@ -23,7 +24,6 @@ import dotty.tools.dotc.util.Spans.Span
 import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintKind
-import scala.meta.pc.ReportContext
 
 class PcInlayHintsProvider(
     driver: InteractiveDriver,

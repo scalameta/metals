@@ -46,9 +46,9 @@ import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
+import scala.meta.pc.ReportContext
 import scala.meta.trees.Origin
 import scala.meta.trees.Origin.Parsed
-import scala.meta.pc.ReportContext
 
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.Gson

@@ -44,7 +44,6 @@ import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.LoggerAccess
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MirroredReportContext
@@ -152,7 +151,8 @@ class MetalsLspService(
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
 
   def getVisibleName: String = folderVisibleName.getOrElse(folder.toString())
-  def getTelemetryLevel: TelemetryLevel = userConfig.telemetryLevel
+  def getTelemetryConfiguration: TelemetryConfiguration =
+    userConfig.telemetryConfiguration
 
   private val cancelables = new MutableCancelable()
   val isCancelled = new AtomicBoolean(false)
@@ -195,24 +195,14 @@ class MetalsLspService(
     },
     ReportLevel.fromString(MetalsServerConfig.default.loglevel),
   )
-  private val logger = logging.MetalsLogger.default
-
-  private val loggerAccess =
-    LoggerAccess(
-      debug = logger.debug(_),
-      info = logger.info(_),
-      warning = logger.warn(_),
-      error = logger.error(_),
-    )
-
-  val client = new telemetry.TelemetryClient(logger = loggerAccess)
 
   private val remoteTelemetryReports = new TelemetryReportContext(
-    telemetryLevel = () => userConfig.telemetryLevel,
-    reporterContext = createTelemetryReporterContext,
+    telemetryConfiguration = () => userConfig.telemetryConfiguration,
+    reporterContext = () => createTelemetryReporterContext,
     workspaceSanitizer = new WorkspaceSanitizer(Some(folder.toNIO)),
-    telemetryClient = client,
-    logger = loggerAccess,
+    telemetryClient = new telemetry.TelemetryClientImpl(
+      userConfig.telemetryConfiguration.telemetryLevel
+    ),
   )
 
   implicit val reports: ReportContext =
@@ -240,8 +230,7 @@ class MetalsLspService(
     new AtomicReference[b.BuildTargetIdentifier]()
   private val definitionIndex = newSymbolIndex()
   private val symbolDocs = new Docstrings(definitionIndex)
-  var bspSession: Option[BspSession] =
-    Option.empty[BspSession]
+  var bspSession: Option[BspSession] = Option.empty[BspSession]
   private val savedFiles = new ActiveFiles(time)
   private val recentlyOpenedFiles = new ActiveFiles(time)
   val isImportInProcess = new AtomicBoolean(false)
@@ -993,7 +982,7 @@ class MetalsLspService(
 
     if (
       userConfig.symbolPrefixes != old.symbolPrefixes ||
-      userConfig.telemetryLevel != old.telemetryLevel
+      userConfig.telemetryConfiguration != old.telemetryConfiguration
     ) {
       compilers.restartAll()
     }

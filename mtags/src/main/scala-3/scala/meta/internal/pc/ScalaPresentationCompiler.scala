@@ -24,9 +24,9 @@ import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments.given
 import scala.meta.internal.pc.completions.CompletionProvider
 import scala.meta.internal.pc.completions.OverrideCompletions
-import scala.meta.pc.ReportContext
 import scala.meta.pc.*
 import scala.meta.pc.PcSymbolInformation as IPcSymbolInformation
+import scala.meta.pc.ReportContext
 
 import dotty.tools.dotc.reporting.StoreReporter
 import org.eclipse.lsp4j as l

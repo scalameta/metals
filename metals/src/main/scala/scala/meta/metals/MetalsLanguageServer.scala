@@ -292,16 +292,20 @@ class MetalsLanguageServer(
    * the method will return telemetry off
    */
   private[metals] def getTelemetryLevel(): TelemetryLevel = {
-    serverState.get()
-    def lowestSettingWithinWorkspaces(service: WorkspaceLspService) = {
-      service.workspaceFolders.getFolderServices.map(_.getTelemetryLevel).min
-    }
+    def lowestSettingWithinWorkspaces(
+        service: WorkspaceLspService
+    ): TelemetryLevel =
+      service.workspaceFolders.getFolderServices
+        .map(_.getTelemetryConfiguration)
+        .minBy(_.telemetryLevel)
+        .telemetryLevel
+
     serverState.get() match {
       case ServerState.Initialized(service) =>
         lowestSettingWithinWorkspaces(service)
       case ServerState.ShuttingDown(service) =>
         lowestSettingWithinWorkspaces(service)
-      case _ => TelemetryLevel.Off
+      case _ => TelemetryLevel.default
     }
   }
 
