@@ -32,12 +32,19 @@ class RequirementsModifier extends StringModifier {
       code: Input,
       reporter: Reporter,
   ): String = {
+    val isVScode = info == "vscode"
+    val javaRequirement =
+      if (isVScode) ""
+      else
+        s"""
+           |
+           |**Java 11, 17 provided by OpenJDK or Oracle**. Eclipse OpenJ9 is not
+           |supported, please make sure the `JAVA_HOME` environment variable
+           |points to a valid Java 11 or 17 installation.
+           |
+           |""".stripMargin
     s"""
-       |## Requirements
-       |
-       |**Java 8, 11, 17 provided by OpenJDK or Oracle**. Eclipse OpenJ9 is not
-       |supported, please make sure the `JAVA_HOME` environment variable
-       |points to a valid Java 8, 11 or 17 installation.
+       |## Requirements$javaRequirement
        |
        |**macOS, Linux or Windows**. Metals is developed on many operating systems and
        |every PR is tested on Ubuntu, Windows and MacOS.

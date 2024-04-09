@@ -6,7 +6,7 @@ title: Visual Studio Code
 
 ![Goto Definition](https://user-images.githubusercontent.com/1408093/48776422-1f764f00-ecd0-11e8-96d1-170f2354d50e.gif)
 
-```scala mdoc:requirements
+```scala mdoc:requirements:vscode
 
 ```
 
@@ -53,16 +53,23 @@ variables.
 
 ## Configure Java version
 
-The VS Code plugin uses by default the `JAVA_HOME` environment variable (via
-[`locate-java-home`](https://www.npmjs.com/package/locate-java-home)) to locate
-the `java` executable. To override the default Java home location, update the
-"Java Home" variable in the settings menu.
+Metals separates JDK used for starting Metals server from the JDK used for the project.
+
+### Metals's server JDK
+Minimum supported version is `11`. The VS Code plugin will first search for `java` executable with version equal or greater than setting using `JAVA_HOME` environment variable (via [`locate-java-home`](https://www.npmjs.com/package/@viperproject/locate-java-home)). If no matching Java found, a JDK will be downloaded using [coursier](https://get-coursier.io).
+
+#### Settings:
+- `Java Version` - minimum JDK version accepted for running Metals server. If none found, this is also the version that will be downloaded using coursier. Allows for one of: `11`, `17`, `21`, with `17` being the default.
+
+### Project's JDK
+JDK used for compiling and running the project. Build servers like `mill` and `sbt` are started using that JDK. In case of `Bloop` Metals's server JDK is used for running the build server but appropriate `-release` flags are added for compilation. By default Metals relies on the build server's mechanism for project's JDK resolution (e.g. `Bloop` - `JAVA_HOME`, `sbt` - java on `PATH`).
+
+#### Settings:
+  - `Java Home` - path to project's JDK's Home. Note: this setting isn't respected for `Bazel`.
 
 ![Java Home setting](https://i.imgur.com/sKrPKk2.png)
 
-If this setting is defined, the VS Code plugin uses the custom path instead of
-the `JAVA_HOME` environment variable.
-
+Note: Project's JDK version should be greater or equal to Metals's server JDK version for features like completions to work correctly.
 ### macOS
 
 To globally configure `$JAVA_HOME` for all GUI applications, see
