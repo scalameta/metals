@@ -105,21 +105,20 @@ class SelectionRangeProvider(
     val srcSliced = srcText.slice(treeStart, treeEnd)
 
     val tokens = srcSliced.tokenize.toOption
-    val rg =
-      if (tokens.isEmpty) Nil
-      else
-        SelectionRangeUtils
-          .commentRangesFromTokens(
-            tokens.toList.flatten,
-            cursorPos.start,
-            treeStart
-          ) map { case (s, e) =>
-          cursorPos
-            .withStart(s)
-            .withEnd(e)
-        }
 
-    rg
+    if (tokens.isEmpty) Nil
+    else
+      SelectionRangeUtils
+        .commentRangesFromTokens(
+          tokens.toList.flatten,
+          cursorPos.start,
+          treeStart
+        ) map { case (s, e) =>
+        cursorPos
+          .withStart(s)
+          .withEnd(e)
+      }
+
   }
 
 }
