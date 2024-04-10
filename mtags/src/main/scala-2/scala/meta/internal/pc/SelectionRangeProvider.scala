@@ -101,7 +101,7 @@ class SelectionRangeProvider(
       .map(t => (t.pos.start, t.pos.end))
       .getOrElse((0, srcText.size))
 
-    // only parse comments from first range to reduce computation
+    // only tokenize comments from first range to reduce computation
     val srcSliced = srcText.slice(treeStart, treeEnd)
 
     val tokens = srcSliced.tokenize.toOption
