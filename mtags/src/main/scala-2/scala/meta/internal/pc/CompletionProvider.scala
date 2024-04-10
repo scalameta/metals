@@ -413,7 +413,7 @@ class CompletionProvider(
     val visitor = new CompilerSearchVisitor(
       context,
       sym =>
-        if (sym.safeOwner.isImplicit) {
+        if (sym.safeOwner.isImplicit && sym.owner.isStatic) {
           val ownerConstructor = sym.owner.info.member(nme.CONSTRUCTOR)
           def typeParams = sym.owner.info.typeParams
           ownerConstructor.info.paramss match {

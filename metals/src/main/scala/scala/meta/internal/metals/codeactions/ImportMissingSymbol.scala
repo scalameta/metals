@@ -60,9 +60,13 @@ class ImportMissingSymbol(compilers: Compilers, buildTargets: BuildTargets)
         name: String,
         findExtensionMethods: Boolean = false,
     ): Future[Seq[l.CodeAction]] = {
+      val offset =
+        if (isScala3) diagnostic.getRange().getEnd()
+        else diagnostic.getRange().getStart()
+
       val textDocumentPositionParams = new l.TextDocumentPositionParams(
         params.getTextDocument(),
-        diagnostic.getRange.getEnd(),
+        offset,
       )
       compilers
         .autoImports(

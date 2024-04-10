@@ -112,4 +112,60 @@ class ImportMissingSymbolCrossLspSuite
         |  println(1.incr)
         |""".stripMargin,
   )
+
+  checkEdit(
+    "6180",
+    s"""|/metals.json
+        |{
+        |  "a":{"scalaVersion" : "${V.scala3}"},
+        |  "b":{
+        |    "scalaVersion" : "${V.scala3}",
+        |    "dependsOn": ["a"]
+        |  }
+        |}
+        |/a/src/main/scala/example/Foo.scala
+        |package example
+        |
+        |trait Foo
+        |
+        |/b/src/main/scala/x/B.scala
+        |package x
+        |case class B(
+        |) extends <<F>>oo
+        |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("Foo", "example")}
+        |${CreateNewSymbol.title("Foo")}
+        |""".stripMargin,
+    s"""|package x
+        |
+        |import example.Foo
+        |case class B(
+        |) extends Foo
+        |""".stripMargin,
+  )
+
+  check(
+    "scalac-explain-flag",
+    """|package a
+       |
+       |object A {
+       |  val f = <<Future>>.successful(2)
+       |}
+       |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
+        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+        |${CreateNewSymbol.title("Future")}
+        |""".stripMargin,
+    """|package a
+       |
+       |import scala.concurrent.Future
+       |
+       |object A {
+       |  val f = Future.successful(2)
+       |}
+       |""".stripMargin,
+    scalaVersion = "3.3.3",
+    scalacOptions = List("-explain"),
+  )
+
 }
