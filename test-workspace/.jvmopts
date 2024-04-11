@@ -1,7 +1,0 @@
--Xss4m
--Xms1G
--Xmx4G
--XX:ReservedCodeCacheSize=1024m
--XX:+TieredCompilation
--XX:+CMSClassUnloadingEnabled
--Dfile.encoding=UTF-8
