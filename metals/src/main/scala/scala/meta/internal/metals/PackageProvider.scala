@@ -70,11 +70,13 @@ class PackageProvider(
     }
 
     for {
-      packageParts <- Option.when(
-        path.isScalaOrJava && !path.isJarFileSystem &&
-          !path.isScalaScript && path.toFile.length() == 0 && fileContent
-            .isEmpty()
-      )(deducePackageParts(path))
+      packageParts <- Option
+        .when(
+          path.isScalaOrJava && !path.isJarFileSystem &&
+            !path.isScalaScript && path.toFile.length() == 0 && fileContent
+              .isEmpty()
+        )(deducePackageParts(path))
+        .flatten
       if packageParts.size > 0
       newFileTemplate <-
         if (path.filename == "package.scala")
@@ -123,12 +125,16 @@ class PackageProvider(
     val changesInMovedFiles = Future
       .traverse(filesWithTrees) { case ((oldFilePath, newFilePath), tree) =>
         Future {
-          calcMovedFileEdits(
-            tree,
-            oldFilePath,
-            deducePackageParts(oldFilePath.value),
-            deducePackageParts(newFilePath.value),
-          ).getOrElse(new WorkspaceEdit())
+          (for {
+            oldPkgParts <- deducePackageParts(oldFilePath.value)
+            newPkgParts <- deducePackageParts(newFilePath.value)
+            edit <- calcMovedFileEdits(
+              tree,
+              oldFilePath,
+              oldPkgParts,
+              newPkgParts,
+            )
+          } yield edit).getOrElse(new WorkspaceEdit())
         }
       }
       .map(_.mergeChanges)
@@ -148,23 +154,29 @@ class PackageProvider(
       newDirPath: AbsoluteDir,
       files: List[AbsoluteFile],
   )(implicit ec: ExecutionContext): Future[WorkspaceEdit] = Future {
-    val oldPackageParts = calcPathToSourceRoot(oldDirPath.value)
-    val newPackageParts = calcPathToSourceRoot(newDirPath.value)
     def isOneOfMovedFiles(uri: String) =
       files.exists(_.value.toURI.toString() == uri)
-    val references =
-      files.flatMap { path =>
-        for {
-          decl <- findTopLevelDecls(path, oldPackageParts)
-          reference <- findReferences(decl, path)
-        } yield reference
+    val result =
+      for {
+        oldPackageParts <- calcPathToSourceRoot(oldDirPath.value)
+        newPackageParts <- calcPathToSourceRoot(newDirPath.value)
+      } yield {
+        val references =
+          files.flatMap { path =>
+            for {
+              decl <- findTopLevelDecls(path, oldPackageParts)
+              reference <- findReferences(decl, path)
+            } yield reference
+          }
+
+        calcRefsEdits(
+          oldPackageParts,
+          newPackageParts,
+          references,
+          !isOneOfMovedFiles(_),
+        )
       }
-    calcRefsEdits(
-      oldPackageParts,
-      newPackageParts,
-      references,
-      !isOneOfMovedFiles(_),
-    )
+    result.getOrElse(new WorkspaceEdit())
   }
 
   private def willMoveFile(oldPath: AbsoluteFile, newPath: AbsoluteFile)(
@@ -173,8 +185,8 @@ class PackageProvider(
     val edit =
       for {
         tree <- trees.get(oldPath.value)
-        oldPackageParts = deducePackageParts(oldPath.value)
-        newPackageParts = deducePackageParts(newPath.value)
+        oldPackageParts <- deducePackageParts(oldPath.value)
+        newPackageParts <- deducePackageParts(newPath.value)
         fileEdits <- calcMovedFileEdits(
           tree,
           oldPath,
@@ -813,17 +825,16 @@ class PackageProvider(
     }
   }
 
-  private def deducePackageParts(path: AbsolutePath): List[String] =
-    calcPathToSourceRoot(path).dropRight(1)
+  private def deducePackageParts(path: AbsolutePath): Option[List[String]] =
+    calcPathToSourceRoot(path).map(_.dropRight(1))
 
   private def calcPathToSourceRoot(
       path: AbsolutePath
-  ): List[String] =
+  ): Option[List[String]] =
     buildTargets
       .inverseSourceItem(path)
       .map(path.toRelative(_).toNIO)
       .map { _.iterator().asScala.map(p => wrap(p.toString())).toList }
-      .getOrElse(List.empty)
 
   private def calcPackageEdit(
       oldPackages: List[PackageWithName],
