@@ -35,6 +35,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
     result
   }
 
+  // NOTE: this filters out things from `java.lang.classfile` which was added in JDK 22
   private def getItems(
       original: String,
       filename: String = "A.scala"
@@ -49,6 +50,7 @@ abstract class BaseCompletionSuite extends BasePCSuite {
       )
     )
     result.getItems.asScala
+      .filterNot(item => item.getLabel().contains("- java.lang.classfile"))
       .sortBy(item => Option(item.getSortText).getOrElse(item.getLabel()))
       .toSeq
   }
