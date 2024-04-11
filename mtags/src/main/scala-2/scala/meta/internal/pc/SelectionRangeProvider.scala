@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import java.{util => ju}
 
+import scala.meta._
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.OffsetParams
 
@@ -39,7 +40,6 @@ class SelectionRangeProvider(
       // lastVisitedParentTrees that will contain the exact tree structure we
       // need to create the selection range, starting from the position
       val _ = locateUntyped(pos)
-
       val bareRanges = lastVisitedParentTrees
         .map { tree: Tree =>
           val selectionRange = new SelectionRange()
@@ -47,9 +47,15 @@ class SelectionRangeProvider(
           selectionRange
         }
 
-      bareRanges.reduceRight(setParent)
-    }
+      val commentRanges =
+        getCommentRanges(pos, lastVisitedParentTrees, param.text()).map { x =>
+          new SelectionRange() { setRange(x.toLsp) }
+        }.toList
 
+      (commentRanges ++ bareRanges)
+        .reduceRightOption(setParent)
+        .getOrElse(new SelectionRange())
+    }
     selectionRanges
   }
 
@@ -82,6 +88,37 @@ class SelectionRangeProvider(
       child.setParent(parent)
       child
     }
+  }
+
+  import compiler._
+  def getCommentRanges(
+      cursorPos: Position,
+      path: List[Tree],
+      srcText: String
+  ): List[Position] = {
+
+    val (treeStart, treeEnd) = path.headOption
+      .map(t => (t.pos.start, t.pos.end))
+      .getOrElse((0, srcText.size))
+
+    // only tokenize comments from first range to reduce computation
+    val srcSliced = srcText.slice(treeStart, treeEnd)
+
+    val tokens = srcSliced.tokenize.toOption
+
+    if (tokens.isEmpty) Nil
+    else
+      SelectionRangeUtils
+        .commentRangesFromTokens(
+          tokens.toList.flatten,
+          cursorPos.start,
+          treeStart
+        ) map { case (s, e) =>
+        cursorPos
+          .withStart(s)
+          .withEnd(e)
+      }
+
   }
 
 }
