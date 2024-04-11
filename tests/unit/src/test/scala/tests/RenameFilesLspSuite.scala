@@ -886,6 +886,16 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     sourcesAreCompiled = true,
   )
 
+  renamed(
+    "do-not-make-changes-when-outside-of-root",
+    s"""|/$prefix/A/Sun.scala
+        |package A
+        |object Sun 
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/Sun.scala" -> s"random/path/Sun.scala"),
+    expectedRenames = Map.empty,
+  )
+
   /* Cases that are not yet supported */
 
   renamed(
