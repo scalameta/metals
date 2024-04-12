@@ -19,38 +19,50 @@ object HoverMarkup {
       optSymbolSignature: Option[String],
       docstring: String,
       forceExpressionType: Boolean = false,
-      contextInfo: List[String] = Nil
+      contextInfo: List[String] = Nil,
+      markdown: Boolean = true
   ): String = {
-    val markdown = new StringBuilder()
+    val builder = new StringBuilder()
+
+    def appendCode(title: Option[String], code: String) = {
+      title.foreach { title =>
+        builder
+          .append(if (markdown) "**" else "")
+          .append(title)
+          .append(if (markdown) "**" else "")
+          .append(":\n")
+      }
+      builder
+        .append(if (markdown) "```scala\n" else "")
+        .append(code)
+        .append(if (markdown) "\n```" else "\n")
+    }
+
     if (contextInfo.nonEmpty) {
-      markdown
-        .append("```scala\n")
-        .append(contextInfo.mkString("\n"))
-        .append("\n```\n\n")
+      appendCode(None, contextInfo.mkString("\n"))
+      builder.append("\n\n")
     }
     if (forceExpressionType || optSymbolSignature.isEmpty) {
-      markdown
-        .append(
-          if (optSymbolSignature.isDefined) "**Expression type**:\n" else ""
-        )
-        .append("```scala\n")
-        .append(expressionType)
-        .append("\n```\n")
+      appendCode(
+        Option.when(optSymbolSignature.isDefined)("Expression type"),
+        expressionType
+      )
+      builder.append("\n")
     }
+
     optSymbolSignature.foreach { symbolSignature =>
       if (symbolSignature.nonEmpty) {
-        markdown
-          .append(if (forceExpressionType) "**Symbol signature**:\n" else "")
-          .append("```scala\n")
-          .append(symbolSignature)
-          .append("\n```")
+        appendCode(
+          Option.when(forceExpressionType)("Symbol signature"),
+          symbolSignature
+        )
       }
     }
     if (docstring.nonEmpty)
-      markdown
+      builder
         .append("\n")
         .append(docstring)
-    markdown.toString()
+    builder.toString()
   }
 
   private def trimBody(body: String) =
@@ -73,27 +85,41 @@ object HoverMarkup {
       expressionType: String,
       symbolSignature: String,
       docstring: String,
-      forceExpressionType: Boolean = false
+      forceExpressionType: Boolean = false,
+      markdown: Boolean = true
   ): String = {
-    val markdown = new StringBuilder()
+    val builder = new StringBuilder()
+
+    def addCode(title: Option[String], code: String) = {
+      title.foreach { title =>
+        builder
+          .append(if (markdown) "**" else "")
+          .append(title)
+          .append(if (markdown) "**" else "")
+          .append(":\n")
+      }
+      builder
+        .append(if (markdown) "```java\n" else "")
+        .append(code)
+        .append(if (markdown) "\n```" else "")
+    }
+
     if (forceExpressionType) {
-      markdown
-        .append("**Expression type**:\n")
-        .append("```java\n")
-        .append(expressionType)
-        .append("\n```\n")
+      addCode(Some("Expression type"), expressionType)
+      builder.append("\n")
     }
-    if (symbolSignature.nonEmpty) {
-      markdown
-        .append(if (forceExpressionType) "**Symbol signature**:\n" else "")
-        .append("```java\n")
-        .append(symbolSignature)
-        .append("\n```")
-    }
+
+    if (symbolSignature.nonEmpty)
+      addCode(
+        Option.when(forceExpressionType)("Symbol signature"),
+        symbolSignature
+      )
+
     if (docstring.nonEmpty)
-      markdown
+      builder
         .append("\n")
         .append(docstring)
-    markdown.toString()
+    builder.toString()
   }
+
 }

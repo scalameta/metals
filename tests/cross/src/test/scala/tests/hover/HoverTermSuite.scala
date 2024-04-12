@@ -1,5 +1,7 @@
 package tests.hover
 
+import scala.meta.pc.HoverContentType
+
 import tests.pc.BaseHoverSuite
 
 class HoverTermSuite extends BaseHoverSuite {
@@ -717,5 +719,38 @@ class HoverTermSuite extends BaseHoverSuite {
       |  infix def nm() = Nanometer(i.toDouble)
       |""".stripMargin,
     "".stripMargin
+  )
+
+  check(
+    "app-plaintext",
+    """|object Main extends <<Ap@@p>>{}
+       |""".stripMargin,
+    "abstract trait App: App",
+    compat = Map(
+      "3" -> "trait App: App"
+    ),
+    contentType = HoverContentType.PLAINTEXT
+  )
+
+  check(
+    "function-chain4-plaintext",
+    """
+      |trait Consumer {
+      |  def subConsumer[T](i: T): T
+      |  def consume(value: Int)(n: Int): Unit
+      |}
+      |
+      |object O {
+      |  val consumer: Consumer = ???
+      |  List(1).foreach(<<consumer.su@@bConsumer(consumer)>>.consume(1))
+      |}
+      |""".stripMargin,
+    """|Expression type:
+       |Consumer
+       |
+       |Symbol signature:
+       |def subConsumer[T](i: T): T
+       |""".stripMargin,
+    contentType = HoverContentType.PLAINTEXT
   )
 }

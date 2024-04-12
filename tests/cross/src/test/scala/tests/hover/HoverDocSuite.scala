@@ -1,5 +1,7 @@
 package tests.hover
 
+import scala.meta.pc.HoverContentType
+
 import tests.pc.BaseHoverSuite
 
 class HoverDocSuite extends BaseHoverSuite {
@@ -526,5 +528,26 @@ class HoverDocSuite extends BaseHoverSuite {
                 | `A`.
                 |""".stripMargin
     )
+  )
+
+  check(
+    "basic-plaintext",
+    """|
+       |/** 
+       |  * Some docstring
+       |  */
+       |case class Alpha(x: Int) {
+       |}
+       |
+       |object Main {
+       |  val x = <<Alp@@ha(2)>>
+       |}
+       |""".stripMargin,
+    """|def apply(x: Int): Alpha
+       |
+       |Some docstring
+       |
+       |""".stripMargin,
+    contentType = HoverContentType.PLAINTEXT
   )
 }

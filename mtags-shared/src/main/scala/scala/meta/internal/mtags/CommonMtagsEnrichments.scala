@@ -31,6 +31,7 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
+import scala.meta.pc.HoverContentType
 
 object CommonMtagsEnrichments extends CommonMtagsEnrichments {}
 trait CommonMtagsEnrichments {
@@ -275,9 +276,11 @@ trait CommonMtagsEnrichments {
       start >= 0 &&
       doc.startsWith(value, start)
     }
-    def toMarkupContent: l.MarkupContent = {
+    def toMarkupContent(
+        contentType: HoverContentType = HoverContentType.MARKDOWN
+    ): l.MarkupContent = {
       val content = new MarkupContent
-      content.setKind("markdown")
+      content.setKind(contentType.toString())
       content.setValue(doc)
       content
     }

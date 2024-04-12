@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import scala.meta.internal.metals.Configs.GlobSyntaxConfig
 import scala.meta.internal.metals.config.DoctorFormat
 import scala.meta.internal.metals.config.StatusBarState
+import scala.meta.pc.HoverContentType
 
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.InitializeParams
@@ -160,6 +161,18 @@ final class ClientConfiguration(
       inlayHintsCapabilities <- Option(textDocumentCapabilities.getInlayHint())
     } yield true
   }.getOrElse(false)
+
+  def hoverContentType(): HoverContentType =
+    (for {
+      capabilities <- clientCapabilities
+      textDocumentCapabilities <- Option(capabilities.getTextDocument())
+      hoverCapabilities <- Option(textDocumentCapabilities.getHover())
+      contentTypes <- Option(hoverCapabilities.getContentFormat())
+    } yield {
+      if (contentTypes.contains(HoverContentType.MARKDOWN.toString()))
+        HoverContentType.MARKDOWN
+      else HoverContentType.PLAINTEXT
+    }).getOrElse(HoverContentType.MARKDOWN)
 
   def isTreeViewProvider(): Boolean =
     extract(

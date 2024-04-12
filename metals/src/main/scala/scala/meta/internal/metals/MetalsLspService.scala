@@ -755,6 +755,7 @@ class MetalsLspService(
     new InlayHintResolveProvider(
       definitionProvider,
       compilers,
+      clientConfig,
     )
 
   val doctor: Doctor = new Doctor(
@@ -1455,7 +1456,7 @@ class MetalsLspService(
     CancelTokens.future { token =>
       compilers
         .hover(params, token)
-        .map(_.map(_.toLsp()))
+        .map(_.map(_.toLsp(clientConfig.hoverContentType())))
         .map(
           _.orElse {
             val path = params.textDocument.getUri.toAbsolutePath

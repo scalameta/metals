@@ -604,7 +604,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
             else label
           val lparam = new ParameterInformation(byNameLabel)
           if (metalsConfig.isSignatureHelpDocumentationEnabled) {
-            lparam.setDocumentation(docstring.toMarkupContent)
+            lparam.setDocumentation(docstring.toMarkupContent())
           }
           if (isActiveSignature && t.activeArg.matches(param, i, j)) {
             arg(i, j) match {
@@ -617,7 +617,8 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
                   metalsConfig.isSignatureHelpDocumentationEnabled
                 ) {
                   lparam.setDocumentation(
-                    ("```scala\n" + tpe + "\n```\n" + docstring).toMarkupContent
+                    ("```scala\n" + tpe + "\n```\n" + docstring)
+                      .toMarkupContent()
                   )
                 }
               case _ =>
@@ -640,7 +641,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
     )
     if (metalsConfig.isSignatureHelpDocumentationEnabled) {
       signatureInformation.setDocumentation(
-        printer.methodDocstring.toMarkupContent
+        printer.methodDocstring.toMarkupContent()
       )
     }
     signatureInformation.setParameters(

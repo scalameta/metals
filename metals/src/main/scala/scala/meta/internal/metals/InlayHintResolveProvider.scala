@@ -16,6 +16,7 @@ import org.eclipse.{lsp4j => l}
 final class InlayHintResolveProvider(
     definitionProvider: DefinitionProvider,
     compilers: Compilers,
+    config: ClientConfiguration,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext) {
   def resolve(
       inlayHint: InlayHint,
@@ -69,7 +70,11 @@ final class InlayHintResolveProvider(
     )
     compilers.hover(hoverParams, token).map { hover =>
       hover
-        .foreach(h => labelPart.setTooltip(h.toLsp().getContents().getRight()))
+        .foreach(h =>
+          labelPart.setTooltip(
+            h.toLsp(config.hoverContentType()).getContents().getRight()
+          )
+        )
       labelPart
     }
   }
