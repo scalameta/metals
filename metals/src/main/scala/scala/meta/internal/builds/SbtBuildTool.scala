@@ -57,6 +57,10 @@ case class SbtBuildTool(
     allArgs
   }
 
+  override def cleanupStaleConfig(): Unit = {
+    // no need to cleanup, the plugin deals with that
+  }
+
   override def digest(workspace: AbsolutePath): Option[String] =
     SbtDigest.current(projectRoot)
   override val minimumVersion: String = "0.13.17"

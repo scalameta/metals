@@ -1,6 +1,10 @@
 package scala.meta.internal.builds
+import java.io.IOException
+import java.nio.file.Files
+
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
 /**
@@ -15,8 +19,31 @@ trait BloopInstallProvider extends BuildTool {
   def bloopInstall(
       workspace: AbsolutePath,
       systemProcess: List[String] => Future[WorkspaceLoadedStatus],
-  ): Future[WorkspaceLoadedStatus] =
+  ): Future[WorkspaceLoadedStatus] = {
+    cleanupStaleConfig()
     systemProcess(bloopInstallArgs(workspace))
+  }
+
+  def cleanupStaleConfig(): Unit = {
+    val bloopDir = projectRoot.resolve(".bloop")
+    try {
+      if (bloopDir.exists && bloopDir.isDirectory) {
+        bloopDir.toFile.listFiles().foreach { file =>
+          if (
+            file.isFile() && file.getName().endsWith(".json") && file
+              .getName() != "bloop.settings.json"
+          ) {
+            Files.delete(file.toPath())
+          }
+        }
+      }
+    } catch {
+      case _: IOException =>
+        scribe.warn(
+          "Failed to remove old config, bloop import might contain some stale information. Please delete `.bloop` and reimport."
+        )
+    }
+  }
 
   /**
    * Args necessary for build tool to generate the .bloop files.
