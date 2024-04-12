@@ -44,7 +44,7 @@ object HoverMarkup {
     }
     if (forceExpressionType || optSymbolSignature.isEmpty) {
       appendCode(
-        Option.when(optSymbolSignature.isDefined)("Expression type"),
+        if (optSymbolSignature.isDefined) Some("Expression type") else None,
         expressionType
       )
       builder.append("\n")
@@ -53,7 +53,7 @@ object HoverMarkup {
     optSymbolSignature.foreach { symbolSignature =>
       if (symbolSignature.nonEmpty) {
         appendCode(
-          Option.when(forceExpressionType)("Symbol signature"),
+          if (forceExpressionType) Some("Symbol signature") else None,
           symbolSignature
         )
       }
@@ -111,7 +111,7 @@ object HoverMarkup {
 
     if (symbolSignature.nonEmpty)
       addCode(
-        Option.when(forceExpressionType)("Symbol signature"),
+        if (forceExpressionType) Some("Symbol signature") else None,
         symbolSignature
       )
 

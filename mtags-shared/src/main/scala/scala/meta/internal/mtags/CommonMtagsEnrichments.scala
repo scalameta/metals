@@ -21,6 +21,7 @@ import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.pc.CompletionItemData
 import scala.meta.internal.pc.RangeOffset
+import scala.meta.pc.HoverContentType
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
 import scala.meta.pc.VirtualFileParams
@@ -31,7 +32,6 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
-import scala.meta.pc.HoverContentType
 
 object CommonMtagsEnrichments extends CommonMtagsEnrichments {}
 trait CommonMtagsEnrichments {
