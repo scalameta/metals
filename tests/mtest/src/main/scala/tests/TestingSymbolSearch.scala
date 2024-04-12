@@ -15,6 +15,7 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.{semanticdb => s}
+import scala.meta.pc.ContentType
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
@@ -35,11 +36,19 @@ class TestingSymbolSearch(
     index: GlobalSymbolIndex = OnDemandSymbolIndex.empty()(EmptyReportContext)
 )(implicit rc: ReportContext = EmptyReportContext)
     extends SymbolSearch {
+
   override def documentation(
       symbol: String,
       parents: ParentSymbols
+  ): Optional[SymbolDocumentation] =
+    documentation(symbol, parents, ContentType.MARKDOWN)
+
+  override def documentation(
+      symbol: String,
+      parents: ParentSymbols,
+      contentType: ContentType
   ): Optional[SymbolDocumentation] = {
-    docs.documentation(symbol, parents)
+    docs.documentation(symbol, parents, contentType)
   }
 
   override def definition(symbol: String, source: URI): ju.List[Location] = {

@@ -21,7 +21,7 @@ import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.pc.CompletionItemData
 import scala.meta.internal.pc.RangeOffset
-import scala.meta.pc.HoverContentType
+import scala.meta.pc.ContentType
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
 import scala.meta.pc.VirtualFileParams
@@ -277,7 +277,7 @@ trait CommonMtagsEnrichments {
       doc.startsWith(value, start)
     }
     def toMarkupContent(
-        contentType: HoverContentType = HoverContentType.MARKDOWN
+        contentType: ContentType = ContentType.MARKDOWN
     ): l.MarkupContent = {
       val content = new MarkupContent
       content.setKind(contentType.toString())

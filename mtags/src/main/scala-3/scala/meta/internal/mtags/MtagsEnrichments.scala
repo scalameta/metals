@@ -5,6 +5,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.pc.SemanticdbSymbols
+import scala.meta.pc.ContentType
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolDocumentation
@@ -232,7 +233,7 @@ object MtagsEnrichments extends ScalametaCommonEnrichments:
     def stripBackticks: String = s.stripPrefix("`").stripSuffix("`")
 
   extension (search: SymbolSearch)
-    def symbolDocumentation(symbol: Symbol)(using
+    def symbolDocumentation(symbol: Symbol, contentType: ContentType = ContentType.MARKDOWN)(using
         Context
     ): Option[SymbolDocumentation] =
       def toSemanticdbSymbol(symbol: Symbol) =
@@ -253,6 +254,7 @@ object MtagsEnrichments extends ScalametaCommonEnrichments:
       val documentation = search.documentation(
         sym,
         () => parentSymbols.map(toSemanticdbSymbol).toList.asJava,
+        contentType
       )
       if documentation.isPresent then Some(documentation.get())
       else None

@@ -20,6 +20,7 @@ import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.ContentType
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 
@@ -29,22 +30,23 @@ import scala.meta.pc.SymbolDocumentation
  * Handles both javadoc and scaladoc.
  */
 class Docstrings(index: GlobalSymbolIndex) {
-  val cache = new TrieMap[String, SymbolDocumentation]()
+  val cache = new TrieMap[(String, ContentType), SymbolDocumentation]()
   private val logger = Logger.getLogger(classOf[Docstrings].getName)
 
   def documentation(
       symbol: String,
-      parents: ParentSymbols
+      parents: ParentSymbols,
+      contentType: ContentType
   ): Optional[SymbolDocumentation] = {
-    val result = cache.get(symbol) match {
+    val result = cache.get((symbol, contentType)) match {
       case Some(value) =>
         if (value == EmptySymbolDocumentation) None
         else Some(value)
       case None =>
-        indexSymbol(symbol)
-        val result = cache.get(symbol)
+        indexSymbol(symbol, contentType)
+        val result = cache.get((symbol, contentType))
         if (result.isEmpty)
-          cache(symbol) = EmptySymbolDocumentation
+          cache((symbol, contentType)) = EmptySymbolDocumentation
         result
     }
     /* Fall back to parent javadocs/scaladocs if nothing is specified for the current symbol
@@ -53,13 +55,14 @@ class Docstrings(index: GlobalSymbolIndex) {
     val resultWithParentDocs = result match {
       case Some(value: MetalsSymbolDocumentation)
           if value.docstring.isEmpty() =>
-        Some(parentDocumentation(symbol, value, parents))
+        Some(parentDocumentation(symbol, value, parents, contentType))
       case None =>
         Some(
           parentDocumentation(
             symbol,
             MetalsSymbolDocumentation.empty(symbol),
-            parents
+            parents,
+            contentType
           )
         )
       case _ => result
@@ -70,16 +73,17 @@ class Docstrings(index: GlobalSymbolIndex) {
   def parentDocumentation(
       symbol: String,
       docs: MetalsSymbolDocumentation,
-      parents: ParentSymbols
+      parents: ParentSymbols,
+      contentType: ContentType
   ): SymbolDocumentation = {
     parents
       .parents()
       .asScala
       .flatMap { s =>
-        if (cache.contains(s)) cache.get(s)
+        if (cache.contains((s, contentType))) cache.get((s, contentType))
         else {
-          indexSymbol(s)
-          cache.get(s)
+          indexSymbol(s, contentType)
+          cache.get((s, contentType))
         }
       }
       .find(_.docstring().nonEmpty)
@@ -87,7 +91,7 @@ class Docstrings(index: GlobalSymbolIndex) {
         docs
       } { withDocs =>
         val updated = docs.copy(docstring = withDocs.docstring())
-        cache(symbol) = updated
+        cache((symbol, contentType)) = updated
         updated
       }
   }
@@ -110,15 +114,18 @@ class Docstrings(index: GlobalSymbolIndex) {
     }
   }
 
-  private def cacheSymbol(doc: SymbolDocumentation): Unit = {
-    cache(doc.symbol()) = doc
+  private def cacheSymbol(
+      doc: SymbolDocumentation,
+      contentType: ContentType
+  ): Unit = {
+    cache((doc.symbol(), contentType)) = doc
   }
 
-  private def indexSymbol(symbol: String): Unit = {
+  private def indexSymbol(symbol: String, contentType: ContentType): Unit = {
     index.definition(Symbol(symbol)) match {
       case Some(defn) =>
         try {
-          indexSymbolDefinition(defn)
+          indexSymbolDefinition(defn, contentType)
         } catch {
           case NonFatal(e) =>
             logger.log(Level.SEVERE, defn.path.toURI.toString, e)
@@ -127,14 +134,19 @@ class Docstrings(index: GlobalSymbolIndex) {
     }
   }
 
-  private def indexSymbolDefinition(defn: SymbolDefinition): Unit = {
+  private def indexSymbolDefinition(
+      defn: SymbolDefinition,
+      contentType: ContentType
+  ): Unit = {
     defn.path.toLanguage match {
       case Language.JAVA =>
         JavadocIndexer
-          .foreach(defn.path.toInput)(cacheSymbol)
+          .foreach(defn.path.toInput, contentType)(cacheSymbol(_, contentType))
       case Language.SCALA =>
         ScaladocIndexer
-          .foreach(defn.path.toInput, defn.dialect)(cacheSymbol)
+          .foreach(defn.path.toInput, defn.dialect, contentType)(
+            cacheSymbol(_, contentType)
+          )
       case _ =>
     }
   }
@@ -148,7 +160,9 @@ class Docstrings(index: GlobalSymbolIndex) {
         sinfo: SymbolInformation,
         owner: String
     ): Unit = {
-      cache.remove(occ.symbol)
+      for {
+        contentType <- ContentType.values()
+      } cache.remove((occ.symbol, contentType))
     }
   }
 

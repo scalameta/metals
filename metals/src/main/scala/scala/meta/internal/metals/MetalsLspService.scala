@@ -1456,7 +1456,7 @@ class MetalsLspService(
     CancelTokens.future { token =>
       compilers
         .hover(params, token)
-        .map(_.map(_.toLsp(clientConfig.hoverContentType())))
+        .map(_.map(_.toLsp()))
         .map(
           _.orElse {
             val path = params.textDocument.getUri.toAbsolutePath

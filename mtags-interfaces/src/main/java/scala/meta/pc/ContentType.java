@@ -1,11 +1,11 @@
 package scala.meta.pc;
 
-public enum HoverContentType {
+public enum ContentType {
   MARKDOWN("markdown"),
   PLAINTEXT("plaintext");
 
   private final String name;
-  HoverContentType(String name) {
+  ContentType(String name) {
       this.name = name;
   }
 

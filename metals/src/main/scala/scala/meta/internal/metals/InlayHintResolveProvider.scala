@@ -72,7 +72,7 @@ final class InlayHintResolveProvider(
       hover
         .foreach(h =>
           labelPart.setTooltip(
-            h.toLsp(config.hoverContentType()).getContents().getRight()
+            h.toLsp().getContents().getRight()
           )
         )
       labelPart

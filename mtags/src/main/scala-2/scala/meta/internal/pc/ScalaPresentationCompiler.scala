@@ -28,6 +28,7 @@ import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.AutoImportsResult
+import scala.meta.pc.ContentType
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.DisplayableException
 import scala.meta.pc.HoverSignature
@@ -334,14 +335,21 @@ case class ScalaPresentationCompiler(
   override def hover(
       params: OffsetParams
   ): CompletableFuture[Optional[HoverSignature]] =
+    hover(params, ContentType.MARKDOWN)
+
+  override def hover(
+      params: OffsetParams,
+      contentType: ContentType
+  ): CompletableFuture[Optional[HoverSignature]] = {
     compilerAccess.withNonInterruptableCompiler(Some(params))(
       Optional.empty[HoverSignature](),
       params.token
     ) { pc =>
       Optional.ofNullable(
-        new HoverProvider(pc.compiler(), params).hover().orNull
+        new HoverProvider(pc.compiler(), params, contentType).hover().orNull
       )
     }
+  }
 
   def definition(params: OffsetParams): CompletableFuture[DefinitionResult] = {
     compilerAccess.withNonInterruptableCompiler(Some(params))(

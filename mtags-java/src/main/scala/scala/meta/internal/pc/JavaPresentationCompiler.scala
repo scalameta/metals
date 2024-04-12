@@ -14,6 +14,7 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.jdk.CollectionConverters._
 
 import scala.meta.pc.AutoImportsResult
+import scala.meta.pc.ContentType
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.InlayHintsParams
@@ -68,13 +69,19 @@ case class JavaPresentationCompiler(
     CompletableFuture.completedFuture(new SignatureHelp())
 
   override def hover(
-      params: OffsetParams
+      params: OffsetParams,
+      contentType: ContentType
   ): CompletableFuture[Optional[HoverSignature]] =
     CompletableFuture.completedFuture(
       Optional.ofNullable(
-        new JavaHoverProvider(javaCompiler, params).hover().orNull
+        new JavaHoverProvider(javaCompiler, params, contentType).hover().orNull
       )
     )
+
+  override def hover(
+      params: OffsetParams
+  ): CompletableFuture[Optional[HoverSignature]] =
+    hover(params, ContentType.MARKDOWN)
 
   override def rename(
       params: OffsetParams,

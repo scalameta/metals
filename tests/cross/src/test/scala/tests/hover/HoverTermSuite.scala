@@ -1,6 +1,6 @@
 package tests.hover
 
-import scala.meta.pc.HoverContentType
+import scala.meta.pc.ContentType
 
 import tests.pc.BaseHoverSuite
 
@@ -729,7 +729,7 @@ class HoverTermSuite extends BaseHoverSuite {
     compat = Map(
       "3" -> "trait App: App"
     ),
-    contentType = HoverContentType.PLAINTEXT
+    contentType = ContentType.PLAINTEXT
   )
 
   check(
@@ -751,6 +751,6 @@ class HoverTermSuite extends BaseHoverSuite {
        |Symbol signature:
        |def subConsumer[T](i: T): T
        |""".stripMargin,
-    contentType = HoverContentType.PLAINTEXT
+    contentType = ContentType.PLAINTEXT
   )
 }

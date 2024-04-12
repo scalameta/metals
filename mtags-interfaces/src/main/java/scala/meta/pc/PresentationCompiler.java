@@ -80,7 +80,16 @@ public abstract class PresentationCompiler {
 	 * Returns the type of the expression at the given position along with the
 	 * symbol of the referenced symbol.
 	 */
+	@Deprecated
 	public abstract CompletableFuture<Optional<HoverSignature>> hover(OffsetParams params);
+
+	/**
+	 * Returns the type of the expression at the given position along with the
+	 * symbol of the referenced symbol.
+	 */
+	public CompletableFuture<Optional<HoverSignature>> hover(OffsetParams params, ContentType contentType) {
+		return hover(params);
+	}
 
 	/**
 	 * Checks if the symbol at given position can be renamed using presentation

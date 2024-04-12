@@ -3,8 +3,8 @@ package scala.meta.internal.pc
 import java.util.Optional
 
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
-import scala.meta.pc.HoverContentType
-import scala.meta.pc.HoverContentType.MARKDOWN
+import scala.meta.pc.ContentType
+import scala.meta.pc.ContentType.MARKDOWN
 import scala.meta.pc.HoverSignature
 
 import org.eclipse.lsp4j
@@ -15,7 +15,8 @@ case class ScalaHover(
     docstring: Option[String] = None,
     forceExpressionType: Boolean = false,
     range: Option[lsp4j.Range] = None,
-    contextInfo: List[String] // e.g. info about rename imports
+    contextInfo: List[String], // e.g. info about rename imports
+    override val contentType: ContentType
 ) extends HoverSignature {
 
   def this(
@@ -31,14 +32,13 @@ case class ScalaHover(
       docstring,
       forceExpressionType,
       range,
-      contextInfo = Nil
+      contextInfo = Nil,
+      contentType = ContentType.MARKDOWN
     )
 
   def signature(): Optional[String] = symbolSignature.asJava
 
-  def toLsp(): lsp4j.Hover = toLsp(HoverContentType.MARKDOWN)
-
-  override def toLsp(contentType: HoverContentType): lsp4j.Hover = {
+  def toLsp(): lsp4j.Hover = {
     val markup =
       HoverMarkup(
         expressionType.getOrElse(""),
@@ -60,7 +60,8 @@ case class ScalaHover(
       docstring,
       forceExpressionType,
       Some(range),
-      contextInfo
+      contextInfo,
+      contentType
     )
 
 }
