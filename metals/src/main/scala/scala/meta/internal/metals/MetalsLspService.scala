@@ -219,6 +219,18 @@ class MetalsLspService(
   private val savedFiles = new ActiveFiles(time)
   private val recentlyOpenedFiles = new ActiveFiles(time)
   val isImportInProcess = new AtomicBoolean(false)
+  val isConnecting = new AtomicBoolean(false)
+  val willGenerateBspConfig = new AtomicReference(Set.empty[util.UUID])
+
+  def withWillGenerateBspConfig[T](body: => Future[T]): Future[T] = {
+    val uuid = util.UUID.randomUUID()
+    willGenerateBspConfig.updateAndGet(_ + uuid)
+    body.map { result =>
+      willGenerateBspConfig.updateAndGet(_ - uuid)
+      result
+    }
+  }
+
   var excludedPackageHandler: ExcludedPackagesHandler =
     ExcludedPackagesHandler.default
 
@@ -810,13 +822,11 @@ class MetalsLspService(
     )
 
   private val popupChoiceReset: PopupChoiceReset = new PopupChoiceReset(
-    folder,
     tables,
     languageClient,
     headDoctor.executeRefreshDoctor,
     () => slowConnectToBuildServer(forceImport = true),
-    bspConnector,
-    () => quickConnectToBuildServer(),
+    () => switchBspServer(),
   )
 
   private val findTextInJars: FindTextInDependencyJars =
@@ -919,12 +929,16 @@ class MetalsLspService(
 
     for {
       _ <- loadFingerPrints()
-      _ <- maybeSetupScalaCli()
       _ <-
         Future
           .sequence(
             List[Future[Unit]](
-              fullConnect(),
+              withWillGenerateBspConfig {
+                for {
+                  _ <- maybeSetupScalaCli()
+                  _ <- fullConnect()
+                } yield ()
+              },
               Future(workspaceSymbols.indexClasspath()),
               Future(formattingProvider.load()),
             )
@@ -1918,16 +1932,18 @@ class MetalsLspService(
   def ammoniteStop(): Future[Unit] = ammonite.stop()
 
   def switchBspServer(): Future[Unit] =
-    for {
-      isSwitched <- bspConnector.switchBuildServer(
-        folder,
-        () => slowConnectToBuildServer(forceImport = true),
-      )
-      _ <- {
-        if (isSwitched) quickConnectToBuildServer()
-        else Future.successful(())
-      }
-    } yield ()
+    withWillGenerateBspConfig {
+      for {
+        isSwitched <- bspConnector.switchBuildServer(
+          folder,
+          () => slowConnectToBuildServer(forceImport = true),
+        )
+        _ <- {
+          if (isSwitched) quickConnectToBuildServer()
+          else Future.successful(())
+        }
+      } yield ()
+    }
 
   def resetPopupChoice(value: String): Future[Unit] =
     popupChoiceReset.reset(value)
@@ -2026,27 +2042,31 @@ class MetalsLspService(
         languageClient.showMessage(Messages.BspProvider.noBuildToolFound)
         Future.successful(())
       case buildTool :: Nil =>
-        buildTool
-          .generateBspConfig(
-            folder,
-            args =>
-              bspConfigGenerator.runUnconditionally(
-                buildTool,
-                args,
-              ),
-            statusBar,
-          )
-          .map(status => ensureAndConnect(buildTool, status))
+        withWillGenerateBspConfig {
+          buildTool
+            .generateBspConfig(
+              folder,
+              args =>
+                bspConfigGenerator.runUnconditionally(
+                  buildTool,
+                  args,
+                ),
+              statusBar,
+            )
+            .map(status => ensureAndConnect(buildTool, status))
+        }
       case buildTools =>
-        bspConfigGenerator
-          .chooseAndGenerate(buildTools)
-          .map {
-            case (
-                  buildTool: BuildServerProvider,
-                  status: BspConfigGenerationStatus,
-                ) =>
-              ensureAndConnect(buildTool, status)
-          }
+        withWillGenerateBspConfig {
+          bspConfigGenerator
+            .chooseAndGenerate(buildTools)
+            .map {
+              case (
+                    buildTool: BuildServerProvider,
+                    status: BspConfigGenerationStatus,
+                  ) =>
+                ensureAndConnect(buildTool, status)
+            }
+        }
     })
   }
 
@@ -2200,15 +2220,16 @@ class MetalsLspService(
 
   private def generateBspAndConnect(
       buildTool: BuildServerProvider
-  ): Future[BuildChange] = {
-    buildTool
-      .generateBspConfig(
-        folder,
-        args => bspConfigGenerator.runUnconditionally(buildTool, args),
-        statusBar,
-      )
-      .flatMap(_ => quickConnectToBuildServer())
-  }
+  ): Future[BuildChange] =
+    withWillGenerateBspConfig {
+      buildTool
+        .generateBspConfig(
+          folder,
+          args => bspConfigGenerator.runUnconditionally(buildTool, args),
+          statusBar,
+        )
+        .flatMap(_ => quickConnectToBuildServer())
+    }
 
   /**
    * If there is no auto-connectable build server and no supported build tool is found
@@ -2219,8 +2240,9 @@ class MetalsLspService(
       !buildTools.isAutoConnectable()
       && buildTools.loadSupported.isEmpty
       && (folder.isScalaProject() || focusedDocument().exists(_.isScala))
-    ) scalaCli.setupIDE(folder)
-    else Future.successful(())
+    ) {
+      scalaCli.setupIDE(folder)
+    } else Future.successful(())
   }
 
   private def slowConnectToBloopServer(
@@ -2342,6 +2364,7 @@ class MetalsLspService(
 
     val scalaCliPath = scalaCli.path
 
+    isConnecting.set(true)
     (for {
       _ <- disconnectOldBuildServer()
       maybeSession <- timerProvider.timed("Connected to build server", true) {
@@ -2435,6 +2458,7 @@ class MetalsLspService(
       workspaceReload.persistChecksumStatus(Digest.Status.Started, _)
     )
     bspSession = Some(session)
+    isConnecting.set(false)
     for {
       _ <- importBuild(session)
       _ <- indexer.profiledIndexWorkspace(runDoctorCheck)
@@ -2520,6 +2544,7 @@ class MetalsLspService(
     sourceMapper,
     folder,
     implementationProvider,
+    () => isConnecting.get(),
   )
 
   private def checkRunningBloopVersion(bspServerVersion: String) = {
@@ -2566,22 +2591,24 @@ class MetalsLspService(
 
   private def onBuildChangedUnbatched(
       paths: Seq[AbsolutePath]
-  ): Future[Unit] = {
-    val changedBuilds = paths.flatMap(buildTools.isBuildRelated)
-    tables.buildTool.selectedBuildTool() match {
-      // no build tool and new added
-      case None if changedBuilds.nonEmpty =>
-        scribe.info(s"Detected new build tool in $path")
-        fullConnect()
-      // used build tool changed
-      case Some(chosenBuildTool) if changedBuilds.contains(chosenBuildTool) =>
-        slowConnectToBuildServer(forceImport = false).ignoreValue
-      // maybe new build tool added
-      case Some(chosenBuildTool) if changedBuilds.nonEmpty =>
-        onBuildToolsAdded(chosenBuildTool, changedBuilds)
-      case _ => Future.unit
+  ): Future[Unit] =
+    if (willGenerateBspConfig.get().nonEmpty) Future.unit
+    else {
+      val changedBuilds = paths.flatMap(buildTools.isBuildRelated)
+      tables.buildTool.selectedBuildTool() match {
+        // no build tool and new added
+        case None if changedBuilds.nonEmpty =>
+          scribe.info(s"Detected new build tool in $path")
+          fullConnect()
+        // used build tool changed
+        case Some(chosenBuildTool) if changedBuilds.contains(chosenBuildTool) =>
+          slowConnectToBuildServer(forceImport = false).ignoreValue
+        // maybe new build tool added
+        case Some(chosenBuildTool) if changedBuilds.nonEmpty =>
+          onBuildToolsAdded(chosenBuildTool, changedBuilds)
+        case _ => Future.unit
+      }
     }
-  }
 
   private def onBuildToolsAdded(
       currentBuildToolName: String,
