@@ -236,7 +236,7 @@ object ImplicitParameters:
     case _ => false
   // Decorations for Quotes are rarely useful
   private def isQuotes(tree: Tree)(using Context) =
-    tree.tpe.typeSymbol.fullName.toString() == "scala.quoted.Quotes"
+    tree.tpe.typeSymbol == Symbols.defn.QuotesClass
 
 end ImplicitParameters
 
