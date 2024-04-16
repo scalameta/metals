@@ -111,29 +111,6 @@ case class ScalaTarget(
     else
       Some(scalac.getClasspath().asScala.toList)
 
-  /**
-   * This method collects jars from classpath defined in scalacOptions.
-   *
-   * If the build server supports lazy classpath resolution, we will
-   * not get any classpath data eagerly and we should not
-   * use this endpoint. It should only be used as a fallback.
-   *
-   * This is due to the fact that we don't request classpath as it
-   * can be resonably expensive.
-   *
-   * We should use the buildTargetDependencyModules information
-   * from the indexer instead.
-   *
-   * @return non empty classpath jar list if it was resolved prior
-   */
-  def jarClasspath: Option[List[AbsolutePath]] =
-    classpath.map(collectJars)
-
-  private def collectJars(paths: List[String]) =
-    paths
-      .filter(_.endsWith(".jar"))
-      .map(_.toAbsolutePath)
-
   def classDirectory: String = scalac.getClassDirectory()
 
   def scalaVersion: String = scalaInfo.getScalaVersion()

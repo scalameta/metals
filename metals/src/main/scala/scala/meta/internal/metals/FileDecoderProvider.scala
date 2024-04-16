@@ -9,6 +9,7 @@ import javax.annotation.Nullable
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.util.Failure
 import scala.util.Properties
 import scala.util.Success
@@ -597,7 +598,7 @@ final class FileDecoderProvider(
           .map(_.id)
       )
     buildTarget
-      .flatMap(id => buildTargets.targetClasspath(id))
+      .flatMap(id => buildTargets.targetClasspath(id, Promise[Unit]()))
       .getOrElse(Future.successful(Nil))
       .map(_.map(_.toAbsolutePath))
       .flatMap { classpaths =>

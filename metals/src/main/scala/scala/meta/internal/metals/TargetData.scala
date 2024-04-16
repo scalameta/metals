@@ -11,6 +11,7 @@ import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.{Map => MMap}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.util.Properties
 
 import scala.meta.inputs.Input
@@ -152,7 +153,7 @@ final class TargetData {
   ): Option[List[AbsolutePath]] = {
     buildTargetDependencyModules.get(id) match {
       case None =>
-        scalaTarget(id).flatMap { target =>
+        jvmTarget(id).flatMap { target =>
           target.jarClasspath
         }
       case Some(value) =>
@@ -165,7 +166,8 @@ final class TargetData {
   }
 
   def targetClasspath(
-      id: BuildTargetIdentifier
+      id: BuildTargetIdentifier,
+      cancelPromise: Promise[Unit],
   )(implicit ec: ExecutionContext): Option[Future[List[String]]] = {
     targetToConnection.get(id).zip(jvmTarget(id)).map {
       case (bspConnection, jvmTarget) =>
@@ -174,7 +176,8 @@ final class TargetData {
             case None =>
               bspConnection
                 .buildTargetJvmClasspath(
-                  new JvmCompileClasspathParams(List(id).asJava)
+                  new JvmCompileClasspathParams(List(id).asJava),
+                  cancelPromise,
                 )
                 .map { classpathResult =>
                   val classpath = classpathResult

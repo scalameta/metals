@@ -9,6 +9,7 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.util.control.NonFatal
 
 import scala.meta.internal.io.PathIO
@@ -117,9 +118,10 @@ final class BuildTargets private (
     data.fromOptions(_.javaTarget(id))
 
   def fullClasspath(
-      id: BuildTargetIdentifier
+      id: BuildTargetIdentifier,
+      cancelPromise: Promise[Unit],
   )(implicit ec: ExecutionContext): Option[Future[List[AbsolutePath]]] =
-    targetClasspath(id).map { lazyClasspath =>
+    targetClasspath(id, cancelPromise).map { lazyClasspath =>
       lazyClasspath.map { classpath =>
         classpath.map(_.toAbsolutePath).collect {
           case path if path.isJar || path.isDirectory =>
@@ -134,9 +136,10 @@ final class BuildTargets private (
     data.fromOptions(_.targetJarClasspath(id))
 
   def targetClasspath(
-      id: BuildTargetIdentifier
+      id: BuildTargetIdentifier,
+      cancelPromise: Promise[Unit],
   )(implicit executionContext: ExecutionContext): Option[Future[List[String]]] =
-    data.fromOptions(_.targetClasspath(id))
+    data.fromOptions(_.targetClasspath(id, cancelPromise))
 
   def targetClassDirectories(
       id: BuildTargetIdentifier
