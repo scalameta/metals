@@ -94,6 +94,10 @@ case class MillBuildTool(
     else "--predef" :: predefScriptPath.toString :: Nil
   }
 
+  override def cleanupStaleConfig(): Unit = {
+    // no need to cleanup, the plugin deals with that
+  }
+
   private def bloopCmd(millVersion: String) = {
     // Bloop was moved to the bloop package in 0.9.3
     // https://github.com/com-lihaoyi/mill/pull/992

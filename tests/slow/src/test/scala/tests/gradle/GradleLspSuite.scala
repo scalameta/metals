@@ -512,4 +512,45 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
     } yield ()
   }
 
+  test("properly-removes-old-config") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/inner/build.gradle
+            |plugins {
+            |    id 'scala'
+            |}
+            |repositories {
+            |    mavenCentral()
+            |}
+            |dependencies {
+            |    implementation 'org.scala-lang:scala-library:${V.scala213}'
+            |}
+            |/inner/settings.gradle
+            |rootProject.name = 'some-project-name'
+            |""".stripMargin
+      )
+      _ = assert(
+        server.server.buildTargets.all
+          .exists(_.getDisplayName() == "some-project-name"),
+        "Build targets should contain \"some-project-name\"",
+      )
+      _ <- server.didChange("inner/settings.gradle")(_ =>
+        "rootProject.name = 'new-name'\n"
+      )
+      _ = client.importBuildChanges = ImportBuildChanges.yes
+      _ <- server.didSave("inner/settings.gradle")(identity)
+      _ = assert(
+        server.server.buildTargets.all
+          .exists(_.getDisplayName() == "new-name"),
+        "Build targets should contain \"new-name\"",
+      )
+      _ = assert(
+        !server.server.buildTargets.all
+          .exists(_.getDisplayName() == "some-project-name"),
+        "Stale build target \"some-project-name\" should be removed.",
+      )
+    } yield ()
+  }
+
 }
