@@ -129,13 +129,28 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
       )
     }
 
-    val scalaClassPath = scalaInfo
-      .flatMap(_.classpath) match {
-      case None => List("<unresolved>")
-      case Some(classpath) =>
-        getClassPath(classpath.map(_.toAbsolutePath), targetId)
+    val scalaClassPath =
+      scalaInfo.flatMap(_.classpath).getOrElse(Nil).map(_.toAbsolutePath)
+    val javaClassPath =
+      javaInfo.flatMap(_.classpath).getOrElse(Nil).map(_.toAbsolutePath)
+    if (scalaClassPath == javaClassPath)
+      if (scalaClassPath.isEmpty)
+        List("<unresolved>")
+      else
+        output ++= getSection(
+          "Classpath",
+          getClassPath(scalaClassPath, targetId),
+        )
+    else {
+      output ++= getSection(
+        "Java Classpath",
+        getClassPath(javaClassPath, targetId),
+      )
+      output ++= getSection(
+        "Scala Classpath",
+        getClassPath(scalaClassPath, targetId),
+      )
     }
-    output ++= getSection("Classpath", scalaClassPath)
     output += ""
     output.mkString(System.lineSeparator())
   }

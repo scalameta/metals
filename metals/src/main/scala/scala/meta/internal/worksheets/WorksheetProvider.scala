@@ -13,6 +13,7 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 
 import scala.meta._
@@ -454,7 +455,7 @@ class WorksheetProvider(
         try {
           val awaitClasspath = Await.result(
             buildTargets
-              .targetClasspath(target)
+              .targetClasspath(target, Promise[Unit]())
               .getOrElse(Future.successful(Nil)),
             Duration(
               5,

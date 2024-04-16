@@ -333,7 +333,8 @@ class BuildServerConnection private (
   }
 
   def buildTargetJvmClasspath(
-      params: JvmCompileClasspathParams
+      params: JvmCompileClasspathParams,
+      cancelPromise: Promise[Unit],
   ): Future[JvmCompileClasspathResult] = {
     val resultOnScalaOptionsUnsupported = new JvmCompileClasspathResult(
       List.empty[JvmCompileClasspathItem].asJava
@@ -346,10 +347,12 @@ class BuildServerConnection private (
             "Jvm compile classpath request not supported by server",
           )
         )
-      register(
+      val completable = register(
         server => server.buildTargetJvmCompileClasspath(params),
         onFail,
-      ).asScala
+      )
+      cancelPromise.future.map(_ => completable.cancel(true))
+      completable.asScala
     } else Future.successful(resultOnScalaOptionsUnsupported)
   }
 

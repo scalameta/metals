@@ -7,7 +7,9 @@ import java.{util => ju}
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
+import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -42,6 +44,7 @@ class CompilerConfiguration(
 
   sealed trait MtagsPresentationCompiler {
     def await: PresentationCompiler
+    def shutdown(): Unit
   }
 
   case class StandaloneCompiler(
@@ -61,6 +64,7 @@ class CompilerConfiguration(
         symbolSearch,
       )
 
+    def shutdown(): Unit = standalone.shutdown()
     def await: PresentationCompiler = standalone
   }
 
@@ -91,18 +95,19 @@ class CompilerConfiguration(
     protected val presentationCompilerRef =
       new ju.concurrent.atomic.AtomicReference[PresentationCompiler]()
 
-    private val wasResolved = new ju.concurrent.atomic.AtomicBoolean(false)
+    protected val cancelCompilerPromise: Promise[Unit] = Promise[Unit]()
     protected val presentationCompilerFuture: Future[PresentationCompiler] =
       buildTargets
-        .targetClasspath(buildTargetId)
+        .targetClasspath(buildTargetId, cancelCompilerPromise)
         .getOrElse(Future.successful(Nil))
         .map { classpath =>
           // set wasResolved to avoid races on timeout below
-          wasResolved.set(true)
-          // Request finished, we can remove and shut down the fallback
-          Option(presentationCompilerRef.getAndSet(null)).foreach(_.shutdown())
           val classpathSeq = classpath.toAbsoluteClasspath.map(_.toNIO).toSeq
-          newCompiler(classpathSeq)
+          val result = newCompiler(classpathSeq)
+          // Request finished, we can remove and shut down the fallback
+          Option(presentationCompilerRef.getAndSet(result))
+            .foreach(_.shutdown())
+          result
         }
 
     def await: PresentationCompiler = {
@@ -116,7 +121,6 @@ class CompilerConfiguration(
             presentationCompilerFuture,
             Duration(compilerConfig.timeoutDelay, compilerConfig.timeoutUnit),
           )
-          presentationCompilerRef.set(result)
           result
         }
       } catch {
@@ -124,15 +128,25 @@ class CompilerConfiguration(
           scribe.warn(
             s"Still waiting for information about classpath, using standalone compiler for now"
           )
-          val pc = presentationCompilerRef.updateAndGet { old =>
+          this.synchronized {
+            val old = presentationCompilerRef.get()
             if (old != null) old
-            else if (!wasResolved.get()) fallback
-            else null
+            else {
+              val newFallback = fallback
+              presentationCompilerRef.set(newFallback)
+              newFallback
+            }
           }
-          if (pc != null) pc
-          // null is only returned if classpath was resolved while we were waiting and there was a race
-          else await
       }
+    }
+
+    def shutdown(): Unit = {
+      cancelCompilerPromise.trySuccess(())
+      presentationCompilerFuture.onComplete {
+        case Success(value) => value.shutdown()
+        case _ =>
+      }
+      Option(presentationCompilerRef.get()).foreach(_.shutdown())
     }
   }
 
@@ -268,11 +282,25 @@ class CompilerConfiguration(
       workspaceFallback,
     )
   } catch {
-    case NonFatal(e) => {
+    case NonFatal(error) => {
       scribe.error(
         "Could not create standalone symbol search, please report an issue.",
-        e,
+        error,
       )
+      val report =
+        Report(
+          "standalone-serach-error",
+          s"""|occurred while creating classpath search
+              |
+              |classpath:
+              |${classpath.mkString(",")}
+              |
+              |sources:
+              |${sources.mkString(",")}
+              |""".stripMargin,
+          error,
+        )
+      rc.unsanitized.create(report)
       EmptySymbolSearch
     }
   }

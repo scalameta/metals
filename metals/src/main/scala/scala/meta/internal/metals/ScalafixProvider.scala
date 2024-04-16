@@ -8,6 +8,7 @@ import java.{util => ju}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.util.Failure
 import scala.util.Random
 import scala.util.Success
@@ -76,9 +77,7 @@ case class ScalafixProvider(
         Future.sequence(testEvaluation)
       }.flatten
         .map { results =>
-          results.forall(_.isSuccessful())
-        }
-        .map { evaluated =>
+          val evaluated = results.forall(_.isSuccessful())
           if (!evaluated) scribe.debug("Could not warm up Scalafix")
 
         }
@@ -381,7 +380,7 @@ case class ScalafixProvider(
     // It seems that Scalafix ignores the targetroot parameter and searches the classpath
     // Prepend targetroot to make sure that it's picked up first always
     val lazyClasspath = buildTargets
-      .fullClasspath(scalaTarget.id)
+      .fullClasspath(scalaTarget.id, Promise[Unit]())
       .getOrElse(Future.successful(Nil))
       .map { classpath =>
         (targetRoot.toList ++ classpath.map(_.toNIO)).asJava

@@ -156,8 +156,8 @@ class Compilers(
     cache.values.count(_.await.isLoaded())
 
   override def cancel(): Unit = {
-    Cancelable.cancelEach(cache.values)(_.await.shutdown())
-    Cancelable.cancelEach(worksheetsCache.values)(_.await.shutdown())
+    Cancelable.cancelEach(cache.values)(_.shutdown())
+    Cancelable.cancelEach(worksheetsCache.values)(_.shutdown())
     cache.clear()
     worksheetsCache.clear()
     worksheetsDigests.clear()
