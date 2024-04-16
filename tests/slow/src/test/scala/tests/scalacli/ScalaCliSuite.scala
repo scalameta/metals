@@ -85,6 +85,7 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
         completion,
         """|pprint
            |pprint_native0.4
+           |pprint_native0.5
            |pprint_sjs1
            |""".stripMargin,
       )
@@ -180,6 +181,7 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
         completion,
         """|pprint
            |pprint_native0.4
+           |pprint_native0.5
            |pprint_sjs1
            |""".stripMargin,
       )
