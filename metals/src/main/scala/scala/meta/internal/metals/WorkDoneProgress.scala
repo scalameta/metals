@@ -152,7 +152,7 @@ class WorkDoneProgress(
         client.notifyProgress(new ProgressParams(token, params))
       }
       .recover { case _: NullPointerException =>
-      // no such value in map
+      // no such value in the task map, task already ended or cancelled
       }
 
   def trackFuture[T](
@@ -182,7 +182,7 @@ class WorkDoneProgress(
       task.onCancel.foreach(_())
     } catch {
       case _: NullPointerException =>
-      // no such value in map
+      // no such value in the task map, task already ended or cancelled
     }
 
   override def cancel(): Unit = {

@@ -70,20 +70,19 @@ final class ForwardingMetalsBuildClient(
   }
   private class Compilation(
       val timer: Timer,
-      val isNoOp: Boolean,
-      token: Option[Future[WorkDoneProgress.Token]],
+      token: Future[WorkDoneProgress.Token],
       taskProgress: TaskProgress = TaskProgress.empty,
   ) extends TreeViewCompilation {
 
     def progressPercentage = taskProgress.percentage
 
-    def end(): Unit = token.foreach(workDoneProgress.endProgress(_))
+    def end(): Unit = workDoneProgress.endProgress(token)
 
     def updateProgress(progress: Long, total: Long = 100): Unit = {
       val prev = taskProgress.percentage
       taskProgress.update(progress, total)
       if (prev != taskProgress.percentage) {
-        token.foreach(workDoneProgress.notifyProgress(_, progressPercentage))
+        workDoneProgress.notifyProgress(token, progressPercentage)
       }
     }
   }
@@ -179,18 +178,12 @@ final class ForwardingMetalsBuildClient(
           compilations.remove(target).foreach(_.end())
 
           val name = info.getDisplayName
-          val isNoOp =
-            params.getMessage != null && params.getMessage.startsWith(
-              "Start no-op compilation"
-            )
           val token =
-            Option.when(!isNoOp) {
-              workDoneProgress.startProgress(
-                s"Compiling $name",
-                withProgress = true,
-              )
-            }
-          val compilation = new Compilation(new Timer(time), isNoOp, token)
+            workDoneProgress.startProgress(
+              s"Compiling $name",
+              withProgress = true,
+            )
+          val compilation = new Compilation(new Timer(time), token)
           compilations(task.getTarget) = compilation
         }
       case _ =>
@@ -223,23 +216,14 @@ final class ForwardingMetalsBuildClient(
             if (isSuccess) clientConfig.icons.check
             else clientConfig.icons.alert
           val message = s"${icon}Compiled $name (${compilation.timer})"
-          if (!compilation.isNoOp) {
-            scribe.info(s"time: compiled $name in ${compilation.timer}")
-          }
+          scribe.info(s"time: compiled $name in ${compilation.timer}")
           if (isSuccess) {
             if (hasReportedError.contains(target)) {
               // Only report success compilation if it fixes a previous compile error.
               statusBar.addMessage(message)
             }
-            if (!compilation.isNoOp || !updatedTreeViews.contains(target)) {
-              // By default, skip `onBuildTargetDidCompile` notifications on no-op
-              // compilations to reduce noisy traffic to the client. However, we
-              // send the notification if it's the first successful compilation of
-              // that target to fix
-              // https://github.com/scalameta/metals/issues/846.
-              updatedTreeViews.add(target)
-              onBuildTargetDidCompile(target)
-            }
+            updatedTreeViews.add(target)
+            onBuildTargetDidCompile(target)
             hasReportedError.remove(target)
           } else {
             hasReportedError.add(target)
