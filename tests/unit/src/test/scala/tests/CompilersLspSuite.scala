@@ -230,7 +230,7 @@ class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
     } yield ()
   }
 
-  test("never-compiling-reverse-order") {
+  test("never-compiling2") {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -261,8 +261,6 @@ class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
           |}
           |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/a/A.scala")
-      _ <- server.didOpen("a/src/main/scala/b/B.scala")
       _ <- server.didOpen("a/src/main/scala/c/C.scala")
       _ = assertNoDiff(
         server.client.workspaceDiagnostics,
@@ -287,7 +285,7 @@ class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
     } yield ()
   }
 
-  test("never-compiling2") {
+  test("never-compiling-reverse-order") {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -319,8 +317,6 @@ class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
           |}
           |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/scala/a/A.scala")
-      _ <- server.didOpen("a/src/main/scala/b/B.scala")
       _ <- server.didOpen("a/src/main/scala/c/C.scala")
       _ = assertNoDiff(
         server.client.workspaceDiagnostics,

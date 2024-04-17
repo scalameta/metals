@@ -93,18 +93,8 @@ class OutlineFilesProvider(
 
   def enrichWithOutlineFiles(
       path: AbsolutePath
-  )(vFile: CompilerVirtualFileParams): CompilerVirtualFileParams = {
-    val optOutlineFiles =
-      for {
-        bt <- buildTargets.inferBuildTarget(path)
-        provider <- outlineFiles.get(bt)
-        outlineFiles <- provider.outlineFiles()
-      } yield outlineFiles
-
-    optOutlineFiles
-      .map(outlineFiles => vFile.copy(outlineFiles = Optional.of(outlineFiles)))
-      .getOrElse(vFile)
-  }
+  )(vFile: CompilerVirtualFileParams): CompilerVirtualFileParams =
+    enrichWithOutlineFiles(buildTargets.inferBuildTarget(path))(vFile)
 
   def clear(): Unit = {
     outlineFiles.clear()

@@ -3,8 +3,6 @@ package scala.meta.internal.pc
 import scala.tools.nsc.reporters.Reporter
 import scala.tools.nsc.reporters.StoreReporter
 
-import scala.meta.pc.OutlineFiles
-
 trait Compat { this: MetalsGlobal =>
   def metalsFunctionArgTypes(tpe: Type): List[Type] = {
     val dealiased = tpe.dealiasWiden
@@ -21,8 +19,4 @@ trait Compat { this: MetalsGlobal =>
   def isAliasCompletion(m: Member): Boolean = false
 
   def constantType(c: ConstantType): ConstantType = c
-
-  def runOutline(files: OutlineFiles): Unit = {
-    // no outline compilation for 2.11
-  }
 }

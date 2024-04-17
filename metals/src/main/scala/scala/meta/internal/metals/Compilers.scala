@@ -15,15 +15,18 @@ import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
+import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.CompilerOffsetParamsUtils
 import scala.meta.internal.metals.CompilerRangeParamsUtils
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.MD5
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.worksheets.WorksheetPcData
 import scala.meta.internal.worksheets.WorksheetProvider
+import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.CancelToken
@@ -114,7 +117,8 @@ class Compilers(
   }
 
   val plugins = new CompilerPlugins()
-  val outlineFilesProvider = new OutlineFilesProvider(buildTargets, buffers)
+  private val outlineFilesProvider =
+    new OutlineFilesProvider(buildTargets, buffers)
 
   // Not a TrieMap because we want to avoid loading duplicate compilers for the same build target.
   // Not a `j.u.c.ConcurrentHashMap` because it can deadlock in `computeIfAbsent` when the absent
@@ -1378,6 +1382,101 @@ class Compilers(
     debugItem.setType(toDebugCompletionType(item.getKind()))
     debugItem.setSortText(item.getFilterText())
     debugItem
+  }
+
+  def semanticdbTextDocument(
+      source: AbsolutePath,
+      text: String,
+  ): s.TextDocument = {
+    val (pc, optBuildTarget) =
+      loadCompiler(source).getOrElse((fallbackCompiler(source), None))
+
+    val (prependedLinesSize, modifiedText) =
+      Option
+        .when(source.isSbt)(
+          buildTargets
+            .sbtAutoImports(source)
+        )
+        .flatten
+        .fold((0, text))(imports =>
+          (imports.size, SbtBuildTool.prependAutoImports(text, imports))
+        )
+
+    // NOTE(olafur): it's unfortunate that we block on `semanticdbTextDocument`
+    // here but to avoid it we would need to refactor the `Semanticdbs` trait,
+    // which requires more effort than it's worth.
+    val params = new CompilerVirtualFileParams(
+      source.toURI,
+      modifiedText,
+      token = EmptyCancelToken,
+      outlineFiles = outlineFilesProvider.getOutlineFiles(optBuildTarget),
+    )
+    val bytes = pc
+      .semanticdbTextDocument(params)
+      .get(
+        config.initialConfig.compilers.timeoutDelay,
+        config.initialConfig.compilers.timeoutUnit,
+      )
+    val textDocument = {
+      val doc = s.TextDocument.parseFrom(bytes)
+      if (doc.text.isEmpty()) doc.withText(text)
+      else doc
+    }
+    if (prependedLinesSize > 0)
+      cleanupAutoImports(textDocument, text, prependedLinesSize)
+    else textDocument
+  }
+
+  private def cleanupAutoImports(
+      document: s.TextDocument,
+      originalText: String,
+      linesSize: Int,
+  ): s.TextDocument = {
+
+    def adjustRange(range: s.Range): Option[s.Range] = {
+      val nextStartLine = range.startLine - linesSize
+      val nextEndLine = range.endLine - linesSize
+      if (nextEndLine >= 0) {
+        val nextRange = range.copy(
+          startLine = nextStartLine,
+          endLine = nextEndLine,
+        )
+        Some(nextRange)
+      } else None
+    }
+
+    val adjustedOccurences =
+      document.occurrences.flatMap { occurence =>
+        occurence.range
+          .flatMap(adjustRange)
+          .map(r => occurence.copy(range = Some(r)))
+      }
+
+    val adjustedDiagnostic =
+      document.diagnostics.flatMap { diagnostic =>
+        diagnostic.range
+          .flatMap(adjustRange)
+          .map(r => diagnostic.copy(range = Some(r)))
+      }
+
+    val adjustedSynthetic =
+      document.synthetics.flatMap { synthetic =>
+        synthetic.range
+          .flatMap(adjustRange)
+          .map(r => synthetic.copy(range = Some(r)))
+      }
+
+    s.TextDocument(
+      schema = document.schema,
+      uri = document.uri,
+      text = originalText,
+      md5 = MD5.compute(originalText),
+      language = document.language,
+      symbols = document.symbols,
+      occurrences = adjustedOccurences,
+      diagnostics = adjustedDiagnostic,
+      synthetics = adjustedSynthetic,
+    )
   }
 
 }

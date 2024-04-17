@@ -8,7 +8,6 @@ import scala.concurrent.duration.Duration
 import scala.util.Success
 import scala.util.Try
 
-import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.scalacli.ScalaCliServers
 import scala.meta.internal.mtags.MD5
@@ -145,7 +144,7 @@ final class InteractiveSemanticdbs(
         javaInteractiveSemanticdb.fold(s.TextDocument())(
           _.textDocument(source, text)
         )
-      else scalaCompile(source, text)
+      else compilers().semanticdbTextDocument(source, text)
     }
 
 }
