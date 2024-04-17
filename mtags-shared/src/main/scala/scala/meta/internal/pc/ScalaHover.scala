@@ -24,7 +24,8 @@ case class ScalaHover(
       symbolSignature: Option[String],
       docstring: Option[String],
       forceExpressionType: Boolean,
-      range: Option[lsp4j.Range]
+      range: Option[lsp4j.Range],
+      contextInfo: List[String]
   ) =
     this(
       expressionType,
@@ -32,7 +33,7 @@ case class ScalaHover(
       docstring,
       forceExpressionType,
       range,
-      contextInfo = Nil,
+      contextInfo,
       contentType = ContentType.MARKDOWN
     )
 

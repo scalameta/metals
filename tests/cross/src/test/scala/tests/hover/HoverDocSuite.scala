@@ -531,7 +531,7 @@ class HoverDocSuite extends BaseHoverSuite {
   )
 
   check(
-    "basic-plaintext",
+    "basic-plaintext".tag(IgnoreForScala3CompilerPC),
     """|
        |/** 
        |  * Some docstring
@@ -552,7 +552,7 @@ class HoverDocSuite extends BaseHoverSuite {
   )
 
   check(
-    "fold-plaintext",
+    "fold-plaintext".tag(IgnoreForScala3CompilerPC),
     """|object a {
        |  <<Option(1).fo@@ld("")(_ => @@)>>
        |}
@@ -584,7 +584,9 @@ class HoverDocSuite extends BaseHoverSuite {
   )
 
   check(
-    "head-plaintext",
+    "head-plaintext".tag(
+      IgnoreScala211.and(IgnoreScala212).and(IgnoreForScala3CompilerPC)
+    ),
     """|object a {
        |  <<List(1).he@@ad>>
        |}

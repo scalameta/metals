@@ -722,7 +722,7 @@ class HoverTermSuite extends BaseHoverSuite {
   )
 
   check(
-    "app-plaintext",
+    "app-plaintext".tag(IgnoreForScala3CompilerPC),
     """|object Main extends <<Ap@@p>>{}
        |""".stripMargin,
     "abstract trait App: App",
@@ -733,7 +733,7 @@ class HoverTermSuite extends BaseHoverSuite {
   )
 
   check(
-    "function-chain4-plaintext",
+    "function-chain4-plaintext".tag(IgnoreForScala3CompilerPC),
     """
       |trait Consumer {
       |  def subConsumer[T](i: T): T
