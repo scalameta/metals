@@ -512,6 +512,10 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |}
             |/inner/settings.gradle
             |rootProject.name = 'some-project-name'
+            |/inner/src/main/scala/A.scala
+            |object A {
+            |  val foo: Int = "aaa"
+            |}
             |""".stripMargin
       )
       _ = assert(
