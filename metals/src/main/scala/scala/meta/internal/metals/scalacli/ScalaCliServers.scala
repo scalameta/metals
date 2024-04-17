@@ -179,19 +179,19 @@ class ScalaCliServers(
       }
     }
 
-    val (newServer, outServer) =
+    val (newServer, oldServer) =
       prevServers
         .find(_.path == path)
         .map((_, None))
         .getOrElse {
           buildTargets.addData(scalaCli.buildTargetsData)
-          val outServer =
+          val oldServer =
             Option.when(servers.size == 10)(prevServers.dequeue._1)
-          (scalaCli, outServer)
+          (scalaCli, oldServer)
         }
 
     for {
-      _ <- outServer.map(_.stop()).getOrElse(Future.unit)
+      _ <- oldServer.map(_.stop()).getOrElse(Future.unit)
       _ <- newServer.start()
     } yield ()
   }

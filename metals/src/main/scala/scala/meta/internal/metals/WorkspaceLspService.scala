@@ -1076,7 +1076,9 @@ class WorkspaceLspService(
         val capabilities = new lsp4j.ServerCapabilities()
         capabilities.setExecuteCommandProvider(
           new lsp4j.ExecuteCommandOptions(
-            (ServerCommands.allIds ++ fallbackService.allActionCommandsIds).toList.asJava
+            (ServerCommands.allIds ++ folderServices.headOption
+              .getOrElse(fallbackService)
+              .allActionCommandsIds).toList.asJava
           )
         )
         capabilities.setFoldingRangeProvider(true)
