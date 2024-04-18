@@ -6,7 +6,6 @@ import scala.meta.XtensionSyntax
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.mtags.CommonMtagsEnrichments.XtensionOptionalJava
-import scala.meta.pc.ContentType
 
 import munit.Location
 import munit.TestOptions
@@ -25,8 +24,7 @@ abstract class BaseHoverSuite
       expected: String,
       includeRange: Boolean = false,
       automaticPackage: Boolean = true,
-      compat: Map[String, String] = Map.empty,
-      contentType: ContentType = ContentType.MARKDOWN
+      compat: Map[String, String] = Map.empty
   )(implicit loc: Location): Unit = {
     test(testOpt) {
       val filename = "Hover.scala"
@@ -45,7 +43,7 @@ abstract class BaseHoverSuite
         CompilerRangeParams(Paths.get(filename).toUri(), code, so, eo)
       }
       val hover = presentationCompiler
-        .hover(pcParams, contentType)
+        .hover(pcParams)
         .get()
         .asScala
         .map(_.toLsp())

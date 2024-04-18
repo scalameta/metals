@@ -16,7 +16,6 @@ import org.eclipse.{lsp4j => l}
 final class InlayHintResolveProvider(
     definitionProvider: DefinitionProvider,
     compilers: Compilers,
-    config: ClientConfiguration,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext) {
   def resolve(
       inlayHint: InlayHint,

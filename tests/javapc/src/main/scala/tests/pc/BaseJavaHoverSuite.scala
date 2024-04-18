@@ -6,7 +6,6 @@ import java.nio.file.Paths
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.pc.ContentType
 
 import munit.Location
 import munit.TestOptions
@@ -39,9 +38,7 @@ class BaseJavaHoverSuite extends BaseJavaPCSuite with TestHovers {
       } else {
         CompilerRangeParams(uri, code, so, eo)
       }
-      val hover = presentationCompiler
-        .hover(pcParams, ContentType.MARKDOWN)
-        .get()
+      val hover = presentationCompiler.hover(pcParams).get()
 
       val obtained: String =
         renderAsString(

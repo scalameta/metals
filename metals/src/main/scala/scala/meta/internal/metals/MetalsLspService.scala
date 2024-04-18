@@ -755,7 +755,6 @@ class MetalsLspService(
     new InlayHintResolveProvider(
       definitionProvider,
       compilers,
-      clientConfig,
     )
 
   val doctor: Doctor = new Doctor(

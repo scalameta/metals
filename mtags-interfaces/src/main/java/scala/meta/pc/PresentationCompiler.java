@@ -80,16 +80,7 @@ public abstract class PresentationCompiler {
 	 * Returns the type of the expression at the given position along with the
 	 * symbol of the referenced symbol.
 	 */
-	@Deprecated
 	public abstract CompletableFuture<Optional<HoverSignature>> hover(OffsetParams params);
-
-	/**
-	 * Returns the type of the expression at the given position along with the
-	 * symbol of the referenced symbol.
-	 */
-	public CompletableFuture<Optional<HoverSignature>> hover(OffsetParams params, ContentType contentType) {
-		return hover(params);
-	}
 
 	/**
 	 * Checks if the symbol at given position can be renamed using presentation
@@ -175,14 +166,16 @@ public abstract class PresentationCompiler {
 	public abstract CompletableFuture<List<Diagnostic>> didChange(VirtualFileParams params);
 
 	/**
-	 * Returns decorations for missing type adnotations, inferred type parameters, implicit parameters and conversions.
+	 * Returns decorations for missing type adnotations, inferred type parameters,
+	 * implicit parameters and conversions.
 	 */
 	public CompletableFuture<List<InlayHint>> inlayHints(InlayHintsParams params) {
 		return CompletableFuture.completedFuture(Collections.emptyList());
 	}
 
 	/**
-	 * Returns decorations for missing type adnotations, inferred type parameters, implicit parameters and conversions.
+	 * Returns decorations for missing type adnotations, inferred type parameters,
+	 * implicit parameters and conversions.
 	 */
 	public CompletableFuture<List<SyntheticDecoration>> syntheticDecorations(SyntheticDecorationsParams params) {
 		return CompletableFuture.completedFuture(Collections.emptyList());

@@ -1,7 +1,5 @@
 package tests.hover
 
-import scala.meta.pc.ContentType
-
 import tests.pc.BaseHoverSuite
 
 class HoverDocSuite extends BaseHoverSuite {
@@ -528,76 +526,5 @@ class HoverDocSuite extends BaseHoverSuite {
                 | `A`.
                 |""".stripMargin
     )
-  )
-
-  check(
-    "basic-plaintext".tag(IgnoreForScala3CompilerPC),
-    """|
-       |/** 
-       |  * Some docstring
-       |  */
-       |case class Alpha(x: Int) {
-       |}
-       |
-       |object Main {
-       |  val x = <<Alp@@ha(2)>>
-       |}
-       |""".stripMargin,
-    """|def apply(x: Int): Alpha
-       |
-       |Some docstring
-       |
-       |""".stripMargin,
-    contentType = ContentType.PLAINTEXT
-  )
-
-  check(
-    "fold-plaintext".tag(IgnoreForScala3CompilerPC),
-    """|object a {
-       |  <<Option(1).fo@@ld("")(_ => @@)>>
-       |}
-       |""".stripMargin,
-    """|Expression type:
-       |String
-       |
-       |Symbol signature:
-       |final def fold[B](ifEmpty: => B)(f: Int => B): B
-       |
-       |Returns the result of applying f to this [[scala.Option]]'s
-       | value if the [[scala.Option]] is nonempty.  Otherwise, evaluates
-       | expression ifEmpty.
-       |This is equivalent to:
-       |{{{
-       |option match {
-       |  case Some(x) => f(x)
-       |  case None    => ifEmpty
-       |}
-       |}}}
-       |This is also equivalent to:
-       |{{{
-       |option map f getOrElse ifEmpty
-       |}}}
-       |@param ifEmpty: the expression to evaluate if empty.
-       |@param f: the function to apply if nonempty.
-       |""".stripMargin,
-    contentType = ContentType.PLAINTEXT
-  )
-
-  check(
-    "head-plaintext".tag(
-      IgnoreScala211.and(IgnoreScala212).and(IgnoreForScala3CompilerPC)
-    ),
-    """|object a {
-       |  <<List(1).he@@ad>>
-       |}
-       |""".stripMargin,
-    """|def head: Int
-       |
-       |Selects the first element of this iterable collection.
-       | Note: might return different results for different runs, unless the underlying collection type is ordered.
-       |@returns the first element of this iterable collection.
-       |@throws NoSuchElementException: if the iterable collection is empty.
-       |""".stripMargin,
-    contentType = ContentType.PLAINTEXT
   )
 }

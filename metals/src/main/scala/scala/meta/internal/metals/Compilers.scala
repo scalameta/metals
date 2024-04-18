@@ -727,8 +727,7 @@ class Compilers(
   ): Future[Option[HoverSignature]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       pc.hover(
-        CompilerRangeParamsUtils.offsetOrRange(pos, token),
-        config.hoverContentType(),
+        CompilerRangeParamsUtils.offsetOrRange(pos, token)
       ).asScala
         .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
     }

@@ -10,7 +10,6 @@ import scala.meta.internal.async.CompletableCancelToken
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.SymbolDefinition
-import scala.meta.pc.ContentType
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 
@@ -84,9 +83,7 @@ class InterruptPresentationCompilerSuite extends BasePCSuite {
       |  val x = "".stripS@@uffix("")
       |}
       |""".stripMargin,
-    (pc, params) => {
-      pc.hover(params, ContentType.MARKDOWN)
-    }
+    (pc, params) => pc.hover(params)
   )
 
   check(
