@@ -23,6 +23,8 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.ContentType
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
+import scala.meta.pc.ContentType.MARKDOWN
+import scala.meta.pc.ContentType.PLAINTEXT
 
 /**
  * Implementation of the `documentation(symbol: String): Option[SymbolDocumentation]` method in `SymbolSearch`.
@@ -30,7 +32,7 @@ import scala.meta.pc.SymbolDocumentation
  * Handles both javadoc and scaladoc.
  */
 class Docstrings(index: GlobalSymbolIndex) {
-  val cache = new TrieMap[(String, ContentType), SymbolDocumentation]()
+  val cache = new TrieMap[Content, SymbolDocumentation]()
   private val logger = Logger.getLogger(classOf[Docstrings].getName)
 
   def documentation(
@@ -38,15 +40,16 @@ class Docstrings(index: GlobalSymbolIndex) {
       parents: ParentSymbols,
       contentType: ContentType
   ): Optional[SymbolDocumentation] = {
-    val result = cache.get((symbol, contentType)) match {
+    val content = Content.from(symbol, contentType)
+    val result = cache.get(content) match {
       case Some(value) =>
         if (value == EmptySymbolDocumentation) None
         else Some(value)
       case None =>
         indexSymbol(symbol, contentType)
-        val result = cache.get((symbol, contentType))
+        val result = cache.get(content)
         if (result.isEmpty)
-          cache((symbol, contentType)) = EmptySymbolDocumentation
+          cache(content) = EmptySymbolDocumentation
         result
     }
     /* Fall back to parent javadocs/scaladocs if nothing is specified for the current symbol
@@ -80,10 +83,11 @@ class Docstrings(index: GlobalSymbolIndex) {
       .parents()
       .asScala
       .flatMap { s =>
-        if (cache.contains((s, contentType))) cache.get((s, contentType))
+        val content = Content.from(s, contentType)
+        if (cache.contains(content)) cache.get(content)
         else {
           indexSymbol(s, contentType)
-          cache.get((s, contentType))
+          cache.get(content)
         }
       }
       .find(_.docstring().nonEmpty)
@@ -91,7 +95,7 @@ class Docstrings(index: GlobalSymbolIndex) {
         docs
       } { withDocs =>
         val updated = docs.copy(docstring = withDocs.docstring())
-        cache((symbol, contentType)) = updated
+        cache(Content.from(symbol, contentType)) = updated
         updated
       }
   }
@@ -118,7 +122,7 @@ class Docstrings(index: GlobalSymbolIndex) {
       doc: SymbolDocumentation,
       contentType: ContentType
   ): Unit = {
-    cache((doc.symbol(), contentType)) = doc
+    cache(Content.from(doc.symbol(), contentType)) = doc
   }
 
   private def indexSymbol(symbol: String, contentType: ContentType): Unit = {
@@ -162,7 +166,7 @@ class Docstrings(index: GlobalSymbolIndex) {
     ): Unit = {
       for {
         contentType <- ContentType.values()
-      } cache.remove((occ.symbol, contentType))
+      } cache.remove(Content.from(occ.symbol, contentType))
     }
   }
 
@@ -172,4 +176,16 @@ object Docstrings {
   def empty(implicit rc: ReportContext): Docstrings = new Docstrings(
     OnDemandSymbolIndex.empty()
   )
+}
+
+sealed trait Content extends Any
+class Markdown(val text: String) extends AnyVal with Content
+class Plain(val text: String) extends AnyVal with Content
+
+object Content {
+  def from(text: String, contentType: ContentType) =
+    contentType match {
+      case MARKDOWN => new Markdown(text)
+      case PLAINTEXT => new Plain(text)
+    }
 }
