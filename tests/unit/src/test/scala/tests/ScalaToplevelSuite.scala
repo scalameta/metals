@@ -680,4 +680,21 @@ class ScalaToplevelSuite extends BaseToplevelSuite {
     ),
     mode = All,
   )
+
+  check(
+    "object-type-alias",
+    """|object A
+       |object O {
+       |  type T = A.type
+       |  type R = Int
+       |}
+       |""".stripMargin,
+    List(
+      "_empty_/A.",
+      "_empty_/O.",
+      "_empty_/O.R# -> Int",
+      "_empty_/O.T# -> A",
+    ),
+    mode = All,
+  )
 }
