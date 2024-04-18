@@ -697,7 +697,6 @@ class ScalaToplevelMtags(
         if (emitTermMember) {
           tpe(ident.name, ident.pos, Kind.TYPE, 0)
         }
-        nextIsNL()
         @tailrec
         def loop(
             name: Option[String],
@@ -722,8 +721,7 @@ class ScalaToplevelMtags(
               loop(name, isAfterEq)
             case IDENTIFIER
                 if isAfterEq && scanner.curr.name != "|" && scanner.curr.name != "&" =>
-              val optName = selectName()
-              loop(optName, isAfterEq)
+              loop(identOrSelectName(), isAfterEq)
             case _ if isAfterEq => None
             case _ =>
               scanner.nextToken()
@@ -949,22 +947,27 @@ class ScalaToplevelMtags(
     }
   }
 
-  def selectName(): Option[String] = {
-    @tailrec
-    def loop(last: Option[String]): Option[String] = {
-      scanner.curr.token match {
-        case IDENTIFIER =>
-          val name = scanner.curr.name
-          scanner.nextToken()
-          loop(Some(name))
-        case DOT =>
-          scanner.nextToken()
-          loop(last)
-        case _ =>
-          last
-      }
+  private def getName: Option[String] =
+    scanner.curr.token match {
+      case WHITESPACE => None
+      case _ => Some(scanner.curr.name)
     }
-    loop(last = None)
+
+  @tailrec
+  private def identOrSelectName(
+      current: Option[String] = getName
+  ): Option[String] = {
+    nextIsNL()
+    scanner.curr.token match {
+      case DOT =>
+        nextIsNL()
+        val newIdent = getName
+        if (newIdent.exists(_ == "type")) {
+          scanner.nextToken()
+          current
+        } else identOrSelectName(newIdent)
+      case _ => current
+    }
   }
 
   /**
