@@ -6,8 +6,8 @@ import scala.tools.nsc.interactive.Global
 
 import scala.meta.dialects
 import scala.meta.interactive.InteractiveSemanticdb
-import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.JdkSources
+import scala.meta.internal.metals.LoggerReportContext
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.mtags.JavaMtags
@@ -90,7 +90,7 @@ class MetalsBench {
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def toplevelsScalaIndex(): Unit = {
     scalaDependencySources.inputs.foreach { input =>
-      implicit val rc: ReportContext = EmptyReportContext
+      implicit val rc: ReportContext = LoggerReportContext
       new ScalaToplevelMtags(
         input,
         includeInnerClasses = false,
@@ -104,7 +104,7 @@ class MetalsBench {
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def typeHierarchyIndex(): Unit = {
     scalaDependencySources.inputs.foreach { input =>
-      implicit val rc: ReportContext = EmptyReportContext
+      implicit val rc: ReportContext = LoggerReportContext
       new ScalaToplevelMtags(
         input,
         includeInnerClasses = true,
@@ -184,14 +184,16 @@ class MetalsBench {
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def toplevelJavaMtags(): Unit = {
     javaDependencySources.inputs.foreach { input =>
-      new JavaToplevelMtags(input, includeInnerClasses = true).index()
+      new JavaToplevelMtags(input, includeInnerClasses = true)(
+        LoggerReportContext
+      ).index()
     }
   }
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def indexSources(): Unit = {
-    val index = OnDemandSymbolIndex.empty()(EmptyReportContext)
+    val index = OnDemandSymbolIndex.empty()(LoggerReportContext)
     fullClasspath.entries.foreach(entry =>
       index.addSourceJar(entry, dialects.Scala213)
     )
