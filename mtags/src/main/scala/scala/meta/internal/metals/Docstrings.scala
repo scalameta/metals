@@ -21,10 +21,10 @@ import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.ContentType
-import scala.meta.pc.ParentSymbols
-import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.ContentType.MARKDOWN
 import scala.meta.pc.ContentType.PLAINTEXT
+import scala.meta.pc.ParentSymbols
+import scala.meta.pc.SymbolDocumentation
 
 /**
  * Implementation of the `documentation(symbol: String): Option[SymbolDocumentation]` method in `SymbolSearch`.
@@ -183,7 +183,7 @@ class Markdown(val text: String) extends AnyVal with Content
 class Plain(val text: String) extends AnyVal with Content
 
 object Content {
-  def from(text: String, contentType: ContentType) =
+  def from(text: String, contentType: ContentType): AnyVal with Content =
     contentType match {
       case MARKDOWN => new Markdown(text)
       case PLAINTEXT => new Plain(text)

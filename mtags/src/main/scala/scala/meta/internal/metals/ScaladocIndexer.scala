@@ -31,6 +31,12 @@ class ScaladocIndexer(
       sinfo: SymbolInformation,
       owner: String
   ): Unit = {
+    val printer =
+      contentType match {
+        case MARKDOWN => printers.MarkdownGenerator
+        case PLAINTEXT => printers.PlaintextGenerator
+      }
+
     val docstring = currentTree.origin match {
       case ScalametaCompat.ParsedOrigin(start, _) =>
         val leadingDocstring =
@@ -47,23 +53,12 @@ class ScaladocIndexer(
     // Register `@define` macros to use for expanding in later docstrings.
     defines ++= ScaladocParser.extractDefines(docstring)
     val comment = ScaladocParser.parseComment(docstring, defines)
-    val docstringContent =
-      contentType match {
-        case MARKDOWN =>
-          MarkdownGenerator.toMarkdown(comment, docstring)
-        case PLAINTEXT =>
-          PlaintextGenerator.toPlaintext(comment, docstring)
-      }
+    val docstringContent = printer.toText(comment, docstring)
     def param(name: String, default: String): SymbolDocumentation = {
       val paramDoc = comment.valueParams
         .get(name)
         .orElse(comment.typeParams.get(name))
-        .map { body =>
-          contentType match {
-            case MARKDOWN => MarkdownGenerator.toMarkdown(body)
-            case PLAINTEXT => PlaintextGenerator.toPlaintext(body)
-          }
-        }
+        .map(printer.toText)
         .getOrElse("")
       MetalsSymbolDocumentation(
         Symbols.Global(owner, Descriptor.Parameter(name)),

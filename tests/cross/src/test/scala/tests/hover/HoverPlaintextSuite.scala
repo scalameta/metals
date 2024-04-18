@@ -52,17 +52,22 @@ class HoverPlaintextSuite extends BaseHoverSuite {
        |Returns the result of applying f to this [[scala.Option]]'s
        | value if the [[scala.Option]] is nonempty.  Otherwise, evaluates
        | expression ifEmpty.
+       |
        |This is equivalent to:
+       |
        |{{{
        |option match {
        |  case Some(x) => f(x)
        |  case None    => ifEmpty
        |}
        |}}}
+       |
        |This is also equivalent to:
+       |
        |{{{
        |option map f getOrElse ifEmpty
        |}}}
+       |
        |@param ifEmpty: the expression to evaluate if empty.
        |@param f: the function to apply if nonempty.
        |""".stripMargin
@@ -80,7 +85,9 @@ class HoverPlaintextSuite extends BaseHoverSuite {
        |
        |Selects the first element of this iterable collection.
        | Note: might return different results for different runs, unless the underlying collection type is ordered.
+       |
        |@returns the first element of this iterable collection.
+       |
        |@throws NoSuchElementException: if the iterable collection is empty.
        |""".stripMargin
   )

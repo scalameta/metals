@@ -6,7 +6,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
-import scala.meta.internal.docstrings.MarkdownGenerator
+import scala.meta.internal.docstrings.printers.MarkdownGenerator
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.JavaMtags
 import scala.meta.internal.semanticdb.Scala.Descriptor
