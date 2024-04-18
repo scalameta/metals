@@ -151,9 +151,10 @@ your own without DAP.
 No matter which method you use, you still need to connect the debug adapter
 extension specific to you editor using the aforementioned URI and let it drive
 the run/debug session. For reference, take a look at the
-[vscode implementation](https://github.com/scalameta/metals-vscode/blob/master/src/scalaDebugger.ts)
+[vscode implementation](https://github.com/scalameta/metals-vscode/blob/main/packages/metals-vscode/src/debugger/scalaDebugger.ts)
+
 and how it is
-[wired up together](https://github.com/scalameta/metals-vscode/blob/master/src/extension.ts#L356)
+[wired up together](https://github.com/scalameta/metals-vscode/blob/main/packages/metals-vscode/src/extension.ts)
 
 ## Supported Testing Frameworks
 
