@@ -234,13 +234,18 @@ class WorkspaceLspService(
 
   def initTreeView(): Unit = treeView.init()
 
+  def currentOrHeadOrFallback: MetalsLspService =
+    currentFolder
+      .orElse { folderServices.headOption }
+      .getOrElse(fallbackService)
+
   private val newProjectProvider: NewProjectProvider = new NewProjectProvider(
     languageClient,
     workDoneProgress,
     clientConfig,
     shellRunner,
     clientConfig.icons,
-    fallbackService.path,
+    () => currentOrHeadOrFallback.path,
   )
 
   private val githubNewIssueUrlCreator = new GithubNewIssueUrlCreator(
@@ -1029,12 +1034,12 @@ class WorkspaceLspService(
         foreachSeq(_.stopScalaCli(), ignoreValue = true)
       case ServerCommands.NewScalaProject() =>
         newProjectProvider
-          .createNewProjectFromTemplate(fallbackService.javaHome)
+          .createNewProjectFromTemplate(currentOrHeadOrFallback.javaHome)
           .asJavaObject
       case ServerCommands.CopyWorksheetOutput(path) =>
         getServiceFor(path).copyWorksheetOutput(path.toAbsolutePath)
       case actionCommand
-          if fallbackService.allActionCommandsIds(
+          if currentOrHeadOrFallback.allActionCommandsIds(
             actionCommand.getCommand()
           ) =>
         val getOptDisplayableMessage: PartialFunction[Throwable, String] = {
@@ -1076,9 +1081,7 @@ class WorkspaceLspService(
         val capabilities = new lsp4j.ServerCapabilities()
         capabilities.setExecuteCommandProvider(
           new lsp4j.ExecuteCommandOptions(
-            (ServerCommands.allIds ++ folderServices.headOption
-              .getOrElse(fallbackService)
-              .allActionCommandsIds).toList.asJava
+            (ServerCommands.allIds ++ currentOrHeadOrFallback.allActionCommandsIds).toList.asJava
           )
         )
         capabilities.setFoldingRangeProvider(true)
