@@ -1,10 +1,13 @@
 package scala.meta.internal.mtags
 
 import scala.annotation.tailrec
+import scala.util.control.NonFatal
 
 import scala.meta.dialects
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
+import scala.meta.internal.metals.Report
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.tokenizers.Reporter
@@ -12,7 +15,8 @@ import scala.meta.internal.tokenizers.Reporter
 class JavaToplevelMtags(
     val input: Input.VirtualFile,
     includeInnerClasses: Boolean
-) extends MtagsIndexer {
+)(implicit rc: ReportContext)
+    extends MtagsIndexer {
 
   import JavaToplevelMtags._
 
@@ -31,9 +35,27 @@ class JavaToplevelMtags(
   override def language: Language = Language.JAVA
 
   override def indexRoot(): Unit = {
-    if (!input.path.endsWith("module-info.java")) {
-      reader.nextRawChar()
-      loop(None)
+    try {
+      if (!input.path.endsWith("module-info.java")) {
+        reader.nextRawChar()
+        loop(None)
+      }
+    } catch {
+      case NonFatal(e) =>
+        rc.unsanitized.create(
+          new Report(
+            s"failed-idex-java",
+            s"""|Java indexer failed with and exception.
+                |```Java
+                |${input.text}
+                |```
+                |""".stripMargin,
+            s"Java indexer failed with and exception.",
+            path = Some(input.path),
+            id = Some(input.path),
+            error = Some(e)
+          )
+        )
     }
   }
 
