@@ -975,7 +975,7 @@ class Compilers(
       .computeIfAbsent(
         PresentationCompilerKey.JavaBuildTarget(targetId),
         { _ =>
-          statusBar.trackBlockingTask(
+          workDoneProgress.trackBlocking(
             s"${config.icons.sync}Loading presentation compiler"
           ) {
             JavaLazyCompiler(targetId, search)
