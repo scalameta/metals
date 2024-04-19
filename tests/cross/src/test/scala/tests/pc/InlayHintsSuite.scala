@@ -4,10 +4,6 @@ import tests.BaseInlayHintsSuite
 
 class InlayHintsSuite extends BaseInlayHintsSuite {
 
-  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = Some(
-    IgnoreForScala3CompilerPC
-  )
-
   check(
     "local",
     """|object Main {
@@ -691,7 +687,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
-    "context-bounds4".tag(IgnoreForScala3CompilerPC),
+    "context-bounds4",
     """|package example
        |object O {
        |  implicit val i: Int = 123
@@ -718,7 +714,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
-    "pattern-match".tag(IgnoreForScala3CompilerPC),
+    "pattern-match",
     """|package example
        |object O {
        |  val head :: tail = List(1)
@@ -788,7 +784,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
-    "pattern-match1".tag(IgnoreForScala3CompilerPC),
+    "pattern-match1",
     """|package example
        |object O {
        |  val head :: tail = List(1)

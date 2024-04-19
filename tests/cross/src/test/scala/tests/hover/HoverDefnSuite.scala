@@ -171,7 +171,7 @@ class HoverDefnSuite extends BaseHoverSuite {
   )
 
   check(
-    "package".tag(IgnoreForScala3CompilerPC),
+    "package",
     """package b.p@@kg
       |object Main
       |""".stripMargin,

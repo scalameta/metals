@@ -6,8 +6,6 @@ object V {
   val scala212 = "2.12.19"
   val scala213 = "2.13.13"
   val scala3 = "3.3.3"
-  val firstScala3PCVersion = "3.3.4"
-  val wrapperMetalsVersion = "3.4.0-RC1-bin-20231127-41e7d95-NIGHTLY"
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
   val scala3RC: Option[String] = None
@@ -119,15 +117,6 @@ object V {
 
   // NOTE if you had a new Scala Version make sure it's contained in quickPublishScalaVersions
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
-
-  lazy val nightlyScala3DottyVersions = {
-    if (isNightliesEnabled)
-      Scala3NightlyVersions.nightlyReleasesAfter(firstScala3PCVersion)
-    else
-      Nil
-  }
-
-  def nightlyScala3Versions = nightlyScala3DottyVersions.map(_.toString)
 
   def supportedScalaVersions =
     scala2Versions ++ scala3Versions

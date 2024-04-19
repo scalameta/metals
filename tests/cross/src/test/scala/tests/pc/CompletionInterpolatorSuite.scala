@@ -596,7 +596,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
   // This case will not be supported as every modern editor automatically insterts closing brace
   // and it is non trivial to correctly find completion query for this scenario.
   checkEditLine(
-    "brace-token-error-pos".tag(IgnoreForScala3CompilerPC),
+    "brace-token-error-pos",
     """|object Main {
        |  val hello = ""
        |  ___

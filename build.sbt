@@ -17,28 +17,18 @@ def isScala212(v: Option[(Long, Long)]): Boolean = v.contains((2, 12))
 def isScala213(v: Option[(Long, Long)]): Boolean = v.contains((2, 13))
 def isScala2(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 2)
 def isScala3(v: Option[(Long, Long)]): Boolean = v.exists(_._1 == 3)
-def isScala3WithPresentationCompiler(v: String): Boolean =
-  (Version.parse(v), Version.parse(V.firstScala3PCVersion)) match {
-    case (Some(v), _) if V.supportedScalaVersions.contains(v.toString()) =>
-      false
-    case (Some(v), Some(firstScala3PCVersion)) => v >= firstScala3PCVersion
-    case _ => false
-  }
 
 def crossSetting[A](
     scalaVersion: String,
     if211: List[A] = Nil,
     if213: List[A] = Nil,
     if3: List[A] = Nil,
-    if3WithPresentationCompiler: List[A] = Nil,
     if2: List[A] = Nil,
 ): List[A] =
   CrossVersion.partialVersion(scalaVersion) match {
     case partialVersion if isScala211(partialVersion) => if211 ::: if2
     case partialVersion if isScala212(partialVersion) => if2
     case partialVersion if isScala213(partialVersion) => if2 ::: if213
-    case _ if isScala3WithPresentationCompiler(scalaVersion) =>
-      if3WithPresentationCompiler
     case partialVersion if isScala3(partialVersion) => if3
     case _ => Nil
   }
@@ -258,9 +248,7 @@ lazy val mtagsShared = project
     moduleName := "mtags-shared",
     crossTarget := target.value / s"scala-${scalaVersion.value}",
     // Dotty depends on Scala 2.13 for compatibility guarantees for from-source compilation.
-    crossScalaVersions :=
-      (V.supportedScalaVersions ++ V.nightlyScala3Versions)
-        .filterNot(isScala3WithPresentationCompiler),
+    crossScalaVersions := V.supportedScalaVersions,
     crossVersion := CrossVersion.full,
     Compile / packageSrc / publishArtifact := true,
     Compile / scalacOptions ++= {
@@ -310,7 +298,7 @@ def scala3ScalametaDependency =
     ) // avoid 2.13 and 3 on the classpath since it comes in via pprint
 
 val mtagsSettings = List(
-  crossScalaVersions := V.supportedScalaVersions ++ V.nightlyScala3Versions,
+  crossScalaVersions := V.supportedScalaVersions,
   crossTarget := target.value / s"scala-${scalaVersion.value}",
   crossVersion := CrossVersion.full,
   Compile / unmanagedSourceDirectories ++= multiScalaDirectories(
@@ -342,9 +330,6 @@ val mtagsSettings = List(
         "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
         scala3ScalametaDependency,
       ),
-      if3WithPresentationCompiler = List(
-        "org.scala-lang" %% "scala3-presentation-compiler" % scalaVersion.value
-      ),
     ),
   },
   libraryDependencies ++= {
@@ -367,8 +352,6 @@ val mtagsSettings = List(
       Set("2.13.5", "2.13.6", "2.13.7", "2.13.8")
     if (scalaVersionsWithSpecialCompat(scalaVersion.value))
       current.filter(f => f.getName() != "scala-2.13")
-    else if (isScala3WithPresentationCompiler(scalaVersion.value))
-      List(base / s"scala-3-wrapper")
     else
       current
   },
@@ -394,35 +377,12 @@ lazy val mtags3 = project
   .dependsOn(interfaces)
   .enablePlugins(BuildInfoPlugin)
 
-lazy val mtags3WithPresentationCompiler = project
-  .in(file(".mtags"))
-  .settings(
-    Compile / unmanagedSourceDirectories := Seq(),
-    sharedSettings,
-    mtagsSettings,
-    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags" / "src" / "main" / "scala-3-wrapper",
-    moduleName := "mtags3WithPresentationCompiler",
-    scalaVersion := V.wrapperMetalsVersion,
-    target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3-wrapper",
-    publish / skip := true,
-    scalafixConfig := Some(
-      (ThisBuild / baseDirectory).value / ".scalafix3.conf"
-    ),
-  )
-  .dependsOn(interfaces)
-  .enablePlugins(BuildInfoPlugin)
-
 lazy val mtags = project
   .settings(
     sharedSettings,
     mtagsSettings,
     moduleName := "mtags",
-    projectDependencies := {
-      // mtags-shared are included in scala3-presentation-compiler module as sources
-      if (isScala3WithPresentationCompiler(scalaVersion.value)) {
-        projectDependencies.value.filterNot(_.name == "mtags-shared")
-      } else projectDependencies.value
-    },
+    projectDependencies := projectDependencies.value,
   )
   .dependsOn(mtagsShared)
   .enablePlugins(BuildInfoPlugin)
@@ -553,7 +513,6 @@ lazy val metals = project
       "bazelScalaVersion" -> V.bazelScalaVersion,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
-      "firstScala3PCVersion" -> V.firstScala3PCVersion,
       "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
   )
@@ -700,9 +659,8 @@ lazy val mtest = project
       "scala212" -> V.scala212,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
-      "firstScala3PCVersion" -> V.firstScala3PCVersion,
       "scala2Versions" -> V.scala2Versions,
-      "scala3Versions" -> (V.scala3Versions ++ V.nightlyScala3Versions),
+      "scala3Versions" -> V.scala3Versions,
       "scala2Versions" -> V.scala2Versions,
       "scalaVersion" -> scalaVersion.value,
       "kindProjector" -> V.kindProjector,
@@ -714,22 +672,6 @@ lazy val mtest = project
       (ThisBuild / baseDirectory).value / "tests" / "mtest",
       scalaVersion.value,
     ),
-    libraryDependencies ++= {
-      if (isScala3WithPresentationCompiler(scalaVersion.value))
-        List(scala3ScalametaDependency)
-      else Nil
-    },
-    Compile / unmanagedSourceDirectories ++= {
-      val base = (mtags / Compile / sourceDirectory).value
-      if (isScala3WithPresentationCompiler(scalaVersion.value)) {
-        List(
-          base / "scala",
-          base / "scala-3" / "scala" / "meta" / "internal" / "metals",
-        )
-      } else {
-        Nil
-      }
-    },
   )
   .dependsOn(mtags)
   .enablePlugins(BuildInfoPlugin)

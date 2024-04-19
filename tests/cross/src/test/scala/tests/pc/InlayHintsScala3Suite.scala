@@ -138,7 +138,7 @@ class InlayHintsScala3Suite extends BaseInlayHintsSuite {
 
   // NOTE: We don't show inlayHints for anonymous given instances
   check(
-    "anonymous-given".tag(IgnoreForScala3CompilerPC),
+    "anonymous-given",
     """|package example
        |
        |trait Ord[T]:
@@ -171,7 +171,7 @@ class InlayHintsScala3Suite extends BaseInlayHintsSuite {
 
   // TODO: Add a separate option for hints for context bounds
   check(
-    "context-bounds1".tag(IgnoreForScala3CompilerPC),
+    "context-bounds1",
     """|package example
        |object O {
        |  given Int = 1
@@ -189,7 +189,7 @@ class InlayHintsScala3Suite extends BaseInlayHintsSuite {
   )
 
   check(
-    "context-bounds3".tag(IgnoreForScala3CompilerPC),
+    "context-bounds3",
     """|package example
        |object O {
        |  def test[T: Ordering](x: T)(using Int) = ???
@@ -205,7 +205,7 @@ class InlayHintsScala3Suite extends BaseInlayHintsSuite {
   )
 
   check(
-    "quotes".tag(IgnoreForScala3CompilerPC),
+    "quotes",
     """|package example
        |import scala.quoted.*
        |object O:
@@ -221,7 +221,7 @@ class InlayHintsScala3Suite extends BaseInlayHintsSuite {
   )
 
   check(
-    "quotes1".tag(IgnoreForScala3CompilerPC),
+    "quotes1",
     """|package example
        |import scala.quoted.*
        |object O:
@@ -243,7 +243,7 @@ class InlayHintsScala3Suite extends BaseInlayHintsSuite {
   )
 
   check(
-    "quotes2".tag(IgnoreForScala3CompilerPC),
+    "quotes2",
     """|package example
        |import scala.quoted.*
        |object O:
