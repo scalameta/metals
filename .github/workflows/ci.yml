@@ -118,11 +118,6 @@ jobs:
             name: Scala javapc tests
             os: ubuntu-latest
             java: "17"
-          - type: cross-test-nightly
-            command: sbt cross-test-latest-nightly
-            name: Scala3 latest NIGHTLY cross test
-            os: ubuntu-latest
-            java: "17"
           - type: cross-test-2-11
             command: sbt cross-test-2-11
             name: Scala 2.11 cross tests

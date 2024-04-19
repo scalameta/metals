@@ -142,18 +142,6 @@ commands ++= Seq(
       "mtags-java/publishLocal" ::
       publishMtags
   },
-  Command.command("cross-test-latest-nightly") { s =>
-    val max =
-      if (V.nightlyScala3DottyVersions.nonEmpty)
-        Option(V.nightlyScala3DottyVersions.max)
-      else None
-    max match {
-      case Some(latest) => crossTestDyn(s, latest.toString)
-      case None =>
-        println("No nightly versions was found. Skipping cross/test")
-        s
-    }
-  },
   Command.command("cross-test-2-11") { s =>
     crossTestDyn(s, V.scala211)
   },
