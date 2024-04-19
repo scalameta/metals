@@ -279,6 +279,7 @@ abstract class BaseWorksheetLspSuite(
       )
       _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
       _ <- cancelled.future
+      _ = client.onWorkDoneProgressStart = (_, _) => {}
       _ <- server.didSave("a/src/main/scala/Main.worksheet.sc")(
         _.replace("Stream", "// Stream")
       )
