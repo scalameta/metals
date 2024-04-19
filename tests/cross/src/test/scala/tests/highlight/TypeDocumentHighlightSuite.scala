@@ -152,7 +152,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
   )
 
   check(
-    "projection1".tag(IgnoreForScala3CompilerPC),
+    "projection1",
     """|
        |class A {
        |    type <<B@@B>> = Int
@@ -163,7 +163,7 @@ class TypeDocumentHighlightSuite extends BaseDocumentHighlightSuite {
   )
 
   check(
-    "projection2".tag(IgnoreForScala3CompilerPC),
+    "projection2",
     """|
        |class A {
        |    type <<BB>> = Int

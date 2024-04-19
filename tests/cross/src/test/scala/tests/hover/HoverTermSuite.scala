@@ -622,7 +622,7 @@ class HoverTermSuite extends BaseHoverSuite {
   )
 
   check(
-    "import-rename".tag(IgnoreForScala3CompilerPC),
+    "import-rename",
     """|import scala.collection.{AbstractMap => AB}
        |import scala.collection.{Set => S}
        |
@@ -652,7 +652,7 @@ class HoverTermSuite extends BaseHoverSuite {
   )
 
   check(
-    "import-rename2".tag(IgnoreForScala3CompilerPC),
+    "import-rename2",
     """|import scala.collection.{AbstractMap => AB}
        |import scala.collection.{Set => S}
        |
