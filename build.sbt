@@ -514,7 +514,7 @@ lazy val metals = project
       // for JSON formatted doctor
       "com.lihaoyi" %% "ujson" % "3.1.5",
       // For fetching projects' templates
-      "com.lihaoyi" %% "requests" % "0.8.0",
+      "com.lihaoyi" %% "requests" % "0.8.2",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
       "org.scalameta" %% "scalameta" % V.semanticdb(scalaVersion.value),
       "org.scalameta" % "semanticdb-scalac-core" % V.semanticdb(
