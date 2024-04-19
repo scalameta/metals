@@ -55,6 +55,7 @@ final case class Indexer(
     executionContext: ExecutionContextExecutorService,
     tables: Tables,
     statusBar: () => StatusBar,
+    workDoneProgress: WorkDoneProgress,
     timerProvider: TimerProvider,
     scalafixProvider: () => ScalafixProvider,
     indexingPromise: () => Promise[Unit],
@@ -165,8 +166,8 @@ final case class Indexer(
   }
 
   def profiledIndexWorkspace(check: () => Unit): Future[Unit] = {
-    val tracked = statusBar().trackFuture(
-      s"Indexing",
+    val tracked = workDoneProgress.trackFuture(
+      Messages.indexing,
       Future {
         timerProvider.timedThunk("indexed workspace", onlyIf = true) {
           try indexWorkspace(check)

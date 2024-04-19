@@ -30,12 +30,11 @@ import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
-import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.pc.CompilerJobQueue
 import scala.meta.internal.pc.InterruptException
@@ -66,7 +65,7 @@ class WorksheetProvider(
     buildTargets: BuildTargets,
     languageClient: MetalsLanguageClient,
     userConfig: () => UserConfiguration,
-    statusBar: StatusBar,
+    workDoneProgress: WorkDoneProgress,
     diagnostics: Diagnostics,
     embedded: Embedded,
     publisher: WorksheetPublisher,
@@ -251,10 +250,9 @@ class WorksheetProvider(
         )
       }
       cancelables.add(Cancelable(() => completeEmptyResult()))
-      statusBar.trackFuture(
+      workDoneProgress.trackFuture(
         s"Evaluating ${path.filename}",
         result.asScala,
-        showTimer = true,
       )
       token.checkCanceled()
       // NOTE(olafurpg) Run evaluation in a custom thread so that we can
@@ -340,17 +338,12 @@ class WorksheetProvider(
     val interruptThread = new Runnable {
       def run(): Unit = {
         if (!result.isDone()) {
-          val cancel = languageClient.metalsSlowTask(
-            new MetalsSlowTaskParams(
-              s"Evaluating worksheet '${path.filename}'",
-              quietLogs = true,
-              secondsElapsed = userConfig().worksheetCancelTimeout,
-            )
+          val token = workDoneProgress.startProgress(
+            s"Evaluating worksheet '${path.filename}'",
+            onCancel = Some(cancellable.cancel),
           )
-          cancel.asScala.foreach { c =>
-            if (c.cancel) cancellable.cancel()
-          }
-          result.asScala.onComplete(_ => cancel.cancel(true))
+
+          result.asScala.onComplete(_ => workDoneProgress.endProgress(token))
         }
       }
     }

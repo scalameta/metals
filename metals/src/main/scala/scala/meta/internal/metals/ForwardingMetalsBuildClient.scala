@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.Promise
+import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.BspErrorHandler
@@ -20,6 +20,7 @@ import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
+import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.tvp._
 import scala.meta.io.AbsolutePath
 
@@ -55,6 +56,7 @@ final class ForwardingMetalsBuildClient(
     onBuildTargetDidCompile: b.BuildTargetIdentifier => Unit,
     onBuildTargetDidChangeFunc: b.DidChangeBuildTarget => Unit,
     bspErrorHandler: BspErrorHandler,
+    workDoneProgress: WorkDoneProgress,
 ) extends MetalsBuildClient
     with Cancelable {
 
@@ -66,13 +68,23 @@ final class ForwardingMetalsBuildClient(
   ): List[LogForwarder] = {
     forwarders.getAndUpdate(_.prepended(logForwarder))
   }
-  private case class Compilation(
-      timer: Timer,
-      promise: Promise[b.CompileReport],
-      isNoOp: Boolean,
-      progress: TaskProgress = TaskProgress.empty,
+  private class Compilation(
+      val timer: Timer,
+      token: Future[WorkDoneProgress.Token],
+      taskProgress: TaskProgress = TaskProgress.empty,
   ) extends TreeViewCompilation {
-    def progressPercentage = progress.percentage
+
+    def progressPercentage = taskProgress.percentage
+
+    def end(): Unit = workDoneProgress.endProgress(token)
+
+    def updateProgress(progress: Long, total: Long = 100): Unit = {
+      val prev = taskProgress.percentage
+      taskProgress.update(progress, total)
+      if (prev != taskProgress.percentage) {
+        workDoneProgress.notifyProgress(token, progressPercentage)
+      }
+    }
   }
 
   private val compilations = TrieMap.empty[b.BuildTargetIdentifier, Compilation]
@@ -109,7 +121,7 @@ final class ForwardingMetalsBuildClient(
       key <- compilations.keysIterator
       compilation <- compilations.remove(key)
     } {
-      compilation.promise.cancel()
+      compilation.end()
     }
   }
 
@@ -163,23 +175,16 @@ final class ForwardingMetalsBuildClient(
         } {
           diagnostics.onStartCompileBuildTarget(target)
           // cancel ongoing compilation for the current target, if any.
-          compilations.remove(target).foreach(_.promise.cancel())
+          compilations.remove(target).foreach(_.end())
 
           val name = info.getDisplayName
-          val promise = Promise[b.CompileReport]()
-          val isNoOp =
-            params.getMessage != null && params.getMessage.startsWith(
-              "Start no-op compilation"
+          val token =
+            workDoneProgress.startProgress(
+              s"Compiling $name",
+              withProgress = true,
             )
-          val compilation = Compilation(new Timer(time), promise, isNoOp)
+          val compilation = new Compilation(new Timer(time), token)
           compilations(task.getTarget) = compilation
-
-          statusBar.trackFuture(
-            s"Compiling $name",
-            promise.future,
-            showTimer = true,
-            progress = Some(compilation.progress),
-          )
         }
       case _ =>
     }
@@ -201,7 +206,7 @@ final class ForwardingMetalsBuildClient(
               scribe.error(s"failed to process compile report", e)
           }
           val target = report.getTarget
-          compilation.promise.trySuccess(report)
+          compilation.end()
           val name = buildTargets.info(report.getTarget) match {
             case Some(i) => i.getDisplayName
             case None => report.getTarget.getUri
@@ -211,23 +216,14 @@ final class ForwardingMetalsBuildClient(
             if (isSuccess) clientConfig.icons.check
             else clientConfig.icons.alert
           val message = s"${icon}Compiled $name (${compilation.timer})"
-          if (!compilation.isNoOp) {
-            scribe.info(s"time: compiled $name in ${compilation.timer}")
-          }
+          scribe.info(s"time: compiled $name in ${compilation.timer}")
           if (isSuccess) {
             if (hasReportedError.contains(target)) {
               // Only report success compilation if it fixes a previous compile error.
               statusBar.addMessage(message)
             }
-            if (!compilation.isNoOp || !updatedTreeViews.contains(target)) {
-              // By default, skip `onBuildTargetDidCompile` notifications on no-op
-              // compilations to reduce noisy traffic to the client. However, we
-              // send the notification if it's the first successful compilation of
-              // that target to fix
-              // https://github.com/scalameta/metals/issues/846.
-              updatedTreeViews.add(target)
-              onBuildTargetDidCompile(target)
-            }
+            updatedTreeViews.add(target)
+            onBuildTargetDidCompile(target)
             hasReportedError.remove(target)
           } else {
             hasReportedError.add(target)
@@ -264,7 +260,7 @@ final class ForwardingMetalsBuildClient(
           buildTarget <- buildTargetFromParams
           report <- compilations.get(buildTarget)
         } yield {
-          report.progress.update(params.getProgress, params.getTotal)
+          report.updateProgress(params.getProgress, params.getTotal)
         }
       case "compile-progress" =>
         // "compile-progress" is from sbt, however its progress field is actually a percentage,
@@ -273,7 +269,7 @@ final class ForwardingMetalsBuildClient(
           buildTarget <- buildTargetFromParams
           report <- compilations.get(buildTarget)
         } yield {
-          report.progress.update(params.getProgress, newTotal = 100)
+          report.updateProgress(params.getProgress)
         }
       case _ =>
     }

@@ -15,22 +15,16 @@ import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
-import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
+import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.process.ExitCodes
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
 import coursierapi._
 
-class ShellRunner(
-    languageClient: MetalsLanguageClient,
-    time: Time,
-    statusBar: StatusBar,
-)(implicit
+class ShellRunner(time: Time, workDoneProvider: WorkDoneProgress)(implicit
     executionContext: scala.concurrent.ExecutionContext
 ) extends Cancelable {
 
@@ -110,40 +104,27 @@ class ShellRunner(
       Some(processErr),
       propagateError,
     )
-    // NOTE(olafur): older versions of VS Code don't respect cancellation of
-    // window/showMessageRequest, meaning the "cancel build import" button
-    // stays forever in view even after successful build import. In newer
-    // VS Code versions the message is hidden after a delay.
-    val taskResponse =
-      languageClient.metalsSlowTask(
-        new MetalsSlowTaskParams(commandRun)
-      )
-
     val result = Promise[Int]
-    taskResponse.asScala.foreach { item =>
-      if (item.cancel) {
+    val newCancelable: Cancelable = () => ps.cancel
+    cancelables.add(newCancelable)
+
+    val processFuture = ps.complete
+    workDoneProvider.trackFuture(
+      commandRun,
+      processFuture,
+      onCancel = Some(() => {
         if (logInfo)
           scribe.info(s"user cancelled $commandRun")
         result.trySuccess(ExitCodes.Cancel)
         ps.cancel
-      }
-    }
-    val newCancelables: List[Cancelable] =
-      List(() => ps.cancel, () => taskResponse.cancel(false))
-    newCancelables.foreach(cancelables.add)
-
-    val processFuture = ps.complete
-    statusBar.trackFuture(
-      s"Running '$commandRun'",
-      processFuture,
+      }),
     )
     processFuture.map { code =>
-      taskResponse.cancel(false)
       if (logInfo)
         scribe.info(s"time: ran '$commandRun' in $elapsed")
       result.trySuccess(code)
     }
-    result.future.onComplete(_ => newCancelables.foreach(cancelables.remove))
+    result.future.onComplete(_ => cancelables.remove(newCancelable))
     result.future
   }
 

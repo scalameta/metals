@@ -221,4 +221,8 @@ class DelegatingScalaService(
       params: DidChangeWorkspaceFoldersParams
   ): CompletableFuture[Unit] = underlying.didChangeWorkspaceFolders(params)
 
+  override def didCancelWorkDoneProgress(
+      params: WorkDoneProgressCancelParams
+  ): Unit = underlying.didCancelWorkDoneProgress(params)
+
 }

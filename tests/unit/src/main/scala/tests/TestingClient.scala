@@ -27,8 +27,6 @@ import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.WorkspaceChoicePopup
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
-import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
-import scala.meta.internal.metals.clients.language.MetalsSlowTaskResult
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.clients.language.RawMetalsInputBoxResult
@@ -53,6 +51,8 @@ import org.eclipse.lsp4j.ResourceOperation
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.TextDocumentEdit
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.WorkDoneProgressBegin
+import org.eclipse.lsp4j.WorkDoneProgressCancelParams
 import org.eclipse.lsp4j.WorkDoneProgressCreateParams
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
@@ -94,7 +94,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   var resetWorkspace = new MessageActionItem(ResetWorkspace.cancel)
   var regenerateAndRestartScalaCliBuildSever = FileOutOfScalaCliBspScope.ignore
   var shouldReloadAfterJavaHomeUpdate = ProjectJavaHomeUpdate.notNow
-
+  var onWorkDoneProgressStart: (String, WorkDoneProgressCancelParams) => Unit =
+    (_, _) => {}
   val resources = new ResourceOperations(buffers)
   val diagnostics: TrieMap[AbsolutePath, Seq[Diagnostic]] =
     TrieMap.empty[AbsolutePath, Seq[Diagnostic]]
@@ -113,9 +114,6 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   val clientCommands = new ConcurrentLinkedDeque[ExecuteCommandParams]()
   val decorations =
     new ConcurrentHashMap[AbsolutePath, Set[PublishDecorationsParams]]()
-  var slowTaskHandler: MetalsSlowTaskParams => Option[MetalsSlowTaskResult] = {
-    _: MetalsSlowTaskParams => None
-  }
   var showMessageHandler: MessageParams => Unit = { _: MessageParams =>
     ()
   }
@@ -135,6 +133,19 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
 
   val testExplorerUpdates: Promise[List[JsonObject]] =
     Promise[List[JsonObject]]()
+
+  def beginProgressMessages: String =
+    progressParams.asScala
+      .flatMap { params =>
+        if (params.getValue().isLeft()) {
+          params.getValue().getLeft() match {
+            case begin: WorkDoneProgressBegin =>
+              Some(begin.getTitle())
+            case _ => None
+          }
+        } else None
+      }
+      .mkString("\n")
 
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
@@ -403,19 +414,6 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   override def logMessage(params: MessageParams): Unit = {
     logMessages.add(params)
   }
-  override def metalsSlowTask(
-      params: MetalsSlowTaskParams
-  ): CompletableFuture[MetalsSlowTaskResult] = {
-    CompletableFuture.completedFuture {
-      messageRequests.addLast(params.message)
-      slowTaskHandler(params) match {
-        case Some(result) =>
-          result
-        case None =>
-          MetalsSlowTaskResult(cancel = false)
-      }
-    }
-  }
 
   override def metalsStatus(params: MetalsStatusParams): Unit = {
     statusParams.add(params)
@@ -432,6 +430,14 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   }
 
   override def notifyProgress(params: ProgressParams): Unit = {
+    if (params.getValue().isLeft()) {
+      params.getValue().getLeft() match {
+        case begin: WorkDoneProgressBegin =>
+          val cancelParams = new WorkDoneProgressCancelParams(params.getToken())
+          onWorkDoneProgressStart(begin.getTitle(), cancelParams)
+        case _ =>
+      }
+    }
     progressParams.add(params)
   }
 

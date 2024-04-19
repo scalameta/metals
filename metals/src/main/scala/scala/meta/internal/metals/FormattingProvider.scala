@@ -48,6 +48,7 @@ final class FormattingProvider(
     client: MetalsLanguageClient,
     clientConfig: ClientConfiguration,
     statusBar: StatusBar,
+    workDoneProgress: WorkDoneProgress,
     icons: Icons,
     tables: Tables,
     buildTargets: BuildTargets,
@@ -503,7 +504,7 @@ final class FormattingProvider(
       def downloadOutputStream(): OutputStream = {
         downloadingScalafmt.trySuccess(())
         downloadingScalafmt = Promise()
-        statusBar.trackSlowFuture(
+        workDoneProgress.trackFuture(
           "Loading Scalafmt",
           downloadingScalafmt.future,
         )

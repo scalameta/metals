@@ -8,7 +8,6 @@ import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.VersionRecommendation
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
-import scala.meta.internal.metals.clients.language.MetalsSlowTaskParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
@@ -135,9 +134,6 @@ object Messages {
     MessageType.Error,
     "Failed to reset the workspace. See the log for more details.",
   )
-
-  def bloopInstallProgress(buildToolExecName: String) =
-    new MetalsSlowTaskParams(s"$buildToolExecName bloopInstall")
 
   def dontShowAgain: MessageActionItem =
     new MessageActionItem("Don't show again")
@@ -1037,6 +1033,9 @@ object Messages {
     """|Failed to evaluate worksheet, timeout reached.
        |See: https://scalameta.org/metals/docs/troubleshooting/faq#i-see-spurious-errors-or-worksheet-fails-to-evaluate
        |""".stripMargin
+
+  val indexing = "Indexing"
+  val importingBuild = "Importing build"
 
 }
 
