@@ -58,11 +58,17 @@ class OutlineFilesProvider(
     }
   }
 
+  def didChange(id: String, path: AbsolutePath): Unit =
+    buildTargetId(id).foreach(didChange(_, path))
+
   def didChange(id: BuildTargetIdentifier, path: AbsolutePath): Unit = {
     for {
       provider <- outlineFiles.get(id)
     } provider.didChange(path)
   }
+
+  def getOutlineFiles(id: String): Optional[JOutlineFiles] =
+    getOutlineFiles(buildTargetId(id))
 
   def getOutlineFiles(
       buildTargetId: Option[BuildTargetIdentifier]
@@ -99,6 +105,9 @@ class OutlineFilesProvider(
   def clear(): Unit = {
     outlineFiles.clear()
   }
+
+  private def buildTargetId(id: String): Option[BuildTargetIdentifier] =
+    Option(id).filter(_.nonEmpty).map(new BuildTargetIdentifier(_))
 }
 
 class BuildTargetOutlineFilesProvider(

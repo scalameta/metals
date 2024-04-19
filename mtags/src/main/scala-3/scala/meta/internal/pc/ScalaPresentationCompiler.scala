@@ -446,4 +446,6 @@ case class ScalaPresentationCompiler(
 
   override def isLoaded() = compilerAccess.isLoaded()
 
+  override def buildTargetId(): String = buildTargetIdentifier
+
 end ScalaPresentationCompiler

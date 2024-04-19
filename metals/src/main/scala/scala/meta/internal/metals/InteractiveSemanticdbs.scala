@@ -3,8 +3,6 @@ package scala.meta.internal.metals
 import java.nio.charset.Charset
 import java.util.Collections
 
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 import scala.util.Success
 import scala.util.Try
 

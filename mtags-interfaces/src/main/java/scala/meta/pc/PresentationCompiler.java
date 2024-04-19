@@ -332,4 +332,8 @@ public abstract class PresentationCompiler {
 	 */
 	public abstract String scalaVersion();
 
+	public String buildTargetId() {
+		return "";
+	}
+
 }

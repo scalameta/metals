@@ -459,6 +459,8 @@ case class ScalaPresentationCompiler(
     }
   }
 
+  override def buildTargetId(): String = buildTargetIdentifier
+
   def newCompiler(): MetalsGlobal = {
     val classpath = this.classpath.mkString(File.pathSeparator)
     val vd = new VirtualDirectory("(memory)", None)

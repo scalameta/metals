@@ -1,10 +1,10 @@
 package scala.meta.internal.metals
 
 import java.net.URI
+import java.util.Optional
 
 import scala.meta.pc.CancelToken
 import scala.meta.pc.InlayHintsParams
-import java.util.Optional
 import scala.meta.pc.OutlineFiles
 
 case class CompilerInlayHintsParams(
