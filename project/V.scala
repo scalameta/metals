@@ -32,7 +32,7 @@ object V {
   val gitter8Version = "0.16.2"
   val gradleBloop = "1.6.2"
   val java8Compat = "1.0.2"
-  val javaSemanticdb = "0.9.9"
+  val javaSemanticdb = "0.9.10"
   val jsoup = "1.17.2"
   val kindProjector = "0.13.3"
   val lsp4jV = "0.20.1"
