@@ -93,11 +93,12 @@ class HoverPlaintextSuite extends BaseHoverSuite {
   )
 
   check(
-    "app-plaintext",
-    """|class XX
+    "trait-plaintext",
+    """|trait XX
        |object Main extends <<X@@X>>{}
        |""".stripMargin,
-    "class XX: XX"
+    "abstract trait XX: XX",
+    compat = Map("3" -> "trait XX: XX")
   )
 
   check(
