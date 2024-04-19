@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.nio.charset.Charset
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.scalacli.ScalaCliServers
 import scala.meta.internal.mtags.Md5Fingerprints
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.mtags.Semanticdbs
@@ -19,12 +20,16 @@ final class FileSystemSemanticdbs(
     charset: Charset,
     mainWorkspace: AbsolutePath,
     fingerprints: Md5Fingerprints,
+    scalaCliServers: => ScalaCliServers,
 ) extends Semanticdbs {
 
   override def textDocument(file: AbsolutePath): TextDocumentLookup = {
     if (
       (!file.toLanguage.isScala && !file.toLanguage.isJava) ||
-      file.toNIO.getFileSystem != mainWorkspace.toNIO.getFileSystem
+      file.toNIO.getFileSystem != mainWorkspace.toNIO.getFileSystem ||
+      scalaCliServers.loadedExactly(
+        file
+      ) // scala-cli single files, interactive is used for those
     ) {
       TextDocumentLookup.NotFound(file)
     } else {

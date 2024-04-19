@@ -361,6 +361,7 @@ class MetalsLspService(
       charset,
       folder,
       fingerprints,
+      scalaCli,
     )
 
   private val interactiveSemanticdbs: InteractiveSemanticdbs = {
