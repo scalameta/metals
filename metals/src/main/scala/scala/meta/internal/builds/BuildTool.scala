@@ -1,5 +1,6 @@
 package scala.meta.internal.builds
 
+import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -9,7 +10,24 @@ import scala.meta.io.AbsolutePath
 
 trait BuildTool {
 
-  def digest(workspace: AbsolutePath): Option[String]
+  def digestWithRetry(
+      workspace: AbsolutePath,
+      retries: Int = 1,
+  ): Option[String] = {
+    try {
+      digest(workspace)
+    } catch {
+      case error: IOException =>
+        scribe.warn(
+          s"Failed to digest workspace $workspace for build tool $executableName with error: $error${if (retries > 0) ", will retry" else ""}"
+        )
+        if (retries > 0) {
+          digestWithRetry(workspace, retries = 0)
+        } else None
+    }
+  }
+
+  protected def digest(workspace: AbsolutePath): Option[String]
 
   protected lazy val tempDir: Path = {
     val dir = Files.createTempDirectory("metals")

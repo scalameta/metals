@@ -38,7 +38,7 @@ final class WorkspaceReload(
       status: Status,
       buildTool: BuildTool,
   ): Unit = {
-    buildTool.digest(workspace).foreach { checksum =>
+    buildTool.digestWithRetry(workspace).foreach { checksum =>
       tables.digests.setStatus(checksum, status)
     }
   }

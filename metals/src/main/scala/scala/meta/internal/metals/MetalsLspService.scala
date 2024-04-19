@@ -2091,7 +2091,7 @@ class MetalsLspService(
           ) =>
         BuildTool.IncompatibleVersion(buildTool)
       case _ =>
-        buildTool.digest(folder) match {
+        buildTool.digestWithRetry(folder) match {
           case Some(digest) =>
             BuildTool.Found(buildTool, digest)
           case None => BuildTool.NoChecksum(buildTool, folder)
