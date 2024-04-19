@@ -183,7 +183,7 @@ class Markdown(val text: String) extends AnyVal with Content
 class Plain(val text: String) extends AnyVal with Content
 
 object Content {
-  def from(text: String, contentType: ContentType): AnyVal with Content =
+  def from(text: String, contentType: ContentType): Content =
     contentType match {
       case MARKDOWN => new Markdown(text)
       case PLAINTEXT => new Plain(text)
