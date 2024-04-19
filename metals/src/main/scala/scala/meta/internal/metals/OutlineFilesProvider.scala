@@ -143,15 +143,19 @@ class BuildTargetOutlineFilesProvider(
         buildTargets
           .buildTargetSources(id)
           .flatMap(_.listRecursive.toList)
-          .flatMap(toVirtualFileParams(_))
-          .toList
-          .asJava
-      Some(
-        OutlineFiles(
-          allFiles,
-          isFirstCompileSubstitute = true,
+
+      if(allFiles.size > OutlineFilesProvider.maxOutlineFiles) {
+        // too many files to outline using pc
+        None
+      } else {
+        val inputs =allFiles.flatMap(toVirtualFileParams(_)).toList.asJava
+        Some(
+          OutlineFiles(
+            inputs,
+            isFirstCompileSubstitute = true,
+          )
         )
-      )
+      }
     } else {
       changedDocuments.asScala.toList.flatMap(
         toVirtualFileParams
@@ -188,3 +192,7 @@ case class OutlineFiles(
     files: ju.List[VirtualFileParams],
     isFirstCompileSubstitute: Boolean = false,
 ) extends JOutlineFiles
+
+object OutlineFilesProvider {
+  val maxOutlineFiles = 300
+}
