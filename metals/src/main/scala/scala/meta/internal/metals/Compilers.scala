@@ -642,7 +642,8 @@ class Compilers(
       token: CancelToken,
   ): Future[CompletionList] =
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      val outlineFiles = outlineFilesProvider.getOutlineFiles(pc.buildTargetId())
+      val outlineFiles =
+        outlineFilesProvider.getOutlineFiles(pc.buildTargetId())
       val offsetParams =
         CompilerOffsetParamsUtils.fromPos(pos, token, outlineFiles)
       pc.complete(offsetParams)
@@ -859,11 +860,11 @@ class Compilers(
       symbol: String,
   ): Future[Option[PcSymbolInformation]] = {
     loadCompiler(path, forceScala = true)
-      .map (
-        _.info(symbol)
-          .asScala
+      .map(
+        _.info(symbol).asScala
           .map(_.asScala.map(PcSymbolInformation.from))
-      ).getOrElse(Future(None))
+      )
+      .getOrElse(Future(None))
   }
 
   private def definition(

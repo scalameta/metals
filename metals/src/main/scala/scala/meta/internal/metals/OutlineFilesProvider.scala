@@ -144,11 +144,11 @@ class BuildTargetOutlineFilesProvider(
           .buildTargetSources(id)
           .flatMap(_.listRecursive.toList)
 
-      if(allFiles.size > OutlineFilesProvider.maxOutlineFiles) {
+      if (allFiles.size > OutlineFilesProvider.maxOutlineFiles) {
         // too many files to outline using pc
         None
       } else {
-        val inputs =allFiles.flatMap(toVirtualFileParams(_)).toList.asJava
+        val inputs = allFiles.flatMap(toVirtualFileParams(_)).toList.asJava
         Some(
           OutlineFiles(
             inputs,
