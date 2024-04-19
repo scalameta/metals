@@ -220,7 +220,6 @@ class MetalsGlobal(
       else false
     }
 
-    // TODO the same in autoimports TEST
     if (query.isEmpty) SymbolSearch.Result.INCOMPLETE
     else {
       val context = doLocateContext(pos)

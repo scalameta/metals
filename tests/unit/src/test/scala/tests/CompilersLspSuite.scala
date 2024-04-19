@@ -135,7 +135,7 @@ class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
            |}
            |""".stripMargin,
       )
-      // check if the change name is piecked up despite the file not compiling
+      // check if the change name is picked up despite the file not compiling
       newText = """|package a
                    |
                    |class A {
@@ -331,6 +331,73 @@ class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
         "  def bar = foo.bar@@",
         "bar: String",
         filename = Some("a/src/main/scala/c/C.scala"),
+      )
+    } yield ()
+  }
+
+  test("imports-for-non-compiling") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |
+          |/a/src/main/scala/b/B.scala
+          |package b
+          |
+          |object O {
+          |  class UniqueObject {
+          |  }
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/b/B.scala")
+      _ <- server.didChange("a/src/main/scala/b/B.scala") { _ =>
+        """|package b
+           |object W {
+           |  class UniqueObject {
+           |    val i: Int = "aaa"
+           |  }
+           |}
+           |""".stripMargin
+      }
+      _ <- server.didSave("a/src/main/scala/b/B.scala")(identity)
+      // check if the change name is picked up despite the file not compiling
+      newText = """|package a
+                   |
+                   |object A {
+                   |  // @@
+                   |  val k: <<UniqueObject>> = ???
+                   |}
+                   |""".stripMargin
+      input = newText.replace("<<", "").replace(">>", "")
+      _ <- server.didChange("a/src/main/scala/a/A.scala")(_ => input)
+      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
+      codeActions <-
+        server
+          .assertCodeAction(
+            "a/src/main/scala/a/A.scala",
+            newText,
+            s"""|${ImportMissingSymbol.title("UniqueObject", "b.W")}
+                |${CreateNewSymbol.title("UniqueObject")}
+                |""".stripMargin,
+            kind = Nil,
+          )
+      _ <- assertCompletionEdit(
+        "UniqueObject@@",
+        """|package a
+           |
+           |import b.W.UniqueObject
+           |
+           |object A {
+           |  UniqueObject
+           |  val k: UniqueObject = ???
+           |}
+           |""".stripMargin,
       )
     } yield ()
   }
