@@ -109,11 +109,11 @@ object V {
 
   // Scala 3
   def nonDeprecatedScala3Versions =
-    Seq(scala3, "3.3.1", "3.2.2", "3.1.3") ++ scala3RC.toSeq
+    Seq(scala3, "3.3.1") ++ scala3RC.toSeq
 
   // whenever version is removed please add it to MtagsResolver under last supported Metals version
   def deprecatedScala3Versions =
-    Seq("3.3.2", "3.2.1", "3.2.0", "3.1.2", "3.1.1", "3.1.0")
+    Seq("3.3.2", "3.2.2", "3.1.3")
 
   // NOTE if you had a new Scala Version make sure it's contained in quickPublishScalaVersions
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
