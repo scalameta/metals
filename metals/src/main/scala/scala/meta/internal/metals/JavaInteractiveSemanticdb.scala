@@ -199,6 +199,11 @@ case class JdkVersion(
 object JdkVersion {
 
   def maybeJdkVersionFromJavaHome(
+      maybeJavaHome: String
+  )(implicit ec: ExecutionContext): Option[JdkVersion] =
+    maybeJdkVersionFromJavaHome(Try(AbsolutePath(maybeJavaHome)).toOption)
+
+  def maybeJdkVersionFromJavaHome(
       maybeJavaHome: Option[AbsolutePath]
   )(implicit ec: ExecutionContext): Option[JdkVersion] = {
     maybeJavaHome.flatMap { javaHome =>

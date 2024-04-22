@@ -143,9 +143,10 @@ final class BloopServers(
   }
 
   private def writeJVMPropertiesToBloopGlobalJsonFile(
-      maybeBloopJvmProperties: List[String]
+      maybeBloopJvmProperties: List[String],
+      newJavaHome: Option[String],
   ): Try[Unit] = Try {
-    if (metalsJavaHome.isDefined || maybeBloopJvmProperties.nonEmpty) {
+    if (newJavaHome.isDefined || maybeBloopJvmProperties.nonEmpty) {
       val javaOptionsField =
         if (maybeBloopJvmProperties.nonEmpty)
           Some(
@@ -156,7 +157,7 @@ final class BloopServers(
         else None
       val fields: List[(String, ujson.Value)] =
         List(
-          metalsJavaHome.map(v => "javaHome" -> ujson.Str(v.trim())),
+          newJavaHome.map(v => "javaHome" -> ujson.Str(v.trim())),
           javaOptionsField,
         ).flatten
       val obj = ujson.Obj.from(fields)
@@ -179,8 +180,13 @@ final class BloopServers(
       .flatMap {
         case messageActionItem
             if messageActionItem == Messages.BloopJvmPropertiesChange.reconnect =>
+          val javaHome = getJavaHomeForBloopJson.flatMap {
+            case AlreadyWritten(javaHome) => Some(javaHome)
+            case _ => metalsJavaHome
+          }
           writeJVMPropertiesToBloopGlobalJsonFile(
-            maybeBloopJvmProperties
+            maybeBloopJvmProperties,
+            javaHome,
           ) match {
             case Failure(exception) => Future.failed(exception)
             case Success(_) =>
@@ -276,31 +282,53 @@ final class BloopServers(
       userConfiguration: UserConfiguration
   ) = {
     // we should set up Java before running Bloop in order to not restart it
-    bloopJsonPath match {
-      case Some(bloopPath) if !bloopPath.exists =>
+    getJavaHomeForBloopJson match {
+      case Some(WriteMetalsJavaHome) =>
         metalsJavaHome.foreach { newHome =>
-          scribe.info(s"Setting up current java home $newHome in $bloopPath")
+          bloopJsonPath.foreach { bloopPath =>
+            scribe.info(s"Setting up current java home $newHome in $bloopPath")
+          }
         }
         // we want to use the same java version as Metals, so it's ok to use java.home
         writeJVMPropertiesToBloopGlobalJsonFile(
-          userConfiguration.bloopJvmProperties.getOrElse(Nil)
+          userConfiguration.bloopJvmProperties.getOrElse(Nil),
+          metalsJavaHome,
         )
-      case Some(bloopPath) if bloopPath.exists =>
-        maybeLoadBloopGlobalJsonFile(bloopPath) match {
-          case (Some(javaHome), opts) =>
-            metalsJavaHome.foreach { newHome =>
-              if (newHome != javaHome) {
-                scribe.info(
-                  s"Replacing bloop java home $javaHome with java home at $newHome."
-                )
-                writeJVMPropertiesToBloopGlobalJsonFile(opts)
-              }
-            }
-          case _ =>
-        }
+      case Some(OverrideWithMetalsJavaHome(javaHome, oldJavaHome, opts)) =>
+        scribe.info(
+          s"Replacing bloop java home $oldJavaHome with java home at $javaHome."
+        )
+        writeJVMPropertiesToBloopGlobalJsonFile(opts, Some(javaHome))
       case _ =>
     }
   }
+
+  private def getJavaHomeForBloopJson: Option[BloopJavaHome] =
+    bloopJsonPath match {
+      case Some(bloopPath) if !bloopPath.exists =>
+        Some(WriteMetalsJavaHome)
+      case Some(bloopPath) if bloopPath.exists =>
+        maybeLoadBloopGlobalJsonFile(bloopPath) match {
+          case (Some(javaHome), opts) =>
+            metalsJavaHome match {
+              case Some(metalsJava) =>
+                (
+                  JdkVersion.maybeJdkVersionFromJavaHome(javaHome),
+                  JdkVersion.maybeJdkVersionFromJavaHome(metalsJava),
+                ) match {
+                  case (Some(writtenVersion), Some(metalsJavaVersion))
+                      if writtenVersion.major >= metalsJavaVersion.major =>
+                    Some(AlreadyWritten(javaHome))
+                  case _ if javaHome != metalsJava =>
+                    Some(OverrideWithMetalsJavaHome(metalsJava, javaHome, opts))
+                  case _ => Some(AlreadyWritten(javaHome))
+                }
+              case None => Some(AlreadyWritten(javaHome))
+            }
+          case _ => None
+        }
+      case _ => None
+    }
 
   private def connectToLauncher(
       bloopVersion: String,
@@ -393,4 +421,13 @@ object BloopServers {
       )
     }
   }
+
+  sealed trait BloopJavaHome
+  case class AlreadyWritten(javaHome: String) extends BloopJavaHome
+  case class OverrideWithMetalsJavaHome(
+      javaHome: String,
+      oldJavaHome: String,
+      opts: List[String],
+  ) extends BloopJavaHome
+  object WriteMetalsJavaHome extends BloopJavaHome
 }
