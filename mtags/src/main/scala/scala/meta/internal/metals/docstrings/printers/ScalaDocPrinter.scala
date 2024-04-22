@@ -28,12 +28,12 @@ abstract class ScalaDocPrinter {
       toText(c.body),
       if (c.constructor.nonEmpty)
         "\n" + c.constructor
-          .map(body => constructor + blocksToText(body.blocks))
+          .map(body => constructor + " " + blocksToText(body.blocks))
           .mkString("\n")
       else "",
       if (c.deprecated.nonEmpty)
         "\n" + c.deprecated
-          .map(body => deprecated ++ blocksToText(body.blocks))
+          .map(body => deprecated ++ " " ++ blocksToText(body.blocks))
           .mkString("\n")
       else "",
       if (c.example.nonEmpty)
