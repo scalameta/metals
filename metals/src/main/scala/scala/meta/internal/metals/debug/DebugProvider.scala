@@ -13,6 +13,7 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.concurrent.duration.Duration
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -51,6 +52,10 @@ import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.config.RunType
 import scala.meta.internal.metals.config.RunType._
+import scala.meta.internal.metals.debug.server.DebugeeParamsCreator
+import scala.meta.internal.metals.debug.server.MainClassDebugAdapter
+import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
+import scala.meta.internal.metals.debug.server.MetalsDebuggee
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.OnDemandSymbolIndex
@@ -64,6 +69,7 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.DebugSessionParams
 import ch.epfl.scala.bsp4j.ScalaMainClass
+import ch.epfl.scala.debugadapter
 import ch.epfl.scala.{bsp4j => b}
 import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement
@@ -91,10 +97,13 @@ class DebugProvider(
     sourceMapper: SourceMapper,
     userConfig: () => UserConfiguration,
     testProvider: TestSuitesProvider,
-) extends Cancelable
+)(implicit ec: ExecutionContext)
+    extends Cancelable
     with LogForwarder {
 
   import DebugProvider._
+
+  private val debugConfigCreator = new DebugeeParamsCreator(buildTargets)
 
   private val runningLocal = new ju.concurrent.atomic.AtomicBoolean(false)
 
@@ -251,13 +260,13 @@ class DebugProvider(
       val targets = parameters.getTargets().asScala.toSeq
 
       compilations.compilationFinished(targets).flatMap { _ =>
-        val conn = buildServer
-          .startDebugSession(parameters, cancelPromise)
-          .map { uri =>
-            val socket = connect(uri)
-            connectedToServer.trySuccess(())
-            socket
-          }
+        val conn =
+          startDebugSession(buildServer, parameters, cancelPromise)
+            .map { uri =>
+              val socket = connect(uri)
+              connectedToServer.trySuccess(())
+              socket
+            }
 
         val startupTimeout = clientConfig.initialConfig.debugServerStartTimeout
 
@@ -313,6 +322,51 @@ class DebugProvider(
 
     connectedToServer.future.map(_ => server)
   }
+
+  private def startDebugSession(
+      buildServer: BuildServerConnection,
+      params: DebugSessionParams,
+      cancelPromise: Promise[Unit],
+  ) =
+    if (buildServer.isDebuggingProvider) {
+      buildServer.startDebugSession(params, cancelPromise)
+    } else {
+      def getDebugee: Future[MetalsDebuggee] = params.getDataKind() match {
+        case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
+          val optDebuggee = for {
+            id <- params.getTargets().asScala.headOption
+            projectInfo <- debugConfigCreator.create(id)
+            scalaMainClass <- params.asScalaMainClass()
+          } yield {
+            projectInfo.map(
+              new MainClassDebugAdapter(
+                workspace,
+                scalaMainClass,
+                _,
+                userConfig().javaHome,
+              )
+            )
+          }
+          optDebuggee.getOrElse(
+            throw new RuntimeException(s"Can't resolve debugee")
+          )
+        case _ => throw new RuntimeException(s"Can't resolve debugee")
+      }
+
+      for (debuggee <- getDebugee) yield {
+        val dapLogger =
+          new scala.meta.internal.metals.debug.server.DebugLogger()
+        val resolver = new MetalsDebugToolsResolver()
+        val handler =
+          debugadapter.DebugServer.run(
+            debuggee,
+            resolver,
+            dapLogger,
+            gracePeriod = Duration(5, TimeUnit.SECONDS),
+          )
+        handler.uri
+      }
+    }
 
   /**
    * Given a BuildTargetIdentifier either get the displayName of that build
