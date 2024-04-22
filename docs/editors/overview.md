@@ -365,6 +365,8 @@ the source code and support hover to show larger output. You can find more
 information about worksheets under the editor specific worksheet section. For
 example, [here for VS Code](vscode.md#worksheets).
 
+By default there is a 30 second timeout on worksheet evaluation, this setting can be overridden by `-Dmetals.worksheet-timeout=<number of seconds>` server property.
+
 ## Document symbols
 
 **✅**: Document symbols are displayed in a hierarchical outline.

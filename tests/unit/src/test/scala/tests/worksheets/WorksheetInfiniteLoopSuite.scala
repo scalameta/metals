@@ -2,6 +2,7 @@ package tests.worksheets
 
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 
@@ -21,7 +22,11 @@ class WorksheetInfiniteLoopSuite
     super.userConfig.copy(
       worksheetScreenWidth = 40,
       worksheetCancelTimeout = 1,
-      worksheetTimeout = 8,
+    )
+
+  override def serverConfig: MetalsServerConfig =
+    MetalsServerConfig.default.copy(
+      worksheetTimeout = 8
     )
 
   test("infinite-loop", maxRetry = 3) {

@@ -28,6 +28,7 @@ import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.Time
@@ -71,6 +72,7 @@ class WorksheetProvider(
     publisher: WorksheetPublisher,
     compilations: Compilations,
     scalaVersionSelector: ScalaVersionSelector,
+    serverConfig: MetalsServerConfig,
 )(implicit ec: ExecutionContext)
     extends Cancelable {
 
@@ -270,7 +272,7 @@ class WorksheetProvider(
       val cancellable = toCancellable(thread, result)
       interruptThreadOnCancel(path, result, cancellable)
       thread.start()
-      val timeout = userConfig().worksheetTimeout * 1000
+      val timeout = serverConfig.worksheetTimeout * 1000
       thread.join(timeout)
       if (!result.isDone()) {
         cancellable.cancel()
