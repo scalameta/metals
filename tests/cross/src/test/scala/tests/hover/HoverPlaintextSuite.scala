@@ -6,8 +6,6 @@ import scala.meta.pc.PresentationCompilerConfig
 import tests.pc.BaseHoverSuite
 
 class HoverPlaintextSuite extends BaseHoverSuite {
-  override def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreForScala3CompilerPC)
 
   override protected def requiresScalaLibrarySources: Boolean = true
 
