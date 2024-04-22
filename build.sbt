@@ -522,7 +522,7 @@ lazy val metals = project
       ) cross CrossVersion.full,
       // For starting Ammonite
       "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.4.0",
-      "org.scala-lang.modules" %% "scala-xml" % "2.2.0",
+      "org.scala-lang.modules" %% "scala-xml" % "2.3.0",
       "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.4",
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
         .exclude("ch.epfl.scala", "bsp4j"),
