@@ -1398,12 +1398,12 @@ class CompletionSuite extends BaseCompletionSuite {
            |implicitConversions scala.languageFeature
            |postfixOps scala.languageFeature
            |""".stripMargin,
-      ">=3.0.0" ->
+      ">=3.3.0" ->
         """|dynamics scala.languageFeature
            |existentials scala.languageFeature
            |experimental scala.languageFeature
-           |higherKinds scala.languageFeature
            |implicitConversions scala.languageFeature
+           |postfixOps scala.languageFeature
            |""".stripMargin,
       ">=3.3.2-RC3" ->
         """|dynamics languageFeature
