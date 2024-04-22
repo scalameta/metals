@@ -1291,6 +1291,15 @@ object MetalsEnrichments
       )
   }
 
+  implicit class XtensionDebugSessionParams(params: b.DebugSessionParams) {
+    def asScalaMainClass(): Option[b.ScalaMainClass] =
+      params.getDataKind() match {
+        case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
+          decodeJson(params.getData(), classOf[b.ScalaMainClass])
+        case _ => None
+      }
+  }
+
   /**
    * Strips ANSI colors.
    * As long as the color codes are valid this should correctly strip
