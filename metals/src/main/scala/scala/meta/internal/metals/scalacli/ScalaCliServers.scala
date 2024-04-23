@@ -19,10 +19,10 @@ import scala.meta.internal.metals.ImportedBuild
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.TargetData
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
@@ -30,7 +30,7 @@ import scala.meta.io.AbsolutePath
 class ScalaCliServers(
     compilers: () => Compilers,
     compilations: Compilations,
-    statusBar: () => StatusBar,
+    workDoneProgress: WorkDoneProgress,
     buffers: Buffers,
     indexWorkspace: () => Future[Unit],
     diagnostics: () => Diagnostics,
@@ -157,7 +157,7 @@ class ScalaCliServers(
       new ScalaCli(
         compilers,
         compilations,
-        statusBar,
+        workDoneProgress,
         buffers,
         indexWorkspace,
         diagnostics,

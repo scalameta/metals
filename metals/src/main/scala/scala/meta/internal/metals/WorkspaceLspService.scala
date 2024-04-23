@@ -183,6 +183,7 @@ class WorkspaceLspService(
       fallbackServicePath,
       Some("fallback-service"),
       doctor,
+      workDoneProgress,
       bspStatus,
     )
 
