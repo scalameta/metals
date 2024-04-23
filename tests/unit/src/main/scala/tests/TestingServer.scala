@@ -44,6 +44,7 @@ import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.ListParametrizedCommand
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsLspService
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MetalsServerInputs
 import scala.meta.internal.metals.MtagsResolver
@@ -167,7 +168,9 @@ final case class TestingServer(
   languageServer.connectToLanguageClient(client)
 
   lazy val fullServer = languageServer.getOldMetalsLanguageServer
-  def server = fullServer.folderServices.head
+  def server: MetalsLspService =
+    if (fullServer.folderServices.isEmpty) fullServer.fallbackService
+    else fullServer.folderServices.head
 
   implicit val reports: ReportContext =
     new StdReportContext(workspace.toNIO, _ => None)
@@ -542,7 +545,7 @@ final case class TestingServer(
   }
 
   def initialize(
-      workspaceFolders: List[String] = Nil
+      workspaceFolders: Option[List[String]] = None
   ): Future[l.InitializeResult] = {
     val params = new InitializeParams
     val workspaceCapabilities = new WorkspaceClientCapabilities()
@@ -585,12 +588,18 @@ final case class TestingServer(
         Map.empty.asJava.toJson,
       )
     )
-    params.setWorkspaceFolders(
-      workspaceFolders
-        .map(file => new WorkspaceFolder(toPath(file).toURI.toString))
-        .asJava
-    )
-    params.setRootUri(workspace.toURI.toString)
+
+    workspaceFolders match {
+      case Some(workspaceFolders) =>
+        params.setWorkspaceFolders(
+          workspaceFolders
+            .map(file => new WorkspaceFolder(toPath(file).toURI.toString))
+            .asJava
+        )
+      case None =>
+        params.setRootUri(workspace.toURI.toString)
+    }
+
     languageServer.initialize(params).asScala
   }
 

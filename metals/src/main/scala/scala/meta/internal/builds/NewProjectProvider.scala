@@ -30,7 +30,7 @@ class NewProjectProvider(
     config: ClientConfiguration,
     shell: ShellRunner,
     icons: Icons,
-    workspace: AbsolutePath,
+    workspace: () => AbsolutePath,
 )(implicit context: ExecutionContext) {
 
   private val templatesUrl =
@@ -69,7 +69,7 @@ class NewProjectProvider(
     }
 
   def createNewProjectFromTemplate(javaHome: Option[String]): Future[Unit] = {
-    val base = workspace.parent
+    val base = workspace().parent
     val withTemplate = askForTemplate(
       NewProjectProvider.curatedTemplates(icons)
     )

@@ -10,6 +10,7 @@ import scala.util.Try
 
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.scalacli.ScalaCliServers
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Shebang
@@ -36,6 +37,7 @@ final class InteractiveSemanticdbs(
     semanticdbIndexer: () => SemanticdbIndexer,
     javaInteractiveSemanticdb: Option[JavaInteractiveSemanticdb],
     buffers: Buffers,
+    scalaCliServers: => ScalaCliServers,
 ) extends Cancelable
     with Semanticdbs {
 
@@ -76,6 +78,7 @@ final class InteractiveSemanticdbs(
           source.isSbt || // sbt files
           source.isWorksheet || // worksheets
           doesNotBelongToBuildTarget || // standalone files
+          scalaCliServers.loadedExactly(source) || // scala-cli single files
           sourceText.exists(
             _.startsWith(Shebang.shebang)
           ) // starts with shebang

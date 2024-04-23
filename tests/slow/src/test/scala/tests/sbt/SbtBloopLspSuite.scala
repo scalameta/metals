@@ -514,9 +514,11 @@ class SbtBloopLspSuite
     cleanWorkspace()
     for {
       _ <- initialize(
-        """|/project/build.properties
-           |sbt.version=0.13.15
-           |""".stripMargin,
+        s"""|/project/build.properties
+            |sbt.version=0.13.15
+            |/build.sbt
+            |scalaVersion := "$scalaVersion"
+            |""".stripMargin,
         expectError = true,
       )
       _ = assertNoDiff(
@@ -540,6 +542,8 @@ class SbtBloopLspSuite
       _ <- initialize(
         s"""|/project/build.properties
             |sbt.version=$minimal
+            |/build.sbt
+            |scalaVersion := "$scalaVersion"
             |""".stripMargin
       )
       _ = assertStatus(_.isInstalled)

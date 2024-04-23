@@ -38,6 +38,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |dependencies {
             |    implementation 'org.scala-lang:scala-library:${V.scala213}'
             |}
+            |/src/main/scala/A.scala
+            |
             |""".stripMargin
       )
       _ = assertNoDiff(
@@ -134,6 +136,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |dependencies {
             |    implementation 'org.scala-lang:scala-library:${V.scala213}'
             |}
+            |/src/main/scala/A.scala
+            |
             |""".stripMargin
       )
       _ = assertNoDiff(
@@ -182,6 +186,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |        System.exit(0);
             |    }
             |}
+            |/src/main/scala/A.scala
             |
             |""".stripMargin
       )
@@ -223,6 +228,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |dependencies {
             |    implementation 'org.scala-lang:scala-reflect:${V.scala213}'
             |}
+            |/src/main/scala/A.scala
+            |
             |""".stripMargin
       )
       _ = assertNoDiff(
@@ -248,6 +255,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |dependencies {
             |    implementation 'org.scala-lang:scala-library:${V.scala213}'
             |}
+            |/src/main/scala/A.scala
+            |
             |""".stripMargin
       )
       _ = assertNoDiff(
@@ -315,6 +324,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       _ <- initialize(
         """|/build.gradle
            |, syntax error
+           |/src/main/scala/A.scala
+           |
            |""".stripMargin,
         expectError = true,
       )
@@ -501,6 +512,10 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |}
             |/inner/settings.gradle
             |rootProject.name = 'some-project-name'
+            |/inner/src/main/scala/A.scala
+            |object A {
+            |  val foo: Int = "aaa"
+            |}
             |""".stripMargin
       )
       _ = assert(

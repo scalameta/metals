@@ -118,6 +118,8 @@ class SbtServerSuite
              |object A {
              |  val foo: Int = "aaa"
              |}
+             |/.metals/
+             |
              |""".stripMargin,
           V.scala213,
           "/inner",
