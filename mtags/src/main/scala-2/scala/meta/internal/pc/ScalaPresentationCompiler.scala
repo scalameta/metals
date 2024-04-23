@@ -365,7 +365,11 @@ case class ScalaPresentationCompiler(
       params.token
     ) { pc =>
       Optional.ofNullable(
-        new HoverProvider(pc.compiler(params), params, config.hoverContentType())
+        new HoverProvider(
+          pc.compiler(params),
+          params,
+          config.hoverContentType()
+        )
           .hover()
           .orNull
       )
