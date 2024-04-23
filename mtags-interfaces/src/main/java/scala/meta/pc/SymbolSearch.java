@@ -13,7 +13,15 @@ public interface SymbolSearch {
     /**
      * Returns the documentation of this symbol, if any.
      */
+    @Deprecated
     Optional<SymbolDocumentation> documentation(String symbol, ParentSymbols parents);
+
+    /**
+     * Returns the documentation of this symbol, if any.
+     */
+    default Optional<SymbolDocumentation> documentation(String symbol, ParentSymbols parents, ContentType contentType) {
+        return documentation(symbol, parents);
+    }
 
     /**
      * Returns the definition of this symbol, if any.

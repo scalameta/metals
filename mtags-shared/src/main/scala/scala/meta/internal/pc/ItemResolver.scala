@@ -72,7 +72,7 @@ trait ItemResolver {
       }
     }
     if (metalsConfig.isCompletionItemDocumentationEnabled) {
-      item.setDocumentation(docstring.toMarkupContent)
+      item.setDocumentation(docstring.toMarkupContent())
     }
     item
   }

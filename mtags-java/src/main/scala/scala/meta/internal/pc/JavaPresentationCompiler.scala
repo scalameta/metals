@@ -72,7 +72,9 @@ case class JavaPresentationCompiler(
   ): CompletableFuture[Optional[HoverSignature]] =
     CompletableFuture.completedFuture(
       Optional.ofNullable(
-        new JavaHoverProvider(javaCompiler, params).hover().orNull
+        new JavaHoverProvider(javaCompiler, params, config.hoverContentType())
+          .hover()
+          .orNull
       )
     )
 

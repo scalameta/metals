@@ -11,6 +11,7 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.ContentType
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
@@ -65,11 +66,20 @@ class StandaloneSymbolSearch(
       symbol: String,
       parents: ParentSymbols,
   ): ju.Optional[SymbolDocumentation] =
+    documentation(symbol, parents, docstringContentType = ContentType.MARKDOWN)
+
+  override def documentation(
+      symbol: String,
+      parents: ParentSymbols,
+      docstringContentType: ContentType,
+  ): ju.Optional[SymbolDocumentation] =
     docs
-      .documentation(symbol, parents)
+      .documentation(symbol, parents, docstringContentType)
       .asScala
       .orElse(
-        workspaceFallback.flatMap(_.documentation(symbol, parents).asScala)
+        workspaceFallback.flatMap(
+          _.documentation(symbol, parents, docstringContentType).asScala
+        )
       )
       .asJava
 

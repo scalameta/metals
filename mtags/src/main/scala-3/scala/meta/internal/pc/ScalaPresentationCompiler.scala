@@ -357,15 +357,13 @@ case class ScalaPresentationCompiler(
     }
   end selectionRange
 
-  def hover(
-      params: OffsetParams
-  ): CompletableFuture[ju.Optional[HoverSignature]] =
+  override def hover(params: OffsetParams): CompletableFuture[ju.Optional[HoverSignature]] =
     compilerAccess.withNonInterruptableCompiler(Some(params))(
       ju.Optional.empty[HoverSignature](),
       params.token,
     ) { access =>
       val driver = access.compiler()
-      HoverProvider.hover(params, driver, search)
+      HoverProvider.hover(params, driver, search, config.hoverContentType())
     }
   end hover
 

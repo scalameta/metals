@@ -223,7 +223,10 @@ class MetalsGlobal(
     buffer.toList
   }
 
-  def symbolDocumentation(symbol: Symbol): Option[SymbolDocumentation] = {
+  def symbolDocumentation(
+      symbol: Symbol,
+      contentType: m.pc.ContentType = m.pc.ContentType.MARKDOWN
+  ): Option[SymbolDocumentation] = {
     def toSemanticdbSymbol(sym: Symbol) = compiler.semanticdbSymbol(
       if (!sym.isJava && sym.isPrimaryConstructor) sym.owner
       else sym
@@ -243,7 +246,8 @@ class MetalsGlobal(
 
           parentSymbols.map(toSemanticdbSymbol).asJava
         }
-      }
+      },
+      contentType
     )
 
     if (documentation.isPresent) {

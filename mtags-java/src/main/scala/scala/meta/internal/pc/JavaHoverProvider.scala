@@ -23,6 +23,7 @@ import scala.jdk.CollectionConverters.SeqHasAsJava
 import scala.jdk.OptionConverters.RichOptional
 
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
+import scala.meta.pc.ContentType
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.ParentSymbols
@@ -33,7 +34,8 @@ import com.sun.source.util.Trees
 
 class JavaHoverProvider(
     compiler: JavaMetalsGlobal,
-    params: OffsetParams
+    params: OffsetParams,
+    contentType: ContentType
 ) {
 
   def hover(): Option[HoverSignature] = params match {
@@ -82,7 +84,13 @@ class JavaHoverProvider(
       case _ => None
     }
 
-    sig.map(s => JavaHover(symbolSignature = Some(s), docstring = Some(docs)))
+    sig.map(s =>
+      JavaHover(
+        symbolSignature = Some(s),
+        docstring = Some(docs),
+        contentType = contentType
+      )
+    )
   }
 
   private def typeHover(t: TypeMirror): String =
@@ -193,7 +201,8 @@ class JavaHoverProvider(
               case _ => util.Collections.emptyList[String]
             }
           }
-        }
+        },
+        contentType
       )
       .toScala
       .map(_.docstring())

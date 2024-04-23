@@ -1,6 +1,6 @@
 package tests
 
-import scala.meta.internal.docstrings.MarkdownGenerator
+import scala.meta.internal.docstrings.printers.MarkdownGenerator
 
 import munit.Location
 
@@ -10,7 +10,7 @@ class JavadocSuite extends BaseSuite {
       loc: Location
   ): Unit = {
     test(name) {
-      val obtained = MarkdownGenerator.toMarkdown(original).mkString
+      val obtained = MarkdownGenerator.toText(original).mkString
       assertNoDiff(obtained, expected)
     }
   }

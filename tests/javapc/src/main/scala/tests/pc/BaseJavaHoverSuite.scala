@@ -38,12 +38,14 @@ class BaseJavaHoverSuite extends BaseJavaPCSuite with TestHovers {
       } else {
         CompilerRangeParams(uri, code, so, eo)
       }
-      val hover = presentationCompiler
-        .hover(pcParams)
-        .get()
+      val hover = presentationCompiler.hover(pcParams).get()
 
       val obtained: String =
-        renderAsString(code, hover.asScala.map(_.toLsp), includeRange)
+        renderAsString(
+          code,
+          hover.asScala.map(_.toLsp()),
+          includeRange,
+        )
 
       assertNoDiff(
         obtained,

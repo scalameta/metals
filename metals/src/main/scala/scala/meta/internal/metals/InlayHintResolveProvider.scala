@@ -69,7 +69,11 @@ final class InlayHintResolveProvider(
     )
     compilers.hover(hoverParams, token).map { hover =>
       hover
-        .foreach(h => labelPart.setTooltip(h.toLsp().getContents().getRight()))
+        .foreach(h =>
+          labelPart.setTooltip(
+            h.toLsp().getContents().getRight()
+          )
+        )
       labelPart
     }
   }

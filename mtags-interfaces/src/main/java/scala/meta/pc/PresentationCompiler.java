@@ -166,14 +166,16 @@ public abstract class PresentationCompiler {
 	public abstract CompletableFuture<List<Diagnostic>> didChange(VirtualFileParams params);
 
 	/**
-	 * Returns decorations for missing type adnotations, inferred type parameters, implicit parameters and conversions.
+	 * Returns decorations for missing type adnotations, inferred type parameters,
+	 * implicit parameters and conversions.
 	 */
 	public CompletableFuture<List<InlayHint>> inlayHints(InlayHintsParams params) {
 		return CompletableFuture.completedFuture(Collections.emptyList());
 	}
 
 	/**
-	 * Returns decorations for missing type adnotations, inferred type parameters, implicit parameters and conversions.
+	 * Returns decorations for missing type adnotations, inferred type parameters,
+	 * implicit parameters and conversions.
 	 */
 	public CompletableFuture<List<SyntheticDecoration>> syntheticDecorations(SyntheticDecorationsParams params) {
 		return CompletableFuture.completedFuture(Collections.emptyList());

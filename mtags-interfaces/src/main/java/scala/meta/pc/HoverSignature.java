@@ -10,4 +10,7 @@ public interface HoverSignature {
   Optional<String> signature();
   Optional<Range> getRange();
   HoverSignature withRange(Range range);
+  default ContentType contentType() {
+    return ContentType.MARKDOWN;
+  }
 }

@@ -21,6 +21,7 @@ import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.pc.CompletionItemData
 import scala.meta.internal.pc.RangeOffset
+import scala.meta.pc.ContentType
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
 import scala.meta.pc.VirtualFileParams
@@ -275,9 +276,11 @@ trait CommonMtagsEnrichments {
       start >= 0 &&
       doc.startsWith(value, start)
     }
-    def toMarkupContent: l.MarkupContent = {
+    def toMarkupContent(
+        contentType: ContentType = ContentType.MARKDOWN
+    ): l.MarkupContent = {
       val content = new MarkupContent
-      content.setKind("markdown")
+      content.setKind(contentType.toString())
       content.setValue(doc)
       content
     }

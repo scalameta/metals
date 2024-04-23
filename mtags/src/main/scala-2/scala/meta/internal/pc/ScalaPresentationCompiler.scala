@@ -333,15 +333,18 @@ case class ScalaPresentationCompiler(
 
   override def hover(
       params: OffsetParams
-  ): CompletableFuture[Optional[HoverSignature]] =
+  ): CompletableFuture[Optional[HoverSignature]] = {
     compilerAccess.withNonInterruptableCompiler(Some(params))(
       Optional.empty[HoverSignature](),
       params.token
     ) { pc =>
       Optional.ofNullable(
-        new HoverProvider(pc.compiler(), params).hover().orNull
+        new HoverProvider(pc.compiler(), params, config.hoverContentType())
+          .hover()
+          .orNull
       )
     }
+  }
 
   def definition(params: OffsetParams): CompletableFuture[DefinitionResult] = {
     compilerAccess.withNonInterruptableCompiler(Some(params))(

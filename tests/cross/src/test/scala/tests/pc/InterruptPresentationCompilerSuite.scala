@@ -83,9 +83,7 @@ class InterruptPresentationCompilerSuite extends BasePCSuite {
       |  val x = "".stripS@@uffix("")
       |}
       |""".stripMargin,
-    (pc, params) => {
-      pc.hover(params)
-    }
+    (pc, params) => pc.hover(params)
   )
 
   check(

@@ -5,6 +5,7 @@ import java.util.Optional
 import java.util.concurrent.TimeUnit
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.pc.ContentType
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 
@@ -26,7 +27,8 @@ case class PresentationCompilerConfigImpl(
     timeoutDelay: Long = 20,
     timeoutUnit: TimeUnit = TimeUnit.SECONDS,
     semanticdbCompilerOptions: util.List[String] =
-      PresentationCompilerConfig.defaultSemanticdbCompilerOptions()
+      PresentationCompilerConfig.defaultSemanticdbCompilerOptions(),
+    override val hoverContentType: ContentType = ContentType.MARKDOWN
 ) extends PresentationCompilerConfig {
 
   override def isStripMarginOnTypeFormattingEnabled(): Boolean =

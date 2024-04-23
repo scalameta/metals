@@ -4,6 +4,7 @@ import java.net.URI
 import java.util.Optional
 import java.{util => ju}
 
+import scala.meta.pc.ContentType
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
@@ -44,4 +45,10 @@ object EmptySymbolSearch extends SymbolSearch {
       parents: ParentSymbols
   ): Optional[SymbolDocumentation] =
     Optional.empty()
+
+  override def documentation(
+      symbol: String,
+      parents: ParentSymbols,
+      docstringContentType: ContentType
+  ): Optional[SymbolDocumentation] = Optional.empty()
 }

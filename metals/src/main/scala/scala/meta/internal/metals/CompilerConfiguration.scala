@@ -239,6 +239,7 @@ class CompilerConfiguration(
               initializeParams.supportsCompletionSnippets,
             _isStripMarginOnTypeFormattingEnabled =
               () => userConfig().enableStripMarginOnTypeFormatting,
+            hoverContentType = config.hoverContentType(),
           )
       }
 
