@@ -212,7 +212,11 @@ class ScalaCliServers(
       .getOrElse(Future.successful(()))
   }
 
-  def didFocus(path: AbsolutePath): Queue[ScalaCli] =
+  /**
+   * We reorder scala-cli servers on `didFocus`,
+   * so the least recently used will be discarded first.
+   */
+  def didFocus(path: AbsolutePath): Unit =
     serversRef.getAndUpdate { servers =>
       servers.find(server => path.startWith(server.path)) match {
         case Some(foundServer) =>
