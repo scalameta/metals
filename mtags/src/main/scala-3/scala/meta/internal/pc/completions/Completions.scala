@@ -322,7 +322,7 @@ class Completions(
            */
           if sym.isClass && companionSynthetic then sym.companionModule.info
           else sym.info
-        val applSymbols = info.member(nme.apply).allSymbols
+        val applSymbols = info.member(nme.apply).allSymbols.filter(_.isAccessibleFrom(info))
         sym :: applSymbols
       else List(sym)
 

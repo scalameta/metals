@@ -2312,4 +2312,17 @@ class CompletionSuite extends BaseCompletionSuite {
     ""
   )
 
+  check(
+    "private-def-should-not-be-suggested",
+    s"""|object O {
+        |  private def apply(i: Int) = i
+        |}
+        |
+        |object W {
+        |  val g = O@@
+        |}""".stripMargin,
+    "",
+    filter = _ == "O(i: Int): Int"
+  )
+
 }
