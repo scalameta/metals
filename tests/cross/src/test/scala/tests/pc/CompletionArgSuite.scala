@@ -870,7 +870,13 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|aaa = : Int
        |assert(assertion: Boolean): Unit
        |""".stripMargin,
-    topLines = Some(2)
+    topLines = Some(2),
+    compat = Map(
+      "3" ->
+        """|aaa = : Int
+           |assert(inline assertion: Boolean): Unit
+           |""".stripMargin
+    )
   )
 
   check(
@@ -885,7 +891,13 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|aaa = : Int
        |assert(assertion: Boolean): Unit
        |""".stripMargin,
-    topLines = Some(2)
+    topLines = Some(2),
+    compat = Map(
+      "3" ->
+        """|aaa = : Int
+           |assert(inline assertion: Boolean): Unit
+           |""".stripMargin
+    )
   )
 
   check(
@@ -998,7 +1010,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|aaa = : Int
        |abb = : Option[Int]
-       |assert(assertion: Boolean): Unit
+       |assert(inline assertion: Boolean): Unit
        |""".stripMargin,
     topLines = Some(3)
   )
@@ -1012,7 +1024,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|aaa = : Int
        |abb = : Option[Int]
-       |assert(assertion: Boolean): Unit
+       |assert(inline assertion: Boolean): Unit
        |""".stripMargin,
     topLines = Some(3)
   )
@@ -1033,7 +1045,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|aaa = : Int
        |abb = : Option[Int]
-       |assert(assertion: Boolean): Unit
+       |assert(inline assertion: Boolean): Unit
        |""".stripMargin,
     topLines = Some(3)
   )
@@ -1051,7 +1063,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|abb = : Option[Int]
        |acc = : List[Int]
-       |assert(assertion: Boolean): Unit
+       |assert(inline assertion: Boolean): Unit
        |""".stripMargin,
     topLines = Some(3)
   )

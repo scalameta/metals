@@ -99,7 +99,13 @@ class CancelCompletionSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|assert(assertion: Boolean): Unit
        |assert(assertion: Boolean, message: => Any): Unit
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|assert(inline assertion: Boolean): Unit
+           |assert(inline assertion: Boolean, inline message: => Any): Unit
+           |""".stripMargin
+    )
   )
 
   /**
