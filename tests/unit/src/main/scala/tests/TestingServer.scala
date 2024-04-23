@@ -593,7 +593,7 @@ final case class TestingServer(
       case Some(workspaceFolders) =>
         params.setWorkspaceFolders(
           workspaceFolders
-            .map(file => new WorkspaceFolder(toPath(file).toURI.toString))
+            .map(file => new WorkspaceFolder(toPath(file).toURI.toString, file))
             .asJava
         )
       case None =>

@@ -259,6 +259,7 @@ lazy val mtagsShared = project
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
       "com.google.protobuf" % "protobuf-java" % "4.26.1",
+      V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
   )
@@ -370,6 +371,7 @@ lazy val mtags3 = project
     scalaVersion := V.scala3,
     target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3",
     publish / skip := true,
+    libraryDependencies += V.guava,
     scalafixConfig := Some(
       (ThisBuild / baseDirectory).value / ".scalafix3.conf"
     ),
