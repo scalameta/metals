@@ -62,7 +62,7 @@ Minimum supported version is `11`. The VS Code plugin will first search for `jav
 - `Java Version` - minimum JDK version accepted for running Metals server. If none found, this is also the version that will be downloaded using coursier. Allows for one of: `11`, `17`, `21`, with `17` being the default.
 
 ### Project's JDK
-JDK used for compiling and running the project. Build servers like `mill` and `sbt` are started using that JDK. In case of `Bloop` Metals's server JDK is used for running the build server but appropriate `-release` flags are added for compilation. By default Metals relies on the build server's mechanism for project's JDK resolution (e.g. `Bloop` - `JAVA_HOME`, `sbt` - java on `PATH`).
+JDK used for compiling and running the project. Build servers like `mill` and `sbt` are started using that JDK. In case of `Bloop` Metals's server JDK is used for running the build server but appropriate `-release` flags are added for compilation. By default Metals uses JDK defined by `JAVA_HOME` environment variable, if the variable is not set is falls to using the Metals's JDK.
 
 #### Settings:
   - `Java Home` - path to project's JDK's Home. Note: this setting isn't respected for `Bazel`.
