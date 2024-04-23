@@ -687,6 +687,56 @@ class Scala3CodeActionLspSuite
     ),
   )
 
+  check(
+    "lose-inline",
+    """|package a
+       |
+       |trait Hello:
+       |  extension (inline rb: Int) inline def hello: Unit
+       |
+       |object <<X>> extends Hello
+       |""".stripMargin,
+    s"""|${ImplementAbstractMembers.title}
+        |${ExtractRenameMember.title("object", "X")}
+        |""".stripMargin,
+    """|package a
+       |
+       |trait Hello:
+       |  extension (inline rb: Int) inline def hello: Unit
+       |
+       |object X extends Hello {
+       |
+       |  extension (inline rb: Int) override inline def hello: Unit = ???
+       |
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "lose-inline-2",
+    """|package a
+       |
+       |trait Hello:
+       |  inline def hello(inline i: Int): Unit
+       |
+       |object <<X>> extends Hello
+       |""".stripMargin,
+    s"""|${ImplementAbstractMembers.title}
+        |${ExtractRenameMember.title("object", "X")}
+        |""".stripMargin,
+    """|package a
+       |
+       |trait Hello:
+       |  inline def hello(inline i: Int): Unit
+       |
+       |object X extends Hello {
+       |
+       |  override inline def hello(inline i: Int): Unit = ???
+       |
+       |}
+       |""".stripMargin,
+  )
+
   private def getPath(name: String) = s"a/src/main/scala/a/$name"
 
   def checkExtractedMember(
