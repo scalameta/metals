@@ -1030,7 +1030,7 @@ object Messages {
   }
 
   def worksheetTimeout: String =
-    """|Failed to evaluate worksheet, timeout reached.
+    """|Failed to evaluate worksheet, timeout reached, if needed modify add `metals.worksheet-timeout` property.
        |See: https://scalameta.org/metals/docs/troubleshooting/faq#i-see-spurious-errors-or-worksheet-fails-to-evaluate
        |""".stripMargin
 

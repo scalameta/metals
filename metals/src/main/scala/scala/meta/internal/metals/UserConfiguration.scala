@@ -56,7 +56,6 @@ case class UserConfiguration(
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
     scalaCliLauncher: Option[String] = None,
     defaultBspToBuildTool: Boolean = false,
-    worksheetTimeout: Int = 30,
 ) {
 
   def shouldAutoImportNewProject: Boolean =

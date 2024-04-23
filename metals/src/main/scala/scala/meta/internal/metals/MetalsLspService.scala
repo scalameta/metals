@@ -608,6 +608,7 @@ class MetalsLspService(
         worksheetPublisher,
         compilations,
         scalaVersionSelector,
+        clientConfig.initialConfig,
       )
     )
   }

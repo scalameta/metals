@@ -85,6 +85,8 @@ except for the standard lib on your classpath.
 
 Worksheet code is entirely wrapped in a class (`class MdocApp`). The class wrapper is needed as a counter measure to dead locks issues, however the wrapper can cause issues for some valid Scala code snippets. Issues like getting stuck in a infinite loop while evaluating or throwing a `StackOverflowException`. Full description of the issue - [mdoc/#853](https://github.com/scalameta/mdoc/issues/853).
 
+If worksheet evaluation times out, you can also increase the timeout by setting `-Dmetals.worksheet-timeout=<number of seconds>` server property.
+
 ## Ammonite scripts
 
 ### How do I use Scala 2.x.x for my script?

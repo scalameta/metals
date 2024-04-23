@@ -110,6 +110,11 @@ final case class MetalsServerConfig(
       Option(System.getProperty("metals.build-server-ping-interval"))
         .flatMap(opt => Try(Duration(opt)).toOption)
         .getOrElse(Duration("1m")),
+    worksheetTimeout: Int =
+      Option(System.getProperty("metals.worksheet-timeout"))
+        .filter(_.forall(Character.isDigit(_)))
+        .map(_.toInt)
+        .getOrElse(30),
 ) {
   override def toString: String =
     List[String](
@@ -131,6 +136,7 @@ final case class MetalsServerConfig(
       s"max-log-backup=${maxLogBackups}",
       s"server-to-idle-time=${metalsToIdleTime}",
       s"build-server-ping-interval=${pingInterval}",
+      s"worksheet-timeout=$worksheetTimeout",
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {
