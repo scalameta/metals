@@ -750,4 +750,47 @@ class DefinitionLspSuite
     } yield ()
   }
 
+  test("go-to-reexported-symbol") {
+    val testCase =
+      """|package a
+         |class Test extends A {
+         |  assert("Hello".fo@@o == "HelloFoo")
+         |}
+         |
+         |trait A {
+         |  export B.*
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { "scalaVersion": "3.4.1" }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |${testCase.replace("@@", "")}
+           |/a/src/main/scala/a/Other.scala
+           |package a
+           |
+           |object B {
+           |  extension (value: String) def foo: String = s"$${value}Foo"
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Other.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/Main.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(locations.length == 1)
+      _ = assert(locations.forall(_.getUri().endsWith("a/Other.scala")))
+      _ = assertEquals(
+        locations.map(_.getRange().getStart().getLine()),
+        List(3),
+      )
+    } yield ()
+  }
+
 }

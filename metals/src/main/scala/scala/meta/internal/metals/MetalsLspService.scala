@@ -2704,6 +2704,7 @@ class MetalsLspService(
                   symbol = results.head.symbol,
                   definition = None,
                   semanticdb = None,
+                  querySymbol = results.head.symbol,
                 )
               )
             }

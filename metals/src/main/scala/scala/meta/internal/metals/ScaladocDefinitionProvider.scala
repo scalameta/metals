@@ -84,6 +84,7 @@ class ScaladocDefinitionProvider(
           results.head.symbol,
           None,
           None,
+          results.head.querySymbol,
         )
       )
   }
