@@ -58,6 +58,7 @@ class BuildServerConnection private (
     config: MetalsServerConfig,
     workspace: AbsolutePath,
     supportsWrappedSources: Boolean,
+    progress: WorkDoneProgress,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
@@ -352,7 +353,15 @@ class BuildServerConnection private (
         onFail,
       )
       cancelPromise.future.map(_ => completable.cancel(true))
-      completable.asScala
+      val description = if (params.getTargets().size() == 1) {
+        params.getTargets().get(0).getUri()
+      } else {
+        s"${params.getTargets().size()} targets"
+      }
+      progress.trackFuture(
+        s"Resolving classpath for $description",
+        completable.asScala,
+      )
     } else Future.successful(resultOnScalaOptionsUnsupported)
   }
 
@@ -572,6 +581,7 @@ object BuildServerConnection {
       bspStatusOpt: Option[ConnectionBspStatus] = None,
       retry: Int = 5,
       supportsWrappedSources: Option[Boolean] = None,
+      workDoneProgress: WorkDoneProgress,
   )(implicit
       ec: ExecutionContextExecutorService
   ): Future[BuildServerConnection] = {
@@ -651,6 +661,7 @@ object BuildServerConnection {
           config,
           projectRoot,
           supportsWrappedSources.getOrElse(connection.supportsWrappedSources),
+          workDoneProgress,
         )
       }
       .recoverWith { case e: TimeoutException =>
@@ -668,6 +679,8 @@ object BuildServerConnection {
             serverName,
             bspStatusOpt,
             retry - 1,
+            supportsWrappedSources,
+            workDoneProgress,
           )
         } else {
           Future.failed(e)

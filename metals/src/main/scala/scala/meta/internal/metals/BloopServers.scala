@@ -43,6 +43,7 @@ final class BloopServers(
     languageClient: MetalsLanguageClient,
     tables: Tables,
     config: MetalsServerConfig,
+    workDoneProgress: WorkDoneProgress,
 )(implicit ec: ExecutionContextExecutorService) {
 
   import BloopServers._
@@ -96,6 +97,7 @@ final class BloopServers(
         config,
         name,
         bspStatusOpt,
+        workDoneProgress = workDoneProgress,
       )
   }
 

@@ -194,6 +194,7 @@ class ScalaCli(
         config(),
         "Scala CLI",
         supportsWrappedSources = Some(true),
+        workDoneProgress = workDoneProgress,
       )
 
       val f = futureConn.flatMap { conn =>

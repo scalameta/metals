@@ -24,6 +24,7 @@ import scala.meta.internal.metals.QuietInputStream
 import scala.meta.internal.metals.SocketConnection
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.URIEncoderDecoder
@@ -48,6 +49,7 @@ final class BspServers(
     bspGlobalInstallDirectories: List[AbsolutePath],
     config: MetalsServerConfig,
     userConfig: () => UserConfiguration,
+    workDoneProgress: WorkDoneProgress,
 )(implicit ec: ExecutionContextExecutorService) {
   private def customProjectRoot =
     userConfig().getCustomProjectRoot(mainWorkspace)
@@ -146,6 +148,7 @@ final class BspServers(
       config,
       details.getName(),
       bspStatusOpt,
+      workDoneProgress = workDoneProgress,
     )
   }
 
