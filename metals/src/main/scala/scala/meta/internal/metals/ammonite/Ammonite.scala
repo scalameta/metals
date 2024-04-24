@@ -258,6 +258,7 @@ final class Ammonite(
           tables.dismissedNotifications.RequestTimeout,
           config,
           "Ammonite",
+          workDoneProgress = workDoneProgress,
         )
         for {
           conn <- futureConn

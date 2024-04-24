@@ -429,6 +429,7 @@ class MetalsLspService(
     languageClient,
     tables,
     clientConfig.initialConfig,
+    workDoneProgress,
   )
 
   private val bspServers: BspServers = new BspServers(
@@ -440,6 +441,7 @@ class MetalsLspService(
     bspGlobalDirectories,
     clientConfig.initialConfig,
     () => userConfig,
+    workDoneProgress,
   )
 
   private val bspConnector: BspConnector = new BspConnector(
