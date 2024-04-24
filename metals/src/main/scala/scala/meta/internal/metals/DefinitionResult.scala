@@ -15,6 +15,7 @@ case class DefinitionResult(
     symbol: String,
     definition: Option[AbsolutePath],
     semanticdb: Option[TextDocument],
+    querySymbol: String,
 ) {
   def isEmpty: Boolean = locations.isEmpty()
   def ++(other: DefinitionResult) = DefinitionResult(
@@ -22,11 +23,12 @@ case class DefinitionResult(
     symbol,
     definition,
     semanticdb,
+    querySymbol,
   )
 }
 
 object DefinitionResult {
   def empty(symbol: String): DefinitionResult =
-    DefinitionResult(Collections.emptyList(), symbol, None, None)
+    DefinitionResult(Collections.emptyList(), symbol, None, None, symbol)
   def empty: DefinitionResult = empty(Symbols.None)
 }

@@ -820,6 +820,7 @@ class Compilers(
             c.symbol(),
             definitionPath,
             None,
+            c.symbol(),
           )
         }
     }.getOrElse(Future.successful(DefinitionResult.empty))

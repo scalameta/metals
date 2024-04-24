@@ -244,7 +244,12 @@ final class RenameProvider(
               Future
                 .sequence(allReferences)
                 .map(locs =>
-                  (locs.flatten, symbolOccurrence, definition, newName)
+                  (
+                    locs.flatten.filterNot(_.getRange().isOffset),
+                    symbolOccurrence,
+                    definition,
+                    newName,
+                  )
                 )
             }
             .map {
