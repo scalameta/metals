@@ -40,7 +40,7 @@ final case class CallHierarchyProvider(
 
   private val incomingCallsFinder = new IncomingCallsFinder(definition, trees)
   private val outgoingCallsFinder =
-    new OutgoingCallsFinder(semanticdbs(), definition, references, trees)
+    new OutgoingCallsFinder(semanticdbs, definition, references, trees)
 
   /**
    * Prepare call hierarchy request by returning a call hierarchy item, resolved for the given text document position.

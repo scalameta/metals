@@ -154,6 +154,9 @@ class ProjectMetalsLspService(
       scalaCli,
     )
 
+  override def optFileSystemSemanticdbs(): Option[FileSystemSemanticdbs] =
+    Some(fileSystemSemanticdbs)
+
   protected val warnings: Warnings = new Warnings(
     folder,
     buildTargets,
@@ -273,11 +276,20 @@ class ProjectMetalsLspService(
   }
 
   override protected def onChange(paths: Seq[AbsolutePath]): Future[Unit] = {
-    super.onChange(paths).map(_ => onBuildChanged(paths))
+    Future
+      .sequence(List(super.onChange(paths), onBuildChanged(paths)))
+      .ignoreValue
   }
 
   override def onDelete(path: AbsolutePath): Future[Unit] = {
-    super.onDelete(path).map(_ => treeView.onWorkspaceFileDidChange(path))
+    Future
+      .sequence(
+        List(
+          super.onDelete(path),
+          Future(treeView.onWorkspaceFileDidChange(path)),
+        )
+      )
+      .ignoreValue
   }
 
   def slowConnectToBuildServer(
@@ -934,7 +946,7 @@ class ProjectMetalsLspService(
     isConnecting.set(false)
     for {
       _ <- importBuild(session)
-      _ <- indexer.profiledIndexWorkspace(runDoctorCheck)
+      _ <- indexer.profiledIndexWorkspace(check)
       _ = buildTool.foreach(
         workspaceReload.persistChecksumStatus(Digest.Status.Installed, _)
       )
@@ -1038,7 +1050,7 @@ class ProjectMetalsLspService(
         case Some(session) =>
           for {
             _ <- importBuild(session)
-            _ <- indexer.profiledIndexWorkspace(runDoctorCheck)
+            _ <- indexer.profiledIndexWorkspace(check)
           } {
             focusedDocument().foreach(path => compilations.compileFile(path))
           }
@@ -1347,7 +1359,7 @@ class ProjectMetalsLspService(
     debugProvider.runCommandDiscovery(unresolvedParams)
 
   def check(): Unit = {
-    runDoctorCheck()
+    doctor.check(headDoctor)
     buildTools
       .loadSupported()
       .map(_.projectRoot)
@@ -1381,7 +1393,10 @@ class ProjectMetalsLspService(
   def buildHasErrors(path: scala.meta.io.AbsolutePath): Boolean =
     buildClient.buildHasErrors(path)
 
-  def maybeFixAndLoad(load: () => Future[Unit]): Future[Unit] =
+  def maybeFixAndLoad(
+      path: AbsolutePath,
+      load: () => Future[Unit],
+  ): Future[Unit] =
     for {
       _ <- maybeAmendScalaCliBspConfig(path)
       _ <- maybeImportScript(path).getOrElse(load())
@@ -1391,7 +1406,5 @@ class ProjectMetalsLspService(
     super.resetStuff()
     treeView.reset()
   }
-
-  def runDoctorCheck(): Unit = doctor.check(headDoctor)
 
 }

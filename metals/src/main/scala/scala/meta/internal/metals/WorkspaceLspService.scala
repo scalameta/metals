@@ -964,7 +964,7 @@ class WorkspaceLspService(
         ).asJavaObject
       case ServerCommands.DiscoverAndRun(params) =>
         getServiceForOpt(params.path)
-          .map(_.debugDiscovery(params).asJavaObject)
+          .map(_.debugDiscovery(params).liftToLspError.asJavaObject)
           .getOrElse(Future.unit.asJavaObject)
       case ServerCommands.AnalyzeStacktrace(content) =>
         Future {

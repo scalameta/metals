@@ -7,7 +7,7 @@ import scala.meta.internal.parsing.Trees
 class WeaverCatsEffectTestFinder(
     trees: Trees,
     symbolIndex: GlobalSymbolIndex,
-    semanticdbs: Semanticdbs,
+    semanticdbs: () => Semanticdbs,
 ) extends MunitTestFinder(trees, symbolIndex, semanticdbs) {
   override protected val baseParentClasses: Set[String] =
     Set("weaver/MutableFSuite#", "weaver/FunSuiteF#")

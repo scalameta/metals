@@ -88,7 +88,11 @@ class FallbackMetalsLspService(
   ): Unit = {}
   def fileWatcher: FileWatcher = NoopFileWatcher
   def getTargetsInfoForReports(): List[Map[String, String]] = Nil
-  def maybeFixAndLoad(load: () => Future[Unit]): Future[Unit] =
+
+  def maybeFixAndLoad(
+      path: AbsolutePath,
+      load: () => Future[Unit],
+  ): Future[Unit] =
     for {
       _ <-
         if (!path.isScala) Future.unit

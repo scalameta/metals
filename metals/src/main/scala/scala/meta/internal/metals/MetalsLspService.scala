@@ -794,12 +794,15 @@ abstract class MetalsLspService(
             )
             .ignoreValue
         }
-        maybeFixAndLoad(load)
+        maybeFixAndLoad(path, load)
       }.asJava
     }
   }
 
-  def maybeFixAndLoad(load: () => Future[Unit]): Future[Unit]
+  def maybeFixAndLoad(
+      path: AbsolutePath,
+      load: () => Future[Unit],
+  ): Future[Unit]
 
   def didFocus(
       uri: String

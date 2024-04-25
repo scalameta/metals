@@ -74,7 +74,7 @@ final class DefinitionProvider(
     buffers,
     mtags,
     workspace,
-    Some(semanticdbs()),
+    () => Some(semanticdbs()),
     trees,
     buildTargets,
     saveDefFileToDisk,
@@ -445,7 +445,7 @@ class DestinationProvider(
     buffers: Buffers,
     mtags: Mtags,
     workspace: AbsolutePath,
-    semanticdbsFallback: Option[Semanticdbs],
+    semanticdbsFallback: () => Option[Semanticdbs],
     trees: Trees,
     buildTargets: BuildTargets,
     saveSymbolFileToDisk: Boolean,
@@ -470,7 +470,7 @@ class DestinationProvider(
       // Fall back to SemanticDB on disk, if any
 
       def fromSemanticdbs(p: AbsolutePath): Option[TextDocument] =
-        semanticdbsFallback.flatMap(_.textDocument(p).documentIncludingStale)
+        semanticdbsFallback().flatMap(_.textDocument(p).documentIncludingStale)
 
       fromSemanticdbs(path)
         .orElse(

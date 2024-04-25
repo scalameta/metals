@@ -145,6 +145,7 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
     for {
       _ <- server.initialize()
       _ <- server.initialized()
+      _ = server.headServer
       _ = Files.delete(workspace.resolve("buildd.sbt").toNIO)
       _ = FileLayout.fromString(
         s"""|/build.sbt

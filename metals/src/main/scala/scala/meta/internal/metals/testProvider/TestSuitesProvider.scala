@@ -65,11 +65,11 @@ final class TestSuitesProvider(
   private val index = new TestSuitesIndex
   private val junitTestFinder = new JunitTestFinder
   private val munitTestFinder =
-    new MunitTestFinder(trees, symbolIndex, semanticdbs())
+    new MunitTestFinder(trees, symbolIndex, semanticdbs)
   private val scalatestTestFinder =
-    new ScalatestTestFinder(trees, symbolIndex, semanticdbs())
+    new ScalatestTestFinder(trees, symbolIndex, semanticdbs)
   private val weaverCatsEffect =
-    new WeaverCatsEffectTestFinder(trees, symbolIndex, semanticdbs())
+    new WeaverCatsEffectTestFinder(trees, symbolIndex, semanticdbs)
 
   private def isExplorerEnabled = clientConfig.isTestExplorerProvider() &&
     userConfig().testUserInterface == TestUserInterfaceKind.TestExplorer
