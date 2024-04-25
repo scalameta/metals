@@ -58,8 +58,7 @@ final class DefinitionProvider(
     mtags: Mtags,
     buffers: Buffers,
     index: GlobalSymbolIndex,
-    semanticdbs: Semanticdbs,
-    warnings: Warnings,
+    semanticdbs: () => Semanticdbs,
     compilers: () => Compilers,
     trees: Trees,
     buildTargets: BuildTargets,
@@ -67,6 +66,7 @@ final class DefinitionProvider(
     saveDefFileToDisk: Boolean,
     sourceMapper: SourceMapper,
     workspaceSearch: WorkspaceSymbolProvider,
+    onMissingSemanticDB: AbsolutePath => Unit,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
 
   val destinationProvider = new DestinationProvider(
@@ -74,7 +74,7 @@ final class DefinitionProvider(
     buffers,
     mtags,
     workspace,
-    Some(semanticdbs),
+    Some(semanticdbs()),
     trees,
     buildTargets,
     saveDefFileToDisk,
@@ -90,7 +90,7 @@ final class DefinitionProvider(
       token: CancelToken,
   ): Future[DefinitionResult] = {
     val fromSemanticdb =
-      semanticdbs.textDocument(path).documentIncludingStale
+      semanticdbs().textDocument(path).documentIncludingStale
     val fromSnapshot = fromSemanticdb match {
       case Some(doc) =>
         definitionFromSnapshot(path, params, doc)
@@ -110,7 +110,7 @@ final class DefinitionProvider(
           }
         case defn =>
           if (fromSemanticdb.isEmpty) {
-            warnings.noSemanticdb(path)
+            onMissingSemanticDB(path)
           }
           Future.successful(defn)
       }
@@ -259,7 +259,7 @@ final class DefinitionProvider(
   ): Option[(SymbolOccurrence, TextDocument)] = {
     for {
       currentDocument <-
-        semanticdbs
+        semanticdbs()
           .textDocument(source)
           .documentIncludingStale
       posOcc = positionOccurrence(

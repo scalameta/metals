@@ -30,7 +30,7 @@ import org.eclipse.lsp4j.Location
 class SymbolHierarchyOps(
     workspace: AbsolutePath,
     buildTargets: BuildTargets,
-    semanticdbs: Semanticdbs,
+    semanticdbs: () => Semanticdbs,
     index: GlobalSymbolIndex,
     scalaVersionSelector: ScalaVersionSelector,
     buffer: Buffers,
@@ -69,7 +69,7 @@ class SymbolHierarchyOps(
   private def findSemanticdb(fileSource: AbsolutePath): Option[TextDocument] = {
     if (fileSource.isJarFileSystem) None
     else
-      semanticdbs
+      semanticdbs()
         .textDocument(fileSource)
         .documentIncludingStale
   }

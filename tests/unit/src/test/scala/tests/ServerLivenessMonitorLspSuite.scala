@@ -26,7 +26,7 @@ class ServerLivenessMonitorLspSuite extends BaseLspSuite("liveness-monitor") {
     Bill.installWorkspace(workspace)
 
     def isServerResponsive =
-      server.server.doctor.buildTargetsJson().header.isBuildServerResponsive
+      server.headServer.doctor.buildTargetsJson().header.isBuildServerResponsive
     for {
       _ <- initialize(
         """

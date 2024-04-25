@@ -107,6 +107,8 @@ class WorkspaceLspService(
   implicit val ex: ExecutionContextExecutorService = ec
   implicit val rc: ReportContext = LoggerReportContext
   private val cancelables = new MutableCancelable()
+  val fallbackIsInitialized: ju.concurrent.atomic.AtomicBoolean =
+    new ju.concurrent.atomic.AtomicBoolean(false)
   var httpServer: Option[MetalsHttpServer] = None
 
   private val clientConfig =
@@ -167,7 +169,8 @@ class WorkspaceLspService(
     focusedDocument = newFocusedDocument
   }
 
-  lazy val fallbackService: FallbackMetalsLspService =
+  lazy val fallbackService: FallbackMetalsLspService = {
+    fallbackIsInitialized.set(true)
     new FallbackMetalsLspService(
       ec,
       sh,
@@ -179,18 +182,18 @@ class WorkspaceLspService(
       () => focusedDocument,
       shellRunner,
       timerProvider,
-      initTreeView,
       fallbackServicePath,
       Some("fallback-service"),
       doctor,
       workDoneProgress,
       bspStatus,
     )
+  }
 
-  def createService(folder: Folder): MetalsLspService =
+  def createService(folder: Folder): ProjectMetalsLspService =
     folder match {
       case Folder(uri, name) =>
-        new MetalsLspService(
+        new ProjectMetalsLspService(
           ec,
           sh,
           serverInputs,
@@ -278,7 +281,7 @@ class WorkspaceLspService(
       case _: ProviderMismatchException => None
     }
 
-  def getServiceForOpt(path: AbsolutePath): Option[MetalsLspService] =
+  def getServiceForOpt(path: AbsolutePath): Option[ProjectMetalsLspService] =
     getFolderForOpt(path, folderServices).orElse {
       folderServices.find(
         _.buildTargets.all
@@ -289,17 +292,20 @@ class WorkspaceLspService(
   def getServiceFor(path: AbsolutePath): MetalsLspService =
     getServiceForOpt(path).getOrElse(fallbackService)
 
-  def getServiceFor(uri: String): MetalsLspService = {
+  def getServiceForOpt(uri: String): Option[ProjectMetalsLspService] = {
     // "metalsDecode" prefix is used for showing special files and is not an actual file system
     val strippedUri = uri.stripPrefix("metalsDecode:")
-    (for {
+    for {
       path <- strippedUri.toAbsolutePathSafe()
       service <-
         if (strippedUri.startsWith("jar:"))
           folderServices.find(_.buildTargets.inverseSources(path).nonEmpty)
-        else Some(getServiceFor(path))
-    } yield service).getOrElse(fallbackService)
+        else getServiceForOpt(path)
+    } yield service
   }
+
+  def getServiceFor(uri: String): MetalsLspService =
+    getServiceForOpt(uri).getOrElse(fallbackService)
 
   def currentFolder: Option[MetalsLspService] =
     focusedDocument.flatMap(getServiceForOpt)
@@ -311,13 +317,13 @@ class WorkspaceLspService(
    * @param actionName -- action name to display for popup
    */
   def onCurrentFolder[A](
-      f: MetalsLspService => Future[A],
+      f: ProjectMetalsLspService => Future[A],
       actionName: String,
       default: () => A,
   ): Future[A] = {
-    def currentService(): Future[Option[MetalsLspService]] =
+    def currentService(): Future[Option[ProjectMetalsLspService]] =
       folderServices match {
-        case Nil => Future { Some(fallbackService) }
+        case Nil => Future { None }
         case head :: Nil => Future { Some(head) }
         case _ =>
           focusedDocument.flatMap(getServiceForOpt) match {
@@ -339,16 +345,28 @@ class WorkspaceLspService(
   }
 
   def onCurrentFolder(
-      f: MetalsLspService => Future[Unit],
+      f: ProjectMetalsLspService => Future[Unit],
       actionName: String,
   ): Future[Unit] =
     onCurrentFolder(f, actionName, () => ())
 
   def foreachSeq[A](
-      f: MetalsLspService => Future[A],
+      f: ProjectMetalsLspService => Future[A],
       ignoreValue: Boolean = false,
   ): CompletableFuture[Object] = {
     val res = Future.sequence(folderServices.map(f))
+    if (ignoreValue) res.ignoreValue.asJavaObject
+    else res.asJavaObject
+  }
+
+  def foreachSeqIncludeFallback[A](
+      f: MetalsLspService => Future[A],
+      ignoreValue: Boolean = false,
+  ): CompletableFuture[Object] = {
+    val services =
+      if (fallbackIsInitialized.get()) fallbackService :: folderServices
+      else folderServices
+    val res = Future.sequence(services.map(f))
     if (ignoreValue) res.ignoreValue.asJavaObject
     else res.asJavaObject
   }
@@ -699,9 +717,11 @@ class WorkspaceLspService(
       )
   }
 
-  private def onFirstSatifying[T, R](mapTo: MetalsLspService => Future[T])(
+  private def onFirstSatifying[T, R](
+      mapTo: ProjectMetalsLspService => Future[T]
+  )(
       satisfies: T => Boolean,
-      exec: (MetalsLspService, T) => Future[R],
+      exec: (ProjectMetalsLspService, T) => Future[R],
       onNotFound: () => Future[R],
   ): Future[R] =
     Future
@@ -717,7 +737,7 @@ class WorkspaceLspService(
   ): CompletableFuture[Object] =
     params match {
       case ServerCommands.ScanWorkspaceSources() =>
-        foreachSeq(_.indexSources(), ignoreValue = true)
+        foreachSeqIncludeFallback(_.indexSources(), ignoreValue = true)
       case ServerCommands.RestartBuildServer() =>
         onCurrentFolder(
           _.restartBspServer().ignoreValue,
@@ -761,9 +781,9 @@ class WorkspaceLspService(
               .asJavaObject
         }
       case ServerCommands.DiscoverMainClasses(unresolvedParams) =>
-        getServiceFor(unresolvedParams.path)
-          .discoverMainClasses(unresolvedParams)
-          .asJavaObject
+        getServiceForOpt(unresolvedParams.path)
+          .map(_.discoverMainClasses(unresolvedParams).asJavaObject)
+          .getOrElse(Future.unit.asJavaObject)
       case ServerCommands.ResetWorkspace() =>
         maybeResetWorkspace().asJavaObject
       case ServerCommands.RunScalafix(params) =>
@@ -834,9 +854,9 @@ class WorkspaceLspService(
           ServerCommands.CleanCompile.title,
         ).asJavaObject
       case ServerCommands.CancelCompile() =>
-        foreachSeq(_.cancelCompile(), ignoreValue = true)
+        foreachSeqIncludeFallback(_.cancelCompile(), ignoreValue = true)
       case ServerCommands.PresentationCompilerRestart() =>
-        foreachSeq(_.restartCompiler(), ignoreValue = true)
+        foreachSeqIncludeFallback(_.restartCompiler(), ignoreValue = true)
       case ServerCommands.GotoPosition(location) =>
         Future {
           languageClient.metalsExecuteClientCommand(
@@ -943,10 +963,9 @@ class WorkspaceLspService(
             ),
         ).asJavaObject
       case ServerCommands.DiscoverAndRun(params) =>
-        getServiceFor(params.path)
-          .debugDiscovery(params)
-          .liftToLspError
-          .asJavaObject
+        getServiceForOpt(params.path)
+          .map(_.debugDiscovery(params).asJavaObject)
+          .getOrElse(Future.unit.asJavaObject)
       case ServerCommands.AnalyzeStacktrace(content) =>
         Future {
           // Getting the service for focused document and first one otherwise
@@ -1014,12 +1033,11 @@ class WorkspaceLspService(
           .getOrElse(fallbackService)
           .createFile(directoryURI, name, fileType, isScala = false)
       case ServerCommands.StartAmmoniteBuildServer() =>
-        val res = focusedDocument match {
-          case None => Future.unit
-          case Some(path) =>
-            getServiceFor(path).ammoniteStart()
-        }
-        res.asJavaObject
+        val res = for {
+          path <- focusedDocument
+          service <- getServiceForOpt(path)
+        } yield service.ammoniteStart()
+        res.getOrElse(Future.unit).asJavaObject
       case ServerCommands.StopAmmoniteBuildServer() =>
         foreachSeq(_.ammoniteStop(), ignoreValue = false)
       case ServerCommands.StartScalaCliServer() =>
@@ -1030,7 +1048,7 @@ class WorkspaceLspService(
         }
         res.asJavaObject
       case ServerCommands.StopScalaCliServer() =>
-        foreachSeq(_.stopScalaCli(), ignoreValue = true)
+        foreachSeqIncludeFallback(_.stopScalaCli(), ignoreValue = true)
       case ServerCommands.NewScalaProject() =>
         newProjectProvider
           .createNewProjectFromTemplate(currentOrHeadOrFallback.javaHome)

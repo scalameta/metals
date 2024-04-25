@@ -12,7 +12,7 @@ import org.eclipse.{lsp4j => l}
 
 final class CodeLensProvider(
     codeLensProviders: List[CodeLens],
-    semanticdbs: Semanticdbs,
+    semanticdbs: () => Semanticdbs,
     stacktraceAnalyzer: StacktraceAnalyzer,
 )(implicit val ec: ExecutionContext) {
   // code lenses will be refreshed after compilation or when workspace gets indexed
@@ -21,7 +21,7 @@ final class CodeLensProvider(
       Future(stacktraceAnalyzer.stacktraceLenses(path))
     } else {
       val enabledCodelenses = codeLensProviders.filter(_.isEnabled)
-      val semanticdbCodeLenses = semanticdbs
+      val semanticdbCodeLenses = semanticdbs()
         .textDocument(path)
         .documentIncludingStale
         .map { textDocument =>

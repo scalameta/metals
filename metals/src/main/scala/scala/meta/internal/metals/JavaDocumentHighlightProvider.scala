@@ -9,14 +9,14 @@ import org.eclipse.lsp4j.TextDocumentPositionParams
 
 final class JavaDocumentHighlightProvider(
     definitionProvider: DefinitionProvider,
-    semanticdbs: Semanticdbs,
+    semanticdbs: () => Semanticdbs,
 ) {
 
   def documentHighlight(
       params: TextDocumentPositionParams
   ): java.util.List[DocumentHighlight] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
-    val result = semanticdbs.textDocument(source)
+    val result = semanticdbs().textDocument(source)
 
     val highlights = for {
       doc <- result.documentIncludingStale.toList

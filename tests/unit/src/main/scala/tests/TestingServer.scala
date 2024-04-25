@@ -170,7 +170,10 @@ final case class TestingServer(
   lazy val fullServer = languageServer.getOldMetalsLanguageServer
   def server: MetalsLspService =
     if (fullServer.folderServices.isEmpty) fullServer.fallbackService
-    else fullServer.folderServices.head
+    else headServer
+
+  def headServer: m.internal.metals.ProjectMetalsLspService =
+    fullServer.folderServices.head
 
   implicit val reports: ReportContext =
     new StdReportContext(workspace.toNIO, _ => None)

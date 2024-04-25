@@ -10,7 +10,7 @@ import scala.meta.internal.metals.logging.MetalsLogger
 
 class WorkspaceFolders(
     initialFolders: List[Folder],
-    createService: Folder => MetalsLspService,
+    createService: Folder => ProjectMetalsLspService,
     redirectSystemOut: Boolean,
     initialServerConfig: MetalsServerConfig,
     userConfigSync: UserConfigurationSync,
@@ -21,7 +21,8 @@ class WorkspaceFolders(
   private val folderServices: AtomicReference[WorkspaceFoldersServices] =
     new AtomicReference(initServices(initialFolders))
 
-  def getFolderServices: List[MetalsLspService] = folderServices.get().services
+  def getFolderServices: List[ProjectMetalsLspService] =
+    folderServices.get().services
   def nonScalaProjects: List[Folder] = folderServices.get().nonScalaFolders
 
   def initServices(folders: List[Folder]): WorkspaceFoldersServices = {
@@ -142,6 +143,6 @@ class WorkspaceFolders(
 }
 
 case class WorkspaceFoldersServices(
-    services: List[MetalsLspService],
+    services: List[ProjectMetalsLspService],
     nonScalaFolders: List[Folder],
 )

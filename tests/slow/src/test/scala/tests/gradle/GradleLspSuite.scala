@@ -90,7 +90,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       )
       _ <- server.server.indexingPromise.future
       _ = assert(server.server.bspSession.get.main.isBloop)
-      buildTool <- server.server.supportedBuildTool()
+      buildTool <- server.headServer.supportedBuildTool()
       _ = assertEquals(buildTool.get.buildTool.executableName, "gradle")
       _ = assertEquals(
         buildTool.get.buildTool.projectRoot,
