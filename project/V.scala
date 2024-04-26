@@ -20,7 +20,7 @@ object V {
   val betterMonadicFor = "0.3.1"
   val bloop = "1.5.17"
   val bloopConfig = "1.5.5"
-  val bsp = "2.2.0-M2"
+  val bsp = "2.2.0-M4.TEST"
   val coursier = "2.1.9"
   val coursierInterfaces =
     "1.0.19" // changing coursier interfaces version may be not binary compatible.
