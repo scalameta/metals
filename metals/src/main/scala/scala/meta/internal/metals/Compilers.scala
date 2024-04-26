@@ -104,7 +104,6 @@ class Compilers(
 
   import compilerConfiguration._
 
-  val plugins = new CompilerPlugins()
   private val outlineFilesProvider =
     new OutlineFilesProvider(buildTargets, buffers)
 
@@ -968,7 +967,15 @@ class Compilers(
         .inverseSources(path)
 
       target match {
-        case None => Some(fallbackCompiler)
+        case None =>
+          val tmpDirectory = workspace.resolve(Directories.tmp)
+          val scalaVersion =
+            scalaVersionSelector.fallbackScalaVersion(isAmmonite = false)
+          if (!path.toNIO.startsWith(tmpDirectory.toNIO))
+            scribe.info(
+              s"no build target found for $path. Using presentation compiler with project's scala-library version: ${scalaVersion}"
+            )
+          Some(fallbackCompiler)
         case Some(value) =>
           if (path.isScalaFilename) loadCompiler(value)
           else if (path.isJavaFilename && forceScala)
