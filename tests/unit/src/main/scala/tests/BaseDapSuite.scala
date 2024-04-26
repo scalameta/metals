@@ -17,7 +17,6 @@ import scala.meta.internal.metals.debug.TestDebugger
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
-import munit.GenericBeforeEach
 import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
@@ -31,7 +30,7 @@ abstract class BaseDapSuite(
   private val dapClient = Trace.protocolTracePath(DebugProtocol.clientName)
   private val dapServer = Trace.protocolTracePath(DebugProtocol.serverName)
 
-  override def beforeEach(context: GenericBeforeEach[Future[Any]]): Unit = {
+  override def beforeEach(context: BeforeEach): Unit = {
     super.beforeEach(context)
     dapClient.touch()
     dapServer.touch()
