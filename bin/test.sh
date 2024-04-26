@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function bloop_version {
-  grep "val bloop" project/V.scala | sed -n 's/.*"\(.*\)".*/\1/p'
+  grep "val bloop =" project/V.scala | sed -n 's/.*"\(.*\)".*/\1/p'
 }
 
 export COURSIER_REPOSITORIES="central|sonatype:snapshots"
