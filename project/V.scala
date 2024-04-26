@@ -19,7 +19,7 @@ object V {
   val ammonite = "3.0.0-M1-10-105f9e32"
   val betterMonadicFor = "0.3.1"
   val bloop = "1.5.17"
-  val bloopConfig = "1.5.5"
+  val bloopConfig = "2.0.0"
   val bsp = "2.2.0-M2"
   val coursier = "2.1.9"
   val coursierInterfaces =
