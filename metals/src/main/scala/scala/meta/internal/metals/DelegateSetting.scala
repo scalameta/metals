@@ -1,31 +1,7 @@
 package scala.meta.internal.metals
 
-import scala.util.control.NonFatal
-
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
-
-class DelegatingFolderService(
-    folder: AbsolutePath,
-    folderVisibleName: Option[String],
-    val service: MetalsLspService,
-) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
-    with FolderService {
-
-  def writeSetting(): Unit = {
-    try {
-      DelegateSetting.writeDeleteSetting(folder, service.path)
-    } catch {
-      case NonFatal(_) =>
-    }
-  }
-
-}
-
-object DelegatingFolderService {
-  def apply(folder: Folder, service: MetalsLspService) =
-    new DelegatingFolderService(folder.path, folder.visibleName, service)
-}
 
 object DelegateSetting {
   private val settingName = "delegate"

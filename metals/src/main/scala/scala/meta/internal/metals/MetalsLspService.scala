@@ -138,11 +138,8 @@ class MetalsLspService(
     maxScalaCliServers: Int,
 ) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
     with Cancelable
-    with TextDocumentService
-    with FolderService {
+    with TextDocumentService {
   import serverInputs._
-
-  def service: MetalsLspService = this
 
   @volatile
   private var userConfig: UserConfiguration = initialUserConfig
@@ -938,21 +935,22 @@ class MetalsLspService(
     if (wasInitialized.compareAndSet(false, true)) {
       registerNiceToHaveFilePatterns()
 
-    for {
-      _ <- loadFingerPrints()
-      _ <-
-        Future
-          .sequence(
-            List[Future[Unit]](
-              withWillGenerateBspConfig {
-                for {
-                  _ <- maybeSetupScalaCli()
-                  _ <- fullConnect()
-                } yield ()
-              },
-              Future(workspaceSymbols.indexClasspath()),
-              Future(formattingProvider.load()),
-            ))
+      for {
+        _ <- loadFingerPrints()
+        _ <-
+          Future
+            .sequence(
+              List[Future[Unit]](
+                withWillGenerateBspConfig {
+                  for {
+                    _ <- maybeSetupScalaCli()
+                    _ <- fullConnect()
+                  } yield ()
+                },
+                Future(workspaceSymbols.indexClasspath()),
+                Future(formattingProvider.load()),
+              )
+            )
       } yield ()
     } else Future.unit
 

@@ -222,8 +222,6 @@ class WorkspaceLspService(
     )
 
   def folderServices = workspaceFolders.getFolderServices
-  def allHandlers: List[Folder with FolderService] =
-    workspaceFolders.getFolderServices ++ workspaceFolders.delegatingServices
   def nonScalaProjects = workspaceFolders.nonScalaProjects
 
   val treeView: TreeViewProvider =
@@ -283,7 +281,12 @@ class WorkspaceLspService(
     }
 
   def getServiceForOpt(path: AbsolutePath): Option[MetalsLspService] =
-    getFolderForOpt(path, allHandlers).map(_.service)
+    getFolderForOpt(path, folderServices).orElse {
+      folderServices.find(
+        _.buildTargets.all
+          .exists(bt => bt.baseDirectoryPath.exists(path.startWith))
+      )
+    }
 
   def getServiceFor(path: AbsolutePath): MetalsLspService =
     getServiceForOpt(path).getOrElse(fallbackService)
@@ -342,14 +345,6 @@ class WorkspaceLspService(
       actionName: String,
   ): Future[Unit] =
     onCurrentFolder(f, actionName, () => ())
-
-  def getServiceForExactUri(
-      folderUri: String
-  ): Option[MetalsLspService] =
-    for {
-      workSpaceFolder <- allHandlers
-        .find(service => service.path.toString == folderUri)
-    } yield workSpaceFolder.service
 
   def foreachSeq[A](
       f: MetalsLspService => Future[A],
