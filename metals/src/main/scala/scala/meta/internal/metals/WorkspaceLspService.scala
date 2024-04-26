@@ -215,7 +215,6 @@ class WorkspaceLspService(
     new WorkspaceFolders(
       folders,
       createService,
-      () => shutdown().asScala,
       redirectSystemOut,
       serverInputs.initialServerConfig,
       userConfigSync,
@@ -1317,6 +1316,12 @@ class Folder(
     isKnownMetalsProject || path.resolve(".metals").exists || path
       .isMetalsProject()
 
+  /**
+   * A workspace folder might be a project reference for an other project.
+   * In that case all its commands will be delegated to the main project's service.
+   * We keep the path to main project's root in a dedicated setting, so even
+   * before the main project is imported, this folder is known to be a reference.
+   */
   lazy val optDelegatePath: Option[AbsolutePath] =
     DelegateSetting.readDeleteSetting(path)
 
