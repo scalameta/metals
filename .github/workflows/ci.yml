@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macOS-latest, ubuntu-latest]
+        os: [windows-latest, macOS-12, ubuntu-latest]
         java: ["17"]
         shard: [1, 2]
         include:
@@ -66,7 +66,7 @@ jobs:
           - type: gradle-mac
             command: bin/test.sh 'slow/testOnly -- tests.gradle.*'
             name: Gradle MacOS integration
-            os: macOS-latest
+            os: macOS-12
             java: "17"
           - type: sbt
             command: bin/test.sh 'slow/testOnly -- tests.sbt.*'
