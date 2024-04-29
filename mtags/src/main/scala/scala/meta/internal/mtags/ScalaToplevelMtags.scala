@@ -63,7 +63,7 @@ class ScalaToplevelMtags(
   override def maybeAllIdentifiers: Set[String] = identifiers.result()
 
   implicit class XtensionScanner(scanner: LegacyScanner) {
-    def mtagsNextToken(): Any = {
+    def mtagsNextToken(): Unit = {
       scanner.nextToken()
       if (collectIdentifiers)
         scanner.curr.token match {

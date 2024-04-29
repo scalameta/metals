@@ -1,20 +1,16 @@
 package scala.meta.internal.metals
 
-import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
 
 import scala.meta.Importee
-import scala.meta.inputs.Input
-import scala.meta.internal.async.CompletableCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ResolvedSymbolOccurrence
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
@@ -33,16 +29,15 @@ import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyToken._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
-import scala.meta.pc.OffsetParams
 import scala.meta.pc.ReferencesRequest
-import scala.meta.tokens.Token.Ident
+import scala.meta.pc.VirtualFileParams
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import org.eclipse.lsp4j.Location
-import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.ReferenceParams
+import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 
 final class ReferenceProvider(
     workspace: AbsolutePath,
@@ -220,8 +215,8 @@ final class ReferenceProvider(
         val pcResult =
           pcReferences(
             source,
-            params,
-            forceIncludeLocalSearch = false,
+            results.flatMap(_.occurrence).map(_.symbol),
+            params.getContext().isIncludeDeclaration(),
             path => !index.contains(path.toNIO),
           )
 
@@ -237,7 +232,13 @@ final class ReferenceProvider(
           )
       case None =>
         scribe.debug(s"No semanticdb for $source")
-        pcReferences(source, params, forceIncludeLocalSearch = true)
+        pcReferences(source, params).map(
+          _.groupBy(_.symbol)
+            .map { case (symbol, refs) =>
+              ReferencesResult(symbol, refs.flatMap(_.locations))
+            }
+            .toList
+        )
     }
   }
 
@@ -334,52 +335,64 @@ final class ReferenceProvider(
   private def pcReferences(
       path: AbsolutePath,
       params: ReferenceParams,
-      forceIncludeLocalSearch: Boolean,
-      filterTargetFiles: AbsolutePath => Boolean = _ => true,
   ): Future[List[ReferencesResult]] = {
-    val result = for {
-      name <- nameAtPosition(path, params.getPosition())
-      buildTarget <- buildTargets.inverseSources(path)
-      targetFiles = {
-        val localPath = Option.when(forceIncludeLocalSearch)(path)
-        pathsForName(buildTarget, localPath, name).filter(filterTargetFiles)
-      }
-      if targetFiles.nonEmpty
-      cancelToken = new CompletableCancelToken
-    } yield compilers
-      .references(params, targetFiles.toList, cancelToken)
-      .withTimeout(30, TimeUnit.SECONDS)
-      .recover { case _: TimeoutException =>
-        cancelToken.cancel()
-        scribe.warn("pc references search timed out after 30 seconds")
-        Nil
-      }
-    result.getOrElse(Future.successful(Nil))
+    compilers.references(params, EmptyCancelToken).flatMap { foundRefs =>
+      pcReferences(
+        path,
+        foundRefs.map(_.symbol),
+        includeDeclaration = params.getContext().isIncludeDeclaration(),
+        filterTargetFiles = _ != path,
+      ).map(_ ++ foundRefs)
+    }
   }
 
-  private def nameAtPosition(
+  private def pcReferences(
       path: AbsolutePath,
-      position: Position,
-  ) =
-    for {
-      text <- buffers.get(path)
-      input = Input.String(text)
-      pos <- position.toMeta(input)
-      tree <- trees.get(path)
-      ident <- tree.tokens.collectFirst {
-        case t: Ident if t.pos.encloses(pos) => t
-      }
-    } yield ident.text
+      symbols: List[String],
+      includeDeclaration: Boolean,
+      filterTargetFiles: AbsolutePath => Boolean,
+  ): Future[List[ReferencesResult]] = {
+    val visited = mutable.Set[AbsolutePath]()
+    val results = for {
+      buildTarget <- buildTargets.inverseSources(path).toList
+      _ = visited.clear()
+      symbol <- symbols
+      name = nameFromSymbol(symbol)
+      searchFile <- pathsForName(buildTarget, name)
+      if (filterTargetFiles(searchFile) && !visited(searchFile))
+    } yield {
+      visited += searchFile
+      compilers.references(
+        searchFile,
+        includeDeclaration,
+        symbol,
+      )
+    }
+    Future.sequence(results).map(_.flatten)
+  }
+
+  private def nameFromSymbol(
+      semanticDBSymbol: String
+  ): String = {
+    val desc = semanticDBSymbol.desc
+    val actualSym =
+      if (
+        desc.isMethod && (desc.name.value == "apply" || desc.name.value == "unapply")
+      ) {
+        val owner = semanticDBSymbol.owner
+        if (owner != s.Scala.Symbols.None) owner.desc
+        else desc
+      } else desc
+    actualSym.name.value
+  }
 
   private def pathsForName(
       buildTarget: BuildTargetIdentifier,
-      localPath: Option[AbsolutePath],
       name: String,
   ): Iterator[AbsolutePath] = {
     val allowedBuildTargets = buildTargets.allInverseDependencies(buildTarget)
     val visited = scala.collection.mutable.Set.empty[AbsolutePath]
-    localPath.foreach(visited.add)
-    val result = for {
+    for {
       (path, entry) <- identifierIndex.index.iterator
       if allowedBuildTargets.contains(entry.id) &&
         entry.bloom.mightContain(name)
@@ -388,8 +401,6 @@ final class ReferenceProvider(
       _ = visited.add(sourcePath)
       if sourcePath.exists
     } yield sourcePath
-
-    result ++ localPath
   }
 
   /**
@@ -508,7 +519,7 @@ final class ReferenceProvider(
     val isLocal = occ.symbol.isLocal
     if (isLocal)
       compilers
-        .references(params, List(source), EmptyCancelToken)
+        .references(params, EmptyCancelToken)
         .map(_.flatMap(_.locations))
     else {
       /* search local in the following cases:
@@ -733,7 +744,7 @@ object SyntheticPackageObject {
 }
 
 case class PcReferencesRequest(
-    params: OffsetParams,
+    file: VirtualFileParams,
     includeDefinition: Boolean,
-    targetUris: java.util.List[URI],
+    offsetOrSymbol: JEither[Integer, String],
 ) extends ReferencesRequest

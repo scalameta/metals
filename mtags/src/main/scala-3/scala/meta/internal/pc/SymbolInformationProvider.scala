@@ -15,58 +15,9 @@ import dotty.tools.dotc.core.StdNames.nme
 import dotty.tools.dotc.core.Symbols.*
 
 class SymbolInformationProvider(using Context):
-  private def toSymbols(
-      pkg: String,
-      parts: List[(String, Boolean)],
-  ): List[Symbol] =
-    def collectSymbols(denotation: Denotation): List[Symbol] =
-      denotation match
-        case MultiDenotation(denot1, denot2) =>
-          collectSymbols(denot1) ++ collectSymbols(denot2)
-        case denot => List(denot.symbol)
-
-    def loop(
-        owners: List[Symbol],
-        parts: List[(String, Boolean)],
-    ): List[Symbol] =
-      parts match
-        case (head, isClass) :: tl =>
-          val foundSymbols =
-            owners.flatMap { owner =>
-              val next =
-                if isClass then owner.info.member(typeName(head))
-                else owner.info.member(termName(head))
-              collectSymbols(next).filter(_.exists)
-            }
-          if foundSymbols.nonEmpty then loop(foundSymbols, tl)
-          else Nil
-        case Nil => owners
-
-    val pkgSym =
-      if pkg == "_empty_" then requiredPackage(nme.EMPTY_PACKAGE)
-      else requiredPackage(pkg)
-    loop(List(pkgSym), parts)
-  end toSymbols
 
   def info(symbol: String): Option[PcSymbolInformation] =
-    val index = symbol.lastIndexOf("/")
-    val pkg = normalizePackage(symbol.take(index + 1))
-
-    def loop(
-        symbol: String,
-        acc: List[(String, Boolean)],
-    ): List[(String, Boolean)] =
-      if symbol.isEmpty() then acc.reverse
-      else
-        val newSymbol = symbol.takeWhile(c => c != '.' && c != '#')
-        val rest = symbol.drop(newSymbol.size)
-        loop(rest.drop(1), (newSymbol, rest.headOption.exists(_ == '#')) :: acc)
-    val names =
-      loop(symbol.drop(index + 1).takeWhile(_ != '('), List.empty)
-
-    val foundSymbols =
-      try toSymbols(pkg, names)
-      catch case NonFatal(e) => Nil
+    val foundSymbols = SymbolProvider.compilerSymbols(symbol)
 
     val (searchedSymbol, alternativeSymbols) =
       foundSymbols.partition(compilerSymbol =>
@@ -120,7 +71,64 @@ class SymbolInformationProvider(using Context):
     else if sym.is(Flags.TypeParam) then PcSymbolKind.TYPE_PARAMETER
     else if sym.isType then PcSymbolKind.TYPE
     else PcSymbolKind.UNKNOWN_KIND
+end SymbolInformationProvider
+
+object SymbolProvider:
+
+  def compilerSymbol(symbol: String)(using Context): Option[Symbol] =
+    compilerSymbols(symbol).find(sym => SemanticdbSymbols.symbolName(sym) == symbol)
+
+  def compilerSymbols(symbol: String)(using Context): List[Symbol] =
+    val index = symbol.lastIndexOf("/")
+    val pkg = normalizePackage(symbol.take(index + 1))
+
+    def loop(
+        symbol: String,
+        acc: List[(String, Boolean)],
+    ): List[(String, Boolean)] =
+      if symbol.isEmpty() then acc.reverse
+      else
+        val newSymbol = symbol.takeWhile(c => c != '.' && c != '#')
+        val rest = symbol.drop(newSymbol.size)
+        loop(rest.drop(1), (newSymbol, rest.headOption.exists(_ == '#')) :: acc)
+    val names =
+      loop(symbol.drop(index + 1).takeWhile(_ != '('), List.empty)
+
+    try toSymbols(pkg, names)
+    catch case NonFatal(e) => Nil
 
   private def normalizePackage(pkg: String): String =
     pkg.replace("/", ".").stripSuffix(".")
-end SymbolInformationProvider
+
+  private def toSymbols(
+      pkg: String,
+      parts: List[(String, Boolean)],
+  )(using Context): List[Symbol] =
+    def collectSymbols(denotation: Denotation): List[Symbol] =
+      denotation match
+        case MultiDenotation(denot1, denot2) =>
+          collectSymbols(denot1) ++ collectSymbols(denot2)
+        case denot => List(denot.symbol)
+
+    def loop(
+        owners: List[Symbol],
+        parts: List[(String, Boolean)],
+    ): List[Symbol] =
+      parts match
+        case (head, isClass) :: tl =>
+          val foundSymbols =
+            owners.flatMap { owner =>
+              val next =
+                if isClass then owner.info.member(typeName(head))
+                else owner.info.member(termName(head))
+              collectSymbols(next).filter(_.exists)
+            }
+          if foundSymbols.nonEmpty then loop(foundSymbols, tl)
+          else Nil
+        case Nil => owners
+
+    val pkgSym =
+      if pkg == "_empty_" then requiredPackage(nme.EMPTY_PACKAGE)
+      else requiredPackage(pkg)
+    loop(List(pkgSym), parts)
+  end toSymbols

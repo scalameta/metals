@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.Collections
@@ -12,7 +11,6 @@ import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
-import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
@@ -30,7 +28,6 @@ import scala.meta.internal.worksheets.WorksheetPcData
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
-import scala.meta.pc
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.CancelToken
 import scala.meta.pc.HoverSignature
@@ -51,7 +48,6 @@ import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintKind
 import org.eclipse.lsp4j.InlayHintParams
-import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRange
@@ -62,9 +58,10 @@ import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.{Position => LspPosition}
 import org.eclipse.lsp4j.{Range => LspRange}
-import org.eclipse.lsp4j.{debug => d}
+import org.eclipse.lsp4j.{debug => d};
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -92,18 +89,6 @@ class Compilers(
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Cancelable {
 
-  val pcBuffers: pc.Buffers = new pc.Buffers {
-    override def getFile(
-        uri: URI,
-        scalaVersion: String,
-    ): ju.Optional[pc.PcAdjustFileParams] =
-      Try(sourceAdjustments(uri.toString(), scalaVersion)).toOption
-        .map[pc.PcAdjustFileParams] { case (vFile, _, adjust) =>
-          PcAdjustFileParams(CompilerVirtualFileParams(uri, vFile.text), adjust)
-        }
-        .asJava
-  }
-
   val compilerConfiguration = new CompilerConfiguration(
     workspace,
     config,
@@ -117,7 +102,6 @@ class Compilers(
     trees,
     mtagsResolver,
     sourceMapper,
-    pcBuffers
   )
 
   import compilerConfiguration._
@@ -747,25 +731,41 @@ class Compilers(
 
   def references(
       params: ReferenceParams,
-      targetFiles: List[AbsolutePath],
       token: CancelToken,
   ): Future[List[ReferencesResult]] = {
-    withPCAndAdjustLsp(params) { (pc, pos, _) =>
-      val request = PcReferencesRequest(
+    withPCAndAdjustLsp(params) { case (pc, pos, adjust) =>
+      val requestParams = new PcReferencesRequest(
         CompilerOffsetParamsUtils.fromPos(pos, token),
         params.getContext().isIncludeDeclaration(),
-        targetFiles.map(_.toURI).asJava,
+        JEither.forLeft(pos.start),
       )
-      pc.references(request)
+      pc.references(requestParams)
         .asScala
-        .map(
-          _.asScala.toList.map { defRes =>
-            val locations = defRes.locations().asScala.toList
-            ReferencesResult(defRes.symbol(), locations)
-          }
-        )
+        .map(_.asScala.map(adjust.adjustReferencesResult).toList)
     }
   }.getOrElse(Future.successful(Nil))
+
+  def references(
+      searchFile: AbsolutePath,
+      includeDefinition: Boolean,
+      symbol: String,
+  ): Future[List[ReferencesResult]] =
+    loadCompiler(searchFile)
+      .map { compiler =>
+        val uri = searchFile.toURI
+        val (input, _, adjust) =
+          sourceAdjustments(uri.toString(), compiler.scalaVersion())
+        val requestParams = new PcReferencesRequest(
+          CompilerVirtualFileParams(uri, input.text),
+          includeDefinition,
+          JEither.forRight(symbol),
+        )
+        compiler
+          .references(requestParams)
+          .asScala
+          .map(_.asScala.map(adjust.adjustReferencesResult).toList)
+      }
+      .getOrElse(Future.successful(Nil))
 
   def extractMethod(
       doc: TextDocumentIdentifier,
@@ -1504,12 +1504,4 @@ object Compilers {
         extends PresentationCompilerKey
     case object Default extends PresentationCompilerKey
   }
-}
-
-case class PcAdjustFileParams(
-    params: pc.VirtualFileParams,
-    adjustLsp: AdjustLspData,
-) extends pc.PcAdjustFileParams {
-  override def adjustLocation(location: Location): Location =
-    adjustLsp.adjustLocation(location)
 }

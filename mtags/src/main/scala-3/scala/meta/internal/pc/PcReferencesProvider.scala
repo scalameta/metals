@@ -2,16 +2,13 @@ package scala.meta.internal.pc
 
 import scala.collection.JavaConverters.*
 
+import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.mtags.MtagsEnrichments.*
-import scala.meta.pc.Buffers
-import scala.meta.pc.PcAdjustFileParams
 import scala.meta.pc.ReferencesRequest
 import scala.meta.pc.ReferencesResult
 
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.tpd.*
-import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
@@ -21,72 +18,47 @@ import org.eclipse.lsp4j.Location
 class PcReferencesProvider(
     driver: InteractiveDriver,
     request: ReferencesRequest,
-    buffers: Buffers,
-    scalaVersion: String,
-):
-  val symbolSearch = new WithCompilationUnit(driver, request.params())
-    with PcSymbolSearch
-  @volatile var isCancelled: Boolean = false
-  def result(): List[ReferencesResult] =
-    val allLocations =
-      symbolSearch.soughtSymbols match
-        case Some((sought, _)) if sought.nonEmpty =>
-          given Context = symbolSearch.ctx
-          if sought.forall(_.is(Flags.Local)) then
-            val file = buffers.getFile(request.params().uri(), scalaVersion)
-            if file.isPresent()
-            then collectForFile(sought, file.get())
-            else List.empty
-          else
-            val fileUris = request.targetUris().asScala.toList
-            fileUris.flatMap { uri =>
-              val file = buffers.getFile(uri, scalaVersion)
-              if file.isPresent() && !isCancelled then
-                collectForFile(sought, file.get())
-              else List.empty
-            }
-          end if
-        case _ => List.empty
+) extends WithCompilationUnit(driver, request.file()) with PcCollector[Option[(String, Option[lsp4j.Range])]]:
 
-    allLocations
-      .groupBy(_._1)
-      .map { case (symbol, locs) =>
-        ReferencesResultImpl(symbol, locs.map(_._2).asJava)
-      }
-      .toList
-  end result
+  private def soughtSymbols =
+    if(request.offsetOrSymbol().isLeft()) {
+      val offsetParams = CompilerOffsetParams(
+        request.file().uri(),
+        request.file().text(),
+        request.offsetOrSymbol().getLeft()
+      )
+      val symbolSearch = new WithCompilationUnit(driver, offsetParams) with PcSymbolSearch
+      symbolSearch.soughtSymbols.map(_._1)
+    } else {
+      SymbolProvider.compilerSymbol(request.offsetOrSymbol().getRight()).map(symbolAlternatives(_))
+    }
 
-  private def collectForFile(
-      sought: Set[Symbol],
-      adjustParams: PcAdjustFileParams,
-  ) =
-    val collector = new WithCompilationUnit(driver, adjustParams.params())
-      with PcCollector[Option[(String, lsp4j.Range)]]:
-      def collect(parent: Option[Tree])(
-          tree: Tree | EndMarker,
-          toAdjust: SourcePosition,
-          symbol: Option[Symbol],
-      ): Option[(String, lsp4j.Range)] =
-        val (pos, _) = toAdjust.adjust(text)
-        tree match
-          case _: DefTree if !request.includeDefinition() => None
-          case t: Tree =>
-            val sym = symbol.getOrElse(t.symbol)
-            Some(SemanticdbSymbols.symbolName(sym), pos.toLsp)
-          case _ => None
-    val results =
-      collector
-        .resultWithSought(sought)
+  def collect(parent: Option[Tree])(
+      tree: Tree | EndMarker,
+      toAdjust: SourcePosition,
+      symbol: Option[Symbol],
+  ): Option[(String, Option[lsp4j.Range])] =
+    val (pos, _) = toAdjust.adjust(text)
+    tree match
+      case t: DefTree if !request.includeDefinition() =>
+        val sym = symbol.getOrElse(t.symbol)
+        Some(SemanticdbSymbols.symbolName(sym), None)
+      case t: Tree =>
+        val sym = symbol.getOrElse(t.symbol)
+        Some(SemanticdbSymbols.symbolName(sym), Some(pos.toLsp))
+      case _ => None
+
+  def references(): List[ReferencesResult] =
+    soughtSymbols match
+      case Some(sought) if sought.nonEmpty =>
+        resultWithSought(sought)
         .flatten
-        .map { case (symbol, range) =>
-          (
-            symbol,
-            adjustParams.adjustLocation(
-              new Location(collector.uri.toString(), range)
-            ),
-          )
+        .groupMap(_._1) { case (_, optRange) =>
+          optRange.map(new Location(request.file().uri().toString(), _))
         }
-    driver.close(collector.uri)
-    results
-  end collectForFile
+        .map { case (symbol, locs) =>
+          ReferencesResultImpl(symbol, locs.flatten.asJava)
+        }
+        .toList
+      case _ => Nil
 end PcReferencesProvider

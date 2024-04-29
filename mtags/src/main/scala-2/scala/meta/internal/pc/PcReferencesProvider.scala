@@ -1,89 +1,93 @@
 package scala.meta.internal.pc
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.pc.Buffers
-import scala.meta.pc.PcAdjustFileParams
+import scala.meta.pc.OffsetParams
 import scala.meta.pc.ReferencesRequest
-import scala.meta.pc.ReferencesResult
+import scala.meta.pc.VirtualFileParams
 
 import org.eclipse.{lsp4j => l}
 
-class PcReferencesProvider(
-    compiler: MetalsGlobal,
-    request: ReferencesRequest,
-    buffers: Buffers,
-    scalaVersion: String
-) extends WithCompilationUnit(compiler, request.params())
-    with PcSymbolSearch {
+trait PcReferencesProvider {
+  _: WithCompilationUnit with PcCollector[(String, Option[l.Range])] =>
+  import compiler._
+  protected def includeDefinition: Boolean
+  protected def result(): List[(String, Option[l.Range])]
 
-  @volatile var isCancelled: Boolean = false
-  def result(): List[ReferencesResult] = {
+  def collect(
+      parent: Option[Tree]
+  )(
+      tree: Tree,
+      toAdjust: Position,
+      sym: Option[Symbol]
+  ): (String, Option[l.Range]) = {
+    val (pos, _) = toAdjust.adjust(text)
+    tree match {
+      case t: DefTree if !includeDefinition =>
+        (compiler.semanticdbSymbol(t.symbol), None)
+      case t =>
+        (compiler.semanticdbSymbol(t.symbol), Some(pos.toLsp))
+    }
+  }
 
-    val result: List[(String, l.Location)] =
-      soughtSymbols match {
-        case Some((sought, _)) if sought.nonEmpty =>
-          def collect(adjustFileParams: PcAdjustFileParams) = {
-            val collector =
-              new WithCompilationUnit(compiler, adjustFileParams.params())
-                with PcCollector[Option[(String, l.Range)]] {
-                import compiler._
-                override def collect(parent: Option[Tree])(
-                    tree: Tree,
-                    toAdjust: Position,
-                    sym: Option[compiler.Symbol]
-                ): Option[(String, l.Range)] = {
-                  val (pos, _) = toAdjust.adjust(text)
-                  tree match {
-                    case _: DefTree if !request.includeDefinition() => None
-                    case t =>
-                      Some(compiler.semanticdbSymbol(t.symbol), pos.toLsp)
-                  }
-                }
-              }
-
-            val result =
-              collector
-                .resultWithSought(
-                  sought.asInstanceOf[Set[collector.compiler.Symbol]]
-                )
-                .flatten
-                .map { case (symbol, range) =>
-                  (
-                    symbol,
-                    adjustFileParams.adjustLocation(
-                      new l.Location(
-                        adjustFileParams.params.uri().toString(),
-                        range
-                      )
-                    )
-                  )
-                }
-            compiler.unitOfFile.remove(collector.unit.source.file)
-            result
-          }
-
-          if (sought.forall(_.isLocalToBlock)) {
-            val file = buffers.getFile(params.uri(), scalaVersion)
-            if (file.isPresent() && !isCancelled) {
-              collect(file.get())
-            } else Nil
-          } else {
-            val fileUris = request.targetUris().asScala.toList
-            fileUris.flatMap { uri =>
-              val file = buffers.getFile(uri, scalaVersion)
-              if (file.isPresent()) collect(file.get())
-              else Nil
-            }
-          }
-        case _ => List.empty
-      }
-
-    result
+  def references(): List[ReferencesResultImpl] =
+    result()
       .groupBy(_._1)
       .map { case (symbol, locs) =>
-        ReferencesResultImpl(symbol, locs.map(_._2).asJava)
+        ReferencesResultImpl(
+          symbol,
+          locs.flatMap { case (_, optRange) =>
+            optRange.map(new l.Location(params.uri().toString(), _))
+          }.asJava
+        )
       }
       .toList
-  }
+}
+
+class LocalPcReferencesProvider(
+    override val compiler: MetalsGlobal,
+    params: OffsetParams,
+    override val includeDefinition: Boolean
+) extends WithSymbolSearchCollector[(String, Option[l.Range])](compiler, params)
+    with PcReferencesProvider
+
+class BySymbolPCReferencesProvider(
+    override val compiler: MetalsGlobal,
+    params: VirtualFileParams,
+    override val includeDefinition: Boolean,
+    semanticDbSymbol: String
+) extends WithCompilationUnit(compiler, params)
+    with PcCollector[(String, Option[l.Range])]
+    with PcReferencesProvider {
+  def result(): List[(String, Option[l.Range])] =
+    compiler
+      .compilerSymbol(semanticDbSymbol)
+      .map(sought => resultWithSought(symbolAlternatives(sought)))
+      .getOrElse(Nil)
+}
+
+object PcReferencesProvider {
+  def apply(
+      compiler: MetalsGlobal,
+      params: ReferencesRequest
+  ): PcReferencesProvider =
+    if (params.offsetOrSymbol().isLeft()) {
+      val offsetParams = CompilerOffsetParams(
+        params.file().uri(),
+        params.file().text(),
+        params.offsetOrSymbol().getLeft()
+      )
+      new LocalPcReferencesProvider(
+        compiler,
+        offsetParams,
+        params.includeDefinition()
+      )
+    } else
+      new BySymbolPCReferencesProvider(
+        compiler,
+        params.file(),
+        params.includeDefinition(),
+        params.offsetOrSymbol().getRight()
+      )
 }

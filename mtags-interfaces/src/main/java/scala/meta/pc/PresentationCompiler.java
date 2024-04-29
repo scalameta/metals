@@ -112,10 +112,6 @@ public abstract class PresentationCompiler {
 	 */
 	public abstract CompletableFuture<java.util.List<DocumentHighlight>> documentHighlight(OffsetParams params);
 
-	public PresentationCompiler withBuffers(Buffers buffers) {
-		return this;
-	}
-
 	/**
 	 * Returns the references of the symbol under the current position in the target files.
 	 */

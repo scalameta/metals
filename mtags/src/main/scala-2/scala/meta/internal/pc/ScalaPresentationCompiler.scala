@@ -28,7 +28,6 @@ import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.AutoImportsResult
-import scala.meta.pc.Buffers
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.DisplayableException
 import scala.meta.pc.HoverSignature
@@ -64,8 +63,7 @@ case class ScalaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     folderPath: Option[Path] = None,
-    reportsLevel: ReportLevel = ReportLevel.Info,
-    buffers: Buffers = NoopBuffers
+    reportsLevel: ReportLevel = ReportLevel.Info
 ) extends PresentationCompiler {
 
   implicit val executionContext: ExecutionContextExecutor = ec
@@ -429,22 +427,16 @@ case class ScalaPresentationCompiler(
         .asJava
     }
 
-  override def withBuffers(buffers: Buffers): PresentationCompiler =
-    copy(buffers = buffers)
-
   override def references(
       params: ReferencesRequest
   ): CompletableFuture[ju.List[ReferencesResult]] = {
-    compilerAccess.withInterruptableCompiler(Some(params.params()))(
+    compilerAccess.withInterruptableCompiler(Some(params.file()))(
       List.empty[ReferencesResult].asJava,
-      params.params.token()
+      params.file.token()
     ) { pc =>
-      new PcReferencesProvider(
-        pc.compiler(),
-        params,
-        buffers,
-        scalaVersion
-      ).result().asJava
+      val res: List[ReferencesResult] =
+        PcReferencesProvider(pc.compiler(), params).references()
+      res.asJava
     }
   }
 

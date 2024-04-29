@@ -42,8 +42,7 @@ case class ScalaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     folderPath: Option[Path] = None,
-    reportsLevel: ReportLevel = ReportLevel.Info,
-    buffers: Buffers = NoopBuffers,
+    reportsLevel: ReportLevel = ReportLevel.Info
 ) extends PresentationCompiler:
 
   def this() = this("", None, Nil, Nil)
@@ -181,19 +180,16 @@ case class ScalaPresentationCompiler(
       PcDocumentHighlightProvider(driver, params).highlights.asJava
     }
 
-  override def withBuffers(buffers: Buffers): PresentationCompiler =
-    copy(buffers = buffers)
-
   override def references(
       params: ReferencesRequest
   ): CompletableFuture[ju.List[ReferencesResult]] =
-    compilerAccess.withNonInterruptableCompiler(Some(params.params()))(
+    compilerAccess.withNonInterruptableCompiler(Some(params.file()))(
       List.empty[ReferencesResult].asJava,
-      params.params().token,
+      params.file().token,
     ) { access =>
       val driver = access.compiler()
-      PcReferencesProvider(driver, params, buffers, scalaVersion)
-        .result()
+      PcReferencesProvider(driver, params)
+        .references()
         .asJava
     }
 
