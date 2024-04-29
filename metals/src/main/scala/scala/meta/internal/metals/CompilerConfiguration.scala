@@ -19,6 +19,7 @@ import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.JavaPresentationCompiler
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
+import scala.meta.pc
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 
@@ -38,6 +39,7 @@ class CompilerConfiguration(
     trees: Trees,
     mtagsResolver: MtagsResolver,
     sourceMapper: SourceMapper,
+    pcBuffers: pc.Buffers
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext) {
 
   private val plugins = new CompilerPlugins()
@@ -228,6 +230,7 @@ class CompilerConfiguration(
       .withWorkspace(workspace.toNIO)
       .withScheduledExecutorService(sh)
       .withReportsLoggerLevel(MetalsServerConfig.default.loglevel)
+      .withBuffers(pcBuffers)
       .withConfiguration {
         val options =
           InitializationOptions.from(initializeParams).compilerOptions

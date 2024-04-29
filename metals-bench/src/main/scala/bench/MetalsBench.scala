@@ -93,7 +93,7 @@ class MetalsBench {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def toplevelsScalaIndex(): Unit = {
-    scalaDependencySources.inputs.foreach { input =>
+    scalaDependencySources.inputs.foreach { case (input, _) =>
       implicit val rc: ReportContext = LoggerReportContext
       new ScalaToplevelMtags(
         input,
@@ -187,7 +187,7 @@ class MetalsBench {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def toplevelJavaMtags(): Unit = {
-    javaDependencySources.inputs.foreach { input =>
+    javaDependencySources.inputs.foreach { case (input, _) =>
       new JavaToplevelMtags(input, includeInnerClasses = true)(
         LoggerReportContext
       ).index()

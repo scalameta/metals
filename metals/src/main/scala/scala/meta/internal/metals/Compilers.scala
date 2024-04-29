@@ -12,6 +12,7 @@ import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
@@ -64,7 +65,6 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.{Position => LspPosition}
 import org.eclipse.lsp4j.{Range => LspRange}
 import org.eclipse.lsp4j.{debug => d}
-import scala.util.Try
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -92,6 +92,18 @@ class Compilers(
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Cancelable {
 
+  val pcBuffers: pc.Buffers = new pc.Buffers {
+    override def getFile(
+        uri: URI,
+        scalaVersion: String,
+    ): ju.Optional[pc.PcAdjustFileParams] =
+      Try(sourceAdjustments(uri.toString(), scalaVersion)).toOption
+        .map[pc.PcAdjustFileParams] { case (vFile, _, adjust) =>
+          PcAdjustFileParams(CompilerVirtualFileParams(uri, vFile.text), adjust)
+        }
+        .asJava
+  }
+
   val compilerConfiguration = new CompilerConfiguration(
     workspace,
     config,
@@ -105,25 +117,13 @@ class Compilers(
     trees,
     mtagsResolver,
     sourceMapper,
+    pcBuffers
   )
 
   import compilerConfiguration._
 
   private val outlineFilesProvider =
     new OutlineFilesProvider(buildTargets, buffers)
-
-  val pcBuffers: pc.Buffers = new pc.Buffers {
-    override def getFile(
-        uri: URI,
-        scalaVersion: String,
-    ): ju.Optional[pc.PcAdjustFileParams] =
-      Try(sourceAdjustments(uri.toString(), scalaVersion)).toOption
-        .map[pc.PcAdjustFileParams] { case (vFile, _, adjust) =>
-          PcAdjustFileParams(CompilerVirtualFileParams(uri, vFile.text), adjust)
-        }
-        .asJava
-  }
-
 
   // Not a TrieMap because we want to avoid loading duplicate compilers for the same build target.
   // Not a `j.u.c.ConcurrentHashMap` because it can deadlock in `computeIfAbsent` when the absent
