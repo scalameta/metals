@@ -21,8 +21,11 @@ import dotty.tools.dotc.core.Names.*
 import dotty.tools.dotc.core.StdNames.*
 import dotty.tools.dotc.core.SymDenotations.NoDenotation
 import dotty.tools.dotc.core.Symbols.*
+import dotty.tools.dotc.core.Types.AliasingBounds
 import dotty.tools.dotc.core.Types.AppliedType
+import dotty.tools.dotc.core.Types.RefinedType
 import dotty.tools.dotc.core.Types.Type
+import dotty.tools.dotc.core.Types.TypeBounds
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
@@ -375,8 +378,13 @@ object MtagsEnrichments extends ScalametaCommonEnrichments:
     def metalsDealias(using Context): Type =
       tpe.dealias match
         case app @ AppliedType(tycon, params) =>
-          // we dealias applied type params by hand, because `dealias` doesn't do it
           AppliedType(tycon, params.map(_.metalsDealias))
+        case aliasingBounds: AliasingBounds =>
+          aliasingBounds.derivedAlias(aliasingBounds.alias.dealias)
+        case TypeBounds(lo, hi) =>
+          TypeBounds(lo.dealias, hi.dealias)
+        case RefinedType(parent, name, refinedInfo) =>
+          RefinedType(parent.dealias, name, refinedInfo.metalsDealias)
         case dealised => dealised
 
 end MtagsEnrichments

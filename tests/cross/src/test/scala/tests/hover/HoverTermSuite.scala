@@ -718,4 +718,59 @@ class HoverTermSuite extends BaseHoverSuite {
       |""".stripMargin,
     "".stripMargin
   )
+
+  check(
+    "dealias type members in val definition",
+    """object Obj {
+      |  trait A extends Sup { self =>
+      |    type T
+      |    def member : T 
+      |  }
+      |  val x: A { type T = Int} = ???
+      |
+      |  <<x.mem@@ber>>
+      |
+      |}""".stripMargin,
+    """def member: Int""".stripMargin.hover
+  )
+
+  check(
+    "dealias-type-members-in-argument-of-anonymous-function",
+    """object Obj {
+      |  trait A extends Sup { self =>
+      |    type T
+      |    def fun(
+      |        body: A { type T = self.T} => Unit
+      |    ) =
+      |      ()
+      |  }
+      |  val x: A { type T = Int} = ???
+      |
+      |  x.fun { <<y@@y>> =>
+      |  ()
+      |  }
+      |
+      |}""".stripMargin,
+    """|**Expression type**:
+       |```scala
+       |A{type T = Int}
+       |```
+       |**Symbol signature**:
+       |```scala
+       |yy: A{type T = dealias-type-members-in-argument-of-anonymous-function.Obj.x.T}
+       |```
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|**Expression type**:
+                |```scala
+                |A{type T = Int}
+                |```
+                |**Symbol signature**:
+                |```scala
+                |yy: A{type T = x.T}
+                |```
+                |""".stripMargin
+    )
+  )
+
 }

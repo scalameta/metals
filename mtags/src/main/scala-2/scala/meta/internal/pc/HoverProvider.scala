@@ -238,7 +238,8 @@ class HoverProvider(
           lookupSymbol = name => context.lookupSymbol(name, _ => true) :: Nil,
           renames = re
         )
-        val prettyType = metalsToLongString(tpe.widen.finalResultType, history)
+        val prettyType =
+          metalsToLongString(tpe.widen.finalResultType.map(_.dealias), history)
         val lspRange = if (range.isRange) Some(range.toLsp) else None
         Some(
           new ScalaHover(
@@ -282,7 +283,8 @@ class HoverProvider(
         val flags = List(symbolFlagString(symbol), keyword, name)
           .filterNot(_.isEmpty)
           .mkString(" ")
-        val prettyType = metalsToLongString(tpe.widen.finalResultType, history)
+        val prettyType =
+          metalsToLongString(tpe.widen.finalResultType.map(_.dealias), history)
         val macroSuffix =
           if (symbol.isMacro) " = macro"
           else ""
@@ -293,8 +295,8 @@ class HoverProvider(
             expressionType = Some(prettyType),
             symbolSignature = Some(prettySignature),
             docstring = Some(docstring),
-            forceExpressionType =
-              pos.start != pos.end || !prettySignature.endsWith(prettyType),
+            forceExpressionType = pos.start != pos.end || (!prettySignature
+              .endsWith(prettyType) && !symbol.isType),
             range = if (range.isRange) Some(range.toLsp) else None,
             contextInfo = history.getUsedRenamesInfo(),
             contentType = contentType
