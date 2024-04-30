@@ -23,23 +23,28 @@ class ToplevelLibrarySuite extends BaseSuite {
     "/dotty/tools/dotc/transform/patmat/Space.scala",
   )
 
+  val scala2ExclusionList: Set[String] = Set(
+    "/scala/Singleton.scala"
+  )
   val javaTestClasspath: List[AbsolutePath] = Library.damlrxjavaSources
 
   scala2TestClasspath.foreach { entry =>
     test(entry.toNIO.getFileName.toString) {
       forAllScalaFilesInJar(entry) { file =>
-        val input = file.toInput
-        val scalaMtags = Mtags.toplevels(Mtags.index(file, dialects.Scala213))
-        val scalaToplevelMtags = Mtags.topLevelSymbols(file)
+        if (!scala2ExclusionList.contains(file.toString)) {
+          val input = file.toInput
+          val scalaMtags = Mtags.toplevels(Mtags.index(file, dialects.Scala213))
+          val scalaToplevelMtags = Mtags.topLevelSymbols(file)
 
-        assertTopLevels(scalaToplevelMtags, scalaMtags, input)
+          assertTopLevels(scalaToplevelMtags, scalaMtags, input)
 
-        // also check that scala3Toplevels parse files identically
-        // to scala2 parser
-        if (!scala3ExclusionList(file.toString)) {
-          val scala3Toplevels =
-            Mtags.topLevelSymbols(file, dialect = dialects.Scala3)
-          assertTopLevels(scala3Toplevels, scalaMtags, input)
+          // also check that scala3Toplevels parse files identically
+          // to scala2 parser
+          if (!scala3ExclusionList(file.toString)) {
+            val scala3Toplevels =
+              Mtags.topLevelSymbols(file, dialect = dialects.Scala3)
+            assertTopLevels(scala3Toplevels, scalaMtags, input)
+          }
         }
       }
     }

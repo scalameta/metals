@@ -6,7 +6,7 @@ object StructuralTypes/*StructuralTypes.scala*/ {
     def age/*StructuralTypes.semanticdb*/: Int/*Int.scala*/
   }
 
-  val user/*StructuralTypes.scala*/ = null.asInstanceOf[User/*StructuralTypes.scala*/]
+  val user/*StructuralTypes.scala*/ = null.asInstanceOf/*Any.scala*/[User/*StructuralTypes.scala*/]
   user/*StructuralTypes.scala*/.name/*StructuralTypes.semanticdb*/
   user/*StructuralTypes.scala*/.age/*StructuralTypes.semanticdb*/
 
