@@ -23,7 +23,7 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
       def loop(trees: List[Tree]): Unit = {
         trees match {
           case Nil =>
-          case tree :: tail =>
+          case (tree: MemberDef) :: tail =>
             val sym = tree.symbol
             def matches = if (sym.isType)
               CompletionFuzzy.matchesSubCharacters(query, sym.name.toString())
@@ -36,6 +36,8 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
                 // with outline compiler there might be situations when things fail
               }
             }
+            loop(tree.children ++ tail)
+          case tree :: tail =>
             loop(tree.children ++ tail)
         }
       }

@@ -30,7 +30,7 @@ final class AutoImportsProvider(
     val isSeen = mutable.Set.empty[String]
     val symbols = List.newBuilder[Symbol]
 
-    def visit(fromWorkspace: Boolean)(sym: Symbol): Boolean = {
+    def visit(sym: Symbol): Boolean = {
       val id = sym.fullName
       if (!isSeen(id)) {
         isSeen += id
@@ -40,10 +40,10 @@ final class AutoImportsProvider(
       false
     }
 
-    compiler.searchOutline(visit(fromWorkspace = false), name)
+    compiler.searchOutline(visit, name)
 
     val visitor =
-      new CompilerSearchVisitor(context, visit(fromWorkspace = true))
+      new CompilerSearchVisitor(context, visit)
     search.search(name, buildTargetIdentifier, visitor)
 
     def isInImportTree: Boolean = lastVisitedParentTrees match {
