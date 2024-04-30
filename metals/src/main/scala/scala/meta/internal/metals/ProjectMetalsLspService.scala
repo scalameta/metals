@@ -38,7 +38,6 @@ import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
-import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.watcher.FileWatcherEvent
@@ -234,28 +233,6 @@ class ProjectMetalsLspService(
     restartBspServer,
     connectionBspStatus,
   )
-
-  protected val debugProvider: DebugProvider = register(
-    new DebugProvider(
-      folder,
-      buildTargets,
-      buildTargetClasses,
-      compilations,
-      languageClient,
-      buildClient,
-      definitionIndex,
-      stacktraceAnalyzer,
-      clientConfig,
-      semanticdbs,
-      compilers,
-      statusBar,
-      workDoneProgress,
-      sourceMapper,
-      () => userConfig,
-      testProvider,
-    )
-  )
-  buildClient.registerLogForwarder(debugProvider)
 
   override def didSave(
       params: DidSaveTextDocumentParams
@@ -1316,47 +1293,6 @@ class ProjectMetalsLspService(
       val nioItem = item.toNIO
       nioDir.startsWith(nioItem) || nioItem.startsWith(nioDir)
     }
-
-  def debugDiscovery(params: DebugDiscoveryParams): Future[DebugSession] =
-    debugProvider
-      .debugDiscovery(params)
-      .flatMap(debugProvider.asSession)
-
-  def createDebugSession(
-      target: b.BuildTargetIdentifier
-  ): Future[DebugSession] =
-    debugProvider.createDebugSession(target).flatMap(debugProvider.asSession)
-
-  def testClassSearch(
-      params: DebugUnresolvedTestClassParams
-  ): DebugProvider.TestClassSearch =
-    new DebugProvider.TestClassSearch(debugProvider, params)
-
-  def mainClassSearch(
-      params: DebugUnresolvedMainClassParams
-  ): DebugProvider.MainClassSearch =
-    new DebugProvider.MainClassSearch(debugProvider, params)
-
-  def supportsBuildTarget(
-      target: b.BuildTargetIdentifier
-  ): Option[b.BuildTarget] = buildTargets.info(target)
-
-  def startTestSuite(
-      target: b.BuildTarget,
-      params: ScalaTestSuitesDebugRequest,
-  ): Future[DebugSession] = debugProvider
-    .startTestSuite(target, params)
-    .flatMap(debugProvider.asSession)
-
-  def startDebugProvider(params: b.DebugSessionParams): Future[DebugSession] =
-    debugProvider
-      .ensureNoWorkspaceErrors(params.getTargets.asScala.toSeq)
-      .flatMap(_ => debugProvider.asSession(params))
-
-  def discoverMainClasses(
-      unresolvedParams: DebugDiscoveryParams
-  ): Future[b.DebugSessionParams] =
-    debugProvider.runCommandDiscovery(unresolvedParams)
 
   def check(): Unit = {
     doctor.check(headDoctor)

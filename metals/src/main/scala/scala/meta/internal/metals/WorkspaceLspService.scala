@@ -718,14 +718,25 @@ class WorkspaceLspService(
   }
 
   private def onFirstSatifying[T, R](
-      mapTo: ProjectMetalsLspService => Future[T]
+      mapTo: MetalsLspService => Future[T]
   )(
       satisfies: T => Boolean,
-      exec: (ProjectMetalsLspService, T) => Future[R],
+      exec: (MetalsLspService, T) => Future[R],
       onNotFound: () => Future[R],
   ): Future[R] =
     Future
       .sequence(folderServices.map(service => mapTo(service).map((service, _))))
+      .flatMap { services =>
+        services.find { case (_, value) => satisfies(value) } match {
+          case Some(found) => Future.successful(Some(found))
+          case None if fallbackIsInitialized.get() =>
+            mapTo(fallbackService).map { value =>
+              if (satisfies(value)) Some((fallbackService, value))
+              else None
+            }
+          case None => Future.successful(None)
+        }
+      }
       .flatMap(
         _.find { case (_, value) => satisfies(value) }
           .map(exec.tupled)
@@ -781,9 +792,9 @@ class WorkspaceLspService(
               .asJavaObject
         }
       case ServerCommands.DiscoverMainClasses(unresolvedParams) =>
-        getServiceForOpt(unresolvedParams.path)
-          .map(_.discoverMainClasses(unresolvedParams).asJavaObject)
-          .getOrElse(Future.unit.asJavaObject)
+        getServiceFor(unresolvedParams.path)
+          .discoverMainClasses(unresolvedParams)
+          .asJavaObject
       case ServerCommands.ResetWorkspace() =>
         maybeResetWorkspace().asJavaObject
       case ServerCommands.RunScalafix(params) =>
@@ -912,9 +923,14 @@ class WorkspaceLspService(
 
       case ServerCommands.StartDebugAdapter(params) if params.getData != null =>
         val targets = params.getTargets().asScala
-        folderServices.find(s =>
-          targets.forall(s.supportsBuildTarget(_).isDefined)
-        ) match {
+        folderServices
+          .find(s => targets.forall(s.supportsBuildTarget(_).isDefined))
+          .orElse {
+            Option.when(
+              fallbackIsInitialized.get() && targets
+                .forall(fallbackService.supportsBuildTarget(_).isDefined)
+            )(fallbackService)
+          } match {
           case Some(service) =>
             service.startDebugProvider(params).liftToLspError.asJavaObject
           case None =>
@@ -963,9 +979,10 @@ class WorkspaceLspService(
             ),
         ).asJavaObject
       case ServerCommands.DiscoverAndRun(params) =>
-        getServiceForOpt(params.path)
-          .map(_.debugDiscovery(params).liftToLspError.asJavaObject)
-          .getOrElse(Future.unit.asJavaObject)
+        getServiceFor(params.path)
+          .debugDiscovery(params)
+          .liftToLspError
+          .asJavaObject
       case ServerCommands.AnalyzeStacktrace(content) =>
         Future {
           // Getting the service for focused document and first one otherwise

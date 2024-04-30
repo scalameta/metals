@@ -83,7 +83,7 @@ class DebugProvider(
     index: OnDemandSymbolIndex,
     stacktraceAnalyzer: StacktraceAnalyzer,
     clientConfig: ClientConfiguration,
-    semanticdbs: Semanticdbs,
+    semanticdbs: () => Semanticdbs,
     compilers: Compilers,
     statusBar: StatusBar,
     workDoneProgress: WorkDoneProgress,
@@ -439,7 +439,7 @@ class DebugProvider(
       params: DebugDiscoveryParams,
   )(implicit ec: ExecutionContext) = {
     val path = params.path.toAbsolutePath
-    semanticdbs
+    semanticdbs()
       .textDocument(path)
       .documentIncludingStale
       .fold[Future[DebugSessionParams]] {
@@ -599,7 +599,7 @@ class DebugProvider(
           NoTestsFoundException("build target", displayName(target))
         )
       case (Some(TestFile), Some(target)) =>
-        semanticdbs
+        semanticdbs()
           .textDocument(path)
           .documentIncludingStale
           .fold[Future[Seq[BuildTargetClasses.FullyQualifiedClassName]]] {

@@ -38,6 +38,7 @@ import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.metals.codelenses.WorksheetCodeLens
 import scala.meta.internal.metals.debug.BuildTargetClasses
+import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
@@ -1507,6 +1508,69 @@ abstract class MetalsLspService(
       bspErrorHandler,
       workDoneProgress,
     )
+
+  protected val debugProvider: DebugProvider = register(
+    new DebugProvider(
+      folder,
+      buildTargets,
+      buildTargetClasses,
+      compilations,
+      languageClient,
+      buildClient,
+      definitionIndex,
+      stacktraceAnalyzer,
+      clientConfig,
+      semanticdbs,
+      compilers,
+      statusBar,
+      workDoneProgress,
+      sourceMapper,
+      () => userConfig,
+      testProvider,
+    )
+  )
+  buildClient.registerLogForwarder(debugProvider)
+
+  def debugDiscovery(params: DebugDiscoveryParams): Future[DebugSession] =
+    debugProvider
+      .debugDiscovery(params)
+      .flatMap(debugProvider.asSession)
+
+  def createDebugSession(
+      target: b.BuildTargetIdentifier
+  ): Future[DebugSession] =
+    debugProvider.createDebugSession(target).flatMap(debugProvider.asSession)
+
+  def testClassSearch(
+      params: DebugUnresolvedTestClassParams
+  ): DebugProvider.TestClassSearch =
+    new DebugProvider.TestClassSearch(debugProvider, params)
+
+  def mainClassSearch(
+      params: DebugUnresolvedMainClassParams
+  ): DebugProvider.MainClassSearch =
+    new DebugProvider.MainClassSearch(debugProvider, params)
+
+  def startTestSuite(
+      target: b.BuildTarget,
+      params: ScalaTestSuitesDebugRequest,
+  ): Future[DebugSession] = debugProvider
+    .startTestSuite(target, params)
+    .flatMap(debugProvider.asSession)
+
+  def startDebugProvider(params: b.DebugSessionParams): Future[DebugSession] =
+    debugProvider
+      .ensureNoWorkspaceErrors(params.getTargets.asScala.toSeq)
+      .flatMap(_ => debugProvider.asSession(params))
+
+  def discoverMainClasses(
+      unresolvedParams: DebugDiscoveryParams
+  ): Future[b.DebugSessionParams] =
+    debugProvider.runCommandDiscovery(unresolvedParams)
+
+  def supportsBuildTarget(
+      target: b.BuildTargetIdentifier
+  ): Option[b.BuildTarget] = buildTargets.info(target)
 
   val scalaCli: ScalaCliServers = register(
     new ScalaCliServers(
