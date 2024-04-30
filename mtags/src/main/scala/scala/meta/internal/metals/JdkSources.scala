@@ -70,9 +70,10 @@ object JdkSources {
               val sep = if (Properties.isWin) ";" else ":"
               s"$javaBin$sep$oldPath"
             }
+          val variableName = if (Properties.isWin) "Path" else "PATH"
           Map(
             "JAVA_HOME" -> javaHome.toString(),
-            "PATH" -> newPath
+            variableName -> newPath
           )
       }
       .getOrElse(Map.empty)
