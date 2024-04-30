@@ -182,7 +182,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
       "3" ->
         """|override def aaa: Int
            |override def bbb: Int
-           |override def equals(x$0: Any): Boolean
+           |override def equals(that: Any): Boolean
            |override def hashCode(): Int
            |override def toString(): String
            |""".stripMargin
@@ -1047,7 +1047,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
       "3" ->
         """|def hello1: Int
            |override val hello2: Int
-           |override def equals(x$0: Any): Boolean
+           |override def equals(that: Any): Boolean
            |""".stripMargin
     )
   )

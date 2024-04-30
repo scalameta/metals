@@ -121,6 +121,7 @@ class MillServerSuite
     }
   }
 
+  // Looks like mill is not compiling properly here for newest version of Scala
   test(s"presentation-compiler") {
     def millBspConfig = workspace.resolve(".bsp/mill-bsp.json")
     writeLayout(
@@ -130,7 +131,7 @@ class MillServerSuite
          |/build.sc
          |import mill._, scalalib._
          |object foo extends ScalaModule {
-         |  def scalaVersion = "${V.scala213}"
+         |  def scalaVersion = "2.13.13"
          |}
          |/foo/src/Main.scala
          |package foo
