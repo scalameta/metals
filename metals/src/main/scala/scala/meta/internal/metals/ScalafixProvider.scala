@@ -269,6 +269,21 @@ case class ScalafixProvider(
       .getOrElse("Unexpected error while running Scalafix.")
   }
 
+  private lazy val scala3RemoveUnusedDefaultConfig = {
+    val path = Files.createTempFile(".scalafix", ".conf")
+    AbsolutePath(path).writeText(
+      s"""|rules = [
+          |  OrganizeImports
+          |]
+          |OrganizeImports.removeUnused = true
+          |OrganizeImports.targetDialect = Scala3
+          |
+          |""".stripMargin
+    )
+    path.toFile().deleteOnExit()
+    path
+  }
+
   private lazy val scala3DefaultConfig = {
     val path = Files.createTempFile(".scalafix", ".conf")
     AbsolutePath(path).writeText(
@@ -284,9 +299,16 @@ case class ScalafixProvider(
     path
   }
 
-  private def scalafixConf(isScala3: Boolean): Option[Path] = {
+  private def scalafixConf(
+      isScala3Dialect: Boolean,
+      canRemoveUnused: Boolean,
+  ): Option[Path] = {
     val defaultLocation = workspace.resolve(".scalafix.conf")
-    val defaultConfig = if (isScala3) Some(scala3DefaultConfig) else None
+    val defaultConfig =
+      if (isScala3Dialect) {
+        if (canRemoveUnused) Some(scala3RemoveUnusedDefaultConfig)
+        else Some(scala3DefaultConfig)
+      } else None
     userConfig().scalafixConfigPath match {
       case Some(path) if !path.isFile && defaultLocation.isFile =>
         languageClient.showMessage(
@@ -308,7 +330,7 @@ case class ScalafixProvider(
   }
 
   private def rulesFromScalafixConf(): Set[String] = {
-    scalafixConf(isScala3 = false) match {
+    scalafixConf(isScala3Dialect = false, canRemoveUnused = false) match {
       case None => Set.empty
       case Some(configPath) =>
         val conf = ConfigFactory.parseFile(configPath.toFile)
@@ -344,6 +366,13 @@ case class ScalafixProvider(
       rules: List[String],
   ): Future[ScalafixEvaluation] = {
     val isScala3 = ScalaVersions.isScala3Version(scalaTarget.scalaVersion)
+    val isSource3 = scalaTarget.scalac.getOptions().contains("-Xsource:3")
+    val isScala3Dialect = isScala3 || isSource3
+    val canRemoveUnused = !isScala3 ||
+      // https://github.com/scala/scala3/pull/17835
+      Seq("3.0", "3.1", "3.2", "3.3")
+        .forall(v => !scalaTarget.scalaVersion.startsWith(v))
+
     val scalaBinaryVersion =
       if (isScala3) "2.13" else scalaTarget.scalaBinaryVersion
     val targetRoot =
@@ -386,7 +415,6 @@ case class ScalafixProvider(
         (targetRoot.toList ++ classpath.map(_.toNIO)).asJava
       }
 
-    val isSource3 = scalaTarget.scalac.getOptions().contains("-Xsource:3")
     val result = for {
       api <- getScalafix(scalaBinaryVersion)
       urlClassLoaderWithExternalRule <- getRuleClassLoader(
@@ -397,8 +425,11 @@ case class ScalafixProvider(
       val scalacOptions = {
         val list = new ju.ArrayList[String](3)
 
-        if (scalaBinaryVersion == "2.13") list.add("-Wunused:imports")
-        else list.add("-Ywarn-unused-import")
+        scalaBinaryVersion match {
+          case "3" => list.add("-Wunused:import")
+          case "2.13" => list.add("-Wunused:imports")
+          case _ => list.add("-Ywarn-unused-import")
+        }
 
         if (!isScala3 && isSource3)
           list.add("-Xsource:3")
@@ -414,7 +445,7 @@ case class ScalafixProvider(
           .withScalaVersion(scalaVersion)
           .withClasspath(classpath)
           .withToolClasspath(urlClassLoaderWithExternalRule)
-          .withConfig(scalafixConf(isScala3 || isSource3).asJava)
+          .withConfig(scalafixConf(isScala3Dialect, canRemoveUnused).asJava)
           .withRules(rules.asJava)
           .withPaths(List(diskFilePath.toNIO).asJava)
           .withSourceroot(sourceroot.toNIO)
