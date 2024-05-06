@@ -2,6 +2,8 @@ package scala.meta.internal.pc
 
 import java.nio.file.Paths
 
+import scala.annotation.tailrec
+
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.printer.MetalsPrinter
@@ -218,7 +220,7 @@ object ImplicitParameters:
     if (params.implicitParameters()) {
       tree match
         case Apply(fun, args)
-            if args.exists(isSyntheticArg) && !tree.sourcePos.span.isZeroExtent =>
+            if args.exists(isSyntheticArg) && !tree.sourcePos.span.isZeroExtent && !args.exists(isQuotes(_)) =>
           val (implicitArgs, providedArgs) = args.partition(isSyntheticArg)
           val allImplicit = providedArgs.isEmpty || providedArgs.forall {
             case Ident(name) => name == nme.MISSING
@@ -229,11 +231,14 @@ object ImplicitParameters:
         case _ => None
     } else None
 
-  private def isSyntheticArg(tree: Tree)(using Context) = tree match
+  @tailrec
+  private def isSyntheticArg(tree: Tree)(using Context): Boolean = tree match
     case tree: Ident =>
-      tree.span.isSynthetic && tree.symbol.isOneOf(Flags.GivenOrImplicit) &&
-        !isQuotes(tree)
+      tree.span.isSynthetic && tree.symbol.isOneOf(Flags.GivenOrImplicit)
+    case Apply(fun, _ ) if tree.span.isZeroExtent => isSyntheticArg(fun)
+    case TypeApply(fun, _ ) if tree.span.isZeroExtent => isSyntheticArg(fun)
     case _ => false
+
   // Decorations for Quotes are rarely useful
   private def isQuotes(tree: Tree)(using Context) =
     tree.tpe.typeSymbol == Symbols.defn.QuotesClass
