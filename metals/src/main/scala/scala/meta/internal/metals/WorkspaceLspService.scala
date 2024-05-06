@@ -151,7 +151,7 @@ class WorkspaceLspService(
 
   val doctor: HeadDoctor =
     new HeadDoctor(
-      () => folderServices.map(_.doctor),
+      () => folderServices.map(_.doctor) ++ optFallback.map(_.doctor),
       () => httpServer,
       clientConfig,
       languageClient,
@@ -225,6 +225,8 @@ class WorkspaceLspService(
 
   def folderServices = workspaceFolders.getFolderServices
   def nonScalaProjects = workspaceFolders.nonScalaProjects
+  def optFallback: Option[FallbackMetalsLspService] =
+    Option.when(fallbackIsInitialized.get())(fallbackService)
 
   val treeView: TreeViewProvider =
     if (clientConfig.isTreeViewProvider) {
@@ -363,9 +365,7 @@ class WorkspaceLspService(
       f: MetalsLspService => Future[A],
       ignoreValue: Boolean = false,
   ): CompletableFuture[Object] = {
-    val services =
-      if (fallbackIsInitialized.get()) fallbackService :: folderServices
-      else folderServices
+    val services = folderServices ++ optFallback
     val res = Future.sequence(services.map(f))
     if (ignoreValue) res.ignoreValue.asJavaObject
     else res.asJavaObject
@@ -737,11 +737,7 @@ class WorkspaceLspService(
           case None => Future.successful(None)
         }
       }
-      .flatMap(
-        _.find { case (_, value) => satisfies(value) }
-          .map(exec.tupled)
-          .getOrElse(onNotFound())
-      )
+      .flatMap(_.map(exec.tupled).getOrElse(onNotFound()))
 
   override def executeCommand(
       params: ExecuteCommandParams

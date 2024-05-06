@@ -77,8 +77,7 @@ final case class Indexer(
     sourceMapper: SourceMapper,
     workspaceFolder: AbsolutePath,
     implementationProvider: ImplementationProvider,
-    // isConnecting: () => Boolean,
-    resetStuff: () => Unit,
+    resetService: () => Unit,
 )(implicit rc: ReportContext) {
 
   private implicit def ec: ExecutionContextExecutorService = executionContext
@@ -120,16 +119,10 @@ final case class Indexer(
 
     bspSession() match {
       case None =>
+        scribe.warn(
+          "No build session currently active to reload. Attempting to reconnect."
+        )
         reconnectToBuildServer()
-      // if (!isConnecting()) {
-      //   scribe.warn(
-      //     "No build session currently active to reload. Attempting to reconnect."
-      //   )
-
-      // } else {
-      //   scribe.warn("Cannot reload build session, still connecting...")
-      //   Future.successful(BuildChange.None)
-      // }
       case Some(session) if forceRefresh => reloadAndIndex(session)
       case Some(session) =>
         workspaceReload().oldReloadResult(checksum) match {
@@ -201,7 +194,7 @@ final case class Indexer(
       "reset stuff",
       clientConfig.initialConfig.statistics.isIndex,
     ) {
-      resetStuff()
+      resetService()
     }
     val allBuildTargetsData = buildData()
     for (buildTool <- allBuildTargetsData)

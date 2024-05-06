@@ -41,6 +41,8 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.doctor.MetalsServiceInfo.FallbackService
+import scala.meta.internal.metals.doctor.MetalsServiceInfo.ProjectService
 import scala.meta.internal.metals.utils.TimestampedFile
 import scala.meta.io.AbsolutePath
 
@@ -57,18 +59,23 @@ final class Doctor(
     buildTargets: BuildTargets,
     diagnostics: Diagnostics,
     languageClient: MetalsLanguageClient,
-    currentBuildServer: () => Option[BspSession],
-    calculateNewBuildServer: () => BspResolvedResult,
     tables: Tables,
     clientConfig: ClientConfiguration,
     mtagsResolver: MtagsResolver,
     javaHome: () => Option[String],
     maybeJDKVersion: Option[JdkVersion],
     folderName: String,
-    buildTools: BuildTools,
-    bspStatus: ConnectionBspStatus,
-)(implicit ec: ExecutionContext, rc: ReportContext) {
+    serviceInfo: () => MetalsServiceInfo,
+)(implicit ec: ExecutionContext, rc: ReportContext)
+    extends TargetsInfoProvider {
   private val hasProblems = new AtomicBoolean(false)
+  def currentBuildServer(): Option[BspSession] =
+    serviceInfo() match {
+      case FallbackService => None
+      case projectService: ProjectService =>
+        projectService.currentBuildServer()
+    }
+
   private val problemResolver =
     new ProblemResolver(
       workspace,
@@ -130,9 +137,14 @@ final class Doctor(
     buildTargets.allBuildTargetIds
 
   private def selectedBuildToolMessage(): Option[(String, Boolean)] = {
-    val isExplicitChoice = buildTools.loadSupported().length > 1
-    tables.buildTool.selectedBuildTool().map { value =>
-      (s"Build definition is coming from ${value}.", isExplicitChoice)
+    serviceInfo() match {
+      case FallbackService => None
+      case projectService: ProjectService =>
+        val isExplicitChoice =
+          projectService.buildTools.loadSupported().length > 1
+        tables.buildTool.selectedBuildTool().map { value =>
+          (s"Build definition is coming from ${value}.", isExplicitChoice)
+        }
     }
   }
 
@@ -155,33 +167,40 @@ final class Doctor(
    *         exists. (Message, Explict Choice)
    */
   private def selectedBuildServerMessage(): (String, Boolean) = {
-    val current = currentBuildServer().map(s => (s.main.name, s.main.version))
-    val chosen = tables.buildServers.selectedServer()
+    serviceInfo() match {
+      case FallbackService =>
+        (s"Using scala-cli for fallback service.", false)
+      case projectInfo: ProjectService =>
+        val current = projectInfo
+          .currentBuildServer()
+          .map(s => (s.main.name, s.main.version))
+        val chosen = tables.buildServers.selectedServer()
 
-    (current, chosen) match {
-      case (Some((name, version)), Some(_)) =>
-        (s"Build server currently being used is $name v$version.", true)
-      case (Some((name, version)), None) =>
-        (s"Build server currently being used is $name v$version.", false)
-      case (None, _) =>
-        calculateNewBuildServer() match {
-          case ResolvedNone =>
-            (
-              "No build server found. Try to run the generate-bsp-config command.",
-              false,
-            )
-          case ResolvedBloop =>
-            ("Build server currently being used is Bloop.", false)
-          case ResolvedBspOne(details) =>
-            (
-              s"Build server currently being used is ${details.getName()}.",
-              false,
-            )
-          case ResolvedMultiple(_, _) =>
-            (
-              "Multiple build servers found for your workspace. Attempt to connect to choose your desired server.",
-              false,
-            )
+        (current, chosen) match {
+          case (Some((name, version)), Some(_)) =>
+            (s"Build server currently being used is $name v$version.", true)
+          case (Some((name, version)), None) =>
+            (s"Build server currently being used is $name v$version.", false)
+          case (None, _) =>
+            projectInfo.calculateNewBuildServer() match {
+              case ResolvedNone =>
+                (
+                  "No build server found. Try to run the generate-bsp-config command.",
+                  false,
+                )
+              case ResolvedBloop =>
+                ("Build server currently being used is Bloop.", false)
+              case ResolvedBspOne(details) =>
+                (
+                  s"Build server currently being used is ${details.getName()}.",
+                  false,
+                )
+              case ResolvedMultiple(_, _) =>
+                (
+                  "Multiple build servers found for your workspace. Attempt to connect to choose your desired server.",
+                  false,
+                )
+            }
         }
     }
   }
@@ -500,7 +519,7 @@ final class Doctor(
       }
   }
 
-  def getTargetsInfoForReports(): List[Map[String, String]] =
+  override def getTargetsInfoForReports(): List[Map[String, String]] =
     allTargetIds()
       .flatMap(extractTargetInfo(_))
       .map(_.toMap(exclude = List("gotoCommand", "buildTarget")))
@@ -568,7 +587,11 @@ final class Doctor(
   }
 
   private def isServerResponsive: Option[Boolean] =
-    bspStatus.isBuildServerResponsive
+    serviceInfo() match {
+      case FallbackService => None
+      case projectInfo: ProjectService =>
+        projectInfo.bspStatus.isBuildServerResponsive
+    }
 
   private def extractScalaTargetInfo(
       scalaTarget: ScalaTarget,
@@ -719,4 +742,19 @@ object ErrorReportsGroup {
       case _ => Other
     }
   }
+}
+
+trait TargetsInfoProvider {
+  def getTargetsInfoForReports(): List[Map[String, String]]
+}
+
+sealed trait MetalsServiceInfo
+object MetalsServiceInfo {
+  object FallbackService extends MetalsServiceInfo
+  case class ProjectService(
+      currentBuildServer: () => Option[BspSession],
+      calculateNewBuildServer: () => BspResolvedResult,
+      buildTools: BuildTools,
+      bspStatus: ConnectionBspStatus,
+  ) extends MetalsServiceInfo
 }

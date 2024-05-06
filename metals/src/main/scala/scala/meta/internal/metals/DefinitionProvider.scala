@@ -66,7 +66,7 @@ final class DefinitionProvider(
     saveDefFileToDisk: Boolean,
     sourceMapper: SourceMapper,
     workspaceSearch: WorkspaceSymbolProvider,
-    onMissingSemanticDB: AbsolutePath => Unit,
+    warnings: () => Warnings,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
 
   val destinationProvider = new DestinationProvider(
@@ -110,7 +110,7 @@ final class DefinitionProvider(
           }
         case defn =>
           if (fromSemanticdb.isEmpty) {
-            onMissingSemanticDB(path)
+            warnings().noSemanticdb(path)
           }
           Future.successful(defn)
       }

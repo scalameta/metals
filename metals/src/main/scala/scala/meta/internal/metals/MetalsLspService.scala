@@ -39,7 +39,9 @@ import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.metals.codelenses.WorksheetCodeLens
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.DebugProvider
+import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.doctor.HeadDoctor
+import scala.meta.internal.metals.doctor.MetalsServiceInfo
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
@@ -168,9 +170,8 @@ abstract class MetalsLspService(
     ReportLevel.fromString(MetalsServerConfig.default.loglevel),
   )
 
-  def getTargetsInfoForReports(): List[Map[String, String]]
   val folderReportsZippper: FolderReportsZippper =
-    FolderReportsZippper(getTargetsInfoForReports, reports)
+    FolderReportsZippper(doctor, reports)
 
   def javaHome = userConfig.javaHome
   protected val optJavaHome: Option[AbsolutePath] =
@@ -288,7 +289,7 @@ abstract class MetalsLspService(
       classpathSearchIndexer = classpathSearchIndexer,
     )
 
-  def onMissingSemanticDB(path: AbsolutePath): Unit
+  protected def warnings: Warnings = NoopWarnings
 
   protected val definitionProvider: DefinitionProvider = new DefinitionProvider(
     folder,
@@ -303,7 +304,7 @@ abstract class MetalsLspService(
     saveDefFileToDisk = !clientConfig.isVirtualDocumentSupported(),
     sourceMapper,
     workspaceSymbols,
-    onMissingSemanticDB,
+    () => warnings,
   )
 
   val stacktraceAnalyzer: StacktraceAnalyzer = new StacktraceAnalyzer(
@@ -554,7 +555,8 @@ abstract class MetalsLspService(
     trees,
   )
 
-  def buildHasErrors(path: AbsolutePath): Boolean
+  def buildHasErrors(path: scala.meta.io.AbsolutePath): Boolean =
+    buildClient.buildHasErrors(path)
 
   protected val scalafixProvider: ScalafixProvider = ScalafixProvider(
     buffers,
@@ -675,24 +677,22 @@ abstract class MetalsLspService(
     }
   }
 
-  val isInitialized = new AtomicBoolean(false)
-
   protected def onInitialized(): Future[Unit]
 
   def initialized(): Future[Unit] =
     if (wasInitialized.compareAndSet(false, true)) {
       registerNiceToHaveFilePatterns()
 
-    for {
-      _ <- loadFingerPrints()
-      _ <-
-        Future
-          .sequence(
-            List[Future[Unit]](
-              onInitialized(),
-              Future(workspaceSymbols.indexClasspath()),
-              Future(formattingProvider.load()),
-            )
+      for {
+        _ <- loadFingerPrints()
+        _ <-
+          Future
+            .sequence(
+              List[Future[Unit]](
+                onInitialized(),
+                Future(workspaceSymbols.indexClasspath()),
+                Future(formattingProvider.load()),
+              )
             )
       } yield ()
     } else Future.unit
@@ -795,12 +795,12 @@ abstract class MetalsLspService(
             )
             .ignoreValue
         }
-        maybeFixAndLoad(path, load)
+        maybeImportFileAndLoad(path, load)
       }.asJava
     }
   }
 
-  def maybeFixAndLoad(
+  def maybeImportFileAndLoad(
       path: AbsolutePath,
       load: () => Future[Unit],
   ): Future[Unit]
@@ -867,12 +867,7 @@ abstract class MetalsLspService(
         buffers.put(path, change.getText)
         diagnostics.didChange(path)
 
-        parseTrees(path)
-          .map { _ =>
-            // treeView.onWorkspaceFileDidChange(path)
-          }
-          .ignoreValue
-          .asJava
+        parseTrees(path).asJava
     }
   }
 
@@ -904,7 +899,9 @@ abstract class MetalsLspService(
       .asJava
   }
 
-  protected def didCompileTarget(report: CompileReport): Unit
+  protected def didCompileTarget(report: CompileReport): Unit = {
+    compilers.didCompile(report)
+  }
 
   def didChangeWatchedFiles(
       events: List[FileEvent]
@@ -1411,12 +1408,9 @@ abstract class MetalsLspService(
       .asJavaObject
 
   def startScalaCli(path: AbsolutePath): Future[Unit] = {
-    val scalaCliPath = scalaCliDirOrFile(path)
-    if (scalaCli.loaded(scalaCliPath)) Future.unit
-    else scalaCli.start(scalaCliPath)
+    if (scalaCli.loaded(path)) Future.unit
+    else scalaCli.start(path)
   }
-
-  def scalaCliDirOrFile(path: AbsolutePath): AbsolutePath
 
   def stopScalaCli(): Future[Unit] = scalaCli.stop()
 
@@ -1495,10 +1489,7 @@ abstract class MetalsLspService(
       clientConfig,
       statusBar,
       time,
-      report => {
-        didCompileTarget(report)
-        compilers.didCompile(report)
-      },
+      didCompileTarget,
       onBuildTargetDidCompile = { target =>
         worksheetProvider.onBuildTargetDidCompile(target)
       },
@@ -1593,7 +1584,7 @@ abstract class MetalsLspService(
 
   protected def buildData(): Seq[Indexer.BuildTool]
 
-  protected def resetStuff(): Unit = {
+  protected def resetService(): Unit = {
     interactiveSemanticdbs.reset()
     buildClient.reset()
     semanticDBIndexer.reset()
@@ -1636,10 +1627,29 @@ abstract class MetalsLspService(
     sourceMapper,
     folder,
     implementationProvider,
-    resetStuff,
+    resetService,
   )
 
-  protected def check()
+  def projectInfo: MetalsServiceInfo
+
+  val doctor: Doctor =
+    new Doctor(
+      folder,
+      buildTargets,
+      diagnostics,
+      languageClient,
+      tables,
+      clientConfig,
+      mtagsResolver,
+      () => userConfig.javaHome,
+      maybeJdkVersion,
+      getVisibleName,
+      () => projectInfo,
+    )
+
+  protected def check(): Unit = {
+    doctor.check(headDoctor)
+  }
 
   protected def onWorksheetChanged(
       paths: Seq[AbsolutePath]

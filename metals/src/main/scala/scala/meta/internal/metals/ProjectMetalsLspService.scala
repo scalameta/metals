@@ -38,8 +38,8 @@ import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
-import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.doctor.HeadDoctor
+import scala.meta.internal.metals.doctor.MetalsServiceInfo
 import scala.meta.internal.metals.watcher.FileWatcherEvent
 import scala.meta.internal.metals.watcher.FileWatcherEvent.EventType
 import scala.meta.internal.metals.watcher.ProjectFileWatcher
@@ -50,6 +50,7 @@ import scala.meta.internal.tvp.FolderTreeViewProvider
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.{bsp4j => b}
+import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.MessageParams
@@ -156,7 +157,7 @@ class ProjectMetalsLspService(
   override def optFileSystemSemanticdbs(): Option[FileSystemSemanticdbs] =
     Some(fileSystemSemanticdbs)
 
-  protected val warnings: Warnings = new Warnings(
+  override protected val warnings: ProjectWarnings = new ProjectWarnings(
     folder,
     buildTargets,
     statusBar,
@@ -176,9 +177,6 @@ class ProjectMetalsLspService(
       parseTrees ::
       compilations.pauseables
   )
-
-  def onMissingSemanticDB(path: AbsolutePath): Unit =
-    warnings.noSemanticdb(path)
 
   protected val semanticdbs: Semanticdbs = AggregateSemanticdbs(
     List(
@@ -234,6 +232,17 @@ class ProjectMetalsLspService(
     connectionBspStatus,
   )
 
+  override def didChange(
+      params: DidChangeTextDocumentParams
+  ): CompletableFuture[Unit] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    super
+      .didChange(params)
+      .asScala
+      .map(_ => treeView.onWorkspaceFileDidChange(path))
+      .asJava
+  }
+
   override def didSave(
       params: DidSaveTextDocumentParams
   ): CompletableFuture[Unit] = {
@@ -241,11 +250,7 @@ class ProjectMetalsLspService(
     super
       .didSave(params)
       .asScala
-      .map(_ =>
-        maybeImportScript(
-          path
-        )
-      )
+      .map(_ => maybeImportScript(path))
       .map { _ =>
         treeView.onWorkspaceFileDidChange(path)
       }
@@ -300,7 +305,12 @@ class ProjectMetalsLspService(
           found.buildTool,
           found.digest,
           importBuild,
-          quickConnectToBuildServer,
+          reconnectToBuildServer = () =>
+            if (!isConnecting.get()) quickConnectToBuildServer()
+            else {
+              scribe.warn("Cannot reload build session, still connecting...")
+              Future.successful(BuildChange.None)
+            },
         )
       case Some(BuildTool.Found(buildTool: BuildServerProvider, _)) =>
         slowConnectToBuildToolBsp(buildTool, forceImport, isSelected(buildTool))
@@ -655,26 +665,13 @@ class ProjectMetalsLspService(
     () => switchBspServer(),
   )
 
-  val doctor: Doctor =
-    new Doctor(
-      folder,
-      buildTargets,
-      diagnostics,
-      languageClient,
+  def projectInfo: MetalsServiceInfo =
+    MetalsServiceInfo.ProjectService(
       () => bspSession,
       () => bspConnector.resolve(buildTool),
-      tables,
-      clientConfig,
-      mtagsResolver,
-      () => userConfig.javaHome,
-      maybeJdkVersion,
-      getVisibleName,
       buildTools,
       connectionBspStatus,
     )
-
-  def getTargetsInfoForReports(): List[Map[String, String]] =
-    doctor.getTargetsInfoForReports()
 
   def ammoniteStart(): Future[Unit] = ammonite.start()
   def ammoniteStop(): Future[Unit] = ammonite.stop()
@@ -1282,7 +1279,7 @@ class ProjectMetalsLspService(
    * @param path
    *   the absolute path of the ScalaCLI script to import
    */
-  override def scalaCliDirOrFile(path: AbsolutePath): AbsolutePath = {
+  def scalaCliDirOrFile(path: AbsolutePath): AbsolutePath = {
     val dir = path.parent
     val nioDir = dir.toNIO
     if (conflictsWithMainBsp(nioDir)) path else dir
@@ -1294,8 +1291,12 @@ class ProjectMetalsLspService(
       nioDir.startsWith(nioItem) || nioItem.startsWith(nioDir)
     }
 
-  def check(): Unit = {
-    doctor.check(headDoctor)
+  override def startScalaCli(path: AbsolutePath): Future[Unit] = {
+    super.startScalaCli(scalaCliDirOrFile(path))
+  }
+
+  override def check(): Unit = {
+    super.check()
     buildTools
       .loadSupported()
       .map(_.projectRoot)
@@ -1308,7 +1309,7 @@ class ProjectMetalsLspService(
     }
   }
 
-  protected def didCompileTarget(report: b.CompileReport): Unit = {
+  override protected def didCompileTarget(report: b.CompileReport): Unit = {
     if (!isReliableFileWatcher) {
       // NOTE(olafur) this step is exclusively used when running tests on
       // non-Linux computers to avoid flaky failures caused by delayed file
@@ -1324,12 +1325,10 @@ class ProjectMetalsLspService(
         didChangeWatchedFiles(event).get()
       }
     }
+    super.didCompileTarget(report)
   }
 
-  def buildHasErrors(path: scala.meta.io.AbsolutePath): Boolean =
-    buildClient.buildHasErrors(path)
-
-  def maybeFixAndLoad(
+  def maybeImportFileAndLoad(
       path: AbsolutePath,
       load: () => Future[Unit],
   ): Future[Unit] =
@@ -1338,8 +1337,8 @@ class ProjectMetalsLspService(
       _ <- maybeImportScript(path).getOrElse(load())
     } yield ()
 
-  override protected def resetStuff(): Unit = {
-    super.resetStuff()
+  override protected def resetService(): Unit = {
+    super.resetService()
     treeView.reset()
   }
 

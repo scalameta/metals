@@ -12,6 +12,7 @@ import scala.meta.internal.metals.Indexer.BuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.doctor.HeadDoctor
+import scala.meta.internal.metals.doctor.MetalsServiceInfo
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.metals.watcher.NoopFileWatcher
 import scala.meta.internal.mtags.Semanticdbs
@@ -59,14 +60,25 @@ class FallbackMetalsLspService(
   buildServerPromise.success(())
   indexingPromise.success(())
 
-  val pauseables: Pauseable = Pauseable.fromPausables(
-    parseTrees ::
-      compilations.pauseables
-  )
-
   private val files: AtomicReference[Set[AbsolutePath]] = new AtomicReference(
     Set.empty
   )
+
+  override val pauseables: Pauseable = Pauseable.fromPausables(
+    parseTrees ::
+      compilations.pauseables
+  )
+  override protected val semanticdbs: Semanticdbs = interactiveSemanticdbs
+  override val fileWatcher: FileWatcher = NoopFileWatcher
+  override val projectInfo: MetalsServiceInfo =
+    MetalsServiceInfo.FallbackService
+
+  protected def buildData(): Seq[BuildTool] =
+    scalaCli.lastImportedBuilds.map {
+      case (lastImportedBuild, buildTargetsData) =>
+        Indexer
+          .BuildTool("scala-cli", buildTargetsData, lastImportedBuild)
+    }
 
   override def didClose(params: DidCloseTextDocumentParams): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath
@@ -75,21 +87,7 @@ class FallbackMetalsLspService(
     scalaCli.stop(path)
   }
 
-  protected def buildData(): Seq[BuildTool] =
-    scalaCli.lastImportedBuilds.map {
-      case (lastImportedBuild, buildTargetsData) =>
-        Indexer
-          .BuildTool("scala-cli", buildTargetsData, lastImportedBuild)
-    }
-  def buildHasErrors(path: AbsolutePath): Boolean = false
-  protected def check(): Unit = {}
-  protected def didCompileTarget(
-      report: ch.epfl.scala.bsp4j.CompileReport
-  ): Unit = {}
-  def fileWatcher: FileWatcher = NoopFileWatcher
-  def getTargetsInfoForReports(): List[Map[String, String]] = Nil
-
-  def maybeFixAndLoad(
+  override def maybeImportFileAndLoad(
       path: AbsolutePath,
       load: () => Future[Unit],
   ): Future[Unit] =
@@ -103,7 +101,10 @@ class FallbackMetalsLspService(
         }
       _ <- load()
     } yield ()
-  protected def onBuildTargetChanges(params: DidChangeBuildTarget): Unit = {
+
+  override protected def onBuildTargetChanges(
+      params: DidChangeBuildTarget
+  ): Unit = {
     compilations.cancel()
     val scalaCliAffectedServers = params.getChanges.asScala
       .flatMap { change =>
@@ -112,11 +113,8 @@ class FallbackMetalsLspService(
       .flatMap(conn => scalaCli.servers.find(_ == conn))
     importAfterScalaCliChanges(scalaCliAffectedServers)
   }
-  protected def onInitialized(): Future[Unit] = Future.unit
-  def onMissingSemanticDB(path: AbsolutePath): Unit = {}
-  def scalaCliDirOrFile(path: AbsolutePath): AbsolutePath = path
-  protected val semanticdbs: Semanticdbs = interactiveSemanticdbs
 
+  override protected def onInitialized(): Future[Unit] = Future.unit
 }
 
 object FallbackMetalsLspService {
