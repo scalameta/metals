@@ -110,6 +110,9 @@ object MetalsEnrichments
     def baseDirectory: String =
       Option(buildTarget.getBaseDirectory()).getOrElse("")
 
+    def baseDirectoryPath: Option[AbsolutePath] =
+      Option(buildTarget.getBaseDirectory()).flatMap(_.toAbsolutePathSafe)
+
     def dataKind: String = Option(buildTarget.getDataKind()).getOrElse("")
 
     def asScalaBuildTarget: Option[b.ScalaBuildTarget] = {

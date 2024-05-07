@@ -26,6 +26,8 @@ object Directories {
     RelativePath(".bazelbsp")
   def bsp: RelativePath =
     RelativePath(".bsp")
+  def metalsSettings: RelativePath =
+    RelativePath(".metals").resolve("settings.json")
 
   val stacktraceFilename = "stacktrace.scala"
   val dependenciesName = "dependencies"

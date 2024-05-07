@@ -5,26 +5,36 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.logging.MetalsLogger
 
 class WorkspaceFolders(
     initialFolders: List[Folder],
     createService: Folder => MetalsLspService,
-    shutdownMetals: () => Future[Unit],
     redirectSystemOut: Boolean,
     initialServerConfig: MetalsServerConfig,
     userConfigSync: UserConfigurationSync,
 )(implicit ec: ExecutionContext) {
 
-  private val folderServices: AtomicReference[WorkspaceFoldersServices] = {
-    val (scalaProjects, nonScalaProjects) =
-      initialFolders.partition(_.isMetalsProject)
-    val services = scalaProjects.map(createService(_))
-    new AtomicReference(WorkspaceFoldersServices(services, nonScalaProjects))
-  }
+  private val allFolders: AtomicReference[List[Folder]] =
+    new AtomicReference(initialFolders)
+  private val folderServices: AtomicReference[WorkspaceFoldersServices] =
+    new AtomicReference(initServices(initialFolders))
 
   def getFolderServices: List[MetalsLspService] = folderServices.get().services
   def nonScalaProjects: List[Folder] = folderServices.get().nonScalaFolders
+
+  def initServices(folders: List[Folder]): WorkspaceFoldersServices = {
+    val (scalaProjects, nonScalaProjects) =
+      folders.partition(_.isMetalsProject)
+    val scalaServices =
+      scalaProjects
+        .filterNot(
+          _.optDelegatePath.exists(path => scalaProjects.exists(_.path == path))
+        )
+        .map(createService)
+    WorkspaceFoldersServices(scalaServices, nonScalaProjects)
+  }
 
   def changeFolderServices(
       toRemove: List[Folder],
@@ -32,60 +42,78 @@ class WorkspaceFolders(
   ): Future[Unit] = {
     val actualToRemove =
       toRemove.filterNot(folder => toAdd.exists(_.path == folder.path))
+
     def shouldBeRemoved(folder: Folder) =
       actualToRemove.exists(_.path == folder.path)
 
-    val (newScala, newNonScala) = toAdd.partition(_.isMetalsProject)
-    val newServices = newScala.map(createService(_))
-    if (newServices.isEmpty && getFolderServices.forall(shouldBeRemoved)) {
-      shutdownMetals()
-    } else {
-      val WorkspaceFoldersServices(prev, _) =
-        folderServices.getAndUpdate {
-          case WorkspaceFoldersServices(services, nonScalaProjects) =>
-            val updatedServices =
-              services.filterNot(shouldBeRemoved) ++
-                newServices.filterNot(isIn(services, _))
-            val updatedNonScala =
-              nonScalaProjects.filterNot(shouldBeRemoved) ++
-                newNonScala.filterNot(isIn(nonScalaProjects ++ services, _))
-            WorkspaceFoldersServices(
-              updatedServices,
-              updatedNonScala,
-            )
-        }
+    allFolders.updateAndGet(_.filterNot(shouldBeRemoved) ++ toAdd)
 
-      setupLogger()
-
-      val services = newServices.filterNot(isIn(prev, _))
-      for {
-        _ <- userConfigSync.initSyncUserConfiguration(services)
-        _ <- Future.sequence(services.map(_.initialized()))
-        _ <- Future(prev.filter(shouldBeRemoved).foreach(_.onShutdown()))
-      } yield ()
+    val actualToAdd = toAdd.filterNot { folder =>
+      findDelegate(getFolderServices.filterNot(shouldBeRemoved), folder) match {
+        case Some(service) =>
+          DelegateSetting.writeDeleteSetting(folder.path, service.path)
+          true
+        case _ =>
+          folder.optDelegatePath.exists(path => toAdd.exists(_.path == path))
+      }
     }
+
+    val servicesToInit =
+      if (actualToRemove.isEmpty) {
+        val WorkspaceFoldersServices(prev, _) =
+          folderServices.getAndUpdate {
+            case WorkspaceFoldersServices(
+                  services,
+                  nonScalaProjects,
+                ) =>
+              val (newScala, newNonScala) = actualToAdd
+                .filterNot(isIn(services ++ nonScalaProjects, _))
+                .partition(_.isMetalsProject)
+
+              val allNewScala = newScala.map(createService)
+
+              WorkspaceFoldersServices(
+                services ++ allNewScala,
+                nonScalaProjects ++ newNonScala,
+              )
+          }
+        getFolderServices.filterNot(isIn(prev, _))
+      } else {
+        val WorkspaceFoldersServices(prev, _) =
+          folderServices.getAndUpdate(_ => initServices(allFolders.get()))
+
+        prev.foreach(_.onShutdown())
+        getFolderServices
+      }
+
+    setupLogger()
+    for {
+      _ <- userConfigSync.initSyncUserConfiguration(servicesToInit)
+      _ <- Future.sequence(servicesToInit.map(_.initialized()))
+    } yield ()
   }
 
-  def convertToScalaProject(folder: Folder): MetalsLspService = {
-    val newService = createService(folder)
-    val WorkspaceFoldersServices(prev, _) = folderServices.getAndUpdate {
-      case wfs @ WorkspaceFoldersServices(services, nonScalaProjects) =>
-        if (!isIn(services, folder)) {
-          WorkspaceFoldersServices(
-            services :+ newService,
-            nonScalaProjects.filterNot(_ == folder),
-          )
-        } else wfs
-    }
+  def convertToScalaProject(folder: Folder): Option[MetalsLspService] = {
+    val WorkspaceFoldersServices(after, _) =
+      folderServices.updateAndGet {
+        case wfs @ WorkspaceFoldersServices(
+              services,
+              nonScalaProjects,
+            ) =>
+          if (!isIn(services, folder)) {
+            WorkspaceFoldersServices(
+              services :+ createService(folder),
+              nonScalaProjects.filterNot(_ == folder),
+            )
+          } else wfs
+      }
 
-    prev.find(_.path == folder.path) match {
-      case Some(service) => service
-      case None =>
-        setupLogger()
-        userConfigSync
-          .initSyncUserConfiguration(List(newService))
-          .map(_ => newService.initialized())
-        newService
+    after.find(_.path == folder.path).map { service =>
+      setupLogger()
+      userConfigSync
+        .initSyncUserConfiguration(List(service))
+        .map(_ => service.initialized())
+      service
     }
   }
 
@@ -99,6 +127,18 @@ class WorkspaceFolders(
   private def isIn(services: List[Folder], service: Folder) =
     services.exists(_.path == service.path)
 
+  private def findDelegate(
+      services: List[MetalsLspService],
+      folder: Folder,
+  ): Option[MetalsLspService] =
+    folder.optDelegatePath
+      .flatMap(delegate => services.find(_.path == delegate))
+      .orElse {
+        val uriString = folder.path.toURI.toString
+        services.find(
+          _.buildTargets.all.exists(_.baseDirectory == uriString)
+        )
+      }
 }
 
 case class WorkspaceFoldersServices(

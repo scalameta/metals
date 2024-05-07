@@ -215,7 +215,6 @@ class WorkspaceLspService(
     new WorkspaceFolders(
       folders,
       createService,
-      () => shutdown().asScala,
       redirectSystemOut,
       serverInputs.initialServerConfig,
       userConfigSync,
@@ -281,7 +280,12 @@ class WorkspaceLspService(
     }
 
   def getServiceForOpt(path: AbsolutePath): Option[MetalsLspService] =
-    getFolderForOpt(path, folderServices)
+    getFolderForOpt(path, folderServices).orElse {
+      folderServices.find(
+        _.buildTargets.all
+          .exists(bt => bt.baseDirectoryPath.exists(path.startWith))
+      )
+    }
 
   def getServiceFor(path: AbsolutePath): MetalsLspService =
     getServiceForOpt(path).getOrElse(fallbackService)
@@ -341,14 +345,6 @@ class WorkspaceLspService(
   ): Future[Unit] =
     onCurrentFolder(f, actionName, () => ())
 
-  def getServiceForExactUri(
-      folderUri: String
-  ): Option[MetalsLspService] =
-    for {
-      workSpaceFolder <- folderServices
-        .find(service => service.path.toString == folderUri)
-    } yield workSpaceFolder
-
   def foreachSeq[A](
       f: MetalsLspService => Future[A],
       ignoreValue: Boolean = false,
@@ -374,7 +370,7 @@ class WorkspaceLspService(
       .orElse {
         if (path.filename.isScalaOrJavaFilename) {
           getFolderForOpt(path, nonScalaProjects)
-            .map(workspaceFolders.convertToScalaProject)
+            .flatMap(workspaceFolders.convertToScalaProject)
         } else None
       }
       .getOrElse(fallbackService)
@@ -580,23 +576,26 @@ class WorkspaceLspService(
 
   override def didChangeWorkspaceFolders(
       params: lsp4j.DidChangeWorkspaceFoldersParams
-  ): CompletableFuture[Unit] =
+  ): CompletableFuture[Unit] = {
+    val removed =
+      params
+        .getEvent()
+        .getRemoved()
+        .map(Folder(_, isKnownMetalsProject = false))
+        .asScala
+        .toList
+    val added =
+      params
+        .getEvent()
+        .getAdded()
+        .map(Folder(_, isKnownMetalsProject = false))
+        .asScala
+        .toList
+
     workspaceFolders
-      .changeFolderServices(
-        params
-          .getEvent()
-          .getRemoved()
-          .map(Folder(_, isKnownMetalsProject = false))
-          .asScala
-          .toList,
-        params
-          .getEvent()
-          .getAdded()
-          .map(Folder(_, isKnownMetalsProject = false))
-          .asScala
-          .toList,
-      )
+      .changeFolderServices(removed, added)
       .asJava
+  }
 
   override def treeViewChildren(
       params: TreeViewChildrenParams
@@ -1316,6 +1315,16 @@ class Folder(
   lazy val isMetalsProject: Boolean =
     isKnownMetalsProject || path.resolve(".metals").exists || path
       .isMetalsProject()
+
+  /**
+   * A workspace folder might be a project reference for an other project.
+   * In that case all its commands will be delegated to the main project's service.
+   * We keep the path to main project's root in a dedicated setting, so even
+   * before the main project is imported, this folder is known to be a reference.
+   */
+  lazy val optDelegatePath: Option[AbsolutePath] =
+    DelegateSetting.readDeleteSetting(path)
+
   def nameOrUri: String = visibleName.getOrElse(path.toString())
 }
 
