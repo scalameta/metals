@@ -2140,10 +2140,9 @@ class MetalsLspService(
       forceImport: Boolean
   ): Future[BuildChange] = {
     val chosenBuildServer = tables.buildServers.selectedServer()
-    def useBuildToolBsp(buildTool: BuildTool) =
+    def useBuildToolBsp(buildTool: BloopInstallProvider) =
       buildTool match {
-        case _: BloopInstallProvider => userConfig.defaultBspToBuildTool
-        case _: BuildServerProvider => true
+        case _: BuildServerProvider => userConfig.defaultBspToBuildTool
         case _ => false
       }
 
