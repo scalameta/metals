@@ -4,6 +4,8 @@ import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 
+import tests.maven.MavenLspSuite.defaultPom
+
 class PreferredBuildServer extends BaseLspSuite("preferred-build-server") {
   override def userConfig: UserConfiguration =
     super.userConfig.copy(defaultBspToBuildTool = true)
@@ -75,6 +77,25 @@ class PreferredBuildServer extends BaseLspSuite("preferred-build-server") {
         "sbt",
       )
       _ = assert(server.server.bspSession.exists(_.main.isSbt))
+    } yield ()
+  }
+
+  test("no-change-in-behavior-for-maven") {
+    cleanWorkspace()
+    val fileLayout =
+      s"""|/pom.xml
+          |$defaultPom
+          |/src/main/scala/A.scala
+          |
+          |""".stripMargin
+    FileLayout.fromString(fileLayout, workspace)
+    for {
+      _ <- server.initialize()
+      _ <- server.initialized()
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        Messages.ImportBuild.params("Maven").getMessage,
+      )
     } yield ()
   }
 }

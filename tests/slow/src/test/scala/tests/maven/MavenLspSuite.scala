@@ -15,17 +15,11 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import tests.BaseImportSuite
+import tests.maven.MavenLspSuite.defaultPom
 
 class MavenLspSuite extends BaseImportSuite("maven-import") {
 
   def buildTool: MavenBuildTool = MavenBuildTool(() => userConfig, workspace)
-
-  val defaultPom: String = new String(
-    InputStreamIO.readBytes(
-      this.getClass.getResourceAsStream("/test-pom.xml")
-    ),
-    StandardCharsets.UTF_8,
-  ).replace("<<>>", V.scala213)
 
   override def currentDigest(
       workspace: AbsolutePath
@@ -253,4 +247,13 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
     } yield ()
   }
 
+}
+
+object MavenLspSuite {
+  val defaultPom: String = new String(
+    InputStreamIO.readBytes(
+      this.getClass.getResourceAsStream("/test-pom.xml")
+    ),
+    StandardCharsets.UTF_8,
+  ).replace("<<>>", V.scala213)
 }
