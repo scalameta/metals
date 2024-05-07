@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import scala.meta.internal.tvp.TreeViewCompilations
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.{bsp4j => b}
@@ -30,8 +29,6 @@ trait MetalsBuildClient {
 
   @JsonNotification("buildTarget/compileReport")
   def onBuildTargetCompileReport(params: b.CompileReport): Unit
-
-  def ongoingCompilations(): TreeViewCompilations
 
   def buildHasErrors(buildTargetId: b.BuildTargetIdentifier): Boolean
 

@@ -115,7 +115,6 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
         client.workspaceTreeViewChanges,
         s"""|${TreeViewProvider.Project} <root>
             |${TreeViewProvider.Build} <root>
-            |${TreeViewProvider.Compile} <root>
             |""".stripMargin,
       )
       _ <- server.didOpen("a/src/main/scala/a/Zero.scala")

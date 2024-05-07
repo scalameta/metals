@@ -8,7 +8,6 @@ trait TreeViewProvider {
   val Project = TreeViewProvider.Project
   val Build = TreeViewProvider.Build
   val Help = TreeViewProvider.Help
-  val Compile = TreeViewProvider.Compile
   def init(): Unit = ()
   def reset(): Unit = ()
   def children(
@@ -32,6 +31,5 @@ trait TreeViewProvider {
 object TreeViewProvider {
   val Project = "metalsPackages"
   val Build = "metalsBuild"
-  val Compile = "metalsCompile"
   val Help = "metalsHelp"
 }

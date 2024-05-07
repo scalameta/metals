@@ -228,7 +228,6 @@ class WorkspaceLspService(
       new MetalsTreeViewProvider(
         () => folderServices.map(_.treeView),
         languageClient,
-        sh,
       )
     } else NoopTreeViewProvider
 

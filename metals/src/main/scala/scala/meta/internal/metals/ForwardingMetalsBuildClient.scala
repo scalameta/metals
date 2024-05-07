@@ -21,7 +21,6 @@ import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.WorkDoneProgress
-import scala.meta.internal.tvp._
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.{bsp4j => b}
@@ -72,7 +71,7 @@ final class ForwardingMetalsBuildClient(
       val timer: Timer,
       token: Future[WorkDoneProgress.Token],
       taskProgress: TaskProgress = TaskProgress.empty,
-  ) extends TreeViewCompilation {
+  ) {
 
     def progressPercentage = taskProgress.percentage
 
@@ -274,12 +273,4 @@ final class ForwardingMetalsBuildClient(
       case _ =>
     }
   }
-
-  def ongoingCompilations(): TreeViewCompilations =
-    new TreeViewCompilations {
-      override def get(id: b.BuildTargetIdentifier) = compilations.get(id)
-      override def isEmpty = compilations.isEmpty
-      override def size = compilations.size
-      override def buildTargets = compilations.keysIterator
-    }
 }

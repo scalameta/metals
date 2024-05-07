@@ -818,7 +818,6 @@ class MetalsLspService(
     new FolderTreeViewProvider(
       new Folder(folder, folderVisibleName, true),
       buildTargets,
-      () => buildClient.ongoingCompilations(),
       definitionIndex,
       () => userConfig,
       scalaVersionSelector,

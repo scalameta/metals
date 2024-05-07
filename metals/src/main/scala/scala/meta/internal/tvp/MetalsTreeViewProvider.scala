@@ -1,10 +1,7 @@
 package scala.meta.internal.tvp
 
 import java.nio.file.Paths
-import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.collection.concurrent.TrieMap
 
@@ -29,7 +26,6 @@ import org.eclipse.{lsp4j => l}
 class MetalsTreeViewProvider(
     getFolderTreeViewProviders: () => List[FolderTreeViewProvider],
     languageClient: MetalsLanguageClient,
-    sh: ScheduledExecutorService,
 )(implicit rc: ReportContext)
     extends TreeViewProvider {
   private val ticks =
@@ -41,7 +37,6 @@ class MetalsTreeViewProvider(
         Array(
           TreeViewNode.empty(Project),
           TreeViewNode.empty(Build),
-          TreeViewNode.empty(Compile),
         )
       )
     )
@@ -119,11 +114,6 @@ class MetalsTreeViewProvider(
           case _ =>
             Array()
         }
-      case Compile =>
-        folderTreeViewProviders
-          .map(_.getOngoingCompilations(Option(params.nodeUri)))
-          .flatten
-          .toArray
       case _ => Array.empty
     }
     MetalsTreeViewChildrenResult(children)
@@ -207,22 +197,6 @@ class MetalsTreeViewProvider(
     }
     if (params.visible) {
       params.viewId match {
-        case TreeViewProvider.Compile =>
-          ticks(params.viewId) = sh.scheduleAtFixedRate(
-            () => {
-              val all = trees.map(_.tickBuildTreeView()).collect {
-                case Some(value) => value
-              }
-              if (all.nonEmpty) {
-                languageClient.metalsTreeViewDidChange(
-                  TreeViewDidChangeParams(all.flatten.toArray)
-                )
-              }
-            },
-            1,
-            1,
-            TimeUnit.SECONDS,
-          )
         case TreeViewProvider.Project =>
           val toUpdate = trees.map(_.flushPendingProjectUpdates).collect {
             case Some(value) => value
@@ -244,7 +218,6 @@ class MetalsTreeViewProvider(
 class FolderTreeViewProvider(
     folder: Folder,
     buildTargets: BuildTargets,
-    compilations: () => TreeViewCompilations,
     definitionIndex: GlobalSymbolIndex,
     userConfig: () => UserConfiguration,
     scalaVersionSelector: ScalaVersionSelector,
@@ -386,18 +359,6 @@ class FolderTreeViewProvider(
       None
     }
 
-  def getOngoingCompilations(nodeUri: Option[String]): Array[TreeViewNode] =
-    nodeUri match {
-      case None =>
-        ongoingCompilations
-      case Some(uri) =>
-        if (uri == ongoingCompilationNode.nodeUri) {
-          ongoingCompilations
-        } else {
-          ongoingCompileNode(new BuildTargetIdentifier(uri)).toArray
-        }
-    }
-
   def getProjectRoot(
       nodeUri: Option[String],
       showFolderName: Boolean,
@@ -449,48 +410,6 @@ class FolderTreeViewProvider(
         .inverseSources(path)
         .map(id => projects.toUri(id, closestSymbol.symbol).parentChain)
     }
-  }
-
-  private def ongoingCompilations: Array[TreeViewNode] = {
-    compilations().buildTargets.flatMap(ongoingCompileNode).toArray
-  }
-
-  private def ongoingCompileNode(
-      id: BuildTargetIdentifier
-  ): Option[TreeViewNode] = {
-    for {
-      compilation <- compilations().get(id)
-      info <- buildTargets.info(id)
-    } yield TreeViewNode(
-      TreeViewProvider.Compile,
-      id.getUri,
-      s"${info.getName()} - ${compilation.timer.toStringSeconds} (${compilation.progressPercentage}%)",
-      icon = "compile",
-    )
-  }
-
-  private def ongoingCompilationNode: TreeViewNode = {
-    TreeViewNode(
-      TreeViewProvider.Compile,
-      null,
-      TreeViewProvider.Compile,
-    )
-  }
-
-  private def toplevelTreeNodes: Array[TreeViewNode] =
-    Array(ongoingCompilationNode)
-
-  private val wasEmpty = new AtomicBoolean(true)
-  private val isEmpty = new AtomicBoolean(true)
-  def tickBuildTreeView(): Option[Array[TreeViewNode]] = {
-    isEmpty.set(compilations().isEmpty)
-    val result = if (wasEmpty.get() && isEmpty.get()) {
-      None // Nothing changed since the last notification.
-    } else {
-      Some(toplevelTreeNodes)
-    }
-    wasEmpty.set(isEmpty.get())
-    result
   }
 
   def reset(): Unit = {
