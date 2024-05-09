@@ -163,17 +163,14 @@ class WorkDoneProgress(
   )(implicit ec: ExecutionContext): Future[T] = {
     val token =
       startProgress(message, onCancel = onCancel, showTimer = showTimer)
-    value.map { result =>
-      endProgress(token)
-      result
-    }
+    value.onComplete(_ => endProgress(token))
+    value
   }
 
   def trackBlocking[T](message: String)(thunk: => T): T = {
     val token = startProgress(message)
-    val result = thunk
-    endProgress(token)
-    result
+    try thunk
+    finally endProgress(token)
   }
 
   def canceled(token: Token): Unit =
