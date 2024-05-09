@@ -11,7 +11,7 @@ object V {
   val scala3RC: Option[String] = None
   val sbtScala = "2.12.18"
   val ammonite212Version = "2.12.19"
-  val ammonite213Version = "2.13.13"
+  val ammonite213Version = "2.13.14"
   // Rules need to be manually updated to support
   val bazelScalaVersion = "2.13.12"
   val ammonite3Version = "3.3.3"
