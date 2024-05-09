@@ -39,9 +39,15 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
       includeDetail: Boolean = true,
       filter: String => Boolean = _ => true,
       filename: Option[String] = None,
+      saveCompletionOrder: Boolean = false,
   )(implicit loc: Location): Future[Unit] = {
     withCompletion(query, project, filename) { list =>
-      val completion = server.formatCompletion(list, includeDetail, filter)
+      val completion = server.formatCompletion(
+        list,
+        includeDetail,
+        filter,
+        saveCompletionOrder,
+      )
       assertNoDiff(completion, expected)
     }
   }

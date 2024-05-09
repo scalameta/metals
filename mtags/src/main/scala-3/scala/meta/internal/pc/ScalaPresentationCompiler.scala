@@ -42,7 +42,8 @@ case class ScalaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     folderPath: Option[Path] = None,
-    reportsLevel: ReportLevel = ReportLevel.Info
+    reportsLevel: ReportLevel = ReportLevel.Info,
+    completionItemPriority: CompletionItemPriority = (_: String) => 0,
 ) extends PresentationCompiler:
 
   def this() = this("", None, Nil, Nil)
@@ -61,6 +62,11 @@ case class ScalaPresentationCompiler(
 
   override def withReportsLoggerLevel(level: String): PresentationCompiler =
     copy(reportsLevel = ReportLevel.fromString(level))
+
+  override def withCompletionItemPriority(
+      priority: CompletionItemPriority
+  ): PresentationCompiler =
+    copy(completionItemPriority = priority)
 
   val compilerAccess: CompilerAccess[StoreReporter, MetalsDriver] =
     Scala3CompilerAccess(
@@ -145,6 +151,7 @@ case class ScalaPresentationCompiler(
         config,
         buildTargetIdentifier,
         folderPath,
+        completionItemPriority,
       ).completions()
 
     }
@@ -371,7 +378,9 @@ case class ScalaPresentationCompiler(
     }
   end selectionRange
 
-  override def hover(params: OffsetParams): CompletableFuture[ju.Optional[HoverSignature]] =
+  override def hover(
+      params: OffsetParams
+  ): CompletableFuture[ju.Optional[HoverSignature]] =
     compilerAccess.withNonInterruptableCompiler(Some(params))(
       ju.Optional.empty[HoverSignature](),
       params.token,

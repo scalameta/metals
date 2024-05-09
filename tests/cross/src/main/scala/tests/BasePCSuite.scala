@@ -15,6 +15,7 @@ import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
 
@@ -43,6 +44,8 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
   val isNightly: Boolean =
     scalaVersion.contains("-bin-") || scalaVersion.contains("NIGHTLY")
 
+  val completionItemPriority: CompletionItemPriority = (_: String) => 0
+
   val tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("metals"))
   val dialect: Dialect =
     if (scalaVersion.startsWith("3.")) dialects.Scala3 else dialects.Scala213
@@ -70,6 +73,7 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
       .withConfiguration(config)
       .withExecutorService(executorService)
       .withScheduledExecutorService(executorService)
+      .withCompletionItemPriority(completionItemPriority)
       .newInstance("", myclasspath.asJava, scalacOpts.asJava)
   }
 

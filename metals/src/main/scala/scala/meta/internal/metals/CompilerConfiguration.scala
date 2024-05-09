@@ -19,6 +19,7 @@ import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.JavaPresentationCompiler
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 
@@ -51,6 +52,7 @@ class CompilerConfiguration(
       scalaVersion: String,
       symbolSearch: SymbolSearch,
       classpath: Seq[Path],
+      referenceCounter: CompletionItemPriority,
   ) extends MtagsPresentationCompiler {
     private val mtags =
       mtagsResolver.resolve(scalaVersion).getOrElse(MtagsBinaries.BuildIn)
@@ -62,6 +64,7 @@ class CompilerConfiguration(
         classpath ++ Embedded.scalaLibrary(scalaVersion),
         "default",
         symbolSearch,
+        referenceCounter,
       )
 
     def shutdown(): Unit = standalone.shutdown()
@@ -75,6 +78,7 @@ class CompilerConfiguration(
         classpath: Seq[Path],
         sources: Seq[Path],
         workspaceFallback: Option[SymbolSearch],
+        referenceCounter: CompletionItemPriority,
     ): StandaloneCompiler = {
       val search =
         createStandaloneSearch(classpath, sources, workspaceFallback)
@@ -82,6 +86,7 @@ class CompilerConfiguration(
         scalaVersion,
         search,
         classpath,
+        referenceCounter,
       )
     }
   }
@@ -154,6 +159,7 @@ class CompilerConfiguration(
       scalaTarget: ScalaTarget,
       mtags: MtagsBinaries,
       search: SymbolSearch,
+      referenceCounter: CompletionItemPriority,
       additionalClasspath: Seq[Path] = Nil,
   ) extends LazyCompiler {
 
@@ -168,6 +174,7 @@ class CompilerConfiguration(
         classpath ++ additionalClasspath,
         name,
         search,
+        referenceCounter,
       )
         .withBuildTargetName(scalaTarget.displayName)
     }
@@ -178,6 +185,7 @@ class CompilerConfiguration(
         Nil,
         Nil,
         Some(search),
+        referenceCounter,
       ).standalone
 
   }
@@ -190,6 +198,7 @@ class CompilerConfiguration(
         classpath: Seq[Path],
         sources: Seq[Path],
         workspaceFallback: SymbolSearch,
+        referenceCounter: CompletionItemPriority,
     ): ScalaLazyCompiler = {
 
       val worksheetSearch =
@@ -199,6 +208,7 @@ class CompilerConfiguration(
         scalaTarget,
         mtags,
         worksheetSearch,
+        referenceCounter,
         classpath,
       )
     }
@@ -207,13 +217,14 @@ class CompilerConfiguration(
   case class JavaLazyCompiler(
       targetId: BuildTargetIdentifier,
       search: SymbolSearch,
+      completionItemPriority: CompletionItemPriority,
   ) extends LazyCompiler {
 
     def buildTargetId: BuildTargetIdentifier = targetId
 
     protected def newCompiler(classpath: Seq[Path]): PresentationCompiler = {
       val pc = JavaPresentationCompiler()
-      configure(pc, search)
+      configure(pc, search, completionItemPriority)
         .newInstance(
           targetId.getUri(),
           classpath.asJava,
@@ -228,9 +239,11 @@ class CompilerConfiguration(
   private def configure(
       pc: PresentationCompiler,
       search: SymbolSearch,
+      completionItemPriority: CompletionItemPriority,
   ): PresentationCompiler =
     pc.withSearch(search)
       .withExecutorService(ec)
+      .withCompletionItemPriority(completionItemPriority)
       .withWorkspace(workspace.toNIO)
       .withScheduledExecutorService(sh)
       .withReportsLoggerLevel(MetalsServerConfig.default.loglevel)
@@ -255,6 +268,7 @@ class CompilerConfiguration(
       classpathSeq: Seq[Path],
       name: String,
       symbolSearch: SymbolSearch,
+      referenceCounter: CompletionItemPriority,
   ): PresentationCompiler = {
     val pc = mtags match {
       case MtagsBinaries.BuildIn => new ScalaPresentationCompiler()
@@ -263,7 +277,7 @@ class CompilerConfiguration(
     }
 
     val filteredOptions = plugins.filterSupportedOptions(options)
-    configure(pc, symbolSearch)
+    configure(pc, symbolSearch, referenceCounter)
       .newInstance(
         name,
         classpathSeq.asJava,

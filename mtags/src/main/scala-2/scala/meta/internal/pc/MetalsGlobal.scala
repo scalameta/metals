@@ -25,6 +25,7 @@ import scala.meta.XtensionSyntax
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
+import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.SymbolDocumentation
@@ -38,7 +39,8 @@ class MetalsGlobal(
     val search: SymbolSearch,
     val buildTargetIdentifier: String,
     val metalsConfig: PresentationCompilerConfig,
-    val workspace: Option[Path]
+    val workspace: Option[Path],
+    val completionItemPriority: CompletionItemPriority
 ) extends Global(settings, reporter)
     with completions.Completions
     with completions.AmmoniteFileCompletions
