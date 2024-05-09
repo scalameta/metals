@@ -16,6 +16,7 @@ import scala.util.control.NonFatal
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.builds.SbtBuildTool
+import scala.meta.internal
 import scala.meta.internal.metals.CompilerOffsetParamsUtils
 import scala.meta.internal.metals.CompilerRangeParamsUtils
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
@@ -61,7 +62,7 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.{Position => LspPosition}
 import org.eclipse.lsp4j.{Range => LspRange}
-import org.eclipse.lsp4j.{debug => d};
+import org.eclipse.lsp4j.{debug => d}
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -734,7 +735,7 @@ class Compilers(
       token: CancelToken,
   ): Future[List[ReferencesResult]] = {
     withPCAndAdjustLsp(params) { case (pc, pos, adjust) =>
-      val requestParams = new PcReferencesRequest(
+      val requestParams = new internal.pc.PcReferencesRequest(
         CompilerOffsetParamsUtils.fromPos(pos, token),
         params.getContext().isIncludeDeclaration(),
         JEither.forLeft(pos.start),
@@ -755,7 +756,7 @@ class Compilers(
         val uri = searchFile.toURI
         val (input, _, adjust) =
           sourceAdjustments(uri.toString(), compiler.scalaVersion())
-        val requestParams = new PcReferencesRequest(
+        val requestParams = new internal.pc.PcReferencesRequest(
           CompilerVirtualFileParams(uri, input.text),
           includeDefinition,
           JEither.forRight(symbol),

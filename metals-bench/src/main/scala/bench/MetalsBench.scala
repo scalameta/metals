@@ -246,7 +246,7 @@ class MetalsBench {
 
       mtags.indexRoot()
 
-      val identifiers = mtags.maybeAllIdentifiers
+      val identifiers = mtags.allIdentifiers
       if (identifiers.nonEmpty)
         index.addIdentifiers(
           path,

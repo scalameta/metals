@@ -57,7 +57,7 @@ class PcReferencesProvider(
           optRange.map(new Location(request.file().uri().toString(), _))
         }
         .map { case (symbol, locs) =>
-          ReferencesResultImpl(symbol, locs.flatten.asJava)
+          PcReferencesResult(symbol, locs.flatten.asJava)
         }
         .toList
       case _ => Nil

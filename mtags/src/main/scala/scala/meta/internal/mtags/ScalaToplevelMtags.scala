@@ -60,7 +60,7 @@ class ScalaToplevelMtags(
   import ScalaToplevelMtags._
 
   private val identifiers = Set.newBuilder[String]
-  override def maybeAllIdentifiers: Set[String] = identifiers.result()
+  override def allIdentifiers: Set[String] = identifiers.result()
 
   implicit class XtensionScanner(scanner: LegacyScanner) {
     def mtagsNextToken(): Unit = {

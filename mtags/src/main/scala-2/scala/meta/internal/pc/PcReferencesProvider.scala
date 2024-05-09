@@ -31,11 +31,11 @@ trait PcReferencesProvider {
     }
   }
 
-  def references(): List[ReferencesResultImpl] =
+  def references(): List[PcReferencesResult] =
     result()
       .groupBy(_._1)
       .map { case (symbol, locs) =>
-        ReferencesResultImpl(
+        PcReferencesResult(
           symbol,
           locs.flatMap { case (_, optRange) =>
             optRange.map(new l.Location(params.uri().toString(), _))

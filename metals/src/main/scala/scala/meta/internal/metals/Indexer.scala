@@ -584,7 +584,7 @@ final case class Indexer(
           }
         }
         optMtags
-          .map(_.maybeAllIdentifiers)
+          .map(_.allIdentifiers)
           .filter(_.nonEmpty)
           .foreach(identifiers =>
             referencesProvider().addIdentifiers(source, identifiers)

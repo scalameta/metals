@@ -43,7 +43,7 @@ trait MtagsIndexer {
   private var myLastCurrentOwner: String = currentOwner
   def lastCurrentOwner: String = myLastCurrentOwner
 
-  def maybeAllIdentifiers: Set[String] = Set.empty
+  def allIdentifiers: Set[String] = Set.empty
 
   def owner: String = currentOwner
   def withOwner[A](owner: String = currentOwner)(thunk: => A): A = {

@@ -29,15 +29,12 @@ import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyToken._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
-import scala.meta.pc.ReferencesRequest
-import scala.meta.pc.VirtualFileParams
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.ReferenceParams
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 
 final class ReferenceProvider(
     workspace: AbsolutePath,
@@ -742,9 +739,3 @@ object SyntheticPackageObject {
   def unapply(str: String): Option[String] =
     Option.when(regex.matches(str))(str)
 }
-
-case class PcReferencesRequest(
-    file: VirtualFileParams,
-    includeDefinition: Boolean,
-    offsetOrSymbol: JEither[Integer, String],
-) extends ReferencesRequest
