@@ -2,8 +2,11 @@ package tests.scalafix
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalafixProvider
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.{BuildInfo => V}
 
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextDocumentIdentifier
@@ -299,6 +302,66 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
            |  used2.head
            |  A.func(a = 1, b = 2, c = 3)
            |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("amend-scalafix-conf") {
+    cleanWorkspace()
+    val newSettings = List(
+      "OrganizeImports.targetDialect = Scala3",
+      "OrganizeImports.removeUnused = false",
+    )
+    val amendScalafixConfRequest = Messages.ScalafixConfig.amendRequest(
+      newSettings,
+      V.scala3,
+      isScala3Source = false,
+    )
+
+    client.showMessageRequestHandler = params =>
+      if (params.getMessage() == amendScalafixConfRequest.getMessage())
+        Some(Messages.ScalafixConfig.adjustScalafix)
+      else None
+
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{"a":{"scalaVersion": "${V.scala3}" }}
+            |/a/src/main/scala/Main.scala
+            |import java.util.concurrent.*
+            |import java.util.*
+            |/.scalafix.conf
+            |rules = [
+            |  OrganizeImports
+            |]
+            |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      textParams =
+        new TextDocumentPositionParams(
+          new TextDocumentIdentifier(
+            workspace.resolve("a/src/main/scala/Main.scala").toURI.toString()
+          ),
+          new Position(0, 0),
+        )
+      _ <- server.executeCommand(
+        ServerCommands.RunScalafix,
+        textParams,
+      )
+      _ = assertNoDiff(
+        workspace.resolve(".scalafix.conf").readText,
+        s"""|rules = [
+            |  OrganizeImports
+            |]
+            |${newSettings.mkString("\n")}
+            |""".stripMargin,
+      )
+      contents = server.bufferContents("a/src/main/scala/Main.scala")
+      _ = assertNoDiff(
+        contents,
+        """|import java.util.*
+           |import java.util.concurrent.*
            |""".stripMargin,
       )
     } yield ()
