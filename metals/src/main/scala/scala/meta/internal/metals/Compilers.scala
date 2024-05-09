@@ -31,6 +31,7 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.CancelToken
+import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
@@ -87,6 +88,7 @@ class Compilers(
     mtagsResolver: MtagsResolver,
     sourceMapper: SourceMapper,
     worksheetProvider: WorksheetProvider,
+    completionItemPriority: () => CompletionItemPriority,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Cancelable {
 
@@ -151,10 +153,20 @@ class Compilers(
                 lazyPc
               } else {
                 presentationCompiler.shutdown()
-                StandaloneCompiler(scalaVersion, search, Nil)
+                StandaloneCompiler(
+                  scalaVersion,
+                  search,
+                  Nil,
+                  completionItemPriority(),
+                )
               }
             case None =>
-              StandaloneCompiler(scalaVersion, search, Nil)
+              StandaloneCompiler(
+                scalaVersion,
+                search,
+                Nil,
+                completionItemPriority(),
+              )
           }
         },
       )
@@ -1131,6 +1143,7 @@ class Compilers(
             classpath,
             sources,
             search,
+            completionItemPriority(),
           )
         },
       )
@@ -1146,6 +1159,7 @@ class Compilers(
             classpath,
             sources,
             Some(search),
+            completionItemPriority(),
           )
         },
       )
@@ -1162,7 +1176,7 @@ class Compilers(
           workDoneProgress.trackBlocking(
             s"${config.icons.sync}Loading presentation compiler"
           ) {
-            JavaLazyCompiler(targetId, search)
+            JavaLazyCompiler(targetId, search, completionItemPriority())
           }
         },
       )
@@ -1189,7 +1203,12 @@ class Compilers(
             workDoneProgress.trackBlocking(
               s"${config.icons.sync}Loading presentation compiler"
             ) {
-              ScalaLazyCompiler(scalaTarget, mtags, search)
+              ScalaLazyCompiler(
+                scalaTarget,
+                mtags,
+                search,
+                completionItemPriority(),
+              )
             }
           val key =
             PresentationCompilerKey.ScalaBuildTarget(scalaTarget.info.getId)

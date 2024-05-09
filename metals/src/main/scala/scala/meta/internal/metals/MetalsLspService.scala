@@ -445,6 +445,7 @@ abstract class MetalsLspService(
       mtagsResolver,
       sourceMapper,
       worksheetProvider,
+      () => referencesProvider,
     )
   )
 

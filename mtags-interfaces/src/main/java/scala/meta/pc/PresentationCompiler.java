@@ -1,6 +1,5 @@
 package scala.meta.pc;
 
-import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionList;
 import org.eclipse.lsp4j.DocumentHighlight;
@@ -9,22 +8,15 @@ import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.Range;
 
 import org.eclipse.lsp4j.Diagnostic;
-import org.eclipse.lsp4j.ExecuteCommandParams;
-import org.eclipse.lsp4j.DocumentSymbol;
-import org.eclipse.lsp4j.DocumentRangeFormattingParams;
-import org.eclipse.lsp4j.DocumentOnTypeFormattingParams;
 import org.eclipse.lsp4j.InlayHint;
 import org.eclipse.lsp4j.SelectionRange;
-import org.eclipse.lsp4j.jsonrpc.messages.Either;
 
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.List;
-import java.util.LinkedList;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -280,6 +272,14 @@ public abstract class PresentationCompiler {
 	 * Provide workspace root for features like ammonite script $file completions.
 	 */
 	public abstract PresentationCompiler withWorkspace(Path workspace);
+
+
+	/**
+	 * Provide CompletionItemPriority for additional sorting completion items.
+	 */
+	public PresentationCompiler withCompletionItemPriority(CompletionItemPriority priority) {
+		return this;
+	}
 
 	/**
 	 * Construct a new presentation compiler with the given parameters.

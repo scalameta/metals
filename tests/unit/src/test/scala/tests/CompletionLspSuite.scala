@@ -427,4 +427,152 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       )
     } yield ()
   }
+
+  test("scope ranking") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/B.scala
+          |package b
+          |import scala.concurrent.Future
+          |object E {
+          | val e = Future.successful("kek")
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |
+          |object A {
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ = assertNoDiagnostics()
+      _ <- server.didChange("a/src/main/scala/a/A.scala")(_ =>
+        """|package a
+           |
+           |object A {
+           |  Fut@@
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
+      _ <- assertCompletion(
+        "  Fut@@",
+        """
+          |Future - scala.concurrent
+          |Future - java.util.concurrent
+          |FutureOps - scala.jdk.FutureConverters
+          |FutureOps - scala.jdk.FutureConverters : [T](f: <?>): scala.jdk.FutureConverters.FutureOps[T] <and> scala.jdk.FutureConverters.FutureOps.type
+          |FutureTask - java.util.concurrent
+          |RunnableFuture - java.util.concurrent
+          |ScheduledFuture - java.util.concurrent
+          |FutureConverters - scala.jdk
+          |FutureConverters - scala.jdk.javaapi
+          |CompletableFuture - java.util.concurrent
+          |""".stripMargin,
+        saveCompletionOrder = true,
+      )
+    } yield ()
+  }
+
+  test("scope ranking on file change") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/B.scala
+          |package a
+          |
+          |object E{}
+          |
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |
+          |object A {
+          |}
+          |""".stripMargin
+      )
+
+      _ <- server.didOpen("a/src/main/scala/a/B.scala")
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ = assertNoDiagnostics()
+      _ <- server.didChange("a/src/main/scala/a/A.scala")(_ =>
+        """|package a
+           |
+           |object A {
+           |  Fut@@
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
+      _ <- assertCompletion(
+        "  Fut@@",
+        """
+          |Future - java.util.concurrent
+          |Future - scala.concurrent
+          |FutureOps - scala.jdk.FutureConverters
+          |FutureOps - scala.jdk.FutureConverters : [T](f: <?>): scala.jdk.FutureConverters.FutureOps[T] <and> scala.jdk.FutureConverters.FutureOps.type
+          |FutureTask - java.util.concurrent
+          |RunnableFuture - java.util.concurrent
+          |ScheduledFuture - java.util.concurrent
+          |FutureConverters - scala.jdk
+          |FutureConverters - scala.jdk.javaapi
+          |CompletableFuture - java.util.concurrent
+          |""".stripMargin,
+        saveCompletionOrder = true,
+      )
+      _ <- server.didSave("a/src/main/scala/a/A.scala")(_ =>
+        """|package a
+           |
+           |object A {
+           |}""".stripMargin
+      )
+
+      // add scala Future reference in other file
+      _ = assertNoDiagnostics()
+      _ <- server.didSave("a/src/main/scala/a/B.scala")(_ =>
+        """|package a
+           |import scala.concurrent.Future
+           |object E {
+           | val e = Future.successful("kek")
+           |}
+           |""".stripMargin
+      )
+      _ = assertNoDiagnostics()
+      _ <- server.didChange("a/src/main/scala/a/A.scala")(_ =>
+        """|package a
+           |
+           |object A {
+           |  Fut@@
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
+
+      // check that completions changed
+      _ <- assertCompletion(
+        "  Fut@@",
+        """
+          |Future - scala.concurrent
+          |Future - java.util.concurrent
+          |FutureOps - scala.jdk.FutureConverters
+          |FutureOps - scala.jdk.FutureConverters : [T](f: <?>): scala.jdk.FutureConverters.FutureOps[T] <and> scala.jdk.FutureConverters.FutureOps.type
+          |FutureTask - java.util.concurrent
+          |RunnableFuture - java.util.concurrent
+          |ScheduledFuture - java.util.concurrent
+          |FutureConverters - scala.jdk
+          |FutureConverters - scala.jdk.javaapi
+          |CompletableFuture - java.util.concurrent
+          |""".stripMargin,
+        saveCompletionOrder = true,
+      )
+    } yield ()
+  }
 }

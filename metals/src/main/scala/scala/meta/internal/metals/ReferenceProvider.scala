@@ -29,6 +29,7 @@ import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.CompletionItemPriority
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import com.google.common.hash.BloomFilter
@@ -46,7 +47,8 @@ final class ReferenceProvider(
     compilers: Compilers,
     scalaVersionSelector: ScalaVersionSelector,
 )(implicit ec: ExecutionContext)
-    extends SemanticdbFeatureProvider {
+    extends SemanticdbFeatureProvider
+    with CompletionItemPriority {
   val index: TrieMap[Path, IdentifierIndex.MaybeStaleIndexEntry] =
     TrieMap.empty
   val identifierIndex: IdentifierIndex = new IdentifierIndex
@@ -72,11 +74,32 @@ final class ReferenceProvider(
     }
   }
 
+  type SymbolName = String
+  val workspaceMemberPriority: TrieMap[SymbolName, Int] = TrieMap.empty
+
   override def reset(): Unit = {
     index.clear()
+    workspaceMemberPriority.clear()
+  }
+
+  private def updateWorkspaceMemberPriority(
+      symbol: String,
+      change: Int,
+  ): Unit = {
+    if (change != 0)
+      workspaceMemberPriority.updateWith(symbol) { priority =>
+        Some(priority.getOrElse(0) + change)
+      }
   }
 
   override def onDelete(file: AbsolutePath): Unit = {
+    index.get(file.toNIO).foreach {
+      case IdentifierIndex.MaybeStaleIndexEntry(_, bloom, _) =>
+        workspaceMemberPriority.foreach { case (symbol, _) =>
+          if (bloom.mightContain(symbol))
+            updateWorkspaceMemberPriority(symbol, -1)
+        }
+    }
     index.remove(file.toNIO)
   }
 
@@ -89,6 +112,8 @@ final class ReferenceProvider(
         Integer.valueOf((count + syntheticsCount) * 2),
         0.01,
       )
+
+      val oldEntry = index.get(file.toNIO)
 
       val entry =
         IdentifierIndex.MaybeStaleIndexEntry(id, bloom, isStale = false)
@@ -103,6 +128,18 @@ final class ReferenceProvider(
             Synthetics.Continue
           }
         }
+      }
+      workspaceMemberPriority.foreach { case (symbol, _) =>
+        val shift = oldEntry
+          .exists(_.bloom.mightContain(symbol))
+          .compare(
+            bloom.mightContain(symbol)
+          )
+        if (shift != 0)
+          updateWorkspaceMemberPriority(
+            symbol,
+            -shift,
+          )
       }
     }
   }
@@ -484,6 +521,21 @@ final class ReferenceProvider(
       result
     }
   }
+
+  override def workspaceMemberPriority(
+      symbol: String
+  ): Integer =
+    workspaceMemberPriority.getOrElseUpdate(
+      symbol, {
+        val visited = scala.collection.mutable.Set.empty[AbsolutePath]
+        index.iterator.count { case (path, entry) =>
+          if (entry.bloom.mightContain(symbol)) {
+            val sourcePath = AbsolutePath(path)
+            visited.add(sourcePath) && sourcePath.exists
+          } else false
+        }
+      },
+    ) * -1
 
   def workspaceReferences(
       source: AbsolutePath,

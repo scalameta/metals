@@ -192,6 +192,7 @@ trait Completions { this: MetalsGlobal =>
     new Ordering[Member] {
       val queryLower = query.toLowerCase()
       val fuzzyCache = mutable.Map.empty[Symbol, Int]
+
       def compareLocalSymbols(o1: Member, o2: Member): Int = {
         if (
           o1.sym.isLocallyDefinedSymbol &&
@@ -215,6 +216,22 @@ trait Completions { this: MetalsGlobal =>
           }
         )
       }
+
+      private def workspaceMemberPriority(symbol: Symbol): Int =
+        completionItemPriority
+          .workspaceMemberPriority(
+            semanticdbSymbol(symbol)
+          )
+
+      def compareFrequency(o1: Member, o2: Member): Int = {
+        (o1, o2) match {
+          case (w1: WorkspaceMember, w2: WorkspaceMember) =>
+            workspaceMemberPriority(w1.sym)
+              .compareTo(workspaceMemberPriority(w2.sym))
+          case _ => 0
+        }
+      }
+
       override def compare(o1: Member, o2: Member): Int = {
         val byCompletion = completion.compare(o1, o2)
         if (byCompletion != 0) byCompletion
@@ -239,18 +256,22 @@ trait Completions { this: MetalsGlobal =>
                   )
                 if (byIdentifier != 0) byIdentifier
                 else {
-                  val byOwner =
-                    o1.sym.owner.fullName.compareTo(o2.sym.owner.fullName)
-                  if (byOwner != 0) byOwner
+                  val byFrequency = compareFrequency(o1, o2)
+                  if (byFrequency != 0) byFrequency
                   else {
-                    val byParamCount = Integer.compare(
-                      o1.sym.paramss.iterator.flatten.size,
-                      o2.sym.paramss.iterator.flatten.size
-                    )
-                    if (byParamCount != 0) byParamCount
+                    val byOwner =
+                      o1.sym.owner.fullName.compareTo(o2.sym.owner.fullName)
+                    if (byOwner != 0) byOwner
                     else {
-                      detailString(o1, history)
-                        .compareTo(detailString(o2, history))
+                      val byParamCount = Integer.compare(
+                        o1.sym.paramss.iterator.flatten.size,
+                        o2.sym.paramss.iterator.flatten.size
+                      )
+                      if (byParamCount != 0) byParamCount
+                      else {
+                        detailString(o1, history)
+                          .compareTo(detailString(o2, history))
+                      }
                     }
                   }
                 }
