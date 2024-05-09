@@ -222,7 +222,7 @@ final class ReferenceProvider(
           .map(
             _.flatten
               .groupBy(_.symbol)
-              .map { case (symbol, refs) =>
+              .collect { case (symbol, refs) =>
                 ReferencesResult(symbol, refs.flatMap(_.locations))
               }
               .toList
@@ -231,7 +231,7 @@ final class ReferenceProvider(
         scribe.debug(s"No semanticdb for $source")
         pcReferences(source, params).map(
           _.groupBy(_.symbol)
-            .map { case (symbol, refs) =>
+            .collect { case (symbol, refs) =>
               ReferencesResult(symbol, refs.flatMap(_.locations))
             }
             .toList
