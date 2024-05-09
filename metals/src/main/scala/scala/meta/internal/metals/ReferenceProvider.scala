@@ -2,13 +2,11 @@ package scala.meta.internal.metals
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
-
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
-
 import scala.meta.Importee
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ResolvedSymbolOccurrence
@@ -26,12 +24,14 @@ import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
-
+import scala.meta.pc.CompletionItemPriority
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.ReferenceParams
+
+import scala.collection.mutable
 
 final class ReferenceProvider(
     workspace: AbsolutePath,
@@ -40,7 +40,8 @@ final class ReferenceProvider(
     definition: DefinitionProvider,
     trees: Trees,
     buildTargets: BuildTargets,
-) extends SemanticdbFeatureProvider {
+) extends SemanticdbFeatureProvider
+    with CompletionItemPriority {
 
   case class IndexEntry(
       id: BuildTargetIdentifier,
@@ -48,11 +49,21 @@ final class ReferenceProvider(
   )
   val index: TrieMap[Path, IndexEntry] = TrieMap.empty
 
+  val workspaceMemberPriority: TrieMap[(String, String), Int] = TrieMap.empty
+
   override def reset(): Unit = {
     index.clear()
   }
 
   override def onDelete(file: AbsolutePath): Unit = {
+    index.get(file.toNIO).foreach { case IndexEntry(id, bloom) =>
+      workspaceMemberPriority.foreach {
+        case ((buildTargetIdentifier, symbol), priority) =>
+          if (buildTargetIdentifier == id.getUri && bloom.mightContain(symbol))
+            workspaceMemberPriority
+              .update((buildTargetIdentifier, symbol), priority - 1)
+      }
+    }
     index.remove(file.toNIO)
   }
 
@@ -66,6 +77,8 @@ final class ReferenceProvider(
         0.01,
       )
 
+      val oldEntry = index.get(file.toNIO)
+
       val entry = IndexEntry(id, bloom)
       index(file.toNIO) = entry
       docs.documents.foreach { d =>
@@ -78,6 +91,19 @@ final class ReferenceProvider(
             Synthetics.Continue
           }
         }
+      }
+      workspaceMemberPriority.foreach {
+        case ((buildTargetIdentifier, symbol), priorty) =>
+          if (buildTargetIdentifier == id.getUri) {
+            val shift = oldEntry
+              .exists(_.bloom.mightContain(symbol))
+              .compare(
+                bloom.mightContain(symbol)
+              )
+            if (shift != 0)
+              workspaceMemberPriority
+                .update((buildTargetIdentifier, symbol), priorty + shift)
+          }
       }
     }
   }
@@ -304,6 +330,25 @@ final class ReferenceProvider(
       result
     }
   }
+
+  override def workspaceMemberPriority(
+      buildTargetIdentifier: String,
+      symbol: String,
+  ): Integer =
+    workspaceMemberPriority.getOrElseUpdate(
+      (symbol, buildTargetIdentifier), {
+        val visited = scala.collection.mutable.Set.empty[AbsolutePath]
+        -index.iterator.count { case (path, entry) =>
+          if (
+            entry.id.getUri == buildTargetIdentifier
+            && entry.bloom.mightContain(symbol)
+          ) {
+            val sourcePath = AbsolutePath(path)
+            visited.add(sourcePath) && sourcePath.exists
+          } else false
+        }
+      },
+    )
 
   def workspaceReferences(
       source: AbsolutePath,
