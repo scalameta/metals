@@ -26,6 +26,7 @@ import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.CompletionItemPriority
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import com.google.common.hash.BloomFilter
@@ -40,7 +41,8 @@ final class ReferenceProvider(
     definition: DefinitionProvider,
     trees: Trees,
     buildTargets: BuildTargets,
-) extends SemanticdbFeatureProvider {
+) extends SemanticdbFeatureProvider
+    with CompletionItemPriority {
 
   case class IndexEntry(
       id: BuildTargetIdentifier,
@@ -302,6 +304,21 @@ final class ReferenceProvider(
       } yield sourcePath
 
       result
+    }
+  }
+  override def workspaceMemberPriority(
+      buildTargetIdentifier: String,
+      symbol: String,
+  ): Integer = {
+    val visited = scala.collection.mutable.Set.empty[AbsolutePath]
+    -index.iterator.count { case (path, entry) =>
+      if (
+        entry.id.getUri == buildTargetIdentifier
+        && entry.bloom.mightContain(symbol)
+      ) {
+        val sourcePath = AbsolutePath(path)
+        visited.add(sourcePath) && sourcePath.exists
+      } else false
     }
   }
 

@@ -32,16 +32,17 @@ import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.TextEdit
 
 case class ScalaPresentationCompiler(
-    buildTargetIdentifier: String = "",
-    buildTargetName: Option[String] = None,
-    classpath: Seq[Path] = Nil,
-    options: List[String] = Nil,
-    search: SymbolSearch = EmptySymbolSearch,
-    ec: ExecutionContextExecutor = ExecutionContext.global,
-    sh: Option[ScheduledExecutorService] = None,
-    config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
-    folderPath: Option[Path] = None,
-    reportsLevel: ReportLevel = ReportLevel.Info,
+                                      buildTargetIdentifier: String = "",
+                                      buildTargetName: Option[String] = None,
+                                      classpath: Seq[Path] = Nil,
+                                      options: List[String] = Nil,
+                                      search: SymbolSearch = EmptySymbolSearch,
+                                      ec: ExecutionContextExecutor = ExecutionContext.global,
+                                      sh: Option[ScheduledExecutorService] = None,
+                                      config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
+                                      folderPath: Option[Path] = None,
+                                      reportsLevel: ReportLevel = ReportLevel.Info,
+                                      completionItemPriority: CompletionItemPriority = (_: String, _: String) => 0,
 ) extends PresentationCompiler:
 
   def this() = this("", None, Nil, Nil)
@@ -60,6 +61,11 @@ case class ScalaPresentationCompiler(
 
   override def withReportsLoggerLevel(level: String): PresentationCompiler =
     copy(reportsLevel = ReportLevel.fromString(level))
+
+  override def withCompletionItemPriority(
+      priority: CompletionItemPriority
+  ): PresentationCompiler =
+    copy(completionItemPriority = priority)
 
   val compilerAccess: CompilerAccess[StoreReporter, MetalsDriver] =
     Scala3CompilerAccess(
@@ -144,6 +150,7 @@ case class ScalaPresentationCompiler(
         config,
         buildTargetIdentifier,
         folderPath,
+        completionItemPriority,
       ).completions()
 
     }

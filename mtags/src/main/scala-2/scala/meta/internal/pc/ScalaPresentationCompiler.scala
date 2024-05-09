@@ -28,6 +28,7 @@ import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.AutoImportsResult
+import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.DisplayableException
 import scala.meta.pc.HoverSignature
@@ -61,7 +62,8 @@ case class ScalaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     folderPath: Option[Path] = None,
-    reportsLevel: ReportLevel = ReportLevel.Info
+    reportsLevel: ReportLevel = ReportLevel.Info,
+    completionItemPriority: CompletionItemPriority = (_: String, _: String) => 0
 ) extends PresentationCompiler {
 
   implicit val executionContext: ExecutionContextExecutor = ec
@@ -104,6 +106,11 @@ case class ScalaPresentationCompiler(
       config: PresentationCompilerConfig
   ): PresentationCompiler =
     copy(config = config)
+
+  override def withCompletionItemPriority(
+      priority: CompletionItemPriority
+  ): PresentationCompiler =
+    copy(completionItemPriority = priority)
 
   def this() = this(buildTargetIdentifier = "")
 
@@ -496,7 +503,8 @@ case class ScalaPresentationCompiler(
       search,
       buildTargetIdentifier,
       config,
-      folderPath
+      folderPath,
+      completionItemPriority
     )
   }
 
