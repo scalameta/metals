@@ -45,6 +45,8 @@ final class FileSystemSemanticdbs(
           javaRoot orElse buildTargets.scalaTargetRoot(buildTarget)
         }
       } yield {
+        if (!targetroot.exists)
+          scribe.warn(s"Target root $targetroot does not exist")
         val optScalaVersion =
           if (file.toLanguage.isJava) None
           else buildTargets.scalaTarget(buildTarget).map(_.scalaVersion)
