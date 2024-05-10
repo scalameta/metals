@@ -40,8 +40,6 @@ final class ReferenceProvider(
     trees: Trees,
     buildTargets: BuildTargets,
 ) extends SemanticdbFeatureProvider {
-  private var referencedPackages: BloomFilter[CharSequence] =
-    BloomFilters.create(10000)
 
   case class IndexEntry(
       id: BuildTargetIdentifier,
@@ -71,9 +69,6 @@ final class ReferenceProvider(
       index(file.toNIO) = entry
       docs.documents.foreach { d =>
         d.occurrences.foreach { o =>
-          if (o.symbol.endsWith("/")) {
-            referencedPackages.put(o.symbol)
-          }
           bloom.put(o.symbol)
         }
         d.synthetics.foreach { synthetic =>
@@ -83,7 +78,6 @@ final class ReferenceProvider(
           }
         }
       }
-      resizeReferencedPackages()
     }
   }
 
@@ -504,15 +498,6 @@ final class ReferenceProvider(
   private val noAdjustRange: AdjustRange =
     (range: s.Range, _: String, _: String) => Some(range)
   type AdjustRange = (s.Range, String, String) => Option[s.Range]
-
-  private def resizeReferencedPackages(): Unit = {
-    // Increase the size of the set of referenced packages if the false positive ratio is too high.
-    if (referencedPackages.expectedFpp() > 0.05) {
-      referencedPackages =
-        BloomFilters.create(referencedPackages.approximateElementCount() * 2)
-    }
-  }
-
 }
 
 class SymbolAlternatives(symbol: String, name: String) {
