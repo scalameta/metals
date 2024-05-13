@@ -10,7 +10,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.Failure
-import scala.util.Random
 import scala.util.Success
 import scala.util.Try
 
@@ -51,47 +50,6 @@ case class ScalafixProvider(
   private val scalafixCache = TrieMap.empty[ScalaBinaryVersion, Scalafix]
   private val rulesClassloaderCache =
     TrieMap.empty[ScalafixRulesClasspathKey, URLClassLoader]
-
-  // Warms up the Scalafix instance so that the first organize imports request responds faster.
-  def load(): Future[Unit] = {
-    if (!Testing.isEnabled) {
-      val tmp = workspace
-        .resolve(Directories.tmp)
-        .resolve(s"Main${Random.nextLong()}.scala")
-      Future {
-        val targets =
-          buildTargets.allScala.toList.groupBy(_.scalaVersion).flatMap {
-            case (_, targets) => targets.headOption
-          }
-        val contents = "object Main{}\n"
-        tmp.writeText(contents)
-        val testEvaluation =
-          for (target <- targets)
-            yield scalafixEvaluate(
-              tmp,
-              target,
-              contents,
-              produceSemanticdb = true,
-              List(organizeImportRuleName),
-            )
-        Future.sequence(testEvaluation)
-      }.flatten
-        .map { results =>
-          val evaluated = results.forall(_.isSuccessful())
-          if (!evaluated) scribe.debug("Could not warm up Scalafix")
-
-        }
-        .recover { e: Throwable =>
-          scribe.debug(
-            s"Scalafix issue while warming up due to issue: ${e.getMessage()}",
-            e,
-          )
-        }
-        .andThen { case _ =>
-          if (tmp.exists) tmp.delete()
-        }
-    } else Future.successful(())
-  }
 
   def runAllRules(file: AbsolutePath): Future[List[l.TextEdit]] = {
     val definedRules = rulesFromScalafixConf()
