@@ -137,9 +137,26 @@ class BspConnector(
         case ResolvedBspOne(details) =>
           tables.buildServers.chooseServer(details.getName())
           optSetBuildTool(details.getName())
-          bspServers
-            .newServer(projectRoot, bspTraceRoot, details, bspStatusOpt)
-            .map(Some(_))
+          buildTool match {
+            case Some(bsp: BuildServerProvider)
+                if bsp.shouldRegenerateBspJson(details.getVersion()) =>
+              bsp
+                .generateBspConfig(
+                  workspace,
+                  args => bspConfigGenerator.runUnconditionally(bsp, args),
+                  statusBar,
+                )
+                .map(status => handleGenerationStatus(bsp, status))
+                .flatMap { _ =>
+                  connect(projectRoot, bspTraceRoot, addLivenessMonitor)
+                }
+
+            case _ =>
+              bspServers
+                .newServer(projectRoot, bspTraceRoot, details, bspStatusOpt)
+                .map(Some(_))
+          }
+
         case ResolvedMultiple(_, availableServers) =>
           val distinctServers = availableServers
             .groupBy(_.getName())
@@ -319,37 +336,6 @@ class BspConnector(
 
     val allPossibleServers = possibleServers ++ availableServers
 
-    /**
-     * Handles showing the user what they need to know after an attempt to
-     * generate a bsp config has happened.
-     */
-    def handleGenerationStatus(
-        buildTool: BuildServerProvider,
-        status: BspConfigGenerationStatus,
-    ): Boolean = status match {
-      case BspConfigGenerationStatus.Generated =>
-        tables.buildServers.chooseServer(buildTool.buildServerName)
-        true
-      case Cancelled => false
-      case Failed(exit) =>
-        exit match {
-          case Left(exitCode) =>
-            scribe.error(
-              s"Creation of .bsp/${buildTool.buildServerName} failed with exit code: $exitCode"
-            )
-            client.showMessage(
-              Messages.BspProvider.genericUnableToCreateConfig
-            )
-          case Right(message) =>
-            client.showMessage(
-              Messages.BspProvider.unableToCreateConfigFromMessage(
-                message
-              )
-            )
-        }
-        false
-    }
-
     def handleServerChoice(
         possibleChoice: Option[String],
         currentSelectedServer: Option[String],
@@ -414,5 +400,36 @@ class BspConnector(
           handleServerChoice(choice, currentSelectedServer)
         )
     }
+  }
+
+  /**
+   * Handles showing the user what they need to know after an attempt to
+   * generate a bsp config has happened.
+   */
+  private def handleGenerationStatus(
+      buildTool: BuildServerProvider,
+      status: BspConfigGenerationStatus,
+  ): Boolean = status match {
+    case BspConfigGenerationStatus.Generated =>
+      tables.buildServers.chooseServer(buildTool.buildServerName)
+      true
+    case Cancelled => false
+    case Failed(exit) =>
+      exit match {
+        case Left(exitCode) =>
+          scribe.error(
+            s"Creation of .bsp/${buildTool.buildServerName} failed with exit code: $exitCode"
+          )
+          client.showMessage(
+            Messages.BspProvider.genericUnableToCreateConfig
+          )
+        case Right(message) =>
+          client.showMessage(
+            Messages.BspProvider.unableToCreateConfigFromMessage(
+              message
+            )
+          )
+      }
+      false
   }
 }

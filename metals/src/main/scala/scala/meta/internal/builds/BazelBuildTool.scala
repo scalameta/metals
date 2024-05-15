@@ -60,6 +60,10 @@ case class BazelBuildTool(
 
   override def buildServerName: String = BazelBuildTool.bspName
 
+  override def shouldRegenerateBspJson(currentVersion: String): Boolean = {
+    currentVersion != BazelBuildTool.version
+  }
+
 }
 
 object BazelBuildTool {
@@ -86,7 +90,7 @@ object BazelBuildTool {
       .flatMap(hasProjectView)
       .headOption
 
-  private def projectViewArgs(projectRoot: AbsolutePath): List[String] = {
+  def projectViewArgs(projectRoot: AbsolutePath): List[String] = {
     existingProjectView(projectRoot) match {
       case Some(projectView) =>
         List("-p", projectView.toRelative(projectRoot).toString())
