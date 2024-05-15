@@ -237,6 +237,60 @@ class BazelLspSuite
     } yield ()
   }
 
+  test("warnings") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
+      )
+      _ <- server.didOpen("Hello.scala")
+      _ <- server.didSave("Hello.scala") { _ =>
+        """|package examples.scala3
+           |
+           |sealed trait A
+           |case class B(name: String) extends A
+           |case class C(name: String) extends A
+           |
+           |class Hello {
+           |  def hello: String = "Hello"
+           |  
+           |  val asd: A = ???
+           |  asd match {
+           |    case B(_) =>
+           |  }
+           |}
+           |""".stripMargin
+      }
+      _ = assertNoDiff(
+        server.client.workspaceDiagnostics,
+        """|Hello.scala:11:3: warning: match may not be exhaustive.
+           |It would fail on the following input: C(_)
+           |  asd match {
+           |  ^
+           |  asd match {
+           |  ^
+           |""".stripMargin,
+      )
+      // warnings should not disappear after updating
+      _ <- server.didSave("Hello.scala") { text =>
+        s"""|$text
+            |
+            |class Additional
+            |""".stripMargin
+      }
+      _ = assertNoDiff(
+        server.client.workspaceDiagnostics,
+        """|Hello.scala:11:3: warning: match may not be exhaustive.
+           |It would fail on the following input: C(_)
+           |  asd match {
+           |  ^
+           |  asd match {
+           |  ^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   private val workspaceLayout =
     s"""|/BUILD
         |load("@io_bazel_rules_scala//scala:scala_toolchain.bzl", "scala_toolchain")
