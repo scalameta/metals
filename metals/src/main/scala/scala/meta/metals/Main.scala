@@ -6,38 +6,32 @@ import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.Trace
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.logging.MetalsLogger
 
 import org.eclipse.lsp4j.jsonrpc.Launcher
 
-object Main {
+object Main extends SupportedScalaVersions {
+
+  override protected def formatSingle(
+      major: String,
+      versions: Seq[String],
+  ): String = {
+
+    s"""| - Scala ${major}:
+        |   ${versions.mkString(", ")}
+        |
+        |""".stripMargin
+  }
   def main(args: Array[String]): Unit = {
     if (args.exists(Set("-v", "--version", "-version"))) {
-      val supportedScala2Versions =
-        BuildInfo.supportedScala2Versions
-          .groupBy(ScalaVersions.scalaBinaryVersionFromFullVersion)
-          .toSeq
-          .sortBy(_._1)
-          .map { case (_, versions) => versions.mkString(", ") }
-          .mkString("\n#       ")
-
-      val supportedScala3Versions =
-        BuildInfo.supportedScala3Versions.sorted.mkString(", ")
-
       println(
         s"""|metals ${BuildInfo.metalsVersion}
             |
-            |# Note:
-            |#   Supported Scala versions:
-            |#     Scala 3: $supportedScala3Versions
-            |#     Scala 2:
-            |#       $supportedScala2Versions
+            |${supportedVersionsString(BuildInfo.metalsVersion)}
             |""".stripMargin
       )
-
       sys.exit(0)
     }
     val systemIn = System.in
