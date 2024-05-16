@@ -7,6 +7,7 @@ import scala.concurrent.Future
 
 import scala.meta.Term
 import scala.meta.Type
+import scala.meta.XtensionClassifiable
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position.Range
 import scala.meta.internal.metals.MetalsEnrichments._

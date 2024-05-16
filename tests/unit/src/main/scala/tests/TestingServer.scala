@@ -1098,7 +1098,7 @@ final case class TestingServer(
         Nil
       }
 
-    val handler = { refreshCount: Int =>
+    val handler = { (refreshCount: Int) =>
       scribe.info(s"Refreshing model for $filename")
       if (refreshCount > 0)
         for {

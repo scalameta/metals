@@ -4,7 +4,7 @@ import scala.meta.Dialect
 import scala.meta.inputs._
 import scala.meta.internal.tokenizers.Reporter
 
-private[meta] case class CharArrayReader private (
+private[meta] case class CharArrayReader(
     buf: Array[Char],
     dialect: Dialect,
     reporter: Reporter,

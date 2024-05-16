@@ -66,7 +66,7 @@ class BspConnector(
             (ScalaCli.names(buildServer.getName()) && ScalaCli.names(sel)) ||
               buildServer.getName == sel
           )
-          .map(ResolvedBspOne)
+          .map(ResolvedBspOne.apply)
     }
   }
 

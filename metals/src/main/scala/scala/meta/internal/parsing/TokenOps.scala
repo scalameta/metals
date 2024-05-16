@@ -1,5 +1,6 @@
 package scala.meta.internal.parsing
 
+import scala.meta.XtensionStructure
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.tokens.Token

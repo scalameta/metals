@@ -41,7 +41,7 @@ class SelectionRangeProvider(
       // need to create the selection range, starting from the position
       val _ = locateUntyped(pos)
       val bareRanges = lastVisitedParentTrees
-        .map { tree: Tree =>
+        .map { (tree: Tree) =>
           val selectionRange = new SelectionRange()
           selectionRange.setRange(tree.pos.toLsp)
           selectionRange

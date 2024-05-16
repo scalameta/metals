@@ -400,7 +400,7 @@ object SemanticTokensProvider {
     var delta = initialDelta
     val currentPart = new StringBuilder()
 
-    def emitToken(token: String, tokenType: Int) {
+    def emitToken(token: String, tokenType: Int) = {
       val (toAdd, newDelta) = convertTokensToIntList(
         token,
         delta,

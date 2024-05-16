@@ -11,6 +11,7 @@ import scala.meta.internal.metals.newScalaFile.NewFileTemplate
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.Identifier
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 

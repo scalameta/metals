@@ -257,7 +257,7 @@ class MetalsLspService(
     buildTargetClasses,
     () => folder,
     languageClient,
-    () => testProvider.refreshTestSuites(),
+    () => testProvider.refreshTestSuites.apply(()),
     () => {
       if (clientConfig.isDoctorVisibilityProvider())
         headDoctor.executeRefreshDoctor()
@@ -651,7 +651,6 @@ class MetalsLspService(
     new ImplementationProvider(
       semanticdbs,
       folder,
-      definitionIndex,
       buffers,
       definitionProvider,
       trees,

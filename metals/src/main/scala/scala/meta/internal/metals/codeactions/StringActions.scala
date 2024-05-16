@@ -3,6 +3,9 @@ package scala.meta.internal.metals.codeactions
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.XtensionClassifiable
+import scala.meta.XtensionDialectApply
+import scala.meta.XtensionTokenizeDialectInput
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CodeAction

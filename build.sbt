@@ -146,6 +146,7 @@ def lintingOptions(scalaVersion: String) = {
   val unused213 = "-Wunused"
   val unused3 = "-Wunused:all"
   val common = List(
+    "-Xsource:3",
     // desugaring of for yield caused pattern var to complain
     // https://github.com/scala/bug/issues/10287
     "-Wconf:msg=in anonymous function is never used:silent",
@@ -157,6 +158,7 @@ def lintingOptions(scalaVersion: String) = {
     "-Wconf:src=*.MtagsIndexer.scala&msg=parameter owner in method visitOccurrence:silent",
     "-Wconf:src=*.ScaladocParser.scala&msg=parameter (pos|message) in method reportError:silent",
     "-Wconf:src=*.TreeViewProvider.scala&msg=parameter params in method (children|parent) is never used:silent",
+    "-Wconf:src=*.InheritanceContext.scala&msg=parameter ec in method getLocations is never used:silent",
     // silence "The outer reference in this type test cannot be checked at run time."
     "-Wconf:src=.*(CompletionProvider|ArgCompletions|Completions|Keywords|IndentOnPaste).scala&msg=The outer reference:silent",
   )
@@ -539,6 +541,7 @@ lazy val input = project
   .in(file("tests/input"))
   .settings(
     sharedSettings,
+    scalacOptions -= "-Xsource:3",
     publish / skip := true,
     libraryDependencies ++= List(
       // these projects have macro annotations
