@@ -332,7 +332,6 @@ case class ScalafixProvider(
   ): Future[ScalafixEvaluation] = {
     val isScala3 = ScalaVersions.isScala3Version(scalaTarget.scalaVersion)
     val isSource3 = scalaTarget.scalac.getOptions().contains("-Xsource:3")
-    isScala3 || isSource3
 
     val scalaBinaryVersion =
       if (isScala3) "2.13" else scalaTarget.scalaBinaryVersion
@@ -447,10 +446,11 @@ case class ScalafixProvider(
           if isScala3Dialect && suggestConfigAmend && rules.contains(
             organizeImportRuleName
           ) && !tables.dismissedNotifications.ScalafixConfAmend.isDismissed =>
+        val removeUnusedSetting =
+          if (canRemoveUnused) List(("OrganizeImports.removeUnused", "false"))
+          else Nil
         val amendSettings =
-          ("OrganizeImports.targetDialect", "Scala3") :: List(
-            ("OrganizeImports.removeUnused", "false")
-          ).filterNot(_ => canRemoveUnused)
+          ("OrganizeImports.targetDialect", "Scala3") :: removeUnusedSetting
         val scalaconfFileText =
           try (Some(Files.readString(path)))
           catch {
