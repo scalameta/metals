@@ -12,6 +12,7 @@ import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.Type
+import scala.meta.XtensionClassifiable
 import scala.meta.internal.metals.ReferenceProvider
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath

@@ -14,6 +14,9 @@ import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.Type
+import scala.meta.XtensionCollectionLikeUI
+import scala.meta.XtensionDialectApply
+import scala.meta.XtensionTokenizeDialectInput
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands

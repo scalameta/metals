@@ -21,6 +21,7 @@ import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TypeRef
+import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.meta.io.AbsolutePath
 

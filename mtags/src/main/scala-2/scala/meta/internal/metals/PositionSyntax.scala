@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import scala.meta.Position
+import scala.meta.internal.inputs.XtensionInputSyntaxStructure
 
 object PositionSyntax {
 

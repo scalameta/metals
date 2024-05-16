@@ -20,6 +20,7 @@ import scala.tools.nsc.reporters.Reporter
 import scala.util.control.NonFatal
 import scala.{meta => m}
 
+import scala.meta.XtensionSyntax
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
@@ -99,7 +100,8 @@ class MetalsGlobal(
       else super.pluginsMacroExpand(typer, expandee, mode, pt)
     }
   }
-  override lazy val analyzer = new MetalsInteractiveAnalyzer(compiler)
+  override lazy val analyzer: this.MetalsInteractiveAnalyzer =
+    new MetalsInteractiveAnalyzer(compiler)
 
   def isDocs: Boolean = System.getProperty("metals.signature-help") != "no-docs"
 

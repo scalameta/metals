@@ -169,7 +169,10 @@ final class BuildTargetClasses(
       target = item.getTarget
       className <- item.getClasses.asScala
       symbol <-
-        symbolFromClassName(className, List(Descriptor.Term, Descriptor.Type))
+        symbolFromClassName(
+          className,
+          List(Descriptor.Term.apply, Descriptor.Type.apply),
+        )
     } {
       // item.getFramework() can return null!
       val framework = TestFramework(Option(item.getFramework()))
@@ -183,9 +186,9 @@ final class BuildTargetClasses(
   ): List[String => Descriptor] = {
     buildTargets.scalaTarget(buildTarget) match {
       case Some(_) =>
-        List(Descriptor.Term)
+        List(Descriptor.Term.apply)
       case None =>
-        List(Descriptor.Type)
+        List(Descriptor.Type.apply)
     }
   }
 

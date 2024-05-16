@@ -20,7 +20,6 @@ import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.SemanticdbFeatureProvider
-import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.IndexingResult
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OverriddenSymbol
@@ -39,6 +38,7 @@ import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.semanticdb.TypeSignature
+import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PcSymbolKind
 import scala.meta.pc.PcSymbolProperty
@@ -50,7 +50,6 @@ import org.eclipse.lsp4j.TextDocumentPositionParams
 final class ImplementationProvider(
     semanticdbs: Semanticdbs,
     workspace: AbsolutePath,
-    index: GlobalSymbolIndex,
     buffer: Buffers,
     definitionProvider: DefinitionProvider,
     trees: Trees,
@@ -204,7 +203,6 @@ final class ImplementationProvider(
               .toGlobal(
                 compilers,
                 implementationsInDependencySources.asScala.toMap,
-                source,
               )
 
         symbolLocationsFromContext(

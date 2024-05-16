@@ -307,7 +307,7 @@ object SbtBuildTool {
     writtenPlugin || writtenMeta
   }
 
-  private case class PluginDetails private (
+  private case class PluginDetails(
       description: Seq[String],
       artifact: String,
       resolver: Option[String],

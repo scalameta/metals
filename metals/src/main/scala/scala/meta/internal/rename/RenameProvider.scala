@@ -27,6 +27,7 @@ import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
