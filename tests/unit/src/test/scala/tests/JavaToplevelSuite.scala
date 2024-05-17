@@ -67,6 +67,17 @@ class JavaToplevelSuite extends BaseToplevelSuite {
   )
 
   check(
+    "broken",
+    """|package dot.enum;
+       |
+       |public class Abc {
+       |  public static final String REFERRER_ORIGIN_HOST = "audit.example.org.apache.hadoop.shaded.org.;
+       |}
+       |""".stripMargin,
+    List("dot/enum/Abc#"),
+  )
+
+  check(
     "extends",
     """|package dot.example;
        |
