@@ -204,6 +204,7 @@ class ProjectMetalsLspService(
     languageClient,
     tables,
     clientConfig.initialConfig,
+    workDoneProgress,
   )
 
   protected val bspServers: BspServers = new BspServers(
@@ -215,6 +216,7 @@ class ProjectMetalsLspService(
     bspGlobalDirectories,
     clientConfig.initialConfig,
     () => userConfig,
+    workDoneProgress,
   )
 
   protected val bspConnector: BspConnector = new BspConnector(

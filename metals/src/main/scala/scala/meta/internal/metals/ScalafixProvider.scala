@@ -48,7 +48,7 @@ case class ScalafixProvider(
     buildTargets: BuildTargets,
     interactive: InteractiveSemanticdbs,
     tables: Tables,
-    buildHasErrors: AbsolutePath => Boolean
+    buildHasErrors: AbsolutePath => Boolean,
 )(implicit ec: ExecutionContext) {
   import ScalafixProvider._
   private val scalafixCache = TrieMap.empty[ScalaBinaryVersion, Scalafix]

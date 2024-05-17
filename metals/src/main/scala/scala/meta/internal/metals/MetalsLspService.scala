@@ -568,7 +568,7 @@ abstract class MetalsLspService(
     buildTargets,
     interactiveSemanticdbs,
     tables,
-    buildHasErrors
+    buildHasErrors,
   )
 
   protected val codeActionProvider: CodeActionProvider = new CodeActionProvider(
@@ -736,7 +736,7 @@ abstract class MetalsLspService(
     ) {
       compilers.restartAll()
     }
-    Future.successful()
+    Future.unit
   }
 
   override def didOpen(
