@@ -447,8 +447,8 @@ case class ScalafixProvider(
             organizeImportRuleName
           ) && !tables.dismissedNotifications.ScalafixConfAmend.isDismissed =>
         val removeUnusedSetting =
-          if (canRemoveUnused) List(("OrganizeImports.removeUnused", "false"))
-          else Nil
+          if (canRemoveUnused) Nil
+          else List(("OrganizeImports.removeUnused", "false"))
         val amendSettings =
           ("OrganizeImports.targetDialect", "Scala3") :: removeUnusedSetting
         val scalaconfFileText =
