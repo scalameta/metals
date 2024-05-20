@@ -151,18 +151,20 @@ final class TargetData {
   def targetJarClasspath(
       id: BuildTargetIdentifier
   ): Option[List[AbsolutePath]] = {
-    buildTargetDependencyModules.get(id) match {
-      case None =>
-        jvmTarget(id).flatMap { target =>
-          target.jarClasspath
-        }
-      case Some(value) =>
-        Some(value.flatMap(_.getArtifacts().asScala).collect {
+    val fromDepModules =
+      for {
+        module <- buildTargetDependencyModules.getOrElse(id, Nil)
+        artifact <- module.getArtifacts().asScala
+        path <- artifact match {
           case artifact: MavenDependencyModuleArtifact
               if artifact.getClassifier() == null =>
-            artifact.getUri().toAbsolutePath
-        })
-    }
+            Some(artifact.getUri().toAbsolutePath)
+          case _ => None
+        }
+      } yield path
+
+    if (fromDepModules.isEmpty) jvmTarget(id).flatMap(_.jarClasspath)
+    else Some(fromDepModules)
   }
 
   def targetClasspath(
