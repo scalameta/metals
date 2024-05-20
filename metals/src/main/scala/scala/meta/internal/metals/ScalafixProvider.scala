@@ -1,8 +1,10 @@
 package scala.meta.internal.metals
 
 import java.net.URLClassLoader
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import java.{util => ju}
 
 import scala.collection.concurrent.TrieMap
@@ -12,6 +14,7 @@ import scala.concurrent.Promise
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
+import scala.util.control.NonFatal
 
 import scala.meta._
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -45,6 +48,7 @@ case class ScalafixProvider(
     buildTargets: BuildTargets,
     buildClient: MetalsBuildClient,
     interactive: InteractiveSemanticdbs,
+    tables: Tables,
 )(implicit ec: ExecutionContext) {
   import ScalafixProvider._
   private val scalafixCache = TrieMap.empty[ScalaBinaryVersion, Scalafix]
@@ -312,6 +316,8 @@ case class ScalafixProvider(
    * @param scalaTarget target with all the data about the module
    * @param inBuffers file version that might not be saved to disk
    * @param produceSemanticdb when set to true, we will try to create semanticdb and
+   * @param rules list of rules to execute
+   * @param suggestConfigAmend if should suggest updating scalafix configuration where relevant
    * save to disk for Scalafix to use. This make organize imports work even if the file is
    * unsaved. This however requires us to save both the file and semanticdb.
    * @return
@@ -322,14 +328,10 @@ case class ScalafixProvider(
       inBuffers: String,
       produceSemanticdb: Boolean,
       rules: List[String],
+      suggestConfigAmend: Boolean = true,
   ): Future[ScalafixEvaluation] = {
     val isScala3 = ScalaVersions.isScala3Version(scalaTarget.scalaVersion)
     val isSource3 = scalaTarget.scalac.getOptions().contains("-Xsource:3")
-    val isScala3Dialect = isScala3 || isSource3
-    val canRemoveUnused = !isScala3 ||
-      // https://github.com/scala/scala3/pull/17835
-      Seq("3.0", "3.1", "3.2", "3.3")
-        .forall(v => !scalaTarget.scalaVersion.startsWith(v))
 
     val scalaBinaryVersion =
       if (isScala3) "2.13" else scalaTarget.scalaBinaryVersion
@@ -397,13 +399,21 @@ case class ScalafixProvider(
         list
       }
 
-      lazyClasspath.map { classpath =>
+      for {
+        classpath <- lazyClasspath
+        confFile <- getScalafixConf(
+          isSource3,
+          rules,
+          scalaVersion,
+          suggestConfigAmend,
+        )
+      } yield {
         val evaluated = api
           .newArguments()
           .withScalaVersion(scalaVersion)
           .withClasspath(classpath)
           .withToolClasspath(urlClassLoaderWithExternalRule)
-          .withConfig(scalafixConf(isScala3Dialect, canRemoveUnused).asJava)
+          .withConfig(confFile.asJava)
           .withRules(rules.asJava)
           .withPaths(List(diskFilePath.toNIO).asJava)
           .withSourceroot(sourceroot.toNIO)
@@ -416,6 +426,79 @@ case class ScalafixProvider(
       }
     }
     result.flatten
+  }
+
+  private def getScalafixConf(
+      isScalaSource: Boolean,
+      rules: List[String],
+      scalaVersion: String,
+      suggestConfigAmend: Boolean,
+  ): Future[Option[Path]] = {
+    val isScala3 = scalaVersion.startsWith("3")
+    val isScala3Dialect = isScala3 || isScalaSource
+    val canRemoveUnused = !isScala3 ||
+      // https://github.com/scala/scala3/pull/17835
+      Seq("3.0", "3.1", "3.2", "3.3")
+        .forall(v => !scalaVersion.startsWith(v))
+    val confFile = scalafixConf(isScala3Dialect, canRemoveUnused)
+    confFile match {
+      case Some(path)
+          if isScala3Dialect && suggestConfigAmend && rules.contains(
+            organizeImportRuleName
+          ) && !tables.dismissedNotifications.ScalafixConfAmend.isDismissed =>
+        val removeUnusedSetting =
+          if (canRemoveUnused) Nil
+          else List(("OrganizeImports.removeUnused", "false"))
+        val amendSettings =
+          ("OrganizeImports.targetDialect", "Scala3") :: removeUnusedSetting
+        val scalaconfFileText =
+          try (Some(Files.readString(path)))
+          catch {
+            case NonFatal(e) =>
+              scribe.warn(
+                s"Failed to read in `.scalafix.conf` with an error $e"
+              )
+              None
+          }
+        (for {
+          config <- scalaconfFileText
+          newSettings = amendSettings.filterNot { case (name, _) =>
+            config.contains(name)
+          }
+          if !newSettings.isEmpty
+        } yield {
+          val settingLines = newSettings.map { case (name, value) =>
+            s"$name = $value"
+          }
+          languageClient
+            .showMessageRequest(
+              Messages.ScalafixConfig
+                .amendRequest(settingLines, scalaVersion, isScalaSource)
+            )
+            .asScala
+            .map {
+              case Messages.ScalafixConfig.adjustScalafix =>
+                try {
+                  Files.write(
+                    path,
+                    settingLines
+                      .mkString(System.lineSeparator)
+                      .getBytes(StandardCharsets.UTF_8),
+                    StandardOpenOption.APPEND,
+                  )
+                } catch {
+                  case NonFatal(e) =>
+                    scribe.warn(s"Failed to amend scalafix config: $e")
+                }
+              case Messages.ScalafixConfig.dontShowAgain =>
+                tables.dismissedNotifications.ScalafixConfAmend.dismissForever()
+              case _ =>
+            }
+            .withTimeout(15, ju.concurrent.TimeUnit.SECONDS)
+            .map(_ => confFile)
+        }).getOrElse(Future.successful(confFile))
+      case _ => Future.successful(confFile)
+    }
   }
 
   private def reportScalafixError(

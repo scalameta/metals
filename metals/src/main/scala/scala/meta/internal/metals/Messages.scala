@@ -1010,7 +1010,7 @@ object Messages {
 
     val cancel = new MessageActionItem("Cancel")
     val waitAction = new MessageActionItem("Wait")
-    val waitAlways = new MessageActionItem("WaitAlways")
+    val waitAlways = new MessageActionItem("Wait always")
 
     def params(actionName: String, minutes: Int): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
@@ -1036,6 +1036,29 @@ object Messages {
 
   val indexing = "Indexing"
   val importingBuild = "Importing build"
+
+  object ScalafixConfig {
+    val adjustScalafix = new MessageActionItem("Yes")
+    val ignore = new MessageActionItem("Not now")
+    val dontShowAgain = new MessageActionItem("Don't show again")
+    def amendRequest(
+        settings: List[String],
+        scalaVersion: String,
+        isScala3Source: Boolean,
+    ): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      val scala3SourceText = if (isScala3Source) " with `-Xsource:3`" else ""
+      params.setMessage(
+        s"""|Your `.scalafix.conf` misses the following settings for organize imports for $scalaVersion$scala3SourceText:
+            |${settings.map(s => s"`$s`").mkString(", ")}.
+            |Would you like to add them?
+            |""".stripMargin
+      )
+      params.setType(MessageType.Info)
+      params.setActions(List(adjustScalafix, ignore, dontShowAgain).asJava)
+      params
+    }
+  }
 
 }
 

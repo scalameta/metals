@@ -745,6 +745,7 @@ class MetalsLspService(
     buildTargets,
     buildClient,
     interactiveSemanticdbs,
+    tables,
   )
 
   private val codeActionProvider: CodeActionProvider = new CodeActionProvider(
