@@ -24,7 +24,7 @@ import org.eclipse.lsp4j.CallHierarchyPrepareParams
 
 final case class CallHierarchyProvider(
     workspace: AbsolutePath,
-    semanticdbs: Semanticdbs,
+    semanticdbs: () => Semanticdbs,
     definition: DefinitionProvider,
     references: ReferenceProvider,
     icons: Icons,
@@ -73,7 +73,7 @@ final case class CallHierarchyProvider(
     }
 
     val source = params.getTextDocument.getUri.toAbsolutePath
-    semanticdbs.textDocument(source).documentIncludingStale match {
+    semanticdbs().textDocument(source).documentIncludingStale match {
       case Some(doc) =>
         val results =
           definition.positionOccurrences(source, params.getPosition, doc)
@@ -116,7 +116,7 @@ final case class CallHierarchyProvider(
     def getIncomingCallsInSpecifiedSource(
         source: AbsolutePath
     ): List[Future[CallHierarchyIncomingCall]] = {
-      semanticdbs.textDocument(source).documentIncludingStale match {
+      semanticdbs().textDocument(source).documentIncludingStale match {
         case Some(doc) if (!containsDuplicates(info.visited)) =>
           val results = trees
             .get(source)
@@ -194,7 +194,7 @@ final case class CallHierarchyProvider(
       } yield results
     }
 
-    semanticdbs.textDocument(source).documentIncludingStale match {
+    semanticdbs().textDocument(source).documentIncludingStale match {
       case Some(doc) if (!containsDuplicates(info.visited)) =>
         trees
           .findLastEnclosingAt(

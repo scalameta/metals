@@ -13,14 +13,14 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 /**
  * A helper to construct clear and actionable warning messages.
  */
-final class Warnings(
+final class ProjectWarnings(
     workspace: AbsolutePath,
     buildTargets: BuildTargets,
     statusBar: StatusBar,
     icons: Icons,
     buildTools: BuildTools,
     isCompiling: BuildTargetIdentifier => Boolean,
-) {
+) extends Warnings {
   def noSemanticdb(path: AbsolutePath): Unit = {
     def doesntWorkBecause =
       s"code navigation does not work for the file '$path' because"
@@ -153,4 +153,12 @@ final class Warnings(
       )
     )
   }
+}
+
+trait Warnings {
+  def noSemanticdb(path: AbsolutePath): Unit
+}
+
+object NoopWarnings extends Warnings {
+  def noSemanticdb(path: AbsolutePath): Unit = {}
 }

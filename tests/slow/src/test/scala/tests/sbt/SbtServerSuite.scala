@@ -294,7 +294,7 @@ class SbtServerSuite
             |""".stripMargin
       )
       _ = buffer.clear()
-      _ <- server.server.restartBspServer()
+      _ <- server.headServer.restartBspServer()
     } yield {
       val logs = buffer.result()
       assert(logs.contains("sbt server started"))

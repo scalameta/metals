@@ -46,9 +46,9 @@ case class ScalafixProvider(
     compilations: Compilations,
     languageClient: MetalsLanguageClient,
     buildTargets: BuildTargets,
-    buildClient: MetalsBuildClient,
     interactive: InteractiveSemanticdbs,
     tables: Tables,
+    buildHasErrors: AbsolutePath => Boolean,
 )(implicit ec: ExecutionContext) {
   import ScalafixProvider._
   private val scalafixCache = TrieMap.empty[ScalaBinaryVersion, Scalafix]
@@ -113,7 +113,7 @@ case class ScalafixProvider(
           case results
               if !scalafixSucceded(results) && hasStaleOrMissingSemanticdb(
                 results
-              ) && buildClient.buildHasErrors(file) =>
+              ) && buildHasErrors(file) =>
             val msg = "Attempt to organize your imports failed. " +
               "It looks like you have compilation issues causing your semanticdb to be stale. " +
               "Ensure everything is compiling and try again."

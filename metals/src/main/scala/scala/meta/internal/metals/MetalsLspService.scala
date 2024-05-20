@@ -19,36 +19,17 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.control.NonFatal
 
-import scala.meta.internal.bsp.BspConfigGenerationStatus._
-import scala.meta.internal.bsp.BspConfigGenerator
-import scala.meta.internal.bsp.BspConnector
-import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.BspSession
-import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.bsp.ConnectionBspStatus
-import scala.meta.internal.bsp.ScalaCliBspScope
-import scala.meta.internal.builds.BloopInstall
-import scala.meta.internal.builds.BloopInstallProvider
 import scala.meta.internal.builds.BspErrorHandler
-import scala.meta.internal.builds.BuildServerProvider
-import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildToolSelector
-import scala.meta.internal.builds.BuildTools
-import scala.meta.internal.builds.Digest
-import scala.meta.internal.builds.MillBuildTool
-import scala.meta.internal.builds.SbtBuildTool
-import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.builds.VersionRecommendation
 import scala.meta.internal.builds.WorkspaceReload
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StdReportContext
-import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
@@ -60,16 +41,16 @@ import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.doctor.HeadDoctor
+import scala.meta.internal.metals.doctor.MetalsServiceInfo
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
+import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.scalacli.ScalaCliServers
 import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.metals.watcher.FileWatcher
-import scala.meta.internal.metals.watcher.FileWatcherEvent
-import scala.meta.internal.metals.watcher.FileWatcherEvent.EventType
 import scala.meta.internal.mtags._
 import scala.meta.internal.parsing.ClassFinder
 import scala.meta.internal.parsing.ClassFinderGranularity
@@ -79,8 +60,6 @@ import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.search.SymbolHierarchyOps
-import scala.meta.internal.semver.SemVer
-import scala.meta.internal.tvp._
 import scala.meta.internal.worksheets.DecorationWorksheetPublisher
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher
@@ -118,7 +97,7 @@ import org.eclipse.{lsp4j => l}
  *  Initialization parameters send by the client in the initialize request,
  *  which is the first request sent to the server by the client.
  */
-class MetalsLspService(
+abstract class MetalsLspService(
     ec: ExecutionContextExecutorService,
     sh: ScheduledExecutorService,
     serverInputs: MetalsServerInputs,
@@ -129,7 +108,6 @@ class MetalsLspService(
     focusedDocument: () => Option[AbsolutePath],
     shellRunner: ShellRunner,
     timerProvider: TimerProvider,
-    initTreeView: () => Unit,
     folder: AbsolutePath,
     folderVisibleName: Option[String],
     headDoctor: HeadDoctor,
@@ -142,15 +120,15 @@ class MetalsLspService(
   import serverInputs._
 
   @volatile
-  private var userConfig: UserConfiguration = initialUserConfig
-  private val userConfigPromise: Promise[Unit] = Promise()
+  protected var userConfig: UserConfiguration = initialUserConfig
+  protected val userConfigPromise: Promise[Unit] = Promise()
 
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
 
   def getVisibleName: String = folderVisibleName.getOrElse(folder.toString())
 
-  private val cancelables = new MutableCancelable()
+  protected val cancelables = new MutableCancelable()
   val isCancelled = new AtomicBoolean(false)
   val wasInitialized = new AtomicBoolean(false)
 
@@ -172,9 +150,9 @@ class MetalsLspService(
     }
   }
 
-  private implicit val executionContext: ExecutionContextExecutorService = ec
+  protected implicit val executionContext: ExecutionContextExecutorService = ec
 
-  private val embedded: Embedded = register(
+  protected val embedded: Embedded = register(
     new Embedded(workDoneProgress)
   )
 
@@ -193,61 +171,41 @@ class MetalsLspService(
   )
 
   val folderReportsZippper: FolderReportsZippper =
-    FolderReportsZippper(doctor.getTargetsInfoForReports, reports)
-
-  private val buildTools: BuildTools = new BuildTools(
-    folder,
-    bspGlobalDirectories,
-    () => userConfig,
-    () => tables.buildServers.selectedServer().nonEmpty,
-    charset,
-  )
+    FolderReportsZippper(doctor, reports)
 
   def javaHome = userConfig.javaHome
-  private val optJavaHome =
+  protected val optJavaHome: Option[AbsolutePath] =
     JdkSources.defaultJavaHome(javaHome).headOption
-  private val maybeJdkVersion: Option[JdkVersion] =
+  protected val maybeJdkVersion: Option[JdkVersion] =
     JdkVersion.maybeJdkVersionFromJavaHome(optJavaHome)
 
-  private val fingerprints = new MutableMd5Fingerprints
-  private val mtags = new Mtags
-  private val focusedDocumentBuildTarget =
+  protected val fingerprints = new MutableMd5Fingerprints
+  protected val mtags = new Mtags
+  protected val focusedDocumentBuildTarget =
     new AtomicReference[b.BuildTargetIdentifier]()
-  private val definitionIndex = newSymbolIndex()
-  private val symbolDocs = new Docstrings(definitionIndex)
+  protected val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
+  protected val symbolDocs = new Docstrings(definitionIndex)
   var bspSession: Option[BspSession] =
     Option.empty[BspSession]
-  private val savedFiles = new ActiveFiles(time)
-  private val recentlyOpenedFiles = new ActiveFiles(time)
-  val isImportInProcess = new AtomicBoolean(false)
-  val isConnecting = new AtomicBoolean(false)
-  val willGenerateBspConfig = new AtomicReference(Set.empty[util.UUID])
-
-  def withWillGenerateBspConfig[T](body: => Future[T]): Future[T] = {
-    val uuid = util.UUID.randomUUID()
-    willGenerateBspConfig.updateAndGet(_ + uuid)
-    body.map { result =>
-      willGenerateBspConfig.updateAndGet(_ - uuid)
-      result
-    }
-  }
+  protected val savedFiles = new ActiveFiles(time)
+  protected val recentlyOpenedFiles = new ActiveFiles(time)
 
   var excludedPackageHandler: ExcludedPackagesHandler =
     ExcludedPackagesHandler.default
 
-  private val mainBuildTargetsData = new TargetData
+  protected val mainBuildTargetsData = new TargetData
   val buildTargets: BuildTargets =
     BuildTargets.from(folder, mainBuildTargetsData, tables)
 
-  private val buildTargetClasses =
+  protected val buildTargetClasses =
     new BuildTargetClasses(buildTargets)
 
-  private val sourceMapper = SourceMapper(
+  protected val sourceMapper: SourceMapper = SourceMapper(
     buildTargets,
     buffers,
   )
 
-  private val scalaVersionSelector = new ScalaVersionSelector(
+  protected val scalaVersionSelector = new ScalaVersionSelector(
     () => userConfig,
     buildTargets,
   )
@@ -268,17 +226,6 @@ class MetalsLspService(
     onStartCompilation,
     () => userConfig,
   )
-  private val fileWatcher = register(
-    new FileWatcher(
-      initialServerConfig,
-      () => folder,
-      buildTargets,
-      fileWatchFilter,
-      params => {
-        didChangeWatchedFiles(params)
-      },
-    )
-  )
   var indexingPromise: Promise[Unit] = Promise[Unit]()
   var buildServerPromise: Promise[Unit] = Promise[Unit]()
   val parseTrees = new BatchedFunction[AbsolutePath, Unit](
@@ -292,54 +239,27 @@ class MetalsLspService(
     "trees",
   )
 
-  private val onBuildChanged =
-    BatchedFunction.fromFuture[AbsolutePath, Unit](
-      onBuildChangedUnbatched,
-      "onBuildChanged",
-    )
+  def pauseables: Pauseable
 
-  val pauseables: Pauseable = Pauseable.fromPausables(
-    onBuildChanged ::
-      parseTrees ::
-      compilations.pauseables
-  )
+  protected val trees = new Trees(buffers, scalaVersionSelector)
 
-  private val trees = new Trees(buffers, scalaVersionSelector)
-
-  private val documentSymbolProvider = new DocumentSymbolProvider(
+  protected val documentSymbolProvider = new DocumentSymbolProvider(
     trees,
     initializeParams.supportsHierarchicalDocumentSymbols,
   )
 
-  private val onTypeFormattingProvider =
+  protected val onTypeFormattingProvider =
     new OnTypeFormattingProvider(buffers, trees, () => userConfig)
-  private val rangeFormattingProvider =
+  protected val rangeFormattingProvider =
     new RangeFormattingProvider(buffers, trees, () => userConfig)
 
-  private val foldingRangeProvider = new FoldingRangeProvider(
+  protected val foldingRangeProvider = new FoldingRangeProvider(
     trees,
     buffers,
     foldOnlyLines = initializeParams.foldOnlyLines,
   )
 
-  private val bloopInstall: BloopInstall = new BloopInstall(
-    folder,
-    languageClient,
-    buildTools,
-    tables,
-    shellRunner,
-    () => userConfig,
-  )
-
-  private val bspConfigGenerator: BspConfigGenerator = new BspConfigGenerator(
-    folder,
-    languageClient,
-    shellRunner,
-    statusBar,
-    () => userConfig,
-  )
-
-  private val diagnostics: Diagnostics = new Diagnostics(
+  protected val diagnostics: Diagnostics = new Diagnostics(
     buffers,
     languageClient,
     clientConfig.initialConfig.statistics,
@@ -347,119 +267,19 @@ class MetalsLspService(
     trees,
   )
 
-  private val warnings: Warnings = new Warnings(
-    folder,
-    buildTargets,
-    statusBar,
-    clientConfig.icons,
-    buildTools,
-    compilations.isCurrentlyCompiling,
-  )
+  protected def semanticdbs(): Semanticdbs
 
-  private val fileSystemSemanticdbs: FileSystemSemanticdbs =
-    new FileSystemSemanticdbs(
-      buildTargets,
-      charset,
-      folder,
-      fingerprints,
-      scalaCli,
-    )
-
-  private val interactiveSemanticdbs: InteractiveSemanticdbs = {
-    val javaInteractiveSemanticdb = maybeJdkVersion.map(jdkVersion =>
-      JavaInteractiveSemanticdb.create(folder, buildTargets, jdkVersion)
-    )
-    register(
-      new InteractiveSemanticdbs(
-        folder,
-        buildTargets,
-        charset,
-        tables,
-        () => compilers,
-        clientConfig,
-        () => semanticDBIndexer,
-        javaInteractiveSemanticdb,
-        buffers,
-        scalaCli,
-      )
-    )
-  }
-
-  private val semanticdbs: Semanticdbs = AggregateSemanticdbs(
-    List(
-      fileSystemSemanticdbs,
-      interactiveSemanticdbs,
-    )
-  )
-
-  private val connectionBspStatus =
+  protected val connectionBspStatus =
     new ConnectionBspStatus(bspStatus, folder, clientConfig.icons())
 
-  private val bspErrorHandler: BspErrorHandler =
+  protected val bspErrorHandler: BspErrorHandler =
     new BspErrorHandler(
       () => bspSession,
       tables,
       connectionBspStatus,
     )
 
-  val buildClient: ForwardingMetalsBuildClient =
-    new ForwardingMetalsBuildClient(
-      languageClient,
-      diagnostics,
-      buildTargets,
-      clientConfig,
-      statusBar,
-      time,
-      report => {
-        didCompileTarget(report)
-        compilers.didCompile(report)
-      },
-      onBuildTargetDidCompile = { target =>
-        worksheetProvider.onBuildTargetDidCompile(target)
-      },
-      onBuildTargetDidChangeFunc = params => {
-        onBuildTargetChanges(params)
-      },
-      bspErrorHandler,
-      workDoneProgress,
-    )
-
-  private val bloopServers: BloopServers = new BloopServers(
-    buildClient,
-    languageClient,
-    tables,
-    clientConfig.initialConfig,
-    workDoneProgress,
-  )
-
-  private val bspServers: BspServers = new BspServers(
-    folder,
-    charset,
-    languageClient,
-    buildClient,
-    tables,
-    bspGlobalDirectories,
-    clientConfig.initialConfig,
-    () => userConfig,
-    workDoneProgress,
-  )
-
-  private val bspConnector: BspConnector = new BspConnector(
-    bloopServers,
-    bspServers,
-    buildTools,
-    languageClient,
-    tables,
-    () => userConfig,
-    statusBar,
-    workDoneProgress,
-    bspConfigGenerator,
-    () => bspSession.map(_.mainConnection),
-    restartBspServer,
-    connectionBspStatus,
-  )
-
-  private val workspaceSymbols: WorkspaceSymbolProvider =
+  protected val workspaceSymbols: WorkspaceSymbolProvider =
     new WorkspaceSymbolProvider(
       folder,
       buildTargets,
@@ -469,13 +289,14 @@ class MetalsLspService(
       classpathSearchIndexer = classpathSearchIndexer,
     )
 
-  private val definitionProvider: DefinitionProvider = new DefinitionProvider(
+  protected def warnings: Warnings = NoopWarnings
+
+  protected val definitionProvider: DefinitionProvider = new DefinitionProvider(
     folder,
     mtags,
     buffers,
     definitionIndex,
     semanticdbs,
-    warnings,
     () => compilers,
     trees,
     buildTargets,
@@ -483,6 +304,7 @@ class MetalsLspService(
     saveDefFileToDisk = !clientConfig.isVirtualDocumentSupported(),
     sourceMapper,
     workspaceSymbols,
+    () => warnings,
   )
 
   val stacktraceAnalyzer: StacktraceAnalyzer = new StacktraceAnalyzer(
@@ -493,7 +315,7 @@ class MetalsLspService(
     clientConfig.commandInHtmlFormat(),
   )
 
-  private val testProvider: TestSuitesProvider = new TestSuitesProvider(
+  protected val testProvider: TestSuitesProvider = new TestSuitesProvider(
     buildTargets,
     buildTargetClasses,
     trees,
@@ -507,7 +329,7 @@ class MetalsLspService(
     folder,
   )
 
-  private val codeLensProvider: CodeLensProvider = {
+  protected val codeLensProvider: CodeLensProvider = {
     val runTestLensProvider =
       new RunTestCodeLens(
         buildTargetClasses,
@@ -538,7 +360,7 @@ class MetalsLspService(
     )
   }
 
-  private val referencesProvider: ReferenceProvider = new ReferenceProvider(
+  protected val referencesProvider: ReferenceProvider = new ReferenceProvider(
     folder,
     semanticdbs,
     buffers,
@@ -547,7 +369,7 @@ class MetalsLspService(
     buildTargets,
   )
 
-  private val formattingProvider: FormattingProvider = new FormattingProvider(
+  protected val formattingProvider: FormattingProvider = new FormattingProvider(
     folder,
     buffers,
     () => userConfig,
@@ -560,13 +382,13 @@ class MetalsLspService(
     buildTargets,
   )
 
-  private val javaHighlightProvider: JavaDocumentHighlightProvider =
+  protected val javaHighlightProvider: JavaDocumentHighlightProvider =
     new JavaDocumentHighlightProvider(
       definitionProvider,
       semanticdbs,
     )
 
-  private val packageProvider: PackageProvider =
+  protected val packageProvider: PackageProvider =
     new PackageProvider(
       buildTargets,
       trees,
@@ -575,7 +397,7 @@ class MetalsLspService(
       definitionProvider,
     )
 
-  private val newFileProvider: NewFileProvider = new NewFileProvider(
+  protected val newFileProvider: NewFileProvider = new NewFileProvider(
     languageClient,
     packageProvider,
     scalaVersionSelector,
@@ -586,7 +408,27 @@ class MetalsLspService(
     },
   )
 
-  private val symbolSearch: MetalsSymbolSearch = new MetalsSymbolSearch(
+  protected val interactiveSemanticdbs: InteractiveSemanticdbs = {
+    val javaInteractiveSemanticdb = maybeJdkVersion.map(jdkVersion =>
+      JavaInteractiveSemanticdb.create(folder, buildTargets, jdkVersion)
+    )
+    register(
+      new InteractiveSemanticdbs(
+        folder,
+        buildTargets,
+        charset,
+        tables,
+        () => compilers,
+        clientConfig,
+        () => semanticDBIndexer,
+        javaInteractiveSemanticdb,
+        buffers,
+        scalaCli,
+      )
+    )
+  }
+
+  protected val symbolSearch: MetalsSymbolSearch = new MetalsSymbolSearch(
     symbolDocs,
     workspaceSymbols,
     definitionProvider,
@@ -619,7 +461,7 @@ class MetalsLspService(
     )
   }
 
-  private val compilers: Compilers = register(
+  protected val compilers: Compilers = register(
     new Compilers(
       folder,
       clientConfig,
@@ -640,14 +482,14 @@ class MetalsLspService(
     )
   )
 
-  private val javaFormattingProvider: JavaFormattingProvider =
+  protected val javaFormattingProvider: JavaFormattingProvider =
     new JavaFormattingProvider(
       buffers,
       () => userConfig,
       buildTargets,
     )
 
-  private val implementationProvider: ImplementationProvider =
+  protected val implementationProvider: ImplementationProvider =
     new ImplementationProvider(
       semanticdbs,
       folder,
@@ -659,7 +501,7 @@ class MetalsLspService(
       buildTargets,
     )
 
-  private val symbolHierarchyOps: SymbolHierarchyOps =
+  protected val symbolHierarchyOps: SymbolHierarchyOps =
     new SymbolHierarchyOps(
       folder,
       buildTargets,
@@ -670,13 +512,13 @@ class MetalsLspService(
       trees,
     )
 
-  private val supermethods: Supermethods = new Supermethods(
+  protected val supermethods: Supermethods = new Supermethods(
     languageClient,
     definitionProvider,
     symbolHierarchyOps,
   )
 
-  private val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
+  protected val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
     List(
       referencesProvider,
       implementationProvider,
@@ -686,7 +528,7 @@ class MetalsLspService(
     folder,
   )
 
-  private val callHierarchyProvider: CallHierarchyProvider =
+  protected val callHierarchyProvider: CallHierarchyProvider =
     new CallHierarchyProvider(
       folder,
       semanticdbs,
@@ -699,7 +541,7 @@ class MetalsLspService(
       supermethods,
     )
 
-  private val renameProvider: RenameProvider = new RenameProvider(
+  protected val renameProvider: RenameProvider = new RenameProvider(
     referencesProvider,
     implementationProvider,
     symbolHierarchyOps,
@@ -713,29 +555,10 @@ class MetalsLspService(
     trees,
   )
 
-  private val debugProvider: DebugProvider = register(
-    new DebugProvider(
-      folder,
-      buildTargets,
-      buildTargetClasses,
-      compilations,
-      languageClient,
-      buildClient,
-      definitionIndex,
-      stacktraceAnalyzer,
-      clientConfig,
-      semanticdbs,
-      compilers,
-      statusBar,
-      workDoneProgress,
-      sourceMapper,
-      () => userConfig,
-      testProvider,
-    )
-  )
-  buildClient.registerLogForwarder(debugProvider)
+  def buildHasErrors(path: scala.meta.io.AbsolutePath): Boolean =
+    buildClient.buildHasErrors(path)
 
-  private val scalafixProvider: ScalafixProvider = ScalafixProvider(
+  protected val scalafixProvider: ScalafixProvider = ScalafixProvider(
     buffers,
     () => userConfig,
     folder,
@@ -743,12 +566,12 @@ class MetalsLspService(
     compilations,
     languageClient,
     buildTargets,
-    buildClient,
     interactiveSemanticdbs,
     tables,
+    buildHasErrors,
   )
 
-  private val codeActionProvider: CodeActionProvider = new CodeActionProvider(
+  protected val codeActionProvider: CodeActionProvider = new CodeActionProvider(
     compilers,
     buffers,
     buildTargets,
@@ -758,57 +581,34 @@ class MetalsLspService(
     languageClient,
   )
 
-  private val inlayHintResolveProvider: InlayHintResolveProvider =
+  protected val inlayHintResolveProvider: InlayHintResolveProvider =
     new InlayHintResolveProvider(
       definitionProvider,
       compilers,
     )
 
-  val doctor: Doctor = new Doctor(
-    folder,
-    buildTargets,
-    diagnostics,
-    languageClient,
-    () => bspSession,
-    () => bspConnector.resolve(buildTool),
-    tables,
-    clientConfig,
-    mtagsResolver,
-    () => userConfig.javaHome,
-    maybeJdkVersion,
-    getVisibleName,
-    buildTools,
-    connectionBspStatus,
-  )
+  def optFileSystemSemanticdbs(): Option[FileSystemSemanticdbs] = None
 
-  val gitHubIssueFolderInfo = new GitHubIssueFolderInfo(
-    () => tables.buildTool.selectedBuildTool(),
-    buildTargets,
-    () => bspSession,
-    () => bspConnector.resolve(buildTool),
-    buildTools,
-  )
-
-  private val fileDecoderProvider: FileDecoderProvider =
+  protected val fileDecoderProvider: FileDecoderProvider =
     new FileDecoderProvider(
       folder,
       compilers,
       buildTargets,
       () => userConfig,
       shellRunner,
-      fileSystemSemanticdbs,
+      optFileSystemSemanticdbs,
       interactiveSemanticdbs,
       languageClient,
       new ClassFinder(trees),
     )
 
-  private val workspaceReload: WorkspaceReload = new WorkspaceReload(
+  protected val workspaceReload: WorkspaceReload = new WorkspaceReload(
     folder,
     languageClient,
     tables,
   )
 
-  private val buildToolSelector: BuildToolSelector = new BuildToolSelector(
+  protected val buildToolSelector: BuildToolSelector = new BuildToolSelector(
     languageClient,
     tables,
   )
@@ -816,56 +616,13 @@ class MetalsLspService(
   def loadedPresentationCompilerCount(): Int =
     compilers.loadedPresentationCompilerCount()
 
-  val treeView =
-    new FolderTreeViewProvider(
-      new Folder(folder, folderVisibleName, true),
-      buildTargets,
-      definitionIndex,
-      () => userConfig,
-      scalaVersionSelector,
-      languageClient,
-      clientConfig,
-      trees,
-      buffers,
-    )
-
-  private val popupChoiceReset: PopupChoiceReset = new PopupChoiceReset(
-    tables,
-    languageClient,
-    headDoctor.executeRefreshDoctor,
-    () => slowConnectToBuildServer(forceImport = true),
-    () => switchBspServer(),
-  )
-
-  private val findTextInJars: FindTextInDependencyJars =
+  protected val findTextInJars: FindTextInDependencyJars =
     new FindTextInDependencyJars(
       buildTargets,
       () => folder,
       languageClient,
       saveJarFileToDisk = !clientConfig.isVirtualDocumentSupported(),
     )
-
-  private val ammonite: Ammonite = register {
-    val amm = new Ammonite(
-      buffers,
-      compilers,
-      compilations,
-      workDoneProgress,
-      diagnostics,
-      tables,
-      languageClient,
-      buildClient,
-      () => userConfig,
-      () => indexer.profiledIndexWorkspace(() => ()),
-      () => folder,
-      focusedDocument,
-      clientConfig.initialConfig,
-      scalaVersionSelector,
-      parseTreesAndPublishDiags,
-    )
-    buildTargets.addData(amm.buildTargetsData)
-    amm
-  }
 
   def parseTreesAndPublishDiags(paths: Seq[AbsolutePath]): Future[Unit] = {
     Future
@@ -884,7 +641,7 @@ class MetalsLspService(
     cancelable
   }
 
-  private def loadFingerPrints(): Future[Unit] = Future {
+  protected def loadFingerPrints(): Future[Unit] = Future {
     // load fingerprints from last execution
     fingerprints.addAll(tables.fingerprints.load())
   }
@@ -896,7 +653,7 @@ class MetalsLspService(
       token: CancelToken,
   ): Future[Unit] = codeActionProvider.executeCommands(params, token)
 
-  private def registerNiceToHaveFilePatterns(): Unit = {
+  protected def registerNiceToHaveFilePatterns(): Unit = {
     for {
       params <- Option(initializeParams)
       capabilities <- Option(params.getCapabilities)
@@ -920,17 +677,7 @@ class MetalsLspService(
     }
   }
 
-  val isInitialized = new AtomicBoolean(false)
-
-  def fullConnect(): Future[Unit] = {
-    buildTools.initialize()
-    for {
-      _ <-
-        if (buildTools.isAutoConnectable(optProjectRoot()))
-          autoConnectToBuildServer()
-        else slowConnectToBuildServer(forceImport = false)
-    } yield buildServerPromise.trySuccess(())
-  }
+  protected def onInitialized(): Future[Unit]
 
   def initialized(): Future[Unit] =
     if (wasInitialized.compareAndSet(false, true)) {
@@ -942,12 +689,7 @@ class MetalsLspService(
           Future
             .sequence(
               List[Future[Unit]](
-                withWillGenerateBspConfig {
-                  for {
-                    _ <- maybeSetupScalaCli()
-                    _ <- fullConnect()
-                  } yield ()
-                },
+                onInitialized(),
                 Future(workspaceSymbols.indexClasspath()),
                 Future(formattingProvider.load()),
               )
@@ -994,116 +736,7 @@ class MetalsLspService(
     ) {
       compilers.restartAll()
     }
-
-    val slowConnect =
-      if (userConfig.customProjectRoot != old.customProjectRoot) {
-        tables.buildTool.reset()
-        tables.buildServers.reset()
-        fullConnect()
-      } else Future.successful(())
-
-    val resetDecorations =
-      if (userConfig.inlayHintsOptions != old.inlayHintsOptions) {
-        languageClient.refreshInlayHints().asScala
-      } else Future.successful(())
-
-    val restartBuildServer = bspSession
-      .map { session =>
-        if (session.main.isBloop) {
-          bloopServers
-            .ensureDesiredVersion(
-              userConfig.currentBloopVersion,
-              session.version,
-              userConfig.bloopVersion.nonEmpty,
-              old.bloopVersion.isDefined,
-              () => autoConnectToBuildServer,
-            )
-            .flatMap { _ =>
-              userConfig.bloopJvmProperties
-                .map(
-                  bloopServers.ensureDesiredJvmSettings(
-                    _,
-                    () => autoConnectToBuildServer(),
-                  )
-                )
-                .getOrElse(Future.unit)
-            }
-            .flatMap { _ =>
-              if (userConfig.javaHome != old.javaHome) {
-                updateBspJavaHome(session)
-              } else Future.unit
-            }
-        } else if (
-          userConfig.ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
-            .exists(Ammonite.isAmmBuildTarget)
-        ) {
-          languageClient
-            .showMessageRequest(Messages.AmmoniteJvmParametersChange.params())
-            .asScala
-            .flatMap {
-              case item
-                  if item == Messages.AmmoniteJvmParametersChange.restart =>
-                ammonite.reload()
-              case _ =>
-                Future.unit
-            }
-        } else if (userConfig.javaHome != old.javaHome) {
-          updateBspJavaHome(session)
-        } else Future.unit
-      }
-      .getOrElse(Future.unit)
-
-    for {
-      _ <- slowConnect
-      _ <- Future.sequence(List(restartBuildServer, resetDecorations))
-    } yield ()
-  }
-
-  private def updateBspJavaHome(session: BspSession) = {
-    if (session.main.isBazel) {
-      languageClient.showMessage(
-        MessageType.Warning,
-        "Java home setting is not available for Bazel bsp, please use env var instead.",
-      )
-      Future.successful(())
-    } else {
-      languageClient
-        .showMessageRequest(
-          Messages.ProjectJavaHomeUpdate
-            .params(isRestart = !session.main.isBloop)
-        )
-        .asScala
-        .flatMap {
-          case Messages.ProjectJavaHomeUpdate.restart =>
-            buildTool match {
-              case Some(sbt: SbtBuildTool) if session.main.isSbt =>
-                for {
-                  _ <- disconnectOldBuildServer()
-                  _ <- sbt.shutdownBspServer(shellRunner)
-                  _ <- sbt.generateBspConfig(
-                    folder,
-                    bspConfigGenerator.runUnconditionally(sbt, _),
-                    statusBar,
-                  )
-                  _ <- autoConnectToBuildServer()
-                } yield ()
-              case Some(mill: MillBuildTool) if session.main.isMill =>
-                for {
-                  _ <- mill.generateBspConfig(
-                    folder,
-                    bspConfigGenerator.runUnconditionally(mill, _),
-                    statusBar,
-                  )
-                  _ <- autoConnectToBuildServer()
-                } yield ()
-              case _ if session.main.isBloop =>
-                slowConnectToBuildServer(forceImport = true)
-              case _ => Future.successful(())
-            }
-          case Messages.ProjectJavaHomeUpdate.notNow =>
-            Future.successful(())
-        }
-    }
+    Future.unit
   }
 
   override def didOpen(
@@ -1162,13 +795,15 @@ class MetalsLspService(
             )
             .ignoreValue
         }
-        for {
-          _ <- maybeAmendScalaCliBspConfig(path)
-          _ <- maybeImportScript(path).getOrElse(load())
-        } yield ()
+        maybeImportFileAndLoad(path, load)
       }.asJava
     }
   }
+
+  def maybeImportFileAndLoad(
+      path: AbsolutePath,
+      load: () => Future[Unit],
+  ): Future[Unit]
 
   def didFocus(
       uri: String
@@ -1192,10 +827,10 @@ class MetalsLspService(
     }
   }
 
-  private def maybeCompileOnDidFocus(
+  protected def maybeCompileOnDidFocus(
       path: AbsolutePath,
       prevBuildTarget: b.BuildTargetIdentifier,
-  ) =
+  ): Future[DidFocusResult.Value] =
     buildTargets.inverseSources(path) match {
       case Some(target) if prevBuildTarget != target =>
         compilations
@@ -1232,12 +867,7 @@ class MetalsLspService(
         buffers.put(path, change.getText)
         diagnostics.didChange(path)
 
-        parseTrees(path)
-          .map { _ =>
-            treeView.onWorkspaceFileDidChange(path)
-          }
-          .ignoreValue
-          .asJava
+        parseTrees(path).asJava
     }
   }
 
@@ -1263,67 +893,14 @@ class MetalsLspService(
           renameProvider.runSave(),
           parseTrees(path),
           onChange(List(path)),
-        ) ++ // if we fixed the script, we might need to retry connection
-          maybeImportScript(
-            path
-          )
+        )
       )
-      .map { _ =>
-        treeView.onWorkspaceFileDidChange(path)
-      }
       .ignoreValue
       .asJava
   }
 
-  private def maybeAmendScalaCliBspConfig(file: AbsolutePath): Future[Unit] = {
-    def isScalaCli = bspSession.exists(_.main.isScalaCLI)
-    def isScalaFile =
-      file.toString.isScala || file.isJava || file.isAmmoniteScript
-    if (
-      isScalaCli && isScalaFile &&
-      buildTargets.inverseSources(file).isEmpty &&
-      file.toNIO.startsWith(folder.toNIO) &&
-      !ScalaCliBspScope.inScope(folder, file)
-    ) {
-      languageClient
-        .showMessageRequest(
-          FileOutOfScalaCliBspScope.askToRegenerateConfigAndRestartBsp(
-            file.toNIO
-          )
-        )
-        .asScala
-        .flatMap {
-          case FileOutOfScalaCliBspScope.regenerateAndRestart =>
-            val buildTool = ScalaCliBuildTool(folder, folder, () => userConfig)
-            for {
-              _ <- buildTool.generateBspConfig(
-                folder,
-                bspConfigGenerator.runUnconditionally(buildTool, _),
-                statusBar,
-              )
-              _ <- quickConnectToBuildServer()
-            } yield ()
-          case _ => Future.successful(())
-        }
-    } else Future.successful(())
-  }
-
-  private def didCompileTarget(report: CompileReport): Unit = {
-    if (!isReliableFileWatcher) {
-      // NOTE(olafur) this step is exclusively used when running tests on
-      // non-Linux computers to avoid flaky failures caused by delayed file
-      // watching notifications. The SemanticDB indexer depends on file watching
-      // notifications to pick up `*.semanticdb` file updates and there's no
-      // reliable way to await until those notifications appear.
-      for {
-        targetroot <- buildTargets.targetRoots(report.getTarget)
-        semanticdb = targetroot.resolve(Directories.semanticdb)
-        generatedFile <- semanticdb.listRecursive
-      } {
-        val event = FileWatcherEvent.createOrModify(generatedFile.toNIO)
-        didChangeWatchedFiles(event).get()
-      }
-    }
+  protected def didCompileTarget(report: CompileReport): Unit = {
+    compilers.didCompile(report)
   }
 
   def didChangeWatchedFiles(
@@ -1355,57 +932,12 @@ class MetalsLspService(
    * This filter is an optimization and it is closely related to which files are
    * processed in [[didChangeWatchedFiles]]
    */
-  private def fileWatchFilter(path: Path): Boolean = {
+  protected def fileWatchFilter(path: Path): Boolean = {
     val abs = AbsolutePath(path)
     abs.isScalaOrJava || abs.isSemanticdb || abs.isInBspDirectory(folder)
   }
 
-  /**
-   * Callback that is executed on a file change event by the file watcher.
-   *
-   * Note that if you are adding processing of another kind of a file, be sure
-   * to include it in the [[fileWatchFilter]]
-   *
-   * This method is run synchronously in the FileWatcher, so it should not do
-   * anything expensive on the main thread
-   */
-  private def didChangeWatchedFiles(
-      event: FileWatcherEvent
-  ): CompletableFuture[Unit] = {
-    val path = AbsolutePath(event.path)
-    val isScalaOrJava = path.isScalaOrJava
-    if (isScalaOrJava && event.eventType == EventType.Delete) {
-      onDelete(path).asJava
-    } else if (
-      isScalaOrJava &&
-      !path.isDirectory &&
-      !savedFiles.isRecentlyActive(path) &&
-      !buffers.contains(path)
-    ) {
-      event.eventType match {
-        case EventType.CreateOrModify =>
-          buildTargets.onCreate(path)
-        case _ =>
-      }
-      onChange(List(path)).asJava
-    } else if (path.isSemanticdb) {
-      val semanticdbPath = SemanticdbPath(path)
-      Future {
-        event.eventType match {
-          case EventType.Delete =>
-            semanticDBIndexer.onDelete(semanticdbPath)
-          case EventType.CreateOrModify =>
-            semanticDBIndexer.onChange(semanticdbPath)
-          case EventType.Overflow =>
-            semanticDBIndexer.onOverflow(semanticdbPath)
-        }
-      }.asJava
-    } else {
-      CompletableFuture.completedFuture(())
-    }
-  }
-
-  private def onChange(paths: Seq[AbsolutePath]): Future[Unit] = {
+  protected def onChange(paths: Seq[AbsolutePath]): Future[Unit] = {
     paths.foreach { path =>
       fingerprints.add(path, FileIO.slurp(path, charset))
     }
@@ -1416,13 +948,12 @@ class MetalsLspService(
           Future(indexer.reindexWorkspaceSources(paths)),
           compilations
             .compileFiles(paths, Option(focusedDocumentBuildTarget.get())),
-          onBuildChanged(paths),
         ) ++ paths.map(f => Future(interactiveSemanticdbs.textDocument(f)))
       )
       .ignoreValue
   }
 
-  private def onDelete(path: AbsolutePath): Future[Unit] = {
+  protected def onDelete(path: AbsolutePath): Future[Unit] = {
     Future
       .sequence(
         List(
@@ -1430,7 +961,6 @@ class MetalsLspService(
             .compileFiles(List(path), Option(focusedDocumentBuildTarget.get())),
           Future {
             diagnostics.didDelete(path)
-            treeView.onWorkspaceFileDidChange(path)
             testProvider.onFileDelete(path)
           },
         )
@@ -1522,6 +1052,8 @@ class MetalsLspService(
         .asJava
     }
 
+  protected def optProjectRoot: Option[AbsolutePath] = None
+
   override def formatting(
       params: DocumentFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
@@ -1579,7 +1111,7 @@ class MetalsLspService(
   // Triggers a cascade compilation and tries to find new references to a given symbol.
   // It's not possible to stream reference results so if we find new symbols we notify the
   // user to run references again to see updated results.
-  private def compileAndLookForNewReferences(
+  protected def compileAndLookForNewReferences(
       params: ReferenceParams,
       result: List[ReferencesResult],
   ): Unit = {
@@ -1780,47 +1312,6 @@ class MetalsLspService(
     indexer.indexWorkspaceSources(buildTargets.allWritableData)
   }
 
-  def restartBspServer(): Future[Boolean] = {
-    def emitMessage(msg: String) = {
-      languageClient.showMessage(new MessageParams(MessageType.Warning, msg))
-    }
-    // This is for `bloop` and `sbt`, for which `build/shutdown` doesn't shutdown the server.
-    val shutdownBsp =
-      bspSession match {
-        case Some(session) if session.main.isBloop =>
-          for {
-            _ <- disconnectOldBuildServer()
-          } yield bloopServers.shutdownServer()
-        case Some(session) if session.main.isSbt =>
-          for {
-            res <- buildTool match {
-              case Some(sbt: SbtBuildTool) =>
-                for {
-                  _ <- disconnectOldBuildServer()
-                  code <- sbt.shutdownBspServer(shellRunner)
-                } yield code == 0
-              case _ => Future.successful(false)
-            }
-          } yield res
-        case s => Future.successful(s.nonEmpty)
-      }
-
-    for {
-      didShutdown <- shutdownBsp
-      _ = if (!didShutdown) {
-        bspSession match {
-          case Some(session) =>
-            emitMessage(
-              s"Could not shutdown ${session.main.name} server. Will try to reconnect."
-            )
-          case None =>
-            emitMessage("No build server connected. Will try to connect.")
-        }
-      }
-      _ <- autoConnectToBuildServer()
-    } yield didShutdown
-  }
-
   def decodeFile(uri: String): Future[DecoderResponse] =
     fileDecoderProvider.decodedFileContents(uri)
 
@@ -1828,11 +1319,6 @@ class MetalsLspService(
     Future {
       testProvider.discoverTests(uri.map(_.toAbsolutePath))
     }
-
-  def discoverMainClasses(
-      unresolvedParams: DebugDiscoveryParams
-  ): Future[b.DebugSessionParams] =
-    debugProvider.runCommandDiscovery(unresolvedParams)
 
   def runScalafix(uri: String): Future[ApplyWorkspaceEditResponse] =
     scalafixProvider
@@ -1847,7 +1333,10 @@ class MetalsLspService(
       .runRulesOrPrompt(uri.toAbsolutePath, rules)
       .flatMap(applyEdits(uri, _))
 
-  private def applyEdits(uri: String, edits: List[TextEdit]) = languageClient
+  protected def applyEdits(
+      uri: String,
+      edits: List[TextEdit],
+  ): Future[ApplyWorkspaceEditResponse] = languageClient
     .applyEdit(
       new l.ApplyWorkspaceEditParams(
         new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava)
@@ -1919,9 +1408,8 @@ class MetalsLspService(
       .asJavaObject
 
   def startScalaCli(path: AbsolutePath): Future[Unit] = {
-    val scalaCliPath = scalaCliDirOrFile(path)
-    if (scalaCli.loaded(scalaCliPath)) Future.unit
-    else scalaCli.start(scalaCliPath)
+    if (scalaCli.loaded(path)) Future.unit
+    else scalaCli.start(path)
   }
 
   def stopScalaCli(): Future[Unit] = scalaCli.stop()
@@ -1938,70 +1426,11 @@ class MetalsLspService(
     }
   }
 
-  def ammoniteStart(): Future[Unit] = ammonite.start()
-  def ammoniteStop(): Future[Unit] = ammonite.stop()
-
-  def switchBspServer(): Future[Unit] =
-    withWillGenerateBspConfig {
-      for {
-        isSwitched <- bspConnector.switchBuildServer(
-          folder,
-          () => slowConnectToBuildServer(forceImport = true),
-        )
-        _ <- {
-          if (isSwitched) quickConnectToBuildServer()
-          else Future.successful(())
-        }
-      } yield ()
-    }
-
-  def resetPopupChoice(value: String): Future[Unit] =
-    popupChoiceReset.reset(value)
-
-  def interactivePopupChoiceReset(): Future[Unit] =
-    popupChoiceReset.interactiveReset()
-
   def analyzeStackTrace(content: String): Option[ExecuteCommandParams] =
     stacktraceAnalyzer.analyzeCommand(content)
 
-  def debugDiscovery(params: DebugDiscoveryParams): Future[DebugSession] =
-    debugProvider
-      .debugDiscovery(params)
-      .flatMap(debugProvider.asSession)
-
   def findBuildTargetByDisplayName(target: String): Option[b.BuildTarget] =
     buildTargets.findByDisplayName(target)
-
-  def createDebugSession(
-      target: b.BuildTargetIdentifier
-  ): Future[DebugSession] =
-    debugProvider.createDebugSession(target).flatMap(debugProvider.asSession)
-
-  def testClassSearch(
-      params: DebugUnresolvedTestClassParams
-  ): DebugProvider.TestClassSearch =
-    new DebugProvider.TestClassSearch(debugProvider, params)
-
-  def mainClassSearch(
-      params: DebugUnresolvedMainClassParams
-  ): DebugProvider.MainClassSearch =
-    new DebugProvider.MainClassSearch(debugProvider, params)
-
-  def supportsBuildTarget(
-      target: b.BuildTargetIdentifier
-  ): Option[b.BuildTarget] = buildTargets.info(target)
-
-  def startTestSuite(
-      target: b.BuildTarget,
-      params: ScalaTestSuitesDebugRequest,
-  ): Future[DebugSession] = debugProvider
-    .startTestSuite(target, params)
-    .flatMap(debugProvider.asSession)
-
-  def startDebugProvider(params: b.DebugSessionParams): Future[DebugSession] =
-    debugProvider
-      .ensureNoWorkspaceErrors(params.getTargets.asScala.toSeq)
-      .flatMap(_ => debugProvider.asSession(params))
 
   def willRenameFile(
       oldPath: AbsolutePath,
@@ -2013,330 +1442,12 @@ class MetalsLspService(
       params: FindTextInDependencyJarsRequest
   ): Future[List[Location]] = findTextInJars.find(params)
 
-  def generateBspConfig(): Future[Unit] = {
-    val servers: List[BuildServerProvider] =
-      buildTools.loadSupported().collect {
-        case buildTool: BuildServerProvider => buildTool
-      }
+  protected def onBuildTargetChanges(params: b.DidChangeBuildTarget): Unit
 
-    def ensureAndConnect(
-        buildTool: BuildServerProvider,
-        status: BspConfigGenerationStatus,
-    ): Unit =
-      status match {
-        case Generated =>
-          tables.buildServers.chooseServer(buildTool.buildServerName)
-          quickConnectToBuildServer().ignoreValue
-        case Cancelled => ()
-        case Failed(exit) =>
-          exit match {
-            case Left(exitCode) =>
-              scribe.error(
-                s"Create of .bsp failed with exit code: $exitCode"
-              )
-              languageClient.showMessage(
-                Messages.BspProvider.genericUnableToCreateConfig
-              )
-            case Right(message) =>
-              languageClient.showMessage(
-                Messages.BspProvider.unableToCreateConfigFromMessage(
-                  message
-                )
-              )
-          }
-      }
-
-    (servers match {
-      case Nil =>
-        scribe.warn(Messages.BspProvider.noBuildToolFound.toString())
-        languageClient.showMessage(Messages.BspProvider.noBuildToolFound)
-        Future.successful(())
-      case buildTool :: Nil =>
-        withWillGenerateBspConfig {
-          buildTool
-            .generateBspConfig(
-              folder,
-              args =>
-                bspConfigGenerator.runUnconditionally(
-                  buildTool,
-                  args,
-                ),
-              statusBar,
-            )
-            .map(status => ensureAndConnect(buildTool, status))
-        }
-      case buildTools =>
-        withWillGenerateBspConfig {
-          bspConfigGenerator
-            .chooseAndGenerate(buildTools)
-            .map {
-              case (
-                    buildTool: BuildServerProvider,
-                    status: BspConfigGenerationStatus,
-                  ) =>
-                ensureAndConnect(buildTool, status)
-            }
-        }
-    })
-  }
-
-  private def buildTool: Option[BuildTool] =
-    for {
-      name <- tables.buildTool.selectedBuildTool()
-      buildTool <- buildTools.loadSupported.find(_.executableName == name)
-      found <- isCompatibleVersion(buildTool) match {
-        case BuildTool.Found(bt, _) => Some(bt)
-        case _ => None
-      }
-    } yield found
-
-  def isCompatibleVersion(buildTool: BuildTool): BuildTool.Verified = {
-    buildTool match {
-      case buildTool: VersionRecommendation
-          if !SemVer.isCompatibleVersion(
-            buildTool.minimumVersion,
-            buildTool.version,
-          ) =>
-        BuildTool.IncompatibleVersion(buildTool)
-      case _ =>
-        buildTool.digestWithRetry(folder) match {
-          case Some(digest) =>
-            BuildTool.Found(buildTool, digest)
-          case None => BuildTool.NoChecksum(buildTool, folder)
-        }
-    }
-  }
-
-  def supportedBuildTool(): Future[Option[BuildTool.Found]] = {
-    buildTools.loadSupported match {
-      case Nil => {
-        if (!buildTools.isAutoConnectable()) {
-          warnings.noBuildTool()
-        }
-        Future(None)
-      }
-      case buildTools =>
-        for {
-          buildTool <- buildToolSelector.checkForChosenBuildTool(
-            buildTools
-          )
-        } yield {
-          buildTool.flatMap { bt =>
-            isCompatibleVersion(bt) match {
-              case found: BuildTool.Found => Some(found)
-              case warn @ BuildTool.IncompatibleVersion(buildTool) =>
-                scribe.warn(warn.message)
-                languageClient.showMessage(
-                  Messages.IncompatibleBuildToolVersion.params(buildTool)
-                )
-                None
-              case warn: BuildTool.NoChecksum =>
-                scribe.warn(warn.message)
-                None
-            }
-          }
-        }
-    }
-  }
-
-  def slowConnectToBuildServer(
-      forceImport: Boolean
-  ): Future[BuildChange] = {
-    val chosenBuildServer = tables.buildServers.selectedServer()
-    def useBuildToolBsp(buildTool: BloopInstallProvider) =
-      buildTool match {
-        case _: BuildServerProvider => userConfig.defaultBspToBuildTool
-        case _ => false
-      }
-
-    def isSelected(buildTool: BuildTool) =
-      buildTool match {
-        case _: BuildServerProvider =>
-          chosenBuildServer.contains(buildTool.buildServerName)
-        case _ => false
-      }
-
-    supportedBuildTool().flatMap {
-      case Some(BuildTool.Found(buildTool: BloopInstallProvider, digest))
-          if chosenBuildServer.contains(BloopServers.name) ||
-            chosenBuildServer.isEmpty && !useBuildToolBsp(buildTool) =>
-        slowConnectToBloopServer(forceImport, buildTool, digest)
-      case Some(found)
-          if isSelected(found.buildTool) &&
-            found.buildTool.isBspGenerated(folder) =>
-        indexer.reloadWorkspaceAndIndex(
-          forceImport,
-          found.buildTool,
-          found.digest,
-          importBuild,
-          quickConnectToBuildServer,
-        )
-      case Some(BuildTool.Found(buildTool: BuildServerProvider, _)) =>
-        slowConnectToBuildToolBsp(buildTool, forceImport, isSelected(buildTool))
-      // Used when there are multiple `.bsp/<name>.json` configs and a known build tool (e.g. sbt)
-      case Some(BuildTool.Found(buildTool, _))
-          if buildTool.isBspGenerated(folder) =>
-        maybeChooseServer(buildTool.buildServerName, isSelected(buildTool))
-        quickConnectToBuildServer()
-      // Used in tests, `.bloop` folder exists but no build tool is detected
-      case _ => quickConnectToBuildServer()
-    }
-  }
-
-  private def slowConnectToBuildToolBsp(
-      buildTool: BuildServerProvider,
-      forceImport: Boolean,
-      isSelected: Boolean,
-  ) = {
-    val notification = tables.dismissedNotifications.ImportChanges
-    if (buildTool.isBspGenerated(folder)) {
-      maybeChooseServer(buildTool.buildServerName, isSelected)
-      quickConnectToBuildServer()
-    } else if (
-      userConfig.shouldAutoImportNewProject || forceImport || isSelected ||
-      buildTool.isInstanceOf[ScalaCliBuildTool]
-    ) {
-      maybeChooseServer(buildTool.buildServerName, isSelected)
-      generateBspAndConnect(buildTool)
-    } else if (notification.isDismissed) {
-      Future.successful(BuildChange.None)
-    } else {
-      scribe.debug("Awaiting user response...")
-      languageClient
-        .showMessageRequest(
-          Messages.GenerateBspAndConnect
-            .params(buildTool.executableName, buildTool.buildServerName)
-        )
-        .asScala
-        .flatMap { item =>
-          if (item == Messages.dontShowAgain) {
-            notification.dismissForever()
-            Future.successful(BuildChange.None)
-          } else if (item == Messages.GenerateBspAndConnect.yes) {
-            maybeChooseServer(buildTool.buildServerName, isSelected)
-            generateBspAndConnect(buildTool)
-          } else {
-            notification.dismiss(2, TimeUnit.MINUTES)
-            Future.successful(BuildChange.None)
-          }
-        }
-    }
-  }
-
-  private def maybeChooseServer(name: String, alreadySelected: Boolean) =
-    if (alreadySelected) Future.successful(())
-    else tables.buildServers.chooseServer(name)
-
-  private def generateBspAndConnect(
-      buildTool: BuildServerProvider
-  ): Future[BuildChange] =
-    withWillGenerateBspConfig {
-      buildTool
-        .generateBspConfig(
-          folder,
-          args => bspConfigGenerator.runUnconditionally(buildTool, args),
-          statusBar,
-        )
-        .flatMap(_ => quickConnectToBuildServer())
-    }
-
-  /**
-   * If there is no auto-connectable build server and no supported build tool is found
-   * we assume it's a scala-cli project.
-   */
-  def maybeSetupScalaCli(): Future[Unit] = {
-    if (
-      !buildTools.isAutoConnectable()
-      && buildTools.loadSupported.isEmpty
-      && (folder.isScalaProject() || focusedDocument().exists(_.isScala))
-    ) {
-      scalaCli.setupIDE(folder)
-    } else Future.successful(())
-  }
-
-  private def slowConnectToBloopServer(
-      forceImport: Boolean,
-      buildTool: BloopInstallProvider,
-      checksum: String,
-  ): Future[BuildChange] =
-    for {
-      result <- {
-        if (forceImport)
-          bloopInstall.runUnconditionally(buildTool, isImportInProcess)
-        else bloopInstall.runIfApproved(buildTool, checksum, isImportInProcess)
-      }
-      change <- {
-        if (result.isInstalled) quickConnectToBuildServer()
-        else if (result.isFailed) {
-          for {
-            change <-
-              if (buildTools.isAutoConnectable(optProjectRoot)) {
-                // TODO(olafur) try to connect but gracefully error
-                languageClient.showMessage(
-                  Messages.ImportProjectPartiallyFailed
-                )
-                // Connect nevertheless, many build import failures are caused
-                // by resolution errors in one weird module while other modules
-                // exported successfully.
-                quickConnectToBuildServer()
-              } else {
-                languageClient.showMessage(Messages.ImportProjectFailed)
-                Future.successful(BuildChange.Failed)
-              }
-          } yield change
-        } else {
-          Future.successful(BuildChange.None)
-        }
-
-      }
-    } yield change
-
-  def optProjectRoot(): Option[AbsolutePath] =
-    buildTool.map(_.projectRoot).orElse(buildTools.bloopProject)
-
-  def quickConnectToBuildServer(): Future[BuildChange] =
-    for {
-      change <-
-        if (!buildTools.isAutoConnectable(optProjectRoot)) {
-          scribe.warn("Build server is not auto-connectable.")
-          Future.successful(BuildChange.None)
-        } else {
-          autoConnectToBuildServer()
-        }
-    } yield {
-      buildServerPromise.trySuccess(())
-      change
-    }
-
-  private def onBuildTargetChanges(
-      params: b.DidChangeBuildTarget
-  ): Unit = {
-    // Make sure that no compilation is running, if it is it might not get completed properly
-    compilations.cancel()
-    val (ammoniteChanges, otherChanges) =
-      params.getChanges.asScala.partition { change =>
-        val connOpt = buildTargets.buildServerOf(change.getTarget)
-        connOpt.nonEmpty && connOpt == ammonite.buildServer
-      }
-
-    val scalaCliServers = scalaCli.servers
-    val groupedByServer = otherChanges.groupBy { change =>
-      val connOpt = buildTargets.buildServerOf(change.getTarget)
-      connOpt.flatMap(conn => scalaCliServers.find(_ == conn))
-    }
-    val scalaCliAffectedServers = groupedByServer.collect {
-      case (Some(server), _) => server
-    }
-    val mainConnectionChanges = groupedByServer.get(None)
-
-    if (ammoniteChanges.nonEmpty)
-      ammonite.importBuild().onComplete {
-        case Success(()) =>
-        case Failure(exception) =>
-          scribe.error("Error re-importing Ammonite build", exception)
-      }
-
-    scalaCliAffectedServers.map { server =>
+  protected def importAfterScalaCliChanges(
+      servers: Iterable[ScalaCli]
+  ): Iterable[Unit] =
+    servers.map { server =>
       server
         .importBuild()
         .onComplete {
@@ -2350,105 +1461,7 @@ class MetalsLspService(
         }
     }
 
-    if (mainConnectionChanges.nonEmpty) {
-      bspSession match {
-        case None => scribe.warn("No build server connected")
-        case Some(session) =>
-          for {
-            _ <- importBuild(session)
-            _ <- indexer.profiledIndexWorkspace(runDoctorCheck)
-          } {
-            focusedDocument().foreach(path => compilations.compileFile(path))
-          }
-      }
-    }
-  }
-
-  def autoConnectToBuildServer(): Future[BuildChange] = {
-    def compileAllOpenFiles: BuildChange => Future[BuildChange] = {
-      case change if !change.isFailed =>
-        Future
-          .sequence(
-            compilations
-              .cascadeCompileFiles(buffers.open.toSeq)
-              .ignoreValue ::
-              compilers.load(buffers.open.toSeq) ::
-              Nil
-          )
-          .map(_ => change)
-      case other => Future.successful(other)
-    }
-
-    val scalaCliPaths = scalaCli.paths
-
-    isConnecting.set(true)
-    (for {
-      _ <- disconnectOldBuildServer()
-      maybeSession <- timerProvider.timed("Connected to build server", true) {
-        bspConnector.connect(
-          buildTool,
-          folder,
-          userConfig,
-          shellRunner,
-        )
-      }
-      result <- maybeSession match {
-        case Some(session) =>
-          val result = connectToNewBuildServer(session)
-          session.mainConnection.onReconnection { newMainConn =>
-            val updSession = session.copy(main = newMainConn)
-            connectToNewBuildServer(updSession)
-              .flatMap(compileAllOpenFiles)
-              .ignoreValue
-          }
-          result
-        case None =>
-          Future.successful(BuildChange.None)
-      }
-      _ <- Future.sequence(
-        scalaCliPaths
-          .collect {
-            case path if (!conflictsWithMainBsp(path.toNIO)) =>
-              scalaCli.start(path)
-          }
-      )
-      _ = initTreeView()
-    } yield result)
-      .recover { case NonFatal(e) =>
-        disconnectOldBuildServer()
-        val message =
-          "Failed to connect with build server, no functionality will work."
-        val details = " See logs for more details."
-        languageClient.showMessage(
-          new MessageParams(MessageType.Error, message + details)
-        )
-        scribe.error(message, e)
-        BuildChange.Failed
-      }
-      .flatMap(compileAllOpenFiles)
-  }
-
-  def disconnectOldBuildServer(): Future[Unit] = {
-    compilations.cancel()
-    buildTargetClasses.cancel()
-    diagnostics.reset()
-    bspSession.foreach(connection =>
-      scribe.info(s"Disconnecting from ${connection.main.name} session...")
-    )
-
-    for {
-      _ <- scalaCli.stop()
-      _ <- bspSession match {
-        case None => Future.successful(())
-        case Some(session) =>
-          bspSession = None
-          mainBuildTargetsData.resetConnections(List.empty)
-          session.shutdown()
-      }
-    } yield ()
-  }
-
-  private def importBuild(session: BspSession) = {
+  protected def importBuild(session: BspSession): Future[Unit] = {
     val importedBuilds0 = timerProvider.timed("Imported build") {
       session.importBuilds()
     }
@@ -2468,29 +1481,87 @@ class MetalsLspService(
     } yield compilers.cancel()
   }
 
-  private def connectToNewBuildServer(
-      session: BspSession
-  ): Future[BuildChange] = {
-    scribe.info(
-      s"Connected to Build server: ${session.main.name} v${session.version}"
+  val buildClient: ForwardingMetalsBuildClient =
+    new ForwardingMetalsBuildClient(
+      languageClient,
+      diagnostics,
+      buildTargets,
+      clientConfig,
+      statusBar,
+      time,
+      didCompileTarget,
+      onBuildTargetDidCompile = { target =>
+        worksheetProvider.onBuildTargetDidCompile(target)
+      },
+      onBuildTargetDidChangeFunc = params => {
+        onBuildTargetChanges(params)
+      },
+      bspErrorHandler,
+      workDoneProgress,
     )
-    cancelables.add(session)
-    buildTool.foreach(
-      workspaceReload.persistChecksumStatus(Digest.Status.Started, _)
+
+  protected val debugProvider: DebugProvider = register(
+    new DebugProvider(
+      folder,
+      buildTargets,
+      buildTargetClasses,
+      compilations,
+      languageClient,
+      buildClient,
+      definitionIndex,
+      stacktraceAnalyzer,
+      clientConfig,
+      semanticdbs,
+      compilers,
+      statusBar,
+      workDoneProgress,
+      sourceMapper,
+      () => userConfig,
+      testProvider,
     )
-    bspSession = Some(session)
-    isConnecting.set(false)
-    for {
-      _ <- importBuild(session)
-      _ <- indexer.profiledIndexWorkspace(runDoctorCheck)
-      _ = buildTool.foreach(
-        workspaceReload.persistChecksumStatus(Digest.Status.Installed, _)
-      )
-      _ = if (session.main.isBloop) checkRunningBloopVersion(session.version)
-    } yield {
-      BuildChange.Reconnected
-    }
-  }
+  )
+  buildClient.registerLogForwarder(debugProvider)
+
+  def debugDiscovery(params: DebugDiscoveryParams): Future[DebugSession] =
+    debugProvider
+      .debugDiscovery(params)
+      .flatMap(debugProvider.asSession)
+
+  def createDebugSession(
+      target: b.BuildTargetIdentifier
+  ): Future[DebugSession] =
+    debugProvider.createDebugSession(target).flatMap(debugProvider.asSession)
+
+  def testClassSearch(
+      params: DebugUnresolvedTestClassParams
+  ): DebugProvider.TestClassSearch =
+    new DebugProvider.TestClassSearch(debugProvider, params)
+
+  def mainClassSearch(
+      params: DebugUnresolvedMainClassParams
+  ): DebugProvider.MainClassSearch =
+    new DebugProvider.MainClassSearch(debugProvider, params)
+
+  def startTestSuite(
+      target: b.BuildTarget,
+      params: ScalaTestSuitesDebugRequest,
+  ): Future[DebugSession] = debugProvider
+    .startTestSuite(target, params)
+    .flatMap(debugProvider.asSession)
+
+  def startDebugProvider(params: b.DebugSessionParams): Future[DebugSession] =
+    debugProvider
+      .ensureNoWorkspaceErrors(params.getTargets.asScala.toSeq)
+      .flatMap(_ => debugProvider.asSession(params))
+
+  def discoverMainClasses(
+      unresolvedParams: DebugDiscoveryParams
+  ): Future[b.DebugSessionParams] =
+    debugProvider.runCommandDiscovery(unresolvedParams)
+
+  def supportsBuildTarget(
+      target: b.BuildTargetIdentifier
+  ): Option[b.BuildTarget] = buildTargets.info(target)
 
   val scalaCli: ScalaCliServers = register(
     new ScalaCliServers(
@@ -2511,9 +1582,21 @@ class MetalsLspService(
     )
   )
 
-  private val indexer = Indexer(
+  protected def buildData(): Seq[Indexer.BuildTool]
+
+  protected def resetService(): Unit = {
+    interactiveSemanticdbs.reset()
+    buildClient.reset()
+    semanticDBIndexer.reset()
+    worksheetProvider.reset()
+    symbolSearch.reset()
+  }
+
+  def fileWatcher: FileWatcher
+
+  protected val indexer: Indexer = Indexer(
     () => workspaceReload,
-    runDoctorCheck,
+    check,
     languageClient,
     () => bspSession,
     executionContext,
@@ -2523,41 +1606,17 @@ class MetalsLspService(
     timerProvider,
     () => scalafixProvider,
     () => indexingPromise,
-    () =>
-      Seq(
-        Indexer.BuildTool(
-          "main",
-          mainBuildTargetsData,
-          ImportedBuild.fromList(
-            bspSession.map(_.lastImportedBuild).getOrElse(Nil)
-          ),
-        ),
-        Indexer.BuildTool(
-          "ammonite",
-          ammonite.buildTargetsData,
-          ammonite.lastImportedBuild,
-        ),
-      )
-        ++
-          scalaCli.lastImportedBuilds.map {
-            case (lastImportedBuild, buildTargetsData) =>
-              Indexer
-                .BuildTool("scala-cli", buildTargetsData, lastImportedBuild)
-          },
+    buildData,
     clientConfig,
     definitionIndex,
     () => referencesProvider,
     () => workspaceSymbols,
     buildTargets,
     () => interactiveSemanticdbs,
-    () => buildClient,
     () => semanticDBIndexer,
-    () => treeView,
     () => worksheetProvider,
     () => symbolSearch,
-    () => buildTools,
-    () => formattingProvider,
-    fileWatcher,
+    () => fileWatcher,
     focusedDocument,
     focusedDocumentBuildTarget,
     buildTargetClasses,
@@ -2568,31 +1627,31 @@ class MetalsLspService(
     sourceMapper,
     folder,
     implementationProvider,
-    () => isConnecting.get(),
+    resetService,
   )
 
-  private def checkRunningBloopVersion(bspServerVersion: String) = {
-    if (doctor.isUnsupportedBloopVersion()) {
-      val notification = tables.dismissedNotifications.IncompatibleBloop
-      if (!notification.isDismissed) {
-        val messageParams = IncompatibleBloopVersion.params(
-          bspServerVersion,
-          BuildInfo.bloopVersion,
-          isChangedInSettings = userConfig.bloopVersion != None,
-        )
-        languageClient.showMessageRequest(messageParams).asScala.foreach {
-          case action if action == IncompatibleBloopVersion.shutdown =>
-            bloopServers.shutdownServer()
-            autoConnectToBuildServer()
-          case action if action == IncompatibleBloopVersion.dismissForever =>
-            notification.dismissForever()
-          case _ =>
-        }
-      }
-    }
+  def projectInfo: MetalsServiceInfo
+
+  val doctor: Doctor =
+    new Doctor(
+      folder,
+      buildTargets,
+      diagnostics,
+      languageClient,
+      tables,
+      clientConfig,
+      mtagsResolver,
+      () => userConfig.javaHome,
+      maybeJdkVersion,
+      getVisibleName,
+      () => projectInfo,
+    )
+
+  protected def check(): Unit = {
+    doctor.check(headDoctor)
   }
 
-  private def onWorksheetChanged(
+  protected def onWorksheetChanged(
       paths: Seq[AbsolutePath]
   ): Future[Unit] = {
     paths
@@ -2611,55 +1670,6 @@ class MetalsLspService(
         // we need to refresh tokens for worksheets since dependencies could have been added
         languageClient.refreshSemanticTokens().asScala.map(_ => ())
       }
-  }
-
-  private def onBuildChangedUnbatched(
-      paths: Seq[AbsolutePath]
-  ): Future[Unit] =
-    if (willGenerateBspConfig.get().nonEmpty) Future.unit
-    else {
-      val changedBuilds = paths.flatMap(buildTools.isBuildRelated)
-      tables.buildTool.selectedBuildTool() match {
-        // no build tool and new added
-        case None if changedBuilds.nonEmpty =>
-          scribe.info(s"Detected new build tool in $path")
-          fullConnect()
-        // used build tool changed
-        case Some(chosenBuildTool) if changedBuilds.contains(chosenBuildTool) =>
-          slowConnectToBuildServer(forceImport = false).ignoreValue
-        // maybe new build tool added
-        case Some(chosenBuildTool) if changedBuilds.nonEmpty =>
-          onBuildToolsAdded(chosenBuildTool, changedBuilds)
-        case _ => Future.unit
-      }
-    }
-
-  private def onBuildToolsAdded(
-      currentBuildToolName: String,
-      newBuildToolsChanged: Seq[String],
-  ): Future[Unit] = {
-    val supportedBuildTools = buildTools.loadSupported()
-    val maybeBuildChange = for {
-      currentBuildTool <- supportedBuildTools.find(
-        _.executableName == currentBuildToolName
-      )
-      newBuildTool <- newBuildToolsChanged
-        .filter(buildTools.newBuildTool)
-        .flatMap(addedBuildName =>
-          supportedBuildTools.find(
-            _.executableName == addedBuildName
-          )
-        )
-        .headOption
-    } yield {
-      buildToolSelector
-        .onNewBuildToolAdded(newBuildTool, currentBuildTool)
-        .flatMap { switch =>
-          if (switch) slowConnectToBuildServer(forceImport = false)
-          else Future.successful(BuildChange.None)
-        }
-    }.ignoreValue
-    maybeBuildChange.getOrElse(Future.unit)
   }
 
   /**
@@ -2756,7 +1766,7 @@ class MetalsLspService(
     }
   }
 
-  private def newSymbolIndex(): OnDemandSymbolIndex = {
+  protected def newSymbolIndex(): OnDemandSymbolIndex = {
     OnDemandSymbolIndex.empty(
       onError = {
         case e @ (_: ParseException | _: TokenizeException) =>
@@ -2783,133 +1793,7 @@ class MetalsLspService(
     )
   }
 
-  private def isMillBuildSc(path: AbsolutePath): Boolean =
-    path.toNIO.getFileName.toString == "build.sc" &&
-      // for now, this only checks for build.sc, but this could be made more strict in the future
-      // (require ./mill or ./.mill-version)
-      buildTools.isMill
-
-  /**
-   * Returns the absolute path or directory that ScalaCLI imports as ScalaCLI
-   * scripts. By default, ScalaCLI tries to import the entire directory as
-   * ScalaCLI scripts. However, we have to ensure that there are no clashes with
-   * other existing sourceItems see:
-   * https://github.com/scalameta/metals/issues/4447
-   *
-   * @param path
-   *   the absolute path of the ScalaCLI script to import
-   */
-  private def scalaCliDirOrFile(path: AbsolutePath): AbsolutePath = {
-    val dir = path.parent
-    val nioDir = dir.toNIO
-    if (conflictsWithMainBsp(nioDir)) path else dir
-  }
-
-  private def conflictsWithMainBsp(nioDir: Path) =
-    buildTargets.sourceItems.filter(_.exists).exists { item =>
-      val nioItem = item.toNIO
-      nioDir.startsWith(nioItem) || nioItem.startsWith(nioDir)
-    }
-
-  def maybeImportScript(path: AbsolutePath): Option[Future[Unit]] = {
-    val scalaCliPath = scalaCliDirOrFile(path)
-    if (
-      !path.isAmmoniteScript ||
-      !buildTargets.inverseSources(path).isEmpty ||
-      ammonite.loaded(path) ||
-      scalaCli.loaded(scalaCliPath) ||
-      isMillBuildSc(path)
-    )
-      None
-    else {
-      def doImportScalaCli(): Future[Unit] =
-        scalaCli
-          .start(scalaCliPath)
-          .map { _ =>
-            languageClient.showMessage(
-              Messages.ImportScalaScript.ImportedScalaCli
-            )
-          }
-          .recover { e =>
-            languageClient.showMessage(
-              Messages.ImportScalaScript.ImportFailed(path.toString)
-            )
-            scribe.warn(s"Error importing Scala CLI project $scalaCliPath", e)
-          }
-      def doImportAmmonite(): Future[Unit] =
-        ammonite
-          .start(Some(path))
-          .map { _ =>
-            languageClient.showMessage(
-              Messages.ImportScalaScript.ImportedAmmonite
-            )
-          }
-          .recover { e =>
-            languageClient.showMessage(
-              Messages.ImportScalaScript.ImportFailed(path.toString)
-            )
-            scribe.warn(s"Error importing Ammonite script $path", e)
-          }
-
-      val autoImportAmmonite =
-        tables.dismissedNotifications.AmmoniteImportAuto.isDismissed
-      val autoImportScalaCli =
-        tables.dismissedNotifications.ScalaCliImportAuto.isDismissed
-
-      def askAutoImport(notification: DismissedNotifications#Notification) =
-        languageClient
-          .showMessageRequest(Messages.ImportAllScripts.params())
-          .asScala
-          .onComplete {
-            case Failure(e) =>
-              scribe.warn("Error requesting automatic Scala scripts import", e)
-            case Success(null) =>
-              scribe.debug("Automatic Scala scripts import cancelled by user")
-            case Success(resp) =>
-              resp.getTitle match {
-                case Messages.ImportAllScripts.importAll =>
-                  notification.dismissForever()
-                case _ =>
-              }
-          }
-
-      val futureRes =
-        if (autoImportAmmonite) {
-          doImportAmmonite()
-        } else if (autoImportScalaCli) {
-          doImportScalaCli()
-        } else {
-          languageClient
-            .showMessageRequest(Messages.ImportScalaScript.params())
-            .asScala
-            .flatMap { response =>
-              if (response != null)
-                response.getTitle match {
-                  case Messages.ImportScalaScript.doImportAmmonite =>
-                    askAutoImport(
-                      tables.dismissedNotifications.AmmoniteImportAuto
-                    )
-                    doImportAmmonite()
-                  case Messages.ImportScalaScript.doImportScalaCli =>
-                    askAutoImport(
-                      tables.dismissedNotifications.ScalaCliImportAuto
-                    )
-                    doImportScalaCli()
-                  case _ => Future.unit
-                }
-              else {
-                Future.unit
-              }
-            }
-            .recover { e =>
-              scribe.warn("Error requesting Scala script import", e)
-            }
-        }
-      Some(futureRes)
-    }
-  }
-
-  private def clearBloopDir(folder: AbsolutePath): Unit = {
+  protected def clearBloopDir(folder: AbsolutePath): Unit = {
     try BloopDir.clear(folder)
     catch {
       case e: Throwable =>
@@ -2918,7 +1802,7 @@ class MetalsLspService(
     }
   }
 
-  private def clearFolders(folders: AbsolutePath*): Unit = {
+  protected def clearFolders(folders: AbsolutePath*): Unit = {
     try {
       folders.foreach(_.deleteRecursively())
     } catch {
@@ -2931,34 +1815,6 @@ class MetalsLspService(
     }
   }
 
-  def resetWorkspace(): Future[Unit] =
-    for {
-      _ <- disconnectOldBuildServer()
-      shouldImport = optProjectRoot match {
-        case Some(path) if buildTools.isBloop(path) =>
-          bloopServers.shutdownServer()
-          clearBloopDir(path)
-          false
-        case Some(path) if buildTools.isBazelBsp =>
-          clearFolders(
-            path.resolve(Directories.bazelBsp),
-            path.resolve(Directories.bsp),
-          )
-          true
-        case Some(path) if buildTools.isBsp =>
-          clearFolders(path.resolve(Directories.bsp))
-          true
-        case _ => false
-      }
-      _ = tables.cleanAll()
-      _ <-
-        if (shouldImport) slowConnectToBuildServer(true)
-        else autoConnectToBuildServer().map(_ => ())
-    } yield ()
-
   def getTastyForURI(uri: URI): Future[Either[String, String]] =
     fileDecoderProvider.getTastyForURI(uri)
-
-  def runDoctorCheck(): Unit = doctor.check(headDoctor)
-
 }

@@ -85,7 +85,7 @@ final class FileDecoderProvider(
     buildTargets: BuildTargets,
     userConfig: () => UserConfiguration,
     shellRunner: ShellRunner,
-    fileSystemSemanticdbs: FileSystemSemanticdbs,
+    optFileSystemSemanticdbs: () => Option[FileSystemSemanticdbs],
     interactiveSemanticdbs: InteractiveSemanticdbs,
     languageClient: MetalsLanguageClient,
     classFinder: ClassFinder,
@@ -468,6 +468,9 @@ final class FileDecoderProvider(
       sourceFile: AbsolutePath
   ): Either[String, AbsolutePath] =
     for {
+      fileSystemSemanticdbs <- optFileSystemSemanticdbs()
+        .map(Right(_))
+        .getOrElse(Left("No file system semanticdbs."))
       metadata <- findBuildTargetMetadata(sourceFile)
       foundSemanticDbPath <- {
         val relativePath = SemanticdbClasspath.fromScalaOrJava(

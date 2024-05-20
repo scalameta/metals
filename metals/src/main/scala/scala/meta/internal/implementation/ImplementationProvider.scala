@@ -48,7 +48,7 @@ import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.TextDocumentPositionParams
 
 final class ImplementationProvider(
-    semanticdbs: Semanticdbs,
+    semanticdbs: () => Semanticdbs,
     workspace: AbsolutePath,
     buffer: Buffers,
     definitionProvider: DefinitionProvider,
@@ -390,7 +390,7 @@ final class ImplementationProvider(
     if (fileSource.isJarFileSystem)
       Some(semanticdbForJarFile(fileSource))
     else
-      semanticdbs
+      semanticdbs()
         .textDocument(fileSource)
         .documentIncludingStale
   }

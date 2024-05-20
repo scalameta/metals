@@ -585,7 +585,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |""".stripMargin
       )
       _ <- server.didOpen("main.sc")
-      _ <- server.server
+      _ <- server.fullServer.folderServices.head
         .maybeImportScript(server.toPath("main.sc"))
         .getOrElse(Future.unit)
 
@@ -599,7 +599,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       )
 
       _ <- server.didOpen("build.sc")
-      _ <- server.server
+      _ <- server.fullServer.folderServices.head
         .maybeImportScript(server.toPath("build.sc"))
         .getOrElse(Future.unit)
 

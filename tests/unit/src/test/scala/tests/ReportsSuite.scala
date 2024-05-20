@@ -12,20 +12,24 @@ import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.TimeFormatter
 import scala.meta.internal.metals.ZipReportsProvider
 import scala.meta.internal.metals.doctor.Doctor
+import scala.meta.internal.metals.doctor.TargetsInfoProvider
 import scala.meta.io.AbsolutePath
 
 class ReportsSuite extends BaseSuite {
   val workspace: AbsolutePath = AbsolutePath(Paths.get("."))
   val reportsProvider =
     new StdReportContext(workspace.toNIO, _.map(_ => "build-target"))
-  val folderReportsZippper: FolderReportsZippper =
-    FolderReportsZippper(exampleBuildTargetsInfo, reportsProvider)
 
-  def exampleBuildTargetsInfo(): List[Map[String, String]] =
-    List(
-      Map("type" -> "scala 3", "semanticdb" -> Icons.unicode.check),
-      Map("type" -> "scala 2", "semanticdb" -> Icons.unicode.check),
-    )
+  val targetsInfoProvider: TargetsInfoProvider = new TargetsInfoProvider {
+    def getTargetsInfoForReports(): List[Map[String, String]] =
+      List(
+        Map("type" -> "scala 3", "semanticdb" -> Icons.unicode.check),
+        Map("type" -> "scala 2", "semanticdb" -> Icons.unicode.check),
+      )
+  }
+
+  val folderReportsZippper: FolderReportsZippper =
+    FolderReportsZippper(targetsInfoProvider, reportsProvider)
 
   def exampleText(workspaceStr: String = workspace.toString()): String =
     s"""|An error occurred in the file:

@@ -55,7 +55,7 @@ class StandaloneSymbolSearch(
       buffers,
       mtags,
       workspace,
-      semanticdbsFallback = None,
+      semanticdbsFallback = () => None,
       trees,
       buildTargets,
       saveSymbolFileToDisk,

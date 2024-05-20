@@ -51,7 +51,7 @@ final class TestSuitesProvider(
     buildTargetClasses: BuildTargetClasses,
     trees: Trees,
     symbolIndex: GlobalSymbolIndex,
-    semanticdbs: Semanticdbs,
+    semanticdbs: () => Semanticdbs,
     buffers: Buffers,
     clientConfig: ClientConfiguration,
     userConfig: () => UserConfiguration,
@@ -302,7 +302,7 @@ final class TestSuitesProvider(
       doc: Option[TextDocument],
   ): Seq[AddTestCases] = {
     doc
-      .orElse(semanticdbs.textDocument(path).documentIncludingStale)
+      .orElse(semanticdbs().textDocument(path).documentIncludingStale)
       .map { semanticdb =>
         suites.flatMap { suite =>
           val testCases = suite.framework match {

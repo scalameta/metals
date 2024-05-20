@@ -11,12 +11,12 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.services.LanguageClient
 
 class WorkspaceChoicePopup(
-    folders: () => List[MetalsLspService],
+    folders: () => List[ProjectMetalsLspService],
     languageClient: LanguageClient,
 ) {
   def interactiveChooseFolder(
       actionName: String
-  )(implicit ec: ExecutionContext): Future[Option[MetalsLspService]] = {
+  )(implicit ec: ExecutionContext): Future[Option[ProjectMetalsLspService]] = {
 
     val currentFolders = folders()
     if (currentFolders.length == 1) Future.successful(currentFolders.headOption)

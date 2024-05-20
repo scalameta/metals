@@ -21,19 +21,16 @@ import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.BspOnly
 import scala.meta.internal.builds.BuildTool
-import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.builds.WorkspaceReload
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
-import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.mtags.IndexingResult
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.tvp.FolderTreeViewProvider
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
 
@@ -49,7 +46,7 @@ import org.eclipse.lsp4j.Position
  */
 final case class Indexer(
     workspaceReload: () => WorkspaceReload,
-    doctorCheck: () => Unit,
+    check: () => Unit,
     languageClient: DelegatingLanguageClient,
     bspSession: () => Option[BspSession],
     executionContext: ExecutionContextExecutorService,
@@ -66,14 +63,10 @@ final case class Indexer(
     workspaceSymbols: () => WorkspaceSymbolProvider,
     buildTargets: BuildTargets,
     interactiveSemanticdbs: () => InteractiveSemanticdbs,
-    buildClient: () => ForwardingMetalsBuildClient,
     semanticDBIndexer: () => SemanticdbIndexer,
-    treeView: () => FolderTreeViewProvider,
     worksheetProvider: () => WorksheetProvider,
     symbolSearch: () => MetalsSymbolSearch,
-    buildTools: () => BuildTools,
-    formattingProvider: () => FormattingProvider,
-    fileWatcher: FileWatcher,
+    fileWatcher: () => FileWatcher,
     focusedDocument: () => Option[AbsolutePath],
     focusedDocumentBuildTarget: AtomicReference[b.BuildTargetIdentifier],
     buildTargetClasses: BuildTargetClasses,
@@ -84,7 +77,7 @@ final case class Indexer(
     sourceMapper: SourceMapper,
     workspaceFolder: AbsolutePath,
     implementationProvider: ImplementationProvider,
-    isConnecting: () => Boolean,
+    resetService: () => Unit,
 )(implicit rc: ReportContext) {
 
   private implicit def ec: ExecutionContextExecutorService = executionContext
@@ -108,7 +101,7 @@ final case class Indexer(
             .flatMap(_ => importBuild(session))
             .map { _ =>
               scribe.info("Correctly reloaded workspace")
-              profiledIndexWorkspace(doctorCheck)
+              profiledIndexWorkspace(check)
               workspaceReload().persistChecksumStatus(
                 Status.Installed,
                 buildTool,
@@ -126,15 +119,10 @@ final case class Indexer(
 
     bspSession() match {
       case None =>
-        if (!isConnecting()) {
-          scribe.warn(
-            "No build session currently active to reload. Attempting to reconnect."
-          )
-          reconnectToBuildServer()
-        } else {
-          scribe.warn("Cannot reload build session, still connecting...")
-          Future.successful(BuildChange.None)
-        }
+        scribe.warn(
+          "No build session currently active to reload. Attempting to reconnect."
+        )
+        reconnectToBuildServer()
       case Some(session) if forceRefresh => reloadAndIndex(session)
       case Some(session) =>
         workspaceReload().oldReloadResult(checksum) match {
@@ -200,18 +188,13 @@ final case class Indexer(
   }
 
   private def indexWorkspace(check: () => Unit): Unit = {
-    fileWatcher.cancel()
+    fileWatcher().cancel()
 
     timerProvider.timedThunk(
       "reset stuff",
       clientConfig.initialConfig.statistics.isIndex,
     ) {
-      interactiveSemanticdbs().reset()
-      buildClient().reset()
-      semanticDBIndexer().reset()
-      treeView().reset()
-      worksheetProvider().reset()
-      symbolSearch().reset()
+      resetService()
     }
     val allBuildTargetsData = buildData()
     for (buildTool <- allBuildTargetsData)
@@ -335,30 +318,19 @@ final case class Indexer(
       clientConfig.initialConfig.statistics.isIndex,
     ) {
       check()
-      buildTools()
-        .loadSupported()
-        .map(_.projectRoot)
-        .distinct match {
-        case Nil => formattingProvider().validateWorkspace(workspaceFolder)
-        case paths =>
-          paths.foreach(
-            formattingProvider().validateWorkspace(_)
-          )
-      }
-
     }
     timerProvider.timedThunk(
       "started file watcher",
       clientConfig.initialConfig.statistics.isIndex,
     ) {
       try {
-        fileWatcher.cancel()
-        fileWatcher.start()
+        fileWatcher().cancel()
+        fileWatcher().start()
       } catch {
         // note(@tgodzik) This is needed in case of ammonite
         // where it can rarely deletes directories while we are trying to watch them
         case NonFatal(e) =>
-          fileWatcher.cancel()
+          fileWatcher().cancel()
           scribe.warn("File watching failed, indexes will not be updated.", e)
       }
     }

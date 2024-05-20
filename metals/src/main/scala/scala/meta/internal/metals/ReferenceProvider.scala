@@ -35,7 +35,7 @@ import org.eclipse.lsp4j.ReferenceParams
 
 final class ReferenceProvider(
     workspace: AbsolutePath,
-    semanticdbs: Semanticdbs,
+    semanticdbs: () => Semanticdbs,
     buffers: Buffers,
     definition: DefinitionProvider,
     trees: Trees,
@@ -98,7 +98,7 @@ final class ReferenceProvider(
         }
       }
     }
-    semanticdbs.textDocument(source).documentIncludingStale match {
+    semanticdbs().textDocument(source).documentIncludingStale match {
       case Some(doc) =>
         doc.occurrences
           .map(_.symbol)
@@ -128,7 +128,7 @@ final class ReferenceProvider(
       includeSynthetics: Synthetic => Boolean = _ => true,
   )(implicit report: ReportContext): List[ReferencesResult] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
-    semanticdbs.textDocument(source).documentIncludingStale match {
+    semanticdbs().textDocument(source).documentIncludingStale match {
       case Some(doc) =>
         val results: List[ResolvedSymbolOccurrence] = {
           val posOccurrences =
@@ -222,7 +222,9 @@ final class ReferenceProvider(
           .asScala
           .headOption
         source = location.getUri().toAbsolutePath
-        definitionDoc <- semanticdbs.textDocument(source).documentIncludingStale
+        definitionDoc <- semanticdbs()
+          .textDocument(source)
+          .documentIncludingStale
       } yield (source, definitionDoc)
     }
 
@@ -334,7 +336,7 @@ final class ReferenceProvider(
     val result = for {
       sourcePath <- pathsFor(definitionBuildTargets, isSymbol)
       semanticdb <-
-        semanticdbs
+        semanticdbs()
           .textDocument(sourcePath)
           .documentIncludingStale
           .iterator
