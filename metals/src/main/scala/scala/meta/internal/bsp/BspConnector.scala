@@ -88,6 +88,7 @@ class BspConnector(
         projectRoot: AbsolutePath,
         bspTraceRoot: AbsolutePath,
         addLivenessMonitor: Boolean,
+        regeneratedConfig: Boolean = false,
     ): Future[Option[BuildServerConnection]] = {
       def bspStatusOpt = Option.when(addLivenessMonitor)(bspStatus)
       scribe.info("Attempting to connect to the build server...")
@@ -139,7 +140,12 @@ class BspConnector(
           optSetBuildTool(details.getName())
           buildTool match {
             case Some(bsp: BuildServerProvider)
-                if bsp.shouldRegenerateBspJson(details.getVersion()) =>
+                if bsp.shouldRegenerateBspJson(
+                  details.getVersion()
+                ) && !regeneratedConfig =>
+              scribe.info(
+                s"Regenerating ${details.getName()} json config to latest."
+              )
               bsp
                 .generateBspConfig(
                   workspace,
@@ -148,7 +154,12 @@ class BspConnector(
                 )
                 .map(status => handleGenerationStatus(bsp, status))
                 .flatMap { _ =>
-                  connect(projectRoot, bspTraceRoot, addLivenessMonitor)
+                  connect(
+                    projectRoot,
+                    bspTraceRoot,
+                    addLivenessMonitor,
+                    regeneratedConfig = true,
+                  )
                 }
 
             case _ =>
