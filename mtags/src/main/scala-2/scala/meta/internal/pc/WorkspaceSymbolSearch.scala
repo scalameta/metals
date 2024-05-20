@@ -16,7 +16,7 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
   def searchOutline(
       visitMember: Symbol => Boolean,
       query: String
-  ) {
+  ): Unit = {
 
     def traverseUnit(unit: RichCompilationUnit) = {
       @tailrec

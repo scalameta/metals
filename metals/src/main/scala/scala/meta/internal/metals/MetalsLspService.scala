@@ -408,6 +408,11 @@ abstract class MetalsLspService(
     },
   )
 
+  protected def onCreate(path: AbsolutePath): Unit = {
+    buildTargets.onCreate(path)
+    compilers.didChange(path)
+  }
+
   protected val interactiveSemanticdbs: InteractiveSemanticdbs = {
     val javaInteractiveSemanticdb = maybeJdkVersion.map(jdkVersion =>
       JavaInteractiveSemanticdb.create(folder, buildTargets, jdkVersion)
@@ -867,12 +872,7 @@ abstract class MetalsLspService(
         buffers.put(path, change.getText)
         diagnostics.didChange(path)
         compilers.didChange(path)
-        parseTrees(path)
-          .map { _ =>
-            treeView.onWorkspaceFileDidChange(path)
-          }
-          .ignoreValue
-          .asJava
+        parseTrees(path).asJava
     }
   }
 
