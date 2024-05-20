@@ -170,9 +170,6 @@ abstract class MetalsLspService(
     ReportLevel.fromString(MetalsServerConfig.default.loglevel),
   )
 
-  val folderReportsZippper: FolderReportsZippper =
-    FolderReportsZippper(doctor, reports)
-
   def javaHome = userConfig.javaHome
   protected val optJavaHome: Option[AbsolutePath] =
     JdkSources.defaultJavaHome(javaHome).headOption
@@ -360,16 +357,6 @@ abstract class MetalsLspService(
     )
   }
 
-  protected val referencesProvider: ReferenceProvider = new ReferenceProvider(
-    folder,
-    semanticdbs,
-    buffers,
-    definitionProvider,
-    trees,
-    buildTargets,
-    compilers,
-  )
-
   protected val formattingProvider: FormattingProvider = new FormattingProvider(
     folder,
     buffers,
@@ -389,26 +376,6 @@ abstract class MetalsLspService(
       semanticdbs,
     )
 
-  protected val packageProvider: PackageProvider =
-    new PackageProvider(
-      buildTargets,
-      trees,
-      referencesProvider,
-      buffers,
-      definitionProvider,
-    )
-
-  protected val newFileProvider: NewFileProvider = new NewFileProvider(
-    languageClient,
-    packageProvider,
-    scalaVersionSelector,
-    clientConfig.icons,
-    onCreate = path => {
-      onCreate(path)
-      onChange(List(path))
-    },
-  )
-
   protected def onCreate(path: AbsolutePath): Unit = {
     buildTargets.onCreate(path)
     compilers.didChange(path)
@@ -425,7 +392,6 @@ abstract class MetalsLspService(
         charset,
         tables,
         () => compilers,
-        clientConfig,
         () => semanticDBIndexer,
         javaInteractiveSemanticdb,
         buffers,
@@ -486,6 +452,37 @@ abstract class MetalsLspService(
       sourceMapper,
       worksheetProvider,
     )
+  )
+
+  protected val referencesProvider: ReferenceProvider = new ReferenceProvider(
+    folder,
+    semanticdbs,
+    buffers,
+    definitionProvider,
+    trees,
+    buildTargets,
+    compilers,
+    scalaVersionSelector,
+  )
+
+  protected val packageProvider: PackageProvider =
+    new PackageProvider(
+      buildTargets,
+      trees,
+      referencesProvider,
+      buffers,
+      definitionProvider,
+    )
+
+  protected val newFileProvider: NewFileProvider = new NewFileProvider(
+    languageClient,
+    packageProvider,
+    scalaVersionSelector,
+    clientConfig.icons,
+    onCreate = path => {
+      onCreate(path)
+      onChange(List(path))
+    },
   )
 
   protected val javaFormattingProvider: JavaFormattingProvider =
@@ -1662,6 +1659,9 @@ abstract class MetalsLspService(
       getVisibleName,
       () => projectInfo,
     )
+
+  val folderReportsZippper: FolderReportsZippper =
+    FolderReportsZippper(doctor, reports)
 
   protected def check(): Unit = {
     doctor.check(headDoctor)

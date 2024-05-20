@@ -15,8 +15,8 @@ import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
-import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal
+import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.CompilerOffsetParamsUtils
 import scala.meta.internal.metals.CompilerRangeParamsUtils
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey

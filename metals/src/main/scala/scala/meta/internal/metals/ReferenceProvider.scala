@@ -25,8 +25,6 @@ import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
-import scala.meta.internal.tokenizers.LegacyScanner
-import scala.meta.internal.tokenizers.LegacyToken._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 

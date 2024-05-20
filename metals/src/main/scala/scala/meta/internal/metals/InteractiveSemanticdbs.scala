@@ -30,7 +30,6 @@ final class InteractiveSemanticdbs(
     charset: Charset,
     tables: Tables,
     compilers: () => Compilers,
-    clientConfig: ClientConfiguration,
     semanticdbIndexer: () => SemanticdbIndexer,
     javaInteractiveSemanticdb: Option[JavaInteractiveSemanticdb],
     buffers: Buffers,
