@@ -5,6 +5,7 @@ import java.util
 import java.util.logging.Logger
 import java.{util => ju}
 
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.language.implicitConversions
 import scala.reflect.internal.util.Position
@@ -66,6 +67,12 @@ class MetalsGlobal(
 
   val logger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)
 
+  val richCompilationCache: TrieMap[String, RichCompilationUnit] =
+    TrieMap.empty[String, RichCompilationUnit]
+
+  // for those paths units were fully compiled (not just outlined)
+  val fullyCompiled: mutable.Set[String] = mutable.Set.empty[String]
+
   class MetalsInteractiveAnalyzer(val global: compiler.type)
       extends InteractiveAnalyzer {
 
@@ -100,6 +107,7 @@ class MetalsGlobal(
       else super.pluginsMacroExpand(typer, expandee, mode, pt)
     }
   }
+
   override lazy val analyzer: this.MetalsInteractiveAnalyzer =
     new MetalsInteractiveAnalyzer(compiler)
 
@@ -165,6 +173,16 @@ class MetalsGlobal(
     }
   }
 
+  /**
+   * If we run outline compilation on a file this means it's fresher
+   * and we don't want to get older data from last compilation.
+   *
+   * @param symbol symbol to check
+   */
+  def isOutlinedFile(path: Path): Boolean = {
+    richCompilationCache.contains(path.toUri().toString())
+  }
+
   def workspaceSymbolListMembers(
       query: String,
       pos: Position,
@@ -172,7 +190,7 @@ class MetalsGlobal(
   ): SymbolSearch.Result = {
 
     def isRelevantWorkspaceSymbol(sym: Symbol): Boolean =
-      sym.isStatic
+      sym.isStatic && !sym.isStale
 
     lazy val isInStringInterpolation = {
       lastVisitedParentTrees match {
@@ -185,26 +203,30 @@ class MetalsGlobal(
       }
     }
 
+    def visitMember(sym: Symbol) = {
+      if (isRelevantWorkspaceSymbol(sym))
+        visit {
+          if (isInStringInterpolation)
+            new WorkspaceInterpolationMember(
+              sym,
+              Nil,
+              edit => s"{$edit}",
+              None
+            )
+          else
+            new WorkspaceMember(sym)
+        }
+      else false
+    }
+
     if (query.isEmpty) SymbolSearch.Result.INCOMPLETE
     else {
       val context = doLocateContext(pos)
       val visitor = new CompilerSearchVisitor(
         context,
-        sym =>
-          if (isRelevantWorkspaceSymbol(sym))
-            visit {
-              if (isInStringInterpolation)
-                new WorkspaceInterpolationMember(
-                  sym,
-                  Nil,
-                  edit => s"{$edit}",
-                  None
-                )
-              else
-                new WorkspaceMember(sym)
-            }
-          else false
+        visitMember
       )
+      searchOutline(visitMember, query)
       search.search(query, buildTargetIdentifier, visitor)
     }
   }
@@ -214,12 +236,17 @@ class MetalsGlobal(
       pos: Position
   ): List[Member] = {
     val buffer = mutable.ListBuffer.empty[Member]
+    val isSeen = mutable.Set.empty[String]
     workspaceSymbolListMembers(
       query,
       pos,
       mem => {
-        buffer.append(mem)
-        true
+        val id = mem.sym.fullName
+        if (!isSeen(id)) {
+          isSeen += id
+          buffer.append(mem)
+          true
+        } else true
       }
     )
     buffer.toList
@@ -637,7 +664,9 @@ class MetalsGlobal(
       code: String,
       filename: String,
       cursor: Option[Int],
-      cursorName: String = CURSOR
+      cursorName: String = CURSOR,
+      isOutline: Boolean = false,
+      forceNew: Boolean = false
   ): RichCompilationUnit = {
     val codeWithCursor = cursor match {
       case Some(offset) =>
@@ -656,10 +685,16 @@ class MetalsGlobal(
           if util.Arrays.equals(
             value.source.content,
             richUnit.source.content
-          ) =>
+          ) && (isOutline || fullyCompiled(filename)) && !forceNew =>
         value
       case _ =>
         unitOfFile(richUnit.source.file) = richUnit
+        if (!isOutline) {
+          fullyCompiled += filename
+        } else {
+          fullyCompiled -= filename
+        }
+
         richUnit
     }
   }

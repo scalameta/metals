@@ -403,10 +403,15 @@ abstract class MetalsLspService(
     scalaVersionSelector,
     clientConfig.icons,
     onCreate = path => {
-      buildTargets.onCreate(path)
+      onCreate(path)
       onChange(List(path))
     },
   )
+
+  protected def onCreate(path: AbsolutePath): Unit = {
+    buildTargets.onCreate(path)
+    compilers.didChange(path)
+  }
 
   protected val interactiveSemanticdbs: InteractiveSemanticdbs = {
     val javaInteractiveSemanticdb = maybeJdkVersion.map(jdkVersion =>
@@ -866,7 +871,7 @@ abstract class MetalsLspService(
         val path = params.getTextDocument.getUri.toAbsolutePath
         buffers.put(path, change.getText)
         diagnostics.didChange(path)
-
+        compilers.didChange(path)
         parseTrees(path).asJava
     }
   }

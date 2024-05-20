@@ -574,8 +574,7 @@ class ProjectMetalsLspService(
       !buffers.contains(path)
     ) {
       event.eventType match {
-        case EventType.CreateOrModify =>
-          buildTargets.onCreate(path)
+        case EventType.CreateOrModify => onCreate(path)
         case _ =>
       }
       onChange(List(path)).asJava

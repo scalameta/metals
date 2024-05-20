@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import java.nio.file.Path
 
+import scala.annotation.tailrec
 import scala.util.control.NonFatal
 
 import scala.meta.pc.PcSymbolKind
@@ -10,7 +11,40 @@ import scala.meta.pc.SymbolSearchVisitor
 
 import org.eclipse.{lsp4j => l}
 
-trait WorkspaceSymbolSearch { this: MetalsGlobal =>
+trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
+
+  def searchOutline(
+      visitMember: Symbol => Boolean,
+      query: String
+  ): Unit = {
+
+    def traverseUnit(unit: RichCompilationUnit) = {
+      @tailrec
+      def loop(trees: List[Tree]): Unit = {
+        trees match {
+          case Nil =>
+          case (tree: MemberDef) :: tail =>
+            val sym = tree.symbol
+            def matches = if (sym.isType)
+              CompletionFuzzy.matchesSubCharacters(query, sym.name.toString())
+            else CompletionFuzzy.matches(query, sym.name.toString())
+            if (sym != null && sym.exists && matches) {
+              try {
+                visitMember(sym)
+              } catch {
+                case _: Throwable =>
+                // with outline compiler there might be situations when things fail
+              }
+            }
+            loop(tree.children ++ tail)
+          case tree :: tail =>
+            loop(tree.children ++ tail)
+        }
+      }
+      loop(List(unit.body))
+    }
+    compiler.richCompilationCache.values.foreach(traverseUnit)
+  }
 
   def info(symbol: String): Option[PcSymbolInformation] = {
     val index = symbol.lastIndexOf("/")
@@ -97,6 +131,7 @@ trait WorkspaceSymbolSearch { this: MetalsGlobal =>
   ) extends SymbolSearchVisitor {
 
     def visit(top: SymbolSearchCandidate): Int = {
+
       var added = 0
       for {
         sym <- loadSymbolFromClassfile(top)
@@ -117,7 +152,7 @@ trait WorkspaceSymbolSearch { this: MetalsGlobal =>
         kind: l.SymbolKind,
         range: l.Range
     ): Int = {
-      visit(SymbolSearchCandidate.Workspace(symbol))
+      visit(SymbolSearchCandidate.Workspace(symbol, path))
     }
 
     def shouldVisitPackage(pkg: String): Boolean =
@@ -161,10 +196,13 @@ trait WorkspaceSymbolSearch { this: MetalsGlobal =>
               }
           }
           members.filter(sym => isAccessible(sym))
-        case SymbolSearchCandidate.Workspace(symbol) =>
+        case SymbolSearchCandidate.Workspace(symbol, path)
+            if !compiler.isOutlinedFile(path) =>
           val gsym = inverseSemanticdbSymbol(symbol)
           if (isAccessible(gsym)) gsym :: Nil
           else Nil
+        case _ =>
+          Nil
       }
     } catch {
       case NonFatal(_) => Nil

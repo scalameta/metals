@@ -131,7 +131,7 @@ case class ScalaPresentationCompiler(
     compilerAccess.shutdown()
   }
 
-  override def restart(): Unit = {
+  def restart(): Unit = {
     compilerAccess.shutdownCurrentCompiler()
   }
 
@@ -155,7 +155,14 @@ case class ScalaPresentationCompiler(
     CompletableFuture.completedFuture(Nil.asJava)
   }
 
-  def didClose(uri: URI): Unit = {}
+  def didClose(uri: URI): Unit = {
+    compilerAccess.withNonInterruptableCompiler(None)(
+      (),
+      EmptyCancelToken
+    ) { pc =>
+      pc.compiler().richCompilationCache.remove(uri.toString())
+    }
+  }
 
   override def semanticTokens(
       params: VirtualFileParams
@@ -166,7 +173,7 @@ case class ScalaPresentationCompiler(
       params.token
     ) { pc =>
       new PcSemanticTokensProvider(
-        pc.compiler(),
+        pc.compiler(params),
         params
       ).provide().asJava
     }
@@ -190,13 +197,15 @@ case class ScalaPresentationCompiler(
 
   override def complete(
       params: OffsetParams
-  ): CompletableFuture[CompletionList] =
+  ): CompletableFuture[CompletionList] = {
     compilerAccess.withInterruptableCompiler(Some(params))(
       EmptyCompletionList(),
       params.token
     ) { pc =>
-      new CompletionProvider(pc.compiler(), params).completions()
+      new CompletionProvider(pc.compiler(params), params)
+        .completions()
     }
+  }
 
   override def implementAbstractMembers(
       params: OffsetParams
@@ -206,7 +215,8 @@ case class ScalaPresentationCompiler(
       empty,
       params.token
     ) { pc =>
-      new CompletionProvider(pc.compiler(), params).implementAll()
+      new CompletionProvider(pc.compiler(params), params)
+        .implementAll()
     }
   }
 
@@ -218,7 +228,9 @@ case class ScalaPresentationCompiler(
       empty,
       params.token
     ) { pc =>
-      new InferredTypeProvider(pc.compiler(), params).inferredTypeEdits().asJava
+      new InferredTypeProvider(pc.compiler(params), params)
+        .inferredTypeEdits()
+        .asJava
     }
   }
 
@@ -228,7 +240,10 @@ case class ScalaPresentationCompiler(
     val empty: Either[String, List[TextEdit]] = Right(List())
     (compilerAccess
       .withInterruptableCompiler(Some(params))(empty, params.token) { pc =>
-        new PcInlineValueProviderImpl(pc.compiler(), params).getInlineTextEdits
+        new PcInlineValueProviderImpl(
+          pc.compiler(params),
+          params
+        ).getInlineTextEdits
       })
       .thenApply {
         case Right(edits: List[TextEdit]) => edits.asJava
@@ -244,7 +259,7 @@ case class ScalaPresentationCompiler(
     compilerAccess.withInterruptableCompiler(Some(range))(empty, range.token) {
       pc =>
         new ExtractMethodProvider(
-          pc.compiler(),
+          pc.compiler(range),
           range,
           extractionPos
         ).extractMethod.asJava
@@ -259,7 +274,7 @@ case class ScalaPresentationCompiler(
     (compilerAccess
       .withInterruptableCompiler(Some(params))(empty, params.token) { pc =>
         new ConvertToNamedArgumentsProvider(
-          pc.compiler(),
+          pc.compiler(params),
           params,
           argIndices.asScala.map(_.toInt).toSet
         ).convertToNamedArguments
@@ -279,7 +294,9 @@ case class ScalaPresentationCompiler(
       List.empty[AutoImportsResult].asJava,
       params.token
     ) { pc =>
-      new AutoImportsProvider(pc.compiler(), name, params).autoImports().asJava
+      new AutoImportsProvider(pc.compiler(params), name, params)
+        .autoImports()
+        .asJava
     }
 
   override def getTasty(
@@ -308,7 +325,10 @@ case class ScalaPresentationCompiler(
     compilerAccess.withNonInterruptableCompiler(Some(params))(
       new SignatureHelp(),
       params.token
-    ) { pc => new SignatureHelpProvider(pc.compiler()).signatureHelp(params) }
+    ) { pc =>
+      new SignatureHelpProvider(pc.compiler(params))
+        .signatureHelp(params)
+    }
 
   override def prepareRename(
       params: OffsetParams
@@ -317,7 +337,9 @@ case class ScalaPresentationCompiler(
       Optional.empty[Range](),
       params.token
     ) { pc =>
-      new PcRenameProvider(pc.compiler(), params, None).prepareRename().asJava
+      new PcRenameProvider(pc.compiler(params), params, None)
+        .prepareRename()
+        .asJava
     }
 
   override def rename(
@@ -328,7 +350,11 @@ case class ScalaPresentationCompiler(
       List[TextEdit]().asJava,
       params.token
     ) { pc =>
-      new PcRenameProvider(pc.compiler(), params, Some(name)).rename().asJava
+      new PcRenameProvider(
+        pc.compiler(params),
+        params,
+        Some(name)
+      ).rename().asJava
     }
 
   override def hover(
@@ -339,7 +365,11 @@ case class ScalaPresentationCompiler(
       params.token
     ) { pc =>
       Optional.ofNullable(
-        new HoverProvider(pc.compiler(), params, config.hoverContentType())
+        new HoverProvider(
+          pc.compiler(params),
+          params,
+          config.hoverContentType()
+        )
           .hover()
           .orNull
       )
@@ -350,7 +380,10 @@ case class ScalaPresentationCompiler(
     compilerAccess.withNonInterruptableCompiler(Some(params))(
       DefinitionResultImpl.empty,
       params.token
-    ) { pc => new PcDefinitionProvider(pc.compiler(), params).definition() }
+    ) { pc =>
+      new PcDefinitionProvider(pc.compiler(params), params)
+        .definition()
+    }
   }
 
   override def info(
@@ -374,7 +407,10 @@ case class ScalaPresentationCompiler(
     compilerAccess.withNonInterruptableCompiler(Some(params))(
       DefinitionResultImpl.empty,
       params.token
-    ) { pc => new PcDefinitionProvider(pc.compiler(), params).typeDefinition() }
+    ) { pc =>
+      new PcDefinitionProvider(pc.compiler(params), params)
+        .typeDefinition()
+    }
   }
 
   override def documentHighlight(
@@ -384,7 +420,9 @@ case class ScalaPresentationCompiler(
       List.empty[DocumentHighlight].asJava,
       params.token()
     ) { pc =>
-      new PcDocumentHighlightProvider(pc.compiler(), params).highlights().asJava
+      new PcDocumentHighlightProvider(pc.compiler(params), params)
+        .highlights()
+        .asJava
     }
 
   override def semanticdbTextDocument(
@@ -392,15 +430,21 @@ case class ScalaPresentationCompiler(
       code: String
   ): CompletableFuture[Array[Byte]] = {
     val virtualFile = CompilerVirtualFileParams(fileUri, code)
+    semanticdbTextDocument(virtualFile)
+  }
+
+  override def semanticdbTextDocument(
+      virtualFile: VirtualFileParams
+  ): CompletableFuture[Array[Byte]] = {
     compilerAccess.withInterruptableCompiler(Some(virtualFile))(
       Array.emptyByteArray,
       EmptyCancelToken
     ) { pc =>
       new SemanticdbTextDocumentProvider(
-        pc.compiler(),
+        pc.compiler(virtualFile),
         config.semanticdbCompilerOptions().asScala.toList
       )
-        .textDocument(fileUri, code)
+        .textDocument(virtualFile.uri(), virtualFile.text())
         .toByteArray
     }
   }
@@ -418,6 +462,8 @@ case class ScalaPresentationCompiler(
       }
     }
   }
+
+  override def buildTargetId(): String = buildTargetIdentifier
 
   def newCompiler(): MetalsGlobal = {
     val classpath = this.classpath.mkString(File.pathSeparator)
@@ -477,4 +523,5 @@ case class ScalaPresentationCompiler(
       .toList
       .asJava
   }
+
 }
