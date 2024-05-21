@@ -25,7 +25,7 @@ object V {
   val coursierInterfaces =
     "1.0.19" // changing coursier interfaces version may be not binary compatible.
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
-  val debugAdapter = "4.1.0"
+  val debugAdapter = "4.1.1"
   val genyVersion = "1.0.0"
   val gitter8Version = "0.16.2"
   val gradleBloop = "1.6.2"
