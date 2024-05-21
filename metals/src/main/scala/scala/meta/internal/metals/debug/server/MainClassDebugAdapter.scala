@@ -62,7 +62,7 @@ class MainClassDebugAdapter(
     val jvmOptions =
       mainClass.getJvmOptions.asScala.toList :+ enableDebugInterface
     val fullClasspathStr =
-      project.classpath.map(_.toString()).mkString(File.pathSeparator)
+      classPath.map(_.toString()).mkString(File.pathSeparator)
     val java = JavaBinary(userJavaHome).toString()
     val classpathOption = "-cp" :: fullClasspathStr :: Nil
     val appOptions =

@@ -92,52 +92,54 @@ abstract class BaseStepDapSuite(
     focusFile = "a/src/main/scala/a/ScalaMain.scala",
   )
 
-  assertSteps("step-into-scala-lib", withoutVirtualDocs = true)(
-    sources = """|/a/src/main/scala/Main.scala
-                 |package a
-                 |
-                 |object Main {
-                 |  def main(args: Array[String]): Unit = {
-                 |>>  println("foo")
-                 |    System.exit(0)
-                 |  }
-                 |}
-                 |""".stripMargin,
-    main = "a.Main",
-    instrument = steps => {
-      steps
-        .at("a/src/main/scala/Main.scala", line = 5)(StepIn)
-        .atDependency(
-          server.toPathFromSymbol("scala.Predef", "scala/Predef.scala"),
-          line = if (scalaVersion.startsWith("2.13")) 427 else 405,
-        )(Continue)
-    },
-  )
+  if (suiteName != "mill-debug-step") { // TODO: delete condition after https://github.com/com-lihaoyi/mill/issues/3148
+    assertSteps("step-into-scala-lib", withoutVirtualDocs = true)(
+      sources = """|/a/src/main/scala/Main.scala
+                   |package a
+                   |
+                   |object Main {
+                   |  def main(args: Array[String]): Unit = {
+                   |>>  println("foo")
+                   |    System.exit(0)
+                   |  }
+                   |}
+                   |""".stripMargin,
+      main = "a.Main",
+      instrument = steps => {
+        steps
+          .at("a/src/main/scala/Main.scala", line = 5)(StepIn)
+          .atDependency(
+            server.toPathFromSymbol("scala.Predef", "scala/Predef.scala"),
+            line = if (scalaVersion.startsWith("2.13")) 427 else 405,
+          )(Continue)
+      },
+    )
 
-  assertSteps("step-into-java-lib", withoutVirtualDocs = true)(
-    sources = """|/a/src/main/scala/Main.scala
-                 |package a
-                 |
-                 |object Main {
-                 |  def main(args: Array[String]): Unit = {
-                 |>>  System.out.println("foo")
-                 |    System.exit(0)
-                 |  }
-                 |}
-                 |""".stripMargin,
-    main = "a.Main",
-    instrument = steps => {
-      val (javaLibFile, javaLibLine) =
-        if (isJava17) ("java.base/java/io/PrintStream.java", 1027)
-        else ("java.base/java/io/PrintStream.java", 881)
-      steps
-        .at("a/src/main/scala/Main.scala", line = 5)(StepIn)
-        .atDependency(
-          server.toPathFromSymbol("java.io.PrintStream", javaLibFile),
-          javaLibLine,
-        )(Continue)
-    },
-  )
+    assertSteps("step-into-java-lib", withoutVirtualDocs = true)(
+      sources = """|/a/src/main/scala/Main.scala
+                   |package a
+                   |
+                   |object Main {
+                   |  def main(args: Array[String]): Unit = {
+                   |>>  System.out.println("foo")
+                   |    System.exit(0)
+                   |  }
+                   |}
+                   |""".stripMargin,
+      main = "a.Main",
+      instrument = steps => {
+        val (javaLibFile, javaLibLine) =
+          if (isJava17) ("java.base/java/io/PrintStream.java", 1027)
+          else ("java.base/java/io/PrintStream.java", 881)
+        steps
+          .at("a/src/main/scala/Main.scala", line = 5)(StepIn)
+          .atDependency(
+            server.toPathFromSymbol("java.io.PrintStream", javaLibFile),
+            javaLibLine,
+          )(Continue)
+      },
+    )
+  }
 
   assertSteps("stops-on-different-class-in-same-file")(
     sources = """|/a/src/main/scala/a/Main.scala
@@ -178,6 +180,7 @@ abstract class BaseStepDapSuite(
 
       for {
         _ <- initialize(workspaceLayout)
+        _ <- server.server.indexingPromise.future
         _ <- server.didFocus(focusFile)
         navigator = instrument(StepNavigator(workspace))
         debugger <- debugMain("a", main, navigator)
