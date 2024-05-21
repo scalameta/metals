@@ -325,7 +325,7 @@ class DebugProvider(
       params: DebugSessionParams,
       cancelPromise: Promise[Unit],
   ) =
-    if (buildServer.isDebuggingProvider) {
+    if (buildServer.isDebuggingProvider || buildServer.isSbt) {
       buildServer.startDebugSession(params, cancelPromise)
     } else {
       def getDebugee: Future[MetalsDebuggee] = params.getDataKind() match {
@@ -350,7 +350,10 @@ class DebugProvider(
         case _ => throw new RuntimeException(s"Can't resolve debugee")
       }
 
-      for (debuggee <- getDebugee) yield {
+      for {
+        _ <- compilations.compileTargets(params.getTargets().asScala.toSeq)
+        debuggee <- getDebugee
+      } yield {
         val dapLogger =
           new scala.meta.internal.metals.debug.server.DebugLogger()
         val resolver = new MetalsDebugToolsResolver()

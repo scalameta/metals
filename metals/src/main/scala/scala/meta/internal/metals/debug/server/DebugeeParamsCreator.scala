@@ -1,7 +1,5 @@
 package scala.meta.internal.metals.debug.server
 
-import java.nio.file.Path
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -18,6 +16,7 @@ import ch.epfl.scala.debugadapter.Module
 import ch.epfl.scala.debugadapter.ScalaVersion
 import ch.epfl.scala.debugadapter.SourceDirectory
 import ch.epfl.scala.debugadapter.SourceJar
+import ch.epfl.scala.debugadapter.StandaloneSourceFile
 import ch.epfl.scala.debugadapter.UnmanagedEntry
 
 class DebugeeParamsCreator(buildTargets: BuildTargets)(implicit
@@ -38,12 +37,7 @@ class DebugeeParamsCreator(buildTargets: BuildTargets)(implicit
         .filter(_.nonEmpty)
         .getOrElse(Nil)
       val debugLibs = libraries.flatMap(createLibrary(_))
-      val includedInLibs = debugLibs
-        .flatMap(_.sourceEntries.flatMap {
-          case SourceJar(jar) => Some(jar)
-          case _ => None
-        })
-        .toSet
+      val includedInLibs = debugLibs.map(_.absolutePath).toSet
 
       val cancelPromise: Promise[Unit] = Promise()
 
@@ -51,11 +45,13 @@ class DebugeeParamsCreator(buildTargets: BuildTargets)(implicit
         classpath <- buildTargets
           .targetClasspath(id, cancelPromise)
           .getOrElse(Future.successful(Nil))
-          .map(_.toAbsoluteClasspath.map(_.toNIO).toSeq)
+          .map(
+            _.filter(_.endsWith(".jar")).toAbsoluteClasspath.map(_.toNIO).toSeq
+          )
       ) yield {
 
         val filteredClassPath = classpath.collect {
-          case path if includedInLibs(path) => UnmanagedEntry(path)
+          case path if !includedInLibs(path) => UnmanagedEntry(path)
         }.toList
 
         val modules = buildTargets
@@ -71,9 +67,8 @@ class DebugeeParamsCreator(buildTargets: BuildTargets)(implicit
           buildTargets.scalaTarget(id).map(_.scalaVersion),
           name,
           modules,
-          libraries.flatMap(createLibrary(_)),
+          debugLibs,
           filteredClassPath,
-          classpath,
         )
       }
     }
@@ -118,8 +113,15 @@ class DebugeeParamsCreator(buildTargets: BuildTargets)(implicit
   private def sources(id: BuildTargetIdentifier) =
     buildTargets.sourceItemsToBuildTargets
       .filter(_._2.iterator.asScala.contains(id))
-      .collect { case (path, _) =>
-        SourceDirectory(path.toNIO)
+      .collect { case (sourcePath, _) =>
+        if (sourcePath.isDirectory) {
+          SourceDirectory(sourcePath.toNIO)
+        } else {
+          StandaloneSourceFile(
+            sourcePath.toNIO,
+            sourcePath.toNIO.getFileName.toString,
+          )
+        }
       }
       .toSeq
 }
@@ -130,5 +132,4 @@ case class DebugeeProject(
     modules: Seq[Module],
     libraries: Seq[Library],
     unmanagedEntries: Seq[UnmanagedEntry],
-    classpath: Seq[Path],
 )
