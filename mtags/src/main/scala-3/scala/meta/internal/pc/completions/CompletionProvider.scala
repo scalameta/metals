@@ -10,6 +10,7 @@ import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportEdits
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
 import scala.meta.internal.pc.printer.MetalsPrinter
+import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.SymbolSearch
@@ -31,12 +32,13 @@ import org.eclipse.lsp4j.Range as LspRange
 import org.eclipse.lsp4j.TextEdit
 
 class CompletionProvider(
-    search: SymbolSearch,
-    driver: InteractiveDriver,
-    params: OffsetParams,
-    config: PresentationCompilerConfig,
-    buildTargetIdentifier: String,
-    folderPath: Option[Path],
+                          search: SymbolSearch,
+                          driver: InteractiveDriver,
+                          params: OffsetParams,
+                          config: PresentationCompilerConfig,
+                          buildTargetIdentifier: String,
+                          folderPath: Option[Path],
+                          referenceCounter: CompletionItemPriority,
 )(using reports: ReportContext):
   def completions(): CompletionList =
     val uri = params.uri
@@ -83,6 +85,7 @@ class CompletionProvider(
             folderPath,
             autoImportsGen,
             driver.settings,
+            referenceCounter,
           ).completions()
 
         val items = completions.zipWithIndex.map { case (item, idx) =>
