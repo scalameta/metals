@@ -37,6 +37,8 @@ import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
+import scala.meta.pc.ReferencesRequest
+import scala.meta.pc.ReferencesResult
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
 import scala.meta.pc.{PcSymbolInformation => IPcSymbolInformation}
@@ -424,6 +426,19 @@ case class ScalaPresentationCompiler(
         .highlights()
         .asJava
     }
+
+  override def references(
+      params: ReferencesRequest
+  ): CompletableFuture[ju.List[ReferencesResult]] = {
+    compilerAccess.withInterruptableCompiler(Some(params.file()))(
+      List.empty[ReferencesResult].asJava,
+      params.file.token()
+    ) { pc =>
+      val res: List[ReferencesResult] =
+        PcReferencesProvider(pc.compiler(), params).references()
+      res.asJava
+    }
+  }
 
   override def semanticdbTextDocument(
       fileUri: URI,

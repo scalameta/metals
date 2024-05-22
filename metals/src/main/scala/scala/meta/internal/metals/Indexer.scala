@@ -174,6 +174,7 @@ final case class Indexer(
           List(
             ("definition index", definitionIndex),
             ("references index", referencesProvider().index),
+            ("identifier index", referencesProvider().identifierIndex.index),
             ("workspace symbol index", workspaceSymbols().inWorkspace),
             ("build targets", buildTargets),
             (
@@ -544,40 +545,50 @@ final case class Indexer(
         val input = sourceToIndex0.toInput
         val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
-        SemanticdbDefinition.foreach(input, dialect, includeMembers = true) {
-          case SemanticdbDefinition(info, occ, owner) =>
-            if (info.isExtension) {
+        val optMtags = SemanticdbDefinition.foreachWithReturnMtags(
+          input,
+          dialect,
+          includeMembers = true,
+          collectIdentifiers = true,
+        ) { case SemanticdbDefinition(info, occ, owner) =>
+          if (info.isExtension) {
+            occ.range.foreach { range =>
+              methodSymbols += WorkspaceSymbolInformation(
+                info.symbol,
+                info.kind,
+                range.toLsp,
+              )
+            }
+          } else {
+            if (info.kind.isRelevantKind) {
               occ.range.foreach { range =>
-                methodSymbols += WorkspaceSymbolInformation(
+                symbols += WorkspaceSymbolInformation(
                   info.symbol,
                   info.kind,
                   range.toLsp,
                 )
               }
-            } else {
-              if (info.kind.isRelevantKind) {
-                occ.range.foreach { range =>
-                  symbols += WorkspaceSymbolInformation(
-                    info.symbol,
-                    info.kind,
-                    range.toLsp,
-                  )
-                }
-              }
             }
-            if (
-              sourceItem.isDefined &&
-              !info.symbol.isPackage &&
-              (owner.isPackage || source.isAmmoniteScript)
-            ) {
-              definitionIndex.addToplevelSymbol(
-                reluri,
-                source,
-                info.symbol,
-                dialect,
-              )
-            }
+          }
+          if (
+            sourceItem.isDefined &&
+            !info.symbol.isPackage &&
+            (owner.isPackage || source.isAmmoniteScript)
+          ) {
+            definitionIndex.addToplevelSymbol(
+              reluri,
+              source,
+              info.symbol,
+              dialect,
+            )
+          }
         }
+        optMtags
+          .map(_.allIdentifiers)
+          .filter(_.nonEmpty)
+          .foreach(identifiers =>
+            referencesProvider().addIdentifiers(source, identifiers)
+          )
         workspaceSymbols().didChange(source, symbols.toSeq, methodSymbols.toSeq)
 
         // Since the `symbols` here are toplevel symbols,

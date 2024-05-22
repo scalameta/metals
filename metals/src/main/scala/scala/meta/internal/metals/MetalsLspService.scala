@@ -170,9 +170,6 @@ abstract class MetalsLspService(
     ReportLevel.fromString(MetalsServerConfig.default.loglevel),
   )
 
-  val folderReportsZippper: FolderReportsZippper =
-    FolderReportsZippper(doctor, reports)
-
   def javaHome = userConfig.javaHome
   protected val optJavaHome: Option[AbsolutePath] =
     JdkSources.defaultJavaHome(javaHome).headOption
@@ -360,15 +357,6 @@ abstract class MetalsLspService(
     )
   }
 
-  protected val referencesProvider: ReferenceProvider = new ReferenceProvider(
-    folder,
-    semanticdbs,
-    buffers,
-    definitionProvider,
-    trees,
-    buildTargets,
-  )
-
   protected val formattingProvider: FormattingProvider = new FormattingProvider(
     folder,
     buffers,
@@ -388,26 +376,6 @@ abstract class MetalsLspService(
       semanticdbs,
     )
 
-  protected val packageProvider: PackageProvider =
-    new PackageProvider(
-      buildTargets,
-      trees,
-      referencesProvider,
-      buffers,
-      definitionProvider,
-    )
-
-  protected val newFileProvider: NewFileProvider = new NewFileProvider(
-    languageClient,
-    packageProvider,
-    scalaVersionSelector,
-    clientConfig.icons,
-    onCreate = path => {
-      onCreate(path)
-      onChange(List(path))
-    },
-  )
-
   protected def onCreate(path: AbsolutePath): Unit = {
     buildTargets.onCreate(path)
     compilers.didChange(path)
@@ -424,7 +392,6 @@ abstract class MetalsLspService(
         charset,
         tables,
         () => compilers,
-        clientConfig,
         () => semanticDBIndexer,
         javaInteractiveSemanticdb,
         buffers,
@@ -485,6 +452,37 @@ abstract class MetalsLspService(
       sourceMapper,
       worksheetProvider,
     )
+  )
+
+  protected val referencesProvider: ReferenceProvider = new ReferenceProvider(
+    folder,
+    semanticdbs,
+    buffers,
+    definitionProvider,
+    trees,
+    buildTargets,
+    compilers,
+    scalaVersionSelector,
+  )
+
+  protected val packageProvider: PackageProvider =
+    new PackageProvider(
+      buildTargets,
+      trees,
+      referencesProvider,
+      buffers,
+      definitionProvider,
+    )
+
+  protected val newFileProvider: NewFileProvider = new NewFileProvider(
+    languageClient,
+    packageProvider,
+    scalaVersionSelector,
+    clientConfig.icons,
+    onCreate = path => {
+      onCreate(path)
+      onChange(List(path))
+    },
   )
 
   protected val javaFormattingProvider: JavaFormattingProvider =
@@ -891,10 +889,12 @@ abstract class MetalsLspService(
     val path = params.getTextDocument.getUri.toAbsolutePath
     savedFiles.add(path)
     // read file from disk, we only remove files from buffers on didClose.
-    buffers.put(path, path.toInput.text)
+    val text = path.toInput.text
+    buffers.put(path, text)
     Future
       .sequence(
         List(
+          referencesProvider.indexIdentifiers(path, text),
           renameProvider.runSave(),
           parseTrees(path),
           onChange(List(path)),
@@ -1111,12 +1111,14 @@ abstract class MetalsLspService(
   override def references(
       params: ReferenceParams
   ): CompletableFuture[util.List[Location]] =
-    CancelTokens { _ => referencesResult(params).flatMap(_.locations).asJava }
+    CancelTokens.future { _ =>
+      referencesResult(params).map(_.flatMap(_.locations).asJava)
+    }
 
   // Triggers a cascade compilation and tries to find new references to a given symbol.
   // It's not possible to stream reference results so if we find new symbols we notify the
   // user to run references again to see updated results.
-  protected def compileAndLookForNewReferences(
+  private def compileAndLookForNewReferences(
       params: ReferenceParams,
       result: List[ReferencesResult],
   ): Unit = {
@@ -1147,44 +1149,50 @@ abstract class MetalsLspService(
       newParams match {
         case None =>
         case Some(p) =>
-          val newResult = referencesProvider.references(p)
-          val diff = newResult
-            .flatMap(_.locations)
-            .length - result.flatMap(_.locations).length
-          val diffSyms: Set[String] =
-            newResult.map(_.symbol).toSet -- result.map(_.symbol).toSet
-          if (diffSyms.nonEmpty && diff > 0) {
-            import scala.meta.internal.semanticdb.Scala._
-            val names =
-              diffSyms.map(sym => s"'${sym.desc.name.value}'").mkString(" and ")
-            val message =
-              s"Found new symbol references for $names, try running again."
-            scribe.info(message)
-            statusBar
-              .addMessage(clientConfig.icons.info + message)
+          referencesProvider.references(p).foreach { newResult =>
+            val diff = newResult
+              .flatMap(_.locations)
+              .length - result.flatMap(_.locations).length
+            val diffSyms: Set[String] =
+              newResult.map(_.symbol).toSet -- result.map(_.symbol).toSet
+            if (diffSyms.nonEmpty && diff > 0) {
+              import scala.meta.internal.semanticdb.Scala._
+              val names =
+                diffSyms
+                  .map(sym => s"'${sym.desc.name.value}'")
+                  .mkString(" and ")
+              val message =
+                s"Found new symbol references for $names, try running again."
+              scribe.info(message)
+              statusBar
+                .addMessage(clientConfig.icons.info + message)
+            }
           }
       }
     }
   }
 
-  def referencesResult(params: ReferenceParams): List[ReferencesResult] = {
+  def referencesResult(
+      params: ReferenceParams
+  ): Future[List[ReferencesResult]] = {
     val timer = new Timer(time)
-    val results: List[ReferencesResult] = referencesProvider.references(params)
-    if (clientConfig.initialConfig.statistics.isReferences) {
-      if (results.forall(_.symbol.isEmpty)) {
-        scribe.info(s"time: found 0 references in $timer")
-      } else {
-        scribe.info(
-          s"time: found ${results.flatMap(_.locations).length} references to symbol '${results
-              .map(_.symbol)
-              .mkString("and")}' in $timer"
-        )
+    referencesProvider.references(params).map { results =>
+      if (clientConfig.initialConfig.statistics.isReferences) {
+        if (results.forall(_.symbol.isEmpty)) {
+          scribe.info(s"time: found 0 references in $timer")
+        } else {
+          scribe.info(
+            s"time: found ${results.flatMap(_.locations).length} references to symbol '${results
+                .map(_.symbol)
+                .mkString("and")}' in $timer"
+          )
+        }
       }
+      if (results.nonEmpty) {
+        compileAndLookForNewReferences(params, results)
+      }
+      results
     }
-    if (results.nonEmpty) {
-      compileAndLookForNewReferences(params, results)
-    }
-    results
   }
 
   override def semanticTokensFull(
@@ -1652,6 +1660,9 @@ abstract class MetalsLspService(
       () => projectInfo,
     )
 
+  val folderReportsZippper: FolderReportsZippper =
+    FolderReportsZippper(doctor, reports)
+
   protected def check(): Unit = {
     doctor.check(headDoctor)
   }
@@ -1708,22 +1719,23 @@ abstract class MetalsLspService(
               positionParams.getPosition(),
               new ReferenceContext(false),
             )
-            val results = referencesResult(refParams)
-            if (results.flatMap(_.locations).isEmpty) {
-              // Fallback again to the original behavior that returns
-              // the definition location itself if no reference locations found,
-              // for avoiding the confusing messages like "No definition found ..."
-              definitionResult(positionParams, token)
-            } else {
-              Future.successful(
-                DefinitionResult(
-                  locations = results.flatMap(_.locations).asJava,
-                  symbol = results.head.symbol,
-                  definition = None,
-                  semanticdb = None,
-                  querySymbol = results.head.symbol,
+            referencesResult(refParams).flatMap { results =>
+              if (results.flatMap(_.locations).isEmpty) {
+                // Fallback again to the original behavior that returns
+                // the definition location itself if no reference locations found,
+                // for avoiding the confusing messages like "No definition found ..."
+                definitionResult(positionParams, token)
+              } else {
+                Future.successful(
+                  DefinitionResult(
+                    locations = results.flatMap(_.locations).asJava,
+                    symbol = results.head.symbol,
+                    definition = None,
+                    semanticdb = None,
+                    querySymbol = results.head.symbol,
+                  )
                 )
-              )
+              }
             }
           } else {
             definitionResult(positionParams, token)

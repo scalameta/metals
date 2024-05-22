@@ -15,6 +15,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
+import scala.meta.internal
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.CompilerOffsetParamsUtils
 import scala.meta.internal.metals.CompilerRangeParamsUtils
@@ -48,6 +49,7 @@ import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintKind
 import org.eclipse.lsp4j.InlayHintParams
+import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SelectionRangeParams
@@ -57,6 +59,7 @@ import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.{Position => LspPosition}
 import org.eclipse.lsp4j.{Range => LspRange}
 import org.eclipse.lsp4j.{debug => d}
@@ -726,6 +729,44 @@ class Compilers(
         }
     }
   }.getOrElse(Future.successful(Nil.asJava))
+
+  def references(
+      params: ReferenceParams,
+      token: CancelToken,
+  ): Future[List[ReferencesResult]] = {
+    withPCAndAdjustLsp(params) { case (pc, pos, adjust) =>
+      val requestParams = new internal.pc.PcReferencesRequest(
+        CompilerOffsetParamsUtils.fromPos(pos, token),
+        params.getContext().isIncludeDeclaration(),
+        JEither.forLeft(pos.start),
+      )
+      pc.references(requestParams)
+        .asScala
+        .map(_.asScala.map(adjust.adjustReferencesResult).toList)
+    }
+  }.getOrElse(Future.successful(Nil))
+
+  def references(
+      searchFile: AbsolutePath,
+      includeDefinition: Boolean,
+      symbol: String,
+  ): Future[List[ReferencesResult]] =
+    loadCompiler(searchFile)
+      .map { compiler =>
+        val uri = searchFile.toURI
+        val (input, _, adjust) =
+          sourceAdjustments(uri.toString(), compiler.scalaVersion())
+        val requestParams = new internal.pc.PcReferencesRequest(
+          CompilerVirtualFileParams(uri, input.text),
+          includeDefinition,
+          JEither.forRight(symbol),
+        )
+        compiler
+          .references(requestParams)
+          .asScala
+          .map(_.asScala.map(adjust.adjustReferencesResult).toList)
+      }
+      .getOrElse(Future.successful(Nil))
 
   def extractMethod(
       doc: TextDocumentIdentifier,
