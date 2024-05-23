@@ -25,9 +25,9 @@ trait PcReferencesProvider {
     val (pos, _) = toAdjust.adjust(text)
     tree match {
       case t: DefTree if !includeDefinition =>
-        (compiler.semanticdbSymbol(t.symbol), None)
+        (compiler.semanticdbSymbol(sym.getOrElse(t.symbol)), None)
       case t =>
-        (compiler.semanticdbSymbol(t.symbol), Some(pos.toLsp))
+        (compiler.semanticdbSymbol(sym.getOrElse(t.symbol)), Some(pos.toLsp))
     }
   }
 

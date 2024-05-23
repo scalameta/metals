@@ -1111,8 +1111,22 @@ abstract class MetalsLspService(
       params: ReferenceParams
   ): CompletableFuture[util.List[Location]] =
     CancelTokens.future { _ =>
-      referencesResult(params).map(_.flatMap(_.locations).asJava)
+      referencesResult(params).map(getSortedLocations)
     }
+
+  private def getSortedLocations(referencesResult: List[ReferencesResult]) =
+    referencesResult
+      .flatMap(_.locations)
+      .groupBy(_.getUri())
+      .flatMap { case (_, locs) =>
+        locs.sortWith(sortByLocationPosition).distinct
+      }
+      .toSeq
+      .asJava
+
+  private def sortByLocationPosition(l1: Location, l2: Location): Boolean = {
+    l1.getRange.getStart.getLine < l2.getRange.getStart.getLine
+  }
 
   def referencesResult(
       params: ReferenceParams
@@ -1691,7 +1705,7 @@ abstract class MetalsLspService(
       } else {
         Future.successful(
           DefinitionResult(
-            locations = results.flatMap(_.locations).asJava,
+            locations = getSortedLocations(results),
             symbol = results.head.symbol,
             definition = None,
             semanticdb = None,

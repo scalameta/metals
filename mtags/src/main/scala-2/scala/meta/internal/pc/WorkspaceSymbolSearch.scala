@@ -3,8 +3,10 @@ package scala.meta.internal.pc
 import java.nio.file.Path
 
 import scala.annotation.tailrec
+import scala.reflect.NameTransformer
 import scala.util.control.NonFatal
 
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.PcSymbolKind
 import scala.meta.pc.PcSymbolProperty
 import scala.meta.pc.SymbolSearchVisitor
@@ -96,14 +98,20 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
         loop(rest.drop(1), (newSymbol, rest.headOption.exists(_ == '#')) :: acc)
       }
 
-    val names =
-      loop(symbol.drop(index + 1).takeWhile(_ != '('), List.empty)
+    val (toNames, rest) = {
+      val withoutPackage = symbol.drop(index + 1)
+      val i = withoutPackage.indexOf('(')
+      if (i < 0) (withoutPackage, "")
+      else withoutPackage.splitAt(i)
+    }
 
-    names.foldLeft(pkg.toList) { case (owners, (name, isClass)) =>
+    val names = loop(toNames, List.empty)
+    val symbols = names.foldLeft(pkg.toList) { case (owners, (name, isClass)) =>
       owners.flatMap { owner =>
+        val actualName = NameTransformer.encode(name.stripBackticks)
         val foundChild =
-          if (isClass) owner.info.member(TypeName(name))
-          else owner.info.member(TermName(name))
+          if (isClass) owner.info.member(TypeName(actualName))
+          else owner.info.member(TermName(actualName))
         if (foundChild.exists) {
           foundChild.info match {
             case OverloadedType(_, alts) => alts
@@ -111,6 +119,12 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
           }
         } else Nil
       }
+    }
+
+    rest match {
+      case ParamName(name) =>
+        symbols.flatMap(_.paramss.flatten.find(_.name.decoded == name))
+      case _ => symbols
     }
   }
 
@@ -211,5 +225,11 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
     } catch {
       case NonFatal(_) => Nil
     }
+  }
+}
+
+object ParamName {
+  def unapply(name: String): Option[String] = {
+    Some(name.dropWhile(_ != '.').drop(2).dropRight(1)).filter(_.nonEmpty)
   }
 }

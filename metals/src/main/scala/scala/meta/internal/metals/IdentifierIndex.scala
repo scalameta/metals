@@ -59,4 +59,13 @@ object IdentifierIndex {
       id: BuildTargetIdentifier,
       bloom: BloomFilter[CharSequence],
   )
+
+  case class IndexEntryWithStaleInfo(
+      id: BuildTargetIdentifier,
+      bloom: BloomFilter[CharSequence],
+      isStale: Boolean,
+  ) {
+    def asStale: IndexEntryWithStaleInfo =
+      IndexEntryWithStaleInfo(id, bloom, isStale = true)
+  }
 }

@@ -242,11 +242,17 @@ trait MtagsEnrichments extends ScalametaCommonEnrichments {
         text(pos.end - 1) == '`' &&
         pos.start != (pos.end - 1) // for one character names, e.g. `c`
       //                                                    start-^^-end
+      lazy val backtickedSetter =
+        text(pos.start) == '`' && text.length > pos.end + 4 && text
+          .slice(pos.end + 1, pos.end + 4)
+          .mkString == "_=`"
       val isOldNameBackticked = text(pos.start) == '`' &&
         (text(pos.end - 1) != '`' || pos.start == (pos.end - 1)) &&
         text(pos.end + 1) == '`'
       if (isBackticked && forRename)
         (pos.withStart(pos.start + 1).withEnd(pos.end - 1), true)
+      else if (backtickedSetter)
+        (pos.withStart(pos.start + 1).withEnd(pos.end + 1), false)
       else if (isOldNameBackticked) // pos
         (pos.withEnd(pos.end + 2), false)
       else (pos, false)
