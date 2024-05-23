@@ -53,7 +53,7 @@ final class ReferenceProvider(
       .inverseSources(file)
       .map(id => identifierIndex.addIdentifiers(file, id, set))
 
-  def indexIdentifiers(
+  def didChange(
       path: AbsolutePath,
       text: String,
   ): Future[Unit] = Future {
@@ -61,6 +61,7 @@ final class ReferenceProvider(
       val dialect = scalaVersionSelector.getDialect(path)
       val set = identifierIndex.collectIdentifiers(text, dialect)
       identifierIndex.addIdentifiers(path, id, set)
+      index.remove(path.toNIO)
     }
   }
 

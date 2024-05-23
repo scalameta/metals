@@ -449,6 +449,64 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
     } yield ()
   }
 
+  test("i6348") {
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{
+           |  "moduleA": { },
+           |  "moduleB": { },
+           |  "root": { dependsOn: [ "moduleA", "moduleB" ] }
+           |}
+           |/moduleA/src/main/scala/Person.scala
+           |package a
+           |object Person{
+           |  def fromList(list: List[Any])={
+           |    println(list)
+           |  }
+           |}
+           |/moduleB/src/main/scala/Main.scala
+           |object A {
+           |}
+           |/root/src/main/scala/Main.scala
+           |
+           |""".stripMargin
+      )
+      _ <- server.didOpen("root/src/main/scala/Main.scala")
+      _ <- server.didOpen("moduleB/src/main/scala/Main.scala")
+      _ <- server.didChange("moduleB/src/main/scala/Main.scala")(_ =>
+        """|object A {
+           |  val i: String = 1
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didSave("moduleB/src/main/scala/Main.scala")(identity)
+      _ <- server.didOpen("root/src/main/scala/Main.scala")
+      _ <- server.didChange("root/src/main/scala/Main.scala")(_ =>
+        """|import a.Person
+           |object Main {
+           |  val i = Person.fromList(Nil)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("moduleA/src/main/scala/Person.scala")
+      references <- server.references(
+        "moduleA/src/main/scala/Person.scala",
+        "fromList",
+      )
+      _ = assertNoDiff(
+        references,
+        """|moduleA/src/main/scala/Person.scala:3:7: info: reference
+           |  def fromList(list: List[Any])={
+           |      ^^^^^^^^
+           |root/src/main/scala/Main.scala:3:18: info: reference
+           |  val i = Person.fromList(Nil)
+           |                 ^^^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   override def assertCheck(
       filename: String,
       edit: String,
