@@ -27,7 +27,7 @@ object TestScala3Compiler {
         val status = new WorkDoneProgress(client, time)(ec)
         val embedded = new Embedded(status)
         val pc = embedded
-          .presentationCompiler(mtags, mtags.jars)
+          .presentationCompiler(mtags)
           .newInstance(
             name,
             input.classpath.entries.map(_.toNIO).asJava,

@@ -71,7 +71,7 @@ abstract class PcBenchmark {
     val pc = MtagsResolver.default().resolve(version) match {
       case Some(MtagsBinaries.BuildIn) => new ScalaPresentationCompiler()
       case Some(artifacts: MtagsBinaries.Artifacts) =>
-        embedded.presentationCompiler(artifacts, classpath)
+        embedded.presentationCompiler(artifacts)
       case _ =>
         throw new RuntimeException(
           s"Forgot to release scala version: $version ?"
