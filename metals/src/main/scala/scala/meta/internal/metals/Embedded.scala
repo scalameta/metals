@@ -61,12 +61,11 @@ final class Embedded(
   }
 
   def presentationCompiler(
-      mtags: MtagsBinaries.Artifacts,
-      classpath: Seq[Path],
+      mtags: MtagsBinaries.Artifacts
   ): PresentationCompiler = {
     val classloader = presentationCompilers.getOrElseUpdate(
       ScalaVersions.dropVendorSuffix(mtags.scalaVersion),
-      newPresentationCompilerClassLoader(mtags, classpath),
+      newPresentationCompilerClassLoader(mtags),
     )
 
     val presentationCompilerClassname =
@@ -158,10 +157,9 @@ final class Embedded(
   }
 
   private def newPresentationCompilerClassLoader(
-      mtags: MtagsBinaries.Artifacts,
-      classpath: Seq[Path],
+      mtags: MtagsBinaries.Artifacts
   ): URLClassLoader = {
-    val allJars = Iterator(mtags.jars, classpath).flatten
+    val allJars = mtags.jars.iterator
     val allURLs = allJars.map(_.toUri.toURL).toArray
     // Share classloader for a subset of types.
     val parent =
@@ -205,7 +203,7 @@ object Embedded {
       if (!ScalaVersions.isScala3Version(scalaVersion))
         resolutionParams.forceVersions(
           List(
-            Dependency.of("org.scala-lang", "scala-library", scalaVersion),
+            scalaLibraryDependency(scalaVersion),
             Dependency.of("org.scala-lang", "scala-compiler", scalaVersion),
             Dependency.of("org.scala-lang", "scala-reflect", scalaVersion),
           ).map(d => (d.getModule, d.getVersion)).toMap.asJava
@@ -223,7 +221,8 @@ object Embedded {
       .withResolutionParams(resolutionParams)
       .withMainArtifacts()
   }
-  private def scalaDependency(scalaVersion: String): Dependency =
+
+  private def scalaLibraryDependency(scalaVersion: String): Dependency =
     Dependency.of("org.scala-lang", "scala-library", scalaVersion)
 
   private def scala3Dependency(scalaVersion: String): Dependency = {
@@ -308,7 +307,7 @@ object Embedded {
 
   def downloadScalaSources(scalaVersion: String): List[Path] =
     downloadDependency(
-      scalaDependency(scalaVersion),
+      scalaLibraryDependency(scalaVersion),
       Some(scalaVersion),
       classfiers = Seq("sources"),
     )
@@ -383,7 +382,7 @@ object Embedded {
       if (ScalaVersions.isScala3Version(scalaVersion))
         scala3Dependency(scalaVersion)
       else
-        scalaDependency(scalaVersion)
+        scalaLibraryDependency(scalaVersion)
     downloadDependency(dependency, Some(scalaVersion))
   }
 
