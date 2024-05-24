@@ -16,16 +16,16 @@ object V {
   val bazelScalaVersion = "2.13.12"
   val ammonite3Version = "3.3.3"
 
-  val ammonite = "3.0.0-M1-24-26133e66"
+  val ammonite = "3.0.0-M2-5-1c823fef"
   val betterMonadicFor = "0.3.1"
-  val bloop = "1.5.17"
+  val bloop = "1.5.18"
   val bloopConfig = "1.5.5"
   val bsp = "2.2.0-M2"
   val coursier = "2.1.10"
   val coursierInterfaces =
     "1.0.19" // changing coursier interfaces version may be not binary compatible.
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
-  val debugAdapter = "4.1.0"
+  val debugAdapter = "4.1.1"
   val genyVersion = "1.0.0"
   val gitter8Version = "0.16.2"
   val gradleBloop = "1.6.2"
@@ -44,7 +44,7 @@ object V {
   val scalaCli = "1.3.1"
   val scalafix = "0.12.1"
   val scalafmt = "3.7.15"
-  val scalameta = "4.9.3"
+  val scalameta = "4.9.5"
   val scribe = "3.13.5"
   val qdox = "2.1.0"
 

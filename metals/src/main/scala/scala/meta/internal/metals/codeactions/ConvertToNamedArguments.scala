@@ -5,6 +5,7 @@ import scala.concurrent.Future
 
 import scala.meta.Term
 import scala.meta.Tree
+import scala.meta.XtensionSyntax
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands

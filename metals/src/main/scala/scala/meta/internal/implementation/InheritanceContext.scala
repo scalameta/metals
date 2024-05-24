@@ -25,12 +25,10 @@ class InheritanceContext(inheritance: Map[String, Set[ClassLocation]]) {
   def toGlobal(
       compilers: Compilers,
       implementationsInDependencySources: Map[String, Set[ClassLocation]],
-      source: AbsolutePath,
   ) = new GlobalInheritanceContext(
     compilers,
     implementationsInDependencySources,
     inheritance,
-    source,
   )
 }
 
@@ -38,7 +36,6 @@ class GlobalInheritanceContext(
     compilers: Compilers,
     implementationsInDependencySources: Map[String, Set[ClassLocation]],
     localInheritance: Map[String, Set[ClassLocation]],
-    source: AbsolutePath,
 ) extends InheritanceContext(localInheritance) {
   override def getLocations(
       symbol: String

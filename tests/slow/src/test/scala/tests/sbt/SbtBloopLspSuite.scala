@@ -476,8 +476,9 @@ class SbtBloopLspSuite
         """.stripMargin,
       )
       // we should still have references despite fatal warning
+      refs <- server.workspaceReferences()
       _ = assertNoDiff(
-        server.workspaceReferences().references.map(_.symbol).mkString("\n"),
+        refs.references.map(_.symbol).sorted.mkString("\n"),
         """|_empty_/A.
            |_empty_/A.B.
            |_empty_/Warning.

@@ -4,13 +4,12 @@ import java.nio.file.Files
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
+import scala.meta.internal.metals.doctor.TargetsInfoProvider
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.io.AbsolutePath
 
 case class FolderReportsZippper(
-    doctorTargetsInfo: () => List[
-      Map[String, String]
-    ], // we pass the function instead of a whole doctor for the simplicity of testing
+    targetsInfoProvider: TargetsInfoProvider,
     reportContext: StdReportContext,
 ) {
 
@@ -27,7 +26,9 @@ case class FolderReportsZippper(
   }
 
   def buildTargetInfo(id: String): String = {
-    val text = doctorTargetsInfo().zipWithIndex
+    val text = targetsInfoProvider
+      .getTargetsInfoForReports()
+      .zipWithIndex
       .map { case (info, ind) =>
         s"""|#### $ind
             |${info.toList.map { case (key, value) => s"$key: $value" }.mkString("\n")}

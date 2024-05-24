@@ -44,7 +44,8 @@ class ScalaToplevelMtags(
     val input: Input.VirtualFile,
     includeInnerClasses: Boolean,
     includeMembers: Boolean,
-    dialect: Dialect
+    dialect: Dialect,
+    collectIdentifiers: Boolean = false
 )(implicit rc: ReportContext)
     extends MtagsIndexer {
 
@@ -57,6 +58,20 @@ class ScalaToplevelMtags(
     overridden += ((currentOwner, symbols))
 
   import ScalaToplevelMtags._
+
+  private val identifiers = Set.newBuilder[String]
+  override def allIdentifiers: Set[String] = identifiers.result()
+
+  implicit class XtensionScanner(scanner: LegacyScanner) {
+    def mtagsNextToken(): Unit = {
+      scanner.nextToken()
+      if (collectIdentifiers)
+        scanner.curr.token match {
+          case IDENTIFIER => identifiers += scanner.curr.name
+          case _ =>
+        }
+    }
+  }
 
   override def language: Language = Language.SCALA
 
@@ -201,7 +216,7 @@ class ScalaToplevelMtags(
               }
               owner
             } else currRegion.termOwner
-          scanner.nextToken()
+          scanner.mtagsNextToken()
           loop(
             indent,
             isAfterNewline = false,
@@ -307,7 +322,7 @@ class ScalaToplevelMtags(
             withOwner(currRegion.termOwner) {
               emitTerm(currRegion, isImplicit)
             }
-          } else scanner.nextToken()
+          } else scanner.mtagsNextToken()
           loop(
             indent,
             isAfterNewline = false,
@@ -319,7 +334,7 @@ class ScalaToplevelMtags(
             withOwner(currRegion.termOwner) {
               emitType(needEmitTermMember())
             }
-          } else scanner.nextToken()
+          } else scanner.mtagsNextToken()
           loop(indent, isAfterNewline = false, currRegion, newExpectIgnoreBody)
         case IMPORT | EXPORT =>
           // skip imports because they might have `given` kw
@@ -327,7 +342,7 @@ class ScalaToplevelMtags(
           loop(indent, isAfterNewline = false, currRegion, expectTemplate)
         case COMMENT =>
           // skip comment because they might break indentation
-          scanner.nextToken()
+          scanner.mtagsNextToken()
           loop(indent, isAfterNewline = false, currRegion, expectTemplate)
         case WHITESPACE if dialect.allowSignificantIndentation =>
           if (isNewline) {
@@ -338,7 +353,7 @@ class ScalaToplevelMtags(
                 val next =
                   expect.startIndentedRegion(currRegion, expect.isExtension)
                 resetRegion(next)
-                scanner.nextToken()
+                scanner.mtagsNextToken()
                 loop(0, isAfterNewline = true, next, None)
               // basically for braceless def
               case Some(expect) if expect.ignoreBody =>
@@ -350,7 +365,7 @@ class ScalaToplevelMtags(
                   None
                 )
               case _ =>
-                scanner.nextToken()
+                scanner.mtagsNextToken()
                 loop(
                   0,
                   isAfterNewline = true,
@@ -361,7 +376,7 @@ class ScalaToplevelMtags(
           } else {
             val nextIndentLevel =
               if (isAfterNewline) indent + 1 else indent
-            scanner.nextToken()
+            scanner.mtagsNextToken()
             loop(
               nextIndentLevel,
               isAfterNewline,
@@ -395,7 +410,7 @@ class ScalaToplevelMtags(
                 isImplicitClass = expect.isImplicit
               )
               resetRegion(next)
-              scanner.nextToken()
+              scanner.mtagsNextToken()
               loop(0, isAfterNewline = true, next, None)
             case (Some(expect), true) =>
               val nextIndent = acceptWhileIndented(expect.indent)
@@ -414,7 +429,7 @@ class ScalaToplevelMtags(
                 expectTemplate
               )
             case _ =>
-              scanner.nextToken()
+              scanner.mtagsNextToken()
               loop(
                 indent,
                 isAfterNewline = false,
@@ -431,7 +446,7 @@ class ScalaToplevelMtags(
                 // e.g. class A(val foo: Foo { type T = Int })
                 //                           ^
                 acceptBalancedDelimeters(LBRACE, RBRACE)
-                scanner.nextToken()
+                scanner.mtagsNextToken()
                 loop(indent, isAfterNewline = false, currRegion, expectTemplate)
               } else {
                 val next =
@@ -441,12 +456,12 @@ class ScalaToplevelMtags(
                     expect.isImplicit
                   )
                 resetRegion(next)
-                scanner.nextToken()
+                scanner.mtagsNextToken()
                 loop(indent, isAfterNewline = false, next, None)
               }
             case _ =>
               acceptBalancedDelimeters(LBRACE, RBRACE)
-              scanner.nextToken()
+              scanner.mtagsNextToken()
               loop(indent, isAfterNewline = false, currRegion, None)
           }
         case RBRACE =>
@@ -454,17 +469,17 @@ class ScalaToplevelMtags(
             case Region.InBrace(_, prev, _, _, _) => resetRegion(prev)
             case r => r
           }
-          scanner.nextToken()
+          scanner.mtagsNextToken()
           loop(indent, isAfterNewline, nextRegion, None)
         case LBRACKET =>
           acceptBalancedDelimeters(LBRACKET, RBRACKET)
-          scanner.nextToken()
+          scanner.mtagsNextToken()
           loop(indent, isAfterNewline = false, currRegion, expectTemplate)
         case LPAREN =>
           expectTemplate match {
             case Some(expect)
                 if expect.isClassConstructor && includeInnerClasses => {
-              scanner.nextToken()
+              scanner.mtagsNextToken()
               loop(
                 indent,
                 isAfterNewline = false,
@@ -477,7 +492,7 @@ class ScalaToplevelMtags(
             }
             case _ => {
               acceptBalancedDelimeters(LPAREN, RPAREN)
-              scanner.nextToken()
+              scanner.mtagsNextToken()
               loop(indent, isAfterNewline = false, currRegion, expectTemplate)
             }
           }
@@ -486,7 +501,7 @@ class ScalaToplevelMtags(
               case _: Region.InParenClass => true
               case _ => false
             }) =>
-          scanner.nextToken()
+          scanner.mtagsNextToken()
           loop(
             indent,
             isAfterNewline = false,
@@ -498,7 +513,7 @@ class ScalaToplevelMtags(
           )
         case COMMA =>
           val nextExpectTemplate = expectTemplate.filter(!_.isPackageBody)
-          scanner.nextToken()
+          scanner.mtagsNextToken()
           loop(
             indent,
             isAfterNewline = false,
@@ -550,7 +565,7 @@ class ScalaToplevelMtags(
             else newExpectClassTemplate()
           )
         case IMPLICIT =>
-          scanner.nextToken()
+          scanner.mtagsNextToken()
           loop(
             indent,
             isAfterNewline,
@@ -560,7 +575,7 @@ class ScalaToplevelMtags(
           )
         case t =>
           val nextExpectTemplate = expectTemplate.filter(!_.isPackageBody)
-          scanner.nextToken()
+          scanner.mtagsNextToken()
           loop(
             indent,
             isAfterNewline = false,
@@ -640,7 +655,7 @@ class ScalaToplevelMtags(
           val maybeNewIndent = acceptAllAfterOverriddenIdentifier()
           scanner.curr.token match {
             case DOT =>
-              scanner.nextToken()
+              scanner.mtagsNextToken()
               getIdentifier()
             case _ => (currentIdentifier, maybeNewIndent)
           }
@@ -686,7 +701,7 @@ class ScalaToplevelMtags(
           }
       }
     }
-    scanner.nextToken()
+    scanner.mtagsNextToken()
   }
 
   def emitType(emitTermMember: Boolean): Option[Unit] = {
@@ -706,25 +721,25 @@ class ScalaToplevelMtags(
             case SEMI => name
             case _ if isNewline | isDone => name
             case EQUALS =>
-              scanner.nextToken()
+              scanner.mtagsNextToken()
               loop(name, isAfterEq = true)
             case TYPELAMBDAARROW | WHITESPACE =>
-              scanner.nextToken()
+              scanner.mtagsNextToken()
               loop(name, isAfterEq)
             case LBRACKET =>
               acceptBalancedDelimeters(LBRACKET, RBRACKET)
-              scanner.nextToken()
+              scanner.mtagsNextToken()
               loop(name, isAfterEq)
             case LBRACE =>
               acceptBalancedDelimeters(LBRACE, RBRACE)
-              scanner.nextToken()
+              scanner.mtagsNextToken()
               loop(name, isAfterEq)
             case IDENTIFIER
                 if isAfterEq && scanner.curr.name != "|" && scanner.curr.name != "&" =>
               loop(identOrSelectName(), isAfterEq)
             case _ if isAfterEq => None
             case _ =>
-              scanner.nextToken()
+              scanner.mtagsNextToken()
               loop(name)
           }
         }
@@ -848,7 +863,7 @@ class ScalaToplevelMtags(
     require(scanner.curr.token == Open, "open delimeter { or (")
     var count = 1
     while (!isDone && count > 0) {
-      scanner.nextToken()
+      scanner.mtagsNextToken()
       scanner.curr.token match {
         case Open =>
           count += 1
@@ -868,15 +883,16 @@ class ScalaToplevelMtags(
       if (!isDone) {
         scanner.curr.token match {
           case WHITESPACE =>
-            if (isNewline) { scanner.nextToken; loop(0, true) }
-            else if (isAfterNL) { scanner.nextToken; loop(indent + 1, true) }
-            else { scanner.nextToken(); loop(indent, false) }
+            if (isNewline) { scanner.mtagsNextToken(); loop(0, true) }
+            else if (isAfterNL) {
+              scanner.mtagsNextToken(); loop(indent + 1, true)
+            } else { scanner.mtagsNextToken(); loop(indent, false) }
           case COMMENT =>
-            scanner.nextToken()
+            scanner.mtagsNextToken()
             loop(indent, false)
           case _ if indent <= exitIndent => indent
           case _ =>
-            scanner.nextToken()
+            scanner.mtagsNextToken()
             loop(indent, false)
         }
       } else indent
@@ -885,7 +901,7 @@ class ScalaToplevelMtags(
   }
 
   def acceptToStatSep(): Unit = {
-    scanner.nextToken()
+    scanner.mtagsNextToken()
     while (
       !isDone &&
       (scanner.curr.token match {
@@ -894,14 +910,14 @@ class ScalaToplevelMtags(
         case _ => true
       })
     ) {
-      scanner.nextToken()
+      scanner.mtagsNextToken()
     }
   }
 
   private def acceptTrivia(): Option[Int] = {
     var includedNewline = false
     var indent = 0
-    scanner.nextToken()
+    scanner.mtagsNextToken()
     while (
       !isDone &&
       (scanner.curr.token match {
@@ -915,13 +931,13 @@ class ScalaToplevelMtags(
       } else if (scanner.curr.token == WHITESPACE) {
         indent += 1
       }
-      scanner.nextToken()
+      scanner.mtagsNextToken()
     }
     if (includedNewline) Some(indent) else None
   }
 
   private def nextIsNL(): Boolean = {
-    scanner.nextToken()
+    scanner.mtagsNextToken()
     scanner.curr.token match {
       case WHITESPACE if isNewline => true
       case WHITESPACE =>
@@ -963,7 +979,7 @@ class ScalaToplevelMtags(
         nextIsNL()
         val newIdent = getName
         if (newIdent.exists(_ == "type")) {
-          scanner.nextToken()
+          scanner.mtagsNextToken()
           current
         } else identOrSelectName(newIdent)
       case _ => current
@@ -1027,7 +1043,7 @@ class ScalaToplevelMtags(
         case WHITESPACE | COMMA => {}
         case _ => { isUnapply = true }
       }
-      scanner.nextToken()
+      scanner.mtagsNextToken()
     }
     if (isUnapply) resultList.filterNot(_.name.charAt(0).isUpper)
     else resultList

@@ -11,6 +11,7 @@ import scala.meta.Position
 import scala.meta.Self
 import scala.meta.Tree
 import scala.meta.Type
+import scala.meta.XtensionClassifiable
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.parsing.finder.ClassKind

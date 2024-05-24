@@ -9,6 +9,7 @@ import scala.meta.Enumerator
 import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
+import scala.meta.XtensionClassifiable
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._

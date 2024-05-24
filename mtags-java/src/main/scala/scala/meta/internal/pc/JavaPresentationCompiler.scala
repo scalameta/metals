@@ -21,6 +21,8 @@ import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
+import scala.meta.pc.ReferencesRequest
+import scala.meta.pc.ReferencesResult
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
 
@@ -97,6 +99,11 @@ case class JavaPresentationCompiler(
   override def documentHighlight(
       params: OffsetParams
   ): CompletableFuture[util.List[DocumentHighlight]] =
+    CompletableFuture.completedFuture(Nil.asJava)
+
+  override def references(
+      params: ReferencesRequest
+  ): CompletableFuture[util.List[ReferencesResult]] =
     CompletableFuture.completedFuture(Nil.asJava)
 
   override def getTasty(

@@ -27,7 +27,7 @@ import scala.meta.io.AbsolutePath
 class MunitTestFinder(
     trees: Trees,
     symbolIndex: GlobalSymbolIndex,
-    semanticdbs: Semanticdbs,
+    semanticdbs: () => Semanticdbs,
 ) {
 
   // depending on the munit version test method symbol varies.
@@ -133,7 +133,9 @@ class MunitTestFinder(
       val methods = for {
         definition <- symbolIndex.definition(mtags.Symbol(parentSymbol))
         tree <- trees.get(definition.path)
-        doc <- semanticdbs.textDocument(definition.path).documentIncludingStale
+        doc <- semanticdbs()
+          .textDocument(definition.path)
+          .documentIncludingStale
         parentClassName = parentSymbol
           .stripPrefix("_empty_/")
           .stripSuffix("#")

@@ -113,6 +113,13 @@ public abstract class PresentationCompiler {
 	public abstract CompletableFuture<java.util.List<DocumentHighlight>> documentHighlight(OffsetParams params);
 
 	/**
+	 * Returns the references of the symbol under the current position in the target files.
+	 */
+	public CompletableFuture<java.util.List<ReferencesResult>> references(ReferencesRequest params) {
+		return CompletableFuture.completedFuture(Collections.emptyList());
+	}
+
+	/**
 	 * Return decoded and pretty printed TASTy content for .scala or .tasty file.
 	 * 
 	 */
@@ -161,7 +168,7 @@ public abstract class PresentationCompiler {
 			List<Integer> argIndices);
 
 	/**
-	 * The text contents of the fiven file changed.
+	 * The text contents of the given file changed.
 	 */
 	public abstract CompletableFuture<List<Diagnostic>> didChange(VirtualFileParams params);
 
@@ -195,6 +202,14 @@ public abstract class PresentationCompiler {
 	 * <code>TextDocument</code> for the given source.
 	 */
 	public abstract CompletableFuture<byte[]> semanticdbTextDocument(URI filename, String code);
+
+	/**
+	 * Returns the Protobuf byte array representation of a SemanticDB
+	 * <code>TextDocument</code> for the given source.
+	 */
+	public CompletableFuture<byte[]> semanticdbTextDocument(VirtualFileParams params) {
+		return semanticdbTextDocument(params.uri(), params.text());
+	}
 
 	/**
 	 * Return the selections ranges for the given positions.
@@ -323,5 +338,9 @@ public abstract class PresentationCompiler {
 	 * Scala version for the current presentation compiler
 	 */
 	public abstract String scalaVersion();
+
+	public String buildTargetId() {
+		return "";
+	}
 
 }

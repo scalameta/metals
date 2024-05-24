@@ -43,7 +43,7 @@ class StdReportContext(
 ) extends ReportContext {
   val reportsDir: Path = workspace.resolve(StdReportContext.reportsDir)
 
-  val unsanitized =
+  val unsanitized: StdReporter =
     new StdReporter(
       workspace,
       StdReportContext.reportsDir,
@@ -51,7 +51,7 @@ class StdReportContext(
       level,
       "metals-full"
     )
-  val incognito =
+  val incognito: StdReporter =
     new StdReporter(
       workspace,
       StdReportContext.reportsDir,
@@ -59,7 +59,7 @@ class StdReportContext(
       level,
       "metals"
     )
-  val bloop =
+  val bloop: StdReporter =
     new StdReporter(
       workspace,
       StdReportContext.reportsDir,

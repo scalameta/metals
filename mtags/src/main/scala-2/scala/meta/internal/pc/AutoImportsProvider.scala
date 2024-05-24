@@ -40,8 +40,10 @@ final class AutoImportsProvider(
       false
     }
 
-    val visitor = new CompilerSearchVisitor(context, visit)
+    compiler.searchOutline(visit, name)
 
+    val visitor =
+      new CompilerSearchVisitor(context, visit)
     search.search(name, buildTargetIdentifier, visitor)
 
     def isInImportTree: Boolean = lastVisitedParentTrees match {

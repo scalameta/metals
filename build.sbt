@@ -9,7 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
-def localSnapshotVersion = "1.3.1-SNAPSHOT"
+def localSnapshotVersion = "1.3.2-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 
 def isScala211(v: Option[(Long, Long)]): Boolean = v.contains((2, 11))
@@ -146,6 +146,7 @@ def lintingOptions(scalaVersion: String) = {
   val unused213 = "-Wunused"
   val unused3 = "-Wunused:all"
   val common = List(
+    "-Xsource:3",
     // desugaring of for yield caused pattern var to complain
     // https://github.com/scala/bug/issues/10287
     "-Wconf:msg=in anonymous function is never used:silent",
@@ -157,6 +158,7 @@ def lintingOptions(scalaVersion: String) = {
     "-Wconf:src=*.MtagsIndexer.scala&msg=parameter owner in method visitOccurrence:silent",
     "-Wconf:src=*.ScaladocParser.scala&msg=parameter (pos|message) in method reportError:silent",
     "-Wconf:src=*.TreeViewProvider.scala&msg=parameter params in method (children|parent) is never used:silent",
+    "-Wconf:src=*.InheritanceContext.scala&msg=parameter ec in method getLocations is never used:silent",
     // silence "The outer reference in this type test cannot be checked at run time."
     "-Wconf:src=.*(CompletionProvider|ArgCompletions|Completions|Keywords|IndentOnPaste).scala&msg=The outer reference:silent",
   )
@@ -258,7 +260,7 @@ lazy val mtagsShared = project
     },
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "4.26.1",
+      "com.google.protobuf" % "protobuf-java" % "4.27.0",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
@@ -462,7 +464,7 @@ lazy val metals = project
       "com.outr" %% "scribe-file" % V.scribe,
       "com.outr" %% "scribe-slf4j2" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "3.3.0",
+      "com.lihaoyi" %% "ujson" % "3.3.1",
       // For fetching projects' templates
       "com.lihaoyi" %% "requests" % "0.8.2",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
@@ -541,6 +543,7 @@ lazy val input = project
   .in(file("tests/input"))
   .settings(
     sharedSettings,
+    scalacOptions -= "-Xsource:3",
     publish / skip := true,
     libraryDependencies ++= List(
       // these projects have macro annotations

@@ -17,9 +17,9 @@ import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.lsp4j as l
 
 final class PcInlineValueProviderImpl(
-    val driver: InteractiveDriver,
+    driver: InteractiveDriver,
     val params: OffsetParams,
-) extends PcCollector[Option[Occurence]](driver, params)
+) extends WithSymbolSearchCollector[Option[Occurence]](driver, params)
     with InlineValueProvider:
 
   val position: l.Position = pos.toLsp.getStart()

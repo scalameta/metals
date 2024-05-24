@@ -27,6 +27,7 @@ import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -128,9 +129,9 @@ final class RenameProvider(
       )
       .recoverWith { case _ =>
         compilations.compilationFinished(source).flatMap { _ =>
-          val defininionFuture = definitionProvider
+          val definitionFuture = definitionProvider
             .definition(source, params, token)
-          defininionFuture
+          definitionFuture
             .flatMap { definition =>
               val textParams = new TextDocumentPositionParams(
                 params.getTextDocument(),
@@ -217,7 +218,7 @@ final class RenameProvider(
                         findRealRange = findRealRange(newName),
                         includeSynthetic,
                       )
-                      .flatMap(_.locations)
+                      .map(_.flatMap(_.locations))
                   definitionLocation = {
                     if (parentSymbols.isEmpty)
                       definition.locations.asScala
@@ -238,9 +239,13 @@ final class RenameProvider(
                     ),
                     newName,
                   )
-                } yield implReferences.map(implLocs =>
-                  currentReferences ++ implLocs ++ companionRefs ++ definitionLocation
-                )
+                } yield Future
+                  .sequence(
+                    List(implReferences, currentReferences, companionRefs)
+                  )
+                  .map(
+                    _.flatten ++ definitionLocation
+                  )
               Future
                 .sequence(allReferences)
                 .map(locs =>
@@ -398,7 +403,7 @@ final class RenameProvider(
       sym: String,
       source: AbsolutePath,
       newName: String,
-  ): Seq[Location] = {
+  ): Future[Seq[Location]] = {
     val results = for {
       companionSymbol <- companion(sym).toIterable
       loc <-
@@ -407,15 +412,15 @@ final class RenameProvider(
           .asScala
       // no companion objects in Java files
       if loc.getUri().isScalaFilename
-      companionLocs <-
-        referenceProvider
-          .references(
-            toReferenceParams(loc, includeDeclaration = false),
-            findRealRange = findRealRange(newName),
-          )
-          .flatMap(_.locations) :+ loc
-    } yield companionLocs
-    results.toList
+    } yield {
+      referenceProvider
+        .references(
+          toReferenceParams(loc, includeDeclaration = false),
+          findRealRange = findRealRange(newName),
+        )
+        .map(_.flatMap(_.locations :+ loc))
+    }
+    Future.sequence(results).map(_.flatten.toSeq)
   }
 
   private def companion(sym: String) = {
@@ -458,20 +463,22 @@ final class RenameProvider(
     if (shouldCheckImplementation) {
       for {
         implLocs <- implementationProvider.implementations(textParams)
-      } yield {
-        for {
-          implLoc <- implLocs
-          locParams = toReferenceParams(implLoc, includeDeclaration = true)
-          loc <-
+        result <- {
+          val result = for {
+            implLoc <- implLocs
+            locParams = toReferenceParams(implLoc, includeDeclaration = true)
+          } yield {
             referenceProvider
               .references(
                 locParams,
                 findRealRange = findRealRange(newName),
                 includeSynthetic,
               )
-              .flatMap(_.locations)
-        } yield loc
-      }
+              .map(_.flatMap(_.locations))
+          }
+          Future.sequence(result)
+        }
+      } yield result.flatten
     } else {
       Future.successful(Nil)
     }

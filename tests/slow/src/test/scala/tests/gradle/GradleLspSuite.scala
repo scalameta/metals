@@ -90,7 +90,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       )
       _ <- server.server.indexingPromise.future
       _ = assert(server.server.bspSession.get.main.isBloop)
-      buildTool <- server.server.supportedBuildTool()
+      buildTool <- server.headServer.supportedBuildTool()
       _ = assertEquals(buildTool.get.buildTool.executableName, "gradle")
       _ = assertEquals(
         buildTool.get.buildTool.projectRoot,
@@ -486,8 +486,9 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
         """.stripMargin,
       )
       // we should still have references despite fatal warning
+      refs <- server.workspaceReferences()
       _ = assertNoDiff(
-        server.workspaceReferences().references.map(_.symbol).mkString("\n"),
+        refs.references.map(_.symbol).sorted.mkString("\n"),
         """|_empty_/A.
            |_empty_/A.B.
            |_empty_/Warning.

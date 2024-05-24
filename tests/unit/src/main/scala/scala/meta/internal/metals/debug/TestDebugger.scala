@@ -85,12 +85,11 @@ final class TestDebugger(
 
   def restart: Future[Unit] = {
     Debug.printEnclosing()
-    ifNotFailed(debugger.restart).flatMap(_ => terminated.future).andThen {
-      case _ =>
-        debugger = connect(this)
-        terminated = Promise()
-        output = new DebuggeeOutput
-        breakpoints = new DebuggeeBreakpoints
+    ifNotFailed(debugger.restart).andThen { case _ =>
+      debugger = connect(this)
+      terminated = Promise()
+      output = new DebuggeeOutput
+      breakpoints = new DebuggeeBreakpoints
     }
   }
 

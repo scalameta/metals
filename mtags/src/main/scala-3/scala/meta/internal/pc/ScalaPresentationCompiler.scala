@@ -20,6 +20,7 @@ import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
+import scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion
 import scala.meta.internal.mtags.MtagsEnrichments.given
 import scala.meta.internal.pc.completions.CompletionProvider
 import scala.meta.internal.pc.completions.OverrideCompletions
@@ -41,7 +42,7 @@ case class ScalaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     folderPath: Option[Path] = None,
-    reportsLevel: ReportLevel = ReportLevel.Info,
+    reportsLevel: ReportLevel = ReportLevel.Info
 ) extends PresentationCompiler:
 
   def this() = this("", None, Nil, Nil)
@@ -177,6 +178,19 @@ case class ScalaPresentationCompiler(
     ) { access =>
       val driver = access.compiler()
       PcDocumentHighlightProvider(driver, params).highlights.asJava
+    }
+
+  override def references(
+      params: ReferencesRequest
+  ): CompletableFuture[ju.List[ReferencesResult]] =
+    compilerAccess.withNonInterruptableCompiler(Some(params.file()))(
+      List.empty[ReferencesResult].asJava,
+      params.file().token,
+    ) { access =>
+      val driver = access.compiler()
+      PcReferencesProvider(driver, params)
+        .references()
+        .asJava
     }
 
   def shutdown(): Unit =
@@ -445,5 +459,7 @@ case class ScalaPresentationCompiler(
     copy(folderPath = Some(workspace))
 
   override def isLoaded() = compilerAccess.isLoaded()
+
+  override def buildTargetId(): String = buildTargetIdentifier
 
 end ScalaPresentationCompiler

@@ -170,7 +170,10 @@ final case class TestingServer(
   lazy val fullServer = languageServer.getOldMetalsLanguageServer
   def server: MetalsLspService =
     if (fullServer.folderServices.isEmpty) fullServer.fallbackService
-    else fullServer.folderServices.head
+    else headServer
+
+  def headServer: m.internal.metals.ProjectMetalsLspService =
+    fullServer.folderServices.head
 
   implicit val reports: ReportContext =
     new StdReportContext(workspace.toNIO, _ => None)
@@ -391,8 +394,7 @@ final case class TestingServer(
 
   def assertReferenceDefinitionBijection()(implicit
       loc: munit.Location
-  ): Unit = {
-    val compare = workspaceReferences()
+  ): Future[Unit] = workspaceReferences().map { compare =>
     assert(compare.definition.nonEmpty, "Definitions should not be empty")
     assert(compare.references.nonEmpty, "References should not be empty")
     Assertions.assertNoDiff(
@@ -403,13 +405,11 @@ final case class TestingServer(
 
   def assertReferenceDefinitionDiff(
       expectedDiff: String
-  )(implicit loc: munit.Location): Unit = {
-    Assertions.assertNoDiff(
-      workspaceReferences().diff,
-      expectedDiff,
+  )(implicit loc: munit.Location): Future[Unit] =
+    workspaceReferences().map(refs =>
+      Assertions.assertNoDiff(refs.diff, expectedDiff)
     )
-  }
-  def workspaceReferences(): WorkspaceSymbolReferences = {
+  def workspaceReferences(): Future[WorkspaceSymbolReferences] = {
     val inverse =
       mutable.Map.empty[SymbolReference, mutable.ListBuffer[Location]]
     val inputsCache = mutable.Map.empty[String, Input]
@@ -456,27 +456,35 @@ final case class TestingServer(
     }
     val definition = Seq.newBuilder[SymbolReference]
     val references = Seq.newBuilder[SymbolReference]
-    for {
-      (ref, expectedLocations) <- inverse.toSeq.sortBy(_._1.symbol)
-    } {
-      val params = new ReferenceParams(
-        new TextDocumentIdentifier(
-          ref.location.getUri
-        ),
-        ref.location.getRange.getStart,
-        new ReferenceContext(true),
+    val resultFuture: Future[Unit] =
+      Future
+        .sequence(
+          for {
+            (ref, expectedLocations) <- inverse.toSeq.sortBy(_._1.symbol)
+          } yield {
+            val params = new ReferenceParams(
+              new TextDocumentIdentifier(
+                ref.location.getUri
+              ),
+              ref.location.getRange.getStart,
+              new ReferenceContext(true),
+            )
+            server.referencesResult(params).map { obtainedLocations =>
+              references ++= obtainedLocations.flatMap { result =>
+                result.locations.map { l =>
+                  newRef(result.symbol, l)
+                }
+              }
+              definition ++= expectedLocations.map(l => newRef(ref.symbol, l))
+            }
+          }
+        )
+        .ignoreValue
+    resultFuture.map(_ =>
+      WorkspaceSymbolReferences(
+        references.result().distinct,
+        definition.result().distinct,
       )
-      val obtainedLocations = server.referencesResult(params)
-      references ++= obtainedLocations.flatMap { result =>
-        result.locations.map { l =>
-          newRef(result.symbol, l)
-        }
-      }
-      definition ++= expectedLocations.map(l => newRef(ref.symbol, l))
-    }
-    WorkspaceSymbolReferences(
-      references.result().distinct,
-      definition.result().distinct,
     )
   }
 
@@ -1098,7 +1106,7 @@ final case class TestingServer(
         Nil
       }
 
-    val handler = { refreshCount: Int =>
+    val handler = { (refreshCount: Int) =>
       scribe.info(s"Refreshing model for $filename")
       if (refreshCount > 0)
         for {
@@ -1213,7 +1221,7 @@ final case class TestingServer(
     }
   }
 
-  private def offsetParams(
+  def offsetParams(
       filename: String,
       original: String,
       root: AbsolutePath,

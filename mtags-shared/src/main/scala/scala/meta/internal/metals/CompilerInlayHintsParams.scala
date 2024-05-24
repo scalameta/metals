@@ -1,9 +1,11 @@
 package scala.meta.internal.metals
 
 import java.net.URI
+import java.util.Optional
 
 import scala.meta.pc.CancelToken
 import scala.meta.pc.InlayHintsParams
+import scala.meta.pc.OutlineFiles
 
 case class CompilerInlayHintsParams(
     rangeParams: CompilerRangeParams,
@@ -28,4 +30,6 @@ case class CompilerInlayHintsParams(
       implicitParameters = implicitParameters
     )
   }
+
+  override def outlineFiles(): Optional[OutlineFiles] = rangeParams.outlineFiles
 }

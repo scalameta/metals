@@ -168,6 +168,10 @@ class JavaToplevelMtags(
     @tailrec
     def quotedLiteral(quote: Char): Token = {
       reader.nextChar()
+
+      if (reader.endCharOffset >= reader.buf.length)
+        throw new RuntimeException("Broken file, quote doesn't end.")
+
       reader.ch match {
         case `quote` => Token.Literal
         case '\\' =>

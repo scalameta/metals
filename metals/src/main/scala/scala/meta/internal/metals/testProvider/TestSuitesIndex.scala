@@ -14,7 +14,7 @@ import org.eclipse.{lsp4j => l}
 final case class FullyQualifiedName(value: String) extends AnyVal
 final case class ClassName(value: String) extends AnyVal
 
-private[testProvider] final case class SymbolsPerTarget private (
+private[testProvider] final case class SymbolsPerTarget(
     target: BuildTarget,
     testSymbols: TrieMap[
       BuildTargetClasses.Symbol,

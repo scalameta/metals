@@ -9,6 +9,7 @@ import scala.meta.Name
 import scala.meta.Pat
 import scala.meta.Term
 import scala.meta.Tree
+import scala.meta.XtensionClassifiable
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferenceProvider
@@ -27,7 +28,7 @@ import org.eclipse.lsp4j
 import org.eclipse.lsp4j.Position
 
 class OutgoingCallsFinder(
-    semanticdbs: Semanticdbs,
+    semanticdbs: () => Semanticdbs,
     definition: DefinitionProvider,
     references: ReferenceProvider,
     trees: Trees,
@@ -82,7 +83,7 @@ class OutgoingCallsFinder(
       symbol: String,
   ): Future[Option[DefinitionInformation]] = {
     def search(source: AbsolutePath) = for {
-      doc <- semanticdbs.textDocument(source).documentIncludingStale
+      doc <- semanticdbs().textDocument(source).documentIncludingStale
       occ <- doc.occurrences.find(occ =>
         occ.symbol == symbol && occ.role.isDefinition && doc.symbols
           .exists(symInfo => symInfo.symbol == symbol)

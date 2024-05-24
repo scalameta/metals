@@ -33,7 +33,7 @@ class BuildTargetClassesFinder(
         .classesOf(_)
         .mainClasses
         .values,
-      { clazz: b.ScalaMainClass => clazz.getClassName },
+      { (clazz: b.ScalaMainClass) => clazz.getClassName },
     ).recoverWith { case ex =>
       val found = ex match {
         // We check whether there is a main in dependencies that is not reported via BSP
@@ -82,7 +82,7 @@ class BuildTargetClassesFinder(
     for {
       symbol <- buildTargetClasses.symbolFromClassName(
         className,
-        List(Descriptor.Term, Descriptor.Type),
+        List(Descriptor.Term.apply, Descriptor.Type.apply),
       )
       cls <- index.definition(Symbol(symbol))
       target <- buildTarget.orElse(findTarget(cls.path))

@@ -8,11 +8,17 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.Indexer.BuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.doctor.HeadDoctor
+import scala.meta.internal.metals.doctor.MetalsServiceInfo
+import scala.meta.internal.metals.watcher.FileWatcher
+import scala.meta.internal.metals.watcher.NoopFileWatcher
+import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.DidChangeBuildTarget
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.InitializeParams
 
@@ -27,7 +33,6 @@ class FallbackMetalsLspService(
     focusedDocument: () => Option[AbsolutePath],
     shellRunner: ShellRunner,
     timerProvider: TimerProvider,
-    initTreeView: () => Unit,
     folder: AbsolutePath,
     folderVisibleName: Option[String],
     headDoctor: HeadDoctor,
@@ -44,7 +49,6 @@ class FallbackMetalsLspService(
       focusedDocument,
       shellRunner,
       timerProvider,
-      initTreeView,
       folder,
       folderVisibleName,
       headDoctor,
@@ -60,14 +64,21 @@ class FallbackMetalsLspService(
     Set.empty
   )
 
-  override def maybeImportScript(path: AbsolutePath): Option[Future[Unit]] = {
-    if (!path.isScala) None
-    else {
-      val prev = files.getAndUpdate(_ + path)
-      if (prev.contains(path)) None
-      else Some(scalaCli.start(path))
+  override val pauseables: Pauseable = Pauseable.fromPausables(
+    parseTrees ::
+      compilations.pauseables
+  )
+  override protected val semanticdbs: Semanticdbs = interactiveSemanticdbs
+  override val fileWatcher: FileWatcher = NoopFileWatcher
+  override val projectInfo: MetalsServiceInfo =
+    MetalsServiceInfo.FallbackService
+
+  protected def buildData(): Seq[BuildTool] =
+    scalaCli.lastImportedBuilds.map {
+      case (lastImportedBuild, buildTargetsData) =>
+        Indexer
+          .BuildTool("scala-cli", buildTargetsData, lastImportedBuild)
     }
-  }
 
   override def didClose(params: DidCloseTextDocumentParams): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath
@@ -76,6 +87,34 @@ class FallbackMetalsLspService(
     scalaCli.stop(path)
   }
 
+  override def maybeImportFileAndLoad(
+      path: AbsolutePath,
+      load: () => Future[Unit],
+  ): Future[Unit] =
+    for {
+      _ <-
+        if (!path.isScala) Future.unit
+        else {
+          val prev = files.getAndUpdate(_ + path)
+          if (prev.contains(path)) Future.unit
+          else scalaCli.start(path)
+        }
+      _ <- load()
+    } yield ()
+
+  override protected def onBuildTargetChanges(
+      params: DidChangeBuildTarget
+  ): Unit = {
+    compilations.cancel()
+    val scalaCliAffectedServers = params.getChanges.asScala
+      .flatMap { change =>
+        buildTargets.buildServerOf(change.getTarget)
+      }
+      .flatMap(conn => scalaCli.servers.find(_ == conn))
+    importAfterScalaCliChanges(scalaCliAffectedServers)
+  }
+
+  override protected def onInitialized(): Future[Unit] = Future.unit
 }
 
 object FallbackMetalsLspService {

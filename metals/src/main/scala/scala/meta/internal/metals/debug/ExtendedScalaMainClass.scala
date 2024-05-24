@@ -36,7 +36,7 @@ import ch.epfl.scala.{bsp4j => b}
  * - allow old clients to work without any change
  * - allow new clients to use shellCommand to run the main class directly in e.g. terminal
  */
-case class ExtendedScalaMainClass private (
+case class ExtendedScalaMainClass(
     `class`: String,
     arguments: java.util.List[String],
     jvmOptions: java.util.List[String],

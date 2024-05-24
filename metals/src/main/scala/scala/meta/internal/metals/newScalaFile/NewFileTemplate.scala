@@ -7,7 +7,7 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 /**
  * File template which allows specifying the cursor position using @@
  */
-final case class NewFileTemplate private (template: String) {
+final case class NewFileTemplate(template: String) {
   import NewFileTemplate._
 
   lazy val fileContent: String = template.replace(cursorMarker, "")

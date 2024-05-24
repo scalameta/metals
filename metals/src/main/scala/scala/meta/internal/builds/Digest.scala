@@ -10,6 +10,8 @@ import scala.util.control.NonFatal
 import scala.xml.Comment
 import scala.xml.Node
 
+import scala.meta.XtensionDialectApply
+import scala.meta.XtensionTokenizeDialectInput
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._

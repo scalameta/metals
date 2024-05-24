@@ -295,7 +295,7 @@ class DebugDiscoverySuite
   }
 
   test("invalid-env") {
-    val fakePath = workspace + "fake-path"
+    val fakePath = workspace.toString + "fake-path"
 
     for {
       _ <- initialize(

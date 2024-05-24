@@ -21,6 +21,7 @@ import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TypeRef
+import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.meta.io.AbsolutePath
 
@@ -29,7 +30,7 @@ import org.eclipse.lsp4j.Location
 class SymbolHierarchyOps(
     workspace: AbsolutePath,
     buildTargets: BuildTargets,
-    semanticdbs: Semanticdbs,
+    semanticdbs: () => Semanticdbs,
     index: GlobalSymbolIndex,
     scalaVersionSelector: ScalaVersionSelector,
     buffer: Buffers,
@@ -68,7 +69,7 @@ class SymbolHierarchyOps(
   private def findSemanticdb(fileSource: AbsolutePath): Option[TextDocument] = {
     if (fileSource.isJarFileSystem) None
     else
-      semanticdbs
+      semanticdbs()
         .textDocument(fileSource)
         .documentIncludingStale
   }

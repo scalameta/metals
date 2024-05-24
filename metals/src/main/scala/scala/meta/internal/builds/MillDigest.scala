@@ -5,6 +5,8 @@ import java.security.MessageDigest
 import scala.collection.mutable
 import scala.util.control.NonFatal
 
+import scala.meta.XtensionDialectApply
+import scala.meta.XtensionTokenizeDialectInput
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath

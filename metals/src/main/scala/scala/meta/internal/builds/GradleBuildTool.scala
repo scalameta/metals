@@ -69,8 +69,8 @@ case class GradleBuildTool(
     }
   }
 
-  private def workspaceGradleLauncher(workspace: AbsolutePath): AbsolutePath = {
-    workspace.resolve(gradleWrapper)
+  private def projectGradleLauncher: AbsolutePath = {
+    projectRoot.resolve(gradleWrapper)
   }
 
   override def digest(workspace: AbsolutePath): Option[String] =
@@ -95,9 +95,9 @@ case class GradleBuildTool(
       case Some(script) =>
         script :: cmd
       case None =>
-        val workspaceGradle = workspaceGradleLauncher(workspace)
-        if (workspaceGradle.isFile)
-          workspaceGradle.toString() :: cmd
+        val projectGradle = projectGradleLauncher
+        if (projectGradle.isFile)
+          projectGradle.toString() :: cmd
         else
           embeddedGradleLauncher.toString() :: cmd
     }

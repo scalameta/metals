@@ -4,14 +4,20 @@ import scala.concurrent.Promise
 
 import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BazelDigest
+import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.FileDecoderProvider
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.WorkDoneProgress
+import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
+import coursierapi.Dependency
 import org.eclipse.lsp4j.MessageActionItem
 import tests.BaseImportSuite
 import tests.BazelBuildLayout
@@ -234,6 +240,108 @@ class BazelLspSuite
            |                       ^^^^^
            |""".stripMargin,
       )
+    } yield ()
+  }
+
+  test("warnings") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
+      )
+      _ <- server.didOpen("Hello.scala")
+      _ <- server.didSave("Hello.scala") { _ =>
+        """|package examples.scala3
+           |
+           |sealed trait A
+           |case class B(name: String) extends A
+           |case class C(name: String) extends A
+           |
+           |class Hello {
+           |  def hello: String = "Hello"
+           |  
+           |  val asd: A = ???
+           |  asd match {
+           |    case B(_) =>
+           |  }
+           |}
+           |""".stripMargin
+      }
+      _ = assertNoDiff(
+        server.client.workspaceDiagnostics,
+        """|Hello.scala:11:3: warning: match may not be exhaustive.
+           |It would fail on the following input: C(_)
+           |  asd match {
+           |  ^
+           |  asd match {
+           |  ^
+           |""".stripMargin,
+      )
+      // warnings should not disappear after updating
+      _ <- server.didSave("Hello.scala") { text =>
+        s"""|$text
+            |
+            |class Additional
+            |""".stripMargin
+      }
+      _ = assertNoDiff(
+        server.client.workspaceDiagnostics,
+        """|Hello.scala:11:3: warning: match may not be exhaustive.
+           |It would fail on the following input: C(_)
+           |  asd match {
+           |  ^
+           |  asd match {
+           |  ^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("update-bazel-bsp") {
+    cleanWorkspace()
+    writeLayout(
+      BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
+    )
+
+    val shellRunner = new ShellRunner(
+      Time.system,
+      new WorkDoneProgress(NoopLanguageClient, Time.system),
+    )
+
+    def jsonFile =
+      workspace.resolve(Directories.bsp).resolve("bazelbsp.json").readText
+    for {
+      _ <- shellRunner.runJava(
+        Dependency.of(
+          BazelBuildTool.dependency.getModule(),
+          "3.2.0-20240508-f3a81e7-NIGHTLY",
+        ),
+        BazelBuildTool.mainClass,
+        workspace,
+        BazelBuildTool.projectViewArgs(workspace),
+        None,
+      )
+      _ = assertContains(jsonFile, "3.2.0-20240508-f3a81e7-NIGHTLY")
+      _ <- initialize(
+        BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
+      )
+      _ <- server.didOpen("Hello.scala")
+      _ <- server.didChange("Hello.scala") { text =>
+        text.replace("def hello: String", "def hello: Int")
+      }
+      _ <- server.didSave("Hello.scala")(identity)
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|Hello.scala:4:20: error: type mismatch;
+           | found   : String("Hello")
+           | required: Int
+           |  def hello: Int = "Hello"
+           |                   ^
+           |  def hello: Int = "Hello"
+           |                   ^
+           |""".stripMargin,
+      )
+      _ = assertContains(jsonFile, "3.2.0-20240515-5f8e0ae-NIGHTLY")
     } yield ()
   }
 
