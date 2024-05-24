@@ -341,7 +341,7 @@ class BazelLspSuite
            |                   ^
            |""".stripMargin,
       )
-      _ = assertContains(jsonFile, "3.2.0-20240515-5f8e0ae-NIGHTLY")
+      _ = assertContains(jsonFile, BazelBuildTool.version)
     } yield ()
   }
 
