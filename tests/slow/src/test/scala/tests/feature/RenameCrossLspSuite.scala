@@ -48,4 +48,21 @@ class RenameCrossLspSuite extends BaseRenameLspSuite("rename-cross") {
     scalaVersion = Some(V.scala3),
   )
 
+  renamed(
+    "variable-explicit2",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object Main {
+       |  var <<v5>> = false
+       |
+       |  def f5: Boolean = {
+       |    `<<v@@5>>_=`(true)
+       |    <<v5>> == true
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "NewSymbol",
+    scalaVersion = Some(V.scala3),
+  )
+
 }
