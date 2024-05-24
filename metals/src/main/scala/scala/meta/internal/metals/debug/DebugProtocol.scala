@@ -2,6 +2,7 @@ package scala.meta.internal.metals.debug
 
 import scala.reflect.ClassTag
 import scala.util.Failure
+import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -221,6 +222,7 @@ object DebugProtocol {
 
   def parse[A: ClassTag](params: Any): Try[A] = {
     params match {
+      case a: A => Success(a)
       case json: JsonElement =>
         json.as[A]
       case _ =>

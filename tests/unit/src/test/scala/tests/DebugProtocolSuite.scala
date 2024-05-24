@@ -67,6 +67,7 @@ class DebugProtocolSuite
   }
 
   test("broken-workspace") {
+    cleanWorkspace()
 
     def startDebugging() =
       server.startDebugging(
@@ -93,8 +94,12 @@ class DebugProtocolSuite
       failed = startDebugging()
       debugger <- failed.recoverWith { case _: ResponseErrorException =>
         server
-          .didSave("a/src/main/scala/a/Main.scala") { text => text + "}" }
-          .flatMap(_ => startDebugging())
+          .didSave("a/src/main/scala/a/Main.scala") { text =>
+            text + "}"
+          }
+          .flatMap { _ =>
+            startDebugging()
+          }
       }
       _ <- debugger.initialize
       _ <- debugger.launch
@@ -136,6 +141,7 @@ class DebugProtocolSuite
   }
 
   test("restart") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""/metals.json

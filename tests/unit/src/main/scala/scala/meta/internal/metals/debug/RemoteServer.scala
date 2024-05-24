@@ -162,6 +162,8 @@ private[debug] final class RemoteServer(
         json.as[A].map(f).recover { case e =>
           scribe.error(s"Could not handle notification [msg]", e)
         }
+      case a: A =>
+        f(a)
       case _ =>
         scribe.error(s"Not a json: ${msg.getParams}")
     }
@@ -187,6 +189,8 @@ private[debug] final class RemoteServer(
           Future[Void](null).asInstanceOf[Future[B]]
         case json: JsonElement =>
           Future.fromTry(json.as[B])
+        case b: B =>
+          Future.successful(b)
         case _ if response.getError != null =>
           Future.failed(new IllegalStateException(response.getError.getMessage))
         case result =>
