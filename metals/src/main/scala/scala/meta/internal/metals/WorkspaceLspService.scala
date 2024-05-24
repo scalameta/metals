@@ -285,10 +285,14 @@ class WorkspaceLspService(
 
   def getServiceForOpt(path: AbsolutePath): Option[ProjectMetalsLspService] =
     getFolderForOpt(path, folderServices).orElse {
-      folderServices.find(
-        _.buildTargets.all
-          .exists(bt => bt.baseDirectoryPath.exists(path.startWith))
-      )
+      folderServices.find { service =>
+        if (path.isJarFileSystem) {
+          service.buildTargets.inferBuildTarget(path).nonEmpty
+        } else {
+          service.buildTargets.all
+            .exists(bt => bt.baseDirectoryPath.exists(path.startWith))
+        }
+      }
     }
 
   def getServiceFor(path: AbsolutePath): MetalsLspService =

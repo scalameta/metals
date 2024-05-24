@@ -37,6 +37,37 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
     } yield ()
   }
 
+  test("dependency", withoutVirtualDocs = true) {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "${V.scala213}",
+           |    "libraryDependencies" : [ "org.scala-lang:scala-reflect:${V.scala213}"] 
+           |  }
+           |}
+           |/a/src/main/scala/Main.scala
+           |object Main {
+           |  import scala.reflect.internal.Scopes
+           |}
+           |""".stripMargin
+      )
+      _ = client.messageRequests.clear()
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      /* Scopes.scala from scala-reflect has unsupported Scala 3 syntax
+       * For Scala 2.13.x it should not show any diagnostics.
+       *
+       * workspaceDefinitions will open Scopes.scala and trigger diagnostics.
+       */
+      _ = server.workspaceDefinitions
+      _ <- server.didOpen("scala/reflect/internal/Scopes.scala")
+      _ = assertNoDiagnostics()
+    } yield ()
+  }
+
   test("basic-rambo".tag(FlakyWindows)) {
     for {
       _ <- initialize(
