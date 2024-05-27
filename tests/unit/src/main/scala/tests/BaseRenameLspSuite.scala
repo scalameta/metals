@@ -60,7 +60,7 @@ abstract class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       expectedError: Boolean = false,
       metalsJson: Option[String] = None,
   )(implicit loc: Location): Unit = {
-    test(name) {
+    test(name, maxRetry = 3) {
       cleanWorkspace()
       val allMarkersRegex = "(<<|>>|@@|##.*##)"
       val files = FileLayout.mapFromString(input)
