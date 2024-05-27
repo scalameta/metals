@@ -106,19 +106,23 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
     }
 
     val names = loop(toNames, List.empty)
-    val symbols = names.foldLeft(pkg.toList) { case (owners, (name, isClass)) =>
-      owners.flatMap { owner =>
-        val actualName = NameTransformer.encode(name.stripBackticks)
-        val foundChild =
-          if (isClass) owner.info.member(TypeName(actualName))
-          else owner.info.member(TermName(actualName))
-        if (foundChild.exists) {
-          foundChild.info match {
-            case OverloadedType(_, alts) => alts
-            case _ => List(foundChild)
-          }
-        } else Nil
-      }
+    val symbols = names.foldLeft(pkg.toList) {
+      case (owners, (nameStr, isClass)) =>
+        owners.flatMap { owner =>
+          val encoded = NameTransformer.encode(nameStr.stripBackticks)
+          val name =
+            if (encoded == nme.CONSTRUCTOR.encoded) nme.CONSTRUCTOR
+            else if (isClass) TypeName(encoded)
+            else TermName(encoded)
+
+          val foundChild = owner.info.member(name)
+          if (foundChild.exists) {
+            foundChild.info match {
+              case OverloadedType(_, alts) => alts
+              case _ => List(foundChild)
+            }
+          } else Nil
+        }
     }
 
     rest match {
