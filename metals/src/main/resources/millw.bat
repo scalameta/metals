@@ -72,9 +72,9 @@ set MILL=%MILL_DOWNLOAD_PATH%\!MILL_VERSION!.bat
 
 if not exist "%MILL%" (
     set VERSION_PREFIX=%MILL_VERSION:~0,4%
-    # Since 0.5.0
+    rem Since 0.5.0
     set DOWNLOAD_SUFFIX=-assembly
-    # Since 0.11.0
+    rem Since 0.11.0
     set DOWNLOAD_FROM_MAVEN=1
     if [!VERSION_PREFIX!]==[0.0.] (
         set DOWNLOAD_SUFFIX=
