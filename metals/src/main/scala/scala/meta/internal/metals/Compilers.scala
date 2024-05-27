@@ -747,26 +747,38 @@ class Compilers(
   }.getOrElse(Future.successful(Nil))
 
   def references(
-      searchFile: AbsolutePath,
+      id: BuildTargetIdentifier,
+      searchFiles: List[AbsolutePath],
       includeDefinition: Boolean,
       symbol: String,
-  ): Future[List[ReferencesResult]] =
-    loadCompiler(searchFile)
-      .map { compiler =>
-        val uri = searchFile.toURI
-        val (input, _, adjust) =
-          sourceAdjustments(uri.toString(), compiler.scalaVersion())
-        val requestParams = new internal.pc.PcReferencesRequest(
-          CompilerVirtualFileParams(uri, input.text),
-          includeDefinition,
-          JEither.forRight(symbol),
-        )
-        compiler
-          .references(requestParams)
-          .asScala
-          .map(_.asScala.map(adjust.adjustReferencesResult).toList)
-      }
-      .getOrElse(Future.successful(Nil))
+  ): Future[List[ReferencesResult]] = {
+    // we filter only Scala files, since `references` for Java are not implemented
+    val filteredFiles = searchFiles.filter(_.isScala)
+    val results =
+      if (filteredFiles.isEmpty) Nil
+      else
+        withUncachedCompiler(id) { compiler =>
+          for {
+            searchFile <- filteredFiles
+          } yield {
+            val uri = searchFile.toURI
+            val (input, _, adjust) =
+              sourceAdjustments(uri.toString(), compiler.scalaVersion())
+            val requestParams = new internal.pc.PcReferencesRequest(
+              CompilerVirtualFileParams(uri, input.text),
+              includeDefinition,
+              JEither.forRight(symbol),
+            )
+            compiler
+              .references(requestParams)
+              .asScala
+              .map(_.asScala.map(adjust.adjustReferencesResult).toList)
+          }
+        }
+          .getOrElse(Nil)
+
+    Future.sequence(results).map(_.flatten)
+  }
 
   def extractMethod(
       doc: TextDocumentIdentifier,
@@ -1125,33 +1137,48 @@ class Compilers(
 
   private def loadCompiler(
       targetId: BuildTargetIdentifier
-  ): Option[PresentationCompiler] = {
-    val target = buildTargets.scalaTarget(targetId)
-    target.flatMap(loadCompilerForTarget)
-  }
+  ): Option[PresentationCompiler] =
+    withKeyAndDefault(targetId) { case (key, getCompiler) =>
+      Option(jcache.computeIfAbsent(key, { _ => getCompiler() }).await)
+    }
 
-  private def loadCompilerForTarget(
-      scalaTarget: ScalaTarget
-  ): Option[PresentationCompiler] = {
-    val scalaVersion = scalaTarget.scalaVersion
-    mtagsResolver.resolve(scalaVersion) match {
-      case Some(mtags) =>
-        val out = jcache.computeIfAbsent(
-          PresentationCompilerKey.ScalaBuildTarget(scalaTarget.info.getId),
-          { _ =>
+  private def withKeyAndDefault[T](
+      targetId: BuildTargetIdentifier
+  )(
+      f: (PresentationCompilerKey, () => MtagsPresentationCompiler) => Option[T]
+  ): Option[T] = {
+    buildTargets.scalaTarget(targetId).flatMap { scalaTarget =>
+      val scalaVersion = scalaTarget.scalaVersion
+      mtagsResolver.resolve(scalaVersion) match {
+        case Some(mtags) =>
+          def default() =
             workDoneProgress.trackBlocking(
               s"${config.icons.sync}Loading presentation compiler"
             ) {
               ScalaLazyCompiler(scalaTarget, mtags, search)
             }
-          },
-        )
-        Option(out.await)
-      case None =>
-        scribe.warn(s"unsupported Scala ${scalaTarget.scalaVersion}")
-        None
+          val key =
+            PresentationCompilerKey.ScalaBuildTarget(scalaTarget.info.getId)
+          f(key, default)
+        case None =>
+          scribe.warn(s"unsupported Scala ${scalaTarget.scalaVersion}")
+          None
+      }
     }
   }
+
+  private def withUncachedCompiler[T](
+      targetId: BuildTargetIdentifier
+  )(f: PresentationCompiler => T): Option[T] =
+    withKeyAndDefault(targetId) { case (key, getCompiler) =>
+      val (out, shouldShutdown) = Option(jcache.get(key))
+        .map((_, false))
+        .getOrElse((getCompiler(), true))
+      val compiler = Option(out.await)
+      val result = compiler.map(f)
+      if (shouldShutdown) compiler.foreach(_.shutdown())
+      result
+    }
 
   private def withPCAndAdjustLsp[T](
       params: SelectionRangeParams
