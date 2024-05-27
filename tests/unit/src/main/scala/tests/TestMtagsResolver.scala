@@ -10,16 +10,19 @@ import scala.meta.internal.metals.ScalaVersions
  * For `unit` we don't publish mtags at all but there are some tests that trigger docker check.
  * So for these cases, do fallback on previous mechanic by checking declared supported versions.
  */
-class TestMtagsResolver extends MtagsResolver {
+class TestMtagsResolver(checkCoursier: Boolean) extends MtagsResolver {
 
   val default: MtagsResolver = MtagsResolver.default()
 
+  private def localCheck(scalaVersion: String) =
+    if (ScalaVersions.isSupportedAtReleaseMomentScalaVersion(scalaVersion))
+      Some(MtagsBinaries.BuildIn)
+    else None
+
   override def resolve(scalaVersion: String): Option[MtagsBinaries] = {
-    default.resolve(scalaVersion).orElse {
-      if (ScalaVersions.isSupportedAtReleaseMomentScalaVersion(scalaVersion))
-        Some(MtagsBinaries.BuildIn)
-      else None
-    }
+    if (checkCoursier)
+      default.resolve(scalaVersion).orElse(localCheck(scalaVersion))
+    else localCheck(scalaVersion)
   }
 
   override def isSupportedInOlderVersion(version: String): Boolean =

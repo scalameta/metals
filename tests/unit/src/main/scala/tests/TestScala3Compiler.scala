@@ -19,7 +19,7 @@ object TestScala3Compiler {
   def compiler(name: String, input: InputProperties)(implicit
       ec: ExecutionContext
   ): Option[PresentationCompiler] = {
-    val resolver = new TestMtagsResolver()
+    val resolver = new TestMtagsResolver(checkCoursier = true)
     resolver.resolve(V.scala3) match {
       case Some(mtags: MtagsBinaries.Artifacts) =>
         val time = new FakeTime

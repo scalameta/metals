@@ -228,7 +228,7 @@ class ProblemResolverSuite extends FunSuite {
 
       val problemResolver = new ProblemResolver(
         AbsolutePath(workspace),
-        new TestMtagsResolver,
+        new TestMtagsResolver(checkCoursier = false),
         () => None,
         () => javaHome,
         () => isTestExplorerProvider,

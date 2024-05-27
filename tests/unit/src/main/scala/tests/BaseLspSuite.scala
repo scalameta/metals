@@ -56,7 +56,7 @@ abstract class BaseLspSuite(
   protected def useVirtualDocuments = useVirtualDocs
 
   protected def mtagsResolver: MtagsResolver =
-    new TestMtagsResolver
+    new TestMtagsResolver(checkCoursier = true)
 
   override def afterAll(): Unit = {
     if (server != null) {
