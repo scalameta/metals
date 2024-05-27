@@ -1713,42 +1713,55 @@ abstract class MetalsLspService(
         occ <- positionOccurrence.occurrence
       } yield occ) match {
         case Some(occ) =>
-          if (occ.role.isDefinition && !definitionOnly) {
-            val refParams = new ReferenceParams(
-              positionParams.getTextDocument(),
-              positionParams.getPosition(),
-              new ReferenceContext(false),
-            )
-            referencesResult(refParams).flatMap { results =>
-              if (results.flatMap(_.locations).isEmpty) {
-                // Fallback again to the original behavior that returns
-                // the definition location itself if no reference locations found,
-                // for avoiding the confusing messages like "No definition found ..."
-                definitionResult(positionParams, token)
-              } else {
-                Future.successful(
-                  DefinitionResult(
-                    locations = results.flatMap(_.locations).asJava,
-                    symbol = results.head.symbol,
-                    definition = None,
-                    semanticdb = None,
-                    querySymbol = results.head.symbol,
-                  )
-                )
-              }
-            }
-          } else {
-            definitionResult(positionParams, token)
-          }
+          if (occ.role.isDefinition && !definitionOnly)
+            getReferencesForGoToDefinition(positionParams, token)
+          else definitionResult(positionParams, token)
         case None =>
           // Even if it failed to retrieve the symbol occurrence from semanticdb,
           // try to find its definitions from presentation compiler.
-          definitionResult(positionParams, token)
+          definitionResult(positionParams, token).flatMap { definition =>
+            def isOnDefinition = definition.locations.asScala.exists(
+              _.getRange().encloses(positionParams.getPosition())
+            )
+            if (!definitionOnly && isOnDefinition)
+              getReferencesForGoToDefinition(positionParams, token)
+            else Future.successful(definition)
+          }
       }
     } else {
       // Ignore non-scala files.
       Future.successful(DefinitionResult.empty)
     }
+  }
+
+  private def getReferencesForGoToDefinition(
+      positionParams: TextDocumentPositionParams,
+      token: CancelToken,
+  ) = {
+    val refParams = new ReferenceParams(
+      positionParams.getTextDocument(),
+      positionParams.getPosition(),
+      new ReferenceContext(false),
+    )
+    referencesResult(refParams).flatMap { results =>
+      if (results.flatMap(_.locations).isEmpty) {
+        // Fallback again to the original behavior that returns
+        // the definition location itself if no reference locations found,
+        // for avoiding the confusing messages like "No definition found ..."
+        definitionResult(positionParams, token)
+      } else {
+        Future.successful(
+          DefinitionResult(
+            locations = results.flatMap(_.locations).asJava,
+            symbol = results.head.symbol,
+            definition = None,
+            semanticdb = None,
+            querySymbol = results.head.symbol,
+          )
+        )
+      }
+    }
+
   }
 
   /**

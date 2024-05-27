@@ -101,6 +101,24 @@ class PcReferencesLspSuite
          |""".stripMargin,
       scalaVersion,
     )
+
+    check(
+      s"basic_go_to_def_$scalaVersion",
+      """|/a/src/main/scala/Defn.scala
+         |package a
+         |object O {
+         |  val i@@ = 1
+         |  val k = <<i>>
+         |}
+         |/a/src/main/scala/Main.scala
+         |package a
+         |object Main {
+         |  val g = O.<<i>>
+         |}
+         |""".stripMargin,
+      scalaVersion,
+      useGoToDef = true,
+    )
   }
 
   check(
@@ -143,6 +161,7 @@ class PcReferencesLspSuite
       scalaVersion: String = BuildInfo.scalaVersion,
       includeDefinition: Boolean = true,
       defnFileName: String = "a/src/main/scala/Defn.scala",
+      useGoToDef: Boolean = false,
   ): Unit =
     test(name) {
       cleanWorkspace()
@@ -225,7 +244,9 @@ class PcReferencesLspSuite
         _ <- server.hover(defnFileName, s"@@$defnFileContent", workspace)
         _ <- server.didOpen(focusFile)
         params <- paramsF
-        refs <- server.server.references(params).asScala
+        refs <-
+          if (!useGoToDef) server.server.references(params).asScala
+          else server.server.definition(params).asScala
         _ = assertNoDiff(renderObtained(refs.asScala.toList), fullInput)
       } yield ()
     }
