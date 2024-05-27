@@ -353,12 +353,19 @@ final class ReferenceProvider(
       _ = visited.clear()
       symbol <- symbols
       name = nameFromSymbol(symbol)
-      searchFile <- pathsForName(buildTarget, name)
-      if (filterTargetFiles(searchFile) && !visited(searchFile))
+      pathsMap = pathsForName(buildTarget, name)
+      id <- pathsMap.keySet
+      searchFiles = pathsMap(id)
+        .filter(searchFile =>
+          filterTargetFiles(searchFile) && !visited(searchFile)
+        )
+        .distinct
+      if searchFiles.nonEmpty
     } yield {
-      visited += searchFile
+      visited ++= searchFiles
       compilers.references(
-        searchFile,
+        id,
+        searchFiles,
         includeDeclaration,
         symbol,
       )
@@ -384,10 +391,10 @@ final class ReferenceProvider(
   private def pathsForName(
       buildTarget: BuildTargetIdentifier,
       name: String,
-  ): Iterator[AbsolutePath] = {
+  ): Map[BuildTargetIdentifier, List[AbsolutePath]] = {
     val allowedBuildTargets = buildTargets.allInverseDependencies(buildTarget)
     val visited = scala.collection.mutable.Set.empty[AbsolutePath]
-    for {
+    val foundPaths = for {
       (path, entry) <- identifierIndex.index.iterator
       if allowedBuildTargets.contains(entry.id) &&
         entry.bloom.mightContain(name)
@@ -395,7 +402,8 @@ final class ReferenceProvider(
       if !visited(sourcePath)
       _ = visited.add(sourcePath)
       if sourcePath.exists
-    } yield sourcePath
+    } yield (entry.id, sourcePath)
+    foundPaths.toList.groupMap(_._1)(_._2)
   }
 
   /**
