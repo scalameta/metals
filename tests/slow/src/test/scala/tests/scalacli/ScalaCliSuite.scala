@@ -12,6 +12,7 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.mtags.CoursierComplete
 
 import org.eclipse.{lsp4j => l}
 import tests.FileLayout
@@ -472,14 +473,21 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
     } yield ()
   }
 
+  val coursierComplete = new CoursierComplete(scalaVersion)
+  val newestToolkit: String = coursierComplete
+    .complete("org.scala-lang::toolkit:")
+    .headOption
+    .map(_.split(":").last)
+    .getOrElse("default")
+
   test("properly-reindex") {
     cleanWorkspace()
     server.client.importBuild = Messages.ImportBuild.yes
     for {
       _ <- scalaCliInitialize(useBsp = true)(
         s"""|/Main.scala
-            |//> using scala 2.13.11
-            |// > using toolkit default
+            |//> using scala ${scalaVersion}
+            |// > using toolkit ${newestToolkit}
             |
             |object Main {
             |    println(os.pwd)
@@ -491,7 +499,7 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
       _ <- server.didOpen("Main.scala")
       _ = assertEquals(
         server.client.workspaceDiagnostics,
-        """|Main.scala:5:13: error: not found: value os
+        """|Main.scala:5:13: error: Not found: os
            |    println(os.pwd)
            |            ^^
            |""".stripMargin,
