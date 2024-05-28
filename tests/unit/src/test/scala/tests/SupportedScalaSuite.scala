@@ -1,12 +1,14 @@
 package tests
 
+import scala.concurrent.duration._
+
 import scala.meta.metals.Main
 
 class SupportedScalaSuite extends BaseSuite {
 
   test("released-version") {
     assertNoDiff(
-      Main.supportedVersionsString("1.2.0"),
+      Main.supportedVersionsString("1.2.0", 5.minutes),
       """|- Scala 2.11:
          |   2.11.12
          |
@@ -30,7 +32,7 @@ class SupportedScalaSuite extends BaseSuite {
 
   test("snapshot-version") {
     assertNoDiff(
-      Main.supportedVersionsString("0.11.10+90-55f285b7-SNAPSHOT"),
+      Main.supportedVersionsString("0.11.10+90-55f285b7-SNAPSHOT", 5.minutes),
       """|- Scala 2.11:
          |   2.11.12
          |
