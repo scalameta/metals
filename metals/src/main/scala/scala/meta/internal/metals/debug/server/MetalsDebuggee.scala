@@ -13,11 +13,10 @@ abstract class MetalsDebuggee extends Debuggee {
     scalaVersionOpt.getOrElse(BuildInfo.version)
   )
 
-  // Needed for hot code reload
   override def observeClassUpdates(
       onClassUpdate: Seq[String] => Unit
   ): Closeable = {
-    // lacks implementation
+    // Hot code reload is not supported in Metals
     () => {}
   }
 

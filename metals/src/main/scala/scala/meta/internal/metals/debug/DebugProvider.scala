@@ -52,6 +52,7 @@ import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.config.RunType
 import scala.meta.internal.metals.config.RunType._
+import scala.meta.internal.metals.debug.server.DebugLogger
 import scala.meta.internal.metals.debug.server.DebugeeParamsCreator
 import scala.meta.internal.metals.debug.server.MainClassDebugAdapter
 import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
@@ -69,8 +70,8 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.DebugSessionParams
 import ch.epfl.scala.bsp4j.ScalaMainClass
-import ch.epfl.scala.debugadapter
 import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.{debugadapter => dap}
 import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.MessageParams
@@ -331,37 +332,36 @@ class DebugProvider(
     if (buildServer.isDebuggingProvider || buildServer.isSbt) {
       buildServer.startDebugSession(params, cancelPromise)
     } else {
-      def getDebugee: Future[MetalsDebuggee] = params.getDataKind() match {
-        case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
-          val optDebuggee = for {
-            id <- params.getTargets().asScala.headOption
-            projectInfo <- debugConfigCreator.create(id)
-            scalaMainClass <- params.asScalaMainClass()
-          } yield {
-            projectInfo.map(
-              new MainClassDebugAdapter(
-                workspace,
-                scalaMainClass,
-                _,
-                userConfig().javaHome,
+      def getDebugee: Option[Future[MetalsDebuggee]] =
+        params.getDataKind() match {
+          case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
+            for {
+              id <- params.getTargets().asScala.headOption
+              projectInfo <- debugConfigCreator.create(id, cancelPromise)
+              scalaMainClass <- params.asScalaMainClass()
+            } yield {
+              projectInfo.map(
+                new MainClassDebugAdapter(
+                  workspace,
+                  scalaMainClass,
+                  _,
+                  userConfig().javaHome,
+                )
               )
-            )
-          }
-          optDebuggee.getOrElse(
-            throw new RuntimeException(s"Can't resolve debugee")
-          )
-        case _ => throw new RuntimeException(s"Can't resolve debugee")
-      }
+            }
+          case _ => None
+        }
 
       for {
         _ <- compilations.compileTargets(params.getTargets().asScala.toSeq)
-        debuggee <- getDebugee
+        debuggee <- getDebugee.getOrElse(
+          throw new RuntimeException(s"Can't resolve debugee")
+        )
       } yield {
-        val dapLogger =
-          new scala.meta.internal.metals.debug.server.DebugLogger()
+        val dapLogger = new DebugLogger()
         val resolver = new MetalsDebugToolsResolver()
         val handler =
-          debugadapter.DebugServer.run(
+          dap.DebugServer.run(
             debuggee,
             resolver,
             dapLogger,

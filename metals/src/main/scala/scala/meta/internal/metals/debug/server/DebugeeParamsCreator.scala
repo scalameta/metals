@@ -22,7 +22,10 @@ import ch.epfl.scala.debugadapter.UnmanagedEntry
 class DebugeeParamsCreator(buildTargets: BuildTargets)(implicit
     ec: ExecutionContext
 ) {
-  def create(id: BuildTargetIdentifier): Option[Future[DebugeeProject]] = {
+  def create(
+      id: BuildTargetIdentifier,
+      cancelPromise: Promise[Unit],
+  ): Option[Future[DebugeeProject]] = {
     val optScalaTarget = buildTargets.scalaTarget(id)
     val optJavaTarget = buildTargets.javaTarget(id)
     for {
@@ -39,17 +42,15 @@ class DebugeeParamsCreator(buildTargets: BuildTargets)(implicit
       val debugLibs = libraries.flatMap(createLibrary(_))
       val includedInLibs = debugLibs.map(_.absolutePath).toSet
 
-      val cancelPromise: Promise[Unit] = Promise()
-
-      for (
-        classpath <- buildTargets
+      val optClasspath =
+        buildTargets
           .targetClasspath(id, cancelPromise)
           .getOrElse(Future.successful(Nil))
           .map(
             _.filter(_.endsWith(".jar")).toAbsoluteClasspath.map(_.toNIO).toSeq
           )
-      ) yield {
 
+      for (classpath <- optClasspath) yield {
         val filteredClassPath = classpath.collect {
           case path if !includedInLibs(path) => UnmanagedEntry(path)
         }.toList
@@ -63,8 +64,10 @@ class DebugeeParamsCreator(buildTargets: BuildTargets)(implicit
           )
           .toSeq
 
+        val scalaVersion = optScalaTarget.map(_.scalaVersion)
+
         new DebugeeProject(
-          buildTargets.scalaTarget(id).map(_.scalaVersion),
+          scalaVersion,
           name,
           modules,
           debugLibs,
