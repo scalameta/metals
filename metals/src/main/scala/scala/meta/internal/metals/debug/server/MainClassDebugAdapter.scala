@@ -57,7 +57,7 @@ class MainClassDebugAdapter(
       .headOption
 
   def name: String =
-    s"${getClass.getSimpleName}($name, ${mainClass.getClassName()})"
+    s"${getClass.getSimpleName}(${project.name}, ${mainClass.getClassName()})"
   def run(listener: DebuggeeListener): CancelableFuture[Unit] = {
     val jvmOptions =
       mainClass.getJvmOptions.asScala.toList :+ enableDebugInterface
