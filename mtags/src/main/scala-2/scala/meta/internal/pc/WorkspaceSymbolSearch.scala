@@ -83,30 +83,9 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
     compilerSymbols(symbol).find(sym => semanticdbSymbol(sym) == symbol)
 
   private def compilerSymbols(symbol: String) = {
-    val index = symbol.lastIndexOf("/")
-    val pkgString = symbol.take(index + 1)
-    val pkg = packageSymbolFromString(pkgString)
-
-    def loop(
-        symbol: String,
-        acc: List[(String, Boolean)]
-    ): List[(String, Boolean)] =
-      if (symbol.isEmpty()) acc.reverse
-      else {
-        val newSymbol = symbol.takeWhile(c => c != '.' && c != '#')
-        val rest = symbol.drop(newSymbol.size)
-        loop(rest.drop(1), (newSymbol, rest.headOption.exists(_ == '#')) :: acc)
-      }
-
-    val (toNames, rest) = {
-      val withoutPackage = symbol.drop(index + 1)
-      val i = withoutPackage.indexOf('(')
-      if (i < 0) (withoutPackage, "")
-      else withoutPackage.splitAt(i)
-    }
-
-    val names = loop(toNames, List.empty)
-    val symbols = names.foldLeft(pkg.toList) {
+    val info = SymbolInfo.getPartsFromSymbol(symbol)
+    val pkg = packageSymbolFromString(info.packagePart)
+    val symbols = info.names.foldLeft(pkg.toList) {
       case (owners, (nameStr, isClass)) =>
         owners.flatMap { owner =>
           val encoded = NameTransformer.encode(nameStr.stripBackticks)
@@ -125,8 +104,8 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
         }
     }
 
-    rest match {
-      case ParamName(name) =>
+    info.paramName match {
+      case Some(name) =>
         symbols.flatMap(_.paramss.flatten.find(_.name.decoded == name))
       case _ => symbols
     }
@@ -229,11 +208,5 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
     } catch {
       case NonFatal(_) => Nil
     }
-  }
-}
-
-object ParamName {
-  def unapply(name: String): Option[String] = {
-    Some(name.dropWhile(_ != '.').drop(2).dropRight(1)).filter(_.nonEmpty)
   }
 }

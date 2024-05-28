@@ -81,38 +81,13 @@ object SymbolProvider:
     compilerSymbols(symbol).find(sym => SemanticdbSymbols.symbolName(sym) == symbol)
 
   def compilerSymbols(symbol: String)(using Context): List[Symbol] =
-    val index = symbol.lastIndexOf("/")
-    val pkg = normalizePackage(symbol.take(index + 1))
-
-    def loop(
-        symbol: String,
-        acc: List[(String, Boolean)],
-    ): List[(String, Boolean)] =
-      if symbol.isEmpty() then acc.reverse
-      else
-        val newSymbol = symbol.takeWhile(c => c != '.' && c != '#')
-        val rest = symbol.drop(newSymbol.size)
-        loop(rest.drop(1), (newSymbol, rest.headOption.exists(_ == '#')) :: acc)
-
-    val (toNames, rest) =
-      val withoutPackage = symbol.drop(index + 1)
-      val i = withoutPackage.indexOf('(')
-      if (i < 0) (withoutPackage, "")
-      else withoutPackage.splitAt(i)
-    val optParamName = Some(rest.dropWhile(_ != '.').drop(2).dropRight(1)).filter(_.nonEmpty)
-    val names = loop(toNames, List.empty)
-
-    try toSymbols(pkg, names, optParamName)
+    try toSymbols(SymbolInfo.getPartsFromSymbol(symbol))
     catch case NonFatal(e) => Nil
 
   private def normalizePackage(pkg: String): String =
     pkg.replace("/", ".").stripSuffix(".")
 
-  private def toSymbols(
-      pkg: String,
-      parts: List[(String, Boolean)],
-      paramName: Option[String]
-  )(using Context): List[Symbol] =
+  private def toSymbols(info: SymbolInfo.SymbolParts)(using Context): List[Symbol] =
     def collectSymbols(denotation: Denotation): List[Symbol] =
       denotation match
         case MultiDenotation(denot1, denot2) =>
@@ -138,10 +113,10 @@ object SymbolProvider:
         case Nil => owners
 
     val pkgSym =
-      if pkg == "_empty_" then requiredPackage(nme.EMPTY_PACKAGE)
-      else requiredPackage(pkg)
-    val found = loop(List(pkgSym), parts)
-    paramName match
+      if info.packagePart == "_empty_" then requiredPackage(nme.EMPTY_PACKAGE)
+      else requiredPackage(normalizePackage(info.packagePart))
+    val found = loop(List(pkgSym), info.names)
+    info.paramName match
       case Some(name) => found.flatMap(_.paramSymss.flatten.find(_.showName == name))
       case _ => found
   end toSymbols
