@@ -3,6 +3,7 @@ package scala.meta.metals
 import java.util.concurrent.Executors
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo
@@ -29,7 +30,7 @@ object Main extends SupportedScalaVersions {
       println(
         s"""|metals ${BuildInfo.metalsVersion}
             |
-            |${supportedVersionsString(BuildInfo.metalsVersion)}
+            |${supportedVersionsString(BuildInfo.metalsVersion, 15.seconds)}
             |""".stripMargin
       )
       sys.exit(0)
