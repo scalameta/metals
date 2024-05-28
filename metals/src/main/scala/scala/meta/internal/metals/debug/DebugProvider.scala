@@ -53,9 +53,11 @@ import scala.meta.internal.metals.config.RunType
 import scala.meta.internal.metals.config.RunType._
 import scala.meta.internal.metals.debug.server.DebugLogger
 import scala.meta.internal.metals.debug.server.DebugeeParamsCreator
+import scala.meta.internal.metals.debug.server.Discovered
 import scala.meta.internal.metals.debug.server.MainClassDebugAdapter
 import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
 import scala.meta.internal.metals.debug.server.MetalsDebuggee
+import scala.meta.internal.metals.debug.server.TestSuiteDebugAdapter
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.OnDemandSymbolIndex
@@ -325,25 +327,42 @@ class DebugProvider(
       buildServer: BuildServerConnection,
       params: DebugSessionParams,
       cancelPromise: Promise[Unit],
-  ) =
+  )(implicit ec: ExecutionContext) =
     if (buildServer.isDebuggingProvider || buildServer.isSbt) {
       buildServer.startDebugSession(params, cancelPromise)
     } else {
-      def getDebugee: Option[Future[MetalsDebuggee]] =
+      def getDebugee(): Option[Future[MetalsDebuggee]] =
         params.getDataKind() match {
           case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
             for {
               id <- params.getTargets().asScala.headOption
               projectInfo <- debugConfigCreator.create(id, cancelPromise)
               scalaMainClass <- params.asScalaMainClass()
+            } yield projectInfo.map(
+              new MainClassDebugAdapter(
+                workspace,
+                scalaMainClass,
+                _,
+                userConfig().javaHome,
+              )
+            )
+          case (b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION |
+              b.TestParamsDataKind.SCALA_TEST_SUITES) =>
+            for {
+              id <- params.getTargets().asScala.headOption
+              buildTarget <- buildTargets.info(id)
+              projectInfo <- debugConfigCreator.create(id, cancelPromise)
+              testSuites <- params.asScalaTestSuites()
             } yield {
-              projectInfo.map(
-                new MainClassDebugAdapter(
-                  workspace,
-                  scalaMainClass,
-                  _,
-                  userConfig().javaHome,
-                )
+              for {
+                project <- projectInfo
+                discovered <- discoverTests(id, testSuites)
+              } yield new TestSuiteDebugAdapter(
+                workspace,
+                testSuites,
+                project,
+                userConfig().javaHome,
+                discovered,
               )
             }
           case _ => None
@@ -351,8 +370,8 @@ class DebugProvider(
 
       for {
         _ <- compilations.compileTargets(params.getTargets().asScala.toSeq)
-        debuggee <- getDebugee.getOrElse(
-          throw new RuntimeException(s"Can't resolve debugee")
+        debuggee <- getDebugee().getOrElse(
+          throw new RuntimeException(s"Can't resolve debugee.")
         )
       } yield {
         val dapLogger = new DebugLogger()
@@ -367,6 +386,37 @@ class DebugProvider(
         handler.uri
       }
     }
+
+  private def discoverTests(
+      id: BuildTargetIdentifier,
+      testClasses: b.ScalaTestSuites,
+  ): Future[Map[TestFramework, List[Discovered]]] = {
+    val symbolInfosList =
+      for {
+        selection <- testClasses.getSuites().asScala.toList
+        (sym, info) <- buildTargetClasses.getTestClasses(
+          selection.getClassName(),
+          id,
+        )
+      } yield compilers.info(id, sym).map(_.map(pcInfo => (info, pcInfo)))
+
+    Future.sequence(symbolInfosList).map {
+      _.flatten.groupBy(_._1.framework).map { case (framework, testSuites) =>
+        (
+          framework,
+          testSuites.map { case (testInfo, pcInfo) =>
+            new Discovered(
+              pcInfo.symbol,
+              testInfo.fullyQualifiedName,
+              pcInfo.recursiveParents.map(_.symbolToFullQualifiedName).toSet,
+              (pcInfo.annotations ++ pcInfo.memberDefsAnnotations).toSet,
+              isModule = false,
+            )
+          },
+        )
+      }
+    }
+  }
 
   /**
    * Given a BuildTargetIdentifier either get the displayName of that build

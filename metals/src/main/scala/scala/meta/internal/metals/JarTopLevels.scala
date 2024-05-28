@@ -19,6 +19,8 @@ import scala.meta.internal.mtags.ResolvedOverriddenSymbol
 import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
 import scala.meta.io.AbsolutePath
 
+import org.h2.jdbc.JdbcBatchUpdateException
+
 /**
  * Handles caching of Jar Top Level Symbols in H2
  *
@@ -177,6 +179,10 @@ final class JarTopLevels(conn: () => Connection) {
         }
         // Return number of rows inserted
         symbolStmt.executeBatch().sum
+      } catch {
+        case e: JdbcBatchUpdateException =>
+          scribe.warn(e)
+          0
       } finally {
         if (symbolStmt != null) symbolStmt.close()
       }

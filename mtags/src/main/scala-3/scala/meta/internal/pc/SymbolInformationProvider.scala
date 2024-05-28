@@ -1,14 +1,14 @@
 package scala.meta.internal.pc
 
+import scala.collection.mutable
 import scala.util.control.NonFatal
 
+import scala.meta.internal.mtags.MtagsEnrichments.allSymbols
 import scala.meta.internal.mtags.MtagsEnrichments.metalsDealias
 import scala.meta.pc.PcSymbolKind
 import scala.meta.pc.PcSymbolProperty
 
 import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.core.Denotations.Denotation
-import dotty.tools.dotc.core.Denotations.MultiDenotation
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Names.*
 import dotty.tools.dotc.core.StdNames.nme
@@ -32,11 +32,28 @@ class SymbolInformationProvider(using Context):
           if classSym.isClass
           then classSym.asClass.parentSyms.map(SemanticdbSymbols.symbolName)
           else Nil
+
+        val allParents = {
+          val visited = mutable.Set[Symbol]()
+          def collect(sym: Symbol): Unit = {
+            visited += sym
+            if sym.isClass
+            then sym.asClass.parentSyms.foreach {
+              case parent if !visited(parent) =>
+                  collect(parent)
+              case _ =>
+            }
+          }
+          collect(classSym)
+          visited.toList.map(SemanticdbSymbols.symbolName)
+        }
+
         val dealisedSymbol =
           if sym.isAliasType then sym.info.metalsDealias.typeSymbol else sym
         val classOwner =
           sym.ownersIterator.drop(1).find(s => s.isClass || s.is(Flags.Module))
         val overridden = sym.denot.allOverriddenSymbols.toList
+        val memberDefAnnots = sym.info.membersBasedOnFlags(Flags.Method, Flags.EmptyFlags).flatMap(_.allSymbols).flatMap(_.denot.annotations)
 
         val pcSymbolInformation =
           PcSymbolInformation(
@@ -51,6 +68,9 @@ class SymbolInformationProvider(using Context):
             properties =
               if sym.is(Flags.Abstract) then List(PcSymbolProperty.ABSTRACT)
               else Nil,
+            allParents,
+            sym.denot.annotations.map(_.symbol.showFullName),
+            memberDefAnnots.map(_.symbol.showFullName).toList
           )
 
         Some(pcSymbolInformation)
@@ -104,12 +124,6 @@ object SymbolProvider:
       pkg: String,
       parts: List[(String, Boolean)],
   )(using Context): List[Symbol] =
-    def collectSymbols(denotation: Denotation): List[Symbol] =
-      denotation match
-        case MultiDenotation(denot1, denot2) =>
-          collectSymbols(denot1) ++ collectSymbols(denot2)
-        case denot => List(denot.symbol)
-
     def loop(
         owners: List[Symbol],
         parts: List[(String, Boolean)],
@@ -121,7 +135,7 @@ object SymbolProvider:
               val next =
                 if isClass then owner.info.member(typeName(head))
                 else owner.info.member(termName(head))
-              collectSymbols(next).filter(_.exists)
+              next.allSymbols.filter(_.exists)
             }
           if foundSymbols.nonEmpty then loop(foundSymbols, tl)
           else Nil

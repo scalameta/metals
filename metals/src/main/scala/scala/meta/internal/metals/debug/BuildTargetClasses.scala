@@ -8,6 +8,7 @@ import scala.meta.internal.metals.BatchedFunction
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.BuildTargetClasses.Classes
+import scala.meta.internal.metals.debug.BuildTargetClasses.TestSymbolInfo
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 
@@ -16,9 +17,9 @@ import ch.epfl.scala.{bsp4j => b}
 /**
  * In-memory index of main class symbols grouped by their enclosing build target
  */
-final class BuildTargetClasses(
-    buildTargets: BuildTargets
-)(implicit val ec: ExecutionContext) {
+final class BuildTargetClasses(buildTargets: BuildTargets)(implicit
+    val ec: ExecutionContext
+) {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
   private val jvmRunEnvironments
       : TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem] =
@@ -56,6 +57,19 @@ final class BuildTargetClasses(
         .map(_.fullyQualifiedName)
     )
 
+  def getTestClasses(
+      name: String,
+      id: b.BuildTargetIdentifier,
+  ): List[(String, TestSymbolInfo)] = {
+    index.get(id).toList.flatMap {
+      _.testClasses
+        .filter { case (_, info) =>
+          info.fullyQualifiedName == name
+        }
+        .toList
+    }
+  }
+
   private def findClassesBy[A](
       f: Classes => Option[A]
   ): List[(A, b.BuildTargetIdentifier)] = {
@@ -77,25 +91,22 @@ final class BuildTargetClasses(
           Future.successful(())
         case (Some(connection), targets0) =>
           val targetsList = targets0.asJava
-          targetsList.forEach(invalidate)
           val classes = targets0.map(t => (t, new Classes)).toMap
 
           val updateMainClasses = connection
             .mainClasses(new b.ScalaMainClassesParams(targetsList))
             .map(cacheMainClasses(classes, _))
 
-          // Currently tests are only run using DAP
           val updateTestClasses =
-            if (connection.isDebuggingProvider || connection.isSbt)
-              connection
-                .testClasses(new b.ScalaTestClassesParams(targetsList))
-                .map(cacheTestClasses(classes, _))
-            else Future.unit
+            connection
+              .testClasses(new b.ScalaTestClassesParams(targetsList))
+              .map(cacheTestClasses(classes, _))
 
           for {
             _ <- updateMainClasses
             _ <- updateTestClasses
           } yield {
+            targetsList.forEach(invalidate)
             classes.foreach { case (id, classes) =>
               index.put(id, classes)
             }
@@ -214,7 +225,10 @@ final class BuildTargetClasses(
   }
 }
 
-sealed abstract class TestFramework(val canResolveChildren: Boolean)
+sealed abstract class TestFramework(val canResolveChildren: Boolean) {
+  def names: List[String]
+}
+
 object TestFramework {
   def apply(framework: Option[String]): TestFramework = framework
     .map {
@@ -226,11 +240,30 @@ object TestFramework {
     }
     .getOrElse(Unknown)
 }
-case object JUnit4 extends TestFramework(true)
-case object MUnit extends TestFramework(true)
-case object Scalatest extends TestFramework(true)
-case object WeaverCatsEffect extends TestFramework(true)
-case object Unknown extends TestFramework(false)
+
+case object JUnit4 extends TestFramework(true) {
+  def names: List[String] = List("com.novocode.junit.JUnitFramework")
+}
+
+case object MUnit extends TestFramework(true) {
+  def names: List[String] = List("munit.Framework")
+}
+
+case object Scalatest extends TestFramework(true) {
+  def names: List[String] =
+    List(
+      "org.scalatest.tools.Framework",
+      "org.scalatest.tools.ScalaTestFramework",
+    )
+}
+
+case object WeaverCatsEffect extends TestFramework(true) {
+  def names: List[String] = Nil // TODO: find what classes should be here
+}
+
+case object Unknown extends TestFramework(false) {
+  def names: List[String] = Nil
+}
 
 object BuildTargetClasses {
   type Symbol = String

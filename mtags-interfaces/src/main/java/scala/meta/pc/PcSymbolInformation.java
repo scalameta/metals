@@ -1,6 +1,7 @@
 package scala.meta.pc;
 
 import java.util.List;
+import java.util.Collections;
 
 public interface PcSymbolInformation {
   String symbol();
@@ -12,4 +13,15 @@ public interface PcSymbolInformation {
   // overloaded methods
   List<String> alternativeSymbols();
   List<PcSymbolProperty> properties();
+  default List<String> recursiveParents() {
+    return Collections.emptyList();
+  }
+  
+  default List<String> annotations() {
+    return Collections.emptyList();
+  }
+
+  default List<String> memberDefsAnnotations() {
+    return Collections.emptyList();
+  }
 }

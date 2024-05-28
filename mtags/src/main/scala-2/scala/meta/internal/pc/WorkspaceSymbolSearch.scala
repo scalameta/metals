@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import java.nio.file.Path
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.util.control.NonFatal
 
 import scala.meta.pc.PcSymbolKind
@@ -54,6 +55,20 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
 
     searchedSymbol match {
       case compilerSymbol :: _ =>
+        val allParents = {
+          val visited = mutable.Set[Symbol]()
+          def collect(sym: Symbol): Unit = {
+            visited += sym
+            sym.parentSymbols.foreach {
+              case parent if !visited(parent) => collect(parent)
+              case _ =>
+            }
+          }
+          collect(compilerSymbol)
+          visited.toList.map(semanticdbSymbol)
+        }
+        val defnAnn =
+          compilerSymbol.info.members.filter(_.isMethod).flatMap(_.annotations)
         Some(
           PcSymbolInformation(
             symbol = symbol,
@@ -70,7 +85,10 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
                 compilerSymbol.isAbstractClass || compilerSymbol.isAbstractType
               )
                 List(PcSymbolProperty.ABSTRACT)
-              else Nil
+              else Nil,
+            allParents,
+            compilerSymbol.annotations.map(_.toString()).distinct,
+            defnAnn.map(_.toString()).toList.distinct
           )
         )
       case _ => None

@@ -785,6 +785,9 @@ object MetalsEnrichments
         value.replace('/', ':')
       else value
     }
+
+    def symbolToFullQualifiedName: String =
+      value.replaceAll("/|#", ".").stripSuffix(".")
   }
 
   implicit class XtensionTextDocumentSemanticdb(textDocument: s.TextDocument) {
@@ -1297,6 +1300,21 @@ object MetalsEnrichments
         case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
           decodeJson(params.getData(), classOf[b.ScalaMainClass])
         case _ => None
+      }
+
+    def asScalaTestSuites(): Option[b.ScalaTestSuites] =
+      params.getDataKind() match {
+        case b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION =>
+          decodeJson(params.getData(), classOf[b.ScalaTestSuites])
+        case b.TestParamsDataKind.SCALA_TEST_SUITES =>
+          for (
+            tests <- decodeJson(params.getData(), classOf[util.List[String]])
+          )
+            yield {
+              val suites =
+                tests.map(new b.ScalaTestSuiteSelection(_, Nil.asJava))
+              new b.ScalaTestSuites(suites, Nil.asJava, Nil.asJava)
+            }
       }
   }
 
