@@ -308,8 +308,9 @@ class ProjectMetalsLspService(
           found.digest,
           importBuild,
           reconnectToBuildServer = () =>
-            if (!isConnecting.get()) quickConnectToBuildServer()
-            else {
+            if (!isConnecting.get()) {
+              quickConnectToBuildServer()
+            } else {
               scribe.warn("Cannot reload build session, still connecting...")
               Future.successful(BuildChange.None)
             },

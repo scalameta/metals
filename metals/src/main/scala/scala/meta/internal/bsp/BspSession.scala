@@ -44,6 +44,8 @@ case class BspSession(
 
   def workspaceReload(): Future[List[Object]] =
     Future.sequence(connections.map(conn => conn.workspaceReload()))
+
+  def canReloadWorkspace: Boolean = connections.forall(_.canReloadWorkspace)
 }
 
 object BspSession {

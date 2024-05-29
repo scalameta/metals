@@ -27,6 +27,8 @@ trait BuildTool {
     }
   }
 
+  def ensurePrerequisites(workspace: AbsolutePath): Unit = {}
+
   protected def digest(workspace: AbsolutePath): Option[String]
 
   protected lazy val tempDir: Path = {
