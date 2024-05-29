@@ -80,6 +80,21 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
        |}""".stripMargin
   )
 
+  checkEdit(
+    "tuple",
+    """|class C {
+       |  def f(t: (String, Int)) = 1
+       |  val g = <<f(("bar" -> 1))>>
+       |}
+       |""".stripMargin,
+    List(0),
+    """|class C {
+       |  def f(t: (String, Int)) = 1
+       |  val g = f(t = ("bar" -> 1))
+       |}
+       |""".stripMargin
+  )
+
   checkError(
     "java-object",
     """|object A{

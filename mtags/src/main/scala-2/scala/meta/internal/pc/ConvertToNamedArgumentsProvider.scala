@@ -1,5 +1,7 @@
 package scala.meta.internal.pc
 
+import scala.collection.mutable.ListBuffer
+
 import scala.meta.internal.mtags.KeywordWrapper
 import scala.meta.pc.OffsetParams
 
@@ -12,6 +14,8 @@ final class ConvertToNamedArgumentsProvider(
 ) {
 
   import compiler._
+
+  val utils = new ConvertToNamedArgumentsUtils(params.text())
   def convertToNamedArguments: Either[String, List[l.TextEdit]] = {
     val unit = addCompilationUnit(
       code = params.text(),
@@ -31,17 +35,25 @@ final class ConvertToNamedArgumentsProvider(
         }
     }
 
-    def makeTextEdits(params: List[Symbol], args: List[Tree]) = {
-      args.zipWithIndex.zip(params).collect {
-        case ((arg, index), param) if argIndices.contains(index) => {
-          val position = arg.pos.toLsp
-          position.setEnd(position.getStart())
+    def makeTextEdits(
+        params: List[Symbol],
+        args: List[Tree],
+        argsStart: Int,
+        argsEnd: Int
+    ) = {
+      var prevArgEnd: Int = argsStart
+      val edits: ListBuffer[l.TextEdit] = new ListBuffer()
+      for (((arg, index), param) <- args.zipWithIndex.zip(params)) {
+        if (argIndices.contains(index)) {
+          val start = utils.findActualArgBeginning(prevArgEnd, arg.pos.start)
+          val position = arg.pos.withStart(start).withEnd(start).toLsp
           val paramNameText =
             KeywordWrapper.Scala2.backtickWrap(param.nameString)
-
-          new l.TextEdit(position, s"$paramNameText = ")
+          edits += new l.TextEdit(position, s"$paramNameText = ")
         }
+        prevArgEnd = utils.findActualArgEnd(arg.pos.end, argsEnd)
       }
+      edits.result()
     }
 
     def handleWithJavaFilter(symbol: Symbol, edits: => List[l.TextEdit]) = {
@@ -51,15 +63,20 @@ final class ConvertToNamedArgumentsProvider(
     }
 
     typedTree match {
-      case FromNewApply(fun, args) if fun.symbol != null =>
+      case app @ FromNewApply(fun, args) if fun.symbol != null =>
         handleWithJavaFilter(
           fun.symbol,
-          makeTextEdits(fun.tpe.paramss.flatten, args)
+          makeTextEdits(
+            fun.tpe.paramss.flatten,
+            args,
+            fun.pos.end,
+            app.pos.end - 1
+          )
         )
-      case Apply(fun, args) if fun.symbol != null && !fun.symbol.isJava =>
+      case app @ Apply(fun, args) if fun.symbol != null && !fun.symbol.isJava =>
         handleWithJavaFilter(
           fun.symbol,
-          makeTextEdits(fun.tpe.params, args)
+          makeTextEdits(fun.tpe.params, args, fun.pos.end, app.pos.end - 1)
         )
       case _ => Right(Nil)
     }

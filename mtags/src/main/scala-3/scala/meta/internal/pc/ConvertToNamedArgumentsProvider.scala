@@ -2,6 +2,8 @@ package scala.meta.internal.pc
 
 import java.nio.file.Paths
 
+import scala.collection.mutable.ListBuffer
+
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.pc.OffsetParams
 
@@ -19,6 +21,8 @@ final class ConvertToNamedArgumentsProvider(
     params: OffsetParams,
     argIndices: Set[Int],
 ):
+
+  val utils = new ConvertToNamedArgumentsUtils(params.text())
 
   def convertToNamedArguments: Either[String, List[l.TextEdit]] =
     val uri = params.uri
@@ -55,28 +59,30 @@ final class ConvertToNamedArgumentsProvider(
     def edits(tree: Option[tpd.Tree])(using
         Context
     ): Either[String, List[l.TextEdit]] =
-      def makeTextEdits(fun: tpd.Tree, args: List[tpd.Tree]) =
+      def makeTextEdits(fun: tpd.Tree, args: List[tpd.Tree], argsEnd: Int) =
         if fun.symbol.is(Flags.JavaDefined) then
           Left(CodeActionErrorMessages.ConvertToNamedArguments.IsJavaObject)
-        else
-          Right(
-            args.zipWithIndex
-              .zip(paramss(fun))
-              .collect {
-                case ((arg, index), param) if argIndices.contains(index) =>
-                  val position = arg.sourcePos.toLsp
-                  position.setEnd(position.getStart())
-                  new l.TextEdit(position, s"$param = ")
-              }
-          )
+        else {
+          var prevArgEnd: Int = fun.span.end
+          val edits: ListBuffer[l.TextEdit] = new ListBuffer()
+          for (((arg, index), param) <- args.zipWithIndex.zip(paramss(fun))) {
+            if (argIndices.contains(index)) {
+              val start = utils.findActualArgBeginning(prevArgEnd, arg.span.start)
+              val position = arg.sourcePos.withStart(start).withEnd(start).toLsp
+              edits += new l.TextEdit(position, s"$param = ")
+            }
+            prevArgEnd = utils.findActualArgEnd(arg.span.end, argsEnd)
+          }
+          Right(edits.result())
+        }
 
       tree match
         case Some(t) =>
           t match
-            case FromNewApply(fun, args) =>
-              makeTextEdits(fun, args)
-            case tpd.Apply(fun, args) =>
-              makeTextEdits(fun, args)
+            case app @ FromNewApply(fun, args) =>
+              makeTextEdits(fun, args, app.span.end)
+            case app @ tpd.Apply(fun, args) =>
+              makeTextEdits(fun, args, app.span.end)
             case _ => Right(Nil)
         case _ => Right(Nil)
       end match
