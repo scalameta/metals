@@ -1271,6 +1271,35 @@ class AutoImplementAbstractMembersSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "braceless-case-class".tag(IgnoreScala2),
+    """|package a
+       |
+       |trait Base:
+       |  def foo(x: Int): Int
+       |  def bar(x: String): String
+       |
+       |case class <<Concrete>>() extends Base:
+       |  def aaa = "aaa"
+       |end Concrete
+       |""".stripMargin,
+    """|package a
+       |
+       |trait Base:
+       |  def foo(x: Int): Int
+       |  def bar(x: String): String
+       |
+       |case class Concrete() extends Base:
+       |
+       |  override def bar(x: String): String = ???
+       |
+       |  override def foo(x: Int): Int = ???
+       |
+       |  def aaa = "aaa"
+       |end Concrete
+       |""".stripMargin
+  )
+
   def checkEdit(
       name: TestOptions,
       original: String,
