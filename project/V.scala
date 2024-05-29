@@ -127,6 +127,7 @@ object V {
 
   val quickPublishScalaVersions =
     Set(
+      bazelScalaVersion,
       scala211,
       sbtScala,
       scala212,
