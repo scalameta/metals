@@ -64,6 +64,15 @@ case class BazelBuildTool(
     currentVersion != BazelBuildTool.version
   }
 
+  override def ensurePrerequisites(workspace: AbsolutePath): Unit = {
+    workspace.list.find(_.filename.endsWith(".bazelproject")) match {
+      // project view cannot be empty, so we need to create a fallback
+      case Some(path) if path.readText.trim.isEmpty =>
+        path.writeText(BazelBuildTool.fallbackProjectView)
+      case _ =>
+    }
+  }
+
 }
 
 object BazelBuildTool {
@@ -82,6 +91,22 @@ object BazelBuildTool {
   private def hasProjectView(dir: AbsolutePath): Option[AbsolutePath] =
     dir.list.find(_.filename.endsWith(".bazelproject"))
 
+  val fallbackProjectView: String = {
+    """|targets:
+       |    //...
+       |
+       |build_manual_targets: false
+       |
+       |derive_targets_from_directories: false
+       |
+       |enabled_rules:
+       |    io_bazel_rules_scala
+       |    rules_java
+       |    rules_jvm
+       |
+       |""".stripMargin
+  }
+
   def existingProjectView(
       projectRoot: AbsolutePath
   ): Option[AbsolutePath] =
@@ -92,6 +117,10 @@ object BazelBuildTool {
 
   def projectViewArgs(projectRoot: AbsolutePath): List[String] = {
     existingProjectView(projectRoot) match {
+      // if project view is empty nothing will work, since no targets are specified
+      case Some(projectView) if projectView.readText.trim().isEmpty =>
+        projectView.writeText(fallbackProjectView)
+        List("-p", projectView.toRelative(projectRoot).toString())
       case Some(projectView) =>
         List("-p", projectView.toRelative(projectRoot).toString())
       case None =>

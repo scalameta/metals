@@ -345,6 +345,59 @@ class BazelLspSuite
     } yield ()
   }
 
+  test("update-projectview") {
+    cleanWorkspace()
+    writeLayout(
+      BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
+    )
+
+    val projectview = workspace.resolve("projectview.bazelproject")
+    projectview.touch()
+
+    for {
+      _ <- initialize(
+        BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
+      )
+      _ = { client.importBuildChanges = ImportBuildChanges.yes }
+      _ <- server.didOpen("Hello.scala")
+      _ = assertNoDiff(
+        projectview.readText,
+        BazelBuildTool.fallbackProjectView,
+      )
+      _ <- server.didChange("Hello.scala") { text =>
+        text.replace("def hello: String", "def hello: Int")
+      }
+      _ <- server.didSave("Hello.scala")(identity)
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|Hello.scala:4:20: error: type mismatch;
+           | found   : String("Hello")
+           | required: Int
+           |  def hello: Int = "Hello"
+           |                   ^
+           |  def hello: Int = "Hello"
+           |                   ^
+           |""".stripMargin,
+      )
+      _ = client.messageRequests.clear()
+      _ <- server.didOpen("Hello.scala")
+      _ <- server.didSave("Hello.scala") { text =>
+        text.replace("def hello: Int", "def hello: String")
+      }
+      _ = assertNoDiagnostics()
+      _ <- server.didOpen("projectview.bazelproject")
+      _ <- server.didSave("projectview.bazelproject")(_ => "")
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        ImportBuildChanges.params("bazel").getMessage(),
+      )
+      _ = assertNoDiff(
+        projectview.readText,
+        BazelBuildTool.fallbackProjectView,
+      )
+    } yield ()
+  }
+
   private val workspaceLayout =
     s"""|/BUILD
         |load("@io_bazel_rules_scala//scala:scala_toolchain.bzl", "scala_toolchain")
