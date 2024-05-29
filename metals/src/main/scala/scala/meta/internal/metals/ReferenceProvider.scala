@@ -371,7 +371,7 @@ final class ReferenceProvider(
           symbol,
         )
     }
-    lazy val maxPcsNumber = Runtime.getRuntime().availableProcessors() / 2
+    val maxPcsNumber = Runtime.getRuntime().availableProcessors() / 2
     executeBatched(results, maxPcsNumber).map(_.flatten)
   }
 
