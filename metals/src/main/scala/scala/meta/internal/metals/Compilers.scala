@@ -762,7 +762,7 @@ class Compilers(
       searchFiles: List[AbsolutePath],
       includeDefinition: Boolean,
       symbol: String,
-      additionalAdjust: AdjustRange
+      additionalAdjust: AdjustRange,
   ): Future[List[ReferencesResult]] = {
     // we filter only Scala files, since `references` for Java are not implemented
     val filteredFiles = searchFiles.filter(_.isScala)
@@ -784,7 +784,14 @@ class Compilers(
             compiler
               .references(requestParams)
               .asScala
-              .map(_.asScala.map(adjust.adjustReferencesResult(_, additionalAdjust, input.text)).toList)
+              .map(
+                _.asScala
+                  .map(
+                    adjust
+                      .adjustReferencesResult(_, additionalAdjust, input.text)
+                  )
+                  .toList
+              )
           }
         }
           .getOrElse(Nil)

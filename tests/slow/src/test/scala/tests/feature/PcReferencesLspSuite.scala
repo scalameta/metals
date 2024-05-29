@@ -121,36 +121,36 @@ class PcReferencesLspSuite
     )
 
     check(
-       s"apply-test_$scalaVersion",
-       """|/a/src/main/scala/Defn.scala
-          |package a
-          |class O(v: Int) { }
-          |object O {
-          |  def <<app@@ly>>() = new O(1)
-          |}
-          |/a/src/main/scala/Main.scala
-          |package a
-          |object Main {
-          |  val g = <<O>>()
-          |}
-          |""".stripMargin,
-       scalaVersion,
-     )
+      s"apply-test_$scalaVersion",
+      """|/a/src/main/scala/Defn.scala
+         |package a
+         |class O(v: Int) { }
+         |object O {
+         |  def <<app@@ly>>() = new O(1)
+         |}
+         |/a/src/main/scala/Main.scala
+         |package a
+         |object Main {
+         |  val g = <<O>>()
+         |}
+         |""".stripMargin,
+      scalaVersion,
+    )
 
-     check(
-       s"constructor_$scalaVersion",
-       """|/a/src/main/scala/Defn.scala
-          |package a
-          |case class Name(<<val@@ue>>: String)
-          |
-          |/a/src/main/scala/Main.scala
-          |package a
-          |object Main {
-          |  val name2 = new Name(<<value>> = "44")
-          |}
-          |""".stripMargin,
-       scalaVersion,
-     )
+    check(
+      s"constructor_$scalaVersion",
+      """|/a/src/main/scala/Defn.scala
+         |package a
+         |case class Name(<<val@@ue>>: String)
+         |
+         |/a/src/main/scala/Main.scala
+         |package a
+         |object Main {
+         |  val name2 = new Name(<<value>> = "44")
+         |}
+         |""".stripMargin,
+      scalaVersion,
+    )
   }
 
   def check(

@@ -245,7 +245,7 @@ trait MtagsEnrichments extends ScalametaCommonEnrichments {
       lazy val backtickedSetter =
         text(pos.start) == '`' && text.length > pos.end + 4 && text
           .slice(pos.end + 1, pos.end + 4)
-          .mkString == "_=`"
+          .mkString == backtickedSetterEnding
       val isOldNameBackticked = text(pos.start) == '`' &&
         (text(pos.end - 1) != '`' || pos.start == (pos.end - 1)) &&
         text(pos.end + 1) == '`'
@@ -258,6 +258,8 @@ trait MtagsEnrichments extends ScalametaCommonEnrichments {
       else (pos, false)
     }
   }
+
+  private val backtickedSetterEnding = "_=`"
 
   implicit class XtensionRangeParameters(pos: RangeParams) {
     def encloses(other: Position): Boolean =

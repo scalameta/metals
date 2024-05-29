@@ -45,7 +45,7 @@ final class ReferenceProvider(
     scalaVersionSelector: ScalaVersionSelector,
 )(implicit ec: ExecutionContext)
     extends SemanticdbFeatureProvider {
-  val index: TrieMap[Path, IdentifierIndex.IndexEntryWithStaleInfo] =
+  val index: TrieMap[Path, IdentifierIndex.MaybeStaleIndexEntry] =
     TrieMap.empty
   val identifierIndex: IdentifierIndex = new IdentifierIndex
 
@@ -88,7 +88,7 @@ final class ReferenceProvider(
       )
 
       val entry =
-        IdentifierIndex.IndexEntryWithStaleInfo(id, bloom, isStale = false)
+        IdentifierIndex.MaybeStaleIndexEntry(id, bloom, isStale = false)
       index(file.toNIO) = entry
       docs.documents.foreach { d =>
         d.occurrences.foreach { o =>

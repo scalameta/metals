@@ -60,12 +60,12 @@ object IdentifierIndex {
       bloom: BloomFilter[CharSequence],
   )
 
-  case class IndexEntryWithStaleInfo(
+  case class MaybeStaleIndexEntry(
       id: BuildTargetIdentifier,
       bloom: BloomFilter[CharSequence],
       isStale: Boolean,
   ) {
-    def asStale: IndexEntryWithStaleInfo =
-      IndexEntryWithStaleInfo(id, bloom, isStale = true)
+    def asStale: MaybeStaleIndexEntry =
+      MaybeStaleIndexEntry(id, bloom, isStale = true)
   }
 }
