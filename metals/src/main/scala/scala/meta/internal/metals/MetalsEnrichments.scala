@@ -1299,4 +1299,18 @@ object MetalsEnrichments
   def filterANSIColorCodes(str: String): String =
     str.replaceAll("\u001b\\[1A\u001b\\[K|\u001B\\[[;\\d]*m", "")
 
+  def executeBatched[T](toExec: List[() => Future[T]], batchSize: Int)(implicit
+      ec: ExecutionContext
+  ): Future[List[T]] = {
+    toExec
+      .grouped(batchSize)
+      .foldLeft(Future.successful(List.empty[List[T]])) { case (accF, toExec) =>
+        for {
+          acc <- accF
+          curr <- Future.sequence(toExec.map(_()))
+        } yield curr :: acc
+      }
+      .map(_.reverse.flatten)
+  }
+
 }
