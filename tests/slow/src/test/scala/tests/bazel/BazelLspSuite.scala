@@ -206,26 +206,15 @@ class BazelLspSuite
     }
   }
 
-  // TODO: Unignore this test
-  test("references".flaky) {
+  test("references") {
     cleanWorkspace()
     for {
       _ <- initialize(
         BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
       )
       _ <- server.didOpen("Hello.scala")
-      references <- server.references("Hello.scala", "hello")
-      _ = assertNoDiff(
-        references,
-        """|Hello.scala:4:7: info: reference
-           |  def hello: String = "Hello"
-           |      ^^^^^
-           |Bar.scala:5:24: info: reference
-           |  def hi = new Hello().hello
-           |                       ^^^^^
-           |""".stripMargin,
-      )
       _ <- server.didOpen("Main.scala")
+      _ <- server.didSave("Main.scala")(identity)
       references <- server.references("Hello.scala", "hello")
       _ = assertNoDiff(
         references,
