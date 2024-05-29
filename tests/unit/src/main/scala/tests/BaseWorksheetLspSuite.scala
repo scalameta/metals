@@ -400,6 +400,37 @@ abstract class BaseWorksheetLspSuite(
     } yield ()
   }
 
+  test("multi-line-string") {
+    cleanWorkspace()
+    val tripleQuotes = (1 to 3).map(_ => '"').mkString
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{"a": {"scalaVersion": "$scalaVersion"}}
+            |/a/src/main/scala/Main.worksheet.sc
+            |s${tripleQuotes}|# Spear $${2.max(1)}
+            ||smth: $${9.max(8)}
+            ||${tripleQuotes}.stripMargin
+            |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
+      _ = assertNoDiagnostics()
+      max <- server.completion(
+        "a/src/main/scala/Main.worksheet.sc",
+        s"|smth: $${9.max@@",
+      )
+      // completions work despite error
+      _ = assertNoDiff(
+        max,
+        s"""|max(that: Double): Double
+            |max(that: Float): Float
+            |max(that: Int): Int
+            |max(that: Long): Long
+            |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("update-classpath") {
     cleanWorkspace()
     for {

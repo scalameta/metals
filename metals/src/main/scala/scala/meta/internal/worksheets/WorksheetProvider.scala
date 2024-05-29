@@ -498,9 +498,8 @@ object WorksheetProvider {
       originInput: Input.VirtualFile
   ): Option[(Input.VirtualFile, AdjustLspData)] = {
     val ident = "  "
-    val withOuter = s"""|object worksheet{
-                        |$ident${originInput.value.replace("\n", "\n" + ident)}
-                        |}""".stripMargin
+    val withOuter =
+      s"""object worksheet{\n$ident${originInput.value.replace("\n", "\n" + ident)}\n}"""
     val modifiedInput =
       originInput.copy(value = withOuter)
     val adjustLspData = AdjustedLspData.create(
