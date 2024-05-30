@@ -938,9 +938,13 @@ object MetalsEnrichments
         diag.getSeverity.toLsp,
         if (diag.getSource == null) "scalac" else diag.getSource,
       )
-      if (diag.getCode() != null) {
+      Option(diag.getCode()).foreach { code =>
         ld.setCode(diag.getCode())
+        if (DiagnosticCodes.isEqual(code, DiagnosticCodes.Unused)) {
+          ld.setTags(java.util.List.of(l.DiagnosticTag.Unnecessary))
+        }
       }
+
       ld.setData(diag.getData)
       ld
     }

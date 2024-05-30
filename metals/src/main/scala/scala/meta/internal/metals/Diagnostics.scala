@@ -148,7 +148,7 @@ final class Diagnostics(
         if (path.isFile)
       } yield onPublishDiagnostics(
         path,
-        params.getDiagnostics().asScala.map(_.toLsp).toSeq,
+        diagnostics,
         params.getReset(),
       )
 
@@ -295,12 +295,12 @@ final class Diagnostics(
             // Scala 3 sets the diagnostic code to -1 for NoExplanation Messages. Ideally
             // this will change and we won't need this check in the future, but for now
             // let's not forward them.
-            if (
-              d.getCode() != null && d
-                .getCode()
-                .isLeft() && d.getCode().getLeft() != "-1"
-            )
-              ld.setCode(d.getCode())
+            val isScala3NoExplanationDiag = d.getCode() != null && d
+              .getCode()
+              .isLeft() && d.getCode().getLeft() == "-1"
+            if (!isScala3NoExplanationDiag) ld.setCode(d.getCode())
+
+            ld.setTags(d.getTags())
             adjustedDiagnosticData(d, edit).map(newData => ld.setData(newData))
             ld
           }
