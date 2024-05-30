@@ -390,7 +390,7 @@ class ProjectMetalsLspService(
   def maybeSetupScalaCli(): Future[Unit] = {
     if (
       !buildTools.isAutoConnectable()
-      && buildTools.loadSupported.isEmpty
+      && buildTools.loadSupported().isEmpty
       && (folder.isScalaProject() || focusedDocument().exists(_.isScala))
     ) {
       scalaCli.setupIDE(folder)
@@ -767,7 +767,7 @@ class ProjectMetalsLspService(
   protected def buildTool: Option[BuildTool] =
     for {
       name <- tables.buildTool.selectedBuildTool()
-      buildTool <- buildTools.loadSupported.find(_.executableName == name)
+      buildTool <- buildTools.current().find(_.executableName == name)
       found <- isCompatibleVersion(buildTool) match {
         case BuildTool.Found(bt, _) => Some(bt)
         case _ => None
@@ -792,7 +792,7 @@ class ProjectMetalsLspService(
   }
 
   def supportedBuildTool(): Future[Option[BuildTool.Found]] = {
-    buildTools.loadSupported match {
+    buildTools.loadSupported() match {
       case Nil => {
         if (!buildTools.isAutoConnectable()) {
           warnings.noBuildTool()
@@ -1299,9 +1299,9 @@ class ProjectMetalsLspService(
   override def check(): Unit = {
     super.check()
     buildTools
-      .loadSupported()
+      .current()
       .map(_.projectRoot)
-      .distinct match {
+      .toList match {
       case Nil => formattingProvider.validateWorkspace(folder)
       case paths =>
         paths.foreach(

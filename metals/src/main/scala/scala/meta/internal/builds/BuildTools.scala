@@ -37,7 +37,9 @@ final class BuildTools(
     explicitChoiceMade: () => Boolean,
     charset: Charset,
 ) {
-  private val lastDetectedBuildTools = new AtomicReference(Set.empty[String])
+  private val lastDetectedBuildTools = new AtomicReference(
+    Map.empty[String, BuildTool]
+  )
   // NOTE: We do a couple extra check here before we say a workspace with a
   // `.bsp` is auto-connectable, and we ensure that a user has explicitly chosen
   // to use another build server besides Bloop or it's a BSP server for a build
@@ -263,16 +265,28 @@ final class BuildTools(
     } else None
   }
 
-  def initialize(): Set[String] = {
-    lastDetectedBuildTools.getAndSet(
-      loadSupported().map(_.executableName).toSet
-    )
+  def initialize(): Set[BuildTool] = {
+    lastDetectedBuildTools
+      .getAndSet(
+        loadSupported().map(tool => tool.executableName -> tool).toMap
+      )
+      .values
+      .toSet
   }
 
   def newBuildTool(buildTool: String): Boolean = {
-    val before = lastDetectedBuildTools.getAndUpdate(_ + buildTool)
-    !before.contains(buildTool)
+    val newBuildTool = loadSupported().find(_.executableName == buildTool)
+    newBuildTool match {
+      case None => false
+      case Some(newBuildTool) =>
+        val before = lastDetectedBuildTools.getAndUpdate(
+          _ + (newBuildTool.executableName -> newBuildTool)
+        )
+        !before.contains(newBuildTool.executableName)
+    }
   }
+
+  def current(): Set[BuildTool] = lastDetectedBuildTools.get().values.toSet
 
 }
 
