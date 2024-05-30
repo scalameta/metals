@@ -337,7 +337,10 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       val buildTools = BuildTools.default().allAvailable
       buildTools.exists(newBuildTool =>
         buildTools.exists(oldBuildTool =>
-          NewBuildToolDetected.params(newBuildTool, oldBuildTool) == params
+          NewBuildToolDetected.params(
+            newBuildTool.executableName,
+            oldBuildTool.executableName,
+          ) == params
         )
       )
     }

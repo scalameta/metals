@@ -13,7 +13,7 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.io.AbsolutePath
 
-class ScalaCliBuildTool(
+case class ScalaCliBuildTool(
     val workspaceVersion: Option[String],
     val projectRoot: AbsolutePath,
     userConfig: () => UserConfiguration,

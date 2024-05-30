@@ -141,7 +141,7 @@ final class Doctor(
       case FallbackService => None
       case projectService: ProjectService =>
         val isExplicitChoice =
-          projectService.buildTools.loadSupported().length > 1
+          projectService.buildTools.current().size > 1
         tables.buildTool.selectedBuildTool().map { value =>
           (s"Build definition is coming from ${value}.", isExplicitChoice)
         }

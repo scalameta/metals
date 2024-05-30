@@ -231,12 +231,12 @@ object Messages {
     val switch = new MessageActionItem("yes")
     val dontSwitch = new MessageActionItem("no")
     def params(
-        newBuildTool: BuildTool,
-        currentBuildTool: BuildTool,
+        newBuildTool: String,
+        currentBuildTool: String,
     ): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(
-        s"""|Would you like to switch from the current build tool (${currentBuildTool.executableName}) to newly detected ${newBuildTool.executableName}?
+        s"""|Would you like to switch from the current build tool (${currentBuildTool}) to newly detected ${newBuildTool}?
             |This action will also reset build server choice.
             |""".stripMargin
       )
