@@ -361,7 +361,7 @@ class CompilerConfiguration(
         case Some(version) =>
           /* Filter out -target: and -Xtarget: options, since they are not relevant and
            * might interfere with -release option */
-          val filterOutTarget = scalacOptions.filter(opt =>
+          val filterOutTarget = scalacOptions.filterNot(opt =>
             opt.startsWith("-target:") || opt.startsWith("-Xtarget:")
           )
           filterOutTarget ++ List("-release", version.toString())
