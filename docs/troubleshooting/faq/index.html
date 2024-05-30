@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://www.googletagmanager.com">
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-140140828-1"></script>
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("js",new Date),gtag("config","UA-140140828-1",{})</script><link rel="stylesheet" href="/metals/assets/css/styles.b6851f02.css">
-<script src="/metals/assets/js/runtime~main.9adf17f4.js" defer="defer"></script>
+<script src="/metals/assets/js/runtime~main.04d7ade4.js" defer="defer"></script>
 <script src="/metals/assets/js/main.980600af.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -76,7 +76,8 @@ on the default Scala version (2.12.12), and you won&#x27;t have access to anythi
 except for the standard lib on your classpath.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="i-see-spurious-errors-or-worksheet-fails-to-evaluate">I see spurious errors or worksheet fails to evaluate<a href="#i-see-spurious-errors-or-worksheet-fails-to-evaluate" class="hash-link" aria-label="Direct link to I see spurious errors or worksheet fails to evaluate" title="Direct link to I see spurious errors or worksheet fails to evaluate">​</a></h2>
 <p>Worksheet code is entirely wrapped in a class (<code>class MdocApp</code>). The class wrapper is needed as a counter measure to dead locks issues, however the wrapper can cause issues for some valid Scala code snippets. Issues like getting stuck in a infinite loop while evaluating or throwing a <code>StackOverflowException</code>. Full description of the issue - <a href="https://github.com/scalameta/mdoc/issues/853" target="_blank" rel="noopener noreferrer">mdoc/#853</a>.</p>
-<p>If worksheet evaluation times out, you can also increase the timeout by setting <code>-Dmetals.worksheet-timeout=&lt;number of seconds&gt;</code> server property.</p>
+<p>If worksheet evaluation times out, you can also increase the timeout by setting <code>-Dmetals.worksheet-timeout=&lt;number of seconds&gt;</code> server property:</p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/v2GEanF.png" alt="worksheet-timeout" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="ammonite-scripts">Ammonite scripts<a href="#ammonite-scripts" class="hash-link" aria-label="Direct link to Ammonite scripts" title="Direct link to Ammonite scripts">​</a></h2>
 <h3 class="anchor anchorWithStickyNavbar_LWe7" id="how-do-i-use-scala-2xx-for-my-script">How do I use Scala 2.x.x for my script?<a href="#how-do-i-use-scala-2xx-for-my-script" class="hash-link" aria-label="Direct link to How do I use Scala 2.x.x for my script?" title="Direct link to How do I use Scala 2.x.x for my script?">​</a></h3>
 <p>Under the hood Metals uses
