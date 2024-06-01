@@ -9,9 +9,9 @@
   },
   "devDependencies": {},
   "dependencies": {
-    "@docusaurus/core": "3.2.1",
+    "@docusaurus/core": "3.4.0",
     "@docusaurus/plugin-client-redirects": "3.4.0",
-    "@docusaurus/preset-classic": "3.2.1",
+    "@docusaurus/preset-classic": "3.4.0",
     "@easyops-cn/docusaurus-search-local": "0.40.1",
     "clsx": "^2.0.0",
     "react": "^18.2.0",
