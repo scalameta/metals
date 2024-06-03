@@ -173,4 +173,24 @@ class JavaToplevelSuite extends BaseToplevelSuite {
     mode = ToplevelWithInner,
   )
 
+  check(
+    "i6390",
+    """|
+       |<#include "/@includes/license.ftl" />
+       |
+       |package org.apache;
+       |
+       |<#include "/@includes/vv_imports.ftl" />
+       |
+       |@SuppressWarnings("unused")
+       |public interface BaseReader extends Positionable{
+       |}
+       |""".stripMargin,
+    List("""|org/
+            |org/apache/
+            |org/apache/BaseReader# -> Positionable
+            |""".stripMargin),
+    mode = ToplevelWithInner,
+  )
+
 }
