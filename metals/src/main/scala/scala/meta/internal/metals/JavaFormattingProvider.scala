@@ -10,7 +10,7 @@ import scala.util.Try
 import scala.xml.Node
 
 import scala.meta._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.io.AbsolutePath
 import scala.meta.{inputs => m}
 
@@ -63,8 +63,7 @@ final class JavaFormattingProvider(
         else
           scribe.error(s"Java formatting profile ${profileName.get} not found")
         defaultSettings
-      } else
-        decodeProfile(profiles.head)
+      } else decodeProfile(profiles.head)
     }
   }
 

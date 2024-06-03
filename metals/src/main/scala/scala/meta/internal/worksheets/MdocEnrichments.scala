@@ -45,7 +45,6 @@ object MdocEnrichments {
           case i.DiagnosticSeverity.Info => l.DiagnosticSeverity.Information
           case i.DiagnosticSeverity.Warning => l.DiagnosticSeverity.Warning
           case i.DiagnosticSeverity.Error => l.DiagnosticSeverity.Error
-          case _ => l.DiagnosticSeverity.Error
         },
         "mdoc",
       )

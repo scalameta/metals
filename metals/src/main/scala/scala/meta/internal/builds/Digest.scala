@@ -14,7 +14,7 @@ import scala.meta.XtensionDialectApply
 import scala.meta.XtensionTokenizeDialectInput
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
@@ -185,7 +185,7 @@ object Digest {
   ): Boolean = {
     try {
       val input = file.toInput
-      val tokens = Trees.defaultTokenizerDialect(input).tokenize.get
+      val tokens = Trees.defaultTokenizerDialect.apply(input).tokenize.get
       tokens.foreach {
         case token if token.isWhiteSpaceOrComment => // Do nothing
         case token =>

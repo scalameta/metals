@@ -228,7 +228,7 @@ object CommandHTMLFormat {
       // The lib used to convert markdown to html in sublime doesn't properly
       // recognize URL encoding so we have to use hexadecimal html encoding
       args.flatMap {
-        case char if toEscape.contains(char) => s"&#x${char.toHexString};"
+        case char if toEscape.contains(char) => s"&#x${char.toInt.toHexString};"
         case char => char.toString
       }
     }

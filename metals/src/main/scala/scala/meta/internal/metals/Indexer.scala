@@ -24,7 +24,7 @@ import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.builds.WorkspaceReload
 import scala.meta.internal.implementation.ImplementationProvider
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.watcher.FileWatcher
@@ -167,7 +167,7 @@ final case class Indexer(
     )
     tracked.foreach { _ =>
       statusBar().addMessage(
-        s"${clientConfig.icons.rocket} Indexing complete!"
+        s"${clientConfig.icons().rocket} Indexing complete!"
       )
       if (clientConfig.initialConfig.statistics.isMemory) {
         Memory.logMemory(

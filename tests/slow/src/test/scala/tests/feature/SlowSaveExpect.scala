@@ -5,8 +5,8 @@ import tests.BaseExpectSuite
 object SlowSaveExpect {
   def main(args: Array[String]): Unit = {
     List[BaseExpectSuite](
-      new SemanticTokensScala3ExpectSuite(),
-      new InlayHintsScala3ExpectSuite(),
+      new SemanticTokensScala2ExpectSuite(),
+      new InlayHintsScala2ExpectSuite(),
     ).foreach { suite =>
       val header = suite.suiteName.length + 2
       println("=" * header)

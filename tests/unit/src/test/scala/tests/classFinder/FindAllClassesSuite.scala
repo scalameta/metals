@@ -129,7 +129,7 @@ class FindAllClassesSuite extends BaseClassFinderSuite {
       "Class FooOps a.Foo$FooOps.class",
       "Object FooOps a.Foo$FooOps$.class",
     ),
-    scalaVersion = V.scala213,
+    scalaVersion = V.scala3,
     searchGranularity = ClassFinderGranularity.ClassFiles,
   )
 
@@ -142,7 +142,7 @@ class FindAllClassesSuite extends BaseClassFinderSuite {
       "Class Foo a.Foo.class",
       "Object Foo a.Foo$.class",
     ),
-    scalaVersion = V.scala213,
+    scalaVersion = V.scala3,
     searchGranularity = ClassFinderGranularity.ClassFiles,
   )
 
@@ -152,7 +152,7 @@ class FindAllClassesSuite extends BaseClassFinderSuite {
       expected: Vector[String],
       searchGranularity: ClassFinderGranularity,
       filename: String = "Main.scala",
-      scalaVersion: String = V.scala213,
+      scalaVersion: String = V.scala3,
   )(implicit loc: Location): Unit =
     test(name) {
       val (buffers, classFinder) = init(scalaVersion)

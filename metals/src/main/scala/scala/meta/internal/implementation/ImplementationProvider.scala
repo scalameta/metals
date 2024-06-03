@@ -14,8 +14,8 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DefinitionProvider
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Report
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions

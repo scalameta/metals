@@ -28,8 +28,7 @@ import scala.meta.internal.builds.WorkspaceReload
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.StdReportContext
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
@@ -308,7 +307,7 @@ abstract class MetalsLspService(
     folder,
     buffers,
     definitionProvider,
-    clientConfig.icons,
+    clientConfig.icons(),
     clientConfig.commandInHtmlFormat(),
   )
 
@@ -365,7 +364,7 @@ abstract class MetalsLspService(
     clientConfig,
     statusBar,
     workDoneProgress,
-    clientConfig.icons,
+    clientConfig.icons(),
     tables,
     buildTargets,
   )
@@ -408,7 +407,7 @@ abstract class MetalsLspService(
 
   val worksheetProvider: WorksheetProvider = {
     val worksheetPublisher =
-      if (clientConfig.isDecorationProvider)
+      if (clientConfig.isDecorationProvider())
         new DecorationWorksheetPublisher(
           clientConfig.isInlineDecorationProvider()
         )
@@ -478,7 +477,7 @@ abstract class MetalsLspService(
     languageClient,
     packageProvider,
     scalaVersionSelector,
-    clientConfig.icons,
+    clientConfig.icons(),
     onCreate = path => {
       onCreate(path)
       onChange(List(path))
@@ -537,7 +536,7 @@ abstract class MetalsLspService(
       semanticdbs,
       definitionProvider,
       referencesProvider,
-      clientConfig.icons,
+      clientConfig.icons(),
       () => compilers,
       trees,
       buildTargets,
@@ -670,9 +669,11 @@ abstract class MetalsLspService(
             new Registration(
               "1",
               "workspace/didChangeWatchedFiles",
-              clientConfig.globSyntax.registrationOptions(
-                this.folder
-              ),
+              clientConfig
+                .globSyntax()
+                .registrationOptions(
+                  this.folder
+                ),
             )
           ).asJava
         )
@@ -1165,7 +1166,7 @@ abstract class MetalsLspService(
                 s"Found new symbol references for $names, try running again."
               scribe.info(message)
               statusBar
-                .addMessage(clientConfig.icons.info + message)
+                .addMessage(clientConfig.icons().info + message)
             }
           }
       }
@@ -1239,7 +1240,7 @@ abstract class MetalsLspService(
       item: CompletionItem
   ): CompletableFuture[CompletionItem] =
     CancelTokens.future { _ =>
-      if (clientConfig.isCompletionItemResolve) {
+      if (clientConfig.isCompletionItemResolve()) {
         compilers.completionItemResolve(item)
       } else {
         Future.successful(item)
@@ -1281,9 +1282,9 @@ abstract class MetalsLspService(
     CancelTokens.future { _ =>
       val path = params.getTextDocument().getUri().toAbsolutePath
       if (path.isScala)
-        parseTrees.currentFuture.map(_ =>
-          foldingRangeProvider.getRangedForScala(path)
-        )
+        parseTrees
+          .currentFuture()
+          .map(_ => foldingRangeProvider.getRangedForScala(path))
       else
         Future {
           foldingRangeProvider.getRangedForJava(path)
@@ -1672,7 +1673,7 @@ abstract class MetalsLspService(
   ): Future[Unit] = {
     paths
       .find { path =>
-        if (clientConfig.isDidFocusProvider || focusedDocument().isDefined) {
+        if (clientConfig.isDidFocusProvider() || focusedDocument().isDefined) {
           focusedDocument().contains(path) &&
           path.isWorksheet
         } else {
@@ -1702,7 +1703,7 @@ abstract class MetalsLspService(
     val source = positionParams.getTextDocument.getUri.toAbsolutePath
     if (source.isScalaFilename || source.isJavaFilename) {
       val semanticDBDoc =
-        semanticdbs.textDocument(source).documentIncludingStale
+        semanticdbs().textDocument(source).documentIncludingStale
       (for {
         doc <- semanticDBDoc
         positionOccurrence = definitionProvider.positionOccurrence(

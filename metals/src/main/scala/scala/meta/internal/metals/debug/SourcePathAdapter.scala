@@ -5,7 +5,7 @@ import java.net.URI
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Directories
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier

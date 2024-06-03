@@ -72,7 +72,7 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
     for {
       _ <- initialize(
         s"""|/metals.json
-            |{"a":{"scalaVersion" : ${V.scala213}}}
+            |{"a":{"scalaVersion" : ${V.scala3}}}
             |/Main.scala
             |object Main extends App {
             |  // @@

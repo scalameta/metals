@@ -17,7 +17,7 @@ import scala.util.Try
 
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.bsp.ConnectionBspStatus
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
@@ -45,6 +45,16 @@ final class BloopServers(
     config: MetalsServerConfig,
     workDoneProgress: WorkDoneProgress,
 )(implicit ec: ExecutionContextExecutorService) {
+
+  class BloopOutputStream extends OutputStream {
+    private lazy val b = new StringBuilder
+
+    override def write(byte: Int): Unit = byte.toChar match {
+      case c => b.append(c)
+    }
+
+    def logs = b.result.linesIterator
+  }
 
   import BloopServers._
 
@@ -354,15 +364,7 @@ final class BloopServers(
     val launcherOut = Channels.newOutputStream(clientInOutPipe.sink())
 
     val serverStarted = Promise[Unit]()
-    val bloopLogs = new OutputStream {
-      private lazy val b = new StringBuilder
-
-      override def write(byte: Int): Unit = byte.toChar match {
-        case c => b.append(c)
-      }
-
-      def logs = b.result.linesIterator
-    }
+    val bloopLogs = new BloopOutputStream()
 
     val launcher =
       new LauncherMain(

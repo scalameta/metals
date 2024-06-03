@@ -14,7 +14,7 @@ import scala.meta.internal.metals.ClientCommands.StartRunSession
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.debug.BuildTargetClasses
@@ -333,7 +333,7 @@ final class RunTestCodeLens(
       .flatMap(scalaTarget =>
         JavaBinary.javaBinaryFromPath(scalaTarget.jvmHome)
       )
-      .orElse(userConfig().usedJavaBinary)
+      .orElse(userConfig().usedJavaBinary())
     val (data, shellCommandAdded) =
       if (!isJVM) (main.toJson, false)
       else

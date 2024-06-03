@@ -4,13 +4,6 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
 import scala.meta.internal.bsp.BspServers
-import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.ClasspathSearch
-import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.MtagsResolver
-import scala.meta.internal.metals.ProgressTicks
-import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
 /**

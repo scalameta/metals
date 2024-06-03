@@ -73,9 +73,10 @@ class HeadDoctor(
     val shouldDisplay = isVisibilityProvider && isVisible.get()
     if (shouldDisplay || !isVisibilityProvider) {
       if (
-        clientConfig.isExecuteClientCommandProvider && !clientConfig.isHttpEnabled
+        clientConfig.isExecuteClientCommandProvider() && !clientConfig
+          .isHttpEnabled()
       ) {
-        val output = clientConfig.doctorFormat match {
+        val output = clientConfig.doctorFormat() match {
           case DoctorFormat.Json => buildTargetsJson()
           case DoctorFormat.Html => buildTargetsHtml()
         }

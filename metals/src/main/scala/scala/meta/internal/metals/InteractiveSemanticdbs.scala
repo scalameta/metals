@@ -6,7 +6,7 @@ import java.util.Collections
 import scala.util.Success
 import scala.util.Try
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.scalacli.ScalaCliServers
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Semanticdbs

@@ -20,7 +20,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BuildChange
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.ammonite.Ammonite.AmmoniteMetalsException
 import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient

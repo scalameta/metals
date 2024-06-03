@@ -217,10 +217,11 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
     val code =
       """
         |package a
-        |import io.circe.Decoder
         |
-        |trait CustomDecoder extends Decoder[String] {
-        |  override def <<1->50>>apply(c: io.circe.HCursor): Decoder.Result[String] = ???
+        |import java.nio.file.FileSystem
+        |
+        |trait CustomFileSystem extends FileSystem {
+        |  override def <<4->50>>close(): Unit = ???
         |}
         |
         |""".stripMargin
@@ -270,7 +271,6 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
                    |{
                    |  "a": {
                    |    "libraryDependencies": [
-                   |      "io.circe::circe-generic:0.12.0"
                    |    ]
                    |  }
                    |}
@@ -288,9 +288,9 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
       // Checked manually it is actually there and operated under artificial ID link "50"
       externalDep = Map(
         50 -> (new Position(
-          60,
-          6,
-        ), workspace.toURI.toString + ".metals/readonly/dependencies/circe-core_2.13-0.12.0-sources.jar/io/circe/Decoder.scala")
+          133,
+          25,
+        ), workspace.toURI.toString + ".metals/readonly/dependencies/src.zip/java.base/java/nio/file/FileSystem.java")
       )
 
       (context, assertions) = parseWithUri(code, path)
