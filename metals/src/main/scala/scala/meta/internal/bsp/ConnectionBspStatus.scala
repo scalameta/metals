@@ -8,6 +8,7 @@ import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.clients.language.StatusType
 import scala.meta.io.AbsolutePath
@@ -139,7 +140,7 @@ object ConnectionBspStatus {
       "warn",
       show = true,
       tooltip = message.trimTo(TOOLTIP_MAX_LENGTH),
-      command = ClientCommands.RunDoctor.id,
+      command = ServerCommands.RunDoctor.id,
       commandTooltip = "Open doctor.",
     ).withStatusType(StatusType.bsp)
 
