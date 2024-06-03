@@ -188,9 +188,7 @@ class JavaToplevelMtags(
         reader.nextChar()
         kwOrIdent(start, builder.append(ch.toChar))
       } else if (builder.isEmpty) {
-        throw new Exception(
-          s"Unexpected symbol at word pos: '$ch'. Line: '$readCurrentLine'"
-        )
+        unexpectedCharacter(ch.toChar, reader.endCharOffset)
       } else {
 
         val pos = Position.Range(input, start, reader.endCharOffset)
@@ -246,6 +244,12 @@ class JavaToplevelMtags(
                 new StringBuilder().append(first.toChar).append(next.toChar)
               )
               (token, true)
+          }
+        case '#' =>
+          reader.nextChar()
+          kwOrIdent(reader.endCharOffset, new StringBuilder(first + 1)) match {
+            case Token.Word("include", _) => (Token.IncludeHeader, true)
+            case _ => unexpectedCharacter('#', first)
           }
         case _ =>
           val token = kwOrIdent(reader.endCharOffset, new StringBuilder(first))
@@ -342,6 +346,11 @@ class JavaToplevelMtags(
     loop(new StringBuilder().append(existing))
   }
 
+  private def unexpectedCharacter(c: Char, pos: Int): Nothing =
+    throw new Exception(
+      s"Unexpected symbol '$c' at word pos: '$pos' Line: '$readCurrentLine'"
+    )
+
 }
 
 object JavaToplevelMtags {
@@ -380,6 +389,7 @@ object JavaToplevelMtags {
     // any allowed symbol like `=` , `-` and others
     case object SpecialSym extends Token
     case object Literal extends Token
+    case object IncludeHeader extends Token
 
     case class Word(value: String, pos: Position) extends WithPos {
       override def toString: String =
