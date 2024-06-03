@@ -113,7 +113,7 @@ object SymbolProvider:
         case Nil => owners
 
     val pkgSym =
-      if info.packagePart == "_empty_" then requiredPackage(nme.EMPTY_PACKAGE)
+      if info.packagePart == "_empty_/" then requiredPackage(nme.EMPTY_PACKAGE)
       else requiredPackage(normalizePackage(info.packagePart))
     val found = loop(List(pkgSym), info.names)
     info.paramName match
