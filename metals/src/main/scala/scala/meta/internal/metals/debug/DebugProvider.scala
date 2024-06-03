@@ -21,7 +21,6 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
-import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
@@ -38,6 +37,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.ScalaTestSuitesDebugRequest
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.SourceMapper
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.StatusBar
@@ -803,7 +803,7 @@ class DebugProvider(
         MetalsStatusParams(
           text = s"${clientConfig.icons.alert}Build misconfiguration",
           tooltip = e.getMessage(),
-          command = ClientCommands.RunDoctor.id,
+          command = ServerCommands.RunDoctor.id,
         )
       )
     case _ =>
