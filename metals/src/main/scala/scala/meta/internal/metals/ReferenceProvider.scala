@@ -363,14 +363,16 @@ final class ReferenceProvider(
       if searchFiles.nonEmpty
     } yield {
       visited ++= searchFiles
-      compilers.references(
-        id,
-        searchFiles,
-        includeDeclaration,
-        symbol,
-      )
+      () =>
+        compilers.references(
+          id,
+          searchFiles,
+          includeDeclaration,
+          symbol,
+        )
     }
-    Future.sequence(results).map(_.flatten)
+    val maxPcsNumber = Runtime.getRuntime().availableProcessors() / 2
+    executeBatched(results, maxPcsNumber).map(_.flatten)
   }
 
   private def nameFromSymbol(
