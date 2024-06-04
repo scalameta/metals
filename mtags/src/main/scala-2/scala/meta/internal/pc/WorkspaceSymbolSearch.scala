@@ -3,8 +3,10 @@ package scala.meta.internal.pc
 import java.nio.file.Path
 
 import scala.annotation.tailrec
+import scala.reflect.NameTransformer
 import scala.util.control.NonFatal
 
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.PcSymbolKind
 import scala.meta.pc.PcSymbolProperty
 import scala.meta.pc.SymbolSearchVisitor
@@ -81,36 +83,31 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
     compilerSymbols(symbol).find(sym => semanticdbSymbol(sym) == symbol)
 
   private def compilerSymbols(symbol: String) = {
-    val index = symbol.lastIndexOf("/")
-    val pkgString = symbol.take(index + 1)
-    val pkg = packageSymbolFromString(pkgString)
+    val info = SymbolInfo.getPartsFromSymbol(symbol)
+    val pkg = packageSymbolFromString(info.packagePart)
+    val symbols = info.names.foldLeft(pkg.toList) {
+      case (owners, (nameStr, isClass)) =>
+        owners.flatMap { owner =>
+          val encoded = NameTransformer.encode(nameStr.stripBackticks)
+          val name =
+            if (encoded == nme.CONSTRUCTOR.encoded) nme.CONSTRUCTOR
+            else if (isClass) TypeName(encoded)
+            else TermName(encoded)
 
-    def loop(
-        symbol: String,
-        acc: List[(String, Boolean)]
-    ): List[(String, Boolean)] =
-      if (symbol.isEmpty()) acc.reverse
-      else {
-        val newSymbol = symbol.takeWhile(c => c != '.' && c != '#')
-        val rest = symbol.drop(newSymbol.size)
-        loop(rest.drop(1), (newSymbol, rest.headOption.exists(_ == '#')) :: acc)
-      }
+          val foundChild = owner.info.member(name)
+          if (foundChild.exists) {
+            foundChild.info match {
+              case OverloadedType(_, alts) => alts
+              case _ => List(foundChild)
+            }
+          } else Nil
+        }
+    }
 
-    val names =
-      loop(symbol.drop(index + 1).takeWhile(_ != '('), List.empty)
-
-    names.foldLeft(pkg.toList) { case (owners, (name, isClass)) =>
-      owners.flatMap { owner =>
-        val foundChild =
-          if (isClass) owner.info.member(TypeName(name))
-          else owner.info.member(TermName(name))
-        if (foundChild.exists) {
-          foundChild.info match {
-            case OverloadedType(_, alts) => alts
-            case _ => List(foundChild)
-          }
-        } else Nil
-      }
+    info.paramName match {
+      case Some(name) =>
+        symbols.flatMap(_.paramss.flatten.find(_.name.decoded == name))
+      case _ => symbols
     }
   }
 

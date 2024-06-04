@@ -12,19 +12,20 @@ trait PcCollector[T] { self: WithCompilationUnit =>
       parent: Option[Tree]
   )(tree: Tree, pos: Position, sym: Option[Symbol]): T
 
-  def resultWithSought(sought: Set[Symbol]): List[T] = {
-    val owners = sought
+  def resultWithSought(soughtSet: Set[Symbol]): List[T] = {
+    val sought = new SoughtSymbols(soughtSet, semanticdbSymbol)
+    val owners = soughtSet
       .map(_.owner)
       .flatMap(o => symbolAlternatives(o))
       .filter(_ != NoSymbol)
-    val soughtNames: Set[Name] = sought.map(_.name)
+    val soughtNames: Set[Name] = soughtSet.map(_.name)
     /*
      * For comprehensions have two owners, one for the enumerators and one for
      * yield. This is a heuristic to find that out.
      */
     def isForComprehensionOwner(named: NameTree) = {
       if (named.symbol.pos.isDefined) {
-        def alternativeSymbol = sought.exists(symbol =>
+        def alternativeSymbol = soughtSet.exists(symbol =>
           symbol.name == named.name &&
             symbol.pos.isDefined &&
             symbol.pos.start == named.symbol.pos.start
@@ -73,7 +74,7 @@ trait PcCollector[T] { self: WithCompilationUnit =>
     //    It it does, we look up the symbol at this position using `fallbackSymbol` or `members`,
     //    and again check if this time we got symbol equal by Symbol#==.
     def soughtFilter(f: Symbol => Boolean): Boolean = {
-      sought.exists(f)
+      soughtSet.exists(f)
     }
 
     traverseSought(soughtTreeFilter, soughtFilter).toList
@@ -345,4 +346,9 @@ abstract class WithSymbolSearchCollector[T](
   def result(): List[T] = soughtSymbols
     .map { case (sought, _) => resultWithSought(sought) }
     .getOrElse(Nil)
+}
+
+class SoughtSymbols[T](val symbols: Set[T], semanticdbSymbol: T => String) {
+  val set: Set[String] = symbols.map(semanticdbSymbol)
+  def apply(sym: T): Boolean = set(semanticdbSymbol(sym))
 }

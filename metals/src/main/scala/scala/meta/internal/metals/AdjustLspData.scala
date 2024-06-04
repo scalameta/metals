@@ -55,11 +55,20 @@ trait AdjustLspData {
     new Location(location.getUri(), adjustRange(location.getRange()))
 
   def adjustReferencesResult(
-      referencesResult: pc.ReferencesResult
+      referencesResult: pc.ReferencesResult,
+      additionalAdjust: AdjustRange,
+      text: String,
   ): ReferencesResult =
     new ReferencesResult(
       referencesResult.symbol,
-      referencesResult.locations().asScala.map(adjustLocation).toList,
+      referencesResult
+        .locations()
+        .asScala
+        .flatMap(loc =>
+          additionalAdjust(loc, text, referencesResult.symbol)
+            .map(adjustLocation)
+        )
+        .toList,
     )
 
   def adjustLocations(

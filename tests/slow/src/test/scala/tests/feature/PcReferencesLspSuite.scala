@@ -119,41 +119,39 @@ class PcReferencesLspSuite
       scalaVersion,
       useGoToDef = true,
     )
+
+    check(
+      s"apply-test_$scalaVersion",
+      """|/a/src/main/scala/Defn.scala
+         |package a
+         |class O(v: Int) { }
+         |object O {
+         |  def <<app@@ly>>() = new O(1)
+         |}
+         |/a/src/main/scala/Main.scala
+         |package a
+         |object Main {
+         |  val g = <<O>>()
+         |}
+         |""".stripMargin,
+      scalaVersion,
+    )
+
+    check(
+      s"constructor_$scalaVersion",
+      """|/a/src/main/scala/Defn.scala
+         |package a
+         |case class Name(<<val@@ue>>: String)
+         |
+         |/a/src/main/scala/Main.scala
+         |package a
+         |object Main {
+         |  val name2 = new Name(<<value>> = "44")
+         |}
+         |""".stripMargin,
+      scalaVersion,
+    )
   }
-
-  check(
-    s"apply-test_${metals.BuildInfo.scala3}",
-    """|/a/src/main/scala/Defn.scala
-       |package a
-       |class O(v: Int) { }
-       |object O {
-       |  def <<app@@ly>>() = new O(1)
-       |}
-       |/a/src/main/scala/Main.scala
-       |package a
-       |object Main {
-       |  val g = <<O>>()
-       |}
-       |""".stripMargin,
-    metals.BuildInfo.scala3,
-  )
-
-  check(
-    s"apply-test_${metals.BuildInfo.scala213}",
-    """|/a/src/main/scala/Defn.scala
-       |package a
-       |class O(v: Int) { }
-       |object O {
-       |  def <<app@@ly>>() = new O(1)
-       |}
-       |/a/src/main/scala/Main.scala
-       |package a
-       |object Main {
-       |  val g = <<O()
-       |}>>
-       |""".stripMargin,
-    metals.BuildInfo.scala213,
-  )
 
   def check(
       name: TestOptions,

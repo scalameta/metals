@@ -733,6 +733,7 @@ class Compilers(
   def references(
       params: ReferenceParams,
       token: CancelToken,
+      additionalAdjust: AdjustRange,
   ): Future[List[ReferencesResult]] = {
     withPCAndAdjustLsp(params) { case (pc, pos, adjust) =>
       val requestParams = new internal.pc.PcReferencesRequest(
@@ -742,7 +743,17 @@ class Compilers(
       )
       pc.references(requestParams)
         .asScala
-        .map(_.asScala.map(adjust.adjustReferencesResult).toList)
+        .map(
+          _.asScala
+            .map(
+              adjust.adjustReferencesResult(
+                _,
+                additionalAdjust,
+                requestParams.file.text(),
+              )
+            )
+            .toList
+        )
     }
   }.getOrElse(Future.successful(Nil))
 
@@ -751,6 +762,7 @@ class Compilers(
       searchFiles: List[AbsolutePath],
       includeDefinition: Boolean,
       symbol: String,
+      additionalAdjust: AdjustRange,
   ): Future[List[ReferencesResult]] = {
     // we filter only Scala files, since `references` for Java are not implemented
     val filteredFiles = searchFiles.filter(_.isScala)
@@ -772,7 +784,14 @@ class Compilers(
             compiler
               .references(requestParams)
               .asScala
-              .map(_.asScala.map(adjust.adjustReferencesResult).toList)
+              .map(
+                _.asScala
+                  .map(
+                    adjust
+                      .adjustReferencesResult(_, additionalAdjust, input.text)
+                  )
+                  .toList
+              )
           }
         }
           .getOrElse(Nil)

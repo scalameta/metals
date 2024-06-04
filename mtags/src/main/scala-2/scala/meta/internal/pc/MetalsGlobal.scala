@@ -790,9 +790,18 @@ class MetalsGlobal(
      * Returns the position of the name/identifier of this select.
      */
     def namePosition: Position = {
-      val start = sel.pos.point
-      val end = start + sel.name.getterName.decoded.trim.length()
-      Position.range(sel.pos.source, start, start, end)
+      sel match {
+        case Select(qualifier: Select, name)
+            if (name == nme.apply || name == nme.unapply) && sel.pos.point == qualifier.pos.point =>
+          qualifier.namePosition
+        case Select(qualifier: Ident, name)
+            if (name == nme.apply || name == nme.unapply) && sel.pos.point == qualifier.pos.point =>
+          qualifier.pos
+        case _ =>
+          val start = sel.pos.point
+          val end = start + sel.name.getterName.decoded.trim.length()
+          Position.range(sel.pos.source, start, start, end)
+      }
     }
 
   }

@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import scala.util.control.NonFatal
 
 import scala.meta.internal.mtags.MtagsEnrichments.metalsDealias
+import scala.meta.internal.mtags.MtagsEnrichments.stripBackticks
 import scala.meta.pc.PcSymbolKind
 import scala.meta.pc.PcSymbolProperty
 
@@ -10,6 +11,7 @@ import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Denotations.Denotation
 import dotty.tools.dotc.core.Denotations.MultiDenotation
 import dotty.tools.dotc.core.Flags
+import dotty.tools.dotc.core.Names
 import dotty.tools.dotc.core.Names.*
 import dotty.tools.dotc.core.StdNames.nme
 import dotty.tools.dotc.core.Symbols.*
@@ -79,31 +81,13 @@ object SymbolProvider:
     compilerSymbols(symbol).find(sym => SemanticdbSymbols.symbolName(sym) == symbol)
 
   def compilerSymbols(symbol: String)(using Context): List[Symbol] =
-    val index = symbol.lastIndexOf("/")
-    val pkg = normalizePackage(symbol.take(index + 1))
-
-    def loop(
-        symbol: String,
-        acc: List[(String, Boolean)],
-    ): List[(String, Boolean)] =
-      if symbol.isEmpty() then acc.reverse
-      else
-        val newSymbol = symbol.takeWhile(c => c != '.' && c != '#')
-        val rest = symbol.drop(newSymbol.size)
-        loop(rest.drop(1), (newSymbol, rest.headOption.exists(_ == '#')) :: acc)
-    val names =
-      loop(symbol.drop(index + 1).takeWhile(_ != '('), List.empty)
-
-    try toSymbols(pkg, names)
+    try toSymbols(SymbolInfo.getPartsFromSymbol(symbol))
     catch case NonFatal(e) => Nil
 
   private def normalizePackage(pkg: String): String =
     pkg.replace("/", ".").stripSuffix(".")
 
-  private def toSymbols(
-      pkg: String,
-      parts: List[(String, Boolean)],
-  )(using Context): List[Symbol] =
+  private def toSymbols(info: SymbolInfo.SymbolParts)(using Context): List[Symbol] =
     def collectSymbols(denotation: Denotation): List[Symbol] =
       denotation match
         case MultiDenotation(denot1, denot2) =>
@@ -118,9 +102,10 @@ object SymbolProvider:
         case (head, isClass) :: tl =>
           val foundSymbols =
             owners.flatMap { owner =>
+              val name = head.stripBackticks
               val next =
-                if isClass then owner.info.member(typeName(head))
-                else owner.info.member(termName(head))
+                if isClass then owner.info.member(typeName(name))
+                else owner.info.member(termName(name))
               collectSymbols(next).filter(_.exists)
             }
           if foundSymbols.nonEmpty then loop(foundSymbols, tl)
@@ -128,7 +113,10 @@ object SymbolProvider:
         case Nil => owners
 
     val pkgSym =
-      if pkg == "_empty_" then requiredPackage(nme.EMPTY_PACKAGE)
-      else requiredPackage(pkg)
-    loop(List(pkgSym), parts)
+      if info.packagePart == "_empty_/" then requiredPackage(nme.EMPTY_PACKAGE)
+      else requiredPackage(normalizePackage(info.packagePart))
+    val found = loop(List(pkgSym), info.names)
+    info.paramName match
+      case Some(name) => found.flatMap(_.paramSymss.flatten.find(_.showName == name))
+      case _ => found
   end toSymbols

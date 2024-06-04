@@ -45,7 +45,8 @@ final class ReferenceProvider(
     scalaVersionSelector: ScalaVersionSelector,
 )(implicit ec: ExecutionContext)
     extends SemanticdbFeatureProvider {
-  val index: TrieMap[Path, IdentifierIndex.IndexEntry] = TrieMap.empty
+  val index: TrieMap[Path, IdentifierIndex.MaybeStaleIndexEntry] =
+    TrieMap.empty
   val identifierIndex: IdentifierIndex = new IdentifierIndex
 
   def addIdentifiers(file: AbsolutePath, set: Iterable[String]): Unit =
@@ -53,7 +54,7 @@ final class ReferenceProvider(
       .inverseSources(file)
       .map(id => identifierIndex.addIdentifiers(file, id, set))
 
-  def indexIdentifiers(
+  def didChange(
       path: AbsolutePath,
       text: String,
   ): Future[Unit] = Future {
@@ -61,6 +62,10 @@ final class ReferenceProvider(
       val dialect = scalaVersionSelector.getDialect(path)
       val set = identifierIndex.collectIdentifiers(text, dialect)
       identifierIndex.addIdentifiers(path, id, set)
+      index.updateWith(path.toNIO) {
+        case Some(entry) if !entry.isStale => Some(entry.asStale)
+        case optEntry => optEntry
+      }
     }
   }
 
@@ -82,7 +87,8 @@ final class ReferenceProvider(
         0.01,
       )
 
-      val entry = IdentifierIndex.IndexEntry(id, bloom)
+      val entry =
+        IdentifierIndex.MaybeStaleIndexEntry(id, bloom, isStale = false)
       index(file.toNIO) = entry
       docs.documents.foreach { d =>
         d.occurrences.foreach { o =>
@@ -144,7 +150,7 @@ final class ReferenceProvider(
       includeSynthetics: Synthetic => Boolean = _ => true,
   )(implicit report: ReportContext): Future[List[ReferencesResult]] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
-    semanticdbs().textDocument(source).documentIncludingStale match {
+    semanticdbs().textDocument(source).toOption match {
       case Some(doc) =>
         val results: List[ResolvedSymbolOccurrence] = {
           val posOccurrences =
@@ -212,7 +218,8 @@ final class ReferenceProvider(
             source,
             results.flatMap(_.occurrence).map(_.symbol),
             params.getContext().isIncludeDeclaration(),
-            path => !index.contains(path.toNIO),
+            path => !index.get(path.toNIO).exists(!_.isStale),
+            findRealRange,
           )
 
         Future
@@ -227,7 +234,7 @@ final class ReferenceProvider(
           )
       case None =>
         scribe.debug(s"No semanticdb for $source")
-        pcReferences(source, params).map(
+        pcReferences(source, params, findRealRange).map(
           _.groupBy(_.symbol)
             .collect { case (symbol, refs) =>
               ReferencesResult(symbol, refs.flatMap(_.locations))
@@ -330,14 +337,17 @@ final class ReferenceProvider(
   private def pcReferences(
       path: AbsolutePath,
       params: ReferenceParams,
+      adjustLocation: AdjustRange,
   ): Future[List[ReferencesResult]] = {
-    compilers.references(params, EmptyCancelToken).flatMap { foundRefs =>
-      pcReferences(
-        path,
-        foundRefs.map(_.symbol),
-        includeDeclaration = params.getContext().isIncludeDeclaration(),
-        filterTargetFiles = _ != path,
-      ).map(_ ++ foundRefs)
+    compilers.references(params, EmptyCancelToken, adjustLocation).flatMap {
+      foundRefs =>
+        pcReferences(
+          path,
+          foundRefs.map(_.symbol),
+          includeDeclaration = params.getContext().isIncludeDeclaration(),
+          filterTargetFiles = _ != path,
+          adjustLocation,
+        ).map(_ ++ foundRefs)
     }
   }
 
@@ -346,6 +356,7 @@ final class ReferenceProvider(
       symbols: List[String],
       includeDeclaration: Boolean,
       filterTargetFiles: AbsolutePath => Boolean,
+      adjustLocation: AdjustRange,
   ): Future[List[ReferencesResult]] = {
     val visited = mutable.Set[AbsolutePath]()
     val results = for {
@@ -369,6 +380,7 @@ final class ReferenceProvider(
           searchFiles,
           includeDeclaration,
           symbol,
+          adjustLocation,
         )
     }
     val maxPcsNumber = Runtime.getRuntime().availableProcessors() / 2
@@ -414,6 +426,7 @@ final class ReferenceProvider(
   private def pathsFor(
       buildTargetSet: Set[BuildTargetIdentifier],
       isSymbol: Set[String],
+      includeStale: Boolean,
   ): Iterator[AbsolutePath] = {
     if (buildTargetSet.isEmpty) Iterator.empty
     else {
@@ -422,6 +435,7 @@ final class ReferenceProvider(
       val visited = scala.collection.mutable.Set.empty[AbsolutePath]
       val result = for {
         (path, entry) <- index.iterator
+        if includeStale || !entry.isStale || path.filename.isJavaFilename
         if allowedBuildTargets(entry.id) &&
           isSymbol.exists(entry.bloom.mightContain)
         sourcePath = AbsolutePath(path)
@@ -463,7 +477,11 @@ final class ReferenceProvider(
       }
 
     val result = for {
-      sourcePath <- pathsFor(definitionBuildTargets, isSymbol)
+      sourcePath <- pathsFor(
+        definitionBuildTargets,
+        isSymbol,
+        includeStale = false,
+      )
       semanticdb <-
         semanticdbs()
           .textDocument(sourcePath)
@@ -506,7 +524,9 @@ final class ReferenceProvider(
   )(implicit ec: ExecutionContext): Future[Set[AbsolutePath]] = {
     buildTargets
       .inverseSourcesBspAll(source)
-      .map(buildTargets => pathsFor(buildTargets.toSet, isSymbol).toSet)
+      .map(buildTargets =>
+        pathsFor(buildTargets.toSet, isSymbol, includeStale = true).toSet
+      )
   }
 
   private def references(
@@ -524,7 +544,7 @@ final class ReferenceProvider(
     val isLocal = occ.symbol.isLocal
     if (isLocal)
       compilers
-        .references(params, EmptyCancelToken)
+        .references(params, EmptyCancelToken, findRealRange)
         .map(_.flatMap(_.locations))
     else {
       /* search local in the following cases:
@@ -619,16 +639,8 @@ final class ReferenceProvider(
       range <- synthetic.range.toList
     } add(range)
 
-    buf.result().toSeq.sortWith(sortByLocationPosition)
+    buf.result().toSeq
   }
-
-  private def sortByLocationPosition(l1: Location, l2: Location): Boolean = {
-    l1.getRange.getStart.getLine < l2.getRange.getStart.getLine
-  }
-
-  private val noAdjustRange: AdjustRange =
-    (range: s.Range, _: String, _: String) => Some(range)
-  type AdjustRange = (s.Range, String, String) => Option[s.Range]
 
 }
 
@@ -746,4 +758,38 @@ object SyntheticPackageObject {
   val regex: Regex = "/.*[$]package[.]".r
   def unapply(str: String): Option[String] =
     Option.when(regex.matches(str))(str)
+}
+
+trait AdjustRange {
+  def apply(range: s.Range, text: String, symbol: String): Option[s.Range]
+  def apply(loc: Location, text: String, symbol: String): Option[Location] = {
+    val semRange = s.Range(
+      loc.getRange().getStart().getLine(),
+      loc.getRange().getStart().getCharacter(),
+      loc.getRange().getEnd().getLine(),
+      loc.getRange().getEnd().getCharacter(),
+    )
+    for (adjusted <- apply(semRange, text, symbol)) yield {
+      loc.setRange(adjusted.toLsp)
+      loc
+    }
+  }
+}
+
+object noAdjustRange extends AdjustRange {
+  def apply(range: s.Range, text: String, symbol: String): Option[s.Range] =
+    Some(range)
+  override def apply(
+      loc: Location,
+      text: String,
+      symbol: String,
+  ): Option[Location] = Some(loc)
+}
+
+object AdjustRange {
+  def apply(adjust: (s.Range, String, String) => Option[s.Range]): AdjustRange =
+    new AdjustRange {
+      def apply(range: s.Range, text: String, symbol: String): Option[s.Range] =
+        adjust(range, text, symbol)
+    }
 }

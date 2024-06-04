@@ -9,6 +9,7 @@ import scala.meta.Importee
 import scala.meta.Tree
 import scala.meta.internal.async.ConcurrentQueue
 import scala.meta.internal.implementation.ImplementationProvider
+import scala.meta.internal.metals.AdjustRange
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Compilations
@@ -215,7 +216,7 @@ final class RenameProvider(
                           txtParams,
                           includeDeclaration = isJava,
                         ),
-                        findRealRange = findRealRange(newName),
+                        findRealRange = AdjustRange(findRealRange(newName)),
                         includeSynthetic,
                       )
                       .map(_.flatMap(_.locations))
@@ -416,7 +417,7 @@ final class RenameProvider(
       referenceProvider
         .references(
           toReferenceParams(loc, includeDeclaration = false),
-          findRealRange = findRealRange(newName),
+          findRealRange = AdjustRange(findRealRange(newName)),
         )
         .map(_.flatMap(_.locations :+ loc))
     }
@@ -471,7 +472,7 @@ final class RenameProvider(
             referenceProvider
               .references(
                 locParams,
-                findRealRange = findRealRange(newName),
+                findRealRange = AdjustRange(findRealRange(newName)),
                 includeSynthetic,
               )
               .map(_.flatMap(_.locations))
@@ -578,20 +579,29 @@ final class RenameProvider(
       symbol: String,
   ): Option[s.Range] = {
     val name = range.inString(text)
-    val nameString = symbol.desc.name.toString()
+    lazy val nameString = symbol.desc.name.toString()
     val isExplicitVarSetter =
       name.exists(nm => nm.endsWith("_=") || nm.endsWith("_=`"))
     val isBackticked = name.exists(_.isBackticked)
 
-    val symbolName =
+    lazy val symbolName =
       if (!isExplicitVarSetter) nameString.stripSuffix("_=")
       else nameString
-    val realName =
+
+    lazy val realName =
       if (isBackticked)
         name.map(_.stripBackticks)
       else name
 
-    if (symbol.isLocal || realName.contains(symbolName)) {
+    lazy val alternativeName =
+      if (symbolName == "apply" || symbolName == "unapply")
+        Some(symbol.owner).filter(_ != Symbols.None).map(_.desc.name.toString())
+      else None
+
+    if (
+      symbol.isLocal || realName
+        .contains(symbolName) || alternativeName.exists(realName.contains)
+    ) {
       /* We don't want to remove anything that is backticked, as we don't
        * know whether it's actuall needed (could be a pattern match). Here
        * we make sure that the backticks are not added twice.
