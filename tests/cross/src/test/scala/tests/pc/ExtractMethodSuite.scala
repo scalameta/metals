@@ -553,4 +553,112 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
             |""".stripMargin
     )
   )
+
+  checkEdit(
+    "i6476",
+    """|object O {
+       |  class C
+       |  def foo(i: Int)(implicit o: C) = i
+       |
+       |  @@val o = {
+       |    implicit val c = new C
+       |    <<foo(2)>>
+       |    ???
+       |  }
+       |}
+       |""".stripMargin,
+    """|object O {
+       |  class C
+       |  def foo(i: Int)(implicit o: C) = i
+       |
+       |  def newMethod()(implicit o: C): Int =
+       |    foo(2)
+       |
+       |  val o = {
+       |    implicit val c = new C
+       |    newMethod()
+       |    ???
+       |  }
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|object O {
+                |  class C
+                |  def foo(i: Int)(implicit o: C) = i
+                |
+                |  def newMethod()(given c: C): Int =
+                |    foo(2)
+                |
+                |  val o = {
+                |    implicit val c = new C
+                |    newMethod()
+                |    ???
+                |  }
+                |}
+                |""".stripMargin
+    )
+  )
+
+  checkEdit(
+    "i6476-2",
+    """|object O {
+       |  class C
+       |  def foo(i: Int)(implicit o: C) = i
+       |
+       |  @@val o = {
+       |    <<foo(2)(new C)>>
+       |    ???
+       |  }
+       |}
+       |""".stripMargin,
+    """|object O {
+       |  class C
+       |  def foo(i: Int)(implicit o: C) = i
+       |
+       |  def newMethod(): Int =
+       |    foo(2)(new C)
+       |
+       |  val o = {
+       |    newMethod()
+       |    ???
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "i6476-3".tag(IgnoreScala2),
+    """|object O {
+       |  class C
+       |  class D
+       |  def foo(i: Int)(using o: C)(x: Int)(using d: D) = i
+       |
+       |  @@val o = {
+       |    given C = new C
+       |    given D = new D
+       |    val w = 2
+       |    <<foo(w)(w)>>
+       |    ???
+       |  }
+       |}
+       |""".stripMargin,
+    """|object O {
+       |  class C
+       |  class D
+       |  def foo(i: Int)(using o: C)(x: Int)(using d: D) = i
+       |
+       |  def newMethod(w: Int)(given given_C: C, given_D: D): Int =
+       |    foo(w)(w)
+       |
+       |  val o = {
+       |    given C = new C
+       |    given D = new D
+       |    val w = 2
+       |    newMethod(w)
+       |    ???
+       |  }
+       |}
+       |""".stripMargin
+  )
+
 }

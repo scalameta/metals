@@ -112,6 +112,14 @@ final class ExtractMethodProvider(
         typeParams.toList.sortBy(_.decodedName)
       )
     }
+
+    def paramsToText(params: List[Symbol]) =
+      params
+        .map(sym =>
+          s"${sym.decodedName}: ${prettyType(sym.info, sym.isMethod && !sym.isGetter)}"
+        )
+        .mkString(", ")
+
     val path = compiler.lastVisitedParentTrees
     val edits =
       for {
@@ -127,19 +135,22 @@ final class ExtractMethodProvider(
         val extractedPos = head.pos.withEnd(expr.pos.end)
         val (methodParams, typeParams) =
           localRefs(extracted, defnPos, extractedPos)
-        val methodParamsText = methodParams
-          .map(sym =>
-            s"${sym.decodedName}: ${prettyType(sym.info, sym.isMethod && !sym.isGetter)}"
-          )
-          .mkString(", ")
+        val methodParamsText = paramsToText(methodParams)
         val typeParamsText = typeParams
           .map(_.decodedName) match {
           case Nil => ""
           case params => params.mkString("[", ", ", "]")
         }
         val newExpr = typedTreeAt(expr.pos)
-        val exprType =
-          if (newExpr.tpe != null) s": ${prettyType(newExpr.tpe.widen)}" else ""
+        val (implicitArgs, tpe) = {
+          newExpr.tpe match {
+            case MethodType(params, resultType)
+                if params.nonEmpty && params.forall(_.isImplicit) =>
+              (params, resultType.widen)
+            case tpe => (Nil, tpe)
+          }
+        }
+        val exprType = if (tpe != null) s": ${prettyType(tpe)}" else ""
         val name = genName(scopeSymbols.map(_.decodedName), "newMethod")
         val exprParams = methodParams.map(_.decodedName).mkString(", ")
         val indent = defnPos.column - (defnPos.point - defnPos.start) - 1
@@ -154,11 +165,14 @@ final class ExtractMethodProvider(
           newIndent,
           oldIndentLen
         )
+        val implicitArgsText =
+          if (implicitArgs.nonEmpty) s"(implicit ${paramsToText(implicitArgs)})"
+          else ""
         val defText =
           if (extracted.length > 1)
-            s"def $name$typeParamsText($methodParamsText)$exprType = {\n${toExtract}\n${newIndent}}\n$newIndent"
+            s"def $name$typeParamsText($methodParamsText)$implicitArgsText$exprType = {\n${toExtract}\n${newIndent}}\n$newIndent"
           else
-            s"def $name$typeParamsText($methodParamsText)$exprType =\n${toExtract}\n\n$newIndent"
+            s"def $name$typeParamsText($methodParamsText)$implicitArgsText$exprType =\n${toExtract}\n\n$newIndent"
         val replacedText = s"$name($exprParams)"
         List(
           new l.TextEdit(
