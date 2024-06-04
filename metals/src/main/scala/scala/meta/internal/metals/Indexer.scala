@@ -15,6 +15,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.control.NonFatal
 
+import scala.meta.Dialect
 import scala.meta.dialects._
 import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BspSession
@@ -78,6 +79,7 @@ final case class Indexer(
     workspaceFolder: AbsolutePath,
     implementationProvider: ImplementationProvider,
     resetService: () => Unit,
+    sharedIndices: SqlSharedIndices,
 )(implicit rc: ReportContext) {
 
   private implicit def ec: ExecutionContextExecutorService = executionContext
@@ -497,7 +499,18 @@ final case class Indexer(
       case Right(zip) =>
         scribe.debug(s"Indexing JDK sources from $zip")
         usedJars += zip
-        definitionIndex.addJDKSources(zip)
+        val dialect = ScalaVersions.dialectForDependencyJar(zip.filename)
+        sharedIndices.jvmTypeHierarchy.getTypeHierarchy(zip) match {
+          case Some(overrides) =>
+            definitionIndex.addIndexedSourceJar(zip, Nil, dialect)
+            implementationProvider.addTypeHierarchyElements(overrides)
+          case None =>
+            val (_, overrides) = indexJar(zip, dialect)
+            sharedIndices.jvmTypeHierarchy.addTypeHierarchyInfo(
+              zip,
+              overrides,
+            )
+        }
       case Left(notFound) =>
         val candidates = notFound.candidates.mkString(", ")
         scribe.warn(
@@ -507,9 +520,9 @@ final case class Indexer(
     for {
       item <- dependencySources.getItems.asScala
     } {
-      jdkSources.foreach(source =>
+      jdkSources.foreach { source =>
         data.addDependencySource(source, item.getTarget)
-      )
+      }
     }
     usedJars.toSet
   }
@@ -612,22 +625,6 @@ final case class Indexer(
    */
   private def addSourceJarSymbols(path: AbsolutePath): Unit = {
     val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
-    def indexJar() = {
-      val indexResult = definitionIndex.addSourceJar(path, dialect)
-      val toplevels = indexResult.flatMap {
-        case IndexingResult(path, toplevels, _) =>
-          toplevels.map((_, path))
-      }
-      val overrides = indexResult.flatMap {
-        case IndexingResult(path, _, list) =>
-          list.flatMap { case (symbol, overridden) =>
-            overridden.map((path, symbol, _))
-          }
-      }
-      implementationProvider.addTypeHierarchyElements(overrides)
-      (toplevels, overrides)
-    }
-
     tables.jarSymbols.getTopLevels(path) match {
       case Some(toplevels) =>
         tables.jarSymbols.getTypeHierarchy(path) match {
@@ -635,13 +632,28 @@ final case class Indexer(
             definitionIndex.addIndexedSourceJar(path, toplevels, dialect)
             implementationProvider.addTypeHierarchyElements(overrides)
           case None =>
-            val (_, overrides) = indexJar()
+            val (_, overrides) = indexJar(path, dialect)
             tables.jarSymbols.addTypeHierarchyInfo(path, overrides)
         }
       case None =>
-        val (toplevels, overrides) = indexJar()
+        val (toplevels, overrides) = indexJar(path, dialect)
         tables.jarSymbols.putJarIndexingInfo(path, toplevels, overrides)
     }
+  }
+
+  private def indexJar(path: AbsolutePath, dialect: Dialect) = {
+    val indexResult = definitionIndex.addSourceJar(path, dialect)
+    val toplevels = indexResult.flatMap {
+      case IndexingResult(path, toplevels, _) =>
+        toplevels.map((_, path))
+    }
+    val overrides = indexResult.flatMap { case IndexingResult(path, _, list) =>
+      list.flatMap { case (symbol, overridden) =>
+        overridden.map((path, symbol, _))
+      }
+    }
+    implementationProvider.addTypeHierarchyElements(overrides)
+    (toplevels, overrides)
   }
 
   def reindexWorkspaceSources(

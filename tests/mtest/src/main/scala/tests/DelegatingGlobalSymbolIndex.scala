@@ -12,7 +12,7 @@ import scala.meta.io.AbsolutePath
  * Symbol index that delegates all methods to an underlying implementation
  */
 class DelegatingGlobalSymbolIndex(
-    var underlying: GlobalSymbolIndex =
+    var underlying: OnDemandSymbolIndex =
       OnDemandSymbolIndex.empty()(EmptyReportContext)
 ) extends GlobalSymbolIndex {
 
@@ -34,10 +34,6 @@ class DelegatingGlobalSymbolIndex(
       dialect: Dialect
   ): List[mtags.IndexingResult] = {
     underlying.addSourceJar(jar, dialect)
-  }
-
-  def addJDKSources(jar: AbsolutePath): Unit = {
-    underlying.addJDKSources(jar)
   }
 
   def addSourceDirectory(

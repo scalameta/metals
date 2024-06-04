@@ -1560,6 +1560,8 @@ abstract class MetalsLspService(
 
   def fileWatcher: FileWatcher
 
+  private val sharedIndices = new SqlSharedIndices
+
   protected val indexer: Indexer = Indexer(
     () => workspaceReload,
     check,
@@ -1594,6 +1596,7 @@ abstract class MetalsLspService(
     folder,
     implementationProvider,
     resetService,
+    sharedIndices,
   )
 
   def projectInfo: MetalsServiceInfo
