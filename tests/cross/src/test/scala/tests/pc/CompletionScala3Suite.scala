@@ -104,4 +104,68 @@ class CompletionScala3Suite extends BaseCompletionSuite {
        |SetOps scala.collection
        |""".stripMargin
   )
+
+  checkEdit(
+    "i6477-1",
+    """|package a
+       |import a.b.SomeClass as SC
+       |
+       |package b {
+       |  class SomeClass
+       |}
+       |package c {
+       |  class SomeClass
+       |}
+       |
+       |val bar: SC = ???
+       |val foo: SomeClass@@
+       |""".stripMargin,
+    """|package a
+       |import a.b.SomeClass as SC
+       |
+       |package b {
+       |  class SomeClass
+       |}
+       |package c {
+       |  class SomeClass
+       |}
+       |
+       |val bar: SC = ???
+       |val foo: SC
+       |""".stripMargin,
+    assertSingleItem = false
+  )
+
+  checkEdit(
+    "i6477-2",
+    """|package a
+       |import a.b.SomeClass as SC
+       |
+       |package b {
+       |  class SomeClass
+       |}
+       |package c {
+       |  class SomeClass
+       |}
+       |
+       |val bar: SC = ???
+       |val foo: SomeClass@@
+       |""".stripMargin,
+    """|package a
+       |import a.b.SomeClass as SC
+       |import a.c.SomeClass
+       |
+       |package b {
+       |  class SomeClass
+       |}
+       |package c {
+       |  class SomeClass
+       |}
+       |
+       |val bar: SC = ???
+       |val foo: SomeClass
+       |""".stripMargin,
+    assertSingleItem = false,
+    itemIndex = 1
+  )
 }

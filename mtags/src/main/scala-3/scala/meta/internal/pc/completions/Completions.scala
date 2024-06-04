@@ -591,8 +591,12 @@ class Completions(
           then
             indexedContext.lookupSym(sym) match
               case IndexedContext.Result.InScope =>
+                val name =
+                  indexedContext.rename(sym) match
+                    case Some(rename) => rename
+                    case None => sym.decodedName
                 visit(
-                  CompletionValue.Scope(sym.decodedName, sym, findSuffix(sym))
+                  CompletionValue.Scope(name, sym, findSuffix(sym))
                 )
               case _ =>
                 completionsWithSuffix(
