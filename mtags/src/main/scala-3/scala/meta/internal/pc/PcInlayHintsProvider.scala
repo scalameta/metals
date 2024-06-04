@@ -232,7 +232,7 @@ object ImplicitParameters:
     } else None
 
   @tailrec
-  private def isSyntheticArg(tree: Tree)(using Context): Boolean = tree match
+  def isSyntheticArg(tree: Tree)(using Context): Boolean = tree match
     case tree: Ident =>
       tree.span.isSynthetic && tree.symbol.isOneOf(Flags.GivenOrImplicit)
     case Apply(fun, _ ) if tree.span.isZeroExtent => isSyntheticArg(fun)
