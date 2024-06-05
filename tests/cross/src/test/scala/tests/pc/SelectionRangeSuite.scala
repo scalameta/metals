@@ -179,4 +179,20 @@ class SelectionRangeSuite extends BaseSelectionRangeSuite {
     )
   )
 
+  private val defIsSameFor2_13And3 = List(
+    """def foo(hi: Int, >>region>>b<<region<<: Int, c:Int) = ???""".stripMargin,
+    """def foo(hi: Int, >>region>>b: Int<<region<<, c:Int) = ???""".stripMargin,
+    """def foo(>>region>>hi: Int, b: Int, c:Int<<region<<) = ???""".stripMargin,
+    """>>region>>def foo(hi: Int, b: Int, c:Int) = ???<<region<<""".stripMargin
+  )
+
+  check(
+    "def".only,
+    """def foo(hi: Int, b@@: Int, c:Int) = ???""".stripMargin,
+    defIsSameFor2_13And3,
+    Map(
+      "3" -> defIsSameFor2_13And3
+    )
+  )
+
 }
