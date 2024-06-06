@@ -164,7 +164,8 @@ class ExtractValueLspSuite
        |  method2({ 1 + <<2>> })
        |}
        |""".stripMargin,
-    ExtractValueCodeAction.title("{ 1 + 2 }"),
+    s"""|${ExtractValueCodeAction.title("{ 1 + 2 }")}
+        |${ConvertToNamedArguments.title("method2(...)")}""".stripMargin,
     """|object Main {
        |  def method2(i: Int) = ???
        |  val (newValue, newValue1) = (0, 1)

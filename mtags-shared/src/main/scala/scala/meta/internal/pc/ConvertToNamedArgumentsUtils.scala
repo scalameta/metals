@@ -13,14 +13,23 @@ class ConvertToNamedArgumentsUtils(text: String) {
    *  e.g. f((a -> b))
    */
   def findActualArgBeginning(prevArgEnd: Int, argBeg: Int): Int = {
-    val inferredArgBeg = prevArgEnd + 1
-    if (inferredArgBeg == argBeg) argBeg
-    else {
-      val slice =
-        text.drop(inferredArgBeg).take(argBeg - inferredArgBeg)
-      val parenIndex = slice.indexOf('(')
-      if (parenIndex < 0) argBeg
-      else inferredArgBeg + parenIndex
+    val inferredArgBegOpt = {
+      val index = text.drop(prevArgEnd).indexOf('(')
+      if (index < 0) None
+      else Some(index + prevArgEnd + 1)
+    }
+    inferredArgBegOpt match {
+      case None => argBeg
+      case Some(inferredArgBeg) if inferredArgBeg == argBeg => argBeg
+      case Some(inferredArgBeg) =>
+        val slice =
+          text.drop(inferredArgBeg).take(argBeg - inferredArgBeg)
+        List(slice.indexOf('('), slice.indexOf('{'))
+          .filter(_ >= 0)
+          .sorted match {
+          case index :: _ => inferredArgBeg + index
+          case Nil => argBeg
+        }
     }
   }
 }

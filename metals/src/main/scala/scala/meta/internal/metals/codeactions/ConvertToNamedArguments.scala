@@ -59,15 +59,24 @@ class ConvertToNamedArguments(
   def getTermWithArgs(
       apply: Term,
       args: List[Tree],
+      nameEnd: Int,
   ): Option[ApplyTermWithArgIndices] = {
-    val argIndices = args.zipWithIndex.collect {
-      case (arg, index)
-          if !arg.isInstanceOf[Term.Assign] && !arg
-            .isInstanceOf[Term.Block] =>
-        index
+    args match {
+      case single :: Nil if single.isInstanceOf[Term.Block] =>
+        val adjustedNameEnd = nameEnd - apply.pos.start
+        val adjustedArgStart = single.pos.start - apply.pos.start
+        val preBlock = apply.text.slice(adjustedNameEnd, adjustedArgStart)
+        if (preBlock.toCharArray().contains('('))
+          Some(ApplyTermWithArgIndices(apply, List(0)))
+        else None
+      case _ =>
+        val argIndices = args.zipWithIndex.collect {
+          case (arg, index) if !arg.isInstanceOf[Term.Assign] =>
+            index
+        }
+        if (argIndices.isEmpty) firstApplyWithUnnamedArgs(apply.parent)
+        else Some(ApplyTermWithArgIndices(apply, argIndices))
     }
-    if (argIndices.isEmpty) firstApplyWithUnnamedArgs(apply.parent)
-    else Some(ApplyTermWithArgIndices(apply, argIndices))
   }
 
   def firstApplyWithUnnamedArgs(
@@ -75,9 +84,9 @@ class ConvertToNamedArguments(
   ): Option[ApplyTermWithArgIndices] = {
     term match {
       case Some(apply: Term.Apply) =>
-        getTermWithArgs(apply, apply.args)
+        getTermWithArgs(apply, apply.args, apply.fun.pos.end)
       case Some(newAppl @ Term.New(init)) =>
-        getTermWithArgs(newAppl, init.argss.flatten)
+        getTermWithArgs(newAppl, init.argss.flatten, init.name.pos.end)
       case Some(t) => firstApplyWithUnnamedArgs(t.parent)
       case _ => None
     }
