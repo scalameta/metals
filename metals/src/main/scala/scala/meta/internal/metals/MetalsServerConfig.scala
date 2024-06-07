@@ -115,6 +115,11 @@ final case class MetalsServerConfig(
         .filter(_.forall(Character.isDigit(_)))
         .map(_.toInt)
         .getOrElse(30),
+    debugServerStartTimeout: Int =
+      Option(System.getProperty("metals.debug-server-start-timeout"))
+        .filter(_.forall(Character.isDigit(_)))
+        .map(_.toInt)
+        .getOrElse(60),
 ) {
   override def toString: String =
     List[String](
@@ -137,6 +142,7 @@ final case class MetalsServerConfig(
       s"server-to-idle-time=${metalsToIdleTime}",
       s"build-server-ping-interval=${pingInterval}",
       s"worksheet-timeout=$worksheetTimeout",
+      s"debug-server-start-timeout=$debugServerStartTimeout",
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {
