@@ -46,12 +46,7 @@ class SelectionRangeProvider(
       val path =
         Interactive.pathTo(driver.openedTrees(uri), pos)(using ctx)
 
-      val bareRanges = path
-        .map { tree =>
-          val selectionRange = new SelectionRange()
-          selectionRange.setRange(tree.sourcePos.toLsp)
-          selectionRange
-        }
+      val bareRanges = path.flatMap(selectionRangesFromTree(pos))
 
       // if cursor is in comment return range in comment4
       val commentRanges = getCommentRanges(pos, path, param.text()).map { x =>
@@ -102,6 +97,33 @@ object SelectionRangeProvider:
   import scala.meta.dialects.Scala3
   import scala.meta.*
   import dotty.tools.dotc.ast.tpd
+
+  /** Given a tree, create a seq of [[SelectionRange]]s corresponding to that tree. */
+  private def selectionRangesFromTree(pos: SourcePosition)(tree: tpd.Tree)(using Context) =
+    def toSelectionRange(srcPos: SourcePosition) =
+      val selectionRange = new SelectionRange()
+      selectionRange.setRange(srcPos.toLsp)
+      selectionRange
+
+    val treeSelectionRange = toSelectionRange(tree.sourcePos)
+
+    tree match
+      case tpd.DefDef(name, paramss, tpt, rhs) =>
+        // If source position is within a parameter list, add a selection range covering that whole list.
+        val selectedParams =
+          paramss
+            .iterator
+            .flatMap: // parameter list to a sourcePosition covering the whole list
+              case Seq(param) => Some(param.sourcePos)
+              case params @ Seq(head, tail*) =>
+                val srcPos = head.sourcePos
+                val lastSpan = tail.last.span
+                Some(SourcePosition(srcPos.source, srcPos.span union lastSpan, srcPos.outer))
+              case Seq() => None
+            .find(_.contains(pos))
+            .map(toSelectionRange)
+        selectedParams ++ Seq(treeSelectionRange)
+      case _ => Seq(treeSelectionRange)
 
 
   /** get comments under cursor */
