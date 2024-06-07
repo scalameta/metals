@@ -180,25 +180,28 @@ class SelectionRangeSuite extends BaseSelectionRangeSuite {
 //   )
 
   check(
-    "def".only,
+    "def - braceless".only,
     """object Main extends App :
       |  def foo(hi: Int, b@@: Int, c:Int) = ???  """.stripMargin,
-    List(
-      """object Main extends App :
-        |  def foo(hi: Int, >>region>>b: Int<<region<<, c:Int) = ??? """.stripMargin,
-      """object Main extends App :
-        |  def foo(>>region>>hi: Int, b: Int, c:Int<<region<<) = ??? """.stripMargin,
-      """object Main extends App :
-        |  >>region>>def foo(hi: Int, b: Int, c:Int) = ???<<region<< """.stripMargin,
-      """object Main extends >>region>>App :
-        |  def foo(hi: Int, b: Int, c:Int) = ???<<region<<""".stripMargin,
-      """>>region>>object Main extends App :
-        |  def foo(hi: Int, b: Int, c:Int) = ???<<region<<""".stripMargin
+    List(),
+    Map(
+      "3" -> List(
+        """object Main extends App :
+          |  def foo(hi: Int, >>region>>b: Int<<region<<, c:Int) = ??? """.stripMargin,
+        """object Main extends App :
+          |  def foo(>>region>>hi: Int, b: Int, c:Int<<region<<) = ??? """.stripMargin,
+        """object Main extends App :
+          |  >>region>>def foo(hi: Int, b: Int, c:Int) = ???<<region<< """.stripMargin,
+        """object Main extends >>region>>App :
+          |  def foo(hi: Int, b: Int, c:Int) = ???<<region<<""".stripMargin,
+        """>>region>>object Main extends App :
+          |  def foo(hi: Int, b: Int, c:Int) = ???<<region<<""".stripMargin
+      )
     )
   )
 
   check(
-    "def".only,
+    "def - braced".only,
     """object Main extends App { def foo(hi: Int, b@@: Int, c:Int) = ??? } """.stripMargin,
     List(
       """object Main extends App { def foo(hi: Int, >>region>>b: Int<<region<<, c:Int) = ??? }""".stripMargin,
