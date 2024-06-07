@@ -258,8 +258,10 @@ class DebugProvider(
             socket
           }
 
+        val startupTimeout = clientConfig.initialConfig.debugServerStartTimeout
+
         conn
-          .withTimeout(60, TimeUnit.SECONDS)
+          .withTimeout(startupTimeout, TimeUnit.SECONDS)
           .recover { case exception =>
             connectedToServer.tryFailure(exception)
             cancelPromise.trySuccess(())
