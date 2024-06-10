@@ -853,4 +853,24 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
     ),
     hintsInPatternMatch = true
   )
+
+  check(
+    "apply-param".tag(IgnoreScala2),
+    """|object Main:
+       |  case class A()
+       |  case class B[T]()
+       |  given A = A()
+       |  implicit def bar(using a: A): B[A] = B[A]()
+       |  def foo(using b: B[A]): String = "aaa"
+       |  val g: String = foo
+       |""".stripMargin,
+    """|object Main:
+       |  case class A()
+       |  case class B[T]()
+       |  given A = A()
+       |  implicit def bar(using a: A): B[A] = B[A]()
+       |  def foo(using b: B[A]): String = "aaa"
+       |  val g: String = foo/*(using bar<<(5:15)>>)*/
+       |""".stripMargin
+  )
 }

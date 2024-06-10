@@ -196,10 +196,10 @@ object ImplicitConversion:
   def unapply(tree: Tree)(using params: InlayHintsParams, ctx: Context) =
     if (params.implicitConversions()) {
       tree match
-        case Apply(fun: Ident, args) if isSynthetic(fun) =>
+        case Apply(fun: Ident, args) if isSynthetic(fun) && args.exists(!_.span.isZeroExtent) =>
           implicitConversion(fun, args)
         case Apply(Select(fun, name), args)
-            if name == nme.apply && isSynthetic(fun) =>
+            if name == nme.apply && isSynthetic(fun) && args.exists(!_.span.isZeroExtent) =>
           implicitConversion(fun, args)
         case _ => None
     } else None
