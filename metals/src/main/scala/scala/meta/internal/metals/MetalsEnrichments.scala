@@ -654,6 +654,11 @@ object MetalsEnrichments
       }
     }
 
+    def deleteWithEmptyParents(): Unit = {
+      deleteIfExists()
+      deleteEmptyParents(path)
+    }
+
     def appendText(text: String): Unit = {
       path.parent.createDirectories()
       Files.write(
@@ -663,6 +668,16 @@ object MetalsEnrichments
       )
     }
 
+  }
+
+  @tailrec
+  private def deleteEmptyParents(current: AbsolutePath): Unit = {
+    current.parentOpt match {
+      case Some(parent) if parent.list.headOption.isEmpty =>
+        parent.deleteIfExists()
+        deleteEmptyParents(parent)
+      case _ =>
+    }
   }
 
   implicit class XtensionString(value: String) {
