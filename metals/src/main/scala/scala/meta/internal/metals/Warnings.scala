@@ -43,7 +43,7 @@ final class ProjectWarnings(
         statusBar.addMessage(
           MetalsStatusParams(
             s"${icons.alert}Build misconfiguration",
-            command = ClientCommands.RunDoctor.id,
+            command = ServerCommands.RunDoctor.id,
           )
         )
       }

@@ -367,6 +367,37 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
     )
   )
 
+  checkEdit(
+    "i6477".tag(IgnoreScala2),
+    """|package a
+       |import a.b.SomeClass as SC
+       |
+       |package b {
+       |  class SomeClass
+       |}
+       |package c {
+       |  class SomeClass
+       |}
+       |
+       |val bar: SC = ???
+       |val foo: <<SomeClass>> = ???
+       |""".stripMargin,
+    """|package a
+       |import a.b.SomeClass as SC
+       |import a.c.SomeClass
+       |
+       |package b {
+       |  class SomeClass
+       |}
+       |package c {
+       |  class SomeClass
+       |}
+       |
+       |val bar: SC = ???
+       |val foo: SomeClass = ???
+       |""".stripMargin
+  )
+
   private def ammoniteWrapper(code: String): String =
     // Vaguely looks like a scala file that Ammonite generates
     // from a sc file.

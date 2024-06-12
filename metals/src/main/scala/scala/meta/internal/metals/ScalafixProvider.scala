@@ -189,11 +189,11 @@ case class ScalafixProvider(
 
   /**
    * Scalafix may be ran successfully, but that doesn't mean that every file
-   * evaluation also ran succesfully. This ensure that the scalafix run was successful
+   * evaluation also ran successfully. This ensure that the scalafix run was successful
    * and also that every file evaluation was successful.
    *
    * @param evaluation
-   * @return true only if the evaulation for every single file contains no errors
+   * @return true only if the evaluation for every single file contains no errors
    */
   private def scalafixSucceded(evaluation: ScalafixEvaluation): Boolean =
     evaluation.isSuccessful && evaluation
@@ -420,8 +420,14 @@ case class ScalafixProvider(
           .withScalacOptions(scalacOptions)
           .evaluate()
 
-        if (produceSemanticdb)
-          targetRoot.foreach(AbsolutePath(_).deleteRecursively())
+        if (produceSemanticdb) {
+          // Clean up created file and semanticdbs from `.metals/.tmp` directory
+          targetRoot.foreach { root =>
+            if (diskFilePath.toNIO.startsWith(root))
+              diskFilePath.deleteWithEmptyParents()
+            AbsolutePath(root.resolve("META-INF")).deleteRecursively()
+          }
+        }
         evaluated
       }
     }

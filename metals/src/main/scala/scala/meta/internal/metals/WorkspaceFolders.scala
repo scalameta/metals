@@ -135,9 +135,10 @@ class WorkspaceFolders(
     folder.optDelegatePath
       .flatMap(delegate => services.find(_.path == delegate))
       .orElse {
-        val uriString = folder.path.toURI.toString
+        val uri = folder.path.toURI
         services.find(
-          _.buildTargets.all.exists(_.baseDirectory == uriString)
+          _.buildTargets.all
+            .exists(_.baseDirectoryPath.map(_.toURI).contains(uri))
         )
       }
 }

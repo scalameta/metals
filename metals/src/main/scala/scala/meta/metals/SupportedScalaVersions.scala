@@ -1,5 +1,8 @@
 package scala.meta.metals
 
+import scala.concurrent.Await
+import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -13,22 +16,33 @@ import org.jsoup.Jsoup
 
 abstract class SupportedScalaVersions {
 
-  def supportedVersionsString(version: String): String = {
-    findAllSupported(version).getOrElse(
+  implicit val ec: scala.concurrent.ExecutionContext =
+    scala.concurrent.ExecutionContext.global
+
+  def supportedVersionsString(
+      version: String,
+      timeout: FiniteDuration,
+  ): String = {
+    findAllSupported(version, timeout).getOrElse(
       formatVersions(BuildInfo.supportedScalaVersions)
     )
   }
 
-  private def findAllSupported(metalsVersion: String) = {
+  private def findAllSupported(
+      metalsVersion: String,
+      timeout: FiniteDuration,
+  ) = {
     if (metalsVersion.contains("SNAPSHOT")) {
       supportedInMetals(
         "https://oss.sonatype.org/content/repositories/snapshots/org/scalameta/",
         metalsVersion,
+        timeout,
       )
     } else {
       supportedInMetals(
         "https://repo1.maven.org/maven2/org/scalameta/",
         metalsVersion,
+        timeout,
       )
     }
   }
@@ -36,9 +50,10 @@ abstract class SupportedScalaVersions {
   private def supportedInMetals(
       url: String,
       metalsVersion: String,
+      timeout: FiniteDuration,
   ): Option[String] =
     try {
-
+      println(s"Checking available versions on $url\n")
       val allScalametaArtifacts = Jsoup.connect(url).get
 
       val allMdocs = allScalametaArtifacts
@@ -50,24 +65,27 @@ abstract class SupportedScalaVersions {
         }
 
       // find all supported Scala versions for this metals version
-      val allSupportedScala = allMdocs.iterator
-        .filter { mdocLink =>
+      val allSupportedScalaFut = allMdocs.iterator
+        .map { mdocLink =>
           // let's not check nightly Scala versions
-          if (mdocLink.text().contains("NIGHTLY")) false
+          if (mdocLink.text().contains("NIGHTLY"))
+            Future.successful(None)
           else {
             val link = mdocLink.attr("href")
             val mtagsLink = if (link.startsWith("http")) link else url + link
-            Try {
-              Jsoup.connect(mtagsLink + metalsVersion).get
-            } match {
-              case Success(_) => true
-              case Failure(_) => false
+            Future {
+              Try(Jsoup.connect(mtagsLink + metalsVersion).get)
+            }.map {
+              case Success(_) =>
+                Some(mdocLink.text().stripPrefix("mtags_").stripSuffix("/"))
+              case Failure(_) => None
             }
 
           }
         }
-        .map(_.text().stripPrefix("mtags_").stripSuffix("/"))
 
+      val allSupportedScala =
+        Await.result(Future.sequence(allSupportedScalaFut), timeout).flatten
       val template = formatVersions(allSupportedScala.toList)
 
       Some(
@@ -80,7 +98,10 @@ abstract class SupportedScalaVersions {
       )
     } catch {
       case NonFatal(t) =>
-        scribe.error("Could not check supported Scala versions", t)
+        scribe.error(
+          "Could not check supported Scala versions, returning list available at release",
+          t,
+        )
         None
     }
 
