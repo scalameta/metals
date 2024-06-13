@@ -3,7 +3,7 @@ id: sbt
 title: sbt
 ---
 
-sbt is most commonly used build tool in the Scala community and works with
+sbt is the most commonly used build tool in the Scala community and works with
 Metals out-of-the-box.
 
 ```scala mdoc:automatic-installation:sbt
