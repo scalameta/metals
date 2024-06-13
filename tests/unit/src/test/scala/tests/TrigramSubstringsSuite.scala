@@ -26,10 +26,10 @@ class TrigramSubstringsSuite extends BaseSuite {
   check(
     "abcd",
     """
-      |abc
-      |abd
-      |acd
       |bcd
+      |acd
+      |abd
+      |abc
       |""".stripMargin,
   )
 
