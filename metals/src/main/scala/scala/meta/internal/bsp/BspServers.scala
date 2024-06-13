@@ -98,12 +98,18 @@ final class BspServers(
             arg
         }
 
+      val variables =
+        // With Bazel for example chaning JAVA_HOME might cause Bazel to restart on shell
+        if (
+          sys.env.contains("JAVA_HOME") && details.getName().contains("bazel")
+        ) Map.empty[String, String]
+        else JdkSources.envVariables(userConfig().javaHome)
       scribe.info(s"Running BSP server $args")
       val proc = SystemProcess.run(
         args,
         projectDirectory,
         redirectErrorOutput = false,
-        JdkSources.envVariables(userConfig().javaHome),
+        variables,
         processOut = None,
         processErr = Some(l => scribe.info("BSP server: " + l)),
         discardInput = false,
