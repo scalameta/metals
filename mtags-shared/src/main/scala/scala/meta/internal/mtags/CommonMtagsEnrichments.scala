@@ -402,4 +402,10 @@ trait CommonMtagsEnrichments {
     }
   }
 
+  implicit class CommonXtensionList[T](lst: List[T]) {
+    def get(i: Int): Option[T] =
+      if (i >= 0 && i < lst.length) Some(lst(i))
+      else None
+  }
+
 }
