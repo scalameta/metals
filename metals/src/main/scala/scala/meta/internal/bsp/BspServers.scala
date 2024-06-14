@@ -102,8 +102,17 @@ final class BspServers(
         // With Bazel for example chaning JAVA_HOME might cause Bazel to restart on shell
         if (
           sys.env.contains("JAVA_HOME") && details.getName().contains("bazel")
-        ) Map.empty[String, String]
-        else JdkSources.envVariables(userConfig().javaHome)
+        ) {
+          userConfig().javaHome.zip(sys.env.get("JAVA_HOME")) match {
+            case Some((metalsHome, envHome)) if metalsHome != envHome =>
+              scribe.warn(
+                s"JAVA_HOME set by Metals (${metalsHome}) would be different than the one set in the environment ($envHome), " +
+                  "which might cause Bazel to restart on shell, so Metals will not override it."
+              )
+            case _ =>
+          }
+          Map.empty[String, String]
+        } else JdkSources.envVariables(userConfig().javaHome)
       scribe.info(s"Running BSP server $args")
       val proc = SystemProcess.run(
         args,
