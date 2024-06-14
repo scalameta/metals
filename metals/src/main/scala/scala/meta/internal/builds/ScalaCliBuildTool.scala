@@ -22,7 +22,7 @@ case class ScalaCliBuildTool(
     with VersionRecommendation {
 
   lazy val runScalaCliCommand: Option[Seq[String]] =
-    ScalaCli.localScalaCli(userConfig())
+    ScalaCli.localScalaCli(userConfig()).map(_.command)
 
   override def generateBspConfig(
       workspace: AbsolutePath,

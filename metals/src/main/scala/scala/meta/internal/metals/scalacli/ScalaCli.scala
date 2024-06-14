@@ -40,6 +40,7 @@ import scala.meta.internal.metals.TargetData
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.scalacli.ScalaCli.ScalaCliCommand
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
@@ -58,7 +59,7 @@ class ScalaCli(
     buildClient: () => MetalsBuildClient,
     languageClient: MetalsLanguageClient,
     config: () => MetalsServerConfig,
-    cliCommand: List[String],
+    cliCommand: ScalaCliCommand,
     parseTreesAndPublishDiags: Seq[AbsolutePath] => Future[Unit],
     val path: AbsolutePath,
     val customWorkspace: Option[AbsolutePath],
@@ -174,9 +175,14 @@ class ScalaCli(
     val command =
       customWorkspace match {
         case Some(workspace) =>
-          cliCommand :+ "bsp" :+ "--workspace" :+ workspace.toString() :+ path
+          val sourceRootPart =
+            if (cliCommand.requireMinimumVersion(ScalaCli.minSourceRootVersion))
+              List("--semantic-db-source-root", path.toNIO.getParent.toString)
+            else Nil
+          (cliCommand.command :+ "bsp" :+ "--workspace" :+ workspace
+            .toString()) ++ sourceRootPart :+ path
             .toString()
-        case None => cliCommand :+ "bsp" :+ path.toString()
+        case None => cliCommand.command :+ "bsp" :+ path.toString()
       }
 
     val connDir = if (path.isDirectory) path else path.parent
@@ -225,6 +231,7 @@ class ScalaCli(
 
 object ScalaCli {
   val minVersion = "0.1.3"
+  val minSourceRootVersion = "1.3.2"
 
   private def socketConn(
       command: Seq[String],
@@ -312,7 +319,7 @@ object ScalaCli {
     ) extends ConnectionState
   }
 
-  def localScalaCli(userConfig: UserConfiguration): Option[Seq[String]] = {
+  def localScalaCli(userConfig: UserConfiguration): Option[ScalaCliCommand] = {
 
     def endsWithCaseInsensitive(s: String, suffix: String): Boolean =
       s.length >= suffix.length &&
@@ -360,31 +367,34 @@ object ScalaCli {
       b.toByteArray
     }
 
-    def requireMinVersion(executable: Path, minVersion: String): Boolean = {
+    def withVersion(executable: String): Option[ScalaCliCommand] = {
       // "scala-cli version" simply prints its version
       val process =
-        new ProcessBuilder(executable.toAbsolutePath.toString, "version")
+        new ProcessBuilder(executable, "version")
           .redirectError(ProcessBuilder.Redirect.INHERIT)
           .redirectOutput(ProcessBuilder.Redirect.PIPE)
           .redirectInput(ProcessBuilder.Redirect.PIPE)
           .start()
 
       val b = readFully(process.getInputStream())
-      val version = raw"\d+\.\d+\.\d+".r
+      raw"\d+\.\d+\.\d+".r
         .findFirstIn(new String(b, "UTF-8"))
-        .map(Version(_))
-      val minVersion0 = Version(minVersion)
-      version.exists(ver => minVersion0.compareTo(ver) <= 0)
+        .map(v => ScalaCliCommand(Seq(executable), Version(v)))
     }
 
     userConfig.scalaCliLauncher
       .filter(_.trim.nonEmpty)
-      .map(Seq(_))
+      .flatMap(withVersion(_))
       .orElse {
         findInPath("scala-cli")
           .orElse(findInPath("scala"))
-          .filter(requireMinVersion(_, ScalaCli.minVersion))
-          .map(p => Seq(p.toString))
+          .collect { scalaCli =>
+            withVersion(scalaCli.toAbsolutePath.toString) match {
+              case Some(cmd: ScalaCliCommand)
+                  if cmd.requireMinimumVersion(minVersion) =>
+                cmd
+            }
+          }
       }
   }
 
@@ -411,5 +421,10 @@ object ScalaCli {
       "languages" -> List("scala", "java"),
     )
     ujson.write(bsjJson)
+  }
+
+  case class ScalaCliCommand(command: Seq[String], version: Version) {
+    def requireMinimumVersion(minVersion: String): Boolean =
+      Version(minVersion).compareTo(version) <= 0
   }
 }
