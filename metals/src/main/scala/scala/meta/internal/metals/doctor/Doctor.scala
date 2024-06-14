@@ -250,7 +250,9 @@ final class Doctor(
         DoctorExplanation.CompilationStatus.toJson(allTargetsInfo),
         DoctorExplanation.Diagnostics.toJson(allTargetsInfo),
         DoctorExplanation.Interactive.toJson(allTargetsInfo),
-        DoctorExplanation.SemanticDB.toJson(allTargetsInfo),
+        DoctorExplanation
+          .SemanticDB(problemResolver.isBazelBsp)
+          .toJson(allTargetsInfo),
         DoctorExplanation.Debugging.toJson(allTargetsInfo),
         DoctorExplanation.JavaSupport.toJson(allTargetsInfo),
       )
@@ -427,7 +429,9 @@ final class Doctor(
       DoctorExplanation.CompilationStatus.toHtml(html, allTargetsInfo)
       DoctorExplanation.Diagnostics.toHtml(html, allTargetsInfo)
       DoctorExplanation.Interactive.toHtml(html, allTargetsInfo)
-      DoctorExplanation.SemanticDB.toHtml(html, allTargetsInfo)
+      DoctorExplanation
+        .SemanticDB(problemResolver.isBazelBsp)
+        .toHtml(html, allTargetsInfo)
       DoctorExplanation.Debugging.toHtml(html, allTargetsInfo)
       DoctorExplanation.JavaSupport.toHtml(html, allTargetsInfo)
 
