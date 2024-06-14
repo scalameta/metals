@@ -26,9 +26,8 @@ import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.FileDecoderProvider
 import scala.meta.internal.metals.HtmlBuilder
 import scala.meta.internal.metals.Icons
+import scala.meta.internal.metals.JavaInfo
 import scala.meta.internal.metals.JavaTarget
-import scala.meta.internal.metals.JdkSources
-import scala.meta.internal.metals.JdkVersion
 import scala.meta.internal.metals.Messages.CheckDoctor
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MtagsResolver
@@ -62,15 +61,13 @@ final class Doctor(
     tables: Tables,
     clientConfig: ClientConfiguration,
     mtagsResolver: MtagsResolver,
-    javaHome: () => Option[String],
-    maybeJDKVersion: Option[JdkVersion],
     folderName: String,
-    serviceInfo: () => MetalsServiceInfo,
+    serviceInfo: => MetalsServiceInfo,
 )(implicit ec: ExecutionContext, rc: ReportContext)
     extends TargetsInfoProvider {
   private val hasProblems = new AtomicBoolean(false)
   def currentBuildServer(): Option[BspSession] =
-    serviceInfo() match {
+    serviceInfo match {
       case FallbackService => None
       case projectService: ProjectService =>
         projectService.currentBuildServer()
@@ -81,9 +78,8 @@ final class Doctor(
       workspace,
       mtagsResolver,
       currentBuildServer,
-      javaHome,
       () => clientConfig.isTestExplorerProvider(),
-      maybeJDKVersion,
+      () => serviceInfo.getJavaInfo(),
     )
 
   def isUnsupportedBloopVersion(): Boolean =
@@ -108,8 +104,12 @@ final class Doctor(
    * Checks if there are any potential problems and if any, notifies the user.
    */
   def check(headDoctor: HeadDoctor): Unit = {
+    scribe.info(s"running doctor check")
     val scalaTargets = buildTargets.allScala.toList
     val javaTargets = buildTargets.allJava.toList
+    scribe.info(
+      s"java targets: ${javaTargets.map(_.info.getDisplayName()).mkString(", ")}"
+    )
     val summary = problemResolver.problemMessage(scalaTargets, javaTargets)
     executeReloadDoctor(summary, headDoctor)
     summary match {
@@ -137,7 +137,7 @@ final class Doctor(
     buildTargets.allBuildTargetIds
 
   private def selectedBuildToolMessage(): Option[(String, Boolean)] = {
-    serviceInfo() match {
+    serviceInfo match {
       case FallbackService => None
       case projectService: ProjectService =>
         val isExplicitChoice =
@@ -167,7 +167,7 @@ final class Doctor(
    *         exists. (Message, Explict Choice)
    */
   private def selectedBuildServerMessage(): (String, Boolean) = {
-    serviceInfo() match {
+    serviceInfo match {
       case FallbackService =>
         (s"Using scala-cli for fallback service.", false)
       case projectInfo: ProjectService =>
@@ -205,12 +205,6 @@ final class Doctor(
     }
   }
 
-  def getJavaInfo(): Option[String] =
-    for {
-      home <- JdkSources.defaultJavaHome(javaHome()).headOption
-      version <- JdkVersion.maybeJdkVersionFromJavaHome(Some(home))
-    } yield s"${version.full} located at $home"
-
   def buildTargetsJson(): DoctorFolderResults = {
     val targetIds = allTargetIds()
     val buildToolHeading = selectedBuildToolMessage().map(_._1)
@@ -219,7 +213,7 @@ final class Doctor(
     val importBuildHeading = selectedImportBuildMessage()
     val header =
       DoctorFolderHeader(
-        getJavaInfo(),
+        serviceInfo.getJavaInfo().map(_.print),
         buildToolHeading,
         buildServerHeading,
         importBuildHeading,
@@ -331,10 +325,10 @@ final class Doctor(
     if (includeWorkspaceFolderName) {
       html.element("h2")(_.text(folderName))
     }
-    getJavaInfo().foreach { jdkMsg =>
+    serviceInfo.getJavaInfo().foreach { jdk =>
       html.element("p") { builder =>
         builder.bold("Project's Java: ")
-        builder.text(jdkMsg)
+        builder.text(jdk.print)
       }
     }
 
@@ -587,7 +581,7 @@ final class Doctor(
   }
 
   private def isServerResponsive: Option[Boolean] =
-    serviceInfo() match {
+    serviceInfo match {
       case FallbackService => None
       case projectInfo: ProjectService =>
         projectInfo.bspStatus.isBuildServerResponsive
@@ -748,13 +742,21 @@ trait TargetsInfoProvider {
   def getTargetsInfoForReports(): List[Map[String, String]]
 }
 
-sealed trait MetalsServiceInfo
+sealed trait MetalsServiceInfo {
+  def getJavaInfo(): Option[JavaInfo]
+}
 object MetalsServiceInfo {
-  object FallbackService extends MetalsServiceInfo
+  object FallbackService extends MetalsServiceInfo {
+    def getJavaInfo(): Option[JavaInfo] = None
+  }
+
   case class ProjectService(
       currentBuildServer: () => Option[BspSession],
       calculateNewBuildServer: () => BspResolvedResult,
       buildTools: BuildTools,
       bspStatus: ConnectionBspStatus,
-  ) extends MetalsServiceInfo
+      javaInfo: () => Option[JavaInfo],
+  ) extends MetalsServiceInfo {
+    def getJavaInfo(): Option[JavaInfo] = javaInfo()
+  }
 }

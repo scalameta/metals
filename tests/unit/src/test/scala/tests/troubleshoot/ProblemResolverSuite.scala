@@ -5,6 +5,7 @@ import java.nio.file.Files
 import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.JavaInfo
 import scala.meta.internal.metals.JdkVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTarget
@@ -226,15 +227,20 @@ class ProblemResolverSuite extends FunSuite {
         else
           None // JdkSources will fallback to default java home path
 
+      val javaInfo =
+        for {
+          home <- javaHome
+          version <- JdkVersion.maybeJdkVersionFromJavaHome(
+            Some(AbsolutePath(System.getProperty("java.home")))
+          )
+        } yield JavaInfo(home, version)
+
       val problemResolver = new ProblemResolver(
         AbsolutePath(workspace),
         new TestMtagsResolver(checkCoursier = false),
         () => None,
-        () => javaHome,
         () => isTestExplorerProvider,
-        JdkVersion.maybeJdkVersionFromJavaHome(
-          Some(AbsolutePath(System.getProperty("java.home")))
-        ),
+        () => javaInfo,
       )
 
       val target =

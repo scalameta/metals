@@ -170,10 +170,6 @@ abstract class MetalsLspService(
   )
 
   def javaHome = userConfig.javaHome
-  protected val optJavaHome: Option[AbsolutePath] =
-    JdkSources.defaultJavaHome(javaHome).headOption
-  protected val maybeJdkVersion: Option[JdkVersion] =
-    JdkVersion.maybeJdkVersionFromJavaHome(optJavaHome)
 
   protected val fingerprints = new MutableMd5Fingerprints
   protected val mtags = new Mtags
@@ -381,9 +377,8 @@ abstract class MetalsLspService(
   }
 
   protected val interactiveSemanticdbs: InteractiveSemanticdbs = {
-    val javaInteractiveSemanticdb = maybeJdkVersion.map(jdkVersion =>
-      JavaInteractiveSemanticdb.create(folder, buildTargets, jdkVersion)
-    )
+    val javaInteractiveSemanticdb =
+      JavaInteractiveSemanticdb.create(folder, buildTargets)
     register(
       new InteractiveSemanticdbs(
         folder,
@@ -1607,10 +1602,8 @@ abstract class MetalsLspService(
       tables,
       clientConfig,
       mtagsResolver,
-      () => userConfig.javaHome,
-      maybeJdkVersion,
       getVisibleName,
-      () => projectInfo,
+      projectInfo,
     )
 
   val folderReportsZippper: FolderReportsZippper =
