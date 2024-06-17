@@ -47,8 +47,7 @@ class BazelLspSuite
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          importMessage,
-          bazelNavigationMessage,
+          importMessage
         ).mkString("\n"),
       )
       _ = assert(bazelBspConfig.exists)
@@ -128,10 +127,7 @@ class BazelLspSuite
            |""".stripMargin,
       )
     } yield {
-      assertNoDiff(
-        client.workspaceMessageRequests,
-        bazelNavigationMessage,
-      )
+      assertEmpty(client.workspaceMessageRequests)
       assert(bazelBspConfig.exists)
       server.assertBuildServerConnection()
     }
@@ -197,8 +193,7 @@ class BazelLspSuite
       assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          bazelNavigationMessage,
-          Messages.ResetWorkspace.message,
+          Messages.ResetWorkspace.message
         ).mkString("\n"),
       )
       assert(bazelBspConfig.exists)

@@ -144,13 +144,19 @@ object DoctorExplanation {
       allTargetsInfo.exists(_.interactiveStatus.isCorrect == false)
   }
 
-  case object SemanticDB extends DoctorExplanation {
+  case class SemanticDB(isBazelBsp: Boolean) extends DoctorExplanation {
     val title =
       "Semanticdb features (references, renames, go to implementation):"
     val correctMessage: String =
       s"${Icons.unicode.check} - build tool automatically creating needed semanticdb files"
+
+    private val additionalBazelMessage =
+      if (isBazelBsp)
+        ", you might need to enable enable_semanticdb flag in scala_toolchain."
+      else ""
+
     val incorrectMessage: String =
-      s"""|${Icons.unicode.alert} - semanticdb index files not present currently
+      s"""|${Icons.unicode.alert} - semanticdb index files not present currently$additionalBazelMessage
           |${Icons.unicode.error} - semanticdb index not being produced""".stripMargin
 
     def show(allTargetsInfo: Seq[DoctorTargetInfo]): Boolean =

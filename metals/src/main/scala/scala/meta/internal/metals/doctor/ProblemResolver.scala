@@ -158,12 +158,6 @@ class ProblemResolver(
         None
       }
 
-    val bazelSemanticdbMessage = if (isBazelBsp) {
-      Some(Messages.CheckDoctor.bazelNavigation)
-    } else {
-      None
-    }
-
     val allMessages = List(
       deprecatedMessage,
       deprecatedRemovedMessage,
@@ -174,7 +168,6 @@ class ProblemResolver(
       unsupportedSbtMessage,
       futureSbtMessage,
       semanticdbMessage,
-      bazelSemanticdbMessage,
     ).flatten ++ javaIssues
 
     def scalaVersionsMessages = List(
@@ -337,7 +330,7 @@ class ProblemResolver(
     else isWrongJavaRelease(javaTarget)
   }
 
-  private def isBazelBsp = currentBuildServer().exists(_.main.isBazel)
+  def isBazelBsp: Boolean = currentBuildServer().exists(_.main.isBazel)
 
   private def isWrongJavaRelease(
       javaTarget: JavaTarget
