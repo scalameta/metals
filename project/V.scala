@@ -16,7 +16,7 @@ object V {
   val bazelScalaVersion = "2.13.12"
   val ammonite3Version = "3.3.3"
 
-  val ammonite = "3.0.0-M2-8-ba4429a2"
+  val ammonite = "3.0.0-M2-11-713b6963"
   val betterMonadicFor = "0.3.1"
   val bloop = "1.5.18"
   val bloopConfig = "1.5.5"
@@ -44,7 +44,7 @@ object V {
   val scalaCli = "1.3.2"
   val scalafix = "0.12.1"
   val scalafmt = "3.7.15"
-  val scalameta = "4.9.5"
+  val scalameta = "4.9.6"
   val scribe = "3.15.0"
   val qdox = "2.1.0"
 
