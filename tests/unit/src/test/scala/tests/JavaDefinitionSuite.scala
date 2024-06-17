@@ -72,7 +72,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
        |                      ^^^^^^
        |""".stripMargin,
     dependencies = List(
-      "org.jboss.xnio:xnio-nio:3.8.15.Final"
+      "org.jboss.xnio:xnio-nio:3.8.16.Final"
     ),
     withoutVirtualDocs = true,
     useWorkspaceFolders = true,
@@ -89,7 +89,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
        |                      ^^^^^^
        |""".stripMargin,
     dependencies = List(
-      "org.jboss.xnio:xnio-nio:3.8.15.Final"
+      "org.jboss.xnio:xnio-nio:3.8.16.Final"
     ),
   )
 
