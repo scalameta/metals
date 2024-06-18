@@ -1,7 +1,7 @@
-import React from 'react';
-import Link from '@docusaurus/Link';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
-import Layout from '@theme/Layout';
+import React from "react";
+import Link from "@docusaurus/Link";
+import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
+import Layout from "@theme/Layout";
 
 const Dropdown = () => {
   const gitpod = (template, organization) =>
@@ -49,13 +49,41 @@ const Dropdown = () => {
   ));
   return (
     <div className="dropdown dropdown--hoverable">
-      <button className="button button--lg button--outline button--primary margin--sm">Try Online with Gitpod</button>
-      <ul className="dropdown__menu">
-        {links}
-      </ul>
+      <button className="button button--lg button--outline button--primary margin--sm">
+        Try Online with Gitpod
+      </button>
+      <ul className="dropdown__menu">{links}</ul>
     </div>
-  )
-}
+  );
+};
+
+const Supported = (props) => {
+  const companies = [
+    {
+      name: "Scala Center",
+      image: "img/scala-center-swirl.png",
+      link: "https://scala.epfl.ch",
+    },
+    {
+      name: "VirtusLab",
+      image: "img/VirtusLab_logo_narrow.png",
+      link: "https://virtuslab.com",
+    },
+  ];
+  return (
+    <div className="text--center ">
+      <div className="padding--md">
+        <h2 className="hero__subtitle padding-vert--md">Supported by: </h2>
+
+        {companies.map((company) => (
+          <a href={company.link}>
+            <img src={company.image} title={company.name}></img>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const Features = (props) => {
   const features = [
@@ -127,7 +155,11 @@ const Features = (props) => {
     <div>
       {features.map((feature) => (
         <div className="hero text--center" key={feature.title}>
-          <div className={`container ${feature.imageAlign === 'right' ? 'flex-row' : 'flex-row-reverse'}`}>
+          <div
+            className={`container ${
+              feature.imageAlign === "right" ? "flex-row" : "flex-row-reverse"
+            }`}
+          >
             <div className="padding--md">
               <h2 className="hero__subtitle">{feature.title}</h2>
               <p>{feature.content}</p>
@@ -138,7 +170,7 @@ const Features = (props) => {
           </div>
         </div>
       ))}
-    </div >
+    </div>
   );
 };
 
@@ -155,11 +187,13 @@ const Index = (props) => {
           <div>
             <Link
               to="/metals/docs"
-              className="button button--lg button--outline button--primary margin--sm">
+              className="button button--lg button--outline button--primary margin--sm"
+            >
               Get started
             </Link>
             <Dropdown />
             <Features />
+            <Supported />
           </div>
         </div>
       </div>
