@@ -64,7 +64,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
              |  body(
              |    p("This is a big paragraph of text")
              |  )
-             |) // : scalatags.Text.TypedTag[String] = TypedTag(tag = "html",modifiers = List(ArraySeq(TypedTag(tag = "body",modifiers = L…
+             |) // : scalatags.Text.TypedTag[String] = TypedTag( tag = "html", modifiers = List( ArraySeq( TypedTag( tag = "body", modifie…
              |htmlFile.render // : String = "<html><body><p>This is a big paragraph of text</p></body></html>"
              |""".stripMargin,
         )
@@ -164,7 +164,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
            |
            |implicit val system: ActorSystem = ActorSystem("QuickStart") // : ActorSystem = akka://QuickStart
            |val source: Source[Int, NotUsed] = Source(1 to 2) // : Source[Int, NotUsed] = Source(SourceShape(StatefulMapConcat.out(...
-           |val future = source.runWith(Sink.foreach(_ => ())) // : concurrent.Future[akka.Done] = Future(Success(Done))
+           |val future = source.runWith(Sink.foreach(_ => ())) // : concurrent.Future[akka.Done] = Future(<not completed>)
            |Await.result(future, 3.seconds) // : akka.Done = Done
            |""".stripMargin,
       )
