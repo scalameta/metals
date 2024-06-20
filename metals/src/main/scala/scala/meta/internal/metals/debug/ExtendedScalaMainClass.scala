@@ -1,18 +1,15 @@
 package scala.meta.internal.metals.debug
 
 import java.io.File
-import java.nio.file.Files
 import java.nio.file.Paths
-import java.util.jar
 
 import scala.util.Properties
 import scala.util.Try
-import scala.util.Using
 
 import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.ManifestJar
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
-import scala.meta.internal.mtags.URIEncoderDecoder
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.ScalaMainClass
@@ -87,7 +84,6 @@ object ExtendedScalaMainClass {
       classpath: List[String],
       workspace: AbsolutePath,
   ): String = {
-
     val classpathDigest = MD5.compute(classpath.mkString)
     val manifestJar =
       workspace
@@ -95,31 +91,9 @@ object ExtendedScalaMainClass {
         .resolve(s"classpath_${classpathDigest}.jar")
 
     if (!manifestJar.exists) {
-
-      manifestJar.touch()
-      manifestJar.toNIO.toFile().deleteOnExit()
-
-      val classpathStr =
-        classpath
-          .map(path =>
-            URIEncoderDecoder.encode(Paths.get(path).toUri().toString())
-          )
-          .mkString(" ")
-
-      val manifest = new jar.Manifest()
-      manifest.getMainAttributes.put(
-        jar.Attributes.Name.MANIFEST_VERSION,
-        "1.0",
-      )
-      manifest.getMainAttributes.put(
-        jar.Attributes.Name.CLASS_PATH,
-        classpathStr,
-      )
-
-      val out = Files.newOutputStream(manifestJar.toNIO)
-      Using.resource(new jar.JarOutputStream(out, manifest))(identity)
-
+      ManifestJar.createManifestJar(manifestJar, classpath.map(Paths.get(_)))
     }
+
     manifestJar.toString()
   }
 

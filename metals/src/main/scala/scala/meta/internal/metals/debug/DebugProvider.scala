@@ -332,32 +332,28 @@ class DebugProvider(
     if (buildServer.isDebuggingProvider || buildServer.isSbt) {
       buildServer.startDebugSession(params, cancelPromise)
     } else {
-      def getDebugee: Option[Future[MetalsDebuggee]] =
+      def getDebugee: Option[MetalsDebuggee] =
         params.getDataKind() match {
           case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
             for {
               id <- params.getTargets().asScala.headOption
-              projectInfo <- debugConfigCreator.create(id, cancelPromise)
+              projectInfo <- debugConfigCreator.create(id)
               scalaMainClass <- params.asScalaMainClass()
-            } yield {
-              projectInfo.map(
-                new MainClassDebugAdapter(
-                  workspace,
-                  scalaMainClass,
-                  _,
-                  userConfig().javaHome,
-                )
-              )
-            }
+            } yield new MainClassDebugAdapter(
+              workspace,
+              scalaMainClass,
+              projectInfo,
+              userConfig().javaHome,
+            )
           case _ => None
         }
 
       for {
         _ <- compilations.compileTargets(params.getTargets().asScala.toSeq)
-        debuggee <- getDebugee.getOrElse(
+      } yield {
+        val debuggee = getDebugee.getOrElse(
           throw new RuntimeException(s"Can't resolve debugee")
         )
-      } yield {
         val dapLogger = new DebugLogger()
         val resolver = new MetalsDebugToolsResolver()
         val handler =

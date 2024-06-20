@@ -1,11 +1,7 @@
 package scala.meta.internal.metals.debug.server
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.Promise
-
 import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.JavaTarget
+import scala.meta.internal.metals.JvmTarget
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTarget
 
@@ -19,19 +15,10 @@ import ch.epfl.scala.debugadapter.SourceJar
 import ch.epfl.scala.debugadapter.StandaloneSourceFile
 import ch.epfl.scala.debugadapter.UnmanagedEntry
 
-class DebugeeParamsCreator(buildTargets: BuildTargets)(implicit
-    ec: ExecutionContext
-) {
-  def create(
-      id: BuildTargetIdentifier,
-      cancelPromise: Promise[Unit],
-  ): Option[Future[DebugeeProject]] = {
-    val optScalaTarget = buildTargets.scalaTarget(id)
-    val optJavaTarget = buildTargets.javaTarget(id)
+class DebugeeParamsCreator(buildTargets: BuildTargets) {
+  def create(id: BuildTargetIdentifier): Option[DebugeeProject] = {
     for {
-      name <- optScalaTarget
-        .map(_.displayName)
-        .orElse(optJavaTarget.map(_.displayName))
+      target <- buildTargets.jvmTarget(id)
       data <- buildTargets.targetData(id)
     } yield {
 
@@ -42,38 +29,27 @@ class DebugeeParamsCreator(buildTargets: BuildTargets)(implicit
       val debugLibs = libraries.flatMap(createLibrary(_))
       val includedInLibs = debugLibs.map(_.absolutePath).toSet
 
-      val optClasspath =
-        buildTargets
-          .targetClasspath(id, cancelPromise)
-          .getOrElse(Future.successful(Nil))
-          .map(
-            _.filter(_.endsWith(".jar")).toAbsoluteClasspath.map(_.toNIO).toSeq
-          )
+      val classpath = buildTargets.targetJarClasspath(id).getOrElse(Nil)
 
-      for (classpath <- optClasspath) yield {
-        val filteredClassPath = classpath.collect {
-          case path if !includedInLibs(path) => UnmanagedEntry(path)
-        }.toList
+      val filteredClassPath = classpath.collect {
+        case path if !includedInLibs(path.toNIO) => UnmanagedEntry(path.toNIO)
+      }.toList
 
-        val modules = buildTargets
-          .allInverseDependencies(id)
-          .flatMap(id =>
-            buildTargets.scalaTarget(id).map(createModule(_)).orElse {
-              buildTargets.javaTarget(id).map(createModule(_))
-            }
-          )
-          .toSeq
+      val modules = buildTargets
+        .allInverseDependencies(id)
+        .flatMap(buildTargets.jvmTarget)
+        .map(createModule(_))
+        .toSeq
 
-        val scalaVersion = optScalaTarget.map(_.scalaVersion)
+      val scalaVersion = buildTargets.scalaTarget(id).map(_.scalaVersion)
 
-        new DebugeeProject(
-          scalaVersion,
-          name,
-          modules,
-          debugLibs,
-          filteredClassPath,
-        )
-      }
+      new DebugeeProject(
+        scalaVersion,
+        target.displayName,
+        modules,
+        debugLibs,
+        filteredClassPath,
+      )
     }
   }
 
@@ -93,25 +69,24 @@ class DebugeeParamsCreator(buildTargets: BuildTargets)(implicit
     )
   }
 
-  def createModule(target: ScalaTarget): Module = {
-    val scalaVersion = ScalaVersion(target.scalaVersion)
+  def createModule(target: JvmTarget): Module = {
+    val (scalaVersion, scalacOptions) =
+      target match {
+        case scalaTarget: ScalaTarget =>
+          (
+            Some(ScalaVersion(scalaTarget.scalaVersion)),
+            scalaTarget.scalac.getOptions().asScala.toSeq,
+          )
+        case _ => (None, Nil)
+      }
     new Module(
       target.displayName,
-      Some(scalaVersion),
-      target.scalac.getOptions().asScala.toSeq,
+      scalaVersion,
+      scalacOptions,
       target.classDirectory.toAbsolutePath.toNIO,
       sources(target.id),
     )
   }
-
-  def createModule(target: JavaTarget) =
-    new Module(
-      target.displayName,
-      None,
-      Nil,
-      target.classDirectory.toAbsolutePath.toNIO,
-      sources(target.id),
-    )
 
   private def sources(id: BuildTargetIdentifier) =
     buildTargets.sourceItemsToBuildTargets

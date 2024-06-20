@@ -1,22 +1,14 @@
 package scala.meta.internal.metals.debug.server
 
-import java.io.BufferedOutputStream
 import java.io.File
 import java.net.InetSocketAddress
-import java.nio.file.Files
-import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.jar.Attributes
-import java.util.jar.JarFile
-import java.util.jar.Manifest
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 
 import scala.concurrent.ExecutionContext
-import scala.util.Properties
 
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JdkSources
+import scala.meta.internal.metals.ManifestJar
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
@@ -83,9 +75,6 @@ class MainClassDebugAdapter(
         }
         .toMap
 
-    // Windows max cmd line length is 32767, which seems to be the least of the common shells.
-    val processCmdCharLimit = 30000
-
     def logError(errorMessage: String) = {
       listener.err(errorMessage)
       scribe.error(errorMessage)
@@ -106,7 +95,7 @@ class MainClassDebugAdapter(
     // Note that we current only shorten the classpath portion and not other options
     // Thus we do not yet *guarantee* that the command will not exceed OS limits
     val process =
-      if (cmdLength <= processCmdCharLimit) {
+      if (cmdLength <= SystemProcess.processCmdCharLimit) {
         SystemProcess.run(
           cmd,
           root,
@@ -116,7 +105,7 @@ class MainClassDebugAdapter(
           processOut = Some(logOutput),
         )
       } else {
-        Utils.withTempManifestJar(classPath) { manifestJar =>
+        ManifestJar.withTempManifestJar(classPath) { manifestJar =>
           val shortClasspathOption = "-cp" :: manifestJar.syntax :: Nil
           val shortCmd =
             java :: jvmOptions ::: shortClasspathOption ::: appOptions
@@ -142,63 +131,5 @@ class MainClassDebugAdapter(
 
   private def enableDebugInterface: String = {
     s"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,quiet=n"
-  }
-}
-
-object Utils {
-  def withTempManifestJar(
-      classpath: Seq[Path]
-  )(
-      op: AbsolutePath => SystemProcess
-  )(implicit ec: ExecutionContext): SystemProcess = {
-
-    val manifestJar =
-      Files.createTempFile("jvm-forker-manifest", ".jar").toAbsolutePath
-    val manifestJarAbs = AbsolutePath(manifestJar)
-
-    // Add trailing slash to directories so that manifest dir entries work
-    val classpathStr =
-      classpath.map(addTrailingSlashToDirectories).mkString(" ")
-
-    val manifest = new Manifest()
-    manifest.getMainAttributes.put(Attributes.Name.MANIFEST_VERSION, "1.0")
-    manifest.getMainAttributes.put(Attributes.Name.CLASS_PATH, classpathStr)
-
-    val zipOut = new ZipOutputStream(Files.newOutputStream(manifestJar))
-    try {
-      val zipEntry = new ZipEntry(JarFile.MANIFEST_NAME)
-      zipOut.putNextEntry(zipEntry)
-      manifest.write(new BufferedOutputStream(zipOut))
-      zipOut.closeEntry()
-    } finally {
-      zipOut.close()
-    }
-
-    val process = op(manifestJarAbs)
-    process.complete.onComplete { case _ =>
-      manifestJarAbs.delete()
-    }
-    process
-  }
-
-  private def addTrailingSlashToDirectories(path: Path): String = {
-    // NOTE(olafur): manifest jars must use URL-encoded paths.
-    // https://docs.oracle.com/javase/7/docs/technotes/guides/jar/jar.html
-    val syntax = path.toURI.toURL.getPath
-    val separatorAdded = {
-      if (syntax.endsWith(".jar") || syntax.endsWith(File.separator)) {
-        syntax
-      } else {
-        syntax + File.separator
-      }
-    }
-
-    if (Properties.isWin) {
-      // Prepend drive letters in windows with slash
-      if (separatorAdded.indexOf(":") != 1) separatorAdded
-      else File.separator + separatorAdded
-    } else {
-      separatorAdded
-    }
   }
 }
