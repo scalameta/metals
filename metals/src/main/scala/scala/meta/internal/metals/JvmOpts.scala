@@ -14,20 +14,38 @@ import scala.meta.io.AbsolutePath
  */
 object JvmOpts {
 
-  def fromWorkspaceOrEnv(workspace: AbsolutePath): List[String] = {
-    val jvmOpts = workspace.resolve(".jvmopts")
+  /**
+   * Tries to get jvmopts needed for running tests, which is now not possible to do with test explorer.
+   * It will also try to use .jvmopts, filter out any -X options since they proved to be problematic,
+   */
+  def fromWorkspaceOrEnvForTest(workspace: AbsolutePath): List[String] = {
+    val forTests =
+      fromWorkspaceOrEnv(workspace, ".test-jvmopts", "TEST_JVM_OPTS")
+    if (forTests.isEmpty) {
+      fromWorkspaceOrEnv(workspace).filterNot(_.startsWith("-X"))
+    } else {
+      forTests
+    }
+  }
+
+  def fromEnvironment(name: String = "JVM_OPTS"): List[String] = {
+    Option(System.getenv(name)) match {
+      case Some(value) => value.split(" ").toList
+      case None => Nil
+    }
+  }
+
+  def fromWorkspaceOrEnv(
+      workspace: AbsolutePath,
+      fileName: String = ".jvmopts",
+      envName: String = "JVM_OPTS",
+  ) = {
+    val jvmOpts = workspace.resolve(fileName)
     if (jvmOpts.isFile && Files.isReadable(jvmOpts.toNIO)) {
       val text = FileIO.slurp(jvmOpts, StandardCharsets.UTF_8)
       text.linesIterator.map(_.trim).filter(_.startsWith("-")).toList
     } else {
-      fromEnvironment
-    }
-  }
-
-  def fromEnvironment: List[String] = {
-    Option(System.getenv("JVM_OPTS")) match {
-      case Some(value) => value.split(" ").toList
-      case None => Nil
+      fromEnvironment(envName)
     }
   }
 
