@@ -22,7 +22,7 @@ import org.h2.mvstore.MVStoreException
 import org.h2.tools.Upgrade
 
 abstract class H2ConnectionProvider(
-    directory: () => AbsolutePath,
+    directory: => AbsolutePath,
     name: String,
     migrations: String,
 ) extends Cancelable {
@@ -33,7 +33,7 @@ abstract class H2ConnectionProvider(
 
   protected def connection: Connection = connect()
 
-  protected def optDirectory: Option[AbsolutePath] = Try(directory()).toOption
+  protected def optDirectory: Option[AbsolutePath] = Try(directory).toOption
   protected def databasePath: Option[AbsolutePath] =
     optDirectory.map(_.resolve("metals.h2.db"))
 
@@ -92,9 +92,9 @@ abstract class H2ConnectionProvider(
     val autoServer =
       if (isAutoServer) ";AUTO_SERVER=TRUE"
       else ""
-    val dbfile = directory().resolve("metals")
+    val dbfile = directory.resolve("metals")
     // from "h2" % "2.0.206" the only option is the MVStore, which uses `metals.mv.db` file
-    val oldDbfile = directory().resolve("metals.h2.db")
+    val oldDbfile = directory.resolve("metals.h2.db")
     if (oldDbfile.exists) {
       scribe.info(s"Deleting old database format $oldDbfile")
       oldDbfile.delete()

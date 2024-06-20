@@ -6,9 +6,10 @@ import scala.meta.io.AbsolutePath
 
 class SqlSharedIndices
     extends H2ConnectionProvider(
-      () => AbsolutePath(Paths.get(sys.props("user.home"))).resolve(".metals"),
-      "metals-shared",
-      "/shared-db/migration",
+      directory =
+        AbsolutePath(Paths.get(sys.props("user.home"))).resolve(".metals"),
+      name = "metals-shared",
+      migrations = "/shared-db/migration",
     ) {
 
   val jvmTypeHierarchy: JarTypeHierarchy = new JarTypeHierarchy(() => connect)

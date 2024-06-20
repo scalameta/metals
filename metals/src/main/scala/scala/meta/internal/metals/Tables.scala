@@ -11,9 +11,9 @@ final class Tables(
     workspace: AbsolutePath,
     time: Time,
 ) extends H2ConnectionProvider(
-      () => workspace.resolve(".metals"),
-      "metals",
-      "/db/migration",
+      directory = workspace.resolve(".metals"),
+      name = "metals",
+      migrations = "/db/migration",
     ) {
 
   val jarSymbols = new JarTopLevels(() => connection)
