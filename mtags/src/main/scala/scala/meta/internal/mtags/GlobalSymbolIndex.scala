@@ -90,8 +90,6 @@ trait GlobalSymbolIndex {
       dialect: Dialect
   ): List[IndexingResult]
 
-  def addJDKSources(jar: AbsolutePath): Unit
-
   /**
    * The same as `addSourceJar` except for directories
    */

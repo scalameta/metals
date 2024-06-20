@@ -254,9 +254,8 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
        |""".stripMargin,
   )
 
-  // we currently don't index JDK sources
   check(
-    "java-classes".ignore,
+    "java-classes",
     """|/a/src/main/scala/a/Main.scala
        |package a
        |class <<MyException>> extends Exce@@ption
@@ -641,23 +640,64 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
        |""".stripMargin,
   )
 
-  if (!isJava11) {
+  if (isJava17) {
     checkSymbols(
       "exception",
       """package a
         |class MyException extends Excep@@tion
         |""".stripMargin,
       """|a/MyException#
-         |scala/ScalaReflectionException#
-         |scala/reflect/internal/FatalError#
-         |scala/reflect/internal/MissingRequirementError#
-         |scala/reflect/internal/Positions#ValidateException#
-         |scala/reflect/macros/Enclosures#EnclosureException#
-         |scala/reflect/macros/ParseException#
-         |scala/reflect/macros/ReificationException#
-         |scala/reflect/macros/TypecheckException#
-         |scala/reflect/macros/UnexpectedReificationException#
+         |com/sun/beans/finder/SignatureException#
+         |com/sun/imageio/plugins/jpeg/JFIFMarkerSegment#IllegalThumbException#
+         |com/sun/jdi/AbsentInformationException#
+         |com/sun/jdi/ClassNotLoadedException#
+         |com/sun/jdi/ClassNotPreparedException#
+         |com/sun/jdi/IncompatibleThreadStateException#
+         |com/sun/jdi/InconsistentDebugInfoException#
+         |com/sun/jdi/InternalException#
+         |com/sun/jdi/InvalidCodeIndexException#
+         |com/sun/jdi/InvalidLineNumberException#
+         |com/sun/jdi/InvalidModuleException#
+         |com/sun/jdi/InvalidStackFrameException#
+         |com/sun/jdi/InvalidTypeException#
+         |com/sun/jdi/InvocationException#
+         |com/sun/jdi/NativeMethodException#
+         |com/sun/jdi/ObjectCollectedException#
+         |com/sun/jdi/VMCannotBeModifiedException#
+         |com/sun/jdi/VMDisconnectedException#
+         |com/sun/jdi/VMMismatchException#
+         |com/sun/jdi/VMOutOfMemoryException#
+         |com/sun/jdi/connect/IllegalConnectorArgumentsException#
+         |com/sun/jdi/connect/TransportTimeoutException#
+         |com/sun/jdi/connect/VMStartException#
+         |com/sun/jdi/connect/spi/ClosedConnectionException#
+         |com/sun/jdi/request/DuplicateRequestException#
+         |com/sun/jdi/request/InvalidRequestStateException#
+         |com/sun/jndi/ldap/LdapReferralException#
+         |com/sun/media/sound/InvalidDataException#
+         |com/sun/media/sound/InvalidFormatException#
+         |com/sun/media/sound/RIFFInvalidDataException#
+         |com/sun/media/sound/RIFFInvalidFormatException#
+         |com/sun/nio/sctp/IllegalReceiveException#
+         |com/sun/nio/sctp/IllegalUnbindException#
+         |com/sun/nio/sctp/InvalidStreamException#
+         |com/sun/org/apache/bcel/internal/classfile/ClassFormatException#
+         |com/sun/org/apache/bcel/internal/generic/ClassGenException#
+         |com/sun/org/apache/bcel/internal/generic/TargetLostException#
+         |com/sun/org/apache/xalan/internal/xsltc/TransletException#
+         |com/sun/org/apache/xalan/internal/xsltc/compiler/CompilerException#
+         |com/sun/org/apache/xalan/internal/xsltc/compiler/IllegalCharException#
+         |com/sun/org/apache/xalan/internal/xsltc/compiler/util/TypeCheckError#
+         |com/sun/org/apache/xerces/internal/dom/AbortException#
+         |com/sun/org/apache/xerces/internal/dom/RangeExceptionImpl#
+         |com/sun/org/apache/xerces/internal/impl/dv/DVFactoryException#
+         |com/sun/org/apache/xerces/internal/impl/dv/DatatypeException#
+         |com/sun/org/apache/xerces/internal/impl/dv/InvalidDatatypeFacetException#
+         |com/sun/org/apache/xerces/internal/impl/dv/InvalidDatatypeValueException#
+         |com/sun/org/apache/xerces/internal/impl/dv/xs/SchemaDateTimeException#
+         |com/sun/org/apache/xerces/internal/impl/io/MalformedByteSequenceException#
          |""".stripMargin,
+      topLines = Some(50),
     )
   }
 
