@@ -78,6 +78,25 @@ final class ConvertToNamedArgumentsProvider(
           fun.symbol,
           makeTextEdits(fun.tpe.params, args, fun.pos.end, app.pos.end - 1)
         )
+      // class A extends <<B(1)>>
+      // this is a workaround case, since the position seems to off by one here
+      case Template(
+            _,
+            _,
+            List(DefDef(_, _, _, _, _, Block(List(app @ Apply(fun, args)), _)))
+          )
+          if fun.symbol != null && !fun.symbol.isJava && app.pos.includes(
+            unit.position(params.offset - 1)
+          ) =>
+        handleWithJavaFilter(
+          fun.symbol,
+          makeTextEdits(
+            fun.tpe.params,
+            args,
+            fun.pos.end + 1,
+            app.pos.end
+          )
+        )
       case _ => Right(Nil)
     }
   }

@@ -3,6 +3,7 @@ package scala.meta.internal.metals.codeactions
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.Init
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.XtensionSyntax
@@ -57,7 +58,7 @@ class ConvertToNamedArguments(
   }
 
   def getTermWithArgs(
-      apply: Term,
+      apply: Tree,
       args: List[Tree],
       nameEnd: Int,
   ): Option[ApplyTermWithArgIndices] = {
@@ -85,14 +86,14 @@ class ConvertToNamedArguments(
     term match {
       case Some(apply: Term.Apply) =>
         getTermWithArgs(apply, apply.args, apply.fun.pos.end)
-      case Some(newAppl @ Term.New(init)) =>
-        getTermWithArgs(newAppl, init.argss.flatten, init.name.pos.end)
+      case Some(init: Init) =>
+        getTermWithArgs(init, init.argss.flatten, init.name.pos.end)
       case Some(t) => firstApplyWithUnnamedArgs(t.parent)
       case _ => None
     }
   }
 
-  private def methodName(t: Term, isFirst: Boolean = false): String = {
+  private def methodName(t: Tree, isFirst: Boolean = false): String = {
     t match {
       // a.foo(a)
       case Term.Select(_, name) =>
@@ -106,7 +107,7 @@ class ConvertToNamedArguments(
       // foo(a)
       case Term.Name(name) =>
         name
-      case Term.New(init) =>
+      case init: Init =>
         init.tpe.syntax + "(...)"
       case _ =>
         t.syntax
@@ -119,14 +120,14 @@ class ConvertToNamedArguments(
 
     val path = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()
-    def predicate(t: Term): Boolean =
+    def predicate(t: Tree): Boolean =
       t match {
         case Term.Apply(fun, _) => !fun.pos.encloses(range)
-        case Term.New(init) => init.pos.encloses(range)
+        case _: Init => true
         case _ => false
       }
     val maybeApply = for {
-      term <- trees.findLastEnclosingAt[Term](
+      term <- trees.findLastEnclosingAt[Tree](
         path,
         range.getStart(),
         term => predicate(term),
@@ -165,7 +166,7 @@ class ConvertToNamedArguments(
 }
 
 object ConvertToNamedArguments {
-  case class ApplyTermWithArgIndices(app: Term, argIndices: List[Int])
+  case class ApplyTermWithArgIndices(app: Tree, argIndices: List[Int])
   def title(funcName: String): String =
     s"Convert '$funcName' to named arguments"
 }
