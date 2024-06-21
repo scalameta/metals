@@ -12,31 +12,32 @@ object TrigramSubstrings {
    * }}}
    */
   val DefaultMaxTrigrams = 250
+  type StartFromZero = Boolean
 
   /**
    * Iterate over all possible substrings of length 3 for the given string.
    */
   def foreach(
-      inString: String,
+      inputs: List[String],
       f: String => Unit,
       maxResults: Int = DefaultMaxTrigrams
   ): Unit = {
-    val string = inString.reverse
-    val N = string.length
-    val arr = new Array[Char](3)
+    val N = inputs.length
     var max = maxResults
     def isNotDone = max > 0
     var i = 0
     while (i < N && isNotDone) {
-      var j = i + 1
+      var j = i
       while (j < N && isNotDone) {
-        var k = j + 1
+        var k = j
         while (k < N && isNotDone) {
-          arr(2) = string.charAt(i)
-          arr(1) = string.charAt(j)
-          arr(0) = string.charAt(k)
-          f(new String(arr))
-          max -= 1
+          max = fromLists(
+            inputs(k),
+            (inputs(j), j != k),
+            (inputs(i), i != j),
+            f,
+            max
+          )
           k += 1
         }
         j += 1
@@ -45,12 +46,45 @@ object TrigramSubstrings {
     }
   }
 
+  private def fromLists(
+      input1: String,
+      input2: (String, StartFromZero),
+      input3: (String, StartFromZero),
+      f: String => Unit,
+      maxResults: Int
+  ): Int = {
+    val N1 = input1.length
+    val N2 = input2._1.length
+    val N3 = input3._1.length
+    val arr = new Array[Char](3)
+    var max = maxResults
+    def isNotDone = max > 0
+    var i = 0
+    while (i < N1 && isNotDone) {
+      var j = if (input2._2) 0 else i + 1
+      while (j < N2 && isNotDone) {
+        var k = if (input3._2) 0 else j + 1
+        while (k < N3 && isNotDone) {
+          arr(0) = input1.charAt(i)
+          arr(1) = input2._1.charAt(j)
+          arr(2) = input3._1.charAt(k)
+          f(new String(arr))
+          max -= 1
+          k += 1
+        }
+        j += 1
+      }
+      i += 1
+    }
+    max
+  }
+
   /**
    * Returns all possible substrings of length 3 for the given string.
    */
-  def seq(string: String): ArrayBuffer[String] = {
+  def seq(inputs: List[String]): ArrayBuffer[String] = {
     val buf = ArrayBuffer.empty[String]
-    foreach(string, trigram => buf += trigram)
+    foreach(inputs.reverse, trigram => buf += trigram)
     buf
   }
 
