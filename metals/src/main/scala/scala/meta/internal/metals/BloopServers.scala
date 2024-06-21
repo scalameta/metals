@@ -25,7 +25,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.bsp.ConnectionBspStatus
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
@@ -34,7 +34,6 @@ import bloop.rifle.BloopRifleConfig
 import bloop.rifle.BloopRifleLogger
 import bloop.rifle.BspConnection
 import bloop.rifle.BspConnectionAddress
-import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageType
 
 /**
@@ -56,7 +55,7 @@ final class BloopServers(
     config: MetalsServerConfig,
     workDoneProgress: WorkDoneProgress,
     sh: ScheduledExecutorService,
-    projectRoot: () => AbsolutePath,
+    projectRoot: AbsolutePath,
 )(implicit ec: ExecutionContextExecutorService) {
 
   import BloopServers._
@@ -72,7 +71,7 @@ final class BloopServers(
   private def metalsJavaHome = sys.props.get("java.home")
 
   def shutdownServer(): Boolean = {
-    val retCode = BloopRifle.exit(bloopConfig, workspace().toNIO, bloopLogger)
+    val retCode = BloopRifle.exit(bloopConfig, projectRoot.toNIO, bloopLogger)
     val result = retCode == 0
     if (!result) {
       scribe.warn("There were issues stopping the Bloop server.")
@@ -92,7 +91,7 @@ final class BloopServers(
     BuildServerConnection
       .fromSockets(
         bspTraceRoot,
-        projectRoot(),
+        projectRoot,
         client,
         languageClient,
         () => connect(bloopVersionOpt, userConfiguration),
@@ -303,7 +302,7 @@ final class BloopServers(
         // we want to use the same java version as Metals, so it's ok to use java.home
         writeJVMPropertiesToBloopGlobalJsonFile(
           userConfiguration.bloopJvmProperties.getOrElse(Nil),
-          metalsJavaHome0,
+          metalsJavaHome,
         )
       case Some(OverrideWithMetalsJavaHome(javaHome, oldJavaHome, opts)) =>
         scribe.info(
@@ -344,6 +343,7 @@ final class BloopServers(
   private lazy val bloopLogger: BloopRifleLogger = new BloopRifleLogger {
     def info(msg: => String): Unit = scribe.info(msg)
     def debug(msg: => String, ex: Throwable): Unit = scribe.debug(msg, ex)
+    def debug(msg: => String): Unit = scribe.debug(msg)
     def error(msg: => String): Unit = scribe.error(msg)
     def error(msg: => String, ex: Throwable): Unit = scribe.error(msg, ex)
 
@@ -381,8 +381,12 @@ final class BloopServers(
           }
       }
     }
-    def bloopBspStdout = Some(loggingOutputStream(scribe.debug(_)))
-    def bloopBspStderr = Some(loggingOutputStream(scribe.info(_)))
+    def bloopBspStdout: Some[java.io.OutputStream] = Some(
+      loggingOutputStream(scribe.debug(_))
+    )
+    def bloopBspStderr: Some[java.io.OutputStream] = Some(
+      loggingOutputStream(scribe.info(_))
+    )
     def bloopCliInheritStdout = false
     def bloopCliInheritStderr = false
   }
@@ -397,7 +401,7 @@ final class BloopServers(
     )
 
     BloopRifleConfig
-      .default(addr, fetchBloop _, workspace().toNIO.toFile)
+      .default(addr, fetchBloop _, projectRoot.toNIO.toFile)
       .copy(
         bspSocketOrPort = Some { () =>
           val pid =
@@ -492,7 +496,7 @@ final class BloopServers(
 
       val conn = BloopRifle.bsp(
         bloopConfig,
-        workspace().toNIO,
+        projectRoot.toNIO,
         bloopLogger,
       )
 
@@ -538,7 +542,7 @@ object BloopServers {
       opts: List[String],
   ) extends BloopJavaHome
   object WriteMetalsJavaHome extends BloopJavaHome
-  
+
   def fetchBloop(version: String): Either[Throwable, (Seq[File], Boolean)] = {
 
     val (org, name) = BloopRifleConfig.defaultModule.split(":", -1) match {
