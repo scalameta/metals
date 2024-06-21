@@ -205,6 +205,8 @@ class ProjectMetalsLspService(
     tables,
     clientConfig.initialConfig,
     workDoneProgress,
+    sh,
+    folder,
   )
 
   protected val bspServers: BspServers = new BspServers(
