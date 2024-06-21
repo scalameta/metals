@@ -322,11 +322,17 @@ class Fuzzy {
       symbol: String,
       hasher: StringBloomFilter
   ): Unit = {
+    var allUpper = List.empty[String]
+    val upper = new StringBuilder()
+    def flushUpper() =
+      if (upper.nonEmpty) {
+        allUpper = upper.result() :: allUpper
+        upper.clear()
+      }
     if (symbol.endsWith("$sp.class")) return
     hasher.reset()
     var i = 0
     var delimiter = i
-    val upper = new StringBuilder()
     var symbolicDelimiter = i
     val N = lastIndex(symbol)
     while (i < N) {
@@ -336,6 +342,7 @@ class Fuzzy {
           hasher.reset()
           delimiter = i + 1
           symbolicDelimiter = delimiter
+          flushUpper()
         case _ =>
           if (ch.isUpper) {
             delimiter = i
@@ -365,8 +372,9 @@ class Fuzzy {
         idx += 1
       }
     }
+    flushUpper()
     TrigramSubstrings.foreach(
-      upper.toString,
+      allUpper,
       trigram => hasher.putCharSequence(trigram)
     )
   }
@@ -411,8 +419,14 @@ class Fuzzy {
     else if (query.length() < PrefixSearchLimit && !isShortQueryRetry)
       List(PrefixCharSequence(query))
     else {
-      val result = mutable.Set.empty[CharSequence]
+      var allUpper = List.empty[String]
       val upper = new StringBuilder
+      def flushUpper() =
+        if (upper.nonEmpty) {
+          allUpper = upper.result() :: allUpper
+          upper.clear()
+        }
+      val result = mutable.Set.empty[CharSequence]
       var i = 0
       var border = 0
       while (i < query.length) {
@@ -421,6 +435,7 @@ class Fuzzy {
           case '.' | '/' | '#' | '$' =>
             result.add(new ZeroCopySubSequence(query, border, i))
             border = i + 1
+            flushUpper()
           case _ =>
             if (ch.isUpper) {
               if (border != i) {
@@ -438,8 +453,9 @@ class Fuzzy {
         case _ =>
           result.add(new ZeroCopySubSequence(query, border, query.length))
       }
+      flushUpper()
       if (includeTrigrams) {
-        TrigramSubstrings.foreach(upper.toString, trigram => result += trigram)
+        TrigramSubstrings.foreach(allUpper, trigram => result += trigram)
       }
       result
     }

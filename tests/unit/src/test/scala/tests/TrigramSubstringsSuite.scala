@@ -9,7 +9,8 @@ class TrigramSubstringsSuite extends BaseSuite {
       loc: Location
   ): Unit = {
     test(original) {
-      val obtained = TrigramSubstrings.seq(original).mkString("\n")
+      val obtained =
+        TrigramSubstrings.seq(original.split('.').toList).mkString("\n")
       assertNoDiff(obtained, expected)
     }
   }
@@ -23,13 +24,20 @@ class TrigramSubstringsSuite extends BaseSuite {
       assertNoDiff(obtained, expected)
     }
   }
+
   check(
-    "abcd",
+    "a.bcde",
     """
       |bcd
-      |acd
-      |abd
+      |bce
+      |bde
+      |cde
       |abc
+      |abd
+      |abe
+      |acd
+      |ace
+      |ade
       |""".stripMargin,
   )
 
