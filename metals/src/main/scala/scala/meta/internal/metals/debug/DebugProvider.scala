@@ -719,7 +719,8 @@ class DebugProvider(
         val env = Option(params.env).toList.flatMap(createEnvList)
 
         envFromFile(Option(params.envFile)).map { envFromFile =>
-          val jvmOpts = JvmOpts.fromWorkspaceOrEnvForTest(workspace)
+          val jvmOpts =
+            JvmOpts.fromWorkspaceOrEnvForTest(workspace).getOrElse(Nil)
           val scalaTestSuite = new b.ScalaTestSuites(
             List(
               new b.ScalaTestSuiteSelection(params.testClass, Nil.asJava)
@@ -764,7 +765,7 @@ class DebugProvider(
       request: ScalaTestSuitesDebugRequest,
   )(implicit ec: ExecutionContext): Future[DebugSessionParams] = {
     def makeDebugSession() = {
-      val jvmOpts = JvmOpts.fromWorkspaceOrEnvForTest(workspace)
+      val jvmOpts = JvmOpts.fromWorkspaceOrEnvForTest(workspace).getOrElse(Nil)
       val debugSession =
         if (supportsTestSelection(request.target)) {
           val testSuites =
