@@ -39,7 +39,7 @@ object JvmOpts {
       workspace: AbsolutePath,
       fileName: String = ".jvmopts",
       envName: String = "JVM_OPTS",
-  ) = {
+  ): List[String] = {
     val jvmOpts = workspace.resolve(fileName)
     if (jvmOpts.isFile && Files.isReadable(jvmOpts.toNIO)) {
       val text = FileIO.slurp(jvmOpts, StandardCharsets.UTF_8)
