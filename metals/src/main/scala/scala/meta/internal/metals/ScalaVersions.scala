@@ -147,7 +147,7 @@ class ScalaVersions(
   }
 
   private val scalaVersionRegex =
-    "(_)?(\\d)(\\.\\d{1,2})?(\\.\\d(-(RC|M)\\d)?)?".r
+    raw"(_)(\d)(\.\d{1,2})?(\.\d(-(RC|M)\d)?)?".r
 
   /**
    * Extract scala binary version from dependency jar name.
@@ -178,7 +178,7 @@ class ScalaVersions(
       .sortBy(_._2)(Ordering.Boolean.reverse)
       .headOption
       .map { case (version, _) => scalaBinaryVersionFromFullVersion(version) }
-      .getOrElse(scala213)
+      .getOrElse("2.13")
   }
 
   def dialectForDependencyJar(filename: String): Dialect =
