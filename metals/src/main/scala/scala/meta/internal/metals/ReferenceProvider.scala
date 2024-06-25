@@ -401,13 +401,14 @@ final class ReferenceProvider(
     val results = pathsWithId
       .groupMap(_._1)(_._2)
       .map { case (id, searchFiles) =>
-        () =>
+        (isCancelled: IsCancelled) =>
           compilers.references(
             id,
             searchFiles.flatten,
             includeDeclaration,
             symbols,
             adjustLocation,
+            isCancelled,
           )
       }
       .toList

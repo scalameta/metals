@@ -1318,10 +1318,12 @@ object MetalsEnrichments
   def filterANSIColorCodes(str: String): String =
     str.replaceAll("\u001b\\[1A\u001b\\[K|\u001B\\[[;\\d]*m", "")
 
+  type IsCancelled = () => Boolean
+
   def executeBatched[T](
-      toExec: List[() => Future[T]],
+      toExec: List[IsCancelled => Future[T]],
       batchSize: Int,
-      isCancelled: () => Boolean,
+      isCancelled: IsCancelled,
   )(implicit
       ec: ExecutionContext
   ): Future[List[T]] = {
@@ -1332,7 +1334,7 @@ object MetalsEnrichments
         else {
           for {
             acc <- accF
-            curr <- Future.sequence(toExec.map(_()))
+            curr <- Future.sequence(toExec.map(_(isCancelled)))
           } yield curr :: acc
         }
       }

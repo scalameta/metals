@@ -763,6 +763,7 @@ class Compilers(
       includeDefinition: Boolean,
       symbols: List[String],
       additionalAdjust: AdjustRange,
+      isCancelled: () => Boolean,
   ): Future[List[ReferencesResult]] = {
     // we filter only Scala files, since `references` for Java are not implemented
     val filteredFiles = searchFiles.filter(_.isScala)
@@ -772,6 +773,7 @@ class Compilers(
         withUncachedCompiler(id) { compiler =>
           for {
             searchFile <- filteredFiles
+            if !isCancelled()
           } yield {
             val uri = searchFile.toURI
             val (input, _, adjust) =
