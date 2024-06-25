@@ -150,7 +150,8 @@ final class ReferenceProvider(
       includeSynthetics: Synthetic => Boolean = _ => true,
   )(implicit report: ReportContext): Future[List[ReferencesResult]] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
-    semanticdbs().textDocument(source).toOption match {
+    val textDoc = semanticdbs().textDocument(source)
+    textDoc.toOption match {
       case Some(doc) =>
         val results: List[ResolvedSymbolOccurrence] = {
           val posOccurrences =
@@ -218,7 +219,6 @@ final class ReferenceProvider(
             source,
             results.flatMap(_.occurrence).map(_.symbol),
             params.getContext().isIncludeDeclaration(),
-            path => !index.get(path.toNIO).exists(!_.isStale),
             findRealRange,
           )
 
@@ -233,14 +233,50 @@ final class ReferenceProvider(
               .toList
           )
       case None =>
-        scribe.debug(s"No semanticdb for $source")
-        pcReferences(source, params, findRealRange).map(
-          _.groupBy(_.symbol)
-            .collect { case (symbol, refs) =>
-              ReferencesResult(symbol, refs.flatMap(_.locations))
+        if (textDoc.documentIncludingStale.isEmpty)
+          scribe.debug(s"No semanticDB for $source")
+        else scribe.debug(s"Stale semanticDB for $source")
+        val includeDeclaration = params.getContext().isIncludeDeclaration()
+        for {
+          foundRefs <- compilers.references(
+            params,
+            EmptyCancelToken,
+            findRealRange,
+          )
+          symbols = foundRefs.map(_.symbol).filterNot(_.isLocal)
+          fromPc <-
+            if (symbols.isEmpty) Future.successful(Nil)
+            else {
+              pcReferences(
+                source,
+                symbols,
+                includeDeclaration,
+                findRealRange,
+              )
             }
-            .toList
-        )
+        } yield {
+          if (symbols.isEmpty) foundRefs
+          else {
+            val fromWorkspace = workspaceReferences(
+              source,
+              symbols.toSet,
+              includeDeclaration,
+              findRealRange,
+              includeSynthetics,
+            )
+            val results = ReferencesResult(
+              symbols.head,
+              fromWorkspace,
+            ) :: (fromPc ++ foundRefs)
+
+            results
+              .groupBy(_.symbol)
+              .collect { case (symbol, refs) =>
+                ReferencesResult(symbol, refs.flatMap(_.locations))
+              }
+              .toList
+          }
+        }
     }
   }
 
@@ -336,26 +372,8 @@ final class ReferenceProvider(
 
   private def pcReferences(
       path: AbsolutePath,
-      params: ReferenceParams,
-      adjustLocation: AdjustRange,
-  ): Future[List[ReferencesResult]] = {
-    compilers.references(params, EmptyCancelToken, adjustLocation).flatMap {
-      foundRefs =>
-        pcReferences(
-          path,
-          foundRefs.map(_.symbol),
-          includeDeclaration = params.getContext().isIncludeDeclaration(),
-          filterTargetFiles = _ != path,
-          adjustLocation,
-        ).map(_ ++ foundRefs)
-    }
-  }
-
-  private def pcReferences(
-      path: AbsolutePath,
       symbols: List[String],
       includeDeclaration: Boolean,
-      filterTargetFiles: AbsolutePath => Boolean,
       adjustLocation: AdjustRange,
   ): Future[List[ReferencesResult]] = {
     val visited = mutable.Set[AbsolutePath]()
@@ -366,11 +384,12 @@ final class ReferenceProvider(
       name = nameFromSymbol(symbol)
       pathsMap = pathsForName(buildTarget, name)
       id <- pathsMap.keySet
-      searchFiles = pathsMap(id)
-        .filter(searchFile =>
-          filterTargetFiles(searchFile) && !visited(searchFile)
+      searchFiles = pathsMap(id).filter { searchFile =>
+        val indexedFile = index.get(searchFile.toNIO)
+        (indexedFile.isEmpty || indexedFile.get.isStale) && !visited(
+          searchFile
         )
-        .distinct
+      }.distinct
       if searchFiles.nonEmpty
     } yield {
       visited ++= searchFiles

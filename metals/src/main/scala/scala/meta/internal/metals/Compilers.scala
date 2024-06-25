@@ -1193,6 +1193,8 @@ class Compilers(
       val (out, shouldShutdown) = Option(jcache.get(key))
         .map((_, false))
         .getOrElse((getCompiler(), true))
+      if (shouldShutdown)
+        scribe.debug(s"starting uncached presentation compiler for $targetId")
       val compiler = Option(out.await)
       val result = compiler.map(f)
       if (shouldShutdown) compiler.foreach(_.shutdown())
