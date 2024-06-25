@@ -2,11 +2,13 @@ package scala.meta.internal.metals
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicReference
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
 
@@ -48,6 +50,7 @@ final class ReferenceProvider(
   val index: TrieMap[Path, IdentifierIndex.MaybeStaleIndexEntry] =
     TrieMap.empty
   val identifierIndex: IdentifierIndex = new IdentifierIndex
+  val pcReferencesLock = new AtomicReference(Lock.completed)
 
   def addIdentifiers(file: AbsolutePath, set: Iterable[String]): Unit =
     buildTargets
@@ -402,8 +405,16 @@ final class ReferenceProvider(
           adjustLocation,
         )
     }
-    val maxPcsNumber = Runtime.getRuntime().availableProcessors() / 2
-    executeBatched(results, maxPcsNumber).map(_.flatten)
+    val lock = new Lock
+    val result =
+      pcReferencesLock.getAndSet(lock).cancelAndWaitUntilCompleted().flatMap {
+        _ =>
+          val maxPcsNumber = Runtime.getRuntime().availableProcessors() / 2
+          executeBatched(results, maxPcsNumber, () => lock.isCancelled)
+            .map(_.flatten)
+      }
+    result.onComplete(_ => lock.complete())
+    result
   }
 
   private def nameFromSymbol(
@@ -811,4 +822,24 @@ object AdjustRange {
       def apply(range: s.Range, text: String, symbol: String): Option[s.Range] =
         adjust(range, text, symbol)
     }
+}
+
+class Lock {
+  private val cancelPromise = Promise[Unit]
+  private val completedPromise = Promise[Unit]
+
+  def isCancelled = cancelPromise.isCompleted
+  def complete(): Unit = completedPromise.trySuccess(())
+  def cancelAndWaitUntilCompleted(): Future[Unit] = {
+    cancelPromise.trySuccess(())
+    completedPromise.future
+  }
+}
+
+object Lock {
+  val completed: Lock = {
+    val lock = new Lock
+    lock.complete()
+    lock
+  }
 }
