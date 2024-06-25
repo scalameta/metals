@@ -761,13 +761,13 @@ class Compilers(
       id: BuildTargetIdentifier,
       searchFiles: List[AbsolutePath],
       includeDefinition: Boolean,
-      symbol: String,
+      symbols: List[String],
       additionalAdjust: AdjustRange,
   ): Future[List[ReferencesResult]] = {
     // we filter only Scala files, since `references` for Java are not implemented
     val filteredFiles = searchFiles.filter(_.isScala)
     val results =
-      if (filteredFiles.isEmpty) Nil
+      if (symbols.isEmpty || filteredFiles.isEmpty) Nil
       else
         withUncachedCompiler(id) { compiler =>
           for {
@@ -779,7 +779,8 @@ class Compilers(
             val requestParams = new internal.pc.PcReferencesRequest(
               CompilerVirtualFileParams(uri, input.text),
               includeDefinition,
-              JEither.forRight(symbol),
+              JEither.forRight(symbols.head),
+              symbols.tail.asJava,
             )
             compiler
               .references(requestParams)
@@ -1553,4 +1554,5 @@ object Compilers {
         extends PresentationCompilerKey
     case object Default extends PresentationCompilerKey
   }
+
 }

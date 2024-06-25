@@ -380,31 +380,37 @@ final class ReferenceProvider(
       adjustLocation: AdjustRange,
   ): Future[List[ReferencesResult]] = {
     val visited = mutable.Set[AbsolutePath]()
-    val results = for {
-      buildTarget <- buildTargets.inverseSources(path).toList
-      _ = visited.clear()
-      symbol <- symbols
-      name = nameFromSymbol(symbol)
-      pathsMap = pathsForName(buildTarget, name)
-      id <- pathsMap.keySet
-      searchFiles = pathsMap(id).filter { searchFile =>
-        val indexedFile = index.get(searchFile.toNIO)
-        (indexedFile.isEmpty || indexedFile.get.isStale) && !visited(
-          searchFile
-        )
-      }.distinct
-      if searchFiles.nonEmpty
-    } yield {
-      visited ++= searchFiles
-      () =>
-        compilers.references(
-          id,
-          searchFiles,
-          includeDeclaration,
-          symbol,
-          adjustLocation,
-        )
-    }
+    val names = symbols.map(nameFromSymbol(_)).toSet
+    val pathsWithId =
+      for {
+        buildTarget <- buildTargets.inverseSources(path).toList
+        name <- names
+        pathsMap = pathsForName(buildTarget, name)
+        id <- pathsMap.keySet
+      } yield {
+        val searchFiles = pathsMap(id).filter { searchFile =>
+          val indexedFile = index.get(searchFile.toNIO)
+          (indexedFile.isEmpty || indexedFile.get.isStale) && !visited(
+            searchFile
+          )
+        }.distinct
+        visited ++= searchFiles
+        (id -> searchFiles)
+      }
+
+    val results = pathsWithId
+      .groupMap(_._1)(_._2)
+      .map { case (id, searchFiles) =>
+        () =>
+          compilers.references(
+            id,
+            searchFiles.flatten,
+            includeDeclaration,
+            symbols,
+            adjustLocation,
+          )
+      }
+      .toList
     val lock = new Lock
     val result =
       pcReferencesLock.getAndSet(lock).cancelAndWaitUntilCompleted().flatMap {

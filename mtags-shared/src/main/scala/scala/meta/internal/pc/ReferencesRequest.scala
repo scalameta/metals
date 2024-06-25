@@ -12,7 +12,9 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 case class PcReferencesRequest(
     file: VirtualFileParams,
     includeDefinition: Boolean,
-    offsetOrSymbol: JEither[Integer, String]
+    offsetOrSymbol: JEither[Integer, String],
+    override val alternativeSymbols: ju.List[String] =
+      ju.Collections.emptyList()
 ) extends ReferencesRequest
 
 case class PcReferencesResult(

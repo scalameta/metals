@@ -30,7 +30,8 @@ class PcReferencesProvider(
       val symbolSearch = new WithCompilationUnit(driver, offsetParams) with PcSymbolSearch
       symbolSearch.soughtSymbols.map(_._1)
     } else {
-      SymbolProvider.compilerSymbol(request.offsetOrSymbol().getRight()).map(symbolAlternatives(_))
+      val semanticDBSymbols = request.alternativeSymbols().asScala.toSet + request.offsetOrSymbol().getRight()
+      Some(semanticDBSymbols.flatMap(SymbolProvider.compilerSymbol).flatMap(symbolAlternatives(_))).filter(_.nonEmpty)
     }
 
   def collect(parent: Option[Tree])(
