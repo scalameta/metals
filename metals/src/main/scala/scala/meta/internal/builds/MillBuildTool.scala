@@ -66,18 +66,14 @@ case class MillBuildTool(
 
   private def putTogetherArgs(
       cmd: List[String],
-      millVersion: String,
       workspace: AbsolutePath,
   ) = {
     // In some environments (such as WSL or cygwin), mill must be run using interactive mode (-i)
     val fullcmd = if (Properties.isWin) "-i" :: cmd else cmd
 
     userConfig().millScript match {
-      case Some(script) =>
-        script :: cmd
-      case None =>
-        embeddedMillWrapper(workspace)
-          .toString() :: "--mill-version" :: millVersion :: fullcmd
+      case Some(script) => script :: cmd
+      case None => embeddedMillWrapper(workspace).toString() :: fullcmd
     }
 
   }
@@ -110,10 +106,9 @@ case class MillBuildTool(
 
   override def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
     val millVersion = getMillVersion(projectRoot)
-
     val cmd =
       bloopImportArgs(millVersion) ::: bloopCmd(millVersion) :: Nil
-    putTogetherArgs(cmd, millVersion, workspace)
+    putTogetherArgs(cmd, workspace)
   }
 
   override def digest(workspace: AbsolutePath): Option[String] =
@@ -141,7 +136,7 @@ case class MillBuildTool(
   ): Option[List[String]] =
     Option.when(workspaceSupportsBsp(workspace: AbsolutePath)) {
       val cmd = "mill.bsp.BSP/install" :: "--jobs" :: "0" :: Nil
-      putTogetherArgs(cmd, getMillVersion(projectRoot), workspace)
+      putTogetherArgs(cmd, workspace)
     }
 
   def workspaceSupportsBsp(workspace: AbsolutePath): Boolean = {
