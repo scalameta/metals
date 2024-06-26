@@ -398,7 +398,7 @@ final class ReferenceProvider(
         (id -> searchFiles)
       }
 
-    val results = pathsWithId
+    val lazyResults = pathsWithId
       .groupMap(_._1)(_._2)
       .map { case (id, searchFiles) =>
         (isCancelled: IsCancelled) =>
@@ -417,7 +417,7 @@ final class ReferenceProvider(
       pcReferencesLock.getAndSet(lock).cancelAndWaitUntilCompleted().flatMap {
         _ =>
           val maxPcsNumber = Runtime.getRuntime().availableProcessors() / 2
-          executeBatched(results, maxPcsNumber, () => lock.isCancelled)
+          executeBatched(lazyResults, maxPcsNumber, () => lock.isCancelled)
             .map(_.flatten)
       }
     result.onComplete(_ => lock.complete())

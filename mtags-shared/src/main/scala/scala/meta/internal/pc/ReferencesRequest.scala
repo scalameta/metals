@@ -2,6 +2,8 @@ package scala.meta.internal.pc
 
 import java.{util => ju}
 
+import scala.collection.JavaConverters._
+
 import scala.meta.pc.ReferencesRequest
 import scala.meta.pc.ReferencesResult
 import scala.meta.pc.VirtualFileParams
@@ -13,8 +15,7 @@ case class PcReferencesRequest(
     file: VirtualFileParams,
     includeDefinition: Boolean,
     offsetOrSymbol: JEither[Integer, String],
-    override val alternativeSymbols: ju.List[String] =
-      ju.Collections.emptyList()
+    override val alternativeSymbols: ju.List[String] = Nil.asJava
 ) extends ReferencesRequest
 
 case class PcReferencesResult(
