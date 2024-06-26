@@ -17,7 +17,7 @@ case class MillBuildTool(
     with BuildServerProvider
     with VersionRecommendation {
 
-  private def getMillVersion(workspace: AbsolutePath): String = {
+  private[builds] def getMillVersion(workspace: AbsolutePath): String = {
     import scala.meta.internal.jdk.CollectionConverters._
     val millVersionPath = workspace.resolve(".mill-version")
     lazy val altMillVersionPath =
