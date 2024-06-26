@@ -92,8 +92,11 @@ final case class Indexer(
     def reloadAndIndex(session: BspSession): Future[BuildChange] = {
       workspaceReload().persistChecksumStatus(Status.Started, buildTool)
 
+      buildTool.ensurePrerequisites(workspaceFolder)
       buildTool match {
         case _: BspOnly =>
+          reconnectToBuildServer()
+        case _ if !session.canReloadWorkspace =>
           reconnectToBuildServer()
         case _ =>
           session

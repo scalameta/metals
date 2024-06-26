@@ -17,10 +17,11 @@ object TrigramSubstrings {
    * Iterate over all possible substrings of length 3 for the given string.
    */
   def foreach(
-      string: String,
+      inString: String,
       f: String => Unit,
       maxResults: Int = DefaultMaxTrigrams
   ): Unit = {
+    val string = inString.reverse
     val N = string.length
     val arr = new Array[Char](3)
     var max = maxResults
@@ -31,9 +32,9 @@ object TrigramSubstrings {
       while (j < N && isNotDone) {
         var k = j + 1
         while (k < N && isNotDone) {
-          arr(0) = string.charAt(i)
+          arr(2) = string.charAt(i)
           arr(1) = string.charAt(j)
-          arr(2) = string.charAt(k)
+          arr(0) = string.charAt(k)
           f(new String(arr))
           max -= 1
           k += 1

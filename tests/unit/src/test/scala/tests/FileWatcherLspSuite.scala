@@ -2,7 +2,6 @@ package tests
 
 import java.nio.file.Files
 
-import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -11,7 +10,6 @@ import scala.meta.internal.metals.RecursivelyDelete
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FileEvent
-
 class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
@@ -130,18 +128,20 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
   test("didChangeWatchedFiles-notification") {
     cleanWorkspace()
     FileLayout.fromString(
-      """|/metals.json
-         |{
-         |  "a": { }
-         |}
-         |/a/src/main/scala/A.scala
-         |package a
-         |object A
-         |/buildd.sbt
-         |
-         |""".stripMargin,
+      s"""|/metals.json
+          |{
+          |  "a": { }
+          |}
+          |/a/src/main/scala/A.scala
+          |package a
+          |object A
+          |/buildd.sbt
+          |
+          |""".stripMargin,
       workspace,
     )
+    server.client.switchBuildTool = Messages.NewBuildToolDetected.switch
+
     for {
       _ <- server.initialize()
       _ <- server.initialized()
@@ -152,7 +152,6 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
             |""".stripMargin,
         workspace,
       )
-      _ = server.server.tables.buildTool.chooseBuildTool(SbtBuildTool.name)
       _ <- server.fullServer
         .didChangeWatchedFiles(
           new DidChangeWatchedFilesParams(
@@ -169,7 +168,7 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
           )
         )
         .asScala
-      _ = assertNoDiff(
+      _ = assertContains(
         client.workspaceMessageRequests,
         Messages.ImportBuild.params("sbt").getMessage(),
       )

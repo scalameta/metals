@@ -105,6 +105,36 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
     CodeActionErrorMessages.ConvertToNamedArguments.IsJavaObject
   )
 
+  checkEdit(
+    "block",
+    """|class C {
+       |  def f(o: Int) = 1
+       |  val g = <<f({2})>>
+       |}
+       |""".stripMargin,
+    List(0),
+    """|class C {
+       |  def f(o: Int) = 1
+       |  val g = f(o = {2})
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "multi-bracket",
+    """|class C {
+       |  def f(o: Int) = 1
+       |  val g = <<f (({2}))>>
+       |}
+       |""".stripMargin,
+    List(0),
+    """|class C {
+       |  def f(o: Int) = 1
+       |  val g = f (o = ({2}))
+       |}
+       |""".stripMargin
+  )
+
   def checkError(
       name: TestOptions,
       original: String,

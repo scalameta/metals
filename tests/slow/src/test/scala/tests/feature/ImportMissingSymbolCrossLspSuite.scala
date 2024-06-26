@@ -168,4 +168,33 @@ class ImportMissingSymbolCrossLspSuite
     scalacOptions = List("-explain"),
   )
 
+  check(
+    "i6475",
+    """|package com.scalaFakePackage.test.latestCommentByItem.domain.projection.latestCommentByItemView
+       |package subscriber {
+       |  class CreateLatestCommentByItemSubscriber
+       |}
+       |package a {
+       |  object O {
+       |    val g: <<CreateLatestCommentByItemSubscriber>> = ???
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("CreateLatestCommentByItemSubscriber", "com.scalaFakePackage.test.latestCommentByItem.domain.projection.latestCommentByItemView.subscriber")}
+        |${CreateNewSymbol.title("CreateLatestCommentByItemSubscriber")}""".stripMargin,
+    """|package com.scalaFakePackage.test.latestCommentByItem.domain.projection.latestCommentByItemView
+       |
+       |import com.scalaFakePackage.test.latestCommentByItem.domain.projection.latestCommentByItemView.subscriber.CreateLatestCommentByItemSubscriber
+       |package subscriber {
+       |  class CreateLatestCommentByItemSubscriber
+       |}
+       |package a {
+       |  object O {
+       |    val g: CreateLatestCommentByItemSubscriber = ???
+       |  }
+       |}
+       |""".stripMargin,
+    scalaVersion = "3.3.3",
+  )
+
 }

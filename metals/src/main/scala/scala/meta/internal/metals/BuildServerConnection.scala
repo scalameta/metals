@@ -112,6 +112,9 @@ class BuildServerConnection private (
   def supportsLazyClasspathResolution: Boolean =
     capabilities.getJvmCompileClasspathProvider()
 
+  def canReloadWorkspace: Boolean =
+    capabilities.getCanReload()
+
   def supportsLanguage(id: String): Boolean =
     Option(capabilities.getCompileProvider())
       .exists(_.getLanguageIds().contains(id)) ||
