@@ -113,13 +113,14 @@ object SelectionRangeProvider:
         val selectedParams =
           paramss
             .iterator
-            .flatMap: // parameter list to a sourcePosition covering the whole list
+            .flatMap{ // parameter list to a sourcePosition covering the whole list
               case Seq(param) => Some(param.sourcePos)
               case params @ Seq(head, tail*) =>
                 val srcPos = head.sourcePos
                 val lastSpan = tail.last.span
                 Some(SourcePosition(srcPos.source, srcPos.span union lastSpan, srcPos.outer))
               case Seq() => None
+            }
             .find(_.contains(pos))
             .map(toSelectionRange)
         selectedParams ++ Seq(treeSelectionRange)
