@@ -141,6 +141,8 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
            |  def scalaVersion = "${V.scala213}"
            |  def scalacOptions = Seq("-Xfatal-warnings", "-Ywarn-unused")
            |}
+           |/.mill-version
+           |${V.millVersion}
            |/foo/src/Warning.scala
            |import scala.concurrent.Future // unused
            |object Warning
