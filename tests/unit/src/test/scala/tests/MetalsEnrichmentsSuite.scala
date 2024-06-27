@@ -2,6 +2,7 @@ package tests
 
 import java.io.FileOutputStream
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.util.zip.ZipOutputStream
 
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -52,6 +53,18 @@ class MetalsEnrichmentsSuite extends BaseSuite {
         "file:///Users/happyMetalsUser/hello space+world/src/main/scala/Main.scala"
       val path = uri.toAbsolutePath
       assert(path.toString().contains("hello space+world"))
+    }
+  }
+
+  if (isWindows) {
+    test("encode-decode-at") {
+      val uri =
+        "jar:file%3A///C%3A/Users/niander/scoop/persist/coursier/cache/https/myproj%2540myorg.pkgs.visualstudio.com/myproj/_packaging/MyMavenFeed/maven/v1/com/azure/azure-security-keyvault-certificates/4.6.3/azure-security-keyvault-certificates-4.6.3-sources.jar%21/com/azure/security/keyvault/certificates/CertificateClient.java"
+      try {
+        uri.toAbsolutePath
+      } catch {
+        case e: NoSuchFileException => assertNotContains(e.getMessage(), "@")
+      }
     }
   }
 

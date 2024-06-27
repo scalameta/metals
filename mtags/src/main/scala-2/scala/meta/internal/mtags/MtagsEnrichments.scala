@@ -154,7 +154,8 @@ trait MtagsEnrichments extends ScalametaCommonEnrichments {
           else f(value)
         } catch {
           // fallback to try without decoding
-          case _: FileSystemNotFoundException if Properties.isWin =>
+          case _: NoSuchFileException | _: FileSystemNotFoundException
+              if Properties.isWin =>
             f(value)
           // prevents infinity recursion and double check for double escaped %
           case _: NoSuchFileException | _: FileSystemNotFoundException
