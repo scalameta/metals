@@ -2,11 +2,13 @@ package scala.meta.internal.metals
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicReference
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
 
@@ -48,6 +50,7 @@ final class ReferenceProvider(
   val index: TrieMap[Path, IdentifierIndex.MaybeStaleIndexEntry] =
     TrieMap.empty
   val identifierIndex: IdentifierIndex = new IdentifierIndex
+  val pcReferencesLock = new AtomicReference(Lock.completed)
 
   def addIdentifiers(file: AbsolutePath, set: Iterable[String]): Unit =
     buildTargets
@@ -150,7 +153,8 @@ final class ReferenceProvider(
       includeSynthetics: Synthetic => Boolean = _ => true,
   )(implicit report: ReportContext): Future[List[ReferencesResult]] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
-    semanticdbs().textDocument(source).toOption match {
+    val textDoc = semanticdbs().textDocument(source)
+    textDoc.toOption match {
       case Some(doc) =>
         val results: List[ResolvedSymbolOccurrence] = {
           val posOccurrences =
@@ -218,7 +222,6 @@ final class ReferenceProvider(
             source,
             results.flatMap(_.occurrence).map(_.symbol),
             params.getContext().isIncludeDeclaration(),
-            path => !index.get(path.toNIO).exists(!_.isStale),
             findRealRange,
           )
 
@@ -233,14 +236,50 @@ final class ReferenceProvider(
               .toList
           )
       case None =>
-        scribe.debug(s"No semanticdb for $source")
-        pcReferences(source, params, findRealRange).map(
-          _.groupBy(_.symbol)
-            .collect { case (symbol, refs) =>
-              ReferencesResult(symbol, refs.flatMap(_.locations))
+        if (textDoc.documentIncludingStale.isEmpty)
+          scribe.debug(s"No semanticDB for $source")
+        else scribe.debug(s"Stale semanticDB for $source")
+        val includeDeclaration = params.getContext().isIncludeDeclaration()
+        for {
+          foundRefs <- compilers.references(
+            params,
+            EmptyCancelToken,
+            findRealRange,
+          )
+          symbols = foundRefs.map(_.symbol).filterNot(_.isLocal)
+          fromPc <-
+            if (symbols.isEmpty) Future.successful(Nil)
+            else {
+              pcReferences(
+                source,
+                symbols,
+                includeDeclaration,
+                findRealRange,
+              )
             }
-            .toList
-        )
+        } yield {
+          if (symbols.isEmpty) foundRefs
+          else {
+            val fromWorkspace = workspaceReferences(
+              source,
+              symbols.toSet,
+              includeDeclaration,
+              findRealRange,
+              includeSynthetics,
+            )
+            val results = ReferencesResult(
+              symbols.head,
+              fromWorkspace,
+            ) :: (fromPc ++ foundRefs)
+
+            results
+              .groupBy(_.symbol)
+              .collect { case (symbol, refs) =>
+                ReferencesResult(symbol, refs.flatMap(_.locations))
+              }
+              .toList
+          }
+        }
     }
   }
 
@@ -336,55 +375,53 @@ final class ReferenceProvider(
 
   private def pcReferences(
       path: AbsolutePath,
-      params: ReferenceParams,
-      adjustLocation: AdjustRange,
-  ): Future[List[ReferencesResult]] = {
-    compilers.references(params, EmptyCancelToken, adjustLocation).flatMap {
-      foundRefs =>
-        pcReferences(
-          path,
-          foundRefs.map(_.symbol),
-          includeDeclaration = params.getContext().isIncludeDeclaration(),
-          filterTargetFiles = _ != path,
-          adjustLocation,
-        ).map(_ ++ foundRefs)
-    }
-  }
-
-  private def pcReferences(
-      path: AbsolutePath,
       symbols: List[String],
       includeDeclaration: Boolean,
-      filterTargetFiles: AbsolutePath => Boolean,
       adjustLocation: AdjustRange,
   ): Future[List[ReferencesResult]] = {
     val visited = mutable.Set[AbsolutePath]()
-    val results = for {
-      buildTarget <- buildTargets.inverseSources(path).toList
-      _ = visited.clear()
-      symbol <- symbols
-      name = nameFromSymbol(symbol)
-      pathsMap = pathsForName(buildTarget, name)
-      id <- pathsMap.keySet
-      searchFiles = pathsMap(id)
-        .filter(searchFile =>
-          filterTargetFiles(searchFile) && !visited(searchFile)
-        )
-        .distinct
-      if searchFiles.nonEmpty
-    } yield {
-      visited ++= searchFiles
-      () =>
-        compilers.references(
-          id,
-          searchFiles,
-          includeDeclaration,
-          symbol,
-          adjustLocation,
-        )
-    }
-    val maxPcsNumber = Runtime.getRuntime().availableProcessors() / 2
-    executeBatched(results, maxPcsNumber).map(_.flatten)
+    val names = symbols.map(nameFromSymbol(_)).toSet
+    val pathsWithId =
+      for {
+        buildTarget <- buildTargets.inverseSources(path).toList
+        name <- names
+        pathsMap = pathsForName(buildTarget, name)
+        id <- pathsMap.keySet
+      } yield {
+        val searchFiles = pathsMap(id).filter { searchFile =>
+          val indexedFile = index.get(searchFile.toNIO)
+          (indexedFile.isEmpty || indexedFile.get.isStale) && !visited(
+            searchFile
+          )
+        }.distinct
+        visited ++= searchFiles
+        (id -> searchFiles)
+      }
+
+    val lazyResults = pathsWithId
+      .groupMap(_._1)(_._2)
+      .map { case (id, searchFiles) =>
+        (isCancelled: IsCancelled) =>
+          compilers.references(
+            id,
+            searchFiles.flatten,
+            includeDeclaration,
+            symbols,
+            adjustLocation,
+            isCancelled,
+          )
+      }
+      .toList
+    val lock = new Lock
+    val result =
+      pcReferencesLock.getAndSet(lock).cancelAndWaitUntilCompleted().flatMap {
+        _ =>
+          val maxPcsNumber = Runtime.getRuntime().availableProcessors() / 2
+          executeBatched(lazyResults, maxPcsNumber, () => lock.isCancelled)
+            .map(_.flatten)
+      }
+    result.onComplete(_ => lock.complete())
+    result
   }
 
   private def nameFromSymbol(
@@ -792,4 +829,24 @@ object AdjustRange {
       def apply(range: s.Range, text: String, symbol: String): Option[s.Range] =
         adjust(range, text, symbol)
     }
+}
+
+class Lock {
+  private val cancelPromise = Promise[Unit]
+  private val completedPromise = Promise[Unit]
+
+  def isCancelled = cancelPromise.isCompleted
+  def complete(): Unit = completedPromise.trySuccess(())
+  def cancelAndWaitUntilCompleted(): Future[Unit] = {
+    cancelPromise.trySuccess(())
+    completedPromise.future
+  }
+}
+
+object Lock {
+  val completed: Lock = {
+    val lock = new Lock
+    lock.complete()
+    lock
+  }
 }
