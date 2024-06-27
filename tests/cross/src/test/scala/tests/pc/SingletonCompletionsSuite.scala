@@ -245,10 +245,47 @@ class SingletonCompletionsSuite extends BaseCompletionSuite {
   )
 
   check(
-    "match-case",
+    "match-case-result",
     """|val h: "foo" =
        |  1 match
        |    case _ => "@@"
+       |""".stripMargin,
+    """|"foo": "foo"
+       |""".stripMargin
+  )
+
+  check(
+    "match-case",
+    """|def h(foo: "foo") =
+       |  foo match
+       |    case "@@" =>
+       |""".stripMargin,
+    """|"foo": "foo"
+       |""".stripMargin
+  )
+
+  check(
+    "match-case2",
+    """|def h =
+       |  ("foo" : "foo") match
+       |    case "@@" =>
+       |""".stripMargin,
+    """|"foo": "foo"
+       |""".stripMargin
+  )
+
+  check(
+    "named-args",
+    """|def h(foo: "foo") = ???
+       |def k = h(foo = "@@")
+       |""".stripMargin,
+    """|"foo": "foo"
+       |""".stripMargin
+  )
+
+  check(
+    "map-type",
+    """|def m = Map["foo", Int]("@@")
        |""".stripMargin,
     """|"foo": "foo"
        |""".stripMargin

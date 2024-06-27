@@ -10,10 +10,12 @@ import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.StdNames
+import dotty.tools.dotc.core.Symbols
 import dotty.tools.dotc.core.Types.AndType
 import dotty.tools.dotc.core.Types.AppliedType
 import dotty.tools.dotc.core.Types.ConstantType
 import dotty.tools.dotc.core.Types.OrType
+import dotty.tools.dotc.core.Types.TermRef
 import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.core.Types.TypeRef
 import dotty.tools.dotc.util.Spans.Span
@@ -21,7 +23,7 @@ import dotty.tools.dotc.util.Spans.Span
 object SingletonCompletions:
   def contribute(
     path: List[Tree],
-    tpe: Type,
+    tpe0: Type,
     completionPos: CompletionPos
   )(using ctx: Context): List[CompletionValue] =
     for {
@@ -31,6 +33,11 @@ object SingletonCompletions:
           case (l @ Literal(const)) :: _ => List(const.show -> l.span)
           case _ => Nil
       query = name.replace(Cursor.value, "")
+      tpe = tpe0 match
+        // for Tuple 2 we want to suggest first arg completion
+        case AppliedType(t: TypeRef, args) if t.classSymbol == Symbols.defn.Tuple2 && args.nonEmpty => 
+          args.head
+        case t => t
       singletonValues = collectSingletons(tpe).map(_.show)
       range = completionPos.cursorPos.withStart(span.start).withEnd(span.start + query.length).toLsp
       value <- singletonValues.collect {
@@ -57,15 +64,25 @@ object InterCompletionType:
 
   def inferType(path: List[Tree], span: Span)(using Context): Option[Type] =
     path match
-      // List(@@)
-      case SeqLiteral(_, tpe) :: _ if !tpe.tpe.isErroneous => Some(tpe.tpe)
       case Block(_, expr) :: rest if expr.span.contains(span) =>
         inferType(rest, span)
       case If(cond, _, _) :: rest if !cond.span.contains(span) =>
         inferType(rest, span)
-      case (defn: ValOrDefDef) :: rest if !defn.tpt.tpe.isErroneous => Some(defn.tpt.tpe)
       case CaseDef(_, _, body) :: Match(_, cases) :: rest if body.span.contains(span) && cases.exists(_.span.contains(span)) =>
         inferType(rest, span)
+      case NamedArg(_, arg) :: rest if arg.span.contains(span) => inferType(rest, span)
+      // x match
+      //  case @@
+      case CaseDef(pat, _, _) :: Match(sel, cases) :: rest if pat.span.contains(span) && cases.exists(_.span.contains(span)) && !sel.tpe.isErroneous =>
+        sel.tpe match
+          case tpe: TermRef => Some(tpe.symbol.info).filterNot(_.isErroneous)
+          case tpe => Some(tpe)
+      // List(@@)
+      case SeqLiteral(_, tpe) :: _ if !tpe.tpe.isErroneous =>
+        Some(tpe.tpe)
+      // val _: T = @@
+      // def _: T = @@
+      case (defn: ValOrDefDef) :: rest if !defn.tpt.tpe.isErroneous => Some(defn.tpt.tpe)
       // f(@@)
       case (app: Apply) :: rest =>
         val param =
