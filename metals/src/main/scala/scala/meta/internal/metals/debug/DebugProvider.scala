@@ -332,11 +332,15 @@ class DebugProvider(
     if (buildServer.isDebuggingProvider || buildServer.isSbt) {
       buildServer.startDebugSession(params, cancelPromise)
     } else {
-      def getDebugee: Option[MetalsDebuggee] =
+      def getDebugee: Either[String, MetalsDebuggee] =
         params.getDataKind() match {
           case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
             for {
-              id <- params.getTargets().asScala.headOption
+              id <- params
+                .getTargets()
+                .asScala
+                .headOption
+                .toRight(s"Missing build target in debug params.")
               projectInfo <- debugConfigCreator.create(id)
               scalaMainClass <- params.asScalaMainClass()
             } yield new MainClassDebugAdapter(
@@ -345,15 +349,17 @@ class DebugProvider(
               projectInfo,
               userConfig().javaHome,
             )
-          case _ => None
+          case kind =>
+            Left(s"Starting debug session for $kind in not supported.")
         }
 
       for {
         _ <- compilations.compileTargets(params.getTargets().asScala.toSeq)
       } yield {
-        val debuggee = getDebugee.getOrElse(
-          throw new RuntimeException(s"Can't resolve debugee")
-        )
+        val debuggee = getDebugee match {
+          case Right(debuggee) => debuggee
+          case Left(errorMessage) => throw new RuntimeException(errorMessage)
+        }
         val dapLogger = new DebugLogger()
         val resolver = new MetalsDebugToolsResolver()
         val handler =

@@ -166,9 +166,7 @@ final class TargetData {
       } yield path
 
     if (fromDepModules.isEmpty)
-      jvmTargets(id).map(_.jarClasspath).collectFirst { case Some(classpath) =>
-        classpath
-      }
+      jvmTargets(id).flatMap(_.jarClasspath).headOption
     else Some(fromDepModules)
   }
 

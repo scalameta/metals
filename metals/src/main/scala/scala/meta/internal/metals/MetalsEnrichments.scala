@@ -1311,11 +1311,15 @@ object MetalsEnrichments
   }
 
   implicit class XtensionDebugSessionParams(params: b.DebugSessionParams) {
-    def asScalaMainClass(): Option[b.ScalaMainClass] =
+    def asScalaMainClass(): Either[String, b.ScalaMainClass] =
       params.getDataKind() match {
         case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
           decodeJson(params.getData(), classOf[b.ScalaMainClass])
-        case _ => None
+            .toRight(s"Cannot decode $params as `ScalaMainClass`.")
+        case _ =>
+          Left(
+            s"Cannot decode params as `ScalaMainClass` incorrect data kind: ${params.getDataKind()}."
+          )
       }
   }
 

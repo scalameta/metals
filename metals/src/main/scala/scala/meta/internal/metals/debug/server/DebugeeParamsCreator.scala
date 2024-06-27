@@ -16,10 +16,14 @@ import ch.epfl.scala.debugadapter.StandaloneSourceFile
 import ch.epfl.scala.debugadapter.UnmanagedEntry
 
 class DebugeeParamsCreator(buildTargets: BuildTargets) {
-  def create(id: BuildTargetIdentifier): Option[DebugeeProject] = {
+  def create(id: BuildTargetIdentifier): Either[String, DebugeeProject] = {
     for {
-      target <- buildTargets.jvmTarget(id)
-      data <- buildTargets.targetData(id)
+      target <- buildTargets
+        .jvmTarget(id)
+        .toRight(s"No build target $id found.")
+      data <- buildTargets
+        .targetData(id)
+        .toRight(s"No data for build target $id found.")
     } yield {
 
       val libraries = data.buildTargetDependencyModules
