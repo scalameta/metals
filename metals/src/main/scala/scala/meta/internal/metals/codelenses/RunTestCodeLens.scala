@@ -108,17 +108,15 @@ final class RunTestCodeLens(
           buildServerCanDebug,
           isJVM,
         )
-      } else if (buildServerCanDebug || clientConfig.isRunProvider()) {
+      } else
         codeLenses(
           textDocument,
           buildTargetId,
           classes,
           distance,
           path,
-          buildServerCanDebug,
           isJVM,
         )
-      } else { Nil }
 
     }
 
@@ -198,7 +196,6 @@ final class RunTestCodeLens(
       classes: BuildTargetClasses.Classes,
       distance: TokenEditDistance,
       path: AbsolutePath,
-      buildServerCanDebug: Boolean,
       isJVM: Boolean,
   ): Seq[l.CodeLens] = {
     for {
@@ -212,7 +209,7 @@ final class RunTestCodeLens(
           .getOrElse(Nil)
         lazy val tests =
           // Currently tests can only be run via DAP
-          if (clientConfig.isDebuggingProvider() && buildServerCanDebug)
+          if (clientConfig.isDebuggingProvider())
             testClasses(target, classes, symbol, isJVM)
           else Nil
         val fromAnnot = DebugProvider

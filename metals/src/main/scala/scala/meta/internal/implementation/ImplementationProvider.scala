@@ -525,7 +525,11 @@ final class ImplementationProvider(
       classOwner = classOwnerInfoOpt.map(_.symbol),
       alternativeSymbols = alternativeSymbols.toList,
       overriddenSymbols = info.overriddenSymbols.toList,
-      properties = if (info.isAbstract) List(PcSymbolProperty.ABSTRACT) else Nil,
+      properties =
+        if (info.isAbstract) List(PcSymbolProperty.ABSTRACT) else Nil,
+      recursiveParents = parents,
+      annotations = info.annotations.map(_.toString()).toList,
+      memberDefsAnnotations = Nil,
     )
   }
 }
