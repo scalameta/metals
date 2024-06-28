@@ -22,8 +22,12 @@ class ChosenBuildTool(conn: () => Connection) {
           )(_ => ()) { _.getString("build_tool") }
           .headOption
       )
-    selected.foreach(toolName => currentTool.set(Some(toolName)))
-    selected
+    selected.flatMap(toolName =>
+      currentTool.updateAndGet {
+        case None => Some(toolName)
+        case some => some
+      }
+    )
   }
 
   def chooseBuildTool(buildTool: String): Int = synchronized {
