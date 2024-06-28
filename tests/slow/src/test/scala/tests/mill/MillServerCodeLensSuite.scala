@@ -57,6 +57,7 @@ class MillServerCodeLensSuite
       _ <- assertCodeLenses(
         "a/test/src/Foo.scala",
         """|// no test lense as debug is not supported
+           |<<test>><<debug test>>
            |class Foo extends munit.FunSuite {}
            |""".stripMargin,
       )
