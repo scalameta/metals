@@ -1310,6 +1310,19 @@ object MetalsEnrichments
       )
   }
 
+  implicit class XtensionDebugSessionParams(params: b.DebugSessionParams) {
+    def asScalaMainClass(): Either[String, b.ScalaMainClass] =
+      params.getDataKind() match {
+        case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
+          decodeJson(params.getData(), classOf[b.ScalaMainClass])
+            .toRight(s"Cannot decode $params as `ScalaMainClass`.")
+        case _ =>
+          Left(
+            s"Cannot decode params as `ScalaMainClass` incorrect data kind: ${params.getDataKind()}."
+          )
+      }
+  }
+
   /**
    * Strips ANSI colors.
    * As long as the color codes are valid this should correctly strip

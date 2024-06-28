@@ -71,7 +71,7 @@ object MillBuildLayout extends BuildToolLayout {
     s"""|/build.sc
         |import mill._, scalalib._
         |
-        |object MillMinimal extends ScalaModule {
+        |object a extends ScalaModule {
         |  def scalaVersion = "${scalaVersion}"
         |  $munitModule
         |}
