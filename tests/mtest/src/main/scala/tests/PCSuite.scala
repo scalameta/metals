@@ -37,7 +37,9 @@ trait PCSuite {
     .withRepositories(allRepos: _*)
 
   protected def indexJdkSources: Unit = JdkSources() match {
-    case Right(jdk) => index.addJDKSources(jdk)
+    case Right(jdk) =>
+      // We don't actually need to index, since java toplevels are trivial.
+      index.underlying.addIndexedSourceJar(jdk, Nil, dialect)
     case _ =>
   }
 

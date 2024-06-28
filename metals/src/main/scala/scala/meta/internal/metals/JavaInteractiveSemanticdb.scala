@@ -21,11 +21,11 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 
 class JavaInteractiveSemanticdb(
-    jdkVersion: JdkVersion,
     pluginJars: List[Path],
     workspace: AbsolutePath,
     buildTargets: BuildTargets,
 ) {
+
   private val readonly = workspace.resolve(Directories.readonly)
 
   def textDocument(source: AbsolutePath, text: String): s.TextDocument = {
@@ -139,34 +139,32 @@ class JavaInteractiveSemanticdb(
     //
     // Currently there is no infrastucture to detect if package belong to jigsaw module or not
     // so this case is covered only for JDK sources.
-    if (jdkVersion.hasJigsaw) {
-      source.toRelativeInside(readonly) match {
-        case Some(rel) =>
-          val names = rel.toNIO.iterator().asScala.toList.map(_.filename)
-          names match {
-            case Directories.dependenciesName :: JdkSources.zipFileName :: moduleName :: _ =>
-              List("--patch-module", s"$moduleName=$sourceRoot")
-            case _ =>
-              Nil
-          }
-        case None =>
-          if (
-            originalSource.jarPath.exists(_.filename == JdkSources.zipFileName)
-          ) {
-            originalSource.toNIO
-              .iterator()
-              .asScala
-              .headOption
-              .map(_.filename)
-              .map(moduleName =>
-                List("--patch-module", s"$moduleName=$sourceRoot")
-              )
-              .getOrElse(Nil)
-          } else {
+    source.toRelativeInside(readonly) match {
+      case Some(rel) =>
+        val names = rel.toNIO.iterator().asScala.toList.map(_.filename)
+        names match {
+          case Directories.dependenciesName :: JdkSources.zipFileName :: moduleName :: _ =>
+            List("--patch-module", s"$moduleName=$sourceRoot")
+          case _ =>
             Nil
-          }
-      }
-    } else Nil
+        }
+      case None =>
+        if (
+          originalSource.jarPath.exists(_.filename == JdkSources.zipFileName)
+        ) {
+          originalSource.toNIO
+            .iterator()
+            .asScala
+            .headOption
+            .map(_.filename)
+            .map(moduleName =>
+              List("--patch-module", s"$moduleName=$sourceRoot")
+            )
+            .getOrElse(Nil)
+        } else {
+          Nil
+        }
+    }
   }
 }
 
@@ -175,12 +173,10 @@ object JavaInteractiveSemanticdb {
   def create(
       workspace: AbsolutePath,
       buildTargets: BuildTargets,
-      jdkVersion: JdkVersion,
   ): JavaInteractiveSemanticdb = {
 
     val pluginJars = Embedded.downloadSemanticdbJavac
     new JavaInteractiveSemanticdb(
-      jdkVersion,
       pluginJars,
       workspace,
       buildTargets,
@@ -191,10 +187,7 @@ object JavaInteractiveSemanticdb {
 case class JdkVersion(
     major: Int,
     full: String,
-) {
-
-  def hasJigsaw: Boolean = major >= 9
-}
+)
 
 object JdkVersion {
 

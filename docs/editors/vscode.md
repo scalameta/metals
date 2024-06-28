@@ -13,7 +13,10 @@ title: Visual Studio Code
 ## Installation
 
 Install the Metals extension from the
-[Marketplace](https://marketplace.visualstudio.com/items?itemName=scalameta.metals) by clicking on this badge [![Install Metals extension](https://img.shields.io/badge/metals-vscode-blue.png)](vscode:extension/scalameta.metals) or via the VS Code editor:
+[Marketplace](https://marketplace.visualstudio.com/items?itemName=scalameta.metals)
+by clicking on this badge
+[![Install Metals extension](https://img.shields.io/badge/metals-vscode-blue.png)](vscode:extension/scalameta.metals)
+or via the VS Code editor:
 
 ![install stable version](https://imgur.com/Qew0fNH.png)
 
@@ -33,8 +36,11 @@ the main directory contains `build.sbt` or `build.sc` file, a Scala file is
 opened, which includes `*.sbt`, `*.scala` and `*.sc` file, or a standard Scala
 directory structure `src/main/scala` is detected.
 
-It is also possible to opt in to install the pre-release version and try out the latest cutting edge features from Metals server. 
-Apart from new features, pre-release versions also include many bugfixes. It's encouraged to use them with [SNAPSHOT](#SNAPSHOT) releases of Metals server. Using pre-release versions may result in less stable experience and it is not indented for beginners.
+It is also possible to opt in to install the pre-release version and try out the
+latest cutting edge features from Metals server. Apart from new features,
+pre-release versions also include many bugfixes. It's encouraged to use them
+with [SNAPSHOT](#SNAPSHOT) releases of Metals server. Using pre-release versions
+may result in less stable experience and it is not indented for beginners.
 Pre-release versions follow `major.minor.PATCH` versioning.
 
 ![Install the pre-release extension](https://imgur.com/CzOTleE.png)
@@ -53,23 +59,42 @@ variables.
 
 ## Configure Java version
 
-Metals separates JDK used for starting Metals server from the JDK used for the project.
+Metals separates JDK used for starting Metals server from the JDK used for the
+project.
 
 ### Metals's server JDK
-Minimum supported version is `11`. The VS Code plugin will first search for `java` executable with version equal or greater than setting using `JAVA_HOME` environment variable (via [`locate-java-home`](https://www.npmjs.com/package/@viperproject/locate-java-home)). If no matching Java found, a JDK will be downloaded using [coursier](https://get-coursier.io).
+
+Minimum supported version is `11`. The VS Code plugin will first search for
+`java` executable with version equal or greater than setting using `JAVA_HOME`
+environment variable (via
+[`locate-java-home`](https://www.npmjs.com/package/@viperproject/locate-java-home)).
+If no matching Java found, a JDK will be downloaded using
+[coursier](https://get-coursier.io).
 
 #### Settings:
-- `Java Version` - minimum JDK version accepted for running Metals server. If none found, this is also the version that will be downloaded using coursier. Allows for one of: `11`, `17`, `21`, with `17` being the default.
+
+- `Java Version` - minimum JDK version accepted for running Metals server. If
+  none found, this is also the version that will be downloaded using coursier.
+  Allows for one of: `11`, `17`, `21`, with `17` being the default.
 
 ### Project's JDK
-JDK used for compiling and running the project. Build servers like `mill` and `sbt` are started using that JDK. In case of `Bloop` Metals's server JDK is used for running the build server but appropriate `-release` flags are added for compilation. By default Metals uses JDK defined by `JAVA_HOME` environment variable, if the variable is not set is falls to using the Metals's JDK.
+
+JDK used for compiling and running the project. Build servers like `mill` and
+`sbt` are started using that JDK. In case of `Bloop` Metals's server JDK is used
+for running the build server but appropriate `-release` flags are added for
+compilation. By default Metals uses JDK defined by `JAVA_HOME` environment
+variable, if the variable is not set is falls to using the Metals's JDK.
 
 #### Settings:
-  - `Java Home` - path to project's JDK's Home. Note: this setting isn't respected for `Bazel`.
+
+- `Java Home` - path to project's JDK's Home. Note: this setting isn't respected
+  for `Bazel`.
 
 ![Java Home setting](https://i.imgur.com/sKrPKk2.png)
 
-Note: Project's JDK version should be greater or equal to Metals's server JDK version for features like completions to work correctly.
+Note: Project's JDK version should be greater or equal to Metals's server JDK
+version for features like completions to work correctly.
+
 ### macOS
 
 To globally configure `$JAVA_HOME` for all GUI applications, see
@@ -107,7 +132,7 @@ following locations:
 - "Server Properties" setting for the Metals VS Code extension, which can be
   configured per-workspace or per-user.
 
-##  Using latest Metals <a name="SNAPSHOT">SNAPSHOT</a>
+## Using latest Metals <a name="SNAPSHOT">SNAPSHOT</a>
 
 Update the "Server Version" setting to try out the latest pending Metals
 features.
@@ -156,7 +181,32 @@ supported `Run` view. When using Metals the debugger itself is
 [Bloop](https://scalacenter.github.io/bloop/), which is also responsible for
 starting the actual process.
 
-Users can begin the debugging session in two ways:
+Users can begin the debugging session in four ways:
+
+### via test explorer
+
+Since version 0.11.0 Metals implements Visual Studio Code's
+[Testing API](https://code.visualstudio.com/api/extension-guides/testing).
+
+Test Explorer UI is a new default way to run/debug test suites and replaces Code
+Lenses. The new UI adds a testing view, which shows all test suites declared in
+project's modules. From this panel it's possible to
+
+- view all discovered test suites grouped by build targets (modules) and filter
+  them
+- run/debug test
+- navigate to test's definition.
+
+![test-explorer](https://i.imgur.com/Z3VtS0O.gif)
+
+```scala mdoc:test-frameworks
+
+```
+
+If you encounter an error, create an
+[issue](https://github.com/scalameta/metals/issues).
+
+![test-explorer](https://i.imgur.com/Z3VtS0O.gif)
 
 ### via code lenses
 
@@ -255,6 +305,20 @@ To assign shortcuts just go to the Keyboard Shortcuts page (`File` ->
 `Preferences` -> `Keyboard Shortcuts`) and search for a command, click on it and
 use your preferred shortcut.
 
+### Defining jvm options
+
+Unfortunately, it's not always possible to define environment variables or jvm
+options for tests. To work around that you can use:
+
+- `.jvmopts` file inside the main project directory or `JVM_OPTS` environment
+  variable. In this case, we will filter out any -X options as it might
+  sometimes be problematic if the file is also used for specifying build tools'
+  options.
+- `.test-jvmopts` file or `TEST_JVM_OPTS` if you want to declare jvm options
+  only for your tests and/or you also want to use -X options.
+
+This will work for any method used to run tests.
+
 ## On type formatting for multiline string formatting
 
 ![on-type](https://imgur.com/a0O2vCs.gif)
@@ -287,10 +351,16 @@ paste in Visual Studio Code you can check the `Editor: Format On Paste` setting:
 ```
 
 ## Searching a symbol in the workspace
-Metals provides an alternative command to the native "Go to symbol in workspace..." command, in order to work around some VS Code limitations (see [this issue](https://github.com/microsoft/vscode/issues/98125) for more context) and provide richer search capabilities.
 
-You can invoke this command from the command palette (look for "Metals: Search symbol in workspace").
-Optionally you can also bind this command to a shortcut. For example, if you want to replace the native command with the Metals one you can configure this shortcut:
+Metals provides an alternative command to the native "Go to symbol in
+workspace..." command, in order to work around some VS Code limitations (see
+[this issue](https://github.com/microsoft/vscode/issues/98125) for more context)
+and provide richer search capabilities.
+
+You can invoke this command from the command palette (look for "Metals: Search
+symbol in workspace"). Optionally you can also bind this command to a shortcut.
+For example, if you want to replace the native command with the Metals one you
+can configure this shortcut:
 
 ```js
   {
@@ -299,22 +369,6 @@ Optionally you can also bind this command to a shortcut. For example, if you wan
     "when": "editorLangId == scala"
   }
 ```
-
-## Test Explorer
-Metals 0.11.0 implements Visual Studio Code's [Testing API](https://code.visualstudio.com/api/extension-guides/testing).  
-
-Test Explorer UI is a new default way to run/debug test suites and replaces Code
-Lenses. The new UI adds a testing view, which shows all test suites declared in
-project's modules. From this panel it's possible to
-- view all discovered test suites grouped by build targets (modules) and filter them
-- run/debug test
-- navigate to test's definition.
-
-![test-explorer](https://i.imgur.com/Z3VtS0O.gif)
-
-```scala mdoc:test-frameworks
-```
-If you encounter an error, create an [issue](https://github.com/scalameta/metals/issues).
 
 ## Coming from IntelliJ
 
@@ -333,4 +387,5 @@ extension to use default IntelliJ shortcuts with VS Code.
 
 ## GitHub Codespaces and GitHub.dev support
 
-See https://scalameta.org/metals/docs/editors/online-ides#github-codespaces-and-githubdev
+See
+https://scalameta.org/metals/docs/editors/online-ides#github-codespaces-and-githubdev

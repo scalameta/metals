@@ -24,8 +24,12 @@ import scala.meta.internal.metals.TargetData
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.scalacli.ScalaCli.ScalaCliCommand
+import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
+
+import coursier.core.Version
 
 class ScalaCliServers(
     compilers: () => Compilers,
@@ -55,14 +59,14 @@ class ScalaCliServers(
   private val serversRef: AtomicReference[Queue[ScalaCli]] =
     new AtomicReference(Queue.empty)
 
-  private lazy val localScalaCli: Option[Seq[String]] =
+  private lazy val localScalaCli: Option[ScalaCliCommand] =
     ScalaCli.localScalaCli(userConfig())
 
   def servers: Iterable[ScalaCli] = serversRef.get()
 
   def setupIDE(path: AbsolutePath): Future[Unit] = {
     localScalaCli
-      .map { cliCommand =>
+      .map { case ScalaCliCommand(cliCommand, _) =>
         val command = cliCommand ++ Seq("setup-ide", path.toString())
         scribe.info(s"Running $command")
         val proc = SystemProcess.run(
@@ -89,16 +93,17 @@ class ScalaCliServers(
       )
       jvmBased()
     }
-  }.toList
+  }
 
-  def jvmBased(): Seq[String] = {
+  def jvmBased(): ScalaCliCommand = {
     val cp = ScalaCli.scalaCliClassPath()
-    Seq(
+    val command = Seq(
       ScalaCli.javaCommand,
       "-cp",
       cp.mkString(File.pathSeparator),
       ScalaCli.scalaCliMainClass,
     )
+    ScalaCliCommand(command, Version(V.scalaCliVersion))
   }
 
   def lastImportedBuilds: List[(ImportedBuild, TargetData)] =

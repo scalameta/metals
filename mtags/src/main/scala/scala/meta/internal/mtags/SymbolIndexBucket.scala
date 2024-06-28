@@ -60,13 +60,6 @@ class SymbolIndexBucket(
     } else List.empty
   }
 
-  def addJDKSources(
-      jar: AbsolutePath
-  ): Unit = {
-    sourceJars.addEntry(jar.toNIO)
-    PlatformFileIO.newJarFileSystem(jar, create = false)
-  }
-
   def addSourceJar(
       jar: AbsolutePath
   ): List[IndexingResult] = {
@@ -102,6 +95,7 @@ class SymbolIndexBucket(
         }
       }
     }
+    PlatformFileIO.newJarFileSystem(jar, create = false)
   }
 
   def addSourceFile(

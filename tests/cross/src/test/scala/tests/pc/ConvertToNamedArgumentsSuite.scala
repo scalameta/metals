@@ -135,6 +135,64 @@ class ConvertToNamedArgumentsSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "extends",
+    """|abstract class AAA(a: Int)
+       |
+       |class B extends <<AAA(2)>>
+       |""".stripMargin,
+    List(0),
+    """|abstract class AAA(a: Int)
+       |
+       |class B extends AAA(a = 2)
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "extends-ugly-formatting",
+    """|abstract class A(a: Int)
+       |
+       |class B
+       |  extends <<A (2)>>
+       |""".stripMargin,
+    List(0),
+    """|abstract class A(a: Int)
+       |
+       |class B
+       |  extends A (a = 2)
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "extends1".tag(IgnoreScala2),
+    """|abstract class A(a: Int)
+       |trait C(c: Int)
+       |
+       |class B extends <<A(2)>> with C(4)
+       |""".stripMargin,
+    List(0),
+    """|abstract class A(a: Int)
+       |trait C(c: Int)
+       |
+       |class B extends A(a = 2) with C(4)
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "extends2".tag(IgnoreScala2),
+    """|abstract class A(a: Int)
+       |trait C(c: Int)
+       |
+       |class B extends A(2) with <<C(4)>>
+       |""".stripMargin,
+    List(0),
+    """|abstract class A(a: Int)
+       |trait C(c: Int)
+       |
+       |class B extends A(2) with C(c = 4)
+       |""".stripMargin
+  )
+
   def checkError(
       name: TestOptions,
       original: String,

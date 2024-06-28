@@ -673,7 +673,29 @@ class ProjectMetalsLspService(
       () => bspConnector.resolve(buildTool),
       buildTools,
       connectionBspStatus,
+      () => getProjectsJavaInfo,
     )
+
+  private def getProjectsJavaInfo: Option[JavaInfo] = {
+    val fromScalaTarget =
+      for {
+        scalaTarget <- mainBuildTargetsData.allScala.headOption
+        home <- scalaTarget.jvmHome.flatMap(_.toAbsolutePathSafe)
+        version <- scalaTarget.jvmVersion
+          .flatMap(JdkVersion.parse)
+          .orElse(JdkVersion.maybeJdkVersionFromJavaHome(Some(home)))
+      } yield JavaInfo(home.toString(), version)
+
+    fromScalaTarget.orElse {
+      val userJavaHome =
+        bspSession.flatMap {
+          // we don't respect `userConfig.javaHome` for Bazel
+          case bs if bs.main.isBazel => None
+          case _ => userConfig.javaHome
+        }
+      JavaInfo.getInfo(userJavaHome)
+    }
+  }
 
   def ammoniteStart(): Future[Unit] = ammonite.start()
   def ammoniteStop(): Future[Unit] = ammonite.stop()

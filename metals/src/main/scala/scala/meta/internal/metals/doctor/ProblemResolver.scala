@@ -5,6 +5,7 @@ import scala.collection.mutable.ListBuffer
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.JavaInfo
 import scala.meta.internal.metals.JavaTarget
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.JdkVersion
@@ -20,9 +21,8 @@ class ProblemResolver(
     workspace: AbsolutePath,
     mtagsResolver: MtagsResolver,
     currentBuildServer: () => Option[BspSession],
-    javaHome: () => Option[String],
     isTestExplorerProvider: () => Boolean,
-    maybeJDKVersion: Option[JdkVersion],
+    javaInfo: () => Option[JavaInfo],
 ) {
 
   def isUnsupportedBloopVersion(): Boolean = {
@@ -158,12 +158,6 @@ class ProblemResolver(
         None
       }
 
-    val bazelSemanticdbMessage = if (isBazelBsp) {
-      Some(Messages.CheckDoctor.bazelNavigation)
-    } else {
-      None
-    }
-
     val allMessages = List(
       deprecatedMessage,
       deprecatedRemovedMessage,
@@ -174,7 +168,6 @@ class ProblemResolver(
       unsupportedSbtMessage,
       futureSbtMessage,
       semanticdbMessage,
-      bazelSemanticdbMessage,
     ).flatten ++ javaIssues
 
     def scalaVersionsMessages = List(
@@ -243,7 +236,7 @@ class ProblemResolver(
       case _ => None
     }
 
-    def javaSourcesProblem = JdkSources(javaHome()) match {
+    def javaSourcesProblem = JdkSources(javaInfo().map(_.home)) match {
       case Left(notFound) => Some(MissingJdkSources(notFound.candidates))
       case Right(_) => None
     }
@@ -337,18 +330,18 @@ class ProblemResolver(
     else isWrongJavaRelease(javaTarget)
   }
 
-  private def isBazelBsp = currentBuildServer().exists(_.main.isBazel)
+  def isBazelBsp: Boolean = currentBuildServer().exists(_.main.isBazel)
 
   private def isWrongJavaRelease(
       javaTarget: JavaTarget
   ): Option[JavaProblem] = {
     val releaseVersion = javaTarget.releaseVersion.flatMap(JdkVersion.parse)
-    releaseVersion.zip(maybeJDKVersion) match {
+    releaseVersion.zip(javaInfo().map(_.version)) match {
       case Some((releaseVersion, jvmHomeVersion))
           if jvmHomeVersion.major < releaseVersion.major =>
         Some(
           WrongJavaReleaseVersion(
-            jvmHomeVersion.toString(),
+            jvmHomeVersion.major.toString(),
             releaseVersion.major.toString(),
           )
         )

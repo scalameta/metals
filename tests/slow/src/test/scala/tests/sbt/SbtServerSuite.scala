@@ -118,7 +118,7 @@ class SbtServerSuite
              |object A {
              |  val foo: Int = "aaa"
              |}
-             |/.metals/
+             |/.metals/a.txt
              |
              |""".stripMargin,
           V.scala213,

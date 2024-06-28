@@ -287,10 +287,13 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
 
       // Checked manually it is actually there and operated under artificial ID link "50"
       externalDep = Map(
-        50 -> (new Position(
-          60,
-          6,
-        ), workspace.toURI.toString + ".metals/readonly/dependencies/circe-core_2.13-0.12.0-sources.jar/io/circe/Decoder.scala")
+        50 -> (
+          new Position(
+            60,
+            6,
+          ),
+          workspace.toURI.toString + ".metals/readonly/dependencies/circe-core_2.13-0.12.0-sources.jar/io/circe/Decoder.scala",
+        )
       )
 
       (context, assertions) = parseWithUri(code, path)

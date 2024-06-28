@@ -30,6 +30,7 @@ import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.JvmOpts
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.UnresolvedDebugSessionParams
 import scala.meta.internal.metals.MetalsBuildClient
@@ -718,11 +719,16 @@ class DebugProvider(
         val env = Option(params.env).toList.flatMap(createEnvList)
 
         envFromFile(Option(params.envFile)).map { envFromFile =>
+          val jvmOpts =
+            JvmOpts.fromWorkspaceOrEnvForTest(workspace).getOrElse(Nil)
           val scalaTestSuite = new b.ScalaTestSuites(
             List(
               new b.ScalaTestSuiteSelection(params.testClass, Nil.asJava)
             ).asJava,
-            Option(params.jvmOptions).getOrElse(Nil.asJava),
+            Option(params.jvmOptions)
+              .map(jvmOpts ++ _.asScala)
+              .getOrElse(jvmOpts)
+              .asJava,
             (envFromFile ::: env).asJava,
           )
           val debugParams = new b.DebugSessionParams(
@@ -759,17 +765,20 @@ class DebugProvider(
       request: ScalaTestSuitesDebugRequest,
   )(implicit ec: ExecutionContext): Future[DebugSessionParams] = {
     def makeDebugSession() = {
+      val jvmOpts = JvmOpts.fromWorkspaceOrEnvForTest(workspace).getOrElse(Nil)
       val debugSession =
         if (supportsTestSelection(request.target)) {
           val testSuites =
-            request.requestData.copy(suites = request.requestData.suites.map {
-              suite =>
+            request.requestData.copy(
+              suites = request.requestData.suites.map { suite =>
                 testProvider.getFramework(buildTarget, suite) match {
                   case JUnit4 | MUnit =>
                     suite.copy(tests = suite.tests.map(escapeTestName))
                   case _ => suite
                 }
-            })
+              },
+              jvmOptions = jvmOpts.asJava,
+            )
           val params = new b.DebugSessionParams(
             singletonList(buildTarget.getId)
           )

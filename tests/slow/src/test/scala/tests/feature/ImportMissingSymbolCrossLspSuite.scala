@@ -194,7 +194,40 @@ class ImportMissingSymbolCrossLspSuite
        |  }
        |}
        |""".stripMargin,
-    scalaVersion = "3.3.3",
+    scalaVersion = V.scala3,
+  )
+
+  check(
+    "i6475-2",
+    """|package com.randomMetalsTest.app.latestCommentByItem.domain.projection.latestCommentByItemView
+       |package subscriber {
+       |  class DeleteLatestCommentByItemViewOnLatestCommentByItemDeleted
+       |}
+       |package a {
+       |  object O {
+       |    val g: <<DeleteLatestCommentByItemViewOnLatestCommentByItemDeleted>> = ???
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${ImportMissingSymbol.title(
+         "DeleteLatestCommentByItemViewOnLatestCommentByItemDeleted",
+         "com.randomMetalsTest.app.latestCommentByItem.domain.projection.latestCommentByItemView.subscriber",
+       )}
+        |${CreateNewSymbol.title("DeleteLatestCommentByItemViewOnLatestCommentByItemDeleted")}
+        |""".stripMargin,
+    """|package com.randomMetalsTest.app.latestCommentByItem.domain.projection.latestCommentByItemView
+       |
+       |import com.randomMetalsTest.app.latestCommentByItem.domain.projection.latestCommentByItemView.subscriber.DeleteLatestCommentByItemViewOnLatestCommentByItemDeleted
+       |package subscriber {
+       |  class DeleteLatestCommentByItemViewOnLatestCommentByItemDeleted
+       |}
+       |package a {
+       |  object O {
+       |    val g: DeleteLatestCommentByItemViewOnLatestCommentByItemDeleted = ???
+       |  }
+       |}
+       |""".stripMargin,
+    scalaVersion = V.scala3,
   )
 
 }

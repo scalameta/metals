@@ -13,7 +13,7 @@ class SbtOptsSuite extends BaseSuite {
       val root = FileLayout.fromString(original)
       val obtained =
         SbtOpts.fromWorkspaceOrEnv(root).mkString("\n") ++
-          JvmOpts.fromWorkspaceOrEnv(root).mkString("\n")
+          JvmOpts.fromWorkspaceOrEnv(root).getOrElse(Nil).mkString("\n")
       assertNoDiff(obtained, expected)
     }
   }

@@ -32,19 +32,11 @@ abstract class SupportedScalaVersions {
       metalsVersion: String,
       timeout: FiniteDuration,
   ) = {
-    if (metalsVersion.contains("SNAPSHOT")) {
-      supportedInMetals(
-        "https://oss.sonatype.org/content/repositories/snapshots/org/scalameta/",
-        metalsVersion,
-        timeout,
-      )
-    } else {
-      supportedInMetals(
-        "https://repo1.maven.org/maven2/org/scalameta/",
-        metalsVersion,
-        timeout,
-      )
-    }
+    val url =
+      if (metalsVersion.contains("SNAPSHOT"))
+        "https://oss.sonatype.org/content/repositories/snapshots/org/scalameta/"
+      else "https://repo1.maven.org/maven2/org/scalameta/"
+    supportedInMetals(url, metalsVersion, timeout)
   }
 
   private def supportedInMetals(

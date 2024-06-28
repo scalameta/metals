@@ -737,6 +737,36 @@ class Scala3CodeActionLspSuite
        |""".stripMargin,
   )
 
+  check(
+    "convert-to-named-args-extends-1",
+    """|abstract class A(a: Int)
+       |trait C(c: Int)
+       |
+       |class B extends A<<(>>2) with C(4)
+       |""".stripMargin,
+    s"${ConvertToNamedArguments.title("A(...)")}",
+    """|abstract class A(a: Int)
+       |trait C(c: Int)
+       |
+       |class B extends A(a = 2) with C(4)
+       |""".stripMargin,
+  )
+
+  check(
+    "convert-to-named-args-extends-2",
+    """|abstract class A(a: Int)
+       |trait C(c: Int)
+       |
+       |class B extends A(2) with C<<(>>4)
+       |""".stripMargin,
+    s"${ConvertToNamedArguments.title("C(...)")}",
+    """|abstract class A(a: Int)
+       |trait C(c: Int)
+       |
+       |class B extends A(2) with C(c = 4)
+       |""".stripMargin,
+  )
+
   private def getPath(name: String) = s"a/src/main/scala/a/$name"
 
   def checkExtractedMember(

@@ -1,7 +1,9 @@
-package tests
+package scala.meta.internal.builds.tests
 
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.metals.UserConfiguration
+
+import tests._
 
 class MillVersionSuite extends BaseSuite {
 
@@ -12,8 +14,8 @@ class MillVersionSuite extends BaseSuite {
     test(expected) {
       val root = FileLayout.fromString(layout)
       val obtained =
-        MillBuildTool(() => UserConfiguration(), root).bloopInstallArgs(root)
-      assert(obtained.contains(expected))
+        MillBuildTool(() => UserConfiguration(), root).getMillVersion(root)
+      assertEquals(obtained, expected)
     }
   }
 

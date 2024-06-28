@@ -251,6 +251,19 @@ class ConvertToNamedArgumentsLspSuite
     filterAction = filterAction,
   )
 
+  check(
+    "extends",
+    """|abstract class A(a: Int)
+       |
+       |class B extends A(<<2>>)
+       |""".stripMargin,
+    s"${ConvertToNamedArguments.title("A(...)")}",
+    """|abstract class A(a: Int)
+       |
+       |class B extends A(a = 2)
+       |""".stripMargin,
+  )
+
   checkNoAction(
     "cursor-outside-func",
     """|object Something {
