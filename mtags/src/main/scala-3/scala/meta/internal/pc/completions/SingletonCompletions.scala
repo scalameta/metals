@@ -64,10 +64,15 @@ object InterCompletionType:
 
   def inferType(path: List[Tree], span: Span)(using Context): Option[Type] =
     path match
+      case Typed(expr, tpt) :: _ if expr.span.contains(span) && !tpt.tpe.isErroneous => Some(tpt.tpe)
       case Block(_, expr) :: rest if expr.span.contains(span) =>
         inferType(rest, span)
-      case If(cond, _, _) :: rest if !cond.span.contains(span) =>
-        inferType(rest, span)
+      case Bind(_, body) :: rest if body.span.contains(span) => inferType(rest, span)
+      case Alternative(_) :: rest => inferType(rest, span)
+      case Try(block, _, _) :: rest if block.span.contains(span) => inferType(rest, span)
+      case CaseDef(_, _, body) :: Try(_, cases, _) :: rest if body.span.contains(span) && cases.exists(_.span.contains(span)) => inferType(rest, span)
+      case If(cond, _, _) :: rest if !cond.span.contains(span) => inferType(rest, span)
+      case If(cond, _, _) :: rest if cond.span.contains(span) => Some(Symbols.defn.BooleanType)
       case CaseDef(_, _, body) :: Match(_, cases) :: rest if body.span.contains(span) && cases.exists(_.span.contains(span)) =>
         inferType(rest, span)
       case NamedArg(_, arg) :: rest if arg.span.contains(span) => inferType(rest, span)

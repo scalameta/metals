@@ -120,6 +120,13 @@ public abstract class PresentationCompiler {
 	}
 
 	/**
+	 * Returns the inferred expected type.
+	 */
+	public CompletableFuture<Optional<String>> inferExpectedType(OffsetParams params) {
+		return CompletableFuture.completedFuture(Optional.empty());
+	}
+
+	/**
 	 * Return decoded and pretty printed TASTy content for .scala or .tasty file.
 	 * 
 	 */
