@@ -1310,6 +1310,19 @@ object MetalsEnrichments
       )
   }
 
+  implicit class XtensionDebugSessionParams(params: b.DebugSessionParams) {
+    def asScalaMainClass(): Either[String, b.ScalaMainClass] =
+      params.getDataKind() match {
+        case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
+          decodeJson(params.getData(), classOf[b.ScalaMainClass])
+            .toRight(s"Cannot decode $params as `ScalaMainClass`.")
+        case _ =>
+          Left(
+            s"Cannot decode params as `ScalaMainClass` incorrect data kind: ${params.getDataKind()}."
+          )
+      }
+  }
+
   /**
    * Strips ANSI colors.
    * As long as the color codes are valid this should correctly strip
@@ -1318,16 +1331,25 @@ object MetalsEnrichments
   def filterANSIColorCodes(str: String): String =
     str.replaceAll("\u001b\\[1A\u001b\\[K|\u001B\\[[;\\d]*m", "")
 
-  def executeBatched[T](toExec: List[() => Future[T]], batchSize: Int)(implicit
+  type IsCancelled = () => Boolean
+
+  def executeBatched[T](
+      toExec: List[IsCancelled => Future[T]],
+      batchSize: Int,
+      isCancelled: IsCancelled,
+  )(implicit
       ec: ExecutionContext
   ): Future[List[T]] = {
     toExec
       .grouped(batchSize)
       .foldLeft(Future.successful(List.empty[List[T]])) { case (accF, toExec) =>
-        for {
-          acc <- accF
-          curr <- Future.sequence(toExec.map(_()))
-        } yield curr :: acc
+        if (isCancelled()) Future.successful(Nil)
+        else {
+          for {
+            acc <- accF
+            curr <- Future.sequence(toExec.map(_(isCancelled)))
+          } yield curr :: acc
+        }
       }
       .map(_.reverse.flatten)
   }

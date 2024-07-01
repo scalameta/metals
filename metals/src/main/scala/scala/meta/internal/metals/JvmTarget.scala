@@ -3,7 +3,13 @@ package scala.meta.internal.metals
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+
 trait JvmTarget {
+
+  def displayName: String
+
+  def id: BuildTargetIdentifier
 
   /**
    * If the build server supports lazy classpath resolution, we will

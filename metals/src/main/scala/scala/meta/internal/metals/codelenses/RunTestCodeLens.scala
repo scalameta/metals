@@ -165,7 +165,6 @@ final class RunTestCodeLens(
       occurence: SymbolOccurrence,
       textDocument: TextDocument,
       target: BuildTargetIdentifier,
-      buildServerCanDebug: Boolean,
   ): Seq[l.Command] = {
     if (occurence.symbol.endsWith("#main().")) {
       textDocument.symbols
@@ -182,7 +181,6 @@ final class RunTestCodeLens(
                 Nil.asJava,
                 Nil.asJava,
               ),
-              buildServerCanDebug,
               isJVM = true,
             )
           else
@@ -210,9 +208,9 @@ final class RunTestCodeLens(
       commands = {
         val main = classes.mainClasses
           .get(symbol)
-          .map(mainCommand(target, _, buildServerCanDebug, isJVM))
+          .map(mainCommand(target, _, isJVM))
           .getOrElse(Nil)
-        val tests =
+        lazy val tests =
           // Currently tests can only be run via DAP
           if (clientConfig.isDebuggingProvider() && buildServerCanDebug)
             testClasses(target, classes, symbol, isJVM)
@@ -222,12 +220,12 @@ final class RunTestCodeLens(
           .flatMap { symbol =>
             classes.mainClasses
               .get(symbol)
-              .map(mainCommand(target, _, buildServerCanDebug, isJVM))
+              .map(mainCommand(target, _, isJVM))
           }
           .getOrElse(Nil)
         val javaMains =
           if (path.isJava)
-            javaLenses(occurrence, textDocument, target, buildServerCanDebug)
+            javaLenses(occurrence, textDocument, target)
           else Nil
         main ++ tests ++ fromAnnot ++ javaMains
       }
@@ -260,7 +258,7 @@ final class RunTestCodeLens(
     val main =
       classes.mainClasses
         .get(expectedMainClass)
-        .map(mainCommand(target, _, buildServerCanDebug, isJVM))
+        .map(mainCommand(target, _, isJVM))
         .getOrElse(Nil)
 
     val fromAnnotations = textDocument.occurrences.flatMap { occ =>
@@ -268,7 +266,7 @@ final class RunTestCodeLens(
         sym <- DebugProvider.mainFromAnnotation(occ, textDocument)
         cls <- classes.mainClasses.get(sym)
         range <- occurrenceRange(occ, distance)
-      } yield mainCommand(target, cls, buildServerCanDebug, isJVM).map { cmd =>
+      } yield mainCommand(target, cls, isJVM).map { cmd =>
         new l.CodeLens(range, cmd, null)
       }
     }.flatten
@@ -325,7 +323,6 @@ final class RunTestCodeLens(
   private def mainCommand(
       target: b.BuildTargetIdentifier,
       main: b.ScalaMainClass,
-      buildServerCanDebug: Boolean,
       isJVM: Boolean,
   ): List[l.Command] = {
     val javaBinary = buildTargets
@@ -353,7 +350,7 @@ final class RunTestCodeLens(
       sessionParams(target, dataKind, data)
     }
 
-    if (clientConfig.isDebuggingProvider() && buildServerCanDebug && isJVM)
+    if (clientConfig.isDebuggingProvider() && isJVM)
       List(
         command("run", StartRunSession, params),
         command("debug", StartDebugSession, params),

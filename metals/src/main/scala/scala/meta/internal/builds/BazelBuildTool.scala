@@ -78,7 +78,7 @@ case class BazelBuildTool(
 object BazelBuildTool {
   val name: String = "bazel"
   val bspName: String = "bazelbsp"
-  val version: String = "3.2.0-20240523-fed6c36-NIGHTLY"
+  val version: String = "3.2.0-20240629-e3d8bdf-NIGHTLY"
 
   val mainClass = "org.jetbrains.bsp.bazel.install.Install"
 

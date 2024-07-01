@@ -16,10 +16,10 @@ object V {
   val bazelScalaVersion = "2.13.12"
   val ammonite3Version = "3.3.3"
 
-  val ammonite = "3.0.0-M2-12-951bbc1e"
+  val ammonite = "3.0.0-M2-13-23a8ef64"
   val betterMonadicFor = "0.3.1"
   val bloop = "1.5.18"
-  val bloopConfig = "1.5.5"
+  val bloopConfig = "2.0.2"
   val bsp = "2.2.0-M2"
   val coursier = "2.1.10"
   val coursierInterfaces =
@@ -30,7 +30,7 @@ object V {
   val gitter8Version = "0.16.2"
   val gradleBloop = "1.6.2"
   val java8Compat = "1.0.2"
-  val javaSemanticdb = "0.9.10"
+  val javaSemanticdb = "0.10.0"
   val jsoup = "1.17.2"
   val kindProjector = "0.13.3"
   val lsp4jV = "0.23.1"
@@ -41,7 +41,7 @@ object V {
   val pprint = "0.7.3"
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
-  val scalaCli = "1.3.2"
+  val scalaCli = "1.4.0"
   val scalafix = "0.12.1"
   val scalafmt = "3.7.15"
   val scalameta = "4.9.7"
@@ -113,7 +113,7 @@ object V {
 
   // whenever version is removed please add it to MtagsResolver under last supported Metals version
   def deprecatedScala3Versions =
-    Seq("3.3.2", "3.2.2", "3.1.3")
+    Seq("3.3.2", "3.2.2")
 
   // NOTE if you had a new Scala Version make sure it's contained in quickPublishScalaVersions
   def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions

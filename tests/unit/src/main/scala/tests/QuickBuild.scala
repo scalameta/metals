@@ -262,6 +262,7 @@ case class QuickBuild(
               filterLibraryFromClasspath = true,
             )
           ),
+          None,
         )
       ),
       java = Some(C.Java(Nil)),

@@ -56,15 +56,17 @@ class BySymbolPCReferencesProvider(
     override val compiler: MetalsGlobal,
     params: VirtualFileParams,
     override val includeDefinition: Boolean,
-    semanticDbSymbol: String
+    semanticDbSymbols: Set[String]
 ) extends WithCompilationUnit(compiler, params)
     with PcCollector[(String, Option[l.Range])]
     with PcReferencesProvider {
-  def result(): List[(String, Option[l.Range])] =
-    compiler
-      .compilerSymbol(semanticDbSymbol)
-      .map(sought => resultWithSought(symbolAlternatives(sought)))
-      .getOrElse(Nil)
+  def result(): List[(String, Option[l.Range])] = {
+    val sought = semanticDbSymbols
+      .flatMap(compiler.compilerSymbol(_))
+      .flatMap(symbolAlternatives(_))
+    if (sought.isEmpty) Nil
+    else resultWithSought(sought)
+  }
 }
 
 object PcReferencesProvider {
@@ -88,6 +90,8 @@ object PcReferencesProvider {
         compiler,
         params.file(),
         params.includeDefinition(),
-        params.offsetOrSymbol().getRight()
+        params.alternativeSymbols().asScala.toSet + params
+          .offsetOrSymbol()
+          .getRight()
       )
 }

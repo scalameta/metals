@@ -13,6 +13,7 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.concurrent.duration.Duration
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -51,6 +52,11 @@ import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.config.RunType
 import scala.meta.internal.metals.config.RunType._
+import scala.meta.internal.metals.debug.server.DebugLogger
+import scala.meta.internal.metals.debug.server.DebugeeParamsCreator
+import scala.meta.internal.metals.debug.server.MainClassDebugAdapter
+import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
+import scala.meta.internal.metals.debug.server.MetalsDebuggee
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.OnDemandSymbolIndex
@@ -65,6 +71,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.DebugSessionParams
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.{debugadapter => dap}
 import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.MessageParams
@@ -91,10 +98,13 @@ class DebugProvider(
     sourceMapper: SourceMapper,
     userConfig: () => UserConfiguration,
     testProvider: TestSuitesProvider,
-) extends Cancelable
+)(implicit ec: ExecutionContext)
+    extends Cancelable
     with LogForwarder {
 
   import DebugProvider._
+
+  private val debugConfigCreator = new DebugeeParamsCreator(buildTargets)
 
   private val runningLocal = new ju.concurrent.atomic.AtomicBoolean(false)
 
@@ -251,13 +261,13 @@ class DebugProvider(
       val targets = parameters.getTargets().asScala.toSeq
 
       compilations.compilationFinished(targets).flatMap { _ =>
-        val conn = buildServer
-          .startDebugSession(parameters, cancelPromise)
-          .map { uri =>
-            val socket = connect(uri)
-            connectedToServer.trySuccess(())
-            socket
-          }
+        val conn =
+          startDebugSession(buildServer, parameters, cancelPromise)
+            .map { uri =>
+              val socket = connect(uri)
+              connectedToServer.trySuccess(())
+              socket
+            }
 
         val startupTimeout = clientConfig.initialConfig.debugServerStartTimeout
 
@@ -313,6 +323,55 @@ class DebugProvider(
 
     connectedToServer.future.map(_ => server)
   }
+
+  private def startDebugSession(
+      buildServer: BuildServerConnection,
+      params: DebugSessionParams,
+      cancelPromise: Promise[Unit],
+  ) =
+    if (buildServer.isDebuggingProvider || buildServer.isSbt) {
+      buildServer.startDebugSession(params, cancelPromise)
+    } else {
+      def getDebugee: Either[String, MetalsDebuggee] =
+        params.getDataKind() match {
+          case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
+            for {
+              id <- params
+                .getTargets()
+                .asScala
+                .headOption
+                .toRight(s"Missing build target in debug params.")
+              projectInfo <- debugConfigCreator.create(id)
+              scalaMainClass <- params.asScalaMainClass()
+            } yield new MainClassDebugAdapter(
+              workspace,
+              scalaMainClass,
+              projectInfo,
+              userConfig().javaHome,
+            )
+          case kind =>
+            Left(s"Starting debug session for $kind in not supported.")
+        }
+
+      for {
+        _ <- compilations.compileTargets(params.getTargets().asScala.toSeq)
+      } yield {
+        val debuggee = getDebugee match {
+          case Right(debuggee) => debuggee
+          case Left(errorMessage) => throw new RuntimeException(errorMessage)
+        }
+        val dapLogger = new DebugLogger()
+        val resolver = new MetalsDebugToolsResolver()
+        val handler =
+          dap.DebugServer.run(
+            debuggee,
+            resolver,
+            dapLogger,
+            gracePeriod = Duration(5, TimeUnit.SECONDS),
+          )
+        handler.uri
+      }
+    }
 
   /**
    * Given a BuildTargetIdentifier either get the displayName of that build
@@ -719,7 +778,8 @@ class DebugProvider(
         val env = Option(params.env).toList.flatMap(createEnvList)
 
         envFromFile(Option(params.envFile)).map { envFromFile =>
-          val jvmOpts = JvmOpts.fromWorkspaceOrEnv(workspace)
+          val jvmOpts =
+            JvmOpts.fromWorkspaceOrEnvForTest(workspace).getOrElse(Nil)
           val scalaTestSuite = new b.ScalaTestSuites(
             List(
               new b.ScalaTestSuiteSelection(params.testClass, Nil.asJava)
@@ -764,7 +824,7 @@ class DebugProvider(
       request: ScalaTestSuitesDebugRequest,
   )(implicit ec: ExecutionContext): Future[DebugSessionParams] = {
     def makeDebugSession() = {
-      val jvmOpts = JvmOpts.fromWorkspaceOrEnv(workspace)
+      val jvmOpts = JvmOpts.fromWorkspaceOrEnvForTest(workspace).getOrElse(Nil)
       val debugSession =
         if (supportsTestSelection(request.target)) {
           val testSuites =
