@@ -19,13 +19,6 @@ jobs:
         os: [windows-latest, macOS-12, ubuntu-latest]
         java: ["17"]
         shard: [1, 2]
-        include:
-          - os: ubuntu-latest
-            java: "11"
-            shard: 1
-          - os: ubuntu-latest
-            java: "11"
-            shard: 2
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
