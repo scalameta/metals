@@ -15,7 +15,10 @@ case class PcSymbolInformation(
     classOwner: Option[String],
     overriddenSymbols: List[String],
     alternativeSymbols: List[String],
-    properties: List[PcSymbolProperty]
+    properties: List[PcSymbolProperty],
+    recursiveParents: List[String],
+    annotations: List[String],
+    memberDefsAnnotations: List[String]
 ) {
   def asJava: PcSymbolInformationJava =
     PcSymbolInformationJava(
@@ -26,7 +29,10 @@ case class PcSymbolInformation(
       classOwner.getOrElse(""),
       overriddenSymbols.asJava,
       alternativeSymbols.asJava,
-      properties.asJava
+      properties.asJava,
+      recursiveParents.asJava,
+      annotations.asJava,
+      memberDefsAnnotations.asJava
     )
 }
 
@@ -38,7 +44,10 @@ case class PcSymbolInformationJava(
     classOwner: String,
     overriddenSymbols: ju.List[String],
     alternativeSymbols: ju.List[String],
-    properties: ju.List[PcSymbolProperty]
+    properties: ju.List[PcSymbolProperty],
+    override val recursiveParents: ju.List[String],
+    override val annotations: ju.List[String],
+    override val memberDefsAnnotations: ju.List[String]
 ) extends IPcSymbolInformation
 
 object PcSymbolInformation {
@@ -52,6 +61,9 @@ object PcSymbolInformation {
       else None,
       info.overriddenSymbols().asScala.toList,
       info.alternativeSymbols().asScala.toList,
-      info.properties().asScala.toList
+      info.properties().asScala.toList,
+      info.recursiveParents().asScala.toList,
+      info.annotations().asScala.toList,
+      info.memberDefsAnnotations().asScala.toList
     )
 }

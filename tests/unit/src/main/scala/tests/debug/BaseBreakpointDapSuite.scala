@@ -677,6 +677,7 @@ abstract class BaseBreakpointDapSuite(
   )
 
   test("remove-breakpoints") {
+    cleanWorkspace()
     val debugLayout = DebugWorkspaceLayout(
       """|/a/src/main/scala/a/Main.scala
          |package a

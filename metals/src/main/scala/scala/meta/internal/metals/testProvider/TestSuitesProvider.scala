@@ -553,12 +553,15 @@ final class TestSuitesProvider(
   def getFramework(
       target: BuildTarget,
       selection: ScalaTestSuiteSelection,
-  ): TestFramework = {
-    val framework =
-      for {
-        testEntry <- index.get(target, FullyQualifiedName(selection.className))
-      } yield testEntry.suiteDetails.framework
-    framework.getOrElse(Unknown)
+  ): TestFramework = getFromCache(target, selection.className)
+    .map(_.suiteDetails.framework)
+    .getOrElse(Unknown)
+
+  def getFromCache(
+      target: BuildTarget,
+      className: String,
+  ): Option[TestEntry] = {
+    index.get(target, FullyQualifiedName(className))
   }
 
 }

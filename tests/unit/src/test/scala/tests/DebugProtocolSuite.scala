@@ -443,6 +443,8 @@ class DebugProtocolSuite
            |}
            |""".stripMargin
       )
+      _ <- server.server.indexingPromise.future
+      _ <- server.didOpen("a/src/main/scala/a/Foo.scala")
       debugger <- server.startDebuggingUnresolved(
         new DebugUnresolvedTestClassParams(
           "a.Foo"
