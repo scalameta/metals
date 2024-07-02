@@ -1,7 +1,23 @@
 package tests
 
+import scala.meta.internal.metals.StacktraceAnalyzer
+
 class AnalyzeStacktraceLspSuite
     extends BaseAnalyzeStacktraceSuite("analyzestacktrace") {
+
+  test("empty-package") {
+    assertEquals(
+      StacktraceAnalyzer.toToplevelSymbol("_empty_/Main$").head,
+      "_empty_/Main.",
+    )
+  }
+
+  test("no-package") {
+    assertEquals(
+      StacktraceAnalyzer.toToplevelSymbol("Main$").head,
+      "_empty_/Main.",
+    )
+  }
 
   check(
     "simple",

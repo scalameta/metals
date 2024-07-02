@@ -206,7 +206,12 @@ object StacktraceAnalyzer {
     val modulePos = symbolIn.indexOf("/")
     val symbolPart =
       if (modulePos > -1) symbolIn.substring(modulePos + 1) else symbolIn
-    val symbol = symbolPart.split('.').init.mkString("/")
+
+    val splitSymbol = symbolPart.split('.')
+    val symbol =
+      if (splitSymbol.size > 1) splitSymbol.init.mkString("/")
+      else splitSymbol.head
+
     /* Symbol containing `$package$` is a toplevel method and we only need to
      * find any method contained in the same file even if overloaded
      */
