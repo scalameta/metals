@@ -193,6 +193,15 @@ case class ScalaPresentationCompiler(
         .asJava
     }
 
+  override def inferExpectedType(params: OffsetParams): CompletableFuture[ju.Optional[String]] = 
+    compilerAccess.withInterruptableCompiler(Some(params))(
+      Optional.empty(),
+      params.token,
+    ) { access =>
+      val driver = access.compiler()
+      new InferExpectedType(search, driver, params).infer().asJava
+    }
+
   def shutdown(): Unit =
     compilerAccess.shutdown()
 
