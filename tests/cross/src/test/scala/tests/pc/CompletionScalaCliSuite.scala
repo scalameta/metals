@@ -30,7 +30,9 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
        |// //> using lib ???
        |//> using lib io.circe::circe-core_native0.4
        |package A
-       |""".stripMargin
+       |""".stripMargin,
+    assertSingleItem = false,
+    itemIndex = 0
   )
 
   check(
@@ -41,6 +43,9 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|circe-core_native0.4_2.12
        |circe-core_native0.4_2.13
        |circe-core_native0.4_3
+       |circe-core_native0.5_2.12
+       |circe-core_native0.5_2.13
+       |circe-core_native0.5_3
        |""".stripMargin
   )
 
@@ -68,7 +73,8 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|//> using lib "io.circe::circe-core:0.14.0", "io.circe::circe-core_na@@"
        |package A
        |""".stripMargin,
-    "circe-core_native0.4"
+    """|circe-core_native0.4
+       |circe-core_native0.5""".stripMargin
   )
 
   check(
@@ -82,6 +88,9 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|circe-core_native0.4_2.12
        |circe-core_native0.4_2.13
        |circe-core_native0.4_3
+       |circe-core_native0.5_2.12
+       |circe-core_native0.5_2.13
+       |circe-core_native0.5_3
        |""".stripMargin,
     filename = "script.sc.scala",
     enablePackageWrap = false
@@ -147,7 +156,8 @@ class CompletionScalaCliSuite extends BaseCompletionSuite {
     """|//> using libs "io.circe::circe-core:0.14.0", "io.circe::circe-core_na@@"
        |package A
        |""".stripMargin,
-    "circe-core_native0.4"
+    """|circe-core_native0.4
+       |circe-core_native0.5""".stripMargin
   )
 
   check(
