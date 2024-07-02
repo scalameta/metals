@@ -40,6 +40,7 @@ class SelectionRangeProvider(
       // lastVisitedParentTrees that will contain the exact tree structure we
       // need to create the selection range, starting from the position
       val _ = locateUntyped(pos)
+
       val bareRanges = lastVisitedParentTrees
         .map { (tree: Tree) =>
           val selectionRange = new SelectionRange()
@@ -56,6 +57,7 @@ class SelectionRangeProvider(
         .reduceRightOption(setParent)
         .getOrElse(new SelectionRange())
     }
+
     selectionRanges
   }
 
