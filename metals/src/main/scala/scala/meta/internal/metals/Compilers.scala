@@ -251,6 +251,11 @@ class Compilers(
 
   def didCompile(report: CompileReport): Unit = {
     val isSuccessful = report.getErrors == 0
+    val isBestEffortCompilation =
+      buildTargets
+        .scalaTarget(report.getTarget)
+        .map(_.isBestEffort)
+        .getOrElse(false)
     buildTargetPCFromCache(report.getTarget).foreach { pc =>
       if (
         outlineFilesProvider.shouldRestartPc(
@@ -264,10 +269,13 @@ class Compilers(
 
     outlineFilesProvider.onDidCompile(report.getTarget(), isSuccessful)
 
-    if (isSuccessful) {
+    if (isSuccessful || isBestEffortCompilation) {
+      // // For best effort even if we get errors, we can generate new betasty files
+      // if (!isSuccessful && !isBestEffortCompilation) {
+      //   buildTargetPCFromCache(report.getTarget).foreach(_.restart())
+      // } else {
       // Restart PC for all build targets that depend on this target since the classfiles
       // may have changed.
-
       for {
         target <- buildTargets.allInverseDependencies(report.getTarget)
         if target != report.getTarget

@@ -544,8 +544,23 @@ final class Doctor(
   ): DoctorStatus = {
     if (diagnostics.hasCompilationErrors(targetId))
       DoctorStatus.error
-    else
-      DoctorStatus.check
+    else {
+      val scalaTargetMaybe = buildTargets.scalaTarget(targetId)
+
+      val dependenciesCompile =
+        scalaTargetMaybe.flatMap {
+          _.info.getDependencies().asScala.collectFirst { buildId =>
+            diagnostics.hasCompilationErrors(buildId)
+          }
+        }.isEmpty
+
+      if (
+        scalaTargetMaybe
+          .map(_.isBestEffort)
+          .getOrElse(false) && !dependenciesCompile
+      ) DoctorStatus.alert
+      else DoctorStatus.check
+    }
   }
 
   private def extractJavaInfo(
