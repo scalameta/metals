@@ -28,10 +28,14 @@ class WorkspaceFolders(
   def initServices(folders: List[Folder]): WorkspaceFoldersServices = {
     val (scalaProjects, nonScalaProjects) =
       folders.partition(_.isMetalsProject)
+    val knowProjectRefs = scalaProjects.flatMap(_.projectReferences).toSet
     val scalaServices =
       scalaProjects
-        .filterNot(
-          _.optDelegatePath.exists(path => scalaProjects.exists(_.path == path))
+        .filterNot(path =>
+          path.optDelegatePath.exists(path =>
+            scalaProjects.exists(_.path == path)
+          ) ||
+            knowProjectRefs(path.path)
         )
         .map(createService)
     WorkspaceFoldersServices(scalaServices, nonScalaProjects)
@@ -49,13 +53,13 @@ class WorkspaceFolders(
 
     allFolders.updateAndGet(_.filterNot(shouldBeRemoved) ++ toAdd)
 
+    val knowProjectRoots = toAdd.flatMap(_.projectReferences)
     val actualToAdd = toAdd.filterNot { folder =>
       findDelegate(getFolderServices.filterNot(shouldBeRemoved), folder) match {
-        case Some(service) =>
-          DelegateSetting.writeDeleteSetting(folder.path, service.path)
-          true
+        case Some(_) => true
         case _ =>
-          folder.optDelegatePath.exists(path => toAdd.exists(_.path == path))
+          folder.optDelegatePath.exists(path => toAdd.exists(_.path == path)) &&
+          !knowProjectRoots.contains(folder.path)
       }
     }
 
@@ -131,16 +135,13 @@ class WorkspaceFolders(
   private def findDelegate(
       services: List[MetalsLspService],
       folder: Folder,
-  ): Option[MetalsLspService] =
-    folder.optDelegatePath
-      .flatMap(delegate => services.find(_.path == delegate))
-      .orElse {
-        val uri = folder.path.toURI
-        services.find(
-          _.buildTargets.all
-            .exists(_.baseDirectoryPath.map(_.toURI).contains(uri))
-        )
-      }
+  ): Option[MetalsLspService] = {
+    val uri = folder.path.toURI
+    services.find(
+      _.buildTargets.all
+        .exists(_.baseDirectoryPath.map(_.toURI).contains(uri))
+    )
+  }
 }
 
 case class WorkspaceFoldersServices(

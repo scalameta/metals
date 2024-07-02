@@ -1359,6 +1359,9 @@ class Folder(
   lazy val optDelegatePath: Option[AbsolutePath] =
     DelegateSetting.readDeleteSetting(path)
 
+  def projectReferences: List[AbsolutePath] =
+    DelegateSetting.readProjectRefs(path)
+
   def nameOrUri: String = visibleName.getOrElse(path.toString())
 }
 

@@ -276,6 +276,43 @@ class ProjectMetalsLspService(
       .ignoreValue
   }
 
+  def saveProjectReferencesInfo(bspBuilds: List[BspSession.BspBuild]): Unit = {
+    val projectRefs = bspBuilds
+      .flatMap { session =>
+        session.build.workspaceBuildTargets.getTargets().asScala.flatMap {
+          _.getBaseDirectory() match {
+            case null | "" => None
+            case path => path.toAbsolutePathSafe
+          }
+        }
+      }
+      .distinct
+      .filterNot(_.startWith(path))
+    if (projectRefs.nonEmpty)
+      DelegateSetting.writeProjectRef(path, projectRefs)
+  }
+
+  protected def importBuild(session: BspSession): Future[Unit] = {
+    val importedBuilds0 = timerProvider.timed("Imported build") {
+      session.importBuilds()
+    }
+    for {
+      bspBuilds <- workDoneProgress.trackFuture(
+        Messages.importingBuild,
+        importedBuilds0,
+      )
+      _ = {
+        val idToConnection = bspBuilds.flatMap { bspBuild =>
+          val targets =
+            bspBuild.build.workspaceBuildTargets.getTargets().asScala
+          targets.map(t => (t.getId(), bspBuild.connection))
+        }
+        mainBuildTargetsData.resetConnections(idToConnection)
+        saveProjectReferencesInfo(bspBuilds)
+      }
+    } yield compilers.cancel()
+  }
+
   def slowConnectToBuildServer(
       forceImport: Boolean
   ): Future[BuildChange] = {

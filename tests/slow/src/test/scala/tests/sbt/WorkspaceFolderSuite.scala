@@ -3,6 +3,7 @@ package tests.sbt
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.metals.DelegateSetting
+import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
@@ -119,8 +120,8 @@ class WorkspaceFolderSuite extends BaseImportSuite("sbt-workspace-suite") {
            |""".stripMargin,
       )
       _ = assertEquals(
-        DelegateSetting.readDeleteSetting(workspace.resolve(libraryFolder)),
-        Some(workspace.resolve("main-folder")),
+        DelegateSetting.readProjectRefs(workspace.resolve("main-folder")),
+        List(workspace.resolve(libraryFolder)),
       )
     } yield ()
   }
@@ -151,9 +152,9 @@ class WorkspaceFolderSuite extends BaseImportSuite("sbt-workspace-suite") {
           |""".stripMargin
     )
 
-    DelegateSetting.writeDeleteSetting(
-      workspace.resolve(libraryFolder),
+    DelegateSetting.writeProjectRef(
       workspace.resolve("main-folder"),
+      List(workspace.resolve(libraryFolder)),
     )
 
     QuickBuild.bloopInstall(workspace.resolve(libraryFolder))
@@ -187,5 +188,80 @@ class WorkspaceFolderSuite extends BaseImportSuite("sbt-workspace-suite") {
         "should not create folder service for project ref",
       )
     } yield ()
+  }
+
+  test("open-delegating-service-old-setting") {
+    cleanWorkspace()
+    val libraryFolder = "library-folder"
+
+    writeLayout(
+      s"""|/$libraryFolder/project/build.properties
+          |sbt.version=${V.sbtVersion}
+          |/$libraryFolder/project/plugins.sbt
+          |addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "${V.sbtBloopVersion}")
+          |/$libraryFolder/build.sbt
+          |scalaVersion := "${V.scala213}"
+          |lazy val libraryProject = project.in(file("."))
+          |/$libraryFolder/metals.json
+          |{
+          |  "libraryProject": {
+          |    "scalaVersion": "${V.scala213}"
+          |  }
+          |}
+          |/$libraryFolder/src/main/scala/example/A.scala
+          |package example
+          |object A {
+          |  val i = 3
+          |}
+          |""".stripMargin
+    )
+
+    writeOldDelegateSetting(
+      workspace.resolve("main-folder"),
+      workspace.resolve(libraryFolder),
+    )
+
+    QuickBuild.bloopInstall(workspace.resolve(libraryFolder))
+
+    for {
+      _ <- initialize(
+        Map(
+          libraryFolder ->
+            "",
+          "main-folder" ->
+            s"""|/project/build.properties
+                |sbt.version=${V.sbtVersion}
+                |/build.sbt
+                |scalaVersion := "${V.scala213}"
+                |lazy val root = project.in(file(".")).dependsOn(ProjectRef(file("../$libraryFolder"), "libraryProject"))
+                |/src/main/scala/a/Main.scala
+                |package a
+                |import example.A
+                |object Main {
+                |  val j: Int = A.i
+                |}
+                |""".stripMargin,
+        ),
+        expectError = false,
+      )
+      _ <- server.didOpen("main-folder/src/main/scala/a/Main.scala")
+      _ = assertNoDiagnostics()
+      _ = assertEquals(
+        server.fullServer.folderServices.size,
+        1,
+        "should not create folder service for project ref",
+      )
+    } yield ()
+  }
+
+  private def writeOldDelegateSetting(
+      folder: AbsolutePath,
+      projectRef: AbsolutePath,
+  ): Unit = {
+    val relPath = folder.toRelative(projectRef)
+    val jsonText = ujson
+      .Obj(DelegateSetting.delegateSetting -> relPath.toString())
+      .toString()
+    projectRef.resolve(Directories.metalsSettings).writeText(jsonText)
   }
 }
