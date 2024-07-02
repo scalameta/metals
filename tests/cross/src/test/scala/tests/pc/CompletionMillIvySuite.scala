@@ -24,6 +24,9 @@ class CompletionMillIvySuite extends BaseCompletionSuite {
     """|circe-core_native0.4_2.12
        |circe-core_native0.4_2.13
        |circe-core_native0.4_3
+       |circe-core_native0.5_2.12
+       |circe-core_native0.5_2.13
+       |circe-core_native0.5_3
        |""".stripMargin,
     filename = "build.sc"
   )
@@ -44,6 +47,7 @@ class CompletionMillIvySuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|circe-core
        |circe-core_native0.4
+       |circe-core_native0.5
        |circe-core_sjs0.6
        |circe-core_sjs1
        |circe-core_sjs1.0-RC2

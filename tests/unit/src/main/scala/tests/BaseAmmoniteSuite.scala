@@ -646,12 +646,14 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       artefactExpectedCompletionList = getExpected(
         """|circe-refined
            |circe-refined_native0.4
+           |circe-refined_native0.5
            |circe-refined_sjs0.6
            |circe-refined_sjs1
            |""".stripMargin,
         Map(
           "3" -> """|circe-refined
                     |circe-refined_native0.4
+                    |circe-refined_native0.5
                     |circe-refined_sjs1
                     |""".stripMargin
         ),
