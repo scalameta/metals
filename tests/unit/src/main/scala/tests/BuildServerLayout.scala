@@ -61,6 +61,7 @@ object MillBuildLayout extends BuildToolLayout {
       sourceLayout: String,
       scalaVersion: String,
       testDep: Option[TestFramework],
+      millVersion: String = V.millVersion,
   ): String = {
     val optDepModule =
       testDep.map {
@@ -84,7 +85,9 @@ object MillBuildLayout extends BuildToolLayout {
         case _ => ""
       }
 
-    s"""|/build.sc
+    s"""|/.mill-version
+        |$millVersion
+        |/build.sc
         |import mill._, scalalib._
         |
         |object a extends ScalaModule {
@@ -95,21 +98,20 @@ object MillBuildLayout extends BuildToolLayout {
         |""".stripMargin
   }
 
-  def apply(
-      sourceLayout: String,
-      scalaVersion: String,
-      millVersion: String,
-      includeMunit: Boolean = false,
-  ): String =
-    s"""|/.mill-version
-        |$millVersion
-        |${apply(sourceLayout, scalaVersion)}
-        |${apply(
-         sourceLayout,
-         scalaVersion,
-         if (includeMunit) Some(MUnit) else None,
-       )}
-        |""".stripMargin
+  // def apply(
+  //     sourceLayout: String,
+  //     scalaVersion: String,
+  //     millVersion: String,
+  //     includeMunit: Boolean = false,
+  // ): String =
+  //   s"""|${apply(sourceLayout, scalaVersion)}
+  //       |${apply(
+  //        sourceLayout,
+  //        scalaVersion,
+  //        if (includeMunit) Some(MUnit) else None,
+  //        millVersion,
+  //      )}
+  //       |""".stripMargin
 }
 
 object BazelBuildLayout extends BuildToolLayout {
