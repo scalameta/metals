@@ -65,7 +65,7 @@ class MillServerSuite
       )
 
   test("too-old") {
-    writeLayout(MillBuildLayout("", V.scala213, preBspVersion))
+    writeLayout(MillBuildLayout("", V.scala213, testDep = None, preBspVersion))
     for {
       _ <- server.initialize()
       _ <- server.initialized()
@@ -93,7 +93,7 @@ class MillServerSuite
   private def testGenerationAndConnection(version: String) = {
     test(s"generate-and-connect-$version") {
       def millBspConfig = workspace.resolve(".bsp/mill-bsp.json")
-      writeLayout(MillBuildLayout("", V.scala213, version))
+      writeLayout(MillBuildLayout("", V.scala213, testDep = None, version))
       for {
         _ <- server.initialize()
         _ <- server.initialized()
