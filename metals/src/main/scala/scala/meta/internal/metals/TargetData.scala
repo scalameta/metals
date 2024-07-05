@@ -109,6 +109,8 @@ final class TargetData {
     javaTargetInfo.get(id)
   def jvmTarget(id: BuildTargetIdentifier): Option[JvmTarget] =
     scalaTarget(id).orElse(javaTarget(id))
+  def jvmTargets(id: BuildTargetIdentifier): List[JvmTarget] =
+    List(scalaTarget(id), javaTarget(id)).flatten
 
   private val sourceBuildTargetsCache =
     new util.concurrent.ConcurrentHashMap[AbsolutePath, Option[
@@ -163,7 +165,8 @@ final class TargetData {
         }
       } yield path
 
-    if (fromDepModules.isEmpty) jvmTarget(id).flatMap(_.jarClasspath)
+    if (fromDepModules.isEmpty)
+      jvmTargets(id).flatMap(_.jarClasspath).headOption
     else Some(fromDepModules)
   }
 

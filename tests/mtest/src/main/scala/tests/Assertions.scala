@@ -22,13 +22,19 @@ trait Assertions extends munit.Assertions {
   def assertContains(string: String, substring: String)(implicit
       loc: Location
   ): Unit = {
-    assert(string.contains(substring))
+    assert(
+      string.contains(substring),
+      s""""$string" should contain "$substring""""
+    )
   }
 
   def assertNotContains(string: String, substring: String)(implicit
       loc: Location
   ): Unit = {
-    assert(!string.contains(substring))
+    assert(
+      !string.contains(substring),
+      s""""$string" should not contain "$substring""""
+    )
   }
 
   def assertDiffNotEqual[T](

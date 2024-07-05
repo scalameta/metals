@@ -800,6 +800,9 @@ object MetalsEnrichments
         value.replace('/', ':')
       else value
     }
+
+    def symbolToFullQualifiedName: String =
+      value.replaceAll("/|#", ".").stripSuffix(".")
   }
 
   implicit class XtensionTextDocumentSemanticdb(textDocument: s.TextDocument) {
@@ -1307,6 +1310,43 @@ object MetalsEnrichments
       new l.TextDocumentPositionParams(
         new l.TextDocumentIdentifier(location.getUri()),
         location.getRange().getStart(),
+      )
+  }
+
+  implicit class XtensionDebugSessionParams(params: b.DebugSessionParams) {
+    def asScalaMainClass(): Either[String, b.ScalaMainClass] = {
+      lazy val className = "ScalaMainClass"
+      params.getDataKind() match {
+        case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
+          decodeJson(params.getData(), classOf[b.ScalaMainClass])
+            .toRight(cannotDecode(className))
+        case _ => incorrectKind(className)
+      }
+    }
+
+    def asScalaTestSuites(): Either[String, b.ScalaTestSuites] = {
+      lazy val className = "ScalaTestSuites"
+      params.getDataKind() match {
+        case b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION =>
+          decodeJson(params.getData(), classOf[b.ScalaTestSuites])
+            .toRight(cannotDecode(className))
+        case b.TestParamsDataKind.SCALA_TEST_SUITES =>
+          (for (
+            tests <- decodeJson(params.getData(), classOf[util.List[String]])
+          )
+            yield {
+              val suites =
+                tests.map(new b.ScalaTestSuiteSelection(_, Nil.asJava))
+              new b.ScalaTestSuites(suites, Nil.asJava, Nil.asJava)
+            }).toRight(cannotDecode(className))
+        case _ => incorrectKind(className)
+      }
+    }
+    def cannotDecode(className: String): String =
+      s"Cannot decode $params as `$className`."
+    def incorrectKind(className: String): Left[String, Nothing] =
+      Left(
+        s"Cannot decode params as `$className` incorrect data kind: ${params.getDataKind()}."
       )
   }
 

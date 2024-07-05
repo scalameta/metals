@@ -13,6 +13,7 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.concurrent.duration.Duration
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -51,6 +52,13 @@ import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.config.RunType
 import scala.meta.internal.metals.config.RunType._
+import scala.meta.internal.metals.debug.server.DebugLogger
+import scala.meta.internal.metals.debug.server.DebugeeParamsCreator
+import scala.meta.internal.metals.debug.server.Discovered
+import scala.meta.internal.metals.debug.server.MainClassDebugAdapter
+import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
+import scala.meta.internal.metals.debug.server.MetalsDebuggee
+import scala.meta.internal.metals.debug.server.TestSuiteDebugAdapter
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.OnDemandSymbolIndex
@@ -65,6 +73,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.DebugSessionParams
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.{debugadapter => dap}
 import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.MessageParams
@@ -91,10 +100,13 @@ class DebugProvider(
     sourceMapper: SourceMapper,
     userConfig: () => UserConfiguration,
     testProvider: TestSuitesProvider,
-) extends Cancelable
+)(implicit ec: ExecutionContext)
+    extends Cancelable
     with LogForwarder {
 
   import DebugProvider._
+
+  private val debugConfigCreator = new DebugeeParamsCreator(buildTargets)
 
   private val runningLocal = new ju.concurrent.atomic.AtomicBoolean(false)
 
@@ -251,13 +263,13 @@ class DebugProvider(
       val targets = parameters.getTargets().asScala.toSeq
 
       compilations.compilationFinished(targets).flatMap { _ =>
-        val conn = buildServer
-          .startDebugSession(parameters, cancelPromise)
-          .map { uri =>
-            val socket = connect(uri)
-            connectedToServer.trySuccess(())
-            socket
-          }
+        val conn =
+          startDebugSession(buildServer, parameters, cancelPromise)
+            .map { uri =>
+              val socket = connect(uri)
+              connectedToServer.trySuccess(())
+              socket
+            }
 
         val startupTimeout = clientConfig.initialConfig.debugServerStartTimeout
 
@@ -312,6 +324,108 @@ class DebugProvider(
     }
 
     connectedToServer.future.map(_ => server)
+  }
+
+  private def startDebugSession(
+      buildServer: BuildServerConnection,
+      params: DebugSessionParams,
+      cancelPromise: Promise[Unit],
+  )(implicit ec: ExecutionContext) =
+    if (buildServer.isDebuggingProvider || buildServer.isSbt) {
+      buildServer.startDebugSession(params, cancelPromise)
+    } else {
+      def getDebugee: Either[String, Future[MetalsDebuggee]] = {
+        def buildTarget = params
+          .getTargets()
+          .asScala
+          .headOption
+          .toRight(s"Missing build target in debug params.")
+        params.getDataKind() match {
+          case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
+            for {
+              id <- buildTarget
+              projectInfo <- debugConfigCreator.create(id)
+              scalaMainClass <- params.asScalaMainClass()
+            } yield Future.successful(
+              new MainClassDebugAdapter(
+                workspace,
+                scalaMainClass,
+                projectInfo,
+                userConfig().javaHome,
+              )
+            )
+          case (b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION |
+              b.TestParamsDataKind.SCALA_TEST_SUITES) =>
+            for {
+              id <- buildTarget
+              project <- debugConfigCreator.create(id)
+              testSuites <- params.asScalaTestSuites()
+            } yield {
+              for {
+                discovered <- discoverTests(id, testSuites)
+              } yield new TestSuiteDebugAdapter(
+                workspace,
+                testSuites,
+                project,
+                userConfig().javaHome,
+                discovered,
+              )
+            }
+          case kind =>
+            Left(s"Starting debug session for $kind in not supported.")
+        }
+      }
+
+      for {
+        _ <- compilations.compileTargets(params.getTargets().asScala.toSeq)
+        debuggee <- getDebugee match {
+          case Right(debuggee) => debuggee
+          case Left(errorMessage) =>
+            Future.failed(new RuntimeException(errorMessage))
+        }
+      } yield {
+        val dapLogger = new DebugLogger()
+        val resolver = new MetalsDebugToolsResolver()
+        val handler =
+          dap.DebugServer.run(
+            debuggee,
+            resolver,
+            dapLogger,
+            gracePeriod = Duration(5, TimeUnit.SECONDS),
+          )
+        handler.uri
+      }
+    }
+
+  private def discoverTests(
+      id: BuildTargetIdentifier,
+      testClasses: b.ScalaTestSuites,
+  ): Future[Map[TestFramework, List[Discovered]]] = {
+    val symbolInfosList =
+      for {
+        selection <- testClasses.getSuites().asScala.toList
+        (sym, info) <- buildTargetClasses.getTestClasses(
+          selection.getClassName(),
+          id,
+        )
+      } yield compilers.info(id, sym).map(_.map(pcInfo => (info, pcInfo)))
+
+    Future.sequence(symbolInfosList).map {
+      _.flatten.groupBy(_._1.framework).map { case (framework, testSuites) =>
+        (
+          framework,
+          testSuites.map { case (testInfo, pcInfo) =>
+            new Discovered(
+              pcInfo.symbol,
+              testInfo.fullyQualifiedName,
+              pcInfo.recursiveParents.map(_.symbolToFullQualifiedName).toSet,
+              (pcInfo.annotations ++ pcInfo.memberDefsAnnotations).toSet,
+              isModule = false,
+            )
+          },
+        )
+      }
+    }
   }
 
   /**

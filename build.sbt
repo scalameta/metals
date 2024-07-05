@@ -260,7 +260,7 @@ lazy val mtagsShared = project
     },
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "4.27.1",
+      "com.google.protobuf" % "protobuf-java" % "4.27.2",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
@@ -426,6 +426,7 @@ lazy val metals = project
       V.lsp4j,
       // for DAP
       V.dap4j,
+      "ch.epfl.scala" %% "scala-debug-adapter" % V.debugAdapter,
       // for finding paths of global log/cache directories
       "dev.dirs" % "directories" % "26",
       // for Java formatting
@@ -778,7 +779,6 @@ lazy val metalsDependencies = project
       "ch.epfl.scala" % "bloop-maven-plugin" % V.mavenBloop,
       "ch.epfl.scala" %% "gradle-bloop" % V.gradleBloop,
       "com.sourcegraph" % "semanticdb-java" % V.javaSemanticdb,
-      "ch.epfl.scala" %% "scala-debug-adapter" % V.debugAdapter intransitive (),
       "org.foundweekends.giter8" %% "giter8" % V.gitter8Version intransitive (),
     ),
   )

@@ -18,7 +18,7 @@ class MillServerCodeLensSuite
     cleanWorkspace()
     writeLayout(
       MillBuildLayout(
-        """|/MillMinimal/src/Main.scala
+        """|/a/src/Main.scala
            |package foo
            |
            |object Main {
@@ -26,7 +26,7 @@ class MillServerCodeLensSuite
            |     println("Hello java!")
            |  }
            |}
-           |/MillMinimal/test/src/Foo.scala
+           |/a/test/src/Foo.scala
            |// no test lense as debug is not supported
            |class Foo extends munit.FunSuite {}
            |""".stripMargin,
@@ -40,14 +40,14 @@ class MillServerCodeLensSuite
       _ <- server.initialize()
       _ <- server.initialized()
       _ <- server.executeCommand(ServerCommands.GenerateBspConfig)
-      _ <- server.didOpen("MillMinimal/src/Main.scala")
-      _ <- server.didSave("MillMinimal/src/Main.scala")(identity)
+      _ <- server.didOpen("a/src/Main.scala")
+      _ <- server.didSave("a/src/Main.scala")(identity)
       _ = assertNoDiagnostics()
       _ <- assertCodeLenses(
-        "MillMinimal/src/Main.scala",
+        "a/src/Main.scala",
         """|package foo
            |
-           |<<run>>
+           |<<run>><<debug>>
            |object Main {
            |  def main(args: Array[String]): Unit = {
            |     println("Hello java!")
@@ -55,12 +55,13 @@ class MillServerCodeLensSuite
            |}""".stripMargin,
       )
       _ <- assertCodeLenses(
-        "MillMinimal/test/src/Foo.scala",
+        "a/test/src/Foo.scala",
         """|// no test lense as debug is not supported
+           |<<test>><<debug test>>
            |class Foo extends munit.FunSuite {}
            |""".stripMargin,
       )
-      lenses <- server.codeLenses("MillMinimal/src/Main.scala")
+      lenses <- server.codeLenses("a/src/Main.scala")
       _ = assert(lenses.size > 0, "No lenses were generated!")
       command = lenses.head.getCommand()
       _ = assertEquals(runFromCommand(command, None), Some("Hello java!"))

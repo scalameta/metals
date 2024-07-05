@@ -1,5 +1,9 @@
 package tests
 
+import scala.meta.internal.metals.debug.JUnit4
+import scala.meta.internal.metals.debug.MUnit
+import scala.meta.internal.metals.debug.Scalatest
+import scala.meta.internal.metals.debug.TestFramework
 import scala.meta.internal.metals.{BuildInfo => V}
 
 trait BuildToolLayout {
@@ -51,27 +55,39 @@ object SbtBuildLayout extends BuildToolLayout {
 object MillBuildLayout extends BuildToolLayout {
 
   override def apply(sourceLayout: String, scalaVersion: String): String =
-    apply(sourceLayout, scalaVersion, includeMunit = false)
+    apply(sourceLayout, scalaVersion, None)
 
   def apply(
       sourceLayout: String,
       scalaVersion: String,
-      includeMunit: Boolean,
+      testDep: Option[TestFramework],
   ): String = {
+    val optDepModule =
+      testDep.map {
+        case Scalatest => ("ScalaTest", "org.scalatest::scalatest:3.2.16")
+        case MUnit => ("Munit", "org.scalameta::munit::0.7.29")
+        case JUnit4 => ("Junit4", "com.github.sbt:junit-interface:0.13.2")
+        case testFramework =>
+          throw new RuntimeException(
+            s"No implementation for layout for $testFramework"
+          )
+      }
     val munitModule =
-      if (includeMunit)
-        """|object test extends ScalaTests with TestModule.Munit {
-           |    def ivyDeps = Agg(
-           |      ivy"org.scalameta::munit::0.7.29"
-           |    )
-           |  }  
-           |""".stripMargin
-      else ""
+      optDepModule match {
+        case Some((module, dep)) =>
+          s"""|object test extends ScalaTests with TestModule.$module {
+              |    def ivyDeps = Agg(
+              |      ivy"$dep"
+              |    )
+              |  }  
+              |""".stripMargin
+        case _ => ""
+      }
 
     s"""|/build.sc
         |import mill._, scalalib._
         |
-        |object MillMinimal extends ScalaModule {
+        |object a extends ScalaModule {
         |  def scalaVersion = "${scalaVersion}"
         |  $munitModule
         |}
@@ -88,7 +104,11 @@ object MillBuildLayout extends BuildToolLayout {
     s"""|/.mill-version
         |$millVersion
         |${apply(sourceLayout, scalaVersion)}
-        |${apply(sourceLayout, scalaVersion, includeMunit)}
+        |${apply(
+         sourceLayout,
+         scalaVersion,
+         if (includeMunit) Some(MUnit) else None,
+       )}
         |""".stripMargin
 }
 

@@ -16,10 +16,10 @@ object V {
   val bazelScalaVersion = "2.13.12"
   val ammonite3Version = "3.3.3"
 
-  val ammonite = "3.0.0-M2-12-951bbc1e"
+  val ammonite = "3.0.0-M2-13-23a8ef64"
   val betterMonadicFor = "0.3.1"
   val bloop = "1.5.18"
-  val bloopConfig = "1.5.5"
+  val bloopConfig = "2.0.2"
   val bsp = "2.2.0-M2"
   val coursier = "2.1.10"
   val coursierInterfaces =
@@ -41,7 +41,7 @@ object V {
   val pprint = "0.7.3"
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
-  val scalaCli = "1.3.2"
+  val scalaCli = "1.4.0"
   val scalafix = "0.12.1"
   val scalafmt = "3.7.15"
   val scalameta = "4.9.7"

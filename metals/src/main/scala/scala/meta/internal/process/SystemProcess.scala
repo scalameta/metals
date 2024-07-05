@@ -22,6 +22,8 @@ trait SystemProcess {
 }
 
 object SystemProcess {
+  // Windows max cmd line length is 32767, which seems to be the least of the common shells.
+  val processCmdCharLimit = 30000
 
   def run(
       cmd: List[String],

@@ -141,8 +141,6 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
            |  def scalaVersion = "${V.scala213}"
            |  def scalacOptions = Seq("-Xfatal-warnings", "-Ywarn-unused")
            |}
-           |/.mill-version
-           |${V.millVersion}
            |/foo/src/Warning.scala
            |import scala.concurrent.Future // unused
            |object Warning
@@ -164,7 +162,11 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
       // we should still have references despite fatal warning
       refs <- server.workspaceReferences()
       _ = assertNoDiff(
-        refs.references.map(_.symbol).sorted.mkString("\n"),
+        refs.references
+          .withFilter(_.location.getUri().endsWith("Warning.scala"))
+          .map(_.symbol)
+          .sorted
+          .mkString("\n"),
         """|_empty_/A.
            |_empty_/A.B.
            |_empty_/Warning.

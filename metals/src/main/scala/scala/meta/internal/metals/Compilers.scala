@@ -941,6 +941,18 @@ class Compilers(
       .getOrElse(Future(None))
   }
 
+  def info(
+      id: BuildTargetIdentifier,
+      symbol: String,
+  ): Future[Option[PcSymbolInformation]] = {
+    loadCompiler(id)
+      .map(
+        _.info(symbol).asScala
+          .map(_.asScala.map(PcSymbolInformation.from))
+      )
+      .getOrElse(Future(None))
+  }
+
   private def definition(
       params: TextDocumentPositionParams,
       token: CancelToken,

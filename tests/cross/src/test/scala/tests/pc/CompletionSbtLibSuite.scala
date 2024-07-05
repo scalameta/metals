@@ -24,6 +24,9 @@ class CompletionSbtLibSuite extends BaseCompletionSuite {
     """|circe-core_native0.4_2.12
        |circe-core_native0.4_2.13
        |circe-core_native0.4_3
+       |circe-core_native0.5_2.12
+       |circe-core_native0.5_2.13
+       |circe-core_native0.5_3
        |""".stripMargin,
     filename = "A.sbt"
   )
@@ -34,6 +37,7 @@ class CompletionSbtLibSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|circe-core
        |circe-core_native0.4
+       |circe-core_native0.5
        |circe-core_sjs0.6
        |circe-core_sjs1
        |circe-core_sjs1.0-RC2
@@ -62,6 +66,8 @@ class CompletionSbtLibSuite extends BaseCompletionSuite {
        |""".stripMargin,
     """|val dependency = "io.circe" %% "circe-core_native0.4"
        |""".stripMargin,
-    filename = "A.sbt"
+    filename = "A.sbt",
+    itemIndex = 0,
+    assertSingleItem = false
   )
 }
