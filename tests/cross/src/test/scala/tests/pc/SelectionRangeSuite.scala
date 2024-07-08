@@ -180,39 +180,30 @@ class SelectionRangeSuite extends BaseSelectionRangeSuite {
   )
 
   check(
-    "def - braceless",
+    "def - braceless".tag(IgnoreScala2),
     """object Main extends App :
       |  def foo(hi: Int, b@@: Int, c:Int) = ???  """.stripMargin,
-    List(),
-    Map(
-      "3" -> List(
-        """object Main extends App :
-          |  def foo(hi: Int, >>region>>b: Int<<region<<, c:Int) = ??? """.stripMargin,
-        """object Main extends App :
-          |  def foo(>>region>>hi: Int, b: Int, c:Int<<region<<) = ??? """.stripMargin,
-        """object Main extends App :
-          |  >>region>>def foo(hi: Int, b: Int, c:Int) = ???<<region<< """.stripMargin,
-        """object Main extends >>region>>App :
-          |  def foo(hi: Int, b: Int, c:Int) = ???<<region<<""".stripMargin,
-        """>>region>>object Main extends App :
-          |  def foo(hi: Int, b: Int, c:Int) = ???<<region<<""".stripMargin
-      )
+    List(
+      """object Main extends App :
+        |  def foo(hi: Int, >>region>>b: Int<<region<<, c:Int) = ??? """.stripMargin,
+      """object Main extends App :
+        |  def foo(>>region>>hi: Int, b: Int, c:Int<<region<<) = ??? """.stripMargin,
+      """object Main extends App :
+        |  >>region>>def foo(hi: Int, b: Int, c:Int) = ???<<region<< """.stripMargin,
+      """object Main extends >>region>>App :
+        |  def foo(hi: Int, b: Int, c:Int) = ???<<region<<""".stripMargin,
+      """>>region>>object Main extends App :
+        |  def foo(hi: Int, b: Int, c:Int) = ???<<region<<""".stripMargin
     )
   )
 
   check(
-    "def - braced",
+    "def - braced".tag(IgnoreScala2),
     """object Main extends App { def foo(hi: Int, b@@: Int, c:Int) = ??? } """.stripMargin,
-    List(),
-    Map(
-      "3" -> List(
-        """object Main extends App { def foo(hi: Int, >>region>>b: Int<<region<<, c:Int) = ??? }""".stripMargin,
-        """object Main extends App { def foo(>>region>>hi: Int, b: Int, c:Int<<region<<) = ??? }""".stripMargin,
-        """object Main extends App { >>region>>def foo(hi: Int, b: Int, c:Int) = ???<<region<< }""".stripMargin
-        /* These fail. A perfect implemenation would succeed (I believe). The effort / fix value ratio means we leave it as is for now */
-        // """object Main extends >>region>>App { def foo(hi: Int, b: Int, c:Int) = ??? }<<region<<""".stripMargin,
-        // """>>region>>object Main extends App { def foo(hi: Int, b: Int, c:Int) = ??? }<<region<<""".stripMargin
-      )
+    List(
+      """object Main extends App { def foo(hi: Int, >>region>>b: Int<<region<<, c:Int) = ??? }""".stripMargin,
+      """object Main extends App { def foo(>>region>>hi: Int, b: Int, c:Int<<region<<) = ??? }""".stripMargin,
+      """object Main extends App { >>region>>def foo(hi: Int, b: Int, c:Int) = ???<<region<< }""".stripMargin
     )
   )
 }
