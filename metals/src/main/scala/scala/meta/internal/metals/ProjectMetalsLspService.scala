@@ -276,6 +276,43 @@ class ProjectMetalsLspService(
       .ignoreValue
   }
 
+  def saveProjectReferencesInfo(bspBuilds: List[BspSession.BspBuild]): Unit = {
+    val projectRefs = bspBuilds
+      .flatMap { session =>
+        session.build.workspaceBuildTargets.getTargets().asScala.flatMap {
+          _.getBaseDirectory() match {
+            case null | "" => None
+            case path => path.toAbsolutePathSafe
+          }
+        }
+      }
+      .distinct
+      .filterNot(_.startWith(path))
+    if (projectRefs.nonEmpty)
+      DelegateSetting.writeProjectRef(path, projectRefs)
+  }
+
+  protected def importBuild(session: BspSession): Future[Unit] = {
+    val importedBuilds0 = timerProvider.timed("Imported build") {
+      session.importBuilds()
+    }
+    for {
+      bspBuilds <- workDoneProgress.trackFuture(
+        Messages.importingBuild,
+        importedBuilds0,
+      )
+      _ = {
+        val idToConnection = bspBuilds.flatMap { bspBuild =>
+          val targets =
+            bspBuild.build.workspaceBuildTargets.getTargets().asScala
+          targets.map(t => (t.getId(), bspBuild.connection))
+        }
+        mainBuildTargetsData.resetConnections(idToConnection)
+        saveProjectReferencesInfo(bspBuilds)
+      }
+    } yield compilers.cancel()
+  }
+
   def slowConnectToBuildServer(
       forceImport: Boolean
   ): Future[BuildChange] = {
@@ -791,19 +828,28 @@ class ProjectMetalsLspService(
     for {
       name <- tables.buildTool.selectedBuildTool()
       buildTool <- buildTools.current().find(_.executableName == name)
-      found <- isCompatibleVersion(buildTool) match {
-        case BuildTool.Found(bt, _) => Some(bt)
-        case _ => None
-      }
-    } yield found
+      if isCompatibleVersion(buildTool)
+    } yield buildTool
 
-  def isCompatibleVersion(buildTool: BuildTool): BuildTool.Verified = {
+  private def isCompatibleVersion(buildTool: BuildTool): Boolean = {
+    buildTool match {
+      case buildTool: VersionRecommendation =>
+        SemVer.isCompatibleVersion(
+          buildTool.minimumVersion,
+          buildTool.version,
+        )
+      case _ => true
+    }
+  }
+
+  /**
+   * Checks if the version of the build tool is compatible with the version that
+   * metals expects and returns the current digest of the build tool.
+   */
+  private def verifyBuildTool(buildTool: BuildTool): BuildTool.Verified = {
     buildTool match {
       case buildTool: VersionRecommendation
-          if !SemVer.isCompatibleVersion(
-            buildTool.minimumVersion,
-            buildTool.version,
-          ) =>
+          if !isCompatibleVersion(buildTool) =>
         BuildTool.IncompatibleVersion(buildTool)
       case _ =>
         buildTool.digestWithRetry(folder) match {
@@ -829,7 +875,7 @@ class ProjectMetalsLspService(
           )
         } yield {
           buildTool.flatMap { bt =>
-            isCompatibleVersion(bt) match {
+            verifyBuildTool(bt) match {
               case found: BuildTool.Found => Some(found)
               case warn @ BuildTool.IncompatibleVersion(buildTool) =>
                 scribe.warn(warn.message)
