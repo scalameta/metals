@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.debug.server
 
 import java.net.URLClassLoader
+import java.nio.file.Path
 
 import scala.collection.mutable
 import scala.util.Success
@@ -24,10 +25,12 @@ class MetalsDebugToolsResolver extends DebugToolsResolver {
       MetalsDebugToolsResolver.expressionCompilerCache,
       scalaVersion,
       dependency,
-    )
+    ) { downloaded =>
+      new URLClassLoader(downloaded.map(_.toUri.toURL).toArray, null)
+    }
   }
 
-  override def resolveDecoder(scalaVersion: ScalaVersion): Try[ClassLoader] = {
+  override def resolveDecoder(scalaVersion: ScalaVersion): Try[Seq[Path]] = {
     val module = s"${BuildInfo.decoderName}_${scalaVersion.binaryVersion}"
     val dependency =
       Dependency.of(BuildInfo.organization, module, BuildInfo.version)
@@ -35,23 +38,22 @@ class MetalsDebugToolsResolver extends DebugToolsResolver {
       MetalsDebugToolsResolver.decoderCache,
       scalaVersion,
       dependency,
-    )
+    )(identity)
   }
 
-  private def getOrTryDownload(
-      cache: mutable.Map[ScalaVersion, ClassLoader],
+  private def getOrTryDownload[T](
+      cache: mutable.Map[ScalaVersion, T],
       scalaVersion: ScalaVersion,
       dependency: Dependency,
-  ): Try[ClassLoader] = {
+  )(f: Seq[Path] => T): Try[T] = {
     if (cache.contains(scalaVersion)) Success(cache(scalaVersion))
     else
       Try {
         val downloaded =
           Embedded.downloadDependency(dependency, Some(scalaVersion.value))
-        val classLoader =
-          new URLClassLoader(downloaded.map(_.toUri.toURL).toArray, null)
-        cache.put(scalaVersion, classLoader)
-        classLoader
+        val value = f(downloaded)
+        cache.put(scalaVersion, value)
+        value
       }
   }
 }
@@ -59,6 +61,6 @@ class MetalsDebugToolsResolver extends DebugToolsResolver {
 object MetalsDebugToolsResolver {
   private val expressionCompilerCache: mutable.Map[ScalaVersion, ClassLoader] =
     mutable.Map.empty
-  private val decoderCache: mutable.Map[ScalaVersion, ClassLoader] =
+  private val decoderCache: mutable.Map[ScalaVersion, Seq[Path]] =
     mutable.Map.empty
 }
