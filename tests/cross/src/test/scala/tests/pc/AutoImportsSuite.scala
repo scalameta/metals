@@ -398,6 +398,19 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "use-packages-in-scope".tag(IgnoreScala2),
+    """|import scala.collection.mutable as mut
+       |
+       |val l = <<ListBuffer>>(2)
+       |""".stripMargin,
+    """|import scala.collection.mutable as mut
+       |import mut.ListBuffer
+       |
+       |val l = ListBuffer(2)
+       |""".stripMargin
+  )
+
   private def ammoniteWrapper(code: String): String =
     // Vaguely looks like a scala file that Ammonite generates
     // from a sc file.
