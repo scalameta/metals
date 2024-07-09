@@ -2,6 +2,7 @@ package scala.meta.internal.metals.codeactions
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.Try
 
 import scala.meta.XtensionDialectApply
 import scala.meta.XtensionTokenizeDialectInput
@@ -39,7 +40,9 @@ class MillifyScalaCliDependencyCodeAction(buffers: Buffers) extends CodeAction {
             .drop(range.getStart.getLine)
             .take(1)
             .headOption
-          tree <- Trees.defaultTokenizerDialect(line).tokenize.toOption
+          tree <- Try(
+            Trees.defaultTokenizerDialect(line).tokenize.toOption
+          ).toOption.flatten
         } yield tree
       else None
 

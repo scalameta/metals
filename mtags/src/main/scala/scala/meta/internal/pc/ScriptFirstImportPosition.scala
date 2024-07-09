@@ -3,6 +3,8 @@ package scala.meta.internal.pc
 import scala.annotation.tailrec
 
 import scala.meta._
+import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.tokens.Token
 
 /**
  * For `.sc` Ammonite and Scala-Cli wraps the code for such files.
@@ -67,7 +69,7 @@ object ScriptFirstImportPosition {
   }
 
   private def tokenize(text: String): Tokens = {
-    val tokenized = text.tokenize.toOption
+    val tokenized = text.safeTokenize.toOption
     tokenized match {
       case None => Tokens(Array.empty)
       case Some(v) => v
@@ -111,15 +113,15 @@ object ScriptFirstImportPosition {
             newLines = 0,
             foundShebang
           )
-        case t if isNewLine(t) =>
+        case t: Token.AtEOL =>
           skipComments(
             it,
             beforeComment,
             lastOffset,
-            newLines + 1,
+            newLines + t.newlines,
             foundShebang
           )
-        case t if isWhitespace(t) =>
+        case _: Token.Whitespace =>
           skipComments(it, beforeComment, lastOffset, newLines, foundShebang)
         case _: Token.BOF =>
           skipComments(it, beforeComment, lastOffset, newLines, foundShebang)
@@ -134,10 +136,4 @@ object ScriptFirstImportPosition {
     } else lastOffset
   }
 
-  private def isNewLine(t: Token): Boolean =
-    t.is[Token.LF] || t.is[Token.LFLF]
-
-  private def isWhitespace(t: Token): Boolean =
-    t.is[Token.Space] || t.is[Token.Tab] || t.is[Token.CR] ||
-      t.is[Token.LF] || t.is[Token.FF] || t.is[Token.LFLF]
 }

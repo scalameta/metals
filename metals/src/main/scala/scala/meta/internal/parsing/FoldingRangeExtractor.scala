@@ -122,8 +122,7 @@ final class FoldingRangeExtractor(
       if (tokens.hasNext) {
         tokens.next() match {
           case token: Token.Comment => findLastConsecutiveComment(token)
-          case _: Token.Space | _: Token.LF | _: Token.CR =>
-            findLastConsecutiveComment(acc)
+          case _: Token.Whitespace => findLastConsecutiveComment(acc)
           case _ => acc
         }
       } else acc

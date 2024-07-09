@@ -79,7 +79,7 @@ class ScalaToplevelMtags(
     loop(0, true, new Region.RootRegion, None)
 
   private val scanner = new LegacyScanner(input, dialect)
-  scanner.reader.nextChar()
+  scanner.initialize()
   def isDone: Boolean = scanner.curr.token == EOF
 
   private def resetRegion(region: Region): Region = {
@@ -182,7 +182,8 @@ class ScalaToplevelMtags(
       val currRegion =
         if (dialect.allowSignificantIndentation) {
           data.token match {
-            case WHITESPACE | COMMENT => region
+            case token if isWhitespace(token) => region
+            case COMMENT => region
             case _ =>
               resetRegion(exitIndented(region, indent))
           }
@@ -344,7 +345,8 @@ class ScalaToplevelMtags(
           // skip comment because they might break indentation
           scanner.mtagsNextToken()
           loop(indent, isAfterNewline = false, currRegion, expectTemplate)
-        case WHITESPACE if dialect.allowSignificantIndentation =>
+        case token
+            if isWhitespace(token) && dialect.allowSignificantIndentation =>
           if (isNewline) {
             expectTemplate match {
               // extension (x: Int)|
@@ -723,7 +725,10 @@ class ScalaToplevelMtags(
             case EQUALS =>
               scanner.mtagsNextToken()
               loop(name, isAfterEq = true)
-            case TYPELAMBDAARROW | WHITESPACE =>
+            case TYPELAMBDAARROW =>
+              scanner.mtagsNextToken()
+              loop(name, isAfterEq)
+            case token if isWhitespace(token) =>
               scanner.mtagsNextToken()
               loop(name, isAfterEq)
             case LBRACKET =>
@@ -882,11 +887,13 @@ class ScalaToplevelMtags(
     def loop(indent: Int, isAfterNL: Boolean): Int = {
       if (!isDone) {
         scanner.curr.token match {
-          case WHITESPACE =>
-            if (isNewline) { scanner.mtagsNextToken(); loop(0, true) }
-            else if (isAfterNL) {
-              scanner.mtagsNextToken(); loop(indent + 1, true)
-            } else { scanner.mtagsNextToken(); loop(indent, false) }
+          case _ if isNewline => scanner.mtagsNextToken(); loop(0, true)
+          case token if isWhitespace(token) && isAfterNL =>
+            scanner.mtagsNextToken()
+            loop(indent + 1, true)
+          case token if isWhitespace(token) =>
+            scanner.mtagsNextToken()
+            loop(indent, false)
           case COMMENT =>
             scanner.mtagsNextToken()
             loop(indent, false)
@@ -905,9 +912,8 @@ class ScalaToplevelMtags(
     while (
       !isDone &&
       (scanner.curr.token match {
-        case WHITESPACE if isNewline => false
         case SEMI => false
-        case _ => true
+        case _ => !isNewline
       })
     ) {
       scanner.mtagsNextToken()
@@ -921,14 +927,14 @@ class ScalaToplevelMtags(
     while (
       !isDone &&
       (scanner.curr.token match {
-        case WHITESPACE | COMMENT => true
-        case _ => false
+        case COMMENT => true
+        case token => isWhitespace(token)
       })
     ) {
       if (isNewline) {
         includedNewline = true
         indent = 0
-      } else if (scanner.curr.token == WHITESPACE) {
+      } else if (isWhitespace(scanner.curr.token)) {
         indent += 1
       }
       scanner.mtagsNextToken()
@@ -936,12 +942,15 @@ class ScalaToplevelMtags(
     if (includedNewline) Some(indent) else None
   }
 
+  private def isWhitespace(token: Int): Boolean = {
+    token >= WHITESPACE_BEG && token < COMMENT
+  }
+
   private def nextIsNL(): Boolean = {
     scanner.mtagsNextToken()
     scanner.curr.token match {
-      case WHITESPACE if isNewline => true
-      case WHITESPACE =>
-        nextIsNL()
+      case token if isWhitespace(token) =>
+        isNewline || nextIsNL()
       case COMMENT =>
         nextIsNL()
       case _ => false
@@ -963,11 +972,10 @@ class ScalaToplevelMtags(
     }
   }
 
-  private def getName: Option[String] =
-    scanner.curr.token match {
-      case WHITESPACE => None
-      case _ => Some(scanner.curr.name)
-    }
+  private def getName: Option[String] = {
+    if (isWhitespace(scanner.curr.token)) None
+    else Some(scanner.curr.name)
+  }
 
   @tailrec
   private def identOrSelectName(
@@ -1040,7 +1048,8 @@ class ScalaToplevelMtags(
           val name = scanner.curr.name
           resultList = new Identifier(name, pos) :: resultList
         }
-        case WHITESPACE | COMMA => {}
+        case COMMA => {}
+        case token if isWhitespace(token) => {}
         case _ => { isUnapply = true }
       }
       scanner.mtagsNextToken()
@@ -1050,11 +1059,7 @@ class ScalaToplevelMtags(
   }
 
   private def isNewline: Boolean =
-    scanner.curr.token == WHITESPACE &&
-      (scanner.curr.strVal match {
-        case "\n" | "\r" => true
-        case _ => false
-      })
+    scanner.curr.token >= WHITESPACE_LF && scanner.curr.token < WHITESPACE_END
 
   def reportError(expected: String): Unit = {
     rc.incognito.create(
@@ -1080,7 +1085,7 @@ class ScalaToplevelMtags(
    */
   def newPosition: Position = {
     val start = scanner.curr.offset
-    val end = scanner.curr.endOffset + 1
+    val end = scanner.curr.endOffset
     Position.Range(input, start, end)
   }
 

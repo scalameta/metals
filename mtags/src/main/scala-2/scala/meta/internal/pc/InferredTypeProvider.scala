@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import scala.meta._
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
 import scala.meta.tokens.{Token => T}
 
@@ -140,7 +141,7 @@ final class InferredTypeProvider(
             def needsNewBraces = params
               .text()
               .substring(appl.pos.start, vl.pos.start)
-              .tokenize
+              .safeTokenize
               .toOption
               .exists {
                 _.tokens.reverseIterator
@@ -175,7 +176,7 @@ final class InferredTypeProvider(
         val searchString = params
           .text()
           .substring(nameEnd, lastParamOffset) // cotains the parameters and =
-        val lastTokenPos = searchString.tokenize.toOption
+        val lastTokenPos = searchString.safeTokenize.toOption
           .flatMap { tokens =>
             tokens.tokens.reverseIterator
               .find(t => t.is[T.RightParen] || t.is[T.RightBracket])
@@ -216,7 +217,7 @@ final class InferredTypeProvider(
             val hasDot = params
               .text()
               .substring(firstEnd, secondStart)
-              .tokenize
+              .safeTokenize
               .toOption
               .exists(_.tokens.exists(_.is[T.Comma]))
             !hasDot

@@ -26,7 +26,7 @@ trait Keywords { this: MetalsGlobal =>
       // Maybe we should re-use the tokenize result with `notInComment`
       val lineStart =
         if (pos.line > 0) pos.source.lineToOffset(pos.line - 1) else 0
-      text.substring(lineStart, pos.start).tokenize.toOption match {
+      text.substring(lineStart, pos.start).safeTokenize.toOption match {
         case Some(toks) => toks.tokens.reverse
         case None => Array.empty[Token]
       }

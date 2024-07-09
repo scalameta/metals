@@ -8,6 +8,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
+import java.util.logging.Level
 import java.util.logging.Logger
 
 import scala.annotation.tailrec
@@ -29,6 +30,7 @@ import scala.meta.io.RelativePath
 
 import geny.Generator
 import org.eclipse.{lsp4j => l}
+import org.scalameta.invariants.InvariantFailedException
 
 object ScalametaCommonEnrichments extends ScalametaCommonEnrichments {}
 trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
@@ -226,6 +228,23 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
   }
 
   implicit class XtensionStringDocMeta(doc: String) {
+
+    import scala.meta._
+
+    def safeTokenize(implicit
+        dialect: m.Dialect
+    ): Tokenized = try {
+      doc.tokenize
+    } catch {
+      case invariant: InvariantFailedException =>
+        logger.log(
+          Level.SEVERE,
+          s"Got invariant failed exception for '${doc}', which should not happen:\n" +
+            invariant.getMessage()
+        )
+        Tokenized.Error(m.Position.None, invariant.getMessage(), invariant)
+    }
+
     def asSymbol: Symbol = Symbol(doc)
 
     def checkIfNotInComment(
@@ -233,9 +252,8 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
         treeEnd: Int,
         currentOffset: Int
     ): Boolean = {
-      import scala.meta._
       val text = doc.slice(treeStart, treeEnd)
-      val tokens = text.tokenize.toOption
+      val tokens = text.safeTokenize.toOption
       tokens
         .flatMap(t =>
           t.find {

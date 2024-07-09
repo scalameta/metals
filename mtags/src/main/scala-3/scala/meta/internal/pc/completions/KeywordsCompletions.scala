@@ -3,7 +3,6 @@ package scala.meta.internal.pc.completions
 import scala.meta.internal.mtags.MtagsEnrichments.given
 import scala.meta.internal.pc.Keyword
 import scala.meta.internal.pc.KeywordCompletionsUtils
-import scala.meta.tokenizers.XtensionTokenizeInputLike
 import scala.meta.tokens.Token
 
 import dotty.tools.dotc.ast.tpd.*
@@ -47,7 +46,7 @@ object KeywordsCompletions:
             else 0
           text
             .substring(lineStart, completionPos.cursorPos.start)
-            .tokenize
+            .safeTokenize
             .toOption match
             case Some(toks) => toks.tokens.reverse
             case None => Array.empty[Token]

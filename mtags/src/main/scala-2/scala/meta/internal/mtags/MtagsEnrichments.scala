@@ -19,6 +19,7 @@ import scala.meta.internal.semanticdb.SymbolInformation.{Property => p}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
+import scala.meta.tokens.Token
 
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
@@ -99,12 +100,10 @@ trait MtagsEnrichments extends ScalametaCommonEnrichments {
     def isVal: Boolean = (properties & p.VAL.value) != 0
   }
 
-  implicit class XtensionToken(token: m.Token) {
+  implicit class XtensionToken(token: Token) {
     def isWhiteSpaceOrComment: Boolean =
       token match {
-        case _: m.Token.Space | _: m.Token.Tab | _: m.Token.CR | _: m.Token.LF |
-            _: m.Token.LFLF | _: m.Token.FF | _: m.Token.Comment |
-            _: m.Token.BOF | _: m.Token.EOF =>
+        case _: Token.Whitespace | _: Token.Comment =>
           true
         case _ => false
       }
