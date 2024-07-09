@@ -114,11 +114,10 @@ object SelectionRangeProvider:
           paramss
             .iterator
             .flatMap{ // parameter list to a sourcePosition covering the whole list
-              case Seq(param) => Some(param.sourcePos)
+              case Seq(param) => None
               case params @ Seq(head, tail*) =>
                 val srcPos = head.sourcePos
-                val lastSpan = tail.last.span
-                Some(SourcePosition(srcPos.source, srcPos.span union lastSpan, srcPos.outer))
+                Some(srcPos.copy(span = srcPos.span union tail.last.span))
               case Seq() => None
             }
             .find(_.contains(pos))
