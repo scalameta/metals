@@ -140,7 +140,7 @@ object SelectionRangeProvider:
     // only parse comments from first range to reduce computation
     val srcSliced = srcText.slice(treeStart, treeEnd)
 
-    val tokens = srcSliced.tokenize.toOption
+    val tokens = srcSliced.safeTokenize.toOption
     if tokens.isEmpty then Nil
     else
       SelectionRangeUtils

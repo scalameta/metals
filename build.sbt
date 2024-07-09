@@ -285,9 +285,8 @@ def multiScalaDirectories(root: File, scalaVersion: String) = {
   result.toList
 }
 
-def scala3ScalametaDependency =
-  ("org.scalameta" %% "scalameta" % V.scalameta)
-    .cross(CrossVersion.for3Use2_13)
+def withExcludes(moduleId: ModuleID) =
+  moduleId
     .exclude("org.scala-lang", "scala-reflect")
     .exclude("org.scala-lang", "scala-compiler")
     // the correct one should be brought in by the scala 3 compiler
@@ -300,6 +299,15 @@ def scala3ScalametaDependency =
       "com.lihaoyi",
       "sourcecode_2.13",
     ) // avoid 2.13 and 3 on the classpath since it comes in via pprint
+
+def scala3SemanticdbDependency: ModuleID = withExcludes(
+  ("org.scalameta" % s"semanticdb-shared_${V.scala213}" % V.scalameta)
+)
+
+def scala3ScalametaDependency: ModuleID = withExcludes(
+  ("org.scalameta" %% "scalameta" % V.scalameta)
+    .cross(CrossVersion.for3Use2_13)
+)
 
 val mtagsSettings = List(
   crossScalaVersions := V.supportedScalaVersions,
@@ -333,6 +341,7 @@ val mtagsSettings = List(
       if3 = List(
         "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
         scala3ScalametaDependency,
+        scala3SemanticdbDependency,
       ),
     ),
   },
@@ -471,7 +480,10 @@ lazy val metals = project
       "com.lihaoyi" %% "requests" % "0.8.3",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
       "org.scalameta" %% "scalameta" % V.semanticdb(scalaVersion.value),
-      "org.scalameta" % "semanticdb-scalac-core" % V.semanticdb(
+      "org.scalameta" %% "semanticdb-metap" % V.semanticdb(
+        scalaVersion.value
+      ) cross CrossVersion.full,
+      "org.scalameta" % "semanticdb-shared" % V.semanticdb(
         scalaVersion.value
       ) cross CrossVersion.full,
       // For starting Ammonite

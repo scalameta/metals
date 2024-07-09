@@ -52,8 +52,8 @@ object MillDigest extends Digestable {
           case _: Token.KwImport =>
             acc.hadImport = true
           // end import either with newline or `,` or `}`
-          case _: Token.LF | _: Token.LFLF | _: Token.Comma |
-              _: Token.RightBrace if acc.processingFileImport =>
+          case _: Token.AtEOL | _: Token.Comma | _: Token.RightBrace
+              if acc.processingFileImport =>
             val newPath = Paths.get(acc.prefix).resolve(acc.current + ".sc")
             val relative = file.toNIO.resolveSibling(newPath)
             acc.allPaths.append(AbsolutePath(relative))
@@ -66,10 +66,7 @@ object MillDigest extends Digestable {
             if (!acc.insideBraces) {
               acc.hadFile = false
             }
-            if (
-              token.isInstanceOf[Token.LF] || token
-                .isInstanceOf[Token.LFLF]
-            ) {
+            if (token.isInstanceOf[Token.AtEOL]) {
               acc.hadImport = false
             }
           // if we are after => and haven't encountered `,`, `}` or newline

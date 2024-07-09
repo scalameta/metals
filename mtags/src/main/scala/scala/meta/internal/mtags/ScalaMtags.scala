@@ -12,6 +12,8 @@ import scala.meta.internal.trees._
 import scala.meta.parsers.Parsed
 import scala.meta.transversers.SimpleTraverser
 
+import org.scalameta.invariants.InvariantFailedException
+
 object ScalaMtags {
   def index(input: Input.VirtualFile, dialect: Dialect): MtagsIndexer = {
     new ScalaMtags(input, dialect)
@@ -25,7 +27,12 @@ class ScalaMtags(
     with MtagsIndexer {
 
   private val root: Parsed[Source] =
-    parsedTree.map(Parsed.Success(_)).getOrElse(dialect(input).parse[Source])
+    try {
+      parsedTree.map(Parsed.Success(_)).getOrElse(dialect(input).parse[Source])
+    } catch {
+      case t: InvariantFailedException =>
+        Parsed.Error(Position.None, t.toString(), t)
+    }
 
   def source: Source = root.get
   override def language: Language = Language.SCALA

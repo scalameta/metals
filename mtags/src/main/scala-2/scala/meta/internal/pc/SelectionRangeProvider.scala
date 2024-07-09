@@ -2,8 +2,8 @@ package scala.meta.internal.pc
 
 import java.{util => ju}
 
-import scala.meta._
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
 
 import org.eclipse.lsp4j.SelectionRange
@@ -106,7 +106,7 @@ class SelectionRangeProvider(
     // only tokenize comments from first range to reduce computation
     val srcSliced = srcText.slice(treeStart, treeEnd)
 
-    val tokens = srcSliced.tokenize.toOption
+    val tokens = srcSliced.safeTokenize.toOption
 
     if (tokens.isEmpty) Nil
     else

@@ -23,6 +23,7 @@ object SemanticTokensProvider {
 
   def getTokens(isScala3: Boolean, text: String): Tokens = {
     import scala.meta._
+    // This should throw if something breaks since otherwise if we return empty everything will get unhighlighted
     if (isScala3) {
       implicit val dialect = scala.meta.dialects.Scala3
       text.tokenize.get

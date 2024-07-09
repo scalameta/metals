@@ -13,7 +13,6 @@ import scala.util.Properties
 import scala.util.Try
 
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.pc.JavaMetalsGlobal
@@ -94,9 +93,8 @@ class JavaInteractiveSemanticdb(
         .resolve(s"${localSource.filename}.semanticdb")
 
     val doc = if (semanticdbFile.exists) {
-      FileIO
-        .readAllDocuments(semanticdbFile)
-        .headOption
+
+      readAllDocuments(semanticdbFile).headOption
         .getOrElse(s.TextDocument())
     } else {
       val log = writer.getBuffer()
@@ -125,6 +123,12 @@ class JavaInteractiveSemanticdb(
 
     workDir.deleteRecursively()
     out
+  }
+
+  private def readAllDocuments(path: AbsolutePath): Seq[s.TextDocument] = {
+    val stream = Files.newInputStream(path.toNIO)
+    try s.TextDocuments.parseFrom(stream).documents
+    finally stream.close()
   }
 
   private def patchModuleFlags(

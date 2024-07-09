@@ -3,7 +3,6 @@ package scala.meta.internal.metals
 import scala.collection.mutable
 
 import scala.meta._
-import scala.meta.dialects.Scala213
 import scala.meta.internal.docstrings._
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.ScalaMtags
@@ -15,6 +14,7 @@ import scala.meta.pc.ContentType
 import scala.meta.pc.ContentType.MARKDOWN
 import scala.meta.pc.ContentType.PLAINTEXT
 import scala.meta.pc.SymbolDocumentation
+import scala.meta.tokens.Token
 
 /**
  * Extracts Scaladoc from Scala source code.
@@ -162,8 +162,7 @@ object ScaladocIndexer {
           val syntax = c.syntax
           if (syntax.startsWith("/**")) Some(syntax)
           else None
-        case _: Token.Space | _: Token.LF | _: Token.CR | _: Token.LFLF |
-            _: Token.Tab =>
+        case _: Token.Whitespace =>
           findLeadingDocstring(tokens, start - 1)
         case _ =>
           None

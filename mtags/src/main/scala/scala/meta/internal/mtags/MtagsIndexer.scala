@@ -5,7 +5,7 @@ import scala.{meta => m}
 import scala.meta.Name
 import scala.meta.Term
 import scala.meta.inputs.Input
-import scala.meta.internal.inputs._
+import scala.meta.internal.semanticdb.Implicits._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation.Kind

@@ -1,6 +1,6 @@
 /*example(Package):9*/package example
 
-/*example.nested.x(Package):5*/package nested.x {
+/*example.nested.x(Package):4*/package nested.x {
   /*example.nested.x.DoublePackage(Class):4*/class DoublePackage {}
 }
 
