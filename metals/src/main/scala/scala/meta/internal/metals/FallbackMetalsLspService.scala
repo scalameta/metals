@@ -84,7 +84,7 @@ class FallbackMetalsLspService(
     val path = params.getTextDocument.getUri.toAbsolutePath
     files.getAndUpdate(_ - path)
     super.didClose(params)
-    scalaCli.stop(path)
+    scalaCli.stop(path).map(_ => diagnostics.didDelete(path))
   }
 
   override def maybeImportFileAndLoad(
