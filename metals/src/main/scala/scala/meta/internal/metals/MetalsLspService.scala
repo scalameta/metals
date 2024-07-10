@@ -1423,26 +1423,6 @@ abstract class MetalsLspService(
         }
     }
 
-  protected def importBuild(session: BspSession): Future[Unit] = {
-    val importedBuilds0 = timerProvider.timed("Imported build") {
-      session.importBuilds()
-    }
-    for {
-      bspBuilds <- workDoneProgress.trackFuture(
-        Messages.importingBuild,
-        importedBuilds0,
-      )
-      _ = {
-        val idToConnection = bspBuilds.flatMap { bspBuild =>
-          val targets =
-            bspBuild.build.workspaceBuildTargets.getTargets().asScala
-          targets.map(t => (t.getId(), bspBuild.connection))
-        }
-        mainBuildTargetsData.resetConnections(idToConnection)
-      }
-    } yield compilers.cancel()
-  }
-
   val buildClient: ForwardingMetalsBuildClient =
     new ForwardingMetalsBuildClient(
       languageClient,

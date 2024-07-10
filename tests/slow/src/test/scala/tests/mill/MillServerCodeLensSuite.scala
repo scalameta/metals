@@ -1,6 +1,7 @@
 package tests.mill
 
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.debug.MUnit
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import tests.BaseCodeLensLspSuite
@@ -31,8 +32,7 @@ class MillServerCodeLensSuite
            |class Foo extends munit.FunSuite {}
            |""".stripMargin,
         V.scala3,
-        V.millVersion,
-        includeMunit = true,
+        testDep = Some(MUnit),
       )
     )
 

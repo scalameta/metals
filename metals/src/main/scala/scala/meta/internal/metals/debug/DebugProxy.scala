@@ -264,10 +264,13 @@ private[debug] final class DebugProxy(
       client.consume(response)
     case message @ ErrorOutputNotification(output) =>
       initialized.trySuccess(())
-      val analyzedMessage = stackTraceAnalyzer
-        .fileLocationFromLine(output.getOutput())
-        .map(DebugProtocol.stacktraceOutputResponse(output, _))
-        .getOrElse(message)
+      val analyzedMessage =
+        if (output.getOutput().contains("at "))
+          stackTraceAnalyzer
+            .fileLocationFromLine(output.getOutput())
+            .map(DebugProtocol.stacktraceOutputResponse(output, _))
+            .getOrElse(message)
+        else message
       client.consume(analyzedMessage)
 
     case message @ OutputNotification(output) if stripColor =>

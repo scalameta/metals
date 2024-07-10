@@ -18,14 +18,14 @@ object V {
 
   val ammonite = "3.0.0-M2-13-23a8ef64"
   val betterMonadicFor = "0.3.1"
-  val bloop = "1.5.18"
+  val bloop = "1.6.0"
   val bloopConfig = "2.0.2"
   val bsp = "2.2.0-M2"
   val coursier = "2.1.10"
   val coursierInterfaces =
     "1.0.19" // changing coursier interfaces version may be not binary compatible.
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
-  val debugAdapter = "4.1.1"
+  val debugAdapter = "4.2.0"
   val genyVersion = "1.0.0"
   val gitter8Version = "0.16.2"
   val gradleBloop = "1.6.2"
@@ -35,7 +35,7 @@ object V {
   val kindProjector = "0.13.3"
   val lsp4jV = "0.23.1"
   val mavenBloop = "2.0.0"
-  val mill = "0.11.7"
+  val mill = "0.11.8"
   val mdoc = "2.5.2"
   val munit = "1.0.0"
   val pprint = "0.7.3"
