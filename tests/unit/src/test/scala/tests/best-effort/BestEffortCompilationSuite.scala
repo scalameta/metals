@@ -1,10 +1,14 @@
 package tests.`best-effort`
 
-import tests.BaseCompletionLspSuite
+import tests.BaseNonCompilingLspSuite
 
 class BestEffortCompilationSuite
-    extends BaseCompletionLspSuite("best-effort-compilation") {
+    extends BaseNonCompilingLspSuite("best-effort-compilation") {
   val scalaVersion = "3.5.0-RC1"
+
+  override val scalaVersionConfig = s"\"scalaVersion\": \"${scalaVersion}\""
+  override val saveAfterChanges: Boolean = true
+  override val scala3Diagnostics: Boolean = true
 
   // implemented in bloop
   test("best-effort-error-diagnostics") {
@@ -13,9 +17,9 @@ class BestEffortCompilationSuite
       _ <- initialize(
         s"""|/metals.json
             |{
-            |  "a": {"scalaVersion": "${scalaVersion}"},
+            |  "a": { $scalaVersionConfig },
             |  "b": {
-            |    "scalaVersion": "${scalaVersion}",
+            |    $scalaVersionConfig,
             |    "dependsOn": [ "a" ]
             |  }
             |}
@@ -57,7 +61,7 @@ class BestEffortCompilationSuite
       _ <- initialize(
         s"""/metals.json
            |{
-           |  "a": { "scalaVersion": "${scalaVersion}" }
+           |  "a": { $scalaVersionConfig }
            |}
            |/a/src/main/scala/a/A.scala
            |package a
@@ -99,10 +103,10 @@ class BestEffortCompilationSuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "scalaVersion": "${scalaVersion}",
+           |    $scalaVersionConfig,
            |    "dependsOn": [ "b" ]
            |  },
-           |  "b": { "scalaVersion": "${scalaVersion}" }
+           |  "b": { $scalaVersionConfig }
            |}
            |/a/src/main/scala/a/A.scala
            |package a
@@ -145,9 +149,9 @@ class BestEffortCompilationSuite
       _ <- initialize(
         s"""/metals.json
            |{
-           |  "b": { "scalaVersion": "${scalaVersion}" },
+           |  "b": { $scalaVersionConfig },
            |  "a": {
-           |    "scalaVersion": "${scalaVersion}",
+           |    $scalaVersionConfig,
            |    "dependsOn": [ "b" ]
            |  }
            |}
@@ -181,7 +185,7 @@ class BestEffortCompilationSuite
             |}
             |""".stripMargin
       }
-      _ <- server.didSave("b/src/main/scala/b/B.scala")(a => a)
+      _ <- server.didSave("b/src/main/scala/b/B.scala")(identity)
       _ <- assertCompletion(
         "BCustom@@",
         """|BCustomChangedObject <empty>
@@ -202,9 +206,9 @@ class BestEffortCompilationSuite
       _ <- initialize {
         s"""/metals.json
            |{
-           |  "b": { "scalaVersion": "${scalaVersion}" },
+           |  "b": { $scalaVersionConfig },
            |  "a": {
-           |    "scalaVersion": "${scalaVersion}",
+           |    $scalaVersionConfig,
            |    "dependsOn": [ "b" ]
            |  }
            |}
@@ -254,7 +258,7 @@ class BestEffortCompilationSuite
             |    unseal.pos  // error
             |""".stripMargin
       }
-      _ <- server.didSave("b/src/main/scala/b/B.scala")(a => a)
+      _ <- server.didSave("b/src/main/scala/b/B.scala")(identity)
       _ <- server.didChange("a/src/main/scala/a/A.scala") { _ =>
         """|object A:
            |  B.completionBar
@@ -263,7 +267,7 @@ class BestEffortCompilationSuite
            |  B.completionAdded // should not errored out, as now we do not recompile A.scala
            |""".stripMargin
       }
-      _ <- server.didSave("a/src/main/scala/a/A.scala")(a => a)
+      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/scala/a/A.scala:4:3: error: value completionUnknown is not a member of object B
