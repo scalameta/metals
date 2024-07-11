@@ -19,6 +19,7 @@ class PcReferencesProvider(
     driver: InteractiveDriver,
     request: ReferencesRequest,
 ) extends WithCompilationUnit(driver, request.file()) with PcCollector[Option[(String, Option[lsp4j.Range])]]:
+  override def allowZeroExtentImplicits: Boolean = true
 
   private def soughtSymbols =
     if(request.offsetOrSymbol().isLeft()) {

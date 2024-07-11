@@ -8,6 +8,8 @@ import scala.meta.pc.VirtualFileParams
 trait PcCollector[T] { self: WithCompilationUnit =>
   import compiler._
 
+  protected def allowZeroExtentImplicits = false
+
   def collect(
       parent: Option[Tree]
   )(tree: Tree, pos: Position, sym: Option[Symbol]): T
@@ -87,6 +89,9 @@ trait PcCollector[T] { self: WithCompilationUnit =>
     traverseSought(noTreeFilter, noSoughtFilter)
   }
 
+  def isCorrectPos(t: Tree): Boolean =
+    t.pos.isRange || (t.pos.isDefined && allowZeroExtentImplicits && t.symbol.isImplicit)
+
   def traverseSought(
       filter: Tree => Boolean,
       soughtFilter: (Symbol => Boolean) => Boolean
@@ -107,7 +112,7 @@ trait PcCollector[T] { self: WithCompilationUnit =>
          * All indentifiers such as:
          * val a = <<b>>
          */
-        case ident: Ident if ident.pos.isRange && filter(ident) =>
+        case ident: Ident if isCorrectPos(ident) && filter(ident) =>
           if (ident.symbol == NoSymbol)
             acc + collect(ident, ident.pos, fallbackSymbol(ident.name, pos))
           else
@@ -118,7 +123,7 @@ trait PcCollector[T] { self: WithCompilationUnit =>
          * type A = [<<b>>]
          */
         case tpe: TypeTree
-            if tpe.pos.isRange && tpe.original != null && filter(tpe) =>
+            if isCorrectPos(tpe) && tpe.original != null && filter(tpe) =>
           tpe.original.children.foldLeft(
             acc + collect(
               tpe.original,
@@ -130,7 +135,7 @@ trait PcCollector[T] { self: WithCompilationUnit =>
          * All select statements such as:
          * val a = hello.<<b>>
          */
-        case sel: Select if sel.pos.isRange && filter(sel) =>
+        case sel: Select if isCorrectPos(sel) && filter(sel) =>
           val newAcc =
             if (isForComprehensionMethod(sel)) acc
             else acc + collect(sel, sel.namePosition)
@@ -146,7 +151,7 @@ trait PcCollector[T] { self: WithCompilationUnit =>
          */
         case Function(params, body) =>
           val newAcc = params
-            .filter(vd => vd.pos.isRange && filter(vd))
+            .filter(vd => isCorrectPos(vd) && filter(vd))
             .foldLeft(
               acc
             ) { case (acc, vd) =>
@@ -167,7 +172,7 @@ trait PcCollector[T] { self: WithCompilationUnit =>
          * class <<Foo>> = ???
          * etc.
          */
-        case df: MemberDef if df.pos.isRange && filter(df) =>
+        case df: MemberDef if isCorrectPos(df) && filter(df) =>
           (annotationChildren(df) ++ df.children).foldLeft({
             val t = collect(
               df,
@@ -277,7 +282,7 @@ trait PcCollector[T] { self: WithCompilationUnit =>
           res
         // catch all missed named trees
         case name: NameTree
-            if soughtFilter(_ == name.symbol) && name.pos.isRange =>
+            if soughtFilter(_ == name.symbol) && isCorrectPos(name) =>
           tree.children.foldLeft(
             acc + collect(
               name,

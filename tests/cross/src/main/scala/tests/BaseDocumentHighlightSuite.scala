@@ -15,7 +15,6 @@ class BaseDocumentHighlightSuite extends BasePCSuite with RangeReplace {
   def check(
       name: TestOptions,
       original: String
-      //   compat: Map[String, String] = Map.empty
   )(implicit location: Location): Unit =
     test(name) {
 

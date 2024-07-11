@@ -14,6 +14,7 @@ trait PcReferencesProvider {
   import compiler._
   protected def includeDefinition: Boolean
   protected def result(): List[(String, Option[l.Range])]
+  override def allowZeroExtentImplicits = true
 
   def collect(
       parent: Option[Tree]
@@ -27,7 +28,10 @@ trait PcReferencesProvider {
       case t: DefTree if !includeDefinition =>
         (compiler.semanticdbSymbol(sym.getOrElse(t.symbol)), None)
       case t =>
-        (compiler.semanticdbSymbol(sym.getOrElse(t.symbol)), Some(pos.toLsp))
+        (
+          compiler.semanticdbSymbol(sym.getOrElse(t.symbol)),
+          Some(pos.toLsp)
+        )
     }
   }
 

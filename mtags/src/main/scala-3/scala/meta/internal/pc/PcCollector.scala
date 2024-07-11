@@ -25,6 +25,8 @@ import dotty.tools.dotc.util.Spans.Span
 trait PcCollector[T]:
   self: WithCompilationUnit =>
 
+  def allowZeroExtentImplicits: Boolean = false
+
   def collect(
       parent: Option[Tree]
   )(tree: Tree | EndMarker, pos: SourcePosition, symbol: Option[Symbol]): T
@@ -81,6 +83,10 @@ trait PcCollector[T]:
     def isCorrect =
       !span.isZeroExtent && span.exists && span.start < sourceText.size && span.end <= sourceText.size
 
+  extension (tree: Tree)
+    def isCorrectSpan =
+      tree.span.isCorrect || (allowZeroExtentImplicits && tree.symbol.is(Flags.Implicit))
+
   def traverseSought(
       filter: Tree => Boolean,
       soughtFilter: (Symbol => Boolean) => Boolean,
@@ -102,7 +108,7 @@ trait PcCollector[T]:
          * val a = <<b>>
          */
         case ident: Ident
-            if ident.span.isCorrect && filter(ident) && !isExtensionMethodCall(
+            if ident.isCorrectSpan && filter(ident) && !isExtensionMethodCall(
               parent,
               ident.symbol,
             ) =>
@@ -121,7 +127,7 @@ trait PcCollector[T]:
          * val x = new <<A>>(1)
          */
         case sel @ Select(New(t), _)
-            if sel.span.isCorrect &&
+            if sel.isCorrectSpan &&
               sel.symbol.isConstructor &&
               t.symbol == NoSymbol =>
           if soughtFilter(_ == sel.symbol.owner) then
@@ -136,7 +142,7 @@ trait PcCollector[T]:
          * val a = hello.<<b>>
          */
         case sel: Select
-            if sel.span.isCorrect && filter(sel) &&
+            if sel.isCorrectSpan && filter(sel) &&
               !sel.isForComprehensionMethod =>
           occurences + collect(
             sel,
