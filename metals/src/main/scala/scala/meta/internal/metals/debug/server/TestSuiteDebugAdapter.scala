@@ -136,6 +136,9 @@ class TestSuiteDebugAdapter(
     scribe.debug("Test agent JARs: " + testAgentJars.mkString(", "))
 
     server.listenToTests
+
+    scribe.debug(s"Running test with debugger with classpath: $classPath")
+
     Run.runMain(
       root,
       classPath ++ testAgentJars,

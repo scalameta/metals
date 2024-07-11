@@ -30,10 +30,16 @@ class MillDebugDiscoverySuite
 
     test(s"testTarget-$scala") {
       cleanWorkspace()
+      val message = "Hello"
       for {
         _ <- initialize(
           MillBuildLayout(
             s"""
+               |/a/src/Main.scala
+               |package a
+               |object Main {
+               |  def message = "$message"
+               |}
                |/${fooPath}
                |package a
                |class Foo extends org.scalatest.funsuite.AnyFunSuite {
@@ -42,13 +48,19 @@ class MillDebugDiscoverySuite
                |/${barPath}
                |package a
                |class Bar extends org.scalatest.funsuite.AnyFunSuite {
-               |  test("bart") {}
+               |  test("bart") {
+               |    assert(Main.message == "$message")
+               |  }
                |}
                |""".stripMargin,
             scala,
             Some(Scalatest),
           )
         )
+        _ <- server.didOpen("a/src/Main.scala")
+        _ <- server.didSave("a/src/Main.scala")(
+          identity
+        ) // making sure it gets compiled to the correct destination
         _ <- server.didOpen(barPath)
         _ <- server.didSave(barPath)(identity)
         _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
