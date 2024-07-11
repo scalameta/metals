@@ -40,7 +40,7 @@ class DebugeeParamsCreator(buildTargets: BuildTargets) {
       }.toList
 
       val modules = buildTargets
-        .allInverseDependencies(id)
+        .buildTargetTransitiveDependencies(id)
         .flatMap(buildTargets.jvmTarget)
         .map(createModule(_))
         .toSeq

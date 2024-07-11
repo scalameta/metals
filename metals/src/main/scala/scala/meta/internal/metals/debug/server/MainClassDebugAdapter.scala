@@ -38,7 +38,8 @@ class MainClassDebugAdapter(
 
   def name: String =
     s"${getClass.getSimpleName}(${project.name}, ${mainClass.getClassName()})"
-  def run(listener: DebuggeeListener): CancelableFuture[Unit] =
+  def run(listener: DebuggeeListener): CancelableFuture[Unit] = {
+    scribe.debug(s"Running main with debugger with classpath: $classPath")
     Run.runMain(
       root = root,
       classPath = classPath,
@@ -49,4 +50,5 @@ class MainClassDebugAdapter(
       evnVariables = mainClass.getEnvironmentVariables().asScala.toList,
       logger = new Logger(listener),
     )
+  }
 }
