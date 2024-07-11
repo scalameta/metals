@@ -791,6 +791,7 @@ class MetalsGlobal(
      */
     def namePosition: Position = {
       sel match {
+        case _ if !sel.pos.isRange => sel.pos
         case Select(qualifier: Select, name)
             if (name == nme.apply || name == nme.unapply) && sel.pos.point == qualifier.pos.point =>
           qualifier.namePosition
