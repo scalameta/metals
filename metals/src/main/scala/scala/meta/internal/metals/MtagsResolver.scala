@@ -81,7 +81,7 @@ object MtagsResolver {
 
   class Default extends MtagsResolver {
 
-    private val firstScala3PCVersion = "3.3.4"
+    private val firstScala3PCVersion = "3.3.4-RC1"
     private val states =
       new ConcurrentHashMap[String, State]()
 
