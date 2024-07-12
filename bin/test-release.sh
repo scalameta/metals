@@ -7,7 +7,6 @@ suffix=${argumentsRest:-}
 
 coursier fetch \
   org.scalameta:metals_2.13:$version \
-  org.scalameta:mtags_3.1.3:$version \
   org.scalameta:mtags_3.2.2:$version \
   org.scalameta:mtags_3.3.0:$version \
   org.scalameta:mtags_3.3.1:$version \
