@@ -36,7 +36,6 @@ final class CodeActionProvider(
       scalafixProvider,
       buildTargets,
       diagnostics,
-      languageClient,
     ),
     new OrganizeImportsQuickFix(
       scalafixProvider,
