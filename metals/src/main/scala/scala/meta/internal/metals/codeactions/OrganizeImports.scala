@@ -9,7 +9,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.ScalafixProvider
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.io.AbsolutePath
@@ -24,28 +23,41 @@ sealed abstract class OrganizeImports(
 )(implicit ec: ExecutionContext)
     extends CodeAction {
 
+  protected val canNotOrganizeImportsWithErrors =
+    "Can not organize imports if file has error"
   protected def title: String
-  protected def isCallAllowed(
+  protected def disabledReason(
       file: AbsolutePath,
       params: CodeActionParams,
-  ): Boolean
+  ): Option[String]
   override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = {
     val uri = params.getTextDocument.getUri
     val file = uri.toAbsolutePath
 
-    if (isCallAllowed(file, params)) {
-      val scalaTarget = for {
-        buildId <- buildTargets.inverseSources(file)
-        target <- buildTargets.scalaTarget(buildId)
-      } yield target
-      scalaTarget match {
-        case Some(target) =>
-          organizeImportsEdits(file, target)
-        case _ => Future.successful(Seq())
-      }
-    } else Future.successful(Seq())
+    disabledReason(file, params) match {
+      case reason @ Some(_) =>
+        Future.successful(
+          Seq(
+            CodeActionBuilder.build(
+              title = this.title,
+              kind = this.kind,
+              disabledReason = reason,
+            )
+          )
+        )
+      case None =>
+        val scalaTarget = for {
+          buildId <- buildTargets.inverseSources(file)
+          target <- buildTargets.scalaTarget(buildId)
+        } yield target
+        scalaTarget match {
+          case Some(target) =>
+            organizeImportsEdits(file, target)
+          case _ => Future.successful(Seq())
+        }
+    }
   }
 
   private def organizeImportsEdits(
@@ -75,7 +87,6 @@ class SourceOrganizeImports(
     scalafixProvider: ScalafixProvider,
     buildTargets: BuildTargets,
     diagnostics: Diagnostics,
-    languageClient: MetalsLanguageClient,
 )(implicit ec: ExecutionContext)
     extends OrganizeImports(
       scalafixProvider,
@@ -85,33 +96,18 @@ class SourceOrganizeImports(
   override val kind: String = SourceOrganizeImports.kind
   override protected val title: String = SourceOrganizeImports.title
 
-  override protected def isCallAllowed(
+  override protected def disabledReason(
       file: AbsolutePath,
       params: CodeActionParams,
-  ): Boolean = {
-    val validCall = isScalaOrSbt(file) && isSourceOrganizeImportCalled(params)
-    if (validCall) {
-      if (diagnostics.hasDiagnosticError(file)) {
-        languageClient.showMessage(
-          l.MessageType.Warning,
-          s"Fix ${file.toNIO.getFileName} before trying to organize your imports",
-        )
-        scribe.info("Can not organize imports if file has error")
-        false
-      } else {
-        true
-      }
+  ): Option[String] =
+    if (!isScalaOrSbt(file)) {
+      Some("Only supported for Scala and sbt files")
+    } else if (diagnostics.hasDiagnosticError(file)) {
+      scribe.info(canNotOrganizeImportsWithErrors)
+      Some(canNotOrganizeImportsWithErrors)
     } else {
-      false
+      None
     }
-  }
-
-  protected def isSourceOrganizeImportCalled(
-      params: CodeActionParams
-  ): Boolean =
-    Option(params.getContext.getOnly)
-      .map(_.asScala.toList.contains(kind))
-      .isDefined
 }
 
 object SourceOrganizeImports {
@@ -131,10 +127,10 @@ class OrganizeImportsQuickFix(
 
   override val kind: String = OrganizeImportsQuickFix.kind
   override protected val title: String = OrganizeImportsQuickFix.title
-  override protected def isCallAllowed(
+  override protected def disabledReason(
       file: AbsolutePath,
       params: CodeActionParams,
-  ): Boolean = {
+  ): Option[String] = {
     val hasUnused = params
       .getContext()
       .getDiagnostics()
@@ -142,10 +138,12 @@ class OrganizeImportsQuickFix(
       .collect { case ScalacDiagnostic.UnusedImport(name) => name }
       .nonEmpty
 
-    if (hasUnused && !diagnostics.hasDiagnosticError(file)) {
-      true
+    if (!hasUnused) {
+      Some("No unused imports found")
+    } else if (diagnostics.hasDiagnosticError(file)) {
+      Some(canNotOrganizeImportsWithErrors)
     } else {
-      false
+      None
     }
   }
 
