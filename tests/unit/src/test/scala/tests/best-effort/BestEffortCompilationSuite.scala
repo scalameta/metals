@@ -141,7 +141,7 @@ class BestEffortCompilationSuite
     } yield ()
   }
 
-  // Here we test wheater completion symbols persist after removing
+  // Here we test whether completion symbols persist after removing
   // the object they originate from
   test("best-effort-completion-multiple-modules-with-removed-objects") {
     cleanWorkspace()

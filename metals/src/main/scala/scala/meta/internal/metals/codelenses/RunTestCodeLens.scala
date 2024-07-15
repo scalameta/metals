@@ -1,10 +1,5 @@
 package scala.meta.internal.metals.codelenses
 
-import java.nio.file.FileSystemException
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.nio.file.attribute.BasicFileAttributes
 import java.util.Collections.singletonList
 
 import scala.concurrent.ExecutionContext
@@ -17,6 +12,7 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands.StartDebugSession
 import scala.meta.internal.metals.ClientCommands.StartRunSession
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -59,6 +55,7 @@ final class RunTestCodeLens(
     userConfig: () => UserConfiguration,
     trees: Trees,
     workspace: AbsolutePath,
+    diagnostics: Diagnostics,
 )(implicit val ec: ExecutionContext)
     extends CodeLens {
 
@@ -89,6 +86,7 @@ final class RunTestCodeLens(
     val distance = buffers.tokenEditDistance(path, textDocument.text, trees)
     val lenses = for {
       buildTargetId <- buildTargets.inverseSources(path)
+      if canActuallyCompile(buildTargetId, diagnostics)
       buildTarget <- buildTargets.info(buildTargetId)
       isJVM = buildTarget.asScalaBuildTarget.forall(
         _.getPlatform == b.ScalaPlatform.JVM
@@ -97,36 +95,31 @@ final class RunTestCodeLens(
       // although hasDebug is already available in BSP capabilities
       // see https://github.com/build-server-protocol/build-server-protocol/pull/161
       // most of the bsp servers such as bloop and sbt might not support it.
-    } yield isNonMetaFileInClasspath(buildTargetId).flatMap {
-      (isNonMeta: Boolean) =>
-        if (isNonMeta) {
-          requestJvmEnvironment(buildTargetId, isJVM).map { _ =>
-            val classes = buildTargetClasses.classesOf(buildTargetId)
+    } yield requestJvmEnvironment(buildTargetId, isJVM).map { _ =>
+      val classes = buildTargetClasses.classesOf(buildTargetId)
 
-            // sbt doesn't declare debugging provider
-            def buildServerCanDebug =
-              connection.isDebuggingProvider || connection.isSbt
+      // sbt doesn't declare debugging provider
+      def buildServerCanDebug =
+        connection.isDebuggingProvider || connection.isSbt
 
-            if (connection.isScalaCLI && path.isAmmoniteScript) {
-              scalaCliCodeLenses(
-                textDocument,
-                buildTargetId,
-                classes,
-                distance,
-                buildServerCanDebug,
-                isJVM,
-              )
-            } else
-              codeLenses(
-                textDocument,
-                buildTargetId,
-                classes,
-                distance,
-                path,
-                isJVM,
-              )
-          }
-        } else Future.successful(Nil)
+      if (connection.isScalaCLI && path.isAmmoniteScript) {
+        scalaCliCodeLenses(
+          textDocument,
+          buildTargetId,
+          classes,
+          distance,
+          buildServerCanDebug,
+          isJVM,
+        )
+      } else
+        codeLenses(
+          textDocument,
+          buildTargetId,
+          classes,
+          distance,
+          path,
+          isJVM,
+        )
     }
     lenses.getOrElse(Future.successful(Nil))
   }
@@ -138,29 +131,17 @@ final class RunTestCodeLens(
    * but semanticDB and betasty (and thus the META_INF directory) may still be produced.
    * We want to avoid creating run/test/debug code lens in those situations.
    */
-  private def isNonMetaFileInClasspath(
-      buildTargetId: BuildTargetIdentifier
-  ): Future[Boolean] = {
-    import scala.jdk.FunctionConverters._
-    buildTargetClasses
-      .jvmRunEnvironment(buildTargetId)
-      .map(
-        _.map(_.getClasspath().asScala.map(_.toAbsolutePath.toString).toList)
-          .map { classpath =>
-            classpath.exists { dir =>
-              try {
-                val rootPath = Paths.get(dir)
-                val predicate = { (path: Path, _: BasicFileAttributes) =>
-                  !path.endsWith("META-INF") && path != rootPath
-                }.asJavaBiPredicate
-                Files.find(rootPath, 1, predicate).findAny().asScala.isDefined
-              } catch {
-                case _: FileSystemException => false
-              }
-            }
-          }
-          .getOrElse(true)
-      )
+  private def canActuallyCompile(
+      buildTargetId: BuildTargetIdentifier,
+      diagnostics: Diagnostics,
+  ): Boolean = {
+    val allBuildTargetsIds: Seq[BuildTargetIdentifier] =
+      buildTargetId +: (buildTargets
+        .buildTargetTransitiveDependencies(buildTargetId)
+        .toSeq)
+    allBuildTargetsIds.forall { id =>
+      !diagnostics.hasCompilationErrors(id)
+    }
   }
 
   /**
