@@ -7,7 +7,13 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
 
   test("deprecated-scala-212") {
     cleanWorkspace()
-    val using = V.deprecatedScalaVersions.filter(_.startsWith("2.12")).head
+    val deprecatedScala212Versions =
+      V.deprecatedScalaVersions.filter(_.startsWith("2.12"))
+    assume(
+      deprecatedScala212Versions.size > 0,
+      "No deprecated Scala 2.12 versions to test.",
+    )
+    val using = deprecatedScala212Versions.head
     for {
       _ <- initialize(
         s"""/metals.json
@@ -32,7 +38,13 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
 
   test("multiple-problems-scala") {
     cleanWorkspace()
-    val using = V.deprecatedScalaVersions.filter(_.startsWith("2.12")).head
+    val deprecatedScala212Versions =
+      V.deprecatedScalaVersions.filter(_.startsWith("2.12"))
+    assume(
+      deprecatedScala212Versions.size > 0,
+      "No deprecated Scala 2.12 versions to test.",
+    )
+    val using = deprecatedScala212Versions.head
     val older = "2.12.4"
     for {
       _ <- initialize(
@@ -104,8 +116,14 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
   }
 
   test("deprecated-scala-213") {
+    val deprecatedScala213Versions =
+      V.deprecatedScalaVersions.filter(_.startsWith("2.13"))
+    assume(
+      deprecatedScala213Versions.size > 0,
+      "No deprecated Scala 2.13 versionsto test.",
+    )
     cleanWorkspace()
-    val using = V.deprecatedScalaVersions.filter(_.startsWith("2.13")).head
+    val using = deprecatedScala213Versions.head
     for {
       _ <- initialize(
         s"""/metals.json
