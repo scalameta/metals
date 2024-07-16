@@ -102,22 +102,36 @@ class PcReferencesSuite extends BasePCSuite with RangeReplace {
     )
   )
 
-  // for Scala 3 the symbol in bar reference is missing (<none>)
   check(
-    "implicit-args-3".tag(IgnoreScala3),
+    "implicit-args-3",
     """|package example
        |
        |class Bar(i: Int)
        |class Foo(implicit b: Bar)
        |
        |object Hello {
-       |  implicit val b@@arr = new Bar(1)
+       |  implicit val b@@arr: Bar = new Bar(1)
        |  for {
        |    _ <- Some(1)
        |    foo = <<>>new Foo()
        |  } yield ()
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|package example
+                |
+                |class Bar(i: Int)
+                |class Foo(implicit b: Bar)
+                |
+                |object Hello {
+                |  implicit val barr: Bar = new Bar(1)
+                |  for {
+                |    _ <- Some(1)
+                |    foo = new Foo()<<>>
+                |  } yield ()
+                |}
+                |""".stripMargin
+    )
   )
 
   check(
