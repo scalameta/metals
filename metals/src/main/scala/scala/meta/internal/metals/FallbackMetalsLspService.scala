@@ -73,6 +73,35 @@ class FallbackMetalsLspService(
   override val projectInfo: MetalsServiceInfo =
     MetalsServiceInfo.FallbackService
 
+  override val indexer: Indexer = Indexer(
+    languageClient,
+    executionContext,
+    tables,
+    statusBar,
+    workDoneProgress,
+    timerProvider,
+    () => indexingPromise,
+    buildData,
+    clientConfig,
+    definitionIndex,
+    referencesProvider,
+    workspaceSymbols,
+    buildTargets,
+    semanticDBIndexer,
+    fileWatcher,
+    focusedDocument,
+    focusedDocumentBuildTarget,
+    buildTargetClasses,
+    () => userConfig,
+    sh,
+    symbolDocs,
+    scalaVersionSelector,
+    sourceMapper,
+    folder,
+    implementationProvider,
+    resetService,
+  )
+
   protected def buildData(): Seq[BuildTool] =
     scalaCli.lastImportedBuilds.map {
       case (lastImportedBuild, buildTargetsData) =>

@@ -523,6 +523,12 @@ final class BuildTargets private (
   ): Option[Iterable[BuildTargetIdentifier]] =
     data.fromOptions(_.sourceBuildTargets(sourceItem))
 
+  def belongsToBuildTarget(nioDir: Path): Boolean =
+    sourceItems.filter(_.exists).exists { item =>
+      val nioItem = item.toNIO
+      nioDir.startsWith(nioItem) || nioItem.startsWith(nioDir)
+    }
+
   def inverseSourceItem(source: AbsolutePath): Option[AbsolutePath] =
     sourceItems.find(item => source.toNIO.startsWith(item.toNIO))
 

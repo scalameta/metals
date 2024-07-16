@@ -5,6 +5,7 @@ import scala.concurrent.Promise
 
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest
+import scala.meta.internal.metals.CreateSession
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.ImportBuildChanges
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -294,7 +295,7 @@ class SbtServerSuite
             |""".stripMargin
       )
       _ = buffer.clear()
-      _ <- server.headServer.restartBspServer()
+      _ <- server.headServer.connect(CreateSession())
     } yield {
       val logs = buffer.result()
       assert(logs.contains("sbt server started"))

@@ -22,9 +22,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.builds.BspErrorHandler
-import scala.meta.internal.builds.BuildToolSelector
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.builds.WorkspaceReload
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
@@ -178,8 +176,7 @@ abstract class MetalsLspService(
     new AtomicReference[b.BuildTargetIdentifier]()
   protected val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
   protected val symbolDocs = new Docstrings(definitionIndex)
-  var bspSession: Option[BspSession] =
-    Option.empty[BspSession]
+  def bspSession: Option[BspSession] = indexer.bspSession
   protected val savedFiles = new ActiveFiles(time)
   protected val recentlyOpenedFiles = new ActiveFiles(time)
 
@@ -606,17 +603,6 @@ abstract class MetalsLspService(
       languageClient,
       new ClassFinder(trees),
     )
-
-  protected val workspaceReload: WorkspaceReload = new WorkspaceReload(
-    folder,
-    languageClient,
-    tables,
-  )
-
-  protected val buildToolSelector: BuildToolSelector = new BuildToolSelector(
-    languageClient,
-    tables,
-  )
 
   def loadedPresentationCompilerCount(): Int =
     compilers.loadedPresentationCompilerCount()
@@ -1529,7 +1515,7 @@ abstract class MetalsLspService(
       compilations,
       workDoneProgress,
       buffers,
-      () => indexer.profiledIndexWorkspace(() => ()),
+      () => indexer.index(() => ()),
       () => diagnostics,
       tables,
       () => buildClient,
@@ -1554,44 +1540,7 @@ abstract class MetalsLspService(
 
   def fileWatcher: FileWatcher
 
-  private val sharedIndices = new SqlSharedIndices
-
-  protected val indexer: Indexer = Indexer(
-    () => workspaceReload,
-    check,
-    languageClient,
-    () => bspSession,
-    executionContext,
-    tables,
-    () => statusBar,
-    workDoneProgress,
-    timerProvider,
-    () => scalafixProvider,
-    () => indexingPromise,
-    buildData,
-    clientConfig,
-    definitionIndex,
-    () => referencesProvider,
-    () => workspaceSymbols,
-    buildTargets,
-    () => interactiveSemanticdbs,
-    () => semanticDBIndexer,
-    () => worksheetProvider,
-    () => symbolSearch,
-    () => fileWatcher,
-    focusedDocument,
-    focusedDocumentBuildTarget,
-    buildTargetClasses,
-    () => userConfig,
-    sh,
-    symbolDocs,
-    scalaVersionSelector,
-    sourceMapper,
-    folder,
-    implementationProvider,
-    resetService,
-    sharedIndices,
-  )
+  protected def indexer: Indexer
 
   def projectInfo: MetalsServiceInfo
 

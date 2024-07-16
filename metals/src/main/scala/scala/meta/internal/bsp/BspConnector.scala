@@ -5,7 +5,6 @@ import java.nio.file.Files
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.internal.bsp.BspConfigGenerationStatus._
 import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
@@ -14,9 +13,13 @@ import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildServerConnection
+import scala.meta.internal.metals.ConnectKind
+import scala.meta.internal.metals.CreateSession
+import scala.meta.internal.metals.GenerateBspConfigAndConnect
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.BspSwitch
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.SlowConnect
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.UserConfiguration
@@ -40,7 +43,7 @@ class BspConnector(
     workDoneProgress: WorkDoneProgress,
     bspConfigGenerator: BspConfigGenerator,
     currentConnection: () => Option[BuildServerConnection],
-    restartBspServer: () => Future[Boolean],
+    restartBspServer: () => Future[Unit],
     bspStatus: ConnectionBspStatus,
 )(implicit ec: ExecutionContext) {
 
@@ -111,7 +114,7 @@ class BspConnector(
           val shouldReload = SbtBuildTool.writeSbtMetalsPlugins(projectRoot)
           def restartSbtBuildServer() = currentConnection()
             .withFilter(_.isSbt)
-            .map(_ => restartBspServer().ignoreValue)
+            .map(_ => restartBspServer())
             .getOrElse(Future.successful(()))
           val connectionF =
             for {
@@ -152,7 +155,6 @@ class BspConnector(
                   args => bspConfigGenerator.runUnconditionally(bsp, args),
                   statusBar,
                 )
-                .map(status => handleGenerationStatus(bsp, status))
                 .flatMap { _ =>
                   connect(
                     projectRoot,
@@ -161,7 +163,6 @@ class BspConnector(
                     regeneratedConfig = true,
                   )
                 }
-
             case _ =>
               bspServers
                 .newServer(projectRoot, bspTraceRoot, details, bspStatusOpt)
@@ -299,10 +300,7 @@ class BspConnector(
    * and connect to it, but stores that you want to change it unless you are
    * choosing Bloop, since in that case it's special cased and does start it.
    */
-  def switchBuildServer(
-      workspace: AbsolutePath,
-      createBloopAndConnect: () => Future[BuildChange],
-  ): Future[Boolean] = {
+  def switchBuildServer[T](): Future[Option[ConnectKind]] = {
 
     val foundServers = bspServers.findAvailableServers()
     val bloopPresent: Boolean = buildTools.isBloop
@@ -356,93 +354,43 @@ class BspConnector(
       possibleChoice match {
         case Some(choice) =>
           allPossibleServers(choice) match {
-            case Left(buildTool) =>
-              buildTool
-                .generateBspConfig(
-                  workspace,
-                  args =>
-                    bspConfigGenerator.runUnconditionally(buildTool, args),
-                  statusBar,
-                )
-                .map(status => handleGenerationStatus(buildTool, status))
+            case Left(buildTool) => Some(GenerateBspConfigAndConnect(buildTool))
             case Right(details) if details.getName == BloopServers.name =>
               tables.buildServers.chooseServer(details.getName)
-              if (bloopPresent) {
-                Future.successful(true)
-              } else {
-                createBloopAndConnect().ignoreValue
-                Future.successful(false)
-              }
+              if (bloopPresent) Some(CreateSession())
+              else Some(SlowConnect)
             case Right(details)
                 if !currentSelectedServer.contains(details.getName) =>
               tables.buildServers.chooseServer(details.getName)
-              Future.successful(true)
-            case _ => Future.successful(false)
+              Some(CreateSession())
+            case _ => None
           }
-        case _ =>
-          Future.successful(false)
+        case _ => None
       }
     }
 
     allPossibleServers.keys.toList match {
       case Nil =>
         client.showMessage(BspSwitch.noInstalledServer)
-        Future.successful(false)
+        Future.successful(None)
       case singleServer :: Nil =>
         allPossibleServers(singleServer) match {
           case Left(buildTool) =>
-            buildTool
-              .generateBspConfig(
-                workspace,
-                args => bspConfigGenerator.runUnconditionally(buildTool, args),
-                statusBar,
-              )
-              .map(status => handleGenerationStatus(buildTool, status))
+            Future.successful(Some(GenerateBspConfigAndConnect(buildTool)))
           case Right(connectionDetails) =>
             client.showMessage(
               BspSwitch.onlyOneServer(name = connectionDetails.getName())
             )
-            Future.successful(false)
+            Future.successful(None)
         }
       case multipleServers =>
         val currentSelectedServer =
           tables.buildServers
             .selectedServer()
             .orElse(currentConnection().map(_.name))
-        askUser(multipleServers, currentSelectedServer).flatMap(choice =>
+        askUser(multipleServers, currentSelectedServer).map(choice =>
           handleServerChoice(choice, currentSelectedServer)
         )
     }
-  }
-
-  /**
-   * Handles showing the user what they need to know after an attempt to
-   * generate a bsp config has happened.
-   */
-  private def handleGenerationStatus(
-      buildTool: BuildServerProvider,
-      status: BspConfigGenerationStatus,
-  ): Boolean = status match {
-    case BspConfigGenerationStatus.Generated =>
-      tables.buildServers.chooseServer(buildTool.buildServerName)
-      true
-    case Cancelled => false
-    case Failed(exit) =>
-      exit match {
-        case Left(exitCode) =>
-          scribe.error(
-            s"Creation of .bsp/${buildTool.buildServerName} failed with exit code: $exitCode"
-          )
-          client.showMessage(
-            Messages.BspProvider.genericUnableToCreateConfig
-          )
-        case Right(message) =>
-          client.showMessage(
-            Messages.BspProvider.unableToCreateConfigFromMessage(
-              message
-            )
-          )
-      }
-      false
   }
 }

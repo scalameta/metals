@@ -1,40 +1,23 @@
 package scala.meta.internal.metals
 
-import java.nio.file.Path
 import java.util
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.util.Failure
 import scala.util.Success
-import scala.util.control.NonFatal
 
-import scala.meta.internal.bsp.BspConfigGenerationStatus.BspConfigGenerationStatus
-import scala.meta.internal.bsp.BspConfigGenerationStatus.Cancelled
-import scala.meta.internal.bsp.BspConfigGenerationStatus.Failed
-import scala.meta.internal.bsp.BspConfigGenerationStatus.Generated
 import scala.meta.internal.bsp.BspConfigGenerator
-import scala.meta.internal.bsp.BspConnector
-import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.bsp.ScalaCliBspScope
-import scala.meta.internal.builds.BloopInstall
-import scala.meta.internal.builds.BloopInstallProvider
 import scala.meta.internal.builds.BuildServerProvider
-import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
-import scala.meta.internal.builds.Digest
-import scala.meta.internal.builds.MillBuildTool
-import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.builds.VersionRecommendation
-import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
@@ -45,7 +28,6 @@ import scala.meta.internal.metals.watcher.FileWatcherEvent.EventType
 import scala.meta.internal.metals.watcher.ProjectFileWatcher
 import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.mtags.Semanticdbs
-import scala.meta.internal.semver.SemVer
 import scala.meta.internal.tvp.FolderTreeViewProvider
 import scala.meta.io.AbsolutePath
 
@@ -53,7 +35,6 @@ import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.InitializeParams
-import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 
 class ProjectMetalsLspService(
@@ -103,8 +84,10 @@ class ProjectMetalsLspService(
     charset,
   )
 
-  val isImportInProcess = new AtomicBoolean(false)
-  val isConnecting = new AtomicBoolean(false)
+  override def indexer: Indexer = connectionProvider
+  def connect[T](config: ConnectConfig[T]): Future[BuildChange] =
+    connectionProvider.ConnectProvider.connect(config)
+
   val willGenerateBspConfig = new AtomicReference(Set.empty[util.UUID])
 
   def withWillGenerateBspConfig[T](body: => Future[T]): Future[T] = {
@@ -126,15 +109,6 @@ class ProjectMetalsLspService(
         didChangeWatchedFiles(params)
       },
     )
-  )
-
-  protected val bloopInstall: BloopInstall = new BloopInstall(
-    folder,
-    languageClient,
-    buildTools,
-    tables,
-    shellRunner,
-    () => userConfig,
   )
 
   protected val bspConfigGenerator: BspConfigGenerator = new BspConfigGenerator(
@@ -166,6 +140,69 @@ class ProjectMetalsLspService(
     compilations.isCurrentlyCompiling,
   )
 
+  val buildToolProvider: BuildToolProvider = new BuildToolProvider(
+    buildTools,
+    tables,
+    folder,
+    warnings,
+    languageClient,
+  )
+
+  protected val bloopServers: BloopServers = new BloopServers(
+    buildClient,
+    languageClient,
+    tables,
+    clientConfig.initialConfig,
+    workDoneProgress,
+  )
+
+  val connectionProvider: ConnectionProvider = new ConnectionProvider(
+    buildToolProvider,
+    compilations,
+    tables,
+    buildTools,
+    buffers,
+    compilers,
+    scalaCli,
+    folder,
+    bloopServers,
+    shellRunner,
+    bspConfigGenerator,
+    check,
+    languageClient,
+    executionContext,
+    statusBar,
+    workDoneProgress,
+    timerProvider,
+    () => indexingPromise,
+    buildData,
+    clientConfig,
+    definitionIndex,
+    referencesProvider,
+    workspaceSymbols,
+    buildTargets,
+    semanticDBIndexer,
+    fileWatcher,
+    focusedDocument,
+    focusedDocumentBuildTarget,
+    buildTargetClasses,
+    () => userConfig,
+    sh,
+    symbolDocs,
+    scalaVersionSelector,
+    sourceMapper,
+    implementationProvider,
+    resetService,
+    doctor,
+    initTreeView,
+    diagnostics,
+    charset,
+    buildClient,
+    bspGlobalDirectories,
+    connectionBspStatus,
+    mainBuildTargetsData,
+  )
+
   protected val onBuildChanged: BatchedFunction[AbsolutePath, Unit] =
     BatchedFunction.fromFuture[AbsolutePath, Unit](
       onBuildChangedUnbatched,
@@ -189,7 +226,7 @@ class ProjectMetalsLspService(
     () => tables.buildTool.selectedBuildTool(),
     buildTargets,
     () => bspSession,
-    () => bspConnector.resolve(buildTool),
+    connectionProvider.resolveBsp,
     buildTools,
   )
 
@@ -198,41 +235,6 @@ class ProjectMetalsLspService(
       // for now, this only checks for build.sc, but this could be made more strict in the future
       // (require ./mill or ./.mill-version)
       buildTools.isMill
-
-  protected val bloopServers: BloopServers = new BloopServers(
-    buildClient,
-    languageClient,
-    tables,
-    clientConfig.initialConfig,
-    workDoneProgress,
-  )
-
-  protected val bspServers: BspServers = new BspServers(
-    folder,
-    charset,
-    languageClient,
-    buildClient,
-    tables,
-    bspGlobalDirectories,
-    clientConfig.initialConfig,
-    () => userConfig,
-    workDoneProgress,
-  )
-
-  protected val bspConnector: BspConnector = new BspConnector(
-    bloopServers,
-    bspServers,
-    buildTools,
-    languageClient,
-    tables,
-    () => userConfig,
-    statusBar,
-    workDoneProgress,
-    bspConfigGenerator,
-    () => bspSession.map(_.mainConnection),
-    restartBspServer,
-    connectionBspStatus,
-  )
 
   override def didChange(
       params: DidChangeTextDocumentParams
@@ -276,150 +278,6 @@ class ProjectMetalsLspService(
       .ignoreValue
   }
 
-  def saveProjectReferencesInfo(bspBuilds: List[BspSession.BspBuild]): Unit = {
-    val projectRefs = bspBuilds
-      .flatMap { session =>
-        session.build.workspaceBuildTargets.getTargets().asScala.flatMap {
-          _.getBaseDirectory() match {
-            case null | "" => None
-            case path => path.toAbsolutePathSafe
-          }
-        }
-      }
-      .distinct
-      .filterNot(_.startWith(path))
-    if (projectRefs.nonEmpty)
-      DelegateSetting.writeProjectRef(path, projectRefs)
-  }
-
-  protected def importBuild(session: BspSession): Future[Unit] = {
-    val importedBuilds0 = timerProvider.timed("Imported build") {
-      session.importBuilds()
-    }
-    for {
-      bspBuilds <- workDoneProgress.trackFuture(
-        Messages.importingBuild,
-        importedBuilds0,
-      )
-      _ = {
-        val idToConnection = bspBuilds.flatMap { bspBuild =>
-          val targets =
-            bspBuild.build.workspaceBuildTargets.getTargets().asScala
-          targets.map(t => (t.getId(), bspBuild.connection))
-        }
-        mainBuildTargetsData.resetConnections(idToConnection)
-        saveProjectReferencesInfo(bspBuilds)
-      }
-    } yield compilers.cancel()
-  }
-
-  def slowConnectToBuildServer(
-      forceImport: Boolean
-  ): Future[BuildChange] = {
-    val chosenBuildServer = tables.buildServers.selectedServer()
-    def useBuildToolBsp(buildTool: BloopInstallProvider) =
-      buildTool match {
-        case _: BuildServerProvider => userConfig.defaultBspToBuildTool
-        case _ => false
-      }
-
-    def isSelected(buildTool: BuildTool) =
-      buildTool match {
-        case _: BuildServerProvider =>
-          chosenBuildServer.contains(buildTool.buildServerName)
-        case _ => false
-      }
-
-    supportedBuildTool().flatMap {
-      case Some(BuildTool.Found(buildTool: BloopInstallProvider, digest))
-          if chosenBuildServer.contains(BloopServers.name) ||
-            chosenBuildServer.isEmpty && !useBuildToolBsp(buildTool) =>
-        slowConnectToBloopServer(forceImport, buildTool, digest)
-      case Some(found)
-          if isSelected(found.buildTool) &&
-            found.buildTool.isBspGenerated(folder) =>
-        indexer.reloadWorkspaceAndIndex(
-          forceImport,
-          found.buildTool,
-          found.digest,
-          importBuild,
-          reconnectToBuildServer = () =>
-            if (!isConnecting.get()) {
-              quickConnectToBuildServer()
-            } else {
-              scribe.warn("Cannot reload build session, still connecting...")
-              Future.successful(BuildChange.None)
-            },
-        )
-      case Some(BuildTool.Found(buildTool: BuildServerProvider, _)) =>
-        slowConnectToBuildToolBsp(buildTool, forceImport, isSelected(buildTool))
-      // Used when there are multiple `.bsp/<name>.json` configs and a known build tool (e.g. sbt)
-      case Some(BuildTool.Found(buildTool, _))
-          if buildTool.isBspGenerated(folder) =>
-        maybeChooseServer(buildTool.buildServerName, isSelected(buildTool))
-        quickConnectToBuildServer()
-      // Used in tests, `.bloop` folder exists but no build tool is detected
-      case _ => quickConnectToBuildServer()
-    }
-  }
-
-  protected def slowConnectToBuildToolBsp(
-      buildTool: BuildServerProvider,
-      forceImport: Boolean,
-      isSelected: Boolean,
-  ): Future[BuildChange] = {
-    val notification = tables.dismissedNotifications.ImportChanges
-    if (buildTool.isBspGenerated(folder)) {
-      maybeChooseServer(buildTool.buildServerName, isSelected)
-      quickConnectToBuildServer()
-    } else if (
-      userConfig.shouldAutoImportNewProject || forceImport || isSelected ||
-      buildTool.isInstanceOf[ScalaCliBuildTool]
-    ) {
-      maybeChooseServer(buildTool.buildServerName, isSelected)
-      generateBspAndConnect(buildTool)
-    } else if (notification.isDismissed) {
-      Future.successful(BuildChange.None)
-    } else {
-      scribe.debug("Awaiting user response...")
-      languageClient
-        .showMessageRequest(
-          Messages.GenerateBspAndConnect
-            .params(buildTool.executableName, buildTool.buildServerName)
-        )
-        .asScala
-        .flatMap { item =>
-          if (item == Messages.dontShowAgain) {
-            notification.dismissForever()
-            Future.successful(BuildChange.None)
-          } else if (item == Messages.GenerateBspAndConnect.yes) {
-            maybeChooseServer(buildTool.buildServerName, isSelected)
-            generateBspAndConnect(buildTool)
-          } else {
-            notification.dismiss(2, util.concurrent.TimeUnit.MINUTES)
-            Future.successful(BuildChange.None)
-          }
-        }
-    }
-  }
-
-  protected def maybeChooseServer(name: String, alreadySelected: Boolean): Any =
-    if (alreadySelected) Future.successful(())
-    else tables.buildServers.chooseServer(name)
-
-  protected def generateBspAndConnect(
-      buildTool: BuildServerProvider
-  ): Future[BuildChange] =
-    withWillGenerateBspConfig {
-      buildTool
-        .generateBspConfig(
-          folder,
-          args => bspConfigGenerator.runUnconditionally(buildTool, args),
-          statusBar,
-        )
-        .flatMap(_ => quickConnectToBuildServer())
-    }
-
   /**
    * If there is no auto-connectable build server and no supported build tool is found
    * we assume it's a scala-cli project.
@@ -434,77 +292,65 @@ class ProjectMetalsLspService(
     } else Future.successful(())
   }
 
-  protected def slowConnectToBloopServer(
-      forceImport: Boolean,
-      buildTool: BloopInstallProvider,
-      checksum: String,
-  ): Future[BuildChange] =
-    for {
-      result <- {
-        if (forceImport)
-          bloopInstall.runUnconditionally(buildTool, isImportInProcess)
-        else bloopInstall.runIfApproved(buildTool, checksum, isImportInProcess)
-      }
-      change <- {
-        if (result.isInstalled) quickConnectToBuildServer()
-        else if (result.isFailed) {
-          for {
-            change <-
-              if (buildTools.isAutoConnectable(optProjectRoot)) {
-                // TODO(olafur) try to connect but gracefully error
-                languageClient.showMessage(
-                  Messages.ImportProjectPartiallyFailed
-                )
-                // Connect nevertheless, many build import failures are caused
-                // by resolution errors in one weird module while other modules
-                // exported successfully.
-                quickConnectToBuildServer()
-              } else {
-                languageClient.showMessage(Messages.ImportProjectFailed)
-                Future.successful(BuildChange.Failed)
-              }
-          } yield change
-        } else {
-          Future.successful(BuildChange.None)
-        }
-
-      }
-    } yield change
-
-  override def optProjectRoot: Option[AbsolutePath] =
-    buildTool.map(_.projectRoot).orElse(buildTools.bloopProject)
-
-  def quickConnectToBuildServer(): Future[BuildChange] =
-    for {
-      change <-
-        if (!buildTools.isAutoConnectable(optProjectRoot)) {
-          scribe.warn("Build server is not auto-connectable.")
-          Future.successful(BuildChange.None)
-        } else {
-          autoConnectToBuildServer()
-        }
-    } yield {
-      buildServerPromise.trySuccess(())
-      change
-    }
-
-  def fullConnect(): Future[Unit] = {
-    buildTools.initialize()
-    for {
-      _ <-
-        if (buildTools.isAutoConnectable(optProjectRoot))
-          autoConnectToBuildServer()
-        else slowConnectToBuildServer(forceImport = false)
-    } yield buildServerPromise.trySuccess(())
-  }
-
   protected def onInitialized(): Future[Unit] =
     withWillGenerateBspConfig {
       for {
         _ <- maybeSetupScalaCli()
-        _ <- fullConnect()
+        _ <- connectionProvider.fullConnect()
       } yield ()
     }
+
+  def onBuildChangedUnbatched(
+      paths: Seq[AbsolutePath]
+  ): Future[Unit] =
+    if (willGenerateBspConfig.get().nonEmpty) Future.unit
+    else {
+      val changedBuilds = paths.flatMap(buildTools.isBuildRelated)
+      tables.buildTool.selectedBuildTool() match {
+        // no build tool and new added
+        case None if changedBuilds.nonEmpty =>
+          scribe.info(s"Detected new build tool in $path")
+          connectionProvider.fullConnect()
+        // used build tool changed
+        case Some(chosenBuildTool) if changedBuilds.contains(chosenBuildTool) =>
+          connectionProvider
+            .slowConnectToBuildServer(forceImport = false)
+            .ignoreValue
+        // maybe new build tool added
+        case Some(chosenBuildTool) if changedBuilds.nonEmpty =>
+          onBuildToolsAdded(chosenBuildTool, changedBuilds)
+        case _ => Future.unit
+      }
+    }
+
+  private def onBuildToolsAdded(
+      currentBuildToolName: String,
+      newBuildToolsChanged: Seq[String],
+  ): Future[Unit] = {
+    val supportedBuildTools = buildTools.loadSupported()
+    val maybeBuildChange = for {
+      currentBuildTool <- supportedBuildTools.find(
+        _.executableName == currentBuildToolName
+      )
+      newBuildTool <- newBuildToolsChanged
+        .filter(buildTools.newBuildTool)
+        .flatMap(addedBuildName =>
+          supportedBuildTools.find(
+            _.executableName == addedBuildName
+          )
+        )
+        .headOption
+    } yield {
+      buildToolProvider
+        .onNewBuildToolAdded(newBuildTool, currentBuildTool)
+        .flatMap { switch =>
+          if (switch)
+            connectionProvider.slowConnectToBuildServer(forceImport = false)
+          else Future.successful(BuildChange.None)
+        }
+    }.ignoreValue
+    maybeBuildChange.getOrElse(Future.unit)
+  }
 
   protected def updateBspJavaHome(session: BspSession): Future[Any] = {
     if (session.main.isBazel) {
@@ -522,31 +368,14 @@ class ProjectMetalsLspService(
         .asScala
         .flatMap {
           case Messages.ProjectJavaHomeUpdate.restart =>
-            buildTool match {
-              case Some(sbt: SbtBuildTool) if session.main.isSbt =>
-                for {
-                  _ <- disconnectOldBuildServer()
-                  _ <- sbt.shutdownBspServer(shellRunner)
-                  _ <- sbt.generateBspConfig(
-                    folder,
-                    bspConfigGenerator.runUnconditionally(sbt, _),
-                    statusBar,
-                  )
-                  _ <- autoConnectToBuildServer()
-                } yield ()
-              case Some(mill: MillBuildTool) if session.main.isMill =>
-                for {
-                  _ <- mill.generateBspConfig(
-                    folder,
-                    bspConfigGenerator.runUnconditionally(mill, _),
-                    statusBar,
-                  )
-                  _ <- autoConnectToBuildServer()
-                } yield ()
-              case _ if session.main.isBloop =>
-                slowConnectToBuildServer(forceImport = true)
-              case _ => Future.successful(())
-            }
+            if (session.main.isBloop)
+              connectionProvider.slowConnectToBuildServer(forceImport = true)
+            else
+              buildToolProvider.buildTool
+                .map { case bt: BuildServerProvider =>
+                  connect(GenerateBspConfigAndConnect(bt, true))
+                }
+                .getOrElse(Future.unit)
           case Messages.ProjectJavaHomeUpdate.notNow =>
             Future.successful(())
         }
@@ -575,14 +404,7 @@ class ProjectMetalsLspService(
         .flatMap {
           case FileOutOfScalaCliBspScope.regenerateAndRestart =>
             val buildTool = ScalaCliBuildTool(folder, folder, () => userConfig)
-            for {
-              _ <- buildTool.generateBspConfig(
-                folder,
-                bspConfigGenerator.runUnconditionally(buildTool, _),
-                statusBar,
-              )
-              _ <- quickConnectToBuildServer()
-            } yield ()
+            connect(GenerateBspConfigAndConnect(buildTool)).ignoreValue
           case _ => Future.successful(())
         }
     } else Future.successful(())
@@ -632,47 +454,6 @@ class ProjectMetalsLspService(
     }
   }
 
-  def restartBspServer(): Future[Boolean] = {
-    def emitMessage(msg: String) = {
-      languageClient.showMessage(new MessageParams(MessageType.Warning, msg))
-    }
-    // This is for `bloop` and `sbt`, for which `build/shutdown` doesn't shutdown the server.
-    val shutdownBsp =
-      bspSession match {
-        case Some(session) if session.main.isBloop =>
-          for {
-            _ <- disconnectOldBuildServer()
-          } yield bloopServers.shutdownServer()
-        case Some(session) if session.main.isSbt =>
-          for {
-            res <- buildTool match {
-              case Some(sbt: SbtBuildTool) =>
-                for {
-                  _ <- disconnectOldBuildServer()
-                  code <- sbt.shutdownBspServer(shellRunner)
-                } yield code == 0
-              case _ => Future.successful(false)
-            }
-          } yield res
-        case s => Future.successful(s.nonEmpty)
-      }
-
-    for {
-      didShutdown <- shutdownBsp
-      _ = if (!didShutdown) {
-        bspSession match {
-          case Some(session) =>
-            emitMessage(
-              s"Could not shutdown ${session.main.name} server. Will try to reconnect."
-            )
-          case None =>
-            emitMessage("No build server connected. Will try to connect.")
-        }
-      }
-      _ <- autoConnectToBuildServer()
-    } yield didShutdown
-  }
-
   private val ammonite: Ammonite = register {
     val amm = new Ammonite(
       buffers,
@@ -684,7 +465,7 @@ class ProjectMetalsLspService(
       languageClient,
       buildClient,
       () => userConfig,
-      () => indexer.profiledIndexWorkspace(() => ()),
+      () => indexer.index(() => ()),
       () => folder,
       focusedDocument,
       clientConfig.initialConfig,
@@ -699,14 +480,14 @@ class ProjectMetalsLspService(
     tables,
     languageClient,
     headDoctor.executeRefreshDoctor,
-    () => slowConnectToBuildServer(forceImport = true),
+    () => connectionProvider.slowConnectToBuildServer(forceImport = true),
     () => switchBspServer(),
   )
 
   def projectInfo: MetalsServiceInfo =
     MetalsServiceInfo.ProjectService(
       () => bspSession,
-      () => bspConnector.resolve(buildTool),
+      connectionProvider.resolveBsp,
       buildTools,
       connectionBspStatus,
       () => getProjectsJavaInfo,
@@ -739,14 +520,14 @@ class ProjectMetalsLspService(
   def switchBspServer(): Future[Unit] =
     withWillGenerateBspConfig {
       for {
-        isSwitched <- bspConnector.switchBuildServer(
-          folder,
-          () => slowConnectToBuildServer(forceImport = true),
-        )
-        _ <- {
-          if (isSwitched) quickConnectToBuildServer()
-          else Future.successful(())
-        }
+        connectKind <- connectionProvider.bspConnector.switchBuildServer()
+        _ <-
+          connectKind match {
+            case None => Future.unit
+            case Some(SlowConnect) =>
+              connectionProvider.slowConnectToBuildServer(forceImport = true)
+            case Some(config: ConnectConfig[t]) => connect(config)
+          }
       } yield ()
     }
 
@@ -762,241 +543,25 @@ class ProjectMetalsLspService(
         case buildTool: BuildServerProvider => buildTool
       }
 
-    def ensureAndConnect(
-        buildTool: BuildServerProvider,
-        status: BspConfigGenerationStatus,
-    ): Unit =
-      status match {
-        case Generated =>
-          tables.buildServers.chooseServer(buildTool.buildServerName)
-          quickConnectToBuildServer().ignoreValue
-        case Cancelled => ()
-        case Failed(exit) =>
-          exit match {
-            case Left(exitCode) =>
-              scribe.error(
-                s"Create of .bsp failed with exit code: $exitCode"
-              )
-              languageClient.showMessage(
-                Messages.BspProvider.genericUnableToCreateConfig
-              )
-            case Right(message) =>
-              languageClient.showMessage(
-                Messages.BspProvider.unableToCreateConfigFromMessage(
-                  message
-                )
-              )
-          }
-      }
-
     (servers match {
       case Nil =>
         scribe.warn(Messages.BspProvider.noBuildToolFound.toString())
         languageClient.showMessage(Messages.BspProvider.noBuildToolFound)
         Future.successful(())
       case buildTool :: Nil =>
-        withWillGenerateBspConfig {
-          buildTool
-            .generateBspConfig(
-              folder,
-              args =>
-                bspConfigGenerator.runUnconditionally(
-                  buildTool,
-                  args,
-                ),
-              statusBar,
-            )
-            .map(status => ensureAndConnect(buildTool, status))
-        }
-      case buildTools =>
-        withWillGenerateBspConfig {
-          bspConfigGenerator
-            .chooseAndGenerate(buildTools)
-            .map {
-              case (
-                    buildTool: BuildServerProvider,
-                    status: BspConfigGenerationStatus,
-                  ) =>
-                ensureAndConnect(buildTool, status)
-            }
-        }
-    })
-  }
-
-  protected def buildTool: Option[BuildTool] =
-    for {
-      name <- tables.buildTool.selectedBuildTool()
-      buildTool <- buildTools.current().find(_.executableName == name)
-      if isCompatibleVersion(buildTool)
-    } yield buildTool
-
-  private def isCompatibleVersion(buildTool: BuildTool): Boolean = {
-    buildTool match {
-      case buildTool: VersionRecommendation =>
-        SemVer.isCompatibleVersion(
-          buildTool.minimumVersion,
-          buildTool.version,
-        )
-      case _ => true
-    }
-  }
-
-  /**
-   * Checks if the version of the build tool is compatible with the version that
-   * metals expects and returns the current digest of the build tool.
-   */
-  private def verifyBuildTool(buildTool: BuildTool): BuildTool.Verified = {
-    buildTool match {
-      case buildTool: VersionRecommendation
-          if !isCompatibleVersion(buildTool) =>
-        BuildTool.IncompatibleVersion(buildTool)
-      case _ =>
-        buildTool.digestWithRetry(folder) match {
-          case Some(digest) =>
-            BuildTool.Found(buildTool, digest)
-          case None => BuildTool.NoChecksum(buildTool, folder)
-        }
-    }
-  }
-
-  def supportedBuildTool(): Future[Option[BuildTool.Found]] = {
-    buildTools.loadSupported() match {
-      case Nil => {
-        if (!buildTools.isAutoConnectable()) {
-          warnings.noBuildTool()
-        }
-        Future(None)
-      }
+        connect(
+          GenerateBspConfigAndConnect(buildTool)
+        ).ignoreValue
       case buildTools =>
         for {
-          buildTool <- buildToolSelector.checkForChosenBuildTool(
+          Some(buildTool) <- bspConfigGenerator.chooseBuildServerProvider(
             buildTools
           )
-        } yield {
-          buildTool.flatMap { bt =>
-            verifyBuildTool(bt) match {
-              case found: BuildTool.Found => Some(found)
-              case warn @ BuildTool.IncompatibleVersion(buildTool) =>
-                scribe.warn(warn.message)
-                languageClient.showMessage(
-                  Messages.IncompatibleBuildToolVersion.params(buildTool)
-                )
-                None
-              case warn: BuildTool.NoChecksum =>
-                scribe.warn(warn.message)
-                None
-            }
-          }
-        }
-    }
-  }
-
-  def autoConnectToBuildServer(): Future[BuildChange] = {
-    def compileAllOpenFiles: BuildChange => Future[BuildChange] = {
-      case change if !change.isFailed =>
-        Future
-          .sequence(
-            compilations
-              .cascadeCompileFiles(buffers.open.toSeq)
-              .ignoreValue ::
-              compilers.load(buffers.open.toSeq) ::
-              Nil
+          _ <- connect(
+            GenerateBspConfigAndConnect(buildTool)
           )
-          .map(_ => change)
-      case other => Future.successful(other)
-    }
-
-    val scalaCliPaths = scalaCli.paths
-
-    isConnecting.set(true)
-    (for {
-      _ <- disconnectOldBuildServer()
-      maybeSession <- timerProvider.timed("Connected to build server", true) {
-        bspConnector.connect(
-          buildTool,
-          folder,
-          userConfig,
-          shellRunner,
-        )
-      }
-      result <- maybeSession match {
-        case Some(session) =>
-          val result = connectToNewBuildServer(session)
-          session.mainConnection.onReconnection { newMainConn =>
-            val updSession = session.copy(main = newMainConn)
-            connectToNewBuildServer(updSession)
-              .flatMap(compileAllOpenFiles)
-              .ignoreValue
-          }
-          result
-        case None =>
-          Future.successful(BuildChange.None)
-      }
-      _ <- Future.sequence(
-        scalaCliPaths
-          .collect {
-            case path if (!conflictsWithMainBsp(path.toNIO)) =>
-              scalaCli.start(path)
-          }
-      )
-      _ = initTreeView()
-    } yield result)
-      .recover { case NonFatal(e) =>
-        disconnectOldBuildServer()
-        val message =
-          "Failed to connect with build server, no functionality will work."
-        val details = " See logs for more details."
-        languageClient.showMessage(
-          new MessageParams(MessageType.Error, message + details)
-        )
-        scribe.error(message, e)
-        BuildChange.Failed
-      }
-      .flatMap(compileAllOpenFiles)
-  }
-
-  def disconnectOldBuildServer(): Future[Unit] = {
-    compilations.cancel()
-    buildTargetClasses.cancel()
-    diagnostics.reset()
-    bspSession.foreach(connection =>
-      scribe.info(s"Disconnecting from ${connection.main.name} session...")
-    )
-
-    for {
-      _ <- scalaCli.stop()
-      _ <- bspSession match {
-        case None => Future.successful(())
-        case Some(session) =>
-          bspSession = None
-          mainBuildTargetsData.resetConnections(List.empty)
-          session.shutdown()
-      }
-    } yield ()
-  }
-
-  protected def connectToNewBuildServer(
-      session: BspSession
-  ): Future[BuildChange] = {
-    scribe.info(
-      s"Connected to Build server: ${session.main.name} v${session.version}"
-    )
-    cancelables.add(session)
-    buildTool.foreach(
-      workspaceReload.persistChecksumStatus(Digest.Status.Started, _)
-    )
-    bspSession = Some(session)
-    isConnecting.set(false)
-    for {
-      _ <- importBuild(session)
-      _ <- indexer.profiledIndexWorkspace(check)
-      _ = buildTool.foreach(
-        workspaceReload.persistChecksumStatus(Digest.Status.Installed, _)
-      )
-      _ = if (session.main.isBloop) checkRunningBloopVersion(session.version)
-    } yield {
-      BuildChange.Reconnected
-    }
+        } yield ()
+    })
   }
 
   protected def buildData(): Seq[Indexer.BuildTool] =
@@ -1021,27 +586,21 @@ class ProjectMetalsLspService(
 
   def resetWorkspace(): Future[Unit] =
     for {
-      _ <- disconnectOldBuildServer()
-      shouldImport = optProjectRoot match {
+      _ <- connect(Disconnect(true))
+      _ = optProjectRoot match {
         case Some(path) if buildTools.isBloop(path) =>
-          bloopServers.shutdownServer()
           clearBloopDir(path)
-          false
         case Some(path) if buildTools.isBazelBsp =>
           clearFolders(
             path.resolve(Directories.bazelBsp),
             path.resolve(Directories.bsp),
           )
-          true
         case Some(path) if buildTools.isBsp =>
           clearFolders(path.resolve(Directories.bsp))
-          true
-        case _ => false
+        case _ =>
       }
       _ = tables.cleanAll()
-      _ <-
-        if (shouldImport) slowConnectToBuildServer(true)
-        else autoConnectToBuildServer().map(_ => ())
+      _ <- connectionProvider.fullConnect()
     } yield ()
 
   val treeView =
@@ -1092,8 +651,7 @@ class ProjectMetalsLspService(
         case None => scribe.warn("No build server connected")
         case Some(session) =>
           for {
-            _ <- importBuild(session)
-            _ <- indexer.profiledIndexWorkspace(check)
+            _ <- connect(ImportBuildAndIndex(session))
           } {
             focusedDocument().foreach(path => compilations.compileFile(path))
           }
@@ -1110,7 +668,7 @@ class ProjectMetalsLspService(
       if (userConfig.customProjectRoot != old.customProjectRoot) {
         tables.buildTool.reset()
         tables.buildServers.reset()
-        fullConnect()
+        connectionProvider.fullConnect()
       } else Future.successful(())
 
     val resetDecorations =
@@ -1127,14 +685,14 @@ class ProjectMetalsLspService(
               session.version,
               userConfig.bloopVersion.nonEmpty,
               old.bloopVersion.isDefined,
-              () => autoConnectToBuildServer,
+              () => connect(CreateSession()),
             )
             .flatMap { _ =>
               userConfig.bloopJvmProperties
                 .map(
                   bloopServers.ensureDesiredJvmSettings(
                     _,
-                    () => autoConnectToBuildServer(),
+                    () => connect(CreateSession()),
                   )
                 )
                 .getOrElse(Future.unit)
@@ -1168,76 +726,6 @@ class ProjectMetalsLspService(
       _ <- slowConnect
       _ <- Future.sequence(List(restartBuildServer, resetDecorations))
     } yield ()
-  }
-
-  protected def checkRunningBloopVersion(bspServerVersion: String): Unit = {
-    if (doctor.isUnsupportedBloopVersion()) {
-      val notification = tables.dismissedNotifications.IncompatibleBloop
-      if (!notification.isDismissed) {
-        val messageParams = IncompatibleBloopVersion.params(
-          bspServerVersion,
-          BuildInfo.bloopVersion,
-          isChangedInSettings = userConfig.bloopVersion != None,
-        )
-        languageClient.showMessageRequest(messageParams).asScala.foreach {
-          case action if action == IncompatibleBloopVersion.shutdown =>
-            bloopServers.shutdownServer()
-            autoConnectToBuildServer()
-          case action if action == IncompatibleBloopVersion.dismissForever =>
-            notification.dismissForever()
-          case _ =>
-        }
-      }
-    }
-  }
-
-  protected def onBuildChangedUnbatched(
-      paths: Seq[AbsolutePath]
-  ): Future[Unit] =
-    if (willGenerateBspConfig.get().nonEmpty) Future.unit
-    else {
-      val changedBuilds = paths.flatMap(buildTools.isBuildRelated)
-      tables.buildTool.selectedBuildTool() match {
-        // no build tool and new added
-        case None if changedBuilds.nonEmpty =>
-          scribe.info(s"Detected new build tool in $path")
-          fullConnect()
-        // used build tool changed
-        case Some(chosenBuildTool) if changedBuilds.contains(chosenBuildTool) =>
-          slowConnectToBuildServer(forceImport = false).ignoreValue
-        // maybe new build tool added
-        case Some(chosenBuildTool) if changedBuilds.nonEmpty =>
-          onBuildToolsAdded(chosenBuildTool, changedBuilds)
-        case _ => Future.unit
-      }
-    }
-
-  protected def onBuildToolsAdded(
-      currentBuildToolName: String,
-      newBuildToolsChanged: Seq[String],
-  ): Future[Unit] = {
-    val supportedBuildTools = buildTools.loadSupported()
-    val maybeBuildChange = for {
-      currentBuildTool <- supportedBuildTools.find(
-        _.executableName == currentBuildToolName
-      )
-      newBuildTool <- newBuildToolsChanged
-        .filter(buildTools.newBuildTool)
-        .flatMap(addedBuildName =>
-          supportedBuildTools.find(
-            _.executableName == addedBuildName
-          )
-        )
-        .headOption
-    } yield {
-      buildToolSelector
-        .onNewBuildToolAdded(newBuildTool, currentBuildTool)
-        .flatMap { switch =>
-          if (switch) slowConnectToBuildServer(forceImport = false)
-          else Future.successful(BuildChange.None)
-        }
-    }.ignoreValue
-    maybeBuildChange.getOrElse(Future.unit)
   }
 
   def maybeImportScript(path: AbsolutePath): Option[Future[Unit]] = {
@@ -1351,14 +839,8 @@ class ProjectMetalsLspService(
   def scalaCliDirOrFile(path: AbsolutePath): AbsolutePath = {
     val dir = path.parent
     val nioDir = dir.toNIO
-    if (conflictsWithMainBsp(nioDir)) path else dir
+    if (buildTargets.belongsToBuildTarget(nioDir)) path else dir
   }
-
-  protected def conflictsWithMainBsp(nioDir: Path): Boolean =
-    buildTargets.sourceItems.filter(_.exists).exists { item =>
-      val nioItem = item.toNIO
-      nioDir.startsWith(nioItem) || nioItem.startsWith(nioDir)
-    }
 
   override def startScalaCli(path: AbsolutePath): Future[Unit] = {
     super.startScalaCli(scalaCliDirOrFile(path))

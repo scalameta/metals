@@ -67,24 +67,7 @@ final class BspConfigGenerator(
         case status => status
       }
 
-  /**
-   * Given multiple build tools that are all BuildServerProviders, allow the
-   * choose the desired build server and then connect to it.
-   */
-  def chooseAndGenerate(
-      buildTools: List[BuildServerProvider]
-  ): Future[(BuildServerProvider, BspConfigGenerationStatus)] = {
-    for {
-      Some(buildTool) <- chooseBuildServerProvider(buildTools)
-      status <- buildTool.generateBspConfig(
-        workspace,
-        args => runUnconditionally(buildTool, args),
-        statusBar,
-      )
-    } yield (buildTool, status)
-  }
-
-  private def chooseBuildServerProvider(
+  def chooseBuildServerProvider(
       buildTools: List[BuildServerProvider]
   ): Future[Option[BuildServerProvider]] = {
     languageClient
