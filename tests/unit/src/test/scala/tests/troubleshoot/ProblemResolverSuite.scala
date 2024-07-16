@@ -48,8 +48,9 @@ class ProblemResolverSuite extends FunSuite {
 
   checkRecommendation(
     "deprecated-scala-version",
-    scalaVersion = "2.12.14",
-    DeprecatedScalaVersion("2.12.14").message,
+    scalaVersion = "3.3.2",
+    DeprecatedScalaVersion("3.3.2").message,
+    scalacOpts = List("-Xsemanticdb"),
   )
 
   checkRecommendation(
@@ -78,10 +79,13 @@ class ProblemResolverSuite extends FunSuite {
   )
 
   checkRecommendation(
+    // we don't have any depracate versions for sbt
     "deprecated-sbt-version",
     scalaVersion = "2.12.14",
     DeprecatedSbtVersion("1.3.0", "2.12.14").message,
     sbtVersion = Some("1.3.0"),
+    assume = () =>
+      assume(BuildInfo.deprecatedScalaVersions.exists(_.startsWith("2.12"))),
   )
 
   checkRecommendation(
@@ -217,8 +221,10 @@ class ProblemResolverSuite extends FunSuite {
       invalidJavaHome: Boolean = false,
       classpath: List[String] = Nil,
       isTestExplorerProvider: Boolean = true,
+      assume: () => Unit = () => (),
   )(implicit loc: Location): Unit = {
     test(name) {
+      assume()
       val workspace = Files.createTempDirectory("metals")
       workspace.toFile().deleteOnExit()
       val javaHome =

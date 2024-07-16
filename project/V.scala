@@ -73,15 +73,7 @@ object V {
   // Scala 2
   // whenever version is removed please add it to MtagsResolver under last supported Metals version
   def deprecatedScala2Versions = Seq(
-    scala211,
-    "2.12.12",
-    "2.12.13",
-    "2.12.14",
-    "2.12.15",
-    "2.13.7",
-    "2.13.8",
-    "2.13.9",
-    "2.13.10",
+    scala211
   )
 
   def nonDeprecatedScala2Versions = Seq(

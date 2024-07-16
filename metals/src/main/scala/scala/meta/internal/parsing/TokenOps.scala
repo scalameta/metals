@@ -24,7 +24,11 @@ object TokenOps {
     override def input(token: Token): Input = token.input
     override def start(token: Token): Int = token.start
     override def end(token: Token): Int = token.end
-    override def isLF(token: Token): Boolean = token.isInstanceOf[Token.AtEOL]
+    override def isLF(token: Token): Boolean = token match {
+      case _: Token.CRLF | _: Token.LF => true
+      case Token.MultiNL(tokens) => tokens.forall(isLF)
+      case _ => false
+    }
     override def show(token: Token): String = token.structure
     override def equalizer: Equalizer[Token] = ScalaTokenEqualizer
   }

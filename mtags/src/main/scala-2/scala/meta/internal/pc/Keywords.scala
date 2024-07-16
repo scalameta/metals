@@ -4,7 +4,6 @@ import scala.tools.nsc.reporters.StoreReporter
 
 import scala.meta._
 import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.internal.pc.KeywordCompletionsUtils
 
 import org.eclipse.{lsp4j => l}
 
