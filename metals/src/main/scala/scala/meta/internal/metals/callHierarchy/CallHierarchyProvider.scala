@@ -195,7 +195,7 @@ final case class CallHierarchyProvider(
     }
 
     semanticdbs().textDocument(source).documentIncludingStale match {
-      case Some(doc) if (!containsDuplicates(info.visited)) =>
+      case Some(doc) if (!containsDuplicates(info.visited.toIndexedSeq)) =>
         trees
           .findLastEnclosingAt(
             source,

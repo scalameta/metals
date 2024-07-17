@@ -27,10 +27,10 @@ object MethodImplementation {
     val classSymbolInfo = findSymbolInCurrentContext(classLocation.symbol)
 
     val validMethods = for {
-      symbolInfo <- classSymbolInfo.toIterable
+      symbolInfo <- classSymbolInfo.toSeq
       if symbolInfo.signature.isInstanceOf[ClassSignature]
       classSignature = symbolInfo.signature.asInstanceOf[ClassSignature]
-      declarations <- classSignature.declarations.toIterable
+      declarations <- classSignature.declarations.toSeq
       methodSymbol <- declarations.symlinks
       methodSymbolInfo <- findSymbolInCurrentContext(methodSymbol)
       if isOverriddenMethod(methodSymbolInfo, parentSymbol)

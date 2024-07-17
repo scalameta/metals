@@ -171,6 +171,7 @@ class BspConnector(
         case ResolvedMultiple(_, availableServers) =>
           val distinctServers = availableServers
             .groupBy(_.getName())
+            .view
             .mapValues {
               case singleVersion :: Nil => singleVersion
               case multipleVersions =>
@@ -239,7 +240,8 @@ class BspConnector(
    * Only for `bloop` there will be no matching build tool and the previously chosen one remains.
    */
   private def optSetBuildTool(buildServerName: String): Unit =
-    buildTools.loadSupported
+    buildTools
+      .loadSupported()
       .find {
         case _: ScalaCliBuildTool if ScalaCli.names(buildServerName) => true
         case buildTool => buildTool.buildServerName == buildServerName

@@ -73,7 +73,7 @@ final class BuildTargetClasses(buildTargets: BuildTargets)(implicit
   private def findClassesBy[A](
       f: Classes => Option[A]
   ): List[(A, b.BuildTargetIdentifier)] = {
-    index
+    index.view
       .mapValues(f)
       .toList
       .collect { case (target, Some(clazz)) =>

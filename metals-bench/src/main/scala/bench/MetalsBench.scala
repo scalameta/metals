@@ -59,7 +59,7 @@ class MetalsBench {
       )
     }
 
-  val jdk: Classpath = Classpath(JdkSources().right.get)
+  val jdk: Classpath = Classpath(JdkSources().toOption.get)
   val fullClasspath: Classpath = jdk ++ inputs.dependencySources
 
   val inflated: Inflated = Inflated.jars(fullClasspath)

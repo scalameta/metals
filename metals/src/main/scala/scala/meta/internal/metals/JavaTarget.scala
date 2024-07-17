@@ -14,7 +14,7 @@ case class JavaTarget(
     javac: JavacOptionsItem,
     bspConnection: Option[BuildServerConnection],
 ) extends JvmTarget {
-  def displayName: String = info.getName
+  def displayName: String = info.getName()
 
   def dataKind: String = info.dataKind
 

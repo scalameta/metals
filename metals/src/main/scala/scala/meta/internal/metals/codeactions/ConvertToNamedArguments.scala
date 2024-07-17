@@ -85,9 +85,13 @@ class ConvertToNamedArguments(
   ): Option[ApplyTermWithArgIndices] = {
     term match {
       case Some(apply: Term.Apply) =>
-        getTermWithArgs(apply, apply.args, apply.fun.pos.end)
+        getTermWithArgs(apply, apply.argClause.values, apply.fun.pos.end)
       case Some(init: Init) =>
-        getTermWithArgs(init, init.argss.flatten, init.name.pos.end)
+        getTermWithArgs(
+          init,
+          init.argClauses.flatMap(_.values).toList,
+          init.name.pos.end,
+        )
       case Some(t) => firstApplyWithUnnamedArgs(t.parent)
       case _ => None
     }
@@ -147,7 +151,7 @@ class ConvertToNamedArguments(
               ServerCommands
                 .ConvertToNamedArgsRequest(
                   position,
-                  apply.argIndices.map(new Integer(_)).asJava,
+                  apply.argIndices.map(Integer.valueOf).asJava,
                 )
             )
 

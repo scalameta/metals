@@ -1,6 +1,6 @@
 package scala.meta.internal.pc
 
-import scala.collection.JavaConverters.*
+import scala.jdk.CollectionConverters.*
 
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments.*

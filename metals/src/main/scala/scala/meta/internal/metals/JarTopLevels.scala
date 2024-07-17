@@ -57,7 +57,7 @@ final class JarTopLevels(conn: () => Connection)
           }
         }
         .headOption
-        .map(_ => toplevels.result)
+        .map(_ => toplevels.result())
     } catch {
       case error @ (_: ZipError | _: ZipException) =>
         scribe.warn(s"corrupted jar $jar: $error")
@@ -202,7 +202,7 @@ class JarTypeHierarchy(conn: () => Connection) {
           }
         }
         .headOption
-        .map(_ => toplevels.result)
+        .map(_ => toplevels.result())
     } catch {
       case error @ (_: ZipError | _: ZipException) =>
         scribe.warn(s"corrupted jar $jar: $error")

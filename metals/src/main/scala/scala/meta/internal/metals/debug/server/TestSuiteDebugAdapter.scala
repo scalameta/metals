@@ -100,6 +100,7 @@ class TestSuiteDebugAdapter(
         testFilter(fqn)
       }
       .groupBy(_._1)
+      .view
       .mapValues(_.map { case (_, taskDef) =>
         selectedTests.get(taskDef.fullyQualifiedName()).getOrElse(Nil) match {
           case Nil => taskDef

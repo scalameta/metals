@@ -721,7 +721,7 @@ object BuildTargets {
   final case class DataSeq(list: List[TargetData]) {
     def iterator: Iterator[TargetData] = list.iterator
     def writableDataIterator: Iterator[TargetData] = list.iterator
-    def iterable: Iterable[TargetData] = list.toIterable
+    def iterable: Iterable[TargetData] = list.toSeq
 
     def fromIterators[T](f: TargetData => Iterator[T]): Iterator[T] =
       iterator.flatMap(f)

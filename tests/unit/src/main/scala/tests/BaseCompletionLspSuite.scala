@@ -59,7 +59,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
   )(
       fn: String => Unit
   ): Future[Unit] = {
-    import scala.collection.JavaConverters._
+    import scala.jdk.CollectionConverters._
     val filename = s"$project/src/main/scala/$project/${project.toUpper}.scala"
     val text = server
       .textContentsOnDisk(filename)
@@ -94,7 +94,7 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
   )(
       fn: CompletionItem => Unit
   ): Future[Unit] = {
-    import scala.collection.JavaConverters._
+    import scala.jdk.CollectionConverters._
     val filename = s"$project/src/main/scala/$project/${project.toUpper}.scala"
     val text = server
       .textContentsOnDisk(filename)

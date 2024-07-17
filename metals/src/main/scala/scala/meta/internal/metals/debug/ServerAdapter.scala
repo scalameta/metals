@@ -34,7 +34,7 @@ final class ServerAdapter(server: RemoteEndpoint)(implicit ec: ExecutionContext)
       parts: Iterable[RequestMessage]
   ): Future[Iterable[ResponseMessage]] = {
     val responses = parts.map { request =>
-      val promise = Promise[ResponseMessage]
+      val promise = Promise[ResponseMessage]()
       server.consume(request)
       partitions += (request.getId -> promise.success)
 

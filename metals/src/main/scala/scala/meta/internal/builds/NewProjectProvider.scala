@@ -53,7 +53,7 @@ class NewProjectProvider(
           // - [jimschubert/finatra.g8](https://github.com/jimschubert/finatra.g8)
           // (A simple Finatra 2.5 template with sbt-revolver and sbt-native-packager)
           val all = for {
-            result <- Try(requests.get(templatesUrl)).toOption.toIterable
+            result <- Try(requests.get(templatesUrl)).toOption.toSeq
             _ = if (result.statusCode != 200)
               client.showMessage(
                 NewScalaProject.templateDownloadFailed(result.statusMessage)

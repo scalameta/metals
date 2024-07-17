@@ -1135,7 +1135,7 @@ class Compilers(
       jworksheetsCache.put(
         path,
         workDoneProgress.trackBlocking(
-          s"${config.icons.sync}Loading worksheet presentation compiler"
+          s"${config.icons().sync}Loading worksheet presentation compiler"
         ) {
           ScalaLazyCompiler.forWorksheet(
             scalaTarget,
@@ -1174,7 +1174,7 @@ class Compilers(
         PresentationCompilerKey.JavaBuildTarget(targetId),
         { _ =>
           workDoneProgress.trackBlocking(
-            s"${config.icons.sync}Loading presentation compiler"
+            s"${config.icons().sync}Loading presentation compiler"
           ) {
             JavaLazyCompiler(targetId, search, completionItemPriority())
           }
@@ -1201,7 +1201,7 @@ class Compilers(
         case Some(mtags) =>
           def default() =
             workDoneProgress.trackBlocking(
-              s"${config.icons.sync}Loading presentation compiler"
+              s"${config.icons().sync}Loading presentation compiler"
             ) {
               ScalaLazyCompiler(
                 scalaTarget,

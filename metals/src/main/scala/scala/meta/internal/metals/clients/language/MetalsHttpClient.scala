@@ -138,7 +138,7 @@ final class MetalsHttpClient(
   override def metalsPublishDecorations(
       params: PublishDecorationsParams
   ): Unit = {
-    if (clientConfig.isDecorationProvider) {
+    if (clientConfig.isDecorationProvider()) {
       underlying.metalsPublishDecorations(params)
     }
   }

@@ -51,7 +51,7 @@ case class ScalaTarget(
     }
   }
 
-  def displayName: String = info.getName
+  def displayName: String = info.getName()
 
   def dataKind: String = info.dataKind
 

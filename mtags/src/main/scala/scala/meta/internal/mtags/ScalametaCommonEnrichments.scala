@@ -259,7 +259,7 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
   }
 
   implicit class XtensionStream[A](stream: java.util.stream.Stream[A]) {
-    import scala.collection.JavaConverters._
+    import scala.meta.internal.jdk.CollectionConverters._
     def asScala: Generator[A] = {
       Generator.selfClosing((stream.iterator.asScala, () => stream.close()))
     }
