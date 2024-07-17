@@ -95,17 +95,12 @@ final class RunTestCodeLens(
     } yield requestJvmEnvironment(buildTargetId, isJVM).map { _ =>
       val classes = buildTargetClasses.classesOf(buildTargetId)
 
-      // sbt doesn't declare debugging provider
-      def buildServerCanDebug =
-        connection.isDebuggingProvider || connection.isSbt
-
       if (connection.isScalaCLI && path.isAmmoniteScript) {
         scalaCliCodeLenses(
           textDocument,
           buildTargetId,
           classes,
           distance,
-          buildServerCanDebug,
           isJVM,
         )
       } else
@@ -244,7 +239,6 @@ final class RunTestCodeLens(
       target: BuildTargetIdentifier,
       classes: BuildTargetClasses.Classes,
       distance: TokenEditDistance,
-      buildServerCanDebug: Boolean,
       isJVM: Boolean,
   ): Seq[l.CodeLens] = {
     val scriptFileName = textDocument.uri.stripSuffix(".sc")
@@ -327,7 +321,7 @@ final class RunTestCodeLens(
       .flatMap(scalaTarget =>
         JavaBinary.javaBinaryFromPath(scalaTarget.jvmHome)
       )
-      .orElse(userConfig().usedJavaBinary)
+      .orElse(userConfig().usedJavaBinary())
     val (data, shellCommandAdded) =
       if (!isJVM) (main.toJson, false)
       else

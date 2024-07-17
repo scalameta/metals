@@ -926,7 +926,7 @@ class DebugProvider(
     case e @ SemanticDbNotFoundException =>
       languageClient.metalsStatus(
         MetalsStatusParams(
-          text = s"${clientConfig.icons.alert}Build misconfiguration",
+          text = s"${clientConfig.icons().alert}Build misconfiguration",
           tooltip = e.getMessage(),
           command = ServerCommands.RunDoctor.id,
         )

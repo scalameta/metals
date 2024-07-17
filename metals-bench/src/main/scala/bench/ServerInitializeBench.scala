@@ -6,6 +6,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 import scala.concurrent.ExecutionContext
+import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.logging.MetalsLogger
@@ -14,6 +15,7 @@ import scala.meta.metals.MetalsLanguageServer
 
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
+import org.eclipse.lsp4j.WorkspaceFolder
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
 import org.openjdk.jmh.annotations.Mode
@@ -58,7 +60,9 @@ class ServerInitializeBench {
     val server = new MetalsLanguageServer(ec, sh)
     server.connectToLanguageClient(client)
     val initialize = new InitializeParams
-    initialize.setRootUri(path.toURI.toString)
+    initialize.setWorkspaceFolders(
+      List(new WorkspaceFolder(path.toURI.toString, "root")).asJava
+    )
     server.initialize(initialize).get()
     server.initialized(new InitializedParams).get()
     server.shutdown().get()

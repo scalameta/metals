@@ -42,7 +42,7 @@ object WorkspaceChoicePopup {
     val params = new ShowMessageRequestParams()
 
     val lowerCaseActionName =
-      if (actionName.nonEmpty) actionName.head.toLower + actionName.tail
+      if (actionName.nonEmpty) s"${actionName.head.toLower}${actionName.tail}"
       else actionName
 
     params.setMessage(

@@ -1,8 +1,8 @@
 package scala.meta.internal.metals.codeactions
 
-import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient

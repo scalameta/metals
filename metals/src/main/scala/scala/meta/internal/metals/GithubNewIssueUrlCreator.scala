@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.net.URLEncoder
+import java.nio.charset.Charset
 
 import scala.util.Properties
 
@@ -17,6 +18,7 @@ import org.eclipse.lsp4j.ClientInfo
 class GithubNewIssueUrlCreator(
     getFoldersInfo: () => List[GitHubIssueFolderInfo],
     clientInfo: ClientInfo,
+    charset: Charset,
 ) {
 
   def buildUrl(): String = {
@@ -66,7 +68,7 @@ class GithubNewIssueUrlCreator(
           | - **Scala versions:** $scalaVersions${selectedBuildTool(foldersInfo)}${selectedBuildServer(foldersInfo)}
           | - **All build tools in workspace:** ${foldersInfo.flatMap(_.buildTools.all).mkString("; ")}
           |""".stripMargin
-    s"https://github.com/scalameta/metals/issues/new?body=${URLEncoder.encode(body)}"
+    s"https://github.com/scalameta/metals/issues/new?body=${URLEncoder.encode(body, charset)}"
   }
 
   private def selectedBuildTool(

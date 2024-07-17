@@ -151,7 +151,7 @@ final class ImplementationProvider(
             source,
             params.getPosition,
           )
-          .toIterable
+          .toSeq
     } yield {
       val sym = symbolOccurrence.symbol
       val dealiased =

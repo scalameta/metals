@@ -77,8 +77,7 @@ class TestingSymbolSearch(
       case None =>
         ju.Collections.emptyList()
       case Some(value) =>
-        import scala.collection.JavaConverters._
-
+        import scala.meta.internal.jdk.CollectionConverters._
         Mtags.topLevelSymbols(value.path).asJava
     }
   }

@@ -50,7 +50,7 @@ class ScalaToplevelMtags(
     extends MtagsIndexer {
 
   override def overrides(): List[(String, List[OverriddenSymbol])] =
-    overridden.result
+    overridden.result()
 
   private val overridden = List.newBuilder[(String, List[OverriddenSymbol])]
 

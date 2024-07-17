@@ -252,7 +252,7 @@ case class ScalaPresentationCompiler(
         new PcInlineValueProviderImpl(
           pc.compiler(params),
           params
-        ).getInlineTextEdits
+        ).getInlineTextEdits()
       })
       .thenApply {
         case Right(edits: List[TextEdit]) => edits.asJava

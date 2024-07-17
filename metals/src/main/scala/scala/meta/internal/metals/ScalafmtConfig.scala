@@ -1,6 +1,6 @@
 package scala.meta.internal.metals
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.util.Success
 import scala.util.Try
 

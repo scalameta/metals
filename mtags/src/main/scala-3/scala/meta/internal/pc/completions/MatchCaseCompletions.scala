@@ -3,9 +3,9 @@ package completions
 
 import java.net.URI
 
-import scala.collection.JavaConverters.*
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.jdk.CollectionConverters.*
 
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*

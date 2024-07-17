@@ -22,7 +22,7 @@ final class BuildToolSelector(
   def checkForChosenBuildTool(
       buildTools: List[BuildTool]
   ): Future[Option[BuildTool]] =
-    tables.buildTool.selectedBuildTool match {
+    tables.buildTool.selectedBuildTool() match {
       case Some(chosen) if buildTools.exists(_.executableName == chosen) =>
         Future(buildTools.find(_.executableName == chosen))
       case _ =>

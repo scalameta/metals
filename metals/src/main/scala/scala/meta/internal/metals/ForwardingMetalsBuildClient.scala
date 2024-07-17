@@ -103,7 +103,7 @@ final class ForwardingMetalsBuildClient(
   def buildHasErrors(file: AbsolutePath): Boolean = {
     buildTargets
       .inverseSources(file)
-      .toIterable
+      .toSeq
       .flatMap(buildTargets.buildTargetTransitiveDependencies)
       .exists(hasReportedError.contains(_))
   }
@@ -212,8 +212,8 @@ final class ForwardingMetalsBuildClient(
           }
           val isSuccess = report.getErrors == 0
           val icon =
-            if (isSuccess) clientConfig.icons.check
-            else clientConfig.icons.alert
+            if (isSuccess) clientConfig.icons().check
+            else clientConfig.icons().alert
           val message = s"${icon}Compiled $name (${compilation.timer})"
           scribe.info(s"time: compiled $name in ${compilation.timer}")
           if (isSuccess) {

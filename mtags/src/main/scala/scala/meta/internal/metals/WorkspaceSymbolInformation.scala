@@ -11,13 +11,13 @@ case class WorkspaceSymbolInformation(
     range: l.Range
 ) {
   def kind: l.SymbolKind = sematicdbKind.toLsp
-  def toLsp(uri: String): l.SymbolInformation = {
+  def toLsp(uri: String): l.WorkspaceSymbol = {
     import scala.meta.internal.semanticdb.Scala._
     val (desc, owner) = DescriptorParser(symbol)
-    new l.SymbolInformation(
+    new l.WorkspaceSymbol(
       desc.name.value,
       kind,
-      new l.Location(uri, range),
+      Left(new l.Location(uri, range)).asJava,
       owner.replace('/', '.')
     )
   }

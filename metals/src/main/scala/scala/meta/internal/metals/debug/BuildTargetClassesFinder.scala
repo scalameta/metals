@@ -1,6 +1,6 @@
 package scala.meta.internal.metals.debug
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try

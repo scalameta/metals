@@ -125,11 +125,11 @@ private[callHierarchy] trait CallHierarchyHelpers {
           case tuple: Term.Tuple =>
             traverseTreeWithArgs(tuple.args)
           case apply: Term.Apply =>
-            traverseTreeWithArgs(apply.args)
+            traverseTreeWithArgs(apply.argClause.values)
           case tuple: Pat.Tuple =>
             traverseTreeWithArgs(tuple.args)
           case extract: Pat.Extract =>
-            traverseTreeWithArgs(extract.args)
+            traverseTreeWithArgs(extract.argClause.values)
           case _ => None
         }
       case Nil => Some(tree)

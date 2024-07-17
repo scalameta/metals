@@ -2,8 +2,7 @@ package scala.meta.internal.pc
 
 import java.{util => ju}
 
-import scala.collection.JavaConverters._
-
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.ReferencesRequest
 import scala.meta.pc.ReferencesResult
 import scala.meta.pc.VirtualFileParams

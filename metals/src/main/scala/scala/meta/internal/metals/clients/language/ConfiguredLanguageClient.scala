@@ -104,7 +104,8 @@ final class ConfiguredLanguageClient(
 
   override def logMessage(message: MessageParams): Unit = {
     if (
-      clientConfig.statusBarState == StatusBarState.LogMessage && message.getType == MessageType.Log
+      clientConfig
+        .statusBarState() == StatusBarState.LogMessage && message.getType == MessageType.Log
     ) {
       // window/logMessage is reserved for the status bar so we don't publish
       // scribe.{info,warn,error} logs here. Users should look at .metals/metals.log instead.
@@ -115,11 +116,11 @@ final class ConfiguredLanguageClient(
   }
 
   override def refreshModel(): CompletableFuture[Unit] = {
-    if (clientConfig.codeLenseRefreshSupport)
+    if (clientConfig.codeLenseRefreshSupport())
       underlying.refreshCodeLenses.thenApply(_ => ())
     else if (
-      clientConfig.isExecuteClientCommandProvider &&
-      (clientConfig.isDebuggingProvider || clientConfig.isRunProvider())
+      clientConfig.isExecuteClientCommandProvider() &&
+      (clientConfig.isDebuggingProvider() || clientConfig.isRunProvider())
     ) {
       val params = ClientCommands.RefreshModel.toExecuteCommandParams()
       CompletableFuture.completedFuture(metalsExecuteClientCommand(params))
@@ -158,7 +159,7 @@ final class ConfiguredLanguageClient(
   override def rawMetalsInputBox(
       params: MetalsInputBoxParams
   ): CompletableFuture[RawMetalsInputBoxResult] = {
-    if (clientConfig.isInputBoxEnabled) {
+    if (clientConfig.isInputBoxEnabled()) {
       underlying.rawMetalsInputBox(params)
     } else {
       CompletableFuture.completedFuture(
@@ -170,7 +171,7 @@ final class ConfiguredLanguageClient(
   override def rawMetalsQuickPick(
       params: MetalsQuickPickParams
   ): CompletableFuture[RawMetalsQuickPickResult] = {
-    if (clientConfig.isQuickPickProvider) {
+    if (clientConfig.isQuickPickProvider()) {
       underlying.rawMetalsQuickPick(params)
     } else {
       showMessageRequest(
@@ -187,7 +188,7 @@ final class ConfiguredLanguageClient(
   override def metalsPublishDecorations(
       params: PublishDecorationsParams
   ): Unit = {
-    if (clientConfig.isDecorationProvider) {
+    if (clientConfig.isDecorationProvider()) {
       underlying.metalsPublishDecorations(params)
     }
   }

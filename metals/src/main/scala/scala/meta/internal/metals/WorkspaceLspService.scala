@@ -229,7 +229,7 @@ class WorkspaceLspService(
     Option.when(fallbackIsInitialized.get())(fallbackService)
 
   val treeView: TreeViewProvider =
-    if (clientConfig.isTreeViewProvider) {
+    if (clientConfig.isTreeViewProvider()) {
       new MetalsTreeViewProvider(
         () => folderServices.map(_.treeView),
         languageClient,
@@ -248,13 +248,14 @@ class WorkspaceLspService(
     workDoneProgress,
     clientConfig,
     shellRunner,
-    clientConfig.icons,
+    clientConfig.icons(),
     () => currentOrHeadOrFallback.path,
   )
 
   private val githubNewIssueUrlCreator = new GithubNewIssueUrlCreator(
     () => folderServices.map(_.gitHubIssueFolderInfo),
     initializeParams.getClientInfo(),
+    charset,
   )
 
   private val workspaceChoicePopup: WorkspaceChoicePopup =
@@ -543,7 +544,7 @@ class WorkspaceLspService(
 
   override def workspaceSymbol(
       params: WorkspaceSymbolParams
-  ): CompletableFuture[ju.List[SymbolInformation]] =
+  ): CompletableFuture[ju.List[lsp4j.SymbolInformation]] =
     CancelTokens.future { token =>
       collectSeq(_.workspaceSymbol(params, token))(_.flatten.asJava)
     }
@@ -1152,7 +1153,7 @@ class WorkspaceLspService(
         )
         capabilities.setCompletionProvider(
           new lsp4j.CompletionOptions(
-            clientConfig.isCompletionItemResolve,
+            clientConfig.isCompletionItemResolve(),
             List(".", "*").asJava,
           )
         )
@@ -1233,7 +1234,7 @@ class WorkspaceLspService(
   }
 
   private def startHttpServer(): Unit = {
-    if (clientConfig.isHttpEnabled) {
+    if (clientConfig.isHttpEnabled()) {
       val host = "localhost"
       val port = 5031
       var url = s"http://$host:$port"
@@ -1258,7 +1259,7 @@ class WorkspaceLspService(
         () => url,
         languageClient.underlying,
         () => server.reload(),
-        clientConfig.icons,
+        clientConfig.icons(),
         clientConfig,
       )
       render = () => newClient.renderHtml
@@ -1279,14 +1280,14 @@ class WorkspaceLspService(
     if (shutdownPromise.compareAndSet(null, promise)) {
       scribe.info("shutting down Metals")
       try {
-        folderServices.foreach(_.onShutdown)
+        folderServices.foreach(_.onShutdown())
       } catch {
         case NonFatal(e) =>
           scribe.error("cancellation error", e)
       } finally {
         promise.success(())
       }
-      if (clientConfig.isExitOnShutdown) {
+      if (clientConfig.isExitOnShutdown()) {
         System.exit(0)
       }
       promise.future.asJava
@@ -1314,7 +1315,7 @@ class WorkspaceLspService(
     }
   }
 
-  def workspaceSymbol(query: String): Seq[SymbolInformation] =
+  def workspaceSymbol(query: String): Seq[lsp4j.SymbolInformation] =
     folderServices.flatMap(_.workspaceSymbol(query))
 
   private def maybeResetWorkspace(): Future[Unit] = {

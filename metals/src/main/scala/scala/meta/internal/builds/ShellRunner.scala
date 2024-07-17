@@ -104,7 +104,7 @@ class ShellRunner(time: Time, workDoneProvider: WorkDoneProgress)(implicit
       Some(processErr),
       propagateError,
     )
-    val result = Promise[Int]
+    val result = Promise[Int]()
     val newCancelable: Cancelable = () => ps.cancel
     cancelables.add(newCancelable)
 

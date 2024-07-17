@@ -172,7 +172,7 @@ final case class Indexer(
     )
     tracked.foreach { _ =>
       statusBar().addMessage(
-        s"${clientConfig.icons.rocket} Indexing complete!"
+        s"${clientConfig.icons().rocket} Indexing complete!"
       )
       if (clientConfig.initialConfig.statistics.isMemory) {
         Memory.logMemory(

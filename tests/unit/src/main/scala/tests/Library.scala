@@ -1,6 +1,6 @@
 package tests
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.PackageIndex

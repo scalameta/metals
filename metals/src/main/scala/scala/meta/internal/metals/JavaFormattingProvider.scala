@@ -17,6 +17,7 @@ import scala.meta.{inputs => m}
 import org.eclipse.jdt.core.JavaCore
 import org.eclipse.jdt.core.ToolFactory
 import org.eclipse.jdt.core.formatter.CodeFormatter
+import org.eclipse.jdt.core.formatter.DefaultCodeFormatterConstants
 import org.eclipse.jdt.internal.formatter.DefaultCodeFormatterOptions
 import org.eclipse.jface.text.BadLocationException
 import org.eclipse.jface.text.Document
@@ -169,12 +170,12 @@ final class JavaFormattingProvider(
         })
     }
 
-    if (!options.contains(JavaCore.FORMATTER_TAB_SIZE))
+    if (!options.contains(DefaultCodeFormatterConstants.FORMATTER_TAB_SIZE))
       Option(formattingOptions.getTabSize).foreach(f =>
-        options += JavaCore.FORMATTER_TAB_SIZE -> f.toString
+        options += DefaultCodeFormatterConstants.FORMATTER_TAB_SIZE -> f.toString
       )
-    if (!options.contains(JavaCore.FORMATTER_TAB_CHAR))
-      options += JavaCore.FORMATTER_TAB_CHAR -> {
+    if (!options.contains(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR))
+      options += DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR -> {
         if (formattingOptions.isInsertSpaces) JavaCore.SPACE else JavaCore.TAB
       }
 
