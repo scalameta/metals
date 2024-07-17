@@ -107,7 +107,7 @@ class BazelLspSuite
       }
       _ <- server.didSave(s"BUILD")(identity)
       _ = assertNoDiff(client.workspaceMessageRequests, "")
-      _ = server.server.buildServerPromise = Promise()
+      _ = server.headServer.connectionProvider.buildServerPromise = Promise()
       _ <- server.executeCommand(ServerCommands.GenerateBspConfig)
       // We need to wait a bit just to ensure the connection is made
       _ <- server.server.buildServerPromise.future
@@ -160,7 +160,7 @@ class BazelLspSuite
       }
       _ <- server.didSave(s"BUILD")(identity)
       _ = assertNoDiff(client.workspaceMessageRequests, "")
-      _ = server.server.buildServerPromise = Promise()
+      _ = server.headServer.connectionProvider.buildServerPromise = Promise()
       _ <- server.executeCommand(ServerCommands.ImportBuild)
       // We need to wait a bit just to ensure the connection is made
       _ <- server.server.buildServerPromise.future
@@ -182,7 +182,7 @@ class BazelLspSuite
            |  Test <- NOT SUPPORTED
            |  Compile""".stripMargin
       _ = assertNoDiff(result, expectedTarget)
-      _ = server.server.buildServerPromise = Promise()
+      _ = server.headServer.connectionProvider.buildServerPromise = Promise()
       _ = client.resetWorkspace =
         new MessageActionItem(Messages.ResetWorkspace.resetWorkspace)
       _ <- server.executeCommand(ServerCommands.ResetWorkspace)

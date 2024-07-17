@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.concurrent.Promise
 
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.Indexer.BuildTool
@@ -57,7 +58,7 @@ class FallbackMetalsLspService(
       maxScalaCliServers = 10,
     ) {
 
-  buildServerPromise.success(())
+  val buildServerPromise: Promise[Unit] = Promise.successful(())
   indexingPromise.success(())
 
   private val files: AtomicReference[Set[AbsolutePath]] = new AtomicReference(

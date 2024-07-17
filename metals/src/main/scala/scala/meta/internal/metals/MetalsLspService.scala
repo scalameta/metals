@@ -220,7 +220,7 @@ abstract class MetalsLspService(
     downstreamTargets,
   )
   var indexingPromise: Promise[Unit] = Promise[Unit]()
-  var buildServerPromise: Promise[Unit] = Promise[Unit]()
+  def buildServerPromise: Promise[Unit]
   val parseTrees = new BatchedFunction[AbsolutePath, Unit](
     paths =>
       CancelableFuture(

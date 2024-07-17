@@ -295,7 +295,7 @@ class SbtServerSuite
             |""".stripMargin
       )
       _ = buffer.clear()
-      _ <- server.headServer.connect(CreateSession())
+      _ <- server.headServer.connect(CreateSession(true))
     } yield {
       val logs = buffer.result()
       assert(logs.contains("sbt server started"))

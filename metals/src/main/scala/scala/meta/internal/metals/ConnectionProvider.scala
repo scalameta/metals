@@ -192,11 +192,11 @@ class ConnectionProvider(
     private object DisconnectProvider
         extends ConnectProvider[Boolean, Disconnect] {
       def run(shutdownBuildServer: Boolean): Future[BuildChange] = {
-        def shutdownBsp(): Future[Boolean] = {
-          bspSession match {
-            case Some(session) if session.main.isBloop =>
+        def shutdownBsp(optMainBsp: Option[String]): Future[Boolean] = {
+          optMainBsp match {
+            case Some(BloopServers.name) =>
               Future { bloopServers.shutdownServer() }
-            case Some(session) if session.main.isSbt =>
+            case Some(SbtBuildTool.name) =>
               for {
                 res <- buildToolProvider.buildTool match {
                   case Some(sbt: SbtBuildTool) =>
@@ -217,14 +217,16 @@ class ConnectionProvider(
 
         for {
           _ <- scalaCli.stop()
-          _ <- bspSession match {
-            case None => Future.successful(())
+          optMainBsp <- bspSession match {
+            case None => Future.successful(None)
             case Some(session) =>
               bspSession = None
               mainBuildTargetsData.resetConnections(List.empty)
-              session.shutdown()
+              session.shutdown().map(_ => Some(session.main.name))
           }
-          _ <- if (shutdownBuildServer) shutdownBsp() else Future.successful(())
+          _ <-
+            if (shutdownBuildServer) shutdownBsp(optMainBsp)
+            else Future.successful(())
         } yield BuildChange.None
       }
     }
@@ -405,6 +407,8 @@ class ConnectionProvider(
 
       def run(config: (BuildServerProvider, Boolean)): Future[BuildChange] = {
         val (buildTool, shutdownServer) = config
+        tables.buildTool.chooseBuildTool(buildTool.executableName)
+        maybeChooseServer(buildTool.buildServerName, alreadySelected = false)
         for {
           _ <-
             if (shutdownServer) DisconnectProvider.run(shutdownServer)
@@ -415,8 +419,10 @@ class ConnectionProvider(
               args => bspConfigGenerator.runUnconditionally(buildTool, args),
               statusBar,
             )
-          _ = handleGenerationStatus(buildTool, status)
-          status <- CreateSessionProvider.run(false)
+          shouldConnect = handleGenerationStatus(buildTool, status)
+          status <-
+            if (shouldConnect) CreateSessionProvider.run(false)
+            else Future.successful(BuildChange.Failed)
         } yield status
       }
 
@@ -500,10 +506,7 @@ class ConnectionProvider(
                     Future.successful(BuildChange.Failed)
                   }
               } yield change
-            } else {
-              Future.successful(BuildChange.None)
-            }
-
+            } else Future.successful(BuildChange.None)
           }
         } yield change
       }
@@ -565,7 +568,7 @@ class ConnectionProvider(
         maybeChooseServer(buildTool.buildServerName, isSelected(buildTool))
         connect(CreateSession())
       // Used in tests, `.bloop` folder exists but no build tool is detected
-      case _ => connect(CreateSession())
+      case _ => quickConnectToBuildServer()
     }
   }
 
@@ -582,8 +585,7 @@ class ConnectionProvider(
       userConfig().shouldAutoImportNewProject || forceImport || isSelected ||
       buildTool.isInstanceOf[ScalaCliBuildTool]
     ) {
-      maybeChooseServer(buildTool.buildServerName, isSelected)
-      connect(CreateSession())
+      connect(GenerateBspConfigAndConnect(buildTool))
     } else if (notification.isDismissed) {
       Future.successful(BuildChange.None)
     } else {
@@ -599,8 +601,7 @@ class ConnectionProvider(
             notification.dismissForever()
             Future.successful(BuildChange.None)
           } else if (item == Messages.GenerateBspAndConnect.yes) {
-            maybeChooseServer(buildTool.buildServerName, isSelected)
-            connect(CreateSession())
+            connect(GenerateBspConfigAndConnect(buildTool))
           } else {
             notification.dismiss(2, TimeUnit.MINUTES)
             Future.successful(BuildChange.None)
