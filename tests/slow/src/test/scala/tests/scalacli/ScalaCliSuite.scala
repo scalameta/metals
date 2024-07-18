@@ -738,4 +738,31 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
       output <- debugServer.allOutput
     } yield assertContains(output, "Hello world!\n")
   }
+
+  test("scala-shebang") {
+    cleanWorkspace()
+    for {
+      _ <- scalaCliInitialize(useBsp = true)(
+        s"""/example.scala
+           |#!usr/bin/env -S scala -cli shebang
+           |//> using scala $scalaVersion
+           |class O {
+           |  val i = List(1, 2, 3).map(_ + 1)
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- server.didOpen("example.scala")
+      completions <- server.completion(
+        "example.scala",
+        "  val i = List(1, 2, 3).map@@(_ + 1)",
+      )
+      _ = assertNoDiff(
+        completions,
+        """|mapConserve[B >: Int <: AnyRef](f: Int => B): List[B]
+           |map[B](f: Int => B): List[B]
+           |""".stripMargin,
+      )
+    } yield ()
+  }
 }
