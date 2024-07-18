@@ -47,6 +47,7 @@ final class Diagnostics(
     statistics: StatisticsConfig,
     workspace: Option[AbsolutePath],
     trees: Trees,
+    buildTargets: BuildTargets,
 ) {
   private val diagnostics =
     TrieMap.empty[AbsolutePath, ju.Queue[Diagnostic]]
@@ -91,11 +92,14 @@ final class Diagnostics(
       report: bsp4j.CompileReport,
       statusCode: bsp4j.StatusCode,
   ): Unit = {
+    val target = report.getTarget()
+
+    if (statusCode.isError)
+      removeInverseDependenciesDiagnostics(target)
+
     publishDiagnosticsBuffer()
 
-    val target = report.getTarget()
     compileTimer.remove(target)
-
     val status = CompilationStatus(statusCode, report.getErrors())
     compilationStatus.update(target, status)
   }
@@ -194,6 +198,23 @@ final class Diagnostics(
       publishDiagnostics(path, queue)
     } else {
       diagnosticsBuffer.add(path)
+    }
+  }
+
+  private def removeInverseDependenciesDiagnostics(
+      buildTarget: BuildTargetIdentifier
+  ) = {
+    val inverseDeps =
+      buildTargets.allInverseDependencies(buildTarget) - buildTarget
+    for (path <- diagnostics.keySet) {
+      if (
+        buildTargets
+          .sourceBuildTargets(path)
+          .exists(_.forall(inverseDeps.apply))
+      ) {
+        diagnostics.remove(path)
+        publishDiagnostics(path)
+      }
     }
   }
 

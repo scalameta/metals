@@ -258,6 +258,7 @@ abstract class MetalsLspService(
     clientConfig.initialConfig.statistics,
     Option(folder),
     trees,
+    buildTargets,
   )
 
   protected def semanticdbs(): Semanticdbs
