@@ -24,6 +24,7 @@ import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.config.StatusBarState
 import scala.meta.internal.metals.debug.DebugProvider
+import scala.meta.internal.metals.debug.DiscoveryFailures
 import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.findfiles.FindTextInDependencyJarsRequest
@@ -94,7 +95,6 @@ import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceSymbolParams
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages
-import scala.meta.internal.metals.debug.NoClassFoundException
 
 class WorkspaceLspService(
     ec: ExecutionContextExecutorService,
@@ -807,7 +807,8 @@ class WorkspaceLspService(
               .flatMap { mains =>
                 mains.headOption.fold(
                   Future.failed[DebugSessionParams](
-                    NoClassFoundException(unresolvedParams.mainClass)
+                    DiscoveryFailures
+                      .NoMainClassFoundException(unresolvedParams.mainClass)
                   )
                 )(Future.successful(_))
               }

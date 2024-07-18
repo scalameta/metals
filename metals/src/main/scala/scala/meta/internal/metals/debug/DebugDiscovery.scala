@@ -2,10 +2,11 @@ package scala.meta.internal.metals.debug
 
 import java.util.Collections.singletonList
 
-import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.Failure
 import scala.util.Success
+import scala.util.Try
 
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.DebugDiscoveryParams
@@ -20,19 +21,16 @@ import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.config.RunType
 import scala.meta.internal.metals.config.RunType._
-import scala.meta.internal.metals.debug.DebugProvider.NoRunOptionException
-import scala.meta.internal.metals.debug.DebugProvider.SemanticDbNotFoundException
-import scala.meta.internal.metals.debug.DebugProvider.UndefinedPathException
-import scala.meta.internal.metals.debug.DebugProvider.WorkspaceErrorsException
-import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.metals.debug.DiscoveryFailures._
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
+import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.semanticdb.SymbolOccurrence
+import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
-import scala.meta.internal.semanticdb.SymbolOccurrence
-import scala.meta.internal.semanticdb.TextDocument
 
 class DebugDiscovery(
     buildTargetClasses: BuildTargetClasses,
@@ -42,7 +40,13 @@ class DebugDiscovery(
     semanticdbs: () => Semanticdbs,
     userConfig: () => UserConfiguration,
     workspace: AbsolutePath,
-) {
+)(implicit ec: ExecutionContext) {
+
+  private def mainClasses(bti: b.BuildTargetIdentifier) =
+    buildTargetClasses.classesOf(bti).mainClasses
+
+  private def testClasses(bti: b.BuildTargetIdentifier) =
+    buildTargetClasses.classesOf(bti).testClasses
 
   /**
    * Tries to discover the main class to run and returns
@@ -56,133 +60,233 @@ class DebugDiscovery(
     debugDiscovery(unresolvedParams).flatMap(enrichWithMainShellCommand)
   }
 
-  /**
-   * Given fully unresolved params this figures out the runType that was passed
-   * in and then discovers either the main methods for the build target the
-   * path belongs to or finds the tests for the current file or build target
-   */
-  def debugDiscovery(
+  import DebugDiscovery._
+
+  private def findMainClass(
+      targetId: b.BuildTargetIdentifier,
+      mains: Set[String],
+  ): List[b.ScalaMainClass] = {
+    mainClasses(targetId).values.toList.filter(cls =>
+      mains.contains(
+        cls.getClassName()
+      )
+    )
+  }
+
+  private def validate(
       params: DebugDiscoveryParams
-  )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
-    val runTypeO = RunType.fromString(params.runType)
+  ): Try[ValidRunType.Value] = {
+
+    val runType = RunType.fromString(params.runType)
     val pathOpt = Option(params.path).map(_.toAbsolutePath)
-    val buildTargetO = pathOpt.flatMap(buildTargets.inverseSources(_)).orElse {
+    val buildTarget = pathOpt.flatMap(buildTargets.inverseSources(_)).orElse {
       Option(params.buildTarget)
         .flatMap(buildTargets.findByDisplayName)
         .map(_.getId())
     }
 
-    lazy val mainClasses = (bti: b.BuildTargetIdentifier) =>
-      buildTargetClasses.classesOf(bti).mainClasses
-
-    lazy val testClasses = (bti: b.BuildTargetIdentifier) =>
-      buildTargetClasses.classesOf(bti).testClasses
-
-    (runTypeO, buildTargetO, pathOpt) match {
+    (runType, buildTarget, pathOpt) match {
       case (_, Some(buildTarget), _)
           if buildClient.buildHasErrors(buildTarget) =>
-        Future.failed(WorkspaceErrorsException)
+        Failure(WorkspaceErrorsException)
       case (_, None, Some(path)) =>
-        Future.failed(BuildTargetNotFoundForPathException(path))
+        Failure(BuildTargetNotFoundForPathException(path))
       case (None, _, _) =>
-        Future.failed(RunType.UnknownRunTypeException(params.runType))
+        Failure(RunType.UnknownRunTypeException(params.runType))
+      case (Some(TestFile), Some(target), Some(path))
+          if testClasses(target).isEmpty =>
+        Failure(
+          NoTestsFoundException("file", path.toString())
+        )
+      case (Some(TestFile | TestTarget), Some(target), _)
+          if testClasses(target).isEmpty =>
+        Failure(
+          NoTestsFoundException("build target", displayName(target))
+        )
+      case (Some(TestTarget), None, _) =>
+        Failure(NoBuildTargetSpecified)
+      case (Some(tpe @ (TestFile | RunOrTestFile)), _, None) =>
+        Failure(UndefinedPathException(tpe))
       case (Some(Run), target, _) =>
         val targetIds = target match {
           case None => buildTargets.allBuildTargetIds
           case Some(value) => List(value)
         }
-        val requestedMain = Option(params.mainClass)
-        val targetToMainClasses = targetIds
-          .map { target =>
-            target ->
-              mainClasses(target).values.toList.filter(cls =>
-                requestedMain.isEmpty || requestedMain.contains(
-                  cls.getClassName()
+        Option(params.mainClass) match {
+          case Some(main)
+              if targetIds
+                .exists(id => findMainClass(id, Set(main)).nonEmpty) =>
+            Success(ValidRunType.Run(targetIds, Set(main)))
+          case Some(main) =>
+            target match {
+              case None => Failure(NoMainClassFoundException(main))
+              case Some(targetId) =>
+                Failure(
+                  ClassNotFoundInBuildTargetException(
+                    main,
+                    displayName(targetId),
+                  )
                 )
-              )
-
-          }
-          .filter { case (_, mains) => mains.nonEmpty }
-          .toMap
-        if (targetToMainClasses.nonEmpty)
-          verifyMain(
-            targetToMainClasses,
-            params,
-          )
-        else
-          Future.failed(
-            MainClassException(
-              params,
-              targetIds.nonEmpty,
-              buildTargets.all.map(_.getDisplayName).toSeq,
-            )
-          )
-      case (Some(RunOrTestFile), Some(target), _) =>
-        resolveInFile(
-          target,
-          mainClasses(target),
-          testClasses(target),
-          params,
-        )
-      case (Some(TestFile), Some(target), path)
-          if testClasses(target).isEmpty =>
-        Future.failed(
-          NoTestsFoundException("file", path.toString())
-        )
-      case (Some(TestTarget), Some(target), _) if testClasses(target).isEmpty =>
-        Future.failed(
-          NoTestsFoundException("build target", displayName(target))
-        )
-      case (Some(TestTarget), None, _) =>
-        Future.failed(NoBuildTargetSpecified)
-      case (Some(TestFile), Some(target), Some(path)) =>
-        semanticdbs()
-          .textDocument(path)
-          .documentIncludingStale
-          .fold[Future[Seq[BuildTargetClasses.FullyQualifiedClassName]]] {
-            Future.failed(SemanticDbNotFoundException)
-          } { textDocument =>
-            Future {
-              for {
-                symbolInfo <- textDocument.symbols
-                symbol = symbolInfo.symbol
-                testSymbolInfo <- testClasses(target).get(symbol)
-              } yield testSymbolInfo.fullyQualifiedName
             }
+          case None if targetIds.exists(id => mainClasses(id).nonEmpty) =>
+            Success(
+              ValidRunType.Run(
+                targetIds,
+                targetIds
+                  .map(mainClasses(_).values.map(_.getClassName()))
+                  .flatten
+                  .toSet,
+              )
+            )
+          case None =>
+            target match {
+              case None =>
+                Failure(NothingToRun)
+              case Some(targetId) =>
+                Failure(
+                  BuildTargetContainsNoMainException(displayName(targetId))
+                )
+            }
+        }
+      case (Some(RunOrTestFile), Some(target), Some(path)) =>
+        Success(ValidRunType.RunOrTestFile(target, path))
+      case (Some(TestFile), Some(target), Some(path)) =>
+        Success(ValidRunType.TestFile(target, path))
+      case (Some(TestTarget), Some(target), _) =>
+        Success(ValidRunType.TestTarget(target))
+    }
+  }
+
+  /**
+   * Given fully unresolved params this figures out the runType that was passed
+   * in and then discovers either the main methods for the build target the
+   * path belongs to or finds the tests for the current file or build target
+   */
+
+  def debugDiscovery(
+      params: DebugDiscoveryParams
+  ): Future[b.DebugSessionParams] = {
+    val validated = Future.fromTry(validate(params))
+
+    validated.flatMap {
+      case ValidRunType.Run(targetIds, mains) =>
+        run(params, targetIds, mains)
+      case ValidRunType.RunOrTestFile(target, path) =>
+        runOrTestFile(target, params, path)
+      case ValidRunType.TestFile(target, path) =>
+        testFile(path, target)
+      case ValidRunType.TestTarget(target) =>
+        testTarget(target)
+    }
+  }
+
+  private def run(
+      params: DebugDiscoveryParams,
+      targetIds: Seq[b.BuildTargetIdentifier],
+      mains: Set[String],
+  ): Future[b.DebugSessionParams] = {
+    val targetToMainClasses = targetIds
+      .map(target => target -> findMainClass(target, mains))
+      .filter { case (_, mains) => mains.nonEmpty }
+      .toMap
+    findMainToRun(
+      targetToMainClasses,
+      params,
+    )
+  }
+
+  private def testFile(
+      path: AbsolutePath,
+      target: b.BuildTargetIdentifier,
+  ): Future[b.DebugSessionParams] =
+    semanticdbs()
+      .textDocument(path)
+      .documentIncludingStale
+      .fold[Future[Seq[BuildTargetClasses.FullyQualifiedClassName]]] {
+        Future.failed(SemanticDbNotFoundException)
+      } { textDocument =>
+        Future {
+          for {
+            symbolInfo <- textDocument.symbols
+            symbol = symbolInfo.symbol
+            testSymbolInfo <- testClasses(target).get(symbol)
+          } yield testSymbolInfo.fullyQualifiedName
+        }
+      }
+      .map { tests =>
+        val params = new b.DebugSessionParams(
+          singletonList(target)
+        )
+        params.setDataKind(
+          b.TestParamsDataKind.SCALA_TEST_SUITES
+        )
+        params.setData(tests.asJava.toJson)
+        params
+      }
+
+  private def testTarget(
+      target: b.BuildTargetIdentifier
+  ): Future[b.DebugSessionParams] = {
+    Future {
+      val params = new b.DebugSessionParams(
+        singletonList(target)
+      )
+      params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES)
+      params.setData(
+        testClasses(target).values
+          .map(_.fullyQualifiedName)
+          .toList
+          .asJava
+          .toJson
+      )
+      params
+    }
+  }
+  private def runOrTestFile(
+      buildTarget: b.BuildTargetIdentifier,
+      params: DebugDiscoveryParams,
+      path: AbsolutePath,
+  ): Future[b.DebugSessionParams] = {
+    semanticdbs()
+      .textDocument(path)
+      .documentIncludingStale
+      .fold[Future[b.DebugSessionParams]] {
+        Future.failed(SemanticDbNotFoundException)
+      } { textDocument =>
+        lazy val tests = for {
+          symbolInfo <- textDocument.symbols
+          symbol = symbolInfo.symbol
+          testSymbolInfo <- testClasses(buildTarget).get(symbol)
+        } yield testSymbolInfo.fullyQualifiedName
+        val mains = for {
+          occurrence <- textDocument.occurrences
+          if occurrence.role.isDefinition || occurrence.symbol == "scala/main#"
+          symbol = occurrence.symbol
+          mainClass <- {
+            val normal = mainClasses(buildTarget).get(symbol)
+            val fromAnnot = DebugDiscovery
+              .mainFromAnnotation(occurrence, textDocument)
+              .flatMap(mainClasses(buildTarget).get(_))
+            List(normal, fromAnnot).flatten
           }
-          .map { tests =>
-            val params = new b.DebugSessionParams(
-              singletonList(target)
-            )
-            params.setDataKind(
-              b.TestParamsDataKind.SCALA_TEST_SUITES
-            )
+        } yield mainClass
+        if (mains.nonEmpty) {
+          findMainToRun(Map(buildTarget -> mains.toList), params)
+        } else if (tests.nonEmpty) {
+          Future {
+            val params = new b.DebugSessionParams(singletonList(buildTarget))
+            params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES)
             params.setData(tests.asJava.toJson)
             params
           }
-      case (Some(TestTarget), Some(target), _) =>
-        Future {
-          val params = new b.DebugSessionParams(
-            singletonList(target)
-          )
-          params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES)
-          params.setData(
-            testClasses(target).values
-              .map(_.fullyQualifiedName)
-              .toList
-              .asJava
-              .toJson
-          )
-          params
+
+        } else {
+          Future.failed(NoRunOptionException)
         }
-      case (Some(tpe @ (TestFile | RunOrTestFile)), _, None) =>
-        Future.failed(UndefinedPathException(tpe))
-
-    }
-
+      }
   }
 
-  private def verifyMain(
+  private def findMainToRun(
       classes: Map[b.BuildTargetIdentifier, List[b.ScalaMainClass]],
       params: DebugDiscoveryParams,
   )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
@@ -195,12 +299,14 @@ class DebugDiscovery(
           buildTarget,
         )
       case multiple =>
-        requestMain(multiple.flatMap(_._2)).flatMap { main =>
-          val buildTarget = classes.find(_._2.contains(main)).map(_._1)
+        val targetMainClasses = multiple.flatMap { case (target, mains) =>
+          mains.map(m => (target, m))
+        }
+        requestMain(targetMainClasses).flatMap { case (target, main) =>
           createMainParams(
             params,
             main,
-            buildTarget.get,
+            target,
           )
         }
 
@@ -248,58 +354,6 @@ class DebugDiscovery(
     }
   }
 
-  private def resolveInFile(
-      buildTarget: b.BuildTargetIdentifier,
-      classes: TrieMap[
-        BuildTargetClasses.Symbol,
-        b.ScalaMainClass,
-      ],
-      testClasses: TrieMap[
-        BuildTargetClasses.Symbol,
-        BuildTargetClasses.TestSymbolInfo,
-      ],
-      params: DebugDiscoveryParams,
-  )(implicit ec: ExecutionContext) = {
-    val path = params.path.toAbsolutePath
-    semanticdbs()
-      .textDocument(path)
-      .documentIncludingStale
-      .fold[Future[b.DebugSessionParams]] {
-        Future.failed(SemanticDbNotFoundException)
-      } { textDocument =>
-        lazy val tests = for {
-          symbolInfo <- textDocument.symbols
-          symbol = symbolInfo.symbol
-          testSymbolInfo <- testClasses.get(symbol)
-        } yield testSymbolInfo.fullyQualifiedName
-        val mains = for {
-          occurrence <- textDocument.occurrences
-          if occurrence.role.isDefinition || occurrence.symbol == "scala/main#"
-          symbol = occurrence.symbol
-          mainClass <- {
-            val normal = classes.get(symbol)
-            val fromAnnot = DebugDiscovery
-              .mainFromAnnotation(occurrence, textDocument)
-              .flatMap(classes.get(_))
-            List(normal, fromAnnot).flatten
-          }
-        } yield mainClass
-        if (mains.nonEmpty) {
-          verifyMain(Map(buildTarget -> mains.toList), params)
-        } else if (tests.nonEmpty) {
-          Future {
-            val params = new b.DebugSessionParams(singletonList(buildTarget))
-            params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES)
-            params.setData(tests.asJava.toJson)
-            params
-          }
-
-        } else {
-          Future.failed(NoRunOptionException)
-        }
-      }
-  }
-
   private def createMainParams(
       params: DebugDiscoveryParams,
       main: b.ScalaMainClass,
@@ -328,12 +382,15 @@ class DebugDiscovery(
       .getOrElse(buildTargetIdentifier.getUri)
 
   private def requestMain(
-      mainClasses: List[b.ScalaMainClass]
-  )(implicit ec: ExecutionContext): Future[b.ScalaMainClass] = {
+      mainClasses: List[(b.BuildTargetIdentifier, b.ScalaMainClass)]
+  )(implicit
+      ec: ExecutionContext
+  ): Future[(b.BuildTargetIdentifier, b.ScalaMainClass)] = {
+    def invalidThrow = throw new RuntimeException("No valid class was chosen")
     languageClient
       .metalsQuickPick(
         new MetalsQuickPickParams(
-          mainClasses.map { m =>
+          mainClasses.map { case (_, m) =>
             val cls = m.getClassName()
             new MetalsQuickPickItem(cls, cls)
           }.asJava,
@@ -341,17 +398,35 @@ class DebugDiscovery(
         )
       )
       .asScala
-      .collect { case Some(choice) =>
-        mainClasses.find { clazz =>
-          clazz.getClassName() == choice.itemId
-        }
+      .map {
+        case Some(choice) =>
+          mainClasses
+            .find { case (_, clazz) =>
+              clazz.getClassName() == choice.itemId
+            }
+            .getOrElse(invalidThrow)
+        case None => invalidThrow
       }
-      .collect { case Some(main) => main }
   }
 
 }
 
 object DebugDiscovery {
+
+  object ValidRunType {
+
+    sealed trait Value
+
+    case class Run(targets: Seq[b.BuildTargetIdentifier], mains: Set[String])
+        extends Value
+    case class RunOrTestFile(
+        target: b.BuildTargetIdentifier,
+        path: AbsolutePath,
+    ) extends Value
+    case class TestFile(target: b.BuildTargetIdentifier, path: AbsolutePath)
+        extends Value
+    case class TestTarget(target: b.BuildTargetIdentifier) extends Value
+  }
 
   /**
    * Given an occurence and a text document return the symbol of a main method

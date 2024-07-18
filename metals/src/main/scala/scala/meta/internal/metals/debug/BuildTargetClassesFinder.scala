@@ -6,7 +6,7 @@ import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.DebugDiscoveryParams
+import scala.meta.internal.metals.debug.DiscoveryFailures._
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala.Descriptor
@@ -43,7 +43,7 @@ class BuildTargetClassesFinder(
             className,
             buildTargets.findByDisplayName(target),
           )
-        case _: NoClassFoundException =>
+        case _: NoMainClassFoundException =>
           revertToDependencies(className, buildTarget = None)
         case _ => Nil
       }
@@ -114,7 +114,7 @@ class BuildTargetClassesFinder(
           }
           .reverse
       if (classes.nonEmpty) Success(classes)
-      else Failure(new NoClassFoundException(className))
+      else Failure(new NoMainClassFoundException(className))
     } { targetName =>
       buildTargets
         .findByDisplayName(targetName)
@@ -132,7 +132,7 @@ class BuildTargetClassesFinder(
             )
             .fold[Try[List[(A, b.BuildTarget)]]] {
               Failure(
-                ClassNotFoundInBuildTargetException(
+                DiscoveryFailures.ClassNotFoundInBuildTargetException(
                   className,
                   target.getDisplayName(),
                 )
@@ -152,66 +152,3 @@ class BuildTargetClassesFinder(
   }
 
 }
-
-object MainClassException {
-  def apply(
-      params: DebugDiscoveryParams,
-      isTargetFound: Boolean,
-      allTargets: Seq[String],
-  ): Throwable = {
-    (
-      Option(params.mainClass),
-      Option(params.buildTarget),
-    ) match {
-      case (None, Some(target)) if !isTargetFound =>
-        BuildTargetNotFoundException(target, allTargets)
-      case (None, None) => NoBuildTargetSpecified
-      case (None, Some(target)) =>
-        BuildTargetContainsNoMainException(target)
-      case (Some(main), Some(target)) =>
-        ClassNotFoundInBuildTargetException(main, target)
-      case (Some(main), None) =>
-        NoClassFoundException(main)
-    }
-  }
-}
-
-case class BuildTargetNotFoundException(
-    buildTargetName: String,
-    candidates: Seq[String],
-) extends Exception(
-      s"Build target not found: $buildTargetName, candidates:\n${candidates.mkString("\n")}"
-    )
-
-case class ClassNotFoundInBuildTargetException(
-    className: String,
-    buildTarget: String,
-) extends Exception(
-      s"Class '$className' not found in build target '${buildTarget}'"
-    )
-
-case class NoClassFoundException(
-    className: String
-) extends Exception(
-      s"Class '$className' not found in any build target"
-    )
-
-case class BuildTargetNotFoundForPathException(path: AbsolutePath)
-    extends Exception(
-      s"No build target could be found for the path: ${path.toString()}"
-    )
-case class BuildTargetContainsNoMainException(buildTargetName: String)
-    extends Exception(
-      s"No main could be found in build target: $buildTargetName"
-    )
-case class NoTestsFoundException(
-    testType: String,
-    name: String,
-) extends Exception(
-      s"No tests could be found in ${testType}: $name"
-    )
-
-case object NoBuildTargetSpecified
-    extends Exception(
-      s"No build target was specified."
-    )
