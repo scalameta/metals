@@ -331,6 +331,7 @@ abstract class MetalsLspService(
         () => userConfig,
         trees,
         folder,
+        diagnostics,
       )
     val goSuperLensProvider = new SuperMethodCodeLens(
       buffers,

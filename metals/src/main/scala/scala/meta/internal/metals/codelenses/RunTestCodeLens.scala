@@ -12,6 +12,7 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands.StartDebugSession
 import scala.meta.internal.metals.ClientCommands.StartRunSession
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -54,6 +55,7 @@ final class RunTestCodeLens(
     userConfig: () => UserConfiguration,
     trees: Trees,
     workspace: AbsolutePath,
+    diagnostics: Diagnostics,
 )(implicit val ec: ExecutionContext)
     extends CodeLens {
 
@@ -84,6 +86,7 @@ final class RunTestCodeLens(
     val distance = buffers.tokenEditDistance(path, textDocument.text, trees)
     val lenses = for {
       buildTargetId <- buildTargets.inverseSources(path)
+      if canActuallyCompile(buildTargetId, diagnostics)
       buildTarget <- buildTargets.info(buildTargetId)
       isJVM = buildTarget.asScalaBuildTarget.forall(
         _.getPlatform == b.ScalaPlatform.JVM
@@ -112,10 +115,28 @@ final class RunTestCodeLens(
           path,
           isJVM,
         )
-
     }
-
     lenses.getOrElse(Future.successful(Nil))
+  }
+
+  /**
+   * Checks if there exist any files outside of the META-INF directory of build target classpath.
+   *
+   * When using Scala 3 Best Effort compilation, the compilation may fail,
+   * but semanticDB and betasty (and thus the META_INF directory) may still be produced.
+   * We want to avoid creating run/test/debug code lens in those situations.
+   */
+  private def canActuallyCompile(
+      buildTargetId: BuildTargetIdentifier,
+      diagnostics: Diagnostics,
+  ): Boolean = {
+    val allBuildTargetsIds: Seq[BuildTargetIdentifier] =
+      buildTargetId +: (buildTargets
+        .buildTargetTransitiveDependencies(buildTargetId)
+        .toSeq)
+    allBuildTargetsIds.forall { id =>
+      !diagnostics.hasCompilationErrors(id)
+    }
   }
 
   /**

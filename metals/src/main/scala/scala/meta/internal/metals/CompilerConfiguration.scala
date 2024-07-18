@@ -168,10 +168,34 @@ class CompilerConfiguration(
     protected def newCompiler(classpath: Seq[Path]): PresentationCompiler = {
       val name = scalaTarget.scalac.getTarget().getUri
       val options = enrichWithReleaseOption(scalaTarget)
+      // Best Effort option `-Ybest-effort` is useless for PC,
+      // and it may unnecesarily dump semanticdb and tasty files
+      val bestEffortOpt = "-Ybest-effort"
+      val withBetastyOpt = "-Ywith-best-effort-tasty"
+      val nonBestEffortOptions =
+        if (scalaTarget.isBestEffort)
+          options
+            .filter(_ != bestEffortOpt)
+            .filter(_ != withBetastyOpt) :+ withBetastyOpt
+        else options
+
+      val bestEffortDirs = scalaTarget.info
+        .getDependencies()
+        .asScala
+        .flatMap { buildId =>
+          if (scalaTarget.isBestEffort)
+            buildTargets.scalaTarget(buildId).map(_.bestEffortPath)
+          else None
+        }
+        .toSeq
+      val selfBestEffortDir =
+        if (scalaTarget.isBestEffort) Seq(scalaTarget.bestEffortPath)
+        else Seq.empty
+
       fromMtags(
         mtags,
-        options,
-        classpath ++ additionalClasspath,
+        nonBestEffortOptions,
+        classpath ++ additionalClasspath ++ bestEffortDirs ++ selfBestEffortDir,
         name,
         search,
         referenceCounter,
