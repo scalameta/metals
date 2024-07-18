@@ -103,6 +103,11 @@ jobs:
             name: Scala CLI integration
             os: ubuntu-latest
             java: "17"
+          - type: multiplebuildtools
+            command: bin/test.sh 'slow/testOnly -- tests.multiplebuildtools.*'
+            name: Multiple build tools
+            os: ubuntu-latest
+            java: "17"
           - type: feature
             command: bin/test.sh 'slow/testOnly -- tests.feature.*'
             name: LSP integration tests

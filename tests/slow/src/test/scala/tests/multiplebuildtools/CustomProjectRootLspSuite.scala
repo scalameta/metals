@@ -1,6 +1,10 @@
-package tests
+package tests.multiplebuildtools
+
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
+
+import tests.BaseLspSuite
+import tests.BloopImportInitializer
 
 class CustomProjectRootLspSuite
     extends BaseLspSuite("custom-project-root", BloopImportInitializer) {
