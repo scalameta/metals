@@ -5,13 +5,9 @@ import java.util.concurrent.TimeUnit
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.debug.BuildTargetContainsNoMainException
-import scala.meta.internal.metals.debug.DebugProvider
-import scala.meta.internal.metals.debug.DebugProvider.SemanticDbNotFoundException
-import scala.meta.internal.metals.debug.DebugProvider.WorkspaceErrorsException
+import scala.meta.internal.metals.debug.DiscoveryFailures._
 import scala.meta.internal.metals.debug.DotEnvFileParser.InvalidEnvFileException
 import scala.meta.internal.metals.debug.ExtendedScalaMainClass
-import scala.meta.internal.metals.debug.NoTestsFoundException
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.DebugSessionParams
@@ -199,7 +195,7 @@ class DebugDiscoverySuite
         .recover { case e: ResponseErrorException => e.getMessage }
     } yield assertNoDiff(
       result.toString(),
-      DebugProvider.NoRunOptionException.getMessage(),
+      NoRunOptionException.getMessage(),
     )
   }
 

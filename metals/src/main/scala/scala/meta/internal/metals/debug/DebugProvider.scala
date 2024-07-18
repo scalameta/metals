@@ -46,7 +46,7 @@ import scala.meta.internal.metals.clients.language.LogForwarder
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.config.RunType
-import scala.meta.internal.metals.config.RunType._
+import scala.meta.internal.metals.debug.DiscoveryFailures._
 import scala.meta.internal.metals.debug.server.DebugLogger
 import scala.meta.internal.metals.debug.server.DebugeeParamsCreator
 import scala.meta.internal.metals.debug.server.Discovered
@@ -721,7 +721,7 @@ class DebugProvider(
           _ <- buildTargetClasses.rebuildIndex(target)
           result <- Future(f())
         } yield result
-      case Failure(_: NoClassFoundException) =>
+      case Failure(_: NoMainClassFoundException) =>
         val allTargetIds = buildTargets.allBuildTargetIds
         for {
           _ <- compilations.compileTargets(allTargetIds)
@@ -759,7 +759,7 @@ class DebugProvider(
 
 object DebugProvider {
 
-  def createEnvList(env: ju.Map[String, String]) = {
+  def createEnvList(env: ju.Map[String, String]): List[String] = {
     env.asScala.map { case (key, value) =>
       s"$key=$value"
     }.toList
@@ -815,32 +815,10 @@ object DebugProvider {
      * since we failed to fin the exception anywhere. Probably just showing the error is enough.
      */
     case _: BuildTargetNotFoundForPathException => 6
-    case _: NoClassFoundException => 7
+    case _: NoMainClassFoundException => 7
     case _: BuildTargetNotFoundException => 8
     case _ => 9
   }
-
-  case object WorkspaceErrorsException
-      extends Exception(
-        s"Cannot run class, since the workspace has errors."
-      )
-
-  case class UndefinedPathException(runType: RunType)
-      extends Exception(
-        s"Cannot run since the $runType required a path to be defined."
-      )
-  case class NoMainClassDefined(runType: RunType)
-      extends Exception(
-        s"Cannot run since the $runType required a mainClass to be defined."
-      )
-  case object NoRunOptionException
-      extends Exception(
-        s"There is nothing to run or test in the current file."
-      )
-  case object SemanticDbNotFoundException
-      extends Exception(
-        "Build misconfiguration. No semanticdb can be found for you file, please check the doctor."
-      )
 
   val specialChars: Set[Char] = ".+*?^()[]{}|&$".toSet
 
