@@ -74,6 +74,7 @@ import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.metals.debug.DebugDiscovery
 
 /**
  * Metals implementation of the Scala Language Service.
@@ -1445,6 +1446,16 @@ abstract class MetalsLspService(
       workDoneProgress,
     )
 
+  protected val debugDiscovery: DebugDiscovery = new DebugDiscovery(
+    buildTargetClasses,
+    buildTargets,
+    buildClient,
+    languageClient,
+    semanticdbs,
+    () => userConfig,
+    folder,
+  )
+
   protected val debugProvider: DebugProvider = register(
     new DebugProvider(
       folder,
@@ -1456,7 +1467,6 @@ abstract class MetalsLspService(
       definitionIndex,
       stacktraceAnalyzer,
       clientConfig,
-      semanticdbs,
       compilers,
       statusBar,
       workDoneProgress,
@@ -1468,7 +1478,7 @@ abstract class MetalsLspService(
   buildClient.registerLogForwarder(debugProvider)
 
   def debugDiscovery(params: DebugDiscoveryParams): Future[DebugSession] =
-    debugProvider
+    debugDiscovery
       .debugDiscovery(params)
       .flatMap(debugProvider.asSession)
 
@@ -1502,7 +1512,7 @@ abstract class MetalsLspService(
   def discoverMainClasses(
       unresolvedParams: DebugDiscoveryParams
   ): Future[b.DebugSessionParams] =
-    debugProvider.runCommandDiscovery(unresolvedParams)
+    debugDiscovery.runCommandDiscovery(unresolvedParams)
 
   def supportsBuildTarget(
       target: b.BuildTargetIdentifier

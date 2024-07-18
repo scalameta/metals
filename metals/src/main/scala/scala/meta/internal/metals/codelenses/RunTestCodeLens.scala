@@ -19,7 +19,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.debug.BuildTargetClasses
-import scala.meta.internal.metals.debug.DebugProvider
+import scala.meta.internal.metals.debug.DebugDiscovery
 import scala.meta.internal.metals.debug.ExtendedScalaMainClass
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
@@ -228,7 +228,7 @@ final class RunTestCodeLens(
           if (clientConfig.isDebuggingProvider())
             testClasses(target, classes, symbol, isJVM)
           else Nil
-        val fromAnnot = DebugProvider
+        val fromAnnot = DebugDiscovery
           .mainFromAnnotation(occurrence, textDocument)
           .flatMap { symbol =>
             classes.mainClasses
@@ -275,7 +275,7 @@ final class RunTestCodeLens(
 
     val fromAnnotations = textDocument.occurrences.flatMap { occ =>
       for {
-        sym <- DebugProvider.mainFromAnnotation(occ, textDocument)
+        sym <- DebugDiscovery.mainFromAnnotation(occ, textDocument)
         cls <- classes.mainClasses.get(sym)
         range <- occurrenceRange(occ, distance)
       } yield mainCommand(target, cls, isJVM).map { cmd =>
