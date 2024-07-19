@@ -421,7 +421,6 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       _ <- server.didSave(A.path)(identity)
       _ = assertNoDiff(client.pathDiagnostics(A.path), "")
 
-      _ <- server.didOpen(B.path)
       // we want the diagnostics for B to appear
       _ = assertNoDiff(
         client.pathDiagnostics(B.path),
@@ -432,6 +431,8 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
            |                  ^
            |""".stripMargin,
       )
+
+      _ <- server.didOpen(B.path)
       _ <- server.didChange(B.path) { _ => B.content("String", "\"aa\"") }
       _ <- server.didSave(B.path)(identity)
       _ = assertNoDiagnostics()

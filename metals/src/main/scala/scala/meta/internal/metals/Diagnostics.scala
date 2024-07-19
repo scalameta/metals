@@ -48,6 +48,7 @@ final class Diagnostics(
     workspace: Option[AbsolutePath],
     trees: Trees,
     buildTargets: BuildTargets,
+    buildTargetMapper: BuildTargetMapper,
 ) {
   private val diagnostics =
     TrieMap.empty[AbsolutePath, ju.Queue[Diagnostic]]
@@ -94,8 +95,11 @@ final class Diagnostics(
   ): Unit = {
     val target = report.getTarget()
 
-    if (statusCode.isError)
+    if (statusCode.isError) {
       removeInverseDependenciesDiagnostics(target)
+    } else {
+      buildTargetMapper.remove(target)
+    }
 
     publishDiagnosticsBuffer()
 
@@ -206,15 +210,20 @@ final class Diagnostics(
   ) = {
     val inverseDeps =
       buildTargets.allInverseDependencies(buildTarget) - buildTarget
-    for (path <- diagnostics.keySet) {
-      if (
-        buildTargets
-          .sourceBuildTargets(path)
-          .exists(_.forall(inverseDeps.apply))
-      ) {
-        diagnostics.remove(path)
-        publishDiagnostics(path)
-      }
+
+    val targets = for {
+      path <- diagnostics.keySet
+      targets <- buildTargets.sourceBuildTargets(path)
+      if targets.forall(inverseDeps.apply)
+    } yield {
+      diagnostics.remove(path)
+      publishDiagnostics(path)
+      targets
+    }
+
+    val targetsSet = targets.flatten.toSet
+    if (targetsSet.nonEmpty) {
+      buildTargetMapper.addMapping(buildTarget, targetsSet)
     }
   }
 
