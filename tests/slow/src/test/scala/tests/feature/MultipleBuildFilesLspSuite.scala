@@ -1,4 +1,4 @@
-package tests.multiplebuildtools
+package tests.feature
 
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool

@@ -1,4 +1,4 @@
-package tests.multiplebuildtools
+package tests.feature
 
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}

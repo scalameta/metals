@@ -1,4 +1,4 @@
-package tests.multiplebuildtools
+package tests.feature
 
 import java.nio.file.Files
 import java.util.UUID
