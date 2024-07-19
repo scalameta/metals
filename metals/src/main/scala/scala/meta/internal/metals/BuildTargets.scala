@@ -253,7 +253,7 @@ final class BuildTargets private (
   ): Option[BuildTargetIdentifier] = {
     val buildTargets = sourceBuildTargets(source)
     val orSbtBuildTarget =
-      buildTargets.getOrElse(sbtBuildScalaTarget(source).toIterable)
+      buildTargets.getOrElse(sbtBuildScalaTarget(source).toIterable).toSeq
     if (orSbtBuildTarget.isEmpty) {
       tables
         .flatMap(_.dependencySources.getBuildTarget(source))
