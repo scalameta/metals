@@ -1,9 +1,13 @@
-package tests
+package tests.feature
 
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 
+import tests.BaseLspSuite
+import tests.FileLayout
+import tests.SbtBuildLayout
+import tests.SbtServerInitializer
 import tests.maven.MavenLspSuite.defaultPom
 
 class PreferredBuildServer extends BaseLspSuite("preferred-build-server") {
