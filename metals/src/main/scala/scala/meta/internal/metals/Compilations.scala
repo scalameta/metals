@@ -26,7 +26,7 @@ final class Compilations(
     workspace: () => AbsolutePath,
     languageClient: MetalsLanguageClient,
     refreshTestSuites: () => Unit,
-    afterSuccesfulCompilation: () => Unit,
+    afterSuccessfulCompilation: () => Unit,
     isCurrentlyFocused: b.BuildTargetIdentifier => Boolean,
     compileWorksheets: Seq[AbsolutePath] => Future[Unit],
     onStartCompilation: () => Unit,
@@ -269,7 +269,7 @@ final class Compilations(
     val result = compilation.asScala
       .andThen { case result =>
         updateCompiledTargetState(result)
-        afterSuccesfulCompilation()
+        afterSuccessfulCompilation()
 
         // See https://github.com/scalacenter/bloop/issues/1067
         classes.rebuildIndex(

@@ -95,7 +95,11 @@ final class Diagnostics(
   ): Unit = {
     val target = report.getTarget()
 
-    if (statusCode.isError) {
+    // if we use best effort compilation downstream targets
+    // should get recompiled even if compilation fails
+    def shouldUnpublishForDownstreamTargets =
+      !buildTargets.scalaTarget(target).exists(_.isBestEffort)
+    if (statusCode.isError && shouldUnpublishForDownstreamTargets) {
       removeInverseDependenciesDiagnostics(target)
     } else {
       buildTargetMapper.remove(target)
