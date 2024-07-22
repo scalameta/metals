@@ -35,7 +35,7 @@ object V {
   val kindProjector = "0.13.3"
   val lsp4jV = "0.23.1"
   val mavenBloop = "2.0.0"
-  val mill = "0.11.8"
+  val mill = "0.11.9"
   val mdoc = "2.5.4"
   val munit = "1.0.0"
   val pprint = "0.7.3"
