@@ -86,8 +86,8 @@ class ProjectMetalsLspService(
 
   override def indexer: Indexer = connectionProvider
   def buildServerPromise = connectionProvider.buildServerPromise
-  def connect[T](config: ConnectConfig[T]): Future[BuildChange] =
-    connectionProvider.ConnectProvider.connect(config)
+  def connect[T](config: ConnectRequest): Future[BuildChange] =
+    connectionProvider.Connect.connect(config)
 
   val willGenerateBspConfig = new AtomicReference(Set.empty[util.UUID])
 
@@ -527,7 +527,7 @@ class ProjectMetalsLspService(
             case None => Future.unit
             case Some(SlowConnect) =>
               connectionProvider.slowConnectToBuildServer(forceImport = true)
-            case Some(config: ConnectConfig[t]) => connect(config)
+            case Some(request: ConnectRequest) => connect(request)
           }
       } yield ()
     }

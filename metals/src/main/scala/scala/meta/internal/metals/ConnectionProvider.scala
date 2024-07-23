@@ -117,7 +117,7 @@ class ConnectionProvider(
       resetService,
     )
     with Cancelable {
-  import ConnectProvider.connect
+  import Connect.connect
 
   def resolveBsp(): bsp.BspResolvedResult =
     bspConnector.resolve(buildToolProvider.buildTool)
@@ -167,350 +167,6 @@ class ConnectionProvider(
   ).ignoreValue
   override def cancel(): Unit = {
     cancelables.cancel()
-  }
-
-  object ConnectProvider {
-    def connect[T](config: ConnectConfig[T]): Future[BuildChange] = {
-      val provider =
-        config match {
-          case _: Disconnect => DisconnectProvider
-          case _: Index => IndexProvider
-          case _: ImportBuildAndIndex => ImportBuildAndIndexProvider
-          case _: Connect => ConnectProvider
-          case _: CreateSession => CreateSessionProvider
-          case _: GenerateBspConfigAndConnect =>
-            GenerateBspConfigAndConnectProvider
-          case _: BloopInstallAndConnect => BloopInstallAndConnectProvider
-        }
-      provider.asInstanceOf[ConnectProvider[T, config.type]].run(config.config)
-    }
-
-    private sealed trait ConnectProvider[T, X <: ConnectConfig[T]] {
-      def run(config: T): Future[BuildChange]
-    }
-
-    private object DisconnectProvider
-        extends ConnectProvider[Boolean, Disconnect] {
-      def run(shutdownBuildServer: Boolean): Future[BuildChange] = {
-        def shutdownBsp(optMainBsp: Option[String]): Future[Boolean] = {
-          optMainBsp match {
-            case Some(BloopServers.name) =>
-              Future { bloopServers.shutdownServer() }
-            case Some(SbtBuildTool.name) =>
-              for {
-                res <- buildToolProvider.buildTool match {
-                  case Some(sbt: SbtBuildTool) =>
-                    sbt.shutdownBspServer(shellRunner).map(_ == 0)
-                  case _ => Future.successful(false)
-                }
-              } yield res
-            case s => Future.successful(s.nonEmpty)
-          }
-        }
-
-        compilations.cancel()
-        buildTargetClasses.cancel()
-        diagnostics.reset()
-        bspSession.foreach(connection =>
-          scribe.info(s"Disconnecting from ${connection.main.name} session...")
-        )
-
-        for {
-          _ <- scalaCli.stop()
-          optMainBsp <- bspSession match {
-            case None => Future.successful(None)
-            case Some(session) =>
-              bspSession = None
-              mainBuildTargetsData.resetConnections(List.empty)
-              session.shutdown().map(_ => Some(session.main.name))
-          }
-          _ <-
-            if (shutdownBuildServer) shutdownBsp(optMainBsp)
-            else Future.successful(())
-        } yield BuildChange.None
-      }
-    }
-
-    private object IndexProvider extends ConnectProvider[() => Unit, Index] {
-      def run(check: () => Unit): Future[BuildChange] =
-        profiledIndexWorkspace(check).map(_ => BuildChange.None)
-    }
-
-    private object ImportBuildAndIndexProvider
-        extends ConnectProvider[BspSession, ImportBuildAndIndex] {
-      def run(session: BspSession): Future[BuildChange] = {
-        val importedBuilds0 = timerProvider.timed("Imported build") {
-          session.importBuilds()
-        }
-        for {
-          bspBuilds <- workDoneProgress.trackFuture(
-            Messages.importingBuild,
-            importedBuilds0,
-          )
-          _ = {
-            val idToConnection = bspBuilds.flatMap { bspBuild =>
-              val targets =
-                bspBuild.build.workspaceBuildTargets.getTargets().asScala
-              targets.map(t => (t.getId(), bspBuild.connection))
-            }
-            mainBuildTargetsData.resetConnections(idToConnection)
-            saveProjectReferencesInfo(bspBuilds)
-          }
-          _ = compilers.cancel()
-          buildChange <- IndexProvider.run(check)
-        } yield buildChange
-      }
-      def saveProjectReferencesInfo(
-          bspBuilds: List[BspSession.BspBuild]
-      ): Unit = {
-        val projectRefs = bspBuilds
-          .flatMap { session =>
-            session.build.workspaceBuildTargets.getTargets().asScala.flatMap {
-              _.getBaseDirectory() match {
-                case null | "" => None
-                case path => path.toAbsolutePathSafe
-              }
-            }
-          }
-          .distinct
-          .filterNot(_.startWith(folder))
-        if (projectRefs.nonEmpty)
-          DelegateSetting.writeProjectRef(folder, projectRefs)
-      }
-    }
-
-    private object ConnectProvider
-        extends ConnectProvider[BspSession, Connect] {
-      def run(session: BspSession): Future[BuildChange] = {
-        scribe.info(
-          s"Connected to Build server: ${session.main.name} v${session.version}"
-        )
-        cancelables.add(session)
-        buildToolProvider.buildTool.foreach(
-          workspaceReload.persistChecksumStatus(Digest.Status.Started, _)
-        )
-        bspSession = Some(session)
-        isConnecting.set(false)
-        for {
-          _ <- ImportBuildAndIndexProvider.run(session)
-          _ = buildToolProvider.buildTool.foreach(
-            workspaceReload.persistChecksumStatus(Digest.Status.Installed, _)
-          )
-          _ = if (session.main.isBloop)
-            checkRunningBloopVersion(session.version)
-        } yield {
-          BuildChange.Reconnected
-        }
-      }
-
-      private def checkRunningBloopVersion(bspServerVersion: String): Unit = {
-        if (doctor.isUnsupportedBloopVersion()) {
-          val notification = tables.dismissedNotifications.IncompatibleBloop
-          if (!notification.isDismissed) {
-            val messageParams = IncompatibleBloopVersion.params(
-              bspServerVersion,
-              BuildInfo.bloopVersion,
-              isChangedInSettings = userConfig().bloopVersion != None,
-            )
-            languageClient.showMessageRequest(messageParams).asScala.foreach {
-              case action if action == IncompatibleBloopVersion.shutdown =>
-                connect(new CreateSession(true))
-              case action
-                  if action == IncompatibleBloopVersion.dismissForever =>
-                notification.dismissForever()
-              case _ =>
-            }
-          }
-        }
-      }
-    }
-
-    private object CreateSessionProvider
-        extends ConnectProvider[Boolean, CreateSession] {
-      def run(shutdownServer: Boolean): Future[BuildChange] = {
-        def compileAllOpenFiles: BuildChange => Future[BuildChange] = {
-          case change if !change.isFailed =>
-            Future
-              .sequence(
-                compilations
-                  .cascadeCompileFiles(buffers.open.toSeq)
-                  .ignoreValue ::
-                  compilers.load(buffers.open.toSeq) ::
-                  Nil
-              )
-              .map(_ => change)
-          case other => Future.successful(other)
-        }
-
-        val scalaCliPaths = scalaCli.paths
-
-        isConnecting.set(true)
-        (for {
-          _ <- DisconnectProvider.run(shutdownServer)
-          maybeSession <- timerProvider.timed(
-            "Connected to build server",
-            true,
-          ) {
-            bspConnector.connect(
-              buildToolProvider.buildTool,
-              folder,
-              userConfig(),
-              shellRunner,
-            )
-          }
-          result <- maybeSession match {
-            case Some(session) =>
-              val result = ConnectProvider.run(session)
-              session.mainConnection.onReconnection { newMainConn =>
-                val updSession = session.copy(main = newMainConn)
-                connect(Connect(updSession))
-                  .flatMap(compileAllOpenFiles)
-                  .ignoreValue
-              }
-              result
-            case None =>
-              Future.successful(BuildChange.None)
-          }
-          _ <- Future.sequence(
-            scalaCliPaths
-              .collect {
-                case path if (!buildTargets.belongsToBuildTarget(path.toNIO)) =>
-                  scalaCli.start(path)
-              }
-          )
-          _ = initTreeView()
-        } yield result)
-          .recover { case NonFatal(e) =>
-            DisconnectProvider.run(false)
-            val message =
-              "Failed to connect with build server, no functionality will work."
-            val details = " See logs for more details."
-            languageClient.showMessage(
-              new MessageParams(MessageType.Error, message + details)
-            )
-            scribe.error(message, e)
-            BuildChange.Failed
-          }
-          .flatMap(compileAllOpenFiles)
-          .map { res =>
-            buildServerPromise.trySuccess(())
-            res
-          }
-      }
-    }
-
-    private object GenerateBspConfigAndConnectProvider
-        extends ConnectProvider[
-          (BuildServerProvider, Boolean),
-          GenerateBspConfigAndConnect,
-        ] {
-
-      def run(config: (BuildServerProvider, Boolean)): Future[BuildChange] = {
-        val (buildTool, shutdownServer) = config
-        tables.buildTool.chooseBuildTool(buildTool.executableName)
-        maybeChooseServer(buildTool.buildServerName, alreadySelected = false)
-        for {
-          _ <-
-            if (shutdownServer) DisconnectProvider.run(shutdownServer)
-            else Future.unit
-          status <- buildTool
-            .generateBspConfig(
-              folder,
-              args => bspConfigGenerator.runUnconditionally(buildTool, args),
-              statusBar,
-            )
-          shouldConnect = handleGenerationStatus(buildTool, status)
-          status <-
-            if (shouldConnect) CreateSessionProvider.run(false)
-            else Future.successful(BuildChange.Failed)
-        } yield status
-      }
-
-      /**
-       * Handles showing the user what they need to know after an attempt to
-       * generate a bsp config has happened.
-       */
-      private def handleGenerationStatus(
-          buildTool: BuildServerProvider,
-          status: BspConfigGenerationStatus,
-      ): Boolean = status match {
-        case bsp.BspConfigGenerationStatus.Generated =>
-          tables.buildServers.chooseServer(buildTool.buildServerName)
-          true
-        case bsp.BspConfigGenerationStatus.Cancelled => false
-        case bsp.BspConfigGenerationStatus.Failed(exit) =>
-          exit match {
-            case Left(exitCode) =>
-              scribe.error(
-                s"Creation of .bsp/${buildTool.buildServerName} failed with exit code: $exitCode"
-              )
-              languageClient.showMessage(
-                Messages.BspProvider.genericUnableToCreateConfig
-              )
-            case Right(message) =>
-              languageClient.showMessage(
-                Messages.BspProvider.unableToCreateConfigFromMessage(
-                  message
-                )
-              )
-          }
-          false
-      }
-    }
-
-    val isImportInProcess = new AtomicBoolean(false)
-
-    private object BloopInstallAndConnectProvider
-        extends ConnectProvider[
-          (BloopInstallProvider, String, Boolean, Boolean),
-          BloopInstallAndConnect,
-        ] {
-      def run(
-          config: (BloopInstallProvider, String, Boolean, Boolean)
-      ): Future[BuildChange] = {
-        val (buildTool, checksum, forceImport, shutdownServer) = config
-        for {
-          result <- {
-            if (forceImport)
-              bloopInstall.runUnconditionally(
-                buildTool,
-                isImportInProcess,
-              )
-            else
-              bloopInstall.runIfApproved(
-                buildTool,
-                checksum,
-                isImportInProcess,
-              )
-          }
-          change <- {
-            if (result.isInstalled) CreateSessionProvider.run(shutdownServer)
-            else if (result.isFailed) {
-              for {
-                change <-
-                  if (
-                    buildTools.isAutoConnectable(
-                      buildToolProvider.optProjectRoot
-                    )
-                  ) {
-                    // TODO(olafur) try to connect but gracefully error
-                    languageClient.showMessage(
-                      Messages.ImportProjectPartiallyFailed
-                    )
-                    // Connect nevertheless, many build import failures are caused
-                    // by resolution errors in one weird module while other modules
-                    // exported successfully.
-                    CreateSessionProvider.run(shutdownServer)
-                  } else {
-                    languageClient.showMessage(Messages.ImportProjectFailed)
-                    Future.successful(BuildChange.Failed)
-                  }
-              } yield change
-            } else Future.successful(BuildChange.None)
-          }
-        } yield change
-      }
-    }
   }
 
   def fullConnect(): Future[Unit] = {
@@ -697,32 +353,357 @@ class ConnectionProvider(
         }
     }
   }
+
+  object Connect {
+    def connect[T](request: ConnectRequest): Future[BuildChange] = {
+      request match {
+        case Disconnect(shutdownBuildServer) => disconnect(shutdownBuildServer)
+        case Index(check) => index(check)
+        case ImportBuildAndIndex(session) => importBuildAndIndex(session)
+        case ConnectToSession(session) => connectToSession(session)
+        case CreateSession(shutdownBuildServer) =>
+          createSession(shutdownBuildServer)
+        case GenerateBspConfigAndConnect(buildTool, shutdownServer) =>
+          generateBspConfigAndConnect(buildTool, shutdownServer)
+        case BloopInstallAndConnect(
+              buildTool,
+              checksum,
+              forceImport,
+              shutdownServer,
+            ) =>
+          bloopInstallAndConnect(
+            buildTool,
+            checksum,
+            forceImport,
+            shutdownServer,
+          )
+      }
+    }
+
+    private def disconnect(
+        shutdownBuildServer: Boolean
+    ): Future[BuildChange] = {
+      def shutdownBsp(optMainBsp: Option[String]): Future[Boolean] = {
+        optMainBsp match {
+          case Some(BloopServers.name) =>
+            Future { bloopServers.shutdownServer() }
+          case Some(SbtBuildTool.name) =>
+            for {
+              res <- buildToolProvider.buildTool match {
+                case Some(sbt: SbtBuildTool) =>
+                  sbt.shutdownBspServer(shellRunner).map(_ == 0)
+                case _ => Future.successful(false)
+              }
+            } yield res
+          case s => Future.successful(s.nonEmpty)
+        }
+      }
+
+      compilations.cancel()
+      buildTargetClasses.cancel()
+      diagnostics.reset()
+      bspSession.foreach(connection =>
+        scribe.info(s"Disconnecting from ${connection.main.name} session...")
+      )
+
+      for {
+        _ <- scalaCli.stop()
+        optMainBsp <- bspSession match {
+          case None => Future.successful(None)
+          case Some(session) =>
+            bspSession = None
+            mainBuildTargetsData.resetConnections(List.empty)
+            session.shutdown().map(_ => Some(session.main.name))
+        }
+        _ <-
+          if (shutdownBuildServer) shutdownBsp(optMainBsp)
+          else Future.successful(())
+      } yield BuildChange.None
+    }
+
+    private def index(check: () => Unit): Future[BuildChange] =
+      profiledIndexWorkspace(check).map(_ => BuildChange.None)
+
+    private def importBuildAndIndex(
+        session: BspSession
+    ): Future[BuildChange] = {
+      val importedBuilds0 = timerProvider.timed("Imported build") {
+        session.importBuilds()
+      }
+      for {
+        bspBuilds <- workDoneProgress.trackFuture(
+          Messages.importingBuild,
+          importedBuilds0,
+        )
+        _ = {
+          val idToConnection = bspBuilds.flatMap { bspBuild =>
+            val targets =
+              bspBuild.build.workspaceBuildTargets.getTargets().asScala
+            targets.map(t => (t.getId(), bspBuild.connection))
+          }
+          mainBuildTargetsData.resetConnections(idToConnection)
+          saveProjectReferencesInfo(bspBuilds)
+        }
+        _ = compilers.cancel()
+        buildChange <- index(check)
+      } yield buildChange
+    }
+
+    private def saveProjectReferencesInfo(
+        bspBuilds: List[BspSession.BspBuild]
+    ): Unit = {
+      val projectRefs = bspBuilds
+        .flatMap { session =>
+          session.build.workspaceBuildTargets.getTargets().asScala.flatMap {
+            _.getBaseDirectory() match {
+              case null | "" => None
+              case path => path.toAbsolutePathSafe
+            }
+          }
+        }
+        .distinct
+        .filterNot(_.startWith(folder))
+      if (projectRefs.nonEmpty)
+        DelegateSetting.writeProjectRef(folder, projectRefs)
+    }
+
+    private def connectToSession(session: BspSession): Future[BuildChange] = {
+      scribe.info(
+        s"Connected to Build server: ${session.main.name} v${session.version}"
+      )
+      cancelables.add(session)
+      buildToolProvider.buildTool.foreach(
+        workspaceReload.persistChecksumStatus(Digest.Status.Started, _)
+      )
+      bspSession = Some(session)
+      isConnecting.set(false)
+      for {
+        _ <- importBuildAndIndex(session)
+        _ = buildToolProvider.buildTool.foreach(
+          workspaceReload.persistChecksumStatus(Digest.Status.Installed, _)
+        )
+        _ = if (session.main.isBloop)
+          checkRunningBloopVersion(session.version)
+      } yield {
+        BuildChange.Reconnected
+      }
+    }
+
+    private def checkRunningBloopVersion(bspServerVersion: String): Unit = {
+      if (doctor.isUnsupportedBloopVersion()) {
+        val notification = tables.dismissedNotifications.IncompatibleBloop
+        if (!notification.isDismissed) {
+          val messageParams = IncompatibleBloopVersion.params(
+            bspServerVersion,
+            BuildInfo.bloopVersion,
+            isChangedInSettings = userConfig().bloopVersion != None,
+          )
+          languageClient.showMessageRequest(messageParams).asScala.foreach {
+            case action if action == IncompatibleBloopVersion.shutdown =>
+              connect(new CreateSession(true))
+            case action if action == IncompatibleBloopVersion.dismissForever =>
+              notification.dismissForever()
+            case _ =>
+          }
+        }
+      }
+    }
+
+    def createSession(shutdownServer: Boolean): Future[BuildChange] = {
+      def compileAllOpenFiles: BuildChange => Future[BuildChange] = {
+        case change if !change.isFailed =>
+          Future
+            .sequence(
+              compilations
+                .cascadeCompileFiles(buffers.open.toSeq)
+                .ignoreValue ::
+                compilers.load(buffers.open.toSeq) ::
+                Nil
+            )
+            .map(_ => change)
+        case other => Future.successful(other)
+      }
+
+      val scalaCliPaths = scalaCli.paths
+
+      isConnecting.set(true)
+      (for {
+        _ <- disconnect(shutdownServer)
+        maybeSession <- timerProvider.timed(
+          "Connected to build server",
+          true,
+        ) {
+          bspConnector.connect(
+            buildToolProvider.buildTool,
+            folder,
+            userConfig(),
+            shellRunner,
+          )
+        }
+        result <- maybeSession match {
+          case Some(session) =>
+            val result = connectToSession(session)
+            session.mainConnection.onReconnection { newMainConn =>
+              val updSession = session.copy(main = newMainConn)
+              connect(ConnectToSession(updSession))
+                .flatMap(compileAllOpenFiles)
+                .ignoreValue
+            }
+            result
+          case None =>
+            Future.successful(BuildChange.None)
+        }
+        _ <- Future.sequence(
+          scalaCliPaths
+            .collect {
+              case path if (!buildTargets.belongsToBuildTarget(path.toNIO)) =>
+                scalaCli.start(path)
+            }
+        )
+        _ = initTreeView()
+      } yield result)
+        .recover { case NonFatal(e) =>
+          disconnect(false)
+          val message =
+            "Failed to connect with build server, no functionality will work."
+          val details = " See logs for more details."
+          languageClient.showMessage(
+            new MessageParams(MessageType.Error, message + details)
+          )
+          scribe.error(message, e)
+          BuildChange.Failed
+        }
+        .flatMap(compileAllOpenFiles)
+        .map { res =>
+          buildServerPromise.trySuccess(())
+          res
+        }
+    }
+
+    private def generateBspConfigAndConnect(
+        buildTool: BuildServerProvider,
+        shutdownServer: Boolean,
+    ): Future[BuildChange] = {
+      tables.buildTool.chooseBuildTool(buildTool.executableName)
+      maybeChooseServer(buildTool.buildServerName, alreadySelected = false)
+      for {
+        _ <-
+          if (shutdownServer) disconnect(shutdownServer)
+          else Future.unit
+        status <- buildTool
+          .generateBspConfig(
+            folder,
+            args => bspConfigGenerator.runUnconditionally(buildTool, args),
+            statusBar,
+          )
+        shouldConnect = handleGenerationStatus(buildTool, status)
+        status <-
+          if (shouldConnect) createSession(false)
+          else Future.successful(BuildChange.Failed)
+      } yield status
+    }
+
+    /**
+     * Handles showing the user what they need to know after an attempt to
+     * generate a bsp config has happened.
+     */
+    private def handleGenerationStatus(
+        buildTool: BuildServerProvider,
+        status: BspConfigGenerationStatus,
+    ): Boolean = status match {
+      case bsp.BspConfigGenerationStatus.Generated =>
+        tables.buildServers.chooseServer(buildTool.buildServerName)
+        true
+      case bsp.BspConfigGenerationStatus.Cancelled => false
+      case bsp.BspConfigGenerationStatus.Failed(exit) =>
+        exit match {
+          case Left(exitCode) =>
+            scribe.error(
+              s"Creation of .bsp/${buildTool.buildServerName} failed with exit code: $exitCode"
+            )
+            languageClient.showMessage(
+              Messages.BspProvider.genericUnableToCreateConfig
+            )
+          case Right(message) =>
+            languageClient.showMessage(
+              Messages.BspProvider.unableToCreateConfigFromMessage(
+                message
+              )
+            )
+        }
+        false
+    }
+
+    val isImportInProcess = new AtomicBoolean(false)
+
+    private def bloopInstallAndConnect(
+        buildTool: BloopInstallProvider,
+        checksum: String,
+        forceImport: Boolean,
+        shutdownServer: Boolean,
+    ): Future[BuildChange] = {
+      for {
+        result <- {
+          if (forceImport)
+            bloopInstall.runUnconditionally(
+              buildTool,
+              isImportInProcess,
+            )
+          else
+            bloopInstall.runIfApproved(
+              buildTool,
+              checksum,
+              isImportInProcess,
+            )
+        }
+        change <- {
+          if (result.isInstalled) createSession(shutdownServer)
+          else if (result.isFailed) {
+            for {
+              change <-
+                if (
+                  buildTools.isAutoConnectable(
+                    buildToolProvider.optProjectRoot
+                  )
+                ) {
+                  // TODO(olafur) try to connect but gracefully error
+                  languageClient.showMessage(
+                    Messages.ImportProjectPartiallyFailed
+                  )
+                  // Connect nevertheless, many build import failures are caused
+                  // by resolution errors in one weird module while other modules
+                  // exported successfully.
+                  createSession(shutdownServer)
+                } else {
+                  languageClient.showMessage(Messages.ImportProjectFailed)
+                  Future.successful(BuildChange.Failed)
+                }
+            } yield change
+          } else Future.successful(BuildChange.None)
+        }
+      } yield change
+    }
+  }
 }
 
 sealed trait ConnectKind
 object SlowConnect extends ConnectKind
 
-sealed trait ConnectConfig[T] extends ConnectKind {
-  def config: T
-}
-case class Disconnect(config: Boolean) extends ConnectConfig[Boolean]
-case class Index(config: () => Unit) extends ConnectConfig[() => Unit]
-case class ImportBuildAndIndex(config: BspSession)
-    extends ConnectConfig[BspSession]
-case class Connect(config: BspSession) extends ConnectConfig[BspSession]
-case class CreateSession(config: Boolean = false) extends ConnectConfig[Boolean]
+sealed trait ConnectRequest extends ConnectKind
+
+case class Disconnect(shutdownBuildServer: Boolean) extends ConnectRequest
+case class Index(check: () => Unit) extends ConnectRequest
+case class ImportBuildAndIndex(bspSession: BspSession) extends ConnectRequest
+case class ConnectToSession(bspSession: BspSession) extends ConnectRequest
+case class CreateSession(shutdownBuildServer: Boolean = false)
+    extends ConnectRequest
 case class GenerateBspConfigAndConnect(
     buildTool: BuildServerProvider,
     shutdownServer: Boolean = false,
-) extends ConnectConfig[(BuildServerProvider, Boolean)] {
-  def config: (BuildServerProvider, Boolean) = (buildTool, shutdownServer)
-}
+) extends ConnectRequest
 case class BloopInstallAndConnect(
     buildTool: BloopInstallProvider,
     checksum: String,
     forceImport: Boolean,
     shutdownServer: Boolean,
-) extends ConnectConfig[(BloopInstallProvider, String, Boolean, Boolean)] {
-  def config: (BloopInstallProvider, String, Boolean, Boolean) =
-    (buildTool, checksum, forceImport, shutdownServer)
-}
+) extends ConnectRequest
