@@ -2325,4 +2325,47 @@ class CompletionSuite extends BaseCompletionSuite {
     filter = _ == "O(i: Int): Int"
   )
 
+  check(
+    "conflict",
+    """|package a
+       |object O {
+       |  val x: Int = 123
+       |  def method = {
+       |    val x: String = "abc"
+       |    x@@
+       |  }
+       |}
+       |""".stripMargin,
+    """|x: String
+       |O.x: Int
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|x: String
+                |x: Int
+                |""".stripMargin
+    )
+  )
+
+  checkEdit(
+    "conflict-edit",
+    """|object O {
+       |  val x: Int = 123
+       |  def method = {
+       |    val x: String = "abc"
+       |    x@@
+       |  }
+       |}
+       |""".stripMargin,
+    """|object O {
+       |  val x: Int = 123
+       |  def method = {
+       |    val x: String = "abc"
+       |    O.x
+       |  }
+       |}
+       |""".stripMargin,
+    assertSingleItem = false,
+    itemIndex = 1
+  )
+
 }

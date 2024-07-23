@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import java.net.URI
 import java.{util => ju}
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 
 import scala.meta.internal.jdk.CollectionConverters._
@@ -73,10 +74,34 @@ class CompletionProvider(
     lazy val importPosition = autoImportPosition(pos, params.text())
     lazy val context = doLocateImportContext(pos)
 
+    @tailrec
+    def findNonConflictingPrefix(sym: Symbol, acc: List[String]): String = {
+      val symName = if (sym.name.isTermName) sym.name.dropLocal else sym.name
+      context.lookupSymbol(symName, _ => true) match {
+        case LookupSucceeded(_, symbol)
+            if sym.effectiveOwner.exists && symbol.effectiveOwner.exists && symbol.effectiveOwner != sym.effectiveOwner =>
+          findNonConflictingPrefix(
+            sym.effectiveOwner,
+            Identifier.backtickWrap(sym.effectiveOwner.name.decoded) :: acc
+          )
+        case _ => acc.mkString(".")
+      }
+    }
+
     val items = sorted.iterator.zipWithIndex.map { case (member, idx) =>
       params.checkCanceled()
       val symbolName = member.symNameDropLocal.decoded
-      val ident = Identifier.backtickWrap(symbolName)
+      val simpleIdent = Identifier.backtickWrap(symbolName)
+      val ident =
+        member match {
+          case _: WorkspaceMember | _: WorkspaceImplicitMember |
+              _: NamedArgMember | _: DependecyMember =>
+            simpleIdent
+          case _: ScopeMember =>
+            findNonConflictingPrefix(member.sym, List(simpleIdent))
+          case _ => simpleIdent
+        }
+
       val detail = member match {
         case o: OverrideDefMember => o.detail
         case t: TextEditMember if t.detail.isDefined => t.detail.get
