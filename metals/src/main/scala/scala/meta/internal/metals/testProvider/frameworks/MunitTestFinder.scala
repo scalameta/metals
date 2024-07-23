@@ -189,14 +189,12 @@ class MunitTestFinder(
       tree: Tree
   ): Option[(Term.Name, Lit.String)] = {
 
-    @tailrec
-    def extractLiteralName(acc: List[Tree]): Option[Lit.String] = acc match {
-      case head :: tail =>
-        head match {
-          case lit: Lit.String => Some(lit)
-          case _ => extractLiteralName(head.children ::: tail)
-        }
-      case immutable.Nil => None
+    def extractLiteralName(tree: Tree): Option[Lit.String] = tree match {
+      case lit: Lit.String => Some(lit)
+      case Term.Select(lit: Lit.String, _) => Some(lit)
+      case Term.Apply(Term.Select(lit: Lit.String, Term.Name("tag")), _) =>
+        Some(lit)
+      case _ => None
     }
 
     @tailrec
@@ -204,9 +202,9 @@ class MunitTestFinder(
     def loop(acc: List[Tree]): Option[(Term.Name, Lit.String)] = acc match {
       case head :: tail =>
         head match {
-          case Term.Apply(term @ Term.Name(name), args)
+          case Term.Apply(term @ Term.Name(name), List(arg))
               if (testFunctionsNames(name)) =>
-            extractLiteralName(args) match {
+            extractLiteralName(arg) match {
               case Some(lit) =>
                 Some((term, lit))
               case None => loop(tail)

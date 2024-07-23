@@ -285,6 +285,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
         |      println(name)
         |      assertEquals(n1, n2)
         |    }
+        |  test("test1" + "test2") {}
         |}
         |""".stripMargin,
     List("app/src/main/scala/a/b/c/MunitTestSuite.scala"),
