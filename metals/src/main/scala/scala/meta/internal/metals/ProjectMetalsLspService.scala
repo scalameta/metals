@@ -428,7 +428,6 @@ class ProjectMetalsLspService(
     if (
       !buildTools.isAutoConnectable()
       && buildTools.loadSupported().isEmpty
-      && (folder.isScalaProject() || focusedDocument().exists(_.isScala))
     ) {
       scalaCli.setupIDE(folder)
     } else Future.successful(())
