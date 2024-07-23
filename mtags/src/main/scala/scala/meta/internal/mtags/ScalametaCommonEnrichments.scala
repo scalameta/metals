@@ -557,6 +557,16 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
         toOffset(startLine, startColumn),
         toOffset(endLine, endColumn)
       )
+
+    def safeParse[T <: m.Tree](dialect: m.Dialect)(implicit
+        parse: m.parsers.Parse[T]
+    ): m.parsers.Parsed[T] =
+      try {
+        parse(input, dialect)
+      } catch {
+        case t: InvariantFailedException =>
+          m.parsers.Parsed.Error(Position.None, t.toString(), t)
+      }
   }
 
   implicit class XtensionSymbolInformation(info: s.SymbolInformation) {

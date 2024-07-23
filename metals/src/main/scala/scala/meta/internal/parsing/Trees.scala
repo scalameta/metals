@@ -12,7 +12,6 @@ import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.io.AbsolutePath
-import scala.meta.parsers.Parse
 import scala.meta.parsers.ParseException
 import scala.meta.parsers.Parsed
 import scala.meta.tokens.Tokens
@@ -20,7 +19,6 @@ import scala.meta.tokens.Tokens
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.{lsp4j => l}
-import org.scalameta.invariants.InvariantFailedException
 
 /**
  * Manages parsing of Scala source files into Scalameta syntax trees.
@@ -130,17 +128,9 @@ final class Trees(
     } yield tokens
   }
 
-  def tokenized(input: inputs.Input.VirtualFile): Tokenized = try {
-    scalaVersionSelector
-      .getDialect(input.path.toAbsolutePath)(input)
-      .tokenize
-  } catch {
-    case t: InvariantFailedException =>
-      Tokenized.Error(
-        Position.None,
-        s"Could not tokenize ${input.path}",
-        t,
-      )
+  def tokenized(input: inputs.Input.VirtualFile): Tokenized = {
+    val dialect = scalaVersionSelector.getDialect(input.path.toAbsolutePath)
+    input.value.safeTokenize(dialect)
   }
 
   private def parse(
@@ -155,11 +145,9 @@ final class Trees(
       val input = Input.VirtualFile(path.toURI.toString(), skipFistShebang)
       if (path.isAmmoniteScript || path.isMill) {
         val ammoniteInput = Input.Ammonite(input)
-        Trees.safeParse { () =>
-          dialect(ammoniteInput).parse(Parse.parseAmmonite)
-        }
+        ammoniteInput.safeParse[MultiSource](dialect)
       } else {
-        Trees.safeParse(dialect, input)
+        input.safeParse[Source](dialect)
       }
     } catch {
       // if the parsers breaks we should not throw the exception further
@@ -185,20 +173,6 @@ final class Trees(
 }
 
 object Trees {
-
-  def safeParse[T](f: () => Parsed[T]): Parsed[T] = {
-    try {
-      f()
-    } catch {
-      case t: InvariantFailedException =>
-        Parsed.Error(Position.None, t.toString(), t)
-    }
-  }
-
-  def safeParse(dialect: Dialect, input: Input): Parsed[Source] =
-    safeParse { () =>
-      dialect.apply(input).parse[Source]
-    }
 
   /* Tokenizing works perfectly fine with 212 dialect as long as we are only
    * interested in having stable results. This is not the case for parsing.
