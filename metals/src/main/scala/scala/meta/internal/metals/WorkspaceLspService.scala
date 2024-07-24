@@ -798,12 +798,12 @@ class WorkspaceLspService(
         val discovered = Option(unresolvedParams.path) match {
           case None =>
             Future
-              .sequence {
+              .find {
                 folderServices
                   .map {
                     _.discoverMainClasses(unresolvedParams)
                   }
-              }
+              }(_ => true)
               .flatMap { mains =>
                 mains.headOption.fold(
                   Future.failed[DebugSessionParams](
