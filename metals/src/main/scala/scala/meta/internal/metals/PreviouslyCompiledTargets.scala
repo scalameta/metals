@@ -5,7 +5,13 @@ import scala.collection.mutable
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
-class BuildTargetMapper {
+/**
+ * When there are some upstream compile errors we remove diagnostics from downstream targets,
+ * since those can be stale. Not to give a false impression, that the project compiles
+ * when upstream errors get fixed, we map compilation of upstream targets to
+ * appropriate downstream targets. This class holds this mapping.
+ */
+class PreviouslyCompiledTargets {
   private val map =
     TrieMap.empty[BuildTargetIdentifier, Set[BuildTargetIdentifier]]
 

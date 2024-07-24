@@ -198,7 +198,7 @@ abstract class MetalsLspService(
     buffers,
   )
 
-  protected val buildTargetMapper = new BuildTargetMapper
+  protected val buildTargetMapper = new PreviouslyCompiledTargets
 
   protected val scalaVersionSelector = new ScalaVersionSelector(
     () => userConfig,

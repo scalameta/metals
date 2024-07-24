@@ -48,7 +48,7 @@ final class Diagnostics(
     workspace: Option[AbsolutePath],
     trees: Trees,
     buildTargets: BuildTargets,
-    buildTargetMapper: BuildTargetMapper,
+    buildTargetMapper: PreviouslyCompiledTargets,
 ) {
   private val diagnostics =
     TrieMap.empty[AbsolutePath, ju.Queue[Diagnostic]]
@@ -218,7 +218,7 @@ final class Diagnostics(
     val targets = for {
       path <- diagnostics.keySet
       targets <- buildTargets.sourceBuildTargets(path)
-      if targets.forall(inverseDeps.apply)
+      if targets.exists(inverseDeps.apply)
     } yield {
       diagnostics.remove(path)
       publishDiagnostics(path)

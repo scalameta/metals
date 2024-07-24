@@ -31,7 +31,7 @@ final class Compilations(
     compileWorksheets: Seq[AbsolutePath] => Future[Unit],
     onStartCompilation: () => Unit,
     userConfiguration: () => UserConfiguration,
-    buildTargetMapper: BuildTargetMapper,
+    buildTargetMapper: PreviouslyCompiledTargets,
 )(implicit ec: ExecutionContext) {
   private val compileTimeout: Timeout =
     Timeout("compile", Duration(10, TimeUnit.MINUTES))
@@ -105,7 +105,7 @@ final class Compilations(
       result <- targetOpt match {
         case None => Future.successful(empty)
         case Some(target) =>
-          compileBatch(target) // HERE
+          compileBatch(target)
             .map(res => res.getOrElse(target, empty))
       }
       _ <- compileWorksheets(Seq(path))
