@@ -4,10 +4,116 @@
         <title>Metals Blog</title>
         <link>http://scalameta.org/metals/blog</link>
         <description>Metals Blog</description>
-        <lastBuildDate>Fri, 12 Jul 2024 00:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Wed, 24 Jul 2024 00:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <language>en</language>
+        <item>
+            <title><![CDATA[Metals v1.3.4 - Thallium]]></title>
+            <link>http://scalameta.org/metals/blog/2024/07/24/thallium</link>
+            <guid>http://scalameta.org/metals/blog/2024/07/24/thallium</guid>
+            <pubDate>Wed, 24 Jul 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[We're happy to announce the release of Metals v1.3.4, which above all improves the experience of working with non-compiling Scala 3 projects.]]></description>
+            <content:encoded><![CDATA[<p>We're happy to announce the release of Metals v1.3.4, which above all improves the experience of working with non-compiling Scala 3 projects.</p>
+<table><tbody><tr><td>Commits since last release</td><td align="center">31</td></tr><tr><td>Merged PRs</td><td align="center">21</td></tr><tr><td>Contributors</td><td align="center">6</td></tr><tr><td>Closed issues</td><td align="center">12</td></tr><tr><td>New features</td><td align="center">2</td></tr></tbody></table>
+<p>For full details: <a href="https://github.com/scalameta/metals/milestone/70?closed=1" target="_blank" rel="noopener noreferrer">https://github.com/scalameta/metals/milestone/70?closed=1</a></p>
+<p>Metals is a language server for Scala that works with VS Code, Vim, Emacs, Zed,
+Helix and Sublime Text. Metals is developed at the
+<a href="https://scala.epfl.ch/" target="_blank" rel="noopener noreferrer">Scala Center</a> and <a href="https://virtuslab.com/" target="_blank" rel="noopener noreferrer">VirtusLab</a>
+with the help from contributors from the community.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="tldr">TL;DR<a class="hash-link" aria-label="Direct link to TL;DR" title="Direct link to TL;DR" href="http://scalameta.org/metals/blog/2024/07/24/thallium#tldr">​</a></h2>
+<p>Check out <a href="https://scalameta.org/metals/" target="_blank" rel="noopener noreferrer">https://scalameta.org/metals/</a>, and
+give Metals a try!</p>
+<ul>
+<li><a href="http://scalameta.org/metals/blog/2024/07/24/thallium#scala-3-best-effort-compilation">Scala 3 best effort compilation</a></li>
+<li><a href="http://scalameta.org/metals/blog/2024/07/24/thallium#sort-workspace-members-with-the-same-name-by-frequency">Sort workspace members with the same name by frequency</a></li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="scala-3-best-effort-compilation">Scala 3 best effort compilation<a class="hash-link" aria-label="Direct link to Scala 3 best effort compilation" title="Direct link to Scala 3 best effort compilation" href="http://scalameta.org/metals/blog/2024/07/24/thallium#scala-3-best-effort-compilation">​</a></h2>
+<p>Starting with this release Metals will take advantage of Scala 3 best effort compilation. This should greatly improve the IDE experience of working with non-compiling code. With best effort compilation Scala 3 compiler will produce a tasty-like format files that can also include partially broken trees even when a module does not compile. Those files, similarly to normal tasty files, will be later consumed by the presentation compiler providing most up to date information about the project. This great feature has been delivered by <a href="https://github.com/jchyb" target="_blank" rel="noopener noreferrer">jchyb</a> and will be available starting with Scala <code>3.5.0</code>.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="sort-workspace-members-with-the-same-name-by-frequency">Sort workspace members with the same name by frequency<a class="hash-link" aria-label="Direct link to Sort workspace members with the same name by frequency" title="Direct link to Sort workspace members with the same name by frequency" href="http://scalameta.org/metals/blog/2024/07/24/thallium#sort-workspace-members-with-the-same-name-by-frequency">​</a></h2>
+<p>Workspace member completions with the same name are now sorted by their usage frequency, so the symbols more often referenced in project appear higher on the list of completions. This cool feature was added by <a href="https://github.com/Temurlock" target="_blank" rel="noopener noreferrer">Temurlock</a>.</p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/lAOeVCZ.gif" alt="sort-by-freq" class="img_ev3q"></p>
+<h1>Miscellaneous</h1>
+<ul>
+<li>fix: show zero extent references for implicits when using pc</li>
+<li>fix: correctly handle <code>.scala</code> files with shebang</li>
+<li>fix: suggest import for maven/gradle when <code>defaultBspToBuildTool = true</code></li>
+<li>fix: only detect 100% sure test names <a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a></li>
+<li>fix: correctly prefix scope completions when conflicting for Scala 2</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="contributors">Contributors<a class="hash-link" aria-label="Direct link to Contributors" title="Direct link to Contributors" href="http://scalameta.org/metals/blog/2024/07/24/thallium#contributors">​</a></h2>
+<p>Big thanks to everybody who contributed to this release or reported an issue!</p>
+<div class="codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#bfc7d5"><span class="token plain">$ git shortlog -sn --no-merges v1.3.3..v1.3.4</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     11	Simon Parten</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     7	Katarzyna Marek</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     7	Tomasz Godzik</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     4	Scalameta Bot</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     1	Jan Chyb</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     1	temurlock</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="merged-prs">Merged PRs<a class="hash-link" aria-label="Direct link to Merged PRs" title="Direct link to Merged PRs" href="http://scalameta.org/metals/blog/2024/07/24/thallium#merged-prs">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="v134-2024-07-24"><a href="https://github.com/scalameta/metals/tree/v1.3.4" target="_blank" rel="noopener noreferrer">v1.3.4</a> (2024-07-24)<a class="hash-link" aria-label="Direct link to v134-2024-07-24" title="Direct link to v134-2024-07-24" href="http://scalameta.org/metals/blog/2024/07/24/thallium#v134-2024-07-24">​</a></h2>
+<p><a href="https://github.com/scalameta/metals/compare/v1.3.3...v1.3.4" target="_blank" rel="noopener noreferrer">Full Changelog</a></p>
+<p><strong>Merged pull requests:</strong></p>
+<ul>
+<li>fix: correctly prefix scope completions when conflicting for Scala 2
+<a href="https://github.com/scalameta/metals/pull/6615" target="_blank" rel="noopener noreferrer">#6615</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>bugfix: Only detect 100% sure test names
+<a href="https://github.com/scalameta/metals/pull/6618" target="_blank" rel="noopener noreferrer">#6618</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix: Retry deleting Bloop folders
+<a href="https://github.com/scalameta/metals/pull/6614" target="_blank" rel="noopener noreferrer">#6614</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>fix: suggest import for maven/gradle when <code>defaultBspToBuildTool = true</code>
+<a href="https://github.com/scalameta/metals/pull/6603" target="_blank" rel="noopener noreferrer">#6603</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>fix: correctly handle <code>.scala</code> with shebang
+<a href="https://github.com/scalameta/metals/pull/6602" target="_blank" rel="noopener noreferrer">#6602</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>fix: by-max on empty
+<a href="https://github.com/scalameta/metals/pull/6610" target="_blank" rel="noopener noreferrer">#6610</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>build(deps): Update h2 from 2.2.224 to 2.3.230
+<a href="https://github.com/scalameta/metals/pull/6605" target="_blank" rel="noopener noreferrer">#6605</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update cli_3, scala-cli-bsp from 1.4.0 to 1.4.1
+<a href="https://github.com/scalameta/metals/pull/6609" target="_blank" rel="noopener noreferrer">#6609</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update ammonite-util from 3.0.0-M2-13-23a8ef64 to 3.0.0-M2-15-9bed9700
+<a href="https://github.com/scalameta/metals/pull/6606" target="_blank" rel="noopener noreferrer">#6606</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>feature: Add support for Scala 3's Best Effort compilation
+<a href="https://github.com/scalameta/metals/pull/5219" target="_blank" rel="noopener noreferrer">#5219</a>
+(<a href="https://github.com/jchyb" target="_blank" rel="noopener noreferrer">jchyb</a>)</li>
+<li>chore: remove some deprecations
+<a href="https://github.com/scalameta/metals/pull/6600" target="_blank" rel="noopener noreferrer">#6600</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>test: fix <code>implicit-args-3</code> test
+<a href="https://github.com/scalameta/metals/pull/6596" target="_blank" rel="noopener noreferrer">#6596</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>improvement: sorting workspace members with same name by frequency
+<a href="https://github.com/scalameta/metals/pull/6393" target="_blank" rel="noopener noreferrer">#6393</a>
+(<a href="https://github.com/Temurlock" target="_blank" rel="noopener noreferrer">Temurlock</a>)</li>
+<li>Range selection for scala 3
+<a href="https://github.com/scalameta/metals/pull/6485" target="_blank" rel="noopener noreferrer">#6485</a>
+(<a href="https://github.com/Quafadas" target="_blank" rel="noopener noreferrer">Quafadas</a>)</li>
+<li>fix: show zero extent references when using pc
+<a href="https://github.com/scalameta/metals/pull/6583" target="_blank" rel="noopener noreferrer">#6583</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>improvement: Add supported by section
+<a href="https://github.com/scalameta/metals/pull/6520" target="_blank" rel="noopener noreferrer">#6520</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>chore: Add support for Scala 3.3.4-RC1
+<a href="https://github.com/scalameta/metals/pull/6591" target="_blank" rel="noopener noreferrer">#6591</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>build(deps): Update jsoup from 1.17.2 to 1.18.1
+<a href="https://github.com/scalameta/metals/pull/6585" target="_blank" rel="noopener noreferrer">#6585</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>chore: Update mdoc to 2.5.4
+<a href="https://github.com/scalameta/metals/pull/6523" target="_blank" rel="noopener noreferrer">#6523</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix: Fix release title
+<a href="https://github.com/scalameta/metals/pull/6590" target="_blank" rel="noopener noreferrer">#6590</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>docs: Add release notes for Metals 1.3.3
+<a href="https://github.com/scalameta/metals/pull/6578" target="_blank" rel="noopener noreferrer">#6578</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+</ul>]]></content:encoded>
+        </item>
         <item>
             <title><![CDATA[Metals v1.3.3 - Thallium]]></title>
             <link>http://scalameta.org/metals/blog/2024/07/12/thallium</link>
@@ -7491,44 +7597,6 @@ give Metals a try!</p>
 <li>0.11.4 release notes
 <a href="https://github.com/scalameta/metals/pull/3873" target="_blank" rel="noopener noreferrer">#3873</a>
 (<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li>
-</ul>]]></content:encoded>
-        </item>
-        <item>
-            <title><![CDATA[Metals v0.11.4 - Aluminium]]></title>
-            <link>http://scalameta.org/metals/blog/2022/04/27/aluminium</link>
-            <guid>http://scalameta.org/metals/blog/2022/04/27/aluminium</guid>
-            <pubDate>Wed, 27 Apr 2022 00:00:00 GMT</pubDate>
-            <description><![CDATA[We're happy to announce the release of Metals v0.11.4, which includes the hotfix of the issue with cs install metals.]]></description>
-            <content:encoded><![CDATA[<p>We're happy to announce the release of Metals v0.11.4, which includes the hotfix of <a href="https://github.com/coursier/coursier/issues/2406" target="_blank" rel="noopener noreferrer">the issue with <code>cs install metals</code></a>.</p>
-<table><tbody><tr><td>Commits since last release</td><td align="center">3</td></tr><tr><td>Merged PRs</td><td align="center">3</td></tr><tr><td>Contributors</td><td align="center">2</td></tr><tr><td>Closed issues</td><td align="center">1</td></tr><tr><td>New features</td><td align="center">0</td></tr></tbody></table>
-<p>Metals is a language server for Scala that works with VS Code, Vim, Emacs and
-Sublime Text. Metals is developed at the
-<a href="https://scala.epfl.ch/" target="_blank" rel="noopener noreferrer">Scala Center</a> and <a href="https://virtuslab.com/" target="_blank" rel="noopener noreferrer">VirtusLab</a>
-with the help from <a href="https://lunatech.com/" target="_blank" rel="noopener noreferrer">Lunatech</a> along with contributors from
-the community.</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="tldr">TL;DR<a class="hash-link" aria-label="Direct link to TL;DR" title="Direct link to TL;DR" href="http://scalameta.org/metals/blog/2022/04/27/aluminium#tldr">​</a></h2>
-<p>Check out <a href="https://scalameta.org/metals/" target="_blank" rel="noopener noreferrer">https://scalameta.org/metals/</a>, and
-give Metals a try!</p>
-<ul>
-<li>Fix the issue with installing Metals using coursier</li>
-</ul>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="contributors">Contributors<a class="hash-link" aria-label="Direct link to Contributors" title="Direct link to Contributors" href="http://scalameta.org/metals/blog/2022/04/27/aluminium#contributors">​</a></h2>
-<p>Big thanks to everybody who contributed to this release or reported an issue!</p>
-<div class="codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#bfc7d5"><span class="token plain">$ git shortlog -sn --no-merges v0.11.3..v0.11.4</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">2	Kamil Podsiadło</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">1	Vadim Chelyshov</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="merged-prs">Merged PRs<a class="hash-link" aria-label="Direct link to Merged PRs" title="Direct link to Merged PRs" href="http://scalameta.org/metals/blog/2022/04/27/aluminium#merged-prs">​</a></h2>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="v0114-2022-04-27"><a href="https://github.com/scalameta/metals/tree/v0.11.4" target="_blank" rel="noopener noreferrer">v0.11.4</a> (2022-04-27)<a class="hash-link" aria-label="Direct link to v0114-2022-04-27" title="Direct link to v0114-2022-04-27" href="http://scalameta.org/metals/blog/2022/04/27/aluminium#v0114-2022-04-27">​</a></h2>
-<p><a href="https://github.com/scalameta/metals/compare/v0.11.3...v0.11.4" target="_blank" rel="noopener noreferrer">Full Changelog</a></p>
-<p><strong>Merged pull requests:</strong></p>
-<ul>
-<li>upgrade bsp4j version to a stable one
-<a href="https://github.com/scalameta/metals/pull/3872" target="_blank" rel="noopener noreferrer">#3872</a>
-(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li>
-<li>chore: update server version after release
-<a href="https://github.com/scalameta/metals/pull/3869" target="_blank" rel="noopener noreferrer">#3869</a>
-(<a href="https://github.com/kpodsiad" target="_blank" rel="noopener noreferrer">kpodsiad</a>)</li>
-<li>docs: release notes
-<a href="https://github.com/scalameta/metals/pull/3860" target="_blank" rel="noopener noreferrer">#3860</a>
-(<a href="https://github.com/kpodsiad" target="_blank" rel="noopener noreferrer">kpodsiad</a>)</li>
 </ul>]]></content:encoded>
         </item>
     </channel>
