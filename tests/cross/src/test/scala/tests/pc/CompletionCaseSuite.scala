@@ -162,10 +162,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     // Assert we don't include AdtTwo in the results.
     """|case Cls(a, b) => `sealed-two`.Outer
-       |""".stripMargin,
-    compat = Map(
-      "3" -> "case Cls(a, b) => sealed-two.Outer"
-    )
+       |""".stripMargin
   )
 
   // TODO: `Left` has conflicting name in Scope, we should fix it so the result is the same as for scala 2
@@ -646,8 +643,9 @@ class CompletionCaseSuite extends BaseCompletionSuite {
         |
         |""".stripMargin,
     """|case Cleaning =>Activity & Physical & Chore
-       |case DishWashing(amount) => exhaustive-enum-tags.Activity
-       |case Sports(time, intensity) => exhaustive-enum-tags.Activity""".stripMargin
+       |case DishWashing(amount) => `exhaustive-enum-tags`.Activity
+       |case Sports(time, intensity) => `exhaustive-enum-tags`.Activity
+       |""".stripMargin
   )
 
   check(
@@ -675,7 +673,8 @@ class CompletionCaseSuite extends BaseCompletionSuite {
         |
         |""".stripMargin,
     """|case Cleaning =>Activity & Physical & Chore
-       |case Sports(time, intensity) => exhaustive-enum-tags2.Activity""".stripMargin
+       |case Sports(time, intensity) => `exhaustive-enum-tags2`.Activity
+       |""".stripMargin
   )
 
   check(
@@ -703,9 +702,10 @@ class CompletionCaseSuite extends BaseCompletionSuite {
         |
         |""".stripMargin,
     """|case Cleaning =>Activity & Physical & Chore
-       |case Reading(book, author) => exhaustive-enum-tags3.Activity
-       |case Singing(song) => exhaustive-enum-tags3.Activity
-       |case Sports(time, intensity) => exhaustive-enum-tags3.Activity""".stripMargin
+       |case Reading(book, author) => `exhaustive-enum-tags3`.Activity
+       |case Singing(song) => `exhaustive-enum-tags3`.Activity
+       |case Sports(time, intensity) => `exhaustive-enum-tags3`.Activity
+       |""".stripMargin
   )
 
   check(
@@ -746,13 +746,7 @@ class CompletionCaseSuite extends BaseCompletionSuite {
         |""".stripMargin,
     """|case Cat() => `type-alias-sealed-trait-case`.O.Animal
        |case Dog => `type-alias-sealed-trait-case`.O.Animal
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|case Cat() => type-alias-sealed-trait-case.O.Animal
-           |case Dog => type-alias-sealed-trait-case.O.Animal
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -803,8 +797,8 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |  val x: Foo | Bar = ???
       |  val y  = List(x).map{ ca@@ }
       |}""".stripMargin,
-    """|case Bar(b) => union-type
-       |case Foo(a) => union-type
+    """|case Bar(b) => `union-type`
+       |case Foo(a) => `union-type`
        |case (exhaustive) Foo | Bar (2 cases)
        |""".stripMargin
   )

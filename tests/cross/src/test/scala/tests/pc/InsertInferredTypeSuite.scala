@@ -452,7 +452,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
-    "path".tag(IgnoreScalaVersion("3.3.3")),
+    "path".tag(IgnoreScalaVersion("3.3.3", "3.3.2")),
     """|import java.nio.file.Paths
        |object ExplicitResultTypesPrefix {
        |  class Path
@@ -831,7 +831,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
-    "backticks-4".tag(IgnoreScala3),
+    "backticks-4",
     """|case class `Foo-Foo`(i: Int)
        |object O{
        |  val <<foo>> = `Foo-Foo`(1)
@@ -844,7 +844,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
-    "backticks-5".tag(IgnoreScala3),
+    "backticks-5",
     """|object A{
        |  case class `Foo-Foo`(i: Int)
        |}
@@ -861,7 +861,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
-    "backticks-6".tag(IgnoreScala3),
+    "backticks-6",
     """|object A{
        |  case class `Foo-Foo`[A](i: A)
        |}
@@ -878,7 +878,7 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
-    "backticks-7".tag(IgnoreScala3),
+    "backticks-7",
     """|object A{
        |  class `x-x`
        |  case class Foo[A](i: A)
@@ -893,7 +893,19 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
        |object O{
        |  val foo: A.Foo[A.`x-x`] = A.Foo(new A.`x-x`)
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|import A.`x-x`
+           |object A{
+           |  class `x-x`
+           |  case class Foo[A](i: A)
+           |}
+           |object O{
+           |  val foo: A.Foo[`x-x`] = A.Foo(new A.`x-x`)
+           |}
+           |""".stripMargin
+    )
   )
 
   checkEdit(

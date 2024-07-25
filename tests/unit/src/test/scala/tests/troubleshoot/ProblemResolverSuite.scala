@@ -48,8 +48,8 @@ class ProblemResolverSuite extends FunSuite {
 
   checkRecommendation(
     "deprecated-scala-version",
-    scalaVersion = "3.3.2",
-    DeprecatedScalaVersion("3.3.2").message,
+    scalaVersion = "3.3.1",
+    DeprecatedScalaVersion("3.3.1").message,
     scalacOpts = List("-Xsemanticdb"),
   )
 
