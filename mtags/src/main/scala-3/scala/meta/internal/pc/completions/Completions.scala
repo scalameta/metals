@@ -527,6 +527,9 @@ class Completions(
       case Literal(Constant(null)) :: tl =>
         advancedCompletions(tl, pos, completionPos)
 
+      // def foo(a@@)
+      case (vd: ValDef) :: (d : DefDef) :: _ if d.paramss.flatten.exists(_.span.contains(vd.span)) =>
+        (KeywordsCompletions.contribute(path, completionPos), true)
       case _ =>
         val args = NamedArgCompletions.contribute(
           pos,

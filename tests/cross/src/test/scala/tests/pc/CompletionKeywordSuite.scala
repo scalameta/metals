@@ -574,47 +574,9 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
        |  def hello(u@@)
        |}""".stripMargin,
     """|using (commit: '')
-       |unsafeExceptions scala (commit: '')
-       |unchecked scala (commit: '')
-       |unsafeNulls - scala.runtime.stdLibPatches.language (commit: '')
-       |unshared(): unshared (commit: '')""".stripMargin,
+       |""".stripMargin,
     includeCommitCharacter = true,
-    compat = Map(
-      "2" -> "",
-      "3.3.0" -> """|using (commit: '')
-                    |unsafeExceptions scala (commit: '')
-                    |unchecked scala (commit: '')
-                    |unsafe - scala.caps (commit: '')
-                    |unsafeNulls - scala.runtime.stdLibPatches.language (commit: '')
-                    |""".stripMargin,
-      "3.3.1" -> """|using (commit: '')
-                    |unsafeExceptions scala (commit: '')
-                    |unchecked scala (commit: '')
-                    |unsafe - scala.caps (commit: '')
-                    |unsafeNulls - scala.runtime.stdLibPatches.language (commit: '')
-                    |""".stripMargin,
-      "3.3.3" -> """|using (commit: '')
-                    |unsafeExceptions scala (commit: '')
-                    |unchecked scala (commit: '')
-                    |unsafe - caps (commit: '')
-                    |unsafeNulls - scala.runtime.stdLibPatches.language (commit: '')
-                    |""".stripMargin,
-      "3.4" -> """|using (commit: '')
-                  |unsafeExceptions scala (commit: '')
-                  |unchecked scala (commit: '')
-                  |unsafe - scala.caps (commit: '')
-                  |unsafeNulls - scala.runtime.stdLibPatches.language (commit: '')
-                  |""".stripMargin,
-      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
-        """|using (commit: '')
-           |unsafe - scala.caps (commit: '')
-           |unsafeNulls - scala.runtime.stdLibPatches.language (commit: '')
-           |unused - scala.annotation (commit: '')
-           |unshared - scala.annotation.internal (commit: '')
-           |""".stripMargin,
-      ">=3.4.2-RC1-bin-20240301-hash-NIGHTLY" -> "using (commit: '')"
-    ),
-    topLines = Some(5)
+    compat = Map("2" -> "")
   )
 
   check(
@@ -622,44 +584,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     """|object A{
        |  def hello(a: String, u@@)
        |}""".stripMargin,
-    "",
-    compat = Map(
-      "3" -> """|unsafeExceptions scala
-                |unchecked scala
-                |unsafeNulls - scala.runtime.stdLibPatches.language
-                |unshared(): unshared
-                |uncheckedStable(): uncheckedStable""".stripMargin,
-      "3.3.0" -> """|unsafeExceptions scala
-                    |unchecked scala
-                    |unsafe - scala.caps
-                    |unsafeNulls - scala.runtime.stdLibPatches.language
-                    |unshared(): unshared""".stripMargin,
-      "3.3.1" -> """|unsafeExceptions scala
-                    |unchecked scala
-                    |unsafe - scala.caps
-                    |unsafeNulls - scala.runtime.stdLibPatches.language
-                    |unshared(): unshared""".stripMargin,
-      "3.3.3" -> """|unsafeExceptions scala
-                    |unchecked scala
-                    |unsafe - caps
-                    |unsafeNulls - scala.runtime.stdLibPatches.language
-                    |unshared(): unshared""".stripMargin,
-      "3.4" -> """|unsafeExceptions scala
-                  |unchecked scala
-                  |unsafe - scala.caps
-                  |unsafeNulls - scala.runtime.stdLibPatches.language
-                  |unused - scala.annotation
-                  |""".stripMargin,
-      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
-        """|unsafe - scala.caps
-           |unsafeNulls - scala.runtime.stdLibPatches.language
-           |unused - scala.annotation
-           |unshared - scala.annotation.internal
-           |unspecialized - scala.annotation
-           |""".stripMargin,
-      ">=3.4.2-RC1-bin-20240301-hash-NIGHTLY" -> ""
-    ),
-    topLines = Some(5)
+    ""
   )
 
   check(

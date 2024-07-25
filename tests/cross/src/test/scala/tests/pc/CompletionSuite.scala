@@ -2368,4 +2368,17 @@ class CompletionSuite extends BaseCompletionSuite {
     itemIndex = 1
   )
 
+  check(
+    "def-arg",
+    """|package a
+       |object W {
+       |  val aaaaaa = 1
+       |}
+       |object O {
+       |  def foo(aa@@)
+       |}
+       |""".stripMargin,
+    ""
+  )
+
 }
