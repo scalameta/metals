@@ -1,7 +1,10 @@
 package scala.meta.internal.pc.printer
 
+import scala.meta.internal.mtags.KeywordWrapper
+
 import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags.*
+import dotty.tools.dotc.core.Names.Name
 import dotty.tools.dotc.core.StdNames.*
 import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.printing.RefinedPrinter
@@ -16,6 +19,10 @@ abstract class RefinedDotcPrinter(_ctx: Context) extends RefinedPrinter(_ctx):
       case tp: NamedType => super.toTextPrefixOf(tp)
       case tp => Text()
 
+  override def nameString(name: Name): String =
+    val nameStr = super.nameString(name)
+    KeywordWrapper.Scala3.backtickWrap(nameStr)
+  
   override def toText(tp: Type): Text =
     tp match
       case tp: TermRef
