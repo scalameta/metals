@@ -2341,9 +2341,45 @@ class CompletionSuite extends BaseCompletionSuite {
        |""".stripMargin,
     compat = Map(
       "3" -> """|x: String
-                |x: Int
+                |x - a.O: Int
                 |""".stripMargin
     )
+  )
+
+  check(
+    "conflict-2",
+    """|package a
+       |object A {
+       |  val foo = 1
+       |}
+       |object B {
+       |  val foo = 1
+       |}
+       |object O {
+       |  val x: Int = foo@@
+       |}
+       |""".stripMargin,
+    """|foo - a.A: Int
+       |foo - a.B: Int
+       |""".stripMargin
+  )
+
+  check(
+    "conflict-3",
+    """|package a
+       |object A {
+       |  var foo = 1
+       |}
+       |object B {
+       |  var foo = 1
+       |}
+       |object O {
+       |  val x: Int = foo@@
+       |}
+       |""".stripMargin,
+    """|foo - a.A: Int
+       |foo - a.B: Int
+       |""".stripMargin
   )
 
   checkEdit(
@@ -2379,6 +2415,35 @@ class CompletionSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     ""
+  )
+
+  checkEdit(
+    "conflict-edit-2",
+    """|package a
+       |object A {
+       |  val foo = 1
+       |}
+       |object B {
+       |  val foo = 1
+       |}
+       |object O {
+       |  val x: Int = foo@@
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import a.A.foo
+       |object A {
+       |  val foo = 1
+       |}
+       |object B {
+       |  val foo = 1
+       |}
+       |object O {
+       |  val x: Int = foo
+       |}
+       |""".stripMargin,
+    assertSingleItem = false
   )
 
 }
