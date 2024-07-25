@@ -1,6 +1,6 @@
 package tests
 
-import scala.meta.internal.inputs.XtensionInputSyntaxStructure
+import scala.meta.internal.inputs.XtensionInput
 
 import munit.diff.Diffs
 

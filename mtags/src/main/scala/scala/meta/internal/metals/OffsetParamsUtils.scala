@@ -6,7 +6,7 @@ import java.nio.file.Paths
 import java.util.Optional
 
 import scala.meta.inputs.Position
-import scala.meta.internal.inputs.XtensionInputSyntaxStructure
+import scala.meta.internal.inputs.XtensionInput
 import scala.meta.pc.CancelToken
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.OutlineFiles

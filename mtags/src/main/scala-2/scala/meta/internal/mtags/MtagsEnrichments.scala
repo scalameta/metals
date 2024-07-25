@@ -227,7 +227,7 @@ trait MtagsEnrichments extends ScalametaCommonEnrichments {
     }
   }
 
-  implicit class XtensionPosition(pos: Position) {
+  implicit class XtensionPositionMtags(pos: Position) {
     def encloses(other: Position): Boolean =
       pos.start <= other.start && pos.end >= other.end
 

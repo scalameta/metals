@@ -23,6 +23,7 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyToken
+import scala.meta.internal.tokenizers.LegacyTokenData
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 
@@ -124,7 +125,17 @@ class MetalsBench {
     scalaDependencySources.foreach { input =>
       val scanner = new LegacyScanner(input, Trees.defaultTokenizerDialect)
       var i = 0
-      scanner.foreach(_ => i += 1)
+
+      def foreach(scanner: LegacyScanner)(f: LegacyTokenData => Unit): Unit = {
+        scanner.initialize()
+        var curr = scanner.nextToken()
+        while (curr.token != LegacyToken.EOF) {
+          f(curr)
+          curr = scanner.nextToken()
+        }
+      }
+
+      foreach(scanner)(_ => i += 1)
     }
   }
 
