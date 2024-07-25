@@ -16,6 +16,7 @@ import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyToken._
+import scala.meta.internal.tokenizers.LegacyTokenData
 import scala.meta.tokenizers.TokenizeException
 
 final class Identifier(val name: String, val pos: Position) {
@@ -49,6 +50,10 @@ class ScalaToplevelMtags(
 )(implicit rc: ReportContext)
     extends MtagsIndexer {
 
+  private val scanner = new LegacyScanner(input, dialect)
+  scanner.initialize()
+  private var curr: LegacyTokenData = scanner.nextToken()
+
   override def overrides(): List[(String, List[OverriddenSymbol])] =
     overridden.result()
 
@@ -63,11 +68,11 @@ class ScalaToplevelMtags(
   override def allIdentifiers: Set[String] = identifiers.result()
 
   implicit class XtensionScanner(scanner: LegacyScanner) {
-    def mtagsNextToken(): Unit = {
-      scanner.nextToken()
+    def mtagsNextToken(): Any = {
+      curr = scanner.nextToken()
       if (collectIdentifiers)
-        scanner.curr.token match {
-          case IDENTIFIER => identifiers += scanner.curr.name
+        curr.token match {
+          case IDENTIFIER => identifiers += curr.strVal
           case _ =>
         }
     }
@@ -78,9 +83,7 @@ class ScalaToplevelMtags(
   override def indexRoot(): Unit =
     loop(0, true, new Region.RootRegion, None)
 
-  private val scanner = new LegacyScanner(input, dialect)
-  scanner.initialize()
-  def isDone: Boolean = scanner.curr.token == EOF
+  def isDone: Boolean = curr.token == EOF
 
   private def resetRegion(region: Region): Region = {
     currentOwner = region.owner
@@ -178,7 +181,7 @@ class ScalaToplevelMtags(
     def srcName = input.filename.stripSuffix(".scala")
 
     if (!isDone) {
-      val data = scanner.curr
+      val data = curr
       val currRegion =
         if (dialect.allowSignificantIndentation) {
           data.token match {
@@ -197,7 +200,7 @@ class ScalaToplevelMtags(
           } else
             loop(indent, false, currRegion, newExpectTemplate())
         case IDENTIFIER
-            if dialect.allowExtensionMethods && data.name == "extension" =>
+            if dialect.allowExtensionMethods && data.strVal == "extension" =>
           val nextOwner =
             if (
               dialect.allowToplevelStatements &&
@@ -543,7 +546,7 @@ class ScalaToplevelMtags(
         case IDENTIFIER if currRegion.emitIdentifier && includeMembers =>
           withOwner(currRegion.owner) {
             term(
-              scanner.curr.name,
+              curr.strVal,
               newPosition,
               Kind.METHOD,
               SymbolInformation.Property.VAL.value
@@ -563,7 +566,7 @@ class ScalaToplevelMtags(
             indent,
             isAfterNewline,
             currRegion,
-            if (scanner.curr.token == CLASS) newExpectCaseClassTemplate()
+            if (curr.token == CLASS) newExpectCaseClassTemplate()
             else newExpectClassTemplate()
           )
         case IMPLICIT =>
@@ -590,13 +593,13 @@ class ScalaToplevelMtags(
   }
 
   def emitPackage(owner: String): Boolean = {
-    require(scanner.curr.token == PACKAGE, "package")
+    require(curr.token == PACKAGE, "package")
     if (currentOwner eq Symbols.EmptyPackage) {
       currentOwner = Symbols.RootPackage
     }
     currentOwner = owner
     acceptTrivia()
-    scanner.curr.token match {
+    curr.token match {
       case IDENTIFIER =>
         val paths = parsePath()
         paths.foreach { path => pkg(path.name, path.pos) }
@@ -618,7 +621,7 @@ class ScalaToplevelMtags(
     def loop(): Unit = {
       newIdentifier.foreach(buf += _)
       acceptTrivia()
-      scanner.curr.token match {
+      curr.token match {
         case DOT =>
           acceptTrivia()
           loop()
@@ -632,7 +635,7 @@ class ScalaToplevelMtags(
   @tailrec
   private def acceptAllAfterOverriddenIdentifier(): Option[Int] = {
     val maybeNewIndent = acceptTrivia()
-    scanner.curr.token match {
+    curr.token match {
       case LPAREN =>
         acceptBalancedDelimeters(LPAREN, RPAREN)
         acceptAllAfterOverriddenIdentifier()
@@ -649,13 +652,13 @@ class ScalaToplevelMtags(
       acc0: List[Identifier]
   ): (List[Identifier], Option[Int]) = {
     val maybeNewIndent0 = acceptTrivia()
-    scanner.curr.token match {
+    curr.token match {
       case IDENTIFIER =>
         @tailrec
         def getIdentifier(): (Option[Identifier], Option[Int]) = {
           val currentIdentifier = newIdentifier
           val maybeNewIndent = acceptAllAfterOverriddenIdentifier()
-          scanner.curr.token match {
+          curr.token match {
             case DOT =>
               scanner.mtagsNextToken()
               getIdentifier()
@@ -664,7 +667,7 @@ class ScalaToplevelMtags(
         }
         val (identifier, maybeNewIndent) = getIdentifier()
         val acc = identifier.toList ++ acc0
-        scanner.curr.token match {
+        curr.token match {
           case WITH => findOverridden(acc)
           case COMMA => findOverridden(acc)
           case _ => (acc, maybeNewIndent)
@@ -672,7 +675,7 @@ class ScalaToplevelMtags(
       case LBRACE =>
         acceptBalancedDelimeters(LBRACE, RBRACE)
         val maybeNewIndent = acceptTrivia()
-        scanner.curr.token match {
+        curr.token match {
           case WITH => findOverridden(acc0)
           case _ => (acc0, maybeNewIndent)
         }
@@ -684,7 +687,7 @@ class ScalaToplevelMtags(
    * Enters a toplevel symbol such as class, trait or object
    */
   def emitMember(isPackageObject: Boolean, owner: String): Unit = {
-    val kind = scanner.curr.token
+    val kind = curr.token
     acceptTrivia()
     val maybeName = newIdentifier
     currentOwner = owner
@@ -719,7 +722,7 @@ class ScalaToplevelMtags(
             name: Option[String],
             isAfterEq: Boolean = false
         ): Option[String] = {
-          scanner.curr.token match {
+          curr.token match {
             case SEMI => name
             case _ if isNewline | isDone => name
             case EQUALS =>
@@ -740,7 +743,7 @@ class ScalaToplevelMtags(
               scanner.mtagsNextToken()
               loop(name, isAfterEq)
             case IDENTIFIER
-                if isAfterEq && scanner.curr.name != "|" && scanner.curr.name != "&" =>
+                if isAfterEq && curr.strVal != "|" && curr.strVal != "&" =>
               loop(identOrSelectName(), isAfterEq)
             case _ if isAfterEq => None
             case _ =>
@@ -763,7 +766,7 @@ class ScalaToplevelMtags(
    */
   def emitTerm(region: Region, isParentImplicit: Boolean): Unit = {
     val extensionProperty = if (isParentImplicit) EXTENSION else 0
-    val kind = scanner.curr.token
+    val kind = curr.token
     acceptTrivia()
     kind match {
       case VAL =>
@@ -817,10 +820,10 @@ class ScalaToplevelMtags(
       if (currentOwner.endsWith("#"))
         s"${currentOwner.stripSuffix("#")}."
       else currentOwner
-    scanner.curr.token match {
+    curr.token match {
       case IDENTIFIER =>
         val pos = newPosition
-        val name = scanner.curr.name
+        val name = curr.strVal
         def emitEnumCaseObject() = {
           currentOwner = ownerCompanionObject
           term(
@@ -834,7 +837,7 @@ class ScalaToplevelMtags(
           List(ResolvedOverriddenSymbol(region.owner))
         )
         val nextIsNewLine0 = nextIsNL()
-        scanner.curr.token match {
+        curr.token match {
           case COMMA =>
             emitEnumCaseObject()
             emitOverridden()
@@ -865,11 +868,11 @@ class ScalaToplevelMtags(
    * Consumes the token stream until the matching closing delimiter
    */
   def acceptBalancedDelimeters(Open: Int, Close: Int): Unit = {
-    require(scanner.curr.token == Open, "open delimeter { or (")
+    require(curr.token == Open, "open delimeter { or (")
     var count = 1
     while (!isDone && count > 0) {
       scanner.mtagsNextToken()
-      scanner.curr.token match {
+      curr.token match {
         case Open =>
           count += 1
         case Close =>
@@ -886,7 +889,7 @@ class ScalaToplevelMtags(
     @tailrec
     def loop(indent: Int, isAfterNL: Boolean): Int = {
       if (!isDone) {
-        scanner.curr.token match {
+        curr.token match {
           case _ if isNewline => scanner.mtagsNextToken(); loop(0, true)
           case token if isWhitespace(token) && isAfterNL =>
             scanner.mtagsNextToken()
@@ -911,7 +914,7 @@ class ScalaToplevelMtags(
     scanner.mtagsNextToken()
     while (
       !isDone &&
-      (scanner.curr.token match {
+      (curr.token match {
         case SEMI => false
         case _ => !isNewline
       })
@@ -926,7 +929,7 @@ class ScalaToplevelMtags(
     scanner.mtagsNextToken()
     while (
       !isDone &&
-      (scanner.curr.token match {
+      (curr.token match {
         case COMMENT => true
         case token => isWhitespace(token)
       })
@@ -934,7 +937,7 @@ class ScalaToplevelMtags(
       if (isNewline) {
         includedNewline = true
         indent = 0
-      } else if (isWhitespace(scanner.curr.token)) {
+      } else if (isWhitespace(curr.token)) {
         indent += 1
       }
       scanner.mtagsNextToken()
@@ -948,7 +951,7 @@ class ScalaToplevelMtags(
 
   private def nextIsNL(): Boolean = {
     scanner.mtagsNextToken()
-    scanner.curr.token match {
+    curr.token match {
       case token if isWhitespace(token) =>
         isNewline || nextIsNL()
       case COMMENT =>
@@ -961,10 +964,10 @@ class ScalaToplevelMtags(
    * Returns a name and position for the current identifier token
    */
   def newIdentifier: Option[Identifier] = {
-    scanner.curr.token match {
+    curr.token match {
       case IDENTIFIER =>
         val pos = newPosition
-        val name = scanner.curr.name
+        val name = curr.strVal
         Some(new Identifier(name, pos))
       case _ =>
         reportError("identifier")
@@ -973,8 +976,8 @@ class ScalaToplevelMtags(
   }
 
   private def getName: Option[String] = {
-    if (isWhitespace(scanner.curr.token)) None
-    else Some(scanner.curr.name)
+    if (isWhitespace(curr.token)) None
+    else Some(curr.strVal)
   }
 
   @tailrec
@@ -982,7 +985,7 @@ class ScalaToplevelMtags(
       current: Option[String] = getName
   ): Option[String] = {
     nextIsNL()
-    scanner.curr.token match {
+    curr.token match {
       case DOT =>
         nextIsNL()
         val newIdent = getName
@@ -998,9 +1001,9 @@ class ScalaToplevelMtags(
    * Returns a name and position for the current identifier token
    */
   def methodIdentifier: Option[Identifier] = {
-    scanner.curr.token match {
+    curr.token match {
       case IDENTIFIER =>
-        Some(new Identifier(scanner.curr.name, newPosition))
+        Some(new Identifier(curr.strVal, newPosition))
       case THIS =>
         None
       case _ =>
@@ -1013,7 +1016,7 @@ class ScalaToplevelMtags(
     @tailrec
     def consumeParams(): Unit = {
       acceptTrivia()
-      scanner.curr.token match {
+      curr.token match {
         case LPAREN =>
           acceptBalancedDelimeters(LPAREN, RPAREN)
           consumeParams()
@@ -1024,11 +1027,11 @@ class ScalaToplevelMtags(
       }
     }
 
-    scanner.curr.token match {
+    curr.token match {
       case IDENTIFIER =>
         val identifier = newIdentifier
         consumeParams()
-        scanner.curr.token match {
+        curr.token match {
           case COLON => identifier
           case _ => None
         }
@@ -1039,13 +1042,11 @@ class ScalaToplevelMtags(
   def valIdentifiers: List[Identifier] = {
     var resultList: List[Identifier] = Nil
     var isUnapply = false
-    while (
-      scanner.curr.token != EQUALS && scanner.curr.token != COLON && scanner.curr.token != EOF
-    ) {
-      scanner.curr.token match {
+    while (curr.token != EQUALS && curr.token != COLON && curr.token != EOF) {
+      curr.token match {
         case IDENTIFIER => {
           val pos = newPosition
-          val name = scanner.curr.name
+          val name = curr.strVal
           resultList = new Identifier(name, pos) :: resultList
         }
         case COMMA => {}
@@ -1059,7 +1060,7 @@ class ScalaToplevelMtags(
   }
 
   private def isNewline: Boolean =
-    scanner.curr.token >= WHITESPACE_LF && scanner.curr.token < WHITESPACE_END
+    curr.token >= WHITESPACE_LF && curr.token < WHITESPACE_END
 
   def reportError(expected: String): Unit = {
     rc.incognito.create(
@@ -1084,13 +1085,13 @@ class ScalaToplevelMtags(
    * Returns position of the current token
    */
   def newPosition: Position = {
-    val start = scanner.curr.offset
-    val end = scanner.curr.endOffset
+    val start = curr.offset
+    val end = curr.endOffset
     Position.Range(input, start, end)
   }
 
   def currentToken: String =
-    InverseLegacyToken.category(scanner.curr.token).toLowerCase()
+    InverseLegacyToken.category(curr.token).toLowerCase()
 
   def require(isOk: Boolean, expected: String): Unit = {
     if (!isOk) {

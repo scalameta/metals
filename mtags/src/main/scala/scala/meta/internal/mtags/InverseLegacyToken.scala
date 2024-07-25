@@ -8,8 +8,6 @@ import scala.meta.internal.tokenizers.LegacyToken._
 object InverseLegacyToken {
   val category: Map[Int, String] = Map[Int, String](
     EMPTY -> "EMPTY",
-    UNDEF -> "UNDEF",
-    ERROR -> "ERROR",
     EOF -> "EOF",
     /**
      * literals

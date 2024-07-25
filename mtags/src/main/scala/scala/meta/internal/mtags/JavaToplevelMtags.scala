@@ -10,7 +10,7 @@ import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.internal.tokenizers.Reporter
+import scala.meta.internal.tokenizers.CharArrayReader
 
 class JavaToplevelMtags(
     val input: Input.VirtualFile,
@@ -20,9 +20,7 @@ class JavaToplevelMtags(
 
   import JavaToplevelMtags._
 
-  val reporter: Reporter = Reporter(input)
-  val reader: CharArrayReader =
-    new CharArrayReader(input, dialects.Scala213, reporter)
+  val reader: CharArrayReader = new CharArrayReader(input, dialects.Scala213)
 
   override def overrides(): List[(String, List[OverriddenSymbol])] =
     overridden.result
