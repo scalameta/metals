@@ -78,13 +78,13 @@ object CompletionValue:
     )(using Context): String =
       if symbol.is(Method) then s"${label}${description(printer)}"
       else if symbol.isConstructor then label
-      else if symbol.is(Mutable) then s"$label: ${description(printer)}"
+      else if symbol.is(Mutable) then s"$label${description(printer)}"
       else if symbol.is(Package) || symbol.is(Module) || symbol.isClass then
         if isFromWorkspace then
           s"${labelWithSuffix(printer)} -${description(printer)}"
         else s"${labelWithSuffix(printer)}${description(printer)}"
       else if symbol.isType then labelWithSuffix(printer)
-      else s"$label: ${description(printer)}"
+      else s"$label${description(printer)}"
 
     protected def labelWithSuffix(
         printer: MetalsPrinter
@@ -98,7 +98,9 @@ object CompletionValue:
       else label
 
     override def description(printer: MetalsPrinter)(using Context): String =
-      printer.completionSymbol(symbol)
+      val isVal = !(symbol.is(Module) || symbol.is(Method) || symbol.isType)
+      val prefix = if isVal then ": " else ""
+      prefix ++ printer.completionSymbol(symbol)
   end Symbolic
 
   case class Compiler(
@@ -120,7 +122,8 @@ object CompletionValue:
     override def labelWithDescription(
         printer: MetalsPrinter
     )(using Context): String =
-      if symbol.is(Method) && symbol.name != nme.apply then
+      val isMethodOrValue = !(symbol.isType || symbol.is(Module))
+      if isMethodOrValue && symbol.name != nme.apply then
         s"${labelWithSuffix(printer)} - ${printer.fullName(symbol.effectiveOwner)}"
       else super.labelWithDescription(printer)
     override def isFromWorkspace: Boolean = true
@@ -151,7 +154,7 @@ object CompletionValue:
     override def completionItemKind(using Context): CompletionItemKind =
       CompletionItemKind.Method
     override def description(printer: MetalsPrinter)(using Context): String =
-      s"${printer.completionSymbol(symbol)} (implicit)"
+      s"${super.description(printer)} (implicit)"
 
   /**
    * @param shortenedNames shortened type names by `Printer`. This field should be used for autoImports
@@ -269,6 +272,10 @@ object CompletionValue:
     override def labelWithDescription(printer: MetalsPrinter)(using
         Context
     ): String = label
+
+    override def description(printer: MetalsPrinter)(using Context): String =
+      printer.completionSymbol(symbol)
+
   end CaseKeyword
 
   case class Document(label: String, doc: String, description: String)
