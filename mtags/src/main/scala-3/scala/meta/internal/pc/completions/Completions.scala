@@ -527,6 +527,9 @@ class Completions(
       case Literal(Constant(null)) :: tl =>
         advancedCompletions(tl, pos, completionPos)
 
+      // def foo(a@@)
+      case ParamDefinitionCompletions(allowKeywords) =>
+        (ParamDefinitionCompletions.contribute(allowKeywords, completionPos), true)
       case _ =>
         val args = NamedArgCompletions.contribute(
           pos,
