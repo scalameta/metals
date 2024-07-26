@@ -1004,13 +1004,13 @@ final case class TestingServer(
       root: AbsolutePath = workspace,
       formattingOptions: Option[FormattingOptions] = None,
   )(implicit loc: munit.Location): Future[Unit] = {
+    val (_, params) = rangeFormattingParams(
+      filename,
+      query,
+      root,
+      formattingOptions,
+    )
     for {
-      (_, params) <- rangeFormattingParams(
-        filename,
-        query,
-        root,
-        formattingOptions,
-      )
       multiline <- fullServer.rangeFormatting(params).asScala
       format = TextEdits.applyEdits(
         textContents(filename),
@@ -1196,10 +1196,9 @@ final case class TestingServer(
       filename: String,
       original: String,
       root: AbsolutePath,
-      replaceWith: String = "",
   )(
       fn: (String, TextDocumentIdentifier, l.Range) => T
-  ): Future[T] = {
+  ): T = {
     val startOffset = original.indexOf("<<")
     val endOffset = original.indexOf(">>")
     if (startOffset < 0) sys.error(s"missing <<\n$original")
@@ -1208,21 +1207,13 @@ final case class TestingServer(
       sys.error(s"invalid range, >> must come after <<\n$original")
     val text =
       original
-        .replace("<<", replaceWith)
-        .replace(">>", replaceWith)
+        .replace("<<", "")
+        .replace(">>", "")
     val input = m.Input.String(text)
     val path = root.resolve(filename)
     path.touch()
     val pos = m.Position.Range(input, startOffset, endOffset - "<<".length())
-    for {
-      _ <- didChange(filename)(_ => text)
-    } yield {
-      fn(
-        text,
-        path.toTextDocumentIdentifier,
-        pos.toLsp,
-      )
-    }
+    fn(text, path.toTextDocumentIdentifier, pos.toLsp)
   }
 
   def offsetParams(
@@ -1248,7 +1239,7 @@ final case class TestingServer(
       original: String,
       root: AbsolutePath,
       context: CodeActionContext,
-  ): Future[(String, CodeActionParams)] =
+  ): (String, CodeActionParams) =
     rangeFromString(filename, original, root) { case (text, textId, range) =>
       (text, new CodeActionParams(textId, range, context))
     }
@@ -1309,7 +1300,7 @@ final case class TestingServer(
       original: String,
       root: AbsolutePath,
       formattingOptions: Option[FormattingOptions],
-  ): Future[(String, DocumentRangeFormattingParams)] = {
+  ): (String, DocumentRangeFormattingParams) = {
     rangeFromString(filename, original, root) {
       case (text, textId, rangeSelection) =>
         val params = new DocumentRangeFormattingParams()
@@ -1394,17 +1385,17 @@ final case class TestingServer(
       root: AbsolutePath,
       kind: List[String],
       filterAction: l.CodeAction => Boolean,
-  ): Future[(List[l.CodeAction], String)] =
+  ): Future[(List[l.CodeAction], String)] = {
+    val (_, params) = codeActionParams(
+      filename,
+      query,
+      root,
+      new CodeActionContext(
+        client.diagnostics.getOrElse(toPath(filename), Nil).asJava,
+        if (kind.nonEmpty) kind.asJava else null,
+      ),
+    )
     for {
-      (_, params) <- codeActionParams(
-        filename,
-        query,
-        root,
-        new CodeActionContext(
-          client.diagnostics.getOrElse(toPath(filename), Nil).asJava,
-          if (kind.nonEmpty) kind.asJava else null,
-        ),
-      )
       codeActions <- fullServer
         .codeAction(params)
         .asScala
@@ -1413,7 +1404,7 @@ final case class TestingServer(
       codeActions.toList,
       codeActions.map(_.getTitle()).mkString("\n"),
     )
-
+  }
   def assertSemanticHighlight(
       filePath: String,
       expected: String,
