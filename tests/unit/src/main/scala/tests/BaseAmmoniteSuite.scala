@@ -6,6 +6,7 @@ import scala.concurrent.Promise
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import org.eclipse.lsp4j.MessageActionItem
@@ -13,6 +14,11 @@ import org.eclipse.lsp4j.MessageActionItem
 abstract class BaseAmmoniteSuite(scalaVersion: String)
     extends BaseLspSuite(s"ammonite-$scalaVersion")
     with ScriptsAssertions {
+
+  override def userConfig: UserConfiguration =
+    super.userConfig.copy(
+      fallbackScalaVersion = Some(scalaVersion)
+    )
 
   override def munitIgnore: Boolean =
     !isValidScalaVersionForEnv(scalaVersion)

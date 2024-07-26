@@ -10,6 +10,7 @@ import scala.meta.internal.metals.RecursivelyDelete
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FileEvent
+
 class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
 
   override protected def initializationOptions: Option[InitializationOptions] =

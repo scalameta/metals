@@ -2,11 +2,15 @@ package tests.feature
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import tests.BaseRangesSuite
 
 class CrossReferenceSuite extends BaseRangesSuite("cross-reference-suite") {
+
+  override def userConfig: UserConfiguration =
+    super.userConfig.copy(fallbackScalaVersion = Some(V.scala3))
 
   check(
     "references-scala3",
