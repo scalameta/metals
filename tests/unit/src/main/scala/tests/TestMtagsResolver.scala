@@ -1,5 +1,7 @@
 package tests
 
+import scala.concurrent.ExecutionContext
+
 import scala.meta.internal.metals.MtagsBinaries
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.ScalaVersions
@@ -19,7 +21,9 @@ class TestMtagsResolver(checkCoursier: Boolean) extends MtagsResolver {
       Some(MtagsBinaries.BuildIn)
     else None
 
-  override def resolve(scalaVersion: String): Option[MtagsBinaries] = {
+  override def resolve(
+      scalaVersion: String
+  )(implicit ec: ExecutionContext): Option[MtagsBinaries] = {
     if (checkCoursier)
       default.resolve(scalaVersion).orElse(localCheck(scalaVersion))
     else localCheck(scalaVersion)

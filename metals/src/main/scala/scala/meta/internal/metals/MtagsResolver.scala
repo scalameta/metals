@@ -2,6 +2,9 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.ConcurrentHashMap
 
+import scala.concurrent.Await
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
@@ -14,14 +17,18 @@ trait MtagsResolver {
    * Try and resolve mtags module for a given version of Scala.
    * @return information to use and load the presentation compiler implementation
    */
-  def resolve(scalaVersion: String): Option[MtagsBinaries]
+  def resolve(scalaVersion: String)(implicit
+      ec: ExecutionContext
+  ): Option[MtagsBinaries]
 
   /**
    * Check if a given Scala version is supported in Metals.
    *
    * @param version Scala version to check
    */
-  def isSupportedScalaVersion(version: String): Boolean =
+  def isSupportedScalaVersion(version: String)(implicit
+      ec: ExecutionContext
+  ): Boolean =
     resolve(version).isDefined
 
   /**
@@ -102,7 +109,9 @@ object MtagsResolver {
     def isSupportedInOlderVersion(version: String): Boolean =
       removedScalaVersions.contains(version)
 
-    def resolve(scalaVersion: String): Option[MtagsBinaries] = {
+    def resolve(
+        scalaVersion: String
+    )(implicit ec: ExecutionContext): Option[MtagsBinaries] = {
       if (hasStablePresentationCompiler(scalaVersion))
         resolve(
           scalaVersion,
@@ -130,7 +139,7 @@ object MtagsResolver {
         scalaVersion: String,
         original: Option[String],
         resolveType: ResolveType.Value,
-    ): Option[MtagsBinaries] = {
+    )(implicit ec: ExecutionContext): Option[MtagsBinaries] = {
 
       def fetch(fetchResolveType: ResolveType.Value, tries: Int = 5): State =
         try {
@@ -143,11 +152,15 @@ object MtagsResolver {
               s"$scalaVersion is no longer supported in the current Metals versions, using the last known supported version $metalsVersion"
             )
           }
-          val jars = fetchResolveType match {
-            case ResolveType.StablePC =>
-              Embedded.downloadScala3PresentationCompiler(scalaVersion)
-            case _ => Embedded.downloadMtags(scalaVersion, metalsVersion)
+          val jarsFuture = Future {
+            fetchResolveType match {
+              case ResolveType.StablePC =>
+                Embedded.downloadScala3PresentationCompiler(scalaVersion)
+              case _ => Embedded.downloadMtags(scalaVersion, metalsVersion)
+            }
           }
+
+          val jars = Await.result(jarsFuture, 60.seconds)
 
           State.Success(
             MtagsBinaries.Artifacts(
