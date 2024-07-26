@@ -91,69 +91,71 @@ case class ScalafixProvider(
     val fromDisk = file.toInput
     val inBuffers = file.toInputFromBuffers(buffers)
 
-    compilations.compilationFinished(file).flatMap { _ =>
-      val scalafixEvaluation =
-        scalafixEvaluate(
-          file,
-          scalaTarget,
-          inBuffers.value,
-          retried || isUnsaved(inBuffers.text, fromDisk.text),
-          rules,
-        )
-
-      scalafixEvaluation
-        .recover { case exception =>
-          reportScalafixError(
-            "Unable to run scalafix, please check logs for more info.",
-            exception,
+    compilations
+      .compilationFinished(file, compileInverseDependencies = false)
+      .flatMap { _ =>
+        val scalafixEvaluation =
+          scalafixEvaluate(
+            file,
+            scalaTarget,
+            inBuffers.value,
+            retried || isUnsaved(inBuffers.text, fromDisk.text),
+            rules,
           )
-          throw exception
-        }
-        .flatMap {
-          case results
-              if !scalafixSucceded(results) && hasStaleOrMissingSemanticdb(
-                results
-              ) && buildHasErrors(file) =>
-            val msg = "Attempt to organize your imports failed. " +
-              "It looks like you have compilation issues causing your semanticdb to be stale. " +
-              "Ensure everything is compiling and try again."
-            scribe.warn(
-              msg
-            )
-            languageClient.showMessage(
-              MessageType.Warning,
-              msg,
-            )
-            Future.successful(Nil)
-          case results if !scalafixSucceded(results) =>
-            val scalafixError = getMessageErrorFromScalafix(results)
-            val exception = ScalafixRunException(scalafixError)
-            if (
-              scalafixError.startsWith("Unknown rule") ||
-              scalafixError.startsWith("Class not found")
-            ) {
-              languageClient
-                .showMessage(Messages.unknownScalafixRules(scalafixError))
-            }
 
-            scribe.error(scalafixError, exception)
-            if (!retried && hasStaleOrMissingSemanticdb(results)) {
-              // Retry, since the semanticdb might be stale
-              runScalafixRules(file, scalaTarget, rules, retried = true)
-            } else {
-              Future.failed(exception)
-            }
-          case results =>
-            Future.successful {
-              val edits = for {
-                fileEvaluation <- results.getFileEvaluations().headOption
-                patches <- fileEvaluation.previewPatches().asScala
-              } yield textEditsFrom(patches, inBuffers)
-              edits.getOrElse(Nil)
-            }
+        scalafixEvaluation
+          .recover { case exception =>
+            reportScalafixError(
+              "Unable to run scalafix, please check logs for more info.",
+              exception,
+            )
+            throw exception
+          }
+          .flatMap {
+            case results
+                if !scalafixSucceded(results) && hasStaleOrMissingSemanticdb(
+                  results
+                ) && buildHasErrors(file) =>
+              val msg = "Attempt to organize your imports failed. " +
+                "It looks like you have compilation issues causing your semanticdb to be stale. " +
+                "Ensure everything is compiling and try again."
+              scribe.warn(
+                msg
+              )
+              languageClient.showMessage(
+                MessageType.Warning,
+                msg,
+              )
+              Future.successful(Nil)
+            case results if !scalafixSucceded(results) =>
+              val scalafixError = getMessageErrorFromScalafix(results)
+              val exception = ScalafixRunException(scalafixError)
+              if (
+                scalafixError.startsWith("Unknown rule") ||
+                scalafixError.startsWith("Class not found")
+              ) {
+                languageClient
+                  .showMessage(Messages.unknownScalafixRules(scalafixError))
+              }
 
-        }
-    }
+              scribe.error(scalafixError, exception)
+              if (!retried && hasStaleOrMissingSemanticdb(results)) {
+                // Retry, since the semanticdb might be stale
+                runScalafixRules(file, scalaTarget, rules, retried = true)
+              } else {
+                Future.failed(exception)
+              }
+            case results =>
+              Future.successful {
+                val edits = for {
+                  fileEvaluation <- results.getFileEvaluations().headOption
+                  patches <- fileEvaluation.previewPatches().asScala
+                } yield textEditsFrom(patches, inBuffers)
+                edits.getOrElse(Nil)
+              }
+
+          }
+      }
   }
 
   private def createTemporarySemanticdb(
