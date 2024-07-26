@@ -22,7 +22,12 @@ abstract class BaseWorksheetLspSuite(
     )
 
   override def userConfig: UserConfiguration =
-    super.userConfig.copy(worksheetScreenWidth = 40, worksheetCancelTimeout = 1)
+    super.userConfig.copy(
+      worksheetScreenWidth = 40,
+      worksheetCancelTimeout = 1,
+      fallbackScalaVersion = Some(scalaVersion),
+    )
+
   override def munitIgnore: Boolean = !isValidScalaVersionForEnv(scalaVersion)
 
   def versionSpecificCodeToValidate: String = ""
