@@ -68,17 +68,25 @@ final class Compilations(
 
   def previouslyCompiled: Iterable[b.BuildTargetIdentifier] = lastCompile
 
-  def compilationFinished(targets: Seq[BuildTargetIdentifier]): Future[Unit] =
+  def compilationFinished(
+      targets: Seq[BuildTargetIdentifier],
+      compileInverseDependencies: Boolean,
+  ): Future[Unit] =
     if (currentlyCompiling.isEmpty) {
       Future(())
-    } else {
+    } else if (compileInverseDependencies) {
       cascadeCompile(targets)
+    } else {
+      compileTargets(targets)
     }
 
   def compilationFinished(
-      source: AbsolutePath
+      source: AbsolutePath,
+      compileInverseDependencies: Boolean,
   ): Future[Unit] =
-    expand(source).flatMap(targets => compilationFinished(targets.toSeq))
+    expand(source).flatMap(targets =>
+      compilationFinished(targets.toSeq, compileInverseDependencies)
+    )
 
   def compileTarget(
       target: b.BuildTargetIdentifier
