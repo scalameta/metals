@@ -121,7 +121,7 @@ class MunitTestFinder(
     val parents = doc.symbols
       .collectFirst {
         case SymbolInformation(symbolValue, _, _, _, _, sig: ClassSignature, _, _, _, _) if symbolValue == classSymbol =>
-          sig.parents.collect { 
+          sig.parents.collect {
             case TypeRef(_, parentSymbol, _) if !baseParentClasses.contains(parentSymbol) => parentSymbol
           }.toVector
       }
