@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.doctor
 
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.metals.BloopServers
@@ -23,7 +24,7 @@ class ProblemResolver(
     currentBuildServer: () => Option[BspSession],
     isTestExplorerProvider: () => Boolean,
     javaInfo: () => Option[JavaInfo],
-) {
+)(implicit ec: ExecutionContext) {
 
   def isUnsupportedBloopVersion(): Boolean = {
     currentBuildServer() match {
