@@ -3,6 +3,7 @@ package scala.meta.internal.metals.formatting
 import scala.annotation.tailrec
 import scala.meta
 
+import scala.meta.XtensionClassifiable
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.tokens.Token
@@ -86,43 +87,6 @@ case class MultilineString(userConfig: () => UserConfiguration)
       }
     }
     if (lastQuote != -1) Some((lastQuote, quoteClosed)) else None
-  }
-
-  private def getIndexOfLastOpenTripleQuote(
-      closedFromPreviousLines: Boolean,
-      line: String,
-  ): Option[(Int, Boolean)] = {
-    var lastTripleQuote = -1
-    var tripleQuoteClosed = closedFromPreviousLines
-    var quoteNum = 0
-    for (i <- 0 until line.size) {
-      val char = line(i)
-      if (char == '"') {
-        quoteNum = quoteNum + 1
-        if (quoteNum == 3) {
-          lastTripleQuote = i
-          tripleQuoteClosed = !tripleQuoteClosed
-          quoteNum = 0
-        }
-      } else {
-        quoteNum = 0
-      }
-    }
-    if (lastTripleQuote != -1) Some((lastTripleQuote, tripleQuoteClosed))
-    else None
-  }
-
-  private def onlyFourQuotes(
-      splitLines: Array[String],
-      position: Position,
-  ): Boolean = {
-
-    val currentLine = splitLines(position.getLine)
-    val pos = position.getCharacter
-    val onlyFour = 4
-    hasNQuotes(pos - 3, currentLine, onlyFour) && currentLine.count(
-      _ == quote
-    ) == onlyFour
   }
 
   private def hasNQuotes(start: Int, text: String, n: Int): Boolean =
@@ -246,35 +210,6 @@ case class MultilineString(userConfig: () => UserConfiguration)
       endPos.end - 1,
     )
     pipeBetweenLastLineAndPos != -1 || pipeBetweenSelection != -1
-  }
-
-  private def doubleQuoteNotClosed(
-      splitLines: Array[String],
-      position: Position,
-  ): Boolean = {
-    val lineBefore = splitLines(position.getLine - 1)
-    getIndexOfLastOpenQuote(lineBefore).exists { case (_, quoteClosed) =>
-      !quoteClosed
-    }
-  }
-
-  private def wasTripleQuoted(
-      splitLines: Array[String],
-      position: Position,
-  ): Boolean = {
-    var closedFromPreviousLines = true
-    var existed = false
-    for (i <- 0 until position.getLine()) {
-      val currentLine = splitLines(i)
-      getIndexOfLastOpenTripleQuote(closedFromPreviousLines, currentLine)
-        .foreach { case (_, quoteClosed) =>
-          closedFromPreviousLines = quoteClosed
-          existed = true
-        }
-    }
-    if (existed)
-      !closedFromPreviousLines
-    else false
   }
 
   private def fixStringNewline(
@@ -413,36 +348,129 @@ case class MultilineString(userConfig: () => UserConfiguration)
   override def contribute(
       params: OnTypeFormatterParams
   ): Option[List[TextEdit]] = {
+    params.triggerChar.head match {
+      case '"' => contributeQuotes(params)
+      case '\n' => contributeNewline(params)
+    }
+  }
+
+  private def contributeQuotes(
+      params: OnTypeFormatterParams
+  ): Option[List[TextEdit]] = {
+    val range = new Range(params.position, params.position)
+    params.tokens
+      .getOrElse(Nil)
+      .sliding(3)
+      .collectFirst {
+        // `s""""` <- four quotes interpolation
+        case Seq(
+              start: Token.Interpolation.Start,
+              part: Token.Interpolation.Part,
+              _: Token.Invalid,
+            )
+            if part.pos.encloses(range) && start.pos.text
+              .startsWith("\"\"\"") && part.pos.text.startsWith("\"") =>
+          Some(replaceWithSixQuotes(params.position))
+        // `""""` <- simple four quotes
+        case Seq(token: Token.Constant.String, _: Token.Invalid, _)
+            if token.pos
+              .encloses(range) && token.pos.text.startsWith("\"\"\"\"") =>
+          Some(replaceWithSixQuotes(params.position))
+      }
+      .flatten
+  }
+
+  private def contributeNewline(
+      params: OnTypeFormatterParams
+  ): Option[List[TextEdit]] = {
     val splitLines = params.splitLines
     val position = params.position
-    val triggerChar = params.triggerChar
-    (params.tokens, triggerChar) match {
-      case (Some(tokens), "\n") =>
-        getStringLiterals(tokens, params, true)
-          .map { expr =>
-            if (expr.hasStripMargin)
-              indent(splitLines, position, expr)
-            else
-              indentWhenNoStripMargin(
-                expr,
-                splitLines,
-                position,
-              )
-          }
-          .find(_.nonEmpty)
-      case (None, "\"") if onlyFourQuotes(splitLines, position) =>
-        Some(replaceWithSixQuotes(position))
-      case (None, "\n")
-          if wasTripleQuoted(
-            splitLines,
-            position,
-          ) =>
-        Some(addTripleQuote(position))
-      case (None, "\n") if doubleQuoteNotClosed(splitLines, position) =>
-        Some(fixStringNewline(position, splitLines))
+    val range = new Range(params.position, params.position)
+    val sourceText = params.sourceText
 
-      case _ => None
+    def isUnfinishedTripleQuote(token: Token) = {
+      token.pos.startLine != token.pos.endLine &&
+      token.end - token.start >= 6 &&
+      (sourceText.subSequence(token.start, token.start + 3) != "\"\"\"" ||
+        sourceText.subSequence(token.end - 3, token.end) != "\"\"\"")
+
     }
+
+    def isUnfinishedDoubleQuote(token: Token.Constant.String) = {
+      token.start != token.end && (
+        sourceText(token.start) != '"' ||
+          sourceText(token.end - 1) != '"'
+      )
+    }
+    params.tokens
+      .getOrElse(Nil)
+      .sliding(3)
+      .collectFirst {
+        /*
+         *```
+         * """some text without ending triple quotes
+         *```
+         */
+        case Seq(token: Token.Constant.String, _: Token.Invalid, _)
+            if token.pos.encloses(range) &&
+              isUnfinishedTripleQuote(token) =>
+          Some(addTripleQuote(position))
+        /*
+         *```
+         * sql"""some interpolated text without ending triple quotes
+         *```
+         */
+        case Seq(
+              start: Token.Interpolation.Start,
+              part: Token.Interpolation.Part,
+              _: Token.Invalid,
+            )
+            if part.pos.encloses(range) &&
+              start.pos.text.startsWith("\"\"\"") =>
+          Some(addTripleQuote(position))
+        /*
+         *```
+         * s"some interpolated text without ending quote
+         *  some textwithout starting quote"
+         *```
+         */
+        case Seq(
+              _: Token.Interpolation.Part,
+              token: Token.Invalid,
+              _,
+            ) if token.pos.endLine == position.getLine - 1 => // we added enter
+          Some(fixStringNewline(position, splitLines))
+        /*
+         *```
+         * "some text without ending quote
+         *  some textwithout starting quote"
+         *```
+         */
+        case Seq(token: Token.Constant.String, _, _)
+            if isUnfinishedDoubleQuote(token) =>
+          Some(fixStringNewline(position, splitLines))
+
+        /*
+         * Otherwise, we are inside a multiline string or interpolation.
+         */
+        case Seq(token, _, _)
+            if (token.is[Token.Constant.String] || token
+              .is[Token.Interpolation.Part]) &&
+              token.pos.encloses(range) && params.tokens.nonEmpty =>
+          getStringLiterals(params.tokens.get, params, true)
+            .map { expr =>
+              if (expr.hasStripMargin)
+                indent(splitLines, position, expr)
+              else
+                indentWhenNoStripMargin(
+                  expr,
+                  splitLines,
+                  position,
+                )
+            }
+            .find(_.nonEmpty)
+      }
+      .flatten
   }
 
   override def contribute(
