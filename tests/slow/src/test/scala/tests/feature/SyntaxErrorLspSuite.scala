@@ -209,10 +209,14 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
       _ <- server.didChange("a/src/main/scala/A.scala")(
         _.replace("\"\"", "\"")
       )
-      // assert that a tokenization error results in a single diagnostic, hides type errors.
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/A.scala:2:16: error: unclosed string literal
+        """|a/src/main/scala/A.scala:2:16: error: type mismatch;
+           | found   : String("")
+           | required: Int
+           |  val x: Int = "
+           |               ^
+           |a/src/main/scala/A.scala:2:16: error: unclosed string literal
            |  val x: Int = "
            |               ^
            |""".stripMargin,
