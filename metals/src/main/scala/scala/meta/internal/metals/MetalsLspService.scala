@@ -296,7 +296,6 @@ abstract class MetalsLspService(
     scalaVersionSelector,
     saveDefFileToDisk = !clientConfig.isVirtualDocumentSupported(),
     sourceMapper,
-    workspaceSymbols,
     () => warnings,
   )
 

@@ -54,6 +54,33 @@ final class Trees(
       }
   }
 
+  def packageAtPosition(
+      source: AbsolutePath,
+      lspPos: l.Position,
+  ) = {
+
+    def loop(t: Tree, pos: Position, acc: String): Option[String] = {
+      t match {
+        case t: Pkg =>
+          val enclosed = enclosedChildren(t.children, pos)
+          enclosed
+            .map(loop(_, pos, acc + "." + t.ref.toString()))
+            .headOption
+            .flatten
+        case other =>
+          val enclosed = enclosedChildren(other.children, pos)
+          if (enclosed.isEmpty) Some(acc)
+          else enclosed.map(loop(_, pos, acc)).headOption.flatten
+      }
+    }
+
+    for {
+      tree <- get(source)
+      pos <- lspPos.toMeta(tree.pos.input)
+      lastEnc <- loop(tree, pos, "")
+    } yield lastEnc.stripPrefix(".")
+  }
+
   /**
    * Find last tree matching T that encloses the position.
    *
