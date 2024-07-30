@@ -10,6 +10,7 @@ import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.IdentifierIndex
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.LoggerReportContext
+import scala.meta.internal.metals.MetalsEnrichments.XtensionScanner
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.mtags.JavaMtags
@@ -23,7 +24,6 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyToken
-import scala.meta.internal.tokenizers.LegacyTokenData
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 
@@ -125,17 +125,7 @@ class MetalsBench {
     scalaDependencySources.foreach { input =>
       val scanner = new LegacyScanner(input, Trees.defaultTokenizerDialect)
       var i = 0
-
-      def foreach(scanner: LegacyScanner)(f: LegacyTokenData => Unit): Unit = {
-        scanner.initialize()
-        var curr = scanner.nextToken()
-        while (curr.token != LegacyToken.EOF) {
-          f(curr)
-          curr = scanner.nextToken()
-        }
-      }
-
-      foreach(scanner)(_ => i += 1)
+      scanner.foreach(_ => i += 1)
     }
   }
 

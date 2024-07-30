@@ -8,9 +8,9 @@ import scala.util.control.NonFatal
 
 import scala.meta.Dialect
 import scala.meta.inputs.Input
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyToken._
-import scala.meta.internal.tokenizers.LegacyTokenData
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -41,19 +41,9 @@ class IdentifierIndex {
       dialect: Dialect,
   ): Iterable[String] = {
     val identifiers = Set.newBuilder[String]
-
-    def foreach(scanner: LegacyScanner)(f: LegacyTokenData => Unit): Unit = {
-      scanner.initialize()
-      var curr = scanner.nextToken()
-      while (curr.token != EOF) {
-        f(curr)
-        curr = scanner.nextToken()
-      }
-    }
-
     try {
       val scanner = new LegacyScanner(Input.String(text), dialect)
-      foreach(scanner) {
+      scanner.foreach {
         case ident if ident.token == IDENTIFIER => identifiers += ident.strVal
         case _ =>
       }
