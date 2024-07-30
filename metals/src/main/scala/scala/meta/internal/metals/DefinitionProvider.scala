@@ -7,7 +7,7 @@ import scala.concurrent.Future
 
 import scala.meta.Term
 import scala.meta.Type
-import scala.meta.XtensionClassifiable
+import scala.meta._
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position.Range
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -33,10 +33,9 @@ import scala.meta.tokens.Token
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.SymbolInformation
-import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
+import org.eclipse.lsp4j.{Range => LspRange}
 
 /**
  * Implements goto definition that works even in code that doesn't parse.
@@ -65,7 +64,6 @@ final class DefinitionProvider(
     scalaVersionSelector: ScalaVersionSelector,
     saveDefFileToDisk: Boolean,
     sourceMapper: SourceMapper,
-    workspaceSearch: WorkspaceSymbolProvider,
     warnings: () => Warnings,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
 
@@ -123,7 +121,7 @@ final class DefinitionProvider(
           )
         scaladocDefinitionProvider
           .definition(path, params, isScala3)
-          .orElse(fromSearch(path, params.getPosition(), token))
+          .orElse(fromSearch(path, params.getPosition()))
           .getOrElse(definition)
       } else {
         definition
@@ -160,7 +158,6 @@ final class DefinitionProvider(
   def fromSearch(
       path: AbsolutePath,
       pos: Position,
-      token: CancelToken,
   ): Option[DefinitionResult] = {
 
     val defResult = for {
@@ -171,43 +168,130 @@ final class DefinitionProvider(
       ident <- tokens.collectFirst {
         case id: Token.Ident if id.pos.encloses(metaPos) => id
       }
+      tree <- trees.get(path)
     } yield {
+      val range = new LspRange(pos, pos)
       lazy val nameTree = trees.findLastEnclosingAt(path, pos)
 
-      // for sure is not a class/trait/enum if we access it via select
-      lazy val isInSelectPosition = nameTree.exists { name =>
-        name.parent.exists {
-          case Type.Select(qual, _) if nameTree.contains(qual) => true
-          case Term.Select(qual, _) if nameTree.contains(qual) => true
-          case _ => false
+      def isInSelect(tree: Tree): Boolean = tree match {
+        case Type.Select(qual, _) if qual.pos.encloses(range) => true
+        case Term.Select(qual, _) if qual.pos.encloses(range) => true
+        case Term.Select(_, _) => tree.parent.exists(isInSelect(_))
+        case _: Importer => true
+        case _ => false
+      }
+
+      def objectOrClass(symbolPrefix: String) =
+        if (isInSelectPosition) List(symbolPrefix + ".")
+        else if (isInTypePosition) List(symbolPrefix + "#")
+        else List(".", "#").map(ending => symbolPrefix + ending)
+
+      def nameFromSelect(tree: Tree, acc: List[String]): List[String] = {
+        tree match {
+          case Term.Select(qualifier, name) =>
+            nameFromSelect(qualifier, name.value +: acc)
+          case Term.Name(value) => value +: acc
         }
       }
 
-      lazy val isInTypePosition = nameTree.exists(_.is[Type.Name])
-
-      def filterViaHeuristics(symbolInfo: SymbolInformation) = {
-        val kind = symbolInfo.getKind()
-        val isClassLike =
-          kind == SymbolKind.Class || kind == SymbolKind.Enum || kind == SymbolKind.Interface
-        if (isClassLike && isInSelectPosition) false
-        else if (kind == SymbolKind.Object && isInTypePosition) false
-        else true
+      /**
+       * Heuristic to guess the symbol from the parts of the identifier.
+       *
+       * We assume that any lower case parts at the start are packages,
+       * everything later is either a class/object and then things
+       * the can belong to them. We don't care about things inside of
+       * classes, since they need to be accessed with a select on a typed
+       * variable instead.
+       *
+       * @param parts List("a", "b", "c", "MyClass"", "myMethod")
+       * @return a/b/c/MyClass.myMethod
+       */
+      def guessSymbolFromParts(parts: List[String]) = {
+        val (symbol, _) = parts.foldLeft(("", false)) {
+          case ((prefix, insideObject), next) =>
+            if (prefix.isEmpty()) (next, insideObject)
+            else if (insideObject) (prefix + "." + next, insideObject)
+            else if (next.head.isLower) (prefix + "/" + next, insideObject)
+            else (prefix + "/" + next, true)
+        }
+        symbol
       }
 
-      val locs = workspaceSearch
-        .searchExactFrom(ident.value, path, token, Some(path))
+      // for sure is not a class/trait/enum if we access it via select
+      lazy val isInSelectPosition =
+        nameTree.flatMap(_.parent).exists(isInSelect(_))
 
-      val reducedGuesses =
-        if (locs.size > 1)
-          locs.filter(filterViaHeuristics)
-        else
-          locs
+      lazy val isInTypePosition = nameTree.exists(_.is[Type.Name])
 
-      if (reducedGuesses.nonEmpty) {
+      // Get all select parts to build symbol from it later
+      val proposedNameParts =
+        nameTree
+          .flatMap(_.parent)
+          .map {
+            case tree: Term.Select if nameTree.contains(tree.name) =>
+              nameFromSelect(tree, Nil)
+            case _ => List(ident.value)
+          }
+          .getOrElse(List(ident.value))
+
+      val proposedCurrentPackageSymbol = objectOrClass {
+        trees
+          .packageAtPosition(path, pos)
+          .getOrElse("_empty_") + "/" + proposedNameParts.mkString(".")
+      }
+
+      // First name in select is the one that must be imported or in scope
+      val probablyImported = proposedNameParts.headOption.getOrElse(ident.value)
+
+      // Search for imports that match the current symbol
+      val proposedImportedSymbols =
+        tree.collect {
+          case imp @ Import(importers)
+              // imports should be in the same scope as the current position
+              if imp.parent.exists(_.pos.encloses(range)) =>
+            importers.collect { case Importer(ref: Term, p) =>
+              val packageSyntax = ref.toString.split("\\.").toList
+              p.collect {
+                case Importee.Name(name) if name.value == probablyImported =>
+                  objectOrClass(
+                    guessSymbolFromParts(packageSyntax ++ proposedNameParts)
+                  )
+                case Importee.Rename(name, renamed)
+                    if renamed.value == probablyImported =>
+                  objectOrClass(
+                    guessSymbolFromParts(
+                      packageSyntax ++ (name.value +: proposedNameParts.drop(1))
+                    )
+                  )
+                case _: Importee.Wildcard =>
+                  objectOrClass(
+                    guessSymbolFromParts(packageSyntax ++ proposedNameParts)
+                  )
+              }.flatten
+            }.flatten
+        }.flatten
+
+      val fullyScopedName = objectOrClass(
+        guessSymbolFromParts(proposedNameParts)
+      )
+
+      val guesses =
+        (proposedImportedSymbols ++ proposedCurrentPackageSymbol ++ fullyScopedName).distinct
+          .flatMap { proposedSymbol =>
+            index.definition(Symbol(proposedSymbol))
+          }
+
+      if (guesses.nonEmpty) {
         scribe.warn(s"Using indexes to guess the definition of ${ident.value}")
         Some(
           DefinitionResult(
-            reducedGuesses.map(_.getLocation()).asJava,
+            guesses
+              .flatMap(guess =>
+                guess.range.map(range =>
+                  new Location(guess.path.toURI.toString(), range.toLsp)
+                )
+              )
+              .asJava,
             ident.value,
             None,
             None,

@@ -366,19 +366,26 @@ class DefinitionLspSuite
           |}
           |/a/src/main/scala/a/Main.scala
           |package a
+          |
           |class Main
           |object Main {
           |  // Error that makes the whole target not compile
           |  val name: Int = "John"
           |  case class Bar()
+          |  val ver: Version = null
           |}
+          |
+          |class Version
+          |
           |/b/src/main/scala/b/Foo.scala
           |package b
           |import a.Main
+          |import a.Main.Bar
           |
           |object Foo{
+          |  val ver: Version = null
           |  val nm = Main.name
-          |  val foo = Main.Bar()
+          |  val foo = Bar()
           |  val m: Main = new Main()
           |}
           |""".stripMargin
@@ -387,7 +394,7 @@ class DefinitionLspSuite
       _ <- server.didOpen("b/src/main/scala/b/Foo.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/a/Main.scala:5:19: error: type mismatch;
+        """|a/src/main/scala/a/Main.scala:6:19: error: type mismatch;
            | found   : String("John")
            | required: Int
            |  val name: Int = "John"
@@ -398,20 +405,114 @@ class DefinitionLspSuite
         server.workspaceDefinitions,
         """|/a/src/main/scala/a/Main.scala
            |package a
-           |class Main/*L1*/
-           |object Main/*L2*/ {
+           |
+           |class Main/*L2*/
+           |object Main/*L3*/ {
            |  // Error that makes the whole target not compile
-           |  val name/*L4*/: Int/*Int.scala*/ = "John"
-           |  case class Bar/*L5*/()
+           |  val name/*L5*/: Int/*Int.scala*/ = "John"
+           |  case class Bar/*L6*/()
+           |  val ver/*L7*/: Version/*L10*/ = null
            |}
+           |
+           |class Version/*L10*/
+           |
            |/b/src/main/scala/b/Foo.scala
            |package b
-           |import a/*<no symbol>*/.Main/*;Main.scala:1;Main.scala:2*/
+           |import a/*<no symbol>*/.Main/*;Main.scala:2;Main.scala:3*/
+           |import a/*<no symbol>*/.Main/*Main.scala:3*/.Bar/*Main.scala:6*/
            |
-           |object Foo/*L3*/{
-           |  val nm/*L4*/ = Main/*Main.scala:2*/.name/*Main.scala:4*/
-           |  val foo/*L5*/ = Main/*Main.scala:2*/.Bar/*Main.scala:5*/()
-           |  val m/*L6*/: Main/*Main.scala:1*/ = new Main/*Main.scala:1*/()
+           |object Foo/*L4*/{
+           |  val ver/*<no symbol>*/: Version/*<no symbol>*/ = null
+           |  val nm/*<no symbol>*/ = Main/*Main.scala:3*/.name/*Main.scala:5*/
+           |  val foo/*<no symbol>*/ = Bar/*Main.scala:6*/()
+           |  val m/*<no symbol>*/: Main/*Main.scala:2*/ = new Main/*Main.scala:2*/()
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("fallback-to-workspace-search-shadowing") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": {},
+          |  "b": { "dependsOn": [ "a" ] }
+          |
+          |}
+          |/a/src/main/scala/a/Main.scala
+          |package a
+          |
+          |object Main {
+          |  val name: Int = "John"
+          |  object Other
+          |}
+          |
+          |object Main2 {
+          |  object Other
+          |}
+          |
+          |
+          |/b/src/main/scala/b/Foo.scala
+          |package b
+          |
+          |object Foo {
+          |  import a.Main.Other
+          |  val other = Other
+          |}
+          |object Foo2 {
+          |  import a.Main2.Other
+          |  val other = Other
+          |}
+          |object Foo3 {
+          |  val Foo = ""
+          |  Foo
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didOpen("b/src/main/scala/b/Foo.scala")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/a/Main.scala:4:19: error: type mismatch;
+           | found   : String("John")
+           | required: Int
+           |  val name: Int = "John"
+           |                  ^^^^^^
+           |""".stripMargin,
+      )
+      _ = assertNoDiff(
+        server.workspaceDefinitions,
+        """|/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |object Main/*L2*/ {
+           |  val name/*L3*/: Int/*Int.scala*/ = "John"
+           |  object Other/*L4*/
+           |}
+           |
+           |object Main2/*L7*/ {
+           |  object Other/*L8*/
+           |}
+           |
+           |
+           |/b/src/main/scala/b/Foo.scala
+           |package b
+           |
+           |object Foo/*L2*/ {
+           |  import a/*<no symbol>*/.Main/*Main.scala:2*/.Other/*Main.scala:4*/
+           |  val other/*<no symbol>*/ = Other/*Main.scala:4*/
+           |}
+           |object Foo2/*L6*/ {
+           |  import a/*<no symbol>*/.Main2/*Main.scala:7*/.Other/*Main.scala:8*/
+           |  val other/*<no symbol>*/ = Other/*Main.scala:8*/
+           |}
+           |object Foo3/*L10*/ {
+           |  val Foo/*L11*/ = ""
+           |  Foo/*L11*/
            |}
            |""".stripMargin,
       )
