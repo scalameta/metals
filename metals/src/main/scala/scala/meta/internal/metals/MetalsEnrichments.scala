@@ -42,6 +42,8 @@ import scala.meta.internal.mtags.MtagsEnrichments
 import scala.meta.internal.parsing.EmptyResult
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
+import scala.meta.internal.tokenizers.LegacyScanner
+import scala.meta.internal.tokenizers.LegacyTokenData
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
@@ -85,6 +87,21 @@ object MetalsEnrichments
     extends AsJavaExtensions
     with AsScalaExtensions
     with MtagsEnrichments {
+
+  implicit class XtensionScanner(scanner: LegacyScanner) {
+
+    import scala.meta.internal.tokenizers.LegacyToken._
+
+    def foreach(f: LegacyTokenData => Unit): Unit = {
+      scanner.initialize()
+      var curr = scanner.nextToken()
+      while (curr.token != EOF) {
+        f(curr)
+        curr = scanner.nextToken()
+      }
+    }
+
+  }
 
   implicit class XtensionFutureOpt[T](future: Future[Option[Future[T]]]) {
     def getOrElse(default: => T)(implicit ec: ExecutionContext): Future[T] =
