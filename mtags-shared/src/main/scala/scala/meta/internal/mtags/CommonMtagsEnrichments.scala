@@ -400,6 +400,36 @@ trait CommonMtagsEnrichments {
       }
       buffer.toList
     }
+
+    def findIndicesOf(symbols: List[Char]): List[Int] = {
+      @tailrec
+      def loop(
+          index: Int,
+          afterEscape: Boolean,
+          inBackticks: Boolean,
+          acc: List[Int]
+      ): List[Int] =
+        if (index >= text.length()) acc.reverse
+        else {
+          val c = text.charAt(index)
+          val newAcc =
+            if (symbols.contains(c) && !inBackticks && !afterEscape)
+              index :: acc
+            else acc
+          loop(
+            index + 1,
+            afterEscape = c == '\\',
+            inBackticks = c == '`' ^ inBackticks,
+            acc = newAcc
+          )
+        }
+      loop(
+        index = 0,
+        afterEscape = false,
+        inBackticks = false,
+        acc = List.empty
+      )
+    }
   }
 
   implicit class CommonXtensionList[T](lst: List[T]) {

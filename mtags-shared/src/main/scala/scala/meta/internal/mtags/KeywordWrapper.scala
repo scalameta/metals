@@ -91,4 +91,5 @@ object KeywordWrapper {
     val keywords: Set[String] = Scala3HardKeywords ++ Scala3SoftKeywords
   }
   object Scala3 extends Scala3
+
 }

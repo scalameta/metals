@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.util.Success
 import scala.util.Try
@@ -14,7 +13,7 @@ import scala.meta.XtensionTokenizeDialectInput
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags.KeywordWrapper
+import scala.meta.internal.mtags
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.tokens.Token.Comment
@@ -195,8 +194,6 @@ class ScaladocDefinitionProvider(
 }
 
 case class ScalaDocLink(rawSymbol: String, isScala3: Boolean) {
-  private val keywordWrapper =
-    if (isScala3) KeywordWrapper.Scala3 else KeywordWrapper.Scala2
 
   def toScalaMetaSymbols(
       contextSymbols: => ContextSymbols
@@ -207,7 +204,7 @@ case class ScalaDocLink(rawSymbol: String, isScala3: Boolean) {
       val symbol = fixPackages(symbol0)
 
       val optIndexOfSlash =
-        ScalaDocLink.findIndicesOf(symbol, List('/')).headOption
+        symbol.findIndicesOf(List('/')).headOption
       val withPrefixes: List[String] =
         optIndexOfSlash match {
           case Some(indexOfSlash) =>
@@ -250,7 +247,7 @@ case class ScalaDocLink(rawSymbol: String, isScala3: Boolean) {
     }
 
   private def symbolWithType: (String, ScalaDocLink.SymbolType) =
-    ScalaDocLink.findIndicesOf(rawSymbol, List('(', '[')).headOption match {
+    rawSymbol.findIndicesOf(List('(', '[')).headOption match {
       case Some(index) =>
         val toDrop = rawSymbol.length() - index
         (rawSymbol.dropRight(toDrop), ScalaDocLink.SymbolType.Method)
@@ -273,28 +270,13 @@ case class ScalaDocLink(rawSymbol: String, isScala3: Boolean) {
    * e.g. a.b.c.A.O to a/b/c/A.O
    */
   private def fixPackages(symbol: String) =
-    ScalaDocLink
-      .splitAt(symbol, '.')
-      .map { str =>
-        // drop `\` used for escaping and wrap in backticks when needed
-        // e.g. [[Foo\\.bar]] -> [[`Foo.bar`]]
-        val name = keywordWrapper.backtickWrap(
-          str.replace("\\", ""),
-          Set("this", "package"),
-        )
-        if (
-          str.headOption.exists(_.isLower) ||
-          (name.length > 1 && name.head == '`' && name.charAt(1).isLower)
-        ) s"$name/"
-        else s"$name."
-      }
-      .mkString
-      .dropRight(1)
+    mtags.Symbol.guessFromPath(symbol, isScala3).value
 }
 
 object ScalaDocLink {
   private val irrelevantWhite = "[ \\n\\t\\r]"
   private val regex = s"\\[\\[$irrelevantWhite*(.*?)$irrelevantWhite*\\]\\]".r
+
   def atOffset(
       text: String,
       offset: Int,
@@ -304,50 +286,6 @@ object ScalaDocLink {
       case m if m.start(1) <= offset && offset <= m.end(1) =>
         ScalaDocLink(m.group(1), isScala3)
     }
-
-  def splitAt(text: String, c: Char): List[String] = {
-    val indices = findIndicesOf(text, List(c))
-    splitAt(text, indices)
-  }
-
-  @tailrec
-  private def splitAt(
-      text: String,
-      indices: List[Int],
-      offset: Int = 0,
-      acc: List[String] = List.empty,
-  ): List[String] = {
-    indices match {
-      case i :: rest =>
-        val (part1, part2) = text.splitAt(i - offset)
-        splitAt(part2.tail, rest, i + 1, part1 :: acc)
-      case _ => (text :: acc).reverse
-    }
-  }
-
-  def findIndicesOf(text: String, symbols: List[Char]): List[Int] = {
-    @tailrec
-    def loop(
-        index: Int,
-        afterEscape: Boolean,
-        inBackticks: Boolean,
-        acc: List[Int],
-    ): List[Int] =
-      if (index >= text.length()) acc.reverse
-      else {
-        val c = text.charAt(index)
-        val newAcc =
-          if (symbols.contains(c) && !inBackticks && !afterEscape) index :: acc
-          else acc
-        loop(
-          index + 1,
-          afterEscape = c == '\\',
-          inBackticks = c == '`' ^ inBackticks,
-          acc = newAcc,
-        )
-      }
-    loop(index = 0, afterEscape = false, inBackticks = false, acc = List.empty)
-  }
 
   sealed trait SymbolType
   object SymbolType {
