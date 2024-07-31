@@ -120,6 +120,10 @@ final case class MetalsServerConfig(
         .filter(_.forall(Character.isDigit(_)))
         .map(_.toInt)
         .getOrElse(60),
+    enableBestEffort: Boolean = MetalsServerConfig.binaryOption(
+      "metals.enable-best-effort",
+      default = false,
+    ),
 ) {
   override def toString: String =
     List[String](
@@ -143,6 +147,7 @@ final case class MetalsServerConfig(
       s"build-server-ping-interval=${pingInterval}",
       s"worksheet-timeout=$worksheetTimeout",
       s"debug-server-start-timeout=$debugServerStartTimeout",
+      s"enable-best-effort=$enableBestEffort",
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {

@@ -612,7 +612,12 @@ object BuildServerConnection {
           Cancelable(() => listening.cancel(false))
         val result =
           try {
-            BuildServerConnection.initialize(projectRoot, server, serverName)
+            BuildServerConnection.initialize(
+              projectRoot,
+              server,
+              serverName,
+              config,
+            )
           } catch {
             case e: TimeoutException =>
               conn.cancelables.foreach(_.cancel())
@@ -705,12 +710,13 @@ object BuildServerConnection {
       workspace: AbsolutePath,
       server: MetalsBuildServer,
       serverName: String,
+      config: MetalsServerConfig,
   ): InitializeBuildResult = {
     val extraParams = BspExtraBuildParams(
       BuildInfo.javaSemanticdbVersion,
       BuildInfo.scalametaVersion,
       BuildInfo.supportedScala2Versions.asJava,
-      true,
+      config.enableBestEffort,
     )
 
     val capabilities = new BuildClientCapabilities(

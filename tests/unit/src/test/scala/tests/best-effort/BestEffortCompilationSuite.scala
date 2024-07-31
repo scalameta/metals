@@ -1,10 +1,15 @@
 package tests.`best-effort`
 
+import scala.meta.internal.metals.MetalsServerConfig
+
 import tests.BaseNonCompilingLspSuite
 
 class BestEffortCompilationSuite
     extends BaseNonCompilingLspSuite("best-effort-compilation") {
   val scalaVersion = "3.5.0-RC1"
+
+  override def serverConfig: MetalsServerConfig =
+    super.serverConfig.copy(enableBestEffort = true)
 
   override val scalaVersionConfig = s"\"scalaVersion\": \"${scalaVersion}\""
   override val saveAfterChanges: Boolean = true
