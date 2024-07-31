@@ -1,7 +1,9 @@
 package scala.meta.internal.mtags
 
+import scala.annotation.tailrec
 import scala.util.control.NonFatal
 
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 
 /**
@@ -133,4 +135,62 @@ object Symbol {
         scala.None
       }
   }
+
+  /**
+   * Heuristic to guess the symbol from the parts of the identifier.
+   *
+   * We assume that any lower case parts at the start are packages,
+   * everything later is either a class/object and then things
+   * the can belong to them. We don't care about things inside of
+   * classes, since they need to be accessed with a select on a typed
+   * variable instead.
+   *
+   * @param path a.b.c.MyClass.myMethod
+   * @param isScala3 true if the path is from a Scala 3 file
+   * @return a/b/c/MyClass.myMethod without including the suffix
+   */
+  def guessFromPath(path: String, isScala3: Boolean): Symbol = {
+    guessSymbolFromParts(splitAt(path, '.'), isScala3)
+  }
+
+  def guessSymbolFromParts(parts: List[String], isScala3: Boolean): Symbol = {
+    val keywordWrapper =
+      if (isScala3) KeywordWrapper.Scala3 else KeywordWrapper.Scala2
+
+    val (symbol, _) = parts.foldLeft(("", false)) {
+      case ((prefix, insideObject), next) =>
+        val name = keywordWrapper.backtickWrap(
+          next.replace("\\", ""),
+          Set("this", "package")
+        )
+        if (prefix.isEmpty())
+          (name, /*insideObject =*/ name.find(_.isLetter).exists(_.isUpper))
+        else if (insideObject) (prefix + "." + name, insideObject)
+        else if (name.find(_.isLetter).exists(_.isLower))
+          (prefix + "/" + name, insideObject)
+        else (prefix + "/" + name, /*insideObject =*/ true)
+    }
+    Symbol(symbol)
+  }
+
+  private def splitAt(text: String, c: Char): List[String] = {
+    val indices = text.findIndicesOf(List(c))
+    splitAt(text, indices)
+  }
+
+  @tailrec
+  private def splitAt(
+      text: String,
+      indices: List[Int],
+      offset: Int = 0,
+      acc: List[String] = List.empty
+  ): List[String] = {
+    indices match {
+      case i :: rest =>
+        val (part1, part2) = text.splitAt(i - offset)
+        splitAt(part2.tail, rest, i + 1, part1 :: acc)
+      case _ => (text :: acc).reverse
+    }
+  }
+
 }

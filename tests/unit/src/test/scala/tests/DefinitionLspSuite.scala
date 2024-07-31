@@ -110,7 +110,7 @@ class DefinitionLspSuite
            |object Main/*L5*/ extends App/*App.scala*/ {
            |  val helloMessage/*<no symbol>*/ = Message/*Message.java:1*/.message/*Message.java:2*/
            |  new java.io.PrintStream/*PrintStream.java*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java*/())
-           |  println/*Predef.scala*/(message/*L4*/)
+           |  println/*Predef.scala*/(message/*<no symbol>*/)
            |}
            |/b/src/main/scala/a/MainSuite.scala
            |>>>>>>>/*<no symbol>*/
@@ -121,7 +121,7 @@ class DefinitionLspSuite
            |import org.scalatest.funsuite.AnyFunSuite/*AnyFunSuite.scala*/
            |object MainSuite/*L6*/ extends AnyFunSuite/*AnyFunSuite.scala*/ {
            |  test/*AnyFunSuiteLike.scala*/(testName/*<no symbol>*/) {
-           |    val condition/*L8*/ = Main/*Main.scala:5*/.message/*Main.scala:4*/.contains/*String.java*/("Hello")
+           |    val condition/*L8*/ = Main/*Main.scala:5*/.message/*<no symbol>*/.contains/*String.java*/("Hello")
            |    assert/*Assertions.scala*/(condition/*L8*/)
            |  }
            |}
@@ -447,7 +447,7 @@ class DefinitionLspSuite
           |package a
           |
           |object Main {
-          |  val name: Int = "John"
+          |  val `na-me`: Int = "John"
           |  object Other
           |}
           |
@@ -462,6 +462,7 @@ class DefinitionLspSuite
           |object Foo {
           |  import a.Main.Other
           |  val other = Other
+          |  a.Main.`na-me`
           |}
           |object Foo2 {
           |  import a.Main2.Other
@@ -477,11 +478,11 @@ class DefinitionLspSuite
       _ <- server.didOpen("b/src/main/scala/b/Foo.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/scala/a/Main.scala:4:19: error: type mismatch;
+        """|a/src/main/scala/a/Main.scala:4:22: error: type mismatch;
            | found   : String("John")
            | required: Int
-           |  val name: Int = "John"
-           |                  ^^^^^^
+           |  val `na-me`: Int = "John"
+           |                     ^^^^^^
            |""".stripMargin,
       )
       _ = assertNoDiff(
@@ -490,7 +491,7 @@ class DefinitionLspSuite
            |package a
            |
            |object Main/*L2*/ {
-           |  val name/*L3*/: Int/*Int.scala*/ = "John"
+           |  val `na-me`/*L3*/: Int/*Int.scala*/ = "John"
            |  object Other/*L4*/
            |}
            |
@@ -505,14 +506,15 @@ class DefinitionLspSuite
            |object Foo/*L2*/ {
            |  import a/*<no symbol>*/.Main/*Main.scala:2*/.Other/*Main.scala:4*/
            |  val other/*<no symbol>*/ = Other/*Main.scala:4*/
+           |  a/*<no symbol>*/.Main/*Main.scala:2*/.`na-me`/*Main.scala:3*/
            |}
-           |object Foo2/*L6*/ {
+           |object Foo2/*L7*/ {
            |  import a/*<no symbol>*/.Main2/*Main.scala:7*/.Other/*Main.scala:8*/
            |  val other/*<no symbol>*/ = Other/*Main.scala:8*/
            |}
-           |object Foo3/*L10*/ {
-           |  val Foo/*L11*/ = ""
-           |  Foo/*L11*/
+           |object Foo3/*L11*/ {
+           |  val Foo/*L12*/ = ""
+           |  Foo/*L12*/
            |}
            |""".stripMargin,
       )

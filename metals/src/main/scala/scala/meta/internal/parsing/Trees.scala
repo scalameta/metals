@@ -57,7 +57,7 @@ final class Trees(
   def packageAtPosition(
       source: AbsolutePath,
       lspPos: l.Position,
-  ) = {
+  ): Option[String] = {
 
     def loop(t: Tree, pos: Position, acc: String): Option[String] = {
       t match {
