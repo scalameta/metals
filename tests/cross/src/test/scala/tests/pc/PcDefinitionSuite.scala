@@ -151,6 +151,24 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
   )
 
   check(
+    "no-symbol",
+    """|
+       |object Main {
+       |  Idont@@Exist
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "no-symbol-advanced",
+    """|
+       |object Main {
+       | val a = Idont@@Exist.name
+       |}
+       |""".stripMargin
+  )
+
+  check(
     "new",
     """|
        |object Main {
