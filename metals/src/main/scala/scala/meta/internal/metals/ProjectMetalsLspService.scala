@@ -664,14 +664,11 @@ class ProjectMetalsLspService(
               () => connect(CreateSession()),
             )
             .flatMap { _ =>
-              userConfig.bloopJvmProperties
-                .map(
-                  bloopServers.ensureDesiredJvmSettings(
-                    _,
-                    () => connect(CreateSession()),
-                  )
-                )
-                .getOrElse(Future.unit)
+              bloopServers.checkPropertiesChanged(
+                old,
+                newConfig,
+                () => connect(CreateSession()),
+              )
             }
             .flatMap { _ =>
               if (userConfig.javaHome != old.javaHome) {
