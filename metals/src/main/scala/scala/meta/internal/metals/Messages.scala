@@ -356,6 +356,32 @@ object Messages {
     }
   }
 
+  object OldBloopVersionRunning {
+
+    def yes: MessageActionItem =
+      new MessageActionItem("Yes")
+
+    def notNow: MessageActionItem =
+      new MessageActionItem("Not now")
+
+    def msg: String =
+      s"Deprecated Bloop server is still running and is taking up resources, " +
+        s"do you want to kill the process?"
+
+    def params(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(msg)
+      params.setType(MessageType.Warning)
+      params.setActions(
+        List(
+          yes,
+          notNow,
+        ).asJava
+      )
+      params
+    }
+  }
+
   object BloopVersionChange {
     def reconnect: MessageActionItem =
       new MessageActionItem("Restart Bloop")
@@ -390,8 +416,7 @@ object Messages {
     def params(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(
-        s"""|Setting Bloop JVM Properties will result in updating Bloop's global Json file, by Metals.
-            |Bloop will need to be restarted in order for these changes to take effect.""".stripMargin
+        "Bloop will need to be restarted in order for these changes to take effect."
       )
       params.setType(MessageType.Warning)
       params.setActions(

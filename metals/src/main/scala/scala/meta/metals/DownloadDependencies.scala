@@ -118,7 +118,7 @@ object DownloadDependencies {
     BloopServers.fetchBloop(version) match {
       case Left(ex) =>
         throw new Exception(s"Could not pre-download Bloop $version", ex)
-      case Right((files, _)) => files.map(_.toPath)
+      case Right(files) => files.map(_.toPath)
     }
   }
 }

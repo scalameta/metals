@@ -5,11 +5,13 @@ function bloop_version {
 }
 
 export COURSIER_REPOSITORIES="central|sonatype:snapshots"
+export BLOOP_JAVA_OPTS="-Xss4m -XX:MaxInlineLevel=20 -XX:+UseZGC -XX:ZUncommitDelay=30 -XX:ZCollectionInterval=5 -XX:+IgnoreUnrecognizedVMOptions -Dbloop.ignore-sig-int=true -Xmx1G"
 
 mkdir -p ~/.bloop
-cp bin/bloop.json ~/.bloop/bloop.json
 curl -Lo coursier https://git.io/coursier-cli && chmod +x coursier
-./coursier launch -r sonatype:snapshots ch.epfl.scala:bloopgun-core_2.13:$(bloop_version) -- about
+./coursier launch -M bloop.cli.Bloop -r sonatype:snapshots ch.epfl.scala:cli_2.13:$(bloop_version) -- about
+
+cat ~/.local/share/scalacli/bloop/daemon/output
 
 rm .jvmopts
 touch .jvmopts

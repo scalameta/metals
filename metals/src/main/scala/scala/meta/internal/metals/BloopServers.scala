@@ -17,15 +17,14 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.FiniteDuration
-import scala.util.Failure
 import scala.util.Properties
-import scala.util.Success
-import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.bsp.ConnectionBspStatus
-import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.Messages.OldBloopVersionRunning
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 
@@ -34,7 +33,6 @@ import bloop.rifle.BloopRifleConfig
 import bloop.rifle.BloopRifleLogger
 import bloop.rifle.BspConnection
 import bloop.rifle.BspConnectionAddress
-import org.eclipse.lsp4j.MessageType
 
 /**
  * Establishes a connection with a bloop server using Bloop Launcher.
@@ -52,7 +50,7 @@ final class BloopServers(
     client: MetalsBuildClient,
     languageClient: MetalsLanguageClient,
     tables: Tables,
-    config: MetalsServerConfig,
+    serverConfig: MetalsServerConfig,
     workDoneProgress: WorkDoneProgress,
     sh: ScheduledExecutorService,
     projectRoot: AbsolutePath,
@@ -60,18 +58,15 @@ final class BloopServers(
 
   import BloopServers._
 
-  private val bloopJsonPath: Option[AbsolutePath] =
-    getBloopFilePath(fileName = "bloop.json")
-
-  // historically used file created by Metals
-  // now we just delete it if existed to cleanup
-  private val bloopLockFile: Option[AbsolutePath] =
-    getBloopFilePath(fileName = "created_by_metals.lock")
-
   private def metalsJavaHome = sys.props.get("java.home")
 
   def shutdownServer(): Boolean = {
-    val retCode = BloopRifle.exit(bloopConfig, projectRoot.toNIO, bloopLogger)
+    // user config is just useful for starting
+    val retCode = BloopRifle.exit(
+      bloopConfig(userConfig = None),
+      projectRoot.toNIO,
+      bloopLogger,
+    )
     val result = retCode == 0
     if (!result) {
       scribe.warn("There were issues stopping the Bloop server.")
@@ -97,7 +92,7 @@ final class BloopServers(
         () => connect(bloopVersionOpt, userConfiguration),
         tables.dismissedNotifications.ReconnectBsp,
         tables.dismissedNotifications.RequestTimeout,
-        config,
+        serverConfig,
         name,
         bspStatusOpt,
         workDoneProgress = workDoneProgress,
@@ -147,198 +142,34 @@ final class BloopServers(
     }
   }
 
-  private def writeJVMPropertiesToBloopGlobalJsonFile(
-      maybeBloopJvmProperties: List[String],
-      newJavaHome: Option[String],
-  ): Try[Unit] = Try {
-    if (newJavaHome.isDefined || maybeBloopJvmProperties.nonEmpty) {
-      val javaOptionsField =
-        if (maybeBloopJvmProperties.nonEmpty)
-          Some(
-            "javaOptions" -> ujson.Arr(
-              maybeBloopJvmProperties.map(opt => ujson.Str(opt.trim())): _*
-            )
-          )
-        else None
-      val fields: List[(String, ujson.Value)] =
-        List(
-          newJavaHome.map(v => "javaHome" -> ujson.Str(v.trim())),
-          javaOptionsField,
-        ).flatten
-      val obj = ujson.Obj.from(fields)
-      val jvmPropertiesString = ujson.write(obj)
-
-      bloopJsonPath.foreach(_.writeText(jvmPropertiesString))
-      bloopLockFile.foreach(_.deleteIfExists())
+  def checkPropertiesChanged(
+      old: UserConfiguration,
+      newConfig: UserConfiguration,
+      reconnect: () => Future[BuildChange],
+  ): Future[Unit] = {
+    if (old.bloopJvmProperties != newConfig.bloopJvmProperties) {
+      languageClient
+        .showMessageRequest(
+          Messages.BloopJvmPropertiesChange.params()
+        )
+        .asScala
+        .flatMap {
+          case item if item == Messages.BloopJvmPropertiesChange.reconnect =>
+            shutdownServer()
+            reconnect().ignoreValue
+          case _ =>
+            Future.unit
+        }
+    } else {
+      Future.unit
     }
-  }
 
-  private def updateBloopGlobalJsonFileThenRestart(
-      maybeBloopJvmProperties: List[String],
-      reconnect: () => Future[BuildChange],
-  ): Future[Unit] = {
-    languageClient
-      .showMessageRequest(
-        Messages.BloopJvmPropertiesChange.params()
-      )
-      .asScala
-      .flatMap {
-        case messageActionItem
-            if messageActionItem == Messages.BloopJvmPropertiesChange.reconnect =>
-          val javaHome = getJavaHomeForBloopJson.flatMap {
-            case AlreadyWritten(javaHome) => Some(javaHome)
-            case _ => metalsJavaHome
-          }
-          writeJVMPropertiesToBloopGlobalJsonFile(
-            maybeBloopJvmProperties,
-            javaHome,
-          ) match {
-            case Failure(exception) => Future.failed(exception)
-            case Success(_) =>
-              shutdownServer()
-              reconnect().ignoreValue
-          }
-        case _ =>
-          Future.unit
-      }
-
-  }
-
-  private def maybeLoadBloopGlobalJsonFile(
-      bloopGlobalJsonFilePath: AbsolutePath
-  ): (Option[String], List[String]) = {
-
-    val maybeLinkedHashMap =
-      bloopGlobalJsonFilePath.readTextOpt.map(ujson.read(_)).flatMap(_.objOpt)
-
-    val maybeJavaHome = for {
-      linkedHashMap <- maybeLinkedHashMap
-      javaHomeValue <- linkedHashMap.get("javaHome")
-      javaHomeStr <- javaHomeValue.strOpt
-    } yield javaHomeStr
-
-    val maybeJavaOptions = for {
-      linkedHashMap <- maybeLinkedHashMap
-      javaOptionsValue <- linkedHashMap.get("javaOptions")
-      javaOptionsValueArray <- javaOptionsValue.arrOpt
-    } yield javaOptionsValueArray.flatMap(_.strOpt).toList
-    (maybeJavaHome, maybeJavaOptions.getOrElse(Nil))
-  }
-
-  /**
-   * First we check if the user requested to update the Bloop JVM
-   * properties through the extension.
-   * <p>Through consultation with the user through appropriate
-   * dialogues we decide if we should
-   * <ul>
-   * <li>overwrite the contents of the Bloop Global Json file with the
-   * requested JVM properties and Metal's JavaHome variables; and then
-   * restart the Bloop server</li>
-   * <li>or alternatively, leave things untouched</li>
-   * </ul>
-   *
-   * @param requestedBloopJvmProperties Bloop JVM Properties requested
-   *                                    through the Metals Extension settings
-   * @param reconnect                   function to connect back to the
-   *                                    build server.
-   * @return `Future.successful` if the purpose is achieved or `Future.failure`
-   *         if a problem occurred such as lacking enough permissions to open or
-   *         write to files
-   */
-  def ensureDesiredJvmSettings(
-      requestedBloopJvmProperties: List[String],
-      reconnect: () => Future[BuildChange],
-  ): Future[Unit] = {
-    val result =
-      for {
-        bloopPath <- bloopJsonPath
-        if bloopPath.canWrite
-        (maybeBloopGlobalJsonJavaHome, maybeBloopGlobalJsonJvmProperties) =
-          maybeLoadBloopGlobalJsonFile(bloopPath)
-        if (requestedBloopJvmProperties != maybeBloopGlobalJsonJvmProperties)
-      } yield updateBloopJvmProperties(
-        requestedBloopJvmProperties,
-        reconnect,
-      )
-    result.getOrElse(Future.unit)
-  }
-
-  private def updateBloopJvmProperties(
-      maybeBloopJvmProperties: List[String],
-      reconnect: () => Future[BuildChange],
-  ): Future[Unit] = {
-    if (tables.dismissedNotifications.UpdateBloopJson.isDismissed) Future.unit
-    else {
-      updateBloopGlobalJsonFileThenRestart(
-        maybeBloopJvmProperties,
-        reconnect,
-      ) andThen {
-        case Failure(exception) =>
-          languageClient.showMessage(
-            MessageType.Error,
-            exception.getMessage,
-          )
-        case Success(_) => Future.unit
-      }
-    }
   }
 
   private def metalsJavaHome(userConfiguration: UserConfiguration) =
     userConfiguration.javaHome
       .orElse(sys.env.get("JAVA_HOME"))
       .orElse(sys.props.get("java.home"))
-
-  private def updateBloopJavaHomeBeforeLaunch(
-      userConfiguration: UserConfiguration
-  ) = {
-    // we should set up Java before running Bloop in order to not restart it
-    getJavaHomeForBloopJson match {
-      case Some(WriteMetalsJavaHome) =>
-        metalsJavaHome.foreach { newHome =>
-          bloopJsonPath.foreach { bloopPath =>
-            scribe.info(s"Setting up current java home $newHome in $bloopPath")
-          }
-        }
-        // we want to use the same java version as Metals, so it's ok to use java.home
-        writeJVMPropertiesToBloopGlobalJsonFile(
-          userConfiguration.bloopJvmProperties.getOrElse(Nil),
-          metalsJavaHome,
-        )
-      case Some(OverrideWithMetalsJavaHome(javaHome, oldJavaHome, opts)) =>
-        scribe.info(
-          s"Replacing bloop java home $oldJavaHome with java home at $javaHome."
-        )
-        writeJVMPropertiesToBloopGlobalJsonFile(opts, Some(javaHome))
-      case _ =>
-    }
-  }
-
-  private def getJavaHomeForBloopJson: Option[BloopJavaHome] =
-    bloopJsonPath match {
-      case Some(bloopPath) if !bloopPath.exists =>
-        Some(WriteMetalsJavaHome)
-      case Some(bloopPath) if bloopPath.exists =>
-        maybeLoadBloopGlobalJsonFile(bloopPath) match {
-          case (Some(javaHome), opts) =>
-            metalsJavaHome match {
-              case Some(metalsJava) =>
-                (
-                  JdkVersion.maybeJdkVersionFromJavaHome(javaHome),
-                  JdkVersion.maybeJdkVersionFromJavaHome(metalsJava),
-                ) match {
-                  case (Some(writtenVersion), Some(metalsJavaVersion))
-                      if writtenVersion.major >= metalsJavaVersion.major =>
-                    Some(AlreadyWritten(javaHome))
-                  case _ if javaHome != metalsJava =>
-                    Some(OverrideWithMetalsJavaHome(metalsJava, javaHome, opts))
-                  case _ => Some(AlreadyWritten(javaHome))
-                }
-              case None => Some(AlreadyWritten(javaHome))
-            }
-          case _ => None
-        }
-      case _ => None
-    }
 
   private lazy val bloopLogger: BloopRifleLogger = new BloopRifleLogger {
     def info(msg: => String): Unit = scribe.info(msg)
@@ -391,16 +222,60 @@ final class BloopServers(
     def bloopCliInheritStderr = false
   }
 
-  private lazy val bloopConfig = {
+  /* Added after 1.3.4, we can probably remove this in a future version.
+   */
+  private def checkOldBloopRunning(): Future[Unit] = try {
+    metalsJavaHome.flatMap { home =>
+      ShellRunner
+        .runSync(
+          List(s"${home}/bin/jps", "-l"),
+          projectRoot,
+          redirectErrorOutput = false,
+        )
+        .flatMap { processes =>
+          "(\\d+) bloop[.]Server".r
+            .findFirstMatchIn(processes)
+            .map(_.group(1).toInt)
+        }
+    } match {
+      case None => Future.unit
+      case Some(value) =>
+        languageClient
+          .showMessageRequest(
+            OldBloopVersionRunning.params()
+          )
+          .asScala
+          .map { res =>
+            Option(res) match {
+              case Some(item) if item == OldBloopVersionRunning.yes =>
+                ShellRunner.runSync(
+                  List("kill", "-9", value.toString()),
+                  projectRoot,
+                  redirectErrorOutput = false,
+                )
+              case _ =>
+            }
+          }
+    }
+  } catch {
+    case NonFatal(e) =>
+      scribe.warn(
+        "Could not check if the deprecated bloop server is still running",
+        e,
+      )
+      Future.unit
+  }
+
+  private def bloopConfig(userConfig: Option[UserConfiguration]) = {
 
     val addr = BloopRifleConfig.Address.DomainSocket(
-      config.bloopDirectory
+      serverConfig.bloopDirectory
         .orElse(getBloopFilePath("daemon"))
         .getOrElse(sys.error("user.home not set"))
         .toNIO
     )
 
-    BloopRifleConfig
+    val config = BloopRifleConfig
       .default(addr, fetchBloop _, projectRoot.toNIO.toFile)
       .copy(
         bspSocketOrPort = Some { () =>
@@ -428,18 +303,22 @@ final class BloopServers(
         bspStdout = bloopLogger.bloopBspStdout,
         bspStderr = bloopLogger.bloopBspStderr,
       )
+
+    userConfig.flatMap(_.bloopJvmProperties) match {
+      case None => config
+      case Some(opts) => config.copy(javaOpts = opts)
+    }
   }
 
   private def connect(
       bloopVersionOpt: Option[String],
       userConfiguration: UserConfiguration,
   ): Future[SocketConnection] = {
-
-    updateBloopJavaHomeBeforeLaunch(userConfiguration)
+    val config = bloopConfig(Some(userConfiguration))
 
     val maybeStartBloop = {
 
-      val running = BloopRifle.check(bloopConfig, bloopLogger)
+      val running = BloopRifle.check(config, bloopLogger)
 
       if (running) {
         scribe.info("Found a Bloop server running")
@@ -454,13 +333,15 @@ final class BloopServers(
           case None => "java"
         }
         val version = bloopVersionOpt.getOrElse(defaultBloopVersion)
-        BloopRifle.startServer(
-          bloopConfig,
-          sh,
-          bloopLogger,
-          version,
-          javaCommand,
-        )
+        checkOldBloopRunning().flatMap { _ =>
+          BloopRifle.startServer(
+            config,
+            sh,
+            bloopLogger,
+            version,
+            javaCommand,
+          )
+        }
       }
     }
 
@@ -495,7 +376,7 @@ final class BloopServers(
     def openBspConn = Future {
 
       val conn = BloopRifle.bsp(
-        bloopConfig,
+        config,
         projectRoot.toNIO,
         bloopLogger,
       )
@@ -503,7 +384,7 @@ final class BloopServers(
       val finished = Promise[Unit]()
       conn.closed.ignoreValue.onComplete(finished.tryComplete)
 
-      val socket = openConnection(conn, bloopConfig.period, bloopConfig.timeout)
+      val socket = openConnection(conn, config.period, config.timeout)
 
       SocketConnection(
         name,
@@ -543,7 +424,7 @@ object BloopServers {
   ) extends BloopJavaHome
   object WriteMetalsJavaHome extends BloopJavaHome
 
-  def fetchBloop(version: String): Either[Throwable, (Seq[File], Boolean)] = {
+  def fetchBloop(version: String): Either[Throwable, Seq[File]] = {
 
     val (org, name) = BloopRifleConfig.defaultModule.split(":", -1) match {
       case Array(org0, name0) => (org0, name0)
@@ -570,8 +451,7 @@ object BloopServers {
         .fetch()
         .asScala
         .toVector
-      val isScalaCliBloop = true
-      Right((cp, isScalaCliBloop))
+      Right(cp)
     } catch {
       case NonFatal(t) =>
         Left(t)
