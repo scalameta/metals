@@ -86,10 +86,10 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         symbol.pos.isDefined &&
         symbol.pos.source.eq(unit.source)
       ) {
+        val focused = symbol.pos.focus
         val namePos =
-          if (symbol.name.startsWith("x$") && symbol.isSynthetic)
-            symbol.pos.focus.toLsp
-          else symbol.pos.withEnd(symbol.pos.start + symbol.name.length()).toLsp
+          if (symbol.name.startsWith("x$") && symbol.isSynthetic) focused.toLsp
+          else focused.withEnd(focused.start + symbol.name.length()).toLsp
         DefinitionResultImpl(
           semanticdbSymbol(symbol),
           ju.Collections.singletonList(

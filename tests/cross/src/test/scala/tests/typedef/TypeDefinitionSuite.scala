@@ -26,15 +26,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |
        |object Main {
        |  val ts@@t = new TClass(2)
-       |}""".stripMargin,
-    compat = Map(
-      "2" ->
-        """|class <<>>TClass(i: Int)
-           |
-           |object Main {
-           |  val tst = new TClass(2)
-           |}""".stripMargin
-    )
+       |}""".stripMargin
   )
 
   check(
@@ -97,18 +89,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
       | def tst(m: TClass): Unit = {}
       |
       |  tst(new T@@Class(2))
-      |}""".stripMargin,
-    compat = Map(
-      "2" ->
-        """|class <<>>TClass(i: Int) {}
-           |
-           |object Main {
-           | def tst(m: TClass): Unit = {}
-           |
-           |  tst(new TClass(2))
-           |}
-           |""".stripMargin
-    )
+      |}""".stripMargin
   )
 
   check(
@@ -196,14 +177,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
     """|object Main {
        | class <<F@@oo>>(val x: Int)
        |}
-       |""".stripMargin,
-    compat = Map(
-      "2" ->
-        """|object Main {
-           | class <<>>Foo(val x: Int)
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -256,14 +230,7 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
     """|object Main {
        | def foo[<<T>>](param: T): T = para@@m
        |}
-       |""".stripMargin,
-    compat = Map(
-      "2" ->
-        """|object Main {
-           | def foo[<<>>T](param: T): T = param
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -410,42 +377,22 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
     "synthetic-definition-case-class",
     """|
        |class Main {
-       |  case class <<>>User(name: String, age: Int)
+       |  case class <<User>>(name: String, age: Int)
        |  def hello(u: User): Unit = ()
        |  hello(Us@@er())
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|
-           |class Main {
-           |  case class <<User>>(name: String, age: Int)
-           |  def hello(u: User): Unit = ()
-           |  hello(User())
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
     "synthetic-definition-class-constructor",
     """|
        |class Main {
-       |  class <<>>User(name: String, age: Int)
+       |  class <<User>>(name: String, age: Int)
        |  def hello(u: User): Unit = ()
        |  hello(new Us@@er())
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|
-           |class Main {
-           |  class <<User>>(name: String, age: Int)
-           |  def hello(u: User): Unit = ()
-           |  hello(new Us@@er())
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
 }
