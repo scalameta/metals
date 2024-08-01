@@ -70,11 +70,21 @@ class FallbackDefinitionProvider(
           }
           .getOrElse(List(ident.value))
 
-      val proposedCurrentPackageSymbol =
-        guessObjectOrClass(
-          trees
-            .packageAtPosition(path, pos)
-            .getOrElse("_empty_") +: proposedNameParts
+      val currentPackageStatements = trees
+        .packageStatementsAtPosition(path, pos) match {
+        case None => List("_empty_")
+        case Some(value) =>
+          // generate packages from all the package statements
+          value.foldLeft(Seq.empty[String]) { case (pre, suffix) =>
+            if (pre.isEmpty) List(suffix) else pre :+ (pre.last + "." + suffix)
+          }
+      }
+
+      val proposedCurrentPackageSymbols =
+        currentPackageStatements.flatMap(pkg =>
+          guessObjectOrClass(
+            (pkg.split("\\.").toList ++ proposedNameParts)
+          )
         )
 
       // First name in select is the one that must be imported or in scope
@@ -107,14 +117,13 @@ class FallbackDefinitionProvider(
       val fullyScopedName =
         guessObjectOrClass(proposedNameParts)
 
-      val guesses =
-        (proposedImportedSymbols ++ proposedCurrentPackageSymbol ++ fullyScopedName).distinct
+      val nonLocalGuesses =
+        (proposedImportedSymbols ++ fullyScopedName).distinct
           .flatMap { proposedSymbol =>
             index.definition(mtags.Symbol(proposedSymbol))
           }
 
-      if (guesses.nonEmpty) {
-        scribe.warn(s"Using indexes to guess the definition of ${ident.value}")
+      def toDefinition(guesses: List[mtags.SymbolDefinition]) = {
         Some(
           DefinitionResult(
             guesses
@@ -130,9 +139,28 @@ class FallbackDefinitionProvider(
             ident.value,
           )
         )
-      } else None
+      }
+      val result = if (nonLocalGuesses.nonEmpty) {
+        toDefinition(nonLocalGuesses)
+      } else {
+        // otherwise might be symbol in a local package, starting from enclosing
+        proposedCurrentPackageSymbols.reverse
+          .map(proposedSymbol => index.definition(mtags.Symbol(proposedSymbol)))
+          .find(_.nonEmpty)
+          .flatten
+          .map(dfn => toDefinition(List(dfn)))
+          .getOrElse(None)
+      }
 
+      result.foreach { _ =>
+        scribe.warn(
+          s"Could not find '${ident.value}' using presentation compiler nor semanticdb. " +
+            s"Trying to guess the definition using available information from local class context. "
+        )
+      }
+      result
     }
+
     defResult.flatten
   }
 

@@ -73,7 +73,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       if (
         symbol == null ||
         symbol == NoSymbol ||
-        symbol.isErroneous
+        symbol.isError
       ) {
         DefinitionResultImpl.empty
       } else if (symbol.hasPackageFlag) {
