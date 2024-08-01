@@ -107,13 +107,13 @@ class PcReferencesLspSuite
       """|/a/src/main/scala/Defn.scala
          |package a
          |object O {
-         |  val i@@ = 1
-         |  val k = <<i>>
+         |  val na@@me = 1
+         |  val k = <<name>>
          |}
          |/a/src/main/scala/Main.scala
          |package a
          |object Main {
-         |  val g = O.<<i>>
+         |  val g = O.<<name>>
          |}
          |""".stripMargin,
       scalaVersion,
@@ -160,7 +160,7 @@ class PcReferencesLspSuite
       includeDefinition: Boolean = true,
       defnFileName: String = "a/src/main/scala/Defn.scala",
       useGoToDef: Boolean = false,
-  ): Unit =
+  )(implicit loc: munit.Location): Unit =
     test(name) {
       cleanWorkspace()
       val fullInput =
