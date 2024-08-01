@@ -23,19 +23,10 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
     "basic",
     """|
        |object Main {
-       |  val <<>>abc = 42
+       |  val <<abc>> = 42
        |  println(a@@bc)
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|
-           |object Main {
-           |  val <<abc>> = 42
-           |  println(abc)
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -43,25 +34,13 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
     """|
        |object Main {
        |  for {
-       |    <<>>x <- List(1)
+       |    <<x>> <- List(1)
        |    y <- 1.to(x)
        |    z = y + x
        |    if y < @@x
        |  } yield y
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|object Main {
-           |  for {
-           |    <<x>> <- List(1)
-           |    y <- 1.to(x)
-           |    z = y + x
-           |    if y < x
-           |  } yield y
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -105,19 +84,10 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
     "function",
     """|
        |object Main {
-       |  val <<>>increment: Int => Int = _ + 2
+       |  val <<increment>>: Int => Int = _ + 2
        |  incre@@ment(1)
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|
-           |object Main {
-           |  val <<increment>>: Int => Int = _ + 2
-           |  increment(1)
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -236,57 +206,30 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
     "named-arg-local",
     """|
        |object Main {
-       |  def foo(<<>>arg: Int): Unit = ()
+       |  def foo(<<arg>>: Int): Unit = ()
        |
        |  foo(a@@rg = 42)
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|
-           |object Main {
-           |  def foo(<<arg>>: Int): Unit = ()
-           |
-           |  foo(arg = 42)
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
     "named-arg-multiple",
     """|object Main {
-       |  def tst(par1: Int, par2: String, <<>>par3: Boolean): Unit = {}
+       |  def tst(par1: Int, par2: String, <<par3>>: Boolean): Unit = {}
        |
        |  tst(1, p@@ar3 = true, par2 = "")
-       |}""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|object Main {
-           |  def tst(par1: Int, par2: String, <<par3>>: Boolean): Unit = {}
-           |
-           |  tst(1, p@@ar3 = true, par2 = "")
-           |}""".stripMargin
-    )
+       |}""".stripMargin
   )
 
   check(
     "named-arg-reversed",
     """|object Main {
-       |  def tst(par1: Int, <<>>par2: String): Unit = {}
+       |  def tst(par1: Int, <<par2>>: String): Unit = {}
        |
        |  tst(pa@@r2 = "foo", par1 = 1)
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|object Main {
-           |  def tst(par1: Int, <<par2>>: String): Unit = {}
-           |
-           |  tst(par2 = "foo", par1 = 1)
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -393,39 +336,21 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
   check(
     "case-class-apply",
     """|
-       |case class Foo(<<>>a: Int, b: String)
+       |case class Foo(<<a>>: Int, b: String)
        |class Main {
        |  Foo(@@a = 3, b = "42")
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|
-           |case class Foo(<<a>>: Int, b: String)
-           |class Main {
-           |  Foo(@@a = 3, b = "42")
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
     "case-class-copy",
     """|
-       |case class Foo(<<>>a: Int, b: String)
+       |case class Foo(<<a>>: Int, b: String)
        |class Main {
        |  Foo(2, "4").copy(@@a = 3, b = "42")
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|
-           |case class Foo(<<a>>: Int, b: String)
-           |class Main {
-           |  Foo(2, "4").copy(@@a = 3, b = "42")
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -441,43 +366,24 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
     "synthetic-definition-case-class",
     """|
        |class Main {
-       |  case class <<>>User(name: String, age: Int)
+       |  case class <<User>>(name: String, age: Int)
        |  def hello(u: User): Unit = ()
        |  hello(Us@@er())
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|
-           |class Main {
-           |  case class <<User>>(name: String, age: Int)
-           |  def hello(u: User): Unit = ()
-           |  hello(User())
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
     "synthetic-definition-class-constructor",
     """|
        |class Main {
-       |  class <<>>User(name: String, age: Int)
+       |  class <<User>>(name: String, age: Int)
        |  def hello(u: User): Unit = ()
        |  hello(new Us@@er())
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|
-           |class Main {
-           |  class <<User>>(name: String, age: Int)
-           |  def hello(u: User): Unit = ()
-           |  hello(new Us@@er())
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
+
   check(
     "no-definition-1",
     """|
