@@ -15,6 +15,7 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.tokenizers.LegacyScanner
+import scala.meta.internal.tokenizers.LegacyToken
 import scala.meta.internal.tokenizers.LegacyToken._
 import scala.meta.internal.tokenizers.LegacyTokenData
 import scala.meta.tokenizers.TokenizeException
@@ -275,7 +276,13 @@ class ScalaToplevelMtags(
               )
             }
           }
-          loop(indent, isAfterNewline = false, currRegion, newExpectIgnoreBody)
+          val newIndent = parseMemberDefinitionLhs(DEF)
+          loop(
+            newIndent.getOrElse(indent),
+            isAfterNewline = newIndent.isDefined,
+            currRegion,
+            newExpectIgnoreBody
+          )
         // inline extension method `extension (...) def foo = ...`
         case DEF
             if includeMembers && expectTemplate
@@ -314,7 +321,7 @@ class ScalaToplevelMtags(
             currRegion.withTermOwner(owner),
             expectTemplate
           )
-        case DEF | VAL | VAR | GIVEN
+        case t @ (DEF | VAL | VAR | GIVEN)
             if expectTemplate.map(!_.isExtension).getOrElse(true) =>
           val isImplicit =
             if (isInParenthesis(region))
@@ -322,14 +329,13 @@ class ScalaToplevelMtags(
                 _.isImplicit
               )
             else region.isImplicit
-          if (needEmitTermMember()) {
-            withOwner(currRegion.termOwner) {
-              emitTerm(currRegion, isImplicit)
-            }
-          } else scanner.mtagsNextToken()
+          withOwner(currRegion.termOwner) {
+            emitTerm(currRegion, isImplicit, needEmitTermMember())
+          }
+          val newIndent = parseMemberDefinitionLhs(t)
           loop(
-            indent,
-            isAfterNewline = false,
+            newIndent.getOrElse(indent),
+            isAfterNewline = newIndent.isDefined,
             currRegion,
             if (isInParenthesis(region)) expectTemplate else newExpectIgnoreBody
           )
@@ -348,6 +354,18 @@ class ScalaToplevelMtags(
           // skip comment because they might break indentation
           scanner.mtagsNextToken()
           loop(indent, isAfterNewline = false, currRegion, expectTemplate)
+        case EQUALS
+            if expectTemplate.exists(
+              _.ignoreBody
+            ) && dialect.allowSignificantIndentation =>
+          val nextIndent =
+            acceptWhileIndented(expectTemplate.get.indent, isInsideBody = false)
+          loop(
+            nextIndent,
+            isAfterNewline = false,
+            currRegion,
+            None
+          )
         case token
             if isWhitespace(token) && dialect.allowSignificantIndentation =>
           if (isNewline) {
@@ -360,15 +378,6 @@ class ScalaToplevelMtags(
                 resetRegion(next)
                 scanner.mtagsNextToken()
                 loop(0, isAfterNewline = true, next, None)
-              // basically for braceless def
-              case Some(expect) if expect.ignoreBody =>
-                val nextIndent = acceptWhileIndented(expect.indent)
-                loop(
-                  nextIndent,
-                  isAfterNewline = false,
-                  currRegion,
-                  None
-                )
               case _ =>
                 scanner.mtagsNextToken()
                 loop(
@@ -647,6 +656,42 @@ class ScalaToplevelMtags(
 
   }
 
+  private def parseMemberDefinitionLhs(token: LegacyToken): Option[Int] =
+    token match {
+      case DEF =>
+        val ident = parseMethodArgs()
+        val ident0 = parseTypeAnnotation(ident)
+        ident0
+      case _ => parseTypeAnnotation(None)
+    }
+
+  private def parseTypeAnnotation(ident: Option[Int]) = {
+    curr.token match {
+      case COLON =>
+        val newIdent = acceptTrivia()
+        curr.token match {
+          case IDENTIFIER =>
+            acceptAllAfterOverriddenIdentifier()
+          case _ => newIdent
+        }
+      case _ => ident
+    }
+  }
+
+  @tailrec
+  private def parseMethodArgs(): Option[Int] = {
+    val additionalIdent = acceptTrivia()
+    curr.token match {
+      case LBRACKET =>
+        acceptBalancedDelimeters(LBRACKET, RBRACKET)
+        parseMethodArgs()
+      case LPAREN =>
+        acceptBalancedDelimeters(LPAREN, RPAREN)
+        parseMethodArgs()
+      case _ => additionalIdent
+    }
+  }
+
   @tailrec
   private def findOverridden(
       acc0: List[Identifier]
@@ -764,48 +809,56 @@ class ScalaToplevelMtags(
   /**
    * Enters a global element (def/val/var/given)
    */
-  def emitTerm(region: Region, isParentImplicit: Boolean): Unit = {
+  def emitTerm(
+      region: Region,
+      isParentImplicit: Boolean,
+      shouldEmit: Boolean
+  ): Unit = {
     val extensionProperty = if (isParentImplicit) EXTENSION else 0
     val kind = curr.token
     acceptTrivia()
     kind match {
       case VAL =>
         valIdentifiers.foreach(name => {
-          term(
-            name.name,
-            name.pos,
-            Kind.METHOD,
-            SymbolInformation.Property.VAL.value | extensionProperty
-          )
+          if (shouldEmit)
+            term(
+              name.name,
+              name.pos,
+              Kind.METHOD,
+              SymbolInformation.Property.VAL.value | extensionProperty
+            )
           resetRegion(region)
         })
       case VAR =>
         valIdentifiers.foreach(name => {
-          method(
-            name.name,
-            "()",
-            name.pos,
-            SymbolInformation.Property.VAR.value | extensionProperty
-          )
+          if (shouldEmit)
+            method(
+              name.name,
+              "()",
+              name.pos,
+              SymbolInformation.Property.VAR.value | extensionProperty
+            )
           resetRegion(region)
         })
       case DEF =>
         methodIdentifier.foreach(name =>
-          method(
-            name.name,
-            region.overloads.disambiguator(name.name),
-            name.pos,
-            extensionProperty
-          )
+          if (shouldEmit)
+            method(
+              name.name,
+              region.overloads.disambiguator(name.name),
+              name.pos,
+              extensionProperty
+            )
         )
       case GIVEN =>
         newGivenIdentifier.foreach { name =>
-          method(
-            name.name,
-            region.overloads.disambiguator(name.name),
-            name.pos,
-            SymbolInformation.Property.GIVEN.value
-          )
+          if (shouldEmit)
+            method(
+              name.name,
+              region.overloads.disambiguator(name.name),
+              name.pos,
+              SymbolInformation.Property.GIVEN.value
+            )
         }
     }
 
@@ -885,29 +938,43 @@ class ScalaToplevelMtags(
   /**
    * Consumes the token stream until outdent to the same indentation level
    */
-  def acceptWhileIndented(exitIndent: Int): Int = {
+  def acceptWhileIndented(
+      exitIndent: Int,
+      isInsideBody: Boolean = true
+  ): Int = {
     @tailrec
-    def loop(indent: Int, isAfterNL: Boolean): Int = {
+    def loop(indent: Int, isAfterNL: Boolean, isInsideBody: Boolean): Int = {
       if (!isDone) {
         curr.token match {
-          case _ if isNewline => scanner.mtagsNextToken(); loop(0, true)
+          case _ if isNewline =>
+            scanner.mtagsNextToken(); loop(0, true, isInsideBody)
           case token if isWhitespace(token) && isAfterNL =>
             scanner.mtagsNextToken()
-            loop(indent + 1, true)
+            loop(indent + 1, true, isInsideBody)
           case token if isWhitespace(token) =>
             scanner.mtagsNextToken()
-            loop(indent, false)
+            loop(indent, false, isInsideBody)
           case COMMENT =>
             scanner.mtagsNextToken()
-            loop(indent, false)
-          case _ if indent <= exitIndent => indent
+            loop(indent, false, isInsideBody)
+          case _ if isInsideBody && indent <= exitIndent => indent
+          case LBRACE if !isInsideBody =>
+            acceptBalancedDelimeters(LBRACE, RBRACE)
+            scanner.mtagsNextToken()
+            exitIndent
+          case EQUALS =>
+            scanner.mtagsNextToken()
+            loop(indent, false, isInsideBody)
+          case _ if !isInsideBody =>
+            acceptToStatSep()
+            loop(indent, false, isInsideBody = true)
           case _ =>
             scanner.mtagsNextToken()
-            loop(indent, false)
+            loop(indent, false, isInsideBody)
         }
       } else indent
     }
-    loop(0, true)
+    loop(0, true, isInsideBody)
   }
 
   def acceptToStatSep(): Unit = {
