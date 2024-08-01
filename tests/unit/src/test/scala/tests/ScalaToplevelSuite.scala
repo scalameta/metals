@@ -575,6 +575,38 @@ class ScalaToplevelSuite extends BaseToplevelSuite {
   )
 
   check(
+    "i6643",
+    """|package a
+       |class A {
+       |  def foo(): Int
+       |         = {
+       |  }
+       |  class B
+       |}
+       |""".stripMargin,
+    List("a/", "a/A#", "a/A#foo().", "a/A#B#"),
+    dialect = dialects.Scala3,
+    mode = All,
+  )
+
+  check(
+    "i6643-2",
+    """|package a
+       |class A {
+       |  def foo
+       |    (a: Int)
+       |    (l: Int) = {
+       |        ???
+       |  }
+       |  class B
+       |}
+       |""".stripMargin,
+    List("a/", "a/A#", "a/A#foo().", "a/A#B#"),
+    dialect = dialects.Scala3,
+    mode = All,
+  )
+
+  check(
     "companion-to-type",
     """|package s
        |type Cow = Long
@@ -638,11 +670,33 @@ class ScalaToplevelSuite extends BaseToplevelSuite {
        |      case String => Char
        |      case Array[t] => t
        |      case Iterable[t] => t
+       |  class Bar
        |}
+       |class Foo
        |""".stripMargin,
-    List("a/", "a/O.", "a/O.A# -> Set", "a/O.H# -> List", "a/O.W# -> Set",
-      "a/O.R# -> Set", "a/O.L# -> List", "a/O.Elem#"),
+    List("a/", "a/Foo#", "a/O.", "a/O.A# -> Set", "a/O.H# -> List",
+      "a/O.W# -> Set", "a/O.R# -> Set", "a/O.L# -> List", "a/O.Bar#",
+      "a/O.Elem#"),
+    dialect = dialects.Scala3,
     mode = All,
+  )
+
+  check(
+    "overridden-type-alias-2",
+    """|package a
+       |type A[X] = Set[X]
+       |type W[X] = mutable.Set[X]
+       |type Elem[X] = X match
+       |  case String => Char
+       |  case Array[t] => t
+       |  case Iterable[t] =>
+       |    class A()
+       |    a
+       |class Bar
+       |""".stripMargin,
+    List("a/", "a/Bar#", "a/Test$package."),
+    dialect = dialects.Scala3,
+    mode = ToplevelWithInner,
   )
 
   check(
@@ -695,6 +749,20 @@ class ScalaToplevelSuite extends BaseToplevelSuite {
       "_empty_/O.R# -> Int",
       "_empty_/O.T# -> A",
     ),
+    mode = All,
+  )
+
+  check(
+    "value-definition",
+    """|package a
+       |
+       |object A:
+       |  val a = null.asInstanceOf[User]
+       |  val b = 1
+       |end A
+       |""".stripMargin,
+    List("a/", "a/A.", "a/A.a.", "a/A.b."),
+    dialect = dialects.Scala3,
     mode = All,
   )
 }
