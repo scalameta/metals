@@ -54,31 +54,35 @@ final class Trees(
       }
   }
 
-  def packageAtPosition(
+  def packageStatementsAtPosition(
       source: AbsolutePath,
       lspPos: l.Position,
-  ): Option[String] = {
+  ): Option[List[String]] = {
 
-    def loop(t: Tree, pos: Position, acc: String): Option[String] = {
+    def loop(
+        t: Tree,
+        pos: Position,
+        acc: List[String],
+    ): Option[List[String]] = {
       t match {
         case t: Pkg =>
           val enclosed = enclosedChildren(t.children, pos)
           enclosed
-            .map(loop(_, pos, acc + "." + t.ref.toString()))
+            .map(loop(_, pos, acc :+ t.ref.toString()))
             .headOption
             .flatten
         case other =>
           val enclosed = enclosedChildren(other.children, pos)
           if (enclosed.isEmpty) Some(acc)
-          else enclosed.map(loop(_, pos, acc)).headOption.flatten
+          else enclosed.flatMap(loop(_, pos, acc)).headOption
       }
     }
 
     for {
       tree <- get(source)
       pos <- lspPos.toMeta(tree.pos.input)
-      lastEnc <- loop(tree, pos, "")
-    } yield lastEnc.stripPrefix(".")
+      lastEnc <- loop(tree, pos, Nil)
+    } yield lastEnc
   }
 
   /**

@@ -141,9 +141,9 @@ object Symbol {
    *
    * We assume that any lower case parts at the start are packages,
    * everything later is either a class/object and then things
-   * the can belong to them. We don't care about things inside of
-   * classes, since they need to be accessed with a select on a typed
-   * variable instead.
+   * the can belong to them. Currently we will not guess if
+   * a identifier actually belongs to a class, we assume that
+   * we can only check fields inside objects.
    *
    * @param path a.b.c.MyClass.myMethod
    * @param isScala3 true if the path is from a Scala 3 file

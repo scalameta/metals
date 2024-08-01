@@ -108,7 +108,7 @@ class DefinitionLspSuite
            |import java.util.concurrent.Future/*Future.java*/ // unused
            |import scala.util.Failure/*Try.scala*/ // unused
            |object Main/*L5*/ extends App/*App.scala*/ {
-           |  val helloMessage/*<no symbol>*/ = Message/*Message.java:1*/.message/*Message.java:2*/
+           |  val helloMessage/*L6*/ = Message/*Message.java:1*/.message/*Message.java:2*/
            |  new java.io.PrintStream/*PrintStream.java*/(new java.io.ByteArrayOutputStream/*ByteArrayOutputStream.java*/())
            |  println/*Predef.scala*/(message/*<no symbol>*/)
            |}
@@ -422,10 +422,10 @@ class DefinitionLspSuite
            |import a/*<no symbol>*/.Main/*Main.scala:3*/.Bar/*Main.scala:6*/
            |
            |object Foo/*L4*/{
-           |  val ver/*<no symbol>*/: Version/*<no symbol>*/ = null
-           |  val nm/*<no symbol>*/ = Main/*Main.scala:3*/.name/*Main.scala:5*/
-           |  val foo/*<no symbol>*/ = Bar/*Main.scala:6*/()
-           |  val m/*<no symbol>*/: Main/*Main.scala:2*/ = new Main/*Main.scala:2*/()
+           |  val ver/*L5*/: Version/*<no symbol>*/ = null
+           |  val nm/*L6*/ = Main/*Main.scala:3*/.name/*Main.scala:5*/
+           |  val foo/*L7*/ = Bar/*Main.scala:6*/()
+           |  val m/*L8*/: Main/*Main.scala:2*/ = new Main/*Main.scala:2*/()
            |}
            |""".stripMargin,
       )
@@ -505,16 +505,133 @@ class DefinitionLspSuite
            |
            |object Foo/*L2*/ {
            |  import a/*<no symbol>*/.Main/*Main.scala:2*/.Other/*Main.scala:4*/
-           |  val other/*<no symbol>*/ = Other/*Main.scala:4*/
+           |  val other/*L4*/ = Other/*Main.scala:4*/
            |  a/*<no symbol>*/.Main/*Main.scala:2*/.`na-me`/*Main.scala:3*/
            |}
            |object Foo2/*L7*/ {
            |  import a/*<no symbol>*/.Main2/*Main.scala:7*/.Other/*Main.scala:8*/
-           |  val other/*<no symbol>*/ = Other/*Main.scala:8*/
+           |  val other/*L9*/ = Other/*Main.scala:8*/
            |}
            |object Foo3/*L11*/ {
            |  val Foo/*L12*/ = ""
            |  Foo/*L12*/
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("fallback-to-workspace-search-packages") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/Main.scala
+          |package a
+          |
+          |object Main {
+          |  val name: Int = "John"
+          |}
+          |
+          |/a/src/main/scala/a/b/Foo.scala
+          |package a
+          |package b
+          |
+          |object Foo {
+          |  Main.name
+          |}
+          |
+          |/a/src/main/scala/a/b/Bar.scala
+          |package a.b
+          |
+          |object Bar {
+          |  Main.name
+          |}
+          |
+          |/a/src/main/scala/a/b/c/OtherMain.scala
+          |package a.b.c
+          |
+          |object Main {
+          |  val name: Int = "Lemon"
+          |}
+          |
+          |/a/src/main/scala/a/b/c/d/Baz.scala
+          |package a
+          |package b
+          |package c
+          |package d
+          |
+          |object Baz {
+          |  Main.name
+          |}
+          |
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didOpen("a/src/main/scala/a/b/Foo.scala")
+      _ <- server.didOpen("a/src/main/scala/a/b/Bar.scala")
+      _ <- server.didOpen("a/src/main/scala/a/b/c/OtherMain.scala")
+      _ <- server.didOpen("a/src/main/scala/a/b/c/d/Baz.scala")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/a/Main.scala:4:19: error: type mismatch;
+           | found   : String("John")
+           | required: Int
+           |  val name: Int = "John"
+           |                  ^^^^^^
+           |a/src/main/scala/a/b/Bar.scala:4:3: error: not found: value Main
+           |  Main.name
+           |  ^^^^
+           |a/src/main/scala/a/b/c/OtherMain.scala:4:19: error: type mismatch;
+           | found   : String("Lemon")
+           | required: Int
+           |  val name: Int = "Lemon"
+           |                  ^^^^^^^
+           |""".stripMargin,
+      )
+      _ = assertNoDiff(
+        server.workspaceDefinitions,
+        """|/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |object Main/*L2*/ {
+           |  val name/*L3*/: Int/*Int.scala*/ = "John"
+           |}
+           |
+           |/a/src/main/scala/a/b/Bar.scala
+           |package a.b
+           |
+           |object Bar/*L2*/ {
+           |  Main/*<no symbol>*/.name/*<no symbol>*/
+           |}
+           |
+           |/a/src/main/scala/a/b/Foo.scala
+           |package a
+           |package b
+           |
+           |object Foo/*L3*/ {
+           |  Main/*Main.scala:2*/.name/*Main.scala:3*/
+           |}
+           |
+           |/a/src/main/scala/a/b/c/OtherMain.scala
+           |package a.b.c
+           |
+           |object Main/*L2*/ {
+           |  val name/*L3*/: Int/*Int.scala*/ = "Lemon"
+           |}
+           |
+           |/a/src/main/scala/a/b/c/d/Baz.scala
+           |package a
+           |package b
+           |package c
+           |package d
+           |
+           |object Baz/*L5*/ {
+           |  Main/*OtherMain.scala:2*/.name/*OtherMain.scala:3*/
            |}
            |""".stripMargin,
       )
