@@ -198,7 +198,7 @@ abstract class MetalsLspService(
     buffers,
   )
 
-  protected val buildTargetMapper = new PreviouslyCompiledTargets
+  protected val downstreamTargets = new PreviouslyCompiledDownsteamTargets
 
   protected val scalaVersionSelector = new ScalaVersionSelector(
     () => userConfig,
@@ -220,7 +220,7 @@ abstract class MetalsLspService(
     worksheets => onWorksheetChanged(worksheets),
     onStartCompilation,
     () => userConfig,
-    buildTargetMapper,
+    downstreamTargets,
   )
   var indexingPromise: Promise[Unit] = Promise[Unit]()
   var buildServerPromise: Promise[Unit] = Promise[Unit]()
@@ -262,7 +262,7 @@ abstract class MetalsLspService(
     Option(folder),
     trees,
     buildTargets,
-    buildTargetMapper,
+    downstreamTargets,
   )
 
   protected def semanticdbs(): Semanticdbs

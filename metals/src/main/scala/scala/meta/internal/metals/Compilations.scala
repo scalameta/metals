@@ -31,7 +31,7 @@ final class Compilations(
     compileWorksheets: Seq[AbsolutePath] => Future[Unit],
     onStartCompilation: () => Unit,
     userConfiguration: () => UserConfiguration,
-    buildTargetMapper: PreviouslyCompiledTargets,
+    downstreamTargets: PreviouslyCompiledDownsteamTargets,
 )(implicit ec: ExecutionContext) {
   private val compileTimeout: Timeout =
     Timeout("compile", Duration(10, TimeUnit.MINUTES))
@@ -45,7 +45,7 @@ final class Compilations(
     ](
       buildTargets =>
         compile(timeout = Some(compileTimeout))(
-          buildTargetMapper.map(buildTargets)
+          downstreamTargets.transitiveTargetsOf(buildTargets)
         ),
       "compileBatch",
       shouldLogQueue = true,

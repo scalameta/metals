@@ -11,11 +11,13 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
  * when upstream errors get fixed, we map compilation of upstream targets to
  * appropriate downstream targets. This class holds this mapping.
  */
-class PreviouslyCompiledTargets {
+class PreviouslyCompiledDownsteamTargets {
   private val map =
     TrieMap.empty[BuildTargetIdentifier, Set[BuildTargetIdentifier]]
 
-  def map(targets: Seq[BuildTargetIdentifier]): Seq[BuildTargetIdentifier] = {
+  def transitiveTargetsOf(
+      targets: Seq[BuildTargetIdentifier]
+  ): Seq[BuildTargetIdentifier] = {
     if (map.isEmpty) targets
     else {
       val finalSet = mutable.Set[BuildTargetIdentifier]()
