@@ -1795,6 +1795,11 @@ final case class TestingServer(
     var last = List[String]()
     trees.tokenized(input).get.foreach { token =>
       val params = token.toPositionParams(identifier)
+      // Scala 3 doesn't count ` as part of the word which is the same as most editors
+      if (token.text.startsWith("`")) {
+        val position = params.getPosition()
+        position.setCharacter(position.getCharacter() + 1)
+      }
       val definition = server
         .definitionOrReferences(params, definitionOnly = true)
         .asJava
