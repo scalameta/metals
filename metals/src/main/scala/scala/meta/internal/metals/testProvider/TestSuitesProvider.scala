@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.testProvider
 
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -412,22 +413,30 @@ final class TestSuitesProvider(
   private def removeStaleTestSuites(
       symbolsPerTargets: List[SymbolsPerTarget]
   ): Map[BuildTarget, List[TestExplorerEvent]] = {
+    val removedBuildTargets =
+      index.allSuites.map(_._1).toSet -- symbolsPerTargets.map(_.target)
+    // first we want to send information about deleted build targets
+    val symbolsPerTargetsWithEmpty =
+      symbolsPerTargets ++ removedBuildTargets.map(
+        SymbolsPerTarget(_, TrieMap.empty)
+      )
     // when test suite is deleted it has to be removed from cache
-    symbolsPerTargets.map { case SymbolsPerTarget(buildTarget, testSymbols) =>
-      val fromBSP =
-        testSymbols.values
-          .map(info => FullyQualifiedName(info.fullyQualifiedName))
-          .toSet
-      val cached = index.getSuiteNames(buildTarget)
-      val diff = (cached -- fromBSP)
-      val removed = diff.foldLeft(List.empty[TestExplorerEvent]) {
-        case (deleted, unusedClassName) =>
-          index.remove(buildTarget, unusedClassName) match {
-            case Some(entry) => entry.suiteDetails.asRemoveEvent :: deleted
-            case None => deleted
-          }
-      }
-      (buildTarget, removed)
+    symbolsPerTargetsWithEmpty.map {
+      case SymbolsPerTarget(buildTarget, testSymbols) =>
+        val fromBSP =
+          testSymbols.values
+            .map(info => FullyQualifiedName(info.fullyQualifiedName))
+            .toSet
+        val cached = index.getSuiteNames(buildTarget)
+        val diff = (cached -- fromBSP)
+        val removed = diff.foldLeft(List.empty[TestExplorerEvent]) {
+          case (deleted, unusedClassName) =>
+            index.remove(buildTarget, unusedClassName) match {
+              case Some(entry) => entry.suiteDetails.asRemoveEvent :: deleted
+              case None => deleted
+            }
+        }
+        (buildTarget, removed)
     }.toMap
   }
 
