@@ -124,32 +124,27 @@ class FallbackDefinitionProvider(
           }
 
       def toDefinition(guesses: List[mtags.SymbolDefinition]) = {
-        Some(
-          DefinitionResult(
-            guesses
-              .flatMap(guess =>
-                guess.range.map(range =>
-                  new Location(guess.path.toURI.toString(), range.toLsp)
-                )
+        DefinitionResult(
+          guesses
+            .flatMap(guess =>
+              guess.range.map(range =>
+                new Location(guess.path.toURI.toString(), range.toLsp)
               )
-              .asJava,
-            ident.value,
-            None,
-            None,
-            ident.value,
-          )
+            )
+            .asJava,
+          ident.value,
+          None,
+          None,
+          ident.value,
         )
       }
       val result = if (nonLocalGuesses.nonEmpty) {
-        toDefinition(nonLocalGuesses)
+        Some(toDefinition(nonLocalGuesses))
       } else {
         // otherwise might be symbol in a local package, starting from enclosing
         proposedCurrentPackageSymbols.reverse
           .map(proposedSymbol => index.definition(mtags.Symbol(proposedSymbol)))
-          .find(_.nonEmpty)
-          .flatten
-          .map(dfn => toDefinition(List(dfn)))
-          .getOrElse(None)
+          .collectFirst { case Some(dfn) => toDefinition(List(dfn)) }
       }
 
       result.foreach { _ =>
