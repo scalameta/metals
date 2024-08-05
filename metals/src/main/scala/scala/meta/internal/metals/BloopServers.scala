@@ -33,6 +33,10 @@ import bloop.rifle.BloopRifleConfig
 import bloop.rifle.BloopRifleLogger
 import bloop.rifle.BspConnection
 import bloop.rifle.BspConnectionAddress
+import dev.dirs.ProjectDirectories
+import scala.util.Try
+// import coursier.cache.shaded.dirs.ProjectDirectories
+// import coursier.cache.shaded.dirs.GetWinDirs
 
 /**
  * Establishes a connection with a bloop server using Bloop Launcher.
@@ -97,6 +101,15 @@ final class BloopServers(
         bspStatusOpt,
         workDoneProgress = workDoneProgress,
       )
+      .recover { case NonFatal(e) =>
+        Try(
+          // Bloop output
+          BloopServers.bloopDaemonDir.resolve("output").readText
+        ).foreach {
+          scribe.error(_)
+        }
+        throw e
+      }
   }
 
   /**
@@ -270,8 +283,7 @@ final class BloopServers(
 
     val addr = BloopRifleConfig.Address.DomainSocket(
       serverConfig.bloopDirectory
-        .orElse(getBloopFilePath("daemon"))
-        .getOrElse(sys.error("user.home not set"))
+        .getOrElse(bloopDaemonDir)
         .toNIO
     )
 
@@ -281,9 +293,7 @@ final class BloopServers(
         bspSocketOrPort = Some { () =>
           val pid =
             ManagementFactory.getRuntimeMXBean.getName.takeWhile(_ != '@').toInt
-          val dir = getBloopFilePath("bsp")
-            .getOrElse(sys.error("user.home not set"))
-            .toNIO
+          val dir = bloopWorkingDir.resolve("bsp").toNIO
           if (!Files.exists(dir)) {
             Files.createDirectories(dir.getParent)
             if (Properties.isWin)
@@ -405,24 +415,20 @@ final class BloopServers(
 object BloopServers {
   val name = "Bloop"
 
-  def getBloopFilePath(fileName: String): Option[AbsolutePath] = {
-    sys.props.get("user.home").map { home =>
-      AbsolutePath(
-        Paths
-          .get(home)
-          .resolve(s".bloop/$fileName")
-      )
-    }
+  private val bloopDirectories = {
+    // Scala CLI is still used since we wanted to avoid breaking thigns
+    ProjectDirectories.from(null, null, "ScalaCli")
   }
 
-  sealed trait BloopJavaHome
-  case class AlreadyWritten(javaHome: String) extends BloopJavaHome
-  case class OverrideWithMetalsJavaHome(
-      javaHome: String,
-      oldJavaHome: String,
-      opts: List[String],
-  ) extends BloopJavaHome
-  object WriteMetalsJavaHome extends BloopJavaHome
+  lazy val bloopDaemonDir =
+    bloopWorkingDir.resolve("daemon")
+
+  lazy val bloopWorkingDir = {
+    val baseDir =
+      if (Properties.isMac) bloopDirectories.cacheDir
+      else bloopDirectories.dataLocalDir
+    AbsolutePath(Paths.get(baseDir).resolve("bloop"))
+  }
 
   def fetchBloop(version: String): Either[Throwable, Seq[File]] = {
 
