@@ -41,7 +41,7 @@ object TestGroups {
       "tests.codeactions.CompanionObjectSuite",
       "tests.codeactions.FlatMapToForComprehensionSuite",
       "tests.MtagsScala2Suite", "tests.UriEncoderDecoderSuite",
-      "tests.DidFocusWhileCompilingLspSuite", "tests.BloopJavaHomeLspSuite",
+      "tests.DidFocusWhileCompilingLspSuite",
       "tests.testProvider.ScalatestFinderSuite", "tests.ScalaCliSuite",
       "tests.FoldingRangeScala3LineFolingOnlySuite",
       "tests.debug.BreakpointScalaCliDapSuite", "tests.CallHierarchyLspSuite",
