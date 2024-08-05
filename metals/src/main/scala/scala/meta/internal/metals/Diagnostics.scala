@@ -49,6 +49,7 @@ final class Diagnostics(
     trees: Trees,
     buildTargets: BuildTargets,
     downstreamTargets: PreviouslyCompiledDownsteamTargets,
+    config: MetalsServerConfig,
 ) {
   private val diagnostics =
     TrieMap.empty[AbsolutePath, ju.Queue[Diagnostic]]
@@ -98,7 +99,9 @@ final class Diagnostics(
     // if we use best effort compilation downstream targets
     // should get recompiled even if compilation fails
     def shouldUnpublishForDownstreamTargets =
-      !buildTargets.scalaTarget(target).exists(_.isBestEffort)
+      !(buildTargets
+        .scalaTarget(target)
+        .exists(_.isBestEffort) && config.enableBestEffort)
     if (statusCode.isError && shouldUnpublishForDownstreamTargets) {
       removeInverseDependenciesDiagnostics(target)
     } else {
