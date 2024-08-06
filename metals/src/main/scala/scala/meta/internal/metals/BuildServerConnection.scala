@@ -67,7 +67,6 @@ class BuildServerConnection private (
   )
 
   @volatile private var connection = Future.successful(initialConnection)
-  initialConnection.setReconnect(() => reconnect().ignoreValue)
   private def reestablishConnection(
       original: Future[BuildServerConnection.LauncherConnection]
   ) = {
@@ -96,6 +95,8 @@ class BuildServerConnection private (
   def name: String = initialConnection.socketConnection.serverName
   private def capabilities: BuildServerCapabilities =
     initialConnection.capabilities
+
+  initialConnection.setReconnect(() => reconnect().ignoreValue)
 
   def isBloop: Boolean = name == BloopServers.name
 
