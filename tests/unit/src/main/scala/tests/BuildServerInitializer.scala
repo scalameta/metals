@@ -47,6 +47,8 @@ object QuickBuildInitializer extends BuildServerInitializer {
         case Some(workspaceFolders) => workspaceFolders.map(workspace.resolve)
         case None => List(workspace)
       }
+    // Add tracing to the build server for test purposes
+    foldersToInit.foreach(_.resolve(".metals/bsp.trace.json").touch())
     foldersToInit.foreach(QuickBuild.bloopInstall)
     for {
       initializeResult <- server.initialize(workspaceFolders)
