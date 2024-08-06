@@ -26,11 +26,12 @@ final class Compilations(
     workspace: () => AbsolutePath,
     languageClient: MetalsLanguageClient,
     refreshTestSuites: () => Unit,
-    afterSuccesfulCompilation: () => Unit,
+    afterSuccessfulCompilation: () => Unit,
     isCurrentlyFocused: b.BuildTargetIdentifier => Boolean,
     compileWorksheets: Seq[AbsolutePath] => Future[Unit],
     onStartCompilation: () => Unit,
     userConfiguration: () => UserConfiguration,
+    downstreamTargets: PreviouslyCompiledDownsteamTargets,
 )(implicit ec: ExecutionContext) {
   private val compileTimeout: Timeout =
     Timeout("compile", Duration(10, TimeUnit.MINUTES))
@@ -42,7 +43,10 @@ final class Compilations(
       b.BuildTargetIdentifier,
       Map[BuildTargetIdentifier, b.CompileResult],
     ](
-      compile(timeout = Some(compileTimeout)),
+      buildTargets =>
+        compile(timeout = Some(compileTimeout))(
+          downstreamTargets.transitiveTargetsOf(buildTargets)
+        ),
       "compileBatch",
       shouldLogQueue = true,
       Some(Map.empty),
@@ -273,7 +277,7 @@ final class Compilations(
     val result = compilation.asScala
       .andThen { case result =>
         updateCompiledTargetState(result)
-        afterSuccesfulCompilation()
+        afterSuccessfulCompilation()
 
         // See https://github.com/scalacenter/bloop/issues/1067
         classes.rebuildIndex(

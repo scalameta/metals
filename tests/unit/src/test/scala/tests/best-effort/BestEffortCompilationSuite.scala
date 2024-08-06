@@ -200,7 +200,7 @@ class BestEffortCompilationSuite
     } yield ()
   }
 
-  // we check if previous sucessful best effort compilation artefacts remain
+  // we check if previous successful best effort compilation artifacts remain
   // after an unsuccessful best effort attempt.
   // Unsuccessful best effort attempts tend surface detailed exceptions
   // from bloop, so those will show up while this test is running.

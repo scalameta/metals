@@ -367,4 +367,99 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       )
     } yield ()
   }
+
+  test("errors-in-dependency") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {},
+           |  "b": { "dependsOn": [ "a" ] }
+           |}
+           |/${A.path}
+           |${A.content("Int", "1")}
+           |/${B.path}
+           |${B.content("Int", "1")}
+        """.stripMargin
+      )
+      _ <- server.didOpen(B.path)
+      _ = assertNoDiagnostics()
+      _ <- server.didChange(B.path) { _ => B.content("String", "1") }
+      _ <- server.didSave(B.path)(identity)
+      _ = assertNoDiff(
+        client.pathDiagnostics(B.path),
+        """|b/src/main/scala/b/B.scala:4:19: error: type mismatch;
+           | found   : Int(1)
+           | required: String
+           |  val b: String = 1
+           |                  ^
+           |b/src/main/scala/b/B.scala:5:20: error: type mismatch;
+           | found   : Int
+           | required: String
+           |  val a1: String = a.A.a
+           |                   ^^^^^
+           |""".stripMargin,
+      )
+      _ <- server.didOpen(A.path)
+      _ <- server.didChange(A.path) { _ => A.content("String", "1") }
+      _ <- server.didSave(A.path)(identity)
+      _ = assertNoDiff(
+        client.pathDiagnostics(A.path),
+        """|a/src/main/scala/a/A.scala:4:19: error: type mismatch;
+           | found   : Int(1)
+           | required: String
+           |  val a: String = 1
+           |                  ^
+           |""".stripMargin,
+      )
+      // we want the diagnostics for B to disappear
+      _ = assertNoDiff(client.pathDiagnostics(B.path), "")
+
+      _ <- server.didChange(A.path) { _ => A.content("String", "\"aa\"") }
+      _ <- server.didSave(A.path)(identity)
+      _ = assertNoDiff(client.pathDiagnostics(A.path), "")
+
+      // we want the diagnostics for B to appear
+      _ = assertNoDiff(
+        client.pathDiagnostics(B.path),
+        """|b/src/main/scala/b/B.scala:4:19: error: type mismatch;
+           | found   : Int(1)
+           | required: String
+           |  val b: String = 1
+           |                  ^
+           |""".stripMargin,
+      )
+
+      _ <- server.didOpen(B.path)
+      _ <- server.didChange(B.path) { _ => B.content("String", "\"aa\"") }
+      _ <- server.didSave(B.path)(identity)
+      _ = assertNoDiagnostics()
+
+    } yield ()
+  }
+
+  object A {
+    val path = "a/src/main/scala/a/A.scala"
+    def content(tpe: String, value: String): String =
+      s"""|package a
+          |
+          |object A {
+          |  val a: $tpe = $value
+          |}
+          |""".stripMargin
+  }
+
+  object B {
+    val path = "b/src/main/scala/b/B.scala"
+    def content(tpe: String, value: String): String =
+      s"""|package b
+          |
+          |object B {
+          |  val b: $tpe = $value
+          |  val a1: $tpe = a.A.a
+          |}
+          |""".stripMargin
+  }
 }

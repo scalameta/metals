@@ -47,6 +47,9 @@ final class Diagnostics(
     statistics: StatisticsConfig,
     workspace: Option[AbsolutePath],
     trees: Trees,
+    buildTargets: BuildTargets,
+    downstreamTargets: PreviouslyCompiledDownsteamTargets,
+    config: MetalsServerConfig,
 ) {
   private val diagnostics =
     TrieMap.empty[AbsolutePath, ju.Queue[Diagnostic]]
@@ -91,11 +94,23 @@ final class Diagnostics(
       report: bsp4j.CompileReport,
       statusCode: bsp4j.StatusCode,
   ): Unit = {
+    val target = report.getTarget()
+
+    // if we use best effort compilation downstream targets
+    // should get recompiled even if compilation fails
+    def shouldUnpublishForDownstreamTargets =
+      !(buildTargets
+        .scalaTarget(target)
+        .exists(_.isBestEffort) && config.enableBestEffort)
+    if (statusCode.isError && shouldUnpublishForDownstreamTargets) {
+      removeInverseDependenciesDiagnostics(target)
+    } else {
+      downstreamTargets.remove(target)
+    }
+
     publishDiagnosticsBuffer()
 
-    val target = report.getTarget()
     compileTimer.remove(target)
-
     val status = CompilationStatus(statusCode, report.getErrors())
     compilationStatus.update(target, status)
   }
@@ -194,6 +209,28 @@ final class Diagnostics(
       publishDiagnostics(path, queue)
     } else {
       diagnosticsBuffer.add(path)
+    }
+  }
+
+  private def removeInverseDependenciesDiagnostics(
+      buildTarget: BuildTargetIdentifier
+  ) = {
+    val inverseDeps =
+      buildTargets.allInverseDependencies(buildTarget) - buildTarget
+
+    val targets = for {
+      path <- diagnostics.keySet
+      targets <- buildTargets.sourceBuildTargets(path)
+      if targets.exists(inverseDeps.apply)
+    } yield {
+      diagnostics.remove(path)
+      publishDiagnostics(path)
+      targets
+    }
+
+    val targetsSet = targets.flatten.toSet
+    if (targetsSet.nonEmpty) {
+      downstreamTargets.addMapping(buildTarget, targetsSet)
     }
   }
 
