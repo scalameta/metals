@@ -191,7 +191,11 @@ final class ReferenceProvider(
   )(implicit report: ReportContext): Future[List[ReferencesResult]] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     val textDoc = semanticdbs().textDocument(source)
-    textDoc.toOption match {
+    val supportsPcRefs =
+      buildTargets.inverseSources(source).exists(buildTargets.supportsPcRefs(_))
+    val textDocOpt =
+      if (supportsPcRefs) textDoc.toOption else textDoc.documentIncludingStale
+    textDocOpt match {
       case Some(doc) =>
         val results: List[ResolvedSymbolOccurrence] = {
           val posOccurrences =
@@ -222,6 +226,7 @@ final class ReferenceProvider(
               params.getContext.isIncludeDeclaration,
               findRealRange,
               includeSynthetics,
+              supportsPcRefs,
             ).map { locations =>
               // It's possible to return nothing is we exclude declaration
               if (
@@ -427,7 +432,9 @@ final class ReferenceProvider(
       } yield {
         val searchFiles = pathsMap(id).filter { searchFile =>
           val indexedFile = index.get(searchFile.toNIO)
-          (indexedFile.isEmpty || indexedFile.get.isStale) && !visited(
+          (indexedFile.isEmpty || indexedFile.get.shouldUsePc(
+            buildTargets
+          )) && !visited(
             searchFile
           )
         }.distinct
@@ -509,7 +516,9 @@ final class ReferenceProvider(
       val visited = scala.collection.mutable.Set.empty[AbsolutePath]
       val result = for {
         (path, entry) <- index.iterator
-        if includeStale || !entry.isStale || path.filename.isJavaFilename
+        if includeStale || !entry.shouldUsePc(
+          buildTargets
+        ) || path.filename.isJavaFilename
         if allowedBuildTargets(entry.id) &&
           isSymbol.exists(entry.bloom.mightContain)
         sourcePath = AbsolutePath(path)
@@ -628,10 +637,11 @@ final class ReferenceProvider(
       isIncludeDeclaration: Boolean,
       findRealRange: AdjustRange,
       includeSynthetics: Synthetic => Boolean,
+      supportsPcRefs: Boolean,
   ): Future[Seq[Location]] = {
     val isSymbol = alternatives + occ.symbol
     val isLocal = occ.symbol.isLocal
-    if (isLocal)
+    if (isLocal && supportsPcRefs)
       compilers
         .references(params, EmptyCancelToken, findRealRange)
         .map(_.flatMap(_.locations))
@@ -643,7 +653,8 @@ final class ReferenceProvider(
        */
       val searchLocal =
         source.isDependencySource(workspace) ||
-          buildTargets.inverseSources(source).isEmpty
+          buildTargets.inverseSources(source).isEmpty ||
+          isLocal
 
       val local =
         if (searchLocal)
@@ -659,19 +670,21 @@ final class ReferenceProvider(
           )
         else Seq.empty
 
-      val sourceContainsDefinition =
+      def sourceContainsDefinition =
         occ.role.isDefinition || snapshot.symbols.exists(
           _.symbol == occ.symbol
         )
       val workspaceRefs =
-        workspaceReferences(
-          source,
-          isSymbol,
-          isIncludeDeclaration,
-          findRealRange,
-          includeSynthetics,
-          sourceContainsDefinition,
-        )
+        if (isLocal) Seq.empty
+        else
+          workspaceReferences(
+            source,
+            isSymbol,
+            isIncludeDeclaration,
+            findRealRange,
+            includeSynthetics,
+            sourceContainsDefinition,
+          )
       Future.successful(local ++ workspaceRefs)
     }
   }

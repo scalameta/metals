@@ -507,6 +507,42 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
     } yield ()
   }
 
+  test("local-3.4.x") {
+    for {
+      _ <- initialize("""
+                        |/metals.json
+                        |{
+                        |  "a": { "scalaVersion": "3.4.2" }
+                        |}
+                        |/a/src/main/scala/a/A.scala
+                        |package a
+                        |
+                        |object A {
+                        |  def foo = {
+                        |    val bar = 1
+                        |    val g = bar
+                        |    bar
+                        |  }
+                        |}
+                        |""".stripMargin)
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      references <- server.references("a/src/main/scala/a/A.scala", "bar")
+      _ = assertNoDiff(
+        references,
+        """|a/src/main/scala/a/A.scala:5:9: info: reference
+           |    val bar = 1
+           |        ^^^
+           |a/src/main/scala/a/A.scala:6:13: info: reference
+           |    val g = bar
+           |            ^^^
+           |a/src/main/scala/a/A.scala:7:5: info: reference
+           |    bar
+           |    ^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   override def assertCheck(
       filename: String,
       edit: String,

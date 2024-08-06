@@ -15,6 +15,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.semver.SemVer.Version
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
@@ -627,6 +628,18 @@ final class BuildTargets private (
           BuildTargets.DataSeq(list.filterNot(_ == data))
       }
     }
+
+  def supportsPcRefs(id: BuildTargetIdentifier): Boolean = {
+    def scalaVersionSupportsPcReferences(scalaVersion: String) =
+      !scalaVersion.startsWith("3.4") &&
+        !MtagsResolver.removedScalaVersions
+          .get(scalaVersion)
+          .exists(Version.fromString(_) < Version.fromString("1.3.2"))
+
+    scalaTarget(id).exists(scalaTaget =>
+      scalaVersionSupportsPcReferences(scalaTaget.scalaVersion)
+    )
+  }
 }
 
 object BuildTargets {
