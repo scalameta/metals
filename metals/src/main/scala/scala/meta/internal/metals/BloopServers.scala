@@ -18,6 +18,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Properties
+import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BuildChange
@@ -34,7 +35,6 @@ import bloop.rifle.BloopRifleLogger
 import bloop.rifle.BspConnection
 import bloop.rifle.BspConnectionAddress
 import dev.dirs.ProjectDirectories
-import scala.util.Try
 // import coursier.cache.shaded.dirs.ProjectDirectories
 // import coursier.cache.shaded.dirs.GetWinDirs
 
@@ -307,7 +307,13 @@ final class BloopServers(
           }
           val socketPath = dir.resolve(s"proc-$pid")
           if (Files.exists(socketPath))
-            Files.delete(socketPath)
+            try Files.delete(socketPath)
+            catch {
+              case NonFatal(e) =>
+                // This seems to be happening sometimes in tests
+                scribe
+                  .debug("Unexpected error while deleting the BSP socket", e)
+            }
           BspConnectionAddress.UnixDomainSocket(socketPath.toFile)
         },
         bspStdout = bloopLogger.bloopBspStdout,
@@ -420,10 +426,10 @@ object BloopServers {
     ProjectDirectories.from(null, null, "ScalaCli")
   }
 
-  lazy val bloopDaemonDir =
+  lazy val bloopDaemonDir: AbsolutePath =
     bloopWorkingDir.resolve("daemon")
 
-  lazy val bloopWorkingDir = {
+  lazy val bloopWorkingDir: AbsolutePath = {
     val baseDir =
       if (Properties.isMac) bloopDirectories.cacheDir
       else bloopDirectories.dataLocalDir
