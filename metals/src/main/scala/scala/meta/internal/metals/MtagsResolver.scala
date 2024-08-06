@@ -47,7 +47,7 @@ object MtagsResolver {
    * Map of removed Scala versions since 0.11.10.
    * Points to the last Metals version that supported it.
    */
-  private val removedScalaVersions = Map(
+  val removedScalaVersions: Map[String, String] = Map(
     "2.13.1" -> "0.11.10",
     "2.13.2" -> "0.11.10",
     "2.13.3" -> "0.11.12",

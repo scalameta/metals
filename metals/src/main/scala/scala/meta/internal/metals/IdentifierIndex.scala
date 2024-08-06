@@ -68,5 +68,8 @@ object IdentifierIndex {
   ) {
     def asStale: MaybeStaleIndexEntry =
       MaybeStaleIndexEntry(id, bloom, isStale = true)
+
+    def shouldUsePc(buildTargets: BuildTargets): Boolean =
+      isStale && buildTargets.supportsPcRefs(id)
   }
 }
