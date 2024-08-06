@@ -35,8 +35,6 @@ import bloop.rifle.BloopRifleLogger
 import bloop.rifle.BspConnection
 import bloop.rifle.BspConnectionAddress
 import dev.dirs.ProjectDirectories
-// import coursier.cache.shaded.dirs.ProjectDirectories
-// import coursier.cache.shaded.dirs.GetWinDirs
 
 /**
  * Establishes a connection with a bloop server using Bloop Launcher.
