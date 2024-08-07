@@ -55,7 +55,6 @@ final class BloopServers(
     serverConfig: MetalsServerConfig,
     workDoneProgress: WorkDoneProgress,
     sh: ScheduledExecutorService,
-    projectRoot: AbsolutePath,
 )(implicit ec: ExecutionContextExecutorService) {
 
   import BloopServers._
@@ -66,7 +65,7 @@ final class BloopServers(
     // user config is just useful for starting
     val retCode = BloopRifle.exit(
       bloopConfig(userConfig = None),
-      projectRoot.toNIO,
+      bloopWorkingDir.toNIO,
       bloopLogger,
     )
     val result = retCode == 0
@@ -80,6 +79,7 @@ final class BloopServers(
   }
 
   def newServer(
+      projectRoot: AbsolutePath,
       bspTraceRoot: AbsolutePath,
       userConfiguration: UserConfiguration,
       bspStatusOpt: Option[ConnectionBspStatus],
@@ -87,8 +87,8 @@ final class BloopServers(
     val bloopVersionOpt = userConfiguration.bloopVersion
     BuildServerConnection
       .fromSockets(
-        bspTraceRoot,
         projectRoot,
+        bspTraceRoot,
         client,
         languageClient,
         () => connect(bloopVersionOpt, userConfiguration),
@@ -240,7 +240,7 @@ final class BloopServers(
       ShellRunner
         .runSync(
           List(s"${home}/bin/jps", "-l"),
-          projectRoot,
+          bloopWorkingDir,
           redirectErrorOutput = false,
         )
         .flatMap { processes =>
@@ -261,7 +261,7 @@ final class BloopServers(
               case Some(item) if item == OldBloopVersionRunning.yes =>
                 ShellRunner.runSync(
                   List("kill", "-9", value.toString()),
-                  projectRoot,
+                  bloopWorkingDir,
                   redirectErrorOutput = false,
                 )
               case _ =>
@@ -286,7 +286,7 @@ final class BloopServers(
     )
 
     val config = BloopRifleConfig
-      .default(addr, fetchBloop _, projectRoot.toNIO.toFile)
+      .default(addr, fetchBloop _, bloopWorkingDir.toNIO.toFile)
       .copy(
         bspSocketOrPort = Some { () =>
           val pid =
@@ -388,10 +388,9 @@ final class BloopServers(
     }
 
     def openBspConn = Future {
-
       val conn = BloopRifle.bsp(
         config,
-        projectRoot.toNIO,
+        bloopWorkingDir.toNIO,
         bloopLogger,
       )
 
