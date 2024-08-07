@@ -39,21 +39,21 @@ import org.eclipse.lsp4j.MessageType
 
 class ProjectMetalsLspService(
     ec: ExecutionContextExecutorService,
-    sh: ScheduledExecutorService,
+    override val sh: ScheduledExecutorService,
     serverInputs: MetalsServerInputs,
-    languageClient: ConfiguredLanguageClient,
+    override val languageClient: ConfiguredLanguageClient,
     initializeParams: InitializeParams,
-    clientConfig: ClientConfiguration,
-    statusBar: StatusBar,
+    override val clientConfig: ClientConfiguration,
+    override val statusBar: StatusBar,
     focusedDocument: () => Option[AbsolutePath],
     shellRunner: ShellRunner,
-    timerProvider: TimerProvider,
+    override val timerProvider: TimerProvider,
     initTreeView: () => Unit,
-    folder: AbsolutePath,
+    override val folder: AbsolutePath,
     folderVisibleName: Option[String],
     headDoctor: HeadDoctor,
     bspStatus: BspStatus,
-    workDoneProgress: WorkDoneProgress,
+    override val workDoneProgress: WorkDoneProgress,
     maxScalaCliServers: Int,
 ) extends MetalsLspService(
       ec,
@@ -160,40 +160,14 @@ class ProjectMetalsLspService(
   val connectionProvider: ConnectionProvider = new ConnectionProvider(
     buildToolProvider,
     compilations,
-    tables,
     buildTools,
     buffers,
     compilers,
     scalaCli,
-    folder,
     bloopServers,
     shellRunner,
     bspConfigGenerator,
     check,
-    languageClient,
-    executionContext,
-    statusBar,
-    workDoneProgress,
-    timerProvider,
-    () => indexingPromise,
-    buildData,
-    clientConfig,
-    definitionIndex,
-    referencesProvider,
-    workspaceSymbols,
-    buildTargets,
-    semanticDBIndexer,
-    fileWatcher,
-    focusedDocument,
-    focusedDocumentBuildTarget,
-    buildTargetClasses,
-    () => userConfig,
-    sh,
-    symbolDocs,
-    scalaVersionSelector,
-    sourceMapper,
-    implementationProvider,
-    resetService,
     doctor,
     initTreeView,
     diagnostics,
@@ -202,6 +176,7 @@ class ProjectMetalsLspService(
     bspGlobalDirectories,
     connectionBspStatus,
     mainBuildTargetsData,
+    this,
   )
 
   protected val onBuildChanged: BatchedFunction[AbsolutePath, Unit] =
@@ -565,7 +540,7 @@ class ProjectMetalsLspService(
     })
   }
 
-  protected def buildData(): Seq[Indexer.BuildTool] =
+  def buildData(): Seq[Indexer.BuildTool] =
     Seq(
       Indexer.BuildTool(
         "main",
@@ -889,7 +864,7 @@ class ProjectMetalsLspService(
       _ <- maybeImportScript(path).getOrElse(load())
     } yield ()
 
-  override protected def resetService(): Unit = {
+  override def resetService(): Unit = {
     super.resetService()
     treeView.reset()
   }

@@ -1,10 +1,8 @@
 package scala.meta.internal.metals
 
 import java.nio.charset.Charset
-import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
@@ -27,58 +25,26 @@ import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
-import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.scalacli.ScalaCliServers
-import scala.meta.internal.metals.watcher.FileWatcher
-import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 
 class ConnectionProvider(
     buildToolProvider: BuildToolProvider,
     compilations: Compilations,
-    tables: Tables,
     buildTools: BuildTools,
     buffers: Buffers,
     compilers: Compilers,
     scalaCli: ScalaCliServers,
-    folder: AbsolutePath,
     bloopServers: BloopServers,
     shellRunner: ShellRunner,
     bspConfigGenerator: bsp.BspConfigGenerator,
     check: () => Unit,
-    languageClient: DelegatingLanguageClient,
-    executionContext: ExecutionContextExecutorService,
-    statusBar: StatusBar,
-    workDoneProgress: WorkDoneProgress,
-    timerProvider: TimerProvider,
-    indexingPromise: () => Promise[Unit],
-    buildData: () => Seq[Indexer.BuildTool],
-    clientConfig: ClientConfiguration,
-    definitionIndex: OnDemandSymbolIndex,
-    referencesProvider: ReferenceProvider,
-    workspaceSymbols: WorkspaceSymbolProvider,
-    buildTargets: BuildTargets,
-    semanticDBIndexer: SemanticdbIndexer,
-    fileWatcher: FileWatcher,
-    focusedDocument: () => Option[AbsolutePath],
-    focusedDocumentBuildTarget: AtomicReference[BuildTargetIdentifier],
-    buildTargetClasses: BuildTargetClasses,
-    userConfig: () => UserConfiguration,
-    sh: ScheduledExecutorService,
-    symbolDocs: Docstrings,
-    scalaVersionSelector: ScalaVersionSelector,
-    sourceMapper: SourceMapper,
-    implementationProvider: ImplementationProvider,
-    resetService: () => Unit,
     doctor: Doctor,
     initTreeView: () => Unit,
     diagnostics: Diagnostics,
@@ -87,37 +53,12 @@ class ConnectionProvider(
     bspGlobalDirectories: List[AbsolutePath],
     bspStatus: bsp.ConnectionBspStatus,
     mainBuildTargetsData: TargetData,
+    indexProviders: IndexProviders,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
-    extends Indexer(
-      languageClient,
-      executionContext,
-      tables,
-      statusBar,
-      workDoneProgress,
-      timerProvider,
-      indexingPromise,
-      buildData,
-      clientConfig,
-      definitionIndex,
-      referencesProvider,
-      workspaceSymbols,
-      buildTargets,
-      semanticDBIndexer,
-      fileWatcher,
-      focusedDocument,
-      focusedDocumentBuildTarget,
-      buildTargetClasses,
-      userConfig,
-      sh,
-      symbolDocs,
-      scalaVersionSelector,
-      sourceMapper,
-      folder,
-      implementationProvider,
-      resetService,
-    )
+    extends Indexer(indexProviders)
     with Cancelable {
   import Connect.connect
+  import indexProviders._
 
   def resolveBsp(): bsp.BspResolvedResult =
     bspConnector.resolve(buildToolProvider.buildTool)
@@ -130,7 +71,7 @@ class ConnectionProvider(
     tables,
     bspGlobalDirectories,
     clientConfig.initialConfig,
-    userConfig,
+    () => userConfig,
     workDoneProgress,
   )
 
@@ -140,7 +81,7 @@ class ConnectionProvider(
     buildTools,
     languageClient,
     tables,
-    userConfig,
+    () => userConfig,
     statusBar,
     workDoneProgress,
     bspConfigGenerator,
@@ -155,7 +96,7 @@ class ConnectionProvider(
     buildTools,
     tables,
     shellRunner,
-    userConfig,
+    () => userConfig,
   )
 
   val cancelables = new MutableCancelable
@@ -185,7 +126,7 @@ class ConnectionProvider(
     val chosenBuildServer = tables.buildServers.selectedServer()
     def useBuildToolBsp(buildTool: BloopInstallProvider) =
       buildTool match {
-        case _: BuildServerProvider => userConfig().defaultBspToBuildTool
+        case _: BuildServerProvider => userConfig.defaultBspToBuildTool
         case _ => false
       }
 
@@ -238,7 +179,7 @@ class ConnectionProvider(
       maybeChooseServer(buildTool.buildServerName, isSelected)
       connect(CreateSession())
     } else if (
-      userConfig().shouldAutoImportNewProject || forceImport || isSelected ||
+      userConfig.shouldAutoImportNewProject || forceImport || isSelected ||
       buildTool.isInstanceOf[ScalaCliBuildTool]
     ) {
       connect(GenerateBspConfigAndConnect(buildTool))
@@ -292,7 +233,7 @@ class ConnectionProvider(
     def reloadAndIndex(session: BspSession): Future[BuildChange] = {
       workspaceReload.persistChecksumStatus(Status.Started, buildTool)
 
-      buildTool.ensurePrerequisites(workspaceFolder)
+      buildTool.ensurePrerequisites(folder)
       buildTool match {
         case _: BspOnly =>
           connect(CreateSession())
@@ -331,7 +272,7 @@ class ConnectionProvider(
             scribe.info(s"Skipping reload with status '${status.name}'")
             Future.successful(BuildChange.None)
           case None =>
-            if (userConfig().automaticImportBuild == AutoImportBuildKind.All) {
+            if (userConfig.automaticImportBuild == AutoImportBuildKind.All) {
               reloadAndIndex(session)
             } else {
               for {
@@ -496,7 +437,7 @@ class ConnectionProvider(
           val messageParams = IncompatibleBloopVersion.params(
             bspServerVersion,
             BuildInfo.bloopVersion,
-            isChangedInSettings = userConfig().bloopVersion != None,
+            isChangedInSettings = userConfig.bloopVersion != None,
           )
           languageClient.showMessageRequest(messageParams).asScala.foreach {
             case action if action == IncompatibleBloopVersion.shutdown =>
@@ -536,7 +477,7 @@ class ConnectionProvider(
           bspConnector.connect(
             buildToolProvider.buildTool,
             folder,
-            userConfig(),
+            userConfig,
             shellRunner,
           )
         }

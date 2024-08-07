@@ -25,19 +25,19 @@ import org.eclipse.lsp4j.InitializeParams
 
 class FallbackMetalsLspService(
     ec: ExecutionContextExecutorService,
-    sh: ScheduledExecutorService,
+    override val sh: ScheduledExecutorService,
     serverInputs: MetalsServerInputs,
-    languageClient: ConfiguredLanguageClient,
+    override val languageClient: ConfiguredLanguageClient,
     initializeParams: InitializeParams,
-    clientConfig: ClientConfiguration,
-    statusBar: StatusBar,
+    override val clientConfig: ClientConfiguration,
+    override val statusBar: StatusBar,
     focusedDocument: () => Option[AbsolutePath],
     shellRunner: ShellRunner,
-    timerProvider: TimerProvider,
-    folder: AbsolutePath,
+    override val timerProvider: TimerProvider,
+    override val folder: AbsolutePath,
     folderVisibleName: Option[String],
     headDoctor: HeadDoctor,
-    workDoneProgress: WorkDoneProgress,
+    override val workDoneProgress: WorkDoneProgress,
     bspStatus: BspStatus,
 ) extends MetalsLspService(
       ec,
@@ -74,36 +74,9 @@ class FallbackMetalsLspService(
   override val projectInfo: MetalsServiceInfo =
     MetalsServiceInfo.FallbackService
 
-  override val indexer: Indexer = Indexer(
-    languageClient,
-    executionContext,
-    tables,
-    statusBar,
-    workDoneProgress,
-    timerProvider,
-    () => indexingPromise,
-    buildData,
-    clientConfig,
-    definitionIndex,
-    referencesProvider,
-    workspaceSymbols,
-    buildTargets,
-    semanticDBIndexer,
-    fileWatcher,
-    focusedDocument,
-    focusedDocumentBuildTarget,
-    buildTargetClasses,
-    () => userConfig,
-    sh,
-    symbolDocs,
-    scalaVersionSelector,
-    sourceMapper,
-    folder,
-    implementationProvider,
-    resetService,
-  )
+  override val indexer: Indexer = Indexer(this)
 
-  protected def buildData(): Seq[BuildTool] =
+  def buildData(): Seq[BuildTool] =
     scalaCli.lastImportedBuilds.map {
       case (lastImportedBuild, buildTargetsData) =>
         Indexer

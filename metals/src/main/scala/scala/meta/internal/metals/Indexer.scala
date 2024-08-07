@@ -1,9 +1,7 @@
 package scala.meta.internal.metals
 
 import java.util.concurrent.ForkJoinPool
-import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 import java.{util => ju}
 
 import scala.build.bsp.WrappedSourceItem
@@ -13,7 +11,6 @@ import scala.collection.parallel.CollectionConverters._
 import scala.collection.parallel.ForkJoinTaskSupport
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
-import scala.concurrent.Promise
 import scala.util.control.NonFatal
 
 import scala.meta.Dialect
@@ -21,13 +18,8 @@ import scala.meta.dialects._
 import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.builds.WorkspaceReload
-import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
-import scala.meta.internal.metals.debug.BuildTargetClasses
-import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.mtags.IndexingResult
-import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.io.AbsolutePath
 
@@ -41,34 +33,8 @@ import org.eclipse.lsp4j.Position
  * Coordinates build target data fetching and caching, and the re-computation of various
  * indexes based on it.
  */
-case class Indexer(
-    languageClient: DelegatingLanguageClient,
-    executionContext: ExecutionContextExecutorService,
-    tables: Tables,
-    statusBar: StatusBar,
-    workDoneProgress: WorkDoneProgress,
-    timerProvider: TimerProvider,
-    indexingPromise: () => Promise[Unit],
-    buildData: () => Seq[Indexer.BuildTool],
-    clientConfig: ClientConfiguration,
-    definitionIndex: OnDemandSymbolIndex,
-    referencesProvider: ReferenceProvider,
-    workspaceSymbols: WorkspaceSymbolProvider,
-    buildTargets: BuildTargets,
-    semanticDBIndexer: SemanticdbIndexer,
-    fileWatcher: FileWatcher,
-    focusedDocument: () => Option[AbsolutePath],
-    focusedDocumentBuildTarget: AtomicReference[b.BuildTargetIdentifier],
-    buildTargetClasses: BuildTargetClasses,
-    userConfig: () => UserConfiguration,
-    sh: ScheduledExecutorService,
-    symbolDocs: Docstrings,
-    scalaVersionSelector: ScalaVersionSelector,
-    sourceMapper: SourceMapper,
-    workspaceFolder: AbsolutePath,
-    implementationProvider: ImplementationProvider,
-    resetService: () => Unit,
-)(implicit rc: ReportContext) {
+case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
+  import indexProviders._
 
   private implicit def ec: ExecutionContextExecutorService = executionContext
   val sharedIndices: SqlSharedIndices = new SqlSharedIndices
@@ -76,7 +42,7 @@ case class Indexer(
   var bspSession: Option[BspSession] = Option.empty[BspSession]
 
   protected val workspaceReload: WorkspaceReload = new WorkspaceReload(
-    workspaceFolder,
+    folder,
     languageClient,
     tables,
   )
@@ -90,7 +56,7 @@ case class Indexer(
         timerProvider.timedThunk("indexed workspace", onlyIf = true) {
           try indexWorkspace(check)
           finally {
-            indexingPromise().trySuccess(())
+            indexingPromise.trySuccess(())
           }
         }
       },
@@ -239,7 +205,7 @@ case class Indexer(
         TimeUnit.SECONDS,
       )
 
-    focusedDocument().foreach { doc =>
+    focusedDocument.foreach { doc =>
       buildTargets
         .inverseSources(doc)
         .foreach(focusedDocumentBuildTarget.set)
@@ -444,7 +410,7 @@ case class Indexer(
     // remove cached symbols from Jars
     // that are not used
     val usedJars = mutable.HashSet.empty[AbsolutePath]
-    val jdkSources = JdkSources(userConfig().javaHome)
+    val jdkSources = JdkSources(userConfig.javaHome)
     jdkSources match {
       case Right(zip) =>
         scribe.debug(s"Indexing JDK sources from $zip")

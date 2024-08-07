@@ -97,28 +97,31 @@ import org.eclipse.{lsp4j => l}
  */
 abstract class MetalsLspService(
     ec: ExecutionContextExecutorService,
-    sh: ScheduledExecutorService,
+    val sh: ScheduledExecutorService,
     serverInputs: MetalsServerInputs,
-    languageClient: ConfiguredLanguageClient,
+    val languageClient: ConfiguredLanguageClient,
     initializeParams: InitializeParams,
-    clientConfig: ClientConfiguration,
-    statusBar: StatusBar,
-    focusedDocument: () => Option[AbsolutePath],
+    val clientConfig: ClientConfiguration,
+    val statusBar: StatusBar,
+    getFocusedDocument: () => Option[AbsolutePath],
     shellRunner: ShellRunner,
-    timerProvider: TimerProvider,
-    folder: AbsolutePath,
+    val timerProvider: TimerProvider,
+    val folder: AbsolutePath,
     folderVisibleName: Option[String],
     headDoctor: HeadDoctor,
     bspStatus: BspStatus,
-    workDoneProgress: WorkDoneProgress,
+    val workDoneProgress: WorkDoneProgress,
     maxScalaCliServers: Int,
 ) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
     with Cancelable
-    with TextDocumentService {
+    with TextDocumentService
+    with IndexProviders {
   import serverInputs._
 
+  def focusedDocument: Option[AbsolutePath] = getFocusedDocument()
+
   @volatile
-  protected var userConfig: UserConfiguration = initialUserConfig
+  var userConfig: UserConfiguration = initialUserConfig
   protected val userConfigPromise: Promise[Unit] = Promise()
 
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
@@ -148,7 +151,7 @@ abstract class MetalsLspService(
     }
   }
 
-  protected implicit val executionContext: ExecutionContextExecutorService = ec
+  implicit val executionContext: ExecutionContextExecutorService = ec
 
   protected val embedded: Embedded = register(
     new Embedded(workDoneProgress)
@@ -172,10 +175,10 @@ abstract class MetalsLspService(
 
   protected val fingerprints = new MutableMd5Fingerprints
   protected val mtags = new Mtags
-  protected val focusedDocumentBuildTarget =
+  val focusedDocumentBuildTarget =
     new AtomicReference[b.BuildTargetIdentifier]()
-  protected val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
-  protected val symbolDocs = new Docstrings(definitionIndex)
+  val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
+  val symbolDocs = new Docstrings(definitionIndex)
   def bspSession: Option[BspSession] = indexer.bspSession
   protected val savedFiles = new ActiveFiles(time)
   protected val recentlyOpenedFiles = new ActiveFiles(time)
@@ -187,17 +190,17 @@ abstract class MetalsLspService(
   val buildTargets: BuildTargets =
     BuildTargets.from(folder, mainBuildTargetsData, tables)
 
-  protected val buildTargetClasses =
+  val buildTargetClasses =
     new BuildTargetClasses(buildTargets)
 
-  protected val sourceMapper: SourceMapper = SourceMapper(
+  val sourceMapper: SourceMapper = SourceMapper(
     buildTargets,
     buffers,
   )
 
   protected val downstreamTargets = new PreviouslyCompiledDownsteamTargets
 
-  protected val scalaVersionSelector = new ScalaVersionSelector(
+  val scalaVersionSelector = new ScalaVersionSelector(
     () => userConfig,
     buildTargets,
   )
@@ -275,7 +278,7 @@ abstract class MetalsLspService(
       connectionBspStatus,
     )
 
-  protected val workspaceSymbols: WorkspaceSymbolProvider =
+  val workspaceSymbols: WorkspaceSymbolProvider =
     new WorkspaceSymbolProvider(
       folder,
       buildTargets,
@@ -453,7 +456,7 @@ abstract class MetalsLspService(
     )
   )
 
-  protected val referencesProvider: ReferenceProvider = new ReferenceProvider(
+  val referencesProvider: ReferenceProvider = new ReferenceProvider(
     folder,
     semanticdbs,
     buffers,
@@ -491,7 +494,7 @@ abstract class MetalsLspService(
       buildTargets,
     )
 
-  protected val implementationProvider: ImplementationProvider =
+  val implementationProvider: ImplementationProvider =
     new ImplementationProvider(
       semanticdbs,
       folder,
@@ -520,7 +523,7 @@ abstract class MetalsLspService(
     symbolHierarchyOps,
   )
 
-  protected val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
+  val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
     List(
       referencesProvider,
       implementationProvider,
@@ -1019,7 +1022,7 @@ abstract class MetalsLspService(
       inlayHint: InlayHint
   ): CompletableFuture[InlayHint] = {
     CancelTokens.future { token =>
-      focusedDocument()
+      focusedDocument
         .map(path => inlayHintResolveProvider.resolve(inlayHint, path, token))
         .getOrElse(Future.successful(inlayHint))
     }
@@ -1251,7 +1254,7 @@ abstract class MetalsLspService(
       val timer = new Timer(time)
       val result =
         workspaceSymbols
-          .search(params.getQuery, token, focusedDocument())
+          .search(params.getQuery, token, focusedDocument)
           .toList
       if (clientConfig.initialConfig.statistics.isWorkspaceSymbol) {
         scribe.info(
@@ -1262,7 +1265,7 @@ abstract class MetalsLspService(
     }
 
   def workspaceSymbol(query: String): Seq[SymbolInformation] = {
-    workspaceSymbols.search(query, focusedDocument())
+    workspaceSymbols.search(query, focusedDocument)
   }
 
   def indexSources(): Future[Unit] = Future {
@@ -1318,7 +1321,7 @@ abstract class MetalsLspService(
   def cancelCompile(): Future[Unit] = Future {
     // We keep this in here to provide a way for clients that aren't work done progress cancel providers
     // to be able to cancel a long-running worksheet evaluation by canceling compilation.
-    if (focusedDocument().exists(_.isWorksheet))
+    if (focusedDocument.exists(_.isWorksheet))
       worksheetProvider.cancel()
 
     compilations.cancel()
@@ -1329,7 +1332,7 @@ abstract class MetalsLspService(
 
   def getLocationForSymbol(symbol: String): Option[Location] =
     definitionProvider
-      .fromSymbol(symbol, focusedDocument())
+      .fromSymbol(symbol, focusedDocument)
       .asScala
       .headOption
 
@@ -1528,9 +1531,9 @@ abstract class MetalsLspService(
     )
   )
 
-  protected def buildData(): Seq[Indexer.BuildTool]
+  def buildData(): Seq[Indexer.BuildTool]
 
-  protected def resetService(): Unit = {
+  def resetService(): Unit = {
     interactiveSemanticdbs.reset()
     buildClient.reset()
     semanticDBIndexer.reset()
@@ -1569,8 +1572,8 @@ abstract class MetalsLspService(
   ): Future[Unit] = {
     paths
       .find { path =>
-        if (clientConfig.isDidFocusProvider() || focusedDocument().isDefined) {
-          focusedDocument().contains(path) &&
+        if (clientConfig.isDidFocusProvider() || focusedDocument.isDefined) {
+          focusedDocument.contains(path) &&
           path.isWorksheet
         } else {
           path.isWorksheet
