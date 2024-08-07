@@ -617,13 +617,6 @@ final case class TestingServer(
 
   def assertBuildServerConnection(): Unit = {
     fullServer.folderServices.foreach { service =>
-      if (service.bspSession.isEmpty) {
-        val traceFile = service.path
-          .resolve(".metals/bsp.trace.json")
-          .readTextOpt
-          .getOrElse("")
-        scribe.error(traceFile)
-      }
       require(
         service.bspSession.isDefined,
         s"Build server ${service.path} did not initialize",

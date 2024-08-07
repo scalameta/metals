@@ -1369,6 +1369,7 @@ class Folder(
     val visibleName: Option[String],
     isKnownMetalsProject: Boolean,
 ) {
+
   lazy val isMetalsProject: Boolean =
     isKnownMetalsProject || path.resolve(".metals").exists || path
       .isMetalsProject()
