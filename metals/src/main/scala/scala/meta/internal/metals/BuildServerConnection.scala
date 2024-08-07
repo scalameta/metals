@@ -732,6 +732,7 @@ object BuildServerConnection {
         workspace.toURI.toString,
         capabilities,
       )
+
       val gson = new Gson
       val data = gson.toJsonTree(extraParams)
       params.setData(data)

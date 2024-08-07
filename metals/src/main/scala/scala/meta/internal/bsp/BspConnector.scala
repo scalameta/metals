@@ -102,6 +102,7 @@ class BspConnector(
         case ResolvedBloop =>
           bloopServers
             .newServer(
+              projectRoot,
               bspTraceRoot,
               userConfiguration,
               bspStatusOpt,

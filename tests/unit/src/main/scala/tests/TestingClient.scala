@@ -379,6 +379,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
           importScalaCliScript
         } else if (ResetWorkspace.params() == params) {
           resetWorkspace
+        } else if (OldBloopVersionRunning.params() == params) {
+          OldBloopVersionRunning.notNow
         } else if (
           params
             .getMessage()
