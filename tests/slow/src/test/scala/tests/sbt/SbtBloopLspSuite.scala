@@ -575,7 +575,9 @@ class SbtBloopLspSuite
     cleanWorkspace()
     for {
       _ <- initialize(
-        s"""|/project/plugins.sbt
+        s"""|/project/build.properties
+            |sbt.version=$sbtVersion
+            |/project/plugins.sbt
             |addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.21")
             |
             |/build.sbt

@@ -11,8 +11,10 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.attribute.PosixFilePermissions
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.atomic.AtomicInteger
 
 import scala.annotation.tailrec
+import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -61,10 +63,12 @@ final class BloopServers(
 
   private def metalsJavaHome = sys.props.get("java.home")
 
+  private val folderIdMap = TrieMap.empty[AbsolutePath, Int]
+
   def shutdownServer(): Boolean = {
-    // user config is just useful for starting
+    // user config is just useful for starting a new bloop server or connection
     val retCode = BloopRifle.exit(
-      bloopConfig(userConfig = None),
+      bloopConfig(userConfig = None, projectRoot = None),
       bloopWorkingDir.toNIO,
       bloopLogger,
     )
@@ -91,7 +95,7 @@ final class BloopServers(
         bspTraceRoot,
         client,
         languageClient,
-        () => connect(bloopVersionOpt, userConfiguration),
+        () => connect(projectRoot, bloopVersionOpt, userConfiguration),
         tables.dismissedNotifications.ReconnectBsp,
         tables.dismissedNotifications.RequestTimeout,
         serverConfig,
@@ -277,7 +281,10 @@ final class BloopServers(
       Future.unit
   }
 
-  private def bloopConfig(userConfig: Option[UserConfiguration]) = {
+  private def bloopConfig(
+      userConfig: Option[UserConfiguration],
+      projectRoot: Option[AbsolutePath],
+  ) = {
 
     val addr = BloopRifleConfig.Address.DomainSocket(
       serverConfig.bloopDirectory
@@ -303,7 +310,16 @@ final class BloopServers(
                   .asFileAttribute(PosixFilePermissions.fromString("rwx------")),
               )
           }
-          val socketPath = dir.resolve(s"proc-$pid")
+          // We need to use a different socket for each folder, since it's a separate connection
+          val uniqueFolderId = projectRoot
+            .map { path =>
+              this.folderIdMap
+                .getOrElseUpdate(path, connectionCounter.incrementAndGet())
+                .toString()
+            }
+            .getOrElse("")
+
+          val socketPath = dir.resolve(s"$pid-$uniqueFolderId")
           if (Files.exists(socketPath))
             try Files.delete(socketPath)
             catch {
@@ -325,10 +341,11 @@ final class BloopServers(
   }
 
   private def connect(
+      projectRoot: AbsolutePath,
       bloopVersionOpt: Option[String],
       userConfiguration: UserConfiguration,
   ): Future[SocketConnection] = {
-    val config = bloopConfig(Some(userConfiguration))
+    val config = bloopConfig(Some(userConfiguration), Some(projectRoot))
 
     val maybeStartBloop = {
 
@@ -417,6 +434,9 @@ final class BloopServers(
 
 object BloopServers {
   val name = "Bloop"
+
+  // Needed for creating unique socket files for each bloop connection
+  private[BloopServers] val connectionCounter = new AtomicInteger(0)
 
   private val bloopDirectories = {
     // Scala CLI is still used since we wanted to avoid breaking thigns
