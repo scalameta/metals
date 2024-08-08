@@ -81,6 +81,7 @@ class WorkspaceFoldersSuite
       _ = assert(server.fullServer.nonScalaProjects.length == 1)
       _ = writeLayout(
         s"""|$newScalaFile
+            |//> using scala ${V.scala213}
             |package a
             |object O {
             | val i: Int = "aaa"
@@ -92,8 +93,9 @@ class WorkspaceFoldersSuite
       _ = assert(server.fullServer.folderServices.length == 2)
       _ = assertNoDiff(
         server.client.pathDiagnostics(s"notYetScalaProject$newScalaFile"),
-        s"""|notYetScalaProject$newScalaFile:3:15: error: Found:    ("aaa" : String)
-            |Required: Int
+        s"""|notYetScalaProject/a/src/main/scala/A.scala:4:15: error: type mismatch;
+            | found   : String("aaa")
+            | required: Int
             | val i: Int = "aaa"
             |              ^^^^^
             |""".stripMargin,

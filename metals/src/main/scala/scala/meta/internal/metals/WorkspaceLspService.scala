@@ -754,7 +754,7 @@ class WorkspaceLspService(
         foreachSeqIncludeFallback(_.indexSources(), ignoreValue = true)
       case ServerCommands.RestartBuildServer() =>
         onCurrentFolder(
-          _.restartBspServer().ignoreValue,
+          _.connect(CreateSession(shutdownBuildServer = true)).ignoreValue,
           ServerCommands.RestartBuildServer.title,
         ).asJavaObject
       case ServerCommands.GenerateBspConfig() =>
@@ -764,19 +764,19 @@ class WorkspaceLspService(
         ).asJavaObject
       case ServerCommands.ImportBuild() =>
         onCurrentFolder(
-          _.slowConnectToBuildServer(forceImport = true),
+          _.connectionProvider.slowConnectToBuildServer(forceImport = true),
           ServerCommands.ImportBuild.title,
           default = () => BuildChange.None,
         ).asJavaObject
       case ServerCommands.ConnectBuildServer() =>
         onCurrentFolder(
-          _.quickConnectToBuildServer(),
+          _.connectionProvider.quickConnectToBuildServer(),
           ServerCommands.ConnectBuildServer.title,
           default = () => BuildChange.None,
         ).asJavaObject
       case ServerCommands.DisconnectBuildServer() =>
         onCurrentFolder(
-          _.disconnectOldBuildServer(),
+          _.connect(Disconnect(shutdownBuildServer = false)).ignoreValue,
           ServerCommands.DisconnectBuildServer.title,
         ).asJavaObject
       case ServerCommands.DecodeFile(uri) =>

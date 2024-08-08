@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.concurrent.Promise
 
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.Indexer.BuildTool
@@ -24,19 +25,19 @@ import org.eclipse.lsp4j.InitializeParams
 
 class FallbackMetalsLspService(
     ec: ExecutionContextExecutorService,
-    sh: ScheduledExecutorService,
+    override val sh: ScheduledExecutorService,
     serverInputs: MetalsServerInputs,
-    languageClient: ConfiguredLanguageClient,
+    override val languageClient: ConfiguredLanguageClient,
     initializeParams: InitializeParams,
-    clientConfig: ClientConfiguration,
-    statusBar: StatusBar,
+    override val clientConfig: ClientConfiguration,
+    override val statusBar: StatusBar,
     focusedDocument: () => Option[AbsolutePath],
     shellRunner: ShellRunner,
-    timerProvider: TimerProvider,
-    folder: AbsolutePath,
+    override val timerProvider: TimerProvider,
+    override val folder: AbsolutePath,
     folderVisibleName: Option[String],
     headDoctor: HeadDoctor,
-    workDoneProgress: WorkDoneProgress,
+    override val workDoneProgress: WorkDoneProgress,
     bspStatus: BspStatus,
 ) extends MetalsLspService(
       ec,
@@ -57,7 +58,7 @@ class FallbackMetalsLspService(
       maxScalaCliServers = 10,
     ) {
 
-  buildServerPromise.success(())
+  val buildServerPromise: Promise[Unit] = Promise.successful(())
   indexingPromise.success(())
 
   private val files: AtomicReference[Set[AbsolutePath]] = new AtomicReference(
@@ -73,7 +74,9 @@ class FallbackMetalsLspService(
   override val projectInfo: MetalsServiceInfo =
     MetalsServiceInfo.FallbackService
 
-  protected def buildData(): Seq[BuildTool] =
+  override val indexer: Indexer = Indexer(this)
+
+  def buildData(): Seq[BuildTool] =
     scalaCli.lastImportedBuilds.map {
       case (lastImportedBuild, buildTargetsData) =>
         Indexer
