@@ -41,9 +41,9 @@ class BuildServerConnectionLspSuite
     } yield ()
   }
 
-  test("bloop-version-change".ignore) {
+  test("bloop-version-change") {
     cleanWorkspace()
-    val updatedBloopVersion = "1.4.0-RC1-76-1488031d"
+    val updatedBloopVersion = "2.0.0-RC1-2-62717f42-SNAPSHOT"
     for {
       _ <- initialize(
         s"""|/metals.json
