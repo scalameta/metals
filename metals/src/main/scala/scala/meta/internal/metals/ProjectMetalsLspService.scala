@@ -155,6 +155,7 @@ class ProjectMetalsLspService(
     tables,
     clientConfig.initialConfig,
     workDoneProgress,
+    sh,
   )
 
   val connectionProvider: ConnectionProvider = new ConnectionProvider(

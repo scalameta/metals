@@ -287,9 +287,7 @@ final class BloopServers(
   ) = {
 
     val addr = BloopRifleConfig.Address.DomainSocket(
-      serverConfig.bloopDirectory
-        .getOrElse(bloopDaemonDir)
-        .toNIO
+      bloopDaemonDir.toNIO
     )
 
     val config = BloopRifleConfig
@@ -439,7 +437,7 @@ object BloopServers {
   private[BloopServers] val connectionCounter = new AtomicInteger(0)
 
   private val bloopDirectories = {
-    // Scala CLI is still used since we wanted to avoid breaking thigns
+    // Scala CLI is still used since we wanted to avoid having two separate servers
     ProjectDirectories.from(null, null, "ScalaCli")
   }
 
