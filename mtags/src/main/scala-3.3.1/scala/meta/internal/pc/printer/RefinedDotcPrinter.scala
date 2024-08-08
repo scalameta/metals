@@ -9,4 +9,4 @@ import dotty.tools.dotc.core.Names.Name
 abstract class RefinedDotcPrinter(_ctx: Context) extends RefinedPrinter(_ctx):
   override def nameString(name: Name): String =
     val nameStr = super.nameString(name)
-    KeywordWrapper.Scala3.backtickWrap(nameStr)
+    KeywordWrapper.Scala3Keywords.backtickWrap(nameStr)
