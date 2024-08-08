@@ -16,6 +16,7 @@ object CodeActionBuilder {
       documentChanges: List[DocumentChange] = Nil,
       command: Option[l.Command] = None,
       diagnostics: List[l.Diagnostic] = Nil,
+      disabledReason: Option[String] = None,
   ): l.CodeAction = {
     val codeAction = new l.CodeAction()
     codeAction.setTitle(title)
@@ -41,6 +42,9 @@ object CodeActionBuilder {
 
     codeAction.setEdit(workspaceEdits)
     command.foreach(codeAction.setCommand)
+    disabledReason.foreach(reason =>
+      codeAction.setDisabled(new l.CodeActionDisabled(reason))
+    )
     codeAction.setDiagnostics(diagnostics.asJava)
     codeAction
   }
