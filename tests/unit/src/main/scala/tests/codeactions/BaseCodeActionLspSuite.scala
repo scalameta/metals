@@ -125,6 +125,8 @@ abstract class BaseCodeActionLspSuite(
       for {
         _ <- initialize(fullInput)
         _ <- server.didOpen(path)
+        _ <- server.server.buildServerPromise.future
+        _ <- server.didSave(path)(identity)
         _ <- {
           configuration match {
             case Some(conf) => server.didChangeConfiguration(conf)

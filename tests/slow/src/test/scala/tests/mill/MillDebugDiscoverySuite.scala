@@ -57,6 +57,7 @@ class MillDebugDiscoverySuite
             Some(Scalatest),
           )
         )
+        _ <- server.server.indexingPromise.future
         _ <- server.didOpen("a/src/Main.scala")
         _ <- server.didSave("a/src/Main.scala")(
           identity
@@ -104,6 +105,7 @@ class MillDebugDiscoverySuite
             Some(JUnit4),
           )
         )
+        _ <- server.server.indexingPromise.future
         _ <- server.didOpen(fooPath)
         _ <- server.didSave(fooPath)(identity)
         _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
@@ -144,6 +146,7 @@ class MillDebugDiscoverySuite
           Some(Scalatest),
         )
       )
+      _ <- server.server.indexingPromise.future
       _ <- server.didOpen(fooPath)
       _ <- server.didSave(fooPath)(identity)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
