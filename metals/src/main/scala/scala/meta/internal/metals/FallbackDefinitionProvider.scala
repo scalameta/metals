@@ -56,7 +56,7 @@ class FallbackDefinitionProvider(
           .value
         if (isInSelectPosition) List(symbolPrefix + ".")
         else if (isInTypePosition) List(symbolPrefix + "#")
-        else List(".", "#").map(ending => symbolPrefix + ending)
+        else List(".", "#", "().").map(ending => symbolPrefix + ending)
       }
 
       // Get all select parts to build symbol from it later
@@ -114,16 +114,26 @@ class FallbackDefinitionProvider(
             }.flatten
         }.flatten
 
+      val standardScalaImports = guessObjectOrClass(
+        List("scala", "Predef") ++ proposedNameParts
+      )
       val fullyScopedName =
         guessObjectOrClass(proposedNameParts)
 
+      def findInIndex(proposedSymbol: String) = {
+        index
+          .definition(mtags.Symbol(proposedSymbol))
+          // Make sure we don't return unrelated definitions
+          .filter { _.definitionSymbol.value == proposedSymbol }
+      }
       val nonLocalGuesses =
-        (proposedImportedSymbols ++ fullyScopedName).distinct
+        (proposedImportedSymbols ++ fullyScopedName ++ standardScalaImports).distinct
           .flatMap { proposedSymbol =>
-            index.definition(mtags.Symbol(proposedSymbol))
+            findInIndex(proposedSymbol)
           }
 
       def toDefinition(guesses: List[mtags.SymbolDefinition]) = {
+
         DefinitionResult(
           guesses
             .flatMap(guess =>
@@ -143,8 +153,10 @@ class FallbackDefinitionProvider(
       } else {
         // otherwise might be symbol in a local package, starting from enclosing
         proposedCurrentPackageSymbols.reverse
-          .map(proposedSymbol => index.definition(mtags.Symbol(proposedSymbol)))
-          .collectFirst { case Some(dfn) => toDefinition(List(dfn)) }
+          .map(proposedSymbol => findInIndex(proposedSymbol))
+          .collectFirst { case Some(dfn) =>
+            toDefinition(List(dfn))
+          }
       }
 
       result.foreach { _ =>

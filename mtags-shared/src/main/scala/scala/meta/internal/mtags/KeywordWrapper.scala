@@ -11,9 +11,12 @@ trait KeywordWrapper {
 
   def keywords: Set[String]
 
-  final def needsBacktick(s: String): Boolean = {
+  final def needsBacktick(
+      s: String,
+      wrapOperators: Boolean = false
+  ): Boolean = {
     val chunks = s.split("_", -1)
-    def validOperator(c: Char) = {
+    def validOperator(c: Char) = !wrapOperators && {
       c.getType == Character.MATH_SYMBOL ||
       c.getType == Character.OTHER_SYMBOL ||
       "!#%&*+-/:<=>?@\\^|~".contains(c)
@@ -45,12 +48,13 @@ trait KeywordWrapper {
 
   final def backtickWrap(
       s: String,
-      exclusions: Set[String] = Set.empty
+      exclusions: Set[String] = Set.empty,
+      wrapOperators: Boolean = false
   ): String = {
     if (exclusions.contains(s)) s
     else if (s.isEmpty) "``"
     else if (s(0) == '`' && s.last == '`') s
-    else if (needsBacktick(s)) "" + ('`') + s + '`'
+    else if (needsBacktick(s, wrapOperators)) "" + ('`') + s + '`'
     else s
   }
 }

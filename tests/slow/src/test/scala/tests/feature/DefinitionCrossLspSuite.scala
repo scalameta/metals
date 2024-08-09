@@ -638,5 +638,69 @@ class DefinitionCrossLspSuite
         )
       } yield ()
     }
+
+    test(s"fallback-object-imports-$version") {
+      cleanWorkspace()
+      for {
+        _ <- initialize(
+          s"""
+             |/metals.json
+             |{
+             |  "a": { "scalaVersion" : "${version}" }
+             |}
+             |/a/src/main/scala/a/Main.scala
+             |package a
+             |import b.Foo._
+             |
+             |object Main {
+             |  val name: Version = ???
+             |}
+             |
+             |/a/src/main/scala/a/b/Foo.scala
+             |package a.b
+             |
+             |trait Foo
+             |object Foo extends Foo{
+             |  val a = 123
+             |}
+             |
+             |""".stripMargin
+        )
+        _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+        _ <- server.didOpen("a/src/main/scala/a/b/Foo.scala")
+        _ = assertNoDiff(
+          client.workspaceDiagnostics,
+          if (version == BuildInfo.scala3)
+            """|a/src/main/scala/a/Main.scala:5:13: error: Not found: type Version
+               |  val name: Version = ???
+               |            ^^^^^^^
+               |""".stripMargin
+          else
+            """|a/src/main/scala/a/Main.scala:5:13: error: not found: type Version
+               |  val name: Version = ???
+               |            ^^^^^^^
+               |""".stripMargin,
+        )
+        _ = assertNoDiff(
+          server.workspaceDefinitions,
+          """|/a/src/main/scala/a/Main.scala
+             |package a
+             |import b/*<no symbol>*/.Foo/*Foo.scala:3*/._
+             |
+             |object Main/*L3*/ {
+             |  val name/*L4*/: Version/*<no symbol>*/ = ???/*Predef.scala*/
+             |}
+             |
+             |/a/src/main/scala/a/b/Foo.scala
+             |package a.b
+             |
+             |trait Foo/*L2*/
+             |object Foo/*L3*/ extends Foo/*L2*/{
+             |  val a/*L4*/ = 123
+             |}
+             |""".stripMargin,
+        )
+      } yield ()
+    }
   }
 }

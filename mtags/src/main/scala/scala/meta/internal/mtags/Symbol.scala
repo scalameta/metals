@@ -161,7 +161,8 @@ object Symbol {
       case ((prefix, insideObject), next) =>
         val name = keywordWrapper.backtickWrap(
           next.replace("\\", ""),
-          Set("this", "package")
+          Set("this", "package"),
+          wrapOperators = true
         )
         if (prefix.isEmpty())
           (name, /*insideObject =*/ name.find(_.isLetter).exists(_.isUpper))
