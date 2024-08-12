@@ -10,7 +10,6 @@ import scala.meta.internal.metals.TextEdits
 import munit.Location
 import munit.TestOptions
 import org.eclipse.{lsp4j => l}
-import tests.BaseCodeActionSuite
 
 class BaseExtractMethodSuite extends BaseCodeActionSuite {
   def checkEdit(

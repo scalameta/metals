@@ -160,8 +160,19 @@ public abstract class PresentationCompiler {
   public abstract CompletableFuture<List<TextEdit>> convertToNamedArguments(
       OffsetParams params, List<Integer> argIndices);
 
-  /** The text contents of the given file changed. */
-  public abstract CompletableFuture<List<Diagnostic>> didChange(VirtualFileParams params);
+	/**
+	 * Return the text edits for converting a wildcard lambda to a named lambda.
+	 */
+	public CompletableFuture<List<TextEdit>> convertToNamedLambdaParameters(OffsetParams params) {
+		return CompletableFuture.supplyAsync(() -> {
+			throw new DisplayableException("Convert to named lambda parameters is not available in this version of Scala");
+		});
+	};
+
+	/**
+	 * The text contents of the given file changed.
+	 */
+	public abstract CompletableFuture<List<Diagnostic>> didChange(VirtualFileParams params);
 
   /**
    * Returns decorations for missing type adnotations, inferred type parameters, implicit parameters
