@@ -17,6 +17,9 @@ jobs:
           distribution: 'temurin'
           java-version: 17
           cache: 'sbt'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "16"
       - name: Publish
         run: |
           COMMAND="ci-release"
