@@ -661,6 +661,20 @@ object ServerCommands {
          |""".stripMargin,
     )
 
+  final case class ConvertToNamedLambdaParametersRequest(
+      position: TextDocumentPositionParams
+  )
+  val ConvertToNamedLambdaParameters =
+    new ParametrizedCommand[ConvertToNamedLambdaParametersRequest](
+      "convert-to-named-lambda-parameters",
+      "Convert wildcard lambda parameters to named parameters",
+      """|Whenever a user chooses code action to convert to named lambda parameters, this command is later run to 
+         |rewrite the lambda to use named parameters.
+         |""".stripMargin,
+      """|Object with [TextDocumentPositionParams](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentPositionParams) of the target lambda
+         |""".stripMargin,
+    )
+
   val GotoLog = new Command(
     "goto-log",
     "Check logs",
