@@ -29,6 +29,10 @@ class WorkspaceFolders(
     val (scalaProjects, nonScalaProjects) =
       folders.partition(_.isMetalsProject)
     val knowProjectRefs = scalaProjects.flatMap(_.projectReferences).toSet
+    if (knowProjectRefs.nonEmpty)
+      scribe.debug("Found project references: " + knowProjectRefs)
+    if (scalaProjects.nonEmpty)
+      scribe.debug("Found Scala projects: " + scalaProjects.map(_.path))
     val scalaServices =
       scalaProjects
         .filterNot(path =>
