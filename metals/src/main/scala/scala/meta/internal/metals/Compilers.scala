@@ -31,6 +31,7 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.CancelToken
+import scala.meta.pc.CodeActionId
 import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
@@ -879,6 +880,34 @@ class Compilers(
         }
     }
   }.getOrElse(Future.successful(Nil.asJava))
+
+  def codeAction(
+      params: TextDocumentPositionParams,
+      token: CancelToken,
+      codeActionId: CodeActionId,
+      codeActionPayload: Object,
+  ): Future[ju.List[TextEdit]] = {
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+      pc.codeAction(
+        CompilerOffsetParamsUtils.fromPos(
+          pos,
+          token,
+          outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
+        ),
+        codeActionId,
+        codeActionPayload,
+      ).asScala
+        .map { edits =>
+          adjust.adjustTextEdits(edits)
+        }
+    }
+  }.getOrElse(Future.successful(Nil.asJava))
+
+  def supportedCodeActions(path: AbsolutePath): ju.List[CodeActionId] = {
+    loadCompiler(path).map { pc =>
+      pc.supportedCodeActions()
+    }
+  }.getOrElse(Nil.asJava)
 
   def hover(
       params: HoverExtParams,

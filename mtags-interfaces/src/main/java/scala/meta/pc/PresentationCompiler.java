@@ -13,6 +13,7 @@ import org.eclipse.lsp4j.SelectionRange;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.List;
@@ -109,6 +110,27 @@ public abstract class PresentationCompiler {
 	 */
 	public CompletableFuture<java.util.List<ReferencesResult>> references(ReferencesRequest params) {
 		return CompletableFuture.completedFuture(Collections.emptyList());
+	}
+
+	/**
+	 * Execute the given code action
+	 */
+	public CompletableFuture<List<TextEdit>> codeAction(OffsetParams params, CodeActionId codeActionId, Object codeActionPayload) {
+		return CompletableFuture.completedFuture(Collections.emptyList());
+	}
+
+	/**
+	 * Returns the list of code actions supported by the current presentation compiler.
+	 */
+	public List<CodeActionId> supportedCodeActions() {
+		return Arrays.asList(
+			CodeActionId.ConvertToNamedArguments,
+			CodeActionId.ExtractMethod,
+			CodeActionId.ImplementAbstractMembers,
+			CodeActionId.ImportMissingSymbol,
+			CodeActionId.InlineValue,
+			CodeActionId.InsertInferredType
+		);
 	}
 
 	/**

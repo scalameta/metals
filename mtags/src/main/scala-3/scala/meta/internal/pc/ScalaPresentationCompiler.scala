@@ -363,6 +363,7 @@ case class ScalaPresentationCompiler(
         case Right(edits: List[l.TextEdit]) => edits.asJava
       }
   end convertToNamedArguments
+
   override def selectionRange(
       params: ju.List[OffsetParams]
   ): CompletableFuture[ju.List[l.SelectionRange]] =
