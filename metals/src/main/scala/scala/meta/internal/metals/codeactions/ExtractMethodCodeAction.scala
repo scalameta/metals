@@ -15,6 +15,7 @@ import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.logging
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
+import scala.meta.pc.CodeActionId
 
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.{lsp4j => l}
@@ -31,6 +32,10 @@ class ExtractMethodCodeAction(
     ServerCommands.ExtractMethod
   )
   override def kind: String = l.CodeActionKind.RefactorExtract
+
+  override val maybeCodeActionId: Option[CodeActionId] = Some(
+    CodeActionId.ExtractMethod
+  )
 
   override def handleCommand(
       data: ServerCommands.ExtractMethodParams,

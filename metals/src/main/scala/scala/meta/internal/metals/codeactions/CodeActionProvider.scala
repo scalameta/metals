@@ -4,6 +4,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.jdk.CollectionConverters._
 
+import scala.meta.internal.metals.MetalsEnrichments.XtensionString
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions.CodeAction
@@ -60,6 +61,12 @@ final class CodeActionProvider(
     new ConvertCommentCodeAction(buffers),
   )
 
+  def actionsForParams(params: l.CodeActionParams): List[CodeAction] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    val supportedCodeActions = compilers.supportedCodeActions(path)
+    allActions.filter(_.maybeCodeActionId.forall(supportedCodeActions.contains))
+  }
+
   def codeActions(
       params: l.CodeActionParams,
       token: CancelToken,
@@ -73,7 +80,7 @@ final class CodeActionProvider(
         case None => true
       }
 
-    val actions = allActions.collect {
+    val actions = actionsForParams(params).collect {
       case action if isRequestedKind(action) =>
         action.contribute(params, token)
     }

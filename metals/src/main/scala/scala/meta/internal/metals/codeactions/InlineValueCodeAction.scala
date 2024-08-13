@@ -16,6 +16,7 @@ import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+import scala.meta.pc.CodeActionId
 
 import org.eclipse.{lsp4j => l}
 
@@ -31,6 +32,10 @@ class InlineValueCodeAction(
     Some(ServerCommands.InlineValue)
 
   override def kind: String = l.CodeActionKind.RefactorInline
+
+  override val maybeCodeActionId: Option[CodeActionId] = Some(
+    CodeActionId.InlineValue
+  )
 
   override def contribute(params: l.CodeActionParams, token: CancelToken)(
       implicit ec: ExecutionContext

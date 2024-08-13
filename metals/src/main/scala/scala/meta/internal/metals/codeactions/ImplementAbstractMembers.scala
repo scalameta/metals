@@ -8,12 +8,17 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.pc.CancelToken
+import scala.meta.pc.CodeActionId
 
 import org.eclipse.{lsp4j => l}
 
 class ImplementAbstractMembers(compilers: Compilers) extends CodeAction {
 
   override def kind: String = l.CodeActionKind.QuickFix
+
+  override val maybeCodeActionId: Option[CodeActionId] = Some(
+    CodeActionId.ImplementAbstractMembers
+  )
 
   override def contribute(
       params: l.CodeActionParams,
