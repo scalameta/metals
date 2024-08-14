@@ -6,7 +6,7 @@ import tests.BaseNonCompilingLspSuite
 
 class BestEffortCompilationSuite
     extends BaseNonCompilingLspSuite("best-effort-compilation") {
-  val scalaVersion = "3.5.0-RC1"
+  val scalaVersion = "3.5.0-RC7"
 
   override def serverConfig: MetalsServerConfig =
     super.serverConfig.copy(enableBestEffort = true)
