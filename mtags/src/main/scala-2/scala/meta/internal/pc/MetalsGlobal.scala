@@ -780,8 +780,9 @@ class MetalsGlobal(
       val name =
         if (defn.symbol.isPackageObject) defn.symbol.enclosingPackageClass.name
         else defn.name
+      val nameLength = name.dropLocal.decoded.length()
       val start = defn.pos.point
-      val end = start + name.dropLocal.decoded.length()
+      val end = start + nameLength
       Position.range(defn.pos.source, start, start, end)
     }
   }
@@ -794,6 +795,11 @@ class MetalsGlobal(
     def namePosition: Position = {
       sel match {
         case _ if !sel.pos.isRange => sel.pos
+        case Select(New(qualifier), name) if name == nme.CONSTRUCTOR =>
+          qualifier match {
+            case qualifier: Select => qualifier.namePosition
+            case _ => qualifier.pos.withStart(qualifier.pos.point)
+          }
         case Select(qualifier: Select, name)
             if (name == nme.apply || name == nme.unapply) && sel.pos.point == qualifier.pos.point =>
           qualifier.namePosition

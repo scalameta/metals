@@ -59,6 +59,8 @@ trait PcCollector[T]:
 
     def soughtOrOverride(sym: Symbol) =
       sought(sym) || sym.allOverriddenSymbols.exists(sought(_))
+    lazy val constructorOwners = sought.collect:
+      case sym if sym.isPrimaryConstructor => sym.owner
 
     def soughtTreeFilter(tree: Tree): Boolean =
       tree match
@@ -68,7 +70,7 @@ trait PcCollector[T]:
           true
         case sel: Select if soughtOrOverride(sel.symbol) => true
         case df: NamedDefTree
-            if soughtOrOverride(df.symbol) && !df.symbol.isSetter =>
+            if (soughtOrOverride(df.symbol) || constructorOwners(df.symbol)) && !df.symbol.isSetter =>
           true
         case imp: Import if owners(imp.expr.symbol) => true
         case _ => false
@@ -167,12 +169,16 @@ trait PcCollector[T]:
          */
         case df: NamedDefTree
             if df.span.isCorrect && df.nameSpan.isCorrect &&
-              filter(df) && !isGeneratedGiven(df, sourceText) =>
+              filter(df) && !isGeneratedGiven(df, sourceText) && !df.symbol.isPrimaryConstructor =>
           def collectEndMarker =
             EndMarker.getPosition(df, pos, sourceText).map {
               collect(EndMarker(df.symbol), _)
             }
           end collectEndMarker
+          def collectPrimaryConstructor =
+            Some(df.symbol.primaryConstructor).filter(_.exists).map( sym =>
+              collect(df, pos.withSpan(df.nameSpan), Some(sym))
+            )
 
           val annots = collectTrees(df.mods.annotations)
           val traverser =
@@ -183,7 +189,7 @@ trait PcCollector[T]:
             occurences + collect(
               df,
               pos.withSpan(df.nameSpan),
-            ) ++ collectEndMarker
+            ) ++ collectEndMarker ++ collectPrimaryConstructor
           ) { case (set, tree) =>
             traverser(set, tree)
           }

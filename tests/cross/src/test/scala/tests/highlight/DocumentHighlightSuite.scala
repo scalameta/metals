@@ -1098,7 +1098,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |object Main {
       |  class <<Abc>>[T](abc: T)
       |  object <<Abc>> {
-      |    def apply(abc: Int, bde: Int) = new <<Abc>>(abc + bde)
+      |    def <<apply>>(abc: Int, bde: Int) = new <<Abc>>(abc + bde)
       |  }
       |  val x = <<Ab@@c>>(123, 456)
       |}""".stripMargin

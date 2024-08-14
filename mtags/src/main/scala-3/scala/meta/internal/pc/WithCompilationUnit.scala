@@ -11,6 +11,7 @@ import scala.meta.pc.VirtualFileParams
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.NameOps.*
+import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
@@ -73,11 +74,12 @@ class WithCompilationUnit(
       else Set.empty
     val all =
       if sym.is(Flags.ModuleClass) then
-        Set(sym, sym.companionModule, sym.companionModule.companion)
+        Set(sym, sym.companionModule, sym.companionModule.companion) ++ sym.info.member(StdNames.nme.apply).allSymbols
       else if sym.isClass then
-        Set(sym, sym.companionModule, sym.companion.moduleClass)
+        Set(sym, sym.companionModule, sym.companion.moduleClass, sym.primaryConstructor)
+        ++ sym.companion.moduleClass.info.member(StdNames.nme.apply).allSymbols.filter(_.is(Flags.Synthetic))
       else if sym.is(Flags.Module) then
-        Set(sym, sym.companionClass, sym.moduleClass)
+        Set(sym, sym.companionClass, sym.moduleClass) ++ sym.moduleClass.info.member(StdNames.nme.apply).allSymbols
       else if sym.isTerm && (sym.owner.isClass || sym.owner.isConstructor)
       then
         val info =

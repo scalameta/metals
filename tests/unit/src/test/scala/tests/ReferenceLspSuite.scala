@@ -8,7 +8,7 @@ import scala.meta.internal.metals.ServerCommands
 class ReferenceLspSuite extends BaseRangesSuite("reference") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
-    Some(TestingServer.TestDefault)
+    Some(TestingServer.TestDefault.copy(quickPickProvider = Some(true)))
 
   test("case-class") {
     cleanWorkspace()
@@ -82,6 +82,65 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |}
        |
        |""".stripMargin,
+  )
+
+  check(
+    "contructor-only",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |case class <<A@@A>>(i: Int)
+       |object AA {
+       |  def apply(): AA = <<AA>>(1)
+       |  val empty: AA = new <<AA>>(0)
+       |}
+       |/a/src/main/scala/b/Other.scala
+       |package b
+       |import a.AA
+       |object O {
+       |  val empty: AA = new <<AA>>(0)
+       |}
+       |""".stripMargin,
+    quickPickReferencesSymbol = { items =>
+      items.find(_.label.contains("Constructor"))
+    },
+  )
+
+  check(
+    "object-only",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |case class A@@A(i: Int)
+       |object <<AA>> {
+       |  def apply(): AA = <<AA>>(1)
+       |  val empty: AA = new AA(0)
+       |}
+       |/a/src/main/scala/b/Other.scala
+       |package b
+       |import a.<<AA>>
+       |object O {
+       |  val empty: AA = new AA(0)
+       |}
+       |""".stripMargin,
+    quickPickReferencesSymbol = _.find(_.label.contains("Term")),
+  )
+
+  check(
+    "type-only",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |case class <<A@@A>>(i: Int)
+       |object AA {
+       |  def apply(): <<AA>> = AA(1)
+       |  val empty: <<AA>> = new <<AA>>(0)
+       |}
+       |/a/src/main/scala/b/Other.scala
+       |package b
+       |import a.<<AA>>
+       |object O {
+       |  val empty: <<AA>> = new <<AA>>(0)
+       |}
+       |""".stripMargin,
+    quickPickReferencesSymbol = _.find(_.label.contains("Type")),
   )
 
   test("synthetic") {
@@ -164,7 +223,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |}
        |""".stripMargin,
     """|object Other {
-       |  val mb = <<Main>>.apply("b")
+       |  val mb = <<Main>>.<<apply>>("b")
        |}
        |""".stripMargin,
   )
@@ -196,10 +255,10 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |""".stripMargin,
   )
 
-  checkInSamePackage( // FIXME: should, but doesn't find the class declaration: https://github.com/scalameta/metals/issues/1553#issuecomment-617884934
+  checkInSamePackage(
     "case-class-unapply-starting-elsewhere",
     """|sealed trait Stuff
-       |case class <<Foo>>(n: Int) extends Stuff // doesn't find this
+       |case class <<Foo>>(n: Int) extends Stuff
        |""".stripMargin,
     """|
        |object ByTheWay {

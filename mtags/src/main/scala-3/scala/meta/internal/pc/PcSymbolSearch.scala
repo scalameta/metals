@@ -1,5 +1,7 @@
 package scala.meta.internal.pc
 
+import scala.annotation.tailrec
+
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.MetalsInteractive.ExtensionMethodCall
 import scala.meta.internal.pc.PcSymbolSearch.*
@@ -255,11 +257,22 @@ object PcSymbolSearch:
   // NOTE: Connected to https://github.com/lampepfl/dotty/issues/16771
   // `sel.nameSpan` is calculated incorrectly in (1 + 2).toString
   // See test DocumentHighlightSuite.select-parentheses
+  @tailrec
   def selectNameSpan(sel: Select): Span =
     val span = sel.span
     if span.exists then
       val point = span.point
-      if sel.name.toTermName == nme.ERROR then Span(point)
+      val termName = sel.name.toTermName 
+      if termName == nme.ERROR then Span(point)
+      else if (termName == nme.apply || termName == nme.unapply || termName == nme.CONSTRUCTOR) && span.point == sel.qualifier.span.start then
+        @tailrec
+        def fromQualfier(qualifier: Tree): Span =
+          qualifier match
+            case sel: Select => selectNameSpan(sel)
+            case New(qual) => fromQualfier(qual)
+            case AppliedTypeTree(tycon, _) => fromQualfier(tycon)
+            case qual => qual.span
+        fromQualfier(sel.qualifier)
       else if sel.qualifier.span.start > span.point then // right associative
         val realName = sel.name.stripModuleClassSuffix.lastPart
         Span(span.start, span.start + realName.length, point)

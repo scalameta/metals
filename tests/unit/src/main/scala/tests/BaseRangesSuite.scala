@@ -2,9 +2,13 @@ package tests
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
+import scala.meta.internal.metals.clients.language.RawMetalsQuickPickResult
+
 import munit.Location
 import munit.TestOptions
-
 abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
 
   protected def libraryDependencies: List[String] = Nil
@@ -23,6 +27,9 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
       additionalLibraryDependencies: List[String] = Nil,
       scalacOptions: List[String] = Nil,
       customMetalsJson: Option[String] = None,
+      quickPickReferencesSymbol: List[MetalsQuickPickItem] => Option[
+        MetalsQuickPickItem
+      ] = _.lastOption,
   )(implicit
       loc: Location
   ): Unit = {
@@ -66,6 +73,16 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
              |${input
               .replaceAll("(<<|>>|@@)", "")}""".stripMargin
         )
+        _ = client.quickPickHandler = {
+          case params
+              if params.placeHolder == Messages.PickSymbolForReferenceSearch =>
+            quickPickReferencesSymbol(params.items.asScala.toList)
+              .map(item => RawMetalsQuickPickResult(item.id))
+              .getOrElse(RawMetalsQuickPickResult(cancelled = true))
+          case params =>
+            pprint.log(params)
+            RawMetalsQuickPickResult(cancelled = true)
+        }
         _ <- Future.sequence(
           files.map(file => server.didOpen(s"${file._1}"))
         )

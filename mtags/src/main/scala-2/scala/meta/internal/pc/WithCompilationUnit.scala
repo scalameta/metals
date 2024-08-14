@@ -36,13 +36,39 @@ class WithCompilationUnit(
    * @return set of possible symbols
    */
   def symbolAlternatives(sym: Symbol): Set[Symbol] = {
+    def allMembers(name: Name, symbol: Symbol): List[Symbol] = {
+      val member = symbol.info.member(name)
+      if (member.isOverloaded)
+        member.info.asInstanceOf[OverloadedType].alternatives
+      else List(member)
+    }
+
     val all =
       if (sym.isClass) {
-        if (sym.owner.isMethod) Set(sym) ++ sym.localCompanion(pos)
-        else Set(sym, sym.companionModule, sym.companion.moduleClass)
+        def contructorLike(moduleClass: Symbol) =
+          sym.primaryConstructor :: allMembers(nme.apply, moduleClass).filter(
+            _.isSynthetic
+          )
+        if (sym.owner.isMethod)
+          Set(sym) ++ sym
+            .localCompanion(pos)
+            .toList
+            .flatMap(comp => comp :: contructorLike(comp))
+        else
+          Set(
+            sym,
+            sym.companionModule,
+            sym.companion.moduleClass
+          ) ++ contructorLike(sym.companion.moduleClass)
       } else if (sym.isModuleOrModuleClass) {
-        if (sym.owner.isMethod) Set(sym) ++ sym.localCompanion(pos)
-        else Set(sym, sym.companionClass, sym.moduleClass)
+        def contructorLike(moduleClass: Symbol) =
+          allMembers(nme.apply, moduleClass)
+        if (sym.owner.isMethod)
+          Set(sym) ++ sym.localCompanion(pos) ++ contructorLike(sym)
+        else
+          Set(sym, sym.companionClass, sym.moduleClass) ++ contructorLike(
+            sym.moduleClass
+          )
       } else if (sym.isTerm && (sym.owner.isClass || sym.owner.isConstructor)) {
         val info =
           if (sym.owner.isClass) sym.owner.info

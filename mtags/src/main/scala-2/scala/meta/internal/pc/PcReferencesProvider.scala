@@ -67,7 +67,6 @@ class BySymbolPCReferencesProvider(
   def result(): List[(String, Option[l.Range])] = {
     val sought = semanticDbSymbols
       .flatMap(compiler.compilerSymbol(_))
-      .flatMap(symbolAlternatives(_))
     if (sought.isEmpty) Nil
     else resultWithSought(sought)
   }

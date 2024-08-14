@@ -15,6 +15,9 @@ import scala.util.matching.Regex
 import scala.meta.Importee
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ResolvedSymbolOccurrence
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
+import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
@@ -46,6 +49,8 @@ final class ReferenceProvider(
     buildTargets: BuildTargets,
     compilers: Compilers,
     scalaVersionSelector: ScalaVersionSelector,
+    languageClient: MetalsLanguageClient,
+    isMetalsQuickPickProvider: Boolean,
 )(implicit ec: ExecutionContext)
     extends SemanticdbFeatureProvider
     with CompletionItemPriority {
@@ -186,6 +191,7 @@ final class ReferenceProvider(
    */
   def references(
       params: ReferenceParams,
+      isForRename: Boolean,
       findRealRange: AdjustRange = noAdjustRange,
       includeSynthetics: Synthetic => Boolean = _ => true,
   )(implicit report: ReportContext): Future[List[ReferencesResult]] = {
@@ -197,7 +203,7 @@ final class ReferenceProvider(
       if (supportsPcRefs) textDoc.toOption else textDoc.documentIncludingStale
     textDocOpt match {
       case Some(doc) =>
-        val results: List[ResolvedSymbolOccurrence] = {
+        val occurences: List[ResolvedSymbolOccurrence] = {
           val posOccurrences =
             definition.positionOccurrences(source, params.getPosition, doc)
           if (posOccurrences.isEmpty)
@@ -205,78 +211,97 @@ final class ReferenceProvider(
             occurrencesForRenamedImport(source, params, doc)
           else posOccurrences
         }
-        if (results.isEmpty) {
+        if (occurences.isEmpty) {
           scribe.debug(
             s"No symbol found at ${params.getPosition()} for $source"
           )
         }
-        val semanticdbResult = Future.sequence {
-          results.map { result =>
+        val resultWithAlt =
+          occurences.zipWithIndex.flatMap { case (result, idx) =>
             val occurrence = result.occurrence.get
-            val distance = result.distance
-            val alternatives =
-              referenceAlternatives(occurrence.symbol, source, doc)
-            references(
+            (referenceAlternatives(
+              occurrence.symbol,
               source,
-              params,
               doc,
-              distance,
-              occurrence,
-              alternatives,
-              params.getContext.isIncludeDeclaration,
-              findRealRange,
-              includeSynthetics,
-              supportsPcRefs,
-            ).map { locations =>
-              // It's possible to return nothing is we exclude declaration
-              if (
-                locations.isEmpty && params.getContext().isIncludeDeclaration()
-              ) {
-                val fileInIndex =
-                  if (index.contains(source.toNIO))
-                    s"Current file ${source} is present"
-                  else s"Missing current file ${source}"
-                scribe.debug(
-                  s"No references found, index size ${index.size}\n" + fileInIndex
-                )
-                report.unsanitized.create(
-                  Report(
-                    "empty-references",
-                    index
-                      .map { case (path, entry) =>
-                        s"$path -> ${entry.bloom.approximateElementCount()}"
-                      }
-                      .mkString("\n"),
-                    s"Could not find any locations for ${result.occurrence}, printing index state",
-                    Some(source.toString()),
-                    Some(
-                      source.toString() + ":" + result.occurrence.getOrElse("")
-                    ),
-                  )
-                )
-              }
-              ReferencesResult(occurrence.symbol, locations)
+            ) + occurrence.symbol).map((_, idx))
+          }
+
+        quickPickSymbolGroup(resultWithAlt.map(_._1).toSet, isForRename)
+          .map { chosen =>
+            resultWithAlt.filter(x => chosen(x._1)).groupMap(_._2)(_._1).map {
+              case (idx, syms) => occurences(idx) -> syms.toSet
             }
           }
-        }
-        val pcResult =
-          pcReferences(
-            source,
-            results.flatMap(_.occurrence).map(_.symbol),
-            params.getContext().isIncludeDeclaration(),
-            findRealRange,
-          )
-
-        Future
-          .sequence(List(semanticdbResult, pcResult))
-          .map(
-            _.flatten
-              .groupBy(_.symbol)
-              .collect { case (symbol, refs) =>
-                ReferencesResult(symbol, refs.flatMap(_.locations))
+          .flatMap { results =>
+            val semanticdbResult = Future.sequence {
+              results.map { case (result, alternatives) =>
+                val occurrence = result.occurrence.get
+                val distance = result.distance
+                references(
+                  source,
+                  params,
+                  doc,
+                  distance,
+                  occurrence,
+                  alternatives,
+                  params.getContext.isIncludeDeclaration,
+                  findRealRange,
+                  includeSynthetics,
+                  supportsPcRefs,
+                ).map { locations =>
+                  // It's possible to return nothing is we exclude declaration
+                  if (
+                    locations.isEmpty && params
+                      .getContext()
+                      .isIncludeDeclaration()
+                  ) {
+                    val fileInIndex =
+                      if (index.contains(source.toNIO))
+                        s"Current file ${source} is present"
+                      else s"Missing current file ${source}"
+                    scribe.debug(
+                      s"No references found, index size ${index.size}\n" + fileInIndex
+                    )
+                    report.unsanitized.create(
+                      Report(
+                        "empty-references",
+                        index
+                          .map { case (path, entry) =>
+                            s"$path -> ${entry.bloom.approximateElementCount()}"
+                          }
+                          .mkString("\n"),
+                        s"Could not find any locations for ${result.occurrence}, printing index state",
+                        Some(source.toString()),
+                        Some(
+                          source.toString() + ":" + result.occurrence
+                            .getOrElse("")
+                        ),
+                      )
+                    )
+                  }
+                  ReferencesResult(occurrence.symbol, locations)
+                }
               }
-              .toList
-          )
+            }
+            val pcResult =
+              pcReferences(
+                source,
+                results.flatMap(_._2).toList,
+                params.getContext().isIncludeDeclaration(),
+                findRealRange,
+              )
+
+            Future
+              .sequence(List(semanticdbResult, pcResult))
+              .map(
+                _.flatten
+                  .groupBy(_.symbol)
+                  .collect { case (symbol, refs) =>
+                    ReferencesResult(symbol, refs.flatMap(_.locations))
+                  }
+                  .toList
+              )
+          }
       case None =>
         if (textDoc.documentIncludingStale.isEmpty)
           scribe.debug(s"No semanticDB for $source")
@@ -289,30 +314,34 @@ final class ReferenceProvider(
             findRealRange,
           )
           symbols = foundRefs.map(_.symbol).filterNot(_.isLocal)
+          chosen <- quickPickSymbolGroup(symbols.toSet, isForRename)
+          fileteredFoundRefs = foundRefs.filter(ref =>
+            chosen(ref.symbol) || ref.symbol.isLocal
+          )
           fromPc <-
-            if (symbols.isEmpty) Future.successful(Nil)
+            if (chosen.isEmpty) Future.successful(Nil)
             else {
               pcReferences(
                 source,
-                symbols,
+                chosen.toList,
                 includeDeclaration,
                 findRealRange,
               )
             }
         } yield {
-          if (symbols.isEmpty) foundRefs
+          if (chosen.isEmpty) fileteredFoundRefs
           else {
             val fromWorkspace = workspaceReferences(
               source,
-              symbols.toSet,
+              chosen.toSet,
               includeDeclaration,
               findRealRange,
               includeSynthetics,
             )
             val results = ReferencesResult(
-              symbols.head,
+              chosen.head,
               fromWorkspace,
-            ) :: (fromPc ++ foundRefs)
+            ) :: (fromPc ++ fileteredFoundRefs)
 
             results
               .groupBy(_.symbol)
@@ -322,6 +351,57 @@ final class ReferenceProvider(
               .toList
           }
         }
+    }
+  }
+
+  private def quickPickSymbolGroup(
+      symbols: Set[String],
+      forRename: Boolean,
+  ): Future[Set[String]] = {
+    lazy val symsContainType = symbols.exists(sym => Symbol(sym).isType)
+    if (forRename) {
+      Future.successful {
+        if (symsContainType) {
+          symbols
+            .filter { sym =>
+              Symbol(sym) match {
+                case sym if sym.isApply => false
+                case _ => true
+              }
+            }
+        } else symbols
+      }
+    } else {
+      lazy val symsMap = symbols
+        .map { sym =>
+          val tpe = Symbol(sym) match {
+            case sym if sym.isType => "Type"
+            case sym if sym.isConstructor || (sym.isApply && symsContainType) =>
+              "Constructor / Synthetic apply"
+            case sym if sym.isApply => "Apply"
+            case _ => "Term"
+          }
+          tpe -> sym
+        }
+        .groupMap(_._1)(_._2)
+      if (symsMap.size > 1 && isMetalsQuickPickProvider) {
+        val allElem = MetalsQuickPickItem("All", "All")
+        languageClient
+          .metalsQuickPick(
+            MetalsQuickPickParams(
+              (symsMap.keySet
+                .map(name => MetalsQuickPickItem(name, name))
+                .toList :+ allElem).asJava,
+              placeHolder = Messages.PickSymbolForReferenceSearch,
+            )
+          )
+          .asScala
+          .map {
+            case None => symbols
+            case Some(res) if res.itemId == null => symbols
+            case Some(id) => symsMap.get(id.itemId).getOrElse(symbols)
+          }
+      } else Future.successful(symbols)
     }
   }
 
@@ -375,6 +455,14 @@ final class ReferenceProvider(
           if check(info)
         } yield info.symbol
 
+        val nonSyntheticSymbols = for {
+          occ <- definitionDoc.occurrences
+          if occ.role.isDefinition
+        } yield occ.symbol
+
+        def isSyntheticSymbol(symbol: String) =
+          !nonSyntheticSymbols.contains(symbol)
+
         val isCandidate =
           if (defPath.isJava)
             candidates { info =>
@@ -385,16 +473,10 @@ final class ReferenceProvider(
               alternatives.isVarSetter(info) ||
               alternatives.isCompanionObject(info) ||
               alternatives.isCopyOrApplyParam(info) ||
-              alternatives.isContructorParam(info)
+              alternatives.isContructorParam(info) ||
+              alternatives.isJavaConstructor(info) ||
+              alternatives.isApplyMethod(info, isSyntheticSymbol)
             }.toSet
-
-        val nonSyntheticSymbols = for {
-          occ <- definitionDoc.occurrences
-          if isCandidate(occ.symbol) || occ.symbol == symbol
-          if occ.role.isDefinition
-        } yield occ.symbol
-
-        def isSyntheticSymbol = !nonSyntheticSymbols.contains(symbol)
 
         def additionalAlternativesForSynthetic = for {
           info <- definitionDoc.symbols
@@ -407,10 +489,10 @@ final class ReferenceProvider(
 
         if (defPath.isJava)
           isCandidate
-        else if (isSyntheticSymbol)
-          isCandidate -- nonSyntheticSymbols ++ additionalAlternativesForSynthetic
+        else if (isSyntheticSymbol(symbol))
+          isCandidate ++ additionalAlternativesForSynthetic
         else
-          isCandidate -- nonSyntheticSymbols
+          isCandidate
       case None => Set.empty
     }
   }
@@ -633,13 +715,12 @@ final class ReferenceProvider(
       snapshot: TextDocument,
       distance: TokenEditDistance,
       occ: SymbolOccurrence,
-      alternatives: Set[String],
+      isSymbol: Set[String],
       isIncludeDeclaration: Boolean,
       findRealRange: AdjustRange,
       includeSynthetics: Synthetic => Boolean,
       supportsPcRefs: Boolean,
   ): Future[Seq[Location]] = {
-    val isSymbol = alternatives + occ.symbol
     val isLocal = occ.symbol.isLocal
     if (isLocal && supportsPcRefs)
       compilers
@@ -728,7 +809,30 @@ final class ReferenceProvider(
        * are ok and speed is more important, we just use the default noAdjustRange.
        */
       else {
-        findRealRange(range, snapshot.text, reference.symbol).foreach(add)
+        val adjustedForConstructorRange = {
+          val symbol = Symbol(reference.symbol)
+          if (symbol.isConstructor && range.isPoint) {
+            lazy val forConstructorOccurence = range.withStartCharacter(
+              range.startCharacter - symbol.owner.displayName.length()
+            )
+            if (reference.role.isDefinition) {
+              // if primary constructor definition find parent definition
+              snapshot.occurrences
+                .collectFirst {
+                  case occ
+                      if occ.symbol == symbol.owner.value && occ.role.isDefinition =>
+                    occ.range
+                }
+                .flatten
+                .getOrElse(forConstructorOccurence)
+            } else forConstructorOccurence
+          } else range
+        }
+        findRealRange(
+          adjustedForConstructorRange,
+          snapshot.text,
+          reference.symbol,
+        ).foreach(add)
       }
 
     }
@@ -809,6 +913,21 @@ class SymbolAlternatives(symbol: String, name: String) {
         ""
     })
   }
+
+  def isApplyMethod(
+      info: SymbolInformation,
+      isSyntheticSymbol: String => Boolean,
+  ): Boolean =
+    symbol == (Symbol(info.symbol) match {
+      case GlobalSymbol(
+            GlobalSymbol(owner, Descriptor.Term(obj)),
+            Descriptor.Method("apply", _),
+          ) =>
+        if (isSyntheticSymbol(info.symbol))
+          Symbols.Global(owner.value, Descriptor.Type(obj))
+        else Symbols.Global(owner.value, Descriptor.Term(obj))
+      case _ => ""
+    })
 
   // Returns true if `info` is a parameter of a synthetic `copy` or `apply` matching the occurrence field symbol.
   def isCopyOrApplyParam(info: SymbolInformation): Boolean =
