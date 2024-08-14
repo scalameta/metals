@@ -264,9 +264,8 @@ final class Compilations(
     if (
       userConfiguration().verboseCompilation && (connection.isBloop || connection.isScalaCLI)
     ) {
-      params.setArguments(List("--verbose").asJava)
-    }
-    params.setArguments(List("--best-effort").asJava)
+      params.setArguments(List("--verbose", "--best-effort").asJava)
+    } else { params.setArguments(List("--best-effort").asJava) }
     targets.foreach { target =>
       isCompiling(target) = true
     }
