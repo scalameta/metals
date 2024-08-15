@@ -11,6 +11,8 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.scalac.SemanticdbConfig
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+import scala.meta.parsers.ParseException
+import scala.meta.tokenizers.TokenizeException
 
 class SemanticdbTextDocumentProvider(
     val compiler: MetalsGlobal,
@@ -51,7 +53,13 @@ class SemanticdbTextDocumentProvider(
     }
     // we recalculate md5, since there seems to be issue with newlines sometimes
     val document =
-      unit.toTextDocument(explicitDialect).withMd5(MD5.compute(code))
+      try {
+        unit.toTextDocument(explicitDialect).withMd5(MD5.compute(code))
+      } catch {
+        case _: TokenizeException | _: ParseException =>
+          s.TextDocument.defaultInstance
+      }
+
     compiler.workspace
       .flatMap { workspacePath =>
         scala.util.Try(workspacePath.relativize(filePath.toNIO)).toOption
