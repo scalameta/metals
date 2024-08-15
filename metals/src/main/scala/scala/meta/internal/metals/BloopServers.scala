@@ -333,8 +333,8 @@ final class BloopServers(
       )
 
     userConfig.flatMap(_.bloopJvmProperties) match {
-      case None => config
-      case Some(opts) => config.copy(javaOpts = opts)
+      case Some(opts) if opts.nonEmpty => config.copy(javaOpts = opts)
+      case _ => config
     }
   }
 
