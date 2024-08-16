@@ -9,7 +9,7 @@ export BLOOP_JAVA_OPTS="-Xss4m -XX:MaxInlineLevel=20 -XX:+UseZGC -XX:ZUncommitDe
 
 mkdir -p ~/.bloop
 curl -Lo coursier https://git.io/coursier-cli && chmod +x coursier
-./coursier launch -M bloop.cli.Bloop -r sonatype:snapshots ch.epfl.scala:cli_2.13:$(bloop_version) -- about
+./coursier launch -M bloop.cli.Bloop -r sonatype:snapshots ch.epfl.scala:bloop-cli_2.13:$(bloop_version) -- about
 
 cat ~/.local/share/scalacli/bloop/daemon/output
 
