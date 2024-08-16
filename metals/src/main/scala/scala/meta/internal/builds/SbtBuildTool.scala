@@ -115,12 +115,12 @@ case class SbtBuildTool(
       workspace: AbsolutePath,
       sbtLauncherOutDir: Path,
   ): List[String] = {
-    val sbtScript = userConfig().sbtScript.orElse(findSbtInPath())
+    val sbtScript = userConfig().sbtScript.orElse(findSbtInPath()).map(_.trim())
 
     sbtScript match {
-      case Some(script) =>
+      case Some(script) if script.nonEmpty =>
         script :: sbtArgs
-      case None =>
+      case _ =>
         val javaArgs = List[String](
           JavaBinary(userConfig().javaHome),
           "-Djline.terminal=jline.UnsupportedTerminal",
