@@ -149,7 +149,7 @@ class ConvertToNamedArguments(
               ServerCommands
                 .ConvertToNamedArgsRequest(
                   position,
-                  apply.argIndices.map(Integer.valueOf).asJava,
+                  apply.argIndices.map(Integer.valueOf).toArray,
                 )
             )
 

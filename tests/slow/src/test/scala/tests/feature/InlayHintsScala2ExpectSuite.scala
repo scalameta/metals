@@ -7,13 +7,13 @@ import tests.BaseInlayHintsExpectSuite
 import tests.InputProperties
 import tests.TestScala2Compiler
 
-class InlayHintsScala3ExpectSuite(
+class InlayHintsScala2ExpectSuite(
 ) extends BaseInlayHintsExpectSuite(
       "inlayHints3",
       InputProperties.scala3(),
     ) {
   override val compiler: PresentationCompiler = {
-    TestScala3Compiler.compiler("inlayHints", input)(
+    TestScala2Compiler.compiler("inlayHints", input)(
       munitExecutionContext
     ) match {
       case Some(pc) => pc

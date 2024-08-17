@@ -240,7 +240,8 @@ class ConnectionProvider(
         case _ if !session.canReloadWorkspace =>
           connect(CreateSession())
         case _ =>
-          session.workspaceReload
+          session
+            .workspaceReload()
             .flatMap(_ => connect(new ImportBuildAndIndex(session)))
             .map { _ =>
               scribe.info("Correctly reloaded workspace")

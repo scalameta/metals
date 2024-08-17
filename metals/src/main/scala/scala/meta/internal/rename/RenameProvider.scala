@@ -50,6 +50,7 @@ import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => LSPEither}
 import org.eclipse.lsp4j.{Range => LSPRange}
+import scala.meta.internal.pc.PcSymbolInformation
 
 final class RenameProvider(
     referenceProvider: ReferenceProvider,
@@ -117,6 +118,7 @@ final class RenameProvider(
       token: CancelToken,
   ): Future[WorkspaceEdit] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
+    // val scalaVersion =
     val localRename = compilers
       .rename(params, token)
       .map(_.asScala.toList)
@@ -164,7 +166,8 @@ final class RenameProvider(
                   if (suggestedName.isBackticked)
                     suggestedName.stripBackticks
                   else suggestedName
-                val newName = Identifier.backtickWrap(withoutBackticks)
+                val newName =
+                  KeywordWrapper.Scala3().backtickWrap(withoutBackticks)
 
                 def isNotRenamedSymbol(
                     textDocument: TextDocument,
@@ -178,15 +181,6 @@ final class RenameProvider(
                   occ.symbol.isLocal ||
                   foundName.contains(realName)
                 }
-
-                def shouldCheckImplementation(
-                    symbol: String,
-                    path: AbsolutePath,
-                    textDocument: TextDocument,
-                ) =
-                  !symbol.desc.isType && !(symbol.isLocal && symbolHierarchyOps
-                    .defaultSymbolSearch(path, textDocument)(symbol)
-                    .exists(info => info.isTrait || info.isClass))
 
                 val allReferences =
                   for {
@@ -235,13 +229,14 @@ final class RenameProvider(
                       source,
                       newName,
                     )
+                    shouldCheckImplementationFut = shouldCheckImplementation(
+                      occurence.symbol,
+                      source,
+                      semanticDb,
+                    )
                     implReferences = implementations(
                       txtParams,
-                      shouldCheckImplementation(
-                        occurence.symbol,
-                        source,
-                        semanticDb,
-                      ),
+                      shouldCheckImplementationFut,
                       newName,
                     )
                   } yield Future
@@ -325,6 +320,32 @@ final class RenameProvider(
       ConcurrentQueue.pollAll(awaitingSave)
     }
     Future.sequence(all.map(waiting => waiting())).ignoreValue
+  }
+
+  private def shouldCheckImplementation(
+      symbol: String,
+      path: AbsolutePath,
+      textDocument: TextDocument,
+  ): Future[Boolean] = {
+    val notLocalAndType = !symbol.desc.isType && !symbol.isLocal
+
+    if (notLocalAndType) Future.successful(true)
+    else if (!symbol.isLocal) Future.successful(false)
+    else
+      symbolHierarchyOps
+        .defaultSymbolSearch(path, textDocument)(symbol)
+        .match {
+          case Some(info) =>
+            Future.successful(info.isTrait || info.isClass)
+          case None =>
+            compilers.info(path, symbol).map {
+              case None => false
+              case Some(value) =>
+                value.kind.getValue() == 13 ||
+                value.kind.getValue() == 14
+            }
+
+        }
   }
 
   /**
@@ -466,31 +487,32 @@ final class RenameProvider(
 
   private def implementations(
       textParams: TextDocumentPositionParams,
-      shouldCheckImplementation: Boolean,
+      shouldCheckImplementationFut: Future[Boolean],
       newName: String,
-  ): Future[Seq[Location]] = {
-    if (shouldCheckImplementation) {
-      for {
-        implLocs <- implementationProvider.implementations(textParams)
-        result <- {
-          val result = for {
-            implLoc <- implLocs
-            locParams = toReferenceParams(implLoc, includeDeclaration = true)
-          } yield {
-            referenceProvider
-              .references(
-                locParams,
-                findRealRange = AdjustRange(findRealRange(newName)),
-                includeSynthetic,
-              )
-              .map(_.flatMap(_.locations))
+  ): Future[Seq[Location]] = shouldCheckImplementationFut.flatMap {
+    shouldCheckImplementation =>
+      if (shouldCheckImplementation) {
+        for {
+          implLocs <- implementationProvider.implementations(textParams)
+          result <- {
+            val result = for {
+              implLoc <- implLocs
+              locParams = toReferenceParams(implLoc, includeDeclaration = true)
+            } yield {
+              referenceProvider
+                .references(
+                  locParams,
+                  findRealRange = AdjustRange(findRealRange(newName)),
+                  includeSynthetic,
+                )
+                .map(_.flatMap(_.locations))
+            }
+            Future.sequence(result)
           }
-          Future.sequence(result)
-        }
-      } yield result.flatten
-    } else {
-      Future.successful(Nil)
-    }
+        } yield result.flatten
+      } else {
+        Future.successful(Nil)
+      }
   }
 
   private def canRenameSymbol(

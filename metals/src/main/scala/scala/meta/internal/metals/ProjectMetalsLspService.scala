@@ -533,7 +533,7 @@ class ProjectMetalsLspService(
         ).ignoreValue
       case buildTools =>
         for {
-          Some(buildTool) <- bspConfigGenerator.chooseBuildServerProvider(
+          case Some(buildTool) <- bspConfigGenerator.chooseBuildServerProvider(
             buildTools
           )
           _ <- connect(

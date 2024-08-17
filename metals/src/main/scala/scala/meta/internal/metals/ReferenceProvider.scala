@@ -14,6 +14,7 @@ import scala.util.matching.Regex
 
 import scala.meta.Importee
 import scala.meta.internal.metals.MetalsEnrichments.given
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol

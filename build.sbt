@@ -468,8 +468,10 @@ lazy val metals = project
       V.lsp4j,
       // for DAP
       V.dap4j,
-      ("ch.epfl.scala" %% "scala-debug-adapter" % V.debugAdapter)
-        .cross(CrossVersion.for3Use2_13),
+      withExcludes(
+        ("ch.epfl.scala" %% "scala-debug-adapter" % V.debugAdapter)
+          .cross(CrossVersion.for3Use2_13)
+      ),
       // for finding paths of global log/cache directories
       "dev.dirs" % "directories" % "26",
       // ==================
@@ -495,7 +497,7 @@ lazy val metals = project
       "com.outr" %% "scribe-file" % V.scribe,
       "com.outr" %% "scribe-slf4j2" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "4.0.0",
+      "com.lihaoyi" %% "ujson" % "3.3.1",
       // For fetching projects' templates
       "com.lihaoyi" %% "requests" % "0.9.0",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta

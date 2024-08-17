@@ -1571,8 +1571,8 @@ abstract class MetalsLspService(
   ): Future[Unit] = {
     paths
       .find { path =>
-        if (clientConfig.isDidFocusProvider() || focusedDocument().isDefined) {
-          focusedDocument().contains(path) &&
+        if (clientConfig.isDidFocusProvider() || focusedDocument.isDefined) {
+          focusedDocument.contains(path) &&
           path.isWorksheet
         } else {
           path.isWorksheet

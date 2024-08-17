@@ -62,7 +62,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       },
     )
     tracked.foreach { _ =>
-      statusBar().addMessage(
+      statusBar.addMessage(
         s"${clientConfig.icons().rocket} Indexing complete!"
       )
       if (clientConfig.initialConfig.statistics.isMemory) {

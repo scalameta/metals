@@ -22,7 +22,6 @@ import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
-import scala.meta.internal.symtab.GlobalSymbolTable
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Location
@@ -36,18 +35,14 @@ class SymbolHierarchyOps(
     buffer: Buffers,
     trees: Trees,
 ) {
-  private val globalTable = new GlobalClassTable(buildTargets)
   def defaultSymbolSearch(
       anyWorkspacePath: AbsolutePath,
       textDocument: TextDocument,
-  ): String => Option[SymbolInformation] = {
-    lazy val global =
-      globalTable.globalSymbolTableFor(anyWorkspacePath)
-    symbol => {
+  ): String => Option[SymbolInformation] = { symbol =>
+    {
       textDocument.symbols
         .find(_.symbol == symbol)
         .orElse(findSymbolInformation(symbol))
-        .orElse(global.flatMap(_.safeInfo(symbol)))
     }
   }
 
@@ -193,15 +188,6 @@ object SymbolHierarchyOps {
   ): Option[SymbolInformation] = {
     semanticDb.symbols
       .find(sym => sym.symbol == symbol)
-  }
-
-  implicit class XtensionGlobalSymbolTable(symtab: GlobalSymbolTable) {
-    def safeInfo(symbol: String): Option[SymbolInformation] =
-      try {
-        symtab.info(symbol)
-      } catch {
-        case NonFatal(_) => None
-      }
   }
 
   def isClassLike(info: SymbolInformation): Boolean =

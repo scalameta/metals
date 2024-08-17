@@ -13,7 +13,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       deprecatedScala212Versions.size > 0,
       "No deprecated Scala 2.12 versions to test.",
     )
-    val using = deprecatedScala212Versions.head
+    val usingVersion = deprecatedScala212Versions.head
     for {
       _ <- initialize(
         s"""/metals.json
@@ -44,7 +44,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       deprecatedScala212Versions.size > 0,
       "No deprecated Scala 2.12 versions to test.",
     )
-    val using = deprecatedScala212Versions.head
+    val usingVersion = deprecatedScala212Versions.head
     val older = "2.12.4"
     for {
       _ <- initialize(

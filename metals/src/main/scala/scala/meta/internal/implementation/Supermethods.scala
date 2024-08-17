@@ -81,6 +81,7 @@ class Supermethods(
         filePath,
         textDocument,
       )
+      // TODO fallback to compilers
       symbolInformation <- findSymbol(symbolOcc.symbol)
       gotoSymbol <- {
         if (symbolOcc.role.isDefinition) {
