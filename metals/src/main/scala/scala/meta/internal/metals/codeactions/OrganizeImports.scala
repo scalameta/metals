@@ -20,34 +20,34 @@ import org.eclipse.{lsp4j => l}
 sealed abstract class OrganizeImports(
     scalafixProvider: ScalafixProvider,
     buildTargets: BuildTargets,
+    diagnostics: Diagnostics,
 )(implicit ec: ExecutionContext)
     extends CodeAction {
 
-  protected val canNotOrganizeImportsWithErrors =
-    "Can not organize imports if file has error"
   protected def title: String
-  protected def disabledReason(
+  protected def isCallAllowed(
       file: AbsolutePath,
       params: CodeActionParams,
-  ): Option[String]
+  ): Boolean
   override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = {
     val uri = params.getTextDocument.getUri
     val file = uri.toAbsolutePath
 
-    disabledReason(file, params) match {
-      case reason @ Some(_) =>
+    if (isCallAllowed(file, params)) {
+      if (diagnostics.hasDiagnosticError(file)) {
         Future.successful(
           Seq(
             CodeActionBuilder.build(
               title = this.title,
               kind = this.kind,
-              disabledReason = reason,
+              disabledReason =
+                Some("Can not organize imports if file has error"),
             )
           )
         )
-      case None =>
+      } else {
         val scalaTarget = for {
           buildId <- buildTargets.inverseSources(file)
           target <- buildTargets.scalaTarget(buildId)
@@ -57,7 +57,8 @@ sealed abstract class OrganizeImports(
             organizeImportsEdits(file, target)
           case _ => Future.successful(Seq())
         }
-    }
+      }
+    } else Future.successful(Seq())
   }
 
   private def organizeImportsEdits(
@@ -66,14 +67,16 @@ sealed abstract class OrganizeImports(
   ): Future[Seq[l.CodeAction]] = {
     scalafixProvider
       .organizeImports(path, scalaVersion)
-      .map { edits =>
-        Seq(
-          CodeActionBuilder.build(
-            title = this.title,
-            kind = this.kind,
-            changes = List(path.toURI.toAbsolutePath -> edits),
+      .map {
+        case Nil => Seq.empty
+        case edits =>
+          Seq(
+            CodeActionBuilder.build(
+              title = this.title,
+              kind = this.kind,
+              changes = List(path.toURI.toAbsolutePath -> edits),
+            )
           )
-        )
       }
   }
 
@@ -91,23 +94,24 @@ class SourceOrganizeImports(
     extends OrganizeImports(
       scalafixProvider,
       buildTargets,
+      diagnostics: Diagnostics,
     ) {
 
   override val kind: String = SourceOrganizeImports.kind
   override protected val title: String = SourceOrganizeImports.title
 
-  override protected def disabledReason(
+  override protected def isCallAllowed(
       file: AbsolutePath,
       params: CodeActionParams,
-  ): Option[String] =
-    if (!isScalaOrSbt(file)) {
-      Some("Only supported for Scala and sbt files")
-    } else if (diagnostics.hasDiagnosticError(file)) {
-      scribe.info(canNotOrganizeImportsWithErrors)
-      Some(canNotOrganizeImportsWithErrors)
-    } else {
-      None
-    }
+  ): Boolean =
+    isScalaOrSbt(file) && isSourceOrganizeImportCalled(params)
+
+  protected def isSourceOrganizeImportCalled(
+      params: CodeActionParams
+  ): Boolean =
+    Option(params.getContext.getOnly)
+      .map(_.asScala.toList.contains(kind))
+      .isDefined
 }
 
 object SourceOrganizeImports {
@@ -123,30 +127,21 @@ class OrganizeImportsQuickFix(
     extends OrganizeImports(
       scalafixProvider,
       buildTargets,
+      diagnostics: Diagnostics,
     ) {
 
   override val kind: String = OrganizeImportsQuickFix.kind
   override protected val title: String = OrganizeImportsQuickFix.title
-  override protected def disabledReason(
+  override protected def isCallAllowed(
       file: AbsolutePath,
       params: CodeActionParams,
-  ): Option[String] = {
-    val hasUnused = params
+  ): Boolean =
+    params
       .getContext()
       .getDiagnostics()
       .asScala
       .collect { case ScalacDiagnostic.UnusedImport(name) => name }
       .nonEmpty
-
-    if (!hasUnused) {
-      Some("No unused imports found")
-    } else if (diagnostics.hasDiagnosticError(file)) {
-      Some(canNotOrganizeImportsWithErrors)
-    } else {
-      None
-    }
-  }
-
 }
 
 object OrganizeImportsQuickFix {
