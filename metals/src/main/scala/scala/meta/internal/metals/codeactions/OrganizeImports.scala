@@ -43,7 +43,7 @@ sealed abstract class OrganizeImports(
               title = this.title,
               kind = this.kind,
               disabledReason =
-                Some("Can not organize imports if file has error"),
+                Some("Cannot organize imports if the file has an error"),
             )
           )
         )

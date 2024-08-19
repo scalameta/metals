@@ -1406,8 +1406,13 @@ final case class TestingServer(
         .asScala
         .map(_.asScala.filter(filterAction))
     } yield (
-      codeActions.toList,
-      codeActions.map(_.getTitle()).mkString("\n"),
+      codeActions.toList.filter(_.getDisabled() == null),
+      codeActions
+        .map(a =>
+          a.getTitle() +
+            Option(a.getDisabled()).fold("")(_ => " (disabled)")
+        )
+        .mkString("\n"),
     )
 
   def assertSemanticHighlight(

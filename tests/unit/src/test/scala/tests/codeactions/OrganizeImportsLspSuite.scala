@@ -286,7 +286,7 @@ class OrganizeImportsLspSuite
        |  val a: Int = "no one wants unused imports"
        |}
        |""".stripMargin,
-    "", // This should give back no code action
+    s"${SourceOrganizeImports.title} (disabled)",
     """|package a
        |
        |import java.time.Instant
