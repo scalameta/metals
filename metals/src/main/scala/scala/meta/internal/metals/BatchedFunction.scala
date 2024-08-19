@@ -182,7 +182,7 @@ object BatchedFunction {
       ec: ExecutionContext
   ): BatchedFunction[A, B] =
     new BatchedFunction(
-      fn.andThen(CancelableFuture(_)),
+      fn.andThen(CancelableFuture(_, Cancelable.empty)),
       functionId,
       shouldLogQueue,
       default,

@@ -4,8 +4,14 @@ import scala.meta.internal.metals.{BuildInfo => V}
 
 import munit.TestOptions
 
-class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
+class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala3) {
 
+  override def versionSpecificCodeToValidate: String =
+    """given str: String = """""
+
+  override def versionSpecificScalacOptionsToValidate: List[String] = List(
+    "-Ycheck-reentrant"
+  )
   checkWorksheetDeps(
     "imports-inside",
     "a/src/main/scala/foo/Main.worksheet.sc",
@@ -24,7 +30,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
              |  "a": {}
              |}
              |/$path
-             |import $$dep.`com.lihaoyi::scalatags:0.9.0`
+             |import $$dep.`com.lihaoyi::scalatags:0.12.0`
              |import scalatags.Text.all._
              |val htmlFile = html(
              |  body(
@@ -43,11 +49,11 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
         _ = assertNoDiff(
           server.workspaceDefinitions,
           s"""|/$path
-              |import $$dep/*<no symbol>*/.`com.lihaoyi::scalatags:0.9.0`/*<no symbol>*/
+              |import $$dep/*<no symbol>*/.`com.lihaoyi::scalatags:0.12.0`/*<no symbol>*/
               |import scalatags.Text/*Text.scala*/.all/*Text.scala*/._
-              |val htmlFile/*L2*/ = html/*Text.scala*/(
-              |  body/*Text.scala*/(
-              |    p/*Text.scala*/("This is a big paragraph of text")
+              |val htmlFile/*L2*/ = html/*Tags.scala*/(
+              |  body/*Tags.scala*/(
+              |    p/*Tags.scala*/("This is a big paragraph of text")
               |  )
               |)
               |htmlFile/*L2*/.render/*Text.scala*/
@@ -58,7 +64,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
         _ = assertNoDiagnostics()
         _ = assertNoDiff(
           client.workspaceDecorations(path),
-          """|import $dep.`com.lihaoyi::scalatags:0.9.0`
+          """|import $dep.`com.lihaoyi::scalatags:0.12.0`
              |import scalatags.Text.all._
              |val htmlFile = html(
              |  body(
@@ -89,7 +95,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
       _ <- server.didOpen(path)
       _ = assertNoDiff(
         client.workspaceErrorShowMessages,
-        "Error downloading com.lihaoyi:scalatags_2.13:0.999.0",
+        "Error downloading com.lihaoyi:scalatags_3:0.999.0",
       )
     } yield ()
   }
@@ -113,7 +119,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
       _ <- server.didOpen(path)
       _ = assertNoDiff(
         client.syntheticDecorations,
-        "new java.sql.Date(100L) // : java.sql.Date = 1970-01-01",
+        "new java.sql.Date(100L) // : Date = 1970-01-01",
       )
     } yield ()
   }

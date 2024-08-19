@@ -9,16 +9,17 @@ import scala.meta.internal.metals.{BuildInfo => V}
 import tests.DirectoryExpectSuite
 import tests.ExpectTestCase
 import tests.InputProperties
-import tests.TestScala3Compiler
+import tests.TestScala2Compiler
 import tests.TestSemanticTokens
 
-class SemanticTokensScala3ExpectSuite(
-) extends DirectoryExpectSuite("semanticTokens3") {
-  override lazy val input: InputProperties = InputProperties.scala3()
+class SemanticTokensScala2ExpectSuite(
+) extends DirectoryExpectSuite("semanticTokens") {
+  override lazy val input: InputProperties = InputProperties.scala2()
+
   private val compiler =
-    TestScala3Compiler.compiler("tokens", input)(munitExecutionContext) match {
+    TestScala2Compiler.compiler("tokens", input)(munitExecutionContext) match {
       case Some(pc) => pc
-      case _ => fail(s"Could not load ${V.scala3} presentation compiler")
+      case _ => fail(s"Could not load ${V.scala213} presentation compiler")
     }
 
   override def testCases(): List[ExpectTestCase] = {
@@ -36,7 +37,7 @@ class SemanticTokensScala3ExpectSuite(
           val tokens = SemanticTokensProvider.provide(
             nodes,
             params,
-            isScala3 = true,
+            isScala3 = false,
           )
 
           TestSemanticTokens.semanticString(

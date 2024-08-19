@@ -15,11 +15,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.NewProjectProvider
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.metals.DidFocusResult
-import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLspService
-import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.config.StatusBarState

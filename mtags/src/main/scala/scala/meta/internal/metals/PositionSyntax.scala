@@ -67,7 +67,7 @@ object PositionSyntax {
         .append("\n")
         .append(pos.lineContent)
         .append("\n")
-        .append(pos.lineCaret)
+        .append(lineCaret)
         .toString()
     }
     def multilines: String = {

@@ -326,7 +326,7 @@ class DebugDiscovery(
               .flatMap(scalaTarget =>
                 JavaBinary.javaBinaryFromPath(scalaTarget.jvmHome)
               )
-              .orElse(userConfig().usedJavaBinary)
+              .orElse(userConfig().usedJavaBinary())
             buildTargetClasses
               .jvmRunEnvironment(params.getTargets().get(0))
               .map { envItem =>

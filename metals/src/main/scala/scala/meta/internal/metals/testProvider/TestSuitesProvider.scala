@@ -13,7 +13,7 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.ScalaTestSuiteSelection
 import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.SemanticdbFeatureProvider
@@ -366,7 +366,7 @@ final class TestSuitesProvider(
       // filter out sbt builds
       .filterNot(_.isSbtBuild)
       .map { buildTarget =>
-        SymbolsPerTarget(
+        SymbolsPerTarget.apply(
           buildTarget,
           buildTargetClasses.classesOf(buildTarget.getId).testClasses,
         )

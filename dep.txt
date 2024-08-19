@@ -1,0 +1,694 @@
+[info] welcome to sbt 1.9.9 (Eclipse Adoptium Java 17.0.6)
+[info] loading global plugins from /home/tgodzik/.sbt/1.0/plugins
+[info] loading settings for project metals-build-build-build from metals.sbt ...
+[info] loading project definition from /home/tgodzik/Documents/metals/project/project/project
+[info] loading settings for project metals-build-build from metals.sbt ...
+[info] loading project definition from /home/tgodzik/Documents/metals/project/project
+[success] Generated .bloop/metals-build-build.json
+[success] Total time: 1 s, completed Aug 16, 2024, 6:21:30 PM
+[info] loading settings for project metals-build from metals.sbt,plugins.sbt ...
+[info] loading project definition from /home/tgodzik/Documents/metals/project
+[success] Generated .bloop/metals-build.json
+[success] Total time: 1 s, completed Aug 16, 2024, 6:21:32 PM
+[info] loading settings for project default-ce2872 from build.sbt ...
+[info] resolving key references (19696 settings) ...
+[info]              _        _     
+[info]   /\/\   ___| |_ __ _| |___ 
+[info]  /    \ / _ \ __/ _` | / __|
+[info] / /\/\ \  __/ || (_| | \__ \
+[info] \/    \/\___|\__\__,_|_|___/
+[info] 
+[info] Useful sbt tasks:
+[info] a. unit/testOnly tests.DefinitionSuite - run a specific unit test suite.
+[info] b. unit/testOnly tests.DefinitionSuite -- *exact-test-name* - run a specific test case inside the unit test suite.
+[info] c. unit/testOnly tests.DefinitionSuite -- -F - use `-F` flag to show the full stack trace in case it is missing
+[info] d. slow/testOnly -- tests.sbt.* - run all slow tests inside tests.sbt package, they will publish needed mtags locally.
+[info] e. ~cross/testOnly tests.hover.HoverTermSuite - automatically rerun on changes a specific presentation compiler test, great for edit/test/debug workflows.
+[info] f. +cross/test - run all presentation compiler tests for all non-deprecated Scala versions.
+[info] g. publishLocal - publish Metals for the currently used Scala version.
+[info] h. +publishLocal - publish Metals for all supported used Scala versions.
+[info] i. quick-publish-local - publish Metals artifacts but with only limited set of Scala versions
+[info] j. ++3.3.3 mtags/publishLocal - publish changes for a single Scala version, especially useful if working on a feature inside mtags module. `publishLocal` will still need to be run before at least once.
+[warn] there's a key that's not used by any other settings/tasks:
+[warn]  
+[warn] * ThisBuild / scalafixScalaBinaryVersion
+[warn]   +- /home/tgodzik/Documents/metals/build.sbt:39
+[warn]  
+[warn] note: a setting might still be used by a command; to exclude a key from this `lintUnused` check
+[warn] either append it to `Global / excludeLintKeys` or call .withRank(KeyRanks.Invisible) on the key
+[info] org.scalameta:metals_3:1.3.6-SNAPSHOT
+[info]   +-ch.epfl.scala:bloop-rifle_2.13:2.0.0-RC1 [S]
+[info]   | +-ch.epfl.scala:bsp4j:2.1.1 (evicted by: 2.2.0-M2)
+[info]   | +-ch.epfl.scala:bsp4j:2.2.0-M2
+[info]   | | +-org.eclipse.lsp4j:org.eclipse.lsp4j.generator:0.20.1
+[info]   | | | +-org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.20.1 (evicted by: 0.23..
+[info]   | | | +-org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.23.1
+[info]   | | | | +-com.google.code.gson:gson:2.11.0
+[info]   | | | | | +-com.google.errorprone:error_prone_annotations:2.27.0
+[info]   | | | | | 
+[info]   | | | | +-com.google.code.gson:gson:[2.9.1,3.0) (evicted by: 2.11.0)
+[info]   | | | | 
+[info]   | | | +-org.eclipse.xtend:org.eclipse.xtend.lib:2.28.0
+[info]   | | |   +-org.eclipse.xtend:org.eclipse.xtend.lib.macro:2.28.0
+[info]   | | |   | +-org.eclipse.xtext:org.eclipse.xtext.xbase.lib:2.28.0
+[info]   | | |   |   +-com.google.guava:guava:33.2.1-jre
+[info]   | | |   |     +-com.google.code.findbugs:jsr305:3.0.2
+[info]   | | |   |     +-com.google.errorprone:error_prone_annotations:2.26.1 (evicte..
+[info]   | | |   |     +-com.google.errorprone:error_prone_annotations:2.27.0
+[info]   | | |   |     +-com.google.guava:failureaccess:1.0.2
+[info]   | | |   |     +-com.google.guava:listenablefuture:9999.0-empty-to-avoid-conf..
+[info]   | | |   |     +-com.google.j2objc:j2objc-annotations:3.0.0
+[info]   | | |   |     +-org.checkerframework:checker-qual:3.42.0
+[info]   | | |   |     
+[info]   | | |   +-org.eclipse.xtext:org.eclipse.xtext.xbase.lib:2.28.0
+[info]   | | |     +-com.google.guava:guava:33.2.1-jre
+[info]   | | |       +-com.google.code.findbugs:jsr305:3.0.2
+[info]   | | |       +-com.google.errorprone:error_prone_annotations:2.26.1 (evicted ..
+[info]   | | |       +-com.google.errorprone:error_prone_annotations:2.27.0
+[info]   | | |       +-com.google.guava:failureaccess:1.0.2
+[info]   | | |       +-com.google.guava:listenablefuture:9999.0-empty-to-avoid-confli..
+[info]   | | |       +-com.google.j2objc:j2objc-annotations:3.0.0
+[info]   | | |       +-org.checkerframework:checker-qual:3.42.0
+[info]   | | |       
+[info]   | | +-org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.20.1 (evicted by: 0.23.1)
+[info]   | | +-org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.23.1
+[info]   | |   +-com.google.code.gson:gson:2.11.0
+[info]   | |   | +-com.google.errorprone:error_prone_annotations:2.27.0
+[info]   | |   | 
+[info]   | |   +-com.google.code.gson:gson:[2.9.1,3.0) (evicted by: 2.11.0)
+[info]   | |   
+[info]   | +-ch.epfl.scala:libdaemon_2.13:0.0.12
+[info]   | +-io.github.alexarchambault.scala-cli.snailgun:snailgun-core_2.13:0.4.1-sc..
+[info]   | 
+[info]   +-ch.epfl.scala:bsp4j:2.2.0-M2
+[info]   | +-org.eclipse.lsp4j:org.eclipse.lsp4j.generator:0.20.1
+[info]   | | +-org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.20.1 (evicted by: 0.23.1)
+[info]   | | +-org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.23.1
+[info]   | | | +-com.google.code.gson:gson:2.11.0
+[info]   | | | | +-com.google.errorprone:error_prone_annotations:2.27.0
+[info]   | | | | 
+[info]   | | | +-com.google.code.gson:gson:[2.9.1,3.0) (evicted by: 2.11.0)
+[info]   | | | 
+[info]   | | +-org.eclipse.xtend:org.eclipse.xtend.lib:2.28.0
+[info]   | |   +-org.eclipse.xtend:org.eclipse.xtend.lib.macro:2.28.0
+[info]   | |   | +-org.eclipse.xtext:org.eclipse.xtext.xbase.lib:2.28.0
+[info]   | |   |   +-com.google.guava:guava:33.2.1-jre
+[info]   | |   |     +-com.google.code.findbugs:jsr305:3.0.2
+[info]   | |   |     +-com.google.errorprone:error_prone_annotations:2.26.1 (evicted ..
+[info]   | |   |     +-com.google.errorprone:error_prone_annotations:2.27.0
+[info]   | |   |     +-com.google.guava:failureaccess:1.0.2
+[info]   | |   |     +-com.google.guava:listenablefuture:9999.0-empty-to-avoid-confli..
+[info]   | |   |     +-com.google.j2objc:j2objc-annotations:3.0.0
+[info]   | |   |     +-org.checkerframework:checker-qual:3.42.0
+[info]   | |   |     
+[info]   | |   +-org.eclipse.xtext:org.eclipse.xtext.xbase.lib:2.28.0
+[info]   | |     +-com.google.guava:guava:33.2.1-jre
+[info]   | |       +-com.google.code.findbugs:jsr305:3.0.2
+[info]   | |       +-com.google.errorprone:error_prone_annotations:2.26.1 (evicted by..
+[info]   | |       +-com.google.errorprone:error_prone_annotations:2.27.0
+[info]   | |       +-com.google.guava:failureaccess:1.0.2
+[info]   | |       +-com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict..
+[info]   | |       +-com.google.j2objc:j2objc-annotations:3.0.0
+[info]   | |       +-org.checkerframework:checker-qual:3.42.0
+[info]   | |       
+[info]   | +-org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.20.1 (evicted by: 0.23.1)
+[info]   | +-org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.23.1
+[info]   |   +-com.google.code.gson:gson:2.11.0
+[info]   |   | +-com.google.errorprone:error_prone_annotations:2.27.0
+[info]   |   | 
+[info]   |   +-com.google.code.gson:gson:[2.9.1,3.0) (evicted by: 2.11.0)
+[info]   |   
+[info]   +-ch.epfl.scala:scala-debug-adapter_2.13:4.2.0 [S]
+[info]   | +-ch.epfl.scala:com-microsoft-java-debug-core:0.34.0+31
+[info]   | | +-com.google.code.gson:gson:2.11.0
+[info]   | | | +-com.google.errorprone:error_prone_annotations:2.27.0
+[info]   | | | 
+[info]   | | +-commons-io:commons-io:2.16.1
+[info]   | | +-io.reactivex.rxjava2:rxjava:2.2.21
+[info]   | | | +-org.reactivestreams:reactive-streams:1.0.3 (evicted by: 1.0.4)
+[info]   | | | +-org.reactivestreams:reactive-streams:1.0.4
+[info]   | | | 
+[info]   | | +-org.apache.commons:commons-lang3:3.14.0
+[info]   | | +-org.reactivestreams:reactive-streams:1.0.4
+[info]   | | 
+[info]   | +-org.ow2.asm:asm-util:9.7
+[info]   | | +-org.ow2.asm:asm-analysis:9.7
+[info]   | | | +-org.ow2.asm:asm-tree:9.7
+[info]   | | |   +-org.ow2.asm:asm:9.7
+[info]   | | |   
+[info]   | | +-org.ow2.asm:asm-tree:9.7
+[info]   | | | +-org.ow2.asm:asm:9.7
+[info]   | | | 
+[info]   | | +-org.ow2.asm:asm:9.7
+[info]   | | 
+[info]   | +-org.ow2.asm:asm:9.7
+[info]   | +-org.scala-lang.modules:scala-parallel-collections_2.13:1.0.4 [S]
+[info]   | +-org.scala-lang:scala-reflect:2.13.14 [S]
+[info]   | +-org.scala-sbt:test-agent:1.10.1
+[info]   | | +-org.scala-sbt:test-interface:1.0
+[info]   | | 
+[info]   | +-org.scalameta:parsers_2.13:4.9.7 (evicted by: 4.9.9)
+[info]   | +-org.scalameta:parsers_2.13:4.9.9 [S]
+[info]   |   +-org.scalameta:trees_2.13:4.9.9 [S]
+[info]   |     +-org.scalameta:common_2.13:4.9.9 [S]
+[info]   |       +-com.lihaoyi:sourcecode_2.13:0.4.2 [S]
+[info]   |       
+[info]   +-ch.epfl.scala:scalafix-interfaces:0.12.1
+[info]   | +-io.get-coursier:interface:1.0.19
+[info]   |   +-org.slf4j:slf4j-api:1.7.36 (evicted by: 2.0.13)
+[info]   |   +-org.slf4j:slf4j-api:2.0.13
+[info]   |   
+[info]   +-com.google.guava:guava:33.2.1-jre
+[info]   | +-com.google.code.findbugs:jsr305:3.0.2
+[info]   | +-com.google.errorprone:error_prone_annotations:2.26.1 (evicted by: 2.27.0)
+[info]   | +-com.google.errorprone:error_prone_annotations:2.27.0
+[info]   | +-com.google.guava:failureaccess:1.0.2
+[info]   | +-com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-gu..
+[info]   | +-com.google.j2objc:j2objc-annotations:3.0.0
+[info]   | +-org.checkerframework:checker-qual:3.42.0
+[info]   | 
+[info]   +-com.googlecode.java-diff-utils:diffutils:1.3.0
+[info]   +-com.h2database:h2:2.3.230
+[info]   +-com.lihaoyi:requests_3:0.9.0
+[info]   | +-com.lihaoyi:geny_3:1.0.0 (evicted by: 1.1.1)
+[info]   | +-com.lihaoyi:geny_3:1.1.1
+[info]   | | +-org.scala-lang:scala3-library_3:3.3.1 (evicted by: 3.4.2)
+[info]   | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | 
+[info]   | +-org.scala-lang:scala3-library_3:3.1.1 (evicted by: 3.4.2)
+[info]   | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | 
+[info]   +-com.lihaoyi:ujson_3:4.0.0
+[info]   | +-com.lihaoyi:upickle-core_3:4.0.0
+[info]   | | +-com.lihaoyi:geny_3:1.1.1
+[info]   | | | +-org.scala-lang:scala3-library_3:3.3.1 (evicted by: 3.4.2)
+[info]   | | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | | 
+[info]   | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | 
+[info]   | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | 
+[info]   +-com.outr:scribe-file_3:3.15.0
+[info]   | +-com.outr:scribe_3:3.15.0
+[info]   | | +-com.lihaoyi:sourcecode_3:0.4.2
+[info]   | | | +-org.scala-lang:scala3-library_3:3.3.1 (evicted by: 3.4.2)
+[info]   | | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | | 
+[info]   | | +-com.outr:moduload_3:1.1.7
+[info]   | | | +-org.scala-lang.modules:scala-collection-compat_3:2.11.0 (evicted by:..
+[info]   | | | +-org.scala-lang.modules:scala-collection-compat_3:2.12.0
+[info]   | | | | +-org.scala-lang:scala3-library_3:3.2.2 (evicted by: 3.4.2)
+[info]   | | | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | | | 
+[info]   | | | +-org.scala-lang:scala3-library_3:3.3.0 (evicted by: 3.4.2)
+[info]   | | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | | 
+[info]   | | +-com.outr:perfolation_3:1.2.11
+[info]   | | | +-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2)
+[info]   | | | | #-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2) (cyc..
+[info]   | | | | 
+[info]   | | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | | 
+[info]   | | +-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2)
+[info]   | | | #-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2) (cycle)
+[info]   | | | 
+[info]   | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | 
+[info]   | +-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2)
+[info]   | | #-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2) (cycle)
+[info]   | | 
+[info]   | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | 
+[info]   +-com.outr:scribe-slf4j2_3:3.15.0
+[info]   | +-com.outr:scribe_3:3.15.0
+[info]   | | +-com.lihaoyi:sourcecode_3:0.4.2
+[info]   | | | +-org.scala-lang:scala3-library_3:3.3.1 (evicted by: 3.4.2)
+[info]   | | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | | 
+[info]   | | +-com.outr:moduload_3:1.1.7
+[info]   | | | +-org.scala-lang.modules:scala-collection-compat_3:2.11.0 (evicted by:..
+[info]   | | | +-org.scala-lang.modules:scala-collection-compat_3:2.12.0
+[info]   | | | | +-org.scala-lang:scala3-library_3:3.2.2 (evicted by: 3.4.2)
+[info]   | | | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | | | 
+[info]   | | | +-org.scala-lang:scala3-library_3:3.3.0 (evicted by: 3.4.2)
+[info]   | | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | | 
+[info]   | | +-com.outr:perfolation_3:1.2.11
+[info]   | | | +-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2)
+[info]   | | | | #-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2) (cyc..
+[info]   | | | | 
+[info]   | | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | | 
+[info]   | | +-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2)
+[info]   | | | #-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2) (cycle)
+[info]   | | | 
+[info]   | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | 
+[info]   | +-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2)
+[info]   | | #-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2) (cycle)
+[info]   | | 
+[info]   | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | +-org.slf4j:slf4j-api:2.0.13
+[info]   | 
+[info]   +-com.outr:scribe_3:3.15.0
+[info]   | +-com.lihaoyi:sourcecode_3:0.4.2
+[info]   | | +-org.scala-lang:scala3-library_3:3.3.1 (evicted by: 3.4.2)
+[info]   | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | 
+[info]   | +-com.outr:moduload_3:1.1.7
+[info]   | | +-org.scala-lang.modules:scala-collection-compat_3:2.11.0 (evicted by: 2..
+[info]   | | +-org.scala-lang.modules:scala-collection-compat_3:2.12.0
+[info]   | | | +-org.scala-lang:scala3-library_3:3.2.2 (evicted by: 3.4.2)
+[info]   | | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | | 
+[info]   | | +-org.scala-lang:scala3-library_3:3.3.0 (evicted by: 3.4.2)
+[info]   | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | 
+[info]   | +-com.outr:perfolation_3:1.2.11
+[info]   | | +-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2)
+[info]   | | | #-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2) (cycle)
+[info]   | | | 
+[info]   | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | 
+[info]   | +-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2)
+[info]   | | #-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2) (cycle)
+[info]   | | 
+[info]   | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | 
+[info]   +-com.swoval:file-tree-views:2.1.12
+[info]   +-dev.dirs:directories:26
+[info]   +-io.get-coursier:coursier-sbt-maven-repository_2.13:2.1.10 [S]
+[info]   | +-io.get-coursier:coursier-core_2.13:2.1.10 [S]
+[info]   |   +-io.get-coursier:coursier-util_2.13:2.1.10 [S]
+[info]   |   +-io.github.alexarchambault:concurrent-reference-hash-map:1.1.0
+[info]   |   
+[info]   +-io.get-coursier:coursier_2.13:2.1.10 [S]
+[info]   | +-com.github.plokhotnyuk.jsoniter-scala:jsoniter-scala-core_2.13:2.13.5 (e..
+[info]   | +-com.github.plokhotnyuk.jsoniter-scala:jsoniter-scala-core_2.13:2.13.5.2 ..
+[info]   | +-io.get-coursier:coursier-cache_2.13:2.1.10 [S]
+[info]   | | +-io.get-coursier.jniutils:windows-jni-utils:0.3.3
+[info]   | | +-io.get-coursier:coursier-util_2.13:2.1.10 [S]
+[info]   | | +-io.github.alexarchambault.windows-ansi:windows-ansi:0.0.5
+[info]   | | | +-org.fusesource.jansi:jansi:1.18
+[info]   | | | 
+[info]   | | +-org.codehaus.plexus:plexus-archiver:4.9.0
+[info]   | | | +-com.github.luben:zstd-jni:1.5.5-10
+[info]   | | | +-commons-io:commons-io:2.15.0 (evicted by: 2.16.1)
+[info]   | | | +-commons-io:commons-io:2.16.1
+[info]   | | | +-javax.inject:javax.inject:1
+[info]   | | | +-org.apache.commons:commons-compress:1.24.0
+[info]   | | | +-org.codehaus.plexus:plexus-io:3.4.1
+[info]   | | | | +-commons-io:commons-io:2.11.0 (evicted by: 2.16.1)
+[info]   | | | | +-commons-io:commons-io:2.16.1
+[info]   | | | | +-javax.inject:javax.inject:1
+[info]   | | | | +-org.codehaus.plexus:plexus-utils:3.5.0 (evicted by: 4.0.0)
+[info]   | | | | +-org.codehaus.plexus:plexus-utils:4.0.0
+[info]   | | | | 
+[info]   | | | +-org.codehaus.plexus:plexus-utils:4.0.0
+[info]   | | | +-org.iq80.snappy:snappy:0.4
+[info]   | | | +-org.slf4j:slf4j-api:1.7.36 (evicted by: 2.0.13)
+[info]   | | | +-org.slf4j:slf4j-api:2.0.13
+[info]   | | | +-org.tukaani:xz:1.9
+[info]   | | | 
+[info]   | | +-org.codehaus.plexus:plexus-container-default:2.1.1
+[info]   | | | +-org.apache.xbean:xbean-reflect:3.7
+[info]   | | | +-org.codehaus.plexus:plexus-classworlds:2.6.0
+[info]   | | | +-org.codehaus.plexus:plexus-utils:3.1.1 (evicted by: 4.0.0)
+[info]   | | | +-org.codehaus.plexus:plexus-utils:4.0.0
+[info]   | | | 
+[info]   | | +-org.virtuslab.scala-cli:config_2.13:0.2.1 [S]
+[info]   | |   +-com.github.plokhotnyuk.jsoniter-scala:jsoniter-scala-core_2.13:2.13...
+[info]   | |   
+[info]   | +-io.get-coursier:coursier-core_2.13:2.1.10 [S]
+[info]   | | +-io.get-coursier:coursier-util_2.13:2.1.10 [S]
+[info]   | | +-io.github.alexarchambault:concurrent-reference-hash-map:1.1.0
+[info]   | | 
+[info]   | +-io.get-coursier:coursier-proxy-setup:2.1.10
+[info]   | 
+[info]   +-io.get-coursier:interface:1.0.19
+[info]   | +-org.slf4j:slf4j-api:1.7.36 (evicted by: 2.0.13)
+[info]   | +-org.slf4j:slf4j-api:2.0.13
+[info]   | 
+[info]   +-io.get-coursier:versions_2.13:0.3.2 [S]
+[info]   +-io.github.alexarchambault.ammonite:ammonite-runner_2.13:0.4.0 [S]
+[info]   | +-io.get-coursier:coursier-launcher_2.13:2.0.16 [S]
+[info]   | +-io.get-coursier:interface:1.0.19
+[info]   | | +-org.slf4j:slf4j-api:1.7.36 (evicted by: 2.0.13)
+[info]   | | +-org.slf4j:slf4j-api:2.0.13
+[info]   | | 
+[info]   | +-io.get-coursier:interface:1.0.8 (evicted by: 1.0.19)
+[info]   | 
+[info]   +-io.undertow:undertow-core:2.2.20.Final
+[info]   | +-org.jboss.logging:jboss-logging:3.4.1.Final
+[info]   | +-org.jboss.threads:jboss-threads:3.1.0.Final
+[info]   | | +-org.jboss.logging:jboss-logging:3.4.1.Final
+[info]   | | +-org.wildfly.common:wildfly-common:1.5.0.Final (evicted by: 1.5.4.Final)
+[info]   | | +-org.wildfly.common:wildfly-common:1.5.4.Final
+[info]   | | 
+[info]   | +-org.jboss.xnio:xnio-api:3.8.16.Final
+[info]   | | +-org.jboss.threads:jboss-threads:2.3.6.Final (evicted by: 3.1.0.Final)
+[info]   | | +-org.jboss.threads:jboss-threads:3.1.0.Final
+[info]   | | | +-org.jboss.logging:jboss-logging:3.4.1.Final
+[info]   | | | +-org.wildfly.common:wildfly-common:1.5.0.Final (evicted by: 1.5.4.Fin..
+[info]   | | | +-org.wildfly.common:wildfly-common:1.5.4.Final
+[info]   | | | 
+[info]   | | +-org.wildfly.client:wildfly-client-config:1.0.1.Final
+[info]   | | | +-org.jboss.logging:jboss-logging:3.3.1.Final (evicted by: 3.4.1.Final)
+[info]   | | | +-org.jboss.logging:jboss-logging:3.4.1.Final
+[info]   | | | 
+[info]   | | +-org.wildfly.common:wildfly-common:1.5.4.Final
+[info]   | | 
+[info]   | +-org.jboss.xnio:xnio-api:3.8.7.Final (evicted by: 3.8.16.Final)
+[info]   | +-org.jboss.xnio:xnio-nio:3.8.16.Final
+[info]   | | +-org.jboss.xnio:xnio-api:3.8.16.Final
+[info]   | |   +-org.jboss.threads:jboss-threads:2.3.6.Final (evicted by: 3.1.0.Final)
+[info]   | |   +-org.jboss.threads:jboss-threads:3.1.0.Final
+[info]   | |   | +-org.jboss.logging:jboss-logging:3.4.1.Final
+[info]   | |   | +-org.wildfly.common:wildfly-common:1.5.0.Final (evicted by: 1.5.4.F..
+[info]   | |   | +-org.wildfly.common:wildfly-common:1.5.4.Final
+[info]   | |   | 
+[info]   | |   +-org.wildfly.client:wildfly-client-config:1.0.1.Final
+[info]   | |   | +-org.jboss.logging:jboss-logging:3.3.1.Final (evicted by: 3.4.1.Fin..
+[info]   | |   | +-org.jboss.logging:jboss-logging:3.4.1.Final
+[info]   | |   | 
+[info]   | |   +-org.wildfly.common:wildfly-common:1.5.4.Final
+[info]   | |   
+[info]   | +-org.jboss.xnio:xnio-nio:3.8.7.Final (evicted by: 3.8.16.Final)
+[info]   | 
+[info]   +-org.eclipse.jdt:org.eclipse.jdt.core:3.25.0
+[info]   +-org.eclipse.lsp4j:org.eclipse.lsp4j.debug:0.23.1
+[info]   | +-org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc.debug:0.23.1
+[info]   |   +-com.google.code.gson:gson:2.11.0
+[info]   |   | +-com.google.errorprone:error_prone_annotations:2.27.0
+[info]   |   | 
+[info]   |   +-com.google.code.gson:gson:[2.9.1,3.0) (evicted by: 2.11.0)
+[info]   |   +-org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.23.1
+[info]   |     +-com.google.code.gson:gson:2.11.0
+[info]   |     | +-com.google.errorprone:error_prone_annotations:2.27.0
+[info]   |     | 
+[info]   |     +-com.google.code.gson:gson:[2.9.1,3.0) (evicted by: 2.11.0)
+[info]   |     
+[info]   +-org.eclipse.lsp4j:org.eclipse.lsp4j:0.23.1
+[info]   | +-org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.23.1
+[info]   |   +-com.google.code.gson:gson:2.11.0
+[info]   |   | +-com.google.errorprone:error_prone_annotations:2.27.0
+[info]   |   | 
+[info]   |   +-com.google.code.gson:gson:[2.9.1,3.0) (evicted by: 2.11.0)
+[info]   |   
+[info]   +-org.eclipse.platform:org.eclipse.ant.core:3.5.500
+[info]   +-org.eclipse.platform:org.eclipse.compare.core:3.6.600
+[info]   +-org.eclipse.platform:org.eclipse.core.commands:3.9.500
+[info]   +-org.eclipse.platform:org.eclipse.core.contenttype:3.7.500
+[info]   +-org.eclipse.platform:org.eclipse.core.expressions:3.6.500
+[info]   +-org.eclipse.platform:org.eclipse.core.filesystem:1.7.500
+[info]   +-org.eclipse.platform:org.eclipse.core.jobs:3.10.500
+[info]   +-org.eclipse.platform:org.eclipse.core.resources:3.13.500
+[info]   +-org.eclipse.platform:org.eclipse.core.runtime:3.16.0
+[info]   +-org.eclipse.platform:org.eclipse.core.variables:3.4.600
+[info]   +-org.eclipse.platform:org.eclipse.equinox.app:1.4.300
+[info]   +-org.eclipse.platform:org.eclipse.equinox.common:3.10.600
+[info]   +-org.eclipse.platform:org.eclipse.equinox.preferences:3.7.600
+[info]   +-org.eclipse.platform:org.eclipse.equinox.registry:3.8.600
+[info]   +-org.eclipse.platform:org.eclipse.osgi:3.15.0
+[info]   +-org.eclipse.platform:org.eclipse.team.core:3.8.700
+[info]   +-org.eclipse.platform:org.eclipse.text:3.9.0
+[info]   +-org.flywaydb:flyway-core:9.22.3
+[info]   | +-com.fasterxml.jackson.dataformat:jackson-dataformat-toml:2.15.2
+[info]   | | +-com.fasterxml.jackson.core:jackson-core:2.15.2
+[info]   | | +-com.fasterxml.jackson.core:jackson-databind:2.15.2
+[info]   | |   +-com.fasterxml.jackson.core:jackson-annotations:2.15.2
+[info]   | |   +-com.fasterxml.jackson.core:jackson-core:2.15.2
+[info]   | |   
+[info]   | +-com.google.code.gson:gson:2.10.1 (evicted by: 2.11.0)
+[info]   | +-com.google.code.gson:gson:2.11.0
+[info]   |   +-com.google.errorprone:error_prone_annotations:2.27.0
+[info]   |   
+[info]   +-org.jboss.xnio:xnio-nio:3.8.16.Final
+[info]   | +-org.jboss.xnio:xnio-api:3.8.16.Final
+[info]   |   +-org.jboss.threads:jboss-threads:2.3.6.Final (evicted by: 3.1.0.Final)
+[info]   |   +-org.jboss.threads:jboss-threads:3.1.0.Final
+[info]   |   | +-org.jboss.logging:jboss-logging:3.4.1.Final
+[info]   |   | +-org.wildfly.common:wildfly-common:1.5.0.Final (evicted by: 1.5.4.Fin..
+[info]   |   | +-org.wildfly.common:wildfly-common:1.5.4.Final
+[info]   |   | 
+[info]   |   +-org.wildfly.client:wildfly-client-config:1.0.1.Final
+[info]   |   | +-org.jboss.logging:jboss-logging:3.3.1.Final (evicted by: 3.4.1.Final)
+[info]   |   | +-org.jboss.logging:jboss-logging:3.4.1.Final
+[info]   |   | 
+[info]   |   +-org.wildfly.common:wildfly-common:1.5.4.Final
+[info]   |   
+[info]   +-org.openjdk.jol:jol-core:0.17
+[info]   +-org.scala-lang.modules:scala-parallel-collections_3:1.0.4
+[info]   | +-org.scala-lang:scala3-library_3:3.0.2 (evicted by: 3.4.2)
+[info]   | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | 
+[info]   +-org.scala-lang.modules:scala-xml_3:2.3.0
+[info]   | +-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2)
+[info]   | | #-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2) (cycle)
+[info]   | | 
+[info]   | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | 
+[info]   +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   +-org.scala-sbt.ipcsocket:ipcsocket:1.6.2
+[info]   | +-net.java.dev.jna:jna-platform:5.12.0
+[info]   | | +-net.java.dev.jna:jna:5.12.0
+[info]   | | 
+[info]   | +-net.java.dev.jna:jna:5.12.0
+[info]   | 
+[info]   +-org.scalameta:mdoc-interfaces:2.5.4
+[info]   | +-io.get-coursier:interface:1.0.19
+[info]   |   +-org.slf4j:slf4j-api:1.7.36 (evicted by: 2.0.13)
+[info]   |   +-org.slf4j:slf4j-api:2.0.13
+[info]   |   
+[info]   +-org.scalameta:metaconfig-core_3:0.13.0
+[info]   | +-org.scala-lang.modules:scala-collection-compat_3:2.12.0
+[info]   | | +-org.scala-lang:scala3-library_3:3.2.2 (evicted by: 3.4.2)
+[info]   | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | 
+[info]   | +-org.scala-lang:scala-reflect:2.13.14 [S]
+[info]   | +-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2)
+[info]   | | #-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2) (cycle)
+[info]   | | 
+[info]   | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | +-org.scalameta:metaconfig-pprint_3:0.13.0
+[info]   | | +-com.lihaoyi:fansi_3:0.5.0
+[info]   | | | +-com.lihaoyi:sourcecode_3:0.4.0 (evicted by: 0.4.2)
+[info]   | | | +-com.lihaoyi:sourcecode_3:0.4.2
+[info]   | | | | +-org.scala-lang:scala3-library_3:3.3.1 (evicted by: 3.4.2)
+[info]   | | | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | | | 
+[info]   | | | +-org.scala-lang:scala3-library_3:3.3.1 (evicted by: 3.4.2)
+[info]   | | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | | 
+[info]   | | +-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2)
+[info]   | | | #-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2) (cycle)
+[info]   | | | 
+[info]   | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | 
+[info]   | +-org.typelevel:paiges-core_3:0.4.4
+[info]   |   +-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2)
+[info]   |   | #-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2) (cycle)
+[info]   |   | 
+[info]   |   +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   |   
+[info]   +-org.scalameta:mtags-java_3:1.3.6-SNAPSHOT
+[info]   | +-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2)
+[info]   | | #-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2) (cycle)
+[info]   | | 
+[info]   | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | +-org.scalameta:mtags-interfaces:1.3.6-SNAPSHOT
+[info]   | | +-org.eclipse.lsp4j:org.eclipse.lsp4j:0.23.1
+[info]   | |   +-org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.23.1
+[info]   | |     +-com.google.code.gson:gson:2.11.0
+[info]   | |     | +-com.google.errorprone:error_prone_annotations:2.27.0
+[info]   | |     | 
+[info]   | |     +-com.google.code.gson:gson:[2.9.1,3.0) (evicted by: 2.11.0)
+[info]   | |     
+[info]   | +-org.scalameta:mtags-shared_3.3.3:1.3.6-SNAPSHOT
+[info]   |   +-com.google.guava:guava:33.2.1-jre
+[info]   |   | +-com.google.code.findbugs:jsr305:3.0.2
+[info]   |   | +-com.google.errorprone:error_prone_annotations:2.26.1 (evicted by: 2...
+[info]   |   | +-com.google.errorprone:error_prone_annotations:2.27.0
+[info]   |   | +-com.google.guava:failureaccess:1.0.2
+[info]   |   | +-com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-wit..
+[info]   |   | +-com.google.j2objc:j2objc-annotations:3.0.0
+[info]   |   | +-org.checkerframework:checker-qual:3.42.0
+[info]   |   | 
+[info]   |   +-com.google.protobuf:protobuf-java:4.27.3
+[info]   |   +-io.get-coursier:interface:1.0.19
+[info]   |   | +-org.slf4j:slf4j-api:1.7.36 (evicted by: 2.0.13)
+[info]   |   | +-org.slf4j:slf4j-api:2.0.13
+[info]   |   | 
+[info]   |   +-org.lz4:lz4-java:1.8.0
+[info]   |   +-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2)
+[info]   |   | #-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2) (cycle)
+[info]   |   | 
+[info]   |   +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   |   +-org.scalameta:mtags-interfaces:1.3.6-SNAPSHOT
+[info]   |     +-org.eclipse.lsp4j:org.eclipse.lsp4j:0.23.1
+[info]   |       +-org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.23.1
+[info]   |         +-com.google.code.gson:gson:2.11.0
+[info]   |         | +-com.google.errorprone:error_prone_annotations:2.27.0
+[info]   |         | 
+[info]   |         +-com.google.code.gson:gson:[2.9.1,3.0) (evicted by: 2.11.0)
+[info]   |         
+[info]   +-org.scalameta:mtags_3.3.3:1.3.6-SNAPSHOT
+[info]   | +-com.lihaoyi:geny_3:1.0.0 (evicted by: 1.1.1)
+[info]   | +-com.lihaoyi:geny_3:1.1.1
+[info]   | | +-org.scala-lang:scala3-library_3:3.3.1 (evicted by: 3.4.2)
+[info]   | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | 
+[info]   | +-com.lihaoyi:pprint_3:0.7.3
+[info]   | | +-com.lihaoyi:fansi_3:0.3.1 (evicted by: 0.5.0)
+[info]   | | +-com.lihaoyi:fansi_3:0.5.0
+[info]   | | | +-com.lihaoyi:sourcecode_3:0.4.0 (evicted by: 0.4.2)
+[info]   | | | +-com.lihaoyi:sourcecode_3:0.4.2
+[info]   | | | | +-org.scala-lang:scala3-library_3:3.3.1 (evicted by: 3.4.2)
+[info]   | | | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | | | 
+[info]   | | | +-org.scala-lang:scala3-library_3:3.3.1 (evicted by: 3.4.2)
+[info]   | | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | | 
+[info]   | | +-com.lihaoyi:sourcecode_3:0.2.8 (evicted by: 0.4.2)
+[info]   | | +-com.lihaoyi:sourcecode_3:0.4.2
+[info]   | | | +-org.scala-lang:scala3-library_3:3.3.1 (evicted by: 3.4.2)
+[info]   | | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | | 
+[info]   | | +-org.scala-lang:scala3-library_3:3.0.2 (evicted by: 3.4.2)
+[info]   | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | 
+[info]   | +-com.thoughtworks.qdox:qdox:2.1.0
+[info]   | +-io.get-coursier:interface:1.0.19
+[info]   | | +-org.slf4j:slf4j-api:1.7.36 (evicted by: 2.0.13)
+[info]   | | +-org.slf4j:slf4j-api:2.0.13
+[info]   | | 
+[info]   | +-org.jsoup:jsoup:1.18.1
+[info]   | +-org.lz4:lz4-java:1.8.0
+[info]   | +-org.scala-lang.modules:scala-java8-compat_3:1.0.2
+[info]   | | +-org.scala-lang:scala3-library_3:3.0.2 (evicted by: 3.4.2)
+[info]   | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | 
+[info]   | +-org.scala-lang:scala3-compiler_3:3.3.3
+[info]   | | +-org.jline:jline-reader:3.19.0
+[info]   | | | +-org.jline:jline-terminal:3.19.0
+[info]   | | | 
+[info]   | | +-org.jline:jline-terminal-jna:3.19.0
+[info]   | | | +-net.java.dev.jna:jna:5.12.0
+[info]   | | | +-net.java.dev.jna:jna:5.3.1 (evicted by: 5.12.0)
+[info]   | | | +-org.jline:jline-terminal:3.19.0
+[info]   | | | 
+[info]   | | +-org.jline:jline-terminal:3.19.0
+[info]   | | +-org.scala-lang.modules:scala-asm:9.5.0-scala-1
+[info]   | | +-org.scala-lang:scala3-interfaces:3.3.3
+[info]   | | +-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2)
+[info]   | | | #-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2) (cycle)
+[info]   | | | 
+[info]   | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | +-org.scala-lang:tasty-core_3:3.3.3
+[info]   | | | +-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2)
+[info]   | | | | #-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2) (cyc..
+[info]   | | | | 
+[info]   | | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | | 
+[info]   | | +-org.scala-sbt:compiler-interface:1.9.3
+[info]   | |   +-org.scala-sbt:util-interface:1.9.2
+[info]   | |   
+[info]   | +-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2)
+[info]   | | #-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2) (cycle)
+[info]   | | 
+[info]   | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | +-org.scalameta:mtags-shared_3.3.3:1.3.6-SNAPSHOT
+[info]   | | +-com.google.guava:guava:33.2.1-jre
+[info]   | | | +-com.google.code.findbugs:jsr305:3.0.2
+[info]   | | | +-com.google.errorprone:error_prone_annotations:2.26.1 (evicted by: 2...
+[info]   | | | +-com.google.errorprone:error_prone_annotations:2.27.0
+[info]   | | | +-com.google.guava:failureaccess:1.0.2
+[info]   | | | +-com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-wit..
+[info]   | | | +-com.google.j2objc:j2objc-annotations:3.0.0
+[info]   | | | +-org.checkerframework:checker-qual:3.42.0
+[info]   | | | 
+[info]   | | +-com.google.protobuf:protobuf-java:4.27.3
+[info]   | | +-io.get-coursier:interface:1.0.19
+[info]   | | | +-org.slf4j:slf4j-api:1.7.36 (evicted by: 2.0.13)
+[info]   | | | +-org.slf4j:slf4j-api:2.0.13
+[info]   | | | 
+[info]   | | +-org.lz4:lz4-java:1.8.0
+[info]   | | +-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2)
+[info]   | | | #-org.scala-lang:scala3-library_3:3.3.3 [S] (evicted by: 3.4.2) (cycle)
+[info]   | | | 
+[info]   | | +-org.scala-lang:scala3-library_3:3.4.2 [S]
+[info]   | | +-org.scalameta:mtags-interfaces:1.3.6-SNAPSHOT
+[info]   | |   +-org.eclipse.lsp4j:org.eclipse.lsp4j:0.23.1
+[info]   | |     +-org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.23.1
+[info]   | |       +-com.google.code.gson:gson:2.11.0
+[info]   | |       | +-com.google.errorprone:error_prone_annotations:2.27.0
+[info]   | |       | 
+[info]   | |       +-com.google.code.gson:gson:[2.9.1,3.0) (evicted by: 2.11.0)
+[info]   | |       
+[info]   | +-org.scalameta:scalameta_2.13:4.9.9
+[info]   | | +-org.scala-lang:scalap:2.13.11
+[info]   | | +-org.scalameta:parsers_2.13:4.9.9 [S]
+[info]   | |   +-org.scalameta:trees_2.13:4.9.9 [S]
+[info]   | |     +-org.scalameta:common_2.13:4.9.9 [S]
+[info]   | |       +-com.lihaoyi:sourcecode_2.13:0.4.2 [S]
+[info]   | |       
+[info]   | +-org.scalameta:semanticdb-shared_2.13.14:4.9.9
+[info]   |   +-com.thesamet.scalapb:scalapb-runtime_2.13:0.11.17
+[info]   |   | +-com.google.protobuf:protobuf-java:3.19.6 (evicted by: 4.27.3)
+[info]   |   | +-com.google.protobuf:protobuf-java:4.27.3
+[info]   |   | +-com.thesamet.scalapb:lenses_2.13:0.11.17
+[info]   |   | 
+[info]   |   +-org.scalameta:scalameta_2.13:4.9.9
+[info]   |     +-org.scala-lang:scalap:2.13.11
+[info]   |     +-org.scalameta:parsers_2.13:4.9.9 [S]
+[info]   |       +-org.scalameta:trees_2.13:4.9.9 [S]
+[info]   |         +-org.scalameta:common_2.13:4.9.9 [S]
+[info]   |           +-com.lihaoyi:sourcecode_2.13:0.4.2 [S]
+[info]   |           
+[info]   +-org.scalameta:scalafmt-dynamic_2.13:3.7.15 [S]
+[info]   | +-com.typesafe:config:1.4.2
+[info]   | +-io.get-coursier:interface:0.0.17 (evicted by: 1.0.19)
+[info]   | +-io.get-coursier:interface:1.0.19
+[info]   | | +-org.slf4j:slf4j-api:1.7.36 (evicted by: 2.0.13)
+[info]   | | +-org.slf4j:slf4j-api:2.0.13
+[info]   | | 
+[info]   | +-org.scalameta:scalafmt-interfaces:3.7.15
+[info]   | 
+[info]   +-org.scalameta:scalameta_2.13:4.9.9
+[info]   | +-org.scala-lang:scalap:2.13.11
+[info]   | +-org.scalameta:parsers_2.13:4.9.9 [S]
+[info]   |   +-org.scalameta:trees_2.13:4.9.9 [S]
+[info]   |     +-org.scalameta:common_2.13:4.9.9 [S]
+[info]   |       +-com.lihaoyi:sourcecode_2.13:0.4.2 [S]
+[info]   |       
+[info]   +-org.scalameta:semanticdb-metap_2.13.14:4.9.9
+[info]   | +-org.scalameta:semanticdb-shared_2.13.14:4.9.9
+[info]   |   +-com.thesamet.scalapb:scalapb-runtime_2.13:0.11.17
+[info]   |   | +-com.google.protobuf:protobuf-java:3.19.6 (evicted by: 4.27.3)
+[info]   |   | +-com.google.protobuf:protobuf-java:4.27.3
+[info]   |   | +-com.thesamet.scalapb:lenses_2.13:0.11.17
+[info]   |   | 
+[info]   |   +-org.scalameta:scalameta_2.13:4.9.9
+[info]   |     +-org.scala-lang:scalap:2.13.11
+[info]   |     +-org.scalameta:parsers_2.13:4.9.9 [S]
+[info]   |       +-org.scalameta:trees_2.13:4.9.9 [S]
+[info]   |         +-org.scalameta:common_2.13:4.9.9 [S]
+[info]   |           +-com.lihaoyi:sourcecode_2.13:0.4.2 [S]
+[info]   |           
+[info]   +-org.scalameta:semanticdb-shared_2.13.14:4.9.9
+[info]   | +-com.thesamet.scalapb:scalapb-runtime_2.13:0.11.17
+[info]   | | +-com.google.protobuf:protobuf-java:3.19.6 (evicted by: 4.27.3)
+[info]   | | +-com.google.protobuf:protobuf-java:4.27.3
+[info]   | | +-com.thesamet.scalapb:lenses_2.13:0.11.17
+[info]   | | 
+[info]   | +-org.scalameta:scalameta_2.13:4.9.9
+[info]   |   +-org.scala-lang:scalap:2.13.11
+[info]   |   +-org.scalameta:parsers_2.13:4.9.9 [S]
+[info]   |     +-org.scalameta:trees_2.13:4.9.9 [S]
+[info]   |       +-org.scalameta:common_2.13:4.9.9 [S]
+[info]   |         +-com.lihaoyi:sourcecode_2.13:0.4.2 [S]
+[info]   |         
+[info]   +-org.virtuslab.scala-cli:scala-cli-bsp:1.4.3
+[info]   
+[success] Total time: 1 s, completed Aug 16, 2024, 6:21:36 PM

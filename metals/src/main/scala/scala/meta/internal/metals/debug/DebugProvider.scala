@@ -32,7 +32,7 @@ import scala.meta.internal.metals.JvmOpts
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.UnresolvedDebugSessionParams
 import scala.meta.internal.metals.MetalsBuildClient
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.ScalaTestSuitesDebugRequest
@@ -451,7 +451,7 @@ class DebugProvider(
       debugParams: DebugSessionParams
   )(implicit ec: ExecutionContext): Future[DebugSession] = {
     for {
-      server <- start(debugParams),
+      server <- start(debugParams)
     } yield {
       statusBar.addMessage("Started debug server!")
       DebugSession(server.sessionName, server.uri.toString)

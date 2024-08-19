@@ -124,16 +124,16 @@ abstract class BaseLspSuite(
       }
     }
     if (withoutVirtualDocs) {
-      test(testOpts.withName(s"${testOpts.name}-readonly")) {
+      super.test(testOpts.withName(s"${testOpts.name}-readonly")) {
         functionRetry(maxRetry)
       }
-      test(
+      super.test(
         testOpts
           .withName(s"${testOpts.name}-virtualdoc")
           .withTags(Set(TestingServer.virtualDocTag))
       ) { functionRetry(maxRetry) }
     } else {
-      test(testOpts)(functionRetry(maxRetry))
+      super.test(testOpts)(functionRetry(maxRetry))
     }
   }
 
@@ -177,10 +177,13 @@ abstract class BaseLspSuite(
   }
 
   override def beforeEach(context: BeforeEach): Unit = {
-    cancelServer()
     if (context.test.tags.contains(Ignore)) return
     useVirtualDocs = context.test.tags.contains(TestingServer.virtualDocTag)
     newServer(context.test.name)
+  }
+
+  override def afterEach(context: AfterEach): Unit = {
+    cancelServer()
   }
 
   protected def createWorkspace(name: String): AbsolutePath = {

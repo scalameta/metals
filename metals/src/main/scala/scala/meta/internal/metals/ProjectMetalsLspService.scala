@@ -136,7 +136,7 @@ class ProjectMetalsLspService(
     folder,
     buildTargets,
     statusBar,
-    clientConfig.icons,
+    clientConfig.icons(),
     buildTools,
     compilations.isCurrentlyCompiling,
   )
@@ -192,12 +192,14 @@ class ProjectMetalsLspService(
       compilations.pauseables
   )
 
-  protected val semanticdbs: Semanticdbs = AggregateSemanticdbs(
+  private val agregateSemanticdbs: AggregateSemanticdbs = AggregateSemanticdbs(
     List(
       fileSystemSemanticdbs,
       interactiveSemanticdbs,
     )
   )
+
+  protected def semanticdbs(): Semanticdbs = agregateSemanticdbs
 
   val gitHubIssueFolderInfo: GitHubIssueFolderInfo = new GitHubIssueFolderInfo(
     () => tables.buildTool.selectedBuildTool(),
@@ -531,7 +533,7 @@ class ProjectMetalsLspService(
         ).ignoreValue
       case buildTools =>
         for {
-          Some(buildTool) <- bspConfigGenerator.chooseBuildServerProvider(
+          case Some(buildTool) <- bspConfigGenerator.chooseBuildServerProvider(
             buildTools
           )
           _ <- connect(

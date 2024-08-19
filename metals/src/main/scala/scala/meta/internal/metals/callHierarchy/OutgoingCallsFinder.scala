@@ -74,7 +74,7 @@ class OutgoingCallsFinder(
               range.toLsp
             )
           )
-        case _ => false
+        case null => false
       }
   }
 

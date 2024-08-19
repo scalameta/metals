@@ -6,8 +6,7 @@ import scala.concurrent.Future
 import scala.meta.XtensionDialectApply
 import scala.meta.XtensionTokenizeDialectInput
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.internal.metals.MetalsEnrichments.given
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 import scala.meta.tokens.Token._

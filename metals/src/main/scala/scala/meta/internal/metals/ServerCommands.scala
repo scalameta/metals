@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import java.{util => ju}
 import javax.annotation.Nullable
 
 import scala.meta.internal.metals.newScalaFile.NewFileTypes
@@ -649,7 +648,7 @@ object ServerCommands {
 
   final case class ConvertToNamedArgsRequest(
       position: TextDocumentPositionParams,
-      argIndices: ju.List[Integer],
+      argIndices: Array[Integer],
   )
   val ConvertToNamedArguments =
     new ParametrizedCommand[ConvertToNamedArgsRequest](

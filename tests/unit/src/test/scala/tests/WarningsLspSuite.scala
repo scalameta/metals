@@ -13,13 +13,13 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       deprecatedScala212Versions.size > 0,
       "No deprecated Scala 2.12 versions to test.",
     )
-    val using = deprecatedScala212Versions.head
+    val usingVersion = deprecatedScala212Versions.head
     for {
       _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {
-           |    "scalaVersion": "${using}"
+           |    "scalaVersion": "${usingVersion}"
            |  }
            |}
            |/a/src/main/scala/a/Main.scala
@@ -30,7 +30,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         Messages.DeprecatedScalaVersion.message(
-          Set(using)
+          Set(usingVersion)
         ),
       )
     } yield ()
@@ -44,14 +44,14 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       deprecatedScala212Versions.size > 0,
       "No deprecated Scala 2.12 versions to test.",
     )
-    val using = deprecatedScala212Versions.head
+    val usingVersion = deprecatedScala212Versions.head
     val older = "2.12.4"
     for {
       _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {
-           |    "scalaVersion": "${using}"
+           |    "scalaVersion": "${usingVersion}"
            |  },
            |  "b": {
            |    "scalaVersion" : "$older"
@@ -71,13 +71,13 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
 
   test("deprecated-scala-211") {
     cleanWorkspace()
-    val using = V.scala211
+    val usingVersion = V.scala211
     for {
       _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {
-           |    "scalaVersion": "${using}"
+           |    "scalaVersion": "${usingVersion}"
            |  }
            |}
            |/a/src/main/scala/a/Main.scala
@@ -87,20 +87,20 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        Messages.DeprecatedScalaVersion.message(Set(using)),
+        Messages.DeprecatedScalaVersion.message(Set(usingVersion)),
       )
     } yield ()
   }
 
   test("unsupported-scala-212") {
     cleanWorkspace()
-    val using = "2.12.4"
+    val usingVersion = "2.12.4"
     for {
       _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {
-           |    "scalaVersion": "${using}"
+           |    "scalaVersion": "${usingVersion}"
            |  }
            |}
            |/a/src/main/scala/a/Main.scala
@@ -110,7 +110,7 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        Messages.UnsupportedScalaVersion.message(Set(using)),
+        Messages.UnsupportedScalaVersion.message(Set(usingVersion)),
       )
     } yield ()
   }
@@ -123,13 +123,13 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       "No deprecated Scala 2.13 versionsto test.",
     )
     cleanWorkspace()
-    val using = deprecatedScala213Versions.head
+    val usingVersion = deprecatedScala213Versions.head
     for {
       _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {
-           |    "scalaVersion": "${using}"
+           |    "scalaVersion": "${usingVersion}"
            |  }
            |}
            |/a/src/main/scala/a/Main.scala
@@ -139,20 +139,20 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        Messages.DeprecatedScalaVersion.message(Set(using)),
+        Messages.DeprecatedScalaVersion.message(Set(usingVersion)),
       )
     } yield ()
   }
 
   test("no-warnings-scala-3") {
     cleanWorkspace()
-    val using = V.scala3
+    val usingVersion = V.scala3
     for {
       _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {
-           |    "scalaVersion": "${using}"
+           |    "scalaVersion": "${usingVersion}"
            |  }
            |}
            |/a/src/main/scala/a/Main.scala

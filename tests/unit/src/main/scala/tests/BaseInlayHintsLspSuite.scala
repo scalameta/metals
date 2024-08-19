@@ -2,8 +2,6 @@ package tests
 
 import munit.Location
 import munit.TestOptions
-import tests.BaseLspSuite
-import tests.TestInlayHints
 
 abstract class BaseInlayHintsLspSuite(name: String, scalaVersion: String)
     extends BaseLspSuite(name) {

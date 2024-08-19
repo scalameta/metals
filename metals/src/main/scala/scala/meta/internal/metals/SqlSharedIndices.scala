@@ -12,5 +12,5 @@ class SqlSharedIndices
       migrations = "/shared-db/migration",
     ) {
 
-  val jvmTypeHierarchy: JarTypeHierarchy = new JarTypeHierarchy(() => connect)
+  val jvmTypeHierarchy: JarTypeHierarchy = new JarTypeHierarchy(() => connect())
 }
