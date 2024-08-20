@@ -102,12 +102,6 @@ object MtagsEnrichments extends ScalametaCommonEnrichments:
     def focusAt(point: Int): SourcePosition =
       pos.withSpan(pos.span.withPoint(point).focus)
 
-    def toLocation: Option[l.Location] =
-      for
-        uri <- InteractiveDriver.toUriOption(pos.source)
-        range <- if pos.exists then Some(pos.toLsp) else None
-      yield new l.Location(uri.toString, range)
-
     def encloses(other: SourcePosition): Boolean =
       pos.start <= other.start && pos.end >= other.end
 
