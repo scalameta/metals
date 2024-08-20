@@ -283,13 +283,15 @@ final class ReferenceProvider(
                 }
               }
             }
+            val chosen = results.flatMap(_._2).toSet
             val pcResult =
               pcReferences(
                 source,
-                results.flatMap(_._2).toList,
+                chosen.toList,
                 params.getContext().isIncludeDeclaration(),
                 findRealRange,
-              )
+                isForRename,
+              ).map(_.filter(ref => chosen(ref.symbol) || ref.symbol.isLocal))
 
             Future
               .sequence(List(semanticdbResult, pcResult))
@@ -326,6 +328,7 @@ final class ReferenceProvider(
                 chosen.toList,
                 includeDeclaration,
                 findRealRange,
+                isForRename,
               )
             }
         } yield {
@@ -502,6 +505,7 @@ final class ReferenceProvider(
       symbols: List[String],
       includeDeclaration: Boolean,
       adjustLocation: AdjustRange,
+      isForRename: Boolean,
   ): Future[List[ReferencesResult]] = {
     val visited = mutable.Set[AbsolutePath]()
     val names = symbols.map(nameFromSymbol(_)).toSet
@@ -540,12 +544,14 @@ final class ReferenceProvider(
       .toList
     val lock = new Lock
     val result =
-      pcReferencesLock.getAndSet(lock).cancelAndWaitUntilCompleted().flatMap {
-        _ =>
+      pcReferencesLock
+        .getAndSet(lock)
+        .cancelAndWaitUntilCompleted(isForRename)
+        .flatMap { _ =>
           val maxPcsNumber = Runtime.getRuntime().availableProcessors() / 2
           executeBatched(lazyResults, maxPcsNumber, () => lock.isCancelled)
             .map(_.flatten)
-      }
+        }
     result.onComplete(_ => lock.complete())
     result
   }
@@ -1021,8 +1027,8 @@ class Lock {
 
   def isCancelled = cancelPromise.isCompleted
   def complete(): Unit = completedPromise.trySuccess(())
-  def cancelAndWaitUntilCompleted(): Future[Unit] = {
-    cancelPromise.trySuccess(())
+  def cancelAndWaitUntilCompleted(isForRename: Boolean): Future[Unit] = {
+    if (!isForRename) cancelPromise.trySuccess(())
     completedPromise.future
   }
 }

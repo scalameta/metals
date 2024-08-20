@@ -79,8 +79,7 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
             quickPickReferencesSymbol(params.items.asScala.toList)
               .map(item => RawMetalsQuickPickResult(item.id))
               .getOrElse(RawMetalsQuickPickResult(cancelled = true))
-          case params =>
-            pprint.log(params)
+          case _ =>
             RawMetalsQuickPickResult(cancelled = true)
         }
         _ <- Future.sequence(

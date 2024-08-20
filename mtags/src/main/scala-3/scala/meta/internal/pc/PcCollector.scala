@@ -59,8 +59,9 @@ trait PcCollector[T]:
 
     def soughtOrOverride(sym: Symbol) =
       sought(sym) || sym.allOverriddenSymbols.exists(sought(_))
-    lazy val constructorOwners = sought.collect:
+    lazy val constructorOwners = sought.collect {
       case sym if sym.isPrimaryConstructor => sym.owner
+    }
 
     def soughtTreeFilter(tree: Tree): Boolean =
       tree match
