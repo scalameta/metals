@@ -119,9 +119,7 @@ final class DefinitionProvider(
           .definition(path, params, isScala3)
           .orElse(fallback.search(path, params.getPosition(), isScala3))
           .getOrElse(definition)
-      } else {
-        definition
-      }
+      } else definition
     }
   }
 

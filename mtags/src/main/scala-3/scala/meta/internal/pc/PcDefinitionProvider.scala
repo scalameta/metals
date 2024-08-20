@@ -128,13 +128,13 @@ class PcDefinitionProvider(
             defs.headOption match
               case Some(srcTree) =>
                 val pos = srcTree.namePos
-                pos.toLocation match
-                  case None => DefinitionResultImpl.empty
-                  case Some(loc) =>
-                    DefinitionResultImpl(
-                      SemanticdbSymbols.symbolName(sym),
-                      List(loc).asJava,
-                    )
+                if pos.exists then
+                  val loc = new Location(params.uri().toString(), pos.toLsp)
+                  DefinitionResultImpl(
+                    SemanticdbSymbols.symbolName(sym),
+                    List(loc).asJava,
+                  )
+                else DefinitionResultImpl.empty
               case None =>
                 alternative(sym) match
                   case Some(alt) => findDefsForSymbol(alt)
