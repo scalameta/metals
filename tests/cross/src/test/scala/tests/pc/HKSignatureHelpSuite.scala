@@ -29,10 +29,6 @@ class HKSignatureHelpSuite extends BaseSignatureHelpSuite {
       "3" ->
         """|foldMap[A, B](fa: Option[A])(f: A => B)(using B: cats.kernel.Monoid[B]): B
            |              ^^^^^^^^^^^^^
-           |""".stripMargin,
-      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" ->
-        """|foldMap[A, B](fa: Option[A])(f: A => B)(using B: Monoid[B]): B
-           |              ^^^^^^^^^^^^^
            |""".stripMargin
     )
   )

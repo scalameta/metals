@@ -27,11 +27,7 @@ class ShadowingCompletionSuite extends BaseCompletionSuite {
        |ListBuffer - scala.collection.mutable
        |""".stripMargin,
     compat = Map(
-      "2" -> "ListBuffer - scala.collection.mutable",
-      ">=3.4.1-RC1-bin-20240208-hash-NIGHTLY" ->
-        """|ListBuffer[A](elems: A*): ListBuffer[A]
-           |ListBuffer - scala.collection.mutable
-           |""".stripMargin
+      "2" -> "ListBuffer - scala.collection.mutable"
     )
   )
 }

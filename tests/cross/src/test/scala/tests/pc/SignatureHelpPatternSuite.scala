@@ -19,11 +19,7 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
     compat = Map(
       ">=2.13.0" -> """|map[B](f: ((Int, Int)) => B): List[B]
                        |       ^^^^^^^^^^^^^^^^^^^^
-                       |""".stripMargin,
-      ">=3.4.0-RC1-bin-20231206-86565a4-NIGHTLY" ->
-        """|(Int, Int)
-           |      ^^^
-           |""".stripMargin
+                       |""".stripMargin
     )
   )
 
@@ -281,9 +277,6 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
     // generate qualifiers with offset positions.
     "",
     compat = Map(
-      "3.0" -> "",
-      "3.1" -> "",
-      ">=3.4.1-RC1-bin-20240120-hash-NIGHTLY" -> "",
       "3" ->
         """|(String, String)
            |         ^^^^^^

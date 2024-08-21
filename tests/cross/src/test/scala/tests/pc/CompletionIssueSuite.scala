@@ -191,10 +191,6 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       "3" ->
         """|filter(p: A => Boolean): Array[A]
            |filter(pred: A => Boolean): C
-           |""".stripMargin,
-      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
-        """|filter(p: Int => Boolean): Array[Int]
-           |filter(pred: Int => Boolean): IndexedSeq[Int @uncheckedVariance]
            |""".stripMargin
     )
   )
@@ -217,10 +213,6 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       "3" ->
         """|filter(p: A => Boolean): Array[A]
            |filter(pred: A => Boolean): C
-           |""".stripMargin,
-      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
-        """|filter(p: Int => Boolean): Array[Int]
-           |filter(pred: Int => Boolean): IndexedSeq[Int @uncheckedVariance]
            |""".stripMargin
     )
   )
@@ -243,10 +235,6 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       "3" ->
         """|filter(p: A => Boolean): Array[A]
            |filter(pred: A => Boolean): C
-           |""".stripMargin,
-      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
-        """|filter(p: Int => Boolean): Array[Int]
-           |filter(pred: Int => Boolean): IndexedSeq[Int @uncheckedVariance]
            |""".stripMargin
     )
   )

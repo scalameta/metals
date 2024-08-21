@@ -32,13 +32,6 @@ class CompletionSuite extends BaseCompletionSuite {
            |List - java.util
            |List - scala.collection.immutable
            |List[A](elems: A*): CC[A]
-           |""".stripMargin,
-      ">=3.4.1-RC1-bin-20240208-hash-NIGHTLY" ->
-        """|List scala.collection.immutable
-           |List[A](elems: A*): List[A]
-           |List - java.awt
-           |List - java.util
-           |ListMap[K, V](elems: (K, V)*): ListMap[K, V]
            |""".stripMargin
     ),
     topLines = Some(5)
@@ -321,53 +314,7 @@ class CompletionSuite extends BaseCompletionSuite {
            |wait(): Unit
            |wait(x$0: Long): Unit
            |wait(x$0: Long, x$1: Int): Unit
-           |""".stripMargin,
-      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
-        """|empty[A]: List[A]
-           |from[B](coll: IterableOnce[B]): List[B]
-           |newBuilder[A]: Builder[A, List[A]]
-           |apply[A](elems: A*): List[A]
-           |concat[A](xss: Iterable[A]*): List[A]
-           |fill[A](n1: Int, n2: Int)(elem: => A): List[List[A] @uncheckedVariance]
-           |fill[A](n1: Int, n2: Int, n3: Int)(elem: => A): List[List[List[A]] @uncheckedVariance]
-           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int)(elem: => A): List[List[List[List[A]]] @uncheckedVariance]
-           |fill[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(elem: => A): List[List[List[List[List[A]]]] @uncheckedVariance]
-           |fill[A](n: Int)(elem: => A): List[A]
-           |iterate[A](start: A, len: Int)(f: A => A): List[A]
-           |range[A: Integral](start: A, end: A): List[A]
-           |range[A: Integral](start: A, end: A, step: A): List[A]
-           |tabulate[A](n1: Int, n2: Int)(f: (Int, Int) => A): List[List[A] @uncheckedVariance]
-           |tabulate[A](n1: Int, n2: Int, n3: Int)(f: (Int, Int, Int) => A): List[List[List[A]] @uncheckedVariance]
-           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int)(f: (Int, Int, Int, Int) => A): List[List[List[List[A]]] @uncheckedVariance]
-           |tabulate[A](n1: Int, n2: Int, n3: Int, n4: Int, n5: Int)(f: (Int, Int, Int, Int, Int) => A): List[List[List[List[List[A]]]] @uncheckedVariance]
-           |tabulate[A](n: Int)(f: Int => A): List[A]
-           |unapplySeq[A](x: List[A] @uncheckedVariance): UnapplySeqWrapper[A]
-           |unfold[A, S](init: S)(f: S => Option[(A, S)]): List[A]
-           |->[B](y: B): (List.type, B)
-           |ensuring(cond: Boolean): List.type
-           |ensuring(cond: List.type => Boolean): List.type
-           |ensuring(cond: Boolean, msg: => Any): List.type
-           |ensuring(cond: List.type => Boolean, msg: => Any): List.type
-           |fromSpecific(from: Any)(it: IterableOnce[Nothing]): List[Nothing]
-           |fromSpecific(it: IterableOnce[Nothing]): List[Nothing]
-           |nn: List.type & List.type
-           |toFactory(from: Any): Factory[Nothing, List[Nothing]]
-           |formatted(fmtstr: String): String
-           |→[B](y: B): (List.type, B)
-           |iterableFactory[A]: Factory[A, List[A]]
-           |asInstanceOf[X0]: X0
-           |equals(x$0: Any): Boolean
-           |getClass[X0 >: List.type](): Class[? <: X0]
-           |hashCode(): Int
-           |isInstanceOf[X0]: Boolean
-           |synchronized[X0](x$0: X0): X0
-           |toString(): String
-           |wait(): Unit
-           |wait(x$0: Long): Unit
-           |wait(x$0: Long, x$1: Int): Unit
            |""".stripMargin
-      // wait(x$0: Long) won't be replaced with timeoutMills here
-      // but it will be replaced in `completionItem/resolve`
     )
   )
 
@@ -424,17 +371,6 @@ class CompletionSuite extends BaseCompletionSuite {
            |PooledConnectionBuilder - javax.sql
            |CertPathBuilderException - java.security.cert
            |PKIXCertPathBuilderResult - java.security.cert
-           |""".stripMargin,
-      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
-        """|ProcessBuilder - scala.sys.process
-           |CertPathBuilder - java.security.cert
-           |CertPathBuilderSpi - java.security.cert
-           |ProcessBuilderImpl - scala.sys.process
-           |CertPathBuilderResult - java.security.cert
-           |PKIXBuilderParameters - java.security.cert
-           |PooledConnectionBuilder - javax.sql
-           |CertPathBuilderException - java.security.cert
-           |PKIXCertPathBuilderResult - java.security.cert
            |""".stripMargin
     )
   )
@@ -461,10 +397,6 @@ class CompletionSuite extends BaseCompletionSuite {
       "3" ->
         """|TrieMap scala.collection.concurrent
            |TrieMap[K, V](elems: (K, V)*): CC[K, V]
-           |""".stripMargin,
-      ">=3.4.1-RC1-bin-20240208-hash-NIGHTLY" ->
-        """|TrieMap scala.collection.concurrent
-           |TrieMap[K, V](elems: (K, V)*): TrieMap[K, V]
            |""".stripMargin
     )
   )
@@ -899,7 +831,6 @@ class CompletionSuite extends BaseCompletionSuite {
     """|incrementThisType(): A.this.type (with underlying type singleton.A)
        |""".stripMargin,
     compat = Map(
-      scala3PresentationCompilerVersion -> "incrementThisType(): A.this.type",
       "3" -> "incrementThisType(): (A.this : singleton.A)"
     )
   )
@@ -941,12 +872,6 @@ class CompletionSuite extends BaseCompletionSuite {
            |until(end: Int, step: Int): Range
            |until(end: T): Exclusive[T]
            |until(end: T, step: T): Exclusive[T]
-           |""".stripMargin,
-      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
-        """|until(end: Int): Range
-           |until(end: Int, step: Int): Range
-           |until(end: Long): Exclusive[Long]
-           |until(end: Long, step: Long): Exclusive[Long]
            |""".stripMargin
     )
   )
@@ -972,8 +897,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|banana: Int
        |""".stripMargin,
     compat = Map(
-      "3" -> "selectDynamic(field: String): Foo",
-      ">=3.4.0-RC1-bin-20231004-hash-NIGHTLY" -> "banana: Int"
+      "3" -> "selectDynamic(field: String): Foo"
     )
   )
 
@@ -987,8 +911,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|banana: Int
        |""".stripMargin,
     compat = Map(
-      "3" -> "selectDynamic(field: String): Foo",
-      ">=3.4.0-RC1-bin-20231004-hash-NIGHTLY" -> "banana: Int"
+      "3" -> "selectDynamic(field: String): Foo"
     )
   )
 
@@ -1003,8 +926,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|banana: Int
        |""".stripMargin,
     compat = Map(
-      "3" -> "selectDynamic(field: String): Foo",
-      ">=3.4.0-RC1-bin-20231004-hash-NIGHTLY" -> "banana: Int"
+      "3" -> "selectDynamic(field: String): Foo"
     )
   )
 
@@ -1018,8 +940,7 @@ class CompletionSuite extends BaseCompletionSuite {
     """|banana: Int
        |""".stripMargin,
     compat = Map(
-      "3" -> "selectDynamic(field: String): Foo",
-      ">=3.4.0-RC1-bin-20231004-hash-NIGHTLY" -> "banana: Int"
+      "3" -> "selectDynamic(field: String): Foo"
     )
   )
 
@@ -1411,13 +1332,6 @@ class CompletionSuite extends BaseCompletionSuite {
            |experimental languageFeature
            |implicitConversions languageFeature
            |postfixOps languageFeature
-           |""".stripMargin,
-      ">=3.4.0-RC1-bin-20230921-3d539e6-NIGHTLY" ->
-        """|dynamics scala.languageFeature
-           |existentials scala.languageFeature
-           |experimental scala.languageFeature
-           |implicitConversions scala.languageFeature
-           |postfixOps scala.languageFeature
            |""".stripMargin
     )
   )
@@ -1852,290 +1766,6 @@ class CompletionSuite extends BaseCompletionSuite {
            |AbstractTypeClassManifest - scala.reflect.ClassManifestFactory
            |""".stripMargin
     )
-  )
-
-  check(
-    "extension-definition-scope".tag(
-      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004-hash-NIGHTLY")
-    ),
-    """|trait Foo
-       |object T:
-       |  extension (x: Fo@@)
-       |""".stripMargin,
-    """|Foo extension-definition-scope
-       |Font - java.awt
-       |Form - java.text.Normalizer
-       |Format - java.text
-       |FontPeer - java.awt.peer
-       |FormView - javax.swing.text.html
-       |Formatter - java.util
-       |Formatter - java.util.logging
-       |FocusEvent - java.awt.event
-       |FontMetrics - java.awt
-       |Found - scala.collection.Searching
-       |""".stripMargin
-  )
-
-  check(
-    "extension-definition-symbol-search".tag(
-      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004-hash-NIGHTLY")
-    ),
-    """|object T:
-       |  extension (x: ListBuffe@@)
-       |""".stripMargin,
-    """|ListBuffer[A] - scala.collection.mutable
-       |ListBuffer - scala.collection.mutable
-       |""".stripMargin
-  )
-
-  check(
-    "extension-definition-type-parameter".tag(
-      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004-hash-NIGHTLY")
-    ),
-    """|trait Foo
-       |object T:
-       |  extension [A <: Fo@@]
-       |""".stripMargin,
-    """|Foo extension-definition-type-parameter
-       |Font - java.awt
-       |Form - java.text.Normalizer
-       |Format - java.text
-       |FontPeer - java.awt.peer
-       |FormView - javax.swing.text.html
-       |Formatter - java.util
-       |Formatter - java.util.logging
-       |FocusEvent - java.awt.event
-       |FontMetrics - java.awt
-       |Found - scala.collection.Searching
-       |""".stripMargin
-  )
-
-  check(
-    "extension-definition-type-parameter-symbol-search".tag(
-      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004-hash-NIGHTLY")
-    ),
-    """|object T:
-       |  extension [A <: ListBuffe@@]
-       |""".stripMargin,
-    """|ListBuffer[A] - scala.collection.mutable
-       |ListBuffer - scala.collection.mutable
-       |""".stripMargin
-  )
-
-  check(
-    "extension-definition-using-param-clause".tag(
-      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004-hash-NIGHTLY")
-    ),
-    """|trait Foo
-       |object T:
-       |  extension (using Fo@@)
-       |""".stripMargin,
-    """|Foo extension-definition-using-param-clause
-       |Font - java.awt
-       |Form - java.text.Normalizer
-       |Format - java.text
-       |FontPeer - java.awt.peer
-       |FormView - javax.swing.text.html
-       |Formatter - java.util
-       |Formatter - java.util.logging
-       |FocusEvent - java.awt.event
-       |FontMetrics - java.awt
-       |Found - scala.collection.Searching
-       |""".stripMargin
-  )
-
-  check(
-    "extension-definition-mix-1".tag(
-      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004-hash-NIGHTLY")
-    ),
-    """|trait Foo
-       |object T:
-       |  extension (x: Int)(using Fo@@)
-       |""".stripMargin,
-    """|Foo extension-definition-mix-1
-       |Font - java.awt
-       |Form - java.text.Normalizer
-       |Format - java.text
-       |FontPeer - java.awt.peer
-       |FormView - javax.swing.text.html
-       |Formatter - java.util
-       |Formatter - java.util.logging
-       |FocusEvent - java.awt.event
-       |FontMetrics - java.awt
-       |Found - scala.collection.Searching
-       |""".stripMargin
-  )
-
-  check(
-    "extension-definition-mix-2".tag(
-      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004-hash-NIGHTLY")
-    ),
-    """|trait Foo
-       |object T:
-       |  extension (using Fo@@)(x: Int)(using Foo)
-       |""".stripMargin,
-    """|Foo extension-definition-mix-2
-       |Font - java.awt
-       |Form - java.text.Normalizer
-       |Format - java.text
-       |FontPeer - java.awt.peer
-       |FormView - javax.swing.text.html
-       |Formatter - java.util
-       |Formatter - java.util.logging
-       |FocusEvent - java.awt.event
-       |FontMetrics - java.awt
-       |Found - scala.collection.Searching
-       |""".stripMargin
-  )
-
-  check(
-    "extension-definition-mix-3".tag(
-      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004-hash-NIGHTLY")
-    ),
-    """|trait Foo
-       |object T:
-       |  extension (using Foo)(x: Int)(using Fo@@)
-       |""".stripMargin,
-    """|Foo extension-definition-mix-3
-       |Font - java.awt
-       |Form - java.text.Normalizer
-       |Format - java.text
-       |FontPeer - java.awt.peer
-       |FormView - javax.swing.text.html
-       |Formatter - java.util
-       |Formatter - java.util.logging
-       |FocusEvent - java.awt.event
-       |FontMetrics - java.awt
-       |Found - scala.collection.Searching
-       |""".stripMargin
-  )
-
-  check(
-    "extension-definition-mix-4".tag(
-      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004-hash-NIGHTLY")
-    ),
-    """|trait Foo
-       |object T:
-       |  extension [A](x: Fo@@)
-       |""".stripMargin,
-    """|Foo extension-definition-mix-4
-       |Font - java.awt
-       |Form - java.text.Normalizer
-       |Format - java.text
-       |FontPeer - java.awt.peer
-       |FormView - javax.swing.text.html
-       |Formatter - java.util
-       |Formatter - java.util.logging
-       |FocusEvent - java.awt.event
-       |FontMetrics - java.awt
-       |Found - scala.collection.Searching
-       |""".stripMargin
-  )
-
-  check(
-    "extension-definition-mix-5".tag(
-      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004-hash-NIGHTLY")
-    ),
-    """|trait Foo
-       |object T:
-       |  extension [A](using Fo@@)(x: Int)
-       |""".stripMargin,
-    """|Foo extension-definition-mix-5
-       |Font - java.awt
-       |Form - java.text.Normalizer
-       |Format - java.text
-       |FontPeer - java.awt.peer
-       |FormView - javax.swing.text.html
-       |Formatter - java.util
-       |Formatter - java.util.logging
-       |FocusEvent - java.awt.event
-       |FontMetrics - java.awt
-       |Found - scala.collection.Searching
-       |""".stripMargin
-  )
-
-  check(
-    "extension-definition-mix-6".tag(
-      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004-hash-NIGHTLY")
-    ),
-    """|trait Foo
-       |object T:
-       |  extension [A](using Foo)(x: Fo@@)
-       |""".stripMargin,
-    """|Foo extension-definition-mix-6
-       |Font - java.awt
-       |Form - java.text.Normalizer
-       |Format - java.text
-       |FontPeer - java.awt.peer
-       |FormView - javax.swing.text.html
-       |Formatter - java.util
-       |Formatter - java.util.logging
-       |FocusEvent - java.awt.event
-       |FontMetrics - java.awt
-       |Found - scala.collection.Searching
-       |""".stripMargin
-  )
-
-  check(
-    "extension-definition-mix-7".tag(
-      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004-hash-NIGHTLY")
-    ),
-    """|trait Foo
-       |object T:
-       |  extension [A](using Foo)(x: Fo@@)(using Foo)
-       |""".stripMargin,
-    """|Foo extension-definition-mix-7
-       |Font - java.awt
-       |Form - java.text.Normalizer
-       |Format - java.text
-       |FontPeer - java.awt.peer
-       |FormView - javax.swing.text.html
-       |Formatter - java.util
-       |Formatter - java.util.logging
-       |FocusEvent - java.awt.event
-       |FontMetrics - java.awt
-       |Found - scala.collection.Searching
-       |""".stripMargin
-  )
-
-  check(
-    "extension-definition-select".tag(
-      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004-hash-NIGHTLY")
-    ),
-    """|object Test:
-       |  class TestSelect()
-       |object T:
-       |  extension (x: Test.TestSel@@)
-       |""".stripMargin,
-    """|TestSelect extension-definition-select.Test
-       |""".stripMargin
-  )
-
-  check(
-    "extension-definition-select-mix-1".tag(
-      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004-hash-NIGHTLY")
-    ),
-    """|object Test:
-       |  class TestSelect()
-       |object T:
-       |  extension (using Int)(x: Test.TestSel@@)
-       |""".stripMargin,
-    """|TestSelect extension-definition-select-mix-1.Test
-       |""".stripMargin
-  )
-
-  check(
-    "extension-definition-select-mix-2".tag(
-      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004-hash-NIGHTLY")
-    ),
-    """|object Test:
-       |  class TestSelect[T]()
-       |object T:
-       |  extension [T](x: Test.TestSel@@)
-       |""".stripMargin,
-    """|TestSelect[T] extension-definition-select-mix-2.Test
-       |TestSelect extension-definition-select-mix-2.Test
-       |""".stripMargin
   )
 
   checkEdit(

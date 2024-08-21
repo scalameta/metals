@@ -342,27 +342,6 @@ class CompletionWorkspaceSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "match-typed".tag(
-      IgnoreScalaVersion.forLessThan("3.4.0-RC1-bin-20231004-hash-NIGHTLY")
-    ),
-    """|object Main {
-       |  def foo(): Unit = null match {
-       |    case x: ArrayDeque@@ =>
-       |  }
-       |}
-       |""".stripMargin,
-    """|import java.util.ArrayDeque
-       |object Main {
-       |  def foo(): Unit = null match {
-       |    case x: ArrayDeque[$0] =>
-       |  }
-       |}
-       |""".stripMargin,
-    filter = _.contains("java.util"),
-    assertSingleItem = false
-  )
-
-  checkEdit(
     "type",
     """|object Main {
        |  def foo(): Unit = {

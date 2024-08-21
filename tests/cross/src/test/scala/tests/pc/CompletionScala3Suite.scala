@@ -69,12 +69,7 @@ class CompletionScala3Suite extends BaseCompletionSuite {
        |""".stripMargin,
     """|map[B](f: A => B): Foo[B]
        |""".stripMargin,
-    topLines = Some(1),
-    compat = Map(
-      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
-        """|map[B](f: Int => B): Foo[B]
-           |""".stripMargin
-    )
+    topLines = Some(1)
   )
 
   checkEdit(
