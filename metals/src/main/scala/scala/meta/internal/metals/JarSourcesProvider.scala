@@ -146,7 +146,7 @@ object JarSourcesProvider {
     val repositories =
       List(Repositories.central, sbtMaven, metalsPluginSnapshots)
     Fetch()
-      .withRepositories(repositories)
+      .addRepositories(repositories*)
       .withDependencies(Seq(dependency))
       .addClassifiers(Classifier.sources)
       .future()
