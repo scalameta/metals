@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import scala.meta.Dialect
 import scala.meta.dialects._
 import scala.meta.internal.semver.SemVer
+import scala.meta.io.AbsolutePath
 
 class ScalaVersions(
     deprecatedScalaVersions: Seq[String],
@@ -157,7 +158,7 @@ class ScalaVersions(
    *   `some-library_2.13-4.5.0` -> 2.13
    *   `some-library_2.13-2.11` -> 2.13
    */
-  def scalaBinaryVersionFromJarName(filename: String): String = {
+  def scalaBinaryVersionFromJarName(filename: String): Option[String] = {
     val dropEnding = filename
       .stripSuffix(".jar")
 
@@ -178,14 +179,26 @@ class ScalaVersions(
       .sortBy(_._2)(Ordering.Boolean.reverse)
       .headOption
       .map { case (version, _) => scalaBinaryVersionFromFullVersion(version) }
-      .getOrElse("2.13")
   }
 
-  def dialectForDependencyJar(filename: String): Dialect =
-    dialectForScalaVersion(
-      scalaBinaryVersionFromJarName(filename),
-      includeSource3 = true,
-    )
+  def dialectForDependencyJar(
+      jar: AbsolutePath,
+      buildTargets: BuildTargets,
+  ): Dialect = {
+    val scalaVersion =
+      scalaBinaryVersionFromJarName(jar.toNIO.getFileName().toString())
+        .orElse(
+          buildTargets
+            .inverseDependencySource(jar)
+            .flatMap(id => buildTargets.scalaTarget(id))
+            .map(_.scalaBinaryVersion)
+            .toList
+            .sorted
+            .headOption
+        )
+        .getOrElse("2.13")
+    dialectForScalaVersion(scalaVersion, includeSource3 = true)
+  }
 
 }
 
