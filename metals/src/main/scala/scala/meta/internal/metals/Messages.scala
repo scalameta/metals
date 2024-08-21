@@ -1089,7 +1089,7 @@ object FileOutOfScalaCliBspScope {
   val ignore = new MessageActionItem("No")
   def askToRegenerateConfigAndRestartBspMsg(file: String): String =
     s"""|$file is outside of scala-cli build server scope.
-        |Would you like to fix this by regenerating bsp configuration and restarting the build sever?""".stripMargin
+        |Would you like to fix this by regenerating bsp configuration and restarting the build server?""".stripMargin
   def askToRegenerateConfigAndRestartBsp(
       file: Path
   ): ShowMessageRequestParams = {

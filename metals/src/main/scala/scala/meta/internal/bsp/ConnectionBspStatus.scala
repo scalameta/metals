@@ -124,7 +124,7 @@ object ConnectionBspStatus {
       s"$serverName ${icons.error}",
       "error",
       show = true,
-      tooltip = s"Build sever ($serverName) is not responding.",
+      tooltip = s"Build server ($serverName) is not responding.",
       command = ClientCommands.ConnectBuildServer.id,
       commandTooltip = "Reconnect.",
     ).withStatusType(StatusType.bsp)
