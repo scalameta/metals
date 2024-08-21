@@ -40,14 +40,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     compat = Map(
       "3" -> """|transient scala (commit: '')
                 |transparentTrait(): transparentTrait (commit: '')
-                |transparentTrait - scala.annotation (commit: '')""".stripMargin,
-      "3.4" -> """|transient scala (commit: '')
-                  |transparentTrait - scala.annotation (commit: '')
-                  |""".stripMargin,
-      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
-        """|transparentTrait - scala.annotation (commit: '')
-           |""".stripMargin,
-      ">=3.4.2-RC1-bin-20240301-hash-NIGHTLY" -> ""
+                |transparentTrait - scala.annotation (commit: '')""".stripMargin
     ),
     includeCommitCharacter = true
   )
@@ -71,15 +64,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     compat = Map(
       "3" -> """|transient scala (commit: '')
                 |transparentTrait(): transparentTrait (commit: '')
-                |transparentTrait - scala.annotation (commit: '')""".stripMargin,
-      "3.4" ->
-        """|transient scala (commit: '')
-           |transparentTrait - scala.annotation (commit: '')
-           |""".stripMargin,
-      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
-        """|transparentTrait - scala.annotation (commit: '')
-           |""".stripMargin,
-      ">=3.4.2-RC1-bin-20240301-hash-NIGHTLY" -> ""
+                |transparentTrait - scala.annotation (commit: '')""".stripMargin
     ),
     includeCommitCharacter = true
   )
@@ -485,13 +470,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
                 |deprecatedInheritance scala
                 |deprecatedName scala
                 |deprecatedOverriding scala
-                |""".stripMargin,
-      ">=3.4.1-RC1-bin-20240201-hash-NIGHTLY" ->
-        """|def
-           |derived - scala.CanEqual
-           |deprecated - scala.runtime.stdLibPatches.language
-           |""".stripMargin,
-      ">=3.4.2-RC1-bin-20240301-hash-NIGHTLY" -> "def"
+                |""".stripMargin
     )
   )
 
@@ -512,14 +491,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
                 |var
                 |varargs(): varargs
                 |varargs - scala.annotation
-                |""".stripMargin,
-      "3.4" -> """|val
-                  |var
-                  |varargs - scala.annotation
-                  |""".stripMargin,
-      ">=3.4.2-RC1-bin-20240301-hash-NIGHTLY" ->
-        """|val
-           |var""".stripMargin
+                |""".stripMargin
     )
   )
 

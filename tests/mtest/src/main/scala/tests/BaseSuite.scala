@@ -19,9 +19,6 @@ abstract class BaseSuite extends munit.FunSuite with Assertions {
    */
   val FlakyWindows = new Tag("FlakyWindows")
 
-  val scala3PresentationCompilerVersion: String =
-    s">=3.3.4"
-
   Testing.enable()
 
   def isJava11: Boolean =

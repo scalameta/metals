@@ -34,10 +34,6 @@ class CompletionDocSuite extends BaseCompletionSuite {
        |join(delimiter: CharSequence, elements: Iterable[_ <: CharSequence]): String
        |""".stripMargin,
     compat = Map(
-      scala3PresentationCompilerVersion ->
-        """|join(delimiter: CharSequence, elements: CharSequence*): String
-           |join(delimiter: CharSequence, elements: java.lang.Iterable[? <: CharSequence]): String
-           |""".stripMargin,
       "3" ->
         """|join(delimiter: CharSequence, elements: CharSequence*): String
            |join(delimiter: CharSequence, elements: Iterable[? <: CharSequence]): String
@@ -633,15 +629,6 @@ class CompletionDocSuite extends BaseCompletionSuite {
           "StringBuilder(underlying: StringBuilder): StringBuilder",
           "StringBuilder(capacity: Int): StringBuilder",
           "StringBuilder(initCapacity: Int, initValue: String): StringBuilder"
-        ).map(s => scala213Docs + "\n" + s).mkString("\n"),
-      scala3PresentationCompilerVersion ->
-        List(
-          "StringBuilder scala.collection.mutable",
-          "StringBuilder(): StringBuilder",
-          "StringBuilder(str: String): StringBuilder",
-          "StringBuilder(underlying: java.lang.StringBuilder): StringBuilder",
-          "StringBuilder(capacity: Int): StringBuilder",
-          "StringBuilder(initCapacity: Int, initValue: String): StringBuilder"
         ).map(s => scala213Docs + "\n" + s).mkString("\n")
     )
   )
@@ -706,21 +693,7 @@ class CompletionDocSuite extends BaseCompletionSuite {
     includeDocs = true,
     compat = Map(
       "2.13" -> vectorDocs213,
-      "3" -> vectorDocs213,
-      ">=3.4.1-RC1-bin-20240208-hash-NIGHTLY" ->
-        (vectorDocs213 +
-          """|> Creates a collection with the specified elements.
-             |
-             |**Type Parameters**
-             |- `A`: the type of the ${coll}'s elements
-             |
-             |**Parameters**
-             |- `elems`: the elements of the created collection
-             |
-             |**Returns:** a new collection with elements `elems`
-             |Vector[A](elems: A*): Vector[A]
-             |
-             |""".stripMargin)
+      "3" -> vectorDocs213
     )
   )
 
@@ -919,12 +892,6 @@ class CompletionDocSuite extends BaseCompletionSuite {
       |}
     """.stripMargin,
     """|myNumbers: Vector[Int]
-       |""".stripMargin,
-    compat = Map(
-      ">=3.4.1-RC1-bin-20240208-hash-NIGHTLY" ->
-        """|myNumbers: Vector[Int]
-           |myNumbers(i: Int): Int
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 }
