@@ -36,13 +36,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |  // tr@@
       |}
       |""".stripMargin,
-    "",
-    compat = Map(
-      "3" -> """|transient scala (commit: '')
-                |transparentTrait(): transparentTrait (commit: '')
-                |transparentTrait - scala.annotation (commit: '')""".stripMargin
-    ),
-    includeCommitCharacter = true
+    ""
   )
 
   check(
@@ -60,13 +54,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |  **/
       |}
       |""".stripMargin,
-    "",
-    compat = Map(
-      "3" -> """|transient scala (commit: '')
-                |transparentTrait(): transparentTrait (commit: '')
-                |transparentTrait - scala.annotation (commit: '')""".stripMargin
-    ),
-    includeCommitCharacter = true
+    ""
   )
 
   check(

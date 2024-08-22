@@ -86,6 +86,7 @@ class CompletionProvider(
             autoImportsGen,
             driver.settings,
             referenceCounter,
+            unit.comments
           ).completions()
 
         val items = completions.zipWithIndex.map { case (item, idx) =>

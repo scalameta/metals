@@ -17,6 +17,7 @@ import scala.meta.internal.semver.SemVer
 import scala.meta.pc.*
 
 import dotty.tools.dotc.ast.tpd.*
+import dotty.tools.dotc.core.Comments.Comment
 import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Flags
@@ -48,6 +49,7 @@ class Completions(
     autoImports: AutoImportsGenerator,
     options: List[String],
     completionItemPriority: CompletionItemPriority,
+    comments: List[Comment]
 )(using ReportContext):
 
   implicit val context: Context = ctx
@@ -181,7 +183,7 @@ class Completions(
   end calculateTypeInstanceAndNewPositions
 
   def completions(): (List[CompletionValue], SymbolSearch.Result) =
-    val (advanced, exclusive) = advancedCompletions(path, pos, completionPos)
+    val (advanced, exclusive) = advancedCompletions(path, pos, completionPos, comments)
     val (all, result) =
       if exclusive then (advanced, SymbolSearch.Result.COMPLETE)
       else
@@ -347,6 +349,7 @@ class Completions(
       path: List[Tree],
       pos: SourcePosition,
       completionPos: CompletionPos,
+      comments: List[Comment]
   ): (List[CompletionValue], Boolean) =
     lazy val rawPath = Paths
       .get(pos.source.path)
@@ -374,6 +377,8 @@ class Completions(
       case _ if ScaladocCompletions.isScaladocCompletion(pos, text) =>
         val values = ScaladocCompletions.contribute(pos, text, config)
         (values, true)
+
+      case _ if comments.exists(_.span.contains(pos.span)) => (Nil, true)
 
       case MatchCaseExtractor.MatchExtractor(selector) =>
         (
@@ -525,7 +530,7 @@ class Completions(
       // From Scala 3.1.3-RC3 (as far as I know), path contains
       // `Literal(Constant(null))` on head for an incomplete program, in this case, just ignore the head.
       case Literal(Constant(null)) :: tl =>
-        advancedCompletions(tl, pos, completionPos)
+        advancedCompletions(tl, pos, completionPos, comments)
 
       // def foo(a@@)
       case ParamDefinitionCompletions(allowKeywords) =>
