@@ -135,5 +135,22 @@ export default {
         "src": "img/scalameta-logo.png"
       }
     }
+  },
+  webpack: {
+    jsLoader: (isServer) => ({
+      loader: "swc-loader",
+      options: {
+        jsc: {
+          parser: {
+            syntax: "typescript",
+            tsx: true,
+          },
+          target: "es2020",
+        },
+        module: {
+          type: isServer ? "commonjs" : "es6",
+        },
+      },
+    }),
   }
 } satisfies Config
