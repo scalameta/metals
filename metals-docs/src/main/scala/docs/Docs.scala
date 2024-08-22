@@ -61,6 +61,7 @@ object Docs {
     val docsOut = target.resolve("docs")
 
     Files.createDirectories(dataOut)
+    Files.createDirectories(docsOut)
     Files.write(
       dataOut.resolve("latests.json"),
       s"""|{
