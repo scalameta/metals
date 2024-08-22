@@ -1,4 +1,6 @@
-module.exports = {
+import type { Config } from "@docusaurus/types"
+
+export default {
   "title": "Metals",
   "tagline": "Scala language server with rich IDE features",
   "url": "http://scalameta.org",
@@ -134,4 +136,4 @@ module.exports = {
       }
     }
   }
-}
+} satisfies Config
