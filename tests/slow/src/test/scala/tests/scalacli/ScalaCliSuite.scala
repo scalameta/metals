@@ -765,4 +765,20 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
       )
     } yield ()
   }
+
+  test("completions-for-test-scope") {
+    for {
+      _ <- scalaCliInitialize(useBsp = true)(
+        s"""/MyTests.sc
+           |//> using scala $scalaVersion
+           |//> using test.dep com.lihaoyi::utest::0.7.10
+           |""".stripMargin
+      )
+      completion <- server.completion(
+        "MyTests.sc",
+        "//> using test.dep com.lihao@@yi::utest",
+      )
+      _ = assertNoDiff(completion, "com.lihaoyi")
+    } yield ()
+  }
 }

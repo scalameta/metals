@@ -116,7 +116,7 @@ object CoursierComplete {
     (editStart, editEnd)
   }
 
-  val reg: Regex = """//>\s*using\s+(lib|plugin|dep)s?\s+"?(.*)""".r
+  val reg: Regex = """//>\s*using\s+(?:test\.)?(lib|plugin|dep)s?\s+"?(.*)""".r
   def isScalaCliDep(line: String): Option[String] = {
     line match {
       case reg(_, deps) =>
