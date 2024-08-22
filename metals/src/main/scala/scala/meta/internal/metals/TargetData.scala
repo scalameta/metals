@@ -206,9 +206,10 @@ final class TargetData {
     }
   }
 
-  def findSourceJarOf(
+  def findConnectedArtifact(
       jar: AbsolutePath,
       targetId: Option[BuildTargetIdentifier],
+      classifier: String = "sources",
   ): Option[AbsolutePath] = {
     val jarUri = jar.toURI.toString()
     def depModules: Iterator[MavenDependencyModule] = targetId match {
@@ -228,10 +229,10 @@ final class TargetData {
       module <- depModules
       artifacts = module.getArtifacts().asScala
       if artifacts.exists(artifact => isUriEqual(artifact.getUri(), jarUri))
-      sourceJar <- artifacts.find(_.getClassifier() == "sources")
-      sourceJarPath = sourceJar.getUri().toAbsolutePath
-      if sourceJarPath.exists
-    } yield sourceJarPath
+      foundJar <- artifacts.find(_.getClassifier() == classifier)
+      foundJarPath = foundJar.getUri().toAbsolutePath
+      if foundJarPath.exists
+    } yield foundJarPath
     allFound.headOption
   }
 

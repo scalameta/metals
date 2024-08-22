@@ -1,7 +1,13 @@
 package scala.meta.internal.metals
 
+import java.io.UncheckedIOException
+
+import scala.collection.concurrent.TrieMap
+
 import scala.meta.Dialect
 import scala.meta.dialects._
+import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
@@ -13,6 +19,8 @@ class ScalaVersions(
     scala213: String,
     scala3: String,
 ) {
+
+  private val jarScalaVersionIndex = TrieMap[String, String]()
 
   def isScala3Milestone(version: String): Boolean =
     version.startsWith("3.0.0-M") || version.startsWith("3.0.0-RC")
@@ -148,7 +156,9 @@ class ScalaVersions(
   }
 
   private val scalaVersionRegex =
-    raw"(_)(\d)(\.\d{1,2})?(\.\d(-(RC|M)\d)?)?".r
+    raw"_(\d)(\.\d{1,2})?(\.\d(-(RC|M)\d)?)?".r
+  private val scalaLibraryRegex =
+    raw"scala-library-(\d)(\.\d{1,2})(\.\d(-(RC|M)\d)?)".r
 
   /**
    * Extract scala binary version from dependency jar name.
@@ -162,40 +172,59 @@ class ScalaVersions(
     val dropEnding = filename
       .stripSuffix(".jar")
 
-    scalaVersionRegex
-      .findAllMatchIn(dropEnding)
-      .toList
+    List(scalaLibraryRegex, scalaVersionRegex)
+      .flatMap(_.findAllMatchIn(dropEnding).toList)
       .flatMap { m =>
-        val hasUnderscorePrefix = Option(m.group(1)).isDefined
-        val major = m.group(2)
-        val minor = Option(m.group(3)).getOrElse("")
-        val ending = Option(m.group(4)).getOrElse("")
+        val major = m.group(1)
+        val minor = Option(m.group(2)).getOrElse("")
+        val ending = Option(m.group(3)).getOrElse("")
         val version = s"$major$minor$ending"
 
         if (isSupportedScalaBinaryVersion(version))
-          Some(version -> hasUnderscorePrefix)
+          Some(version)
         else None
       }
-      .sortBy(_._2)(Ordering.Boolean.reverse)
       .headOption
-      .map { case (version, _) => scalaBinaryVersionFromFullVersion(version) }
+      .map(scalaBinaryVersionFromFullVersion)
   }
 
   def dialectForDependencyJar(
       jar: AbsolutePath,
       buildTargets: BuildTargets,
   ): Dialect = {
+    lazy val buildTargetAndScalaVersion =
+      buildTargets
+        .inverseDependencySource(jar)
+        .flatMap(id => buildTargets.scalaTarget(id))
+        .map(target => (target.scalaBinaryVersion, target.id))
+        .toList
+        .sortBy(_._1)
+        .headOption
+
+    def fromTastyExistance = {
+      val fromTasty = buildTargetAndScalaVersion
+        .flatMap { case (_, id) => buildTargets.findJarFor(id, jar) }
+        .flatMap(
+          FileIO.withJarFileSystem(_, create = false) { root =>
+            try {
+              root.listRecursive
+                .find(f => f.isFile && f.filename.endsWith(".tasty"))
+                .map(_ => "3")
+                .orElse(Some("2.13"))
+            } catch {
+              case _: UncheckedIOException => None
+            }
+          }
+        )
+      fromTasty.foreach(jarScalaVersionIndex.put(jar.toURI.toString(), _))
+      fromTasty
+    }
+
     val scalaVersion =
       scalaBinaryVersionFromJarName(jar.toNIO.getFileName().toString())
-        .orElse(
-          buildTargets
-            .inverseDependencySource(jar)
-            .flatMap(id => buildTargets.scalaTarget(id))
-            .map(_.scalaBinaryVersion)
-            .toList
-            .sorted
-            .headOption
-        )
+        .orElse(jarScalaVersionIndex.get(jar.toURI.toString()))
+        .orElse(fromTastyExistance)
+        .orElse(buildTargetAndScalaVersion.map(_._1))
         .getOrElse("2.13")
     dialectForScalaVersion(scalaVersion, includeSource3 = true)
   }

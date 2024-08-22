@@ -434,10 +434,14 @@ final class BuildTargets private (
    * @return path to the source jar for that jar
    */
   private def sourceJarPathFallback(
-      sourceJarPath: AbsolutePath
+      sourceJarPath: AbsolutePath,
+      inputIsSourceJar: Boolean = false,
   ): Option[AbsolutePath] = {
+    val (from, to) =
+      if (inputIsSourceJar) ("-sources.jar", ".jar")
+      else (".jar", "-sources.jar")
     val fallback = sourceJarPath.parent.resolve(
-      sourceJarPath.filename.replace(".jar", "-sources.jar")
+      sourceJarPath.filename.replace(from, to)
     )
     if (fallback.exists) Some(fallback)
     else None
@@ -578,7 +582,7 @@ final class BuildTargets private (
       jar: AbsolutePath,
   ): Option[AbsolutePath] = {
     data
-      .fromOptions(_.findSourceJarOf(jar, Some(id)))
+      .fromOptions(_.findConnectedArtifact(jar, Some(id)))
       .orElse(sourceJarPathFallback(jar))
   }
 
@@ -586,8 +590,19 @@ final class BuildTargets private (
       jar: AbsolutePath
   ): Option[AbsolutePath] = {
     data
-      .fromOptions(_.findSourceJarOf(jar, targetId = None))
+      .fromOptions(_.findConnectedArtifact(jar, targetId = None))
       .orElse(sourceJarPathFallback(jar))
+  }
+
+  def findJarFor(
+      id: BuildTargetIdentifier,
+      sourceJar: AbsolutePath,
+  ): Option[AbsolutePath] = {
+    data
+      .fromOptions(
+        _.findConnectedArtifact(sourceJar, Some(id), classifier = null)
+      )
+      .orElse(sourceJarPathFallback(sourceJar, inputIsSourceJar = true))
   }
 
   def inverseDependencySource(
