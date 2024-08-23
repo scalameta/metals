@@ -1,9 +1,14 @@
 package scala.meta.internal.metals.debug.server
 
-import scala.meta.internal.metals.BuildTargets
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.concurrent.Promise
+
 import scala.meta.internal.metals.JvmTarget
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTarget
+import scala.meta.internal.metals.debug.BuildTargetClasses
+import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.MavenDependencyModule
@@ -15,8 +20,11 @@ import ch.epfl.scala.debugadapter.SourceJar
 import ch.epfl.scala.debugadapter.StandaloneSourceFile
 import ch.epfl.scala.debugadapter.UnmanagedEntry
 
-class DebugeeParamsCreator(buildTargets: BuildTargets) {
-  def create(id: BuildTargetIdentifier): Either[String, DebugeeProject] = {
+class DebugeeParamsCreator(buildTargetClasses: BuildTargetClasses) {
+  val buildTargets = buildTargetClasses.buildTargets
+  def create(
+      id: BuildTargetIdentifier
+  )(implicit ec: ExecutionContext): Either[String, Future[DebugeeProject]] = {
     for {
       target <- buildTargets
         .jvmTarget(id)
@@ -31,13 +39,6 @@ class DebugeeParamsCreator(buildTargets: BuildTargets) {
         .filter(_.nonEmpty)
         .getOrElse(Nil)
       val debugLibs = libraries.flatMap(createLibrary(_))
-      val includedInLibs = debugLibs.map(_.absolutePath).toSet
-
-      val classpath = buildTargets.targetJarClasspath(id).getOrElse(Nil)
-
-      val filteredClassPath = classpath.collect {
-        case path if !includedInLibs(path.toNIO) => UnmanagedEntry(path.toNIO)
-      }.toList
 
       val modules = buildTargets
         .buildTargetTransitiveDependencies(id)
@@ -45,15 +46,35 @@ class DebugeeParamsCreator(buildTargets: BuildTargets) {
         .map(createModule(_))
         .toSeq
 
-      val scalaVersion = buildTargets.scalaTarget(id).map(_.scalaVersion)
+      val includedInLibsOrModules =
+        debugLibs.map(_.absolutePath).toSet ++ modules.map(_.absolutePath).toSet
 
-      new DebugeeProject(
-        scalaVersion,
-        target.displayName,
-        modules,
-        debugLibs,
-        filteredClassPath,
-      )
+      for {
+        classpathString <- buildTargets
+          .targetClasspath(id, Promise())
+          .getOrElse(Future.successful(Nil))
+        jvmRunEnv <- buildTargetClasses.jvmRunEnvironment(id)
+      } yield {
+
+        val classpath = classpathString.map(_.toAbsolutePath)
+        val filteredClassPath = classpath.collect {
+          case path if !includedInLibsOrModules(path.toNIO) =>
+            UnmanagedEntry(path.toNIO)
+        }.toList
+
+        val scalaVersion = buildTargets.scalaTarget(id).map(_.scalaVersion)
+
+        new DebugeeProject(
+          scalaVersion,
+          target.displayName,
+          modules,
+          debugLibs,
+          filteredClassPath,
+          jvmRunEnv
+            .map(_.getClasspath().asScala.toList.map(_.toAbsolutePath))
+            .getOrElse(classpath),
+        )
+      }
     }
   }
 
@@ -114,4 +135,5 @@ case class DebugeeProject(
     modules: Seq[Module],
     libraries: Seq[Library],
     unmanagedEntries: Seq[UnmanagedEntry],
+    runClassPath: List[AbsolutePath],
 )

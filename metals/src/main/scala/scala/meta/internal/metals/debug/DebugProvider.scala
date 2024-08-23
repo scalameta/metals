@@ -94,7 +94,7 @@ class DebugProvider(
 
   import DebugProvider._
 
-  private val debugConfigCreator = new DebugeeParamsCreator(buildTargets)
+  private val debugConfigCreator = new DebugeeParamsCreator(buildTargetClasses)
 
   private val runningLocal = new ju.concurrent.atomic.AtomicBoolean(false)
 
@@ -337,11 +337,11 @@ class DebugProvider(
               id <- buildTarget
               projectInfo <- debugConfigCreator.create(id)
               scalaMainClass <- params.asScalaMainClass()
-            } yield Future.successful(
+            } yield projectInfo.map(
               new MainClassDebugAdapter(
                 workspace,
                 scalaMainClass,
-                projectInfo,
+                _,
                 userConfig().javaHome,
               )
             )
@@ -349,11 +349,12 @@ class DebugProvider(
               b.TestParamsDataKind.SCALA_TEST_SUITES) =>
             for {
               id <- buildTarget
-              project <- debugConfigCreator.create(id)
+              projectInfo <- debugConfigCreator.create(id)
               testSuites <- params.asScalaTestSuites()
             } yield {
               for {
                 discovered <- discoverTests(id, testSuites)
+                project <- projectInfo
               } yield new TestSuiteDebugAdapter(
                 workspace,
                 testSuites,

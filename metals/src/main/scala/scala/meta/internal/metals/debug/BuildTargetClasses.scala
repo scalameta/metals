@@ -17,7 +17,7 @@ import ch.epfl.scala.{bsp4j => b}
 /**
  * In-memory index of main class symbols grouped by their enclosing build target
  */
-final class BuildTargetClasses(buildTargets: BuildTargets)(implicit
+final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
     val ec: ExecutionContext
 ) {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]

@@ -138,11 +138,14 @@ class TestSuiteDebugAdapter(
 
     server.listenToTests
 
-    scribe.debug(s"Running test with debugger with classpath: $classPath")
+    scribe.debug(s"""|Running test with debugger with compile classpath:
+                     |\t${classPath.mkString("\n\t")}
+                     |and run classpath:
+                     |\t${project.runClassPath.mkString("\n\t")}""".stripMargin)
 
     Run.runMain(
       root,
-      classPath ++ testAgentJars,
+      project.runClassPath.map(_.toNIO) ++ testAgentJars,
       userJavaHome,
       forkMain,
       arguments,
