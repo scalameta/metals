@@ -9,6 +9,7 @@ import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.pc.AutoImports.AutoImportEdits
 import scala.meta.internal.pc.AutoImports.AutoImportsGenerator
+import scala.meta.internal.pc.Compat.*
 import scala.meta.internal.pc.printer.MetalsPrinter
 import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.OffsetParams
@@ -86,7 +87,7 @@ class CompletionProvider(
             autoImportsGen,
             driver.settings,
             referenceCounter,
-            unit.comments
+            unit.getComments()
           ).completions()
 
         val items = completions.zipWithIndex.map { case (item, idx) =>
