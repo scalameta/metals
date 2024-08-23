@@ -39,10 +39,13 @@ class MainClassDebugAdapter(
   def name: String =
     s"${getClass.getSimpleName}(${project.name}, ${mainClass.getClassName()})"
   def run(listener: DebuggeeListener): CancelableFuture[Unit] = {
-    scribe.debug(s"Running main with debugger with classpath: $classPath")
+    scribe.debug(s"""|Running main with debugger with compile classpath:
+                     |\t${classPath.mkString("\n\t")}
+                     |and run classpath:
+                     |\t${project.runClassPath.mkString("\n\t")}""".stripMargin)
     Run.runMain(
       root = root,
-      classPath = classPath,
+      classPath = project.runClassPath.map(_.toNIO),
       userJavaHome = userJavaHome,
       className = mainClass.getClassName,
       args = mainClass.getArguments().asScala.toList,
