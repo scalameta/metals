@@ -94,7 +94,7 @@ export default {
         "items": [
           {
             "label": "Overview",
-            "to": "docs/overview/editor-support"
+            "to": "docs/"
           },
           {
             "label": "Build Tools",
