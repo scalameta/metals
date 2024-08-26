@@ -36,7 +36,7 @@ def crossSetting[A](
 logo := Welcome.logo
 usefulTasks := Welcome.tasks
 
-ThisBuild / scalafixScalaBinaryVersion := scalaBinaryVersion.value
+ThisBuild / semanticdbVersion := V.semanticdb(scalaVersion.value)
 
 inThisBuild(
   List(
