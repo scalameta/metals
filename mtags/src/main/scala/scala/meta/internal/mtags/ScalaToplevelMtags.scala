@@ -983,6 +983,9 @@ class ScalaToplevelMtags(
       !isDone &&
       (curr.token match {
         case SEMI => false
+        case LBRACE =>
+          acceptBalancedDelimeters(LBRACE, RBRACE)
+          true
         case _ => !isNewline
       })
     ) {
