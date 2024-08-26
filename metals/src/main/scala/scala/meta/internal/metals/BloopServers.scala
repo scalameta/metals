@@ -182,9 +182,9 @@ final class BloopServers(
   }
 
   private def metalsJavaHome(userConfiguration: UserConfiguration) =
-    userConfiguration.javaHome
+    sys.props
+      .get("java.home")
       .orElse(sys.env.get("JAVA_HOME"))
-      .orElse(sys.props.get("java.home"))
 
   private lazy val bloopLogger: BloopRifleLogger = new BloopRifleLogger {
     def info(msg: => String): Unit = scribe.info(msg)
