@@ -765,4 +765,23 @@ class ScalaToplevelSuite extends BaseToplevelSuite {
     dialect = dialects.Scala3,
     mode = All,
   )
+
+  check(
+    "i6712",
+    """"
+      |package a
+      |
+      |trait Strict
+      |
+      |object FormData {
+      |  def apply() = Strict {
+      |    _ => true
+      |  }
+      |  case class Strict(i: Unit => Boolean)
+      |}
+      |
+      |""".stripMargin,
+    List("a/", "a/FormData.", "a/Strict#", "a/FormData.Strict#"),
+    mode = ToplevelWithInner,
+  )
 }
