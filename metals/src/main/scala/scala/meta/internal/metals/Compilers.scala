@@ -558,7 +558,9 @@ class Compilers(
                   SemanticTokensProvider.provide(
                     nodes.asScala.toList,
                     vFile,
+                    path,
                     isScala3,
+                    trees,
                   )
                 } catch {
                   case NonFatal(e) =>

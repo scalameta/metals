@@ -27,7 +27,9 @@ class SemanticTokensExpectSuite extends DirectoryExpectSuite("semanticTokens") {
           val tokens = SemanticTokensProvider.provide(
             nodes,
             params,
+            file.file,
             isScala3 = false,
+            MetalsTestEnrichments.emptyTrees,
           )
 
           TestSemanticTokens.semanticString(

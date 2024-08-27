@@ -9,6 +9,7 @@ import scala.meta.internal.metals.{BuildInfo => V}
 import tests.DirectoryExpectSuite
 import tests.ExpectTestCase
 import tests.InputProperties
+import tests.MetalsTestEnrichments
 import tests.TestScala3Compiler
 import tests.TestSemanticTokens
 
@@ -36,7 +37,9 @@ class SemanticTokensScala3ExpectSuite(
           val tokens = SemanticTokensProvider.provide(
             nodes,
             params,
+            file.file,
             isScala3 = true,
+            MetalsTestEnrichments.emptyTrees,
           )
 
           TestSemanticTokens.semanticString(
