@@ -14,14 +14,6 @@ Metals is able to work with Bazel via the
 work by the JetBrains team, Metals is able to work almost directly with Bazel
 and reuse all its perks.
 
-:::caution
-
-Currently, newest Bazel 7.x.y is not supported by Bazel BSP, so it will also not
-work with Metals. For updates on this issue, please check the
-[Bazel BSP repository](https://github.com/JetBrains/bazel-bsp)
-
-:::
-
 ## Automatic installation
 
 The first time you open Metals in a new Bazel workspace you will be prompted to
@@ -155,15 +147,15 @@ the newest available version or check for the latest nightly using
 3. Use `Metals: Connect to build server` command if Metals didn't pick up the
    new bsp configuration automatically.
 
-## Additional remarks
+## Mezel
 
-Currently (Metals 1.2.1), when using Bazel, Metals will try to get scalac
-options for every target, which underneath will call `bazel query` for every
-target. This can be slow for large workspaces. To mitigate this, you can set
-targets manually in `projectview.bazel`. This will speed up the import process
-significantly.
+If you are unable to make the default Bazel BSP server work, you can try using
+[Mezel](https://github.com/ValdemarGr/mezel), which is an alternative
+implementation of BSP for Bazel.
 
-There is work ongoing to improve the performance of Bazel in Metals.
+Check out the
+[Mezel README](https://github.com/ValdemarGr/mezel/blob/master/README.md) for
+more information.
 
 ## Troubleshooting
 
@@ -172,5 +164,8 @@ There is work ongoing to improve the performance of Bazel in Metals.
 This possibly means that some of the environment variables are set to different
 values between what Metals and Bazel are using. Some of the variables that
 influence this are PATH, PWD, JAVA_HOME and others. Make sure that these are set
-to the same values in both environments. If possible let us know if we can improve
-the default behaviour of Metals to avoid this issue.
+to the same values in both environments. If possible let us know if we can
+improve the default behaviour of Metals to avoid this issue.
+
+Alternatively, adding `--incompatible_strict_action_env=true` option to .bazelrc
+might help in your case.
