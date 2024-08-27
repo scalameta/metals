@@ -104,6 +104,7 @@ object Keyword {
       canBeExtended = false
     ),
     Keyword("type", isTemplate = true, isDefinition = true),
+    Keyword("opaque type", isTemplate = true, isDefinition = true, isScala3 = true),
     Keyword("class", isTemplate = true, isPackage = true, isDefinition = true),
     Keyword("enum", isTemplate = true, isPackage = true, isDefinition = true, isScala3 = true),
     Keyword("case class", isTemplate = true, isPackage = true, isDefinition = true),
