@@ -40,7 +40,8 @@ class SymbolIndexBucket(
     sourceJars: OpenClassLoader,
     toIndexSource: AbsolutePath => AbsolutePath = identity,
     mtags: Mtags,
-    dialect: Dialect
+    dialect: Dialect,
+    onError: PartialFunction[Throwable, Unit]
 ) {
 
   private val logger = Logger.getLogger(classOf[SymbolIndexBucket].getName)
@@ -102,7 +103,7 @@ class SymbolIndexBucket(
       source: AbsolutePath,
       sourceDirectory: Option[AbsolutePath],
       isJava: Boolean
-  ): Option[IndexingResult] = {
+  ): Option[IndexingResult] = try {
     val IndexingResult(path, topLevels, overrides) =
       indexSource(source, dialect, sourceDirectory, isJava)
     topLevels.foreach { symbol =>
@@ -112,6 +113,10 @@ class SymbolIndexBucket(
       }
     }
     Some(IndexingResult(path, topLevels, overrides))
+  } catch {
+    case NonFatal(e) =>
+      onError(e)
+      None
   }
 
   private def indexSource(
@@ -369,7 +374,8 @@ object SymbolIndexBucket {
   def empty(
       dialect: Dialect,
       mtags: Mtags,
-      toIndexSource: AbsolutePath => AbsolutePath
+      toIndexSource: AbsolutePath => AbsolutePath,
+      onError: PartialFunction[Throwable, Unit]
   ): SymbolIndexBucket =
     new SymbolIndexBucket(
       AtomicTrieMap.empty,
@@ -377,7 +383,8 @@ object SymbolIndexBucket {
       new OpenClassLoader,
       toIndexSource,
       mtags,
-      dialect
+      dialect,
+      onError
     )
 
 }

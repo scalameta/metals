@@ -41,7 +41,7 @@ final class OnDemandSymbolIndex(
   private def getOrCreateBucket(dialect: Dialect): SymbolIndexBucket =
     dialectBuckets.getOrElseUpdate(
       dialect,
-      SymbolIndexBucket.empty(dialect, mtags, toIndexSource)
+      SymbolIndexBucket.empty(dialect, mtags, toIndexSource, onError)
     )
 
   override def definition(symbol: Symbol): Option[SymbolDefinition] = {
