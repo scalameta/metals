@@ -6,15 +6,21 @@ import scala.collection.mutable.ArrayBuffer
 import scala.{meta => m}
 
 import scala.meta.dialects
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.Memory
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.SemanticdbDefinition
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkspaceSources
 import scala.meta.internal.metals.WorkspaceSymbolInformation
 import scala.meta.internal.metals.WorkspaceSymbolProvider
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
@@ -37,6 +43,16 @@ import org.eclipse.{lsp4j => l}
  *  but only for tests
  */
 object MetalsTestEnrichments {
+
+  def emptyTrees: Trees = {
+    new Trees(
+      new Buffers(),
+      new ScalaVersionSelector(
+        () => UserConfiguration.default,
+        BuildTargets.empty,
+      ),
+    )(EmptyReportContext)
+  }
 
   implicit class XtensionTestAbsolutePath(path: AbsolutePath) {
     def text: String = Files.readAllLines(path.toNIO).asScala.mkString("\n")

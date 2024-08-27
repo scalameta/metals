@@ -2,6 +2,7 @@ package bench
 
 import java.net.URI
 import java.nio.charset.StandardCharsets
+import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
 import scala.meta.internal.io.FileIO
@@ -19,6 +20,7 @@ import org.openjdk.jmh.annotations.OutputTimeUnit
 import org.openjdk.jmh.annotations.Param
 import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.State
+import tests.MetalsTestEnrichments
 
 @State(Scope.Benchmark)
 class SemanticTokensBench extends PcBenchmark {
@@ -84,11 +86,12 @@ class SemanticTokensBench extends PcBenchmark {
 
     val nodes = pc.semanticTokens(vFile).get().asScala.toList
     val isScala3 = ScalaVersions.isScala3Version(pc.scalaVersion())
-
     SemanticTokensProvider.provide(
       nodes,
       vFile,
+      AbsolutePath(Paths.get(vFile.uri)),
       isScala3,
+      MetalsTestEnrichments.emptyTrees,
     )
   }
 
