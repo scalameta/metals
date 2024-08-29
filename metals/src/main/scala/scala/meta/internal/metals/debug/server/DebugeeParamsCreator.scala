@@ -23,7 +23,8 @@ import ch.epfl.scala.debugadapter.UnmanagedEntry
 class DebugeeParamsCreator(buildTargetClasses: BuildTargetClasses) {
   val buildTargets = buildTargetClasses.buildTargets
   def create(
-      id: BuildTargetIdentifier
+      id: BuildTargetIdentifier,
+      cancelPromise: Promise[Unit],
   )(implicit ec: ExecutionContext): Either[String, Future[DebugeeProject]] = {
     for {
       target <- buildTargets
@@ -51,7 +52,7 @@ class DebugeeParamsCreator(buildTargetClasses: BuildTargetClasses) {
 
       for {
         classpathString <- buildTargets
-          .targetClasspath(id, Promise())
+          .targetClasspath(id, cancelPromise)
           .getOrElse(Future.successful(Nil))
         jvmRunEnv <- buildTargetClasses.jvmRunEnvironment(id)
       } yield {
