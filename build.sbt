@@ -481,6 +481,7 @@ lazy val metals = project
       "localSnapshotVersion" -> localSnapshotVersion,
       "metalsVersion" -> version.value,
       "mdocVersion" -> V.mdoc,
+      "bazelBspVersion" -> V.bazelBsp,
       "bspVersion" -> V.bsp,
       "sbtVersion" -> sbtVersion.value,
       "bloopVersion" -> V.bloop,
@@ -734,6 +735,7 @@ lazy val metalsDependencies = project
       "ch.epfl.scala" %% "gradle-bloop" % V.gradleBloop,
       "com.sourcegraph" % "semanticdb-java" % V.javaSemanticdb,
       "org.foundweekends.giter8" %% "giter8" % V.gitter8Version intransitive (),
+      "org.jetbrains.bsp" % "bazel-bsp" % V.bazelBsp intransitive (),
     ),
   )
   .disablePlugins(ScalafixPlugin)
