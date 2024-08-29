@@ -172,37 +172,25 @@ def lintingOptions(scalaVersion: String) = {
 
 val sharedJavacOptions = List(
   Compile / javacOptions ++= {
-    if (sys.props("java.version").startsWith("1.8"))
+    if (sys.props("java.version").startsWith("17"))
       Nil
     else
-      Seq("--release", "8")
+      Seq("--release", "17")
   }
 )
 
 val sharedScalacOptions = List(
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
-      case partialVersion
-          // Scala 2.12.16 and lower break within the tests if target is set to 11
-          if isScala211(partialVersion) ||
-            scalaVersion.value == "2.12.16" ||
-            isScala212(partialVersion) && V.deprecatedScala2Versions
-              .contains(scalaVersion.value) =>
-        List(
-          "-target:jvm-1.8",
-          "-Yrangepos",
-          "-Xexperimental",
-        ) // TODO after release drop 2.11.12
-      /* Scala 2.12 has a bug on older version that break with `-release, but target
-       * is enough and we will confirm the compilation on latest Scala 2.12
-       */
-      case partialVersion
-          if isScala212(partialVersion) && V.scala212 != scalaVersion.value =>
-        List("-target:11", "-Yrangepos", "-Xexperimental")
+      //  Scala 2.12 and 2.11 cannot output for JDKs > 8
+      case partialVersion if isScala211(partialVersion) =>
+        List("-target:jvm-1.8", "-Yrangepos", "-Xexperimental")
+      case partialVersion if isScala212(partialVersion) =>
+        List("-Yrangepos", "-Xexperimental")
       case partialVersion if isScala3(partialVersion) =>
-        List("-Xtarget:11", "-language:implicitConversions", "-Xsemanticdb")
+        List("-Xtarget:17", "-language:implicitConversions", "-Xsemanticdb")
       case _ =>
-        List("-target:11", "-Yrangepos")
+        List("-target:17", "-Yrangepos")
     }
   }
 )

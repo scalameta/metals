@@ -15,6 +15,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
+          # Do not change the version of Java, it is the minimal version Metals works with
           java-version: 17
           cache: 'sbt'
       - name: Publish
