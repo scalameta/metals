@@ -7,6 +7,7 @@ import scala.meta.io.AbsolutePath
 
 import coursierapi.Dependency
 import coursierapi.Fetch
+import scala.meta.internal.metals.BuildInfo
 
 case class BazelBuildTool(
     userConfig: () => UserConfiguration,
@@ -78,7 +79,7 @@ case class BazelBuildTool(
 object BazelBuildTool {
   val name: String = "bazel"
   val bspName: String = "bazelbsp"
-  val version: String = "3.2.0-20240629-e3d8bdf-NIGHTLY"
+  val version: String = BuildInfo.bazelBspVersion
 
   val mainClass = "org.jetbrains.bsp.bazel.install.Install"
 
