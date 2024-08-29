@@ -51,7 +51,7 @@ case class ScalaPresentationCompiler(
   val scalaVersion = BuildInfo.scalaCompilerVersion
 
   private val forbiddenOptions = Set("-print-lines", "-print-tasty")
-  private val forbiddenDoubleOptions = Set("-release")
+  private val forbiddenDoubleOptions = Set.empty[String]
   given ReportContext =
     folderPath
       .map(StdReportContext(_, _ => buildTargetName, reportsLevel))
