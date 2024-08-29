@@ -970,7 +970,8 @@ object MetalsEnrichments
       val ld = new l.Diagnostic(
         diag.getRange.toLsp,
         fansi.Str(diag.getMessage, ErrorMode.Strip).plainText,
-        diag.getSeverity.toLsp,
+        if (diag.getSeverity == null) l.DiagnosticSeverity.Error
+        else diag.getSeverity.toLsp,
         if (diag.getSource == null) "scalac" else diag.getSource,
       )
       Option(diag.getCode()).foreach { code =>

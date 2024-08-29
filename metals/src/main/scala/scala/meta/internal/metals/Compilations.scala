@@ -261,11 +261,11 @@ final class Compilations(
     val originId = "METALS-$" + UUID.randomUUID().toString
     val params = new b.CompileParams(targets.asJava)
     params.setOriginId(originId)
-    if (
-      userConfiguration().verboseCompilation && (connection.isBloop || connection.isScalaCLI)
-    ) {
-      params.setArguments(List("--verbose", "--best-effort").asJava)
-    } else { params.setArguments(List("--best-effort").asJava) }
+    if (connection.isBloop || connection.isScalaCLI) {
+      if (userConfiguration().verboseCompilation)
+        params.setArguments(List("--verbose", "--best-effort").asJava)
+      else params.setArguments(List("--best-effort").asJava)
+    }
     targets.foreach { target =>
       isCompiling(target) = true
     }

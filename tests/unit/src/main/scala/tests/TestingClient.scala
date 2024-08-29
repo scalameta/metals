@@ -243,9 +243,13 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   def pathDiagnostics(filename: String): String = {
     pathDiagnostics(toPath(filename))
   }
-  def pathDiagnostics(path: AbsolutePath): String = {
+  def pathDiagnostics(
+      path: AbsolutePath,
+      filter: Diagnostic => Boolean = _ => true,
+  ): String = {
     val isDeleted = !path.isFile
-    val diags = diagnostics.getOrElse(path, Nil).sortBy(_.getRange)
+    val diags =
+      diagnostics.getOrElse(path, Nil).filter(filter).sortBy(_.getRange)
     val relpath =
       if (path.isJarFileSystem)
         path.toString.stripPrefix("/")
@@ -275,7 +279,14 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   }
   def workspaceDiagnostics: String = {
     val paths = diagnostics.keys.toList.sortBy(_.toURI.toString)
-    paths.map(pathDiagnostics).mkString
+    paths.map(pathDiagnostics(_)).mkString
+  }
+
+  def workspaceDiagnostics(
+      filter: Diagnostic => Boolean = _ => true
+  ): String = {
+    val paths = diagnostics.keys.toList.sortBy(_.toURI.toString)
+    paths.map(pathDiagnostics(_, filter)).mkString
   }
 
   override def registerCapability(

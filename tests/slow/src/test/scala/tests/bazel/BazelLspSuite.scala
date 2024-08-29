@@ -28,6 +28,7 @@ class BazelLspSuite
   val buildTool: BazelBuildTool = BazelBuildTool(() => userConfig, workspace)
 
   val bazelVersion = "6.4.0"
+  val bazel7Version = "7.3.0"
 
   def bazelBspConfig: AbsolutePath = workspace.resolve(".bsp/bazelbsp.json")
 
@@ -38,55 +39,59 @@ class BazelLspSuite
   val importMessage: String =
     GenerateBspAndConnect.params("bazel", "bazelbsp").getMessage()
 
-  test("basic") {
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
-      )
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        List(
-          importMessage
-        ).mkString("\n"),
-      )
-      _ = assert(bazelBspConfig.exists)
-      _ = client.messageRequests.clear() // restart
-      _ = assertStatus(_.isInstalled)
-      _ = assertNoDiff(client.workspaceDiagnostics, "")
-      _ <- server.didChange("WORKSPACE")(_ + "\n# comment")
-      _ <- server.didSave("WORKSPACE")(identity)
-      // Comment changes do not trigger "re-import project" request
-      _ = assertNoDiff(client.workspaceMessageRequests, "")
-      _ <- server.didChange("Hello.scala") { text =>
-        text.replace("def hello: String", "def hello: Int")
+  for (bazelVersion <- List(bazelVersion, bazel7Version)) {
+    test(s"basic-$bazelVersion") {
+      cleanWorkspace()
+      for {
+        _ <- initialize(
+          BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
+        )
+        _ = assertNoDiff(
+          client.workspaceMessageRequests,
+          List(
+            importMessage
+          ).mkString("\n"),
+        )
+        _ = assert(bazelBspConfig.exists)
+        _ = client.messageRequests.clear() // restart
+        _ = assertStatus(_.isInstalled)
+        _ = assertNoDiff(client.workspaceDiagnostics, "")
+        _ <- server.didChange("WORKSPACE")(_ + "\n# comment")
+        _ <- server.didSave("WORKSPACE")(identity)
+        // Comment changes do not trigger "re-import project" request
+        _ = assertNoDiff(client.workspaceMessageRequests, "")
+        _ <- server.didChange("Hello.scala") { text =>
+          text.replace("def hello: String", "def hello: Int")
+        }
+        _ <- server.didSave("Hello.scala")(identity)
+        _ = assertNoDiff(
+          client.workspaceDiagnostics { diag =>
+            diag.getSeverity() != null
+          },
+          """|Hello.scala:4:20: error: type mismatch;
+             | found   : String("Hello")
+             | required: Int
+             |  def hello: Int = "Hello"
+             |                   ^
+             |  def hello: Int = "Hello"
+             |                   ^
+             |""".stripMargin,
+        )
+        _ <- server.didChange(s"BUILD") { text =>
+          text.replace("\"hello\"", "\"hello1\"")
+        }
+        _ = assertNoDiff(client.workspaceMessageRequests, "")
+        _ = client.generateBspAndConnect = GenerateBspAndConnect.yes
+        _ <- server.didSave(s"BUILD")(identity)
+      } yield {
+        assertNoDiff(
+          client.workspaceMessageRequests,
+          List(
+            importBuildChangesMessage
+          ).mkString("\n"),
+        )
+        server.assertBuildServerConnection()
       }
-      _ <- server.didSave("Hello.scala")(identity)
-      _ = assertNoDiff(
-        client.workspaceDiagnostics,
-        """|Hello.scala:4:20: error: type mismatch;
-           | found   : String("Hello")
-           | required: Int
-           |  def hello: Int = "Hello"
-           |                   ^
-           |  def hello: Int = "Hello"
-           |                   ^
-           |""".stripMargin,
-      )
-      _ <- server.didChange(s"BUILD") { text =>
-        text.replace("\"hello\"", "\"hello1\"")
-      }
-      _ = assertNoDiff(client.workspaceMessageRequests, "")
-      _ = client.generateBspAndConnect = GenerateBspAndConnect.yes
-      _ <- server.didSave(s"BUILD")(identity)
-    } yield {
-      assertNoDiff(
-        client.workspaceMessageRequests,
-        List(
-          importBuildChangesMessage
-        ).mkString("\n"),
-      )
-      server.assertBuildServerConnection()
     }
   }
 
@@ -330,7 +335,7 @@ class BazelLspSuite
   }
 
   test("update-projectview") {
-    cleanWorkspace()
+    // cleanWorkspace()
     writeLayout(
       BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
     )
