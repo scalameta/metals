@@ -106,6 +106,7 @@ abstract class BaseCodeLensLspSuite(
   def check(
       name: TestOptions,
       library: Option[String] = None,
+      plugin: Option[String] = None,
       scalaVersion: Option[String] = None,
       printCommand: Boolean = false,
       extraInitialization: (TestingServer, String) => Future[Unit] = (_, _) =>
@@ -129,13 +130,14 @@ abstract class BaseCodeLensLspSuite(
         s"a/src/main/scala/$file"
       }
 
-      val libraryString = library.map(s => s""" "$s" """).getOrElse("")
+      def wrap(dep: Option[String]) = dep.map(s => s""" "$s" """).getOrElse("")
       for {
         _ <- initialize(
           s"""|/metals.json
               |{
               |  "a": { 
-              |    "libraryDependencies" : [ $libraryString ],
+              |    "libraryDependencies" : [ ${wrap(library)} ],
+              |    "compilerPlugins" : [ ${wrap(plugin)} ],
               |    "scalaVersion": "$actualScalaVersion"
               |  }
               |}
@@ -158,6 +160,7 @@ abstract class BaseCodeLensLspSuite(
   def checkTestCases(
       name: TestOptions,
       library: Option[String] = None,
+      plugin: Option[String] = None,
       scalaVersion: Option[String] = None,
       printCommand: Boolean = false,
       minExpectedLenses: Int = 1,
@@ -166,6 +169,7 @@ abstract class BaseCodeLensLspSuite(
   )(implicit loc: Location): Unit = check(
     name,
     library,
+    plugin,
     scalaVersion,
     printCommand,
     (server, sourceFile) =>

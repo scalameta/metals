@@ -97,8 +97,13 @@ final class RunTestCodeLens(
       // most of the bsp servers such as bloop and sbt might not support it.
     } yield requestJvmEnvironment(buildTargetId, isJVM).map { _ =>
       val classes = buildTargetClasses.classesOf(buildTargetId)
-
-      if (connection.isScalaCLI && path.isAmmoniteScript) {
+      val syntheticLenses = syntheticCodeLenses(
+        textDocument,
+        buildTargetId,
+        classes,
+        isJVM,
+      )
+      val regularLenses = if (connection.isScalaCLI && path.isAmmoniteScript) {
         scalaCliCodeLenses(
           textDocument,
           buildTargetId,
@@ -115,6 +120,7 @@ final class RunTestCodeLens(
           path,
           isJVM,
         )
+      syntheticLenses ++ regularLenses
     }
     lenses.getOrElse(Future.successful(Nil))
   }
@@ -203,6 +209,36 @@ final class RunTestCodeLens(
     } else {
       Nil
     }
+
+  }
+
+  private def syntheticCodeLenses(
+      textDocument: TextDocument,
+      target: BuildTargetIdentifier,
+      classes: BuildTargetClasses.Classes,
+      isJVM: Boolean,
+  ): Seq[l.CodeLens] = {
+    val symbolsWithMain = textDocument.symbols.filter(info =>
+      classes.mainClasses.contains(info.symbol)
+    )
+    for {
+      sym <- symbolsWithMain
+      if ! {
+        textDocument.occurrences.exists(occ =>
+          occ.symbol == sym.symbol && occ.role.isDefinition
+        )
+      }
+      command <- classes.mainClasses
+        .get(sym.symbol)
+        .map(
+          mainCommand(target, _, isJVM, adjustName = s" (${sym.displayName})")
+        )
+        .getOrElse(Nil)
+    } yield new l.CodeLens(
+      new l.Range(new l.Position(0, 0), new l.Position(0, 0)),
+      command,
+      null,
+    )
 
   }
 
@@ -336,6 +372,7 @@ final class RunTestCodeLens(
       target: b.BuildTargetIdentifier,
       main: b.ScalaMainClass,
       isJVM: Boolean,
+      adjustName: String = "",
   ): List[l.Command] = {
     val javaBinary = buildTargets
       .scalaTarget(target)
@@ -364,12 +401,12 @@ final class RunTestCodeLens(
 
     if (clientConfig.isDebuggingProvider() && isJVM)
       List(
-        command("run", StartRunSession, params),
-        command("debug", StartDebugSession, params),
+        command("run" + adjustName, StartRunSession, params),
+        command("debug" + adjustName, StartDebugSession, params),
       )
     // run provider needs shell command to run currently, we don't support pure run inside metals for JVM
     else if (shellCommandAdded && clientConfig.isRunProvider() || !isJVM)
-      List(command("run", StartRunSession, params))
+      List(command("run" + adjustName, StartRunSession, params))
     else Nil
   }
 

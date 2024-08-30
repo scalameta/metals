@@ -50,6 +50,23 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
        |""".stripMargin
   )
 
+  check(
+    "custom-main",
+    library = Some("io.github.dfianthdl::dfhdl:0.7.1"),
+    plugin = Some("io.github.dfianthdl:::dfhdl-plugin:0.7.1"),
+    scalaVersion = Some("3.5.0"),
+  )(
+    """|<<run (top_Foo)>><<debug (top_Foo)>>
+       |package foo.bar
+       |
+       |import dfhdl.* 
+       |@top class Foo extends EDDesign
+       |
+       |<<run>><<debug>>
+       |@main def hey = ???
+       |""".stripMargin
+  )
+
   checkTestCases(
     "test-suite-with-tests",
     library = Some("org.scalatest::scalatest:3.2.16"),
