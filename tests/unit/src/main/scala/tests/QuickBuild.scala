@@ -159,12 +159,12 @@ case class QuickBuild(
         .toDependency(plugin, scalaVersion, binaryVersion)
         .withTransitive(false)
     )
+    val pluginJars = QuickBuild.fetchDependencies(pluginDependencies)
+    val plugins = pluginJars.map(jar => s"-Xplugin:$jar")
     val allScalacOptions =
       if (ScalaVersions.isScala3Version(scalaVersion)) {
-        scalacOptions.toList
+        scalacOptions.toList ++ plugins
       } else {
-        val pluginJars = QuickBuild.fetchDependencies(pluginDependencies)
-        val plugins = pluginJars.map(jar => s"-Xplugin:$jar")
         val cache =
           if (scalaVersion == V.scala213)
             List("-Ycache-plugin-class-loader:last-modified")
