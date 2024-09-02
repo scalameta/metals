@@ -13,7 +13,7 @@
   "dependencies": {
     "@docusaurus/core": "3.4.0",
     "@docusaurus/plugin-client-redirects": "3.4.0",
-    "@docusaurus/preset-classic": "3.4.0",
+    "@docusaurus/preset-classic": "3.5.2",
     "@easyops-cn/docusaurus-search-local": "0.44.5",
     "@swc/core": "^1.7.14",
     "clsx": "^2.0.0",
