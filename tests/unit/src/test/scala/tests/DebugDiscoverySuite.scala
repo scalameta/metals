@@ -1,6 +1,11 @@
 package tests
 
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.TimeUnit
+
+import scala.jdk.CollectionConverters.MapHasAsJava
+import scala.util.Random
 
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.JsonParser._
@@ -136,6 +141,13 @@ class DebugDiscoverySuite
   }
 
   test("run-file-test") {
+    val envFile: Path =
+      Files.write(
+        workspace
+          .resolve(Random.alphanumeric.take(10).mkString.toLowerCase + ".env")
+          .toNIO,
+        "BAR=BAZ".getBytes(),
+      )
     for {
       _ <- initialize(
         s"""/metals.json
@@ -147,7 +159,11 @@ class DebugDiscoverySuite
            |/${fooPath}
            |package a
            |class Foo extends org.scalatest.funsuite.AnyFunSuite {
-           |  test("foo") {}
+           |  test("foo") {
+           |    val foo = sys.env("FOO")
+           |    val bar = sys.env("BAR")
+           |    print(s"$$foo $$bar")
+           |}
            |}
            |""".stripMargin
       )
@@ -158,6 +174,8 @@ class DebugDiscoverySuite
         new DebugDiscoveryParams(
           server.toPath(fooPath).toURI.toString,
           "runOrTestFile",
+          env = Map("FOO" -> "BAR").asJava,
+          envFile = envFile.getFileName.toString,
         ).toJson
       )
       _ <- debugger.initialize
@@ -165,7 +183,14 @@ class DebugDiscoverySuite
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assert(output.contains("All tests in a.Foo passed"))
+    } yield assert(
+      output.contains(
+        """|All tests in a.Foo passed
+           |
+           |BAR BAZ
+           |""".stripMargin
+      )
+    )
   }
 
   test("no-run-or-test") {
