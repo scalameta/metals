@@ -103,15 +103,7 @@ final class RunTestCodeLens(
         classes,
         isJVM,
       )
-      val regularLenses = if (connection.isScalaCLI && path.isAmmoniteScript) {
-        scalaCliCodeLenses(
-          textDocument,
-          buildTargetId,
-          classes,
-          distance,
-          isJVM,
-        )
-      } else
+      val regularLenses =
         codeLenses(
           textDocument,
           buildTargetId,
@@ -290,42 +282,6 @@ final class RunTestCodeLens(
   ): Option[l.Range] =
     occurrence.range
       .flatMap(r => distance.toRevisedStrict(r).map(_.toLsp))
-
-  private def scalaCliCodeLenses(
-      textDocument: TextDocument,
-      target: BuildTargetIdentifier,
-      classes: BuildTargetClasses.Classes,
-      distance: TokenEditDistance,
-      isJVM: Boolean,
-  ): Seq[l.CodeLens] = {
-    val scriptFileName = textDocument.uri.stripSuffix(".sc")
-
-    val expectedMainClass =
-      if (scriptFileName.contains('/')) s"${scriptFileName}_sc."
-      else s"_empty_/${scriptFileName}_sc."
-    val main =
-      classes.mainClasses
-        .get(expectedMainClass)
-        .map(mainCommand(target, _, isJVM))
-        .getOrElse(Nil)
-
-    val fromAnnotations = textDocument.occurrences.flatMap { occ =>
-      for {
-        sym <- DebugDiscovery.mainFromAnnotation(occ, textDocument)
-        cls <- classes.mainClasses.get(sym)
-        range <- occurrenceRange(occ, distance)
-      } yield mainCommand(target, cls, isJVM).map { cmd =>
-        new l.CodeLens(range, cmd, null)
-      }
-    }.flatten
-    fromAnnotations ++ main.map(command =>
-      new l.CodeLens(
-        new l.Range(new l.Position(0, 0), new l.Position(0, 2)),
-        command,
-        null,
-      )
-    )
-  }
 
   /**
    * Do not return test code lenses if user declared test explorer as a test interface.
