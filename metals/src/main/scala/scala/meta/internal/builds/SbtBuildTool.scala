@@ -104,7 +104,7 @@ case class SbtBuildTool(
       val allPaths = projectRoot :: envPaths.map(AbsolutePath(_))
       allPaths.collectFirst { path =>
         path.resolve("sbt") match {
-          case sbtPath if sbtPath.exists => sbtPath.toString()
+          case sbtPath if sbtPath.exists && sbtPath.isFile => sbtPath.toString()
         }
       }
     }

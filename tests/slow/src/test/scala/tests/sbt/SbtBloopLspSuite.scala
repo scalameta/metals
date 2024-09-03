@@ -47,6 +47,8 @@ class SbtBloopLspSuite
 
   test("basic") {
     cleanWorkspace()
+    // directory should not be used as sbt script
+    workspace.resolve("sbt").createDirectories()
     for {
       _ <- initialize(
         s"""|/project/build.properties
