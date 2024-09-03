@@ -12,6 +12,7 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.JvmOpts
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -273,13 +274,37 @@ class DebugDiscovery(
         if (mains.nonEmpty) {
           findMainToRun(Map(buildTarget -> mains.toList), params)
         } else if (tests.nonEmpty) {
-          Future {
-            val params = new b.DebugSessionParams(singletonList(buildTarget))
-            params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES)
-            params.setData(tests.asJava.toJson)
-            params
-          }
+          DebugProvider.envFromFile(workspace, Option(params.envFile)).map {
+            envFromFile =>
+              val env =
+                Option(params.env).toList.flatMap(DebugProvider.createEnvList)
 
+              val jvmOpts =
+                JvmOpts.fromWorkspaceOrEnvForTest(workspace).getOrElse(Nil)
+              val scalaTestSuite = new b.ScalaTestSuites(
+                tests
+                  .map(
+                    new b.ScalaTestSuiteSelection(
+                      _,
+                      Nil.asJava,
+                    )
+                  )
+                  .asJava,
+                Option(params.jvmOptions)
+                  .map(jvmOpts ++ _.asScala)
+                  .getOrElse(jvmOpts)
+                  .asJava,
+                (envFromFile ::: env).asJava,
+              )
+              val debugParams = new b.DebugSessionParams(
+                singletonList(buildTarget)
+              )
+              debugParams.setDataKind(
+                b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION
+              )
+              debugParams.setData(scalaTestSuite.toJson)
+              debugParams
+          }
         } else {
           Future.failed(NoRunOptionException)
         }
