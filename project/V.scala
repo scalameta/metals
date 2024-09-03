@@ -3,7 +3,7 @@ import sbt._
 object V {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
-  val scala212 = "2.12.19"
+  val scala212 = "2.12.20"
   val scala213 = "2.13.14"
   val scala3 = "3.3.3"
 
@@ -145,6 +145,7 @@ object V {
   def nonDeprecatedScala2Versions = Seq(
     scala213,
     scala212,
+    "2.12.19",
     "2.12.18",
     "2.12.17",
     "2.12.16",
