@@ -1,5 +1,6 @@
 package tests.scalacli
 
+import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import tests.BaseCodeLensLspSuite
@@ -25,7 +26,7 @@ class CodeLensesScalaCliSuite
       _ <- server.didOpen(path)
       _ <- assertCodeLenses(
         path,
-        """|<<run>><<debug>>
+        """|<<run (main_sc)>><<debug (main_sc)>>
            |val x = 3
            |
            |def main() = {
@@ -85,6 +86,52 @@ class CodeLensesScalaCliSuite
             |object Main extends App {
             |    println(12)
             |}""".stripMargin,
+      )
+    } yield ()
+  }
+
+  private val scalaCliScriptPath = "a/src/main/scala/a/main.sc"
+  test("run-script") {
+    cleanWorkspace()
+    for {
+
+      _ <- initialize(
+        s"""/.bsp/scala-cli.json
+           |${ScalaCli.scalaCliBspJsonContent()}
+           |/.scala-build/ide-inputs.json
+           |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
+           |/$scalaCliScriptPath
+           |print("oranges are nice")""".stripMargin
+      )
+      _ <- server.didOpen(scalaCliScriptPath)
+      _ <- assertCodeLenses(
+        scalaCliScriptPath,
+        """|<<run (main_sc)>><<debug (main_sc)>>
+           |print("oranges are nice")
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  private val scalaCliScriptPathTop = "main.sc"
+  test("run-script-top") {
+    cleanWorkspace()
+    for {
+
+      _ <- initialize(
+        s"""/.bsp/scala-cli.json
+           |${ScalaCli.scalaCliBspJsonContent()}
+           |/.scala-build/ide-inputs.json
+           |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
+           |/$scalaCliScriptPathTop
+           |print("oranges are nice")""".stripMargin
+      )
+      _ <- server.didOpen(scalaCliScriptPathTop)
+      _ <- assertCodeLenses(
+        scalaCliScriptPathTop,
+        """|<<run (main_sc)>><<debug (main_sc)>>
+           |print("oranges are nice")
+           |""".stripMargin,
       )
     } yield ()
   }
