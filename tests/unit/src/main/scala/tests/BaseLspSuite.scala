@@ -6,6 +6,8 @@ import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.util.Failure
+import scala.util.Success
 import scala.util.control.NonFatal
 
 import scala.meta.internal.io.PathIO
@@ -14,11 +16,14 @@ import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.ExecuteClientCommandConfig
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.Trace
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.debug.DebugProtocol
 import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.io.AbsolutePath
 
@@ -49,6 +54,14 @@ abstract class BaseLspSuite(
   var workspace: AbsolutePath = _
   var onStartCompilation: () => Unit = () => ()
 
+  protected def metalsDotDir: AbsolutePath = workspace.resolve(".metals")
+  protected def dapClient: AbsolutePath =
+    Trace.protocolTracePath(DebugProtocol.clientName, metalsDotDir)
+  protected def dapServer: AbsolutePath =
+    Trace.protocolTracePath(DebugProtocol.serverName, metalsDotDir)
+  protected def bspTrace: AbsolutePath =
+    Trace.protocolTracePath("bsp", metalsDotDir)
+
   protected def initializationOptions: Option[InitializationOptions] = None
 
   private var useVirtualDocs = false
@@ -65,6 +78,35 @@ abstract class BaseLspSuite(
     }
   }
 
+  override def munitTestTransforms: List[TestTransform] =
+    super.munitTestTransforms :+
+      new TestTransform(
+        "Print DAP traces",
+        { test =>
+          test.withBody(() =>
+            test
+              .body()
+              .andThen {
+                case Failure(exception) =>
+                  logDapTraces()
+                  exception
+                case Success(value) => value
+              }(munitExecutionContext)
+          )
+        },
+      )
+
+  protected def logDapTraces(): Unit = {
+    if (isCI) {
+      scribe.warn("The test failed, printing the traces:")
+      if (dapClient.exists)
+        scribe.warn(dapClient.toString() + ":\n" + dapClient.readText)
+      if (dapServer.exists)
+        scribe.warn(dapServer.toString() + ":\n" + dapServer.readText)
+      if (bspTrace.exists)
+        scribe.warn(bspTrace.toString() + ":\n" + bspTrace.readText)
+    }
+  }
   def writeLayout(layout: String): Unit = {
     FileLayout.fromString(layout, workspace)
   }
@@ -213,7 +255,14 @@ abstract class BaseLspSuite(
   def cleanWorkspace(): Unit = {
     if (workspace.isDirectory) {
       try {
-        RecursivelyDelete(workspace)
+        RecursivelyDelete(
+          root = workspace,
+          excludedNames = Set(
+            "bsp.trace.json",
+            "dap-client.trace.json",
+            "dap-server.trace.json",
+          ),
+        )
         Files.createDirectories(workspace.toNIO)
       } catch {
         case NonFatal(_) =>

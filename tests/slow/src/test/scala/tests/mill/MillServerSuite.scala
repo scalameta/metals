@@ -1,8 +1,6 @@
 package tests.mill
 
 import scala.concurrent.Promise
-import scala.util.Failure
-import scala.util.Success
 
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.MillDigest
@@ -28,8 +26,6 @@ class MillServerSuite
   val supportedBspVersion = V.millVersion
   val scalaVersion = V.scala213
   def buildTool: MillBuildTool = MillBuildTool(() => userConfig, workspace)
-  def bspTrace: AbsolutePath =
-    workspace.resolve(".metals").resolve("bsp.trace.json")
 
   override def currentDigest(
       workspace: AbsolutePath
@@ -38,31 +34,8 @@ class MillServerSuite
   override def beforeEach(context: BeforeEach): Unit = {
     super.beforeEach(context)
     cleanWorkspace()
-    bspTrace.writeText("")
+    bspTrace.touch()
   }
-
-  private def logBspTraces(): Option[Unit] =
-    bspTrace.readTextOpt.map(trace => scribe.warn(s"""|BSP trace:
-                                                      |$trace
-                                                      |""".stripMargin))
-
-  override def munitTestTransforms: List[TestTransform] =
-    super.munitTestTransforms :+
-      new TestTransform(
-        "Print BSP traces",
-        { test =>
-          test.withBody(() =>
-            test
-              .body()
-              .andThen {
-                case Failure(exception) =>
-                  logBspTraces()
-                  exception
-                case Success(value) => value
-              }(munitExecutionContext)
-          )
-        },
-      )
 
   test("too-old") {
     writeLayout(MillBuildLayout("", V.scala213, testDep = None, preBspVersion))

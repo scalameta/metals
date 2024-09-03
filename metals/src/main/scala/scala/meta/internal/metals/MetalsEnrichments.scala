@@ -242,6 +242,7 @@ object MetalsEnrichments
 
     def liftToLspError(implicit ec: ExecutionContext): Future[A] =
       future.recoverWith { case NonFatal(e) =>
+        scribe.error(e)
         val newException = new ResponseErrorException(
           new messages.ResponseError(
             messages.ResponseErrorCode.InvalidRequest,

@@ -10,8 +10,8 @@ import java.nio.file.attribute.BasicFileAttributes
 import scala.meta.io.AbsolutePath
 
 object RecursivelyDelete {
-  def apply(root: AbsolutePath): Int = {
-    if (root.isFile) {
+  def apply(root: AbsolutePath, excludedNames: Set[String] = Set.empty): Int = {
+    if (root.isFile && !excludedNames(root.toNIO.getFileName.toString)) {
       Files.delete(root.toNIO)
       1
     } else if (root.isDirectory) {
@@ -22,9 +22,11 @@ object RecursivelyDelete {
           override def visitFile(
               file: Path,
               attrs: BasicFileAttributes
-          ): FileVisitResult = {
+          ): FileVisitResult = if (!excludedNames(file.getFileName.toString)) {
             count += 1
             Files.delete(file)
+            super.visitFile(file, attrs)
+          } else {
             super.visitFile(file, attrs)
           }
           override def postVisitDirectory(
