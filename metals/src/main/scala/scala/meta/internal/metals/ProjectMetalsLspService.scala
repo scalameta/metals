@@ -210,11 +210,12 @@ class ProjectMetalsLspService(
     buildTools,
   )
 
-  protected def isMillBuildSc(path: AbsolutePath): Boolean =
-    path.toNIO.getFileName.toString == "build.sc" &&
-      // for now, this only checks for build.sc, but this could be made more strict in the future
-      // (require ./mill or ./.mill-version)
-      buildTools.isMill
+  protected def isMillBuildSc(path: AbsolutePath): Boolean = {
+    buildTools.isMill && {
+      val filename = path.toNIO.getFileName.toString
+      filename == "build.sc" || filename == "build.mill"
+    }
+  }
 
   override def didChange(
       params: DidChangeTextDocumentParams
