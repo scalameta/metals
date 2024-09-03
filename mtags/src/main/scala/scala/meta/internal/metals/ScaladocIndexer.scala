@@ -15,6 +15,7 @@ import scala.meta.pc.ContentType.MARKDOWN
 import scala.meta.pc.ContentType.PLAINTEXT
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.tokens.Token
+import scala.meta.trees.Origin
 
 /**
  * Extracts Scaladoc from Scala source code.
@@ -38,7 +39,7 @@ class ScaladocIndexer(
       }
 
     val docstring = currentTree.origin match {
-      case ScalametaCompat.ParsedOrigin(start, _) =>
+      case Origin.Parsed(_, start, _) =>
         val leadingDocstring =
           ScaladocIndexer.findLeadingDocstring(
             source.tokens,
