@@ -4,6 +4,7 @@ import scala.concurrent.Future
 
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
 
 import ch.epfl.scala.bsp4j.DebugSessionParams
 import com.google.gson.JsonObject
@@ -15,6 +16,16 @@ abstract class BaseCodeLensLspSuite(
     name: String,
     initializer: BuildServerInitializer = QuickBuildInitializer,
 ) extends BaseLspSuite(name, initializer) {
+
+  override def serverConfig: MetalsServerConfig =
+    super.serverConfig.copy(loglevel = "debug")
+
+  override def beforeEach(context: BeforeEach): Unit = {
+    super.beforeEach(context)
+    dapClient.touch()
+    dapServer.touch()
+    bspTrace.touch()
+  }
 
   protected def runFromCommand(
       cmd: Command,

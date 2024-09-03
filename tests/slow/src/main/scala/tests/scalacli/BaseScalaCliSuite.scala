@@ -9,6 +9,8 @@ import scala.concurrent.Promise
 import scala.concurrent.duration._
 
 import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.scalacli.ScalaCli
 
 import ch.epfl.scala.bsp4j.MessageType
@@ -20,6 +22,16 @@ import tests.ScriptsAssertions
 abstract class BaseScalaCliSuite(protected val scalaVersion: String)
     extends BaseLspSuite(s"scala-cli-$scalaVersion")
     with ScriptsAssertions {
+
+  override def serverConfig: MetalsServerConfig =
+    super.serverConfig.copy(loglevel = "debug")
+
+  override def beforeEach(context: BeforeEach): Unit = {
+    super.beforeEach(context)
+    dapClient.touch()
+    dapServer.touch()
+    bspTrace.touch()
+  }
 
   private val scheduler = Executors.newSingleThreadScheduledExecutor()
 

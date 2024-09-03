@@ -3,12 +3,9 @@ package tests
 import java.util.Collections.emptyList
 
 import scala.concurrent.Future
-import scala.util.Failure
-import scala.util.Success
 
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.Trace
-import scala.meta.internal.metals.debug.DebugProtocol
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.debug.DebugStep._
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.StepNavigator
@@ -26,41 +23,15 @@ abstract class BaseDapSuite(
     initializer: BuildServerInitializer,
     buildToolLayout: BuildToolLayout,
 ) extends BaseLspSuite(suiteName, initializer) {
-
-  private val dapClient = Trace.protocolTracePath(DebugProtocol.clientName)
-  private val dapServer = Trace.protocolTracePath(DebugProtocol.serverName)
+  override def serverConfig: MetalsServerConfig =
+    super.serverConfig.copy(loglevel = "debug")
 
   override def beforeEach(context: BeforeEach): Unit = {
     super.beforeEach(context)
     dapClient.touch()
     dapServer.touch()
+    bspTrace.touch()
   }
-
-  protected def logDapTraces(): Unit = {
-    if (isCI) {
-      scribe.warn("The DAP test failed, printing the traces")
-      scribe.warn(dapClient.toString() + ":\n" + dapClient.readText)
-      scribe.warn(dapServer.toString() + ":\n" + dapServer.readText)
-    }
-  }
-
-  override def munitTestTransforms: List[TestTransform] =
-    super.munitTestTransforms :+
-      new TestTransform(
-        "Print DAP traces",
-        { test =>
-          test.withBody(() =>
-            test
-              .body()
-              .andThen {
-                case Failure(exception) =>
-                  logDapTraces()
-                  exception
-                case Success(value) => value
-              }(munitExecutionContext)
-          )
-        },
-      )
 
   def debugMain(
       buildTarget: String,
