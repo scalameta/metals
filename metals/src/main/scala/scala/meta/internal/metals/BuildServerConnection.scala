@@ -62,8 +62,8 @@ class BuildServerConnection private (
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
-  private val defaultTimeout = Some(
-    Timeout.default(FiniteDuration(3, TimeUnit.MINUTES))
+  private def timeout(minutes: Int) = Some(
+    Timeout.default(FiniteDuration(minutes, TimeUnit.MINUTES))
   )
 
   @volatile private var connection = Future.successful(initialConnection)
@@ -228,7 +228,8 @@ class BuildServerConnection private (
   }
 
   def mainClasses(
-      params: ScalaMainClassesParams
+      params: ScalaMainClassesParams,
+      retry: Int = 3,
   ): Future[ScalaMainClassesResult] = {
     val resultOnUnsupported = new ScalaMainClassesResult(Collections.emptyList)
     if (supportsScala) {
@@ -241,14 +242,17 @@ class BuildServerConnection private (
       register(
         server => server.buildTargetScalaMainClasses(params),
         onFail,
-        defaultTimeout,
-      ).asScala
+        timeout(1),
+      ).asScala.recoverWith {
+        case _: TimeoutException if retry > 0 => mainClasses(params, retry - 1)
+      }
     } else Future.successful(resultOnUnsupported)
 
   }
 
   def testClasses(
-      params: ScalaTestClassesParams
+      params: ScalaTestClassesParams,
+      retry: Int = 3,
   ): Future[ScalaTestClassesResult] = {
     val resultOnUnsupported = new ScalaTestClassesResult(Collections.emptyList)
     if (supportsScala) {
@@ -261,8 +265,10 @@ class BuildServerConnection private (
       register(
         server => server.buildTargetScalaTestClasses(params),
         onFail,
-        defaultTimeout,
-      ).asScala
+        timeout(1),
+      ).asScala.recoverWith {
+        case _: TimeoutException if retry > 0 => testClasses(params, retry - 1)
+      }
     } else Future.successful(resultOnUnsupported)
   }
 
