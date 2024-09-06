@@ -184,6 +184,7 @@ class FallbackDefinitionProvider(
       case Term.Select(qualifier, name) =>
         nameFromSelect(qualifier, name.value +: acc)
       case Term.Name(value) => value +: acc
+      case _ => Nil
     }
   }
 
