@@ -58,7 +58,8 @@ final class AutoImportsProvider(
       sym.name.dropLocal.decoded == name
 
     symbols.result().collect {
-      case sym if isExactMatch(sym, name) =>
+      case sym
+          if isExactMatch(sym, name) && context.isAccessible(sym, sym.info) =>
         val pkg = sym.owner.fullName
         val edits = importPosition match {
           // if we are in import section just specify full name
