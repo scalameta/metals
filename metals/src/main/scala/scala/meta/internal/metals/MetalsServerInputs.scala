@@ -3,6 +3,8 @@ package scala.meta.internal.metals
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
+import scala.concurrent.ExecutionContext
+
 import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClasspathSearch
@@ -69,7 +71,8 @@ object MetalsServerInputs {
       time = Time.system,
       initialServerConfig = MetalsServerConfig.default,
       initialUserConfig = UserConfiguration.default,
-      bspGlobalDirectories = BspServers.globalInstallDirectories,
+      bspGlobalDirectories =
+        BspServers.globalInstallDirectories(ExecutionContext.global),
       mtagsResolver = MtagsResolver.default(),
       onStartCompilation = () => (),
       redirectSystemOut = true,
