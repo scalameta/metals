@@ -4,6 +4,7 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -19,6 +20,7 @@ import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsProjectDirectories
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.QuietInputStream
 import scala.meta.internal.metals.SocketConnection
@@ -33,7 +35,6 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 import com.google.gson.Gson
-import dev.dirs.ProjectDirectories
 
 /**
  * Implements BSP server discovery, named "BSP Connection Protocol" in the spec.
@@ -202,11 +203,18 @@ final class BspServers(
 }
 
 object BspServers {
-  def globalInstallDirectories: List[AbsolutePath] = {
-    val dirs = ProjectDirectories.fromPath("bsp")
-    List(dirs.dataLocalDir, dirs.dataDir).distinct
-      .map(path => Try(AbsolutePath(path)).toOption)
-      .flatten
+  def globalInstallDirectories(implicit
+      ec: ExecutionContext
+  ): List[AbsolutePath] = {
+    val dirs = MetalsProjectDirectories.fromPath("bsp")
+    dirs match {
+      case Some(dirs) =>
+        List(dirs.dataLocalDir, dirs.dataDir).distinct
+          .map(path => Try(AbsolutePath(path)).toOption)
+          .flatten
+      case None =>
+        Nil
+    }
   }
 
   def readInBspConfig(

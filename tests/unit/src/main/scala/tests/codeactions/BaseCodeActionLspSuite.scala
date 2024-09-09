@@ -59,6 +59,7 @@ abstract class BaseCodeActionLspSuite(
       expectError: Boolean = false,
       filterAction: CodeAction => Boolean = _ => true,
       overrideLayout: Option[String] = None,
+      retryAction: Int = 0,
   )(implicit loc: Location): Unit = {
     val scalacOptionsJson =
       if (scalacOptions.nonEmpty)
@@ -88,6 +89,7 @@ abstract class BaseCodeActionLspSuite(
       changeFile,
       expectError,
       filterAction,
+      retryAction,
     )
   }
 
@@ -105,6 +107,7 @@ abstract class BaseCodeActionLspSuite(
       changeFile: String => String = identity,
       expectError: Boolean = false,
       filterAction: CodeAction => Boolean = _ => true,
+      retryAction: Int = 0,
   )(implicit loc: Location): Unit = {
     val files = FileLayout.mapFromString(layout)
     val (path, input) = files
@@ -119,6 +122,25 @@ abstract class BaseCodeActionLspSuite(
     val actualExpectedCode =
       if (renamePath.nonEmpty) input.replace("<<", "").replace(">>", "")
       else expectedCode
+
+    def assertActionsWithRetry(
+        retry: Int = retryAction
+    ): Future[List[CodeAction]] = {
+      server
+        .assertCodeAction(
+          path,
+          changeFile(input),
+          expectedActions,
+          kind,
+          filterAction = filterAction,
+        )
+        .recoverWith {
+          case _: Throwable if retry > 0 =>
+            Thread.sleep(1000)
+            assertActionsWithRetry(retry - 1)
+          case _: Throwable if expectError => Future.successful(Nil)
+        }
+    }
 
     test(name) {
       cleanWorkspace()
@@ -135,18 +157,7 @@ abstract class BaseCodeActionLspSuite(
           path,
           changeFile(input).replace("<<", "").replace(">>", ""),
         )
-        codeActions <-
-          server
-            .assertCodeAction(
-              path,
-              changeFile(input),
-              expectedActions,
-              kind,
-              filterAction = filterAction,
-            )
-            .recover {
-              case _: Throwable if expectError => Nil
-            }
+        codeActions <- assertActionsWithRetry()
         _ <- client.applyCodeAction(selectedActionIndex, codeActions, server)
         _ <- server.didSave(newPath) { _ =>
           if (newPath != path)

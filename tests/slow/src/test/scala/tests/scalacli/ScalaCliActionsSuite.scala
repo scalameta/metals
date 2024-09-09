@@ -41,6 +41,8 @@ class ScalaCliActionsSuite
     scalaCliOptions = List("--actions", "-S", scalaVersion),
     expectNoDiagnostics = false,
     selectedActionIndex = 1,
+    // Scala CLI doesn't publish everything with the normal diagnostics, but later
+    retryAction = 5,
   )
 
   checkScalaCLI(
@@ -71,6 +73,8 @@ class ScalaCliActionsSuite
     scalaCliOptions = List("--actions", "-S", scalaVersion),
     expectNoDiagnostics = false,
     selectedActionIndex = 1,
+    // Scala CLI doesn't publish everything with the normal diagnostics, but later
+    retryAction = 5,
   )
 
   checkNoActionScalaCLI(
