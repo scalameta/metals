@@ -141,6 +141,7 @@ abstract class BaseCodeActionLspSuite(
           case _: Throwable if expectError => Future.successful(Nil)
         }
     }
+
     test(name) {
       cleanWorkspace()
       for {

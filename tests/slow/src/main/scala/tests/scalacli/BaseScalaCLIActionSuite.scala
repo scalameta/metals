@@ -97,7 +97,7 @@ class BaseScalaCLIActionSuite(name: String)
       expectError,
       filterAction,
       overrideLayout = layout,
-      retryAction,
+      retryAction = retryAction,
     )
   }
 }

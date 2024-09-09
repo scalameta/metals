@@ -354,7 +354,7 @@ private[debug] object DebugProxy {
       workspace: AbsolutePath,
       endpoint: RemoteEndpoint,
       name: String,
-  ): RemoteEndpoint =
+  )(implicit ec: ExecutionContext): RemoteEndpoint =
     Trace.setupTracePrinter(name, workspace) match {
       case Some(trace) => new EndpointLogger(endpoint, trace)
       case None => endpoint
