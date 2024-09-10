@@ -2,6 +2,7 @@ package tests.feature
 
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SemanticTokensProvider
 import scala.meta.internal.metals.{BuildInfo => V}
@@ -40,7 +41,7 @@ class SemanticTokensScala3ExpectSuite(
             file.file,
             isScala3 = true,
             MetalsTestEnrichments.emptyTrees,
-          )
+          )(EmptyReportContext)
 
           TestSemanticTokens.semanticString(
             file.code,

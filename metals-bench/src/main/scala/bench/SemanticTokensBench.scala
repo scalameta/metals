@@ -9,6 +9,7 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.SemanticTokensProvider
 import scala.meta.io.AbsolutePath
@@ -92,7 +93,7 @@ class SemanticTokensBench extends PcBenchmark {
       AbsolutePath(Paths.get(vFile.uri)),
       isScala3,
       MetalsTestEnrichments.emptyTrees,
-    )
+    )(EmptyReportContext)
   }
 
   def currentHighlight: String = highlightRequests(currentHighlightRequest)
