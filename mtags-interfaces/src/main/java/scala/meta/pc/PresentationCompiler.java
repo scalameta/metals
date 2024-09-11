@@ -115,21 +115,21 @@ public abstract class PresentationCompiler {
 	/**
 	 * Execute the given code action
 	 */
-	public CompletableFuture<List<TextEdit>> codeAction(OffsetParams params, CodeActionId codeActionId, Object codeActionPayload) {
+	public CompletableFuture<List<TextEdit>> codeAction(OffsetParams params, String codeActionId, Object codeActionPayload) {
 		return CompletableFuture.completedFuture(Collections.emptyList());
 	}
 
 	/**
 	 * Returns the list of code actions supported by the current presentation compiler.
 	 */
-	public List<CodeActionId> supportedCodeActions() {
+	public List<String> supportedCodeActions() {
 		return Arrays.asList(
-			CodeActionId.ConvertToNamedArguments,
-			CodeActionId.ExtractMethod,
-			CodeActionId.ImplementAbstractMembers,
-			CodeActionId.ImportMissingSymbol,
-			CodeActionId.InlineValue,
-			CodeActionId.InsertInferredType
+			"ConvertToNamedArguments",
+			"ExtractMethod",
+			"ImplementAbstractMembers",
+			"ImportMissingSymbol",
+			"InlineValue",
+			"InsertInferredType"
 		);
 	}
 

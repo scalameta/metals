@@ -31,7 +31,6 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.CancelToken
-import scala.meta.pc.CodeActionId
 import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
@@ -884,7 +883,7 @@ class Compilers(
   def codeAction(
       params: TextDocumentPositionParams,
       token: CancelToken,
-      codeActionId: CodeActionId,
+      codeActionId: String,
       codeActionPayload: Object,
   ): Future[ju.List[TextEdit]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
@@ -903,7 +902,7 @@ class Compilers(
     }
   }.getOrElse(Future.successful(Nil.asJava))
 
-  def supportedCodeActions(path: AbsolutePath): ju.List[CodeActionId] = {
+  def supportedCodeActions(path: AbsolutePath): ju.List[String] = {
     loadCompiler(path).map { pc =>
       pc.supportedCodeActions()
     }
