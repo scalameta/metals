@@ -7,7 +7,6 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ParametrizedCommand
 import scala.meta.pc.CancelToken
-import scala.meta.pc.CodeActionId
 
 import org.eclipse.{lsp4j => l}
 
@@ -23,7 +22,7 @@ trait CodeAction {
    * The CodeActionId for this code action, if applicable. CodeActionId is only
    * used for code actions that require the use of the presentation compiler.
    */
-  def maybeCodeActionId: Option[CodeActionId] = None
+  def maybeCodeActionId: Option[String] = None
 
   type CommandData
   type ActionCommand = ParametrizedCommand[CommandData]

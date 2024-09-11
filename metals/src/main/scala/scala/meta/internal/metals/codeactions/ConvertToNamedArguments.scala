@@ -16,7 +16,6 @@ import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.metals.logging
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
-import scala.meta.pc.CodeActionId
 
 import org.eclipse.{lsp4j => l}
 
@@ -29,8 +28,8 @@ class ConvertToNamedArguments(
   import ConvertToNamedArguments._
   override val kind: String = l.CodeActionKind.RefactorRewrite
 
-  override val maybeCodeActionId: Option[CodeActionId] = Some(
-    CodeActionId.ConvertToNamedArguments
+  override val maybeCodeActionId: Option[String] = Some(
+    "ConvertToNamedArguments"
   )
 
   override type CommandData = ServerCommands.ConvertToNamedArgsRequest

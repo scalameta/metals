@@ -10,7 +10,6 @@ import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.pc.CancelToken
-import scala.meta.pc.CodeActionId
 
 import org.eclipse.{lsp4j => l}
 
@@ -19,8 +18,8 @@ class ImportMissingSymbol(compilers: Compilers, buildTargets: BuildTargets)
 
   override def kind: String = l.CodeActionKind.QuickFix
 
-  override val maybeCodeActionId: Option[CodeActionId] = Some(
-    CodeActionId.ImportMissingSymbol
+  override val maybeCodeActionId: Option[String] = Some(
+    "ImportMissingSymbol"
   )
 
   override def contribute(

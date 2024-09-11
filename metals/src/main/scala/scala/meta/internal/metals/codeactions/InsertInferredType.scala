@@ -16,7 +16,6 @@ import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
-import scala.meta.pc.CodeActionId
 
 import org.eclipse.{lsp4j => l}
 
@@ -34,8 +33,8 @@ class InsertInferredType(
   import InsertInferredType._
   override def kind: String = l.CodeActionKind.QuickFix
 
-  override val maybeCodeActionId: Option[CodeActionId] = Some(
-    CodeActionId.InsertInferredType
+  override val maybeCodeActionId: Option[String] = Some(
+    "InsertInferredType"
   )
 
   override def handleCommand(
