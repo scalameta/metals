@@ -1,5 +1,6 @@
 package scala.meta.internal.builds
 
+import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
@@ -78,7 +79,7 @@ case class BazelBuildTool(
 object BazelBuildTool {
   val name: String = "bazel"
   val bspName: String = "bazelbsp"
-  val version: String = "3.2.0-20240629-e3d8bdf-NIGHTLY"
+  val version: String = BuildInfo.bazelBspVersion
 
   val mainClass = "org.jetbrains.bsp.bazel.install.Install"
 
