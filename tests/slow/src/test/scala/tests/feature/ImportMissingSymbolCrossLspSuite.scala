@@ -230,4 +230,86 @@ class ImportMissingSymbolCrossLspSuite
     scalaVersion = V.scala3,
   )
 
+  check(
+    "i6732-happy",
+    s"""|package example.a {
+        |  private [example] object A {
+        |    val foo = "foo"
+        |  }
+        |}
+        |package example.b {
+        |  object B {
+        |    val bar = <<A>>.foo
+        |  }
+        |}
+        |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("A", "example.a")}
+        |${CreateNewSymbol.title("A")}
+        |""".stripMargin,
+    s"""|import example.a.A
+        |package example.a {
+        |  private [example] object A {
+        |    val foo = "foo"
+        |  }
+        |}
+        |package example.b {
+        |  object B {
+        |    val bar = A.foo
+        |  }
+        |}
+        |""".stripMargin,
+    scalaVersion = V.scala3,
+  )
+
+  check(
+    "i6732-negative (private)",
+    s"""|package example.a {
+        |  private object A {
+        |    val foo = "foo"
+        |  }
+        |}
+        |package example.b {
+        |  object B {
+        |    val bar = <<A>>
+        |  }
+        |}
+        |""".stripMargin,
+    "",
+    s"""|package example.a {
+        |  private object A {
+        |    val foo = "foo"
+        |  }
+        |}
+        |package example.b {
+        |  object B {
+        |    val bar = A
+        |  }
+        |}
+        |""".stripMargin,
+    expectNoDiagnostics = false,
+    filterAction = _.getTitle() == ImportMissingSymbol.title("A", "example.a"),
+    scalaVersion = V.scala3,
+  )
+
+  check(
+    "i6732-negative (private with out of path access boundary)",
+    s"""|package exampleA.a {
+        |  private [exampleA] object A {
+        |    val foo = "foo"
+        |  }
+        |}
+        |val bar = <<A>>
+        |""".stripMargin,
+    "",
+    s"""|package exampleA.a {
+        |  private [exampleA] object A {
+        |    val foo = "foo"
+        |  }
+        |}
+        |val bar = A
+        |""".stripMargin,
+    expectNoDiagnostics = false,
+    filterAction = _.getTitle() == ImportMissingSymbol.title("A", "example.a"),
+    scalaVersion = V.scala3,
+  )
 }
