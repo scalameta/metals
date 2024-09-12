@@ -293,7 +293,7 @@ object Embedded {
 
   def downloadDependency(
       dep: Dependency,
-      scalaVersion: Option[String],
+      scalaVersion: Option[String] = None,
       classfiers: Seq[String] = Seq.empty,
       resolution: Option[ResolutionParams] = None,
   ): List[Path] = {

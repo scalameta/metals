@@ -477,7 +477,7 @@ class ConnectionProvider(
           bspConnector.connect(
             buildToolProvider.buildTool,
             folder,
-            userConfig,
+            () => userConfig,
             shellRunner,
           )
         }
