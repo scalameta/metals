@@ -61,7 +61,10 @@ final class BloopServers(
 
   import BloopServers._
 
-  private def metalsJavaHome = sys.props.get("java.home")
+  private def metalsJavaHome =
+    sys.props
+      .get("java.home")
+      .orElse(sys.env.get("JAVA_HOME"))
 
   private val folderIdMap = TrieMap.empty[AbsolutePath, Int]
 
@@ -85,17 +88,20 @@ final class BloopServers(
   def newServer(
       projectRoot: AbsolutePath,
       bspTraceRoot: AbsolutePath,
-      userConfiguration: UserConfiguration,
+      userConfiguration: () => UserConfiguration,
       bspStatusOpt: Option[ConnectionBspStatus],
   ): Future[BuildServerConnection] = {
-    val bloopVersionOpt = userConfiguration.bloopVersion
     BuildServerConnection
       .fromSockets(
         projectRoot,
         bspTraceRoot,
         client,
         languageClient,
-        () => connect(projectRoot, bloopVersionOpt, userConfiguration),
+        () =>
+          connect(
+            projectRoot,
+            userConfiguration(),
+          ),
         tables.dismissedNotifications.ReconnectBsp,
         tables.dismissedNotifications.RequestTimeout,
         serverConfig,
@@ -132,7 +138,7 @@ final class BloopServers(
       runningVersion: String,
       userDefinedNew: Boolean,
       userDefinedOld: Boolean,
-      reconnect: () => Future[BuildChange],
+      restartAndConnect: () => Future[BuildChange],
   ): Future[Unit] = {
     val correctVersionRunning = expectedVersion == runningVersion
     val changedToNoVersion = userDefinedOld && !userDefinedNew
@@ -147,8 +153,7 @@ final class BloopServers(
         .asScala
         .flatMap {
           case item if item == Messages.BloopVersionChange.reconnect =>
-            shutdownServer()
-            reconnect().ignoreValue
+            restartAndConnect().ignoreValue
           case _ =>
             Future.unit
         }
@@ -160,7 +165,7 @@ final class BloopServers(
   def checkPropertiesChanged(
       old: UserConfiguration,
       newConfig: UserConfiguration,
-      reconnect: () => Future[BuildChange],
+      restartAndConnect: () => Future[BuildChange],
   ): Future[Unit] = {
     if (old.bloopJvmProperties != newConfig.bloopJvmProperties) {
       languageClient
@@ -170,8 +175,7 @@ final class BloopServers(
         .asScala
         .flatMap {
           case item if item == Messages.BloopJvmPropertiesChange.reconnect =>
-            shutdownServer()
-            reconnect().ignoreValue
+            restartAndConnect().ignoreValue
           case _ =>
             Future.unit
         }
@@ -180,11 +184,6 @@ final class BloopServers(
     }
 
   }
-
-  private def metalsJavaHome(userConfiguration: UserConfiguration) =
-    sys.props
-      .get("java.home")
-      .orElse(sys.env.get("JAVA_HOME"))
 
   private lazy val bloopLogger: BloopRifleLogger = new BloopRifleLogger {
     def info(msg: => String): Unit = scribe.info(msg)
@@ -340,7 +339,6 @@ final class BloopServers(
 
   private def connect(
       projectRoot: AbsolutePath,
-      bloopVersionOpt: Option[String],
       userConfiguration: UserConfiguration,
   ): Future[SocketConnection] = {
     val config = bloopConfig(Some(userConfiguration), Some(projectRoot))
@@ -355,13 +353,13 @@ final class BloopServers(
       } else {
         scribe.info("No running Bloop server found, starting one.")
         val ext = if (Properties.isWin) ".exe" else ""
-        val metalsJavaHomeOpt = metalsJavaHome(userConfiguration)
-        val javaCommand = metalsJavaHomeOpt match {
+        val javaCommand = metalsJavaHome match {
           case Some(metalsJavaHome) =>
             Paths.get(metalsJavaHome).resolve(s"bin/java$ext").toString
           case None => "java"
         }
-        val version = bloopVersionOpt.getOrElse(defaultBloopVersion)
+        val version =
+          userConfiguration.bloopVersion.getOrElse(defaultBloopVersion)
         checkOldBloopRunning().flatMap { _ =>
           BloopRifle.startServer(
             config,
@@ -472,12 +470,9 @@ object BloopServers {
     }
 
     try {
-      val cp = coursierapi.Fetch
-        .create()
-        .addDependencies(coursierapi.Dependency.of(org, name, version))
-        .fetch()
-        .asScala
-        .toVector
+      val cp = Embedded
+        .downloadDependency(coursierapi.Dependency.of(org, name, version))
+        .map(_.toFile())
       Right(cp)
     } catch {
       case NonFatal(t) =>

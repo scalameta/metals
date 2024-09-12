@@ -83,7 +83,7 @@ class BspConnector(
   def connect(
       buildTool: Option[BuildTool],
       workspace: AbsolutePath,
-      userConfiguration: UserConfiguration,
+      userConfiguration: () => UserConfiguration,
       shellRunner: ShellRunner,
   )(implicit ec: ExecutionContext): Future[Option[BspSession]] = {
     val projectRoot = buildTool.map(_.projectRoot).getOrElse(workspace)
@@ -118,7 +118,7 @@ class BspConnector(
             .getOrElse(Future.successful(()))
           val connectionF =
             for {
-              _ <- SbtBuildTool(projectRoot, () => userConfiguration)
+              _ <- SbtBuildTool(projectRoot, userConfiguration)
                 .ensureCorrectJavaVersion(
                   shellRunner,
                   projectRoot,
