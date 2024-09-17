@@ -360,18 +360,16 @@ class CompletionSuite extends BaseCompletionSuite {
        |PKIXCertPathBuilderResult - java.security.cert
        |""".stripMargin,
     compat = Map(
-      "2" ->
-        """|ProcessBuilder java.lang
-           |ProcessBuilder - scala.sys.process
-           |CertPathBuilder - java.security.cert
-           |CertPathBuilderSpi - java.security.cert
-           |ProcessBuilderImpl - scala.sys.process
-           |CertPathBuilderResult - java.security.cert
-           |PKIXBuilderParameters - java.security.cert
-           |PooledConnectionBuilder - javax.sql
-           |CertPathBuilderException - java.security.cert
-           |PKIXCertPathBuilderResult - java.security.cert
-           |""".stripMargin
+      "3" -> """|ProcessBuilder java.lang
+                |ProcessBuilder - scala.sys.process
+                |CertPathBuilder - java.security.cert
+                |CertPathBuilderSpi - java.security.cert
+                |CertPathBuilderResult - java.security.cert
+                |PKIXBuilderParameters - java.security.cert
+                |PooledConnectionBuilder - javax.sql
+                |CertPathBuilderException - java.security.cert
+                |PKIXCertPathBuilderResult - java.security.cert
+                |""".stripMargin
     )
   )
 
