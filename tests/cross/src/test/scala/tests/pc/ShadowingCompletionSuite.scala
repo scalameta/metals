@@ -27,7 +27,12 @@ class ShadowingCompletionSuite extends BaseCompletionSuite {
        |ListBuffer - scala.collection.mutable
        |""".stripMargin,
     compat = Map(
-      "2" -> "ListBuffer - scala.collection.mutable"
+      "2" -> "ListBuffer - scala.collection.mutable",
+      "3" -> """|ListBuffer[A](elems: A*): CC[A]
+                |ListBuffer(i: Int): A
+                |ListBuffer - scala.collection.mutable
+                |ListBuffer - coursierapi.shaded.scala.collection.mutable
+                |""".stripMargin
     )
   )
 }
