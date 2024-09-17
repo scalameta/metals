@@ -363,6 +363,25 @@ case class ScalaPresentationCompiler(
         case Right(edits: List[l.TextEdit]) => edits.asJava
       }
   end convertToNamedArguments
+
+  override def convertToNamedLambdaParameters(
+    params: OffsetParams
+  ): ju.concurrent.CompletableFuture[ju.List[l.TextEdit]] =
+    val empty: Either[String, List[l.TextEdit]] = Right(List())
+    (compilerAccess
+      .withInterruptableCompiler(Some(params))(empty, params.token) { pc =>
+        new ConvertToNamedLambdaParametersProvider(
+          pc.compiler(),
+          params
+        ).convertToNamedLambdaParameters
+      })
+      .thenApplyAsync {
+        case Left(error: String) => throw new DisplayableException(error)
+        case Right(edits: List[l.TextEdit]) => edits.asJava
+      }
+  end convertToNamedLambdaParameters
+
+
   override def selectionRange(
       params: ju.List[OffsetParams]
   ): CompletableFuture[ju.List[l.SelectionRange]] =
