@@ -185,7 +185,6 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
            |ArrayDequeOps[$0]
            |ArrayDeque
            |ArrayDeque
-           |ArrayDequeOps
            |""".stripMargin
     )
   )
@@ -472,11 +471,16 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
        |WindowEvent -  java.awt.event
        |""".stripMargin,
     compat = Map(
-      ">=2.13.0" -> """|Widget -  example
-                       |Window -  java.awt
-                       |WindowPeer -  java.awt.peer
-                       |WithFilter -  scala.collection
-                       |""".stripMargin
+      "2.13" -> """|Widget -  example
+                   |Window -  java.awt
+                   |WindowPeer -  java.awt.peer
+                   |WithFilter -  scala.collection
+                   |""".stripMargin,
+      "3" -> """|Widget -  example
+                |Window -  java.awt
+                |WindowPeer -  java.awt.peer
+                |WithFilter($0) - [A](p: A => Boolean, xs: Array[A]): WithFilter[A]
+                |""".stripMargin
     ),
     includeDetail = true,
     topLines = Some(4)
