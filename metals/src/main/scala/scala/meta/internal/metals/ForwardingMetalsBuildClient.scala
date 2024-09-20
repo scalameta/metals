@@ -177,7 +177,7 @@ final class ForwardingMetalsBuildClient(
           compilations.remove(target).foreach(_.end())
 
           val name = info.getDisplayName
-          val token =
+          val (_, token) =
             workDoneProgress.startProgress(
               s"Compiling $name",
               withProgress = true,

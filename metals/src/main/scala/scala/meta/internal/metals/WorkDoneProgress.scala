@@ -5,9 +5,11 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.WorkDoneProgress.Token
@@ -32,6 +34,7 @@ class WorkDoneProgress(
       maybeProgress: Option[TaskProgress],
   ) {
     val timer = new Timer(time)
+    val wasFinished = new AtomicBoolean(false)
     def additionalMessage: Option[String] =
       if (showTimer) {
         val seconds = timer.elapsedSeconds
@@ -79,7 +82,7 @@ class WorkDoneProgress(
       withProgress: Boolean = false,
       showTimer: Boolean = true,
       onCancel: Option[() => Unit] = None,
-  ): Future[Token] = {
+  ): (Task, Future[Token]) = {
     val uuid = UUID.randomUUID().toString()
     val token = messages.Either.forLeft[String, Integer](uuid)
 
@@ -87,7 +90,7 @@ class WorkDoneProgress(
     val task = Task(onCancel, showTimer, optProgress)
     taskMap.put(token, task)
 
-    client
+    val tokenFuture = client
       .createProgress(new WorkDoneProgressCreateParams(token))
       .asScala
       .map { _ =>
@@ -107,6 +110,7 @@ class WorkDoneProgress(
         client.notifyProgress(new ProgressParams(token, notification))
         token
       }
+    (task, tokenFuture)
   }
 
   def notifyProgress(
@@ -130,16 +134,22 @@ class WorkDoneProgress(
   }
 
   private def notifyProgress(token: Token, task: Task): Unit = {
-    val report = new WorkDoneProgressReport()
-    task.maybeProgress.foreach { progress =>
-      report.setPercentage(progress.percentage)
+    // make sure we don't update if a task was finished
+    if (task.wasFinished.get()) {
+      endProgress(Future.successful(token))
+      taskMap.remove(token)
+    } else {
+      val report = new WorkDoneProgressReport()
+      task.maybeProgress.foreach { progress =>
+        report.setPercentage(progress.percentage)
+      }
+      task.additionalMessage.foreach(report.setMessage)
+      val notification =
+        messages.Either.forLeft[WorkDoneProgressNotification, Object](
+          report
+        )
+      client.notifyProgress(new ProgressParams(token, notification))
     }
-    task.additionalMessage.foreach(report.setMessage)
-    val notification =
-      messages.Either.forLeft[WorkDoneProgressNotification, Object](
-        report
-      )
-    client.notifyProgress(new ProgressParams(token, notification))
   }
 
   def endProgress(token: Future[Token]): Future[Unit] =
@@ -151,8 +161,11 @@ class WorkDoneProgress(
           messages.Either.forLeft[WorkDoneProgressNotification, Object](end)
         client.notifyProgress(new ProgressParams(token, params))
       }
-      .recover { case _: NullPointerException =>
-      // no such value in the task map, task already ended or cancelled
+      .recover {
+        case _: NullPointerException =>
+        // no such value in the task map, task already ended or cancelled
+        case NonFatal(e) =>
+          scribe.error("Could not end a progress task", e)
       }
 
   def trackFuture[T](
@@ -161,16 +174,22 @@ class WorkDoneProgress(
       onCancel: Option[() => Unit] = None,
       showTimer: Boolean = true,
   )(implicit ec: ExecutionContext): Future[T] = {
-    val token =
+    val (task, token) =
       startProgress(message, onCancel = onCancel, showTimer = showTimer)
-    value.onComplete(_ => endProgress(token))
+    value.onComplete { _ =>
+      task.wasFinished.set(true)
+      endProgress(token)
+    }
     value
   }
 
   def trackBlocking[T](message: String)(thunk: => T): T = {
-    val token = startProgress(message)
+    val (task, token) = startProgress(message)
     try thunk
-    finally endProgress(token)
+    finally {
+      task.wasFinished.set(true)
+      endProgress(token)
+    }
   }
 
   def canceled(token: Token): Unit =

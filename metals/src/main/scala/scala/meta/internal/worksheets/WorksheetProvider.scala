@@ -340,12 +340,15 @@ class WorksheetProvider(
     val interruptThread = new Runnable {
       def run(): Unit = {
         if (!result.isDone()) {
-          val token = workDoneProgress.startProgress(
+          val (task, token) = workDoneProgress.startProgress(
             s"Evaluating worksheet '${path.filename}'",
             onCancel = Some(cancellable.cancel),
           )
 
-          result.asScala.onComplete(_ => workDoneProgress.endProgress(token))
+          result.asScala.onComplete { _ =>
+            task.wasFinished.set(true)
+            workDoneProgress.endProgress(token)
+          }
         }
       }
     }
