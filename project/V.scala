@@ -4,7 +4,7 @@ object V {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
   val scala212 = "2.12.20"
-  val scala213 = "2.13.14"
+  val scala213 = "2.13.15"
   val scala3 = "3.3.3"
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
@@ -152,6 +152,7 @@ object V {
     "2.13.11",
     "2.13.12",
     "2.13.13",
+    "2.13.14",
   )
 
   def minimumSupportedSbtVersion = {
