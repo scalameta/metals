@@ -199,6 +199,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
             |""".stripMargin,
       "2.13.13" -> docsAfter21313,
       "2.13.14" -> docsAfter21313,
+      "2.13.15" -> docsAfter21313,
       "3" ->
         """|Applies the given binary operator `op` to the given initial value `z` and all
            | elements of this collection, going left to right. Returns the initial value if this collection
