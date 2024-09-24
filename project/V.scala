@@ -188,16 +188,15 @@ object V {
   def deprecatedScalaVersions =
     deprecatedScala2Versions ++ deprecatedScala3Versions
 
-  val quickPublishScalaVersions =
-    Set(
-      bazelScalaVersion,
-      scala211,
-      sbtScala,
-      scala212,
-      ammonite212Version,
-      scala213,
-      ammonite213Version,
-      scala3,
-      ammonite3Version,
-    ).toList ++ scala3RC.toList
+  val quickPublishScalaVersions = Set(
+    bazelScalaVersion,
+    scala211,
+    sbtScala,
+    scala212,
+    ammonite212Version,
+    scala213,
+    ammonite213Version,
+    scala3,
+    ammonite3Version,
+  ).toList ++ scala3RC.toList
 }

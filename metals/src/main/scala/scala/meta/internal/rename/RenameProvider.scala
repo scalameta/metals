@@ -174,7 +174,7 @@ final class RenameProvider(
                   def foundName =
                     occ.range
                       .flatMap(rng => rng.inString(textDocument.text))
-                      .map(_.stripBackticks)
+                      .map(_.stripBackticks.stripSuffix(","))
                   occ.symbol.isLocal ||
                   foundName.contains(realName)
                 }
@@ -591,9 +591,10 @@ final class RenameProvider(
     val isExplicitVarSetter =
       name.exists(nm => nm.endsWith("_=") || nm.endsWith("_=`"))
     val isBackticked = name.exists(_.isBackticked)
+    val commaIncluded = name.exists(_.endsWith(","))
 
     lazy val symbolName =
-      if (!isExplicitVarSetter) nameString.stripSuffix("_=")
+      if (!isExplicitVarSetter) nameString.stripSuffix("_=").stripSuffix(",")
       else nameString
 
     lazy val realName =
@@ -622,10 +623,14 @@ final class RenameProvider(
         range
       }
 
+      val withoutComma = if (commaIncluded) {
+        withoutBacktick.withEndCharacter(withoutBacktick.endCharacter - 1)
+      } else withoutBacktick
+
       val realRange =
         if (isExplicitVarSetter && !newName.endsWith("_="))
-          withoutBacktick.withEndCharacter(withoutBacktick.endCharacter - 2)
-        else withoutBacktick
+          withoutComma.withEndCharacter(withoutComma.endCharacter - 2)
+        else withoutComma
       Some(realRange)
     } else {
       scribe.warn(s"Name doesn't match for $symbolName at $range")

@@ -65,4 +65,31 @@ class RenameCrossLspSuite extends BaseRenameLspSuite("rename-cross") {
     scalaVersion = Some(V.scala3),
   )
 
+  renamed(
+    "ends-comma",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |object main {
+       |  def myMethod(
+       |      s1: String,
+       |      s2: String,
+       |      s3: String,
+       |      s4: String,
+       |  ) = s1 ++ s2 ++ s3 ++ s4
+       |
+       |  val word1 = "hello"
+       |  val <<word2>> = "world"
+       |
+       |  myMethod(
+       |    word1,
+       |    <<word2>>,
+       |    s3 = word1,
+       |    s4 = <<word2>>,
+       |  )
+       |}
+       |""".stripMargin,
+    newName = "NewSymbol",
+    scalaVersion = Some(V.scala3),
+  )
+
 }
