@@ -402,7 +402,10 @@ class ScalaMtags(
           namePos.foreach { case (name, pos) =>
             enterGiven(name, pos, t.tparams, t.sparams)
           }
-        case _ => stop()
+        case _: Pkg.Body | _: Template.Body =>
+          continue()
+        case _ =>
+          stop()
       }
     }
 

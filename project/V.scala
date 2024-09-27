@@ -148,8 +148,6 @@ object V {
     "2.12.19",
     "2.12.18",
     "2.12.17",
-    "2.12.16",
-    "2.13.11",
     "2.13.12",
     "2.13.13",
     "2.13.14",
@@ -157,12 +155,12 @@ object V {
 
   def minimumSupportedSbtVersion = {
     // Update when deprecating a Scala version together with sbt version
-    val sbtScalaVersion = "2.12.16"
+    val sbtScalaVersion = "2.12.17"
     if (!nonDeprecatedScala2Versions.contains(sbtScalaVersion))
       throw new RuntimeException(
         "Please change minimalSupportedSbtVersion when removing support for a particular Scala version"
       )
-    "1.7.0"
+    "1.8.0"
   }
 
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions

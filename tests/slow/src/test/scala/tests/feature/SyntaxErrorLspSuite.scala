@@ -54,7 +54,7 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
            |/metals.json
            |{"a": {}}
            |/project/plugins.sbt
-           |lazy lazy val x = 1
+           |object object val x = 1
            |/Main.scala
            |object object A
            |""".stripMargin
@@ -63,14 +63,13 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
       _ <- server.didOpen("project/plugins.sbt")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """
-          |Main.scala:1:8: error: `identifier` expected but `object` found
-          |object object A
-          |       ^^^^^^
-          |project/plugins.sbt:1:6: error: repeated modifier
-          |lazy lazy val x = 1
-          |     ^^^^
-          |""".stripMargin,
+        """|Main.scala:1:8: error: `identifier` expected but `object` found
+           |object object A
+           |       ^^^^^^
+           |project/plugins.sbt:1:8: error: `identifier` expected but `object` found
+           |object object val x = 1
+           |       ^^^^^^
+           |""".stripMargin,
       )
       _ <- server.didClose("Main.scala")
       _ <- server.didClose("project/plugins.sbt")
@@ -80,11 +79,10 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
       _ <- server.didSave("Main.scala")(_ => "object A\n")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """
-          |project/plugins.sbt:1:6: error: repeated modifier
-          |lazy lazy val x = 1
-          |     ^^^^
-          |""".stripMargin,
+        """|project/plugins.sbt:1:8: error: `identifier` expected but `object` found
+           |object object val x = 1
+           |       ^^^^^^
+           |""".stripMargin,
       )
       _ <- server.didSave("project/plugins.sbt")(_ => "lazy val x = 1\n")
       _ = assertNoDiff(client.workspaceDiagnostics, "")

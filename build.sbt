@@ -289,7 +289,8 @@ def withExcludes(moduleId: ModuleID) =
     ) // avoid 2.13 and 3 on the classpath since it comes in via pprint
 
 def scala3SemanticdbDependency: ModuleID = withExcludes(
-  ("org.scalameta" % s"semanticdb-shared_${V.scala213}" % V.scalameta)
+  ("org.scalameta" %% s"semanticdb-shared" % V.scalameta)
+    .cross(CrossVersion.for3Use2_13)
 )
 
 def scala3ScalametaDependency: ModuleID = withExcludes(
@@ -454,9 +455,7 @@ lazy val metals = project
       "org.scalameta" %% "semanticdb-metap" % V.semanticdb(
         scalaVersion.value
       ) cross CrossVersion.full,
-      "org.scalameta" % "semanticdb-shared" % V.semanticdb(
-        scalaVersion.value
-      ) cross CrossVersion.full,
+      "org.scalameta" %% "semanticdb-shared" % V.semanticdb(scalaVersion.value),
       // For starting Ammonite
       "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.4.0",
       "org.scala-lang.modules" %% "scala-xml" % "2.3.0",

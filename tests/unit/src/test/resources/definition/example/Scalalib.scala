@@ -6,7 +6,7 @@ class Scalalib/*Scalalib.scala*/ {
     (
         Nothing/*Nothing.scala*/,
         Null/*Null.scala*/,
-        Singleton,
+        Singleton/*Singleton.scala*/,
         Any/*Any.scala*/,
         AnyRef/*AnyRef.scala*/,
         AnyVal/*AnyVal.scala*/,

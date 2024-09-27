@@ -123,7 +123,8 @@ final class DocumentSymbolProvider(
             addChild(s"new $name", SymbolKind.Interface, t.pos, selection, "")
             newOwner()
           } else continue()
-        case _: Source | _: Template | _: MultiSource =>
+        case _: Source | _: Template | _: MultiSource | _: Pkg.Body |
+            _: Template.Body | _: Tree.CasesBlock =>
           continue()
         case block: Term.Block =>
           if (owner.getName() == "try") {
