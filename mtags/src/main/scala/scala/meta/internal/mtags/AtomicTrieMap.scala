@@ -11,6 +11,7 @@ final class AtomicTrieMap[K, V] {
   private val trieMap = new TrieMap[K, V]()
   private val concurrentMap = new ConcurrentHashMap[K, V]
 
+  override def toString(): String = trieMap.toString()
   def get(key: K): Option[V] = trieMap.get(key)
 
   def contains(key: K): Boolean = trieMap.contains(key)

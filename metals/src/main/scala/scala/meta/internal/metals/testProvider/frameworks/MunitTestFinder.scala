@@ -78,7 +78,7 @@ class MunitTestFinder(
 
         // let's collect all tests candidates
         val testcases = new mutable.ArrayBuffer[TestCaseEntry]()
-        template.children.foreach {
+        template.body.children.foreach {
           // test("testname".only|ignore|tag) {}
           case appl: Term.Apply if hasTestCall(appl, occurences) =>
             getTestCallWithTestName(appl).foreach { case (test, testname) =>
@@ -231,7 +231,7 @@ class MunitTestFinder(
   private def extractPotentialTestMethods(
       clsTemplate: Template,
       occurences: Vector[SymbolOccurrence],
-  ): Set[String] = clsTemplate.children.collect {
+  ): Set[String] = clsTemplate.body.children.collect {
     case dfn: Defn.Def if hasTestCall(dfn, occurences) => dfn.name.value
   }.toSet
 

@@ -158,8 +158,8 @@ class ExtractRenameMember(
               nodes += EndableMember(last.member, Some(endMarker))
             case _ =>
           }
-        case s: Source =>
-          super.apply(s)
+        case _: Source | _: Pkg.Body =>
+          super.apply(tree)
         case _ =>
       }
     }
@@ -175,7 +175,7 @@ class ExtractRenameMember(
 
     val traverser = new SimpleTraverser {
       override def apply(tree: Tree): Unit = tree match {
-        case p: Pkg => super.apply(p)
+        case p: Pkg => super.apply(p.body)
         case s: Source => super.apply(s)
         case e: Defn.ExtensionGroup =>
           nodes += EndableDefn[Defn.ExtensionGroup](e, None)
@@ -237,7 +237,7 @@ class ExtractRenameMember(
             t match {
               case o: Defn.Object => o.name.value :: completePreName(o)
               case po: Pkg.Object => po.name.value :: completePreName(po)
-              case tmpl: Template => completePreName(tmpl)
+              case _: Template | _: Template.Body => completePreName(t)
               case _ => Nil
             }
           case None => Nil
@@ -286,7 +286,7 @@ class ExtractRenameMember(
       override def apply(tree: Tree): Unit = tree match {
         case p: Pkg if p.pos.toLsp.overlapsWith(range) =>
           packages += Pkg(ref = p.ref, stats = Nil)
-          super.apply(p)
+          super.apply(p.body)
         case i: Import =>
           imports += i
         case s: Source =>
@@ -561,13 +561,13 @@ class ExtractRenameMember(
 
     val packageEdit = endableMember.member.parent
       .flatMap {
-        case p: Pkg
+        case p: Pkg.Body
             if p.stats.forall(t =>
               t.isInstanceOf[Import] || t
                 .equals(endableMember.member) || maybeEndableMemberCompanion
                 .exists(_.member.equals(t))
             ) =>
-          Some(p)
+          p.parent
         case _ => None
       }
       .map(tree => List(removeEdit(tree.pos)))

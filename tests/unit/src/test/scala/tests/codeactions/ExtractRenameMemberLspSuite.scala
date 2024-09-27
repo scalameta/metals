@@ -467,7 +467,7 @@ class ExtractRenameMemberLspSuite
       codeActionExpected: Boolean = true,
       scalaVersion: String = V.scala213,
       fileName: String = "A.scala",
-  ): Unit =
+  )(implicit loc: munit.Location): Unit =
     test(name) {
       val (buffers, trees) = TreeUtils.getTrees(scalaVersion)
       val filename = fileName
@@ -499,7 +499,7 @@ class ExtractRenameMemberLspSuite
         codeActions <- codeActionFut
         _ = {
           if (codeActionExpected) assert(codeActions.nonEmpty)
-          else assert(codeActions.isEmpty)
+          else assertEmpty(codeActions.map(_.getTitle()).mkString("\n"))
         }
       } yield ()
     }
