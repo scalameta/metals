@@ -32,6 +32,9 @@ import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.core.Types.TypeRef
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.lsp4j as l
+import dotty.tools.dotc.ast.Trees.Tree
+import dotty.tools.dotc.ast.Trees.Tree
+import dotty.tools.dotc.ast.Trees.Tree
 
 object CaseKeywordCompletion:
 
@@ -390,7 +393,7 @@ class CompletionValueGenerator(
     patternOnly: Option[String] = None,
     hasBind: Boolean = false,
 ):
-  def fuzzyMatches(name: String) =
+  def fuzzyMatches(name: String): Boolean =
     patternOnly match
       case None => true
       case Some("") => true
@@ -525,7 +528,7 @@ class MatchCaseExtractor(
     completionPos: CompletionPos,
 ):
   object MatchExtractor:
-    def unapply(path: List[Tree]) =
+    def unapply(path: List[Tree]): Option[Tree[Type | Null]] =
       path match
         // foo mat@@
         case (sel @ Select(qualifier, name)) :: _
@@ -594,7 +597,7 @@ class MatchCaseExtractor(
   end CaseExtractor
 
   object CasePatternExtractor:
-    def unapply(path: List[Tree])(using Context) =
+    def unapply(path: List[Tree])(using Context): Option[(Tree[Type], Tree[Type], String)] =
       path match
         // case @@
         case (c @ CaseDef(
@@ -621,7 +624,7 @@ class MatchCaseExtractor(
   end CasePatternExtractor
 
   object TypedCasePatternExtractor:
-    def unapply(path: List[Tree])(using Context) =
+    def unapply(path: List[Tree])(using Context): Option[(Tree[Type], Tree[Type], String)] =
       path match
         // case _: Som@@ =>
         case Ident(name) :: Typed(_, _) :: CaseExtractor(selector, parent, _) =>

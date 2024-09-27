@@ -57,7 +57,7 @@ case class ScalaPresentationCompiler(
       .map(StdReportContext(_, _ => buildTargetName, reportsLevel))
       .getOrElse(EmptyReportContext)
 
-  override def withBuildTargetName(buildTargetName: String) =
+  override def withBuildTargetName(buildTargetName: String): PresentationCompiler =
     copy(buildTargetName = Some(buildTargetName))
 
   override def withReportsLoggerLevel(level: String): PresentationCompiler =
@@ -468,7 +468,7 @@ case class ScalaPresentationCompiler(
   def withWorkspace(workspace: Path): PresentationCompiler =
     copy(folderPath = Some(workspace))
 
-  override def isLoaded() = compilerAccess.isLoaded()
+  override def isLoaded(): Boolean = compilerAccess.isLoaded()
 
   override def buildTargetId(): String = buildTargetIdentifier
 

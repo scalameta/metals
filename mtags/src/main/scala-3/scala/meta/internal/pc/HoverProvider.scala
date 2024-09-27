@@ -22,6 +22,7 @@ import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourcePosition
+import dotty.tools.dotc.ast.Trees.Tree
 
 object HoverProvider:
 
@@ -208,7 +209,7 @@ object HoverProvider:
 end HoverProvider
 
 object SelectDynamicExtractor:
-  def unapply(path: List[Tree])(using Context) =
+  def unapply(path: List[Tree])(using Context): Option[(Tree[Type | Null], Name, String)] =
     path match
       // the same tests as below, since 3.3.1-RC1 path starts with Select
       case Select(_, _) :: Apply(

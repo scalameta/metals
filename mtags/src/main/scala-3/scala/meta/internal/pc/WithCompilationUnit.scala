@@ -14,34 +14,37 @@ import dotty.tools.dotc.core.NameOps.*
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
+import java.net.URI
+import java.nio.file.Path
+import dotty.tools.dotc.util.SourcePosition
 
 class WithCompilationUnit(
     val driver: InteractiveDriver,
     params: VirtualFileParams,
 ):
-  val uri = params.uri()
-  val filePath = Paths.get(uri)
+  val uri: URI = params.uri()
+  val filePath: Path = Paths.get(uri)
   val sourceText = params.text
-  val text = sourceText.toCharArray()
-  val source =
+  val text: Array[Char] = sourceText.toCharArray()
+  val source: SourceFile =
     SourceFile.virtual(filePath.toString, sourceText)
   driver.run(uri, source)
   given ctx: Context = driver.currentCtx
 
   val unit = driver.latestRun
-  val compilatonUnitContext = ctx.fresh.setCompilationUnit(unit)
-  val offset = params match
+  val compilatonUnitContext: FreshContext = ctx.fresh.setCompilationUnit(unit)
+  val offset: Int = params match
     case op: OffsetParams => op.offset()
     case _ => 0
-  val offsetParams =
+  val offsetParams: OffsetParams =
     params match
       case op: OffsetParams => op
       case _ =>
         CompilerOffsetParams(params.uri(), params.text(), 0, params.token())
-  val pos = driver.sourcePosition(offsetParams)
+  val pos: SourcePosition = driver.sourcePosition(offsetParams)
 
   // First identify the symbol we are at, comments identify @@ as current cursor position
-  def symbolAlternatives(sym: Symbol)(using Context) =
+  def symbolAlternatives(sym: Symbol)(using Context): Set[Symbol] =
     def member(parent: Symbol) = parent.info.member(sym.name).symbol
     def primaryConstructorTypeParam(owner: Symbol) =
       for

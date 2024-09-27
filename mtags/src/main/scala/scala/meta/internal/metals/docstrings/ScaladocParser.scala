@@ -46,9 +46,9 @@ object ScaladocParser {
       shortDescription0: List[Body] = List.empty
   ): Comment =
     new Comment {
-      val body = body0 getOrElse Body(Seq.empty)
+      val body: Body = body0 getOrElse Body(Seq.empty)
       val authors = authors0
-      val see = see0.map { body =>
+      val see: List[Body] = see0.map { body =>
         def convertTextToLink(inline: Inline): Inline = {
           inline match {
             case Chain(c) =>
@@ -92,7 +92,7 @@ object ScaladocParser {
       val inheritDiagram = inheritDiagram0
       val contentDiagram = contentDiagram0
       val groupDesc = groupDesc0
-      val group =
+      val group: Option[String] =
         group0 match {
           case Some(
                 Body(List(Paragraph(Chain(List(Summary(Text(groupId)))))))
@@ -100,24 +100,26 @@ object ScaladocParser {
             Some(groupId.toString.trim)
           case _ => None
         }
-      val groupPrio = groupPrio0 flatMap { case (group, body) =>
-        try {
+      val groupPrio: Map[String, Int] = groupPrio0 flatMap {
+        case (group, body) =>
+          try {
+            body match {
+              case Body(List(Paragraph(Chain(List(Summary(Text(prio))))))) =>
+                List(group -> prio.trim.toInt)
+              case _ => List()
+            }
+          } catch {
+            case _: java.lang.NumberFormatException => List()
+          }
+      }
+      val groupNames: Map[String, String] = groupNames0 flatMap {
+        case (group, body) =>
           body match {
-            case Body(List(Paragraph(Chain(List(Summary(Text(prio))))))) =>
-              List(group -> prio.trim.toInt)
+            case Body(List(Paragraph(Chain(List(Summary(Text(name)))))))
+                if (!name.trim.contains("\n")) =>
+              List(group -> (name.trim))
             case _ => List()
           }
-        } catch {
-          case _: java.lang.NumberFormatException => List()
-        }
-      }
-      val groupNames = groupNames0 flatMap { case (group, body) =>
-        body match {
-          case Body(List(Paragraph(Chain(List(Summary(Text(name)))))))
-              if (!name.trim.contains("\n")) =>
-            List(group -> (name.trim))
-          case _ => List()
-        }
       }
 
       override val shortDescription: Option[Text] =

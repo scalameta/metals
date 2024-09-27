@@ -8,12 +8,12 @@ case class CompletionSuffix(
     suffixes: Set[SuffixKind],
     snippet: SuffixKind,
 ):
-  def addLabelSnippet = suffixes.contains(SuffixKind.Bracket)
-  def hasSnippet = snippet != SuffixKind.NoSuffix
-  def chain(copyFn: CompletionSuffix => CompletionSuffix) = copyFn(this)
-  def withNewSuffix(kind: SuffixKind) =
+  def addLabelSnippet: Boolean = suffixes.contains(SuffixKind.Bracket)
+  def hasSnippet: Boolean = snippet != SuffixKind.NoSuffix
+  def chain(copyFn: CompletionSuffix => CompletionSuffix): CompletionSuffix = copyFn(this)
+  def withNewSuffix(kind: SuffixKind): CompletionSuffix =
     CompletionSuffix(suffixes + kind, snippet)
-  def withNewSuffixSnippet(kind: SuffixKind) =
+  def withNewSuffixSnippet(kind: SuffixKind): CompletionSuffix =
     CompletionSuffix(suffixes + kind, kind)
   def toEdit: String =
     def loop(suffixes: List[SuffixKind]): String =
@@ -30,7 +30,7 @@ case class CompletionSuffix(
 end CompletionSuffix
 
 object CompletionSuffix:
-  val empty = CompletionSuffix(
+  val empty: CompletionSuffix = CompletionSuffix(
     suffixes = Set.empty,
     snippet = SuffixKind.NoSuffix,
   )

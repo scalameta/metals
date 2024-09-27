@@ -57,7 +57,7 @@ class Completions(
   val coursierComplete = new CoursierComplete(BuildInfo.scalaCompilerVersion)
 
   // versions prior to 3.1.0 sometimes didn't manage to detect properly Java objects
-  val canDetectJavaObjectsCorrectly =
+  val canDetectJavaObjectsCorrectly: Boolean =
     SemVer.isLaterVersion("3.1.0", BuildInfo.scalaCompilerVersion)
 
   private lazy val shouldAddSnippet =
@@ -843,7 +843,7 @@ class Completions(
     def postProcess(items: List[CompletionValue]): List[CompletionValue]
 
   object CompletionApplication:
-    val empty = new CompletionApplication:
+    val empty: CompletionApplication = new CompletionApplication:
       def isImplicitConversion(symbol: Symbol): Boolean = false
       def isMember(symbol: Symbol): Boolean = false
       def isInherited(symbol: Symbol): Boolean = false
@@ -892,8 +892,8 @@ class Completions(
       cursorPos: CursorPos,
   ): Ordering[CompletionValue] =
     new Ordering[CompletionValue]:
-      val queryLower = completionPos.query.toLowerCase()
-      val fuzzyCache = mutable.Map.empty[CompletionValue, Int]
+      val queryLower: String = completionPos.query.toLowerCase()
+      val fuzzyCache: scala.collection.mutable.Map[CompletionValue, Int] = mutable.Map.empty[CompletionValue, Int]
 
       def compareLocalSymbols(s1: Symbol, s2: Symbol): Int =
         if s1.isLocal && s2.isLocal && s1.sourcePos.exists && s2.sourcePos.exists

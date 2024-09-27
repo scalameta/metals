@@ -15,7 +15,7 @@ import dotty.tools.dotc.printing.Texts.Text
     but haven't managed to port all of them yet to the LTS */
 abstract class RefinedDotcPrinter(_ctx: Context) extends RefinedPrinter(_ctx):
 
-  def toTextPrefix(tp: Type) =
+  def toTextPrefix(tp: Type): Text =
     tp match
       case tp: NamedType => super.toTextPrefixOf(tp)
       case tp => Text()

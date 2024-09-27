@@ -314,7 +314,7 @@ object PcCollector:
   // Folds over the tree as `DeepFolder` but `f` takes also the parent.
   class DeepFolderWithParent[X](f: (X, Tree, Option[Tree]) => X):
     private val traverser = WithParentTraverser[X](f)
-    def apply(x: X, tree: Tree)(using Context) =
+    def apply(x: X, tree: Tree)(using Context): X =
       traverser.traverse(x, tree, None)
 end PcCollector
 

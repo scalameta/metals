@@ -31,6 +31,7 @@ import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.lsp4j as l
+import dotty.tools.dotc.ast.tpd
 
 object OverrideCompletions:
   private type TargetDef = TypeDef | DefDef
@@ -531,7 +532,7 @@ object OverrideCompletions:
     })
 
   object OverrideExtractor:
-    def unapply(path: List[Tree])(using Context) =
+    def unapply(path: List[Tree])(using Context): Option[(tpd.TypeDef, Option[Symbol], Int, Boolean, None.type) | (tpd.TypeDef, None.type, Int, Boolean, Some[String])] =
       path match
         // class FooImpl extends Foo:
         //   def x|

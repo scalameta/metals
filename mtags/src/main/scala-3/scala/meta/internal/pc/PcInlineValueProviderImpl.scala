@@ -193,7 +193,7 @@ final class PcInlineValueProviderImpl(
 end PcInlineValueProviderImpl
 
 case class Occurence(tree: Tree, parent: Option[Tree], pos: SourcePosition):
-  def isDefn =
+  def isDefn: Boolean =
     tree match
       case _: ValDef => true
       case _ => false

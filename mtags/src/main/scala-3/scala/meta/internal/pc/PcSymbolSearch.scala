@@ -20,13 +20,15 @@ import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans.Span
+import dotty.tools.dotc.ast.Trees.Tree
+import dotty.tools.dotc.ast.Trees.Tree
 
 trait PcSymbolSearch:
   self: WithCompilationUnit =>
 
   private val caseClassSynthetics: Set[Name] = Set(nme.apply, nme.copy)
 
-  lazy val rawPath =
+  lazy val rawPath: List[Tree[Type]] =
     Interactive
       .pathTo(driver.openedTrees(uri), pos)(using driver.currentCtx)
       .dropWhile(t => // NamedArg anyway doesn't have symbol
@@ -35,12 +37,12 @@ trait PcSymbolSearch:
           t.isInstanceOf[TypeTree]
       )
 
-  lazy val extensionMethods =
+  lazy val extensionMethods: Option[ExtMethods] =
     NavigateAST
       .untypedPath(pos.span)(using compilatonUnitContext)
       .collectFirst { case em @ ExtMethods(_, _) => em }
 
-  lazy val path = rawPath match
+  lazy val path: List[Tree[Type]] = rawPath match
     // For type it will sometimes go into the wrong tree since TypeTree also contains the same span
     // https://github.com/lampepfl/dotty/issues/15937
     case TypeApply(sel: Select, _) :: tail if sel.span.contains(pos.span) =>
@@ -274,7 +276,7 @@ object PcSymbolSearch:
       case sel: Select => sel.sourcePos.withSpan(selectNameSpan(sel))
       case _ => tree.sourcePos
 
-  def isGeneratedGiven(df: NamedDefTree, sourceText: String)(using Context) =
+  def isGeneratedGiven(df: NamedDefTree, sourceText: String)(using Context): Boolean =
     val nameSpan = df.nameSpan
     df.symbol.is(Flags.Given) && sourceText.substring(
       nameSpan.start,

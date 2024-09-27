@@ -28,6 +28,10 @@ import dotty.tools.dotc.util.Spans.Span
 import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintKind
+import java.net.URI
+import java.nio.file.Path
+import dotty.tools.dotc.ast.Trees.Tree
+import dotty.tools.dotc.ast.Trees.Untyped
 
 class PcInlayHintsProvider(
     driver: InteractiveDriver,
@@ -35,17 +39,17 @@ class PcInlayHintsProvider(
     symbolSearch: SymbolSearch,
 )(using ReportContext):
 
-  val uri = params.uri()
-  val filePath = Paths.get(uri)
+  val uri: URI = params.uri()
+  val filePath: Path = Paths.get(uri)
   val sourceText = params.text
-  val text = sourceText.toCharArray()
-  val source =
+  val text: Array[Char] = sourceText.toCharArray()
+  val source: SourceFile =
     SourceFile.virtual(filePath.toString, sourceText)
   driver.run(uri, source)
   given ctx: Context = driver.currentCtx
   val unit = driver.latestRun
   given InferredType.Text = InferredType.Text(text)
-  val pos = driver.sourcePosition(params)
+  val pos: SourcePosition = driver.sourcePosition(params)
   given InlayHintsParams = params
 
   def provide(): List[InlayHint] =
@@ -193,7 +197,7 @@ class PcInlayHintsProvider(
 end PcInlayHintsProvider
 
 object ImplicitConversion:
-  def unapply(tree: Tree)(using params: InlayHintsParams, ctx: Context) =
+  def unapply(tree: Tree)(using params: InlayHintsParams, ctx: Context): Option[(Symbol, SourcePosition)] =
     if (params.implicitConversions()) {
       tree match
         case Apply(fun: Ident, args) if isSynthetic(fun) && args.exists(!_.span.isZeroExtent) =>
@@ -216,7 +220,7 @@ object ImplicitConversion:
 end ImplicitConversion
 
 object ImplicitParameters:
-  def unapply(tree: Tree)(using params: InlayHintsParams, ctx: Context) =
+  def unapply(tree: Tree)(using params: InlayHintsParams, ctx: Context): Option[(List[Symbol], SourcePosition, Boolean)] =
     if (params.implicitParameters()) {
       tree match
         case Apply(fun, args)
@@ -246,7 +250,7 @@ object ImplicitParameters:
 end ImplicitParameters
 
 object ValueOf:
-  def unapply(tree: Tree)(using params: InlayHintsParams, ctx: Context) =
+  def unapply(tree: Tree)(using params: InlayHintsParams, ctx: Context): Option[(String, SourcePosition)] =
     if (params.implicitParameters()) {
       tree match
         case Apply(ta @ TypeApply(fun, _), _)
@@ -263,7 +267,7 @@ object ValueOf:
 end ValueOf
 
 object TypeParameters:
-  def unapply(tree: Tree)(using params: InlayHintsParams, ctx: Context) =
+  def unapply(tree: Tree)(using params: InlayHintsParams, ctx: Context): Option[(List[Type], SourcePosition, Tree[Type | Null])] =
     if (params.typeParameters()) {
       tree match
         case TypeApply(sel: Select, _)
@@ -287,7 +291,7 @@ object InferredType:
   object Text:
     def apply(text: Array[Char]): Text = text
 
-  def unapply(tree: Tree)(using params: InlayHintsParams, text: Text, ctx: Context) =
+  def unapply(tree: Tree)(using params: InlayHintsParams, text: Text, ctx: Context): Option[(Untyped, SourcePosition, dotty.tools.dotc.ast.Trees.ValDef[Untyped]) | ((Untyped, SourcePosition, dotty.tools.dotc.ast.Trees.DefDef[Untyped]) | (Type, SourcePosition, dotty.tools.dotc.ast.Trees.Bind[Untyped]))] =
     if (params.inferredTypes()) {
       tree match
         case vd @ ValDef(_, tpe, _)
@@ -325,7 +329,7 @@ object InferredType:
   /* If is left part of val definition bind:
    * val <<t>> @ ... =
    */
-  def isValDefBind(text: Text, vd: ValDef)(using Context) =
+  def isValDefBind(text: Text, vd: ValDef)(using Context): Boolean =
     val afterDef = text.drop(vd.nameSpan.end)
     val index = indexAfterSpacesAndComments(afterDef)
     index >= 0 && index < afterDef.size && afterDef(index) == '@'

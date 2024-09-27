@@ -5,13 +5,14 @@ import scala.meta.internal.mtags.MtagsEnrichments.*
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.util.SourcePosition
+import scala.meta.internal.pc.completions.CompletionValue.IvyImport
 
 class ScalaCliCompletions(
     coursierComplete: CoursierComplete,
     pos: SourcePosition,
     text: String,
 ):
-  def unapply(path: List[Tree]) =
+  def unapply(path: List[Tree]): Option[String] =
     def scalaCliDep = CoursierComplete.isScalaCliDep(
       pos.lineContent.take(pos.column).stripPrefix("/*<script>*/")
     )
@@ -25,7 +26,7 @@ class ScalaCliCompletions(
         scalaCliDep
       case head :: next => None
 
-  def contribute(dependency: String) =
+  def contribute(dependency: String): List[IvyImport] =
     val completions = coursierComplete.complete(dependency)
     val (editStart, editEnd) = CoursierComplete.inferEditRange(pos.point, text)
     val editRange = pos.withStart(editStart).withEnd(editEnd).toLsp
