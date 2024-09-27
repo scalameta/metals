@@ -2,20 +2,16 @@ package scala.meta.internal.metals
 
 import java.nio.file.Paths
 
-import scala.util.Properties
-
 import scala.meta.io.AbsolutePath
 
+import dev.dirs.ProjectDirectories
+
 object MetalsDirectories {
+  private val projectDirectories = ProjectDirectories.from(null, null, "metals")
+
   def getMetalsDirectory: AbsolutePath = {
-    if (Properties.isLinux) {
-      Option(System.getenv("XDG_DATA_HOME"))
-        .map(xdg => Paths.get(xdg, "metals"))
-        .getOrElse(Paths.get(sys.props("user.home"), ".local", "share", "metals"))
-    } else {
-      Paths.get(sys.props("user.home"), ".metals")
-    }
-  }.toAbsolutePath
+    AbsolutePath(Paths.get(projectDirectories.dataDir))
+  }
 }
 
 class SqlSharedIndices
