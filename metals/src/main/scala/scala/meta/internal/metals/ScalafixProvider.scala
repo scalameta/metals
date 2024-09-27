@@ -242,6 +242,8 @@ case class ScalafixProvider(
           |OrganizeImports.removeUnused = true
           |OrganizeImports.targetDialect = Scala3
           |
+          |ExplicitResultTypes.fetchScala3CompilerArtifactsOnVersionMismatch = true
+          |
           |""".stripMargin
     )
     path.toFile().deleteOnExit()
@@ -256,6 +258,8 @@ case class ScalafixProvider(
           |]
           |OrganizeImports.removeUnused = false
           |OrganizeImports.targetDialect = Scala3
+          |
+          |ExplicitResultTypes.fetchScala3CompilerArtifactsOnVersionMismatch = true
           |
           |""".stripMargin
     )
@@ -379,7 +383,7 @@ case class ScalafixProvider(
       }
 
     val result = for {
-      api <- getScalafix(scalaBinaryVersion)
+      api <- getScalafix(scalaTarget.scalaVersion)
       urlClassLoaderWithExternalRule <- getRuleClassLoader(
         scalafixRulesKey,
         api.getClass.getClassLoader,
@@ -484,7 +488,8 @@ case class ScalafixProvider(
     val isScala3Dialect = isScala3 || isScalaSource
     val canRemoveUnused = !isScala3 ||
       // https://github.com/scala/scala3/pull/17835
-      Seq("3.0", "3.1", "3.2", "3.3")
+      // https://github.com/scala/scala3/pull/20315
+      Seq("3.0", "3.1", "3.2", "3.3.0", "3.3.1", "3.3.2", "3.3.3")
         .forall(v => !scalaVersion.startsWith(v))
     val confFile = scalafixConf(isScala3Dialect, canRemoveUnused)
     confFile match {
