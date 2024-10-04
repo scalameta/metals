@@ -87,7 +87,7 @@ object Digest {
       digest: MessageDigest,
   ): Boolean = {
     val ext = PathIO.extension(path.toNIO)
-    val isScala = Set("sbt", "scala", "sc")(ext)
+    val isScala = Set("sbt", "scala", "sc", "mill")(ext)
     // we can have both gradle and gradle.kts and build plugins can be written in any of three languages
     val isGeneralJVM =
       Set("gradle", "groovy", "gradle.kts", "java", "kts").exists(
