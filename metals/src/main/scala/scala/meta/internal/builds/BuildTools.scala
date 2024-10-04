@@ -93,7 +93,9 @@ final class BuildTools(
   }
   def isSbt: Boolean = sbtProject.isDefined
   def millProject: Option[AbsolutePath] = searchForBuildTool(path =>
-    path.resolve("build.mill").isFile || path.resolve("build.sc").isFile
+    path.resolve("build.mill").isFile ||
+      path.resolve("build.mill.scala").isFile ||
+      path.resolve("build.sc").isFile
   )
   def isMill: Boolean = millProject.isDefined
   def isMillBsp(path: AbsolutePath): Boolean =
