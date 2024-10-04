@@ -41,7 +41,7 @@ object V {
   val pprint = "0.7.3"
   val sbtBloop = bloop
   val sbtJdiTools = "1.1.1"
-  val scalaCli = "1.5.0"
+  val scalaCli = "1.5.1"
   val scalafix = "0.13.0"
   val scalafmt = "3.7.15"
   val scalameta = "4.10.1"
