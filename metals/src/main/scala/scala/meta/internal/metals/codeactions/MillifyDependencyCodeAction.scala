@@ -22,7 +22,7 @@ class MillifyDependencyCodeAction(buffers: Buffers) extends CodeAction {
     val range = params.getRange()
 
     val tokenized =
-      if ((path.isMill || path.isScalaScript) && range.getStart == range.getEnd)
+      if (path.isScalaScript && range.getStart == range.getEnd)
         buffers
           .get(path)
           .flatMap(_.safeTokenize(Trees.defaultTokenizerDialect).toOption)
