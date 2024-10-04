@@ -172,6 +172,8 @@ object MillBuildTool {
       path: AbsolutePath
   ): Boolean = {
     val filename = path.toNIO.getFileName.toString
-    filename.endsWith(".mill") || filename.endsWith(".sc") || filename.endsWith(".mill.scala")
+    filename.endsWith(".mill") || filename.endsWith(".sc") || filename.endsWith(
+      ".mill.scala"
+    )
   }
 }
