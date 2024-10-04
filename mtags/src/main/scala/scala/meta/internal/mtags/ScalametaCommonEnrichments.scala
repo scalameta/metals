@@ -176,7 +176,7 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     if (filename.endsWith(".java")) Language.JAVA
     else if (
       filename.endsWith(".scala") || filename.endsWith(".sc")
-      || filename.endsWith(".sbt")
+      || filename.endsWith(".sbt") || filename.endsWith(".mill")
     )
       Language.SCALA
     else Language.UNKNOWN_LANGUAGE

@@ -18,7 +18,10 @@ case class InputFile(
   def sourceDirectoryRelativePath: RelativePath =
     file.toRelative(sourceDirectory)
   def input: Input.VirtualFile = file.toInput
-  def isScala: Boolean = PathIO.extension(file.toNIO) == "scala"
+  def isScala: Boolean =
+    PathIO.extension(file.toNIO) == "scala" ||
+      PathIO.extension(file.toNIO) == "mill"
+
   def expectPath(name: String): AbsolutePath =
     AbsolutePath(BuildInfo.testResourceDirectory)
       .resolve(name)
