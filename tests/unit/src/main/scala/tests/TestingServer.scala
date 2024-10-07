@@ -17,9 +17,11 @@ import java.{util => ju}
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.concurrent.duration._
 import scala.util.Failure
 import scala.util.Success
 import scala.util.matching.Regex
@@ -809,7 +811,8 @@ final case class TestingServer(
 
   def exportEvaluation(filename: String): Option[String] = {
     val path = toPath(filename)
-    server.worksheetProvider.copyWorksheetOutput(path)
+    Await.result(server.worksheetProvider.copyWorksheetOutput(path), 5.minutes)
+
   }
 
   def didOpen(filename: String): Future[Unit] = {
