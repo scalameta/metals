@@ -109,6 +109,9 @@ class RelatedSuite extends BaseSuite {
     }
   }
   checkIsMillRelated("build.sc")
+  checkIsMillRelated("build.mill")
+  checkIsMillRelated("build.mill.scala")
+  checkIsMillRelated("foo/package.mill.scala")
   checkIsMillRelated("a/b/c/other.sc")
   checkIsNotMillRelated("/ab/c/A.groovy")
   checkIsNotMillRelated("/ab/c/A.kts")
