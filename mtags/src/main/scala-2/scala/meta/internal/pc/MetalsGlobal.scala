@@ -678,7 +678,7 @@ class MetalsGlobal(
     val unit = newCompilationUnit(codeWithCursor, filename)
 
     val source =
-      if (filename.isScalaScript || filename.isSbt)
+      if (filename.isScalaScript || filename.isSbt || filename.isMill)
         ScriptSourceFile(unit.source.file, unit.source.content)
       else unit.source
     val richUnit = new RichCompilationUnit(source)
