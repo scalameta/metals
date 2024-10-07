@@ -114,7 +114,7 @@ object MtagsResolver {
     )(implicit ec: ExecutionContext): Option[MtagsBinaries] = {
       if (hasStablePresentationCompiler(scalaVersion))
         resolve(
-          scalaVersion,
+          scalaVersion.stripSuffix("-nonbootstrapped"),
           original = None,
           resolveType = ResolveType.StablePC,
         )
