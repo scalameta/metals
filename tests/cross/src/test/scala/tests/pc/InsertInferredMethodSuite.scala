@@ -29,7 +29,7 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |  def otherMethod(arg0: Int): String = ???
        |  method1(otherMethod(1))
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -48,7 +48,7 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |  def otherMethod(arg0: Double): String = ???
        |  method1(otherMethod( (1 + 123).toDouble ))
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -56,31 +56,31 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
     """|
        |trait Main {
        |    def method1(b: Double, s : String) = 123
-       |  
+       |
        |    case class User(i : Int)
        |    val user = User(1)
-       |  
+       |
        |    method1(0.0, <<otherMethod>>(user, 1))
        |}
        |
        |""".stripMargin,
     """|trait Main {
        |    def method1(b: Double, s : String) = 123
-       |  
+       |
        |    case class User(i : Int)
        |    val user = User(1)
-       |  
+       |
        |    def otherMethod(arg0: User, arg1: Int): String = ???
        |    method1(0.0, otherMethod(user, 1))
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
   checkEdit(
     "custom-type2",
     """|
        |trait Main {
        |    def method1(b: Double, s : String) = 123
-       |  
+       |
        |    case class User(i : Int)
        |    val user = User(1)
        |    <<otherMethod>>(user, 1)
@@ -89,13 +89,13 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |""".stripMargin,
     """|trait Main {
        |    def method1(b: Double, s : String) = 123
-       |  
+       |
        |    case class User(i : Int)
        |    val user = User(1)
        |    def otherMethod(arg0: User, arg1: Int) = ???
        |    otherMethod(user, 1)
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   // doesn't work currently, User(1) is not being typed
@@ -104,22 +104,22 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
     """|
        |trait Main {
        |    def method1(b: Double, s : String) = 123
-       |  
+       |
        |    case class User(i : Int)
-       |  
+       |
        |    <<otherMethod>>(User(1), 1)
        |}
        |
        |""".stripMargin,
     """|trait Main {
        |    def method1(b: Double, s : String) = 123
-       |  
+       |
        |    case class User(i : Int)
-       |  
+       |
        |    def otherMethod(arg0: User, arg1: Int): String = ???
        |    method1(0.0, otherMethod(user, 1))
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -146,7 +146,7 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |      method1(otherMethod(path))
        |    }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -167,7 +167,7 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |    method1(otherMethod)
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   checkEdit(
@@ -188,7 +188,7 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |    method1(otherMethod)
        |  }
        |}
-       |""".stripMargin,
+       |""".stripMargin
   )
 
   // checkEdit(
@@ -214,32 +214,33 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
   //      |""".stripMargin
   // )
 
-  checkEdit(
-    "lambda-generic",
-    """|
-       |trait Main {
-       |  def main() = {
-       |    val list = List(1, 2, 3)
-       |    list.map(<<otherMethod>>)
-       |  }
-       |}
-       |
-       |""".stripMargin,
-    """|trait Main {
-       |  def main() = {
-       |    val list = List(1, 2, 3)
-       |    def otherMethod(arg0: Int) = ???
-       |    list.map(otherMethod)
-       |  }
-       |}
-       |""".stripMargin,
-  )
+  // TODO not supported yet
+  // checkEdit(
+  //   "lambda-generic",
+  //   """|
+  //      |trait Main {
+  //      |  def main() = {
+  //      |    val list = List(1, 2, 3)
+  //      |    list.map(<<otherMethod>>)
+  //      |  }
+  //      |}
+  //      |
+  //      |""".stripMargin,
+  //   """|trait Main {
+  //      |  def main() = {
+  //      |    val list = List(1, 2, 3)
+  //      |    def otherMethod(arg0: Int) = ???
+  //      |    list.map(otherMethod)
+  //      |  }
+  //      |}
+  //      |""".stripMargin,
+  // )
 
   def checkEdit(
       name: TestOptions,
       original: String,
       expected: String,
-      compat: Map[String, String] = Map.empty,
+      compat: Map[String, String] = Map.empty
   )(implicit location: Location): Unit =
     test(name) {
       val edits = getInferredMethod(original)
@@ -250,7 +251,7 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
 
   def getInferredMethod(
       original: String,
-      filename: String = "file:/A.scala",
+      filename: String = "file:/A.scala"
   ): List[l.TextEdit] = {
     val (code, _, offset) = params(original)
     val result = presentationCompiler

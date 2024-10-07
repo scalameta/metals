@@ -46,7 +46,7 @@ class CreateNewSymbol() extends CodeAction {
       codeAction.setKind(l.CodeActionKind.QuickFix)
       codeAction.setDiagnostics(List(diagnostic).asJava)
       codeAction.setCommand(
-        ServerCommands.InsertInferredMethod.toLSP(
+        ServerCommands.InsertInferredMethod.toLsp(
           new l.TextDocumentPositionParams(
             params.getTextDocument(),
             params.getRange().getStart(),

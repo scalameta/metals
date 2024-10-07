@@ -97,7 +97,7 @@ final class InferredMethodProvider(
       }
       val full =
         s"def ${name}($paramsString)$retTypeString = ???\n$indentString"
-      val methodInsertPosition = lastApplyPos.toLSP
+      val methodInsertPosition = lastApplyPos.toLsp
       methodInsertPosition.setEnd(methodInsertPosition.getStart())
       new TextEdit(
         methodInsertPosition,
@@ -183,7 +183,7 @@ final class InferredMethodProvider(
                       val ret = prettyType(resultType)
                       val full =
                         s"def ${errorMethod.name}($paramsString): $ret = ???\n$indentString"
-                      val methodInsertPosition = lastApplyPos.toLSP
+                      val methodInsertPosition = lastApplyPos.toLsp
                       methodInsertPosition.setEnd(
                         methodInsertPosition.getStart()
                       )
