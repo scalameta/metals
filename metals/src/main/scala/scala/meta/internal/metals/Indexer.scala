@@ -117,6 +117,104 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
           importedBuild.dependencyModules
         )
 
+        // hack for mill build sources until a proper BSP wrapped sources mapping gets into
+        // the official protocol
+        val millBuildTargetIdentifiers =
+          importedBuild.workspaceBuildTargets
+            .getTargets()
+            .iterator()
+            .asScala
+            .collect {
+              case t if t.getName().endsWith("mill-build/") =>
+                t.getId()
+            }
+            .toSet
+
+        import java.nio.file._
+        import java.nio.file.attribute._
+        for {
+          item <- importedBuild.sources.getItems.asScala
+          if millBuildTargetIdentifiers.contains(item.getTarget())
+          sources = item.getSources().asScala
+          generatedSourcesDirectory <- sources
+            .find(item =>
+              item
+                .getGenerated() && item.getKind() == b.SourceItemKind.DIRECTORY
+            )
+            .map(_.getUri().toAbsolutePath)
+        } {
+          Files.walkFileTree(
+            generatedSourcesDirectory.toNIO,
+            new SimpleFileVisitor[Path] {
+              override def visitFile(
+                  generatedPath: Path,
+                  attrs: BasicFileAttributes,
+              ): FileVisitResult = {
+                val generatedLines = Files.readAllLines(generatedPath).asScala
+
+                for {
+                  originalFilePath <-
+                    generatedLines.collectFirst {
+                      case s"//MILL_ORIGINAL_FILE_PATH=$path" => path
+                    }
+                  generatedAbsolutePath = AbsolutePath(generatedPath)
+                  generatedContent <- generatedAbsolutePath.readTextOpt
+                } {
+                  val topWrapper =
+                    generatedLines.takeWhile(
+                      _ != "//MILL_USER_CODE_START_MARKER"
+                    )
+
+                  val topWrapperLineCount = topWrapper.size + 1
+
+                  val toGenerated: Position => Position =
+                    sourcePosition =>
+                      new Position(
+                        topWrapperLineCount + sourcePosition.getLine,
+                        sourcePosition.getCharacter,
+                      )
+                  val fromGenerated: Position => Position =
+                    generatedPosition =>
+                      new Position(
+                        generatedPosition.getLine - topWrapperLineCount,
+                        generatedPosition.getCharacter,
+                      )
+                  val mappedSource = new TargetData.MappedSource {
+                    def path = generatedAbsolutePath
+                    def update(content: String): (
+                        Input.VirtualFile,
+                        Position => Position,
+                        AdjustLspData,
+                    ) = {
+                      val adjustLspData =
+                        AdjustedLspData.create(fromGenerated)
+                      (
+                        Input.VirtualFile(
+                          generatedPath.toString,
+                          generatedContent,
+                        ),
+                        toGenerated,
+                        adjustLspData,
+                      )
+                    }
+                    override def lineForServer(line: Int): Option[Int] =
+                      Some(line + topWrapperLineCount)
+                    override def lineForClient(line: Int): Option[Int] =
+                      Some(line - topWrapperLineCount)
+                  }
+
+                  data.addMappedSource(
+                    AbsolutePath(originalFilePath),
+                    mappedSource,
+                  )
+                }
+
+                FileVisitResult.CONTINUE
+              }
+            },
+          )
+        }
+
         // For "wrapped sources", we create dedicated TargetData.MappedSource instances,
         // able to convert back and forth positions from the user-facing file to
         // the compiler-facing actual underlying source.
