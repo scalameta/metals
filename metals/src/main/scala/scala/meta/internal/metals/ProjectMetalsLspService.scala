@@ -210,10 +210,10 @@ class ProjectMetalsLspService(
     buildTools,
   )
 
-  protected def isMillBuildSc(path: AbsolutePath): Boolean = {
+  protected def isMillBuildFile(path: AbsolutePath): Boolean = {
     buildTools.isMill && {
       val filename = path.toNIO.getFileName.toString
-      filename == "build.sc" || filename == "build.mill"
+      filename == "build.mill" || filename == "build.mill.scala" || filename == "build.sc"
     }
   }
 
@@ -714,7 +714,7 @@ class ProjectMetalsLspService(
       !buildTargets.inverseSources(path).isEmpty ||
       ammonite.loaded(path) ||
       scalaCli.loaded(scalaCliPath) ||
-      isMillBuildSc(path)
+      isMillBuildFile(path)
     )
       None
     else {

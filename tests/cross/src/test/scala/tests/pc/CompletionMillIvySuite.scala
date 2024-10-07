@@ -24,6 +24,32 @@ class CompletionMillIvySuite extends BaseCompletionSuite {
     """|io.circe
        |io.circul
        |""".stripMargin,
+    filename = "build.sc"
+  )
+
+  check(
+    "source",
+    """|package build
+       |object `package` extends RootModule {
+       |  val dependency = ivy"io.cir@@"
+       |}
+       |""".stripMargin,
+    """|io.circe
+       |io.circul
+       |""".stripMargin,
+    filename = "build.mill.scala"
+  )
+
+  check(
+    "source",
+    """|package build
+       |object `package` extends RootModule {
+       |  val dependency = ivy"io.cir@@"
+       |}
+       |""".stripMargin,
+    """|io.circe
+       |io.circul
+       |""".stripMargin,
     filename = "build.mill"
   )
 
