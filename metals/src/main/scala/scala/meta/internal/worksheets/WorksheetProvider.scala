@@ -27,7 +27,6 @@ import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
@@ -54,6 +53,9 @@ import mdoc.interfaces.Mdoc
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.InlayHint
+import org.eclipse.lsp4j.jsonrpc.messages
+import scala.meta.internal.metals.MetalsEnrichments._
 
 /**
  * Implements interactive worksheets for "*.worksheet.sc" file extensions.
@@ -73,6 +75,7 @@ class WorksheetProvider(
     compilations: Compilations,
     scalaVersionSelector: ScalaVersionSelector,
     serverConfig: MetalsServerConfig,
+    isInlayHintsProvider: Boolean,
 )(implicit ec: ExecutionContext)
     extends Cancelable {
 
@@ -135,7 +138,7 @@ class WorksheetProvider(
   }
 
   def onDidFocus(path: AbsolutePath): Future[Unit] = Future {
-    if (path.isWorksheet) {
+    if (!isInlayHintsProvider) {
       val input = path.toInputFromBuffers(buffers)
       exportableEvaluations.get(input) match {
         case Some(evaluatedWorksheet) =>
@@ -145,10 +148,11 @@ class WorksheetProvider(
     }
   }
 
-  def evaluateAndPublish(
+  private def evaluateAndPublish[T](
       path: AbsolutePath,
       token: CancelToken,
-  ): Future[Unit] = {
+      publish: Option[EvaluatedWorksheet] => T,
+  ): Future[T] = {
     val possibleBuildTarget = buildTargets.inverseSources(path)
     val previouslyCompiled = compilations.previouslyCompiled.toSeq
 
@@ -160,11 +164,51 @@ class WorksheetProvider(
         compilations.compileTarget(bdi).ignoreValue
       case _ =>
         Future.successful(())
-    }).flatMap(_ =>
-      evaluateAsync(path, token).map(
-        _.foreach(publisher.publish(languageClient, path, _))
+    }).flatMap(_ => evaluateAsync(path, token).map(publish))
+  }
+
+  def evaluateAndPublish(
+      path: AbsolutePath,
+      token: CancelToken,
+  ): Future[Unit] = {
+    if (isInlayHintsProvider)
+      Future.successful(())
+    else
+      evaluateAndPublish(
+        path,
+        token,
+        _.foreach(publisher.publish(languageClient, path, _)),
       )
+  }
+
+  def inlayHints(
+      path: AbsolutePath,
+      token: CancelToken,
+  ) = if (path.isWorksheet) {
+    evaluateAndPublish(
+      path,
+      token,
+      toInlayHints,
     )
+  } else Future.successful(Nil)
+
+  private def toInlayHints(worksheet: Option[EvaluatedWorksheet]) = {
+    worksheet match {
+      case None => Nil
+      case Some(value) =>
+        value
+          .statements()
+          .map { stat =>
+            val hint = new InlayHint(
+              stat.position().toLsp.getEnd(),
+              messages.Either.forLeft(stat.summary()),
+            )
+            hint.setTooltip(stat.details())
+            hint
+          }
+          .asScala
+          .toList
+    }
   }
 
   /**

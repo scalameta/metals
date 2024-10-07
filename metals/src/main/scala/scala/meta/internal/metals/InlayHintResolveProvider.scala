@@ -23,11 +23,19 @@ final class InlayHintResolveProvider(
       token: CancelToken,
   ): Future[InlayHint] = {
     scala.util.Try {
-      val data = inlayHint.getData().asInstanceOf[JsonArray]
-      getLabelParts(inlayHint).zip(parseData(data))
+      Option(inlayHint.getData()) match {
+        case Some(data: JsonArray) =>
+          resolve(
+            inlayHint,
+            getLabelParts(inlayHint).zip(parseData(data)),
+            path,
+            token,
+          )
+
+        case _ => Future.successful(inlayHint)
+      }
     }.toEither match {
-      case Right(labelParts) =>
-        resolve(inlayHint, labelParts, path, token)
+      case Right(labelParts) => labelParts
       case Left(error) =>
         scribe.warn(s"Failed to resolve inlay hint: $error")
         rc.unsanitized.create(report(inlayHint, path, error), ifVerbose = true)
