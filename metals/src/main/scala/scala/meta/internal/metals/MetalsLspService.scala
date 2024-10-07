@@ -423,6 +423,7 @@ abstract class MetalsLspService(
       new WorksheetProvider(
         folder,
         buffers,
+        trees,
         buildTargets,
         languageClient,
         () => userConfig,
@@ -432,7 +433,7 @@ abstract class MetalsLspService(
         worksheetPublisher,
         compilations,
         scalaVersionSelector,
-        clientConfig.initialConfig,
+        clientConfig,
       )
     )
   }
@@ -1017,7 +1018,11 @@ abstract class MetalsLspService(
           if (userConfig.areSyntheticsEnabled())
             compilers.inlayHints(params, token)
           else Future.successful(List.empty[l.InlayHint].asJava)
-      } yield hints
+        worksheet <- worksheetProvider.inlayHints(
+          params.getTextDocument().getUri().toAbsolutePath,
+          token,
+        )
+      } yield (hints.asScala ++ worksheet).asJava
     }
   }
 
@@ -1393,13 +1398,17 @@ abstract class MetalsLspService(
   def copyWorksheetOutput(
       worksheetPath: AbsolutePath
   ): CompletableFuture[Object] = {
-    val output = worksheetProvider.copyWorksheetOutput(worksheetPath)
-    if (output.nonEmpty) {
-      Future(output).asJavaObject
-    } else {
-      languageClient.showMessage(Messages.Worksheets.unableToExport)
-      Future.successful(()).asJavaObject
-    }
+    worksheetProvider
+      .copyWorksheetOutput(worksheetPath)
+      .map { output =>
+        if (output.nonEmpty) {
+          output
+        } else {
+          languageClient.showMessage(Messages.Worksheets.unableToExport)
+          ()
+        }
+      }
+      .asJavaObject
   }
 
   def analyzeStackTrace(content: String): Option[ExecuteCommandParams] =

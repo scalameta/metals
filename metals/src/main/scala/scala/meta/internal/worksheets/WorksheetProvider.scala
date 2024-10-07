@@ -17,12 +17,12 @@ import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 
 import scala.meta._
-import scala.meta.inputs.Input.VirtualFile
 import scala.meta.internal.metals.AdjustLspData
 import scala.meta.internal.metals.AdjustedLspData
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.Embedded
@@ -37,6 +37,7 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.mtags.MD5
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.CompilerJobQueue
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.worksheets.MdocEnrichments._
@@ -52,8 +53,10 @@ import coursierapi.error.SimpleResolutionError
 import mdoc.interfaces.EvaluatedWorksheet
 import mdoc.interfaces.Mdoc
 import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.jsonrpc.messages
 
 /**
  * Implements interactive worksheets for "*.worksheet.sc" file extensions.
@@ -63,6 +66,7 @@ import org.eclipse.lsp4j.Position
 class WorksheetProvider(
     workspace: AbsolutePath,
     buffers: Buffers,
+    trees: Trees,
     buildTargets: BuildTargets,
     languageClient: MetalsLanguageClient,
     userConfig: () => UserConfiguration,
@@ -72,10 +76,15 @@ class WorksheetProvider(
     publisher: WorksheetPublisher,
     compilations: Compilations,
     scalaVersionSelector: ScalaVersionSelector,
-    serverConfig: MetalsServerConfig,
+    clientConfig: ClientConfiguration,
 )(implicit ec: ExecutionContext)
     extends Cancelable {
+  private val serverConfig: MetalsServerConfig = clientConfig.initialConfig
 
+  case class EvaluatedWorksheetSnapshot(
+      evaluatedWorksheet: EvaluatedWorksheet,
+      text: String,
+  )
   // Worksheet evaluation happens on a single threaded job queue. Jobs are
   // prioritized using the same order as completion/hover requests:
   // first-come last-out.
@@ -88,7 +97,7 @@ class WorksheetProvider(
   private val cancelables = new MutableCancelable()
   private val mdocs = new TrieMap[MdocKey, MdocRef]()
   private val exportableEvaluations =
-    new TrieMap[VirtualFile, EvaluatedWorksheet]()
+    new TrieMap[AbsolutePath, Promise[EvaluatedWorksheetSnapshot]]()
   private val worksheetPcData =
     new TrieMap[AbsolutePath, WorksheetPcData]()
 
@@ -134,21 +143,27 @@ class WorksheetProvider(
     reset()
   }
 
-  def onDidFocus(path: AbsolutePath): Future[Unit] = Future {
-    if (path.isWorksheet) {
-      val input = path.toInputFromBuffers(buffers)
-      exportableEvaluations.get(input) match {
-        case Some(evaluatedWorksheet) =>
-          publisher.publish(languageClient, path, evaluatedWorksheet)
-        case None =>
+  def onDidFocus(path: AbsolutePath): Future[Unit] = {
+    if (!clientConfig.isInlayHintsEnabled()) {
+      exportableEvaluations.get(path) match {
+        case Some(worksheetF) =>
+          worksheetF.future.map { worksheet =>
+            publisher.publish(
+              languageClient,
+              path,
+              worksheet.evaluatedWorksheet,
+            )
+          }
+        case None => Future.successful(())
       }
-    }
+    } else Future.successful(())
   }
 
-  def evaluateAndPublish(
+  private def evaluateAndPublish[T](
       path: AbsolutePath,
       token: CancelToken,
-  ): Future[Unit] = {
+      publish: Option[EvaluatedWorksheetSnapshot] => T,
+  ): Future[T] = {
     val possibleBuildTarget = buildTargets.inverseSources(path)
     val previouslyCompiled = compilations.previouslyCompiled.toSeq
 
@@ -160,11 +175,81 @@ class WorksheetProvider(
         compilations.compileTarget(bdi).ignoreValue
       case _ =>
         Future.successful(())
-    }).flatMap(_ =>
-      evaluateAsync(path, token).map(
-        _.foreach(publisher.publish(languageClient, path, _))
-      )
+    }).flatMap(_ => evaluateAsync(path, token).map(publish))
+  }
+
+  def evaluateAndPublish(
+      path: AbsolutePath,
+      token: CancelToken,
+  ): Future[Unit] = {
+    evaluateAndPublish(
+      path,
+      token,
+      _.foreach { toPublish =>
+        if (clientConfig.isInlayHintsRefreshEnabled())
+          languageClient.refreshInlayHints()
+        else
+          publisher.publish(languageClient, path, toPublish.evaluatedWorksheet)
+      },
     )
+  }
+
+  def inlayHints(
+      path: AbsolutePath,
+      token: CancelToken,
+  ): Future[List[InlayHint]] = if (path.isWorksheet) {
+    exportableEvaluations.get(path) match {
+      case Some(value) if value.isCompleted =>
+        value.future.map(worksheet => toInlayHints(path, Some(worksheet)))
+      case Some(value) =>
+        if (clientConfig.isInlayHintsRefreshEnabled()) {
+          value.future.map { _ =>
+            languageClient.refreshInlayHints()
+            Nil
+          }
+        } else {
+          value.future.map(worksheet => toInlayHints(path, Some(worksheet)))
+        }
+      case None =>
+        evaluateAndPublish(
+          path,
+          token,
+          toInlayHints(path, _),
+        )
+    }
+  } else Future.successful(Nil)
+
+  // TODO switch to only inlay hints
+  // TODO add tests
+  private def toInlayHints(
+      path: AbsolutePath,
+      worksheet: Option[EvaluatedWorksheetSnapshot],
+  ) = {
+    worksheet match {
+      case None => Nil
+      case Some(value) =>
+        val distance = buffers.tokenEditDistance(path, value.text, trees)
+        value.evaluatedWorksheet
+          .statements()
+          .map { stat =>
+            val statEnd = stat.position().toLsp.getEnd()
+            // Update positions so that they don't break
+            distance.toRevised(statEnd) match {
+              case Left(_) =>
+              case Right(right) =>
+                statEnd.setLine(right.startLine)
+                statEnd.setCharacter(right.startColumn)
+            }
+            val hint = new InlayHint(
+              statEnd,
+              messages.Either.forLeft(" // " + stat.summary()),
+            )
+            hint.setTooltip(stat.details())
+            hint
+          }
+          .asScala
+          .toList
+    }
   }
 
   /**
@@ -183,53 +268,56 @@ class WorksheetProvider(
    * @param path to the input used to search previous evaluations.
    * @return possible evaluated output.
    */
-  def copyWorksheetOutput(path: AbsolutePath): Option[String] = {
-    val input = path.toInputFromBuffers(buffers)
-    exportableEvaluations.get(input) match {
-      case None => None
-      case Some(evalutatedWorksheet) =>
-        val toExport = new StringBuilder
-        val originalLines = input.value.split("\n").toBuffer.zipWithIndex
+  def copyWorksheetOutput(path: AbsolutePath): Future[Option[String]] = {
+    lazy val input = path.toInputFromBuffers(buffers)
+    exportableEvaluations.get(path) match {
+      case None => Future.successful(None)
+      case Some(worksheetPromise) =>
+        worksheetPromise.future.map { worksheetSnapshot =>
+          val toExport = new StringBuilder
+          val originalLines = input.value.split("\n").toBuffer.zipWithIndex
 
-        originalLines.foreach { case (lineContent, lineNumber) =>
-          val lineHasOutput = evalutatedWorksheet
-            .statements()
-            .asScala
-            .find(_.position.endLine() == lineNumber)
+          originalLines.foreach { case (lineContent, lineNumber) =>
+            val lineHasOutput = worksheetSnapshot.evaluatedWorksheet
+              .statements()
+              .asScala
+              .find(_.position.endLine() == lineNumber)
 
-          lineHasOutput match {
-            case Some(statement) =>
-              val detailLines = statement
-                .prettyDetails()
-                .split("\n")
-                .map { line =>
-                  // println in worksheets already come with //
-                  if (line.trim().startsWith("//")) line
-                  else s"// ${line}"
-                }
-                .mkString("\n")
+            lineHasOutput match {
+              case Some(statement) =>
+                val detailLines = statement
+                  .prettyDetails()
+                  .split("\n")
+                  .map { line =>
+                    // println in worksheets already come with //
+                    if (line.trim().startsWith("//")) line
+                    else s"// ${line}"
+                  }
+                  .mkString("\n")
 
-              toExport.append(s"\n${lineContent}\n${detailLines}")
-            case None => toExport.append(s"\n${lineContent}")
+                toExport.append(s"\n${lineContent}\n${detailLines}")
+              case None => toExport.append(s"\n${lineContent}")
+            }
           }
+          Some(toExport.result())
         }
 
-        Some(toExport.result())
     }
   }
 
   private def evaluateAsync(
       path: AbsolutePath,
       token: CancelToken,
-  ): Future[Option[EvaluatedWorksheet]] = {
-    val result = new CompletableFuture[Option[EvaluatedWorksheet]]()
+  ): Future[Option[EvaluatedWorksheetSnapshot]] = {
+    val result = new CompletableFuture[Option[EvaluatedWorksheetSnapshot]]()
     def completeEmptyResult() = result.complete(None)
     token.onCancel().asScala.foreach { isCancelled =>
       if (isCancelled) {
         completeEmptyResult()
       }
     }
-    val onError: PartialFunction[Throwable, Option[EvaluatedWorksheet]] = {
+    val onError
+        : PartialFunction[Throwable, Option[EvaluatedWorksheetSnapshot]] = {
       case InterruptException() =>
         None
       case e: SimpleResolutionError =>
@@ -257,6 +345,8 @@ class WorksheetProvider(
         result.asScala,
       )
       token.checkCanceled()
+      val promise = Promise[EvaluatedWorksheetSnapshot]()
+      exportableEvaluations.update(path, promise)
       // NOTE(olafurpg) Run evaluation in a custom thread so that we can
       // `Thread.stop()` it in case of infinite loop. I'm not aware of any
       // other JVM APIs that allow killing a runnable even in the face of
@@ -264,13 +354,14 @@ class WorksheetProvider(
       val thread = new Thread(s"Evaluating Worksheet ${path.filename}") {
         override def run(): Unit = {
           result.complete(
-            try Some(evaluateWorksheet(path))
+            try Some(evaluateWorksheet(path, promise))
             catch onError
           )
         }
       }
       val cancellable = toCancellable(thread, result)
       interruptThreadOnCancel(path, result, cancellable)
+
       thread.start()
       val timeout = serverConfig.worksheetTimeout * 1000
       thread.join(timeout)
@@ -298,7 +389,7 @@ class WorksheetProvider(
 
   private def toCancellable(
       thread: Thread,
-      result: CompletableFuture[Option[EvaluatedWorksheet]],
+      result: CompletableFuture[Option[EvaluatedWorksheetSnapshot]],
   ): Cancelable = {
     // Last resort, if everything else fails we use `Thread.stop()`.
     val stopThread = new Runnable {
@@ -331,7 +422,7 @@ class WorksheetProvider(
    */
   private def interruptThreadOnCancel(
       path: AbsolutePath,
-      result: CompletableFuture[Option[EvaluatedWorksheet]],
+      result: CompletableFuture[Option[EvaluatedWorksheetSnapshot]],
       cancellable: Cancelable,
   ): Unit = {
     // If the program is running for more than
@@ -374,17 +465,17 @@ class WorksheetProvider(
   }
 
   private def evaluateWorksheet(
-      path: AbsolutePath
-  ): EvaluatedWorksheet = {
+      path: AbsolutePath,
+      promise: Promise[EvaluatedWorksheetSnapshot],
+  ): EvaluatedWorksheetSnapshot = {
     val mdoc = getMdoc(path)
     val input = path.toInputFromBuffers(buffers)
     val relativePath = path.toRelative(workspace)
     val evaluatedWorksheet =
       mdoc.evaluateWorksheet(relativePath.toString(), input.value)
-    exportableEvaluations.update(
-      input,
-      evaluatedWorksheet,
-    )
+    val worksheetSnapshot =
+      EvaluatedWorksheetSnapshot(evaluatedWorksheet, input.value)
+    promise.trySuccess(worksheetSnapshot)
 
     val oldDigest = worksheetPcData.get(path).getOrElse("")
     val classpath = evaluatedWorksheet.classpath().asScala.toList
@@ -411,7 +502,7 @@ class WorksheetProvider(
       toPublish,
       isReset = true,
     )
-    evaluatedWorksheet
+    worksheetSnapshot
   }
 
   def getWorksheetPCData(path: AbsolutePath): Option[WorksheetPcData] =

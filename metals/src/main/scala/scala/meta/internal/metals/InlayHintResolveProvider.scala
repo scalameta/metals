@@ -18,21 +18,34 @@ final class InlayHintResolveProvider(
     definitionProvider: DefinitionProvider,
     compilers: Compilers,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext) {
+  
   def resolve(
       inlayHint: InlayHint,
       token: CancelToken,
-  ): Future[InlayHint] =
-    try {
-      val (uri, labelParts) =
-        InlayHints.fromData(inlayHint.getData().asInstanceOf[JsonElement])
-      val path = uri.toAbsolutePath
-      resolve(inlayHint, getLabelParts(inlayHint).zip(labelParts), path, token)
-    } catch {
-      case error: Throwable =>
+  ): Future[InlayHint] = {
+    scala.util.Try {
+      Option(inlayHint.getData()) match {
+        case Some(data: JsonElement) =>
+          val (uri, labelParts) =
+            InlayHints.fromData(data)
+          val path = uri.toAbsolutePath
+          resolve(
+            inlayHint,
+            getLabelParts(inlayHint).zip(labelParts),
+            path,
+            token,
+          )
+
+        case _ => Future.successful(inlayHint)
+      }
+    }.toEither match {
+      case Right(labelParts) => labelParts
+      case Left(error) =>
         scribe.warn(s"Failed to resolve inlay hint: $error")
         rc.unsanitized.create(report(inlayHint, error), ifVerbose = true)
         Future.successful(inlayHint)
     }
+  }
 
   private def resolve(
       inlayHint: InlayHint,
