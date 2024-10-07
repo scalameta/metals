@@ -163,6 +163,11 @@ public abstract class PresentationCompiler {
 	public abstract CompletableFuture<List<TextEdit>> insertInferredType(OffsetParams params);
 
 	/**
+	 * Return the missing method
+	 */
+	public abstract CompletableFuture<List<TextEdit>> insertInferredMethod(OffsetParams params);
+
+	/**
 	 * Return the text edits for inlining a value.
 	 */
 	public CompletableFuture<List<TextEdit>> inlineValue(OffsetParams params) {
