@@ -646,54 +646,57 @@ object FileDecoderProviderLspSuite {
   }
 
   private val tastySingle =
-    s"""|Names:
-        |   0: ASTs
-        |   1: foo
-        |   2: bar
-        |   3: foo[Qualified . bar]
-        |   4: example
-        |   5: foo[Qualified . bar][Qualified . example]
-        |   6: Main
-        |   7: Main[ModuleClass]
-        |   8: <init>
-        |   9: foo[Qualified . bar][Qualified . example][Qualified . Main]
-        |  10: foo[Qualified . bar][Qualified . example][Qualified . Main][ModuleClass]
-        |  11: <init>[Signed Signature(List(),foo.bar.example.Main$$) @<init>]
-        |  12: java
-        |  13: lang
-        |  14: java[Qualified . lang]
-        |  15: Object
-        |  16: java[Qualified . lang][Qualified . Object]
-        |  17: <init>[Signed Signature(List(),java.lang.Object) @<init>]
-        |  18: _
-        |  19: Unit
-        |  20: scala
-        |  21: writeReplace
-        |  22: AnyRef
-        |  23: runtime
-        |  24: scala[Qualified . runtime]
-        |  25: ModuleSerializationProxy
-        |  26: scala[Qualified . runtime][Qualified . ModuleSerializationProxy]
-        |  27: Class
-        |  28: java[Qualified . lang][Qualified . Class]
-        |  29: <init>[Signed Signature(List(java.lang.Class),scala.runtime.ModuleSerializationProxy) @<init>]
-        |  30: SourceFile
-        |  31: annotation
-        |  32: scala[Qualified . annotation]
-        |  33: internal
-        |  34: scala[Qualified . annotation][Qualified . internal]
-        |  35: scala[Qualified . annotation][Qualified . internal][Qualified . SourceFile]
-        |  36: String
-        |  37: java[Qualified . lang][Qualified . String]
-        |  38: <init>[Signed Signature(List(java.lang.String),scala.annotation.internal.SourceFile) @<init>]
-        |  39: app/src/main/scala/Main.scala
-        |  40: Positions
-        |  41: Comments
+    s"""|Header:
+        |  version: 28.3.0
+        |  tooling: Scala 3.3.4
+        |     UUID: 000af99d-8578-97d4-00fd-3ab11b2e95b0
         |
-        |Trees:
-        |start = Addr(0), base = 344, current = Addr(0), end = Addr(101)
-        |101 bytes of AST, base = Addr(0)
+        |Names (307 bytes, starting from 35):
+        |     0: ASTs
+        |     1: foo
+        |     2: bar
+        |     3: foo[Qualified . bar]
+        |     4: example
+        |     5: foo[Qualified . bar][Qualified . example]
+        |     6: Main
+        |     7: Main[ModuleClass]
+        |     8: <init>
+        |     9: foo[Qualified . bar][Qualified . example][Qualified . Main]
+        |    10: foo[Qualified . bar][Qualified . example][Qualified . Main][ModuleClass]
+        |    11: <init>[Signed Signature(List(),foo.bar.example.Main$$) @<init>]
+        |    12: java
+        |    13: lang
+        |    14: java[Qualified . lang]
+        |    15: Object
+        |    16: java[Qualified . lang][Qualified . Object]
+        |    17: <init>[Signed Signature(List(),java.lang.Object) @<init>]
+        |    18: _
+        |    19: Unit
+        |    20: scala
+        |    21: writeReplace
+        |    22: AnyRef
+        |    23: runtime
+        |    24: scala[Qualified . runtime]
+        |    25: ModuleSerializationProxy
+        |    26: scala[Qualified . runtime][Qualified . ModuleSerializationProxy]
+        |    27: Class
+        |    28: java[Qualified . lang][Qualified . Class]
+        |    29: <init>[Signed Signature(List(java.lang.Class),scala.runtime.ModuleSerializationProxy) @<init>]
+        |    30: SourceFile
+        |    31: annotation
+        |    32: scala[Qualified . annotation]
+        |    33: internal
+        |    34: scala[Qualified . annotation][Qualified . internal]
+        |    35: scala[Qualified . annotation][Qualified . internal][Qualified . SourceFile]
+        |    36: String
+        |    37: java[Qualified . lang][Qualified . String]
+        |    38: <init>[Signed Signature(List(java.lang.String),scala.annotation.internal.SourceFile) @<init>]
+        |    39: app/src/main/scala/Main.scala
+        |    40: Positions
+        |    41: Comments
         |
+        |
+        |Trees (101 bytes, starting from 344):
         |     0: PACKAGE(99)
         |     2:   TERMREFpkg 5 [foo[Qualified . bar][Qualified . example]]
         |     4:   VALDEF(18) 6 [Main]
@@ -749,69 +752,70 @@ object FileDecoderProviderLspSuite {
         |    99:         STRINGconst 39 [app/src/main/scala/Main.scala]
         |   101:
         |
-        | 44 position bytes:
-        |   lines: 3
-        |   line sizes: 23, 11, 0
-        |   positions:
-        |         0: 0 .. 35
-        |         4: 24 .. 24
-        |         7: 24 .. 24
-        |        24: 24 .. 35
-        |        27: 24 .. 24
-        |        35: 31 .. 31
-        |        44: 24 .. 24
-        |        48: 24 .. 24
-        |        52: 24 .. 24
-        |        57: 31 .. 31
-        |        61: 31 .. 31
-        |        71: 31 .. 31
-        |        77: 31 .. 31
-        |        89: 24 .. 35
-        |        95: 24 .. 24
-        |        99: 24 .. 24
+        |Positions (44 bytes, starting from 447):
+        |  lines: 3
+        |  line sizes:
+        |     23, 11, 0
+        |  positions:
+        |     0: 0 .. 35
+        |     4: 24 .. 24
+        |     7: 24 .. 24
+        |    24: 24 .. 35
+        |    27: 24 .. 24
+        |    35: 31 .. 31
+        |    44: 24 .. 24
+        |    48: 24 .. 24
+        |    52: 24 .. 24
+        |    57: 31 .. 31
+        |    61: 31 .. 31
+        |    71: 31 .. 31
+        |    77: 31 .. 31
+        |    89: 24 .. 35
+        |    95: 24 .. 24
+        |    99: 24 .. 24
         |
-        | source paths:
-        |         0: app/src/main/scala/Main.scala
-        |
-        |
-        | 0 comment bytes:
+        |  source paths:
+        |     0: 39 [app/src/main/scala/Main.scala]
         |""".stripMargin
 
   private val tastyMultiple =
-    s"""|Names:
-        |   0: ASTs
-        |   1: foo
-        |   2: bar
-        |   3: foo[Qualified . bar]
-        |   4: example
-        |   5: foo[Qualified . bar][Qualified . example]
-        |   6: Foo
-        |   7: <init>
-        |   8: java
-        |   9: lang
-        |  10: java[Qualified . lang]
-        |  11: Object
-        |  12: java[Qualified . lang][Qualified . Object]
-        |  13: <init>[Signed Signature(List(),java.lang.Object) @<init>]
-        |  14: Unit
-        |  15: scala
-        |  16: SourceFile
-        |  17: annotation
-        |  18: scala[Qualified . annotation]
-        |  19: internal
-        |  20: scala[Qualified . annotation][Qualified . internal]
-        |  21: scala[Qualified . annotation][Qualified . internal][Qualified . SourceFile]
-        |  22: String
-        |  23: java[Qualified . lang][Qualified . String]
-        |  24: <init>[Signed Signature(List(java.lang.String),scala.annotation.internal.SourceFile) @<init>]
-        |  25: app/src/main/scala/Main.scala
-        |  26: Positions
-        |  27: Comments
+    s"""|Header:
+        |  version: 28.3.0
+        |  tooling: Scala 3.3.4
+        |     UUID: 00c4e36f-58ab-50ea-00a1-598e5ec4df86
         |
-        |Trees:
-        |start = Addr(0), base = 245, current = Addr(0), end = Addr(48)
-        |48 bytes of AST, base = Addr(0)
+        |Names (208 bytes, starting from 35):
+        |     0: ASTs
+        |     1: foo
+        |     2: bar
+        |     3: foo[Qualified . bar]
+        |     4: example
+        |     5: foo[Qualified . bar][Qualified . example]
+        |     6: Foo
+        |     7: <init>
+        |     8: java
+        |     9: lang
+        |    10: java[Qualified . lang]
+        |    11: Object
+        |    12: java[Qualified . lang][Qualified . Object]
+        |    13: <init>[Signed Signature(List(),java.lang.Object) @<init>]
+        |    14: Unit
+        |    15: scala
+        |    16: SourceFile
+        |    17: annotation
+        |    18: scala[Qualified . annotation]
+        |    19: internal
+        |    20: scala[Qualified . annotation][Qualified . internal]
+        |    21: scala[Qualified . annotation][Qualified . internal][Qualified . SourceFile]
+        |    22: String
+        |    23: java[Qualified . lang][Qualified . String]
+        |    24: <init>[Signed Signature(List(java.lang.String),scala.annotation.internal.SourceFile) @<init>]
+        |    25: app/src/main/scala/Main.scala
+        |    26: Positions
+        |    27: Comments
         |
+        |
+        |Trees (48 bytes, starting from 245):
         |     0: PACKAGE(46)
         |     2:   TERMREFpkg 5 [foo[Qualified . bar][Qualified . example]]
         |     4:   TYPEDEF(42) 6 [Foo]
@@ -838,169 +842,168 @@ object FileDecoderProviderLspSuite {
         |    46:         STRINGconst 25 [app/src/main/scala/Main.scala]
         |    48:
         |
-        | 29 position bytes:
-        |   lines: 4
-        |   line sizes: 23, 9, 9, 0
-        |   positions:
-        |         0: 0 .. 43
-        |         4: 24 .. 33
-        |         7: 24 .. 24
-        |        15: 30 .. 30
-        |        21: 24 .. 24
-        |        25: 24 .. 24
-        |        36: 24 .. 33
-        |        42: 24 .. 24
-        |        46: 24 .. 24
+        |Positions (29 bytes, starting from 295):
+        |  lines: 4
+        |  line sizes:
+        |     23, 9, 9, 0
+        |  positions:
+        |     0: 0 .. 43
+        |     4: 24 .. 33
+        |     7: 24 .. 24
+        |    15: 30 .. 30
+        |    21: 24 .. 24
+        |    25: 24 .. 24
+        |    36: 24 .. 33
+        |    42: 24 .. 24
+        |    46: 24 .. 24
         |
-        | source paths:
-        |         0: app/src/main/scala/Main.scala
-        |
-        |
-        | 0 comment bytes:
+        |  source paths:
+        |     0: 25 [app/src/main/scala/Main.scala]
         |""".stripMargin
 
   private val tastyToplevel =
-    s"""|Names:
-        |   0: ASTs
-        |   1: foo
-        |   2: bar
-        |   3: foo[Qualified . bar]
-        |   4: example
-        |   5: foo[Qualified . bar][Qualified . example]
-        |   6: Main$$package
-        |   7: Main$$package[ModuleClass]
-        |   8: <init>
-        |   9: foo[Qualified . bar][Qualified . example][Qualified . Main$$package]
-        |  10: foo[Qualified . bar][Qualified . example][Qualified . Main$$package][ModuleClass]
-        |  11: <init>[Signed Signature(List(),foo.bar.example.Main$$package$$) @<init>]
-        |  12: java
-        |  13: lang
-        |  14: java[Qualified . lang]
-        |  15: Object
-        |  16: java[Qualified . lang][Qualified . Object]
-        |  17: <init>[Signed Signature(List(),java.lang.Object) @<init>]
-        |  18: _
-        |  19: Unit
-        |  20: scala
-        |  21: writeReplace
-        |  22: AnyRef
-        |  23: runtime
-        |  24: scala[Qualified . runtime]
-        |  25: ModuleSerializationProxy
-        |  26: scala[Qualified . runtime][Qualified . ModuleSerializationProxy]
-        |  27: Class
-        |  28: java[Qualified . lang][Qualified . Class]
-        |  29: <init>[Signed Signature(List(java.lang.Class),scala.runtime.ModuleSerializationProxy) @<init>]
-        |  30: SourceFile
-        |  31: annotation
-        |  32: scala[Qualified . annotation]
-        |  33: internal
-        |  34: scala[Qualified . annotation][Qualified . internal]
-        |  35: scala[Qualified . annotation][Qualified . internal][Qualified . SourceFile]
-        |  36: String
-        |  37: java[Qualified . lang][Qualified . String]
-        |  38: <init>[Signed Signature(List(java.lang.String),scala.annotation.internal.SourceFile) @<init>]
-        |  39: app/src/main/scala/Main.scala
-        |  40: Positions
-        |  41: Comments
-        |
-        |Trees:
-        |start = Addr(0), base = 352, current = Addr(0), end = Addr(114)
-        |114 bytes of AST, base = Addr(0)
-        |
-        |     0: PACKAGE(112)
-        |     2:   TERMREFpkg 5 [foo[Qualified . bar][Qualified . example]]
-        |     4:   VALDEF(19) 6 [Main$$package]
-        |     7:     IDENTtpt 7 [Main$$package[ModuleClass]]
-        |     9:       TYPEREFsymbol 25
-        |    11:         TERMREFpkg 5 [foo[Qualified . bar][Qualified . example]]
-        |    13:     APPLY(8)
-        |    15:       SELECTin(6) 11 [<init>[Signed Signature(List(),foo.bar.example.Main$$package$$) @<init>]]
-        |    18:         NEW
-        |    19:           SHAREDterm 7
-        |    21:         SHAREDtype 9
-        |    23:     OBJECT
-        |    24:     SYNTHETIC
-        |    25:   TYPEDEF(87) 7 [Main$$package[ModuleClass]]
-        |    28:     TEMPLATE(64)
-        |    30:       APPLY(10)
-        |    32:         SELECTin(8) 17 [<init>[Signed Signature(List(),java.lang.Object) @<init>]]
-        |    35:           NEW
-        |    36:             TYPEREF 15 [Object]
-        |    38:               TERMREFpkg 14 [java[Qualified . lang]]
-        |    40:           SHAREDtype 36
-        |    42:       SELFDEF 18 [_]
-        |    44:         SINGLETONtpt
-        |    45:           TERMREFsymbol 4
-        |    47:             SHAREDtype 11
-        |    49:       DEFDEF(7) 8 [<init>]
-        |    52:         EMPTYCLAUSE
-        |    53:         TYPEREF 19 [Unit]
-        |    55:           TERMREFpkg 20 [scala]
-        |    57:         STABLE
-        |    58:       DEFDEF(23) 21 [writeReplace]
-        |    61:         EMPTYCLAUSE
-        |    62:         TYPEREF 22 [AnyRef]
-        |    64:           SHAREDtype 55
-        |    66:         APPLY(13)
-        |    68:           SELECTin(8) 29 [<init>[Signed Signature(List(java.lang.Class),scala.runtime.ModuleSerializationProxy) @<init>]]
-        |    71:             NEW
-        |    72:               TYPEREF 25 [ModuleSerializationProxy]
-        |    74:                 TERMREFpkg 24 [scala[Qualified . runtime]]
-        |    76:             SHAREDtype 72
-        |    78:           CLASSconst
-        |    79:             SHAREDtype 45
-        |    81:         PRIVATE
-        |    82:         SYNTHETIC
-        |    83:       DEFDEF(9) 1 [foo]
-        |    86:         EMPTYCLAUSE
-        |    87:         IDENTtpt 19 [Unit]
-        |    89:           TYPEREF 19 [Unit]
-        |    91:             TERMREFpkg 20 [scala]
-        |    93:         UNITconst
-        |    94:     OBJECT
-        |    95:     SYNTHETIC
-        |    96:     ANNOTATION(16)
-        |    98:       TYPEREF 30 [SourceFile]
-        |   100:         TERMREFpkg 34 [scala[Qualified . annotation][Qualified . internal]]
-        |   102:       APPLY(10)
-        |   104:         SELECTin(6) 38 [<init>[Signed Signature(List(java.lang.String),scala.annotation.internal.SourceFile) @<init>]]
-        |   107:           NEW
-        |   108:             SHAREDtype 98
-        |   110:           SHAREDtype 98
-        |   112:         STRINGconst 39 [app/src/main/scala/Main.scala]
-        |   114:
-        |
-        | 50 position bytes:
-        |   lines: 4
-        |   line sizes: 23, 11, 20, 0
-        |   positions:
-        |         0: 0 .. 56
-        |         4: 36 .. 36
-        |         7: 36 .. 36
-        |        25: 36 .. 56
-        |        28: 36 .. 56
-        |        36: 36 .. 36
-        |        45: 36 .. 36
-        |        49: 36 .. 36
-        |        53: 36 .. 36
-        |        58: 36 .. 36
-        |        62: 36 .. 36
-        |        72: 36 .. 36
-        |        78: 36 .. 36
-        |        83: 36 .. 56
-        |        87: 47 .. 51
-        |        93: 54 .. 56
-        |       102: 36 .. 56
-        |       108: 36 .. 36
-        |       112: 36 .. 36
-        |
-        | source paths:
-        |         0: app/src/main/scala/Main.scala
-        |
-        |
-        | 0 comment bytes:
-        |""".stripMargin
+    """|Header:
+       |  version: 28.3.0
+       |  tooling: Scala 3.3.4
+       |     UUID: 0086aea0-56eb-7ed4-0077-cbc6a31c7680
+       |
+       |Names (315 bytes, starting from 35):
+       |     0: ASTs
+       |     1: foo
+       |     2: bar
+       |     3: foo[Qualified . bar]
+       |     4: example
+       |     5: foo[Qualified . bar][Qualified . example]
+       |     6: Main$package
+       |     7: Main$package[ModuleClass]
+       |     8: <init>
+       |     9: foo[Qualified . bar][Qualified . example][Qualified . Main$package]
+       |    10: foo[Qualified . bar][Qualified . example][Qualified . Main$package][ModuleClass]
+       |    11: <init>[Signed Signature(List(),foo.bar.example.Main$package$) @<init>]
+       |    12: java
+       |    13: lang
+       |    14: java[Qualified . lang]
+       |    15: Object
+       |    16: java[Qualified . lang][Qualified . Object]
+       |    17: <init>[Signed Signature(List(),java.lang.Object) @<init>]
+       |    18: _
+       |    19: Unit
+       |    20: scala
+       |    21: writeReplace
+       |    22: AnyRef
+       |    23: runtime
+       |    24: scala[Qualified . runtime]
+       |    25: ModuleSerializationProxy
+       |    26: scala[Qualified . runtime][Qualified . ModuleSerializationProxy]
+       |    27: Class
+       |    28: java[Qualified . lang][Qualified . Class]
+       |    29: <init>[Signed Signature(List(java.lang.Class),scala.runtime.ModuleSerializationProxy) @<init>]
+       |    30: SourceFile
+       |    31: annotation
+       |    32: scala[Qualified . annotation]
+       |    33: internal
+       |    34: scala[Qualified . annotation][Qualified . internal]
+       |    35: scala[Qualified . annotation][Qualified . internal][Qualified . SourceFile]
+       |    36: String
+       |    37: java[Qualified . lang][Qualified . String]
+       |    38: <init>[Signed Signature(List(java.lang.String),scala.annotation.internal.SourceFile) @<init>]
+       |    39: app/src/main/scala/Main.scala
+       |    40: Positions
+       |    41: Comments
+       |
+       |
+       |Trees (114 bytes, starting from 352):
+       |     0: PACKAGE(112)
+       |     2:   TERMREFpkg 5 [foo[Qualified . bar][Qualified . example]]
+       |     4:   VALDEF(19) 6 [Main$package]
+       |     7:     IDENTtpt 7 [Main$package[ModuleClass]]
+       |     9:       TYPEREFsymbol 25
+       |    11:         TERMREFpkg 5 [foo[Qualified . bar][Qualified . example]]
+       |    13:     APPLY(8)
+       |    15:       SELECTin(6) 11 [<init>[Signed Signature(List(),foo.bar.example.Main$package$) @<init>]]
+       |    18:         NEW
+       |    19:           SHAREDterm 7
+       |    21:         SHAREDtype 9
+       |    23:     OBJECT
+       |    24:     SYNTHETIC
+       |    25:   TYPEDEF(87) 7 [Main$package[ModuleClass]]
+       |    28:     TEMPLATE(64)
+       |    30:       APPLY(10)
+       |    32:         SELECTin(8) 17 [<init>[Signed Signature(List(),java.lang.Object) @<init>]]
+       |    35:           NEW
+       |    36:             TYPEREF 15 [Object]
+       |    38:               TERMREFpkg 14 [java[Qualified . lang]]
+       |    40:           SHAREDtype 36
+       |    42:       SELFDEF 18 [_]
+       |    44:         SINGLETONtpt
+       |    45:           TERMREFsymbol 4
+       |    47:             SHAREDtype 11
+       |    49:       DEFDEF(7) 8 [<init>]
+       |    52:         EMPTYCLAUSE
+       |    53:         TYPEREF 19 [Unit]
+       |    55:           TERMREFpkg 20 [scala]
+       |    57:         STABLE
+       |    58:       DEFDEF(23) 21 [writeReplace]
+       |    61:         EMPTYCLAUSE
+       |    62:         TYPEREF 22 [AnyRef]
+       |    64:           SHAREDtype 55
+       |    66:         APPLY(13)
+       |    68:           SELECTin(8) 29 [<init>[Signed Signature(List(java.lang.Class),scala.runtime.ModuleSerializationProxy) @<init>]]
+       |    71:             NEW
+       |    72:               TYPEREF 25 [ModuleSerializationProxy]
+       |    74:                 TERMREFpkg 24 [scala[Qualified . runtime]]
+       |    76:             SHAREDtype 72
+       |    78:           CLASSconst
+       |    79:             SHAREDtype 45
+       |    81:         PRIVATE
+       |    82:         SYNTHETIC
+       |    83:       DEFDEF(9) 1 [foo]
+       |    86:         EMPTYCLAUSE
+       |    87:         IDENTtpt 19 [Unit]
+       |    89:           TYPEREF 19 [Unit]
+       |    91:             TERMREFpkg 20 [scala]
+       |    93:         UNITconst
+       |    94:     OBJECT
+       |    95:     SYNTHETIC
+       |    96:     ANNOTATION(16)
+       |    98:       TYPEREF 30 [SourceFile]
+       |   100:         TERMREFpkg 34 [scala[Qualified . annotation][Qualified . internal]]
+       |   102:       APPLY(10)
+       |   104:         SELECTin(6) 38 [<init>[Signed Signature(List(java.lang.String),scala.annotation.internal.SourceFile) @<init>]]
+       |   107:           NEW
+       |   108:             SHAREDtype 98
+       |   110:           SHAREDtype 98
+       |   112:         STRINGconst 39 [app/src/main/scala/Main.scala]
+       |   114:
+       |
+       |Positions (50 bytes, starting from 468):
+       |  lines: 4
+       |  line sizes:
+       |     23, 11, 20, 0
+       |  positions:
+       |     0: 0 .. 56
+       |     4: 36 .. 36
+       |     7: 36 .. 36
+       |    25: 36 .. 56
+       |    28: 36 .. 56
+       |    36: 36 .. 36
+       |    45: 36 .. 36
+       |    49: 36 .. 36
+       |    53: 36 .. 36
+       |    58: 36 .. 36
+       |    62: 36 .. 36
+       |    72: 36 .. 36
+       |    78: 36 .. 36
+       |    83: 36 .. 56
+       |    87: 47 .. 51
+       |    93: 54 .. 56
+       |   102: 36 .. 56
+       |   108: 36 .. 36
+       |   112: 36 .. 36
+       |
+       |  source paths:
+       |     0: 39 [app/src/main/scala/Main.scala]
+       |""".stripMargin
 
   private val cfr =
     s"""|/*

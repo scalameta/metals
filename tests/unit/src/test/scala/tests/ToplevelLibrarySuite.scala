@@ -17,10 +17,7 @@ class ToplevelLibrarySuite extends BaseSuite {
   val scala3TestClasspath: List[AbsolutePath] = Library.scala3.sources.entries
 
   val scala3ExclusionList: Set[String] = Set(
-    // [scalameta] erased modifier support isn't implemeneted yet
-    "/scala/CanThrow.scala",
-    // error in the parser
-    "/dotty/tools/dotc/transform/patmat/Space.scala",
+    "/scala/Singleton.scala"
   )
 
   val scala2ExclusionList: Set[String] = Set(

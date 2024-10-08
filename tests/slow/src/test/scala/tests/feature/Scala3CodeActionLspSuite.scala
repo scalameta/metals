@@ -710,6 +710,8 @@ class Scala3CodeActionLspSuite
        |
        |}
        |""".stripMargin,
+    // backport needed https://github.com/scalameta/metals/pull/6342
+    assume = () => scalaVersion != "3.3.4",
   )
 
   check(
@@ -735,6 +737,8 @@ class Scala3CodeActionLspSuite
        |
        |}
        |""".stripMargin,
+    // backport needed https://github.com/scalameta/metals/pull/6342
+    assume = () => scalaVersion != "3.3.4",
   )
 
   check(

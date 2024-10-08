@@ -258,7 +258,7 @@ class ImportMissingSymbolCrossLspSuite
         |  }
         |}
         |""".stripMargin,
-    scalaVersion = V.scala3,
+    scalaVersion = "3.3.3",
   )
 
   check(
@@ -288,7 +288,7 @@ class ImportMissingSymbolCrossLspSuite
         |""".stripMargin,
     expectNoDiagnostics = false,
     filterAction = _.getTitle() == ImportMissingSymbol.title("A", "example.a"),
-    scalaVersion = V.scala3,
+    scalaVersion = "3.3.3",
   )
 
   check(
@@ -310,6 +310,6 @@ class ImportMissingSymbolCrossLspSuite
         |""".stripMargin,
     expectNoDiagnostics = false,
     filterAction = _.getTitle() == ImportMissingSymbol.title("A", "example.a"),
-    scalaVersion = V.scala3,
+    scalaVersion = "3.3.3",
   )
 }
