@@ -14,7 +14,7 @@ object StructuralTypes/*example.StructuralTypes.*/:
 
   val V/*example.StructuralTypes.V.*/: Object/*java.lang.Object#*/ {
     def scalameta/*local2*/: String/*scala.Predef.String#*/
-  } = /*local4*/new:
-    def scalameta/*local3*/ = "4.0"
+  } = new:
+    /*local4*/def scalameta/*local3*/ = "4.0"
   V/*example.StructuralTypes.V.*/.scalameta/*scala.reflect.Selectable#selectDynamic().*/
 end StructuralTypes/*example.StructuralTypes.*/

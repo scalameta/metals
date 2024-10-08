@@ -5,16 +5,16 @@ object V {
   val scala211 = "2.11.12"
   val scala212 = "2.12.20"
   val scala213 = "2.13.15"
-  val scala3 = "3.3.3"
+  val lastPublishedScala3 = "3.3.3"
+  val scala3 = "3.3.4"
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
-  val scala3RC: Option[String] = None
   val sbtScala = "2.12.18"
   val ammonite212Version = "2.12.19"
   val ammonite213Version = "2.13.14"
   // Rules need to be manually updated to support
   val bazelScalaVersion = "2.13.12"
-  val ammonite3Version = "3.3.3"
+  val ammonite3Version = "3.3.4"
 
   val ammonite = "3.0.0-2-6342755f"
   val betterMonadicFor = "0.3.1"
@@ -167,24 +167,16 @@ object V {
 
   // Scala 3
   def nonDeprecatedScala3Versions =
-    Seq(scala3, "3.3.1") ++ scala3RC.toSeq
-
-  // whenever version is removed please add it to MtagsResolver under last supported Metals version
-  def deprecatedScala3Versions =
-    Seq(
-      "3.3.2", // was a broken release
-      "3.2.2",
-    )
+    Seq(lastPublishedScala3, "3.3.1")
 
   // NOTE if you had a new Scala Version make sure it's contained in quickPublishScalaVersions
-  def scala3Versions = nonDeprecatedScala3Versions ++ deprecatedScala3Versions
+  def scala3Versions = nonDeprecatedScala3Versions
 
   def supportedScalaVersions =
     scala2Versions ++ scala3Versions
   def nonDeprecatedScalaVersions =
     nonDeprecatedScala2Versions ++ nonDeprecatedScala3Versions
-  def deprecatedScalaVersions =
-    deprecatedScala2Versions ++ deprecatedScala3Versions
+  def deprecatedScalaVersions = deprecatedScala2Versions
 
   val quickPublishScalaVersions = Set(
     bazelScalaVersion,
@@ -194,7 +186,6 @@ object V {
     ammonite212Version,
     scala213,
     ammonite213Version,
-    scala3,
     ammonite3Version,
-  ).toList ++ scala3RC.toList
+  ).toList
 }

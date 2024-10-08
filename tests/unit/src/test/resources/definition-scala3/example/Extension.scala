@@ -1,6 +1,6 @@
 package example
 
-extension/*<no symbol>*/ (i/*Extension.scala*/: Int/*Int.scala*/) def asString/*Extension.scala*/: String/*Predef.scala*/ = i/*Extension.scala*/.toString/*Object.java fallback to java.lang.Object#toString().*/
+extension/*<no symbol>*/ (i/*Extension.scala*/: Int/*Int.scala*/) def asString/*Extension.scala*/: String/*Predef.scala*/ = i/*Extension.scala*/.toString/*Any.scala*/
 
 extension/*<no symbol>*/ (s/*Extension.scala*/: String/*Predef.scala*/)
   def asInt/*Extension.scala*/: Int/*Int.scala*/ = s/*Extension.scala*/.toInt/*StringOps.scala*/

@@ -425,10 +425,10 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
           |       ^^^^^
           |""".stripMargin
       else
-        """errored.sc:15:25: error: Not found: type Fooz
+        """errored.sc:15:25: error: Not found: type Fooz - did you mean Foo?
           |val decodedFoo = decode[Fooz](json)
           |                        ^^^^
-          |errored.sc:18:8: error: Not found: type Foozz
+          |errored.sc:18:8: error: Not found: type Foozz - did you mean Foo?
           |decode[Foozz](json)
           |       ^^^^^
           |""".stripMargin
