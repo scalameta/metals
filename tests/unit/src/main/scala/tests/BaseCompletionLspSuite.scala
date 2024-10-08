@@ -206,13 +206,12 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
                  |LongStream - java.util.stream
                  |PrintStream - java.io
                  |Stream - java.util.stream
-                 |Stream - scala.collection.immutable
                  |Stream scala.collection.immutable
                  |StreamFilter - javax.xml.stream
                  |StreamResult - javax.xml.transform.stream
                  |StreamShape - scala.collection.convert.StreamExtensions
                  |StreamSource - javax.xml.transform.stream
-                 |Stream[A](elems: A*): CC[A]
+                 |Stream[A](elems: A*): Stream[A]
                  |""".stripMargin,
           ),
           scalaVersion,
@@ -235,8 +234,9 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
                  |""".stripMargin,
             "3" ->
               """|TrieMap - scala.collection.concurrent
-                 |TrieMap(k: K): V
-                 |TrieMap[K, V](elems: (K, V)*): CC[K, V]
+                 |TrieMap[K, V](elems: (K, V)*): TrieMap[K, V] - scala.collection.concurrent
+                 |new TrieMap[K, V](hashf: Hashing[K], ef: Equiv[K]): TrieMap[K, V] - scala.collection.concurrent
+                 |new TrieMap[K, V]: TrieMap[K, V] - scala.collection.concurrent
                  |""".stripMargin,
           ),
           scalaVersion,

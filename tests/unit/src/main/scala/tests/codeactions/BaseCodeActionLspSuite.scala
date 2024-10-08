@@ -59,6 +59,8 @@ abstract class BaseCodeActionLspSuite(
       expectError: Boolean = false,
       filterAction: CodeAction => Boolean = _ => true,
       overrideLayout: Option[String] = None,
+      retryAction: Int = 0,
+      assume: () => Boolean = () => true,
   )(implicit loc: Location): Unit = {
     val scalacOptionsJson =
       if (scalacOptions.nonEmpty)
@@ -88,6 +90,8 @@ abstract class BaseCodeActionLspSuite(
       changeFile,
       expectError,
       filterAction,
+      retryAction,
+      assume,
     )
   }
 
@@ -105,6 +109,8 @@ abstract class BaseCodeActionLspSuite(
       changeFile: String => String = identity,
       expectError: Boolean = false,
       filterAction: CodeAction => Boolean = _ => true,
+      retryAction: Int = 0,
+      assumeFunc: () => Boolean = () => true,
   )(implicit loc: Location): Unit = {
     val files = FileLayout.mapFromString(layout)
     val (path, input) = files
@@ -121,6 +127,7 @@ abstract class BaseCodeActionLspSuite(
       else expectedCode
 
     test(name) {
+      assume(assumeFunc())
       cleanWorkspace()
       for {
         _ <- initialize(fullInput)

@@ -570,7 +570,7 @@ class DefinitionCrossLspSuite
                |Required: Int
                |  val name: Int = "John"
                |                  ^^^^^^
-               |a/src/main/scala/a/b/Bar.scala:4:3: error: Not found: Main
+               |a/src/main/scala/a/b/Bar.scala:4:3: error: Not found: Main - did you mean Math? or perhaps wait?
                |  Main.name
                |  ^^^^
                |a/src/main/scala/a/b/c/OtherMain.scala:4:19: error: Found:    ("Lemon" : String)
