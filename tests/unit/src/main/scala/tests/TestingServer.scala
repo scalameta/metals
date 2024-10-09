@@ -955,7 +955,7 @@ final case class TestingServer(
       root: AbsolutePath = workspace,
   )(implicit loc: munit.Location): Future[Unit] = {
     for {
-      (text, params) <- onTypeParams(
+      (_, params) <- onTypeParams(
         filename,
         query,
         root,
@@ -1511,7 +1511,7 @@ final case class TestingServer(
       root: AbsolutePath,
   ): Future[List[Location]] = {
     for {
-      (text, params) <- offsetParams(filename, query, root)
+      (_, params) <- offsetParams(filename, query, root)
       definition <- fullServer.definition(params).asScala
     } yield {
       definition.asScala.toList

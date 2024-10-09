@@ -682,7 +682,7 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
       _ <- debugServer.configurationDone
       _ <- debugServer.disconnect
       _ <- debugServer.shutdown
-      output <- debugServer.allOutput
+      _ <- debugServer.allOutput
     } yield ()
   }
 
