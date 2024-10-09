@@ -15,8 +15,6 @@ import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.Type
 import scala.meta.XtensionCollectionLikeUI
-import scala.meta.XtensionDialectApply
-import scala.meta.XtensionTokenizeDialectInput
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
@@ -617,7 +615,7 @@ class ExtractRenameMember(
     for {
       text <- buffers.get(path)
       (part, _) = text.splitAt(member.pos.start)
-      tokenized <- Trees.defaultTokenizerDialect(part).tokenize.toOption
+      tokenized <- part.safeTokenize(Trees.defaultTokenizerDialect).toOption
       collectComments = tokenized.tokens.reverse.takeWhile {
         case _: Token.EOF => true
         case _: Token.Comment => true

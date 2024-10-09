@@ -5,6 +5,7 @@ import scala.collection.Seq
 import scala.meta._
 import scala.meta.dialects.Scala213
 import scala.meta.internal.docstrings._
+import scala.meta.internal.mtags.MtagsEnrichments._
 
 /**
  * Generates markdown from the docstring
@@ -19,7 +20,7 @@ object MarkdownGenerator extends ScalaDocPrinter {
    * @return a sequence of markdown strings - one per docstring comment in the code
    */
   def toText(code: String): Seq[String] =
-    Scala213(code).tokenize.get.collect {
+    code.safeTokenize(Scala213).get.collect {
       case c: Token.Comment if c.syntax.startsWith("/**") =>
         fromDocstring(c.syntax, Map.empty)
     }

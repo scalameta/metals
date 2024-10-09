@@ -3,8 +3,6 @@ package scala.meta.internal.metals.codeactions
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.XtensionDialectApply
-import scala.meta.XtensionTokenizeDialectInput
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CodeAction
@@ -45,7 +43,7 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
   private def tokenizeIfNotRangeSelection(range: l.Range, content: String) = {
     Option
       .when(range.getStart == range.getEnd)(
-        Trees.defaultTokenizerDialect(content).tokenize
+        content.safeTokenize(Trees.defaultTokenizerDialect)
       )
       .flatMap(_.toOption)
   }

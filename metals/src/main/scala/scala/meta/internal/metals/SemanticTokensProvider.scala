@@ -27,12 +27,11 @@ import org.eclipse.lsp4j.SemanticTokenTypes
 object SemanticTokensProvider {
 
   def getTokens(isScala3: Boolean, text: String): Tokens = {
-    import scala.meta._
     if (isScala3) {
       implicit val dialect = scala.meta.dialects.Scala3
-      text.tokenize.get
+      text.safeTokenize.get
     } else {
-      text.tokenize.get
+      text.safeTokenize.get
     }
   }
 

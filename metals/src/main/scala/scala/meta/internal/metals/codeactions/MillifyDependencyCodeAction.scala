@@ -3,8 +3,6 @@ package scala.meta.internal.metals.codeactions
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.XtensionDialectApply
-import scala.meta.XtensionTokenizeDialectInput
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CodeAction
@@ -27,7 +25,7 @@ class MillifyDependencyCodeAction(buffers: Buffers) extends CodeAction {
       if (path.isScalaScript && range.getStart == range.getEnd)
         buffers
           .get(path)
-          .flatMap(Trees.defaultTokenizerDialect(_).tokenize.toOption)
+          .flatMap(_.safeTokenize(Trees.defaultTokenizerDialect).toOption)
       else None
 
     tokenized
