@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.util.Try
+import scala.util.control.NonFatal
 import scala.util.matching.Regex
 
 import scala.meta.internal.metals.utils.LimitedFilesManager
@@ -106,14 +107,18 @@ class StdReporter(
 
   def readInIds(): Unit = {
     val reports = getReports().flatMap { report =>
-      val lines = Files.readAllLines(report.file.toPath())
-      if (lines.size() > 0) {
-        lines.get(0) match {
-          case id if id.startsWith(Report.idPrefix) =>
-            Some((id.stripPrefix(Report.idPrefix) -> report.toPath))
-          case _ => None
-        }
-      } else None
+      try {
+        val lines = Files.readAllLines(report.file.toPath())
+        if (lines.size() > 0) {
+          lines.get(0) match {
+            case id if id.startsWith(Report.idPrefix) =>
+              Some((id.stripPrefix(Report.idPrefix) -> report.toPath))
+            case _ => None
+          }
+        } else None
+      } catch {
+        case NonFatal(_) => None
+      }
     }.toMap
     reported.updateAndGet(_ ++ reports)
   }
@@ -123,30 +128,29 @@ class StdReporter(
       ifVerbose: Boolean = false
   ): Option[Path] =
     if (ifVerbose && !level.isVerbose) None
-    else {
-      if (initialized.compareAndSet(false, true)) {
-        readInIds()
-      }
-      val sanitizedId = report.id.map(sanitize)
-      val path = reportPath(report)
+    else
+      Try {
+        if (initialized.compareAndSet(false, true)) {
+          readInIds()
+        }
+        val sanitizedId = report.id.map(sanitize)
+        val path = reportPath(report)
 
-      val optDuplicate =
-        for {
-          id <- sanitizedId
-          reportedMap = reported.getAndUpdate(map =>
-            if (map.contains(id)) map else map + (id -> path)
-          )
-          duplicate <- reportedMap.get(id)
-        } yield duplicate
+        val optDuplicate =
+          for {
+            id <- sanitizedId
+            reportedMap = reported.getAndUpdate(map =>
+              if (map.contains(id)) map else map + (id -> path)
+            )
+            duplicate <- reportedMap.get(id)
+          } yield duplicate
 
-      optDuplicate.orElse {
-        Try {
+        optDuplicate.orElse {
           path.createDirectories()
           path.writeText(sanitize(report.fullText(withIdAndSummary = true)))
-          path
-        }.toOption
-      }
-    }
+          Some(path)
+        }
+      }.toOption.flatten
 
   override def sanitize(text: String): String = {
     val textAfterWokspaceReplace =
