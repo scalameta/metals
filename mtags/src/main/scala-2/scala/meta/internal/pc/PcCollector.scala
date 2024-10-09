@@ -90,7 +90,7 @@ trait PcCollector[T] { self: WithCompilationUnit =>
   }
 
   def isCorrectPos(t: Tree): Boolean =
-    t.pos.isRange || (t.pos.isDefined && allowZeroExtentImplicits && t.symbol.isImplicit)
+    t.pos.isRange || (t.pos.isDefined && allowZeroExtentImplicits && t.symbol != null && t.symbol.isImplicit)
 
   def traverseSought(
       filter: Tree => Boolean,
