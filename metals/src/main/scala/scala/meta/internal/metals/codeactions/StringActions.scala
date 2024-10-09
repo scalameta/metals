@@ -4,8 +4,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.XtensionClassifiable
-import scala.meta.XtensionDialectApply
-import scala.meta.XtensionTokenizeDialectInput
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CodeAction
@@ -33,7 +31,7 @@ class StringActions(buffers: Buffers) extends CodeAction {
         val tokenized = buffers
           .get(path)
           .flatMap(source =>
-            Trees.defaultTokenizerDialect(source).tokenize.toOption
+            source.safeTokenize(Trees.defaultTokenizerDialect).toOption
           )
         tokenized match {
           case Some(tokens) => {

@@ -30,6 +30,7 @@ import scala.meta.io.RelativePath
 
 import geny.Generator
 import org.eclipse.{lsp4j => l}
+import org.scalameta.UnreachableError
 import org.scalameta.invariants.InvariantFailedException
 
 object ScalametaCommonEnrichments extends ScalametaCommonEnrichments {}
@@ -243,6 +244,17 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
             invariant.getMessage()
         )
         Tokenized.Error(m.Position.None, invariant.getMessage(), invariant)
+      case unreachable: UnreachableError =>
+        logger.log(
+          Level.SEVERE,
+          s"Got unreachable exception for '${doc}', which should not happen:\n" +
+            unreachable.getMessage()
+        )
+        Tokenized.Error(
+          m.Position.None,
+          unreachable.getMessage(),
+          new RuntimeException(unreachable.getMessage())
+        )
     }
 
     def asSymbol: Symbol = Symbol(doc)

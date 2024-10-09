@@ -8,8 +8,6 @@ import scala.meta.Defn
 import scala.meta.Pkg
 import scala.meta.Term
 import scala.meta.Tree
-import scala.meta.XtensionDialectApply
-import scala.meta.XtensionTokenizeDialectInput
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -96,7 +94,7 @@ class ScaladocDefinitionProvider(
       isScala3: Boolean,
   ) =
     for {
-      tokens <- Trees.defaultTokenizerDialect(buffer).tokenize.toOption
+      tokens <- buffer.safeTokenize(Trees.defaultTokenizerDialect).toOption
       comment <- tokens.collectFirst {
         case token: Comment if token.pos.encloses(position) => token
       }

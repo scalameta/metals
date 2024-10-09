@@ -210,4 +210,7 @@ object Trees {
    */
   val defaultTokenizerDialect: Dialect = scala.meta.dialects.Scala213
 
+  def defaultTokenized(input: inputs.Input.VirtualFile): Tokenized = {
+    input.value.safeTokenize(defaultTokenizerDialect)
+  }
 }
