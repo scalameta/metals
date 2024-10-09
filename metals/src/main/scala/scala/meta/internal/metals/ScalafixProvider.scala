@@ -51,7 +51,7 @@ case class ScalafixProvider(
     buildHasErrors: AbsolutePath => Boolean,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
   import ScalafixProvider._
-  private val scalafixCache = TrieMap.empty[ScalaBinaryVersion, Scalafix]
+  private val scalafixCache = TrieMap.empty[ScalaVersion, Scalafix]
   private val rulesClassloaderCache =
     TrieMap.empty[ScalafixRulesClasspathKey, URLClassLoader]
 
@@ -574,15 +574,15 @@ case class ScalafixProvider(
   }
 
   private def getScalafix(
-      scalaBinaryVersion: ScalaBinaryVersion
+      scalaVersion: ScalaVersion
   ): Future[Scalafix] = Future {
     scalafixCache.getOrElseUpdate(
-      scalaBinaryVersion, {
+      scalaVersion, {
         workDoneProgress.trackBlocking("Downloading scalafix") {
           val scalafix =
-            if (scalaBinaryVersion == "2.11") scala211Fallback
+            if (scalaVersion.startsWith("2.11")) scala211Fallback
             else
-              Scalafix.fetchAndClassloadInstance(scalaBinaryVersion)
+              Scalafix.fetchAndClassloadInstance(scalaVersion)
           scalafix
         }
       },
@@ -618,11 +618,11 @@ case class ScalafixProvider(
           val rulesDependencies = scalfixRulesKey.usedRulesWithClasspath
           val organizeImportRule =
             // Scalafix version that supports Scala 2.11 doesn't have the rule built in
-            if (scalfixRulesKey.scalaBinaryVersion == "2.11")
+            if (scalfixRulesKey.scalaVersion.startsWith("2.11"))
               Some(
                 Dependency.of(
                   "com.github.liancheng",
-                  "organize-imports_" + scalfixRulesKey.scalaBinaryVersion,
+                  "organize-imports_2.11",
                   "0.6.0",
                 )
               )
@@ -682,11 +682,10 @@ case class ScalafixProvider(
 
 object ScalafixProvider {
 
-  type ScalaBinaryVersion = String
   type ScalaVersion = String
 
   case class ScalafixRulesClasspathKey(
-      scalaBinaryVersion: ScalaBinaryVersion,
+      scalaVersion: ScalaVersion,
       usedRulesWithClasspath: Set[Dependency],
   )
 
