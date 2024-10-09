@@ -137,7 +137,6 @@ class Supermethods(
         textDocument,
       )
       symbolInformation <- findSymbol(symbolOcc.symbol)
-      docText = TextDocumentWithPath(textDocument, filePath)
     } yield SuperMethodProvider.getSuperMethodHierarchy(
       symbolInformation
     )

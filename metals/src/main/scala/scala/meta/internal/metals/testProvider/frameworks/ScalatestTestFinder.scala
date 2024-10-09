@@ -65,7 +65,6 @@ class ScalatestTestFinder(
       case parentSymbol if !ScalatestStyle.baseSymbols.contains(parentSymbol) =>
         for {
           definition <- symbolIndex.definition(mtags.Symbol(parentSymbol))
-          tree <- trees.get(definition.path)
           doc <- semanticdbs()
             .textDocument(definition.path)
             .documentIncludingStale

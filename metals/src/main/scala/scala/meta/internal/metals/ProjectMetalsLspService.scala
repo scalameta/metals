@@ -116,7 +116,6 @@ class ProjectMetalsLspService(
     folder,
     languageClient,
     shellRunner,
-    statusBar,
     () => userConfig,
   )
 

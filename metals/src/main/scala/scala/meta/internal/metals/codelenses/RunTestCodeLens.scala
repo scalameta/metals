@@ -91,7 +91,6 @@ final class RunTestCodeLens(
       isJVM = buildTarget.asScalaBuildTarget.forall(
         _.getPlatform == b.ScalaPlatform.JVM
       )
-      connection <- buildTargets.buildServerOf(buildTargetId)
       // although hasDebug is already available in BSP capabilities
       // see https://github.com/build-server-protocol/build-server-protocol/pull/161
       // most of the bsp servers such as bloop and sbt might not support it.

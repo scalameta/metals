@@ -54,7 +54,7 @@ class DidFocusLspSuite extends BaseLspSuite("did-focus") {
       _ = assert(didCompile == Compiled)
       didCompile <- server.didFocus("b/src/main/scala/b/B.scala")
       _ = assert(didCompile == Compiled)
-      didCompile <- server.didFocus("c/src/main/scala/c/C.scala")
+      _ <- server.didFocus("c/src/main/scala/c/C.scala")
       // fake delete the diagnostic to see that `c` won't get recompiled
       _ = client.diagnostics(server.toPath("c/src/main/scala/c/C.scala")) =
         Seq.empty
@@ -112,7 +112,7 @@ class DidFocusLspSuite extends BaseLspSuite("did-focus") {
       _ <- server.didOpen("b/src/main/scala/b/B.scala")
       _ = assertNoDiagnostics()
       _ = fakeTime.elapseSeconds(10)
-      didCompile <- server.didFocus("b/src/main/scala/b/B.scala")
+      _ <- server.didFocus("b/src/main/scala/b/B.scala")
       _ <- server.didSave("a/src/main/scala/a/A.scala")(
         _.replace("val x = 1", "val x = \"string\"")
       )

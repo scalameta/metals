@@ -75,7 +75,7 @@ abstract class BaseNonCompilingLspSuite(name: String)
              |  def completeThisUniqueName2(): String = 42
              |}""".stripMargin
         }
-      - <-
+      _ <-
         if (saveAfterChanges)
           server.didSave("a/src/main/scala/b/B.scala")(identity)
         else Future.unit
@@ -108,7 +108,7 @@ abstract class BaseNonCompilingLspSuite(name: String)
       _ <- server.didSave("a/src/main/scala/a/A.scala") { _ =>
         newText.replace("<<", "").replace(">>", "")
       }
-      codeActions <-
+      _ <-
         server
           .assertCodeAction(
             "a/src/main/scala/a/A.scala",
@@ -122,7 +122,7 @@ abstract class BaseNonCompilingLspSuite(name: String)
       _ <- server.didSave("a/src/main/scala/a/A.scala") { _ =>
         input.replace("UniqueObjectOther", "UniqueObject")
       }
-      codeActions <-
+      _ <-
         server
           .assertCodeAction(
             "a/src/main/scala/a/A.scala",
@@ -367,7 +367,7 @@ abstract class BaseNonCompilingLspSuite(name: String)
       input = newText.replace("<<", "").replace(">>", "")
       _ <- server.didChange("a/src/main/scala/a/A.scala")(_ => input)
       _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
-      codeActions <-
+      _ <-
         server
           .assertCodeAction(
             "a/src/main/scala/a/A.scala",

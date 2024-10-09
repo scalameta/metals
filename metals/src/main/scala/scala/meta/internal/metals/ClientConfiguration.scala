@@ -158,7 +158,7 @@ final class ClientConfiguration(
     for {
       capabilities <- clientCapabilities
       textDocumentCapabilities <- Option(capabilities.getTextDocument())
-      inlayHintsCapabilities <- Option(textDocumentCapabilities.getInlayHint())
+      _ <- Option(textDocumentCapabilities.getInlayHint())
     } yield true
   }.getOrElse(false)
 
