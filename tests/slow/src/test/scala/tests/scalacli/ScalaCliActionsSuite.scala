@@ -1,6 +1,8 @@
 package tests.scalacli
 
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.codeactions.SourceOrganizeImports
@@ -11,6 +13,16 @@ import coursier.core.Version
 
 class ScalaCliActionsSuite
     extends BaseScalaCLIActionSuite("actionableDiagnostic") {
+
+  override def serverConfig: MetalsServerConfig =
+    super.serverConfig.copy(loglevel = "debug")
+
+  override def beforeEach(context: BeforeEach): Unit = {
+    super.beforeEach(context)
+    dapClient.touch()
+    dapServer.touch()
+    bspTrace.touch()
+  }
 
   val oldOsLibVersion: Version = Version("0.7.8")
   val coursierComplete = new CoursierComplete(scalaCompilerVersion)
