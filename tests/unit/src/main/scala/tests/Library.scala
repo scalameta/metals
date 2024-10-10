@@ -87,7 +87,7 @@ object Library {
     val fetch = Fetch
       .create()
       .withMainArtifacts()
-      .withClassifiers(Set("sources", "_").asJava)
+      .addClassifiers("sources")
       .withDependencies(
         deps: _*
       )

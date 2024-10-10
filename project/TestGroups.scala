@@ -123,5 +123,4 @@ object TestGroups {
       "tests.ServerLivenessMonitorSuite", "tests.ResetWorkspaceLspSuite",
       "tests.ToplevelWithInnerScala3Suite"),
   )
-
 }
