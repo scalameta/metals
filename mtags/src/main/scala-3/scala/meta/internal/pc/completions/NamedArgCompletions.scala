@@ -386,7 +386,7 @@ class FuzzyArgMatcher(tparams: List[Symbols.Symbol])(using Context):
    */
   def doMatch(
       allArgsProvided: Boolean
-  )(expectedArgs: List[Symbols.Symbol], actualArgs: List[Tree]) =
+  )(expectedArgs: List[Symbols.Symbol], actualArgs: List[Tree]): Boolean =
     (expectedArgs.length == actualArgs.length ||
       (!allArgsProvided && expectedArgs.length >= actualArgs.length)) &&
       actualArgs.zipWithIndex.forall {

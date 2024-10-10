@@ -29,7 +29,7 @@ final class PcRenameProvider(
       else None
     )
 
-  val newName = name.map(_.stripBackticks.backticked).getOrElse("newName")
+  val newName: String = name.map(_.stripBackticks.backticked).getOrElse("newName")
 
   def collect(
       parent: Option[Tree]

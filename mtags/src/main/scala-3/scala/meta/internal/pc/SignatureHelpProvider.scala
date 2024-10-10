@@ -34,7 +34,7 @@ object SignatureHelpProvider:
       driver: InteractiveDriver,
       params: OffsetParams,
       search: SymbolSearch,
-  ) =
+  ): l.SignatureHelp =
     val uri = params.uri
     val sourceFile = CompilerInterfaces.toSource(params.uri, params.text)
     driver.run(uri, sourceFile)
