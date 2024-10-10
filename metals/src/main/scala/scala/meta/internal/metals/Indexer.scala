@@ -415,7 +415,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       case Right(zip) =>
         scribe.debug(s"Indexing JDK sources from $zip")
         usedJars += zip
-        val dialect = ScalaVersions.dialectForDependencyJar(zip.filename)
+        val dialect = ScalaVersions.dialectForDependencyJar(zip, buildTargets)
         sharedIndices.jvmTypeHierarchy.getTypeHierarchy(zip) match {
           case Some(overrides) =>
             definitionIndex.addIndexedSourceJar(zip, Nil, dialect)
@@ -540,7 +540,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
    * @param path JAR path
    */
   private def addSourceJarSymbols(path: AbsolutePath): Unit = {
-    val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
+    val dialect = ScalaVersions.dialectForDependencyJar(path, buildTargets)
     tables.jarSymbols.getTopLevels(path) match {
       case Some(toplevels) =>
         tables.jarSymbols.getTypeHierarchy(path) match {
