@@ -310,8 +310,7 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
   test("amend-scalafix-conf") {
     cleanWorkspace()
     val newSettings = List(
-      "OrganizeImports.targetDialect = Scala3",
-      "OrganizeImports.removeUnused = false",
+      "OrganizeImports.targetDialect = Scala3"
     )
     val amendScalafixConfRequest = Messages.ScalafixConfig.amendRequest(
       newSettings,
@@ -322,7 +321,10 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
     client.showMessageRequestHandler = params =>
       if (params.getMessage() == amendScalafixConfRequest.getMessage())
         Some(Messages.ScalafixConfig.adjustScalafix)
-      else None
+      else {
+        scribe.error(s"Unexpected message: ${params.getMessage()}")
+        None
+      }
 
     for {
       _ <- initialize(
