@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -36,7 +37,6 @@ import bloop.rifle.BloopRifleConfig
 import bloop.rifle.BloopRifleLogger
 import bloop.rifle.BspConnection
 import bloop.rifle.BspConnectionAddress
-import dev.dirs.ProjectDirectories
 
 /**
  * Establishes a connection with a bloop server using Bloop Launcher.
@@ -61,11 +61,11 @@ final class BloopServers(
 
   import BloopServers._
 
-  private def metalsJavaHome =
-    sys.props
-      .get("java.home")
-      .orElse(sys.env.get("JAVA_HOME"))
-
+  private def metalsJavaHome = sys.props
+    .get("java.home")
+    .orElse(sys.env.get("JAVA_HOME"))
+  private val bloopWorkingDir = createBloopWorkingDir
+  private val bloopDaemonDir = bloopWorkingDir.resolve("daemon")
   private val folderIdMap = TrieMap.empty[AbsolutePath, Int]
 
   def shutdownServer(): Boolean = {
@@ -112,7 +112,7 @@ final class BloopServers(
       .recover { case NonFatal(e) =>
         Try(
           // Bloop output
-          BloopServers.bloopDaemonDir.resolve("output").readText
+          bloopDaemonDir.resolve("output").readText
         ).foreach {
           scribe.error(_)
         }
@@ -434,19 +434,29 @@ object BloopServers {
   // Needed for creating unique socket files for each bloop connection
   private[BloopServers] val connectionCounter = new AtomicInteger(0)
 
-  private val bloopDirectories = {
-    // Scala CLI is still used since we wanted to avoid having two separate servers
-    ProjectDirectories.from(null, null, "ScalaCli")
-  }
+  def createBloopWorkingDir(implicit ec: ExecutionContext): AbsolutePath = {
 
-  lazy val bloopDaemonDir: AbsolutePath =
-    bloopWorkingDir.resolve("daemon")
+    val baseDir = MetalsProjectDirectories.from(null, null, "ScalaCli") match {
+      case None =>
+        val userHome = Paths.get(System.getProperty("user.home"))
 
-  lazy val bloopWorkingDir: AbsolutePath = {
-    val baseDir =
-      if (Properties.isMac) bloopDirectories.cacheDir
-      else bloopDirectories.dataLocalDir
-    AbsolutePath(Paths.get(baseDir).resolve("bloop"))
+        val potential =
+          if (Properties.isWin) userHome.resolve("AppData/Local/ScalaCli/data")
+          else if (Properties.isMac) userHome.resolve("Library/Caches/ScalaCli")
+          else userHome.resolve(".local/share/scalacli")
+        Files.createDirectories(potential)
+        if (potential.toFile.exists()) potential
+        else
+          throw new IllegalStateException(
+            s"Could not create directory $potential for Bloop, please try using a different BSP server and reporting your issue."
+          )
+      case Some(bloopDirectories) =>
+        val baseDir =
+          if (Properties.isMac) bloopDirectories.cacheDir
+          else bloopDirectories.dataLocalDir
+        Paths.get(baseDir)
+    }
+    AbsolutePath(baseDir.resolve("bloop"))
   }
 
   def fetchBloop(version: String): Either[Throwable, Seq[File]] = {

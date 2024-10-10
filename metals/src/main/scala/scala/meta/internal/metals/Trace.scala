@@ -6,33 +6,34 @@ import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 
 import scala.annotation.tailrec
+import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 import scala.meta.internal.io.PathIO
 import scala.meta.io.AbsolutePath
-
-import dev.dirs.ProjectDirectories
 
 /**
  * Manages JSON-RPC tracing of incoming/outgoing messages via BSP and LSP.
  */
 object Trace {
   // jvm-directories can fail for less common OS versions: https://github.com/soc/directories-jvm/issues/17
-  val globalDirectory: Option[AbsolutePath] =
+  def globalDirectory(implicit ec: ExecutionContext): Option[AbsolutePath] =
     Try {
       val projectDirectories =
-        ProjectDirectories.from("org", "scalameta", "metals")
+        MetalsProjectDirectories.from("org", "scalameta", "metals")
       // NOTE(olafur): strictly speaking we should use `dataDir` instead of `cacheDir` but on
       // macOS this maps to `$HOME/Library/Application Support` which has an annoying space in
       // the path making it difficult to tail/cat from the terminal and cmd+click from VS Code.
       // Instead, we use the `cacheDir` which has no spaces. The logs are safe to remove so
       // putting them in the "cache directory" makes more sense compared to the "config directory".
-      val cacheDir = Paths.get(projectDirectories.cacheDir)
-      // https://github.com/scalameta/metals/issues/5590
-      // deal with issue on windows and PowerShell, which would cause us to create a null directory in the workspace
-      if (cacheDir.isAbsolute())
-        Some(AbsolutePath(cacheDir))
-      else None
+      projectDirectories.flatMap { dirs =>
+        val cacheDir = Paths.get(dirs.cacheDir)
+        // https://github.com/scalameta/metals/issues/5590
+        // deal with issue on windows and PowerShell, which would cause us to create a null directory in the workspace
+        if (cacheDir.isAbsolute())
+          Some(AbsolutePath(cacheDir))
+        else None
+      }
     }.toOption.flatten
 
   private val localDirectory: AbsolutePath =
@@ -44,7 +45,7 @@ object Trace {
   // normally be fine, but in others like nvim where "workspace" doesn't really
   // exist, we can only rely on the rootUri that is passed in, but we don't have
   // access to that yet when we use this.
-  val metalsLog: AbsolutePath =
+  def metalsLog(implicit ec: ExecutionContext): AbsolutePath =
     globalDirectory.getOrElse(localDirectory).resolve("metals.log")
 
   def protocolTracePath(
@@ -63,7 +64,7 @@ object Trace {
   def setupTracePrinter(
       protocolName: String,
       workspace: AbsolutePath = PathIO.workingDirectory,
-  ): Option[PrintWriter] = {
+  )(implicit ec: ExecutionContext): Option[PrintWriter] = {
     val metalsDir = workspace.resolve(".metals")
     val tracePaths = (metalsDir :: globalDirectory.toList).map(dir =>
       protocolTracePath(protocolName, dir)

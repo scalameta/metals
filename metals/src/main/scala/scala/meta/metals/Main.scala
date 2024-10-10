@@ -37,10 +37,10 @@ object Main extends SupportedScalaVersions {
     }
     val systemIn = System.in
     val systemOut = System.out
-    MetalsLogger.redirectSystemOut(Trace.metalsLog)
-    val tracePrinter = Trace.setupTracePrinter("LSP")
     val exec = Executors.newCachedThreadPool()
     val ec = ExecutionContext.fromExecutorService(exec)
+    MetalsLogger.redirectSystemOut(Trace.metalsLog(ec))
+    val tracePrinter = Trace.setupTracePrinter("LSP")(ec)
     val sh = Executors.newSingleThreadScheduledExecutor()
     val server = new MetalsLanguageServer(ec, sh)
     try {
