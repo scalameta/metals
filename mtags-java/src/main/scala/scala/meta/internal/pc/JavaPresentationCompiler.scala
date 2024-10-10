@@ -34,6 +34,7 @@ import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.WorkspaceEdit
 
 case class JavaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -130,8 +131,8 @@ case class JavaPresentationCompiler(
 
   override def insertInferredMethod(
       params: OffsetParams
-  ): CompletableFuture[util.List[TextEdit]] =
-    CompletableFuture.completedFuture(Nil.asJava)
+  ): CompletableFuture[WorkspaceEdit] =
+    CompletableFuture.completedFuture(new WorkspaceEdit())
 
   override def extractMethod(
       range: RangeParams,

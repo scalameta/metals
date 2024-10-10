@@ -5,6 +5,7 @@ import org.eclipse.lsp4j.CompletionList;
 import org.eclipse.lsp4j.DocumentHighlight;
 import org.eclipse.lsp4j.SignatureHelp;
 import org.eclipse.lsp4j.TextEdit;
+import org.eclipse.lsp4j.WorkspaceEdit;
 import org.eclipse.lsp4j.Range;
 
 import org.eclipse.lsp4j.Diagnostic;
@@ -157,15 +158,15 @@ public abstract class PresentationCompiler {
 	public abstract CompletableFuture<List<TextEdit>> implementAbstractMembers(OffsetParams params);
 
 	/**
+	 * Return the missing method
+	 */
+	public abstract CompletableFuture<WorkspaceEdit> insertInferredMethod(OffsetParams params);
+
+	/**
 	 * Return the missing implements and imports for the symbol at the given
 	 * position.
 	 */
 	public abstract CompletableFuture<List<TextEdit>> insertInferredType(OffsetParams params);
-
-	/**
-	 * Return the missing method
-	 */
-	public abstract CompletableFuture<List<TextEdit>> insertInferredMethod(OffsetParams params);
 
 	/**
 	 * Return the text edits for inlining a value.

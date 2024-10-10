@@ -191,50 +191,308 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
-  // checkEdit(
-  //   "lambda-0".only,
-  //   """|
-  //      |trait Main {
-  //      |  def main() = {
-  //      |    def method1(s : => Int) = 123
-  //      |    method1(<<otherMethod>>)
-  //      |  }
-  //      |}
-  //      |
-  //      |""".stripMargin,
-  //   """|
-  //      |trait Main {
-  //      |  def main() = {
-  //      |    def method1(s : => Int) = 123
-  //      |    def otherMethod: Int = ???
-  //      |    method1(otherMethod)
-  //      |  }
-  //      |}
-  //      |
-  //      |""".stripMargin
-  // )
+  checkEdit(
+    "lambda-0",
+    """|
+       |trait Main {
+       |  def main() = {
+       |    def method1(s : => Int) = 123
+       |    method1(<<otherMethod>>)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|
+       |trait Main {
+       |  def main() = {
+       |    def method1(s : => Int) = 123
+       |    def otherMethod: Int = ???
+       |    method1(otherMethod)
+       |  }
+       |}
+       |
+       |""".stripMargin
+  )
 
-  // TODO not supported yet
-  // checkEdit(
-  //   "lambda-generic",
-  //   """|
-  //      |trait Main {
-  //      |  def main() = {
-  //      |    val list = List(1, 2, 3)
-  //      |    list.map(<<otherMethod>>)
-  //      |  }
-  //      |}
-  //      |
-  //      |""".stripMargin,
-  //   """|trait Main {
-  //      |  def main() = {
-  //      |    val list = List(1, 2, 3)
-  //      |    def otherMethod(arg0: Int) = ???
-  //      |    list.map(otherMethod)
-  //      |  }
-  //      |}
-  //      |""".stripMargin,
-  // )
+  checkEdit(
+    "lambda-0-with-fn-arg",
+    """|
+       |trait Main {
+       |  def main() = {
+       |    def method1(s : String => Int) = s("123")
+       |    method1(<<lol>>)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|
+       |trait Main {
+       |  def main() = {
+       |    def method1(s : String => Int) = s("123")
+       |    def lol(arg0: String): Int = ???
+       |    method1(lol)
+       |  }
+       |}
+       |
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "lambda-generic",
+    """|
+       |trait Main {
+       |  def main() = {
+       |    val list = List(1, 2, 3)
+       |    list.map(<<otherMethod>>)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|trait Main {
+       |  def main() = {
+       |    val list = List(1, 2, 3)
+       |    def otherMethod(arg0: Int) = ???
+       |    list.map(otherMethod)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "lambda-generic-filter",
+    """|
+       |trait Main {
+       |  def main() = {
+       |    val list = List(1, 2, 3)
+       |    list.filter(<<otherMethod>>)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|trait Main {
+       |  def main() = {
+       |    val list = List(1, 2, 3)
+       |    def otherMethod(arg0: Int) = ???
+       |    list.filter(otherMethod)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "lambda-generic-foldLeft".ignore,
+    """|
+       |trait Main {
+       |  def main() = {
+       |    val list = List(1, 2, 3)
+       |    list.foldLeft(0)(<<otherMethod>>)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|trait Main {
+       |  def main() = {
+       |    val list = List(1, 2, 3)
+       |    def otherMethod(arg0: Int, arg1: Int) = ???
+       |    list.foldLeft(0)(otherMethod)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "lambda-generic-with-arguments",
+    """|
+       |trait Main {
+       |  def main() = {
+       |    val list = List((1, 2))
+       |    list.map{case (x,y) => <<otherMethod>>(x,y)}
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|trait Main {
+       |  def main() = {
+       |    val list = List((1, 2))
+       |    def otherMethod(arg0: Int, arg1: Int) = ???
+       |    list.map{case (x,y) => otherMethod(x,y)}
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "lambda-generic-with-mixed-arguments",
+    """|
+       |trait Main {
+       |  def main() = {
+       |    val y = "hi"
+       |    val list = List(1)
+       |    list.map(x => <<otherMethod>>(x,y))
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|trait Main {
+       |  def main() = {
+       |    val y = "hi"
+       |    val list = List(1)
+       |    def otherMethod(arg0: Int, arg1: String) = ???
+       |    list.map(x => otherMethod(x,y))
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "class-method-with-no-body",
+    """|
+       |class X()
+       |trait Main {
+       |  def main() = {
+       |    val x = new X()
+       |    val a = true
+       |    val b = "test"
+       |    x.<<otherMethod>>(a, b, 1)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|class X() {
+       |  def otherMethod(arg0: Boolean, arg1: String, arg2: Int) = ???
+       |}
+       |trait Main {
+       |  def main() = {
+       |    val x = new X()
+       |    val a = true
+       |    val b = "test"
+       |    x.otherMethod(a, b, 1)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "class-method-with-empty-body",
+    """|
+       |class X() {}
+       |trait Main {
+       |  def main() = {
+       |    val x = new X()
+       |    val a = true
+       |    val b = "test"
+       |    x.<<otherMethod>>(a, b, 1)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|class X() {
+       |  def otherMethod(arg0: Boolean, arg1: String, arg2: Int) = ???
+       |}
+       |trait Main {
+       |  def main() = {
+       |    val x = new X()
+       |    val a = true
+       |    val b = "test"
+       |    x.otherMethod(a, b, 1)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "class-method-with-body",
+    """|
+       |class X() {
+       |  val x = 1
+       |}
+       |trait Main {
+       |  def main() = {
+       |    val x = new X()
+       |    val a = true
+       |    val b = "test"
+       |    x.<<otherMethod>>(a, b, 1)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|class X() {
+       |  def otherMethod(arg0: Boolean, arg1: String, arg2: Int) = ???
+       |
+       |  val x = 1
+       |}
+       |trait Main {
+       |  def main() = {
+       |    val x = new X()
+       |    val a = true
+       |    val b = "test"
+       |    x.otherMethod(a, b, 1)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "trait-method-with-body",
+    """|
+       |trait X {
+       |  val x = 1
+       |}
+       |trait Main {
+       |  def main() = {
+       |    val x: X = ???
+       |    val a = true
+       |    val b = "test"
+       |    x.<<otherMethod>>(a, b, 1)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|trait X {
+       |  def otherMethod(arg0: Boolean, arg1: String, arg2: Int) = ???
+       |
+       |  val x = 1
+       |}
+       |trait Main {
+       |  def main() = {
+       |    val x: X = ???
+       |    val a = true
+       |    val b = "test"
+       |    x.otherMethod(a, b, 1)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "object-method-with-body",
+    """|
+       |object X {
+       |  val x = 1
+       |}
+       |trait Main {
+       |  def main() = {
+       |    val a = true
+       |    val b = "test"
+       |    X.<<otherMethod>>(a, b, 1)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|object X {
+       |  def otherMethod(arg0: Boolean, arg1: String, arg2: Int) = ???
+       |
+       |  val x = 1
+       |}
+       |trait Main {
+       |  def main() = {
+       |    val a = true
+       |    val b = "test"
+       |    X.otherMethod(a, b, 1)
+       |  }
+       |}
+       |""".stripMargin
+  )
 
   def checkEdit(
       name: TestOptions,
@@ -259,7 +517,11 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
         CompilerOffsetParams(URI.create(filename), code, offset, cancelToken)
       )
       .get()
-    result.asScala.toList
+    result
+      .getChanges()
+      .asScala
+      .map(_._2.asScala)
+      .foldLeft(List.empty[l.TextEdit])(_ ++ _)
   }
 
 }

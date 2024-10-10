@@ -61,6 +61,7 @@ import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.{Position => LspPosition}
 import org.eclipse.lsp4j.{Range => LspRange}
@@ -921,15 +922,31 @@ class Compilers(
   def insertInferredMethod(
       params: TextDocumentPositionParams,
       token: CancelToken,
-  ): Future[ju.List[TextEdit]] = {
+  ): Future[WorkspaceEdit] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       pc.insertInferredMethod(CompilerOffsetParamsUtils.fromPos(pos, token))
         .asScala
-        .map { edits =>
-          adjust.adjustTextEdits(edits)
-        }
+        .map(workspaceEdit =>
+          new WorkspaceEdit(
+            workspaceEdit
+              .getChanges()
+              .asScala
+              .map {
+                case (uri, textEdits) => {
+                  (
+                    uri,
+                    textEdits.asScala.map { textEdit =>
+                      textEdit.setRange(adjust.adjustRange(textEdit.getRange()))
+                      textEdit
+                    }.asJava,
+                  )
+                }
+              }
+              .asJava
+          )
+        )
     }
-  }.getOrElse(Future.successful(Nil.asJava))
+  }.getOrElse(Future.successful(new WorkspaceEdit()))
 
   def implementAbstractMembers(
       params: TextDocumentPositionParams,
