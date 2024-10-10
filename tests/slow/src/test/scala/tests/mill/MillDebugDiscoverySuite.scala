@@ -26,6 +26,9 @@ class MillDebugDiscoverySuite
   private val fooPath = "a/test/src/Foo.scala"
   private val barPath = "a/test/src/Bar.scala"
 
+  // mill sometimes hangs and doesn't return main classes
+  override protected val retryTimes: Int = 2
+
   for (scala <- List(scalaVersion, scala3)) {
 
     test(s"testTarget-$scala") {

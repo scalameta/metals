@@ -14,6 +14,9 @@ class MillStepDapSuite
       MillBuildLayout,
     ) {
 
+  // mill sometimes hangs and doesn't return main classes
+  override protected val retryTimes: Int = 2
+
   // otherwise we get both Scala 2.12 and 2.13 dependencies, which is more tricky for the tests
   override def scalaVersion: String = BuildInfo.scala212
 
