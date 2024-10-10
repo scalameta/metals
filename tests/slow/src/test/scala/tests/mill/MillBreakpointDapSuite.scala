@@ -13,6 +13,9 @@ class MillBreakpointDapSuite
       MillBuildLayout,
     ) {
 
+  // mill sometimes hangs and doesn't return main classes
+  override protected val retryTimes: Int = 2
+
   override def serverConfig: MetalsServerConfig =
-    super.serverConfig.copy(debugServerStartTimeout = 360)
+    super.serverConfig.copy(debugServerStartTimeout = 120)
 }

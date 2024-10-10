@@ -26,6 +26,8 @@ abstract class BaseDapSuite(
   override def serverConfig: MetalsServerConfig =
     super.serverConfig.copy(loglevel = "debug")
 
+  protected val retryTimes = 0
+
   override def beforeEach(context: BeforeEach): Unit = {
     super.beforeEach(context)
     dapClient.touch()
@@ -102,7 +104,7 @@ abstract class BaseDapSuite(
   )(
       source: String
   )(implicit loc: Location): Unit = {
-    test(name) {
+    test(name, maxRetry = retryTimes) {
       cleanWorkspace()
       val debugLayout = DebugWorkspaceLayout(source, workspace)
       val workspaceLayout = buildToolLayout(debugLayout.toString, scalaVersion)
