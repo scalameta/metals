@@ -244,7 +244,7 @@ lazy val mtagsShared = project
     crossVersion := CrossVersion.full,
     Compile / packageSrc / publishArtifact := true,
     Compile / scalacOptions ++= {
-      if (scalaVersion.value == V.scala3)
+      if (scalaVersion.value == V.lastPublishedScala3)
         List("-Yexplicit-nulls", "-language:unsafeNulls")
       else Nil
     },
@@ -370,7 +370,7 @@ lazy val mtags3 = project
     Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala",
     Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala-3",
     moduleName := "mtags3",
-    scalaVersion := V.scala3,
+    scalaVersion := V.lastPublishedScala3,
     target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3",
     publish / skip := true,
     libraryDependencies += V.guava,

@@ -13,7 +13,6 @@ import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.doctor.DeprecatedRemovedSbtVersion
 import scala.meta.internal.metals.doctor.DeprecatedRemovedScalaVersion
 import scala.meta.internal.metals.doctor.DeprecatedSbtVersion
-import scala.meta.internal.metals.doctor.DeprecatedScalaVersion
 import scala.meta.internal.metals.doctor.FutureSbtVersion
 import scala.meta.internal.metals.doctor.FutureScalaVersion
 import scala.meta.internal.metals.doctor.MissingSourceRoot
@@ -44,13 +43,6 @@ class ProblemResolverSuite extends FunSuite {
     "unsupported-scala-version",
     scalaVersion = "2.12.7",
     UnsupportedScalaVersion("2.12.7").message,
-  )
-
-  checkRecommendation(
-    "deprecated-scala-version",
-    scalaVersion = "3.3.2",
-    DeprecatedScalaVersion("3.3.2").message,
-    scalacOpts = List("-Xsemanticdb"),
   )
 
   checkRecommendation(

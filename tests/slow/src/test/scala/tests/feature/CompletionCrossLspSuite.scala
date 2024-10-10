@@ -191,10 +191,8 @@ class CompletionCrossLspSuite
       _ = assertNoDiagnostics()
       _ <- assertCompletion(
         "MyC@@",
-        """|MyClass1(): MyClass1
-           |MyClass2(name: String): MyClass2
-           |MyClass3 - foo
-           |MyClass3(name: String): Nothing
+        """|MyClass3 - foo
+           |MyClass3(name: String): Nothing - foo
            |""".stripMargin,
         filename = Some("a/src/main/scala/Main.scala"),
       )

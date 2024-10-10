@@ -164,7 +164,7 @@ class ImportMissingSymbolCrossLspSuite
        |  val f = Future.successful(2)
        |}
        |""".stripMargin,
-    scalaVersion = "3.3.3",
+    scalaVersion = V.scala3,
     scalacOptions = List("-explain"),
   )
 
@@ -258,7 +258,7 @@ class ImportMissingSymbolCrossLspSuite
         |  }
         |}
         |""".stripMargin,
-    scalaVersion = V.scala3,
+    scalaVersion = "3.3.3",
   )
 
   check(
@@ -288,7 +288,7 @@ class ImportMissingSymbolCrossLspSuite
         |""".stripMargin,
     expectNoDiagnostics = false,
     filterAction = _.getTitle() == ImportMissingSymbol.title("A", "example.a"),
-    scalaVersion = V.scala3,
+    scalaVersion = "3.3.3",
   )
 
   check(
@@ -310,6 +310,6 @@ class ImportMissingSymbolCrossLspSuite
         |""".stripMargin,
     expectNoDiagnostics = false,
     filterAction = _.getTitle() == ImportMissingSymbol.title("A", "example.a"),
-    scalaVersion = V.scala3,
+    scalaVersion = "3.3.3",
   )
 }
