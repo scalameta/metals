@@ -31,6 +31,7 @@ import dotty.tools.dotc.reporting.StoreReporter
 import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.WorkspaceEdit
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -310,13 +311,13 @@ case class ScalaPresentationCompiler(
 
   override def insertInferredMethod(
       params: OffsetParams
-  ): CompletableFuture[ju.List[l.TextEdit]] = ???
-  // val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
-  // compilerAccess.withInterruptableCompiler(empty, params.token) { pc =>
-  //   new InferredTypeProvider(params, pc.compiler(), config)
-  //     .inferredTypeEdits()
-  //     .asJava
-  //
+  ): CompletableFuture[WorkspaceEdit] = {
+    val empty: WorkspaceEdit = new WorkspaceEdit()
+    compilerAccess.withInterruptableCompiler(Some(params))(empty, params.token) { pc =>
+      // TODO support Scala3 for infer method
+    empty
+    }
+  }
 
   override def inlineValue(
       params: OffsetParams

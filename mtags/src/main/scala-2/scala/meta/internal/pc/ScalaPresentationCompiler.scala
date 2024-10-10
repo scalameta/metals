@@ -54,6 +54,7 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.WorkspaceEdit
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -290,15 +291,15 @@ case class ScalaPresentationCompiler(
 
   override def insertInferredMethod(
       params: OffsetParams
-  ): CompletableFuture[ju.List[TextEdit]] = {
-    val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
+  ): CompletableFuture[WorkspaceEdit] = {
+    // an inferred method can be added to a file different from the currently open one
+    val empty: WorkspaceEdit = new WorkspaceEdit()
     compilerAccess.withInterruptableCompiler(Some(params))(
       empty,
       params.token
     ) { pc =>
       new InferredMethodProvider(pc.compiler(), params)
         .inferredMethodEdits()
-        .asJava
     }
   }
 
