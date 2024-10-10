@@ -17,17 +17,6 @@ class Worksheet3LspSuite extends tests.BaseWorksheetLspSuite(V.scala3) {
   )
 }
 
-class LatestWorksheet3LspSuite
-    extends tests.BaseWorksheetLspSuite(
-      V.supportedScala3Versions
-        .sortWith(SemVer.isCompatibleVersion)
-        .reverse
-        .head
-    ) {
-  override def versionSpecificCodeToValidate: String =
-    """given str: String = """""
-}
-
 class Worksheet3NextSuite
     extends tests.BaseWorksheetLspSuite(Worksheet3NextSuite.scala3Next) {
   override def versionSpecificCodeToValidate: String =

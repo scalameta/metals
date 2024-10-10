@@ -1,4 +1,4 @@
-package tests.`best-effort`
+package tests.bestEffort
 
 import scala.meta.internal.metals.MetalsServerConfig
 
@@ -11,7 +11,8 @@ class BestEffortCompilationSuite
   override def serverConfig: MetalsServerConfig =
     super.serverConfig.copy(enableBestEffort = true)
 
-  override val scalaVersionConfig = s"\"scalaVersion\": \"${scalaVersion}\""
+  override val scalaVersionConfig: String =
+    s"\"scalaVersion\": \"${scalaVersion}\""
   override val saveAfterChanges: Boolean = true
   override val scala3Diagnostics: Boolean = true
 

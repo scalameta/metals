@@ -51,7 +51,8 @@ object TestGroups {
       "tests.inlayHints.InlayHintsHoverSuite", "tests.Java8Suite",
       "tests.RequestRegistrySuite", "tests.inlayHints.InlayHintsExpectSuite",
       "tests.worksheets.WorksheetInfiniteLoopSuite", "tests.TimeoutSuite",
-      "tests.SingleFileSuite", "tests.SupportedScalaSuite"),
+      "tests.SingleFileSuite", "tests.SupportedScalaSuite",
+      "tests.bestEffort.BestEffortCompilationSuite"),
     Set("tests.AmmoniteSuite", "tests.debug.BreakpointDapSuite",
       "tests.OnTypeFormattingSuite", "tests.ReferenceLspSuite",
       "tests.SuperMethodLspSuite", "tests.SyntaxErrorLspSuite",
@@ -121,7 +122,7 @@ object TestGroups {
       "tests.decorations.SyntheticDecorationsExpectSuite",
       "tests.codeactions.ConvertSingleLineCommentLspSuite",
       "tests.ServerLivenessMonitorSuite", "tests.ResetWorkspaceLspSuite",
-      "tests.ToplevelWithInnerScala3Suite"),
+      "tests.ToplevelWithInnerScala3Suite", "tests.OutlineLspSuite"),
   )
 
 }

@@ -186,6 +186,6 @@ object V {
     ammonite212Version,
     scala213,
     ammonite213Version,
-    ammonite3Version,
+    lastPublishedScala3,
   ).toList
 }
