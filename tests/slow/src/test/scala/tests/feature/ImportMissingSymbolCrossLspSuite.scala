@@ -164,7 +164,7 @@ class ImportMissingSymbolCrossLspSuite
        |  val f = Future.successful(2)
        |}
        |""".stripMargin,
-    scalaVersion = "3.3.3",
+    scalaVersion = V.scala3,
     scalacOptions = List("-explain"),
   )
 

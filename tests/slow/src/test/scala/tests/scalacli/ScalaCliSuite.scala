@@ -11,13 +11,13 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.scalacli.ScalaCli
-import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.mtags.CoursierComplete
 
 import org.eclipse.{lsp4j => l}
 import tests.FileLayout
 
-class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
+// https://github.com/scalameta/metals/issues/6839
+class ScalaCliSuite extends BaseScalaCliSuite("3.3.3") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(
@@ -68,14 +68,14 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
 
       completion <- server.completion(
         "MyTests.scala",
-        "//> using lib \"com.lihao@@yi::utest",
+        "//> using dep \"com.lihao@@yi::utest",
       )
 
       _ = assertNoDiff(completion, "com.lihaoyi")
 
       completion <- server.completion(
         "MyTests.scala",
-        "//> using lib com.lihaoyi::pprin@@t",
+        "//> using dep com.lihaoyi::pprin@@t",
       )
 
       _ = assertNoDiff(
@@ -95,8 +95,8 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
         s"""/MyTests.sc
            |#!/usr/bin/env -S scala-cli shebang --java-opt -Xms256m --java-opt -XX:MaxRAMPercentage=80 
            |//> using scala "$scalaVersion"
-           |//> using lib "com.lihaoyi::utest::0.7.10"
-           |//> using lib com.lihaoyi::pprint::0.6.6
+           |//> using dep "com.lihaoyi::utest::0.7.10"
+           |//> using dep com.lihaoyi::pprint::0.6.6
            |
            |import foo.Foo
            |import utest._
@@ -164,14 +164,14 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
 
       completion <- server.completion(
         "MyTests.sc",
-        "//> using lib \"com.lihao@@yi::utest",
+        "//> using dep \"com.lihao@@yi::utest",
       )
 
       _ = assertNoDiff(completion, "com.lihaoyi")
 
       completion <- server.completion(
         "MyTests.sc",
-        "//> using lib com.lihaoyi::pprin@@t",
+        "//> using dep com.lihaoyi::pprin@@t",
       )
 
       _ = assertNoDiff(
@@ -199,8 +199,8 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
         "MyTests.sc",
         s"""|#!/usr/bin/env -S scala-cli shebang --java-opt -Xms256m --java-opt -XX:MaxRAMPercentage=80 
             |//> using scala "$scalaVersion"
-            |//> using lib "com.lihaoyi::utest::0.7.10"
-            |//> using lib com.lihaoyi::pprint::0.6.6
+            |//> using dep "com.lihaoyi::utest::0.7.10"
+            |//> using dep com.lihaoyi::pprint::0.6.6
             |
             |import foo.Foo
             |import utest._
@@ -225,8 +225,8 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
   private val simpleFileLayout =
     s"""|/MyTests.scala
         |//> using scala "$scalaVersion"
-        |//> using lib "com.lihaoyi::utest::0.7.10"
-        |//> using lib com.lihaoyi::pprint::0.6.6
+        |//> using dep "com.lihaoyi::utest::0.7.10"
+        |//> using dep com.lihaoyi::pprint::0.6.6
         |
         |import foo.Foo
         |import utest._
@@ -333,7 +333,7 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
       _ <- scalaCliInitialize(useBsp = false)(
         s"""|/inner/project.scala
             |//> using scala "$scalaVersion"
-            |//> using lib "com.lihaoyi::utest::0.8.1"
+            |//> using dep "com.lihaoyi::utest::0.8.1"
             |/inner/MyTests.scala
             |import utest._
             |
@@ -356,8 +356,8 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
       _ <- scalaCliInitialize(useBsp = false)(
         s"""/scripts/MyTests.scala
            |//> using scala "$scalaVersion"
-           |//> using lib "com.lihaoyi::utest::0.7.10"
-           |//> using lib com.lihaoyi::pprint::0.6.6
+           |//> using dep "com.lihaoyi::utest::0.7.10"
+           |//> using dep com.lihaoyi::pprint::0.6.6
            |
            |import foo.Foo
            |import utest._
@@ -434,9 +434,9 @@ class ScalaCliSuite extends BaseScalaCliSuite(V.scala3) {
     for {
       _ <- initialize(
         s"""|/project.scala
-            |//> using scala "${V.scala3}"
-            |//> using lib "com.lihaoyi::utest::0.8.1"
-            |//> using lib "com.lihaoyi::pprint::0.8.1"
+            |//> using scala "${scalaVersion}"
+            |//> using dep "com.lihaoyi::utest::0.8.1"
+            |//> using dep "com.lihaoyi::pprint::0.8.1"
             |
             |/test/MyTests.scala
             |

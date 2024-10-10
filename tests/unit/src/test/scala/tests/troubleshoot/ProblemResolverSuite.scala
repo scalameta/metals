@@ -13,7 +13,6 @@ import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.doctor.DeprecatedRemovedSbtVersion
 import scala.meta.internal.metals.doctor.DeprecatedRemovedScalaVersion
 import scala.meta.internal.metals.doctor.DeprecatedSbtVersion
-import scala.meta.internal.metals.doctor.DeprecatedScalaVersion
 import scala.meta.internal.metals.doctor.FutureSbtVersion
 import scala.meta.internal.metals.doctor.FutureScalaVersion
 import scala.meta.internal.metals.doctor.MissingSourceRoot
