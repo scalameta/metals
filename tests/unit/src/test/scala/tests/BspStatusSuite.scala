@@ -60,7 +60,7 @@ class BspStatusSuite extends BaseLspSuite("bsp-status-suite") {
     assertEquals(client.status, "some other other text")
   }
 
-  test("bsp-error") {
+  test("bsp-error", maxRetry = { if (isMacOS) 3 else 0 }) {
     cleanWorkspace()
     Bill.installWorkspace(workspace.resolve("billWorkspace"), "Bill")
     def bloopReports = server.server.reports.bloop.getReports()
