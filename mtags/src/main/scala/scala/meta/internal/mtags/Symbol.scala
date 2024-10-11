@@ -3,6 +3,7 @@ package scala.meta.internal.mtags
 import scala.annotation.tailrec
 import scala.util.control.NonFatal
 
+import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 
@@ -31,6 +32,20 @@ final class Symbol private (val value: String) {
   def isPackage: Boolean = desc.isPackage
   def isParameter: Boolean = desc.isParameter
   def isTypeParameter: Boolean = desc.isTypeParameter
+  def isConstructor: Boolean =
+    this match {
+      case GlobalSymbol(_, Descriptor.Method("<init>", _)) => true
+      case _ => false
+    }
+  def isApply: Boolean =
+    this match {
+      case GlobalSymbol(
+            GlobalSymbol(_, Descriptor.Term(_)),
+            Descriptor.Method("apply", _)
+          ) =>
+        true
+      case _ => false
+    }
   private lazy val desc: Descriptor = value.desc
 
   def owner: Symbol = Symbol(value.owner)

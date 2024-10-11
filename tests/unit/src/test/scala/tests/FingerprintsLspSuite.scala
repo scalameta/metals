@@ -76,6 +76,12 @@ class FingerprintsLspSuite extends BaseLspSuite("fingerprints") {
            |a/src/main/scala/a/Adresses.scala:2:7: a/Adresses#
            |class Adresses {
            |      ^^^^^^^^
+           |========================
+           |= a/Adresses#`<init>`().
+           |========================
+           |a/src/main/scala/a/Adresses.scala:2:7: a/Adresses#`<init>`().
+           |class Adresses {
+           |      ^^^^^^^^
            |====================
            |= a/Adresses#number.
            |====================
@@ -101,6 +107,12 @@ class FingerprintsLspSuite extends BaseLspSuite("fingerprints") {
            |= a/Names#
            |==========
            |a/src/main/scala/a/Names.scala:2:7: a/Names#
+           |class Names {
+           |      ^^^^^
+           |=====================
+           |= a/Names#`<init>`().
+           |=====================
+           |a/src/main/scala/a/Names.scala:2:7: a/Names#`<init>`().
            |class Names {
            |      ^^^^^
            |===============

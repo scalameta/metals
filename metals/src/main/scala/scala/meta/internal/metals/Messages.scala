@@ -1082,6 +1082,9 @@ object Messages {
     }
   }
 
+  final val PickSymbolForReferenceSearch =
+    "Choose symbol to search references for."
+
 }
 
 object FileOutOfScalaCliBspScope {

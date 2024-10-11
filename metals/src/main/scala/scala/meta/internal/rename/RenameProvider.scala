@@ -220,6 +220,7 @@ final class RenameProvider(
                             txtParams,
                             includeDeclaration = isJava,
                           ),
+                          isForRename = true,
                           findRealRange = AdjustRange(findRealRange(newName)),
                           includeSynthetic,
                         )
@@ -425,6 +426,7 @@ final class RenameProvider(
       referenceProvider
         .references(
           toReferenceParams(loc, includeDeclaration = false),
+          isForRename = true,
           findRealRange = AdjustRange(findRealRange(newName)),
         )
         .map(_.flatMap(_.locations :+ loc))
@@ -480,6 +482,7 @@ final class RenameProvider(
             referenceProvider
               .references(
                 locParams,
+                isForRename = true,
                 findRealRange = AdjustRange(findRealRange(newName)),
                 includeSynthetic,
               )
