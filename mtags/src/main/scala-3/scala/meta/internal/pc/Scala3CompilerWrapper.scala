@@ -13,7 +13,7 @@ class Scala3CompilerWrapper(driver: MetalsDriver)
 
   override def reporterAccess: ReporterAccess[StoreReporter] =
     new ReporterAccess[StoreReporter]:
-      def reporter = driver.currentCtx.reporter.asInstanceOf[StoreReporter]
+      def reporter: StoreReporter = driver.currentCtx.reporter.asInstanceOf[StoreReporter]
 
   override def askShutdown(): Unit = ()
 
