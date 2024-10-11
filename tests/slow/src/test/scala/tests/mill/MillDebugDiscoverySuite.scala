@@ -2,7 +2,6 @@ package tests.mill
 
 import java.util.concurrent.TimeUnit
 
-import scala.meta.internal.metals.BuildInfo.scala3
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -29,7 +28,8 @@ class MillDebugDiscoverySuite
   // mill sometimes hangs and doesn't return main classes
   override protected val retryTimes: Int = 2
 
-  for (scala <- List(scalaVersion, scala3)) {
+  // Needs LTS 3.3.5
+  for (scala <- List(scalaVersion, "3.3.3")) {
 
     test(s"testTarget-$scala") {
       cleanWorkspace()
