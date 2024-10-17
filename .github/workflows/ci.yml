@@ -26,6 +26,7 @@ jobs:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
           cache: 'sbt'
+      - uses: sbt/setup-sbt@v1
       - name: Run unit tests
         run: |
           bin/test.sh unit/test
@@ -138,6 +139,7 @@ jobs:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
           cache: 'sbt'
+      - uses: sbt/setup-sbt@v1
       - name: ${{ matrix.command }}
         run: ${{ matrix.command }}
         env:
