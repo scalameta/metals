@@ -2,9 +2,11 @@ package scala.meta.internal.metals
 
 import java.util
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.util.Failure
@@ -74,6 +76,8 @@ class ProjectMetalsLspService(
       maxScalaCliServers,
     ) {
 
+  private val SemanticdbExecutionContext =
+    ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
   import serverInputs._
 
   protected val buildTools: BuildTools = new BuildTools(
@@ -415,7 +419,7 @@ class ProjectMetalsLspService(
       onChange(List(path)).asJava
     } else if (path.isSemanticdb) {
       val semanticdbPath = SemanticdbPath(path)
-      Future {
+      def changeSemanticdb = {
         event.eventType match {
           case EventType.Delete =>
             semanticDBIndexer.onDelete(semanticdbPath)
@@ -424,7 +428,8 @@ class ProjectMetalsLspService(
           case EventType.Overflow =>
             semanticDBIndexer.onOverflow(semanticdbPath)
         }
-      }.asJava
+      }
+      Future(changeSemanticdb)(SemanticdbExecutionContext).asJava
     } else {
       CompletableFuture.completedFuture(())
     }
