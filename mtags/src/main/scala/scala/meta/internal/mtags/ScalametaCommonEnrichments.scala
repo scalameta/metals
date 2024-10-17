@@ -177,7 +177,7 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     if (filename.endsWith(".java")) Language.JAVA
     else if (
       filename.endsWith(".scala") || filename.endsWith(".sc")
-      || filename.endsWith(".sbt")
+      || filename.endsWith(".sbt") || filename.endsWith(".mill")
     )
       Language.SCALA
     else Language.UNKNOWN_LANGUAGE
@@ -411,7 +411,9 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     def isSourcesJar: Boolean = {
       filename.endsWith("-sources.jar") || filename == "src.zip"
     }
-    def isMill: Boolean = isScalaScript && filename == "build.sc"
+    def isMill: Boolean =
+      filename.endsWith(".mill") ||
+        filename.endsWith(".mill.scala") || filename == "build.sc"
     def isAmmoniteScript: Boolean =
       isScalaScript && !isWorksheet && !isMill
     def isWorksheet: Boolean = {
