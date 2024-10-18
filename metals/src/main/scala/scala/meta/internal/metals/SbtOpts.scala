@@ -52,6 +52,8 @@ object SbtOpts {
         Some(noGlobalOpts)
       else if (sbtToJdkOpts.exists { case (k, _) => opt.startsWith(k) })
         processOptWithArg(opt)
+      else if (opt.contains(" "))
+        process(opt.split("\\s+").toList)
       else if (opt.startsWith("-J"))
         Some(opt.substring(2))
       else if (opt.startsWith("-D"))
