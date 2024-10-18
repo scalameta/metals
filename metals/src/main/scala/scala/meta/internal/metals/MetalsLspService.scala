@@ -430,6 +430,7 @@ abstract class MetalsLspService(
         compilations,
         scalaVersionSelector,
         clientConfig.initialConfig,
+        clientConfig.isInlayHintsEnabled(),
       )
     )
   }
@@ -1014,7 +1015,11 @@ abstract class MetalsLspService(
           if (userConfig.areSyntheticsEnabled())
             compilers.inlayHints(params, token)
           else Future.successful(List.empty[l.InlayHint].asJava)
-      } yield hints
+        worksheet <- worksheetProvider.inlayHints(
+          params.getTextDocument().getUri().toAbsolutePath,
+          token,
+        )
+      } yield (hints.asScala ++ worksheet).asJava
     }
   }
 
