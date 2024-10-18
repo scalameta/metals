@@ -25,6 +25,7 @@ class SbtOptsSuite extends BaseSuite {
       |-sbt-dir /some/where/else/sbt
       |-ivy /some/where/ivy
       |-jvm-debug 4711
+      |-J-Xmx5G -J-XX:+UseG1GC
       |
     """.stripMargin,
     """
@@ -32,6 +33,8 @@ class SbtOptsSuite extends BaseSuite {
       |-Dsbt.global.base=/some/where/else/sbt
       |-Dsbt.ivy.home=/some/where/ivy
       |-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=4711
+      |-Xmx5G
+      |-XX:+UseG1GC
     """.stripMargin,
   )
 
