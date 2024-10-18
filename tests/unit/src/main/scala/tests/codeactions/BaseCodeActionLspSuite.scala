@@ -126,6 +126,24 @@ abstract class BaseCodeActionLspSuite(
       if (renamePath.nonEmpty) input.replace("<<", "").replace(">>", "")
       else expectedCode
 
+    def assertCodeAction(retry: Int): Future[List[CodeAction]] = {
+      server
+        .assertCodeAction(
+          path,
+          changeFile(input),
+          expectedActions,
+          kind,
+          filterAction = filterAction,
+        )
+        .recoverWith {
+          case _: Throwable if retry > 0 =>
+            Thread.sleep(2000)
+            assertCodeAction(retry - 1)
+          case _: Throwable if expectError =>
+            Future.successful(Nil)
+        }
+    }
+
     test(name) {
       assume(assumeFunc())
       cleanWorkspace()
@@ -142,18 +160,7 @@ abstract class BaseCodeActionLspSuite(
           path,
           changeFile(input).replace("<<", "").replace(">>", ""),
         )
-        codeActions <-
-          server
-            .assertCodeAction(
-              path,
-              changeFile(input),
-              expectedActions,
-              kind,
-              filterAction = filterAction,
-            )
-            .recover {
-              case _: Throwable if expectError => Nil
-            }
+        codeActions <- assertCodeAction(retryAction)
         _ <- client.applyCodeAction(selectedActionIndex, codeActions, server)
         _ <- server.didSave(newPath) { _ =>
           if (newPath != path)
