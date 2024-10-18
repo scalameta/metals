@@ -18,6 +18,53 @@ class CompletionMillIvySuite extends BaseCompletionSuite {
   )
 
   check(
+    "source",
+    """|val dependency = ivy"io.cir@@"
+       |""".stripMargin,
+    """|io.circe
+       |io.circul
+       |""".stripMargin,
+    filename = "build.sc"
+  )
+
+  check(
+    "source",
+    """|package build
+       |object `package` extends RootModule {
+       |  val dependency = ivy"io.cir@@"
+       |}
+       |""".stripMargin,
+    """|io.circe
+       |io.circul
+       |""".stripMargin,
+    filename = "build.mill.scala"
+  )
+
+  check(
+    "source",
+    """|package build
+       |object `package` extends RootModule {
+       |  val dependency = ivy"io.cir@@"
+       |}
+       |""".stripMargin,
+    """|io.circe
+       |io.circul
+       |""".stripMargin,
+    filename = "build.mill"
+  )
+
+  check(
+    "source",
+    """|package build
+       |val dependency = ivy"io.cir@@"
+       |""".stripMargin,
+    """|io.circe
+       |io.circul
+       |""".stripMargin,
+    filename = "build.mill"
+  )
+
+  check(
     "java-completions",
     """|val dependency = ivy"io.circe:circe-core_na@@"
        |""".stripMargin,
