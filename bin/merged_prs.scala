@@ -1,6 +1,7 @@
+//> using jvm 17
 //> using scala "3.3.0"
-//> using dep "org.kohsuke:github-api:1.318"
-//> using dep "com.lihaoyi::os-lib:0.9.2"
+//> using dep "org.kohsuke:github-api:1.326"
+//> using dep "com.lihaoyi::os-lib:0.11.3"
 //> using options "-Wunused:all", "-deprecation"
 
 import scala.collection.mutable.ListBuffer
@@ -13,7 +14,7 @@ import org.kohsuke.github.GHIssueState
 import java.text.SimpleDateFormat
 import java.util.Date
 
-val codename = "Thallium"
+val codename = "Palladium"
 
 @main
 def main(
