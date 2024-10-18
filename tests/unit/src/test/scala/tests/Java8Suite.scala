@@ -6,7 +6,11 @@ import com.google.gson.JsonPrimitive
 import coursierapi.JvmManager
 
 class Java8Suite extends BaseCompletionLspSuite("completion-java-8") {
-  val pathToJava8: String = JvmManager.create().get("8").toString()
+
+  // We don't have access to JDK 8 on latest macOS M1
+  override def munitIgnore: Boolean = isMacOS
+
+  lazy val pathToJava8: String = JvmManager.create().get("8").toString()
   override def userConfig: UserConfiguration =
     UserConfiguration(javaHome = Some(pathToJava8))
 

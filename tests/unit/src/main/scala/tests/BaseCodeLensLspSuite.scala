@@ -82,7 +82,7 @@ abstract class BaseCodeLensLspSuite(
 
   protected def testRunShellCommand(
       name: String,
-      javaHome: Option[String] = None,
+      javaHome: => Option[String] = None,
   ): Unit =
     test(name) {
       def javaHomeString(javaHome: String) = {

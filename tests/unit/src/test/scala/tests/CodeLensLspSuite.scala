@@ -329,10 +329,11 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
         |""".stripMargin
   )
 
-  testRunShellCommand(
-    "run-shell-command-old-java",
-    Some(JvmManager.create().get("8").toString()),
-  )
+  if (!isMacOS)
+    testRunShellCommand(
+      "run-shell-command-old-java",
+      Some(JvmManager.create().get("8").toString()),
+    )
   testRunShellCommand("run-shell-command")
   testRunShellCommand("run shell command")
 
