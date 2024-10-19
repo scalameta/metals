@@ -427,11 +427,19 @@ abstract class BaseWorksheetLspSuite(
       // completions work despite error
       _ = assertNoDiff(
         max,
-        s"""|max(that: Double): Double
-            |max(that: Float): Float
-            |max(that: Int): Int
-            |max(that: Long): Long
-            |""".stripMargin,
+        getExpected(
+          s"""|max(that: Double): Double
+              |max(that: Float): Float
+              |max(that: Int): Int
+              |max(that: Long): Long
+              |""".stripMargin,
+          Map(
+            "3.6" ->
+              s"""|max(that: Int): Int
+                  |""".stripMargin
+          ),
+          scalaVersion,
+        ),
       )
     } yield ()
   }
