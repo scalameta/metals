@@ -41,7 +41,8 @@ case class SbtBuildTool(
   def embeddedSbtLauncher(
       outDir: Path
   ): AbsolutePath = {
-    val out = BuildTool.copyFromResource(outDir, "sbt-launch.jar")
+    val scriptName = if (scala.util.Properties.isWin) "sbt.bat" else "sbt"
+    val out = BuildTool.copyExecutableFromResource(outDir, scriptName)
     AbsolutePath(out)
   }
 
@@ -127,18 +128,8 @@ case class SbtBuildTool(
           "-Dsbt.log.noformat=true",
           "-Dfile.encoding=UTF-8",
         )
-        val jarArgs = List(
-          "-jar",
-          embeddedSbtLauncher(sbtLauncherOutDir).toString(),
-        )
-        val sbtVersion =
-          if (workspaceVersion.isEmpty) List(s"-Dsbt.version=$version") else Nil
         List(
-          javaArgs,
-          sbtVersion,
-          SbtOpts.fromWorkspaceOrEnv(workspace),
-          JvmOpts.fromWorkspaceOrEnv(workspace).getOrElse(Nil),
-          jarArgs,
+          List(embeddedSbtLauncher(sbtLauncherOutDir).toString()),
           sbtArgs,
         ).flatten
     }

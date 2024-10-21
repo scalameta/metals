@@ -4,6 +4,8 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.PosixFilePermission
+import scala.meta.internal.metals.MetalsEnrichments._
 
 import scala.meta.internal.metals.Directories
 import scala.meta.io.AbsolutePath
@@ -75,6 +77,25 @@ object BuildTool {
     val outFile = tempDir.resolve(destination.getOrElse(filePath))
     Files.createDirectories(outFile.getParent)
     Files.copy(embeddedFile, outFile, StandardCopyOption.REPLACE_EXISTING)
+    outFile
+  }
+
+  def copyExecutableFromResource(
+      tempDir: Path,
+      filePath: String,
+      destination: Option[String] = None,
+  ): Path = {
+    val embeddedFile =
+      this.getClass.getResourceAsStream(s"/$filePath")
+    val outFile = tempDir.resolve(destination.getOrElse(filePath))
+    Files.createDirectories(outFile.getParent)
+    Files.copy(embeddedFile, outFile, StandardCopyOption.REPLACE_EXISTING)
+    val perms = Set(
+      PosixFilePermission.OWNER_EXECUTE,
+      PosixFilePermission.OWNER_READ,
+      PosixFilePermission.OWNER_WRITE,
+    ).asJava
+    Files.setPosixFilePermissions(outFile, perms)
     outFile
   }
 
