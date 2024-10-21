@@ -421,7 +421,7 @@ lazy val metals = project
       "org.flywaydb" % "flyway-core" % "10.20.0",
       "com.h2database" % "h2" % "2.3.232",
       // for BSP
-      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.2",
+      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
       "ch.epfl.scala" %% "bloop-rifle" % V.bloop,
       // for LSP
