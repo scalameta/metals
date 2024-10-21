@@ -20,7 +20,12 @@ object Trace {
   def globalDirectory(implicit ec: ExecutionContext): Option[AbsolutePath] =
     Try {
       val projectDirectories =
-        MetalsProjectDirectories.from("org", "scalameta", "metals")
+        MetalsProjectDirectories.from(
+          "org",
+          "scalameta",
+          "metals",
+          silent = true,
+        ) // we dont want to log anything before redirecting
       // NOTE(olafur): strictly speaking we should use `dataDir` instead of `cacheDir` but on
       // macOS this maps to `$HOME/Library/Application Support` which has an annoying space in
       // the path making it difficult to tail/cat from the terminal and cmd+click from VS Code.

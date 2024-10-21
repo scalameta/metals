@@ -12,31 +12,36 @@ import dev.dirs.ProjectDirectories
 
 object MetalsProjectDirectories {
 
-  def from(qualifier: String, organization: String, application: String)(
-      implicit ec: ExecutionContext
+  def from(
+      qualifier: String,
+      organization: String,
+      application: String,
+      silent: Boolean,
+  )(implicit
+      ec: ExecutionContext
   ): Option[ProjectDirectories] =
-    wrap { () =>
+    wrap(silent) { () =>
       ProjectDirectories.from(qualifier, organization, application)
     }
 
-  def fromPath(path: String)(implicit
+  def fromPath(path: String, silent: Boolean)(implicit
       ec: ExecutionContext
   ): Option[ProjectDirectories] =
-    wrap { () =>
+    wrap(silent) { () =>
       ProjectDirectories.fromPath(path)
     }
 
-  private def wrap(
+  private def wrap(silent: Boolean)(
       f: () => ProjectDirectories
   )(implicit ec: ExecutionContext): Option[ProjectDirectories] = {
     Try {
       val dirs = Future { f() }
-      Await.result(dirs, 10.seconds)
-
+      Await.result(dirs, 5.seconds)
     } match {
-      case Failure(exception) =>
+      case Failure(exception) if !silent =>
         scribe.error("Failed to get project directories", exception)
         None
+      case Failure(exception) => None
       case Success(value) => Some(value)
     }
   }
