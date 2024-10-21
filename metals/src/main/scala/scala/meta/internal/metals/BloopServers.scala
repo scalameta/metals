@@ -436,7 +436,12 @@ object BloopServers {
 
   def createBloopWorkingDir(implicit ec: ExecutionContext): AbsolutePath = {
 
-    val baseDir = MetalsProjectDirectories.from(null, null, "ScalaCli") match {
+    val baseDir = MetalsProjectDirectories.from(
+      null,
+      null,
+      "ScalaCli",
+      silent = false,
+    ) match {
       case None =>
         val userHome = Paths.get(System.getProperty("user.home"))
 
