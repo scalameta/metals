@@ -72,6 +72,7 @@ final class InteractiveSemanticdbs(
         unsavedContents.isDefined ||
           source.isInReadonlyDirectory(workspace) || // dependencies
           source.isSbt || // sbt files
+          source.isMill || // mill files
           source.isWorksheet || // worksheets
           doesNotBelongToBuildTarget || // standalone files
           scalaCliServers.loadedExactly(source) || // scala-cli single files
@@ -81,7 +82,7 @@ final class InteractiveSemanticdbs(
       ) || source.isJarFileSystem // dependencies
     }
 
-    // anything aside from `*.scala`, `*.sbt`, `*.sc`, `*.java` file
+    // anything aside from `*.scala`, `*.sbt`, `*.mill`, `*.sc`, `*.java` file
     def isExcludedFile = !source.isScalaFilename && !source.isJavaFilename
 
     if (isExcludedFile || !shouldTryCalculateInteractiveSemanticdb) {
