@@ -206,7 +206,7 @@ object BspServers {
   def globalInstallDirectories(implicit
       ec: ExecutionContext
   ): List[AbsolutePath] = {
-    val dirs = MetalsProjectDirectories.fromPath("bsp")
+    val dirs = MetalsProjectDirectories.fromPath("bsp", silent = false)
     dirs match {
       case Some(dirs) =>
         List(dirs.dataLocalDir, dirs.dataDir).distinct
