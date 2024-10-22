@@ -174,7 +174,7 @@ final class Trees(
       val skipFistShebang =
         if (text.startsWith("#!")) text.replaceFirst("#!", "//") else text
       val input = Input.VirtualFile(path.toURI.toString(), skipFistShebang)
-      if (path.isAmmoniteScript) {
+      if (path.isAmmoniteScript || path.isMill) {
         val ammoniteInput = Input.Ammonite(input)
         ammoniteInput.safeParse[MultiSource](dialect)
       } else {
