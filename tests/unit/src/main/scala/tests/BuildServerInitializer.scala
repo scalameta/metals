@@ -157,7 +157,6 @@ object SbtServerInitializer extends BuildServerInitializer {
         sbtLaunchJar.toString,
         "xsbt.boot.Boot",
         "-bsp",
-        s"--sbt-launch-jar=$sbtLaunchJar",
       )
       val connectionDetails = new BspConnectionDetails(
         "sbt",
