@@ -423,9 +423,9 @@ class SbtServerSuite
     cleanWorkspace()
     val expected =
       s"""|<<lazy>>/*modifier*/ <<val>>/*keyword*/ <<root>>/*variable,definition,readonly*/ = (<<project>>/*class*/ <<in>>/*method*/ <<file>>/*method*/(<<".">>/*string*/))
-          |  .<<configs>>/*method*/(<<IntegrationTest>>/*variable,readonly*/)
+          |  .<<configs>>/*method*/(<<IntegrationTest>>/*variable,readonly,deprecated*/)
           |  .<<settings>>/*method*/(
-          |    <<Defaults>>/*class*/.<<itSettings>>/*variable,readonly*/,
+          |    <<Defaults>>/*class*/.<<itSettings>>/*variable,readonly,deprecated*/,
           |    <<inThisBuild>>/*method*/(
           |      <<List>>/*class*/(
           |        <<organization>>/*variable,readonly*/ <<:=>>/*method*/ <<"com.example">>/*string*/,
