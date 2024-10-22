@@ -64,10 +64,9 @@ object ZipReportsProvider {
       folders: List[FolderReportsZippper],
       additionalToZip: List[FileToZip],
   ): AbsolutePath = {
-    val path = AbsolutePath(
-      folders.head.reportContext.reportsDir
-        .resolve(StdReportContext.ZIP_FILE_NAME)
-    )
+    val reportsDir = folders.head.reportContext.reportsDir
+    Files.createDirectories(reportsDir)
+    val path = AbsolutePath(reportsDir.resolve(StdReportContext.ZIP_FILE_NAME))
     val zipOut = new ZipOutputStream(Files.newOutputStream(path.toNIO))
 
     for {
