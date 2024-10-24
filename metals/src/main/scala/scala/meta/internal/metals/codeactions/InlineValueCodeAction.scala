@@ -32,10 +32,6 @@ class InlineValueCodeAction(
 
   override def kind: String = l.CodeActionKind.RefactorInline
 
-  override val maybeCodeActionId: Option[String] = Some(
-    "InlineValue"
-  )
-
   override def contribute(params: l.CodeActionParams, token: CancelToken)(
       implicit ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {

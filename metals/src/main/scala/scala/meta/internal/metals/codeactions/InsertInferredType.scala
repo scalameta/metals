@@ -33,10 +33,6 @@ class InsertInferredType(
   import InsertInferredType._
   override def kind: String = l.CodeActionKind.QuickFix
 
-  override val maybeCodeActionId: Option[String] = Some(
-    "InsertInferredType"
-  )
-
   override def handleCommand(
       textDocumentParams: l.TextDocumentPositionParams,
       token: CancelToken,

@@ -32,10 +32,6 @@ class ExtractMethodCodeAction(
   )
   override def kind: String = l.CodeActionKind.RefactorExtract
 
-  override val maybeCodeActionId: Option[String] = Some(
-    "ExtractMethod"
-  )
-
   override def handleCommand(
       data: ServerCommands.ExtractMethodParams,
       token: CancelToken,

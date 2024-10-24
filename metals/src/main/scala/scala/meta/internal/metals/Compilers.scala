@@ -31,6 +31,7 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.CancelToken
+import scala.meta.pc.CodeActionId
 import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
@@ -702,13 +703,26 @@ class Compilers(
       token: CancelToken,
   ): Future[ju.List[TextEdit]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.insertInferredType(
+      val offset =
         CompilerOffsetParamsUtils.fromPos(
           pos,
           token,
           outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
         )
-      ).asScala
+      val result =
+        if (
+          pc.supportedCodeActions()
+            .contains(CodeActionId.InsertInferredType)
+        )
+          pc.codeAction(
+            offset,
+            CodeActionId.InsertInferredType,
+            ju.Optional.empty(),
+          )
+        else
+          pc.insertInferredType(offset)
+
+      result.asScala
         .map { edits =>
           adjust.adjustTextEdits(edits)
         }
@@ -720,14 +734,28 @@ class Compilers(
       token: CancelToken,
   ): Future[ju.List[TextEdit]] =
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.inlineValue(
-        CompilerOffsetParamsUtils.fromPos(
-          pos,
-          token,
-          outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
+      val offsetParams = CompilerOffsetParamsUtils.fromPos(
+        pos,
+        token,
+        outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
+      )
+      val result =
+        if (
+          pc.supportedCodeActions()
+            .contains(CodeActionId.InlineValue)
         )
-      ).asScala
-        .map(adjust.adjustTextEdits)
+          pc.codeAction(
+            offsetParams,
+            CodeActionId.InlineValue,
+            ju.Optional.empty(),
+          )
+        else
+          pc.inlineValue(offsetParams)
+
+      result.asScala
+        .map { edits =>
+          adjust.adjustTextEdits(edits)
+        }
     }.getOrElse(Future.successful(Nil.asJava))
 
   def documentHighlight(
@@ -828,14 +856,30 @@ class Compilers(
   ): Future[ju.List[TextEdit]] = {
     withPCAndAdjustLsp(doc.getUri(), range, extractionPos) {
       (pc, metaRange, metaExtractionPos, adjust) =>
-        pc.extractMethod(
-          CompilerRangeParamsUtils.fromPos(
-            metaRange,
-            token,
-            outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
-          ),
-          CompilerOffsetParamsUtils.fromPos(metaExtractionPos, token),
-        ).asScala
+        val rangeParams = CompilerRangeParamsUtils.fromPos(
+          metaRange,
+          token,
+          outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
+        )
+        val extractionOffsetParams =
+          CompilerOffsetParamsUtils.fromPos(metaExtractionPos, token)
+        val result =
+          if (
+            pc.supportedCodeActions()
+              .contains(CodeActionId.ImplementAbstractMembers)
+          )
+            pc.codeAction(
+              rangeParams,
+              CodeActionId.ExtractMethod,
+              ju.Optional.of(extractionOffsetParams),
+            )
+          else
+            pc.extractMethod(
+              rangeParams,
+              extractionOffsetParams,
+            )
+
+        result.asScala
           .map { edits =>
             adjust.adjustTextEdits(edits)
           }
@@ -848,14 +892,26 @@ class Compilers(
       token: CancelToken,
   ): Future[ju.List[TextEdit]] = {
     withPCAndAdjustLsp(position) { (pc, pos, adjust) =>
-      pc.convertToNamedArguments(
+      val offset =
         CompilerOffsetParamsUtils.fromPos(
           pos,
           token,
           outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
-        ),
-        argIndices,
-      ).asScala
+        )
+      val result =
+        if (
+          pc.supportedCodeActions()
+            .contains(CodeActionId.ConvertToNamedArguments)
+        )
+          pc.codeAction(
+            offset,
+            CodeActionId.ConvertToNamedArguments,
+            ju.Optional.of(argIndices),
+          )
+        else
+          pc.convertToNamedArguments(offset, argIndices)
+
+      result.asScala
         .map { edits =>
           adjust.adjustTextEdits(edits)
         }
@@ -867,13 +923,26 @@ class Compilers(
       token: CancelToken,
   ): Future[ju.List[TextEdit]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.implementAbstractMembers(
-        CompilerOffsetParamsUtils.fromPos(
-          pos,
-          token,
-          outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
+      val offsetParams = CompilerOffsetParamsUtils.fromPos(
+        pos,
+        token,
+        outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
+      )
+
+      val result =
+        if (
+          pc.supportedCodeActions()
+            .contains(CodeActionId.ImplementAbstractMembers)
         )
-      ).asScala
+          pc.codeAction(
+            offsetParams,
+            CodeActionId.ImplementAbstractMembers,
+            None.asJava,
+          )
+        else
+          pc.implementAbstractMembers(offsetParams)
+
+      result.asScala
         .map { edits =>
           adjust.adjustTextEdits(edits)
         }
@@ -884,7 +953,7 @@ class Compilers(
       params: TextDocumentPositionParams,
       token: CancelToken,
       codeActionId: String,
-      codeActionPayload: Object,
+      codeActionPayload: Option[Object],
   ): Future[ju.List[TextEdit]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       pc.codeAction(
@@ -894,7 +963,7 @@ class Compilers(
           outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
         ),
         codeActionId,
-        codeActionPayload,
+        codeActionPayload.asJava,
       ).asScala
         .map { edits =>
           adjust.adjustTextEdits(edits)
