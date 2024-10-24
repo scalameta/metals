@@ -28,10 +28,6 @@ class ConvertToNamedArguments(
   import ConvertToNamedArguments._
   override val kind: String = l.CodeActionKind.RefactorRewrite
 
-  override val maybeCodeActionId: Option[String] = Some(
-    "ConvertToNamedArguments"
-  )
-
   override type CommandData = ServerCommands.ConvertToNamedArgsRequest
 
   override def command: Option[ActionCommand] = Some(
