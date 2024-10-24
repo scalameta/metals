@@ -128,6 +128,11 @@ case class JavaPresentationCompiler(
   ): CompletableFuture[util.List[TextEdit]] =
     CompletableFuture.completedFuture(Nil.asJava)
 
+  override def insertInferredMethod(
+      params: OffsetParams
+  ): CompletableFuture[util.List[TextEdit]] =
+    CompletableFuture.completedFuture(Nil.asJava)
+
   override def extractMethod(
       range: RangeParams,
       extractionPos: OffsetParams
