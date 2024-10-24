@@ -114,8 +114,20 @@ public abstract class PresentationCompiler {
 
 	/**
 	 * Execute the given code action
+	 * 
+	 * @deprecated Please use the code action with optional data.
 	 */
-	public CompletableFuture<List<TextEdit>> codeAction(OffsetParams params, String codeActionId, Object codeActionPayload) {
+	@Deprecated(since = "1.4.1")
+	public CompletableFuture<List<TextEdit>> codeAction(OffsetParams params, String codeActionId,
+			Object codeActionPayload) {
+		return codeAction(params, codeActionId, Optional.of(codeActionPayload));
+	}
+
+	/**
+	 * Execute the given code action
+	 */
+	public <T> CompletableFuture<List<TextEdit>> codeAction(OffsetParams params, String codeActionId,
+			Optional<T> codeActionPayload) {
 		return CompletableFuture.completedFuture(Collections.emptyList());
 	}
 
@@ -123,14 +135,7 @@ public abstract class PresentationCompiler {
 	 * Returns the list of code actions supported by the current presentation compiler.
 	 */
 	public List<String> supportedCodeActions() {
-		return Arrays.asList(
-			"ConvertToNamedArguments",
-			"ExtractMethod",
-			"ImplementAbstractMembers",
-			"ImportMissingSymbol",
-			"InlineValue",
-			"InsertInferredType"
-		);
+		return Arrays.asList();
 	}
 
 	/**
@@ -294,7 +299,6 @@ public abstract class PresentationCompiler {
 	 * Provide workspace root for features like ammonite script $file completions.
 	 */
 	public abstract PresentationCompiler withWorkspace(Path workspace);
-
 
 	/**
 	 * Provide CompletionItemPriority for additional sorting completion items.

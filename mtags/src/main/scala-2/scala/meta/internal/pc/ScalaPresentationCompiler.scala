@@ -28,6 +28,7 @@ import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.AutoImportsResult
+import scala.meta.pc.CodeActionId
 import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.DisplayableException
@@ -113,6 +114,14 @@ case class ScalaPresentationCompiler(
       priority: CompletionItemPriority
   ): PresentationCompiler =
     copy(completionItemPriority = priority)
+
+  override def supportedCodeActions(): util.List[String] = List(
+    CodeActionId.ConvertToNamedArguments,
+    CodeActionId.ImplementAbstractMembers,
+    CodeActionId.ExtractMethod,
+    CodeActionId.InlineValue,
+    CodeActionId.InsertInferredType
+  ).asJava
 
   def this() = this(buildTargetIdentifier = "")
 
@@ -216,6 +225,42 @@ case class ScalaPresentationCompiler(
     }
   }
 
+  override def codeAction[T](
+      params: OffsetParams,
+      codeActionId: String,
+      codeActionPayload: Optional[T]
+  ): CompletableFuture[util.List[TextEdit]] = {
+    (codeActionId, codeActionPayload.asScala) match {
+      case (
+            CodeActionId.ConvertToNamedArguments,
+            Some(argIndices: ju.List[_])
+          ) =>
+        val payload = argIndices.asScala.collect { case i: Integer =>
+          i.toInt
+        }.toSet
+        convertToNamedArguments(params, payload)
+      case (CodeActionId.ImplementAbstractMembers, _) =>
+        implementAbstractMembers(params)
+      case (CodeActionId.InsertInferredType, _) =>
+        insertInferredType(params)
+      case (CodeActionId.InlineValue, _) =>
+        inlineValue(params)
+      case (CodeActionId.ExtractMethod, Some(extractionPos: OffsetParams)) =>
+        params match {
+          case range: RangeParams =>
+            extractMethod(range, extractionPos)
+          case _ =>
+            CompletableFuture.failedFuture(
+              new IllegalArgumentException(s"Expected range parameters")
+            )
+        }
+      case (id, _) =>
+        CompletableFuture.failedFuture(
+          new IllegalArgumentException(s"Unsupported action id $id")
+        )
+    }
+  }
+
   override def implementAbstractMembers(
       params: OffsetParams
   ): CompletableFuture[ju.List[TextEdit]] = {
@@ -279,13 +324,23 @@ case class ScalaPresentationCompiler(
       params: OffsetParams,
       argIndices: ju.List[Integer]
   ): CompletableFuture[ju.List[TextEdit]] = {
+    convertToNamedArguments(
+      params,
+      argIndices.asScala.map(_.toInt).toSet
+    )
+  }
+
+  def convertToNamedArguments(
+      params: OffsetParams,
+      argIndices: Set[Int]
+  ): CompletableFuture[ju.List[TextEdit]] = {
     val empty: Either[String, List[TextEdit]] = Right(List())
     (compilerAccess
       .withInterruptableCompiler(Some(params))(empty, params.token) { pc =>
         new ConvertToNamedArgumentsProvider(
           pc.compiler(params),
           params,
-          argIndices.asScala.map(_.toInt).toSet
+          argIndices
         ).convertToNamedArguments
       })
       .thenApply {
