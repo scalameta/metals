@@ -66,6 +66,7 @@ class BaseScalaCLIActionSuite(name: String)
       changeFile: String => String = identity,
       expectError: Boolean = false,
       filterAction: CodeAction => Boolean = _ => true,
+      retryAction: Int = 0,
   )(implicit loc: Location): Unit = {
 
     val path = toPath(fileName)
@@ -95,7 +96,8 @@ class BaseScalaCLIActionSuite(name: String)
       changeFile,
       expectError,
       filterAction,
-      overrideLayout = layout,
+      layout,
+      retryAction,
     )
   }
 }

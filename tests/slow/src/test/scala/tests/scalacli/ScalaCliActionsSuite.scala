@@ -28,6 +28,7 @@ class ScalaCliActionsSuite
   val coursierComplete = new CoursierComplete(scalaCompilerVersion)
   val newestOsLib: String = coursierComplete
     .complete("com.lihaoyi::os-lib:")
+    .filterNot(_.contains("M"))
     .headOption
     .map(_.stripPrefix(":"))
     .getOrElse("0.8.1")
@@ -53,6 +54,7 @@ class ScalaCliActionsSuite
     scalaCliOptions = List("--actions", "-S", scalaVersion),
     expectNoDiagnostics = false,
     selectedActionIndex = 1,
+    retryAction = 5,
   )
 
   checkScalaCLI(
@@ -83,6 +85,7 @@ class ScalaCliActionsSuite
     scalaCliOptions = List("--actions", "-S", scalaVersion),
     expectNoDiagnostics = false,
     selectedActionIndex = 1,
+    retryAction = 5,
   )
 
   checkNoActionScalaCLI(
