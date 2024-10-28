@@ -45,7 +45,7 @@ object V {
   val scalafix = "0.13.0"
   val scalafmt = "3.7.15"
   val scalameta = "4.11.0"
-  val scribe = "3.15.1"
+  val scribe = "3.15.2"
   val qdox = "2.1.0"
 
   val guava = "com.google.guava" % "guava" % "33.3.1-jre"
