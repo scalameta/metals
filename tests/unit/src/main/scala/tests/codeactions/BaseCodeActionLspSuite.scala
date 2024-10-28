@@ -138,6 +138,7 @@ abstract class BaseCodeActionLspSuite(
         .recoverWith {
           case _: Throwable if retry > 0 =>
             Thread.sleep(2000)
+            scribe.debug("Retrying code actions")
             assertCodeAction(retry - 1)
           case _: Throwable if expectError =>
             Future.successful(Nil)
