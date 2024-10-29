@@ -114,10 +114,10 @@ public abstract class PresentationCompiler {
 
 	/**
 	 * Execute the given code action
-	 * 
+	 * @since 1.4.1
 	 * @deprecated Please use the code action with optional data.
 	 */
-	@Deprecated(since = "1.4.1")
+	@Deprecated
 	public CompletableFuture<List<TextEdit>> codeAction(OffsetParams params, String codeActionId,
 			Object codeActionPayload) {
 		return codeAction(params, codeActionId, Optional.of(codeActionPayload));
