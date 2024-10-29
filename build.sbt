@@ -214,7 +214,6 @@ publish / skip := true
 
 lazy val interfaces = project
   .in(file("mtags-interfaces"))
-  .settings(sharedJavacOptions)
   .settings(
     moduleName := "mtags-interfaces",
     autoScalaLibrary := false,
@@ -226,6 +225,7 @@ lazy val interfaces = project
     libraryDependencies ++= List(
       V.lsp4j
     ),
+    javacOptions := Seq("--release", "8"),
     crossVersion := CrossVersion.disabled,
     Compile / doc / javacOptions ++= List(
       "-tag",
@@ -241,6 +241,14 @@ lazy val mtagsShared = project
     crossTarget := target.value / s"scala-${scalaVersion.value}",
     // Dotty depends on Scala 2.13 for compatibility guarantees for from-source compilation.
     crossScalaVersions := V.supportedScalaVersions,
+    scalacOptions --= crossSetting(
+      scalaVersion.value,
+      if213 = List("-target:17"),
+    ),
+    scalacOptions ++= crossSetting(
+      scalaVersion.value,
+      if213 = List("-target:8"),
+    ),
     crossVersion := CrossVersion.full,
     Compile / packageSrc / publishArtifact := true,
     Compile / scalacOptions ++= {
