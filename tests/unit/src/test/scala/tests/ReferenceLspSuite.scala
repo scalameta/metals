@@ -84,6 +84,38 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |""".stripMargin,
   )
 
+  check(
+    "companion-object",
+    """|/Main.scala
+       |case class <<Rend@@erTile>>(
+       |    lowBits: Int,
+       |    highBits: Int,
+       |    // 2 bits
+       |    attrBits: Int
+       |)
+       |
+       |object <<RenderTile>>{
+       |  val zero = <<RenderTile>>(0, 0, 0)
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "companion-class",
+    """|/Main.scala
+       |case class <<RenderTile>>(
+       |    lowBits: Int,
+       |    highBits: Int,
+       |    // 2 bits
+       |    attrBits: Int
+       |)
+       |
+       |object <<Rende@@rTile>>{
+       |  val zero = <<RenderTile>>(0, 0, 0)
+       |}
+       |""".stripMargin,
+  )
+
   test("synthetic") {
     cleanWorkspace()
     for {
