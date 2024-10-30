@@ -5,9 +5,34 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 
+import scala.meta.internal.metals.MetalsEnrichments.XtensionString
 import scala.meta.io.AbsolutePath
 
 object FileLayout {
+
+  case class Query(filename: String, query: String, uniqueString: String)
+
+  def queriesFromFiles(
+      files: Map[String, String],
+      uniqueSeed: String = "seed",
+  ): Seq[Query] = {
+    val singleQuery = files
+      .find(_._2.contains("@@"))
+
+    val queries = singleQuery match {
+      case None =>
+        files.flatMap { case (file, code) =>
+          code.indicesOf("<<").map { ind =>
+            val updated =
+              code.substring(0, ind + 3) + "@@" + code.substring(ind + 3)
+            Query(file, updated, uniqueSeed + ind)
+          }
+
+        }
+      case Some((filename, edit)) => List(Query(filename, edit, uniqueSeed))
+    }
+    queries.toSeq
+  }
 
   def mapFromString(layout: String): Map[String, String] = {
     if (!layout.trim.isEmpty) {

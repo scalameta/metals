@@ -27,16 +27,8 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
       loc: Location
   ): Unit = {
     val files = FileLayout.mapFromString(input)
-    val (filename, edit) = files
-      .find(_._2.contains("@@"))
-      .map { case (fileName, code) =>
-        (fileName, code.replaceAll("(<<|>>)", ""))
-      }
-      .getOrElse {
-        throw new IllegalArgumentException(
-          "No `@@` was defined that specifies cursor position"
-        )
-      }
+    val allReferenceLocations = FileLayout.queriesFromFiles(files)
+
     val expected = files.map { case (fileName, code) =>
       fileName -> code.replaceAll("@@", "")
     }
@@ -69,7 +61,16 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
         _ <- Future.sequence(
           files.map(file => server.didOpen(s"${file._1}"))
         )
-        _ <- assertCheck(filename, edit, expected, base)
+        allChecks = for {
+          query <- allReferenceLocations
+        } yield () =>
+          assertCheck(
+            query.filename,
+            query.query.replaceAll("(<<|>>)", ""),
+            expected,
+            base,
+          )
+        _ <- MetalsTestEnrichments.orderly(allChecks)
         _ <- server.shutdown()
       } yield ()
     }
