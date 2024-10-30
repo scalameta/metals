@@ -371,7 +371,6 @@ final class ReferenceProvider(
 
         def candidates(check: SymbolInformation => Boolean) = for {
           info <- definitionDoc.symbols
-          if info.symbol != name
           if check(info)
         } yield info.symbol
 
@@ -384,6 +383,7 @@ final class ReferenceProvider(
             candidates { info =>
               alternatives.isVarSetter(info) ||
               alternatives.isCompanionObject(info) ||
+              alternatives.isCompanionClass(info) ||
               alternatives.isCopyOrApplyParam(info) ||
               alternatives.isContructorParam(info)
             }.toSet
@@ -408,9 +408,9 @@ final class ReferenceProvider(
         if (defPath.isJava)
           isCandidate
         else if (isSyntheticSymbol)
-          isCandidate -- nonSyntheticSymbols ++ additionalAlternativesForSynthetic
+          isCandidate ++ additionalAlternativesForSynthetic
         else
-          isCandidate -- nonSyntheticSymbols
+          isCandidate
       case None => Set.empty
     }
   }
