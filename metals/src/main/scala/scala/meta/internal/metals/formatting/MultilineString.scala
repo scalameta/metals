@@ -60,9 +60,11 @@ case class MultilineString(userConfig: () => UserConfiguration)
     val index =
       if (lineToCheck.contains("\"\"\"|")) {
         lineToCheck.indexOf('"') + 3
+      } else if (lineToCheck.contains("|")) {
+        lineToCheck.indexOf('|')
       } else if (lineToCheck.contains("\"\"\"")) {
         lineToCheck.indexOf('"') + 2
-      } else lineToCheck.indexOf('|')
+      } else 0
     space * index
   }
 
