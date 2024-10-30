@@ -339,6 +339,19 @@ class MultilineStringRangeFormattingWhenPastingSuite
        |}""".stripMargin,
   )
 
+  check(
+    "i6798",
+    s"""|val x =
+        |  s'''|Hello
+        |      |Good@@'''.stripMargin
+        |}""".stripMargin,
+    "bye",
+    s"""|val x =
+        |  s'''|Hello
+        |      |Goodbye'''.stripMargin
+        |}""".stripMargin,
+  )
+
   def check(
       name: TestOptions,
       testCase: String,
@@ -358,7 +371,7 @@ class MultilineStringRangeFormattingWhenPastingSuite
           s"""/metals.json
              |{"a":{}}
              |/a/src/main/scala/a/Main.scala
-      """.stripMargin + base
+             |""".stripMargin + base
         )
         _ <- server.didOpen("a/src/main/scala/a/Main.scala")
         _ <- server.rangeFormatting(
