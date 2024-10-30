@@ -45,6 +45,11 @@ trait PcCollector[T] { self: WithCompilationUnit =>
     def soughtOrOverride(sym: Symbol) =
       sought(sym) || sym.allOverriddenSymbols.exists(sought(_))
 
+    def primaryContructorParent(sym: Symbol) =
+      soughtSet
+        .flatMap(sym => if (sym.isPrimaryConstructor) Some(sym.owner) else None)
+        .contains(sym)
+
     def soughtTreeFilter(tree: Tree): Boolean =
       tree match {
         case ident: Ident
@@ -57,7 +62,8 @@ trait PcCollector[T] { self: WithCompilationUnit =>
           soughtOrOverride(sel.symbol)
         case df: MemberDef =>
           (soughtOrOverride(df.symbol) ||
-          isForComprehensionOwner(df))
+          isForComprehensionOwner(df) ||
+          primaryContructorParent(df.symbol))
         case appl: Apply =>
           appl.symbol != null &&
           (owners(appl.symbol) ||
@@ -172,13 +178,22 @@ trait PcCollector[T] { self: WithCompilationUnit =>
          * class <<Foo>> = ???
          * etc.
          */
-        case df: MemberDef if isCorrectPos(df) && filter(df) =>
+        case df: MemberDef
+            if isCorrectPos(df) && filter(
+              df
+            ) && !df.symbol.isPrimaryConstructor =>
           (annotationChildren(df) ++ df.children).foldLeft({
-            val t = collect(
-              df,
-              df.namePosition
+            val maybeConstructor =
+              Some(df.symbol.primaryConstructor).filter(_ != NoSymbol)
+            val collected = collect(df, df.namePosition)
+            // we also collect primary constructor on class,
+            // since primary constructor is synthetic and doesn't have needed span anymore
+            // later we cannot get the correct
+            val collectedConstructor = maybeConstructor.map(sym =>
+              collect(df, df.namePosition, Some(sym))
             )
-            if (acc(t)) acc else acc + t
+
+            acc + collected ++ collectedConstructor
           })(traverse(_, _))
         /* Named parameters, since they don't show up in typed tree:
          * foo(<<name>> = "abc")

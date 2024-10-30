@@ -465,6 +465,8 @@ abstract class MetalsLspService(
     buildTargets,
     compilers,
     scalaVersionSelector,
+    languageClient,
+    clientConfig.isQuickPickProvider(),
   )
 
   protected val packageProvider: PackageProvider =
@@ -1126,7 +1128,7 @@ abstract class MetalsLspService(
       params: ReferenceParams
   ): Future[List[ReferencesResult]] = {
     val timer = new Timer(time)
-    referencesProvider.references(params).map { results =>
+    referencesProvider.references(params, isForRename = false).map { results =>
       if (clientConfig.initialConfig.statistics.isReferences) {
         if (results.forall(_.symbol.isEmpty)) {
           scribe.info(s"time: found 0 references in $timer")
