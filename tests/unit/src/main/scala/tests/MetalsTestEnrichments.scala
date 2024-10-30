@@ -3,6 +3,8 @@ package tests
 import java.nio.file.Files
 
 import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.{meta => m}
 
 import scala.meta.dialects
@@ -53,6 +55,13 @@ object MetalsTestEnrichments {
       ),
     )(EmptyReportContext)
   }
+
+  def orderly(lst: Iterable[() => Future[Unit]])(implicit
+      ec: ExecutionContext
+  ): Future[Unit] =
+    lst.foldLeft(Future.unit) { case (acc, next) =>
+      acc.flatMap(_ => next())
+    }
 
   implicit class XtensionTestAbsolutePath(path: AbsolutePath) {
     def text: String = Files.readAllLines(path.toNIO).asScala.mkString("\n")

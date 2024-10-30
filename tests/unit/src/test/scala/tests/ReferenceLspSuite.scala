@@ -75,7 +75,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |package a
        |
        |object Main{
-       |  def <<hel@@lo>>() = println("Hello world")
+       |  def <<hello>>() = println("Hello world")
        |  <<hello>>()
        |  <<hello>>()
        |  <<hello>>()
@@ -87,22 +87,6 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
   check(
     "companion-object",
     """|/Main.scala
-       |case class <<Rend@@erTile>>(
-       |    lowBits: Int,
-       |    highBits: Int,
-       |    // 2 bits
-       |    attrBits: Int
-       |)
-       |
-       |object <<RenderTile>>{
-       |  val zero = <<RenderTile>>(0, 0, 0)
-       |}
-       |""".stripMargin,
-  )
-
-  check(
-    "companion-class",
-    """|/Main.scala
        |case class <<RenderTile>>(
        |    lowBits: Int,
        |    highBits: Int,
@@ -110,7 +94,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |    attrBits: Int
        |)
        |
-       |object <<Rende@@rTile>>{
+       |object <<RenderTile>>{
        |  val zero = <<RenderTile>>(0, 0, 0)
        |}
        |""".stripMargin,
@@ -372,7 +356,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
     "ordering",
     """|/a/src/main/scala/a/Main.scala
        |package a
-       |trait <<A@@A>>
+       |trait <<AA>>
        |/a/src/main/scala/a/Other.scala
        |package a
        |trait BB extends <<AA>>
@@ -384,7 +368,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
   check(
     "worksheet",
     """|/a/src/main/scala/a/Main.worksheet.sc
-       |trait <<A@@A>>
+       |trait <<AA>>
        |trait BB extends <<AA>>
        |trait CC extends <<AA>>
        |trait DD extends <<AA>>
@@ -400,7 +384,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |}
        |/a/src/main/scala/a/Other.scala
        |object Other {
-       |  val mb = new <<M@@ain>>("b")
+       |  val mb = new <<Main>>("b")
        |}
        |""".stripMargin,
   )
@@ -410,7 +394,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
     """|/a/src/main/scala/a/Main.scala
        |case class <<Main>>(name: String)
        |object F {
-       |  val ma = <<Ma@@in>>("a")
+       |  val ma = <<Main>>("a")
        |}
        |/a/src/main/scala/a/Other.scala
        |object Other {
@@ -425,7 +409,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |case class Name(<<value>>: String)
        |
        |object Main {
-       |  val name2 = new Name(<<va@@lue>> = "44")
+       |  val name2 = new Name(<<value>> = "44")
        |}
        |""".stripMargin,
   )

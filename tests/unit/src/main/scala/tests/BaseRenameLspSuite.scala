@@ -2,7 +2,6 @@ package tests
 
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.MetalsEnrichments.XtensionString
 import scala.meta.internal.pc.Identifier
 
 import munit.Location
@@ -81,21 +80,8 @@ abstract class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
           }
         }
 
-      val singleRename = files
-        .find(_._2.contains("@@"))
-
-      val allRenameLocations = singleRename match {
-        case None =>
-          files.flatMap { case (file, code) =>
-            code.indicesOf("<<").map { ind =>
-              val updated =
-                code.substring(0, ind + 3) + "@@" + code.substring(ind + 3)
-              (file, updated, newName + ind)
-            }
-
-          }
-        case Some((filename, edit)) => List((filename, edit, newName))
-      }
+      val allRenameLocations =
+        FileLayout.queriesFromFiles(files, uniqueSeed = newName)
 
       val openedFiles = files.keySet.diff(nonOpened)
       val fullInput = input.replaceAll(allMarkersRegex, "")
@@ -121,35 +107,34 @@ abstract class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
             server.didChange(file) { code => "\n" + code }
           }
         }
-        allRenamed = allRenameLocations.map { case (filename, edit, renameTo) =>
-          () =>
-            server
-              .assertRename(
-                filename,
-                edit.replaceAll("(<<|>>|##.*##)", ""),
-                expectedFiles(renameTo),
-                files.keySet,
-                renameTo,
-              )
-              .flatMap {
-                // Revert all files to initial state
-                _ =>
-                  Future
-                    .sequence {
-                      files.map { case (file, code) =>
-                        server.didSave(file)(_ =>
-                          code.replaceAll(allMarkersRegex, "")
-                        )
-                      }.toList
+        allRenamed = allRenameLocations.map {
+          case FileLayout.Query(filename, edit, renameTo) =>
+            () =>
+              server
+                .assertRename(
+                  filename,
+                  edit.replaceAll("(<<|>>|##.*##)", ""),
+                  expectedFiles(renameTo),
+                  files.keySet,
+                  renameTo,
+                )
+                .flatMap {
+                  // Revert all files to initial state
+                  _ =>
+                    Future
+                      .sequence {
+                        files.map { case (file, code) =>
+                          server.didSave(file)(_ =>
+                            code.replaceAll(allMarkersRegex, "")
+                          )
+                        }.toList
 
-                    }
-                    .map(_ => ())
+                      }
+                      .map(_ => ())
 
-              }
+                }
         }
-        _ <- allRenamed.foldLeft(Future.unit) { case (acc, next) =>
-          acc.flatMap(_ => next())
-        }
+        _ <- MetalsTestEnrichments.orderly(allRenamed)
       } yield ()
     }
   }
