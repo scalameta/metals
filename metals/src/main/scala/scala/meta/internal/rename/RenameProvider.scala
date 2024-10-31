@@ -175,8 +175,11 @@ final class RenameProvider(
                     occ.range
                       .flatMap(rng => rng.inString(textDocument.text))
                       .map(_.stripBackticks.stripSuffix(","))
-                  occ.symbol.isLocal ||
-                  foundName.contains(realName)
+                  val notRenamed =
+                    occ.symbol.isLocal || foundName.contains(realName)
+                  if (!notRenamed)
+                    scribe.debug(s"Expected $realName, but found $foundName")
+                  notRenamed
                 }
 
                 def shouldCheckImplementation(
@@ -223,7 +226,10 @@ final class RenameProvider(
                           findRealRange = AdjustRange(findRealRange(newName)),
                           includeSynthetic,
                         )
-                        .map(_.flatMap(_.locations))
+                        .map { refs =>
+                          scribe.debug(s"Found ${refs.size} basic references")
+                          refs.flatMap(_.locations)
+                        }
                     definitionLocation = {
                       if (parentSymbols.isEmpty)
                         definition.locations.asScala
@@ -277,8 +283,13 @@ final class RenameProvider(
                     else allReferences
 
                   if (fallbackOccurences.isEmpty) {
-                    scribe.debug(s"Symbol occurence was $symbolOccurrence")
-                    scribe.debug(s"The definition found was $definition")
+                    scribe.debug(
+                      s"Symbol occurence was ${symbolOccurrence.map(_._1)}"
+                    )
+                    scribe.debug(s"""|The definition found was:
+                                     | - path ${definition.definition}
+                                     | - symbol ${definition.symbol}
+                                     |""".stripMargin)
                   }
 
                   val allChanges = for {
@@ -570,7 +581,10 @@ final class RenameProvider(
       definitionPath.isWorkspaceSource(workspace)
     }
 
-    symbol.isLocal || isFromWorkspace
+    val isWorkspace = symbol.isLocal || isFromWorkspace
+
+    if (!isWorkspace) scribe.debug(s"$symbol not found int workspace")
+    isWorkspace
   }
 
   private def includeSynthetic(syn: Synthetic) = {
