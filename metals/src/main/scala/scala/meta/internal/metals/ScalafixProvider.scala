@@ -512,9 +512,10 @@ case class ScalafixProvider(
               None
           }
         (for {
-          config <- scalaconfFileText
+          text <- scalaconfFileText
+          config = ConfigFactory.parseString(text)
           newSettings = amendSettings.filterNot { case (name, _) =>
-            config.contains(name)
+            config.hasPath(name)
           }
           if !newSettings.isEmpty
         } yield {

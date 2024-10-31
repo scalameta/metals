@@ -368,5 +368,58 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
       )
     } yield ()
   }
+  test("no-amend-scalafix-conf") {
+    cleanWorkspace()
+
+    client.showMessageRequestHandler = params =>
+      if (
+        params
+          .getMessage()
+          .contains(
+            "Your `.scalafix.conf` misses the following settings for organize imports"
+          )
+      )
+        fail("No amend message should be shown")
+      else {
+        None
+      }
+
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{"a":{"scalaVersion": "${V.scala3}" }}
+            |/a/src/main/scala/Main.scala
+            |import java.util.concurrent.*
+            |import java.util.*
+            |/.scalafix.conf
+            |rules = [
+            |  OrganizeImports
+            |]
+            |OrganizeImports = {
+            |  targetDialect = Scala3
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      textParams =
+        new TextDocumentPositionParams(
+          new TextDocumentIdentifier(
+            workspace.resolve("a/src/main/scala/Main.scala").toURI.toString()
+          ),
+          new Position(0, 0),
+        )
+      _ <- server.executeCommand(
+        ServerCommands.RunScalafix,
+        textParams,
+      )
+      contents = server.bufferContents("a/src/main/scala/Main.scala")
+      _ = assertNoDiff(
+        contents,
+        """|import java.util.*
+           |import java.util.concurrent.*
+           |""".stripMargin,
+      )
+    } yield ()
+  }
 
 }
