@@ -115,14 +115,10 @@ final class InferredMethodProvider(
         methodInsertPosition,
         postProcess(full)
       ) :: additionalImports
-      // TODO not sure if additionalImports needs to happen in the current document or the edited one
       newEdits.map(textEdit => (fileUri, textEdit))
     }
 
     val uriTextEditPairs = typedTree match {
-      // case errorMethod if errorMethod.toString().contains("lol") =>
-      //   pprint.log(lastVisitedParentTrees)
-      //   Nil
       case errorMethod: Ident if errorMethod.isErroneous =>
         lastVisitedParentTrees match {
           /**
@@ -159,7 +155,7 @@ final class InferredMethodProvider(
                 Nil
             }
           // nonExistent(param1, param2)
-          // val a: Int = nonExistent(param1, param2) TODO
+          // val a: Int = nonExistent(param1, param2)
           case (_: Ident) :: Apply(
                 containing @ Ident(
                   nonExistent
@@ -299,7 +295,6 @@ final class InferredMethodProvider(
                 _,
                 arguments
               ) :: _ =>
-            // pprint.log(lastVisitedParentTrees)
             // we need to get the type of the container of our undefined method
             val containerSymbol = context.lookupSymbol(container, _ => true)
             if (containerSymbol.isSuccess) {
@@ -326,8 +321,6 @@ final class InferredMethodProvider(
                         ) =>
                       val insertPos: Position =
                         inferEditPosition(template)
-
-                      // val ret = prettyType(methodParams(retIndex).tpe)
                       signature(
                         name = errorMethod.name.toString(),
                         paramsString = argumentsString(arguments).getOrElse(""),
@@ -353,8 +346,6 @@ final class InferredMethodProvider(
                         ) =>
                       val insertPos: Position =
                         inferEditPosition(template)
-
-                      // val ret = prettyType(methodParams(retIndex).tpe)
                       signature(
                         name = errorMethod.name.toString(),
                         paramsString = argumentsString(arguments).getOrElse(""),
@@ -385,8 +376,6 @@ final class InferredMethodProvider(
                             ) =>
                           val insertPos: Position =
                             inferEditPosition(template)
-
-                          // val ret = prettyType(methodParams(retIndex).tpe)
                           signature(
                             name = errorMethod.name.toString(),
                             paramsString =
