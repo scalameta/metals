@@ -86,6 +86,10 @@ final class InferredMethodProvider(
 
     type FileURI = String
 
+    def getPositionUri(position: Position): String = scala.util
+      .Try(position.source.toString()) // in tests this is undefined
+      .toOption
+      .getOrElse(params.uri().toString())
     def signature(
         name: String,
         paramsString: String,
@@ -95,10 +99,7 @@ final class InferredMethodProvider(
     ): List[(FileURI, TextEdit)] = {
 
       val lastApplyPos = position.getOrElse(insertPosition())
-      val fileUri = scala.util
-        .Try(lastApplyPos.source.toString()) // in tests this is undefined
-        .toOption
-        .getOrElse(params.uri().toString())
+      val fileUri = getPositionUri(lastApplyPos)
       val indentString =
         indentation(params.text(), lastApplyPos.start - 1)
       val retTypeString = retType match {
@@ -209,7 +210,6 @@ final class InferredMethodProvider(
         )
       }
     }
-
     def makeEditsForListApplyWithoutArgs(
         argumentList: Name,
         errorMethod: Ident
@@ -253,49 +253,29 @@ final class InferredMethodProvider(
       ): List[(FileURI, TextEdit)] = {
         val insertPos: Position =
           inferEditPosition(template)
-        signature(
-          name = errorMethod.name.toString(),
-          paramsString = argumentsString(arguments).getOrElse(""),
-          retType = None,
-          postProcess = method => {
-            if (
-              hasBody(
-                template.pos.source.content
-                  .map(_.toString)
-                  .mkString,
-                template
-              ).isDefined
-            )
-              s"\n  $method"
-            else s" {\n  $method}"
-          },
-          position = Option(insertPos)
-        )
-      }
-
-      def makeTraitMethodEdits(
-          template: Template
-      ): List[(FileURI, TextEdit)] = {
-        val insertPos: Position =
-          inferEditPosition(template)
-        signature(
-          name = errorMethod.name.toString(),
-          paramsString = argumentsString(arguments).getOrElse(""),
-          retType = None,
-          postProcess = method => {
-            if (
-              hasBody(
-                template.pos.source.content
-                  .map(_.toString)
-                  .mkString,
-                template
-              ).isDefined
-            )
-              s"\n  $method"
-            else s" {\n  $method}"
-          },
-          position = Option(insertPos)
-        )
+        val templateFileUri = template.pos.source.content
+          .map(_.toString)
+          .mkString
+        if (params.uri().toString() != getPositionUri(insertPos)) {
+          println("You can only infer method for current file.")
+          Nil
+        } else
+          signature(
+            name = errorMethod.name.toString(),
+            paramsString = argumentsString(arguments).getOrElse(""),
+            retType = None,
+            postProcess = method => {
+              if (
+                hasBody(
+                  templateFileUri,
+                  template
+                ).isDefined
+              )
+                s"\n  $method"
+              else s" {\n  $method}"
+            },
+            position = Option(insertPos)
+          )
       }
 
       // we need to get the type of the container of our undefined method
@@ -315,6 +295,7 @@ final class InferredMethodProvider(
               context.lookupSymbol(classSymbol.name, _ => true)
             // this gives me the position of the class
             typedTreeAt(containerClass.symbol.pos) match {
+              // class case
               case ClassDef(
                     _,
                     _,
@@ -322,16 +303,18 @@ final class InferredMethodProvider(
                     template
                   ) =>
                 makeClassMethodEdits(template)
+              // trait case
               case ModuleDef(
                     _,
                     _,
                     template
                   ) =>
-                makeTraitMethodEdits(template)
+                makeClassMethodEdits(template)
               case _ =>
                 // object Y {}
                 // Y.nonExistent(1,2,3)
                 typedTreeAt(containerSymbol.symbol.pos) match {
+                  // class case
                   case ClassDef(
                         _,
                         _,
@@ -339,12 +322,13 @@ final class InferredMethodProvider(
                         template
                       ) =>
                     makeClassMethodEdits(template)
+                  // trait case
                   case ModuleDef(
                         _,
                         _,
                         template
                       ) =>
-                    makeTraitMethodEdits(template)
+                    makeClassMethodEdits(template)
                   case _ =>
                     Nil
                 }
