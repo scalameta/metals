@@ -209,22 +209,14 @@ final class RunTestCodeLens(
       classes: BuildTargetClasses.Classes,
       isJVM: Boolean,
   ): Seq[l.CodeLens] = {
-    val symbolsWithMain = textDocument.symbols.filter(info =>
-      classes.mainClasses.contains(info.symbol)
-    )
     for {
-      sym <- symbolsWithMain
-      if ! {
-        textDocument.occurrences.exists(occ =>
-          occ.symbol == sym.symbol && occ.role.isDefinition
-        )
-      }
-      command <- classes.mainClasses
-        .get(sym.symbol)
-        .map(
-          mainCommand(target, _, isJVM, adjustName = s" (${sym.displayName})")
-        )
-        .getOrElse(Nil)
+      main <- DebugDiscovery.syntheticMains(textDocument, classes)
+      command <- mainCommand(
+        target,
+        main,
+        isJVM,
+        adjustName = s" (${main.getClassName().split("\\.").last})",
+      )
     } yield new l.CodeLens(
       new l.Range(new l.Position(0, 0), new l.Position(0, 0)),
       command,

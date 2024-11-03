@@ -17,30 +17,34 @@ class ScalaCliDebugSuite
     ) {
 
   private val scalaCliScriptPath = "a/src/main/scala/a/main.sc"
-  test("run-scala-cli-script") {
-    for {
-      _ <- initialize(
-        s"""/.bsp/scala-cli.json
-           |${ScalaCli.scalaCliBspJsonContent()}
-           |/.scala-build/ide-inputs.json
-           |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
-           |/$scalaCliScriptPath
-           |print("oranges are nice")""".stripMargin
-      )
-      _ <- server.didOpen(scalaCliScriptPath)
-      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
-      debugger <- server.startDebuggingUnresolved(
-        DebugDiscoveryParams(
-          server.toPath(scalaCliScriptPath).toURI.toString,
-          "run",
-        ).toJson
-      )
-      _ <- debugger.initialize
-      _ <- debugger.launch
-      _ <- debugger.configurationDone
-      _ <- debugger.shutdown
-      output <- debugger.allOutput
-    } yield assertNoDiff(output, "oranges are nice")
+
+  for (runType <- List("runOrTestFile", "run")) {
+
+    test(s"run-scala-cli-script-$runType") {
+      for {
+        _ <- initialize(
+          s"""/.bsp/scala-cli.json
+             |${ScalaCli.scalaCliBspJsonContent()}
+             |/.scala-build/ide-inputs.json
+             |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
+             |/$scalaCliScriptPath
+             |print("oranges are nice")""".stripMargin
+        )
+        _ <- server.didOpen(scalaCliScriptPath)
+        _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+        debugger <- server.startDebuggingUnresolved(
+          DebugDiscoveryParams(
+            server.toPath(scalaCliScriptPath).toURI.toString,
+            runType,
+          ).toJson
+        )
+        _ <- debugger.initialize
+        _ <- debugger.launch
+        _ <- debugger.configurationDone
+        _ <- debugger.shutdown
+        output <- debugger.allOutput
+      } yield assertNoDiff(output, "oranges are nice")
+    }
   }
 
 }

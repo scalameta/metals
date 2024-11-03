@@ -254,25 +254,30 @@ class DebugDiscovery(
       .fold[Future[b.DebugSessionParams]] {
         Future.failed(SemanticDbNotFoundException)
       } { textDocument =>
+        val classes = buildTargetClasses.classesOf(buildTarget)
         lazy val tests = for {
           symbolInfo <- textDocument.symbols
           symbol = symbolInfo.symbol
-          testSymbolInfo <- testClasses(buildTarget).get(symbol)
+          testSymbolInfo <- classes.testClasses.get(symbol)
         } yield testSymbolInfo.fullyQualifiedName
+
         val mains = for {
           occurrence <- textDocument.occurrences
           if occurrence.role.isDefinition || occurrence.symbol == "scala/main#"
           symbol = occurrence.symbol
           mainClass <- {
-            val normal = mainClasses(buildTarget).get(symbol)
+            val normal = classes.mainClasses.get(symbol)
             val fromAnnot = DebugDiscovery
               .mainFromAnnotation(occurrence, textDocument)
-              .flatMap(mainClasses(buildTarget).get(_))
+              .flatMap(classes.mainClasses.get(_))
             List(normal, fromAnnot).flatten
           }
         } yield mainClass
-        if (mains.nonEmpty) {
-          findMainToRun(Map(buildTarget -> mains.toList), params)
+        val mainWithFallback =
+          if (mains.nonEmpty) mains
+          else DebugDiscovery.syntheticMains(textDocument, classes)
+        if (mainWithFallback.nonEmpty) {
+          findMainToRun(Map(buildTarget -> mainWithFallback.toList), params)
         } else if (tests.nonEmpty) {
           DebugProvider.envFromFile(workspace, Option(params.envFile)).map {
             envFromFile =>
@@ -491,6 +496,25 @@ object DebugDiscovery {
       None
     }
 
+  }
+
+  def syntheticMains(
+      textDocument: TextDocument,
+      classes: BuildTargetClasses.Classes,
+  ): Seq[b.ScalaMainClass] = {
+    val symbolsWithMain = textDocument.symbols.filter(info =>
+      classes.mainClasses.contains(info.symbol)
+    )
+    for {
+      sym <- symbolsWithMain
+      if ! {
+        textDocument.occurrences.exists(occ =>
+          occ.symbol == sym.symbol && occ.role.isDefinition
+        )
+      }
+      main <- classes.mainClasses
+        .get(sym.symbol)
+    } yield main
   }
 
   import scala.meta.internal.semanticdb.Scala._
