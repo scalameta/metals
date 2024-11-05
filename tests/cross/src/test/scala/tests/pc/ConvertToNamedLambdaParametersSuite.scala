@@ -5,6 +5,7 @@ import java.net.URI
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.TextEdits
+import scala.meta.pc.CodeActionId
 
 import munit.Location
 import munit.TestOptions
@@ -166,8 +167,10 @@ class ConvertToNamedLambdaParametersSuite extends BaseCodeActionSuite {
   ): List[l.TextEdit] = {
     val (code, _, offset) = params(original)
     val result = presentationCompiler
-      .convertToNamedLambdaParameters(
-        CompilerOffsetParams(URI.create(filename), code, offset, cancelToken)
+      .codeAction(
+        CompilerOffsetParams(URI.create(filename), code, offset, cancelToken),
+        CodeActionId.ConvertToNamedLambdaParameters,
+        null
       )
       .get()
     result.asScala.toList
