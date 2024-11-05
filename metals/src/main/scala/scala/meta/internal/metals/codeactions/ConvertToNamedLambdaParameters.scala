@@ -13,6 +13,7 @@ import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.metals.logging
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
+import scala.meta.pc.CodeActionId
 
 import org.eclipse.{lsp4j => l}
 
@@ -43,9 +44,11 @@ class ConvertToNamedLambdaParameters(
   )(implicit ec: ExecutionContext): Future[Unit] = {
     val uri = data.position.getTextDocument().getUri()
     for {
-      edits <- compilers.convertToNamedLambdaParameters(
+      edits <- compilers.codeAction(
         data.position,
         token,
+        CodeActionId.ConvertToNamedLambdaParameters,
+        null,
       )
       _ = logging.logErrorWhen(
         edits.isEmpty(),
@@ -83,6 +86,11 @@ class ConvertToNamedLambdaParameters(
         )
         Future.successful(Seq(codeAction))
       }
+      .filter(_ =>
+        compilers
+          .supportedCodeActions(path)
+          .contains(CodeActionId.ConvertToNamedLambdaParameters)
+      )
       .getOrElse(Future.successful(Nil))
   }
 
