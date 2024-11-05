@@ -941,20 +941,6 @@ class Compilers(
     }
   }.getOrElse(Future.successful(Nil.asJava))
 
-  def convertToNamedLambdaParameters(
-      position: TextDocumentPositionParams,
-      token: CancelToken,
-  ): Future[ju.List[TextEdit]] = {
-    withPCAndAdjustLsp(position) { (pc, pos, adjust) =>
-      pc.convertToNamedLambdaParameters(
-        CompilerOffsetParamsUtils.fromPos(pos, token)
-      ).asScala
-        .map { edits =>
-          adjust.adjustTextEdits(edits)
-        }
-    }
-  }.getOrElse(Future.successful(Nil.asJava))
-
   def implementAbstractMembers(
       params: TextDocumentPositionParams,
       token: CancelToken,
