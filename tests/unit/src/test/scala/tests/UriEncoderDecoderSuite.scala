@@ -1,5 +1,6 @@
 package tests
 
+import scala.meta.internal.metals.MetalsEnrichments.XtensionString
 import scala.meta.internal.mtags.URIEncoderDecoder
 
 class UriEncoderDecoderSuite extends BaseSuite {
@@ -39,6 +40,13 @@ class UriEncoderDecoderSuite extends BaseSuite {
       obtained,
       expected,
     )
+  }
+
+  test("absolute-path-space") {
+    // Should be NoSuchFileException instead of URI creation one
+    intercept[java.nio.file.NoSuchFileException] {
+      "jar:file:///C:/Program Files/Java/jdk-21.0.3+9/lib/src.zip!/java.base/java/lang/String.java".toAbsolutePath
+    }
   }
 
 }
