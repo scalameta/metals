@@ -136,21 +136,7 @@ export default {
       }
     }
   },
-  webpack: {
-    jsLoader: (isServer) => ({
-      loader: "swc-loader",
-      options: {
-        jsc: {
-          parser: {
-            syntax: "typescript",
-            tsx: true,
-          },
-          target: "es2020",
-        },
-        module: {
-          type: isServer ? "commonjs" : "es6",
-        },
-      },
-    }),
-  }
+  "future": {
+    "experimental_faster": true,
+  },
 } satisfies Config
