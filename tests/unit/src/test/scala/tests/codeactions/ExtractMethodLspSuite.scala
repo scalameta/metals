@@ -55,6 +55,35 @@ class ExtractMethodLspSuite
   )
 
   check(
+    "val-trait",
+    """|
+       |trait Simple{
+       |  def well(str: String) = ""
+       |}
+       |
+       |object A{
+       | 
+       |  <<val s: Simple = ???
+       |  s.well("")>>
+       |}""".stripMargin,
+    s"""|${ExtractMethodCodeAction.title("object `A`")}
+        |""".stripMargin,
+    """|trait Simple{
+       |  def well(str: String) = ""
+       |}
+       |
+       |object A{
+       | 
+       |  def newMethod(): String = {
+       |    val s: Simple = ???
+       |    s.well("")
+       |  }
+       |  newMethod()
+       |}
+       |""".stripMargin,
+  )
+
+  check(
     "single-param",
     s"""|object A{
         |  def method(i: Int, j: Int) = i + j

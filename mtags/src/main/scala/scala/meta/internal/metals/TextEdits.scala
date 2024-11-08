@@ -21,7 +21,11 @@ object TextEdits {
         .collect { case (edit, Some(pos)) =>
           edit -> pos
         }
-        .sortBy(_._2.start)
+        .sortWith { case ((_, pos1), (_, pos2)) =>
+          if (pos1.start == pos2.start) pos1.end < pos2.end
+          else pos1.start < pos2.start
+
+        }
       var curr = 0
       val out = new java.lang.StringBuilder()
       positions.foreach { case (edit, pos) =>

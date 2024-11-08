@@ -79,7 +79,7 @@ class ExtractMethodCodeAction(
         enclosing.map(_ match {
           case Term.Block(stats) =>
             stats.filter((s: Tree) => range.encloses(s.pos.toLsp))
-          case Template(_, _, _, stats) =>
+          case Template.Body(_, stats) =>
             stats.filter((s: Tree) => range.encloses(s.pos.toLsp))
           case ap if returnsValue(ap) => List(ap)
           case _ => Nil
