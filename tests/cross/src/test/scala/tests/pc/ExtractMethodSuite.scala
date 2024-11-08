@@ -58,6 +58,49 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
   )
 
   checkEdit(
+    "val-trait",
+    """|
+       |trait Simple{
+       |  def well(str: String) = ""
+       |}
+       |
+       |object A{
+       |  @@
+       |  <<val s: Simple = ???
+       |  s.well("")>>
+       |}""".stripMargin,
+    """|trait Simple{
+       |  def well(str: String) = ""
+       |}
+       |
+       |object A{
+       |  
+       |  def newMethod(): String = {
+       |    val s: Simple = ???
+       |    s.well("")
+       |  }
+       |  newMethod()
+       |}
+       |""".stripMargin,
+    Map(
+      "3" ->
+        """|trait Simple{
+           |  def well(str: String) = ""
+           |}
+           |
+           |object A{
+           |  
+           |  def newMethod(): String =
+           |    val s: Simple = ???
+           |    s.well("")
+           |
+           |  newMethod()
+           |}
+           |""".stripMargin
+    )
+  )
+
+  checkEdit(
     "single-param",
     s"""|object A{
         |  def method(i: Int, j: Int) = i + j
