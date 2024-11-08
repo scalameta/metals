@@ -1,5 +1,7 @@
 package tests
 
+import scala.util.control.NonFatal
+
 import scala.meta.internal.metals.Messages
 
 import coursierapi.JvmManager
@@ -7,8 +9,15 @@ import munit.Location
 import munit.TestOptions
 
 trait JavaHomeChangeTest { self: BaseLspSuite =>
-  val pathToJava11: String = JvmManager.create().get("11").toString()
 
+  def resolvePathToJava11(retries: Int = 3): String = try {
+    JvmManager.create().get("11").toString()
+  } catch {
+    case NonFatal(t) =>
+      scribe.error("Failed to resolve path to java 11", t)
+      if (retries > 0) { resolvePathToJava11(retries - 1) }
+      else throw t
+  }
   def checkJavaHomeUpdate(
       name: TestOptions,
       makeLayout: String => String,
@@ -23,6 +32,7 @@ trait JavaHomeChangeTest { self: BaseLspSuite =>
            |""".stripMargin,
   )(implicit loc: Location): Unit = {
     test(name) {
+      val pathToJava11 = resolvePathToJava11()
       val java11Code =
         """|package a
            |object O
