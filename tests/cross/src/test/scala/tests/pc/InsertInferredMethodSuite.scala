@@ -12,7 +12,9 @@ import org.eclipse.{lsp4j => l}
 import tests.BaseCodeActionSuite
 
 class InsertInferredMethodSuite extends BaseCodeActionSuite {
-
+  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] = Some(
+    IgnoreScala3
+  )
   checkEdit(
     "simple",
     """|

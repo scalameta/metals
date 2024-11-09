@@ -666,7 +666,10 @@ object ServerCommands {
     new ParametrizedCommand[TextDocumentPositionParams](
       "insert-inferred-method",
       "Insert inferred method",
-      """|
+      """|Try and create a method from the error symbol at the current position
+           |where that position points to a name of form for example:
+           |- `nonExisting(param)`
+           |- `obj.nonExisting()`
          |""".stripMargin,
       """|Object with `document` and `position`
          |

@@ -58,7 +58,7 @@ class CreateNewSymbol(
         buildId <- buildTargets.inverseSources(file)
         target <- buildTargets.scalaTarget(buildId)
         isScala3 = ScalaVersions.isScala3Version(
-          target.scalaInfo.getScalaVersion()
+          target.scalaVersion
         )
       } yield isScala3).getOrElse(false)
 
