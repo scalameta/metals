@@ -34,6 +34,23 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
   )
 
   checkNewSymbol(
+    "infer-method",
+    """| object X {
+       |  <<otherMethod>>(1)
+       |}
+       |""".stripMargin,
+    s"""|${CreateNewSymbol.method("otherMethod")}""".stripMargin,
+    selectedActionIndex = 0,
+    pickedKind = "infer-method",
+    newFile = "a/src/main/scala/a/A.scala" ->
+      """| object X {
+         |  def otherMethod(arg0: Int) = ???
+         |  otherMethod(1)
+         |}
+         |""".stripMargin,
+  )
+
+  checkNewSymbol(
     "trait",
     """|package a
        |

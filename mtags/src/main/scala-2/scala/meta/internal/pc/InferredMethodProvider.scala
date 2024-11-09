@@ -164,6 +164,8 @@ final class InferredMethodProvider(
 
             val tpe = methodParams(retIndex).tpe
             tpe match {
+              // def method1(s : (String, Float) => Int) = 123
+              // method1(<<otherMethod>>)
               case TypeRef(_, _, args) if definitions.isFunctionType(tpe) =>
                 val params = args.take(args.size - 1)
                 val paramsString =
@@ -462,12 +464,14 @@ final class InferredMethodProvider(
    * `class Foo extends Bar {}` => retuning position would be right after the opening brace.
    * `class Foo extends Bar` => retuning position would be right after `Bar`.
    *
-   * @param text the text of the original source code.
    * @param t the enclosing template for the class/object/trait we are implementing.
    */
   private def inferEditPosition(t: Template): Position = {
-    // get text via reflection because Template could be in a different file
-    val text = t.pos.source.content.map(_.toString).mkString
+    // to get text via reflection because Template could be in a different file
+    // we decided to not support other files, but we may want to go back to it
+    //
+    // val text = t.pos.source.content.map(_.toString).mkString
+    val text = params.text()
     hasBody(text, t)
       .map { offset => t.pos.withStart(offset + 1).withEnd(offset + 1) }
       .getOrElse(
