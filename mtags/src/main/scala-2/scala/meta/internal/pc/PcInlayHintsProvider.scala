@@ -1,5 +1,7 @@
 package scala.meta.internal.pc
 
+import scala.annotation.tailrec
+
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.InlayHintsParams
 
@@ -57,14 +59,10 @@ final class PcInlayHintsProvider(
             LabelPart(")") :: Nil,
             InlayHintKind.Parameter
           )
-      case ImplicitParameters(symbols, pos, allImplicit) =>
-        val labelParts = symbols.map(s => List(labelPart(s, s.decodedName)))
-        val label =
-          if (allImplicit) labelParts.separated("(", ", ", ")")
-          else labelParts.separated(", ")
+      case ImplicitParameters(trees, pos) =>
         inlayHints.add(
           adjustPos(pos).focusEnd.toLsp,
-          label,
+          ImplicitParameters.partsFromImplicitArgs(trees),
           InlayHintKind.Parameter
         )
       case ValueOf(label, pos) =>
@@ -160,25 +158,97 @@ final class PcInlayHintsProvider(
       fun.pos.isOffset && fun.symbol != null && fun.symbol.isImplicit
   }
   object ImplicitParameters {
-    def unapply(tree: Tree): Option[(List[Symbol], Position, Boolean)] =
+    def unapply(tree: Tree): Option[(List[Tree], Position)] =
       if (params.implicitParameters())
         tree match {
           case Apply(_, args)
               if args.exists(isSyntheticArg) && !tree.pos.isOffset =>
             val (implicitArgs, providedArgs) = args.partition(isSyntheticArg)
-            val allImplicit = providedArgs.isEmpty
             val pos = providedArgs.lastOption.fold(tree.pos)(_.pos)
             Some(
-              implicitArgs.map(_.symbol),
-              pos,
-              allImplicit
+              implicitArgs,
+              pos
             )
           case _ => None
         }
       else None
 
     private def isSyntheticArg(arg: Tree): Boolean =
-      arg.pos.isOffset && arg.symbol != null && arg.symbol.isImplicit
+      arg.pos.isOffset && arg.symbol != null && (arg.symbol.isImplicit || arg.symbol.isAnonymousFunction)
+
+    def partsFromImplicitArgs(trees: List[Tree]): List[LabelPart] = {
+      @tailrec
+      def recurseImplicitArgs(
+          currentArgs: List[Tree],
+          remainingArgsLists: List[List[Tree]],
+          parts: List[LabelPart]
+      ): List[LabelPart] =
+        (currentArgs, remainingArgsLists) match {
+          case (Nil, Nil) => parts
+          case (Nil, headArgsList :: tailArgsList) =>
+            if (headArgsList.isEmpty) {
+              recurseImplicitArgs(
+                headArgsList,
+                tailArgsList,
+                LabelPart(")") :: parts
+              )
+            } else {
+              recurseImplicitArgs(
+                headArgsList,
+                tailArgsList,
+                LabelPart(", ") :: LabelPart(")") :: parts
+              )
+            }
+          case (arg :: remainingArgs, remainingArgsLists) =>
+            arg match {
+              case Apply(fun, args) =>
+                val applyLabel = labelPart(fun.symbol, fun.symbol.decodedName)
+                recurseImplicitArgs(
+                  args,
+                  remainingArgs :: remainingArgsLists,
+                  LabelPart("(") :: applyLabel :: parts
+                )
+              case t @ Function(vparams, body) =>
+                val funLabel = if (t.symbol.isSynthetic) {
+                  LabelPart(
+                    vparams
+                      .map(v => s"${v.tpt.toString}: ${v.name}")
+                      .mkString("(", ", ", ")")
+                  )
+                } else LabelPart(t.symbol.decodedName)
+                recurseImplicitArgs(
+                  List(body),
+                  remainingArgs :: remainingArgsLists,
+                  LabelPart(" => ") :: funLabel :: parts
+                )
+              case t if t.isTerm =>
+                val termLabel = labelPart(t.symbol, t.symbol.decodedName)
+                if (remainingArgs.isEmpty)
+                  recurseImplicitArgs(
+                    remainingArgs,
+                    remainingArgsLists,
+                    termLabel :: parts
+                  )
+                else
+                  recurseImplicitArgs(
+                    remainingArgs,
+                    remainingArgsLists,
+                    LabelPart(", ") :: termLabel :: parts
+                  )
+              case _ =>
+                recurseImplicitArgs(
+                  remainingArgs,
+                  remainingArgsLists,
+                  parts
+                )
+            }
+        }
+      (LabelPart(")") :: recurseImplicitArgs(
+        trees,
+        Nil,
+        List(LabelPart("("))
+      )).reverse
+    }
   }
 
   object ValueOf {
