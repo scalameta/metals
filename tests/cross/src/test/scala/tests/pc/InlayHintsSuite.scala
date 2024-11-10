@@ -870,7 +870,137 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |  given A = A()
        |  implicit def bar(using a: A): B[A] = B[A]()
        |  def foo(using b: B[A]): String = "aaa"
-       |  val g: String = foo/*(using bar<<(5:15)>>)*/
+       |  val g: String = foo/*(using bar<<(5:15)>>(given_A<<(4:8)>>))*/
        |""".stripMargin
+  )
+
+  check(
+    "multiple-params-list",
+    """|object Main {
+       |  case class A()
+       |  case class B()
+       |  implicit val theA: A = A()
+       |  def foo(b: B)(implicit a: A): String = "aaa"
+       |  val g: String = foo(B())
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  case class A()
+       |  case class B()
+       |  implicit val theA: A = A()
+       |  def foo(b: B)(implicit a: A): String = "aaa"
+       |  val g: String = foo(B())/*(theA<<(4:15)>>)*/
+       |}
+       |""".stripMargin,
+    compat = Map("3" -> """|object Main {
+                           |  case class A()
+                           |  case class B()
+                           |  implicit val theA: A = A()
+                           |  def foo(b: B)(implicit a: A): String = "aaa"
+                           |  val g: String = foo(B())/*(using theA<<(4:15)>>)*/
+                           |}
+                           |""".stripMargin)
+  )
+
+  check(
+    "implicit-chain",
+    """|object Main{
+       |  def hello()(implicit string: String, integer: Int, long: Long): String = {
+       |    println(s"Hello $string, $long, $integer!")
+       |  }
+       |  implicit def theString(implicit i: Int): String = i.toString
+       |  implicit def theInt(implicit l: Long): Int = l
+       |  implicit val theLong: Long = 42
+       |  hello()
+       |}
+       |""".stripMargin,
+    """|object Main{
+       |  def hello()(implicit string: String, integer: Int, long: Long): String = {
+       |    println(s"Hello $string, $long, $integer!")
+       |  }
+       |  implicit def theString(implicit i: Int): String = i.toString
+       |  implicit def theInt(implicit l: Long): Int = l
+       |  implicit val theLong: Long = 42
+       |  hello()/*(theString<<(5:15)>>(theInt<<(6:15)>>(theLong<<(7:15)>>)), theInt<<(6:15)>>(theLong<<(7:15)>>), theLong<<(7:15)>>)*/
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|object Main{
+                |  def hello()(implicit string: String, integer: Int, long: Long): String = {
+                |    println(s"Hello $string, $long, $integer!")
+                |  }
+                |  implicit def theString(implicit i: Int): String = i.toString
+                |  implicit def theInt(implicit l: Long): Int = l
+                |  implicit val theLong: Long = 42
+                |  hello()/*(using theString<<(5:15)>>(theInt<<(6:15)>>(theLong<<(7:15)>>)), theInt<<(6:15)>>(theLong<<(7:15)>>), theLong<<(7:15)>>)*/
+                |}
+                |""".stripMargin
+    )
+  )
+
+  check(
+    "implicit-parameterless-def",
+    """|object Main{
+       |  def hello()(implicit string: String, integer: Int, long: Long): String = {
+       |    println(s"Hello $string, $long, $integer!")
+       |  }
+       |  implicit def theString(implicit i: Int): String = i.toString
+       |  implicit def theInt: Int = 43
+       |  implicit def theLong: Long = 42
+       |  hello()
+       |}
+       |""".stripMargin,
+    """|object Main{
+       |  def hello()(implicit string: String, integer: Int, long: Long): String = {
+       |    println(s"Hello $string, $long, $integer!")
+       |  }
+       |  implicit def theString(implicit i: Int): String = i.toString
+       |  implicit def theInt: Int = 43
+       |  implicit def theLong: Long = 42
+       |  hello()/*(theString<<(5:15)>>(theInt<<(6:15)>>), theInt<<(6:15)>>, theLong<<(7:15)>>)*/
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|object Main{
+                |  def hello()(implicit string: String, integer: Int, long: Long): String = {
+                |    println(s"Hello $string, $long, $integer!")
+                |  }
+                |  implicit def theString(implicit i: Int): String = i.toString
+                |  implicit def theInt: Int = 43
+                |  implicit def theLong: Long = 42
+                |  hello()/*(using theString<<(5:15)>>(theInt<<(6:15)>>), theInt<<(6:15)>>, theLong<<(7:15)>>)*/
+                |}
+                |""".stripMargin
+    )
+  )
+
+  check(
+    "implicit-fn",
+    """|object Main{
+       |  implicit def stringLength(s: String): Int = s.length
+       |  implicitly[String => Int]
+       |
+       |  implicit val namedStringLength: String => Long = (s: String) => s.length.toLong
+       |  implicitly[String => Long]
+       |}
+       |""".stripMargin,
+    """|object Main{
+       |  implicit def stringLength(s: String): Int = s.length
+       |  implicitly[String => Int]/*((String: s) => stringLength<<(2:15)>>(s<<(3:12)>>)))*/
+       |
+       |  implicit val namedStringLength: String => Long = (s: String) => s.length.toLong
+       |  implicitly[String => Long]/*(namedStringLength<<(5:15)>>)*/
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|object Main{
+                |  implicit def stringLength(s: String): Int = s.length
+                |  implicitly[String => Int]
+                |
+                |  implicit val namedStringLength: String => Long = (s: String) => s.length.toLong
+                |  implicitly[String => Long]/*(using namedStringLength<<(5:15)>>)*/
+                |}
+                |""".stripMargin
+    )
   )
 }
