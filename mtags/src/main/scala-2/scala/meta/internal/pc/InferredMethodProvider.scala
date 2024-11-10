@@ -69,11 +69,16 @@ final class InferredMethodProvider(
                 Some(prettyType(found.symbol.tpe))
               else None
             case _ =>
+              // in this case we could have list, tuple, classes, etc and we would need to assess each case to extract the right argument type
               val typ = arg.tpe
               if (typ != null)
                 Some(prettyType(arg.tpe))
-              else
-                None
+              else {
+                logger.warning(
+                  "infer-method: could not infer type of argument, defaulting to Any"
+                )
+                Some("Any")
+              }
           }
           tp.map(tp => s"arg$index: $tp")
 
@@ -90,9 +95,10 @@ final class InferredMethodProvider(
       .Try(position.source.toString()) // in tests this is undefined
       .toOption
       .getOrElse(params.uri().toString())
+
     def signature(
         name: String,
-        paramsString: String,
+        paramsString: Option[String],
         retType: Option[String],
         postProcess: String => String,
         position: Option[Position]
@@ -108,8 +114,9 @@ final class InferredMethodProvider(
         case Some(retTypeStr) =>
           s": $retTypeStr"
       }
+      val parameters = paramsString.map(s => s"($s)").getOrElse("")
       val full =
-        s"def ${name}($paramsString)$retTypeString = ???\n$indentString"
+        s"def ${name}$parameters$retTypeString = ???\n$indentString"
       val methodInsertPosition = lastApplyPos.toLsp
       methodInsertPosition.setEnd(methodInsertPosition.getStart())
       val newEdits = new TextEdit(
@@ -119,6 +126,13 @@ final class InferredMethodProvider(
       newEdits.map(textEdit => (fileUri, textEdit))
     }
 
+    def unimplemented(c: String): List[(FileURI, TextEdit)] = {
+      logger.warning(
+        s"This case ($c) is not currently supported by the infer-method code action."
+      )
+      throw new RuntimeException()
+      Nil
+    }
     def makeEditsForApplyWithUnknownName(
         arguments: List[Tree],
         containingMethod: Name,
@@ -135,17 +149,17 @@ final class InferredMethodProvider(
               val ret = prettyType(methodParams(retIndex).tpe)
               signature(
                 name = errorMethod.name.toString(),
-                paramsString = paramsString,
+                paramsString = Option(paramsString),
                 retType = Some(ret),
                 postProcess = identity,
                 position = None
               )
             case _ =>
-              Nil
+              unimplemented("apply-with-unknown-name-inner")
           }
 
         case _ =>
-          Nil
+          unimplemented("apply-with-unknown-name-outer")
       }
     }
     def makeEditsForListApply(
@@ -165,7 +179,7 @@ final class InferredMethodProvider(
             val tpe = methodParams(retIndex).tpe
             tpe match {
               // def method1(s : (String, Float) => Int) = 123
-              // method1(<<otherMethod>>)
+              // method1(<<nonExistent>>)
               case TypeRef(_, _, args) if definitions.isFunctionType(tpe) =>
                 val params = args.take(args.size - 1)
                 val paramsString =
@@ -178,7 +192,7 @@ final class InferredMethodProvider(
                 val ret = prettyType(resultType)
                 signature(
                   name = errorMethod.name.toString(),
-                  paramsString,
+                  Option(paramsString),
                   Option(ret),
                   identity,
                   None
@@ -186,26 +200,24 @@ final class InferredMethodProvider(
 
               case _ =>
                 //    def method1(s : => Int) = 123
-                //    method1(<<otherMethod>>)
+                //    method1(<<nonExistent>>)
                 val ret = tpe.toString().replace("=>", "").trim()
-                val full =
-                  s"def ${errorMethod.name}: $ret = ???\n$indentString"
                 signature(
                   name = errorMethod.name.toString(),
-                  "",
                   None,
-                  _ => full,
+                  Option(ret),
+                  identity,
                   Option(lastApplyPos)
                 )
             }
 
           case _ =>
-            Nil
+            unimplemented("list-apply")
         }
       } else {
         signature(
           name = errorMethod.name.toString(),
-          paramsString = argumentsString(arguments).getOrElse(""),
+          paramsString = Option(argumentsString(arguments).getOrElse("")),
           retType = None,
           postProcess = identity,
           position = None
@@ -224,7 +236,7 @@ final class InferredMethodProvider(
             val paramsString = s"arg0: ${prettyType(inputType.tpe)}"
             signature(
               name = errorMethod.name.toString(),
-              paramsString,
+              Option(paramsString),
               None,
               identity,
               None
@@ -235,18 +247,18 @@ final class InferredMethodProvider(
             val paramsString = s"arg0: ${prettyType(inputType.tpe)}"
             signature(
               name = errorMethod.name.toString(),
-              paramsString,
+              Option(paramsString),
               None,
               identity,
               None
             )
           case _ =>
-            Nil
+            unimplemented("list-apply-without-args-inner")
         }
-      } else Nil
+      } else unimplemented("list-apply-without-args-outer")
     }
     def makeEditsMethodObject(
-        arguments: List[Tree],
+        arguments: Option[List[Tree]],
         container: Name,
         errorMethod: Select
     ): List[(FileURI, TextEdit)] = {
@@ -259,12 +271,12 @@ final class InferredMethodProvider(
           .map(_.toString)
           .mkString
         if (params.uri().toString() != getPositionUri(insertPos)) {
-          println("You can only infer method for current file.")
-          Nil
+          unimplemented("method in external file")
         } else
           signature(
             name = errorMethod.name.toString(),
-            paramsString = argumentsString(arguments).getOrElse(""),
+            paramsString = arguments
+              .fold(Option.empty[String])(argumentsString(_) orElse Option("")),
             retType = None,
             postProcess = method => {
               if (
@@ -332,14 +344,14 @@ final class InferredMethodProvider(
                       ) =>
                     makeClassMethodEdits(template)
                   case _ =>
-                    Nil
+                    unimplemented("object-method-inner")
                 }
             }
           case _ =>
-            Nil
+            unimplemented("object-method-outer")
         }
       } else
-        Nil
+        unimplemented("object-method")
     }
     val uriTextEditPairs = typedTree match {
       case errorMethod: Ident if errorMethod.isErroneous =>
@@ -360,8 +372,8 @@ final class InferredMethodProvider(
               errorMethod,
               nonExistent
             )
-          // nonExistent(param1, param2)
-          // val a: Int = nonExistent(param1, param2)
+          // <<nonExistent>>(param1, param2)
+          // val a: Int = <<nonExistent>>(param1, param2)
           case (_: Ident) :: Apply(
                 containing @ Ident(
                   nonExistent
@@ -370,13 +382,13 @@ final class InferredMethodProvider(
               ) :: _ if containing.isErrorTyped =>
             signature(
               name = nonExistent.toString(),
-              paramsString = argumentsString(arguments).getOrElse(""),
+              paramsString = Option(argumentsString(arguments).getOrElse("")),
               retType = None,
               postProcess = identity,
               position = None
             )
-          // List(1, 2, 3).map(nonExistent)
-          // List((1, 2)).map{case (x,y) => otherMethod(x,y)}
+          // List(1, 2, 3).map(<<nonExistent>>)
+          // List((1, 2)).map{case (x,y) => <<nonExistent>>(x,y)}
           case (_: Ident) :: Apply(
                 Ident(containingMethod),
                 arguments
@@ -395,7 +407,8 @@ final class InferredMethodProvider(
               ) :: _ =>
             signature(
               name = errorMethod.name.toString(),
-              paramsString = argumentsString(arguments).getOrElse(""),
+              paramsString =
+                Option(argumentsString(arguments.take(1)).getOrElse("")),
               retType = None,
               postProcess = identity,
               position = None
@@ -407,7 +420,7 @@ final class InferredMethodProvider(
                 _ :: Nil
               ) :: _ =>
             makeEditsForListApplyWithoutArgs(argumentList, errorMethod)
-          case _ => Nil
+          case _ => unimplemented("simple-case")
         }
       case errorMethod: Select =>
         lastVisitedParentTrees match {
@@ -418,11 +431,18 @@ final class InferredMethodProvider(
                 _,
                 arguments
               ) :: _ =>
-            makeEditsMethodObject(arguments, container, errorMethod)
-          case _ => Nil
+            makeEditsMethodObject(Option(arguments), container, errorMethod)
+          // X.<<nonExistent>>
+          case Select(Ident(container), _) :: _ =>
+            makeEditsMethodObject(Option.empty, container, errorMethod)
+          // X.<<nonExistent>>
+          case Select(Select(_, container), _) :: _ =>
+            makeEditsMethodObject(Option.empty, container, errorMethod)
+          case _ =>
+            unimplemented("other-than-method")
         }
       case _ =>
-        Nil
+        unimplemented("other-than-ident-or-select")
     }
     new WorkspaceEdit(
       uriTextEditPairs
@@ -458,7 +478,7 @@ final class InferredMethodProvider(
     else acc
   }
 
-  // TODO taken from OverrideCompletion: move into a utility?
+  // taken from OverrideCompletion
   /**
    * Get the position to insert implements for the given Template.
    * `class Foo extends Bar {}` => retuning position would be right after the opening brace.

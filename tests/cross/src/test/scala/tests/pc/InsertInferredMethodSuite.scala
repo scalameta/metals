@@ -261,6 +261,25 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
+    "lambda-generic-complex-type",
+    """|
+       |trait Main {
+       |  def main() = {
+       |    List((1, 2, 3)).map(<<otherMethod>>)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|trait Main {
+       |  def otherMethod(arg0: Any) = ???
+       |  def main() = {
+       |    List((1, 2, 3)).map(otherMethod)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
     "lambda-generic-filter",
     """|
        |trait Main {
@@ -491,6 +510,32 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |    val a = true
        |    val b = "test"
        |    X.otherMethod(a, b, 1)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "object-method-without-args",
+    """|
+       |object X {
+       |  val x = 1
+       |}
+       |trait Main {
+       |  def main() = {
+       |    X.<<otherMethod>>
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|object X {
+       |  def otherMethod = ???
+       |
+       |  val x = 1
+       |}
+       |trait Main {
+       |  def main() = {
+       |    X.otherMethod
        |  }
        |}
        |""".stripMargin
