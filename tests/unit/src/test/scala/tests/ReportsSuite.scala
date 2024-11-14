@@ -1,5 +1,6 @@
 package tests
 
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -36,7 +37,7 @@ class ReportsSuite extends BaseSuite {
         |${workspaceStr}/WrongFile.scala
         |""".stripMargin
 
-  def exampleReport(name: String, path: Option[String] = None): Report =
+  def exampleReport(name: String, path: Option[URI] = None): Report =
     Report(name, exampleText(), "Test error report.", path)
 
   override def afterEach(context: AfterEach): Unit = {
@@ -70,7 +71,8 @@ class ReportsSuite extends BaseSuite {
 
   test("get-name-summary-and-buildTarget") {
     val report = exampleReport("test_error")
-    val report2 = exampleReport("test_error2", Some("<path>"))
+    val report2 =
+      exampleReport("test_error2", Some(URI.create("file://file.scala")))
     reportsProvider.incognito.create(report)
     reportsProvider.incognito.create(report2)
     val reports = reportsProvider.incognito

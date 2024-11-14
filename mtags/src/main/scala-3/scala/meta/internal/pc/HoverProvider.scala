@@ -88,7 +88,7 @@ object HoverProvider:
               |""".stripMargin,
           s"empty hover in $uri",
           id = Some(s"$uri::$posId"),
-          path = Some(uri.toString),
+          path = Some(uri),
         )
       end report
       reportContext.unsanitized.create(report, ifVerbose = true)

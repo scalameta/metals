@@ -99,7 +99,7 @@ object SemanticTokensProvider {
               "semantic-tokens-provider",
               params.text(),
               s"Could not find semantic tokens for: ${params.uri()}",
-              Some(params.uri().toString()),
+              Some(params.uri()),
               error = Some(t),
             )
           )

@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -39,7 +40,7 @@ trait Reporter {
 
 class StdReportContext(
     workspace: Path,
-    resolveBuildTarget: Option[String] => Option[String],
+    resolveBuildTarget: Option[URI] => Option[String],
     level: ReportLevel = ReportLevel.Info
 ) extends ReportContext {
   val reportsDir: Path = workspace.resolve(StdReportContext.reportsDir)
@@ -85,7 +86,7 @@ class StdReportContext(
 class StdReporter(
     workspace: Path,
     pathToReports: Path,
-    resolveBuildTarget: Option[String] => Option[String],
+    resolveBuildTarget: Option[URI] => Option[String],
     level: ReportLevel,
     override val name: String
 ) extends Reporter {
@@ -221,7 +222,7 @@ case class Report(
     name: String,
     text: String,
     shortSummary: String,
-    path: Option[String] = None,
+    path: Option[URI] = None,
     id: Option[String] = None,
     error: Option[Throwable] = None
 ) {
@@ -267,7 +268,7 @@ object Report {
       name: String,
       text: String,
       error: Throwable,
-      path: Option[String]
+      path: Option[URI]
   ): Report =
     Report(
       name,

@@ -121,7 +121,7 @@ final class InlayHintResolveProvider(
           |""".stripMargin,
       s"failed to resolve inlayHint in $path",
       id = Some(s"$path::${pos.getLine()}:${pos.getCharacter()}"),
-      path = Some(path.toString()),
+      path = Some(path.toURI),
       error = Some(error),
     )
   }

@@ -181,7 +181,7 @@ final class ImplementationProvider(
                   |$dealisedSymbol
                   |""".stripMargin,
               s"missing def: $dealisedSymbol",
-              Some(source.toURI.toString()),
+              Some(source.toURI),
             )
           )
         }

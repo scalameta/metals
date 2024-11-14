@@ -1,6 +1,9 @@
 package scala.meta.internal.mtags
 
+import java.nio.file.Paths
+
 import scala.annotation.tailrec
+import scala.util.Try
 
 import scala.meta.Dialect
 import scala.meta.inputs.Input
@@ -1139,7 +1142,7 @@ class ScalaToplevelMtags(
         failMessage(expected),
         s"expected $expected; obtained $currentToken",
         id = Some(s"""${input.path}:${newPosition}"""),
-        path = Some(input.path)
+        path = Try(Paths.get(input.path).toUri()).toOption
       )
     )
   }
