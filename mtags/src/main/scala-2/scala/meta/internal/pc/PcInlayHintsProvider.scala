@@ -186,6 +186,12 @@ final class PcInlayHintsProvider(
             }
           case (arg :: remainingArgs, remainingArgsLists) =>
             arg match {
+              case Block(_, expr) =>
+                recurseImplicitArgs(
+                  expr :: remainingArgs,
+                  remainingArgsLists,
+                  parts
+                )
               case Apply(fun, _) if isValueOf(fun.symbol) =>
                 val label = LabelPart(
                   "new " + nme.valueOf.decoded.capitalize + "(...)"
