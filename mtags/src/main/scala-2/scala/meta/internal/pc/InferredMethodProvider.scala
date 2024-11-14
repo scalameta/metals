@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 
+import scala.meta.pc.DisplayableException
 import scala.meta.pc.OffsetParams
 
 import org.eclipse.lsp4j.TextEdit
@@ -127,10 +128,9 @@ final class InferredMethodProvider(
     }
 
     def unimplemented(c: String): List[(FileURI, TextEdit)] = {
-      logger.warning(
-        s"This case ($c) is not currently supported by the infer-method code action."
+      throw new DisplayableException(
+        s"The case ($c) is not currently supported by the infer-method code action."
       )
-      throw new RuntimeException()
       Nil
     }
     def makeEditsForApplyWithUnknownName(
@@ -173,9 +173,6 @@ final class InferredMethodProvider(
         methodSymbol.symbol.tpe match {
           case MethodType(methodParams, _) if retIndex >= 0 =>
             val lastApplyPos = insertPosition()
-            val indentString =
-              indentation(params.text(), lastApplyPos.start - 1)
-
             val tpe = methodParams(retIndex).tpe
             tpe match {
               // def method1(s : (String, Float) => Int) = 123
@@ -399,20 +396,13 @@ final class InferredMethodProvider(
                 Select(
                   Apply(
                     Ident(_),
-                    arguments
+                    _
                   ),
                   _
                 ),
                 _
               ) :: _ =>
-            signature(
-              name = errorMethod.name.toString(),
-              paramsString =
-                Option(argumentsString(arguments.take(1)).getOrElse("")),
-              retType = None,
-              postProcess = identity,
-              position = None
-            )
+            unimplemented("select-with-function-without-args")
           // val list = List(1,2,3)
           // list.map(nonExistent)
           case (Ident(_)) :: Apply(
