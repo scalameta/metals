@@ -1,5 +1,8 @@
 package tests
 
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -29,6 +32,24 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
         .copy(inputBoxProvider = Some(true), openNewWindowProvider = Some(true))
     )
 
+  def scrape(urlString: String): String = {
+    val url = new URL(urlString)
+    val connection = url.openConnection()
+    val reader = new BufferedReader(
+      new InputStreamReader(connection.getInputStream())
+    )
+
+    LazyList.continually(reader.readLine()).takeWhile(_ != null).mkString("\n")
+  }
+
+  val CubeCalculator =
+    "https://raw.githubusercontent.com/scala/scalatest-example.g8/refs/heads/main/src/main/g8/src/main/scala/%24package%24/CubeCalculator.scala"
+  val CubeCalculatorTest =
+    "https://raw.githubusercontent.com/scala/scalatest-example.g8/refs/heads/main/src/main/g8/src/test/scala/%24package%24/CubeCalculatorTest.scala"
+
+  lazy val CubeCalculatorInput: String = scrape(CubeCalculator)
+  lazy val CubeCalculatorTestInput: String = scrape(CubeCalculatorTest)
+
   def scalatestTemplate(name: String = "scalatest-example"): String =
     s"""|/$name/build.sbt
         |lazy val root = (project in file(".")).
@@ -48,19 +69,11 @@ class NewProjectLspSuite extends BaseLspSuite("new-project") {
         |
         |
         |/$name/src/main/scala/com/example/CubeCalculator.scala
-        |object CubeCalculator extends App {
-        |  def cube(x: Int) = {
-        |    x * x * x
-        |  }
-        |}
+        |$CubeCalculatorInput
+        |
         |
         |/$name/src/test/scala/com/example/CubeCalculatorTest.scala
-        |class CubeCalculatorTest extends org.scalatest.funsuite.AnyFunSuite {
-        |  test("CubeCalculator.cube") {
-        |    assert(CubeCalculator.cube(3) === 27)
-        |  }
-        |}
-        |
+        |$CubeCalculatorTestInput
         |""".stripMargin
 
   check("basic-template")(
