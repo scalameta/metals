@@ -52,11 +52,8 @@ trait Assertions extends munit.Assertions {
   def assertDiffEqual[T](obtained: T, expected: T, hint: String = "")(implicit
       loc: Location
   ): Unit = {
-    if (obtained != expected) {
-      val hintMsg = if (hint.isEmpty) "" else s" (hint: $hint)"
-      assertNoDiff(obtained.toString, expected.toString, hint)
-      fail(s"obtained=<$obtained> != expected=<$expected>$hintMsg")
-    }
+    val hintMsg = if (hint.isEmpty) "" else s" (hint: $hint)"
+    assertNoDiff(obtained.toString, expected.toString, hintMsg)
   }
 
   def assertLines(obtained: String, expected: String)(implicit
