@@ -65,12 +65,6 @@ final class PcInlayHintsProvider(
           ImplicitParameters.partsFromImplicitArgs(trees),
           InlayHintKind.Parameter
         )
-      case ValueOf(label, pos) =>
-        inlayHints.add(
-          adjustPos(pos).focusEnd.toLsp,
-          LabelPart("(") :: LabelPart(label) :: List(LabelPart(")")),
-          InlayHintKind.Parameter
-        )
       case TypeParameters(tpes, pos) if tpes.forall(_ != null) =>
         val label = tpes.map(toLabelParts(_, pos)).separated("[", ", ", "]")
         inlayHints.add(
@@ -161,20 +155,11 @@ final class PcInlayHintsProvider(
     def unapply(tree: Tree): Option[(List[Tree], Position)] =
       if (params.implicitParameters())
         tree match {
-          case Apply(_, args)
-              if args.exists(isSyntheticArg) && !tree.pos.isOffset =>
-            val (implicitArgs, providedArgs) = args.partition(isSyntheticArg)
-            val pos = providedArgs.lastOption.fold(tree.pos)(_.pos)
-            Some(
-              implicitArgs,
-              pos
-            )
+          case implicitApply: ApplyToImplicitArgs if !tree.pos.isOffset =>
+            Some(implicitApply.args, tree.pos)
           case _ => None
         }
       else None
-
-    private def isSyntheticArg(arg: Tree): Boolean =
-      arg.pos.isOffset && arg.symbol != null && (arg.symbol.isImplicit || arg.symbol.isAnonymousFunction)
 
     def partsFromImplicitArgs(trees: List[Tree]): List[LabelPart] = {
       @tailrec
@@ -201,6 +186,22 @@ final class PcInlayHintsProvider(
             }
           case (arg :: remainingArgs, remainingArgsLists) =>
             arg match {
+              case Apply(fun, _) if isValueOf(fun.symbol) =>
+                val label = LabelPart(
+                  "new " + nme.valueOf.decoded.capitalize + "(...)"
+                )
+                if (remainingArgs.isEmpty)
+                  recurseImplicitArgs(
+                    remainingArgs,
+                    remainingArgsLists,
+                    label :: parts
+                  )
+                else
+                  recurseImplicitArgs(
+                    remainingArgs,
+                    remainingArgsLists,
+                    LabelPart(", ") :: label :: parts
+                  )
               case Apply(fun, args) =>
                 val applyLabel = labelPart(fun.symbol, fun.symbol.decodedName)
                 recurseImplicitArgs(
@@ -249,24 +250,9 @@ final class PcInlayHintsProvider(
         List(LabelPart("("))
       )).reverse
     }
-  }
 
-  object ValueOf {
-    def unapply(tree: Tree): Option[(String, Position)] =
-      if (params.implicitParameters())
-        tree match {
-          case Apply(ta: TypeApply, Apply(fun, _) :: _)
-              if fun.pos.isOffset && isValueOf(fun.symbol) =>
-            Some(
-              "new " + nme.valueOf.decoded.capitalize + "(...)",
-              ta.pos
-            )
-          case _ => None
-        }
-      else None
     private def isValueOf(symbol: Symbol) =
       symbol != null && symbol.safeOwner.decodedName == nme.valueOf.decoded.capitalize
-
   }
 
   object TypeParameters {
