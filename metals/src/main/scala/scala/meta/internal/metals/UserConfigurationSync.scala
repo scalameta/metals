@@ -91,6 +91,8 @@ class UserConfigurationSync(
       case Left(errors) =>
         errors.foreach { error => scribe.error(s"config error: $error") }
         None
-      case Right(newUserConfig) => Some(newUserConfig)
+      case Right(newUserConfig) =>
+        scribe.debug("New user configuration: " + newUserConfig)
+        Some(newUserConfig)
     }
 }
