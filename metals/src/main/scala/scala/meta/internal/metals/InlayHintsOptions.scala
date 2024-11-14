@@ -34,13 +34,14 @@ object InlayHintsOption {
   case object ImplicitArguments extends InlayHintsOption
   case object TypeParameters extends InlayHintsOption
   case object HintsInPatternMatch extends InlayHintsOption
-  def unapply(value: String): Option[InlayHintsOption] = value match {
-    case "inferredTypes" => Some(InferredType)
-    case "implicitConversions" => Some(ImplicitConversions)
-    case "implicitArguments" => Some(ImplicitArguments)
-    case "typeParameters" => Some(TypeParameters)
-    case "hintsInPatternMatch" => Some(HintsInPatternMatch)
-    case _ => None
-  }
+  def unapply(value: String): Option[InlayHintsOption] =
+    StringCase.kebabToCamel(value) match {
+      case "inferredTypes" => Some(InferredType)
+      case "implicitConversions" => Some(ImplicitConversions)
+      case "implicitArguments" => Some(ImplicitArguments)
+      case "typeParameters" => Some(TypeParameters)
+      case "hintsInPatternMatch" => Some(HintsInPatternMatch)
+      case _ => None
+    }
 
 }
