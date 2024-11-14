@@ -1,8 +1,8 @@
 //> using jvm 17
-//> using scala "3.3.0"
-//> using dep "org.kohsuke:github-api:1.326"
-//> using dep "com.lihaoyi::os-lib:0.11.3"
-//> using options "-Wunused:all", "-deprecation"
+//> using scala 3
+//> using dep org.kohsuke:github-api:1.326
+//> using dep com.lihaoyi::os-lib:0.11.3
+//> using options -Wunused:all -deprecation
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable
