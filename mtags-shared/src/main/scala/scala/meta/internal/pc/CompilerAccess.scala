@@ -216,7 +216,7 @@ abstract class CompilerAccess[Reporter, Compiler](
             |${params.map(_.printed()).getOrElse("<NONE>")}
             |""".stripMargin,
         error,
-        path = params.map(_.uri().toString)
+        path = params.map(_.uri())
       )
     val pathToReport =
       rc.unsanitized.create(report)

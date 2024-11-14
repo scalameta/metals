@@ -248,7 +248,7 @@ final class ReferenceProvider(
                       }
                       .mkString("\n"),
                     s"Could not find any locations for ${result.occurrence}, printing index state",
-                    Some(source.toString()),
+                    Some(source.toURI),
                     Some(
                       source.toString() + ":" + result.occurrence.getOrElse("")
                     ),

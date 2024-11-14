@@ -17,6 +17,7 @@ import scala.concurrent.TimeoutException
 import scala.concurrent.duration._
 import scala.util.Failure
 import scala.util.Success
+import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BspSession
@@ -163,7 +164,7 @@ abstract class MetalsLspService(
     folder.toNIO,
     _.flatMap { uri =>
       for {
-        filePath <- uri.toAbsolutePathSafe
+        filePath <- Try(AbsolutePath(Paths.get(uri))).toOption
         buildTargetId <- buildTargets.inverseSources(filePath)
         name <- buildTargets.info(buildTargetId).map(_.getDisplayName())
       } yield name

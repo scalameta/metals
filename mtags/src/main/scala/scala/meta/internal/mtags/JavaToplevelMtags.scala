@@ -1,6 +1,9 @@
 package scala.meta.internal.mtags
 
+import java.nio.file.Paths
+
 import scala.annotation.tailrec
+import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.dialects
@@ -49,7 +52,7 @@ class JavaToplevelMtags(
                 |```
                 |""".stripMargin,
             s"Java indexer failed with and exception.",
-            path = Some(input.path),
+            path = Try(Paths.get(input.path).toUri()).toOption,
             id = Some(input.path),
             error = Some(e)
           )

@@ -53,7 +53,7 @@ class HoverProvider(
       val hasErroneousType =
         if (tree.tpe != null) tree.tpe.isErroneous
         else "type null"
-      val fileName = params.uri().toString()
+      val fileName = params.uri()
       val posId =
         if (tree.pos.isDefined) tree.pos.start
         else pos.start
