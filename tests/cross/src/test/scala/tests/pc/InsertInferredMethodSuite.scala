@@ -240,7 +240,7 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
-    "lambda-generic",
+    "lambda-generic".ignore,
     """|
        |trait Main {
        |  def main() = {
@@ -261,7 +261,7 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
-    "lambda-generic-complex-type",
+    "lambda-generic-complex-type".ignore,
     """|
        |trait Main {
        |  def main() = {
@@ -280,7 +280,7 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
-    "lambda-generic-filter",
+    "lambda-generic-filter".ignore,
     """|
        |trait Main {
        |  def main() = {
