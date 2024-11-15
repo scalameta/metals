@@ -1,6 +1,6 @@
 ---
 author: Tomasz Godzik
-title: Metals v1.4.0 - Palladium
+title: Metals v1.4.1 - Palladium
 authorURL: https://twitter.com/TomekGodzik
 authorImageURL: https://github.com/tgodzik.png
 ---
