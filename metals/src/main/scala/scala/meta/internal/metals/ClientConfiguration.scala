@@ -162,6 +162,15 @@ final class ClientConfiguration(
     } yield true
   }.getOrElse(false)
 
+  def isInlayHintsRefreshEnabled(): Boolean = {
+    for {
+      capabilities <- clientCapabilities
+      workspace <- Option(capabilities.getWorkspace())
+      inlayHints <- Option(workspace.getInlayHint())
+      refreshSupport <- Option(inlayHints.getRefreshSupport())
+    } yield refreshSupport.booleanValue()
+  }.getOrElse(false)
+
   def hoverContentType(): ContentType =
     (for {
       capabilities <- clientCapabilities
