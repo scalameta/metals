@@ -161,6 +161,35 @@ final class PcInlayHintsProvider(
         }
       else None
 
+    private def reversedLabelPartsFromParams(
+        vparams: List[ValDef]
+    ): List[LabelPart] = {
+      val labels = vparams
+        .map(v =>
+          List(
+            labelPart(v.tpt.symbol, v.tpt.symbol.decodedName),
+            LabelPart(s"${v.name} : ")
+          )
+        )
+        .reverse
+        .flatten
+      if (labels.size == 0) labels
+      else {
+        val withCommas =
+          if (labels.size > 2)
+            labels.zipWithIndex.flatMap {
+              case (label, index)
+                  // add coma between each param except last
+                  if index % 2 == 1 && index != labels.size - 1 =>
+                Seq(label, LabelPart(", "))
+              case (label, _) => Seq(label)
+
+            }
+          else labels
+        LabelPart(")") +: withCommas :+ LabelPart("(")
+      }
+    }
+
     def partsFromImplicitArgs(trees: List[Tree]): List[LabelPart] = {
       @tailrec
       def recurseImplicitArgs(
@@ -216,17 +245,14 @@ final class PcInlayHintsProvider(
                   LabelPart("(") :: applyLabel :: parts
                 )
               case t @ Function(vparams, body) =>
-                val funLabel = if (t.symbol.isSynthetic) {
-                  LabelPart(
-                    vparams
-                      .map(v => s"${v.tpt.toString}: ${v.name}")
-                      .mkString("(", ", ", ")")
-                  )
-                } else LabelPart(t.symbol.decodedName)
+                val funLabels =
+                  if (t.symbol.isSynthetic)
+                    reversedLabelPartsFromParams(vparams)
+                  else List(labelPart(t.symbol, t.symbol.decodedName))
                 recurseImplicitArgs(
                   List(body),
                   remainingArgs :: remainingArgsLists,
-                  LabelPart(" => ") :: funLabel :: parts
+                  LabelPart(" => ") :: funLabels ::: parts
                 )
               case t if t.isTerm =>
                 val termLabel = labelPart(t.symbol, t.symbol.decodedName)
