@@ -127,7 +127,9 @@ final class PcInlayHintsProvider(
   }
 
   private def labelPart(symbol: Symbol, label: String) =
-    if (symbol.pos.source == pos.source) {
+    if (symbol.isSynthetic && !symbol.isMethod) {
+      LabelPart(label)
+    } else if (symbol.pos.source == pos.source) {
       val pos = if (symbol.pos.start != symbol.pos.point) {
         symbol.pos.withStart(symbol.pos.point)
       } else {
