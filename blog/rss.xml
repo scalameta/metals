@@ -4,10 +4,174 @@
         <title>Metals Blog</title>
         <link>http://scalameta.org/metals/blog</link>
         <description>Metals Blog</description>
-        <lastBuildDate>Thu, 24 Oct 2024 00:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Fri, 15 Nov 2024 00:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <language>en</language>
+        <item>
+            <title><![CDATA[Metals v1.4.0 - Palladium]]></title>
+            <link>http://scalameta.org/metals/blog/2024/11/15/palladium</link>
+            <guid>http://scalameta.org/metals/blog/2024/11/15/palladium</guid>
+            <pubDate>Fri, 15 Nov 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[We're happy to announce the release of Metals v1.4.1, which focuses mostly on]]></description>
+            <content:encoded><![CDATA[<p>We're happy to announce the release of Metals v1.4.1, which focuses mostly on
+smaller fixes to the latest 1.4.0 release together with updating Bloop to the
+latest version, which includes it's own improvements and fixes.</p>
+<table><tbody><tr><td>Commits since last release</td><td align="center">37</td></tr><tr><td>Merged PRs</td><td align="center">36</td></tr><tr><td>Contributors</td><td align="center">4</td></tr><tr><td>Closed issues</td><td align="center">7</td></tr><tr><td>New features</td><td align="center">0</td></tr></tbody></table>
+<p>For full details:
+<a href="https://github.com/scalameta/metals/milestone/73?closed=1" target="_blank" rel="noopener noreferrer">https://github.com/scalameta/metals/milestone/73?closed=1</a></p>
+<p>Metals is a language server for Scala that works with VS Code, Vim, Emacs, Zed,
+Helix and Sublime Text. Metals is developed at the
+<a href="https://scala.epfl.ch/" target="_blank" rel="noopener noreferrer">Scala Center</a> and <a href="https://virtuslab.com/" target="_blank" rel="noopener noreferrer">VirtusLab</a>
+with the help from contributors from the community.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="tldr">TL;DR<a href="http://scalameta.org/metals/blog/2024/11/15/palladium#tldr" class="hash-link" aria-label="Direct link to TL;DR" title="Direct link to TL;DR">​</a></h2>
+<p>Check out <a href="https://scalameta.org/metals/" target="_blank" rel="noopener noreferrer">https://scalameta.org/metals/</a>, and
+give Metals a try!</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="bloop-update">Bloop Update<a href="http://scalameta.org/metals/blog/2024/11/15/palladium#bloop-update" class="hash-link" aria-label="Direct link to Bloop Update" title="Direct link to Bloop Update">​</a></h2>
+<p>Newest Bloop brings two main improvements for Metals users:</p>
+<ul>
+<li>Wart Remover should now work correctly, users will need to reimport the build.</li>
+<li>Best effort compilation issues should now be fixed and users are encouraged to
+tests it out by starting Metals with <code>-Dmetals.enable-best-effort=true</code> or by
+putting that property into <code>metals.serverProperties</code> in case of VS Code.</li>
+</ul>
+<p>You can read about a specific changes in the
+<a href="https://github.com/scalacenter/bloop/releases/tag/v2.0.5" target="_blank" rel="noopener noreferrer">release notes</a></p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="miscellaneous">Miscellaneous<a href="http://scalameta.org/metals/blog/2024/11/15/palladium#miscellaneous" class="hash-link" aria-label="Direct link to Miscellaneous" title="Direct link to Miscellaneous">​</a></h2>
+<ul>
+<li>bugfix: Fix extract function not showing up
+<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a></li>
+<li>bugfix: Properly escape jar: paths on Windows
+<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a></li>
+<li>bugfix: Run by default also synthetic mains such as scripts
+<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a></li>
+<li>bugfix: Correctly check if a given config exists in scalafix.conf
+<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a></li>
+<li>improvement: Always find all references including companion objects and
+classes. <a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a></li>
+<li>bugfix: Fix pasting into multiline strings when indent would be wrong.
+<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a></li>
+<li>improvement: Don't automatically add release flag for versions from 17
+<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a></li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="contributors">Contributors<a href="http://scalameta.org/metals/blog/2024/11/15/palladium#contributors" class="hash-link" aria-label="Direct link to Contributors" title="Direct link to Contributors">​</a></h2>
+<p>Big thanks to everybody who contributed to this release or reported an issue!</p>
+<div class="codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#bfc7d5"><span class="token plain">$ git shortlog -sn --no-merges v1.4.0..v1.4.1</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    16	Tomasz Godzik</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    12	Scalameta Bot</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     5	dependabot[bot]</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     1	nguyenyou</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="merged-prs">Merged PRs<a href="http://scalameta.org/metals/blog/2024/11/15/palladium#merged-prs" class="hash-link" aria-label="Direct link to Merged PRs" title="Direct link to Merged PRs">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="v141-2024-11-14"><a href="https://github.com/scalameta/metals/tree/v1.4.1" target="_blank" rel="noopener noreferrer">v1.4.1</a> (2024-11-14)<a href="http://scalameta.org/metals/blog/2024/11/15/palladium#v141-2024-11-14" class="hash-link" aria-label="Direct link to v141-2024-11-14" title="Direct link to v141-2024-11-14">​</a></h2>
+<p><a href="https://github.com/scalameta/metals/compare/v1.4.0...v1.4.1" target="_blank" rel="noopener noreferrer">Full Changelog</a></p>
+<p><strong>Merged pull requests:</strong></p>
+<ul>
+<li>improvements: Explicitly use URI instead of string
+<a href="https://github.com/scalameta/metals/pull/6933" target="_blank" rel="noopener noreferrer">#6933</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix: Allow kebab case in inlay hints
+<a href="https://github.com/scalameta/metals/pull/6932" target="_blank" rel="noopener noreferrer">#6932</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix: Fix test for new project provider
+<a href="https://github.com/scalameta/metals/pull/6931" target="_blank" rel="noopener noreferrer">#6931</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>build(deps): Update sbt-buildinfo from 0.13.0 to 0.13.1
+<a href="https://github.com/scalameta/metals/pull/6927" target="_blank" rel="noopener noreferrer">#6927</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update coursier, ... from 2.1.16 to 2.1.17
+<a href="https://github.com/scalameta/metals/pull/6928" target="_blank" rel="noopener noreferrer">#6928</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>bugfix: Fix extract function not showing up
+<a href="https://github.com/scalameta/metals/pull/6920" target="_blank" rel="noopener noreferrer">#6920</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>chore: Only resolve jvm when running test
+<a href="https://github.com/scalameta/metals/pull/6919" target="_blank" rel="noopener noreferrer">#6919</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>build(deps): Update bloop-rifle from 2.0.3 to 2.0.5
+<a href="https://github.com/scalameta/metals/pull/6916" target="_blank" rel="noopener noreferrer">#6916</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update flyway-core from 10.20.1 to 10.21.0
+<a href="https://github.com/scalameta/metals/pull/6918" target="_blank" rel="noopener noreferrer">#6918</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update coursier, ... from 2.1.14 to 2.1.16
+<a href="https://github.com/scalameta/metals/pull/6917" target="_blank" rel="noopener noreferrer">#6917</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>docs: Upgrade Docusaurus to Version 3.6.0
+<a href="https://github.com/scalameta/metals/pull/6915" target="_blank" rel="noopener noreferrer">#6915</a>
+(<a href="https://github.com/nguyenyou" target="_blank" rel="noopener noreferrer">nguyenyou</a>)</li>
+<li>bugfix: Properly escape jar: paths
+<a href="https://github.com/scalameta/metals/pull/6913" target="_blank" rel="noopener noreferrer">#6913</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix: Also discover synthetic mains such as scripts
+<a href="https://github.com/scalameta/metals/pull/6910" target="_blank" rel="noopener noreferrer">#6910</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>build(deps): Update sbt-buildinfo from 0.12.0 to 0.13.0
+<a href="https://github.com/scalameta/metals/pull/6911" target="_blank" rel="noopener noreferrer">#6911</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update sbt, scripted-plugin from 1.10.4 to 1.10.5
+<a href="https://github.com/scalameta/metals/pull/6912" target="_blank" rel="noopener noreferrer">#6912</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): bump react from 18.2.0 to 18.3.1 in /website
+<a href="https://github.com/scalameta/metals/pull/6905" target="_blank" rel="noopener noreferrer">#6905</a>
+(<a href="https://github.com/dependabot%5Bbot%5D" target="_blank" rel="noopener noreferrer">dependabot[bot]</a>)</li>
+<li>build(deps): bump @swc/core from 1.7.14 to 1.7.42 in /website
+<a href="https://github.com/scalameta/metals/pull/6907" target="_blank" rel="noopener noreferrer">#6907</a>
+(<a href="https://github.com/dependabot%5Bbot%5D" target="_blank" rel="noopener noreferrer">dependabot[bot]</a>)</li>
+<li>build(deps-dev): bump @types/node from 22.5.0 to 22.8.6 in /website
+<a href="https://github.com/scalameta/metals/pull/6906" target="_blank" rel="noopener noreferrer">#6906</a>
+(<a href="https://github.com/dependabot%5Bbot%5D" target="_blank" rel="noopener noreferrer">dependabot[bot]</a>)</li>
+<li>build(deps): Update sbt, scripted-plugin from 1.10.3 to 1.10.4
+<a href="https://github.com/scalameta/metals/pull/6903" target="_blank" rel="noopener noreferrer">#6903</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): bump @easyops-cn/docusaurus-search-local from 0.44.5 to 0.45.0 in
+/website <a href="https://github.com/scalameta/metals/pull/6908" target="_blank" rel="noopener noreferrer">#6908</a>
+(<a href="https://github.com/dependabot%5Bbot%5D" target="_blank" rel="noopener noreferrer">dependabot[bot]</a>)</li>
+<li>debug: Print only relevant information when rename isn't happening
+<a href="https://github.com/scalameta/metals/pull/6902" target="_blank" rel="noopener noreferrer">#6902</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>improvement: Check all references at the same time
+<a href="https://github.com/scalameta/metals/pull/6899" target="_blank" rel="noopener noreferrer">#6899</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix: Correctly check if a given config exists in scalafix.conf
+<a href="https://github.com/scalameta/metals/pull/6901" target="_blank" rel="noopener noreferrer">#6901</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>improvement: Always find all references
+<a href="https://github.com/scalameta/metals/pull/6898" target="_blank" rel="noopener noreferrer">#6898</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix: When determining indent first check for pipe
+<a href="https://github.com/scalameta/metals/pull/6897" target="_blank" rel="noopener noreferrer">#6897</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix: Publish interfaces and mtagsShared for JDK 8
+<a href="https://github.com/scalameta/metals/pull/6895" target="_blank" rel="noopener noreferrer">#6895</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>improvement: Don't add release flag for versions from 17
+<a href="https://github.com/scalameta/metals/pull/6894" target="_blank" rel="noopener noreferrer">#6894</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>refactor: Use codeAction interface for most code actions
+<a href="https://github.com/scalameta/metals/pull/6881" target="_blank" rel="noopener noreferrer">#6881</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>chore: Retry code actions for Scala CLi diags
+<a href="https://github.com/scalameta/metals/pull/6892" target="_blank" rel="noopener noreferrer">#6892</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>build(deps): Update scribe, scribe-file, scribe-slf4j2 from 3.15.1 to 3.15.2
+<a href="https://github.com/scalameta/metals/pull/6891" target="_blank" rel="noopener noreferrer">#6891</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update flyway-core from 10.20.0 to 10.20.1
+<a href="https://github.com/scalameta/metals/pull/6884" target="_blank" rel="noopener noreferrer">#6884</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update protobuf-java from 4.28.2 to 4.28.3
+<a href="https://github.com/scalameta/metals/pull/6883" target="_blank" rel="noopener noreferrer">#6883</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update sbt-ci-release from 1.8.0 to 1.9.0
+<a href="https://github.com/scalameta/metals/pull/6882" target="_blank" rel="noopener noreferrer">#6882</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>chore: Update Metals default versions
+<a href="https://github.com/scalameta/metals/pull/6880" target="_blank" rel="noopener noreferrer">#6880</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>docs: Add release notes for 1.4.0
+<a href="https://github.com/scalameta/metals/pull/6879" target="_blank" rel="noopener noreferrer">#6879</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>build(deps): bump http-proxy-middleware from 2.0.6 to 2.0.7 in /website
+<a href="https://github.com/scalameta/metals/pull/6878" target="_blank" rel="noopener noreferrer">#6878</a>
+(<a href="https://github.com/dependabot%5Bbot%5D" target="_blank" rel="noopener noreferrer">dependabot[bot]</a>)</li>
+</ul>]]></content:encoded>
+        </item>
         <item>
             <title><![CDATA[Metals v1.4.0 - Palladium]]></title>
             <link>http://scalameta.org/metals/blog/2024/10/24/palladium</link>
@@ -7572,398 +7736,6 @@ Check out this new page in the documentation! You can see a list of all the code
 <li>release: Add release notes for Metals 0.11.7
 <a href="https://github.com/scalameta/metals/pull/4083" target="_blank" rel="noopener noreferrer">#4083</a>
 (<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-</ul>]]></content:encoded>
-        </item>
-        <item>
-            <title><![CDATA[Metals v0.11.7 - Aluminium]]></title>
-            <link>http://scalameta.org/metals/blog/2022/07/04/aluminium</link>
-            <guid>http://scalameta.org/metals/blog/2022/07/04/aluminium</guid>
-            <pubDate>Mon, 04 Jul 2022 00:00:00 GMT</pubDate>
-            <description><![CDATA[We're happy to announce the release of Metals v0.11.7, which brings a large]]></description>
-            <content:encoded><![CDATA[<p>We're happy to announce the release of Metals v0.11.7, which brings a large
-number of Scala 3 improvements as well as a few interesting code actions.</p>
-<table><tbody><tr><td>Commits since last release</td><td align="center">164</td></tr><tr><td>Merged PRs</td><td align="center">77</td></tr><tr><td>Contributors</td><td align="center">14</td></tr><tr><td>Closed issues</td><td align="center">14</td></tr><tr><td>New features</td><td align="center">9</td></tr></tbody></table>
-<p>For full details: <a href="https://github.com/scalameta/metals/milestone/51?closed=1" target="_blank" rel="noopener noreferrer">https://github.com/scalameta/metals/milestone/51?closed=1</a></p>
-<p>Metals is a language server for Scala that works with VS Code, Vim, Emacs and
-Sublime Text. Metals is developed at the <a href="https://scala.epfl.ch/" target="_blank" rel="noopener noreferrer">Scala Center</a>
-and <a href="https://virtuslab.com/" target="_blank" rel="noopener noreferrer">VirtusLab</a> with the help from
-<a href="https://lunatech.com/" target="_blank" rel="noopener noreferrer">Lunatech</a> along with contributors from the community.</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="tldr">TL;DR<a href="http://scalameta.org/metals/blog/2022/07/04/aluminium#tldr" class="hash-link" aria-label="Direct link to TL;DR" title="Direct link to TL;DR">​</a></h2>
-<p>Check out <a href="https://scalameta.org/metals/" target="_blank" rel="noopener noreferrer">https://scalameta.org/metals/</a>, and
-give Metals a try!</p>
-<ul>
-<li>Release notes now shown in VS Code</li>
-<li>Improvements to Bloop Java home automation.</li>
-<li>Allow to run all scalafix rules on a file</li>
-<li>[Scala 3] Implement-all abstract members code action.</li>
-<li>[Scala 3] Add snippet completions.</li>
-<li>[Scala 3] Add file name completions.</li>
-<li>[Scala 3] Expression evaluation for debugger.</li>
-<li>[Scala 2] Add ConvertToNamedArguments code action.</li>
-<li>New flatMap to for comprehension code action.</li>
-</ul>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="release-notes-now-shown-in-vs-code">Release notes now shown in VS Code<a href="http://scalameta.org/metals/blog/2022/07/04/aluminium#release-notes-now-shown-in-vs-code" class="hash-link" aria-label="Direct link to Release notes now shown in VS Code" title="Direct link to Release notes now shown in VS Code">​</a></h2>
-<p>If you are using Visual Studio Code you should see this message right after the
-update of the Metals extension has finished. 🚀</p>
-<p>Starting with the current release we will be showing release notes inside VS
-Code when the version update completes. This way users will know whenever the
-extension was updated and it will not just silently update in the background.</p>
-<p>Release notes will be shown only once after the update, but can be viewed again
-by executing <code>Metals: Show release notes</code></p>
-<p>This was contributed by <a href="https://github.com/kpodsiad" target="_blank" rel="noopener noreferrer">kpodsiad</a>, thanks for the
-continuous contributions!</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="improvements-to-bloop-java-home-automation">Improvements to Bloop Java home automation<a href="http://scalameta.org/metals/blog/2022/07/04/aluminium#improvements-to-bloop-java-home-automation" class="hash-link" aria-label="Direct link to Improvements to Bloop Java home automation" title="Direct link to Improvements to Bloop Java home automation">​</a></h2>
-<p>From the
-<a href="https://scalameta.org/metals/blog/2022/06/03/aluminium#automatically-setup-java-home-for-the-bloop-build-server" target="_blank" rel="noopener noreferrer">last version of Metals</a>
-we introduced an automated setup of Java home for your Bloop build server, which
-is used to compile your code under the hood and is the default build server to
-be used.</p>
-<p>Your Java Home would be added when starting Metals, before starting the build
-server, and would also suggest an update when changing the versions in the
-Metals settings. This could result in two possible notifications:</p>
-<ul>
-<li>Metals changing Java version:</li>
-</ul>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/BH8AS5c.png" alt="metals-java-home" class="img_ev3q"></p>
-<ul>
-<li>Metals detecting an existing Bloop Java configuration:</li>
-</ul>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/PCyyNVT.png" alt="metals-java-home-existing" class="img_ev3q"></p>
-<p>However, this caused a couple of issues:</p>
-<ol>
-<li>In some cases Metals would suggest to change your Java home even if it hasn't
-changed and it wasn't possible to dismiss the notification forever.</li>
-<li>In case your Java home changed and you missed the notification (or the
-notification was not shown), Bloop would not start if the old java home was
-removed. That especially caused issues with usage of Java with Nix.</li>
-<li>Metals would suggest to update your ~/.bloop/bloop.json file even if it was
-readonly.</li>
-</ol>
-<p>To help with that we implemented a number of fixes:</p>
-<ol>
-<li>You can dismiss the notification forever if Metals mistakenly suggests
-updating your Bloop configuration and the overall false positives have been
-reduced. To do that you just need to click on the
-<code>Use the Global File's JVM...</code> button.</li>
-<li>Metals will check before starting if your Java home is correct, and if it's
-not it will replace it with the current one used by Metals.</li>
-<li>Metals will not show any notifications if it cannot change the file itself.</li>
-</ol>
-<p>If you encounter any further issues, you can take a look at Metals output and it
-should show logs like these:</p>
-<div class="codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#bfc7d5"><span class="token plain">2022.07.01 16:14:41 INFO  Bloop uses /usr/lib/jvm/openjdk17 defined at /home/tgodzik/.bloop/bloop.json</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">2022.07.01 16:14:41 INFO  Bloop currently uses settings: -Xmx3G</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
-<p>You can use them to debug what is happening and report an issue.</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="allow-to-run-all-scalafix-rules-on-a-file">Allow to run all scalafix rules on a file<a href="http://scalameta.org/metals/blog/2022/07/04/aluminium#allow-to-run-all-scalafix-rules-on-a-file" class="hash-link" aria-label="Direct link to Allow to run all scalafix rules on a file" title="Direct link to Allow to run all scalafix rules on a file">​</a></h2>
-<p>Up until the current release Metals would only run scalafix for
-<code>organize imports</code> and wouldn't allow to use any other rules. Starting with this
-release you should be able to apply all currently defined
-<code>rules in .scalafix.conf</code> you require by running <code>metals.scalafix-run</code> command.</p>
-<p>By default it's bound to <code>alt</code> + <code>ctrl</code> + <code>shift</code> + <code>o</code> shortcut in Visual
-Studio Code.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/DLe5sYT.gif" alt="scalafix-run" class="img_ev3q"></p>
-<p>One major drawback of the current approach is that we are unable to run some of
-the custom rules. Only the default rules and the contributed Hygiene rules are
-currently available by default. You can see the full list of them
-<a href="https://scalacenter.github.io/scalafix/docs/rules/community-rules.html#hygiene-rules" target="_blank" rel="noopener noreferrer">here</a>.
-For all the rest users will have to use a previously added setting
-<code>metals.scalafixRulesDependencies</code>, where you can add dependencies following the
-<a href="https://get-coursier.io/" target="_blank" rel="noopener noreferrer">coursier</a> convention such as
-<code>com.github.liancheng::organize-imports:0.6.0</code>.</p>
-<p>Let us know if there is another rule we should add to the default ones!</p>
-<p>The current situation could be improved by making sure that the dependencies for
-scalafix are listed in the configuration itself. This would allow both Metals
-and scalafix CLI to easily run rules on your workspace. You can find the
-discussion on
-<a href="https://github.com/scalacenter/scalafix/issues/1625" target="_blank" rel="noopener noreferrer">scalafix github page</a></p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="scala-3-implement-all-abstract-members-code-action">[Scala 3] Implement-all abstract members code action.<a href="http://scalameta.org/metals/blog/2022/07/04/aluminium#scala-3-implement-all-abstract-members-code-action" class="hash-link" aria-label="Direct link to [Scala 3] Implement-all abstract members code action." title="Direct link to [Scala 3] Implement-all abstract members code action.">​</a></h2>
-<p>Implement-all abstract members code action is finally available in Scala 3 🎉</p>
-<p>Previously, in Scala3, when you were implementing an abstract member in a
-concrete class, you could only see the completion to override particular
-members. However, you needed to add those members one by one. Now you'll see a
-code action to implement all the members at once.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/foU3oHL.gif" alt="implement-all" class="img_ev3q"></p>
-<p>Great work by <a href="https://github.com/tanishiking" target="_blank" rel="noopener noreferrer">tanishiking</a>.</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="scala-3-add-snippet-completions">[Scala 3] Add snippet completions.<a href="http://scalameta.org/metals/blog/2022/07/04/aluminium#scala-3-add-snippet-completions" class="hash-link" aria-label="Direct link to [Scala 3] Add snippet completions." title="Direct link to [Scala 3] Add snippet completions.">​</a></h2>
-<p>Previously, whenever users accepted method completions the only inserted text
-would be the name of the method. With snippets we can now add additional <code>()</code>
-with cursor ending in or after the parenthesis depending on whether the method
-accepts parameters.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/QEbPSTd.gif" alt="snippets" class="img_ev3q"></p>
-<p>For editors that do not support snippets the previous behaviour is preserved.</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="scala-3-add-file-name-completions">[Scala 3] Add file name completions<a href="http://scalameta.org/metals/blog/2022/07/04/aluminium#scala-3-add-file-name-completions" class="hash-link" aria-label="Direct link to [Scala 3] Add file name completions" title="Direct link to [Scala 3] Add file name completions">​</a></h2>
-<p>A file name completion feature has been available only in the Scala 2 project,
-but thanks to the effort by <a href="https://github.com/riiswa" target="_blank" rel="noopener noreferrer">riiswa</a>, Metals 0.11.7
-will complete class name based on the enclosing file, in Scala3!</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/f10pnJ6.gif" alt="filename-completion" class="img_ev3q"></p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="scala-3-expression-evaluation-for-debugger">[Scala 3] Expression evaluation for debugger.<a href="http://scalameta.org/metals/blog/2022/07/04/aluminium#scala-3-expression-evaluation-for-debugger" class="hash-link" aria-label="Direct link to [Scala 3] Expression evaluation for debugger." title="Direct link to [Scala 3] Expression evaluation for debugger.">​</a></h2>
-<p>Expression evaluation was already available for use in your Scala 2 code,
-however it was still missing for Scala 3. Thanks to the main work by
-<a href="https://github.com/tdudzik" target="_blank" rel="noopener noreferrer">tdudzik</a> and later finishing touches and multiple
-bug fixes by <a href="https://github.com/adpi2" target="_blank" rel="noopener noreferrer">adpi2</a> it is now possible to to evaluate
-your code on breakpoints in the Scala 3 code.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/jYs7QdM.gif" alt="debug" class="img_ev3q"></p>
-<p>It was added in the previous 0.11.6 version of Metals, however it was still not
-working correctly enough to promote it. Currently, it should be working
-correctly in most cases, so please do test it out and report any issues you find
-to <a href="https://github.com/scalacenter/scala-debug-adapter" target="_blank" rel="noopener noreferrer">scala-debug-adapter</a>.</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="scala-2-add-converttonamedarguments-code-action">[Scala 2] Add ConvertToNamedArguments code action<a href="http://scalameta.org/metals/blog/2022/07/04/aluminium#scala-2-add-converttonamedarguments-code-action" class="hash-link" aria-label="Direct link to [Scala 2] Add ConvertToNamedArguments code action" title="Direct link to [Scala 2] Add ConvertToNamedArguments code action">​</a></h2>
-<p>Metals 0.11.7 allows users to use a new code action that can convert all
-arguments to named arguments, which is only available on Scala 2 for the time
-being.</p>
-<p>The new code action will work on method calls with multiple arguments, where<br>
-<!-- -->it's sometimes hard to tell which arguments match which parameters at a glance.
-In this situation you may want to make them named arguments. Now you will be
-able to automatically convert all those arguments into named arguments.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/SiUYUSY.gif" alt="convert-to-named-vscode" class="img_ev3q"></p>
-<p>We'd like to thank <a href="https://github.com/camgraff" target="_blank" rel="noopener noreferrer">@camgraff</a> for
-<a href="https://github.com/scalameta/metals/pull/3971" target="_blank" rel="noopener noreferrer">implementing this feature</a> 🥳</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="new-flatmap-to-for-comprehension-code-action">New flatMap to for comprehension code action.<a href="http://scalameta.org/metals/blog/2022/07/04/aluminium#new-flatmap-to-for-comprehension-code-action" class="hash-link" aria-label="Direct link to New flatMap to for comprehension code action." title="Direct link to New flatMap to for comprehension code action.">​</a></h2>
-<p>When working with long chains of map/flatMap/filter it might sometimes be useful
-to replace them with for comprehensions, which can give you a flatter view of
-your code.</p>
-<p>This is purely a syntactic sugar which gives us an ability to offer a code
-action to automatically convert any chain of the mentioned methods with a for
-comprehensions.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/MOZLYi0.gif" alt="for-comp" class="img_ev3q"></p>
-<p>There is currently one known issue with two separate chains being inside one
-another, which might cause unexpected issues. Please report any other issues you
-find!</p>
-<p>Amazing effort from <a href="https://github.com/zmerr" target="_blank" rel="noopener noreferrer">zmerr</a></p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="miscellaneous">Miscellaneous<a href="http://scalameta.org/metals/blog/2022/07/04/aluminium#miscellaneous" class="hash-link" aria-label="Direct link to Miscellaneous" title="Direct link to Miscellaneous">​</a></h2>
-<ul>
-<li>Updated Bloop version to 1.5.2, which should allow for a better
-<code>clean compile workspace</code> behaviour.</li>
-<li>Always print out CFR output if there is any available even if the command
-printed to the error output.</li>
-<li>Add correct parenthesis when using extension methods completions.
-<a href="https://github.com/riiswa" target="_blank" rel="noopener noreferrer">riiswa</a></li>
-<li>Properly show links to implicit parameters in decoration hovers inside for
-comprehensions.</li>
-<li>Run doctor when <code>more information</code> button was clicked</li>
-<li>Fix issues with Metals support for Scala 3.1.x hanging due to infinite loop in
-the compiler.</li>
-</ul>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="contributors">Contributors<a href="http://scalameta.org/metals/blog/2022/07/04/aluminium#contributors" class="hash-link" aria-label="Direct link to Contributors" title="Direct link to Contributors">​</a></h2>
-<p>Big thanks to everybody who contributed to this release or reported an issue!</p>
-<div class="codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#bfc7d5"><span class="token plain">$ git shortlog -sn --no-merges v0.11.6..v0.11.7</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">27	Tomasz Godzik</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    22	Cam Graff</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    18	Rikito Taniguchi</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    15	Scalameta Bot</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    10	ckipp01</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     5	Waris Radji</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     5	scalameta-bot</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     4	Vadim Chelyshov</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     3	Adrien Piquerez</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     2	Kamil Podsiadlo</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     2	tgodzik</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     1	Chris Kipp</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     1	Kamil Podsiadło</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     1	zmerr</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="merged-prs">Merged PRs<a href="http://scalameta.org/metals/blog/2022/07/04/aluminium#merged-prs" class="hash-link" aria-label="Direct link to Merged PRs" title="Direct link to Merged PRs">​</a></h2>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="v0117-2022-07-04"><a href="https://github.com/scalameta/metals/tree/v0.11.7" target="_blank" rel="noopener noreferrer">v0.11.7</a> (2022-07-04)<a href="http://scalameta.org/metals/blog/2022/07/04/aluminium#v0117-2022-07-04" class="hash-link" aria-label="Direct link to v0117-2022-07-04" title="Direct link to v0117-2022-07-04">​</a></h2>
-<p><a href="https://github.com/scalameta/metals/compare/v0.11.6...v0.11.7" target="_blank" rel="noopener noreferrer">Full Changelog</a></p>
-<p><strong>Merged pull requests:</strong></p>
-<ul>
-<li>Fix sbt-dependengy-graph workflow again
-<a href="https://github.com/scalameta/metals/pull/4095" target="_blank" rel="noopener noreferrer">#4095</a>
-(<a href="https://github.com/adpi2" target="_blank" rel="noopener noreferrer">adpi2</a>)</li>
-<li>Fix sbt-dependency-graph workflow
-<a href="https://github.com/scalameta/metals/pull/4092" target="_blank" rel="noopener noreferrer">#4092</a>
-(<a href="https://github.com/adpi2" target="_blank" rel="noopener noreferrer">adpi2</a>)</li>
-<li>fix: ConvertToNamedArgument code action: register the server command / hide in
-Scala3 projects <a href="https://github.com/scalameta/metals/pull/4090" target="_blank" rel="noopener noreferrer">#4090</a>
-(<a href="https://github.com/tanishiking" target="_blank" rel="noopener noreferrer">tanishiking</a>)</li>
-<li>fix: (scala3) insert correct position for implement-all code action on class
-with type parameters <a href="https://github.com/scalameta/metals/pull/4081" target="_blank" rel="noopener noreferrer">#4081</a>
-(<a href="https://github.com/tanishiking" target="_blank" rel="noopener noreferrer">tanishiking</a>)</li>
-<li>chore: Bump Bloop to newest version
-<a href="https://github.com/scalameta/metals/pull/4078" target="_blank" rel="noopener noreferrer">#4077</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>bugfix: Change Java home on startup if broken
-<a href="https://github.com/scalameta/metals/pull/4079" target="_blank" rel="noopener noreferrer">#4077</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>feature: Add known scalafix rules' dependencies
-<a href="https://github.com/scalameta/metals/pull/4077" target="_blank" rel="noopener noreferrer">#4077</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>bugfix: [Scala 3] Adjust changes for the most recent compiler version
-<a href="https://github.com/scalameta/metals/pull/4071" target="_blank" rel="noopener noreferrer">#4071</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>bugfix: Don't cache Java for nix and additionally use JAVA_HOME
-<a href="https://github.com/scalameta/metals/pull/4075" target="_blank" rel="noopener noreferrer">#4075</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>bugfix: Make sure that the Scala 3 compiler always retries properly
-<a href="https://github.com/scalameta/metals/pull/4074" target="_blank" rel="noopener noreferrer">#4074</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>chore: Uncomment HKSignatureHelpSuite
-<a href="https://github.com/scalameta/metals/pull/4072" target="_blank" rel="noopener noreferrer">#4072</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>chore: handle memory footprint errors on JDK17
-<a href="https://github.com/scalameta/metals/pull/4064" target="_blank" rel="noopener noreferrer">#4064</a>
-(<a href="https://github.com/kpodsiad" target="_blank" rel="noopener noreferrer">kpodsiad</a>)</li>
-<li>fix: lsif-java -&gt; scip-java
-<a href="https://github.com/scalameta/metals/pull/3972" target="_blank" rel="noopener noreferrer">#3972</a>
-(<a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a>)</li>
-<li>feature: Don't update readonly bloop.json and allow to dismiss notifications
-<a href="https://github.com/scalameta/metals/pull/4049" target="_blank" rel="noopener noreferrer">#4049</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>feat: OverrideCompletion can handle symbolPrefix
-<a href="https://github.com/scalameta/metals/pull/4037" target="_blank" rel="noopener noreferrer">#4037</a>
-(<a href="https://github.com/tanishiking" target="_blank" rel="noopener noreferrer">tanishiking</a>)</li>
-<li>docs: Add Rikito Taniguchi to maintainers
-<a href="https://github.com/scalameta/metals/pull/4058" target="_blank" rel="noopener noreferrer">#4058</a>
-(<a href="https://github.com/tanishiking" target="_blank" rel="noopener noreferrer">tanishiking</a>)</li>
-<li>bugfix: Fix wrong type shown when type alias is used
-<a href="https://github.com/scalameta/metals/pull/4046" target="_blank" rel="noopener noreferrer">#4046</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>docs: Update release documentation
-<a href="https://github.com/scalameta/metals/pull/4051" target="_blank" rel="noopener noreferrer">#4051</a>
-(<a href="https://github.com/tanishiking" target="_blank" rel="noopener noreferrer">tanishiking</a>)</li>
-<li>fix: support tab indent in implement-all code action
-<a href="https://github.com/scalameta/metals/pull/4042" target="_blank" rel="noopener noreferrer">#4042</a>
-(<a href="https://github.com/tanishiking" target="_blank" rel="noopener noreferrer">tanishiking</a>)</li>
-<li>flatMap to For Comprehension
-<a href="https://github.com/scalameta/metals/pull/3885" target="_blank" rel="noopener noreferrer">#3885</a>
-(<a href="https://github.com/zmerr" target="_blank" rel="noopener noreferrer">zmerr</a>)</li>
-<li>bugfix: Fix wrong flag for default methods
-<a href="https://github.com/scalameta/metals/pull/4045" target="_blank" rel="noopener noreferrer">#4045</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>fix: remove improper javaOptions initialization
-<a href="https://github.com/scalameta/metals/pull/4047" target="_blank" rel="noopener noreferrer">#4047</a>
-(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li>
-<li>fix: do not fail when stripping ansi codes
-<a href="https://github.com/scalameta/metals/pull/4048" target="_blank" rel="noopener noreferrer">#4048</a>
-(<a href="https://github.com/kpodsiad" target="_blank" rel="noopener noreferrer">kpodsiad</a>)</li>
-<li>Add ConvertToNamedArguments code action
-<a href="https://github.com/scalameta/metals/pull/3971" target="_blank" rel="noopener noreferrer">#3971</a>
-(<a href="https://github.com/camgraff" target="_blank" rel="noopener noreferrer">camgraff</a>)</li>
-<li>add scala 3.1.3 and 3.2.0-RC1
-<a href="https://github.com/scalameta/metals/pull/4041" target="_blank" rel="noopener noreferrer">#4041</a>
-(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li>
-<li>Adjust to signature help changes in scala3 compiler
-<a href="https://github.com/scalameta/metals/pull/4026" target="_blank" rel="noopener noreferrer">#4026</a>
-(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li>
-<li>feat(mill): also check default version in mill file
-<a href="https://github.com/scalameta/metals/pull/4039" target="_blank" rel="noopener noreferrer">#4039</a>
-(<a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a>)</li>
-<li>fix(worksheets): filter out NonUnitStatements wartremover in worksheets
-<a href="https://github.com/scalameta/metals/pull/4038" target="_blank" rel="noopener noreferrer">#4038</a>
-(<a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a>)</li>
-<li>build(deps): Update munit from 1.0.0-M3 to 1.0.0-M5
-<a href="https://github.com/scalameta/metals/pull/4033" target="_blank" rel="noopener noreferrer">#4033</a>
-(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
-<li>build(deps): Update scribe, scribe-file, scribe-slf4j from 3.8.3 to 3.9.0
-<a href="https://github.com/scalameta/metals/pull/4031" target="_blank" rel="noopener noreferrer">#4031</a>
-(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
-<li>[Scala 3] Add file name completions
-<a href="https://github.com/scalameta/metals/pull/4018" target="_blank" rel="noopener noreferrer">#4018</a>
-(<a href="https://github.com/riiswa" target="_blank" rel="noopener noreferrer">riiswa</a>)</li>
-<li>build(deps): Update undertow-core from 2.2.17.Final to 2.2.18.Final
-<a href="https://github.com/scalameta/metals/pull/4032" target="_blank" rel="noopener noreferrer">#4032</a>
-(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
-<li>build(deps): Update requests from 0.7.0 to 0.7.1
-<a href="https://github.com/scalameta/metals/pull/4030" target="_blank" rel="noopener noreferrer">#4030</a>
-(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
-<li>build(deps): Update h2 from 2.1.212 to 2.1.214
-<a href="https://github.com/scalameta/metals/pull/4029" target="_blank" rel="noopener noreferrer">#4029</a>
-(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
-<li>build(deps): Update sbt-scalafix, scalafix-interfaces from 0.10.0 to 0.10.1
-<a href="https://github.com/scalameta/metals/pull/4028" target="_blank" rel="noopener noreferrer">#4028</a>
-(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
-<li>feat: Implement-all abstract members code action for Scala3
-<a href="https://github.com/scalameta/metals/pull/3960" target="_blank" rel="noopener noreferrer">#3960</a>
-(<a href="https://github.com/tanishiking" target="_blank" rel="noopener noreferrer">tanishiking</a>)</li>
-<li>bugfix: Properly send back experimental capabilities
-<a href="https://github.com/scalameta/metals/pull/4007" target="_blank" rel="noopener noreferrer">#4007</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>chore(maven): update the maven wrapper
-<a href="https://github.com/scalameta/metals/pull/4024" target="_blank" rel="noopener noreferrer">#4024</a>
-(<a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a>)</li>
-<li>fix: run doctor when <code>more information</code> button was clicked
-<a href="https://github.com/scalameta/metals/pull/4019" target="_blank" rel="noopener noreferrer">#4019</a>
-(<a href="https://github.com/kpodsiad" target="_blank" rel="noopener noreferrer">kpodsiad</a>)</li>
-<li>chore: Fix errors for kind projector
-<a href="https://github.com/scalameta/metals/pull/4015" target="_blank" rel="noopener noreferrer">#4015</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>bugfix: Reset diagnostics before connecting to new server
-<a href="https://github.com/scalameta/metals/pull/4017" target="_blank" rel="noopener noreferrer">#4017</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>bugfix: Properly show links to implicit parameters in decoration hovers
-<a href="https://github.com/scalameta/metals/pull/4014" target="_blank" rel="noopener noreferrer">#4014</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>feature: Allow to run all scalafix rules on a file
-<a href="https://github.com/scalameta/metals/pull/3996" target="_blank" rel="noopener noreferrer">#3996</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>Fix extension methods completion
-<a href="https://github.com/scalameta/metals/pull/4013" target="_blank" rel="noopener noreferrer">#4013</a>
-(<a href="https://github.com/riiswa" target="_blank" rel="noopener noreferrer">riiswa</a>)</li>
-<li>chore: Add support for Scala 2.12.16
-<a href="https://github.com/scalameta/metals/pull/4010" target="_blank" rel="noopener noreferrer">#4010</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>bugfix: Always print out CFR output if there is any available
-<a href="https://github.com/scalameta/metals/pull/4012" target="_blank" rel="noopener noreferrer">#4012</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>chore: Add support for Scala 3.1.3-RC5
-<a href="https://github.com/scalameta/metals/pull/4011" target="_blank" rel="noopener noreferrer">#4011</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>Fix auto implement abstract members for self-types
-<a href="https://github.com/scalameta/metals/pull/4009" target="_blank" rel="noopener noreferrer">#4009</a>
-(<a href="https://github.com/riiswa" target="_blank" rel="noopener noreferrer">riiswa</a>)</li>
-<li>fix: only compare Bloop JavaHome with Metals JavaHome if set
-<a href="https://github.com/scalameta/metals/pull/4002" target="_blank" rel="noopener noreferrer">#4002</a>
-(<a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a>)</li>
-<li>fix: add checkout to steward job
-<a href="https://github.com/scalameta/metals/pull/3999" target="_blank" rel="noopener noreferrer">#3999</a>
-(<a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a>)</li>
-<li>chore(deps): add in other scalameta repos to steward job
-<a href="https://github.com/scalameta/metals/pull/3995" target="_blank" rel="noopener noreferrer">#3995</a>
-(<a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a>)</li>
-<li>fix: switch mtags release on a branch with backports
-<a href="https://github.com/scalameta/metals/pull/3998" target="_blank" rel="noopener noreferrer">#3998</a>
-(<a href="https://github.com/dos65" target="_blank" rel="noopener noreferrer">dos65</a>)</li>
-<li>bugfix: Fix failing tests after refactor
-<a href="https://github.com/scalameta/metals/pull/3993" target="_blank" rel="noopener noreferrer">#3993</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>build(deps): Update ammonite-util from 2.5.3 to 2.5.4
-<a href="https://github.com/scalameta/metals/pull/3983" target="_blank" rel="noopener noreferrer">#3983</a>
-(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
-<li>build(deps): Update scalameta, semanticdb-scalac, ... from 4.5.6 to 4.5.9
-<a href="https://github.com/scalameta/metals/pull/3991" target="_blank" rel="noopener noreferrer">#3991</a>
-(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
-<li>chore: Update lsp4j to 0.14.0
-<a href="https://github.com/scalameta/metals/pull/3958" target="_blank" rel="noopener noreferrer">#3958</a>
-(<a href="https://github.com/tanishiking" target="_blank" rel="noopener noreferrer">tanishiking</a>)</li>
-<li>build(deps): Update munit from 1.0.0-M3 to 1.0.0-M4
-<a href="https://github.com/scalameta/metals/pull/3990" target="_blank" rel="noopener noreferrer">#3990</a>
-(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
-<li>build(deps): Update jsoup from 1.14.3 to 1.15.1
-<a href="https://github.com/scalameta/metals/pull/3989" target="_blank" rel="noopener noreferrer">#3989</a>
-(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
-<li>build(deps): Update flyway-core from 8.5.10 to 8.5.12
-<a href="https://github.com/scalameta/metals/pull/3988" target="_blank" rel="noopener noreferrer">#3988</a>
-(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
-<li>build(deps): Update interface from 1.0.6 to 1.0.7
-<a href="https://github.com/scalameta/metals/pull/3986" target="_blank" rel="noopener noreferrer">#3986</a>
-(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
-<li>build(deps): Update coursier from 2.1.0-M5 to 2.1.0-M6
-<a href="https://github.com/scalameta/metals/pull/3985" target="_blank" rel="noopener noreferrer">#3985</a>
-(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
-<li>build(deps): Update scribe, scribe-file, scribe-slf4j from 3.8.2 to 3.8.3
-<a href="https://github.com/scalameta/metals/pull/3984" target="_blank" rel="noopener noreferrer">#3984</a>
-(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
-<li>build(deps): Update bloop-config, bloop-launcher from 1.5.0-18-003e6c7b to
-1.5.0-22-91111c15 <a href="https://github.com/scalameta/metals/pull/3982" target="_blank" rel="noopener noreferrer">#3982</a>
-(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
-<li>chore: Update tests to work with newest nightlies
-<a href="https://github.com/scalameta/metals/pull/3981" target="_blank" rel="noopener noreferrer">#3981</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>refactor: Fix testing library breakpoints and simplify metals adapter logic
-<a href="https://github.com/scalameta/metals/pull/3966" target="_blank" rel="noopener noreferrer">#3966</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>fix: correct steward cron
-<a href="https://github.com/scalameta/metals/pull/3980" target="_blank" rel="noopener noreferrer">#3980</a>
-(<a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a>)</li>
-<li>chore(ci): add Scala Steward into CI
-<a href="https://github.com/scalameta/metals/pull/3977" target="_blank" rel="noopener noreferrer">#3977</a>
-(<a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a>)</li>
-<li>feature: [Scala 3] Add snippet completions
-<a href="https://github.com/scalameta/metals/pull/3959" target="_blank" rel="noopener noreferrer">#3959</a>
-(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
-<li>doc: fix release note v0.11.6 (duplicated merged commits section)
-<a href="https://github.com/scalameta/metals/pull/3979" target="_blank" rel="noopener noreferrer">#3979</a>
-(<a href="https://github.com/tanishiking" target="_blank" rel="noopener noreferrer">tanishiking</a>)</li>
-<li>chore: update version for v0.11.6
-<a href="https://github.com/scalameta/metals/pull/3978" target="_blank" rel="noopener noreferrer">#3978</a>
-(<a href="https://github.com/tanishiking" target="_blank" rel="noopener noreferrer">tanishiking</a>)</li>
-<li>docs: release note for Metals 0.11.6
-<a href="https://github.com/scalameta/metals/pull/3957" target="_blank" rel="noopener noreferrer">#3957</a>
-(<a href="https://github.com/tanishiking" target="_blank" rel="noopener noreferrer">tanishiking</a>)</li>
 </ul>]]></content:encoded>
         </item>
     </channel>
