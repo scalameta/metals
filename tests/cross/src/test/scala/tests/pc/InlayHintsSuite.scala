@@ -986,7 +986,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |""".stripMargin,
     """|object Main{
        |  implicit def stringLength(s: String): Int = s.length
-       |  implicitly[String => Int]/*((String: s) => stringLength<<(2:15)>>(s<<(3:12)>>)))*/
+       |  implicitly[String => Int]/*((s : String<<java/lang/String#>>) => stringLength<<(2:15)>>(s<<(3:12)>>)))*/
        |
        |  implicit val namedStringLength: String => Long = (s: String) => s.length.toLong
        |  implicitly[String => Long]/*(namedStringLength<<(5:15)>>)*/
@@ -1003,4 +1003,39 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
                 |""".stripMargin
     )
   )
+
+  check(
+    "implicit-fn2",
+    """|object Main{
+       |  implicit def stringLength(s: String, i: Int): Int = s.length
+       |  implicitly[(String, Int) => Int]
+       |}
+       |""".stripMargin,
+    """|object Main{
+       |  implicit def stringLength(s: String, i: Int): Int = s.length
+       |  implicitly[(String, Int) => Int]/*((s : String<<java/lang/String#>>, i : Int<<scala/Int#>>) => stringLength<<(2:15)>>(s<<(3:12)>>, i<<(3:12)>>)))*/
+       |}
+       |""".stripMargin,
+    compat = Map(
+      "3" -> """|object Main{
+                |  implicit def stringLength(s: String, i: Int): Int = s.length
+                |  implicitly[(String, Int) => Int]
+                |}
+                |""".stripMargin
+    )
+  )
+
+  check(
+    "strip-margin",
+    """|object Main{
+       |  "".stripMargin
+       |}
+       |""".stripMargin,
+    """|package `strip-margin`
+       |object Main{
+       |  /*augmentString<<scala/Predef.augmentString().>>(*/""/*)*/.stripMargin
+       |}
+       |""".stripMargin
+  )
+
 }
