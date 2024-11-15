@@ -986,7 +986,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |""".stripMargin,
     """|object Main{
        |  implicit def stringLength(s: String): Int = s.length
-       |  implicitly[String => Int]/*((s : String<<java/lang/String#>>) => stringLength<<(2:15)>>(s<<(3:12)>>)))*/
+       |  implicitly[String => Int]/*((s: String<<java/lang/String#>>) => stringLength<<(2:15)>>(s<<(3:12)>>)))*/
        |
        |  implicit val namedStringLength: String => Long = (s: String) => s.length.toLong
        |  implicitly[String => Long]/*(namedStringLength<<(5:15)>>)*/
@@ -1013,7 +1013,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |""".stripMargin,
     """|object Main{
        |  implicit def stringLength(s: String, i: Int): Int = s.length
-       |  implicitly[(String, Int) => Int]/*((s : String<<java/lang/String#>>, i : Int<<scala/Int#>>) => stringLength<<(2:15)>>(s<<(3:12)>>, i<<(3:12)>>)))*/
+       |  implicitly[(String, Int) => Int]/*((s: String<<java/lang/String#>>, i: Int<<scala/Int#>>) => stringLength<<(2:15)>>(s<<(3:12)>>, i<<(3:12)>>)))*/
        |}
        |""".stripMargin,
     compat = Map(

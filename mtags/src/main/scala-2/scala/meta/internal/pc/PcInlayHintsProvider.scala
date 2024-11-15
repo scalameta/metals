@@ -168,7 +168,7 @@ final class PcInlayHintsProvider(
         .map(v =>
           List(
             labelPart(v.tpt.symbol, v.tpt.symbol.decodedName),
-            LabelPart(s"${v.name} : ")
+            LabelPart(s"${v.name}: ")
           )
         )
         .reverse
