@@ -140,7 +140,10 @@ final class ConfiguredLanguageClient(
   }
 
   override def refreshInlayHints(): CompletableFuture[Void] = {
-    if (clientConfig.isInlayHintsEnabled()) {
+    if (
+      clientConfig.isInlayHintsEnabled() && clientConfig
+        .isInlayHintsRefreshEnabled()
+    ) {
       underlying
         .refreshInlayHints()
         .handle { (msg, ex) =>
