@@ -155,11 +155,15 @@ final class InferredMethodProvider(
                 position = None
               )
             case _ =>
-              unimplemented("apply-with-unknown-name-inner")
+              unimplemented(
+                "the thing containing the method to infer is not a method"
+              )
           }
 
         case _ =>
-          unimplemented("apply-with-unknown-name-outer")
+          unimplemented(
+            "the method containing the method to infer does not exist"
+          )
       }
     }
     def makeEditsForListApply(
@@ -209,7 +213,9 @@ final class InferredMethodProvider(
             }
 
           case _ =>
-            unimplemented("list-apply")
+            unimplemented(
+              "the thing applying the method to insert is not a method"
+            )
         }
       } else {
         signature(
@@ -250,9 +256,14 @@ final class InferredMethodProvider(
               None
             )
           case _ =>
-            unimplemented("list-apply-without-args-inner")
+            unimplemented(
+              "the argument of the method to infer is not a single type"
+            )
         }
-      } else unimplemented("list-apply-without-args-outer")
+      } else
+        unimplemented(
+          "the type of the argument of the method to infer is unknown"
+        )
     }
     def makeEditsMethodObject(
         arguments: Option[List[Tree]],
@@ -341,14 +352,16 @@ final class InferredMethodProvider(
                       ) =>
                     makeClassMethodEdits(template)
                   case _ =>
-                    unimplemented("object-method-inner")
+                    unimplemented(
+                      "the thing containing the method to infer is not a trait, class nor object"
+                    )
                 }
             }
           case _ =>
-            unimplemented("object-method-outer")
+            unimplemented("the thing containing the method to infer is unknown")
         }
       } else
-        unimplemented("object-method")
+        unimplemented("the thing containing the method was not found")
     }
     val uriTextEditPairs = typedTree match {
       case errorMethod: Ident if errorMethod.isErroneous =>
@@ -402,7 +415,7 @@ final class InferredMethodProvider(
                 ),
                 _
               ) :: _ =>
-            unimplemented("select-with-function-without-args")
+            unimplemented("infer method for a list apply")
           // val list = List(1,2,3)
           // list.map(nonExistent)
           case (Ident(_)) :: Apply(
@@ -410,7 +423,7 @@ final class InferredMethodProvider(
                 _ :: Nil
               ) :: _ =>
             makeEditsForListApplyWithoutArgs(argumentList, errorMethod)
-          case _ => unimplemented("simple-case")
+          case _ => unimplemented("method in scope not handled")
         }
       case errorMethod: Select =>
         lastVisitedParentTrees match {
@@ -429,10 +442,10 @@ final class InferredMethodProvider(
           case Select(Select(_, container), _) :: _ =>
             makeEditsMethodObject(Option.empty, container, errorMethod)
           case _ =>
-            unimplemented("other-than-method")
+            unimplemented("inferred method belongs to an unknown thing")
         }
       case _ =>
-        unimplemented("other-than-ident-or-select")
+        unimplemented("inferred method in an unknown context")
     }
     new WorkspaceEdit(
       uriTextEditPairs
