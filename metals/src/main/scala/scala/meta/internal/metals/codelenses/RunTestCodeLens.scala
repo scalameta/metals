@@ -96,12 +96,15 @@ final class RunTestCodeLens(
       // most of the bsp servers such as bloop and sbt might not support it.
     } yield requestJvmEnvironment(buildTargetId, isJVM).map { _ =>
       val classes = buildTargetClasses.classesOf(buildTargetId)
-      val syntheticLenses = syntheticCodeLenses(
-        textDocument,
-        buildTargetId,
-        classes,
-        isJVM,
-      )
+      val syntheticLenses =
+        if (!path.isWorksheet)
+          syntheticCodeLenses(
+            textDocument,
+            buildTargetId,
+            classes,
+            isJVM,
+          )
+        else Nil
       val regularLenses =
         codeLenses(
           textDocument,
