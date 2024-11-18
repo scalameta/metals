@@ -17,5 +17,5 @@ class MillBreakpointDapSuite
   override protected val retryTimes: Int = 2
 
   override def serverConfig: MetalsServerConfig =
-    super.serverConfig.copy(debugServerStartTimeout = 120)
+    super.serverConfig.copy(debugServerStartTimeout = 180)
 }

@@ -243,6 +243,7 @@ class BuildServerConnection private (
         server => server.buildTargetScalaMainClasses(params),
         onFail,
         timeout(1),
+        restartByDefault = true,
       ).asScala.recoverWith {
         case _: TimeoutException if retry > 0 => mainClasses(params, retry - 1)
       }
@@ -266,6 +267,7 @@ class BuildServerConnection private (
         server => server.buildTargetScalaTestClasses(params),
         onFail,
         timeout(1),
+        restartByDefault = true,
       ).asScala.recoverWith {
         case _: TimeoutException if retry > 0 => testClasses(params, retry - 1)
       }
@@ -508,6 +510,7 @@ class BuildServerConnection private (
       action: MetalsBuildServer => CompletableFuture[T],
       onFail: => Option[(T, String)] = None,
       timeout: Option[Timeout] = None,
+      restartByDefault: Boolean = false,
   ): CompletableFuture[T] = {
     val localCancelable = new MutableCancelable()
     def runWithCanceling(
@@ -516,6 +519,7 @@ class BuildServerConnection private (
       val CancelableFuture(result, cancelable) = requestRegistry.register(
         action = () => action(launcherConnection.server),
         timeout = timeout,
+        cancelByDefault = restartByDefault,
       )
       localCancelable.add(cancelable)
       result.onComplete(_ => localCancelable.remove(cancelable))
