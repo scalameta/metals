@@ -557,6 +557,9 @@ final case class TestingServer(
   ): Future[l.InitializeResult] = {
     val params = new InitializeParams
     val workspaceCapabilities = new WorkspaceClientCapabilities()
+    workspaceCapabilities.setInlayHint(
+      new l.InlayHintWorkspaceCapabilities(true)
+    )
     val textDocumentCapabilities = new TextDocumentClientCapabilities
     val windowCapabilities = new l.WindowClientCapabilities()
     windowCapabilities.setWorkDoneProgress(true)
