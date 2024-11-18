@@ -1,5 +1,7 @@
 package scala.meta.internal.metals.debug.server
 
+import java.nio.file.Paths
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -65,15 +67,24 @@ class DebugeeParamsCreator(buildTargetClasses: BuildTargetClasses) {
 
         val scalaVersion = buildTargets.scalaTarget(id).map(_.scalaVersion)
 
+        val runClasspath = jvmRunEnv
+          .map(_.getClasspath().asScala.toList.map { path =>
+            try { path.toAbsolutePath }
+            catch {
+              case _: IllegalArgumentException =>
+                AbsolutePath(Paths.get(path))
+            }
+
+          })
+          .getOrElse(classpath)
+
         new DebugeeProject(
           scalaVersion,
           target.displayName,
           modules,
           debugLibs,
           filteredClassPath,
-          jvmRunEnv
-            .map(_.getClasspath().asScala.toList.map(_.toAbsolutePath))
-            .getOrElse(classpath),
+          runClasspath,
         )
       }
     }
