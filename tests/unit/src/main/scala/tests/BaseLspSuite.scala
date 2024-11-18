@@ -159,10 +159,13 @@ abstract class BaseLspSuite(
     def functionRetry(retry: Int): Future[Unit] = {
       fn.recoverWith {
         case _ if retry > 0 =>
+          scribe.debug(s"Retrying test ${testOpts.name} ${retry - maxRetry}")
           cancelServer()
           newServer(testOpts.name)
           functionRetry(retry - 1)
-        case e => Future.failed(e)
+        case e =>
+          scribe.debug(s"Retry limit reached $maxRetry", e)
+          Future.failed(e)
       }
     }
     if (withoutVirtualDocs) {
