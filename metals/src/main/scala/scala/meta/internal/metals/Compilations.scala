@@ -152,6 +152,8 @@ final class Compilations(
     } yield ()
 
   def cancel(): Unit = {
+    isCompiling.clear()
+    lastCompile = Set.empty
     cascadeBatch.cancelAll()
     compileBatch.cancelAll()
   }
@@ -238,6 +240,9 @@ final class Compilations(
 
     targetsByBuildServer.toList match {
       case Nil =>
+        scribe.debug(
+          s"No compilation targets found for ${targets.mkString(", ")}"
+        )
         Future
           .successful(Map.empty[BuildTargetIdentifier, b.CompileResult])
           .asCancelable
@@ -258,6 +263,7 @@ final class Compilations(
       targets: Seq[b.BuildTargetIdentifier],
       timeout: Option[Timeout],
   ): CancelableFuture[b.CompileResult] = {
+    scribe.debug("Compiling " + targets.mkString(", "))
     val originId = "METALS-$" + UUID.randomUUID().toString
     val params = new b.CompileParams(targets.asJava)
     params.setOriginId(originId)
