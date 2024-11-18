@@ -67,7 +67,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
     s"""|/org/xnio/nio/NioTcpServer.java
         |tcpServerLog.logf(FQCN, @@Logger.Level.TRACE, null, "Wake up accepts on %s", this);
         |""".stripMargin,
-    """|jboss-logging-3.3.1.Final-sources.jar/org/jboss/logging/Logger.java info: result
+    """|jboss-logging-3.4.3.Final-sources.jar/org/jboss/logging/Logger.java info: result
        |public abstract class Logger implements Serializable, BasicLogger {
        |                      ^^^^^^
        |""".stripMargin,
@@ -84,7 +84,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
     s"""|/org/xnio/nio/Log.java
         |Log log = @@Logger.getMessageLogger(Log.class, "org.xnio.nio");
         |""".stripMargin,
-    """|jboss-logging-3.3.1.Final-sources.jar/org/jboss/logging/Logger.java info: result
+    """|jboss-logging-3.4.3.Final-sources.jar/org/jboss/logging/Logger.java info: result
        |public abstract class Logger implements Serializable, BasicLogger {
        |                      ^^^^^^
        |""".stripMargin,
