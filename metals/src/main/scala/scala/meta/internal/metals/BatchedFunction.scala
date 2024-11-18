@@ -115,6 +115,7 @@ final class BatchedFunction[A, B](
   private def unlock(): Unit = {
     lock.set(None)
     if (!queue.isEmpty) {
+      scribe.debug(s"Queue $functionId is empty, running acquire")
       runAcquire()
     }
   }
@@ -143,6 +144,7 @@ final class BatchedFunction[A, B](
       if (requests.nonEmpty) {
         val args = requests.flatMap(_.arguments)
         val callbacks = requests.map(_.callback)
+        scribe.debug(s"Running function inside queue $functionId")
         val result = fn(args)
         this.current.set(result)
         val resultF = for {
