@@ -27,8 +27,9 @@ object CodeActionBuilder {
       "Only changes or documentChanges can be set in code action at the same time",
     )
 
-    val workspaceEdits = new l.WorkspaceEdit()
-    if (changes.nonEmpty)
+    // we don't want to set edit to make it resolve lazily in codeAction/resolve
+    if (changes.nonEmpty) {
+      val workspaceEdits = new l.WorkspaceEdit()
       workspaceEdits.setChanges(
         changes
           .map { case (path, edits) =>
@@ -37,10 +38,12 @@ object CodeActionBuilder {
           .toMap
           .asJava
       )
-    else if (documentChanges.nonEmpty)
+      codeAction.setEdit(workspaceEdits)
+    } else if (documentChanges.nonEmpty) {
+      val workspaceEdits = new l.WorkspaceEdit()
       workspaceEdits.setDocumentChanges(documentChanges.map(_.asJava).asJava)
-
-    codeAction.setEdit(workspaceEdits)
+      codeAction.setEdit(workspaceEdits)
+    }
     command.foreach(codeAction.setCommand)
     disabledReason.foreach(reason =>
       codeAction.setDisabled(new l.CodeActionDisabled(reason))
