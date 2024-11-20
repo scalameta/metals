@@ -220,7 +220,6 @@ class WorksheetProvider(
   } else Future.successful(Nil)
 
   // TODO switch to only inlay hints
-  // TODO add tests
   private def toInlayHints(
       path: AbsolutePath,
       worksheet: Option[EvaluatedWorksheetSnapshot],
@@ -242,7 +241,7 @@ class WorksheetProvider(
             }
             val hint = new InlayHint(
               statEnd,
-              messages.Either.forLeft(" // " + stat.summary()),
+              messages.Either.forLeft(" // " + truncatify(stat)),
             )
             hint.setTooltip(stat.details())
             hint

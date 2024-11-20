@@ -255,10 +255,11 @@ class InlayHintsLspSuite
       _ <- server.assertInlayHints(
         "a/Main.worksheet.sc",
         """|def method(implicit str: String) = str + str
-           |implicit val name: String = "Susan".stripMargin
-           |val greeting = s"Hello $$name"
-           |method
+           |implicit val name: String = "Susan".stripMargin/* // : String = "Susan"| name: String = "Susan" |*/ 
+           |val greeting = s"Hello $$name"/* // : String = "Hello $name"| greeting: String = "Hello $name" |*/ 
+           |method/* // : String = "SusanSusan"| res0: String = "SusanSusan" |*/
            |""".stripMargin,
+        withTooltip = true,
       )
       _ <- server.didChangeConfiguration(
         """|{"inlayHints": {
@@ -272,9 +273,9 @@ class InlayHintsLspSuite
       _ <- server.assertInlayHints(
         "a/Main.worksheet.sc",
         """|def method(implicit str: String)/*: String<<java/lang/String#>>*/ = str + str
-           |implicit val name: String = /*augmentString<<scala/Predef.augmentString().>>(*/"Susan"/*)*/.stripMargin
-           |val greeting/*: String<<java/lang/String#>>*/ = s"Hello $$name"
-           |method/*(name<<(1:13)>>)*/
+           |implicit val name: String = /*augmentString<<scala/Predef.augmentString().>>(*/"Susan"/*)*/.stripMargin/* // : String = "Susan"*/
+           |val greeting/*: String<<java/lang/String#>>*/ = s"Hello $$name"/* // : String = "Hello $name"*/
+           |method/*(name<<(1:13)>>)*//* // : String = "SusanSusan"*/
            |""".stripMargin,
       )
     } yield ()
