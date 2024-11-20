@@ -44,7 +44,6 @@ import scala.meta.internal.tvp.TreeViewProvider
 import scala.meta.internal.tvp.TreeViewVisibilityDidChangeParams
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.ScalaLspService
-import scala.meta.pc.DisplayableException
 
 import ch.epfl.scala.bsp4j.DebugSessionParams
 import com.google.gson.Gson
@@ -535,6 +534,15 @@ class WorkspaceLspService(
       params: CodeActionParams
   ): CompletableFuture[ju.List[CodeAction]] =
     getServiceFor(params.getTextDocument.getUri).codeAction(params)
+
+  override def codeActionResolve(
+      codeAction: CodeAction
+  ): CompletableFuture[CodeAction] =
+    currentFolder
+      .map(
+        _.codeActionResolve(codeAction)
+      )
+      .getOrElse(Future.successful(codeAction).asJava)
 
   override def codeLens(
       params: CodeLensParams
@@ -1111,14 +1119,6 @@ class WorkspaceLspService(
           if currentOrHeadOrFallback.allActionCommandsIds(
             actionCommand.getCommand()
           ) =>
-        val getOptDisplayableMessage: PartialFunction[Throwable, String] = {
-          case e: DisplayableException => e.getMessage()
-          case e: Exception if (e.getCause() match {
-                case _: DisplayableException => true
-                case _ => false
-              }) =>
-            e.getCause().getMessage()
-        }
         CancelTokens.future { token =>
           currentFolder
             .map(
@@ -1195,19 +1195,20 @@ class WorkspaceLspService(
         capabilities.setWorkspaceSymbolProvider(true)
         capabilities.setDocumentSymbolProvider(true)
         capabilities.setDocumentFormattingProvider(true)
+        val codeActionOptions = new lsp4j.CodeActionOptions()
+
         if (initializeParams.supportsCodeActionLiterals) {
-          capabilities.setCodeActionProvider(
-            new lsp4j.CodeActionOptions(
-              List(
-                lsp4j.CodeActionKind.QuickFix,
-                lsp4j.CodeActionKind.Refactor,
-                lsp4j.CodeActionKind.SourceOrganizeImports,
-              ).asJava
-            )
+          codeActionOptions.setCodeActionKinds(
+            List(
+              lsp4j.CodeActionKind.QuickFix,
+              lsp4j.CodeActionKind.Refactor,
+              lsp4j.CodeActionKind.SourceOrganizeImports,
+            ).asJava
           )
-        } else {
-          capabilities.setCodeActionProvider(true)
         }
+        codeActionOptions.setResolveProvider(true)
+
+        capabilities.setCodeActionProvider(codeActionOptions)
         val inlayHintsCapabilities = new lsp4j.InlayHintRegistrationOptions()
         inlayHintsCapabilities.setResolveProvider(true)
         capabilities.setInlayHintProvider(inlayHintsCapabilities)

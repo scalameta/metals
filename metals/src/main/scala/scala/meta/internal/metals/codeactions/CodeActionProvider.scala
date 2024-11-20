@@ -2,9 +2,8 @@ package scala.meta.internal.metals.codeactions
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.jdk.CollectionConverters._
 
-import scala.meta.internal.metals.MetalsEnrichments.XtensionString
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions.CodeAction
@@ -40,7 +39,7 @@ final class CodeActionProvider(
     new RewriteBracesParensCodeAction(trees),
     new ExtractValueCodeAction(trees, buffers),
     new CreateCompanionObjectCodeAction(trees, buffers),
-    new ExtractMethodCodeAction(trees, compilers, languageClient),
+    new ExtractMethodCodeAction(trees, compilers),
     new InlineValueCodeAction(trees, compilers, languageClient),
     new ConvertToNamedArguments(trees, compilers, languageClient),
     new FlatMapToForComprehensionCodeAction(trees, buffers),
@@ -86,6 +85,25 @@ final class CodeActionProvider(
       data <- actionCommand.unapply(params)
     } yield action.handleCommand(data, token)
     Future.sequence(running).map(_ => ())
+  }
+
+  /**
+   * Resolved command inside a code action lazily.
+   */
+  def resolveCodeAction(
+      resolvedAction: l.CodeAction,
+      token: CancelToken,
+  ): Future[l.CodeAction] = {
+    val resolved = for {
+      action <- allActions
+    } yield action.resolveCodeAction(resolvedAction, token)
+
+    resolved.collectFirst { case Some(resolved) =>
+      resolved
+    } match {
+      case None => Future.successful(resolvedAction)
+      case Some(resolvingAction) => resolvingAction
+    }
   }
 
   val allActionCommandsIds: Set[String] =

@@ -126,6 +126,11 @@ trait TextDocumentService {
       params: CodeActionParams
   ): CompletableFuture[util.List[l.CodeAction]]
 
+  @JsonRequest("codeAction/resolve")
+  def codeActionResolve(
+      params: CodeAction
+  ): CompletableFuture[l.CodeAction]
+
   @JsonRequest("textDocument/codeLens")
   def codeLens(
       params: CodeLensParams

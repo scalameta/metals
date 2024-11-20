@@ -9,9 +9,9 @@ import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.JsonParser
+import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.logging
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
@@ -22,38 +22,45 @@ import org.eclipse.{lsp4j => l}
 class ExtractMethodCodeAction(
     trees: Trees,
     compilers: Compilers,
-    languageClient: MetalsLanguageClient,
 ) extends CodeAction {
+  ExtractMethodCodeAction
 
-  override type CommandData = ServerCommands.ExtractMethodParams
+  private val parser = new JsonParser.Of[ExtractMethodParams]
 
-  override def command: Option[ActionCommand] = Some(
-    ServerCommands.ExtractMethod
+  private case class ExtractMethodParams(
+      param: l.TextDocumentIdentifier,
+      range: l.Range,
+      extractPosition: l.Position,
   )
+
   override def kind: String = l.CodeActionKind.RefactorExtract
 
-  override def handleCommand(
-      data: ServerCommands.ExtractMethodParams,
-      token: CancelToken,
-  )(implicit ec: ExecutionContext): Future[Unit] = {
-    val doc = data.param
-    val uri = doc.getUri()
-    for {
-      edits <- compilers.extractMethod(
-        doc,
-        data.range,
-        data.extractPosition,
-        token,
-      )
-      _ = logging.logErrorWhen(
-        edits.isEmpty(),
-        s"Could not extract method from range \n${data.range}\nin file ${uri.toAbsolutePath}",
-      )
-      workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
-      _ <- languageClient
-        .applyEdit(new l.ApplyWorkspaceEditParams(workspaceEdit))
-        .asScala
-    } yield ()
+  override def resolveCodeAction(codeAction: l.CodeAction, token: CancelToken)(
+      implicit ec: ExecutionContext
+  ): Option[Future[l.CodeAction]] = {
+    val data = codeAction.getData()
+    data match {
+      case parser.Jsonized(data) =>
+        val doc = data.param
+        val uri = doc.getUri()
+        val modifiedCodeAction = for {
+          edits <- compilers.extractMethod(
+            doc,
+            data.range,
+            data.extractPosition,
+            token,
+          )
+          _ = logging.logErrorWhen(
+            edits.isEmpty(),
+            s"Could not extract method from range \n${data.range}\nin file ${uri.toAbsolutePath}",
+          )
+          workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
+          _ = codeAction.setEdit(workspaceEdit)
+        } yield codeAction
+        Some(modifiedCodeAction)
+      case _ =>
+        None
+    }
   }
 
   override def contribute(params: CodeActionParams, token: CancelToken)(implicit
@@ -102,17 +109,15 @@ class ExtractMethodCodeAction(
             head.pos.toLsp.getStart(),
             expr.pos.toLsp.getEnd(),
           )
-          val command = ServerCommands.ExtractMethod.toLsp(
-            ServerCommands.ExtractMethodParams(
-              params.getTextDocument(),
-              exprRange,
-              defnPos.pos.toLsp.getStart(),
-            )
+          val data = ExtractMethodParams(
+            params.getTextDocument(),
+            exprRange,
+            defnPos.pos.toLsp.getStart(),
           )
           CodeActionBuilder.build(
             title = ExtractMethodCodeAction.title(scopeName),
             kind = this.kind,
-            command = Some(command),
+            data = Some(data.toJsonObject),
           )
         }
       }

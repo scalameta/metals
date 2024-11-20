@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 
@@ -586,7 +587,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       selectedActionIndex: Int,
       codeActions: List[CodeAction],
       server: TestingServer,
-  ): Future[Any] = {
+  )(implicit ec: ExecutionContext): Future[Any] = {
     if (codeActions.nonEmpty) {
       if (selectedActionIndex >= codeActions.length) {
         Assertions.fail(
@@ -594,17 +595,26 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
         )
       }
       val codeAction = codeActions(selectedActionIndex)
-      val edit = codeAction.getEdit()
-      val command = codeAction.getCommand()
-      if (edit != null) {
-        applyWorkspaceEdit(edit)
-      }
-      if (command != null) {
-        server.executeCommandUnsafe(
-          command.getCommand(),
-          command.getArguments().asScala.toSeq,
-        )
-      } else Future.unit
+      val resolved =
+        if (codeAction.getEdit() == null || codeAction.getCommand() == null)
+          server.fullServer.codeActionResolve(codeAction).asScala
+        else Future.successful(codeAction)
+
+      for {
+        action <- resolved
+        edit = action.getEdit()
+        command = codeAction.getCommand()
+        _ = if (edit != null) {
+          applyWorkspaceEdit(edit)
+        }
+        _ <-
+          if (command != null) {
+            server.executeCommandUnsafe(
+              command.getCommand(),
+              command.getArguments().asScala.toSeq,
+            )
+          } else Future.unit
+      } yield ()
 
     } else Future.unit
   }

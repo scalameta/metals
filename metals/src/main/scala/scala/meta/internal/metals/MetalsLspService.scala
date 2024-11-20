@@ -1209,6 +1209,22 @@ abstract class MetalsLspService(
       codeActionProvider.codeActions(params, token).map(_.asJava)
     }
 
+  override def codeActionResolve(
+      params: CodeAction
+  ): CompletableFuture[CodeAction] = {
+    CancelTokens.future { token =>
+      codeActionProvider
+        .resolveCodeAction(params, token)
+        .recover(
+          getOptDisplayableMessage.andThen { msg =>
+            languageClient
+              .showMessage(MessageType.Info, msg)
+            params
+          }
+        )
+    }
+  }
+
   override def codeLens(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
