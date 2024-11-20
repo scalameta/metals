@@ -6,7 +6,6 @@ import javax.annotation.Nullable
 import scala.meta.internal.metals.newScalaFile.NewFileTypes
 
 import ch.epfl.scala.{bsp4j => b}
-import org.eclipse.lsp4j
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
@@ -630,23 +629,6 @@ object ServerCommands {
        |""".stripMargin,
   )
 
-  final case class ExtractMethodParams(
-      param: TextDocumentIdentifier,
-      range: lsp4j.Range,
-      extractPosition: lsp4j.Position,
-  )
-  val ExtractMethod = new ParametrizedCommand[ExtractMethodParams](
-    "extract-method",
-    "Extract method from range",
-    """|Whenever a user chooses code action to extract method, this command is later ran to
-       |calculate parameters for the newly created method and create its definition.
-       |""".stripMargin,
-    """|LSP [`TextDocumentIdentifier`], (https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentIdentifier),
-       |LSP [`Range`], range of the code you'd like to extract as method,
-       |LSP [`Position`], position where the definition of extracted method will be created.
-       |""".stripMargin,
-  )
-
   final case class ConvertToNamedArgsRequest(
       position: TextDocumentPositionParams,
       argIndices: ju.List[Integer],
@@ -788,7 +770,6 @@ object ServerCommands {
       PresentationCompilerRestart,
       ResetChoicePopup,
       ResetNotifications,
-      ExtractMethod,
       RestartBuildServer,
       RunDoctor,
       RunScalafix,

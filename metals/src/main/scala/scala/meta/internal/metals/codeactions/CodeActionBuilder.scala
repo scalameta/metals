@@ -4,6 +4,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.logging
 import scala.meta.io.AbsolutePath
 
+import com.google.gson.JsonObject
 import org.eclipse.{lsp4j => l}
 
 object CodeActionBuilder {
@@ -15,6 +16,7 @@ object CodeActionBuilder {
       changes: Seq[(AbsolutePath, Seq[l.TextEdit])] = Nil,
       documentChanges: List[DocumentChange] = Nil,
       command: Option[l.Command] = None,
+      data: Option[JsonObject] = None,
       diagnostics: List[l.Diagnostic] = Nil,
       disabledReason: Option[String] = None,
   ): l.CodeAction = {
@@ -45,6 +47,7 @@ object CodeActionBuilder {
       codeAction.setEdit(workspaceEdits)
     }
     command.foreach(codeAction.setCommand)
+    data.foreach(codeAction.setData)
     disabledReason.foreach(reason =>
       codeAction.setDisabled(new l.CodeActionDisabled(reason))
     )

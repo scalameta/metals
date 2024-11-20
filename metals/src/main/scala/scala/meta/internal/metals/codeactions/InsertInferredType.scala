@@ -14,6 +14,7 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder
+import scala.meta.internal.metals.logging
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 
@@ -43,7 +44,10 @@ class InsertInferredType(
         textDocumentParams,
         token,
       )
-      if (!edits.isEmpty())
+      _ = logging.logErrorWhen(
+        edits.isEmpty(),
+        s"No inferred type found for ${textDocumentParams}",
+      )
       workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
       _ <- languageClient
         .applyEdit(new l.ApplyWorkspaceEditParams(workspaceEdit))

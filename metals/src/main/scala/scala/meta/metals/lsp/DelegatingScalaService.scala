@@ -145,6 +145,10 @@ class DelegatingScalaService(
       params: CodeActionParams
   ): CompletableFuture[util.List[CodeAction]] = underlying.codeAction(params)
 
+  override def codeActionResolve(
+      params: CodeAction
+  ): CompletableFuture[CodeAction] = underlying.codeActionResolve(params)
+
   override def codeLens(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] = underlying.codeLens(params)

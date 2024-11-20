@@ -30,7 +30,6 @@ import scala.meta.pc.CancelToken
 import scala.meta.tokens.Token
 import scala.meta.transversers.SimpleTraverser
 
-import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.{lsp4j => l}
@@ -440,7 +439,7 @@ class ExtractRenameMember(
 
   private def calculate(
       params: l.TextDocumentPositionParams
-  ): Future[(ApplyWorkspaceEditParams, Option[Location])] = Future {
+  ): Future[(l.ApplyWorkspaceEditParams, Option[Location])] = Future {
     val uri = params.getTextDocument().getUri()
 
     def isCompanion(
@@ -516,7 +515,7 @@ class ExtractRenameMember(
       newFileMemberRange.setEnd(pos)
       val workspaceEdit = new WorkspaceEdit(Map(uri -> edits.asJava).asJava)
       (
-        new ApplyWorkspaceEditParams(workspaceEdit),
+        new l.ApplyWorkspaceEditParams(workspaceEdit),
         Option(new Location(newFileUri, newFileMemberRange)),
       )
     }

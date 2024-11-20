@@ -1400,4 +1400,13 @@ object MetalsEnrichments
       .map(_.reverse.flatten)
   }
 
+  val getOptDisplayableMessage: PartialFunction[Throwable, String] = {
+    case e: m.pc.DisplayableException => e.getMessage()
+    case e: Exception if (e.getCause() match {
+          case _: m.pc.DisplayableException => true
+          case _ => false
+        }) =>
+      e.getCause().getMessage()
+  }
+
 }

@@ -33,6 +33,10 @@ trait CodeAction {
       ec: ExecutionContext
   ): Future[Unit] = Future.unit
 
+  def resolveCodeAction(codeAction: l.CodeAction, token: CancelToken)(implicit
+      ec: ExecutionContext
+  ): Option[Future[l.CodeAction]] = None
+
   def contribute(
       params: l.CodeActionParams,
       token: CancelToken,
