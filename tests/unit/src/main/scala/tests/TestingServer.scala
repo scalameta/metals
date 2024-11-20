@@ -1455,11 +1455,20 @@ final case class TestingServer(
       filename: String,
       expected: String,
       root: AbsolutePath = workspace,
+      withTooltip: Boolean = false,
+      postprocessObtained: String => String = identity,
   )(implicit
       location: munit.Location
   ): Future[Unit] = {
     val fileContent = TestInlayHints.removeInlayHints(expected)
-    assertInlayHints(filename, fileContent, expected, root)
+    assertInlayHints(
+      filename,
+      fileContent,
+      expected,
+      root,
+      withTooltip,
+      postprocessObtained,
+    )
   }
 
   def assertInlayHints(
@@ -1467,6 +1476,8 @@ final case class TestingServer(
       fileContent: String,
       expected: String,
       root: AbsolutePath,
+      withTooltip: Boolean,
+      postprocessObtained: String => String,
   )(implicit
       location: munit.Location
   ): Future[Unit] = {
@@ -1474,7 +1485,9 @@ final case class TestingServer(
       hints <- inlayHints(filename, fileContent, root)
     } yield {
       Assertions.assertNoDiff(
-        TestInlayHints.applyInlayHints(fileContent, hints),
+        postprocessObtained(
+          TestInlayHints.applyInlayHints(fileContent, hints, withTooltip)
+        ),
         expected,
       )
     }
@@ -1485,6 +1498,7 @@ final case class TestingServer(
       fileContent: String,
       root: AbsolutePath = workspace,
   ): Future[List[l.InlayHint]] = {
+    Debug.printEnclosing(filename)
     val path = root.resolve(filename)
     val input = m.Input.String(fileContent)
     path.touch()

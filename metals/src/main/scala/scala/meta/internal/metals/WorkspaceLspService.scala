@@ -450,9 +450,9 @@ class WorkspaceLspService(
 
   override def inlayHints(
       params: lsp4j.InlayHintParams
-  ): CompletableFuture[java.util.List[lsp4j.InlayHint]] =
+  ): CompletableFuture[java.util.List[lsp4j.InlayHint]] = {
     getServiceFor(params.getTextDocument.getUri()).inlayHints(params)
-
+  }
   override def inlayHintResolve(
       inlayHint: lsp4j.InlayHint
   ): CompletableFuture[lsp4j.InlayHint] =
