@@ -1,6 +1,7 @@
 package tests
 
 import scala.concurrent.Promise
+import scala.concurrent.duration._
 
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -77,16 +78,16 @@ abstract class BaseWorksheetLspSuite(
           ),
         )
         _ = assertNoDiagnostics()
-        _ = assertNoDiff(
-          client.syntheticDecorations,
+        _ <- server.assertInlayHints(
+          "a/src/main/scala/foo/Main.worksheet.sc",
           getExpected(
-            """|identity(42) // : Int = 42
-               |val name = sourcecode.Name.generate.value // : String = "name"
+            """|identity(42)/* // : Int = 42*/
+               |val name = sourcecode.Name.generate.value/* // : String = "name"*/
                |""".stripMargin,
             Map(
               "3" ->
-                """|identity(42) // : Int = 42
-                   |val name = sourcecode.Name.generate.value // : String = name
+                """|identity(42)/* // : Int = 42*/
+                   |val name = sourcecode.Name.generate.value/* // : String = name*/
                    |""".stripMargin
             ),
             scalaVersion,
@@ -106,11 +107,9 @@ abstract class BaseWorksheetLspSuite(
            |""".stripMargin
       )
       _ <- server.didOpen("a/Main.worksheet.sc")
-      // check that ANSI colors were stripped
-      _ = assertNotContains(client.syntheticDecorations, "\u001b")
-      _ = assertNoDiff(
-        client.syntheticDecorations,
-        """|pprint.pprintln("Hello, world!") // "Hello, world!"
+      _ <- server.assertInlayHints(
+        "a/Main.worksheet.sc",
+        """|pprint.pprintln("Hello, world!")/* // "Hello, world!"*/
            |""".stripMargin,
       )
     } yield ()
@@ -134,25 +133,24 @@ abstract class BaseWorksheetLspSuite(
       )
       _ <- server.didOpen("a/Main.worksheet.sc")
       _ = assertNoDiagnostics()
-      _ = assertNoDiff(
-        client.syntheticDecorations,
+      _ <- server.assertInlayHints(
+        "a/Main.worksheet.sc",
         getExpected(
           """|import java.nio.file.Files
-             |val name = "Susan" // : String = "Susan"
-             |val greeting = s"Hello $name" // : String = "Hello Susan"
-             |println(greeting + "\nHow are you?") // Hello Susan…
-             |1.to(10).toVector // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-             |val List(a, b) = List(42, 10) // a: Int = 42, b: Int = 10
+             |val name = "Susan"/* // : String = "Susan"*/
+             |val greeting = s"Hello $name"/* // : String = "Hello Susan"*/
+             |println(greeting + "\nHow are you?")/* // Hello Susan...*/
+             |1.to(10).toVector/* // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)*/
+             |val List(a, b) = List(42, 10)/* // a: Int = 42, b: Int = 10*/
              |""".stripMargin,
           Map(
             "3" ->
               """|import java.nio.file.Files
-                 |val name = "Susan" // : String = Susan
-                 |val greeting = s"Hello $name" // : String = Hello Susan
-                 |println(greeting + "\nHow are you?") // Hello Susan…
-                 |1.to(10).toVector // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-                 |val List(a, b) = List(42, 10) // a: Int = 42, b: Int = 10
-                 |given str: String = ""
+                 |val name = "Susan"/* // : String = Susan*/
+                 |val greeting = s"Hello $name"/* // : String = Hello Susan*/
+                 |println(greeting + "\nHow are you?")/* // Hello Susan...*/
+                 |1.to(10).toVector/* // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)*/
+                 |val List(a, b) = List(42, 10)/* // a: Int = 42, b: Int = 10*/
                  |""".stripMargin
           ),
           scalaVersion,
@@ -179,85 +177,29 @@ abstract class BaseWorksheetLspSuite(
       )
       _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
       _ = assertNoDiagnostics()
-      _ = assertNoDiff(
-        client.syntheticDecorations,
+      _ <- server.assertInlayHints(
+        "a/src/main/scala/Main.worksheet.sc",
         getExpected(
           """|import java.nio.file.Files
-             |val name = "Susan" // : String = "Susan"
-             |val greeting = s"Hello $name" // : String = "Hello Susan"
-             |println(greeting + "\nHow are you?") // Hello Susan…
-             |1.to(10).toVector // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-             |val List(a, b) = List(42, 10) // a: Int = 42, b: Int = 10
+             |val name = "Susan"/* // : String = "Susan"| name: String = "Susan" |*/
+             |val greeting = s"Hello $name"/* // : String = "Hello Susan"| greeting: String = "Hello Susan" |*/
+             |println(greeting + "\nHow are you?")/* // Hello Susan...| // Hello Susan\n// How are you? |*/
+             |1.to(10).toVector/* // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)| res1: Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10) |*/
+             |val List(a, b) = List(42, 10)/* // a: Int = 42, b: Int = 10| a: Int = 42\nb: Int = 10 |*/
              |""".stripMargin,
           Map(
             "3" ->
               """|import java.nio.file.Files
-                 |val name = "Susan" // : String = Susan
-                 |val greeting = s"Hello $name" // : String = Hello Susan
-                 |println(greeting + "\nHow are you?") // Hello Susan…
-                 |1.to(10).toVector // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-                 |val List(a, b) = List(42, 10) // a: Int = 42, b: Int = 10
+                 |val name = "Susan"/* // : String = Susan| name: String = Susan |*/
+                 |val greeting = s"Hello $name"/* // : String = Hello Susan| greeting: String = Hello Susan |*/
+                 |println(greeting + "\nHow are you?")/* // Hello Susan...| // Hello Susan\n// How are you? |*/
+                 |1.to(10).toVector/* // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)| res1: Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10) |*/
+                 |val List(a, b) = List(42, 10)/* // a: Int = 42, b: Int = 10| a: Int = 42\nb: Int = 10 |*/
                  |""".stripMargin
           ),
           scalaVersion,
         ),
-      )
-      _ = assertNoDiff(
-        client.syntheticDecorationHoverMessage,
-        getExpected(
-          """|import java.nio.file.Files
-             |val name = "Susan"
-             |```scala
-             |name: String = "Susan"
-             |```
-             |val greeting = s"Hello $name"
-             |```scala
-             |greeting: String = "Hello Susan"
-             |```
-             |println(greeting + "\nHow are you?")
-             |```scala
-             |// Hello Susan
-             |// How are you?
-             |```
-             |1.to(10).toVector
-             |```scala
-             |res1: Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-             |```
-             |val List(a, b) = List(42, 10)
-             |```scala
-             |a: Int = 42
-             |b: Int = 10
-             |```
-             |""".stripMargin,
-          Map(
-            "3" ->
-              """|import java.nio.file.Files
-                 |val name = "Susan"
-                 |```scala
-                 |name: String = Susan
-                 |```
-                 |val greeting = s"Hello $name"
-                 |```scala
-                 |greeting: String = Hello Susan
-                 |```
-                 |println(greeting + "\nHow are you?")
-                 |```scala
-                 |// Hello Susan
-                 |// How are you?
-                 |```
-                 |1.to(10).toVector
-                 |```scala
-                 |res1: Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-                 |```
-                 |val List(a, b) = List(42, 10)
-                 |```scala
-                 |a: Int = 42
-                 |b: Int = 10
-                 |```
-                 |""".stripMargin
-          ),
-          scalaVersion,
-        ),
+        withTooltip = true,
       )
     } yield ()
   }
@@ -266,6 +208,7 @@ abstract class BaseWorksheetLspSuite(
     cleanWorkspace()
     val cancelled = Promise[Unit]()
     client.onWorkDoneProgressStart = { (message, cancelParams) =>
+      scribe.info(message)
       if (message.startsWith("Evaluating worksheet")) {
         cancelled.trySuccess(())
         server.fullServer.didCancelWorkDoneProgress(cancelParams)
@@ -283,18 +226,20 @@ abstract class BaseWorksheetLspSuite(
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
-      _ <- cancelled.future
-      _ = client.onWorkDoneProgressStart = (_, _) => {}
+      _ <- cancelled.future.withTimeout(10.seconds)
+      _ = client.onWorkDoneProgressStart = (message, _) => {
+        scribe.info(message)
+      }
       _ <- server.didSave("a/src/main/scala/Main.worksheet.sc")(
         _.replace("Stream", "// Stream")
       )
       _ <- server.didSave("a/src/main/scala/Main.worksheet.sc")(
         _.replace("42", "43")
       )
-      _ = assertNoDiff(
-        client.syntheticDecorations,
+      _ <- server.assertInlayHints(
+        "a/src/main/scala/Main.worksheet.sc",
         """|
-           |println(43) // 43
+           |println(43)/* // 43*/
            |// Stream.from(10).last
            |""".stripMargin,
       )
@@ -314,10 +259,9 @@ abstract class BaseWorksheetLspSuite(
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
-      _ = assertNoDiff(
-        client.syntheticDecorations,
-        """|
-           |val x = 42 // : Int = 42
+      _ <- server.assertInlayHints(
+        "a/src/main/scala/Main.worksheet.sc",
+        """|val x = 42/* // : Int = 42*/
            |throw new RuntimeException("boom")
            |""".stripMargin,
       )
@@ -372,10 +316,10 @@ abstract class BaseWorksheetLspSuite(
       _ <- server.didOpen("b/src/main/scala/core/Lib2.scala")
       _ <- server.didOpen("b/src/main/scala/foo/Main.worksheet.sc")
       _ = assertNoDiagnostics()
-      _ = assertNoDiff(
-        client.workspaceDecorations("b/src/main/scala/foo/Main.worksheet.sc"),
-        """|println(core.Lib) // Lib
-           |println(core.Lib2) // Lib2
+      _ <- server.assertInlayHints(
+        "b/src/main/scala/foo/Main.worksheet.sc",
+        """|println(core.Lib)/* // Lib*/
+           |println(core.Lib2)/* // Lib2*/
            |""".stripMargin,
       )
     } yield ()
@@ -400,8 +344,13 @@ abstract class BaseWorksheetLspSuite(
       )
       // completions work despite error
       _ = assertNoDiff(identity, "identity[A](x: A): A")
-      // decorations do not appear for non ".worksheet.sc" files.
-      _ = assertNoDiff(client.syntheticDecorations, "")
+      // worksheet evaluations do not appear for non ".worksheet.sc" files.
+      _ <- server.assertInlayHints(
+        "b/src/main/scala/foo/Main.worksheet.sc",
+        """|identity(42)
+           |val x: Int = ""
+           |""".stripMargin,
+      )
     } yield ()
   }
 
@@ -463,20 +412,20 @@ abstract class BaseWorksheetLspSuite(
       _ <- server.didOpen("a/src/main/scala/a/Util.scala")
       _ <- server.didOpen("a/src/main/scala/a/Main.worksheet.sc")
       _ = assertNoDiagnostics()
-      _ = assertNoDiff(
-        client.workspaceDecorations("a/src/main/scala/a/Main.worksheet.sc"),
+      _ <- server.assertInlayHints(
+        "a/src/main/scala/a/Main.worksheet.sc",
         """
-          |a.Util.increase(1) // : Int = 2
+          |a.Util.increase(1)/* // : Int = 2*/
           |""".stripMargin,
       )
       _ <- server.didSave("a/src/main/scala/a/Util.scala")(
         _.replace("n + 1", "n + 2")
       )
       _ <- server.didSave("a/src/main/scala/a/Main.worksheet.sc")(identity)
-      _ = assertNoDiff(
-        client.workspaceDecorations("a/src/main/scala/a/Main.worksheet.sc"),
+      _ <- server.assertInlayHints(
+        "a/src/main/scala/a/Main.worksheet.sc",
         """
-          |a.Util.increase(1) // : Int = 3
+          |a.Util.increase(1)/* // : Int = 3*/
           |""".stripMargin,
       )
     } yield ()

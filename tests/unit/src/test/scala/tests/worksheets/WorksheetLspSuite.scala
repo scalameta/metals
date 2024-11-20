@@ -56,16 +56,16 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
         _ <- server.didOpen("scalatags/Text.scala")
         _ = assertNoDiff(identity, "render: String")
         _ = assertNoDiagnostics()
-        _ = assertNoDiff(
-          client.workspaceDecorations(path),
+        _ <- server.assertInlayHints(
+          path,
           """|import $dep.`com.lihaoyi::scalatags:0.9.0`
              |import scalatags.Text.all._
              |val htmlFile = html(
              |  body(
              |    p("This is a big paragraph of text")
              |  )
-             |) // : scalatags.Text.TypedTag[String] = TypedTag( tag = "html", modifiers = List( ArraySeq( TypedTag( tag = "body", modifie…
-             |htmlFile.render // : String = "<html><body><p>This is a big paragraph of text</p></body></html>"
+             |)/* // : scalatags.Text.TypedTag[String] = TypedTag( tag = "html", modifiers = List( ArraySeq( TypedTag( tag = "body", modifie…*/
+             |htmlFile.render/* // : String = "<html><body><p>This is a big paragraph of text</p></body></html>"*/
              |""".stripMargin,
         )
       } yield ()
@@ -111,9 +111,9 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
            |""".stripMargin
       )
       _ <- server.didOpen(path)
-      _ = assertNoDiff(
-        client.syntheticDecorations,
-        "new java.sql.Date(100L) // : java.sql.Date = 1970-01-01",
+      _ <- server.assertInlayHints(
+        path,
+        "new java.sql.Date(100L)/* // : java.sql.Date = 1970-01-01*/",
       )
     } yield ()
   }
@@ -148,9 +148,8 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
            |""".stripMargin
       )
       _ <- server.didOpen(path)
-      _ = assertNoDiff(
-        // it seems that part of the string is always different, so let's remove it
-        client.syntheticDecorations.replaceAll(".out\\(.*", ".out(..."),
+      _ <- server.assertInlayHints(
+        path,
         """|import $dep.`com.typesafe.akka::akka-stream:2.6.13`
            |
            |import akka.actor.ActorSystem
@@ -162,11 +161,12 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
            |import scala.concurrent.duration.DurationInt
            |
            |
-           |implicit val system: ActorSystem = ActorSystem("QuickStart") // : ActorSystem = akka://QuickStart
-           |val source: Source[Int, NotUsed] = Source(1 to 2) // : Source[Int, NotUsed] = Source(SourceShape(StatefulMapConcat.out(...
-           |val future = source.runWith(Sink.foreach(_ => ())) // : concurrent.Future[akka.Done] = Future(<not completed>)
-           |Await.result(future, 3.seconds) // : akka.Done = Done
+           |implicit val system: ActorSystem = ActorSystem("QuickStart")/* // : ActorSystem = akka://QuickStart*/
+           |val source: Source[Int, NotUsed] = Source(1 to 2)/* // : Source[Int, NotUsed] = Source(SourceShape(StatefulMapConcat.out(...*/
+           |val future = source.runWith(Sink.foreach(_ => ()))/* // : concurrent.Future[akka.Done] = Future(<not completed>)*/
+           |Await.result(future, 3.seconds)/* // : akka.Done = Done*/
            |""".stripMargin,
+        postprocessObtained = _.replaceAll(".out\\(.*", ".out(...*/"),
       )
     } yield ()
   }

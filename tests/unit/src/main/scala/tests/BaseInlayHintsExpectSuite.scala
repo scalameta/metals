@@ -45,7 +45,11 @@ abstract class BaseInlayHintsExpectSuite(
                 InlayHintCompat
                   .maybeFixInlayHintData(_, file.file.toURI.toString())
               )
-          TestInlayHints.applyInlayHints(file.code, inlayHints)
+          TestInlayHints.applyInlayHints(
+            file.code,
+            inlayHints,
+            withTooltip = false,
+          )
         },
       )
     }
