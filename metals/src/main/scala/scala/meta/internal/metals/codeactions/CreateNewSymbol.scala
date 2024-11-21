@@ -3,23 +3,20 @@ package scala.meta.internal.metals.codeactions
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.logging
 import scala.meta.pc.CancelToken
+import scala.meta.pc.CodeActionId
 
 import org.eclipse.{lsp4j => l}
-import scala.meta.pc.CodeActionId
 
 class CreateNewSymbol(
     compilers: Compilers,
-    buildTargets: BuildTargets,
     languageClient: MetalsLanguageClient,
 ) extends CodeAction {
   override def kind: String = l.CodeActionKind.QuickFix
@@ -29,8 +26,6 @@ class CreateNewSymbol(
     ServerCommands.InsertInferredMethod
   )
 
-  override def maybeCodeActionId: Option[String] = Some(CodeActionId.InsertInferredMethod)
-  
   override def handleCommand(
       textDocumentParams: l.TextDocumentPositionParams,
       token: CancelToken,
@@ -40,13 +35,15 @@ class CreateNewSymbol(
         textDocumentParams,
         token,
         CodeActionId.InsertInferredMethod,
-        None
+        None,
       )
       _ = logging.logErrorWhen(
         edits.isEmpty(),
         s"Could not infer method at ${textDocumentParams}",
       )
-      workspaceEdit = new l.WorkspaceEdit(Map(textDocumentParams.getTextDocument().getUri() -> edits).asJava)
+      workspaceEdit = new l.WorkspaceEdit(
+        Map(textDocumentParams.getTextDocument().getUri() -> edits).asJava
+      )
       _ <- languageClient
         .applyEdit(new l.ApplyWorkspaceEditParams(workspaceEdit))
         .asScala
@@ -63,14 +60,9 @@ class CreateNewSymbol(
 
     val uri = params.getTextDocument().getUri()
     val file = uri.toAbsolutePath
-    lazy val isScala3 =
-      (for {
-        buildId <- buildTargets.inverseSources(file)
-        target <- buildTargets.scalaTarget(buildId)
-        isScala3 = ScalaVersions.isScala3Version(
-          target.scalaVersion
-        )
-      } yield isScala3).getOrElse(false)
+    lazy val isSupportedInferredType = compilers
+      .supportedCodeActions(file)
+      .contains(CodeActionId.InsertInferredMethod)
 
     def createNewSymbol(
         diagnostic: l.Diagnostic,
@@ -107,26 +99,29 @@ class CreateNewSymbol(
       )
     }
 
+    def overalaps(diags: Seq[l.Diagnostic]) = {
+      params.getRange().overlapsWith(diags.head.getRange())
+    }
+
     val codeActions = params
       .getContext()
       .getDiagnostics()
       .asScala
+      .toSeq
       .groupBy {
         case ScalacDiagnostic.SymbolNotFound(name) if name.nonEmpty =>
           Some(name)
-        case ScalacDiagnostic.NotAMember(name) if name.nonEmpty =>
+        case ScalacDiagnostic.NotAMember(name)
+            if name.nonEmpty && isSupportedInferredType =>
           Some(name)
         case _ => None
       }
       .collect {
         case (Some(name), diags)
-            if !isScala3 // scala 3 not supported yet
-              && name.head.isLower && params
-                .getRange()
-                .overlapsWith(diags.head.getRange()) =>
+            if overalaps(diags) && name.head.isLower &&
+              isSupportedInferredType =>
           createNewMethod(diags.head, name)
-        case (Some(name), diags)
-            if params.getRange().overlapsWith(diags.head.getRange()) =>
+        case (Some(name), diags) if overalaps(diags) =>
           createNewSymbol(diags.head, name)
       }
       .toSeq

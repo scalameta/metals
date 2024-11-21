@@ -24,16 +24,17 @@ final class InferredMethodProvider(
     params: OffsetParams
 ) {
   import compiler._
-  val unit = addCompilationUnit(
+  val unit: RichCompilationUnit = addCompilationUnit(
     code = params.text(),
     filename = params.uri().toString(),
     cursor = None
   )
 
-  val pos = unit.position(params.offset)
-  val typedTree = typedTreeAt(pos)
-  val importPosition = autoImportPosition(pos, params.text())
-  val context = doLocateImportContext(pos)
+  val pos: Position = unit.position(params.offset)
+  val typedTree: Tree = typedTreeAt(pos)
+  val importPosition: Option[AutoImportPosition] =
+    autoImportPosition(pos, params.text())
+  val context: Context = doLocateImportContext(pos)
   val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
   val history = new ShortenedNames(
     lookupSymbol = name =>
@@ -42,296 +43,7 @@ final class InferredMethodProvider(
     renames = re
   )
 
-  def additionalImports = importPosition match {
-    case None =>
-      // No import position means we can't insert an import without clashing with
-      // existing symbols in scope, so we just do nothing
-      Nil
-    case Some(importPosition) =>
-      history.autoImports(pos, importPosition)
-  }
-
-  def prettyType(tpe: Type) =
-    metalsToLongString(tpe.widen.finalResultType, history)
-
-  def argumentsString(args: List[Tree]): Option[String] = {
-    val paramsTypes = args.zipWithIndex
-      .map { case (arg, index) =>
-        val tp = arg match {
-          case Ident(name) =>
-            val found = context.lookupSymbol(name, _ => true)
-            if (found.isSuccess)
-              Some(prettyType(found.symbol.tpe))
-            else None
-          case _ =>
-            // in this case we could have list, tuple, classes, etc and we would need to assess each case to extract the right argument type
-            val typ = arg.tpe
-            if (typ != null)
-              Some(prettyType(arg.tpe))
-            else {
-              logger.warning(
-                "infer-method: could not infer type of argument, defaulting to Any"
-              )
-              Some("Any")
-            }
-        }
-        tp.map(tp => s"arg$index: $tp")
-
-      }
-    if (paramsTypes.forall(_.nonEmpty)) {
-      Some(paramsTypes.flatten.mkString(", "))
-    } else None
-  }
-
   def inferredMethodEdits(): Either[String, List[TextEdit]] = {
-
-    def getPositionUri(position: Position): String = scala.util
-      .Try(position.source.toString()) // in tests this is undefined
-      .toOption
-      .getOrElse(params.uri().toString())
-
-    def signature(
-        name: String,
-        paramsString: Option[String],
-        retType: Option[String],
-        postProcess: String => String,
-        position: Option[Position]
-    ): Either[String, List[TextEdit]] = {
-
-      val lastApplyPos = position.getOrElse(insertPosition())
-      val indentString =
-        indentation(params.text(), lastApplyPos.start - 1)
-      val retTypeString = retType match {
-        case None =>
-          ""
-        case Some(retTypeStr) =>
-          s": $retTypeStr"
-      }
-      val parameters = paramsString.map(s => s"($s)").getOrElse("")
-      val full =
-        s"def ${name}$parameters$retTypeString = ???\n$indentString"
-      val methodInsertPosition = lastApplyPos.toLsp
-      methodInsertPosition.setEnd(methodInsertPosition.getStart())
-      val newEdits = new TextEdit(
-        methodInsertPosition,
-        postProcess(full)
-      ) :: additionalImports
-      Right(newEdits)
-    }
-
-    def unimplemented(
-        name: String
-    )(implicit line: sourcecode.Line): Either[String, List[TextEdit]] = {
-      Left(
-        s"[${line.value}] Could not infer method for `$name`, please report an issue in github.com/scalameta/metals"
-      )
-    }
-
-    def makeEditsForApplyWithUnknownName(
-        arguments: List[Tree],
-        containingMethod: Name,
-        errorMethodName: String,
-        nonExistent: Apply
-    ): Either[String, List[TextEdit]] = {
-      val argumentString = argumentsString(nonExistent.args)
-      val methodSymbol = context.lookupSymbol(containingMethod, _ => true)
-      argumentString match {
-        case Some(paramsString) =>
-          val retIndex = arguments.indexWhere(_.pos.includes(pos))
-          methodSymbol.symbol.tpe match {
-            case MethodType(methodParams, _) if retIndex >= 0 =>
-              val ret = prettyType(methodParams(retIndex).tpe)
-              signature(
-                name = errorMethodName,
-                paramsString = Option(paramsString),
-                retType = Some(ret),
-                postProcess = identity,
-                position = None
-              )
-            case _ =>
-              unimplemented(errorMethodName)
-          }
-
-        case _ =>
-          unimplemented(errorMethodName)
-      }
-    }
-    def makeEditsForListApply(
-        arguments: List[Tree],
-        containingMethod: Name,
-        errorMethodName: String
-    ): Either[String, List[TextEdit]] = {
-      val methodSymbol = context.lookupSymbol(containingMethod, _ => true)
-      if (methodSymbol.isSuccess) {
-        val retIndex = arguments.indexWhere(_.pos.includes(pos))
-        methodSymbol.symbol.tpe match {
-          case MethodType(methodParams, _) if retIndex >= 0 =>
-            val lastApplyPos = insertPosition()
-            val tpe = methodParams(retIndex).tpe
-            tpe match {
-              // def method1(s : (String, Float) => Int) = 123
-              // method1(<<nonExistent>>)
-              case TypeRef(_, _, args) if definitions.isFunctionType(tpe) =>
-                val params = args.take(args.size - 1)
-                val paramsString =
-                  params.zipWithIndex
-                    .map { case (p, index) =>
-                      s"arg$index: ${prettyType(p)}"
-                    }
-                    .mkString(", ")
-                val resultType = args.last
-                val ret = prettyType(resultType)
-                signature(
-                  name = errorMethodName,
-                  Option(paramsString),
-                  Option(ret),
-                  identity,
-                  None
-                )
-
-              case _ =>
-                //    def method1(s : => Int) = 123
-                //    method1(<<nonExistent>>)
-                val ret = tpe.toString().replace("=>", "").trim()
-                signature(
-                  name = errorMethodName,
-                  None,
-                  Option(ret),
-                  identity,
-                  Option(lastApplyPos)
-                )
-            }
-
-          case _ =>
-            unimplemented(errorMethodName)
-        }
-      } else {
-        signature(
-          name = errorMethodName,
-          paramsString = Option(argumentsString(arguments).getOrElse("")),
-          retType = None,
-          postProcess = identity,
-          position = None
-        )
-      }
-    }
-    def makeEditsForListApplyWithoutArgs(
-        argumentList: Name,
-        errorMethodName: String
-    ): Either[String, List[TextEdit]] = {
-      val listSymbol = context.lookupSymbol(argumentList, _ => true)
-      if (listSymbol.isSuccess) {
-        listSymbol.symbol.tpe match {
-          // need to find the type of the value on which we are mapping
-          case TypeRef(_, _, TypeRef(_, inputType, _) :: Nil) =>
-            val paramsString = s"arg0: ${prettyType(inputType.tpe)}"
-            signature(
-              name = errorMethodName,
-              Option(paramsString),
-              None,
-              identity,
-              None
-            )
-          case NullaryMethodType(
-                TypeRef(_, _, TypeRef(_, inputType, _) :: Nil)
-              ) =>
-            val paramsString = s"arg0: ${prettyType(inputType.tpe)}"
-            signature(
-              name = errorMethodName,
-              Option(paramsString),
-              None,
-              identity,
-              None
-            )
-          case _ =>
-            unimplemented(errorMethodName)
-        }
-      } else
-        unimplemented(errorMethodName)
-    }
-    def makeEditsMethodObject(
-        arguments: Option[List[Tree]],
-        container: Name,
-        errorMethodName: String
-    ): Either[String, List[TextEdit]] = {
-      def makeClassMethodEdits(
-          template: Template
-      ): Either[String, List[TextEdit]] = {
-        val insertPos: Position =
-          inferEditPosition(template)
-        val templateFileUri = template.pos.source.content
-          .map(_.toString)
-          .mkString
-        if (params.uri().toString() != getPositionUri(insertPos)) {
-          unimplemented(errorMethodName)
-        } else
-          signature(
-            name = errorMethodName,
-            paramsString = arguments
-              .fold(Option.empty[String])(argumentsString(_) orElse Option("")),
-            retType = None,
-            postProcess = method => {
-              if (
-                hasBody(
-                  templateFileUri,
-                  template
-                ).isDefined
-              )
-                s"\n  $method"
-              else s" {\n  $method}"
-            },
-            position = Option(insertPos)
-          )
-      }
-
-      // we need to get the type of the container of our undefined method
-      val containerName = context.lookupSymbol(container, _ => true)
-
-      if (containerName.isSuccess) {
-        val containerSymbolType =
-          if (containerName.symbol.tpe.isInstanceOf[NullaryMethodType])
-            containerName.symbol.tpe
-              .asInstanceOf[NullaryMethodType]
-              .resultType
-          else containerName.symbol.tpe
-
-        val classSymbol = containerSymbolType match {
-          case TypeRef(_, classSymbol, _) => Some(classSymbol)
-          // Object will be first
-          case RefinedType(parents, decls) if parents.size > 1 =>
-            parents.tail.headOption.map(_.typeSymbol)
-          case _ => None
-        }
-        classSymbol match {
-          case Some(classSymbol) =>
-            // we get the position of the container
-            // class because we want to add the method
-            // definition there
-            val containerClass =
-              context.lookupSymbol(classSymbol.name, _ => true)
-            // this gives me the position of the class
-            typedTreeAt(containerClass.symbol.pos) match {
-              // class / trait case
-              case cls: ImplDef =>
-                makeClassMethodEdits(cls.impl)
-              case _ =>
-                // object Y {}
-                // Y.nonExistent(1,2,3)
-                typedTreeAt(containerName.symbol.pos) match {
-                  // class / trait case
-                  case cls: ImplDef =>
-                    makeClassMethodEdits(cls.impl)
-                  case _ =>
-                    unimplemented(errorMethodName)
-                }
-            }
-          case None =>
-            unimplemented(errorMethodName)
-        }
-      } else {
-        unimplemented(errorMethodName)
-      }
-    }
 
     val textEdits = typedTree match {
       case errorMethod: Ident if errorMethod.isErroneous =>
@@ -420,6 +132,300 @@ final class InferredMethodProvider(
         unimplemented(tree.summaryString)
     }
     textEdits
+  }
+
+  private def additionalImports = importPosition match {
+    case None =>
+      // No import position means we can't insert an import without clashing with
+      // existing symbols in scope, so we just do nothing
+      Nil
+    case Some(importPosition) =>
+      history.autoImports(pos, importPosition)
+  }
+
+  private def prettyType(tpe: Type) =
+    metalsToLongString(tpe.widen.finalResultType, history)
+
+  private def argumentsString(args: List[Tree]): Option[String] = {
+    val paramsTypes = args.zipWithIndex
+      .map { case (arg, index) =>
+        val tp = arg match {
+          case Ident(name) =>
+            val found = context.lookupSymbol(name, _ => true)
+            if (found.isSuccess)
+              Some(prettyType(found.symbol.tpe))
+            else None
+          case _ =>
+            // in this case we could have list, tuple, classes, etc and we would need to assess each case to extract the right argument type
+            val typ = arg.tpe
+            if (typ != null)
+              Some(prettyType(arg.tpe))
+            else {
+              logger.warning(
+                "infer-method: could not infer type of argument, defaulting to Any"
+              )
+              Some("Any")
+            }
+        }
+        tp.map(tp => s"arg$index: $tp")
+
+      }
+    if (paramsTypes.forall(_.nonEmpty)) {
+      Some(paramsTypes.flatten.mkString(", "))
+    } else None
+  }
+
+  private def getPositionUri(position: Position): String = scala.util
+    .Try(position.source.toString()) // in tests this is undefined
+    .toOption
+    .getOrElse(params.uri().toString())
+
+  private def unimplemented(
+      name: String
+  ): Either[String, List[TextEdit]] = {
+    Left(
+      s"Could not infer method for `$name`, please report an issue in github.com/scalameta/metals"
+    )
+  }
+
+  private def signature(
+      name: String,
+      paramsString: Option[String],
+      retType: Option[String],
+      postProcess: String => String,
+      position: Option[Position]
+  ): Either[String, List[TextEdit]] = {
+
+    val lastApplyPos = position.getOrElse(insertPosition())
+    val indentString =
+      indentation(params.text(), lastApplyPos.start - 1)
+    val retTypeString = retType match {
+      case None =>
+        ""
+      case Some(retTypeStr) =>
+        s": $retTypeStr"
+    }
+    val parameters = paramsString.map(s => s"($s)").getOrElse("")
+    val full =
+      s"def ${name}$parameters$retTypeString = ???\n$indentString"
+    val methodInsertPosition = lastApplyPos.toLsp
+    methodInsertPosition.setEnd(methodInsertPosition.getStart())
+    val newEdits = new TextEdit(
+      methodInsertPosition,
+      postProcess(full)
+    ) :: additionalImports
+    Right(newEdits)
+  }
+
+  private def makeEditsForApplyWithUnknownName(
+      arguments: List[Tree],
+      containingMethod: Name,
+      errorMethodName: String,
+      nonExistent: Apply
+  ): Either[String, List[TextEdit]] = {
+    val argumentString = argumentsString(nonExistent.args)
+    val methodSymbol = context.lookupSymbol(containingMethod, _ => true)
+    argumentString match {
+      case Some(paramsString) =>
+        val retIndex = arguments.indexWhere(_.pos.includes(pos))
+        methodSymbol.symbol.tpe match {
+          case MethodType(methodParams, _) if retIndex >= 0 =>
+            val ret = prettyType(methodParams(retIndex).tpe)
+            signature(
+              name = errorMethodName,
+              paramsString = Option(paramsString),
+              retType = Some(ret),
+              postProcess = identity,
+              position = None
+            )
+          case _ =>
+            unimplemented(errorMethodName)
+        }
+
+      case _ =>
+        unimplemented(errorMethodName)
+    }
+  }
+
+  private def makeEditsForListApply(
+      arguments: List[Tree],
+      containingMethod: Name,
+      errorMethodName: String
+  ): Either[String, List[TextEdit]] = {
+    val methodSymbol = context.lookupSymbol(containingMethod, _ => true)
+    if (methodSymbol.isSuccess) {
+      val retIndex = arguments.indexWhere(_.pos.includes(pos))
+      methodSymbol.symbol.tpe match {
+        case MethodType(methodParams, _) if retIndex >= 0 =>
+          val lastApplyPos = insertPosition()
+          val tpe = methodParams(retIndex).tpe
+          tpe match {
+            // def method1(s : (String, Float) => Int) = 123
+            // method1(<<nonExistent>>)
+            case TypeRef(_, _, args) if definitions.isFunctionType(tpe) =>
+              val params = args.take(args.size - 1)
+              val paramsString =
+                params.zipWithIndex
+                  .map { case (p, index) =>
+                    s"arg$index: ${prettyType(p)}"
+                  }
+                  .mkString(", ")
+              val resultType = args.last
+              val ret = prettyType(resultType)
+              signature(
+                name = errorMethodName,
+                Option(paramsString),
+                Option(ret),
+                identity,
+                None
+              )
+
+            case _ =>
+              //    def method1(s : => Int) = 123
+              //    method1(<<nonExistent>>)
+              val ret = tpe.toString().replace("=>", "").trim()
+              signature(
+                name = errorMethodName,
+                None,
+                Option(ret),
+                identity,
+                Option(lastApplyPos)
+              )
+          }
+
+        case _ =>
+          unimplemented(errorMethodName)
+      }
+    } else {
+      signature(
+        name = errorMethodName,
+        paramsString = Option(argumentsString(arguments).getOrElse("")),
+        retType = None,
+        postProcess = identity,
+        position = None
+      )
+    }
+  }
+
+  private def makeEditsForListApplyWithoutArgs(
+      argumentList: Name,
+      errorMethodName: String
+  ): Either[String, List[TextEdit]] = {
+    val listSymbol = context.lookupSymbol(argumentList, _ => true)
+    if (listSymbol.isSuccess) {
+      listSymbol.symbol.tpe match {
+        // need to find the type of the value on which we are mapping
+        case TypeRef(_, _, TypeRef(_, inputType, _) :: Nil) =>
+          val paramsString = s"arg0: ${prettyType(inputType.tpe)}"
+          signature(
+            name = errorMethodName,
+            Option(paramsString),
+            None,
+            identity,
+            None
+          )
+        case NullaryMethodType(
+              TypeRef(_, _, TypeRef(_, inputType, _) :: Nil)
+            ) =>
+          val paramsString = s"arg0: ${prettyType(inputType.tpe)}"
+          signature(
+            name = errorMethodName,
+            Option(paramsString),
+            None,
+            identity,
+            None
+          )
+        case _ =>
+          unimplemented(errorMethodName)
+      }
+    } else
+      unimplemented(errorMethodName)
+  }
+
+  private def makeEditsMethodObject(
+      arguments: Option[List[Tree]],
+      container: Name,
+      errorMethodName: String
+  ): Either[String, List[TextEdit]] = {
+    def makeClassMethodEdits(
+        template: Template
+    ): Either[String, List[TextEdit]] = {
+      val insertPos: Position =
+        inferEditPosition(template)
+      val templateFileUri = template.pos.source.content
+        .map(_.toString)
+        .mkString
+      if (params.uri().toString() != getPositionUri(insertPos)) {
+        Left(
+          "Inferring method only works in the current file, cannot add method to types outside of it."
+        )
+      } else
+        signature(
+          name = errorMethodName,
+          paramsString = arguments
+            .fold(Option.empty[String])(argumentsString(_) orElse Option("")),
+          retType = None,
+          postProcess = method => {
+            if (
+              hasBody(
+                templateFileUri,
+                template
+              ).isDefined
+            )
+              s"\n  $method"
+            else s" {\n  $method}"
+          },
+          position = Option(insertPos)
+        )
+    }
+
+    // we need to get the type of the container of our undefined method
+    val containerName = context.lookupSymbol(container, _ => true)
+
+    if (containerName.isSuccess) {
+      val containerSymbolType =
+        if (containerName.symbol.tpe.isInstanceOf[NullaryMethodType])
+          containerName.symbol.tpe
+            .asInstanceOf[NullaryMethodType]
+            .resultType
+        else containerName.symbol.tpe
+
+      val classSymbol = containerSymbolType match {
+        case TypeRef(_, classSymbol, _) => Some(classSymbol)
+        // Object will be first
+        case RefinedType(parents, decls) if parents.size > 1 =>
+          parents.tail.headOption.map(_.typeSymbol)
+        case _ => None
+      }
+      classSymbol match {
+        case Some(classSymbol) =>
+          // we get the position of the container
+          // class because we want to add the method
+          // definition there
+          val containerClass =
+            context.lookupSymbol(classSymbol.name, _ => true)
+          // this gives me the position of the class
+          typedTreeAt(containerClass.symbol.pos) match {
+            // class / trait case
+            case cls: ImplDef =>
+              makeClassMethodEdits(cls.impl)
+            case _ =>
+              // object Y {}
+              // Y.nonExistent(1,2,3)
+              typedTreeAt(containerName.symbol.pos) match {
+                // class / trait case
+                case cls: ImplDef =>
+                  makeClassMethodEdits(cls.impl)
+                case _ =>
+                  unimplemented(errorMethodName)
+              }
+          }
+        case None =>
+          unimplemented(errorMethodName)
+      }
+    } else {
+      unimplemented(errorMethodName)
+    }
   }
 
   private def insertPosition(): Position = {
