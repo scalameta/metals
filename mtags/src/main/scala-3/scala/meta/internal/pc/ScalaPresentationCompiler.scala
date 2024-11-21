@@ -309,16 +309,6 @@ case class ScalaPresentationCompiler(
         .asJava
     }
 
-  override def insertInferredMethod(
-      params: OffsetParams
-  ): CompletableFuture[WorkspaceEdit] = {
-    val empty: WorkspaceEdit = new WorkspaceEdit()
-    compilerAccess.withInterruptableCompiler(Some(params))(empty, params.token) { pc =>
-      // TODO support Scala3 for infer method
-    empty
-    }
-  }
-
   override def inlineValue(
       params: OffsetParams
   ): CompletableFuture[ju.List[l.TextEdit]] =

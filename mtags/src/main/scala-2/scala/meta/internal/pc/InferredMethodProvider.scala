@@ -28,7 +28,7 @@ final class InferredMethodProvider(
 ) {
   import compiler._
 
-  def inferredMethodEdits(): WorkspaceEdit = {
+  def inferredMethodEdits(): List[TextEdit] = {
 
     val unit = addCompilationUnit(
       code = params.text(),
@@ -103,10 +103,9 @@ final class InferredMethodProvider(
         retType: Option[String],
         postProcess: String => String,
         position: Option[Position]
-    ): List[(FileURI, TextEdit)] = {
+    ): List[TextEdit] = {
 
       val lastApplyPos = position.getOrElse(insertPosition())
-      val fileUri = getPositionUri(lastApplyPos)
       val indentString =
         indentation(params.text(), lastApplyPos.start - 1)
       val retTypeString = retType match {
@@ -124,21 +123,21 @@ final class InferredMethodProvider(
         methodInsertPosition,
         postProcess(full)
       ) :: additionalImports
-      newEdits.map(textEdit => (fileUri, textEdit))
+      newEdits
     }
 
-    def unimplemented(c: String): List[(FileURI, TextEdit)] = {
+    def unimplemented(c: String): List[TextEdit] = {
       throw new DisplayableException(
         s"The case ($c) is not currently supported by the infer-method code action."
       )
-      Nil
     }
+
     def makeEditsForApplyWithUnknownName(
         arguments: List[Tree],
         containingMethod: Name,
         errorMethod: Ident,
         nonExistent: Apply
-    ): List[(FileURI, TextEdit)] = {
+    ): List[TextEdit] = {
       val argumentString = argumentsString(nonExistent.args)
       val methodSymbol = context.lookupSymbol(containingMethod, _ => true)
       argumentString match {
@@ -170,7 +169,7 @@ final class InferredMethodProvider(
         arguments: List[Tree],
         containingMethod: Name,
         errorMethod: Ident
-    ): List[(FileURI, TextEdit)] = {
+    ): List[TextEdit] = {
       val methodSymbol = context.lookupSymbol(containingMethod, _ => true)
       if (methodSymbol.isSuccess) {
         val retIndex = arguments.indexWhere(_.pos.includes(pos))
@@ -230,7 +229,7 @@ final class InferredMethodProvider(
     def makeEditsForListApplyWithoutArgs(
         argumentList: Name,
         errorMethod: Ident
-    ): List[(FileURI, TextEdit)] = {
+    ): List[TextEdit] = {
       val listSymbol = context.lookupSymbol(argumentList, _ => true)
       if (listSymbol.isSuccess) {
         listSymbol.symbol.tpe match {
@@ -269,10 +268,10 @@ final class InferredMethodProvider(
         arguments: Option[List[Tree]],
         container: Name,
         errorMethod: Select
-    ): List[(FileURI, TextEdit)] = {
+    ): List[TextEdit] = {
       def makeClassMethodEdits(
           template: Template
-      ): List[(FileURI, TextEdit)] = {
+      ): List[TextEdit] = {
         val insertPos: Position =
           inferEditPosition(template)
         val templateFileUri = template.pos.source.content
@@ -363,7 +362,7 @@ final class InferredMethodProvider(
       } else
         unimplemented("the thing containing the method was not found")
     }
-    val uriTextEditPairs = typedTree match {
+    val textEdits = typedTree match {
       case errorMethod: Ident if errorMethod.isErroneous =>
         lastVisitedParentTrees match {
           /**
@@ -447,13 +446,7 @@ final class InferredMethodProvider(
       case _ =>
         unimplemented("inferred method in an unknown context")
     }
-    new WorkspaceEdit(
-      uriTextEditPairs
-        .groupBy(_._1)
-        .map { case (k, kvs) => (k, kvs.map(_._2).asJava) }
-        .toMap
-        .asJava
-    )
+    textEdits
   }
 
   private def insertPosition(): Position = {
