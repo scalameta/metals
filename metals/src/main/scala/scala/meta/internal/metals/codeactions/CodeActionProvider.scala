@@ -29,7 +29,7 @@ final class CodeActionProvider(
   private val allActions: List[CodeAction] = List(
     new ImplementAbstractMembers(compilers),
     new ImportMissingSymbol(compilers, buildTargets),
-    new CreateNewSymbol(compilers, buildTargets, languageClient),
+    new CreateNewSymbol(compilers, languageClient),
     new ActionableDiagnostic(),
     new StringActions(buffers),
     extractMemberAction,

@@ -621,7 +621,7 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
       name: TestOptions,
       original: String,
       expectedError: String
-  )(implicit loc: munit.Location) = {
+  )(implicit loc: munit.Location): Unit = {
     test(name) {
       Try(getInferredMethod(original)) match {
         case Failure(exception: Throwable) =>

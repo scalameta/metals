@@ -2,17 +2,17 @@ package tests.codeactions
 
 import scala.meta.internal.metals.Messages.NewScalaFile
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ExtractRenameMember
+import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
+import scala.meta.internal.metals.codeactions.FlatMapToForComprehensionCodeAction
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
+import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
 
 import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.ShowMessageRequestParams
-import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
-import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
-import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
-import scala.meta.internal.metals.codeactions.FlatMapToForComprehensionCodeAction
 
 class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
 
@@ -75,7 +75,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
          |""".stripMargin,
     expectNoDiagnostics = false,
     expectedMessages = Some(
-      "The case (infer method for a list apply) is not currently supported by the infer-method code action."
+      "Could not infer method for `sdf`, please report an issue in github.com/scalameta/metals"
     ),
   )
 
