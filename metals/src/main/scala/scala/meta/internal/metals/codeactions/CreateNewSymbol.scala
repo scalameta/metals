@@ -11,9 +11,11 @@ import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.internal.metals.logging
 import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
+import scala.meta.pc.CodeActionId
 
 class CreateNewSymbol(
     compilers: Compilers,
@@ -27,16 +29,24 @@ class CreateNewSymbol(
     ServerCommands.InsertInferredMethod
   )
 
+  override def maybeCodeActionId: Option[String] = Some(CodeActionId.InsertInferredMethod)
+  
   override def handleCommand(
       textDocumentParams: l.TextDocumentPositionParams,
       token: CancelToken,
   )(implicit ec: ExecutionContext): Future[Unit] = {
     for {
-      workspaceEdit <- compilers.codeAction(
+      edits <- compilers.codeAction(
         textDocumentParams,
         token,
+        CodeActionId.InsertInferredMethod,
+        None
       )
-      if (!workspaceEdit.getChanges().isEmpty())
+      _ = logging.logErrorWhen(
+        edits.isEmpty(),
+        s"Could not infer method at ${textDocumentParams}",
+      )
+      workspaceEdit = new l.WorkspaceEdit(Map(textDocumentParams.getTextDocument().getUri() -> edits).asJava)
       _ <- languageClient
         .applyEdit(new l.ApplyWorkspaceEditParams(workspaceEdit))
         .asScala
