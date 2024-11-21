@@ -13,21 +13,23 @@ class ChosenBuildTool(conn: () => Connection) {
     )
 
   def selectedBuildTool(): Option[String] = {
-    val selected = currentTool
-      .get()
-      .orElse(
-        conn()
+    currentTool.get() match {
+      case selected @ Some(_) =>
+        selected
+      case None =>
+        val selected = conn()
           .query(
             "select * from chosen_build_tool LIMIT 1;"
           )(_ => ()) { _.getString("build_tool") }
           .headOption
-      )
-    selected.flatMap(toolName =>
-      currentTool.updateAndGet {
-        case None => Some(toolName)
-        case some => some
-      }
-    )
+
+        selected.flatMap(toolName =>
+          currentTool.updateAndGet {
+            case None => Some(toolName)
+            case some => some
+          }
+        )
+    }
   }
 
   def chooseBuildTool(buildTool: String): Int = synchronized {
