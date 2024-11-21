@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.net.URI
 import java.nio.file.ProviderMismatchException
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicReference
 import java.{util => ju}
 
 import scala.concurrent.Await
@@ -146,7 +147,8 @@ class WorkspaceLspService(
     new ShellRunner(time, workDoneProgress)
   }
 
-  var focusedDocument: Option[AbsolutePath] = None
+  private val focusedDocument: AtomicReference[Option[AbsolutePath]] =
+    new AtomicReference(None)
   private val recentlyFocusedFiles = new ActiveFiles(time)
 
   private val timerProvider: TimerProvider = new TimerProvider(time)
@@ -165,10 +167,11 @@ class WorkspaceLspService(
   )
 
   def setFocusedDocument(newFocusedDocument: Option[AbsolutePath]): Unit = {
+    focusedDocument.get().foreach(focused => recentlyFocusedFiles.add(focused))
+    focusedDocument.set(newFocusedDocument)
     newFocusedDocument
       .flatMap(getServiceForOpt)
       .foreach(service => bspStatus.focus(service.path))
-    focusedDocument = newFocusedDocument
   }
 
   lazy val fallbackService: FallbackMetalsLspService = {
@@ -181,7 +184,7 @@ class WorkspaceLspService(
       initializeParams,
       clientConfig,
       statusBar,
-      () => focusedDocument,
+      () => focusedDocument.get(),
       shellRunner,
       timerProvider,
       fallbackServicePath,
@@ -203,7 +206,7 @@ class WorkspaceLspService(
           initializeParams,
           clientConfig,
           statusBar,
-          () => focusedDocument,
+          () => focusedDocument.get(),
           shellRunner,
           timerProvider,
           initTreeView,
@@ -317,7 +320,7 @@ class WorkspaceLspService(
     getServiceForOpt(uri).getOrElse(fallbackService)
 
   def currentFolder: Option[MetalsLspService] =
-    focusedDocument.flatMap(getServiceForOpt)
+    focusedDocument.get().flatMap(getServiceForOpt)
 
   /**
    * Execute on current folder (for focused document).
@@ -335,7 +338,7 @@ class WorkspaceLspService(
         case Nil => Future { None }
         case head :: Nil => Future { Some(head) }
         case _ =>
-          focusedDocument.flatMap(getServiceForOpt) match {
+          focusedDocument.get().flatMap(getServiceForOpt) match {
             case Some(service) => Future { Some(service) }
             case None =>
               workspaceChoicePopup.interactiveChooseFolder(actionName)
@@ -386,7 +389,7 @@ class WorkspaceLspService(
   override def didOpen(
       params: DidOpenTextDocumentParams
   ): CompletableFuture[Unit] = {
-    focusedDocument.foreach(recentlyFocusedFiles.add)
+    focusedDocument.get().foreach(recentlyFocusedFiles.add)
     val uri = params.getTextDocument.getUri
     val path = uri.toAbsolutePath
     setFocusedDocument(Some(path))
@@ -403,12 +406,21 @@ class WorkspaceLspService(
 
   override def didChange(
       params: DidChangeTextDocumentParams
-  ): CompletableFuture[Unit] =
-    getServiceFor(params.getTextDocument().getUri()).didChange(params)
+  ): CompletableFuture[Unit] = {
+    val uri = params.getTextDocument().getUri()
+    /* If a file changed that was most likely caused by the user,
+     * we should consider it as the focused document.
+     *
+     * This isn't needed if a client send those updates itself.
+     */
+    if (!clientConfig.isDidFocusProvider())
+      setFocusedDocument(Some(uri.toAbsolutePath))
+    getServiceFor(uri).didChange(params)
+  }
 
   override def didClose(params: DidCloseTextDocumentParams): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    if (focusedDocument.contains(path)) {
+    if (focusedDocument.get().contains(path)) {
       setFocusedDocument(recentlyFocusedFiles.pollRecent())
     }
     getServiceFor(params.getTextDocument().getUri()).didClose(params)
@@ -1010,7 +1022,7 @@ class WorkspaceLspService(
         Future {
           // Getting the service for focused document and first one otherwise
           val service =
-            focusedDocument.map(getServiceFor).getOrElse(fallbackService)
+            focusedDocument.get().map(getServiceFor).getOrElse(fallbackService)
           val command = service.analyzeStackTrace(content)
           command.foreach(languageClient.metalsExecuteClientCommand)
           scribe.debug(s"Executing AnalyzeStacktrace ${command}")
@@ -1054,7 +1066,7 @@ class WorkspaceLspService(
         val directoryURI = args
           .lift(0)
           .flatten
-          .orElse(focusedDocument.map(_.parent.toURI.toString()))
+          .orElse(focusedDocument.get().map(_.parent.toURI.toString()))
         val name = args.lift(1).flatten
         val fileType = args.lift(2).flatten
         directoryURI
@@ -1065,7 +1077,7 @@ class WorkspaceLspService(
         val directoryURI = args
           .lift(0)
           .flatten
-          .orElse(focusedDocument.map(_.parent.toURI.toString()))
+          .orElse(focusedDocument.get().map(_.parent.toURI.toString()))
         val name = args.lift(1).flatten
         val fileType = args.lift(2).flatten
         directoryURI
@@ -1074,14 +1086,14 @@ class WorkspaceLspService(
           .createFile(directoryURI, name, fileType, isScala = false)
       case ServerCommands.StartAmmoniteBuildServer() =>
         val res = for {
-          path <- focusedDocument
+          path <- focusedDocument.get()
           service <- getServiceForOpt(path)
         } yield service.ammoniteStart()
         res.getOrElse(Future.unit).asJavaObject
       case ServerCommands.StopAmmoniteBuildServer() =>
         foreachSeq(_.ammoniteStop(), ignoreValue = false)
       case ServerCommands.StartScalaCliServer() =>
-        val res = focusedDocument match {
+        val res = focusedDocument.get() match {
           case None => Future.unit
           case Some(path) =>
             getServiceFor(path).startScalaCli(path)
