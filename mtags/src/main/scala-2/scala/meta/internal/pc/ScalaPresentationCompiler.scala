@@ -54,7 +54,6 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.WorkspaceEdit
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -121,7 +120,8 @@ case class ScalaPresentationCompiler(
     CodeActionId.ImplementAbstractMembers,
     CodeActionId.ExtractMethod,
     CodeActionId.InlineValue,
-    CodeActionId.InsertInferredType
+    CodeActionId.InsertInferredType,
+    CodeActionId.InsertInferredMethod
   ).asJava
 
   def this() = this(buildTargetIdentifier = "")
@@ -294,15 +294,21 @@ case class ScalaPresentationCompiler(
   def insertInferredMethod(
       params: OffsetParams
   ): CompletableFuture[ju.List[TextEdit]] = {
-    val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
-    compilerAccess.withInterruptableCompiler(Some(params))(
-      empty,
-      params.token
-    ) { pc =>
-      new InferredMethodProvider(pc.compiler(), params)
-        .inferredMethodEdits()
-        .asJava
-    }
+    val empty: Either[String, List[TextEdit]] = Left(
+      "Could not infer method, please report an issue in github.com/scalameta/metals"
+    )
+    compilerAccess
+      .withInterruptableCompiler(Some(params))(
+        empty,
+        params.token
+      ) { pc =>
+        new InferredMethodProvider(pc.compiler(), params)
+          .inferredMethodEdits()
+      }
+      .thenApply {
+        case Right(edits: List[TextEdit]) => edits.asJava
+        case Left(error: String) => throw new DisplayableException(error)
+      }
   }
 
   override def inlineValue(

@@ -1,13 +1,10 @@
 package scala.meta.internal.pc
 
 import scala.annotation.tailrec
-import scala.collection.JavaConverters._
 
-import scala.meta.pc.DisplayableException
 import scala.meta.pc.OffsetParams
 
 import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.WorkspaceEdit
 
 /**
  * Tries to calculate edits needed to create a method that will fix missing symbol
@@ -27,70 +24,66 @@ final class InferredMethodProvider(
     params: OffsetParams
 ) {
   import compiler._
+  val unit = addCompilationUnit(
+    code = params.text(),
+    filename = params.uri().toString(),
+    cursor = None
+  )
 
-  def inferredMethodEdits(): List[TextEdit] = {
+  val pos = unit.position(params.offset)
+  val typedTree = typedTreeAt(pos)
+  val importPosition = autoImportPosition(pos, params.text())
+  val context = doLocateImportContext(pos)
+  val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
+  val history = new ShortenedNames(
+    lookupSymbol = name =>
+      context.lookupSymbol(name, sym => !sym.isStale) :: Nil,
+    config = renameConfig,
+    renames = re
+  )
 
-    val unit = addCompilationUnit(
-      code = params.text(),
-      filename = params.uri().toString(),
-      cursor = None
-    )
+  def additionalImports = importPosition match {
+    case None =>
+      // No import position means we can't insert an import without clashing with
+      // existing symbols in scope, so we just do nothing
+      Nil
+    case Some(importPosition) =>
+      history.autoImports(pos, importPosition)
+  }
 
-    val pos = unit.position(params.offset)
-    val typedTree = typedTreeAt(pos)
-    val importPosition = autoImportPosition(pos, params.text())
-    val context = doLocateImportContext(pos)
-    val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
-    val history = new ShortenedNames(
-      lookupSymbol = name =>
-        context.lookupSymbol(name, sym => !sym.isStale) :: Nil,
-      config = renameConfig,
-      renames = re
-    )
+  def prettyType(tpe: Type) =
+    metalsToLongString(tpe.widen.finalResultType, history)
 
-    def additionalImports = importPosition match {
-      case None =>
-        // No import position means we can't insert an import without clashing with
-        // existing symbols in scope, so we just do nothing
-        Nil
-      case Some(importPosition) =>
-        history.autoImports(pos, importPosition)
-    }
-
-    def prettyType(tpe: Type) =
-      metalsToLongString(tpe.widen.finalResultType, history)
-
-    def argumentsString(args: List[Tree]): Option[String] = {
-      val paramsTypes = args.zipWithIndex
-        .map { case (arg, index) =>
-          val tp = arg match {
-            case Ident(name) =>
-              val found = context.lookupSymbol(name, _ => true)
-              if (found.isSuccess)
-                Some(prettyType(found.symbol.tpe))
-              else None
-            case _ =>
-              // in this case we could have list, tuple, classes, etc and we would need to assess each case to extract the right argument type
-              val typ = arg.tpe
-              if (typ != null)
-                Some(prettyType(arg.tpe))
-              else {
-                logger.warning(
-                  "infer-method: could not infer type of argument, defaulting to Any"
-                )
-                Some("Any")
-              }
-          }
-          tp.map(tp => s"arg$index: $tp")
-
+  def argumentsString(args: List[Tree]): Option[String] = {
+    val paramsTypes = args.zipWithIndex
+      .map { case (arg, index) =>
+        val tp = arg match {
+          case Ident(name) =>
+            val found = context.lookupSymbol(name, _ => true)
+            if (found.isSuccess)
+              Some(prettyType(found.symbol.tpe))
+            else None
+          case _ =>
+            // in this case we could have list, tuple, classes, etc and we would need to assess each case to extract the right argument type
+            val typ = arg.tpe
+            if (typ != null)
+              Some(prettyType(arg.tpe))
+            else {
+              logger.warning(
+                "infer-method: could not infer type of argument, defaulting to Any"
+              )
+              Some("Any")
+            }
         }
-      if (paramsTypes.forall(_.nonEmpty)) {
-        Some(paramsTypes.flatten.mkString(", "))
-      } else None
+        tp.map(tp => s"arg$index: $tp")
 
-    }
+      }
+    if (paramsTypes.forall(_.nonEmpty)) {
+      Some(paramsTypes.flatten.mkString(", "))
+    } else None
+  }
 
-    type FileURI = String
+  def inferredMethodEdits(): Either[String, List[TextEdit]] = {
 
     def getPositionUri(position: Position): String = scala.util
       .Try(position.source.toString()) // in tests this is undefined
@@ -103,7 +96,7 @@ final class InferredMethodProvider(
         retType: Option[String],
         postProcess: String => String,
         position: Option[Position]
-    ): List[TextEdit] = {
+    ): Either[String, List[TextEdit]] = {
 
       val lastApplyPos = position.getOrElse(insertPosition())
       val indentString =
@@ -123,21 +116,23 @@ final class InferredMethodProvider(
         methodInsertPosition,
         postProcess(full)
       ) :: additionalImports
-      newEdits
+      Right(newEdits)
     }
 
-    def unimplemented(c: String): List[TextEdit] = {
-      throw new DisplayableException(
-        s"The case ($c) is not currently supported by the infer-method code action."
+    def unimplemented(
+        name: String
+    )(implicit line: sourcecode.Line): Either[String, List[TextEdit]] = {
+      Left(
+        s"[${line.value}] Could not infer method for `$name`, please report an issue in github.com/scalameta/metals"
       )
     }
 
     def makeEditsForApplyWithUnknownName(
         arguments: List[Tree],
         containingMethod: Name,
-        errorMethod: Ident,
+        errorMethodName: String,
         nonExistent: Apply
-    ): List[TextEdit] = {
+    ): Either[String, List[TextEdit]] = {
       val argumentString = argumentsString(nonExistent.args)
       val methodSymbol = context.lookupSymbol(containingMethod, _ => true)
       argumentString match {
@@ -147,29 +142,25 @@ final class InferredMethodProvider(
             case MethodType(methodParams, _) if retIndex >= 0 =>
               val ret = prettyType(methodParams(retIndex).tpe)
               signature(
-                name = errorMethod.name.toString(),
+                name = errorMethodName,
                 paramsString = Option(paramsString),
                 retType = Some(ret),
                 postProcess = identity,
                 position = None
               )
             case _ =>
-              unimplemented(
-                "the thing containing the method to infer is not a method"
-              )
+              unimplemented(errorMethodName)
           }
 
         case _ =>
-          unimplemented(
-            "the method containing the method to infer does not exist"
-          )
+          unimplemented(errorMethodName)
       }
     }
     def makeEditsForListApply(
         arguments: List[Tree],
         containingMethod: Name,
-        errorMethod: Ident
-    ): List[TextEdit] = {
+        errorMethodName: String
+    ): Either[String, List[TextEdit]] = {
       val methodSymbol = context.lookupSymbol(containingMethod, _ => true)
       if (methodSymbol.isSuccess) {
         val retIndex = arguments.indexWhere(_.pos.includes(pos))
@@ -191,7 +182,7 @@ final class InferredMethodProvider(
                 val resultType = args.last
                 val ret = prettyType(resultType)
                 signature(
-                  name = errorMethod.name.toString(),
+                  name = errorMethodName,
                   Option(paramsString),
                   Option(ret),
                   identity,
@@ -203,7 +194,7 @@ final class InferredMethodProvider(
                 //    method1(<<nonExistent>>)
                 val ret = tpe.toString().replace("=>", "").trim()
                 signature(
-                  name = errorMethod.name.toString(),
+                  name = errorMethodName,
                   None,
                   Option(ret),
                   identity,
@@ -212,13 +203,11 @@ final class InferredMethodProvider(
             }
 
           case _ =>
-            unimplemented(
-              "the thing applying the method to insert is not a method"
-            )
+            unimplemented(errorMethodName)
         }
       } else {
         signature(
-          name = errorMethod.name.toString(),
+          name = errorMethodName,
           paramsString = Option(argumentsString(arguments).getOrElse("")),
           retType = None,
           postProcess = identity,
@@ -228,8 +217,8 @@ final class InferredMethodProvider(
     }
     def makeEditsForListApplyWithoutArgs(
         argumentList: Name,
-        errorMethod: Ident
-    ): List[TextEdit] = {
+        errorMethodName: String
+    ): Either[String, List[TextEdit]] = {
       val listSymbol = context.lookupSymbol(argumentList, _ => true)
       if (listSymbol.isSuccess) {
         listSymbol.symbol.tpe match {
@@ -237,7 +226,7 @@ final class InferredMethodProvider(
           case TypeRef(_, _, TypeRef(_, inputType, _) :: Nil) =>
             val paramsString = s"arg0: ${prettyType(inputType.tpe)}"
             signature(
-              name = errorMethod.name.toString(),
+              name = errorMethodName,
               Option(paramsString),
               None,
               identity,
@@ -248,40 +237,36 @@ final class InferredMethodProvider(
               ) =>
             val paramsString = s"arg0: ${prettyType(inputType.tpe)}"
             signature(
-              name = errorMethod.name.toString(),
+              name = errorMethodName,
               Option(paramsString),
               None,
               identity,
               None
             )
           case _ =>
-            unimplemented(
-              "the argument of the method to infer is not a single type"
-            )
+            unimplemented(errorMethodName)
         }
       } else
-        unimplemented(
-          "the type of the argument of the method to infer is unknown"
-        )
+        unimplemented(errorMethodName)
     }
     def makeEditsMethodObject(
         arguments: Option[List[Tree]],
         container: Name,
-        errorMethod: Select
-    ): List[TextEdit] = {
+        errorMethodName: String
+    ): Either[String, List[TextEdit]] = {
       def makeClassMethodEdits(
           template: Template
-      ): List[TextEdit] = {
+      ): Either[String, List[TextEdit]] = {
         val insertPos: Position =
           inferEditPosition(template)
         val templateFileUri = template.pos.source.content
           .map(_.toString)
           .mkString
         if (params.uri().toString() != getPositionUri(insertPos)) {
-          unimplemented("method in external file")
+          unimplemented(errorMethodName)
         } else
           signature(
-            name = errorMethod.name.toString(),
+            name = errorMethodName,
             paramsString = arguments
               .fold(Option.empty[String])(argumentsString(_) orElse Option("")),
             retType = None,
@@ -300,15 +285,25 @@ final class InferredMethodProvider(
       }
 
       // we need to get the type of the container of our undefined method
-      val containerSymbol = context.lookupSymbol(container, _ => true)
+      val containerName = context.lookupSymbol(container, _ => true)
 
-      if (containerSymbol.isSuccess) {
-        (if (containerSymbol.symbol.tpe.isInstanceOf[NullaryMethodType])
-           containerSymbol.symbol.tpe
-             .asInstanceOf[NullaryMethodType]
-             .resultType
-         else containerSymbol.symbol.tpe) match {
-          case TypeRef(_, classSymbol, _) =>
+      if (containerName.isSuccess) {
+        val containerSymbolType =
+          if (containerName.symbol.tpe.isInstanceOf[NullaryMethodType])
+            containerName.symbol.tpe
+              .asInstanceOf[NullaryMethodType]
+              .resultType
+          else containerName.symbol.tpe
+
+        val classSymbol = containerSymbolType match {
+          case TypeRef(_, classSymbol, _) => Some(classSymbol)
+          // Object will be first
+          case RefinedType(parents, decls) if parents.size > 1 =>
+            parents.tail.headOption.map(_.typeSymbol)
+          case _ => None
+        }
+        classSymbol match {
+          case Some(classSymbol) =>
             // we get the position of the container
             // class because we want to add the method
             // definition there
@@ -316,54 +311,31 @@ final class InferredMethodProvider(
               context.lookupSymbol(classSymbol.name, _ => true)
             // this gives me the position of the class
             typedTreeAt(containerClass.symbol.pos) match {
-              // class case
-              case ClassDef(
-                    _,
-                    _,
-                    _,
-                    template
-                  ) =>
-                makeClassMethodEdits(template)
-              // trait case
-              case ModuleDef(
-                    _,
-                    _,
-                    template
-                  ) =>
-                makeClassMethodEdits(template)
+              // class / trait case
+              case cls: ImplDef =>
+                makeClassMethodEdits(cls.impl)
               case _ =>
                 // object Y {}
                 // Y.nonExistent(1,2,3)
-                typedTreeAt(containerSymbol.symbol.pos) match {
-                  // class case
-                  case ClassDef(
-                        _,
-                        _,
-                        _,
-                        template
-                      ) =>
-                    makeClassMethodEdits(template)
-                  // trait case
-                  case ModuleDef(
-                        _,
-                        _,
-                        template
-                      ) =>
-                    makeClassMethodEdits(template)
+                typedTreeAt(containerName.symbol.pos) match {
+                  // class / trait case
+                  case cls: ImplDef =>
+                    makeClassMethodEdits(cls.impl)
                   case _ =>
-                    unimplemented(
-                      "the thing containing the method to infer is not a trait, class nor object"
-                    )
+                    unimplemented(errorMethodName)
                 }
             }
-          case _ =>
-            unimplemented("the thing containing the method to infer is unknown")
+          case None =>
+            unimplemented(errorMethodName)
         }
-      } else
-        unimplemented("the thing containing the method was not found")
+      } else {
+        unimplemented(errorMethodName)
+      }
     }
+
     val textEdits = typedTree match {
       case errorMethod: Ident if errorMethod.isErroneous =>
+        val errorMethodName = Identifier.backtickWrap(errorMethod.name.decoded)
         lastVisitedParentTrees match {
           /**
            * Works for apply with unknown name:
@@ -378,7 +350,7 @@ final class InferredMethodProvider(
             makeEditsForApplyWithUnknownName(
               arguments,
               containingMethod,
-              errorMethod,
+              errorMethodName,
               nonExistent
             )
           // <<nonExistent>>(param1, param2)
@@ -402,7 +374,7 @@ final class InferredMethodProvider(
                 Ident(containingMethod),
                 arguments
               ) :: _ =>
-            makeEditsForListApply(arguments, containingMethod, errorMethod)
+            makeEditsForListApply(arguments, containingMethod, errorMethodName)
           // List(1,2,3).map(myFn)
           case (_: Ident) :: Apply(
                 Select(
@@ -414,17 +386,18 @@ final class InferredMethodProvider(
                 ),
                 _
               ) :: _ =>
-            unimplemented("infer method for a list apply")
+            unimplemented(errorMethodName)
           // val list = List(1,2,3)
           // list.map(nonExistent)
           case (Ident(_)) :: Apply(
                 Select(Ident(argumentList), _),
                 _ :: Nil
               ) :: _ =>
-            makeEditsForListApplyWithoutArgs(argumentList, errorMethod)
-          case _ => unimplemented("method in scope not handled")
+            makeEditsForListApplyWithoutArgs(argumentList, errorMethodName)
+          case _ => unimplemented(errorMethodName)
         }
       case errorMethod: Select =>
+        val errorMethodName = Identifier.backtickWrap(errorMethod.name.decoded)
         lastVisitedParentTrees match {
           // class X{}
           // val x: X = ???
@@ -433,18 +406,18 @@ final class InferredMethodProvider(
                 _,
                 arguments
               ) :: _ =>
-            makeEditsMethodObject(Option(arguments), container, errorMethod)
+            makeEditsMethodObject(Option(arguments), container, errorMethodName)
           // X.<<nonExistent>>
           case Select(Ident(container), _) :: _ =>
-            makeEditsMethodObject(Option.empty, container, errorMethod)
+            makeEditsMethodObject(Option.empty, container, errorMethodName)
           // X.<<nonExistent>>
           case Select(Select(_, container), _) :: _ =>
-            makeEditsMethodObject(Option.empty, container, errorMethod)
+            makeEditsMethodObject(Option.empty, container, errorMethodName)
           case _ =>
-            unimplemented("inferred method belongs to an unknown thing")
+            unimplemented(errorMethodName)
         }
-      case _ =>
-        unimplemented("inferred method in an unknown context")
+      case tree =>
+        unimplemented(tree.summaryString)
     }
     textEdits
   }

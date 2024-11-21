@@ -9,6 +9,10 @@ import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.ShowMessageRequestParams
+import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
+import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
+import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
+import scala.meta.internal.metals.codeactions.FlatMapToForComprehensionCodeAction
 
 class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
 
@@ -48,6 +52,31 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
          |  otherMethod(1)
          |}
          |""".stripMargin,
+  )
+
+  checkNewSymbol(
+    "unsupported-method",
+    """|object X {
+       |  List(1,2).map(s<<>>df)
+       |}
+       |""".stripMargin,
+    s"""|${CreateNewSymbol.method("sdf")}
+        |${RewriteBracesParensCodeAction.toBraces("map")}
+        |${ExtractValueCodeAction.title("sdf")}
+        |${ConvertToNamedArguments.title("map(...)")}
+        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+        |""".stripMargin,
+    selectedActionIndex = 0,
+    pickedKind = "infer-method",
+    newFile = "a/src/main/scala/a/A.scala" ->
+      """| object X {
+         |  List(1,2).map(sdf)
+         |}
+         |""".stripMargin,
+    expectNoDiagnostics = false,
+    expectedMessages = Some(
+      "The case (infer method for a list apply) is not currently supported by the infer-method code action."
+    ),
   )
 
   checkNewSymbol(
@@ -104,6 +133,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
       newFile: (String, String),
       selectedActionIndex: Int = 0,
       expectNoDiagnostics: Boolean = true,
+      expectedMessages: Option[String] = None,
   )(implicit loc: Location): Unit = {
     val path = "a/src/main/scala/a/A.scala"
     test(name) {
@@ -140,6 +170,9 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
           )
           assertNoDiff(absolutePath.readText, content)
         }
+        _ = expectedMessages.foreach(expected =>
+          assertNoDiff(client.workspaceShowMessages, expected)
+        )
       } yield ()
     }
   }

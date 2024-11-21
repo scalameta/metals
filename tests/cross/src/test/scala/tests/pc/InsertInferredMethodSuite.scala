@@ -1,10 +1,16 @@
 package tests.pc
 
 import java.net.URI
+import java.util.Optional
+
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.TextEdits
+import scala.meta.pc.CodeActionId
 
 import munit.Location
 import munit.TestOptions
@@ -30,6 +36,25 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |
        |  def otherMethod(arg0: Int): String = ???
        |  method1(otherMethod(1))
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "backtick",
+    """|
+       |trait Main {
+       |  def method1(s : String) = 123
+       |
+       |  method1(<<`otherM ? ethod`>>(1))
+       |}
+       |
+       |""".stripMargin,
+    """|trait Main {
+       |  def method1(s : String) = 123
+       |
+       |  def `otherM ? ethod`(arg0: Int): String = ???
+       |  method1(`otherM ? ethod`(1))
        |}
        |""".stripMargin
   )
@@ -101,8 +126,9 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
   )
 
   // doesn't work currently, User(1) is not being typed
+  // https://github.com/scalameta/metals/issues/6954
   checkEdit(
-    "custom-type-advanced".ignore,
+    "custom-type-advanced",
     """|
        |trait Main {
        |    def method1(b: Double, s : String) = 123
@@ -118,8 +144,8 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |
        |    case class User(i : Int)
        |
-       |    def otherMethod(arg0: User, arg1: Int): String = ???
-       |    method1(0.0, otherMethod(user, 1))
+       |    def otherMethod(arg0: Any, arg1: Int) = ???
+       |    otherMethod(User(1), 1)
        |}
        |""".stripMargin
   )
@@ -240,7 +266,7 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
-    "lambda-generic".ignore,
+    "lambda-generic",
     """|
        |trait Main {
        |  def main() = {
@@ -260,8 +286,8 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
-  checkEdit(
-    "lambda-generic-complex-type".ignore,
+  checkError(
+    "lambda-generic-complex-type-list",
     """|
        |trait Main {
        |  def main() = {
@@ -270,17 +296,33 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |}
        |
        |""".stripMargin,
-    """|trait Main {
-       |  def otherMethod(arg0: Any) = ???
+    "Could not infer method for `otherMethod`, please report an issue in github.com/scalameta/metals"
+  )
+
+  // https://github.com/scalameta/metals/issues/6954
+  checkEdit(
+    "lambda-generic-complex-type",
+    """|
+       |trait Main {
        |  def main() = {
-       |    List((1, 2, 3)).map(otherMethod)
+       |    val list = List((1, 2, 3))
+       |    list.map(<<otherMethod>>)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|trait Main {
+       |  def main() = {
+       |    val list = List((1, 2, 3))
+       |    def otherMethod(arg0: (T1, T2, T3)) = ???
+       |    list.map(otherMethod)
        |  }
        |}
        |""".stripMargin
   )
 
   checkEdit(
-    "lambda-generic-filter".ignore,
+    "lambda-generic-filter",
     """|
        |trait Main {
        |  def main() = {
@@ -300,8 +342,8 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
-  checkEdit(
-    "lambda-generic-foldLeft".ignore,
+  checkError(
+    "lambda-generic-foldLeft",
     """|
        |trait Main {
        |  def main() = {
@@ -311,14 +353,7 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |}
        |
        |""".stripMargin,
-    """|trait Main {
-       |  def main() = {
-       |    val list = List(1, 2, 3)
-       |    def otherMethod(arg0: Int, arg1: Int) = ???
-       |    list.foldLeft(0)(otherMethod)
-       |  }
-       |}
-       |""".stripMargin
+    "Could not infer method for `otherMethod`, please report an issue in github.com/scalameta/metals"
   )
 
   checkEdit(
@@ -385,6 +420,34 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |trait Main {
        |  def main() = {
        |    val x = new X()
+       |    val a = true
+       |    val b = "test"
+       |    x.otherMethod(a, b, 1)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "trait-with-added",
+    """|
+       |trait X
+       |trait Main {
+       |  def main() = {
+       |    val x = new X { }
+       |    val a = true
+       |    val b = "test"
+       |    x.<<otherMethod>>(a, b, 1)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|trait X {
+       |  def otherMethod(arg0: Boolean, arg1: String, arg2: Int) = ???
+       |}
+       |trait Main {
+       |  def main() = {
+       |    val x = new X { }
        |    val a = true
        |    val b = "test"
        |    x.otherMethod(a, b, 1)
@@ -554,21 +617,37 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
       assertNoDiff(obtained, getExpected(expected, compat, scalaVersion))
     }
 
+  def checkError(
+      name: TestOptions,
+      original: String,
+      expectedError: String
+  )(implicit loc: munit.Location) = {
+    test(name) {
+      Try(getInferredMethod(original)) match {
+        case Failure(exception: Throwable) =>
+          assertNoDiff(
+            exception.getCause().getMessage().replaceAll("\\[.*\\]", ""),
+            expectedError
+          )
+        case Success(_) =>
+          fail("Expected an error but got a result")
+      }
+    }
+  }
+
   def getInferredMethod(
       original: String,
       filename: String = "file:/A.scala"
   ): List[l.TextEdit] = {
     val (code, _, offset) = params(original)
     val result = presentationCompiler
-      .insertInferredMethod(
-        CompilerOffsetParams(URI.create(filename), code, offset, cancelToken)
+      .codeAction(
+        CompilerOffsetParams(URI.create(filename), code, offset, cancelToken),
+        CodeActionId.InsertInferredMethod,
+        Optional.empty()
       )
       .get()
-    result
-      .getChanges()
-      .asScala
-      .map(_._2.asScala)
-      .foldLeft(List.empty[l.TextEdit])(_ ++ _)
+    result.asScala.toList
   }
 
 }

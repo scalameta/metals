@@ -31,7 +31,6 @@ import dotty.tools.dotc.reporting.StoreReporter
 import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.WorkspaceEdit
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
