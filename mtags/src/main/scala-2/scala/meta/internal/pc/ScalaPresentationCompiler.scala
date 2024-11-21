@@ -246,6 +246,8 @@ case class ScalaPresentationCompiler(
         insertInferredType(params)
       case (CodeActionId.InlineValue, _) =>
         inlineValue(params)
+      case (CodeActionId.InsertInferredMethod, _) =>
+        insertInferredMethod(params)
       case (CodeActionId.ExtractMethod, Some(extractionPos: OffsetParams)) =>
         params match {
           case range: RangeParams =>
@@ -289,17 +291,17 @@ case class ScalaPresentationCompiler(
     }
   }
 
-  override def insertInferredMethod(
+  def insertInferredMethod(
       params: OffsetParams
-  ): CompletableFuture[WorkspaceEdit] = {
-    // an inferred method can be added to a file different from the currently open one
-    val empty: WorkspaceEdit = new WorkspaceEdit()
+  ): CompletableFuture[ju.List[TextEdit]] = {
+    val empty: ju.List[TextEdit] = new ju.ArrayList[TextEdit]()
     compilerAccess.withInterruptableCompiler(Some(params))(
       empty,
       params.token
     ) { pc =>
       new InferredMethodProvider(pc.compiler(), params)
         .inferredMethodEdits()
+        .asJava
     }
   }
 

@@ -158,11 +158,6 @@ public abstract class PresentationCompiler {
 	public abstract CompletableFuture<List<TextEdit>> implementAbstractMembers(OffsetParams params);
 
 	/**
-	 * Return the missing method
-	 */
-	public abstract CompletableFuture<WorkspaceEdit> insertInferredMethod(OffsetParams params);
-
-	/**
 	 * Return the missing implements and imports for the symbol at the given
 	 * position.
 	 */

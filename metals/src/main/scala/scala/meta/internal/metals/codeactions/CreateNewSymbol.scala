@@ -32,7 +32,7 @@ class CreateNewSymbol(
       token: CancelToken,
   )(implicit ec: ExecutionContext): Future[Unit] = {
     for {
-      workspaceEdit <- compilers.insertInferredMethod(
+      workspaceEdit <- compilers.codeAction(
         textDocumentParams,
         token,
       )

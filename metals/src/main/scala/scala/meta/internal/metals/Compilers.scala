@@ -919,35 +919,6 @@ class Compilers(
     }
   }.getOrElse(Future.successful(Nil.asJava))
 
-  def insertInferredMethod(
-      params: TextDocumentPositionParams,
-      token: CancelToken,
-  ): Future[WorkspaceEdit] = {
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.insertInferredMethod(CompilerOffsetParamsUtils.fromPos(pos, token))
-        .asScala
-        .map(workspaceEdit =>
-          new WorkspaceEdit(
-            workspaceEdit
-              .getChanges()
-              .asScala
-              .map {
-                case (uri, textEdits) => {
-                  (
-                    uri,
-                    textEdits.asScala.map { textEdit =>
-                      textEdit.setRange(adjust.adjustRange(textEdit.getRange()))
-                      textEdit
-                    }.asJava,
-                  )
-                }
-              }
-              .asJava
-          )
-        )
-    }
-  }.getOrElse(Future.successful(new WorkspaceEdit()))
-
   def implementAbstractMembers(
       params: TextDocumentPositionParams,
       token: CancelToken,
