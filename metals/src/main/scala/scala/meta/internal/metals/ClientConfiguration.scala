@@ -52,7 +52,7 @@ final class ClientConfiguration(
     extract(
       initializationOptions.bspStatusBarState,
       StatusBarState.fromString(initialConfig.bspStatusBar.value),
-      StatusBarState.ShowMessage,
+      StatusBarState.LogMessage,
     )
 
   def globSyntax(): GlobSyntaxConfig =
