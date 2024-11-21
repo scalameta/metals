@@ -86,7 +86,11 @@ class BspConnector(
       userConfiguration: () => UserConfiguration,
       shellRunner: ShellRunner,
   )(implicit ec: ExecutionContext): Future[Option[BspSession]] = {
-    val projectRoot = buildTool.map(_.projectRoot).getOrElse(workspace)
+    val projectRoot = buildTool
+      .map(_.projectRoot)
+      .orElse(userConfiguration().getCustomProjectRoot(workspace))
+      .getOrElse(workspace)
+
     def connect(
         projectRoot: AbsolutePath,
         bspTraceRoot: AbsolutePath,
