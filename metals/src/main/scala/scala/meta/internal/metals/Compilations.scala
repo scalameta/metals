@@ -32,6 +32,7 @@ final class Compilations(
     onStartCompilation: () => Unit,
     userConfiguration: () => UserConfiguration,
     downstreamTargets: PreviouslyCompiledDownsteamTargets,
+    bestEffortEnabled: Boolean,
 )(implicit ec: ExecutionContext) {
   private val compileTimeout: Timeout =
     Timeout("compile", Duration(10, TimeUnit.MINUTES))
@@ -266,12 +267,12 @@ final class Compilations(
     scribe.debug("Compiling " + targets.mkString(", "))
     val originId = "METALS-$" + UUID.randomUUID().toString
     val params = new b.CompileParams(targets.asJava)
+    val addBestEffort =
+      (connection.isBloop || connection.isScalaCLI) && bestEffortEnabled
     params.setOriginId(originId)
-    if (
-      userConfiguration().verboseCompilation && (connection.isBloop || connection.isScalaCLI)
-    ) {
+    if (userConfiguration().verboseCompilation && addBestEffort) {
       params.setArguments(List("--verbose", "--best-effort").asJava)
-    } else if (connection.isBloop || connection.isScalaCLI) {
+    } else if (addBestEffort) {
       params.setArguments(List("--best-effort").asJava)
     } else params.setArguments(Nil.asJava)
     targets.foreach { target =>
