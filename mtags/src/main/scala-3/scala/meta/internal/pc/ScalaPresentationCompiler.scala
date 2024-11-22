@@ -68,6 +68,10 @@ case class ScalaPresentationCompiler(
   ): PresentationCompiler =
     copy(completionItemPriority = priority)
 
+  override def supportedCodeActions(): ju.List[String] = List(
+    CodeActionId.ConvertToNamedLambdaParameters
+  ).asJava
+
   val compilerAccess: CompilerAccess[StoreReporter, MetalsDriver] =
     Scala3CompilerAccess(
       config,
@@ -153,8 +157,22 @@ case class ScalaPresentationCompiler(
         folderPath,
         completionItemPriority,
       ).completions()
-
     }
+
+  override def codeAction[T](
+    params: OffsetParams,
+    codeActionId: String,
+    codeActionPayload: ju.Optional[T]
+  ): ju.concurrent.CompletableFuture[ju.List[l.TextEdit]] = {
+    (codeActionId, codeActionPayload) match {
+      case (CodeActionId.ConvertToNamedLambdaParameters, _) =>
+        convertToNamedLambdaParameters(params)
+      case (id, _) =>
+        CompletableFuture.failedFuture(
+          new IllegalArgumentException(s"Unsupported action id $id")
+        )
+    }
+  }
 
   def definition(params: OffsetParams): CompletableFuture[DefinitionResult] =
     compilerAccess.withNonInterruptableCompiler(Some(params))(
@@ -363,6 +381,23 @@ case class ScalaPresentationCompiler(
         case Right(edits: List[l.TextEdit]) => edits.asJava
       }
   end convertToNamedArguments
+
+  def convertToNamedLambdaParameters(
+    params: OffsetParams
+  ): ju.concurrent.CompletableFuture[ju.List[l.TextEdit]] =
+    val empty: Either[String, List[l.TextEdit]] = Right(List())
+    (compilerAccess
+      .withInterruptableCompiler(Some(params))(empty, params.token) { pc =>
+        new ConvertToNamedLambdaParametersProvider(
+          pc.compiler(),
+          params
+        ).convertToNamedLambdaParameters
+      })
+      .thenApplyAsync {
+        case Left(error: String) => throw new DisplayableException(error)
+        case Right(edits: List[l.TextEdit]) => edits.asJava
+      }
+  end convertToNamedLambdaParameters
 
   override def selectionRange(
       params: ju.List[OffsetParams]
