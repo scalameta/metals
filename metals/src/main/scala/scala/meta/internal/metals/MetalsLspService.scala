@@ -222,6 +222,7 @@ abstract class MetalsLspService(
     onStartCompilation,
     () => userConfig,
     downstreamTargets,
+    clientConfig.initialConfig.enableBestEffort,
   )
   var indexingPromise: Promise[Unit] = Promise[Unit]()
   def buildServerPromise: Promise[Unit]
