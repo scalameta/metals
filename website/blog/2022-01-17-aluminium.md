@@ -1,8 +1,6 @@
 ---
-author: Tomasz Godzik
+authors: tgodzik
 title: Metals v0.11.1 - Aluminium
-authorURL: https://twitter.com/TomekGodzik
-authorImageURL: https://github.com/tgodzik.png
 ---
 
 Metals v0.11.1 is a bugfix release needed to fix a couple of performance
@@ -55,7 +53,8 @@ give Metals a try!
 - Fix performance in large files. [tgodzik](https://github.com/tgodzik)
 - fix user config for java formatting. [Arthurm1](https://github.com/Arthurm1)
 - Call javap with `-private` flag. [durban](https://github.com/durban)
-- Fix issues when using Metals analyze with inner classes. [durban](https://github.com/durban)
+- Fix issues when using Metals analyze with inner classes.
+  [durban](https://github.com/durban)
 
 ## Contributors
 

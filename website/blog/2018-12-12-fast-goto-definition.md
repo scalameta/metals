@@ -1,8 +1,6 @@
 ---
-author: Ólafur Páll Geirsson
+authors: olafurpg
 title: Fast goto definition with low memory footprint
-authorURL: https://twitter.com/olafurpg
-authorImageURL: https://avatars2.githubusercontent.com/u/1408093?s=460&v=4
 ---
 
 Metals throws away its navigation index when it shuts down. Next time it starts,

@@ -1,20 +1,18 @@
 ---
-author: Chris Kipp
+authors: ckipp
 title: sbt BSP support
-authorURL: https://twitter.com/ckipp01
-authorImageURL: https://avatars2.githubusercontent.com/u/13974112?v=4
 ---
 
-If you've been following the [sbt
-releases](https://github.com/sbt/sbt/releases), 1.4.x introduced some great new
-features, one of those being BSP support. This effort was initiated by community
-members and proposed to the [Scala Center Advisory
-Board](https://github.com/scalacenter/advisoryboard/blob/master/proposals/023-bsp.md).
+If you've been following the
+[sbt releases](https://github.com/sbt/sbt/releases), 1.4.x introduced some great
+new features, one of those being BSP support. This effort was initiated by
+community members and proposed to the
+[Scala Center Advisory Board](https://github.com/scalacenter/advisoryboard/blob/master/proposals/023-bsp.md).
 Then thanks to the work of [Adrien Piquerez](https://twitter.com/adrienpi2) and
 [Eugene Yokota](https://twitter.com/eed3si9n) BSP support became a reality in
 1.4.0. You can read more about the reason behind the work and some of the
-details of the implementation in this blog post: [BSP Support in sbt
-1.4](https://www.scala-lang.org/blog/2020/10/27/bsp-in-sbt.html).
+details of the implementation in this blog post:
+[BSP Support in sbt 1.4](https://www.scala-lang.org/blog/2020/10/27/bsp-in-sbt.html).
 
 The Metals team is also happy to announce that as of the 0.9.5 release, the
 process to use other BSP servers like sbt is now much smoother. In some ways,
@@ -26,24 +24,23 @@ Metals makes for you, and show you how to explore the sbt BSP server.
 
 ## What is BSP?
 
-First off, you may be wondering what BSP is. The [Build Server
-Protocol](https://build-server-protocol.github.io/) (BSP) is a _Protocol for IDEs and
-build tools to communicate about compilation, running, testing, debugging, and
-much more._ If you're familiar with the [Language Server
-Protocol](https://microsoft.github.io/language-server-protocol/) (LSP), BSP is
-complementary to LSP and inspired by it. Where LSP allows your editor to
-abstract over various programming languages by a shared way to communicate to a
-language server, BSP allows IDE's to abstract over various build servers. A
-typical example of this can be illustrated like so:
+First off, you may be wondering what BSP is. The
+[Build Server Protocol](https://build-server-protocol.github.io/) (BSP) is a
+_Protocol for IDEs and build tools to communicate about compilation, running,
+testing, debugging, and much more._ If you're familiar with the
+[Language Server Protocol](https://microsoft.github.io/language-server-protocol/)
+(LSP), BSP is complementary to LSP and inspired by it. Where LSP allows your
+editor to abstract over various programming languages by a shared way to
+communicate to a language server, BSP allows IDE's to abstract over various
+build servers. A typical example of this can be illustrated like so:
 
 ![LSP BSP example](https://i.imgur.com/0RRUDlU.png)
 
 You have your editor (Emacs) communicating with Metals via LSP, and then Metals
 communicating with a BSP server (Bloop) via BSP. This communication over BSP can
 be about compiling your code, running your code, defining sources in your
-workspace, etc. You can read all about the various communication types [here in
-the
-protocol](https://build-server-protocol.github.io/docs/specification#actual-protocol).
+workspace, etc. You can read all about the various communication types
+[here in the protocol](https://build-server-protocol.github.io/docs/specification#actual-protocol).
 
 [Bloop](https://scalacenter.github.io/bloop/) was the first server to implement
 BSP, and it's the default build server for all build tools that Metals supports
@@ -60,8 +57,8 @@ Another question you may have is "what does sbt BSP support mean for Metals"?
 This means a couple different things. Up until this point, if you wanted to use
 sbt BSP, you needed to clear your `.metals/` and `.bloop` directories, and then
 start sbt with a specific flag before connecting to it. None of this is
-necessary anymore. In order for [BSP
-discovery](https://build-server-protocol.github.io/docs/server-discovery.html)
+necessary anymore. In order for
+[BSP discovery](https://build-server-protocol.github.io/docs/server-discovery.html)
 to happen, you need a `.bsp/*json` file with instructions on how to
 start/connect to the build server. A new command has been added to Metals (which
 we'll go over down below) that can generate this file for you if it doesn't
@@ -79,22 +76,22 @@ At this point you may be asking, "what's the difference?". For an average user,
 there may not be a ton of difference, however I'd like to outline a couple
 things that may be relevant to you.
 
-- Bloop supports the [Debug Adapter
-    Protocol](https://microsoft.github.io/debug-adapter-protocol/) (DAP) and sbt
-    doesn't. So you'll notice when using sbt as a build server, you won't have
-    the `run` or `debug` code lenses directly in your editor like you do with
-    Bloop.
+- Bloop supports the
+  [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/)
+  (DAP) and sbt doesn't. So you'll notice when using sbt as a build server, you
+  won't have the `run` or `debug` code lenses directly in your editor like you
+  do with Bloop.
 - Bloop writes all the necessary information about your build it needs to disk
-    whereas sbt loads it into memory. If you're a user that works for long
-    periods of time on a single project, then this may not matter to you at all.
-    However, if you jump in and out of projects, without having sbt shell
-    running, then you will pay the cost of loading up your build every time.
-- Bloop offers sbt file support that enables completions and hover, whereas
-    this is not yet available in the sbt BSP implementation.
+  whereas sbt loads it into memory. If you're a user that works for long periods
+  of time on a single project, then this may not matter to you at all. However,
+  if you jump in and out of projects, without having sbt shell running, then you
+  will pay the cost of loading up your build every time.
+- Bloop offers sbt file support that enables completions and hover, whereas this
+  is not yet available in the sbt BSP implementation.
 - sbt gives you access to the full task graph, so for example if you're using
-    `BuildInfo`, and you compile with Bloop, your `BuildInfo` won't get
-    generated. However, sources will get generated when using sbt server. This
-    can help avoid any potential inconsistencies. 
+  `BuildInfo`, and you compile with Bloop, your `BuildInfo` won't get generated.
+  However, sources will get generated when using sbt server. This can help avoid
+  any potential inconsistencies.
 
 While there are some more differences, these are probably the main ones you'll
 notice as a user. These are both great tools, and you'll have to explore more to
@@ -117,6 +114,7 @@ then auto-connect to the sbt build server. For example in VS Code this looks
 like this:
 
 ### `metals.generate-bsp-config`
+
 ![generate-bsp-config](https://i.imgur.com/kBNbtzI.gif)
 
 ### `.bsp/sbt.json` already exists
@@ -126,6 +124,7 @@ already exist. In this case, you can simply use the `metals.bsp-switch` command
 and choose sbt. For example, using `coc-metals`, it looks like this:
 
 ### `metals.bsp-switch`
+
 ![bsp-switch](https://i.imgur.com/6tY2ofL.gif)
 
 ### Switching back to Bloop
@@ -139,12 +138,13 @@ that have an html doctor, you can also reset your build server choice in the
 Doctor.
 
 ### Doctor reset
+
 ![Doctor](https://i.imgur.com/YEGfEGB.png)
 
 ## Conclusion
 
 We hope you enjoy this easier way to use sbt server with Metals. If you're
-curious about the implementation details, much of the work was done in [this
-pr](https://github.com/scalameta/metals/pull/2154). As always please don't
+curious about the implementation details, much of the work was done in
+[this pr](https://github.com/scalameta/metals/pull/2154). As always please don't
 hesitate to ask questions on our various channels, submit issues, or create new
 feature requests.

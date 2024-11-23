@@ -1,11 +1,10 @@
 ---
-author: Rikito Taniguchi
+authors: tanishiking
 title: Metals v0.11.6 - Aluminium
-authorURL: https://twitter.com/tanishiking25
-authorImageURL: https://github.com/tanishiking.png
 ---
 
-We're happy to announce the release of Metals v0.11.6 which continues to improve the Scala 3 support along with many other fixes.
+We're happy to announce the release of Metals v0.11.6 which continues to improve
+the Scala 3 support along with many other fixes.
 
 <table>
 <tbody>
@@ -25,10 +24,9 @@ We're happy to announce the release of Metals v0.11.6 which continues to improve
 </table>
 
 Metals is a language server for Scala that works with VS Code, Vim, Emacs and
-Sublime Text. Metals is developed at the
-[Scala Center](https://scala.epfl.ch/) and [VirtusLab](https://virtuslab.com)
-with the help from [Lunatech](https://lunatech.com) along with contributors from
-the community.
+Sublime Text. Metals is developed at the [Scala Center](https://scala.epfl.ch/)
+and [VirtusLab](https://virtuslab.com) with the help from
+[Lunatech](https://lunatech.com) along with contributors from the community.
 
 ## TL;DR
 
@@ -43,48 +41,71 @@ Check out [https://scalameta.org/metals/](https://scalameta.org/metals/), and
 give Metals a try!
 
 ## Reduce file watcher memory usage
-Previously, Metals consumed a huge amount of memory for file watchers in large projects, especially on macOS.
-Now, Metals uses a memory-efficient way to watch files to detect changes and consume less memory.
 
-For more technical details, see the original PR: [\#3758](https://github.com/scalameta/metals/pull/3758).
+Previously, Metals consumed a huge amount of memory for file watchers in large
+projects, especially on macOS. Now, Metals uses a memory-efficient way to watch
+files to detect changes and consume less memory.
+
+For more technical details, see the original PR:
+[\#3758](https://github.com/scalameta/metals/pull/3758).
 
 ## [Scala3] Override Completions
 
-Override completions for Scala3 are now available with Metals 0.11.6!
-Now, Metals shows the scaladoc on hover for Scala3 projects. (Before this release, Metals was unable to show the scaladoc for the symbols from third-party modules).
-
+Override completions for Scala3 are now available with Metals 0.11.6! Now,
+Metals shows the scaladoc on hover for Scala3 projects. (Before this release,
+Metals was unable to show the scaladoc for the symbols from third-party
+modules).
 
 ![override-completion](https://i.imgur.com/Go3sMxy.gif)
 
 ## [Scala3] Show scaladoc on hover for Scala 3 project
 
-Previously, scaladocs were missing for a lot of classes and methods in Scala 3, especially for the symbols from third-party modules. From this release, Metals will always show the scaladoc on hover for Scala3 projects.
+Previously, scaladocs were missing for a lot of classes and methods in Scala 3,
+especially for the symbols from third-party modules. From this release, Metals
+will always show the scaladoc on hover for Scala3 projects.
 
 ![hover-scala3](https://i.imgur.com/Svzq5DD.png)
 
 ### [Scala3] Support `completionItem/resolve`
 
-`completionItem/resolve` is a feature that provides on-demand, more detailed information when moving through the list of suggested completions. It will show documentation, proper parameter names for Java methods, and default values for Scala 3 methods. Now, this is also available for use in Scala 3.
+`completionItem/resolve` is a feature that provides on-demand, more detailed
+information when moving through the list of suggested completions. It will show
+documentation, proper parameter names for Java methods, and default values for
+Scala 3 methods. Now, this is also available for use in Scala 3.
 
 ![completion-item-resolve](https://i.imgur.com/Tz6AOsx.gif)
 
-
 ## Show parent scaladoc if implementation is returning empty
 
-Scaladocs can be inspected whenever you hover, use a completion or signature help. Up until recently we only showed you the documentation if the exact method you are using had the scaladocs written, which meant that if you overrode a method and didn't add the scaladoc comments again we would not show you any documentation. One example of such method is `headOption` on `List`.
+Scaladocs can be inspected whenever you hover, use a completion or signature
+help. Up until recently we only showed you the documentation if the exact method
+you are using had the scaladocs written, which meant that if you overrode a
+method and didn't add the scaladoc comments again we would not show you any
+documentation. One example of such method is `headOption` on `List`.
 
- From this release we will also search the parent method in case the current method's scaladoc are empty. 
+From this release we will also search the parent method in case the current
+method's scaladoc are empty.
 
 ## [Scala 3] Show scaladocs for signature help
 
-As mentioned in the previous paragraph, Metals can show you documentation in three different places. That, however, was true only for Scala 2 previously. In this release, we will now show you proper documentation whenever invoking signature help.
+As mentioned in the previous paragraph, Metals can show you documentation in
+three different places. That, however, was true only for Scala 2 previously. In
+this release, we will now show you proper documentation whenever invoking
+signature help.
 
-As a reminder, signature help is used to indicate what parameters can be used in a method. It should pop up automatically after writing `(`, but you can also invoke it manually. In VS Code that takes the form of `editor.action.triggerParameterHints` command, which can also be bound to a shortcut and by default is.
+As a reminder, signature help is used to indicate what parameters can be used in
+a method. It should pop up automatically after writing `(`, but you can also
+invoke it manually. In VS Code that takes the form of
+`editor.action.triggerParameterHints` command, which can also be bound to a
+shortcut and by default is.
 
 ## [MUnit] Test Explorer can find helper methods from parent classes
 
-MUnit allows to use [helper functions](https://scalameta.org/munit/docs/tests.html#declare-tests-inside-a-helper-function) when declaring tests. Very often those helper methods are extracted to some parent classes which are extended by many test suites.
-Now, Metals can find usages of those helper methods and display them in Test Explorer.
+MUnit allows to use
+[helper functions](https://scalameta.org/munit/docs/tests.html#declare-tests-inside-a-helper-function)
+when declaring tests. Very often those helper methods are extracted to some
+parent classes which are extended by many test suites. Now, Metals can find
+usages of those helper methods and display them in Test Explorer.
 
 This feature is available for Bloop and SBT 1.7.0-M2 or later.
 
@@ -92,28 +113,48 @@ This feature is available for Bloop and SBT 1.7.0-M2 or later.
 
 ## Support Cats Effect stacktraces in stacktrace analyzer
 
-Cats Effect offers [asynchronous stack tracing](https://typelevel.org/cats-effect/docs/tracing#asynchronous-stack-tracing) which augments exceptions with additional information.  
-Now, Stacktrace Analyzer is able to recognize CE's stacktraces and provide link to location in code. Say no to tedious debugging when you have only stacktrace from the logs!
+Cats Effect offers
+[asynchronous stack tracing](https://typelevel.org/cats-effect/docs/tracing#asynchronous-stack-tracing)
+which augments exceptions with additional information.\
+Now, Stacktrace Analyzer is able to recognize CE's stacktraces and provide link
+to location in code. Say no to tedious debugging when you have only stacktrace
+from the logs!
 
 ![cats-effect-stacktraces](https://imgur.com/5fMvcYd.gif)
 
-
 ## Improve implement all completion and code action
-Previously, when we invoked the "implement all members" completion and code action, Metals used `x$0` for Java parameter names. Now, Metals fills these with the correct parameter names.
- 
-## Improve rewrite to braces/parenthesis code action
-Sometimes, it wasn't clear which code would be affected by [rewrite to braces/parenthesis](https://scalameta.org/metals/blog/2021/09/06/tungsten#replace--with--in-functions-and-vice-versa) code action.
-Now, code action's description contains name of the function/method which will be affected by executing action.
-![rewrite-braces-parens](https://imgur.com/SkHolsJ.gif)
-Theme: [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
+Previously, when we invoked the "implement all members" completion and code
+action, Metals used `x$0` for Java parameter names. Now, Metals fills these with
+the correct parameter names.
+
+## Improve rewrite to braces/parenthesis code action
+
+Sometimes, it wasn't clear which code would be affected by
+[rewrite to braces/parenthesis](https://scalameta.org/metals/blog/2021/09/06/tungsten#replace--with--in-functions-and-vice-versa)
+code action. Now, code action's description contains name of the function/method
+which will be affected by executing action.
+![rewrite-braces-parens](https://imgur.com/SkHolsJ.gif) Theme:
+[One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
 ## Automatically setup java home for the Bloop build server
-In previous versions of Metals, if users wanted to change the java version of the Bloop build server, they would need to manually update `.bloop/bloop.json` file in their user home directory. With this version, we ensure that the Bloop Java version will correspond to Metals one to avoid weird compilation issues that could arise from different versions being used.
 
-Now, each time you update `javaHome` or `bloopJvmProperties` settings, Metals will ask you whether to forward those changes to the Bloop configuration file. If you modified that file previously or want to use a custom one, you can dismiss the Metals notification. Otherwise, everything will automatically be set up for you once you decide to apply the changes. If you never created the file, we will create it before starting Bloop, so you should not notice anything out of order.
+In previous versions of Metals, if users wanted to change the java version of
+the Bloop build server, they would need to manually update `.bloop/bloop.json`
+file in their user home directory. With this version, we ensure that the Bloop
+Java version will correspond to Metals one to avoid weird compilation issues
+that could arise from different versions being used.
+
+Now, each time you update `javaHome` or `bloopJvmProperties` settings, Metals
+will ask you whether to forward those changes to the Bloop configuration file.
+If you modified that file previously or want to use a custom one, you can
+dismiss the Metals notification. Otherwise, everything will automatically be set
+up for you once you decide to apply the changes. If you never created the file,
+we will create it before starting Bloop, so you should not notice anything out
+of order.
 
 ## Support for Scala 3.1.3-RC4, 3.1.3-RC3
+
 Metals 0.11.6 supports Scala 3.1.3-RC3 and RC4.
 
 ## Contributors
@@ -279,8 +320,7 @@ $ git shortlog -sn --no-merges v0.11.5..v0.11.6
 - Update scalafmt-dynamic to 3.5.2
   [\#3893](https://github.com/scalameta/metals/pull/3893)
   ([scala-steward](https://github.com/scala-steward))
-- Update ujson to 2.0.0
-  [\#3890](https://github.com/scalameta/metals/pull/3890)
+- Update ujson to 2.0.0 [\#3890](https://github.com/scalameta/metals/pull/3890)
   ([scala-steward](https://github.com/scala-steward))
 - Update xnio-nio to 3.8.7.Final
   [\#3892](https://github.com/scalameta/metals/pull/3892)
@@ -309,6 +349,5 @@ $ git shortlog -sn --no-merges v0.11.5..v0.11.6
 - 0.11.5 - update versions
   [\#3883](https://github.com/scalameta/metals/pull/3883)
   ([dos65](https://github.com/dos65))
-- 0.11.5 release notes
-  [\#3882](https://github.com/scalameta/metals/pull/3882)
+- 0.11.5 release notes [\#3882](https://github.com/scalameta/metals/pull/3882)
   ([dos65](https://github.com/dos65))

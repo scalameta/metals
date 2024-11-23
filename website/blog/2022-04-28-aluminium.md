@@ -1,11 +1,10 @@
 ---
-author: Vadim Chelyshov
+authors: dos65
 title: Metals v0.11.5 - Aluminium
-authorURL: https://twitter.com/_dos65
-authorImageURL: https://github.com/dos65.png
 ---
 
-We're happy to announce the release of Metals v0.11.5, which brings a few of hotfixes and improves hover info for Scala 3
+We're happy to announce the release of Metals v0.11.5, which brings a few of
+hotfixes and improves hover info for Scala 3
 
 <table>
 <tbody>
@@ -35,10 +34,9 @@ We're happy to announce the release of Metals v0.11.5, which brings a few of hot
 For full details: https://github.com/scalameta/metals/milestone/50?closed=1
 
 Metals is a language server for Scala that works with VS Code, Vim, Emacs and
-Sublime Text. Metals is developed at the
-[Scala Center](https://scala.epfl.ch/) and [VirtusLab](https://virtuslab.com)
-with the help from [Lunatech](https://lunatech.com) along with contributors from
-the community.
+Sublime Text. Metals is developed at the [Scala Center](https://scala.epfl.ch/)
+and [VirtusLab](https://virtuslab.com) with the help from
+[Lunatech](https://lunatech.com) along with contributors from the community.
 
 ## TL;DR
 
@@ -88,6 +86,5 @@ $ git shortlog -sn --no-merges v0.11.4..v0.11.5
 - update versions for 0.11.4
   [\#3874](https://github.com/scalameta/metals/pull/3874)
   ([dos65](https://github.com/dos65))
-- 0.11.4 release notes
-  [\#3873](https://github.com/scalameta/metals/pull/3873)
+- 0.11.4 release notes [\#3873](https://github.com/scalameta/metals/pull/3873)
   ([dos65](https://github.com/dos65))

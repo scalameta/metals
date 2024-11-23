@@ -1,8 +1,6 @@
 ---
-author: Kamil Podsiadlo
+authors: kpodsiad
 title: Metals v0.11.3 - Aluminium
-authorURL: https://twitter.com/podsiadel
-authorImageURL: https://github.com/kpodsiad.png
 ---
 
 We're happy to announce the release of Metals v0.11.3.
@@ -32,17 +30,18 @@ We're happy to announce the release of Metals v0.11.3.
 </tbody>
 </table>
 
-This release uses a new version of [Bloop](https://github.com/scalacenter/bloop/blob/main/notes/v1.5.0.md).
-This should fix a few bugs regarding e.g. stale diagnostics in Scala 3. Moreover, the new release brings also
-a few UX improvements regarding Doctor view and running/debugging your code.
+This release uses a new version of
+[Bloop](https://github.com/scalacenter/bloop/blob/main/notes/v1.5.0.md). This
+should fix a few bugs regarding e.g. stale diagnostics in Scala 3. Moreover, the
+new release brings also a few UX improvements regarding Doctor view and
+running/debugging your code.
 
 For full details: https://github.com/scalameta/metals/milestone/48?closed=1
 
 Metals is a language server for Scala that works with VS Code, Vim, Emacs and
-Sublime Text. Metals is developed at the
-[Scala Center](https://scala.epfl.ch/) and [VirtusLab](https://virtuslab.com)
-with the help from [Lunatech](https://lunatech.com) along with contributors from
-the community.
+Sublime Text. Metals is developed at the [Scala Center](https://scala.epfl.ch/)
+and [VirtusLab](https://virtuslab.com) with the help from
+[Lunatech](https://lunatech.com) along with contributors from the community.
 
 ## TL;DR
 
@@ -61,9 +60,14 @@ give Metals a try!
 
 ## Add more information to the Doctor view
 
-Thanks to the joined effort of [\#3772](https://github.com/scalameta/metals/pull/3772), [\#3763](https://github.com/scalameta/metals/pull/3763) and [\#3710](https://github.com/scalameta/metals/pull/3710) the Doctor view currently:
+Thanks to the joined effort of
+[\#3772](https://github.com/scalameta/metals/pull/3772),
+[\#3763](https://github.com/scalameta/metals/pull/3763) and
+[\#3710](https://github.com/scalameta/metals/pull/3710) the Doctor view
+currently:
 
-- shows the Metals server version and information about Java used to run the Metals server
+- shows the Metals server version and information about Java used to run the
+  Metals server
 - displays the compilation status of project
 - allows to navigate to the build target info for each target
 
@@ -71,11 +75,12 @@ Thanks to the joined effort of [\#3772](https://github.com/scalameta/metals/pull
 
 ## Create companion object code action
 
-Thanks to the efforts of [zmerr](https://github.com/zmerr), Metals offers a new code action - `Create companion object`.
-As its name suggests, it can be used to automatically create a companion object for the given class, trait or enum.
+Thanks to the efforts of [zmerr](https://github.com/zmerr), Metals offers a new
+code action - `Create companion object`. As its name suggests, it can be used to
+automatically create a companion object for the given class, trait or enum.
 
-![create-companion-object-code-action](https://imgur.com/HW5rr5f.gif)
-Theme: [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
+![create-companion-object-code-action](https://imgur.com/HW5rr5f.gif) Theme:
+[One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
 ## Add status bar when starting a debug session
 
@@ -85,65 +90,78 @@ Starting a debug session is a complex task, which requires a few steps:
 - debugger has to be initialized (configuration, breakpoints, etc.)
 
 Very often each of these steps takes up to a few seconds in order to complete.
-Until now, the user had no idea what is happening because Metals didn't show any progress indicator.
-[ckipp01](https://github.com/ckipp01) addressed this problem and added a status bar for each of the steps.
+Until now, the user had no idea what is happening because Metals didn't show any
+progress indicator. [ckipp01](https://github.com/ckipp01) addressed this problem
+and added a status bar for each of the steps.
 
-![start-debug-session-status-bar](https://imgur.com/qh7Jzdy.gif)
-Theme: [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
+![start-debug-session-status-bar](https://imgur.com/qh7Jzdy.gif) Theme:
+[One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
 ## Ensure the "no run or test" message is shown to user.
 
-There is a command `Run main class or tests in current file` which is a convenient way, as name suggests, of running main class:
-![run-main](https://imgur.com/rShZ8L3.gif)
-Theme: [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
+There is a command `Run main class or tests in current file` which is a
+convenient way, as name suggests, of running main class:
+![run-main](https://imgur.com/rShZ8L3.gif) Theme:
+[One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
 or running tests in the current file:
-![run-tests](https://imgur.com/BtbOubC.gif)
-Theme: [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
+![run-tests](https://imgur.com/BtbOubC.gif) Theme:
+[One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
-It is also possible to just press `F5` in file and Metals will execute main class or run tests in the current file if no run configuration is defined.
+It is also possible to just press `F5` in file and Metals will execute main
+class or run tests in the current file if no run configuration is defined.
 
-However, this command was silently failing when there was no class or test to run in the file.
-This is no longer the case, now Metals will display proper error message in this scenario.
-![no-class-to-run](https://imgur.com/xda3ApF.gif)
-Theme: [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
+However, this command was silently failing when there was no class or test to
+run in the file. This is no longer the case, now Metals will display proper
+error message in this scenario.
+![no-class-to-run](https://imgur.com/xda3ApF.gif) Theme:
+[One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
 ## Show better unnaply signatures
 
-Previously, when pattern matching Metals was showing real `unnaply` method signature, which wasn't very useful.
-Now, Metals properly uses unapply result type to show what types can be matched on.
-![unnaply-signatures](https://imgur.com/Gzg11YT.png)
-Theme: [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
+Previously, when pattern matching Metals was showing real `unnaply` method
+signature, which wasn't very useful. Now, Metals properly uses unapply result
+type to show what types can be matched on.
+![unnaply-signatures](https://imgur.com/Gzg11YT.png) Theme:
+[One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
 ## Provide an easier way to configure bloop settings
 
-Bloop [JVM options](https://scalacenter.github.io/bloop/docs/server-reference#custom-java-options) can be
-configured through a global config file. Thanks to the [zmerr](https://github.com/zmerr), Metals is capable of changing those settings.
-Each modification of `Bloop Jvm Properties` settings will try to update that global file if possible.
-In case of manually configured settings, Metals will inform user about it and ask for their action.
+Bloop
+[JVM options](https://scalacenter.github.io/bloop/docs/server-reference#custom-java-options)
+can be configured through a global config file. Thanks to the
+[zmerr](https://github.com/zmerr), Metals is capable of changing those settings.
+Each modification of `Bloop Jvm Properties` settings will try to update that
+global file if possible. In case of manually configured settings, Metals will
+inform user about it and ask for their action.
 
-![update-bloop-settings](https://imgur.com/Xz2gO0h.gif)
-Theme: [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
+![update-bloop-settings](https://imgur.com/Xz2gO0h.gif) Theme:
+[One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
 ## Better MUnit support in Test Explorer
 
 Disclaimer: **this works only when Bloop is a build server**
 
-Test Explorer in Metals is now able to detect some single test cases for [MUnit](https://scalameta.org/munit/) test framework.
-![munit-single-tests](https://imgur.com/QQMLy6M.png)
-Theme: [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
+Test Explorer in Metals is now able to detect some single test cases for
+[MUnit](https://scalameta.org/munit/) test framework.
+![munit-single-tests](https://imgur.com/QQMLy6M.png) Theme:
+[One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
-More information about current MUnit support status can be found at this [issue](https://github.com/scalameta/metals/issues/3771).
+More information about current MUnit support status can be found at this
+[issue](https://github.com/scalameta/metals/issues/3771).
 
 ## Better sbt BSP integration
 
-From this release Metals will no longer run the compilation when sbt generates files under the `src-managed` directory.
-The previous behaviour was related to some of the source generating sbt plugins. When used with sbt BSP users would experience  continuous compilation.
-For more details, see [\#2183](https://github.com/scalameta/metals/issues/2183).
+From this release Metals will no longer run the compilation when sbt generates
+files under the `src-managed` directory. The previous behaviour was related to
+some of the source generating sbt plugins. When used with sbt BSP users would
+experience continuous compilation. For more details, see
+[\#2183](https://github.com/scalameta/metals/issues/2183).
 
 ## Improved Scala3 support
 
-Metals 0.11.3 now includes some better Scala3 supports in go-to-definition, rename symbols, and displaying hover.
+Metals 0.11.3 now includes some better Scala3 supports in go-to-definition,
+rename symbols, and displaying hover.
 
 For more information, check out the following pull requests:
 
@@ -223,8 +241,7 @@ $ git shortlog -sn --no-merges v0.11.2..v0.11.3
 - fix: Make signature help work properly with a non-tuple result
   [\#3849](https://github.com/scalameta/metals/pull/3849)
   ([tgodzik](https://github.com/tgodzik))
-- bloop jvm settings
-  [\#3746](https://github.com/scalameta/metals/pull/3746)
+- bloop jvm settings [\#3746](https://github.com/scalameta/metals/pull/3746)
   ([zmerr](https://github.com/zmerr))
 - Remove some redundant collection conversions
   [\#3848](https://github.com/scalameta/metals/pull/3848)
@@ -256,14 +273,14 @@ $ git shortlog -sn --no-merges v0.11.2..v0.11.3
 - Update bloop-config, bloop-launcher to 1.4.13-75-f9d1bef5
   [\#3831](https://github.com/scalameta/metals/pull/3831)
   ([scala-steward](https://github.com/scala-steward))
-- fix: (Scala3) Don't navigate to enclosing symbols on go-to-definition if cursor is not on symbol
+- fix: (Scala3) Don't navigate to enclosing symbols on go-to-definition if
+  cursor is not on symbol
   [\#3807](https://github.com/scalameta/metals/pull/3807)
   ([tanishiking](https://github.com/tanishiking))
 - Update scalafmt-dynamic to 3.4.3
   [\#3840](https://github.com/scalameta/metals/pull/3840)
   ([scala-steward](https://github.com/scala-steward))
-- Update ujson to 1.6.0
-  [\#3835](https://github.com/scalameta/metals/pull/3835)
+- Update ujson to 1.6.0 [\#3835](https://github.com/scalameta/metals/pull/3835)
   ([scala-steward](https://github.com/scala-steward))
 - test: Add test for completions of matchtype / higher-kinded type
   [\#3821](https://github.com/scalameta/metals/pull/3821)
@@ -271,8 +288,7 @@ $ git shortlog -sn --no-merges v0.11.2..v0.11.3
 - Update mill-contrib-testng to 0.10.3
   [\#3834](https://github.com/scalameta/metals/pull/3834)
   ([scala-steward](https://github.com/scala-steward))
-- Update h2 to 2.1.212
-  [\#3833](https://github.com/scalameta/metals/pull/3833)
+- Update h2 to 2.1.212 [\#3833](https://github.com/scalameta/metals/pull/3833)
   ([scala-steward](https://github.com/scala-steward))
 - Fix formatting after last merge
   [\#3827](https://github.com/scalameta/metals/pull/3827)
@@ -289,14 +305,12 @@ $ git shortlog -sn --no-merges v0.11.2..v0.11.3
 - Add support for Scala 3.1.2 and 3.1.3-RC2
   [\#3822](https://github.com/scalameta/metals/pull/3822)
   ([tgodzik](https://github.com/tgodzik))
-- fix release script
-  [\#3823](https://github.com/scalameta/metals/pull/3823)
+- fix release script [\#3823](https://github.com/scalameta/metals/pull/3823)
   ([dos65](https://github.com/dos65))
 - fix: handle backticked names in inffered-type
   [\#3791](https://github.com/scalameta/metals/pull/3791)
   ([dos65](https://github.com/dos65))
-- bloop - bump version
-  [\#3818](https://github.com/scalameta/metals/pull/3818)
+- bloop - bump version [\#3818](https://github.com/scalameta/metals/pull/3818)
   ([dos65](https://github.com/dos65))
 - docs: add common workflow to contributing guide
   [\#3816](https://github.com/scalameta/metals/pull/3816)
@@ -304,14 +318,12 @@ $ git shortlog -sn --no-merges v0.11.2..v0.11.3
 - Remove -release option from the Scala 3 PC
   [\#3812](https://github.com/scalameta/metals/pull/3812)
   ([tgodzik](https://github.com/tgodzik))
-- fix: uri encoding
-  [\#3795](https://github.com/scalameta/metals/pull/3795)
+- fix: uri encoding [\#3795](https://github.com/scalameta/metals/pull/3795)
   ([kpodsiad](https://github.com/kpodsiad))
 - docs overview: mention editor pages for installation (#3796)
   [\#3811](https://github.com/scalameta/metals/pull/3811)
   ([juhp](https://github.com/juhp))
-- Log BSP server stderr
-  [\#3789](https://github.com/scalameta/metals/pull/3789)
+- Log BSP server stderr [\#3789](https://github.com/scalameta/metals/pull/3789)
   ([alexarchambault](https://github.com/alexarchambault))
 - Support MatchType in SemanticdbTreePrinter
   [\#3787](https://github.com/scalameta/metals/pull/3787)
@@ -364,8 +376,7 @@ $ git shortlog -sn --no-merges v0.11.2..v0.11.3
 - Update bloop-config, bloop-launcher to 1.4.13-55-1fc97fae
   [\#3774](https://github.com/scalameta/metals/pull/3774)
   ([scala-steward](https://github.com/scala-steward))
-- Update pprint to 0.7.3
-  [\#3776](https://github.com/scalameta/metals/pull/3776)
+- Update pprint to 0.7.3 [\#3776](https://github.com/scalameta/metals/pull/3776)
   ([scala-steward](https://github.com/scala-steward))
 - Update flyway-core to 8.5.5
   [\#3778](https://github.com/scalameta/metals/pull/3778)
@@ -373,8 +384,7 @@ $ git shortlog -sn --no-merges v0.11.2..v0.11.3
 - feat: add java version and Metals version to doctor
   [\#3772](https://github.com/scalameta/metals/pull/3772)
   ([kpodsiad](https://github.com/kpodsiad))
-- fix: nightly script
-  [\#3773](https://github.com/scalameta/metals/pull/3773)
+- fix: nightly script [\#3773](https://github.com/scalameta/metals/pull/3773)
   ([dos65](https://github.com/dos65))
 - fix: munit test discovery when there is no package
   [\#3770](https://github.com/scalameta/metals/pull/3770)
@@ -445,8 +455,7 @@ $ git shortlog -sn --no-merges v0.11.2..v0.11.3
 - docs: small update to contributing docs
   [\#3732](https://github.com/scalameta/metals/pull/3732)
   ([ckipp01](https://github.com/ckipp01))
-- bump: bloop
-  [\#3729](https://github.com/scalameta/metals/pull/3729)
+- bump: bloop [\#3729](https://github.com/scalameta/metals/pull/3729)
   ([kpodsiad](https://github.com/kpodsiad))
 - feat: implement test selection request for sbt
   [\#3678](https://github.com/scalameta/metals/pull/3678)
@@ -457,7 +466,8 @@ $ git shortlog -sn --no-merges v0.11.2..v0.11.3
 - fix(doctor): ensure compilationStatus is in the json payload
   [\#3725](https://github.com/scalameta/metals/pull/3725)
   ([ckipp01](https://github.com/ckipp01))
-- Add `generated` info to `Source Directories `section of `Display build target info`
+- Add `generated` info to `Source Directories`section of
+  `Display build target info`
   [\#3720](https://github.com/scalameta/metals/pull/3720)
   ([tanishiking](https://github.com/tanishiking))
 - fix: ensure user gets warned of workspace error when running with lens
@@ -475,8 +485,7 @@ $ git shortlog -sn --no-merges v0.11.2..v0.11.3
 - Update mill-contrib-testng to 0.10.1
   [\#3714](https://github.com/scalameta/metals/pull/3714)
   ([scala-steward](https://github.com/scala-steward))
-- Update pprint to 0.7.2
-  [\#3715](https://github.com/scalameta/metals/pull/3715)
+- Update pprint to 0.7.2 [\#3715](https://github.com/scalameta/metals/pull/3715)
   ([scala-steward](https://github.com/scala-steward))
 - Exclude generated source items from FileWatcher (sbt BSP)
   [\#3694](https://github.com/scalameta/metals/pull/3694)
@@ -514,7 +523,7 @@ $ git shortlog -sn --no-merges v0.11.2..v0.11.3
 - docs: make release instruction more structured
   [\#3700](https://github.com/scalameta/metals/pull/3700)
   ([kpodsiad](https://github.com/kpodsiad))
--  Fix DefinitionCrossLspSuite
+- Fix DefinitionCrossLspSuite
   [\#3692](https://github.com/scalameta/metals/pull/3692)
   ([tgodzik](https://github.com/tgodzik))
 - chore(docs): get snapshot version for docs from 2.13 now

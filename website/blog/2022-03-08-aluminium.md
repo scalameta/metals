@@ -1,11 +1,10 @@
 ---
-author: Kamil Podsiadlo
+authors: kpodsiad
 title: Metals v0.11.2 - Aluminium
-authorURL: https://twitter.com/podsiadel
-authorImageURL: https://github.com/kpodsiad.png
 ---
 
-We're happy to announce the release of Metals v0.11.2, which focuses on improving overall user experience.
+We're happy to announce the release of Metals v0.11.2, which focuses on
+improving overall user experience.
 
 <table>
 <tbody>
@@ -36,10 +35,9 @@ We're happy to announce the release of Metals v0.11.2, which focuses on improvin
 For full details: https://github.com/scalameta/metals/milestone/?closed=1
 
 Metals is a language server for Scala that works with VS Code, Vim, Emacs and
-Sublime Text. Metals is developed at the
-[Scala Center](https://scala.epfl.ch/) and [VirtusLab](https://virtuslab.com)
-with the help from [Lunatech](https://lunatech.com) along with contributors from
-the community.
+Sublime Text. Metals is developed at the [Scala Center](https://scala.epfl.ch/)
+and [VirtusLab](https://virtuslab.com) with the help from
+[Lunatech](https://lunatech.com) along with contributors from the community.
 
 ## TL;DR
 
@@ -54,23 +52,32 @@ give Metals a try!
 
 ## Reduce indexing time in monorepos on MacOS
 
-Thanks to changes made by [Duhemm](https://github.com/Duhemm), Metals on MacOS can now index monorepo workspaces much faster than before. After changes, we observed at times **over 10 times faster** indexing times in the workspaces where only a few submodules needed to be imported.
+Thanks to changes made by [Duhemm](https://github.com/Duhemm), Metals on MacOS
+can now index monorepo workspaces much faster than before. After changes, we
+observed at times **over 10 times faster** indexing times in the workspaces
+where only a few submodules needed to be imported.
 
-Here are a few examples of indexing improvement. They are not actual benchmarks of any kind, but more of rough estimations of improvements in a couple of example repos.
+Here are a few examples of indexing improvement. They are not actual benchmarks
+of any kind, but more of rough estimations of improvements in a couple of
+example repos.
 
 | Before      | After      |
 | ----------- | ---------- |
 | \>10minutes | ~30seconds |
 | ~40seconds  | ~4s        |
 
-However, take into mind that indexing speedup heavily depends on your repository structure. The more imported modules which don't need to be imported, the greater the speed improvement is.
+However, take into mind that indexing speedup heavily depends on your repository
+structure. The more imported modules which don't need to be imported, the
+greater the speed improvement is.
 
-If you are interested in details you can check out the related [pull request](https://github.com/scalameta/metals/pull/3665).
+If you are interested in details you can check out the related
+[pull request](https://github.com/scalameta/metals/pull/3665).
 
 ## Display build target info
 
-Thanks to the [Arthurm1](https://github.com/Arthurm1) Metals is now able to display all important information about modules.
-This brand new feature gathers in one view information such as:
+Thanks to the [Arthurm1](https://github.com/Arthurm1) Metals is now able to
+display all important information about modules. This brand new feature gathers
+in one view information such as:
 
 - javac and scalac options
 - dependent modules
@@ -81,10 +88,16 @@ This brand new feature gathers in one view information such as:
 
 ## [vscode] View source jar files as virtual docs
 
-Previously, when the client wanted to browse files in source jars source, these files were extracted and saved in the `metals/readonly/dependencies` directory. With the help of [virtual documents](https://code.visualstudio.com/api/extension-guides/virtual-documents) Metals can show you dependencies in readonly files without unnecessary copying.
+Previously, when the client wanted to browse files in source jars source, these
+files were extracted and saved in the `metals/readonly/dependencies` directory.
+With the help of
+[virtual documents](https://code.visualstudio.com/api/extension-guides/virtual-documents)
+Metals can show you dependencies in readonly files without unnecessary copying.
 Thanks [Arthurm1](https://github.com/Arthurm1) for this feature!
 
-Together with Metals tab, this feature could be used to browse through your dependencies' sources. Just run the `Metals: Reveal Active File in Side Bar` command and browse through both dependencies and source code seamlessly.
+Together with Metals tab, this feature could be used to browse through your
+dependencies' sources. Just run the `Metals: Reveal Active File in Side Bar`
+command and browse through both dependencies and source code seamlessly.
 
 ![virtual-docs-navigation](https://imgur.com/HsuW8Hn.gif)
 
@@ -92,10 +105,14 @@ Currently, `Metals: Reveal Active File in Side Bar` works only for Scala 2.
 
 ## Improve completions for Scala 3
 
-Completion suggestions for different Scala keywords now work with most of the Scala 3 keywords. This includes for example `given` and `enum`, it should also work even if defining things in toplevel without a wrapping class or object.
+Completion suggestions for different Scala keywords now work with most of the
+Scala 3 keywords. This includes for example `given` and `enum`, it should also
+work even if defining things in toplevel without a wrapping class or object.
 ![keyword-completions](https://i.imgur.com/4BUxCDK.gif)
 
-Another improvement for Scala 3 completions is better support for showing scope completions, when writing in an empty line. Previously, we would not show correct completions when no identifier was specified.
+Another improvement for Scala 3 completions is better support for showing scope
+completions, when writing in an empty line. Previously, we would not show
+correct completions when no identifier was specified.
 
 ```scala
 object Foo:
@@ -106,26 +123,34 @@ object Foo:
   @@
 ```
 
-In the above situation with cursor position indicated by `@@` we will now properly show `bar` and `baz` completions.
+In the above situation with cursor position indicated by `@@` we will now
+properly show `bar` and `baz` completions.
 
 ## [Test Explorer] Detect and run single tests for JUnit4
 
-We're actively working on improving the Test Explorer and making it better with each release.
-From this release, Metals is able to run or debug single test in JUnit4.
+We're actively working on improving the Test Explorer and making it better with
+each release. From this release, Metals is able to run or debug single test in
+JUnit4.
 
-Currently, this feature **only works when using Bloop as your build server**, but in a future release there will be support added for sbt as well.
+Currently, this feature **only works when using Bloop as your build server**,
+but in a future release there will be support added for sbt as well.
 
 ![test-explorer-single-tests](https://imgur.com/FbgSTGr.gif)
 
 ## [vscode] Add mirror setting to help coursier set up
 
-In order to bootstrap Metals, vscode's extension uses the coursier script which needs access to `repo1.maven.org`. Previously, this URL couldn't be configured which was causing problems on the machines that didn't have access to repo1.maven.org.
+In order to bootstrap Metals, vscode's extension uses the coursier script which
+needs access to `repo1.maven.org`. Previously, this URL couldn't be configured
+which was causing problems on the machines that didn't have access to
+repo1.maven.org.
 
-Thanks to [tgodzik](https://github.com/tgodzik)'s work from now on it's possible to define `metals.coursierMirror` property.
+Thanks to [tgodzik](https://github.com/tgodzik)'s work from now on it's possible
+to define `metals.coursierMirror` property.
 
 ![coursier-mirror](https://imgur.com/iLB079M.png)
 
-More information about mirrors can be found at [coursier documentation](https://get-coursier.io/blog/#mirrors).
+More information about mirrors can be found at
+[coursier documentation](https://get-coursier.io/blog/#mirrors).
 
 ## Miscellaneous
 
@@ -178,8 +203,7 @@ $ git shortlog -sn --no-merges v0.11.1..v0.11.2
 - fix: Add test case for topelevel tuple hover
   [\#3676](https://github.com/scalameta/metals/pull/3676)
   ([tgodzik](https://github.com/tgodzik))
-- Scala3 PC refactorings
-  [\#3651](https://github.com/scalameta/metals/pull/3651)
+- Scala3 PC refactorings [\#3651](https://github.com/scalameta/metals/pull/3651)
   ([dos65](https://github.com/dos65))
 - fix: Add tests for Scala 3 toplevel enums
   [\#3674](https://github.com/scalameta/metals/pull/3674)
@@ -211,14 +235,13 @@ $ git shortlog -sn --no-merges v0.11.1..v0.11.2
 - Change hashing to lastModified
   [\#3611](https://github.com/scalameta/metals/pull/3611)
   ([tgodzik](https://github.com/tgodzik))
-- Update Bloop to 1.4.13
-  [\#3664](https://github.com/scalameta/metals/pull/3664)
+- Update Bloop to 1.4.13 [\#3664](https://github.com/scalameta/metals/pull/3664)
   ([tgodzik](https://github.com/tgodzik))
 - Fix issues with nightlies tests
   [\#3663](https://github.com/scalameta/metals/pull/3663)
   ([tgodzik](https://github.com/tgodzik))
-- fix: do not show test explorer related error for client which don't implement it
-  [\#3661](https://github.com/scalameta/metals/pull/3661)
+- fix: do not show test explorer related error for client which don't implement
+  it [\#3661](https://github.com/scalameta/metals/pull/3661)
   ([kpodsiad](https://github.com/kpodsiad))
 - Add current env variables to bloopInstall
   [\#3662](https://github.com/scalameta/metals/pull/3662)
@@ -253,8 +276,7 @@ $ git shortlog -sn --no-merges v0.11.1..v0.11.2
 - Scala3 emptyline completions
   [\#3629](https://github.com/scalameta/metals/pull/3629)
   ([dos65](https://github.com/dos65))
-- Update millw to 0.4.2
-  [\#3641](https://github.com/scalameta/metals/pull/3641)
+- Update millw to 0.4.2 [\#3641](https://github.com/scalameta/metals/pull/3641)
   ([tgodzik](https://github.com/tgodzik))
 - fix: actions, discover new scala3 nigtly properly
   [\#3640](https://github.com/scalameta/metals/pull/3640)
@@ -358,11 +380,9 @@ $ git shortlog -sn --no-merges v0.11.1..v0.11.2
 - Update flyway-core to 8.4.3
   [\#3590](https://github.com/scalameta/metals/pull/3590)
   ([scala-steward](https://github.com/scala-steward))
-- Update ujson to 1.5.0
-  [\#3588](https://github.com/scalameta/metals/pull/3588)
+- Update ujson to 1.5.0 [\#3588](https://github.com/scalameta/metals/pull/3588)
   ([scala-steward](https://github.com/scala-steward))
-- Update geny to 0.7.1
-  [\#3587](https://github.com/scalameta/metals/pull/3587)
+- Update geny to 0.7.1 [\#3587](https://github.com/scalameta/metals/pull/3587)
   ([scala-steward](https://github.com/scala-steward))
 - Update metaconfig-core to 0.10.0
   [\#3585](https://github.com/scalameta/metals/pull/3585)
@@ -385,8 +405,7 @@ $ git shortlog -sn --no-merges v0.11.1..v0.11.2
 - Pass -Xsource:3 to scalafix organize-imports action if present
   [\#3574](https://github.com/scalameta/metals/pull/3574)
   ([hugo-vrijswijk](https://github.com/hugo-vrijswijk))
-- Insert missing comma
-  [\#3573](https://github.com/scalameta/metals/pull/3573)
+- Insert missing comma [\#3573](https://github.com/scalameta/metals/pull/3573)
   ([ossScharom](https://github.com/ossScharom))
 - cleanup: remove unused stuff from CompilerInterfaces
   [\#3572](https://github.com/scalameta/metals/pull/3572)
