@@ -1,8 +1,6 @@
 ---
-author: Chris Kipp
+authors: ckipp
 title: A Dive into Configuring Metals
-authorURL: https://twitter.com/ckipp01
-authorImageURL: https://avatars1.githubusercontent.com/u/13974112?s=400&u=7b6a2ddab8eec6f99e4e40ae9b81f71cb5ba92e5&v=4
 ---
 
 As of this last Metals release, it's now 100% possible to fully configure Metals
@@ -20,12 +18,12 @@ all the various editors.
 
 Looking back to the Fall of 2018, you see a giant glimpse of Metals becoming
 what it is today when looking at a giant commit by
-[@olafurpg](https://twitter.com/olafurpg) with the title [Implement pretty
-basic language server and build
+[@olafurpg](https://twitter.com/olafurpg) with the title
+[Implement pretty basic language server and build
 client.](https://github.com/scalameta/metals/commit/df6b41acaad1978ffd1fa25c41909c38425932ab).
 It's a pretty fascinating commit to look at if you're interested in the
-beginnings of Metals, but I want to focus in on a specific file that still exists
-today, which is the
+beginnings of Metals, but I want to focus in on a specific file that still
+exists today, which is the
 [MetalsServerConfig.scala](https://github.com/scalameta/metals/commit/df6b41acaad1978ffd1fa25c41909c38425932ab#diff-dc72b5c684177c884881164ab17182eb).
 In this file you see the first configuration options that existed for Metals.
 You see things like `isLogShowMessage` to ensure users were correctly getting
@@ -54,6 +52,7 @@ System.getProperty("metals.client", "unknown") match {
     )
   ...
 ```
+
 The property would then be set when the user would bootstrap Metals. This
 started out as a manual process for almost all the editors utilizing
 [Coursier](https://github.com/coursier/coursier). This still actually remains a
@@ -93,7 +92,7 @@ easily change a setting, even while in the editor. For example, we have a
 current setting `metals.superMethodLensesEnabled` which when enabled will
 display a code lens that when invoked will either go to the parent class
 containing the definition of the method or symbol or display the full method
-hierarchy allowing you to choose where to go. 
+hierarchy allowing you to choose where to go.
 
 Here is an example of what this looks like in Vim:
 ![Super Method Hierarchy](https://i.imgur.com/rEvhzG1.png)
@@ -106,8 +105,8 @@ configuration value and notify the server via
 [`workspace/didChangeConfiguration`](https://microsoft.github.io/language-server-protocol/specification#workspace_didChangeConfiguration).
 This can fully happen for most of the user configuration values without any need
 to restart the server. You can see the first configuration options added this
-way in [this
-commit](https://github.com/scalameta/metals/commit/f4706ec75afb9bf797e3144f4a0e91bb0b186e07)
+way in
+[this commit](https://github.com/scalameta/metals/commit/f4706ec75afb9bf797e3144f4a0e91bb0b186e07)
 where the ability to define your `JAVA_HOME` was added. With now allowing for
 user configurations in Metals, this allowed for an even more customized
 experience.
@@ -121,15 +120,15 @@ way was needed for the client to express that it supported these extensions.
 This is when Metals started to use the
 [`ClientCapabilities.experimental`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize)
 field which the client needed to declare support the extension. You can see the
-first inklings of this when the [Tree View
-Protocol](https://scalameta.org/metals/docs/editors/tree-view-protocol.html) was
-introduced [here in this
-commit](https://github.com/scalameta/metals/commit/a55a2413ef10237c8510eb707c0de0cd03b83d85#diff-f8c05eebbf12c9c21a7d568f09b500ea).
+first inklings of this when the
+[Tree View Protocol](https://scalameta.org/metals/docs/editors/tree-view-protocol.html)
+was introduced
+[here in this commit](https://github.com/scalameta/metals/commit/a55a2413ef10237c8510eb707c0de0cd03b83d85#diff-f8c05eebbf12c9c21a7d568f09b500ea).
 This then continued to be further expanded as we introduced more extensions.
 
-As it became easier for various clients to set this, we slowly [started to
-migrate](https://github.com/scalameta/metals/pull/1414) other options that could
-only be previously set via server properties to
+As it became easier for various clients to set this, we slowly
+[started to migrate](https://github.com/scalameta/metals/pull/1414) other
+options that could only be previously set via server properties to
 `ClientCapabilities.experimental`. So settings like which format you'd like the
 Doctor to return could now be set directly by the client without need to
 bootstrap the server with a specific property. This allowed for much easier
@@ -149,8 +148,8 @@ configured Metals via `InitializationOptions` without the need to set any server
 properties. In theory this also meant that you could not use the same Metals
 executable for VS Code, Vim, or Emacs since the server is fully being configured
 by the client itself. The current settings that can be passed in and their
-defaults are explained in detail [here on the
-website](https://scalameta.org/metals/docs/integrations/new-editor#initializationoptions),
+defaults are explained in detail
+[here on the website](https://scalameta.org/metals/docs/integrations/new-editor#initializationoptions),
 but the interface is as follows:
 
 ```typescript
@@ -175,6 +174,7 @@ interface MetalsInitializationOptions {
   openNewWindowProvider?: boolean;
 }
 ```
+
 ```typescript
 interface CompilerInitializationOptions {
   completionCommand?: string;
@@ -203,21 +203,20 @@ While all of the old server properties still exist for Metals, it's no longer
 recommended to use them to configure Metals. However, there are still a few
 server properties that remain only server properties since they are not meant to
 be widely used, and aren't exactly recommended to use for the average user. You
-can see an up to date list of these [here on the
-website](https://scalameta.org/metals/docs/integrations/new-editor#metals-server-properties)
+can see an up to date list of these
+[here on the website](https://scalameta.org/metals/docs/integrations/new-editor#metals-server-properties)
 and what functionality they provide.
 
 ## Conclusion
 
 As of Metals 0.9.2 it's fully possibly for all clients to use a default
 bootstrapped Metals that can fully be configured via `InitializationOptions`.
-There is a freshly updated [Integrating a new
-editor](https://scalameta.org/metals/docs/editors/new-editor.html) section on
-the website to help explain how to exactly configure a client for usage with
-Metals. As always, don't hesitate to reach out on any of the various channels
-located in the footer or submit an issue to either improve documentation or to
-log a bug. Also as a reminder, there is a separate repo for
+There is a freshly updated
+[Integrating a new editor](https://scalameta.org/metals/docs/editors/new-editor.html)
+section on the website to help explain how to exactly configure a client for
+usage with Metals. As always, don't hesitate to reach out on any of the various
+channels located in the footer or submit an issue to either improve
+documentation or to log a bug. Also as a reminder, there is a separate repo for
 [metals-feature-requests](https://github.com/scalameta/metals-feature-requests).
-
 
 Happy coding with Metals!

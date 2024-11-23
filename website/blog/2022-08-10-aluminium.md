@@ -1,11 +1,10 @@
 ---
-author: Rikito Taniguchi
+authors: tanishiking
 title: Metals v0.11.8 - Aluminium
-authorURL: https://twitter.com/tanishiking
-authorImageURL: https://github.com/tanishiking.png
 ---
 
-We're happy to announce the release of Metals v0.11.8, bringing a number of improvements for both Scala 2 and Scala 3.
+We're happy to announce the release of Metals v0.11.8, bringing a number of
+improvements for both Scala 2 and Scala 3.
 
 <table>
 <tbody>
@@ -35,10 +34,9 @@ We're happy to announce the release of Metals v0.11.8, bringing a number of impr
 For full details: https://github.com/scalameta/metals/milestone/52?closed=1
 
 Metals is a language server for Scala that works with VS Code, Vim, Emacs and
-Sublime Text. Metals is developed at the
-[Scala Center](https://scala.epfl.ch/) and [VirtusLab](https://virtuslab.com)
-with the help from [Lunatech](https://lunatech.com) along with contributors from
-the community.
+Sublime Text. Metals is developed at the [Scala Center](https://scala.epfl.ch/)
+and [VirtusLab](https://virtuslab.com) with the help from
+[Lunatech](https://lunatech.com) along with contributors from the community.
 
 ## TL;DR
 
@@ -57,11 +55,15 @@ and a lot of bugfixes!
 
 ## [Scala 3] Auto import and completion for extension methods
 
-You might know that Scala 3 has introduced `extension methods` that allow defining new methods to your existing types.
+You might know that Scala 3 has introduced `extension methods` that allow
+defining new methods to your existing types.
 
-Previously, Metals couldn't auto-complete extension methods; so developers had to find an appropriate extension method from their workspace and manually import it. But, this was time-consuming and not always beginner friendly.
+Previously, Metals couldn't auto-complete extension methods; so developers had
+to find an appropriate extension method from their workspace and manually import
+it. But, this was time-consuming and not always beginner friendly.
 
-Now, Metals provides auto-completion for extension methods and automatically imports them!
+Now, Metals provides auto-completion for extension methods and automatically
+imports them!
 
 ![extension-methods](https://i.imgur.com/EAbVHeH.gif)
 
@@ -69,27 +71,37 @@ Now, Metals provides auto-completion for extension methods and automatically imp
 
 [Metals 0.11.7 added `ConvertToNamedParameters` code action to Scala2](https://scalameta.org/metals/blog/2022/07/04/aluminium#scala-2-add-converttonamedarguments-code-action).
 
-Thanks to the contribution by [@jkciesluk](https://github.com/jkciesluk), this feature is now available for Scala 3!
+Thanks to the contribution by [@jkciesluk](https://github.com/jkciesluk), this
+feature is now available for Scala 3!
 
 ![convert-to-named](https://i.imgur.com/9i7MWoQ.gif)
 
 ## [Scala 3] Scaladoc completion
 
-Metals now supports offering Scaladoc completions in Scala 3. When typing `/**` you get an option to auto-complete a scaladoc template for methods, classes, etc.!
+Metals now supports offering Scaladoc completions in Scala 3. When typing `/**`
+you get an option to auto-complete a scaladoc template for methods, classes,
+etc.!
 
 ![scala-doc-completion](https://i.imgur.com/MEJUXr3.gif)
 
 ## [Scala 3] Completions in string interpolation
 
-In the previous versions, whenever users wanted to include a value in a string using string interpolation, they would need to do it all manually. Now, it is possible to get an automatic conversion to string interpolation when typing `$value`, as well as automatic wrapping in `{}` when accessing members of such value.
+In the previous versions, whenever users wanted to include a value in a string
+using string interpolation, they would need to do it all manually. Now, it is
+possible to get an automatic conversion to string interpolation when typing
+`$value`, as well as automatic wrapping in `{}` when accessing members of such
+value.
 
 ![scala3-interpolation](https://i.imgur.com/EyFKpiv.gif)
 
 ## [Scala 2] Automatically import types in string interpolations
 
-Previously, the only suggestions for string interpolations were coming from the currently available symbols in scope. This meant that if you wanted to import something from another package, you would need to do it manually.
+Previously, the only suggestions for string interpolations were coming from the
+currently available symbols in scope. This meant that if you wanted to import
+something from another package, you would need to do it manually.
 
-This problem is now resolved. Users can easily get such symbols automatically imported, which creates a seamless workflow.
+This problem is now resolved. Users can easily get such symbols automatically
+imported, which creates a seamless workflow.
 
 ![scala2-inteprolation](https://i.imgur.com/cCWTQnj.gif)
 
@@ -97,8 +109,9 @@ The feature is also being worked on for Scala 3.
 
 ## Code Action documentation
 
-Have you ever wondered what kind of refactorings are available in Metals?
-Check out this new page in the documentation! You can see a list of all the code actions in Metals with examples.
+Have you ever wondered what kind of refactorings are available in Metals? Check
+out this new page in the documentation! You can see a list of all the code
+actions in Metals with examples.
 https://scalameta.org/metals/docs/codeactions/codeactions
 
 Big thanks to [zmerr](https://github.com/vzmerr) for writing this documentation.
@@ -194,8 +207,7 @@ $ git shortlog -sn --no-merges v0.11.7..v0.11.8
 - fix: request configuration before connecting to build server
   [\#4180](https://github.com/scalameta/metals/pull/4180)
   ([dos65](https://github.com/dos65))
-- Code Actions doc page
-  [\#4157](https://github.com/scalameta/metals/pull/4157)
+- Code Actions doc page [\#4157](https://github.com/scalameta/metals/pull/4157)
   ([vzmerr](https://github.com/vzmerr))
 - fix: Remember choice `Don't show this again` for sbt as build server
   [\#4175](https://github.com/scalameta/metals/pull/4175)
@@ -323,8 +335,7 @@ $ git shortlog -sn --no-merges v0.11.7..v0.11.8
 - build(deps): Update mill-contrib-testng from 0.10.4 to 0.10.5
   [\#4119](https://github.com/scalameta/metals/pull/4119)
   ([scala-steward](https://github.com/scala-steward))
-- add scala 3.2.0-RC2
-  [\#4118](https://github.com/scalameta/metals/pull/4118)
+- add scala 3.2.0-RC2 [\#4118](https://github.com/scalameta/metals/pull/4118)
   ([dos65](https://github.com/dos65))
 - build(deps): Update jsoup from 1.15.1 to 1.15.2
   [\#4120](https://github.com/scalameta/metals/pull/4120)

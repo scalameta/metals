@@ -1,8 +1,6 @@
 ---
-author: Tomasz Godzik
+authors: tgodzik
 title: Metals v0.11.11 - Aluminium
-authorURL: https://twitter.com/TomekGodzik
-authorImageURL: https://github.com/tgodzik.png
 ---
 
 We're happy to announce the release of Metals v0.11.11, which brings in a couple
@@ -104,17 +102,17 @@ You can also modify your theme colors and styles for some particular types of
 symbols. For example:
 
 ```json
-  "editor.semanticTokenColorCustomizations": {
-    "[Adapta Nokto]": {
-      "rules": {
-        "variable": "#c95252",
-        "*.readonly": "#8d91b8",
-        "*.deprecated": {
-          "strikethrough": true
-        }
+"editor.semanticTokenColorCustomizations": {
+  "[Adapta Nokto]": {
+    "rules": {
+      "variable": "#c95252",
+      "*.readonly": "#8d91b8",
+      "*.deprecated": {
+        "strikethrough": true
       }
     }
-  },
+  }
+},
 ```
 
 will make vars red and values light blue while also crossing out any deprecated

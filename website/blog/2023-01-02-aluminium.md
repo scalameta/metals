@@ -1,8 +1,6 @@
 ---
-author: Tomasz Godzik
+authors: tgodzik
 title: Metals v0.11.10 - Aluminium
-authorURL: https://twitter.com/TomekGodzik
-authorImageURL: https://github.com/tgodzik.png
 ---
 
 We're happy to announce the release of Metals v0.11.10, which brings in a lot of

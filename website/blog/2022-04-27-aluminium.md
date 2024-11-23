@@ -1,11 +1,11 @@
 ---
-author: Vadim Chelyshov
+authors: dos65
 title: Metals v0.11.4 - Aluminium
-authorURL: https://twitter.com/_dos65
-authorImageURL: https://github.com/dos65.png
 ---
 
-We're happy to announce the release of Metals v0.11.4, which includes the hotfix of [the issue with `cs install metals`](https://github.com/coursier/coursier/issues/2406).
+We're happy to announce the release of Metals v0.11.4, which includes the hotfix
+of
+[the issue with `cs install metals`](https://github.com/coursier/coursier/issues/2406).
 
 <table>
 <tbody>
@@ -33,10 +33,9 @@ We're happy to announce the release of Metals v0.11.4, which includes the hotfix
 </table>
 
 Metals is a language server for Scala that works with VS Code, Vim, Emacs and
-Sublime Text. Metals is developed at the
-[Scala Center](https://scala.epfl.ch/) and [VirtusLab](https://virtuslab.com)
-with the help from [Lunatech](https://lunatech.com) along with contributors from
-the community.
+Sublime Text. Metals is developed at the [Scala Center](https://scala.epfl.ch/)
+and [VirtusLab](https://virtuslab.com) with the help from
+[Lunatech](https://lunatech.com) along with contributors from the community.
 
 ## TL;DR
 
@@ -69,6 +68,5 @@ $ git shortlog -sn --no-merges v0.11.3..v0.11.4
 - chore: update server version after release
   [\#3869](https://github.com/scalameta/metals/pull/3869)
   ([kpodsiad](https://github.com/kpodsiad))
-- docs: release notes
-  [\#3860](https://github.com/scalameta/metals/pull/3860)
+- docs: release notes [\#3860](https://github.com/scalameta/metals/pull/3860)
   ([kpodsiad](https://github.com/kpodsiad))

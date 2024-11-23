@@ -1,8 +1,6 @@
 ---
-author: Ólafur Páll Geirsson
+authors: olafurpg
 title: Low-memory symbol indexing with bloom filters
-authorURL: https://twitter.com/olafurpg
-authorImageURL: https://avatars2.githubusercontent.com/u/1408093?s=460&v=4
 ---
 
 The latest Metals release introduces three new in-memory indexes to implement

@@ -1,8 +1,6 @@
 ---
-author: Tomasz Godzik
+authors: tgodzik
 title: Metals v0.11.7 - Aluminium
-authorURL: https://twitter.com/TomekGodzik
-authorImageURL: https://github.com/tgodzik.png
 ---
 
 We're happy to announce the release of Metals v0.11.7, which brings a large
@@ -202,7 +200,7 @@ Metals 0.11.7 allows users to use a new code action that can convert all
 arguments to named arguments, which is only available on Scala 2 for the time
 being.
 
-The new code action will work on method calls with multiple arguments, where  
+The new code action will work on method calls with multiple arguments, where\
 it's sometimes hard to tell which arguments match which parameters at a glance.
 In this situation you may want to make them named arguments. Now you will be
 able to automatically convert all those arguments into named arguments.

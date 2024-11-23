@@ -1,10 +1,11 @@
 ---
-author: Katarzyna Marek
+authors: kmarek
 title: Metals v0.11.12 - Aluminium
-authorURL: https://github.com/kasiaMarek
-authorImageURL: https://github.com/kasiaMarek.png
 ---
-We're happy to announce the release of Metals v0.11.12. This release brings mostly stability fixes, some various improvements, and a start towards better issue identification and reporting when users experience issues.
+
+We're happy to announce the release of Metals v0.11.12. This release brings
+mostly stability fixes, some various improvements, and a start towards better
+issue identification and reporting when users experience issues.
 
 <table>
 <tbody>
@@ -35,10 +36,9 @@ For full details: [https://github.com/scalameta/metals/milestone/56?closed=1]
 (https://github.com/scalameta/metals/milestone/56?closed=1)
 
 Metals is a language server for Scala that works with VS Code, Vim, Emacs and
-Sublime Text. Metals is developed at the
-[Scala Center](https://scala.epfl.ch/) and [VirtusLab](https://virtuslab.com)
-with the help from [Lunatech](https://lunatech.com) along with contributors from
-the community.
+Sublime Text. Metals is developed at the [Scala Center](https://scala.epfl.ch/)
+and [VirtusLab](https://virtuslab.com) with the help from
+[Lunatech](https://lunatech.com) along with contributors from the community.
 
 ## TL;DR
 
@@ -52,23 +52,41 @@ give Metals a try!
 
 ## Introducing Error Reports
 
-Starting with this release, upon chosen errors or incorrect states in metals error reports will be automatically generated and saved in the `.metals/.reports` directory within the workspace. Such an error report can later be used by users to attach to a github issue with additional information. All the reports have their paths anonymised.
+Starting with this release, upon chosen errors or incorrect states in metals
+error reports will be automatically generated and saved in the
+`.metals/.reports` directory within the workspace. Such an error report can
+later be used by users to attach to a github issue with additional information.
+All the reports have their paths anonymised.
 
 Currently, we create two types of reports:
 
-- _incognito_ under `.metals/.reports/metals`: these error reports contain only metals related stacktraces and should not contain any sensitive/private information
-- _unsanitized_ under `.metals/.reports/metals-full`: these error reports may contain come sensitive/private information (e.g. code snippets)
+- _incognito_ under `.metals/.reports/metals`: these error reports contain only
+  metals related stacktraces and should not contain any sensitive/private
+  information
+- _unsanitized_ under `.metals/.reports/metals-full`: these error reports may
+  contain come sensitive/private information (e.g. code snippets)
 
-To make it easier to attach reports to github issues the `zip-reports` command will zip all the **incognito** reports into `.metals/.reports/report.zip`, while unsanitized reports will have to be browsed and attached by hand. In order not to clutter the workspace too much, only up to 30 last reports of each kind are kept at a time.
+To make it easier to attach reports to github issues the `zip-reports` command
+will zip all the **incognito** reports into `.metals/.reports/report.zip`, while
+unsanitized reports will have to be browsed and attached by hand. In order not
+to clutter the workspace too much, only up to 30 last reports of each kind are
+kept at a time.
 
-When running into a problem in VSCode (or any editor that implements this command) users can use the `Metals: Open new github issue` command. This will create a template for an issue with all basic info such as Metals version, used build server etc.. Next, you can browse through reports and drag and drop chosen ones to your GitHub issue. Invoking the `Metals: Zip reports` command will create a zip of all the incognito that reports can also be included in the issue.
+When running into a problem in VSCode (or any editor that implements this
+command) users can use the `Metals: Open new github issue` command. This will
+create a template for an issue with all basic info such as Metals version, used
+build server etc.. Next, you can browse through reports and drag and drop chosen
+ones to your GitHub issue. Invoking the `Metals: Zip reports` command will
+create a zip of all the incognito that reports can also be included in the
+issue.
 
 ![Reports](https://i.imgur.com/wBwFjpZ.gif)
 ![Zip reports](https://i.imgur.com/YN3U3N9.gif)
 
 ## New code action for converting dependencies from sbt to scala-cli compliant ones
 
-New code action for scala-cli `using (dep | lib | plugin)` directives, which allows to convert dependencies from sbt style to scala-cli compliant ones.
+New code action for scala-cli `using (dep | lib | plugin)` directives, which
+allows to convert dependencies from sbt style to scala-cli compliant ones.
 
 ![Convert dependency](https://i.imgur.com/G9W7Nox.gif)
 
@@ -76,7 +94,9 @@ A great contribution by [majk-p](https://github.com/majk-p).
 
 ## Improvements to semantic highlighting
 
-This release brings a lot of improvements for semantic highlighting thanks to [jkciesluk](https://github.com/scalameta/metals/pulls/jkciesluk) and [tgodzik](https://github.com/tgodzik). This includes:
+This release brings a lot of improvements for semantic highlighting thanks to
+[jkciesluk](https://github.com/scalameta/metals/pulls/jkciesluk) and
+[tgodzik](https://github.com/tgodzik). This includes:
 
 - Added declaration and definition tokens.
 - Parameters are now read only.
@@ -87,33 +107,56 @@ This release brings a lot of improvements for semantic highlighting thanks to [j
 
 ## Miscellaneous
 
-- bugfix: Ignored tests now show up in the test explorer. [kpodsiad](https://github.com/kpodsiad)
+- bugfix: Ignored tests now show up in the test explorer.
+  [kpodsiad](https://github.com/kpodsiad)
 - improvement: Reworked package rename upon file move.
-- bugfix: Fixed go to and hover for `TypeTest`. [tgodzik](https://github.com/tgodzik)
-- feature: Auto connect to bazel-bsp if it's installed. [tanishiking](https://github.com/tanishiking)
+- bugfix: Fixed go to and hover for `TypeTest`.
+  [tgodzik](https://github.com/tgodzik)
+- feature: Auto connect to bazel-bsp if it's installed.
+  [tanishiking](https://github.com/tanishiking)
 - docs: Updated emacs support table. [kurnevsky](https://github.com/kurnevsky)
-- bugfix: Placing cursor on primary contructor type parameter no longer incorrectly highlights type parameter with the same name used in a member definiton. [tgodzik](https://github.com/tgodzik)
-- bugfix: Added Reload sbt after changes in the `metals.sbt` plugin file. [adpi2](https://github.com/adpi2)
+- bugfix: Placing cursor on primary contructor type parameter no longer
+  incorrectly highlights type parameter with the same name used in a member
+  definiton. [tgodzik](https://github.com/tgodzik)
+- bugfix: Added Reload sbt after changes in the `metals.sbt` plugin file.
+  [adpi2](https://github.com/adpi2)
 - bugfix: Added handling fixing wildcard imports upon file rename.
-- bugfix: Added refresh test case code lenses after test discovery. [LaurenceWarne](https://github.com/LaurenceWarne)
-- bugfix: Fixed lacking newline for new imports added upon file move. [susliko](https://github.com/susliko)
+- bugfix: Added refresh test case code lenses after test discovery.
+  [LaurenceWarne](https://github.com/LaurenceWarne)
+- bugfix: Fixed lacking newline for new imports added upon file move.
+  [susliko](https://github.com/susliko)
 - bugfix: Add showing lenses when BSP server is plain Scala.
-- bugfix: A workaround for running BSP sbt when it's installed in a directory with a space on Widows. [tgodzik](https://github.com/tgodzik)
+- bugfix: A workaround for running BSP sbt when it's installed in a directory
+  with a space on Widows. [tgodzik](https://github.com/tgodzik)
 - improvement: If an aliased inferred type is not in scope dealias it.
-- feature: Add hover information for structural types. [jkciesluk](https://github.com/jkciesluk)
-- feature: Inline code action will be no longer executed if any of the references used on the right-hand side of the value to be inlined are shadowed by local definitions. In this case a warning will be shown to the user instead.
-- bugfix: Fixed test suite discovery in presence of a companion object. [xydrolase](https://github.com/xydrolase)
-- bugfix: Fixed shown return type of completions, that are no argument members, which return type depends on the ower type parameter.
+- feature: Add hover information for structural types.
+  [jkciesluk](https://github.com/jkciesluk)
+- feature: Inline code action will be no longer executed if any of the
+  references used on the right-hand side of the value to be inlined are shadowed
+  by local definitions. In this case a warning will be shown to the user
+  instead.
+- bugfix: Fixed test suite discovery in presence of a companion object.
+  [xydrolase](https://github.com/xydrolase)
+- bugfix: Fixed shown return type of completions, that are no argument members,
+  which return type depends on the ower type parameter.
 - bugfix: Strip ANSI colors before printing worksheet results.
-- improvement: Force close thread when file watching cancel hangs. [tgodzik](https://github.com/tgodzik)
-- bugfix: Add end condition for tokenizing partially written code, so tokenizing doesn't hang. [tgodzik](https://github.com/tgodzik)
-- bugfix: Correctly adjust span for extension methods for correctly displayed highligh. [jkciesluk](https://github.com/jkciesluk)
-- bugfix: Correctly show `Expression type` (dealiased type) for parametrized types.
-- bugfix: Filter out `-Ycheck-reentrant` option for worksheets, so worksheets correctly show results. [tgodzik](https://github.com/tgodzik)
-- bugfix: Show correct defaults when named parameters order is mixed in Scala 2. [tgodzik](https://github.com/tgodzik)
+- improvement: Force close thread when file watching cancel hangs.
+  [tgodzik](https://github.com/tgodzik)
+- bugfix: Add end condition for tokenizing partially written code, so tokenizing
+  doesn't hang. [tgodzik](https://github.com/tgodzik)
+- bugfix: Correctly adjust span for extension methods for correctly displayed
+  highligh. [jkciesluk](https://github.com/jkciesluk)
+- bugfix: Correctly show `Expression type` (dealiased type) for parametrized
+  types.
+- bugfix: Filter out `-Ycheck-reentrant` option for worksheets, so worksheets
+  correctly show results. [tgodzik](https://github.com/tgodzik)
+- bugfix: Show correct defaults when named parameters order is mixed in Scala 2.
+  [tgodzik](https://github.com/tgodzik)
 - bugfix: Print better constructors in synthetic decorator.
-- bugfix: Show synthetic objects as options for case classes and AnyVal implicit classes in `Metals Analayze Source`. [kpodsiad](https://github.com/kpodsiad)
-- bugfix: Corrrectly handle testfiles renames in test explorer. [kpodsiad](https://github.com/kpodsiad)
+- bugfix: Show synthetic objects as options for case classes and AnyVal implicit
+  classes in `Metals Analayze Source`. [kpodsiad](https://github.com/kpodsiad)
+- bugfix: Corrrectly handle testfiles renames in test explorer.
+  [kpodsiad](https://github.com/kpodsiad)
 
 ## Contributors
 
@@ -235,8 +278,8 @@ $ git shortlog -sn --no-merges v0.11.11..v0.11.12
 - improvement: Extract shared mtags without scalameta dependency
   [\#5075](https://github.com/scalameta/metals/pull/5075)
   ([rochala](https://github.com/rochala))
-- build(deps): bump @docusaurus/plugin-client-redirects from 2.3.1 to 2.4.0 in /website
-  [\#5111](https://github.com/scalameta/metals/pull/5111)
+- build(deps): bump @docusaurus/plugin-client-redirects from 2.3.1 to 2.4.0 in
+  /website [\#5111](https://github.com/scalameta/metals/pull/5111)
   ([dependabot[bot]](https://github.com/dependabot[bot]))
 - build(deps): Update xnio-nio from 3.8.8.Final to 3.8.9.Final
   [\#5113](https://github.com/scalameta/metals/pull/5113)

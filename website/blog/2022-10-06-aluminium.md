@@ -1,8 +1,6 @@
 ---
-author: Tomasz Godzik
+authors: tgodzik
 title: Metals v0.11.9 - Aluminium
-authorURL: https://twitter.com/TomekGodzik
-authorImageURL: https://github.com/tgodzik.png
 ---
 
 We're happy to announce the release of Metals v0.11.9, which brings some of the
@@ -35,7 +33,8 @@ the new contributors for their great work!
 </tbody>
 </table>
 
-For full details: [https://github.com/scalameta/metals/milestone/53?closed=1](https://github.com/scalameta/metals/milestone/53?closed=1)
+For full details:
+[https://github.com/scalameta/metals/milestone/53?closed=1](https://github.com/scalameta/metals/milestone/53?closed=1)
 
 Metals is a language server for Scala that works with VS Code, Vim, Emacs and
 Sublime Text. Metals is developed at the [Scala Center](https://scala.epfl.ch/)
@@ -269,7 +268,8 @@ the user facing ones are mentioned here:
 - feature: Improved completions in type positions
 - feature: Add completion for extends keyword after classes/traits/objects/enums
 - improvement: Don't show misconfigured test message
-- bugfix: Add backticks where needed in "convert to named arguments" [kubukoz](https://github.com/kubukoz)
+- bugfix: Add backticks where needed in "convert to named arguments"
+  [kubukoz](https://github.com/kubukoz)
 - bugfix: Try to download semanticdb even if it might not be supported
 - bugfix: Properly write constant types in signatures
 - bugfix: Allow to add jvmopts and env variables when running tests

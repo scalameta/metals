@@ -1,8 +1,6 @@
 ---
-author: Tomasz Godzik
+authors: tgodzik
 title: Metals v0.11.0 - Aluminium
-authorURL: https://twitter.com/TomekGodzik
-authorImageURL: https://github.com/tgodzik.png
 ---
 
 We're happy to announce the release of Metals v0.11.0! Due to the number of
@@ -351,8 +349,7 @@ Thomas Lopatic
 
 **Merged pull requests:**
 
-- Update Bloop to 1.4.12
-  [\#3497](https://github.com/scalameta/metals/pull/3497)
+- Update Bloop to 1.4.12 [\#3497](https://github.com/scalameta/metals/pull/3497)
   ([tgodzik](https://github.com/tgodzik))
 - Fix issues with renames in Java files
   [\#3495](https://github.com/scalameta/metals/pull/3495)

@@ -1,8 +1,6 @@
 ---
-author: Tomasz Godzik
+authors: tgodzik
 title: Metals v1.4.0 - Palladium
-authorURL: https://twitter.com/TomekGodzik
-authorImageURL: https://github.com/tgodzik.png
 ---
 
 We're happy to announce the release of Metals v1.4.0, with the main focus on
@@ -84,7 +82,7 @@ old server will no longer be used by any tool known to us.
 
 Metals allows users to customize the default options for the Bloop build server.
 However, in most cases, it is best to use the defaults, which will be applied if
-the `metals.bloopJvmOptions `setting is missing or set to an empty array.
+the `metals.bloopJvmOptions`setting is missing or set to an empty array.
 
 The new default JVM options for Bloop are as follows:
 
