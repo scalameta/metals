@@ -120,11 +120,9 @@ def template(
   s"""|---
       |author: $author
       |title: Metals $lastTag - $codename
-      |authorURL: https://twitter.com/<login>
-      |authorImageURL: https://github.com/<login>.png
       |---
       |
-      |We're happy to announce the release of Metals $lastTag, which 
+      |We're happy to announce the release of Metals $lastTag, which
       |
       |<table>
       |<tbody>
