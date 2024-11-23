@@ -12,8 +12,8 @@ of each page and submit those changes directly on GitHub.
 
 For running the website locally, you'll need:
 
-- `yarn` (https://yarnpkg.com/lang/en/docs/install-ci/)
-- `sbt` (https://www.scala-sbt.org/1.0/docs/Setup.html)
+- `yarn` (https://classic.yarnpkg.com/docs/install)
+- `sbt` (https://www.scala-sbt.org/1.x/docs/Setup.html)
 
 In addition to Docusaurus, we preprocess the markdown files using:
 
