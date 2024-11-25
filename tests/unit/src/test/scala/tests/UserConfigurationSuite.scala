@@ -1,13 +1,22 @@
 package tests
 
+import java.nio.file.Paths
 import java.util.Properties
 
+import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.InlayHintsOption
+import scala.meta.internal.metals.InlayHintsOptions
 import scala.meta.internal.metals.JavaFormatConfig
+import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
 import munit.Location
+import org.eclipse.lsp4j.InitializeParams
 
 class UserConfigurationSuite extends BaseSuite {
   def check(
@@ -226,5 +235,126 @@ class UserConfigurationSuite extends BaseSuite {
         JavaFormatConfig(AbsolutePath("path"), None)
       )
     )
+  }
+
+  test("check-print") {
+    val fakePath = AbsolutePath(Paths.get("./.scalafmt.conf"))
+    val fakePathString = fakePath.toString().replace("\\", "\\\\")
+
+    val nonDefault = UserConfiguration(
+      javaHome = Some("/fake/home"),
+      sbtScript = Some("sbt"),
+      gradleScript = Some("gradle"),
+      mavenScript = Some("mvn"),
+      millScript = Some("mill"),
+      scalafmtConfigPath = Some(fakePath),
+      scalafixConfigPath = Some(fakePath),
+      symbolPrefixes = Map("java/util/" -> "hello."),
+      worksheetScreenWidth = 140,
+      worksheetCancelTimeout = 10,
+      bloopSbtAlreadyInstalled = true,
+      bloopVersion = Some("1.2.3"),
+      bloopJvmProperties = Some(List("a", "b", "c")),
+      ammoniteJvmProperties = Some(List("aa", "bb", "cc")),
+      superMethodLensesEnabled = true,
+      inlayHintsOptions = InlayHintsOptions(
+        Map(
+          InlayHintsOption.HintsInPatternMatch -> true,
+          InlayHintsOption.ImplicitArguments -> true,
+          InlayHintsOption.InferredType -> true,
+          InlayHintsOption.ImplicitConversions -> true,
+          InlayHintsOption.TypeParameters -> true,
+        )
+      ),
+      enableStripMarginOnTypeFormatting = false,
+      enableIndentOnPaste = true,
+      enableSemanticHighlighting = false,
+      excludedPackages = Some(List("excluded")),
+      fallbackScalaVersion = Some("3.2.1"),
+      testUserInterface = TestUserInterfaceKind.TestExplorer,
+      javaFormatConfig = Some(JavaFormatConfig(fakePath, Some("profile"))),
+      scalafixRulesDependencies = List("rule1", "rule2"),
+      customProjectRoot = Some("customs"),
+      verboseCompilation = true,
+      automaticImportBuild = AutoImportBuildKind.All,
+      scalaCliLauncher = Some("scala-cli"),
+      defaultBspToBuildTool = true,
+    )
+
+    val json = nonDefault.toString()
+    assertNoDiff(
+      json,
+      s"""|{
+          |  "enableIndentOnPaste": true,
+          |  "customProjectRoot": "customs",
+          |  "millScript": "mill",
+          |  "javaFormat": {
+          |    "eclipseConfigPath": "$fakePathString",
+          |    "eclipseProfile": "profile"
+          |  },
+          |  "defaultBspToBuildTool": true,
+          |  "excludedPackages": [
+          |    "excluded"
+          |  ],
+          |  "bloopJvmProperties": [
+          |    "a",
+          |    "b",
+          |    "c"
+          |  ],
+          |  "ammoniteJvmProperties": [
+          |    "aa",
+          |    "bb",
+          |    "cc"
+          |  ],
+          |  "enableStripMarginOnTypeFormatting": false,
+          |  "gradleScript": "gradle",
+          |  "scalafixConfigPath": "$fakePathString",
+          |  "superMethodLensesEnabled": true,
+          |  "bloopSbtAlreadyInstalled": true,
+          |  "symbolPrefixes": {
+          |    "java/util/": "hello."
+          |  },
+          |  "inlayHintsOptions": {
+          |    "HintsInPatternMatch": "true",
+          |    "ImplicitArguments": "true",
+          |    "TypeParameters": "true",
+          |    "InferredType": "true",
+          |    "ImplicitConversions": "true"
+          |  },
+          |  "scalafixRulesDependencies": [
+          |    "rule1",
+          |    "rule2"
+          |  ],
+          |  "testUserInterface": "test explorer",
+          |  "bloopVersion": "1.2.3",
+          |  "fallbackScalaVersion": "3.2.1",
+          |  "autoImportBuilds": "all",
+          |  "enableSemanticHighlighting": false,
+          |  "scalaCliLauncher": "scala-cli",
+          |  "sbtScript": "sbt",
+          |  "mavenScript": "mvn",
+          |  "verboseCompilation": true,
+          |  "worksheetCancelTimeout": 10,
+          |  "worksheetScreenWidth": 140,
+          |  "scalafmtConfigPath": "$fakePathString",
+          |  "javaHome": "/fake/home"
+          |}
+          |""".stripMargin,
+    )
+    val roundtripJson = UserConfiguration.parse(json)
+
+    val params = new InitializeParams()
+    params.setInitializationOptions(
+      Map("testExplorerProvider" -> true).asJava.toJsonObject
+    )
+
+    val clientConfig = ClientConfiguration(MetalsServerConfig.default, params)
+
+    val roundtrip = UserConfiguration
+      .fromJson(roundtripJson, clientConfig)
+      .getOrElse(fail("Failed to parse roundtrip json"))
+      // maps have a different order
+      .copy(inlayHintsOptions = nonDefault.inlayHintsOptions)
+    assertEquals(roundtrip, nonDefault)
   }
 }

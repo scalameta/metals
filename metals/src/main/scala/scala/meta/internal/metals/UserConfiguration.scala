@@ -7,12 +7,13 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.JsonParser.XtensionSerializedAsOption
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig
 
+import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
@@ -57,6 +58,95 @@ case class UserConfiguration(
     scalaCliLauncher: Option[String] = None,
     defaultBspToBuildTool: Boolean = false,
 ) {
+
+  override def toString(): String = {
+    def mapField[K, T](
+        key: String,
+        opts: Map[K, T],
+    ): Option[(String, java.util.Map[String, String])] = {
+      val serializable = opts.map { case (k, v) =>
+        (k.toString(), v.toString())
+      }
+      Some((key, serializable.asJava))
+    }
+
+    def listField[T](key: String, list: Option[List[String]]) = {
+      list match {
+        case None => None
+        case Some(value) => Some(key -> value.asJava)
+      }
+    }
+
+    def optStringField(
+        key: String,
+        value: Option[Any],
+    ): Option[(String, Any)] =
+      value match {
+        case None => None
+        case Some(value) => Some(key -> value.toString)
+      }
+
+    val fields = List(
+      optStringField("javaHome", javaHome),
+      optStringField("sbtScript", sbtScript),
+      optStringField("gradleScript", gradleScript),
+      optStringField("mavenScript", mavenScript),
+      optStringField("millScript", millScript),
+      optStringField("scalafmtConfigPath", scalafmtConfigPath),
+      optStringField("scalafixConfigPath", scalafixConfigPath),
+      optStringField("scalafixConfigPath", scalafixConfigPath),
+      mapField("symbolPrefixes", symbolPrefixes),
+      Some(("worksheetScreenWidth", worksheetScreenWidth)),
+      Some(("worksheetCancelTimeout", worksheetCancelTimeout)),
+      Some(("bloopSbtAlreadyInstalled", bloopSbtAlreadyInstalled)),
+      optStringField("bloopVersion", bloopVersion),
+      listField("bloopJvmProperties", bloopJvmProperties),
+      listField("ammoniteJvmProperties", ammoniteJvmProperties),
+      Some(("superMethodLensesEnabled", superMethodLensesEnabled)),
+      mapField("inlayHintsOptions", inlayHintsOptions.options),
+      Some(
+        (
+          "enableStripMarginOnTypeFormatting",
+          enableStripMarginOnTypeFormatting,
+        )
+      ),
+      Some(("enableIndentOnPaste", enableIndentOnPaste)),
+      Some(
+        (
+          "enableSemanticHighlighting",
+          enableSemanticHighlighting,
+        )
+      ),
+      listField("excludedPackages", excludedPackages),
+      optStringField("fallbackScalaVersion", fallbackScalaVersion),
+      Some("testUserInterface" -> testUserInterface.toString()),
+      javaFormatConfig.map(value =>
+        "javaFormat" -> List(
+          Some("eclipseConfigPath" -> value.eclipseFormatConfigPath.toString()),
+          value.eclipseFormatProfile.map("eclipseProfile" -> _),
+        ).flatten.toMap.asJava
+      ),
+      listField(
+        "scalafixRulesDependencies",
+        Some(scalafixRulesDependencies),
+      ),
+      optStringField("customProjectRoot", customProjectRoot),
+      Some(("verboseCompilation", verboseCompilation)),
+      Some(
+        "autoImportBuilds" ->
+          automaticImportBuild.toString().toLowerCase()
+      ),
+      optStringField("scalaCliLauncher", scalaCliLauncher),
+      Some(
+        (
+          "defaultBspToBuildTool",
+          defaultBspToBuildTool,
+        )
+      ),
+    ).flatten.toMap.asJava
+    val gson = new GsonBuilder().setPrettyPrinting().create()
+    gson.toJson(fields).toString()
+  }
 
   def shouldAutoImportNewProject: Boolean =
     automaticImportBuild != AutoImportBuildKind.Off
@@ -697,13 +787,17 @@ object UserConfiguration {
 
 sealed trait TestUserInterfaceKind
 object TestUserInterfaceKind {
-  object CodeLenses extends TestUserInterfaceKind
-  object TestExplorer extends TestUserInterfaceKind
+  object CodeLenses extends TestUserInterfaceKind {
+    override def toString: String = "code lenses"
+  }
+  object TestExplorer extends TestUserInterfaceKind {
+    override def toString: String = "test explorer"
+  }
 }
 
 sealed trait AutoImportBuildKind
 object AutoImportBuildKind {
-  object Off extends AutoImportBuildKind
-  object Initial extends AutoImportBuildKind
-  object All extends AutoImportBuildKind
+  case object Off extends AutoImportBuildKind
+  case object Initial extends AutoImportBuildKind
+  case object All extends AutoImportBuildKind
 }
