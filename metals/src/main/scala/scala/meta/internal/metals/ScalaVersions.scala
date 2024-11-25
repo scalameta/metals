@@ -27,8 +27,11 @@ class ScalaVersions(
   private val _isSupportedScalaVersion: Set[String] =
     supportedScalaVersions.toSet
 
-  def isSupportedAtReleaseMomentScalaVersion(version: String): Boolean =
-    _isSupportedScalaVersion(dropVendorSuffix(version))
+  def isSupportedAtReleaseMomentScalaVersion(version: String): Boolean = {
+    val versionWithoutVendorSuffix = dropVendorSuffix(version)
+    SemVer.isLaterVersion("3.3.3", versionWithoutVendorSuffix) ||
+    _isSupportedScalaVersion(versionWithoutVendorSuffix)
+  }
 
   def isDeprecatedScalaVersion(version: String): Boolean =
     _isDeprecatedScalaVersion(dropVendorSuffix(version))

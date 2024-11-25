@@ -11,6 +11,7 @@ import scala.meta.internal.metals.Messages.GenerateBspAndConnect
 import scala.meta.internal.metals.Messages.ImportBuild
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
@@ -25,6 +26,7 @@ sealed trait BuildServerInitializer {
       server: TestingServer,
       client: TestingClient,
       expectError: Boolean,
+      userConfig: UserConfiguration,
       workspaceFolders: Option[List[String]] = None,
   )(implicit ec: ExecutionContext): Future[InitializeResult]
 }
@@ -40,6 +42,7 @@ object QuickBuildInitializer extends BuildServerInitializer {
       server: TestingServer,
       client: TestingClient,
       expectError: Boolean,
+      userConfig: UserConfiguration,
       workspaceFolders: Option[List[String]] = None,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     val foldersToInit =
@@ -51,6 +54,7 @@ object QuickBuildInitializer extends BuildServerInitializer {
     for {
       initializeResult <- server.initialize(workspaceFolders)
       _ <- server.initialized()
+      _ <- server.didChangeConfiguration(userConfig.toString)
     } yield {
       if (!expectError) {
         server.assertBuildServerConnection()
@@ -71,6 +75,7 @@ object BloopImportInitializer extends BuildServerInitializer {
       server: TestingServer,
       client: TestingClient,
       expectError: Boolean,
+      userConfig: UserConfiguration,
       workspaceFolders: Option[List[String]] = None,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     for {
@@ -78,6 +83,7 @@ object BloopImportInitializer extends BuildServerInitializer {
       // Import build using Bloop
       _ = client.importBuild = ImportBuild.yes
       _ <- server.initialized()
+      _ <- server.didChangeConfiguration(userConfig.toString())
     } yield {
       if (!expectError) {
         server.assertBuildServerConnection()
@@ -99,6 +105,7 @@ object SbtServerInitializer extends BuildServerInitializer {
       server: TestingServer,
       client: TestingClient,
       expectError: Boolean,
+      userConfig: UserConfiguration,
       workspaceFolders: Option[List[String]] = None,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     val paths = workspaceFolders match {
@@ -123,6 +130,7 @@ object SbtServerInitializer extends BuildServerInitializer {
           )
         }
       }
+      _ <- server.didChangeConfiguration(userConfig.toString)
       _ <- paths.zipWithIndex.foldLeft(Future.successful(())) {
         case (future, (_, i)) =>
           future.flatMap { _ =>
@@ -178,11 +186,13 @@ object MillServerInitializer extends BuildServerInitializer {
       server: TestingServer,
       client: TestingClient,
       expectError: Boolean,
+      userConfig: UserConfiguration,
       workspaceFolders: Option[List[String]] = None,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     for {
       initializeResult <- server.initialize()
       _ <- server.initialized()
+      _ <- server.didChangeConfiguration(userConfig.toString)
       // choose mill-bsp as the Bsp Server
       _ = client.selectBspServer = { _ => new MessageActionItem("mill-bsp") }
       _ <- server.executeCommand(ServerCommands.BspSwitch)
@@ -202,6 +212,7 @@ object BazelServerInitializer extends BuildServerInitializer {
       server: TestingServer,
       client: TestingClient,
       expectError: Boolean,
+      userConfig: UserConfiguration,
       workspaceFolders: Option[List[String]] = None,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     for {
@@ -209,6 +220,7 @@ object BazelServerInitializer extends BuildServerInitializer {
       // Import build using Bazel
       _ = client.generateBspAndConnect = GenerateBspAndConnect.yes
       _ <- server.initialized()
+      _ <- server.didChangeConfiguration(userConfig.toString)
     } yield {
       if (!expectError) {
         server.assertBuildServerConnection()

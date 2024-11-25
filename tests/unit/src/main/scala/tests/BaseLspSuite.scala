@@ -121,7 +121,7 @@ abstract class BaseLspSuite(
   ): Future[InitializeResult] = {
     Debug.printEnclosing()
     writeLayout(layout)
-    initializer.initialize(workspace, server, client, expectError)
+    initializer.initialize(workspace, server, client, expectError, userConfig)
   }
 
   def initialize(
@@ -137,6 +137,7 @@ abstract class BaseLspSuite(
       server,
       client,
       expectError,
+      userConfig,
       Some(layout.keys.toList),
     )
   }
