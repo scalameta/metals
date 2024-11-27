@@ -79,7 +79,9 @@ class CompletionProvider(
       val symName = if (sym.name.isTermName) sym.name.dropLocal else sym.name
       context.lookupSymbol(symName, _ => true) match {
         case LookupSucceeded(_, symbol)
-            if sym.effectiveOwner.exists && symbol.effectiveOwner.exists && symbol.effectiveOwner != sym.effectiveOwner =>
+            if sym.effectiveOwner.exists && symbol.effectiveOwner.exists &&
+              !symbol.effectiveOwner.isAnonymousFunction &&
+              symbol.effectiveOwner != sym.effectiveOwner =>
           findNonConflictingPrefix(
             sym.effectiveOwner,
             Identifier.backtickWrap(sym.effectiveOwner.name.decoded) :: acc

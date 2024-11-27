@@ -252,6 +252,34 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       |import obj.method""".stripMargin
   )
 
+  checkEdit(
+    "anon-func",
+    """|import scala.concurrent.Future
+       |
+       |object OO {
+       |  
+       |    def resolveActions(codeActions: List[Int]): Future[List[Int]] = {
+       |      val afterResolved = codeActions.map {
+       |         case action if act@@ => action
+       |      }
+       |      ???
+       |    }
+       |}
+       |""".stripMargin,
+    """|import scala.concurrent.Future
+       |
+       |object OO {
+       |  
+       |    def resolveActions(codeActions: List[Int]): Future[List[Int]] = {
+       |      val afterResolved = codeActions.map {
+       |         case action if action => action
+       |      }
+       |      ???
+       |    }
+       |}
+       |""".stripMargin
+  )
+
   // We shouldn't get exhaustive completions for AbsolutePath
   // related to https://github.com/scala/scala/commit/14fa7bef120cbb996d042daba6095530167c49ed
   check(
