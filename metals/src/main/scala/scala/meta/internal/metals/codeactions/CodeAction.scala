@@ -3,7 +3,9 @@ package scala.meta.internal.metals.codeactions
 import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.reflect.ClassTag
 
+import scala.meta.internal.metals.JsonParser
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ParametrizedCommand
 import scala.meta.pc.CancelToken
@@ -17,6 +19,33 @@ trait CodeAction {
    * listed in [[org.eclipse.lsp4j.CodeActionKind]]
    */
   def kind: String
+
+  private def className = this.getClass().getSimpleName()
+  protected trait CodeActionResolveData {
+    this: Product =>
+
+    /**
+     * Name is neccessary to identify what code action is being resolved.
+     *
+     * Gson will attempt to fill this field during deserialization,
+     * but if it's the wrong data the name will be wrong.
+     */
+    val codeActionName: String = className
+
+    def notNullFields: Boolean = this.productIterator.forall(_ != null)
+  }
+
+  protected def parseData[T <: CodeActionResolveData](
+      codeAction: l.CodeAction
+  )(implicit clsTag: ClassTag[T]): Option[T] = {
+    val parser = new JsonParser.Of[T]
+    codeAction.getData() match {
+      case parser.Jsonized(data)
+          if data.codeActionName == className && data.notNullFields =>
+        Some(data)
+      case _ => None
+    }
+  }
 
   /**
    * The CodeActionId for this code action, if applicable. CodeActionId is only

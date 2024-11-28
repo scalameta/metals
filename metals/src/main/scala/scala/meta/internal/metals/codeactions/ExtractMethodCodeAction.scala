@@ -9,7 +9,6 @@ import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.internal.metals.Compilers
-import scala.meta.internal.metals.JsonParser
 import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.logging
@@ -23,24 +22,20 @@ class ExtractMethodCodeAction(
     trees: Trees,
     compilers: Compilers,
 ) extends CodeAction {
-  ExtractMethodCodeAction
 
-  private val parser = new JsonParser.Of[ExtractMethodParams]
-
-  private case class ExtractMethodParams(
+  private case class ExtractMethodData(
       param: l.TextDocumentIdentifier,
       range: l.Range,
       extractPosition: l.Position,
-  )
+  ) extends CodeActionResolveData
 
   override def kind: String = l.CodeActionKind.RefactorExtract
 
   override def resolveCodeAction(codeAction: l.CodeAction, token: CancelToken)(
       implicit ec: ExecutionContext
   ): Option[Future[l.CodeAction]] = {
-    val data = codeAction.getData()
-    data match {
-      case parser.Jsonized(data) =>
+    parseData[ExtractMethodData](codeAction) match {
+      case Some(data) =>
         val doc = data.param
         val uri = doc.getUri()
         val modifiedCodeAction = for {
@@ -109,7 +104,7 @@ class ExtractMethodCodeAction(
             head.pos.toLsp.getStart(),
             expr.pos.toLsp.getEnd(),
           )
-          val data = ExtractMethodParams(
+          val data = ExtractMethodData(
             params.getTextDocument(),
             exprRange,
             defnPos.pos.toLsp.getStart(),
