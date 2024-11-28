@@ -8,9 +8,8 @@ import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.XtensionSyntax
 import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.metals.logging
@@ -22,39 +21,40 @@ import org.eclipse.{lsp4j => l}
 class ConvertToNamedArguments(
     trees: Trees,
     compilers: Compilers,
-    languageClient: MetalsLanguageClient,
 ) extends CodeAction {
 
   import ConvertToNamedArguments._
+
+  case class ConvertToNamedArgsData(
+      position: l.TextDocumentPositionParams,
+      argIndices: java.util.List[Integer],
+  ) extends CodeActionResolveData
+
   override val kind: String = l.CodeActionKind.RefactorRewrite
 
-  override type CommandData = ServerCommands.ConvertToNamedArgsRequest
-
-  override def command: Option[ActionCommand] = Some(
-    ServerCommands.ConvertToNamedArguments
-  )
-
-  override def handleCommand(
-      data: ServerCommands.ConvertToNamedArgsRequest,
-      token: CancelToken,
-  )(implicit ec: ExecutionContext): Future[Unit] = {
-    val uri = data.position.getTextDocument().getUri()
-    for {
-      edits <- compilers.convertToNamedArguments(
-        data.position,
-        data.argIndices,
-        token,
-      )
-      _ = logging.logErrorWhen(
-        edits.isEmpty(),
-        s"Could not find the correct names for arguments at ${data.position} with indices ${data.argIndices.asScala
-            .mkString(",")}",
-      )
-      workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
-      _ <- languageClient
-        .applyEdit(new l.ApplyWorkspaceEditParams(workspaceEdit))
-        .asScala
-    } yield ()
+  override def resolveCodeAction(codeAction: l.CodeAction, token: CancelToken)(
+      implicit ec: ExecutionContext
+  ): Option[Future[l.CodeAction]] = {
+    parseData[ConvertToNamedArgsData](codeAction) match {
+      case Some(data) =>
+        val uri = data.position.getTextDocument().getUri()
+        val result = for {
+          edits <- compilers.convertToNamedArguments(
+            data.position,
+            data.argIndices,
+            token,
+          )
+          _ = logging.logErrorWhen(
+            edits.isEmpty(),
+            s"Could not find the correct names for arguments at ${data.position} with indices ${data.argIndices.asScala
+                .mkString(",")}",
+          )
+          workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
+          _ = codeAction.setEdit(workspaceEdit)
+        } yield codeAction
+        Some(result)
+      case None => None
+    }
   }
 
   private def getTermWithArgs(
@@ -146,19 +146,16 @@ class ConvertToNamedArguments(
             params.getTextDocument(),
             new l.Position(apply.app.pos.endLine, apply.app.pos.endColumn),
           )
-          val command =
-            ServerCommands.ConvertToNamedArguments.toLsp(
-              ServerCommands
-                .ConvertToNamedArgsRequest(
-                  position,
-                  apply.argIndices.map(Integer.valueOf).asJava,
-                )
+          val data =
+            ConvertToNamedArgsData(
+              position,
+              apply.argIndices.map(Integer.valueOf).asJava,
             )
 
           val codeAction = CodeActionBuilder.build(
             title = title(methodName(apply.app, isFirst = true)),
             kind = l.CodeActionKind.RefactorRewrite,
-            command = Some(command),
+            data = Some(data.toJsonObject),
           )
 
           Future.successful(Seq(codeAction))

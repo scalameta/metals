@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import java.{util => ju}
 import javax.annotation.Nullable
 
 import scala.meta.internal.metals.newScalaFile.NewFileTypes
@@ -629,21 +628,6 @@ object ServerCommands {
        |""".stripMargin,
   )
 
-  final case class ConvertToNamedArgsRequest(
-      position: TextDocumentPositionParams,
-      argIndices: ju.List[Integer],
-  )
-  val ConvertToNamedArguments =
-    new ParametrizedCommand[ConvertToNamedArgsRequest](
-      "convert-to-named-arguments",
-      "Convert positional arguments to named ones",
-      """|Whenever a user chooses code action to convert to named arguments, this command is later run to
-         |determine the parameter names of all unnamed arguments and insert names at the correct locations.
-         |""".stripMargin,
-      """|Object with [TextDocumentPositionParams](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentPositionParams) of the target Apply and `numUnnamedArgs` (int)
-         |""".stripMargin,
-    )
-
   val InsertInferredMethod =
     new ParametrizedCommand[TextDocumentPositionParams](
       "insert-inferred-method",
@@ -751,7 +735,6 @@ object ServerCommands {
       CancelCompile,
       CascadeCompile,
       CleanCompile,
-      ConvertToNamedArguments,
       CopyWorksheetOutput,
       DiscoverMainClasses,
       DiscoverTestSuites,

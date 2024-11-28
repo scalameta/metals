@@ -41,7 +41,7 @@ final class CodeActionProvider(
     new CreateCompanionObjectCodeAction(trees, buffers),
     new ExtractMethodCodeAction(trees, compilers),
     new InlineValueCodeAction(trees, compilers, languageClient),
-    new ConvertToNamedArguments(trees, compilers, languageClient),
+    new ConvertToNamedArguments(trees, compilers),
     new FlatMapToForComprehensionCodeAction(trees, buffers),
     new MillifyDependencyCodeAction(buffers),
     new MillifyScalaCliDependencyCodeAction(buffers),
