@@ -680,6 +680,7 @@ class ScalaCliSuite extends BaseScalaCliSuite("3.3.3") {
       _ <- debugServer.initialize
       _ <- debugServer.launch
       _ <- debugServer.configurationDone
+      _ <- debugServer.awaitOutput("Hello world!", seconds = 20)
       _ <- debugServer.disconnect
       _ <- debugServer.shutdown
       _ <- debugServer.allOutput

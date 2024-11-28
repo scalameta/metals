@@ -16,7 +16,7 @@ final class DebuggeeOutput {
     synchronized {
       output.append(message)
 
-      val remaining = listeners.filterNot(_.matches(output.toString()))
+      val remaining = listeners.filterNot(_.matches(message.toString()))
       listeners = remaining
     }
 
