@@ -162,7 +162,11 @@ class CompletionProvider(
     // related issue https://github.com/lampepfl/dotty/issues/11941
     lazy val kind: CompletionItemKind = completion.completionItemKind
     val description = completion.description(printer)
-    val label = completion.labelWithDescription(printer)
+    val label =
+      if config.isDetailIncludedInLabel then
+        completion.labelWithDescription(printer)
+      else
+        completion.label
     val ident = completion.insertText.getOrElse(completion.label)
 
     def mkItem(

@@ -97,6 +97,13 @@ public interface PresentationCompilerConfig {
 	boolean isCompletionSnippetsEnabled();
 
 	/**
+	 * Returns true if the completion's description should be included in the label.
+	 */
+	default boolean isDetailIncludedInLabel() {
+		return true;
+	}
+
+	/**
 	 * The maximum delay for requests to respond.
 	 *
 	 * After the given delay, every request to completions/hover/signatureHelp is

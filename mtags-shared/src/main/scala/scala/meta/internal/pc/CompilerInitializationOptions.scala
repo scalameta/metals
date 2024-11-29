@@ -16,6 +16,8 @@ package scala.meta.internal.pc
  * @param isHoverDocumentationEnabled whether to include docstrings in a `textDocument/hover`.
  * @param isSignatureHelpDocumentationEnabled whether the `SignatureHelp.documentation` field
  *                                            should be populated.
+ * @param isDetailIncludedInLabel whether the completion's description should be included in the
+ *                                label.
  * @param overrideDefFormat whether the override should include a unicode icon or only ascii.
  * @param parameterHintsCommand command identifier to trigger parameter hints.
  * @param snippetAutoIndent whether the client defaults to adding the indentation of the reference
@@ -28,6 +30,7 @@ case class CompilerInitializationOptions(
     isCompletionItemResolve: Option[Boolean],
     isHoverDocumentationEnabled: Option[Boolean],
     isSignatureHelpDocumentationEnabled: Option[Boolean],
+    isDetailIncludedInLabel: Option[Boolean],
     overrideDefFormat: Option[String],
     parameterHintsCommand: Option[String],
     snippetAutoIndent: Option[Boolean]
@@ -36,6 +39,7 @@ case class CompilerInitializationOptions(
 object CompilerInitializationOptions {
   def default: CompilerInitializationOptions =
     CompilerInitializationOptions(
+      None,
       None,
       None,
       None,
