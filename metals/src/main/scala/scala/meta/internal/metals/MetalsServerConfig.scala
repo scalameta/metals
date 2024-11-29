@@ -225,7 +225,8 @@ object MetalsServerConfig {
         base.copy(
           executeClientCommand = ExecuteClientCommandConfig.on,
           compilers = base.compilers.copy(
-            snippetAutoIndent = false
+            snippetAutoIndent = false,
+            isDetailIncludedInLabel = false,
           ),
         )
       case _ =>

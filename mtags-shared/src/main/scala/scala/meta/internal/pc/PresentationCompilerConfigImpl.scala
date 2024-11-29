@@ -22,6 +22,7 @@ case class PresentationCompilerConfigImpl(
     snippetAutoIndent: Boolean = true,
     isSignatureHelpDocumentationEnabled: Boolean = true,
     isCompletionSnippetsEnabled: Boolean = true,
+    override val isDetailIncludedInLabel: Boolean = true,
     isCompletionItemResolve: Boolean = true,
     _isStripMarginOnTypeFormattingEnabled: () => Boolean = () => true,
     timeoutDelay: Long = 20,
@@ -71,6 +72,9 @@ case class PresentationCompilerConfigImpl(
         ),
       isCompletionItemResolve = options.isCompletionItemResolve.getOrElse(
         this.isCompletionItemResolve
+      ),
+      isDetailIncludedInLabel = options.isDetailIncludedInLabel.getOrElse(
+        this.isDetailIncludedInLabel
       ),
       _parameterHintsCommand = options.parameterHintsCommand.orElse(
         this._parameterHintsCommand

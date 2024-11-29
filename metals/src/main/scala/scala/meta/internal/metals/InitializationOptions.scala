@@ -200,6 +200,9 @@ object InitializationOptions {
       isSignatureHelpDocumentationEnabled = compilerObj.flatMap(
         _.getBooleanOption("isSignatureHelpDocumentationEnabled")
       ),
+      isDetailIncludedInLabel = compilerObj.flatMap(
+        _.getBooleanOption("isDetailIncludedInLabel")
+      ),
       overrideDefFormat = compilerObj.flatMap(
         _.getStringOption("overrideDefFormat")
       ),
@@ -210,7 +213,6 @@ object InitializationOptions {
         compilerObj.flatMap(_.getBooleanOption("snippetAutoIndent")),
     )
   }
-
 }
 
 sealed trait CommandHTMLFormat {

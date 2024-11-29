@@ -111,7 +111,9 @@ class CompletionProvider(
       }
 
       def labelWithSig =
-        if (member.sym.isMethod || member.sym.isValue) {
+        if (
+          compiler.metalsConfig.isDetailIncludedInLabel && (member.sym.isMethod || member.sym.isValue)
+        ) {
           ident + detail
         } else {
           ident
