@@ -4,6 +4,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta._
+import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder
@@ -16,19 +17,62 @@ import org.eclipse.{lsp4j => l}
 class FilterMapToCollectCodeAction(trees: Trees) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorRewrite
 
+  private case class FilterMapCollectParams(
+      param: l.TextDocumentIdentifier,
+      pos: l.Position,
+  )
+
+  override def resolveCodeAction(codeAction: l.CodeAction, token: CancelToken)(
+      implicit ec: ExecutionContext
+  ): Option[Future[l.CodeAction]] = {
+    println(codeAction.getData.toJson)
+    val edits = for {
+      data <- codeAction.getData.toJson.as[FilterMapCollectParams].toOption
+      params = data.param
+      uri = params.getUri()
+      path = uri.toAbsolutePath
+    } yield trees
+      .findLastEnclosingAt[Term.Apply](path, data.pos)
+      .flatMap(findFilterMapChain)
+      .map(toTextEdit(_))
+      .map(edit => List(uri -> List(edit)))
+      .getOrElse(Nil)
+
+    edits match {
+      case None | (Some(Nil)) => None
+      case Some(xs) => {
+        val workspaceEdit = new l.WorkspaceEdit(
+          xs.map { case (uri, edits) => uri -> edits.asJava }.toMap.asJava
+        )
+        codeAction.setEdit(workspaceEdit)
+        Some(Future.successful(codeAction))
+      }
+    }
+  }
+
   override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = Future {
     val uri = params.getTextDocument().getUri()
 
     val path = uri.toAbsolutePath
-    val range = params.getRange()
+    val start = params.getRange.getStart
 
     trees
-      .findLastEnclosingAt[Term.Apply](path, range.getStart())
+      .findLastEnclosingAt[Term.Apply](path, start)
       .flatMap(findFilterMapChain)
-      .map(toTextEdit(_))
-      .map(toCodeAction(uri, _))
+      .map(_ => {
+        val data =
+          FilterMapCollectParams(
+            params.getTextDocument(),
+            start,
+          )
+        CodeActionBuilder.build(
+          title = FilterMapToCollectCodeAction.title,
+          kind = this.kind,
+          data = Some(data.toJsonObject),
+        )
+      })
       .toSeq
   }
 
@@ -65,13 +109,6 @@ class FilterMapToCollectCodeAction(trees: Trees) extends CodeAction {
 
     new l.TextEdit(chain.pos.toLsp, indented)
   }
-
-  private def toCodeAction(uri: String, textEdit: l.TextEdit): l.CodeAction =
-    CodeActionBuilder.build(
-      title = FilterMapToCollectCodeAction.title,
-      kind = this.kind,
-      changes = List(uri.toAbsolutePath -> List(textEdit)),
-    )
 
   private implicit class FunctionOps(fn: Term.Function) {
     def renameParam(to: Term.Name): Term = {
