@@ -430,14 +430,31 @@ final class BuildTargets private (
    * in other capacity than as a fallback, since both source jar
    * and normal jar might not be in the same directory.
    *
-   * @param sourceJarPath path to the nromaljar
+   * @param sourceJarPath path to the normal jar
    * @return path to the source jar for that jar
    */
   private def sourceJarPathFallback(
       sourceJarPath: AbsolutePath
-  ): Option[AbsolutePath] = {
-    val fallback = sourceJarPath.parent.resolve(
-      sourceJarPath.filename.replace(".jar", "-sources.jar")
+  ): Option[AbsolutePath] =
+    findInTheSameDirectoryWithReplace(sourceJarPath, ".jar", "-sources.jar")
+
+  /**
+   * Try to resolve path to normal jar from source jar,
+   * should only be used as fallback, since jar and source jar
+   * do not have to be in the same directory.
+   */
+  private def jarFromSourceJarFallback(
+      jarPath: AbsolutePath
+  ): Option[AbsolutePath] =
+    findInTheSameDirectoryWithReplace(jarPath, "-sources.jar", ".jar")
+
+  private def findInTheSameDirectoryWithReplace(
+      path: AbsolutePath,
+      fromPattern: String,
+      toPattern: String,
+  ) = {
+    val fallback = path.parent.resolve(
+      path.filename.replace(fromPattern, toPattern)
     )
     if (fallback.exists) Some(fallback)
     else None
@@ -578,7 +595,7 @@ final class BuildTargets private (
       jar: AbsolutePath,
   ): Option[AbsolutePath] = {
     data
-      .fromOptions(_.findSourceJarOf(jar, Some(id)))
+      .fromOptions(_.findConnectedArtifact(jar, Some(id)))
       .orElse(sourceJarPathFallback(jar))
   }
 
@@ -586,8 +603,19 @@ final class BuildTargets private (
       jar: AbsolutePath
   ): Option[AbsolutePath] = {
     data
-      .fromOptions(_.findSourceJarOf(jar, targetId = None))
+      .fromOptions(_.findConnectedArtifact(jar, targetId = None))
       .orElse(sourceJarPathFallback(jar))
+  }
+
+  def findJarFor(
+      id: BuildTargetIdentifier,
+      sourceJar: AbsolutePath,
+  ): Option[AbsolutePath] = {
+    data
+      .fromOptions(
+        _.findConnectedArtifact(sourceJar, Some(id), classifier = null)
+      )
+      .orElse(jarFromSourceJarFallback(sourceJar))
   }
 
   def inverseDependencySource(

@@ -396,7 +396,8 @@ final class ImplementationProvider(
   }
 
   private def semanticdbForJarFile(fileSource: AbsolutePath) = {
-    val dialect = ScalaVersions.dialectForDependencyJar(fileSource.filename)
+    val dialect =
+      ScalaVersions.dialectForDependencyJar(fileSource, buildTargets)
     FileIO.slurp(fileSource, StandardCharsets.UTF_8)
     val textDocument = Mtags.index(fileSource, dialect)
     textDocument

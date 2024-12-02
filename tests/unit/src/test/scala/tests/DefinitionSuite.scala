@@ -45,9 +45,15 @@ abstract class DefinitionSuiteBase(
     // Step 2. Index dependency sources
     index.addSourceJar(JdkSources().right.get, dialect)
     input.dependencySources.entries.foreach { jar =>
+      val scalaVersion = ScalaVersions
+        .scalaBinaryVersionFromJarName(jar.filename)
+        .getOrElse("2.13")
       index.addSourceJar(
         jar,
-        ScalaVersions.dialectForDependencyJar(jar.filename),
+        ScalaVersions.dialectForScalaVersion(
+          scalaVersion,
+          includeSource3 = true,
+        ),
       )
     }
 

@@ -106,7 +106,11 @@ object MetalsTestEnrichments {
       }
       libraries.foreach(
         _.sources.entries.foreach { s =>
-          val dialect = ScalaVersions.dialectForDependencyJar(s.filename)
+          val version = ScalaVersions
+            .scalaBinaryVersionFromJarName(s.filename)
+            .getOrElse("2.13")
+          val dialect =
+            ScalaVersions.dialectForScalaVersion(version, includeSource3 = true)
           wsp.index.addSourceJar(s, dialect)
         }
       )

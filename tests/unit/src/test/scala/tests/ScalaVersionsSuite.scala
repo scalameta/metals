@@ -316,7 +316,7 @@ class ScalaVersionsSuite extends BaseSuite {
   checkJar("tested-3.0-sources.jar", "2.13")
 
   def checkJar(jar: String, expected: String): Unit = test(jar) {
-    val out = ScalaVersions.scalaBinaryVersionFromJarName(jar)
+    val out = ScalaVersions.scalaBinaryVersionFromJarName(jar).getOrElse("2.13")
     assertEquals(out, expected, jar)
   }
 
