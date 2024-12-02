@@ -120,9 +120,9 @@ class ConnectionProvider(
   var buildServerPromise: Promise[Unit] = Promise[Unit]()
   val isConnecting = new AtomicBoolean(false)
 
-  override def index(check: () => Unit): Future[Unit] = connect(
-    Index(check)
-  ).ignoreValue
+  override def index(check: () => Unit): Future[Unit] =
+    connect(Index(check)).ignoreValue
+
   override def cancel(): Unit = {
     cancelables.cancel()
   }
@@ -336,16 +336,16 @@ class ConnectionProvider(
         val iter = queue.iterator()
         while (iter.hasNext()) {
           val curr = iter.next()
-          request.cancelCompare(iter.next().request) match {
-            case 1 => curr.cancel()
-            case -1 => info.cancel()
-            case _ =>
+          request.cancelCompare(curr.request) match {
+            case TakeOver => curr.cancel()
+            case Yield    => info.cancel()
+            case _        =>
           }
         }
         queue.add(info)
         // maybe cancel ongoing
         currentRequest.foreach(ongoing =>
-          if (request.cancelCompare(ongoing.request) == 1) ongoing.cancel()
+          if (request.cancelCompare(ongoing.request) == TakeOver) ongoing.cancel()
         )
         info
       }
@@ -757,66 +757,72 @@ class ConnectionProvider(
 sealed trait ConnectKind
 object SlowConnect extends ConnectKind
 
+sealed trait ConflictBehaviour
+case object Yield extends ConflictBehaviour
+case object TakeOver extends ConflictBehaviour
+case object Queue extends ConflictBehaviour
+
 sealed trait ConnectRequest extends ConnectKind {
 
-  /**
-   * -1 cancel this
-   * 1  cancel other
-   * 0  queue
-   * @param other
-   * @return
+  /** Decides what to do with a new connect request
+   * in presence of an another ongoing/queued request.
+   * @param other the ongoing or queued request
+   * @return behavoiur of the incoming request 
+   * Yield    -- cancel this
+   * TakeOver -- cancel other
+   * Queue    -- queue
    */
-  def cancelCompare(other: ConnectRequest): Int
+  def cancelCompare(other: ConnectRequest): ConflictBehaviour
 }
 
 case class Disconnect(shutdownBuildServer: Boolean) extends ConnectRequest {
-  def cancelCompare(other: ConnectRequest): Int =
+  def cancelCompare(other: ConnectRequest): ConflictBehaviour =
     other match {
-      case _: Index => 0
-      case _ => -1
+      case _: Index => Queue
+      case _ => Yield
     }
 }
 case class Index(check: () => Unit) extends ConnectRequest {
-  def cancelCompare(other: ConnectRequest): Int =
+  def cancelCompare(other: ConnectRequest): ConflictBehaviour =
     other match {
-      case _: Disconnect => 0
-      case _ => -1
+      case _: Disconnect => Queue
+      case _ => Yield
     }
 }
 case class ImportBuildAndIndex(bspSession: BspSession) extends ConnectRequest {
-  def cancelCompare(other: ConnectRequest): Int =
+  def cancelCompare(other: ConnectRequest): ConflictBehaviour =
     other match {
-      case (_: Index) | (_: ImportBuildAndIndex) => 1
-      case _: Disconnect => 0
-      case _ => -1
+      case (_: Index) | (_: ImportBuildAndIndex) => TakeOver
+      case _: Disconnect => Queue
+      case _ => Yield
     }
 }
 case class ConnectToSession(bspSession: BspSession) extends ConnectRequest {
-  def cancelCompare(other: ConnectRequest): Int =
+  def cancelCompare(other: ConnectRequest): ConflictBehaviour =
     other match {
-      case (_: Disconnect) | (_: Index) | (_: ConnectToSession) => 1
-      case _ => -1
+      case (_: Disconnect) | (_: Index) | (_: ConnectToSession) => TakeOver
+      case _ => Yield
     }
 }
 case class CreateSession(shutdownBuildServer: Boolean = false)
     extends ConnectRequest {
-  def cancelCompare(other: ConnectRequest): Int =
+  def cancelCompare(other: ConnectRequest): ConflictBehaviour =
     other match {
       case (_: Disconnect) | (_: Index) | (_: ConnectToSession) | CreateSession(
             false
           ) =>
-        1
-      case _ => -1
+        TakeOver
+      case _ => Yield
     }
 }
 case class GenerateBspConfigAndConnect(
     buildTool: BuildServerProvider,
     shutdownServer: Boolean = false,
 ) extends ConnectRequest {
-  def cancelCompare(other: ConnectRequest): Int =
+  def cancelCompare(other: ConnectRequest): ConflictBehaviour =
     other match {
-      case BloopInstallAndConnect(_, _, _, true) if !shutdownServer => 0
-      case _ => 1
+      case BloopInstallAndConnect(_, _, _, true) if !shutdownServer => Queue
+      case _ => TakeOver
     }
 }
 case class BloopInstallAndConnect(
@@ -825,9 +831,9 @@ case class BloopInstallAndConnect(
     forceImport: Boolean,
     shutdownServer: Boolean,
 ) extends ConnectRequest {
-  def cancelCompare(other: ConnectRequest): Int =
+  def cancelCompare(other: ConnectRequest): ConflictBehaviour =
     other match {
-      case GenerateBspConfigAndConnect(_, true) if !shutdownServer => 0
-      case _ => 1
+      case GenerateBspConfigAndConnect(_, true) if !shutdownServer => Queue
+      case _ => TakeOver
     }
 }
