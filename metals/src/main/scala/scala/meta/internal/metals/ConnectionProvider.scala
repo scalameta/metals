@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.nio.charset.Charset
 import java.util.UUID
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -9,6 +10,7 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.util.Failure
 import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp
@@ -27,6 +29,7 @@ import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.Interruptable._
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.doctor.Doctor
@@ -310,34 +313,103 @@ class ConnectionProvider(
   }
 
   object Connect {
+    class RequestInfo(val request: ConnectRequest) {
+      val promise: Promise[BuildChange] = Promise()
+      val cancelPromise: Promise[Unit] = Promise()
+      def cancel(): Boolean = cancelPromise.trySuccess(())
+    }
+
+    @volatile private var currentRequest: Option[RequestInfo] = None
+    private val queue = new ConcurrentLinkedQueue[RequestInfo]()
+
+    def getOngoingRequest(): Option[RequestInfo] = currentRequest
+
     def connect[T](request: ConnectRequest): Future[BuildChange] = {
-      request match {
-        case Disconnect(shutdownBuildServer) => disconnect(shutdownBuildServer)
-        case Index(check) => index(check)
-        case ImportBuildAndIndex(session) => importBuildAndIndex(session)
-        case ConnectToSession(session) => connectToSession(session)
-        case CreateSession(shutdownBuildServer) =>
-          createSession(shutdownBuildServer)
-        case GenerateBspConfigAndConnect(buildTool, shutdownServer) =>
-          generateBspConfigAndConnect(buildTool, shutdownServer)
-        case BloopInstallAndConnect(
-              buildTool,
-              checksum,
-              forceImport,
-              shutdownServer,
-            ) =>
-          bloopInstallAndConnect(
-            buildTool,
-            checksum,
-            forceImport,
-            shutdownServer,
-          )
+      val info = addToQueue(request)
+      pollAndConnect()
+      info.promise.future
+    }
+
+    private def addToQueue(request: ConnectRequest): RequestInfo =
+      synchronized {
+        val info = new RequestInfo(request)
+        val iter = queue.iterator()
+        while (iter.hasNext()) {
+          val curr = iter.next()
+          request.cancelCompare(iter.next().request) match {
+            case 1 => curr.cancel()
+            case -1 => info.cancel()
+            case _ =>
+          }
+        }
+        queue.add(info)
+        // maybe cancel ongoing
+        currentRequest.foreach(ongoing =>
+          if (request.cancelCompare(ongoing.request) == 1) ongoing.cancel()
+        )
+        info
+      }
+
+    private def pollAndConnect(): Unit = {
+      val optRequest = synchronized {
+        if (currentRequest.isEmpty) {
+          currentRequest = Option(queue.poll())
+          currentRequest
+        } else None
+      }
+
+      for (request <- optRequest) {
+        val cancelPromise = request.cancelPromise
+        val result =
+          if (cancelPromise.isCompleted)
+            Interruptable.successful(BuildChange.Cancelled)
+          else
+            request.request match {
+              case Disconnect(shutdownBuildServer) =>
+                disconnect(shutdownBuildServer, cancelPromise)
+              case Index(check) => index(check, cancelPromise)
+              case ImportBuildAndIndex(session) =>
+                importBuildAndIndex(session, cancelPromise)
+              case ConnectToSession(session) =>
+                connectToSession(session, cancelPromise)
+              case CreateSession(shutdownBuildServer) =>
+                createSession(shutdownBuildServer, cancelPromise)
+              case GenerateBspConfigAndConnect(buildTool, shutdownServer) =>
+                generateBspConfigAndConnect(
+                  buildTool,
+                  shutdownServer,
+                  cancelPromise,
+                )
+              case BloopInstallAndConnect(
+                    buildTool,
+                    checksum,
+                    forceImport,
+                    shutdownServer,
+                  ) =>
+                bloopInstallAndConnect(
+                  buildTool,
+                  checksum,
+                  forceImport,
+                  shutdownServer,
+                  cancelPromise,
+                )
+            }
+        result.future.onComplete { res =>
+          res match {
+            case Failure(CancelConnectException) =>
+              request.promise.trySuccess(BuildChange.Cancelled)
+            case _ => request.promise.tryComplete(res)
+          }
+          currentRequest = None
+          pollAndConnect()
+        }
       }
     }
 
     private def disconnect(
-        shutdownBuildServer: Boolean
-    ): Future[BuildChange] = {
+        shutdownBuildServer: Boolean,
+        cancelPromise: Promise[Unit],
+    ): Interruptable[BuildChange] = {
       def shutdownBsp(optMainBsp: Option[String]): Future[Boolean] = {
         optMainBsp match {
           case Some(BloopServers.name) =>
@@ -362,34 +434,43 @@ class ConnectionProvider(
       )
 
       for {
-        _ <- scalaCli.stop()
-        optMainBsp <- bspSession match {
+        _ <- scalaCli.stop(storeLast = true).withInterrupt(cancelPromise)
+        optMainBsp <- (bspSession match {
           case None => Future.successful(None)
           case Some(session) =>
             bspSession = None
             mainBuildTargetsData.resetConnections(List.empty)
             session.shutdown().map(_ => Some(session.main.name))
-        }
+        }).withInterrupt(cancelPromise)
         _ <-
-          if (shutdownBuildServer) shutdownBsp(optMainBsp)
-          else Future.successful(())
+          if (shutdownBuildServer)
+            shutdownBsp(optMainBsp).withInterrupt(cancelPromise)
+          else Interruptable.successful(())
       } yield BuildChange.None
     }
 
-    private def index(check: () => Unit): Future[BuildChange] =
-      profiledIndexWorkspace(check).map(_ => BuildChange.None)
+    private def index(
+        check: () => Unit,
+        cancelPromise: Promise[Unit],
+    ): Interruptable[BuildChange] =
+      profiledIndexWorkspace(check)
+        .map(_ => BuildChange.None)
+        .withInterrupt(cancelPromise)
 
     private def importBuildAndIndex(
-        session: BspSession
-    ): Future[BuildChange] = {
+        session: BspSession,
+        cancelPromise: Promise[Unit],
+    ): Interruptable[BuildChange] = {
       val importedBuilds0 = timerProvider.timed("Imported build") {
         session.importBuilds()
       }
       for {
-        bspBuilds <- workDoneProgress.trackFuture(
-          Messages.importingBuild,
-          importedBuilds0,
-        )
+        bspBuilds <- workDoneProgress
+          .trackFuture(
+            Messages.importingBuild,
+            importedBuilds0,
+          )
+          .withInterrupt(cancelPromise)
         _ = {
           val idToConnection = bspBuilds.flatMap { bspBuild =>
             val targets =
@@ -400,7 +481,7 @@ class ConnectionProvider(
           saveProjectReferencesInfo(bspBuilds)
         }
         _ = compilers.cancel()
-        buildChange <- index(check)
+        buildChange <- index(check, cancelPromise)
       } yield buildChange
     }
 
@@ -422,7 +503,10 @@ class ConnectionProvider(
         DelegateSetting.writeProjectRef(folder, projectRefs)
     }
 
-    private def connectToSession(session: BspSession): Future[BuildChange] = {
+    private def connectToSession(
+        session: BspSession,
+        cancelPromise: Promise[Unit],
+    ): Interruptable[BuildChange] = {
       scribe.info(
         s"Connected to Build server: ${session.main.name} v${session.version}"
       )
@@ -433,7 +517,7 @@ class ConnectionProvider(
       bspSession = Some(session)
       isConnecting.set(false)
       for {
-        _ <- importBuildAndIndex(session)
+        _ <- importBuildAndIndex(session, cancelPromise)
         _ = buildToolProvider.buildTool.foreach(
           workspaceReload.persistChecksumStatus(Digest.Status.Installed, _)
         )
@@ -464,7 +548,10 @@ class ConnectionProvider(
       }
     }
 
-    def createSession(shutdownServer: Boolean): Future[BuildChange] = {
+    def createSession(
+        shutdownServer: Boolean,
+        cancelPromise: Promise[Unit],
+    ): Interruptable[BuildChange] = {
       def compileAllOpenFiles: BuildChange => Future[BuildChange] = {
         case change if !change.isFailed =>
           Future
@@ -479,25 +566,25 @@ class ConnectionProvider(
         case other => Future.successful(other)
       }
 
-      val scalaCliPaths = scalaCli.paths
-
       isConnecting.set(true)
       (for {
-        _ <- disconnect(shutdownServer)
-        maybeSession <- timerProvider.timed(
-          "Connected to build server",
-          true,
-        ) {
-          bspConnector.connect(
-            buildToolProvider.buildTool,
-            folder,
-            () => userConfig,
-            shellRunner,
-          )
-        }
+        _ <- disconnect(shutdownServer, cancelPromise)
+        maybeSession <- timerProvider
+          .timed(
+            "Connected to build server",
+            true,
+          ) {
+            bspConnector.connect(
+              buildToolProvider.buildTool,
+              folder,
+              () => userConfig,
+              shellRunner,
+            )
+          }
+          .withInterrupt(cancelPromise)
         result <- maybeSession match {
           case Some(session) =>
-            val result = connectToSession(session)
+            val result = connectToSession(session, cancelPromise)
             session.mainConnection.onReconnection { newMainConn =>
               val updSession = session.copy(main = newMainConn)
               connect(ConnectToSession(updSession))
@@ -506,19 +593,17 @@ class ConnectionProvider(
             }
             result
           case None =>
-            Future.successful(BuildChange.None)
+            Interruptable.successful(BuildChange.None)
         }
-        _ <- Future.sequence(
-          scalaCliPaths
-            .collect {
-              case path if (!buildTargets.belongsToBuildTarget(path.toNIO)) =>
-                scalaCli.start(path)
-            }
-        )
+        _ <- scalaCli
+          .startForAllLastPaths(path =>
+            !buildTargets.belongsToBuildTarget(path.toNIO)
+          )
+          .withInterrupt(cancelPromise)
         _ = initTreeView()
       } yield result)
         .recover { case NonFatal(e) =>
-          disconnect(false)
+          disconnect(false, cancelPromise)
           val message =
             "Failed to connect with build server, no functionality will work."
           val details = " See logs for more details."
@@ -528,7 +613,7 @@ class ConnectionProvider(
           scribe.error(message, e)
           BuildChange.Failed
         }
-        .flatMap(compileAllOpenFiles)
+        .flatMap(compileAllOpenFiles(_).withInterrupt(cancelPromise))
         .map { res =>
           buildServerPromise.trySuccess(())
           res
@@ -538,23 +623,25 @@ class ConnectionProvider(
     private def generateBspConfigAndConnect(
         buildTool: BuildServerProvider,
         shutdownServer: Boolean,
-    ): Future[BuildChange] = {
+        cancelPromise: Promise[Unit],
+    ): Interruptable[BuildChange] = {
       tables.buildTool.chooseBuildTool(buildTool.executableName)
       maybeChooseServer(buildTool.buildServerName, alreadySelected = false)
       for {
         _ <-
-          if (shutdownServer) disconnect(shutdownServer)
-          else Future.unit
+          if (shutdownServer) disconnect(shutdownServer, cancelPromise)
+          else Interruptable.successful(())
         status <- buildTool
           .generateBspConfig(
             folder,
             args => bspConfigGenerator.runUnconditionally(buildTool, args),
             statusBar,
           )
+          .withInterrupt(cancelPromise)
         shouldConnect = handleGenerationStatus(buildTool, status)
         status <-
-          if (shouldConnect) createSession(false)
-          else Future.successful(BuildChange.Failed)
+          if (shouldConnect) createSession(false, cancelPromise)
+          else Interruptable.successful(BuildChange.Failed)
       } yield status
     }
 
@@ -589,30 +676,27 @@ class ConnectionProvider(
         false
     }
 
-    val isImportInProcess = new AtomicBoolean(false)
-
     private def bloopInstallAndConnect(
         buildTool: BloopInstallProvider,
         checksum: String,
         forceImport: Boolean,
         shutdownServer: Boolean,
-    ): Future[BuildChange] = {
+        cancelPromise: Promise[Unit],
+    ): Interruptable[BuildChange] = {
       for {
         result <- {
           if (forceImport)
             bloopInstall.runUnconditionally(
-              buildTool,
-              isImportInProcess,
+              buildTool
             )
           else
             bloopInstall.runIfApproved(
               buildTool,
               checksum,
-              isImportInProcess,
             )
-        }
+        }.withInterrupt(cancelPromise)
         change <- {
-          if (result.isInstalled) createSession(shutdownServer)
+          if (result.isInstalled) createSession(shutdownServer, cancelPromise)
           else if (result.isFailed) {
             for {
               change <-
@@ -628,7 +712,7 @@ class ConnectionProvider(
                   // Connect nevertheless, many build import failures are caused
                   // by resolution errors in one weird module while other modules
                   // exported successfully.
-                  createSession(shutdownServer)
+                  createSession(shutdownServer, cancelPromise)
                 } else {
                   buildTool match {
                     case _: BuildServerProvider =>
@@ -637,56 +721,113 @@ class ConnectionProvider(
                           Messages.ImportProjectFailedSuggestBspSwitch.params()
                         )
                         .asScala
+                        .withInterrupt(cancelPromise)
                         .flatMap {
                           case Messages.ImportProjectFailedSuggestBspSwitch.switchBsp =>
-                            switchBspServer()
-                          case _ => Future.unit
+                            switchBspServer().withInterrupt(cancelPromise)
+                          case _ => Interruptable.successful(BuildChange.Failed)
                         }
                     case _ =>
                       languageClient.showMessage(Messages.ImportProjectFailed)
+                      Interruptable.successful(BuildChange.Failed)
                   }
-                  Future.successful(BuildChange.Failed)
                 }
             } yield change
-          } else Future.successful(BuildChange.None)
+          } else Interruptable.successful(BuildChange.None)
         }
       } yield change
     }
   }
 
-  def switchBspServer(): Future[Unit] =
+  def switchBspServer(): Future[BuildChange] =
     withWillGenerateBspConfig {
       for {
         connectKind <- bspConnector.switchBuildServer()
-        _ <-
+        change <-
           connectKind match {
-            case None => Future.unit
+            case None => Future.successful(BuildChange.Failed)
             case Some(SlowConnect) =>
               slowConnectToBuildServer(forceImport = true)
             case Some(request: ConnectRequest) => connect(request)
           }
-      } yield ()
+      } yield change
     }
 }
 
 sealed trait ConnectKind
 object SlowConnect extends ConnectKind
 
-sealed trait ConnectRequest extends ConnectKind
+sealed trait ConnectRequest extends ConnectKind {
 
-case class Disconnect(shutdownBuildServer: Boolean) extends ConnectRequest
-case class Index(check: () => Unit) extends ConnectRequest
-case class ImportBuildAndIndex(bspSession: BspSession) extends ConnectRequest
-case class ConnectToSession(bspSession: BspSession) extends ConnectRequest
+  /**
+   * -1 cancel this
+   * 1  cancel other
+   * 0  queue
+   * @param other
+   * @return
+   */
+  def cancelCompare(other: ConnectRequest): Int
+}
+
+case class Disconnect(shutdownBuildServer: Boolean) extends ConnectRequest {
+  def cancelCompare(other: ConnectRequest): Int =
+    other match {
+      case _: Index => 0
+      case _ => -1
+    }
+}
+case class Index(check: () => Unit) extends ConnectRequest {
+  def cancelCompare(other: ConnectRequest): Int =
+    other match {
+      case _: Disconnect => 0
+      case _ => -1
+    }
+}
+case class ImportBuildAndIndex(bspSession: BspSession) extends ConnectRequest {
+  def cancelCompare(other: ConnectRequest): Int =
+    other match {
+      case (_: Index) | (_: ImportBuildAndIndex) => 1
+      case _: Disconnect => 0
+      case _ => -1
+    }
+}
+case class ConnectToSession(bspSession: BspSession) extends ConnectRequest {
+  def cancelCompare(other: ConnectRequest): Int =
+    other match {
+      case (_: Disconnect) | (_: Index) | (_: ConnectToSession) => 1
+      case _ => -1
+    }
+}
 case class CreateSession(shutdownBuildServer: Boolean = false)
-    extends ConnectRequest
+    extends ConnectRequest {
+  def cancelCompare(other: ConnectRequest): Int =
+    other match {
+      case (_: Disconnect) | (_: Index) | (_: ConnectToSession) | CreateSession(
+            false
+          ) =>
+        1
+      case _ => -1
+    }
+}
 case class GenerateBspConfigAndConnect(
     buildTool: BuildServerProvider,
     shutdownServer: Boolean = false,
-) extends ConnectRequest
+) extends ConnectRequest {
+  def cancelCompare(other: ConnectRequest): Int =
+    other match {
+      case BloopInstallAndConnect(_, _, _, true) if !shutdownServer => 0
+      case _ => 1
+    }
+}
 case class BloopInstallAndConnect(
     buildTool: BloopInstallProvider,
     checksum: String,
     forceImport: Boolean,
     shutdownServer: Boolean,
-) extends ConnectRequest
+) extends ConnectRequest {
+  def cancelCompare(other: ConnectRequest): Int =
+    other match {
+      case GenerateBspConfigAndConnect(_, true) if !shutdownServer => 0
+      case _ => 1
+    }
+}
