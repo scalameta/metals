@@ -33,6 +33,7 @@ import scala.meta.pc.SymbolDocumentation
  */
 class Docstrings(index: GlobalSymbolIndex) {
   val cache = new TrieMap[Content, SymbolDocumentation]()
+  val alternativesMap = new TrieMap[String, Set[String]]
   private val logger = Logger.getLogger(classOf[Docstrings].getName)
 
   def documentation(
@@ -130,11 +131,35 @@ class Docstrings(index: GlobalSymbolIndex) {
       case Some(defn) =>
         try {
           indexSymbolDefinition(defn, contentType)
+          maybeCacheAlternative(defn, contentType)
         } catch {
           case NonFatal(e) =>
             logger.log(Level.SEVERE, defn.path.toURI.toString, e)
         }
       case None =>
+    }
+  }
+
+  private def maybeCacheAlternative(
+      defn: SymbolDefinition,
+      contentType: ContentType
+  ) = {
+    val defSymbol = defn.definitionSymbol.value
+    val querySymbol = defn.querySymbol.value
+    lazy val queryContent = Content.from(querySymbol, contentType)
+
+    if (defSymbol != querySymbol && !cache.contains(queryContent)) {
+      cache
+        .get(Content.from(defSymbol, contentType))
+        .foreach(cache.put(queryContent, _))
+
+      alternativesMap.synchronized {
+        val prev = alternativesMap.get(defSymbol)
+        alternativesMap.put(
+          defSymbol,
+          prev.map(_ + querySymbol).getOrElse(Set(querySymbol))
+        )
+      }
     }
   }
 
@@ -166,7 +191,10 @@ class Docstrings(index: GlobalSymbolIndex) {
     ): Unit = {
       for {
         contentType <- ContentType.values()
-      } cache.remove(Content.from(occ.symbol, contentType))
+        symbol <- alternativesMap
+          .remove(occ.symbol)
+          .getOrElse(Set.empty) + occ.symbol
+      } cache.remove(Content.from(symbol, contentType))
     }
   }
 

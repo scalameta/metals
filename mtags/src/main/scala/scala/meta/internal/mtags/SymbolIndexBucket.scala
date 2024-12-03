@@ -12,6 +12,7 @@ import scala.meta.Dialect
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.io.PlatformFileIO
+import scala.meta.internal.mtags.DefinitionAlternatives.ValidateLocation
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
@@ -190,7 +191,8 @@ class SymbolIndexBucket(
    */
   private def query0(
       querySymbol: Symbol,
-      symbol: Symbol
+      symbol: Symbol,
+      validate: Option[ValidateLocation] = None
   ): List[SymbolDefinition] = {
 
     removeOldEntries(symbol)
@@ -224,21 +226,27 @@ class SymbolIndexBucket(
     if (!definitions.contains(symbol.value)) {
       // Fallback 3: guess related symbols from the enclosing class.
       DefinitionAlternatives(symbol)
-        .flatMap(alternative => query0(querySymbol, alternative))
+        .flatMap { case (alternative, validate) =>
+          query0(querySymbol, alternative, validate)
+        }
     } else {
       definitions
         .get(symbol.value)
         .map { paths =>
-          paths.map { location =>
-            SymbolDefinition(
-              querySymbol = querySymbol,
-              definitionSymbol = symbol,
-              path = location.path,
-              dialect = dialect,
-              range = location.range,
-              kind = None,
-              properties = 0
-            )
+          paths.flatMap { location =>
+            if (validate.forall(_(location))) {
+              Some(
+                SymbolDefinition(
+                  querySymbol = querySymbol,
+                  definitionSymbol = symbol,
+                  path = location.path,
+                  dialect = dialect,
+                  range = location.range,
+                  kind = None,
+                  properties = 0
+                )
+              )
+            } else None
           }.toList
         }
         .getOrElse(List.empty)

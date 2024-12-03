@@ -595,4 +595,20 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |""".stripMargin
   )
 
+  check(
+    "i6852",
+    """
+      |type Foo = String
+      |
+      |/** some doc */
+      |object Foo:
+      |  /** doc doc */
+      |  val fo@@o = ""
+      |""".stripMargin,
+    """|```scala
+       |val foo: String
+       |```
+       |doc doc""".stripMargin
+  )
+
 }

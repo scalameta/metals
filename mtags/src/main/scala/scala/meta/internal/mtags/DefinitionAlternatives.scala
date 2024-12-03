@@ -1,22 +1,25 @@
 package scala.meta.internal.mtags
 
+import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 
 object DefinitionAlternatives {
+  type ValidateLocation = SymbolLocation => Boolean
 
   /**
    * Returns a list of fallback symbols that can act instead of given symbol.
    */
-  def apply(symbol: Symbol): List[Symbol] = {
-    List(
-      caseClassCompanionToType(symbol),
-      caseClassApplyOrCopy(symbol),
-      caseClassApplyOrCopyParams(symbol),
-      initParamToValue(symbol),
-      varGetter(symbol),
-      methodOwner(symbol),
-      objectInsteadOfAny(symbol)
-    ).flatten
+  def apply(symbol: Symbol): List[(Symbol, Option[ValidateLocation])] = {
+    stripSyntheticPackageObjectFromObject(symbol).toList ++
+      List(
+        caseClassCompanionToType(symbol),
+        caseClassApplyOrCopy(symbol),
+        caseClassApplyOrCopyParams(symbol),
+        initParamToValue(symbol),
+        varGetter(symbol),
+        methodOwner(symbol),
+        objectInsteadOfAny(symbol)
+      ).flatten.map((_, None))
   }
 
   object GlobalSymbol {
@@ -24,6 +27,27 @@ object DefinitionAlternatives {
       Symbol(Symbols.Global(owner.value, desc))
     def unapply(sym: Symbol): Option[(Symbol, Descriptor)] =
       Some(sym.owner -> sym.value.desc)
+  }
+
+  private def stripSyntheticPackageObjectFromObject(
+      symbol: Symbol
+  ): Option[(Symbol, Option[ValidateLocation])] = {
+    val toplevel = symbol.toplevel
+    Option(toplevel).flatMap {
+      case GlobalSymbol(owner, Descriptor.Term(pkgName))
+          if pkgName.endsWith("$package") =>
+        val newSymbol =
+          Symbol(s"${owner.value}${symbol.value.stripPrefix(toplevel.value)}")
+        if (newSymbol.toplevel.isTerm) {
+          Some(
+            (
+              newSymbol,
+              Some(loc => s"${loc.path.scalaFileName}$$package" == pkgName)
+            )
+          )
+        } else None
+      case _ => None
+    }
   }
 
   /**
