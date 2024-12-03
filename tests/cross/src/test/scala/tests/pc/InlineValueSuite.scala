@@ -300,6 +300,23 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |}""".stripMargin
   )
 
+  checkEdit(
+    "i6924",
+    """|object O {
+       |  def test(n: Int) = {
+       |    val isOne = n == 1
+       |    <<i>>sOne
+       |  }
+       |}
+       |""".stripMargin,
+    """|object O {
+       |  def test(n: Int) = {
+       |    n == 1
+       |  }
+       |}
+       |""".stripMargin
+  )
+
   checkError(
     "scoping-packages",
     """|package a
