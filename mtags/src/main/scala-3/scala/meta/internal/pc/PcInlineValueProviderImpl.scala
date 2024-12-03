@@ -43,7 +43,7 @@ final class PcInlineValueProviderImpl(
           DefinitionTree(defn, pos)
         }
         .toRight(Errors.didNotFindDefinition)
-      symbols = symbolsUsedInDefn(definition.tree.rhs)
+      symbols = symbolsUsedInDefn(definition.tree.symbol, definition.tree.rhs)
       references <- getReferencesToInline(definition, allOccurences, symbols)
     yield
       val (deleteDefinition, refsEdits) = references
@@ -106,16 +106,25 @@ final class PcInlineValueProviderImpl(
     val adjustedEnd = extend(pos.end - 1, ')', 1) + 1
     text.slice(adjustedStart, adjustedEnd).mkString
 
+  /** 
+   * Return all scope symbols used in this
+   */
   private def symbolsUsedInDefn(
+      symbol: Symbol,
       rhs: Tree
   ): List[Symbol] =
+    val classParents =
+      if (symbol != null) symbol.ownersIterator.filter(_.isType).toSet
+      else Set.empty
+
     def collectNames(
         symbols: List[Symbol],
         tree: Tree,
     ): List[Symbol] =
       tree match
         case id: (Ident | Select)
-            if !id.symbol.is(Synthetic) && !id.symbol.is(Implicit) =>
+            if !id.symbol.is(Synthetic) && !id.symbol.is(Implicit) &&
+            (!id.symbol.owner.isType || id.symbol.owner.is(ModuleClass) || classParents.contains(id.symbol.owner)) =>
           tree.symbol :: symbols
         case _ => symbols
 

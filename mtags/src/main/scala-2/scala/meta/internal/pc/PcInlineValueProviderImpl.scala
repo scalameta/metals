@@ -66,8 +66,18 @@ final class PcInlineValueProviderImpl(
   }
 
   private def symbolsUsedInDef(
+      symbol: Symbol,
       rhs: Tree
   ): List[Symbol] = {
+    val classParents =
+      if (symbol != null) symbol.ownersIterator.filter(_.isType).toSet
+      else Set.empty
+
+    def validateSymbol(symbol: Symbol) =
+      !symbol.isSynthetic && !symbol.isImplicit &&
+        (!symbol.safeOwner.isType || symbol.safeOwner.isModuleClass || classParents
+          .exists(_ == symbol.safeOwner))
+
     @tailrec
     def collectNames(
         symbols: List[Tree],
@@ -77,11 +87,8 @@ final class PcInlineValueProviderImpl(
         case tree :: toTraverse => {
           val nextSymbols =
             tree match {
-              case id: Ident
-                  if !id.symbol.isSynthetic && !id.symbol.isImplicit =>
-                id :: symbols
-              case s: Select if !s.symbol.isSynthetic && !s.symbol.isImplicit =>
-                s :: symbols
+              case id: Ident if validateSymbol(id.symbol) => id :: symbols
+              case s: Select if validateSymbol(s.symbol) => s :: symbols
               case _ => symbols
             }
           collectNames(nextSymbols, toTraverse ++ tree.children)
@@ -99,7 +106,7 @@ final class PcInlineValueProviderImpl(
       .drop(1)
       .exists(e => e.isTerm)
     val allreferences = allOccurences.filterNot(_.isDefn)
-    val symbols = symbolsUsedInDef(definition.tree.rhs)
+    val symbols = symbolsUsedInDef(definition.tree.symbol, definition.tree.rhs)
     def inlineAll() =
       makeRefs(allreferences, symbols).right
         .map((true, _))
