@@ -65,37 +65,29 @@ final class PcInlineValueProviderImpl(
     }
   }
 
-  private def symbolsUsedInDef(
-      symbol: Symbol,
-      rhs: Tree
-  ): List[Symbol] = {
-    val classParents =
-      if (symbol != null) symbol.ownersIterator.filter(_.isType).toSet
-      else Set.empty
-
+  private def symbolsUsedInDef(rhs: Tree): List[Symbol] = {
     def validateSymbol(symbol: Symbol) =
-      !symbol.isSynthetic && !symbol.isImplicit &&
-        (!symbol.safeOwner.isType || symbol.safeOwner.isModuleClass || classParents
-          .exists(_ == symbol.safeOwner))
+      !symbol.isSynthetic && !symbol.isImplicit
 
     @tailrec
     def collectNames(
-        symbols: List[Tree],
+        symbols: List[Symbol],
         toTraverse: List[Tree]
-    ): List[Tree] =
+    ): List[Symbol] =
       toTraverse match {
         case tree :: toTraverse => {
           val nextSymbols =
             tree match {
-              case id: Ident if validateSymbol(id.symbol) => id :: symbols
-              case s: Select if validateSymbol(s.symbol) => s :: symbols
+              case id: Ident if validateSymbol(id.symbol) =>
+                id.symbol :: symbols
+              case s: Select if validateSymbol(s.symbol) => s.symbol :: symbols
               case _ => symbols
             }
           collectNames(nextSymbols, toTraverse ++ tree.children)
         }
         case Nil => symbols
       }
-    collectNames(List(), List(rhs)).map(_.symbol)
+    collectNames(List(), List(rhs))
   }
 
   private def referenceEdits(
@@ -106,7 +98,10 @@ final class PcInlineValueProviderImpl(
       .drop(1)
       .exists(e => e.isTerm)
     val allreferences = allOccurences.filterNot(_.isDefn)
-    val symbols = symbolsUsedInDef(definition.tree.symbol, definition.tree.rhs)
+    val importContext = doLocateContext(definition.tree.rhs.pos)
+    val symbols = symbolsUsedInDef(definition.tree.rhs).distinct.filter { sym =>
+      importContext.symbolIsInScope(sym)
+    }
     def inlineAll() =
       makeRefs(allreferences, symbols).right
         .map((true, _))
