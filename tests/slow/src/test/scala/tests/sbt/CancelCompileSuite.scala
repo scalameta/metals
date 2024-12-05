@@ -1,6 +1,7 @@
 package tests
 
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.PathWithContent
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 
@@ -58,7 +59,7 @@ class CancelCompileSuite
       _ <- server.server.buildServerPromise.future
       (compileReport, _) <- server.server.compilations
         .compileFile(
-          workspace.resolve("c/src/main/scala/c/C.scala")
+          PathWithContent(workspace.resolve("c/src/main/scala/c/C.scala"))
         )
         .zip {
           // wait until the compilation start
@@ -68,7 +69,7 @@ class CancelCompileSuite
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ = assertEquals(compileReport.get.getStatusCode(), StatusCode.CANCELLED)
       _ <- server.server.compilations.compileFile(
-        workspace.resolve("c/src/main/scala/c/C.scala")
+        PathWithContent(workspace.resolve("c/src/main/scala/c/C.scala"))
       )
       _ = assertNoDiff(
         client.workspaceDiagnostics,

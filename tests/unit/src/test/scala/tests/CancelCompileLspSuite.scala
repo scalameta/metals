@@ -1,5 +1,6 @@
 package tests
 
+import scala.meta.internal.metals.PathWithContent
 import scala.meta.internal.metals.ServerCommands
 
 import ch.epfl.scala.bsp4j.StatusCode
@@ -48,7 +49,7 @@ class CancelCompileLspSuite extends BaseLspSuite("compile-cancel") {
       _ <- server.server.buildServerPromise.future
       (compileReport, _) <- server.server.compilations
         .compileFile(
-          workspace.resolve("c/src/main/scala/c/C.scala")
+          PathWithContent(workspace.resolve("c/src/main/scala/c/C.scala"))
         )
         .zip {
           // wait until the compilation start
@@ -58,7 +59,7 @@ class CancelCompileLspSuite extends BaseLspSuite("compile-cancel") {
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ = assertEquals(compileReport.get.getStatusCode(), StatusCode.CANCELLED)
       _ <- server.server.compilations.compileFile(
-        workspace.resolve("c/src/main/scala/c/C.scala")
+        PathWithContent(workspace.resolve("c/src/main/scala/c/C.scala"))
       )
       _ = assertNoDiff(
         client.workspaceDiagnostics,
