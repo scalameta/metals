@@ -139,7 +139,7 @@ abstract class BaseWorksheetLspSuite(
           """|import java.nio.file.Files
              |val name = "Susan"/* // : String = "Susan"*/
              |val greeting = s"Hello $name"/* // : String = "Hello Susan"*/
-             |println(greeting + "\nHow are you?")/* // Hello Susan...*/
+             |println(greeting + "\nHow are you?")/* // Hello Susan…*/
              |1.to(10).toVector/* // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)*/
              |val List(a, b) = List(42, 10)/* // a: Int = 42, b: Int = 10*/
              |""".stripMargin,
@@ -148,7 +148,7 @@ abstract class BaseWorksheetLspSuite(
               """|import java.nio.file.Files
                  |val name = "Susan"/* // : String = Susan*/
                  |val greeting = s"Hello $name"/* // : String = Hello Susan*/
-                 |println(greeting + "\nHow are you?")/* // Hello Susan...*/
+                 |println(greeting + "\nHow are you?")/* // Hello Susan…*/
                  |1.to(10).toVector/* // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)*/
                  |val List(a, b) = List(42, 10)/* // a: Int = 42, b: Int = 10*/
                  |""".stripMargin
@@ -183,7 +183,7 @@ abstract class BaseWorksheetLspSuite(
           """|import java.nio.file.Files
              |val name = "Susan"/* // : String = "Susan"| name: String = "Susan" |*/
              |val greeting = s"Hello $name"/* // : String = "Hello Susan"| greeting: String = "Hello Susan" |*/
-             |println(greeting + "\nHow are you?")/* // Hello Susan...| // Hello Susan\n// How are you? |*/
+             |println(greeting + "\nHow are you?")/* // Hello Susan…| // Hello Susan\n// How are you? |*/
              |1.to(10).toVector/* // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)| res1: Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10) |*/
              |val List(a, b) = List(42, 10)/* // a: Int = 42, b: Int = 10| a: Int = 42\nb: Int = 10 |*/
              |""".stripMargin,
@@ -192,7 +192,7 @@ abstract class BaseWorksheetLspSuite(
               """|import java.nio.file.Files
                  |val name = "Susan"/* // : String = Susan| name: String = Susan |*/
                  |val greeting = s"Hello $name"/* // : String = Hello Susan| greeting: String = Hello Susan |*/
-                 |println(greeting + "\nHow are you?")/* // Hello Susan...| // Hello Susan\n// How are you? |*/
+                 |println(greeting + "\nHow are you?")/* // Hello Susan…| // Hello Susan\n// How are you? |*/
                  |1.to(10).toVector/* // : Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)| res1: Vector[Int] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9, 10) |*/
                  |val List(a, b) = List(42, 10)/* // a: Int = 42, b: Int = 10| a: Int = 42\nb: Int = 10 |*/
                  |""".stripMargin

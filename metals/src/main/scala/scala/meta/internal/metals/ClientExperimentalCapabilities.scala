@@ -15,6 +15,7 @@ import org.eclipse.{lsp4j => l}
  */
 final case class ClientExperimentalCapabilities(
     debuggingProvider: Option[Boolean],
+    @deprecated("Decoration protocol is no longer used.")
     decorationProvider: Option[Boolean],
     didFocusProvider: Option[Boolean],
     doctorProvider: Option[String],

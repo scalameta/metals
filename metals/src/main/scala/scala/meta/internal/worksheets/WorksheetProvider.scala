@@ -52,7 +52,6 @@ import coursierapi.Fetch
 import coursierapi.error.SimpleResolutionError
 import mdoc.interfaces.EvaluatedWorksheet
 import mdoc.interfaces.Mdoc
-import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.Position
@@ -73,7 +72,6 @@ class WorksheetProvider(
     workDoneProgress: WorkDoneProgress,
     diagnostics: Diagnostics,
     embedded: Embedded,
-    publisher: WorksheetPublisher,
     compilations: Compilations,
     scalaVersionSelector: ScalaVersionSelector,
     clientConfig: ClientConfiguration,
@@ -143,22 +141,6 @@ class WorksheetProvider(
     reset()
   }
 
-  def onDidFocus(path: AbsolutePath): Future[Unit] = {
-    if (!clientConfig.isInlayHintsEnabled()) {
-      exportableEvaluations.get(path) match {
-        case Some(worksheetF) =>
-          worksheetF.future.map { worksheet =>
-            publisher.publish(
-              languageClient,
-              path,
-              worksheet.evaluatedWorksheet,
-            )
-          }
-        case None => Future.successful(())
-      }
-    } else Future.successful(())
-  }
-
   private def evaluateAndPublish[T](
       path: AbsolutePath,
       token: CancelToken,
@@ -188,8 +170,6 @@ class WorksheetProvider(
       _.foreach { toPublish =>
         if (clientConfig.isInlayHintsRefreshEnabled())
           languageClient.refreshInlayHints()
-        else
-          publisher.publish(languageClient, path, toPublish.evaluatedWorksheet)
       },
     )
   }
@@ -219,7 +199,6 @@ class WorksheetProvider(
     }
   } else Future.successful(Nil)
 
-  // TODO switch to only inlay hints
   private def toInlayHints(
       path: AbsolutePath,
       worksheet: Option[EvaluatedWorksheetSnapshot],
@@ -249,15 +228,6 @@ class WorksheetProvider(
           .asScala
           .toList
     }
-  }
-
-  /**
-   * Fallback hover for results.
-   * While for the actual code hover's provided by Compilers,
-   * for evaluated results hover's provided here
-   */
-  def hover(path: AbsolutePath, position: Position): Option[Hover] = {
-    publisher.hover(path, position)
   }
 
   /**
