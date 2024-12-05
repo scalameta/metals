@@ -2,7 +2,6 @@ package scala.meta.internal.metals.clients.language
 
 import java.util.concurrent.CompletableFuture
 
-import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.tvp._
 
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -46,9 +45,6 @@ abstract class NoopLanguageClient extends MetalsLanguageClient {
   }
   override def metalsTreeViewDidChange(
       params: TreeViewDidChangeParams
-  ): Unit = ()
-  override def metalsPublishDecorations(
-      params: PublishDecorationsParams
   ): Unit = ()
 
   override def refreshModel(): CompletableFuture[Unit] =

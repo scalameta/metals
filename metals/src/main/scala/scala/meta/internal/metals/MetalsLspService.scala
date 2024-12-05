@@ -59,9 +59,7 @@ import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.search.SymbolHierarchyOps
-import scala.meta.internal.worksheets.DecorationWorksheetPublisher
 import scala.meta.internal.worksheets.WorksheetProvider
-import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.TextDocumentService
 import scala.meta.parsers.ParseException
@@ -410,33 +408,22 @@ abstract class MetalsLspService(
     definitionProvider,
   )
 
-  val worksheetProvider: WorksheetProvider = {
-    val worksheetPublisher =
-      if (clientConfig.isDecorationProvider())
-        new DecorationWorksheetPublisher(
-          clientConfig.isInlineDecorationProvider()
-        )
-      else
-        new WorkspaceEditWorksheetPublisher(buffers, trees)
-
-    register(
-      new WorksheetProvider(
-        folder,
-        buffers,
-        trees,
-        buildTargets,
-        languageClient,
-        () => userConfig,
-        workDoneProgress,
-        diagnostics,
-        embedded,
-        worksheetPublisher,
-        compilations,
-        scalaVersionSelector,
-        clientConfig,
-      )
+  val worksheetProvider: WorksheetProvider = register(
+    new WorksheetProvider(
+      folder,
+      buffers,
+      trees,
+      buildTargets,
+      languageClient,
+      () => userConfig,
+      workDoneProgress,
+      diagnostics,
+      embedded,
+      compilations,
+      scalaVersionSelector,
+      clientConfig,
     )
-  }
+  )
 
   protected val compilers: Compilers = register(
     new Compilers(
@@ -822,7 +809,6 @@ abstract class MetalsLspService(
     } else if (recentlyOpenedFiles.isRecentlyActive(path)) {
       CompletableFuture.completedFuture(DidFocusResult.RecentlyActive)
     } else {
-      worksheetProvider.onDidFocus(path)
       maybeCompileOnDidFocus(path, prevBuildTarget).asJava
     }
   }
@@ -997,13 +983,7 @@ abstract class MetalsLspService(
         .hover(params, token)
         .map(_.map(_.toLsp()))
         .map(
-          _.orElse {
-            val path = params.textDocument.getUri.toAbsolutePath
-            if (path.isWorksheet)
-              worksheetProvider.hover(path, params.getPosition)
-            else
-              None
-          }.orNull
+          _.orNull
         )
     }
   }

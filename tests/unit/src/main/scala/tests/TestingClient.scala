@@ -2,7 +2,6 @@ package tests
 
 import java.net.URI
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
@@ -15,7 +14,6 @@ import scala.concurrent.Promise
 import scala.meta.inputs.Input
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.builds.BuildTools
-import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Debug
@@ -113,8 +111,6 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
 
   /** Stores commands executed by the client */
   val clientCommands = new ConcurrentLinkedDeque[ExecuteCommandParams]()
-  val decorations =
-    new ConcurrentHashMap[AbsolutePath, Set[PublishDecorationsParams]]()
   var showMessageHandler: MessageParams => Unit = { (_: MessageParams) =>
     ()
   }
@@ -469,105 +465,6 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       params: TreeViewDidChangeParams
   ): Unit = {
     treeViewChanges.add(params)
-  }
-
-  override def metalsPublishDecorations(
-      params: PublishDecorationsParams
-  ): Unit = {
-    val path = params.uri.toAbsolutePath
-    decorations.compute(
-      path,
-      {
-        case (_, decorationTypes) => {
-          if (decorationTypes == null) {
-            Set(params)
-          } else {
-            decorationTypes.filter(p => p.isInline != params.isInline) + params
-          }
-        }
-      },
-    )
-  }
-
-  def syntheticDecorations: String = {
-    syntheticDecorations(isHover = false)
-  }
-
-  def workspaceDecorations(filename: String): String = {
-    syntheticDecorations(isHover = false, Some(filename))
-  }
-
-  def syntheticDecorationHoverMessage: String =
-    syntheticDecorations(isHover = true)
-
-  def syntheticDecorationHoverMessage(
-      filename: String
-  ): String = {
-    syntheticDecorations(isHover = true, Some(filename))
-  }
-  private def syntheticDecorations(
-      isHover: Boolean,
-      filename: Option[String] = None,
-  ): String = {
-    val out = new StringBuilder()
-    decorationsForPath(filename).foreach { case (path, synthetics) =>
-      val input = path.toInputFromBuffers(buffers)
-      input.text.linesIterator.zipWithIndex.foreach { case (line, i) =>
-        val lineDecorations = synthetics.toList
-          .flatMap(params =>
-            params.options.map(o =>
-              (
-                o,
-                Option(params.isInline).getOrElse(
-                  false.asInstanceOf[java.lang.Boolean]
-                ),
-              )
-            )
-          )
-          .filter { case (deco, _) => deco.range.getEnd().getLine() == i }
-          /* Need to sort them by the type of decoration, inline needs to be first.
-           * This mirrors the VS Code behaviour, the first declared type is
-           * shown first if the end is the same */
-          .sortBy { case (deco, isInline) =>
-            (deco.range.getEnd().getCharacter(), !isInline)
-          }
-          .map(_._1)
-        if (isHover) {
-          out.append(line)
-          lineDecorations.collect {
-            case decoration if decoration.hoverMessage != null =>
-              out.append("\n" + decoration.hoverMessage.getValue())
-          }
-          out.append("\n")
-        } else {
-          val lineIndex = lineDecorations.foldLeft(0) {
-            case (index, decoration) =>
-              if (decoration.renderOptions.after.contentText != null) {
-                val decoCharacter = decoration.range.getEnd().getCharacter()
-                out.append(line.substring(index, decoCharacter))
-                out.append(decoration.renderOptions.after.contentText)
-                decoCharacter
-              } else {
-                index
-              }
-          }
-          out.append(line.substring(lineIndex))
-          out.append("\n")
-        }
-      }
-    }
-    out.toString()
-  }
-
-  private def decorationsForPath(filename: Option[String]) = {
-    filename match {
-      case None =>
-        decorations.asScala.find(_._2.nonEmpty)
-      case Some(file) =>
-        val path = workspace.resolve(file)
-        val synthetics = decorations.asScala.getOrElse(path, Set.empty)
-        Some(path, synthetics)
-    }
   }
 
   def workspaceTreeViewChanges: String = {

@@ -70,14 +70,11 @@ Metals communicates with build server such as `bloop` and `sbt` using [Build Ser
 
 For more details about sbt's BSP support in Metals, see [the blog post](https://scalameta.org/metals/blog/2020/11/06/sbt-BSP-support/).
 
-## Worksheet
+## Worksheets
 
 Worksheet support is provided by [mdoc](https://github.com/scalameta/mdoc), which is able to typecheck and evaluate each line of the input. The main class responsible for worksheets is [WorksheetProvider.scala](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/worksheets/WorksheetProvider.scala). It is responsible for downloading mdoc instance for each Scala version that is supported and running the evaluation in the file input.
 
-Later the evaluations are published using [decoration extension](https://scalameta.org/metals/docs/integrations/decoration-protocol) or via additional Text Edits for editors that do not support decorations. This is done in the two classes implementing [WorksheetPublisher.scala](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/worksheets/WorksheetPublisher.scala):
-
-- [DecorationWorksheetPublisher.scala](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/worksheets/DecorationWorksheetPublisher.scala) for decoration publishing
-- [WorkspaceEditWorksheetPublisher.scala](https://github.com/scalameta/metals/blob/main/metals/src/main/scala/scala/meta/internal/worksheets/WorkspaceEditWorksheetPublisher.scala) for publishing decorations as comments in the code
+Later the evaluations are published using [inlay hints](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_inlayHint).
 
 ## Formatting
 

@@ -16,8 +16,8 @@ class WorksheetModifier extends StringModifier {
 
     val (howYouSeeEvaluations, howToHover) = info match {
       case "vscode" =>
-        "as a decoration at the end of the line." ->
-          "hover on the decoration to expand the decoration."
+        "as a inlay hint at the end of the line." ->
+          "hover on the inlay hint to expand it."
       case _ =>
         "as a comment as the end of the line." -> "hover on the comment to expand."
     }

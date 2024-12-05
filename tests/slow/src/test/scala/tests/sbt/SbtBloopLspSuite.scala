@@ -8,7 +8,6 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.ClientCommands
-import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -36,14 +35,6 @@ class SbtBloopLspSuite
   override def currentDigest(
       workspace: AbsolutePath
   ): Option[String] = SbtDigest.current(workspace)
-
-  override protected def initializationOptions: Option[InitializationOptions] =
-    Some(
-      InitializationOptions.Default.copy(
-        decorationProvider = Some(true),
-        inlineDecorationProvider = Some(true),
-      )
-    )
 
   test("basic") {
     cleanWorkspace()
