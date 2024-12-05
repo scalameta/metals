@@ -69,10 +69,6 @@
         "title": "Debug Adapter Protocol",
         "sidebar_label": "Debug Adapter Protocol"
       },
-      "integrations/decoration-protocol": {
-        "title": "Decoration Protocol v0.2.0",
-        "sidebar_label": "Decoration Protocol"
-      },
       "integrations/new-build-tool": {
         "title": "Integrating a new build tool"
       },

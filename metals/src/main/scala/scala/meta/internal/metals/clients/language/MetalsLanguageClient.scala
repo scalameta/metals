@@ -5,7 +5,6 @@ import javax.annotation.Nullable
 
 import scala.util.Try
 
-import scala.meta.internal.decorations.DecorationClient
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.tvp._
 
@@ -18,10 +17,7 @@ import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageClient
 
-trait MetalsLanguageClient
-    extends LanguageClient
-    with TreeViewClient
-    with DecorationClient {
+trait MetalsLanguageClient extends LanguageClient with TreeViewClient {
 
   /**
    * Display message in the editor "status bar", which should be displayed somewhere alongside the buffer.

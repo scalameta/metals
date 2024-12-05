@@ -5,7 +5,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.concurrent.ExecutionContext
 
-import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -185,14 +184,6 @@ final class ConfiguredLanguageClient(
           case None => RawMetalsQuickPickResult(cancelled = true)
         }
       }.asJava
-    }
-  }
-
-  override def metalsPublishDecorations(
-      params: PublishDecorationsParams
-  ): Unit = {
-    if (clientConfig.isDecorationProvider()) {
-      underlying.metalsPublishDecorations(params)
     }
   }
 

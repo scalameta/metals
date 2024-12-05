@@ -357,13 +357,7 @@ projects.
 
 ## Worksheets
 
-**✅**: Worksheets work via the Decoration protocol and are added as a
-non-editable side decoration.
-
-**Comments**: Worksheets work via `workspace/applyEdit` by adding comments to
-the source code and support hover to show larger output. You can find more
-information about worksheets under the editor specific worksheet section. For
-example, [here for VS Code](vscode.md#worksheets).
+**✅**: Worksheets work via inlay hints.
 
 By default there is a 30 second timeout on worksheet evaluation, this setting can be overridden by `-Dmetals.worksheet-timeout=<number of seconds>` server property.
 
@@ -447,9 +441,6 @@ website.
 ## Metals Extensions
 
 **Status bar**: Editor client implements the `metals/status` notification.
-
-**Decoration protocol**: Editor client implements the
-[Decoration Protocol](../integrations/decoration-protocol.md).
 
 **Tree view**: Editor client implements the
 [Tree View Protocol](../integrations/tree-view-protocol.md).

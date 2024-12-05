@@ -22,8 +22,6 @@ class ScalaCliSuite extends BaseScalaCliSuite("3.3.3") {
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(
       InitializationOptions.Default.copy(
-        inlineDecorationProvider = Some(true),
-        decorationProvider = Some(true),
         debuggingProvider = Option(true),
         runProvider = Option(true),
       )

@@ -144,16 +144,6 @@ final class ClientConfiguration(
   def isRunProvider(): Boolean =
     initializationOptions.runProvider.getOrElse(false)
 
-  def isDecorationProvider(): Boolean =
-    extract(
-      initializationOptions.decorationProvider,
-      experimentalCapabilities.decorationProvider,
-      false,
-    )
-
-  def isInlineDecorationProvider(): Boolean =
-    initializationOptions.inlineDecorationProvider.getOrElse(false)
-
   def isInlayHintsEnabled(): Boolean = {
     for {
       capabilities <- clientCapabilities
