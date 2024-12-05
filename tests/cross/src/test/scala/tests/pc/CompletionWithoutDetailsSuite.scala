@@ -19,28 +19,60 @@ class CompletionWithoutDetailsSuite extends BaseCompletionSuite {
       |  Lis@@
       |}""".stripMargin,
     """|List
-       |List - java.awt
-       |List - java.util
-       |JList - javax.swing
-       |ListUI - javax.swing.plaf
+       |List
+       |List
+       |JList
+       |ListUI
        |""".stripMargin,
     compat = Map(
       "2.13" ->
         """|List
            |LazyList
-           |List - java.awt
-           |List - java.util
-           |JList - javax.swing
+           |List
+           |List
+           |JList
            |""".stripMargin,
       "3" ->
         """|List
-           |List - java.awt
-           |List - java.util
-           |List - scala.collection.immutable
-           |List[A](elems: A*): CC[A]
+           |List
+           |List
+           |List
+           |List
            |""".stripMargin
     ),
     includeDetail = false,
+    topLines = Some(5)
+  )
+
+  check(
+    "scope-detail",
+    """
+      |object A {
+      |  Lis@@
+      |}""".stripMargin,
+    """|List scala.collection.immutable
+       |List java.awt
+       |List java.util
+       |JList javax.swing
+       |ListUI javax.swing.plaf
+       |""".stripMargin,
+    compat = Map(
+      "2.13" ->
+        """|List scala.collection.immutable
+           |LazyList scala.collection.immutable
+           |List java.awt
+           |List java.util
+           |JList javax.swing
+           |""".stripMargin,
+      "3" ->
+        """|List scala.collection.immutable
+           |List java.awt
+           |List java.util
+           |List scala.collection.immutable
+           |List[A](elems: A*): CC[A]
+           |""".stripMargin
+    ),
+    includeDetail = true,
     topLines = Some(5)
   )
 

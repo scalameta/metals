@@ -110,9 +110,10 @@ class CompletionProvider(
         case _ => detailString(member, history)
       }
 
+      val includeDetailInLabel = compiler.metalsConfig.isDetailIncludedInLabel
       def labelWithSig =
         if (
-          compiler.metalsConfig.isDetailIncludedInLabel && (member.sym.isMethod || member.sym.isValue)
+          includeDetailInLabel && (member.sym.isMethod || member.sym.isValue)
         ) {
           ident + detail
         } else {
@@ -130,7 +131,7 @@ class CompletionProvider(
           o.label.getOrElse(labelWithSig)
         case _: WorkspaceImplicitMember =>
           s"$labelWithSig (implicit)"
-        case o: WorkspaceMember =>
+        case o: WorkspaceMember if includeDetailInLabel =>
           s"$ident - ${o.sym.owner.fullName}"
         case _ => labelWithSig
       }
