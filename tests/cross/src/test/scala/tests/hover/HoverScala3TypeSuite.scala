@@ -608,7 +608,8 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
     """|```scala
        |val foo: String
        |```
-       |doc doc""".stripMargin
+       |doc doc""".stripMargin,
+    repeat = 2
   )
 
 }

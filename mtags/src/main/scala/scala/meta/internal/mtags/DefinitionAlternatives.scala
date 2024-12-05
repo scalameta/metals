@@ -3,20 +3,21 @@ package scala.meta.internal.mtags
 import scala.meta.internal.semanticdb.Scala._
 
 object DefinitionAlternatives {
+
   /**
    * Returns a list of fallback symbols that can act instead of given symbol.
    */
   def apply(symbol: Symbol): List[Symbol] = {
-      List(
-        stripSyntheticPackageObjectFromObject(symbol),
-        caseClassCompanionToType(symbol),
-        caseClassApplyOrCopy(symbol),
-        caseClassApplyOrCopyParams(symbol),
-        initParamToValue(symbol),
-        varGetter(symbol),
-        methodOwner(symbol),
-        objectInsteadOfAny(symbol)
-      ).flatten
+    List(
+      stripSyntheticPackageObjectFromObject(symbol),
+      caseClassCompanionToType(symbol),
+      caseClassApplyOrCopy(symbol),
+      caseClassApplyOrCopyParams(symbol),
+      initParamToValue(symbol),
+      varGetter(symbol),
+      methodOwner(symbol),
+      objectInsteadOfAny(symbol)
+    ).flatten
   }
 
   object GlobalSymbol {
@@ -26,7 +27,9 @@ object DefinitionAlternatives {
       Some(sym.owner -> sym.value.desc)
   }
 
-  private def stripSyntheticPackageObjectFromObject(symbol: Symbol): Option[Symbol] = {
+  private def stripSyntheticPackageObjectFromObject(
+      symbol: Symbol
+  ): Option[Symbol] = {
     val toplevel = symbol.toplevel
     Option(toplevel).flatMap {
       case GlobalSymbol(owner, Descriptor.Term(pkgName))
