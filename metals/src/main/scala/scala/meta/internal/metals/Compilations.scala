@@ -34,6 +34,7 @@ final class Compilations(
     downstreamTargets: PreviouslyCompiledDownsteamTargets,
     bestEffortEnabled: Boolean,
 )(implicit ec: ExecutionContext) {
+  private val fileSignatures = new SavedFileSignatures
   private val compileTimeout: Timeout =
     Timeout("compile", Duration(10, TimeUnit.MINUTES))
   private val cascadeTimeout: Timeout =
@@ -106,18 +107,20 @@ final class Compilations(
     compileBatch(targets).ignoreValue
   }
 
-  def compileFile(path: AbsolutePath): Future[b.CompileResult] = {
-    def empty = new b.CompileResult(b.StatusCode.CANCELLED)
-    for {
-      targetOpt <- expand(path)
-      result <- targetOpt match {
-        case None => Future.successful(empty)
-        case Some(target) =>
-          compileBatch(target)
-            .map(res => res.getOrElse(target, empty))
-      }
-      _ <- compileWorksheets(Seq(path))
-    } yield result
+  def compileFile(path: AbsolutePath): Future[Option[b.CompileResult]] = {
+    if(fileSignatures.didSavedContentChanged(path)) {
+      def empty = new b.CompileResult(b.StatusCode.CANCELLED)
+      for {
+        targetOpt <- expand(path)
+        result <- targetOpt match {
+          case None => Future.successful(empty)
+          case Some(target) =>
+            compileBatch(target)
+              .map(res => res.getOrElse(target, empty))
+        }
+        _ <- compileWorksheets(Seq(path))
+      } yield Some(result)
+    } else Future.successful(None)
   }
 
   def compileFiles(
@@ -125,7 +128,7 @@ final class Compilations(
       focusedDocumentBuildTarget: Option[BuildTargetIdentifier],
   ): Future[Unit] = {
     for {
-      targets <- expand(paths)
+      targets <- expand(paths.filter(fileSignatures.didSavedContentChanged))
       _ <- compileBatch(targets)
       _ <- focusedDocumentBuildTarget match {
         case Some(bt)
