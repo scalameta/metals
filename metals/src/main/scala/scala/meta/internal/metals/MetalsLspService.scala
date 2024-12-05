@@ -750,8 +750,9 @@ abstract class MetalsLspService(
         .getOrElse(current)
     }
 
+    val content = FileIO.readAllBytes(path)
     // Update md5 fingerprint from file contents on disk
-    fingerprints.add(path, FileIO.slurp(path, charset))
+    fingerprints.add(path, new String(content, charset))
     // Update in-memory buffer contents from LSP client
     buffers.put(path, params.getTextDocument.getText)
 
@@ -784,7 +785,10 @@ abstract class MetalsLspService(
           Future
             .sequence(
               List(
-                maybeCompileOnDidFocus(path, prevBuildTarget),
+                maybeCompileOnDidFocus(
+                  PathWithContent(path, content),
+                  prevBuildTarget,
+                ),
                 compilers.load(List(path)),
                 parser,
                 interactive,
@@ -821,20 +825,20 @@ abstract class MetalsLspService(
       CompletableFuture.completedFuture(DidFocusResult.RecentlyActive)
     } else {
       worksheetProvider.onDidFocus(path)
-      maybeCompileOnDidFocus(path, prevBuildTarget).asJava
+      maybeCompileOnDidFocus(PathWithContent(path), prevBuildTarget).asJava
     }
   }
 
   protected def maybeCompileOnDidFocus(
-      path: AbsolutePath,
+      path: PathWithContent,
       prevBuildTarget: b.BuildTargetIdentifier,
   ): Future[DidFocusResult.Value] =
-    buildTargets.inverseSources(path) match {
+    buildTargets.inverseSources(path.path) match {
       case Some(target) if prevBuildTarget != target =>
         compilations
           .compileFile(path)
           .map(_ => DidFocusResult.Compiled)
-      case _ if path.isWorksheet =>
+      case _ if path.path.isWorksheet =>
         compilations
           .compileFile(path)
           .map(_ => DidFocusResult.Compiled)
@@ -938,16 +942,22 @@ abstract class MetalsLspService(
   }
 
   protected def onChange(paths: Seq[AbsolutePath]): Future[Unit] = {
-    paths.foreach { path =>
-      fingerprints.add(path, FileIO.slurp(path, charset))
-    }
+    val pathsWithContent =
+      paths.map { path =>
+        val content = FileIO.readAllBytes(path)
+        fingerprints.add(path, new String(content, charset))
+        PathWithContent(path, content)
+      }
 
     Future
       .sequence(
         List(
           Future(indexer.reindexWorkspaceSources(paths)),
           compilations
-            .compileFiles(paths, Option(focusedDocumentBuildTarget.get())),
+            .compileFiles(
+              pathsWithContent,
+              Option(focusedDocumentBuildTarget.get()),
+            ),
         ) ++ paths.map(f => Future(interactiveSemanticdbs.textDocument(f)))
       )
       .ignoreValue
@@ -958,7 +968,10 @@ abstract class MetalsLspService(
       .sequence(
         List(
           compilations
-            .compileFiles(List(path), Option(focusedDocumentBuildTarget.get())),
+            .compileFiles(
+              List(PathWithContent.deleted(path)),
+              Option(focusedDocumentBuildTarget.get()),
+            ),
           Future {
             diagnostics.didDelete(path)
             testProvider.onFileDelete(path)
