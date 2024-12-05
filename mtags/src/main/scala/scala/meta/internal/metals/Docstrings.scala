@@ -33,7 +33,6 @@ import scala.meta.pc.SymbolDocumentation
  */
 class Docstrings(index: GlobalSymbolIndex) {
   val cache = new TrieMap[Content, SymbolDocumentation]()
-  val alternativesMap = new TrieMap[String, Set[String]]
   private val logger = Logger.getLogger(classOf[Docstrings].getName)
 
   def documentation(
@@ -41,16 +40,15 @@ class Docstrings(index: GlobalSymbolIndex) {
       parents: ParentSymbols,
       contentType: ContentType
   ): Optional[SymbolDocumentation] = {
-    val content = Content.from(symbol, contentType)
-    val result = cache.get(content) match {
+    val result = getFromCacheWithProxy(symbol, contentType) match {
       case Some(value) =>
         if (value == EmptySymbolDocumentation) None
         else Some(value)
       case None =>
         indexSymbol(symbol, contentType)
-        val result = cache.get(content)
+        val result = getFromCacheWithProxy(symbol, contentType)
         if (result.isEmpty)
-          cache(content) = EmptySymbolDocumentation
+          cache(Content.from(symbol, contentType)) = EmptySymbolDocumentation
         result
     }
     /* Fall back to parent javadocs/scaladocs if nothing is specified for the current symbol
@@ -84,11 +82,9 @@ class Docstrings(index: GlobalSymbolIndex) {
       .parents()
       .asScala
       .flatMap { s =>
-        val content = Content.from(s, contentType)
-        if (cache.contains(content)) cache.get(content)
-        else {
+        getFromCacheWithProxy(s, contentType).orElse {
           indexSymbol(s, contentType)
-          cache.get(content)
+          getFromCacheWithProxy(s, contentType)
         }
       }
       .find(_.docstring().nonEmpty)
@@ -99,6 +95,17 @@ class Docstrings(index: GlobalSymbolIndex) {
         cache(Content.from(symbol, contentType)) = updated
         updated
       }
+  }
+
+  private def getFromCacheWithProxy(
+      symbol: String,
+      contentType: ContentType
+  ): Option[SymbolDocumentation] = {
+    cache.get(Content.from(symbol, contentType)) match {
+      case Some(ProxySymbolDocumentation(alternativeSymbol)) =>
+        cache.get(Content.from(alternativeSymbol, contentType))
+      case res => res
+    }
   }
 
   /**
@@ -148,19 +155,12 @@ class Docstrings(index: GlobalSymbolIndex) {
     val querySymbol = defn.querySymbol.value
     lazy val queryContent = Content.from(querySymbol, contentType)
 
-    if (defSymbol != querySymbol && !cache.contains(queryContent)) {
-      cache
-        .get(Content.from(defSymbol, contentType))
-        .foreach(cache.put(queryContent, _))
-
-      alternativesMap.synchronized {
-        val prev = alternativesMap.get(defSymbol)
-        alternativesMap.put(
-          defSymbol,
-          prev.map(_ + querySymbol).getOrElse(Set(querySymbol))
-        )
+    if (
+      defSymbol != querySymbol && cache.get(queryContent).forall {
+        case EmptySymbolDocumentation | _: ProxySymbolDocumentation => true
+        case _ => false
       }
-    }
+    ) cache.put(queryContent, new ProxySymbolDocumentation(defSymbol))
   }
 
   private def indexSymbolDefinition(
@@ -191,10 +191,7 @@ class Docstrings(index: GlobalSymbolIndex) {
     ): Unit = {
       for {
         contentType <- ContentType.values()
-        symbol <- alternativesMap
-          .remove(occ.symbol)
-          .getOrElse(Set.empty) + occ.symbol
-      } cache.remove(Content.from(symbol, contentType))
+      } cache.remove(Content.from(sinfo.symbol, contentType))
     }
   }
 
