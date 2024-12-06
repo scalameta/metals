@@ -258,7 +258,7 @@ lazy val mtagsShared = project
     },
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "4.29.0",
+      "com.google.protobuf" % "protobuf-java" % "4.29.1",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
