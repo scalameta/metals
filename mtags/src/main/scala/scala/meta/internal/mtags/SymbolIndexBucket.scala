@@ -223,8 +223,7 @@ class SymbolIndexBucket(
     }
     if (!definitions.contains(symbol.value)) {
       // Fallback 3: guess related symbols from the enclosing class.
-      DefinitionAlternatives(symbol)
-        .flatMap { case (alternative) => query0(querySymbol, alternative) }
+      DefinitionAlternatives(symbol).flatMap(query0(querySymbol, _))
     } else {
       definitions
         .get(symbol.value)
