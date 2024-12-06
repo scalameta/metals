@@ -18,10 +18,8 @@ import org.eclipse.{lsp4j => l}
 final class FoldingRangeExtractor(
     distance: TokenEditDistance,
     foldOnlyLines: Boolean,
+    spanThreshold: Int,
 ) {
-  private val spanThreshold = 2
-  private val distanceToEnclosingThreshold = 3
-
   private val ranges = new FoldingRanges(foldOnlyLines)
 
   def extract(tree: Tree): util.List[FoldingRange] = {
@@ -31,19 +29,19 @@ final class FoldingRangeExtractor(
   }
 
   def extractFrom(tree: Tree, enclosing: Position): Unit = {
-    // All Defn statements except one-liners must fold
-    if (span(tree.pos) > spanThreshold) {
+    if (span(tree.pos) > 0) {
       val newEnclosing = tree match {
+        case _ if tree.pos.startLine == enclosing.startLine =>
+          enclosing
         case Foldable((pos, adjust))
-            if tree.is[Defn] || span(enclosing) - span(
-              pos
-            ) > distanceToEnclosingThreshold =>
+            if pos.startLine != enclosing.startLine && spanAboveThreshold(
+              pos,
+              adjust,
+            ) =>
           distance.toRevised(pos.toLsp) match {
             case Some(revisedPos) =>
-              if (pos.startLine != enclosing.startLine) {
-                val range = createRange(revisedPos)
-                ranges.add(Region, range, adjust)
-              }
+              val range = createRange(revisedPos)
+              ranges.add(Region, range, adjust)
               pos
             case None => enclosing
           }
@@ -61,6 +59,11 @@ final class FoldingRangeExtractor(
         extractFrom(child, childEnclosing)
       })
     }
+  }
+
+  private def spanAboveThreshold(pos: Position, adjust: Boolean) = {
+    val adjustValue = if (adjust && foldOnlyLines) 1 else 0
+    span(pos) - adjustValue >= spanThreshold
   }
 
   private def extractImports(trees: List[Tree]) = {

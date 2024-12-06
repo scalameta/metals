@@ -23,6 +23,7 @@ public class Main {
 
     abstract class A {
         abstract void hello();
+        abstract void hello2();
     }
 
     abstract class B extends A {

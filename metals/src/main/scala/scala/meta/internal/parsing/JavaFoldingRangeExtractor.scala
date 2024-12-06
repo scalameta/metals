@@ -20,7 +20,6 @@ import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.FoldingRangeKind
 
 final object JavaFoldingRangeExtractor {
-  private val spanThreshold = 2
 
   private case class Range(
       startPos: Long,
@@ -165,6 +164,7 @@ final object JavaFoldingRangeExtractor {
       text: String,
       path: AbsolutePath,
       foldOnlyLines: Boolean,
+      spanThreshold: Int,
   ): List[FoldingRange] = {
     getTrees(text, path) match {
       case Some((trees, root)) =>

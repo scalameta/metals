@@ -9,11 +9,11 @@ class A >>region>>{
   def noSpacing =>>region>>
     for{
       x <- ???
-    }yield{
+    }yield>>region>>{
       ???
       ???
       ???
-    }<<region<<
+    }<<region<<<<region<<
 
   def why =>>region>>
     for
