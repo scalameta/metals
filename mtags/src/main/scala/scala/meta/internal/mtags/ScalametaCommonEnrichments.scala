@@ -363,6 +363,9 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
 
     def filename: String = path.toNIO.filename
 
+    def scalaFileName: String =
+      path.filename.stripSuffix(".scala").stripSuffix(".sc")
+
     def toIdeallyRelativeURI(sourceItemOpt: Option[AbsolutePath]): String =
       sourceItemOpt match {
         case Some(sourceItem) =>
