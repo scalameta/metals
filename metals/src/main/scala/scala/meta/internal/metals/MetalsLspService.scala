@@ -255,6 +255,7 @@ abstract class MetalsLspService(
     trees,
     buffers,
     foldOnlyLines = initializeParams.foldOnlyLines,
+    clientConfig.initialConfig.foldingRageMinimumSpan,
   )
 
   protected val diagnostics: Diagnostics = new Diagnostics(

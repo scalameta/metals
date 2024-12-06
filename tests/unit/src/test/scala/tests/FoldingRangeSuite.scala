@@ -19,7 +19,7 @@ abstract class FoldingRangeSuite(
 ) extends DirectoryExpectSuite(s"$directory/expect") {
   private val (buffers, trees) = TreeUtils.getTrees(scalaVersion)
   private val foldingRangeProvider =
-    new FoldingRangeProvider(trees, buffers, lineFoldingOnly)
+    new FoldingRangeProvider(trees, buffers, lineFoldingOnly, 3)
 
   override def testCases(): List[ExpectTestCase] = {
     val inputDirectory = AbsolutePath(testResourceDirectory)

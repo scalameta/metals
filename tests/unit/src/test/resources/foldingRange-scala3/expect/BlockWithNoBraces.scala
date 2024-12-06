@@ -43,7 +43,7 @@ def fooNested(): Unit =>>region>>
 
 def fooWithMatch(): Unit =>>region>>
   def bar(): Unit =>>region>>
-    ??? match
+    ??? match>>region>>
       case 1 =>>>region>>
         ???
         ???
@@ -56,7 +56,7 @@ def fooWithMatch(): Unit =>>region>>
           case 6 => ???<<region<<
         ???
         ???
-        ???<<region<<<<region<<
+        ???<<region<<<<region<<<<region<<
   ???
   ???
   ???
