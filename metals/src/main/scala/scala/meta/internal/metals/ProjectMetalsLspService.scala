@@ -76,6 +76,8 @@ class ProjectMetalsLspService(
       maxScalaCliServers,
     ) {
 
+  scribe.debug(clientConfig.toString())
+
   private val SemanticdbExecutionContext =
     ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
   import serverInputs._
