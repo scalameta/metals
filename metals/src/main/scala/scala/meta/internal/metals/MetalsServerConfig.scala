@@ -121,6 +121,11 @@ final case class MetalsServerConfig(
       "metals.enable-best-effort",
       default = false,
     ),
+    foldingRageMinimumSpan: Int =
+      Option(System.getProperty("metals.folding-range-minimum-span"))
+        .filter(_.forall(Character.isDigit(_)))
+        .map(_.toInt)
+        .getOrElse(3),
 ) {
   override def toString: String =
     List[String](
@@ -144,6 +149,7 @@ final case class MetalsServerConfig(
       s"worksheet-timeout=$worksheetTimeout",
       s"debug-server-start-timeout=$debugServerStartTimeout",
       s"enable-best-effort=$enableBestEffort",
+      s"folding-range-minimum-span=$foldingRageMinimumSpan",
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {

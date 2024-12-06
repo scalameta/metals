@@ -1,7 +1,7 @@
 class A >>region>>{
   val tryCatch =>>region>>
     try ???
-    catch {
+    catch >>region>>{
       case 0 =>
       case 1 => println()
       case 2 =>>>region>>
@@ -12,7 +12,7 @@ class A >>region>>{
       case 3 =>
         println()
       case _ => println()
-    }<<region<<
+    }<<region<<<<region<<
 
   val patternMatching =>>region>> ??? match {
     case 0 =>
