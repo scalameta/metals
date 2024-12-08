@@ -3,7 +3,6 @@ package scala.meta.internal.metals.clients.language
 import java.util.concurrent.CompletableFuture
 import java.{util => ju}
 
-import scala.meta.internal.decorations.PublishDecorationsParams
 import scala.meta.internal.tvp._
 
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
@@ -94,12 +93,6 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
       params: TreeViewDidChangeParams
   ): Unit = {
     underlying.metalsTreeViewDidChange(params)
-  }
-
-  override def metalsPublishDecorations(
-      params: PublishDecorationsParams
-  ): Unit = {
-    underlying.metalsPublishDecorations(params)
   }
 
   override def refreshModel(): CompletableFuture[Unit] =

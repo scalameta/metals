@@ -59,9 +59,7 @@ import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.search.SymbolHierarchyOps
-import scala.meta.internal.worksheets.DecorationWorksheetPublisher
 import scala.meta.internal.worksheets.WorksheetProvider
-import scala.meta.internal.worksheets.WorkspaceEditWorksheetPublisher
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.TextDocumentService
 import scala.meta.parsers.ParseException
@@ -409,32 +407,22 @@ abstract class MetalsLspService(
     definitionProvider,
   )
 
-  val worksheetProvider: WorksheetProvider = {
-    val worksheetPublisher =
-      if (clientConfig.isDecorationProvider())
-        new DecorationWorksheetPublisher(
-          clientConfig.isInlineDecorationProvider()
-        )
-      else
-        new WorkspaceEditWorksheetPublisher(buffers, trees)
-
-    register(
-      new WorksheetProvider(
-        folder,
-        buffers,
-        buildTargets,
-        languageClient,
-        () => userConfig,
-        workDoneProgress,
-        diagnostics,
-        embedded,
-        worksheetPublisher,
-        compilations,
-        scalaVersionSelector,
-        clientConfig.initialConfig,
-      )
+  val worksheetProvider: WorksheetProvider = register(
+    new WorksheetProvider(
+      folder,
+      buffers,
+      trees,
+      buildTargets,
+      languageClient,
+      () => userConfig,
+      workDoneProgress,
+      diagnostics,
+      embedded,
+      compilations,
+      scalaVersionSelector,
+      clientConfig,
     )
-  }
+  )
 
   protected val compilers: Compilers = register(
     new Compilers(
@@ -820,7 +808,6 @@ abstract class MetalsLspService(
     } else if (recentlyOpenedFiles.isRecentlyActive(path)) {
       CompletableFuture.completedFuture(DidFocusResult.RecentlyActive)
     } else {
-      worksheetProvider.onDidFocus(path)
       maybeCompileOnDidFocus(path, prevBuildTarget).asJava
     }
   }
@@ -995,13 +982,7 @@ abstract class MetalsLspService(
         .hover(params, token)
         .map(_.map(_.toLsp()))
         .map(
-          _.orElse {
-            val path = params.textDocument.getUri.toAbsolutePath
-            if (path.isWorksheet)
-              worksheetProvider.hover(path, params.getPosition)
-            else
-              None
-          }.orNull
+          _.orNull
         )
     }
   }
@@ -1016,7 +997,11 @@ abstract class MetalsLspService(
           if (userConfig.areSyntheticsEnabled())
             compilers.inlayHints(params, token)
           else Future.successful(List.empty[l.InlayHint].asJava)
-      } yield hints
+        worksheet <- worksheetProvider.inlayHints(
+          params.getTextDocument().getUri().toAbsolutePath,
+          token,
+        )
+      } yield (hints.asScala ++ worksheet).asJava
     }
   }
 
@@ -1395,13 +1380,17 @@ abstract class MetalsLspService(
   def copyWorksheetOutput(
       worksheetPath: AbsolutePath
   ): CompletableFuture[Object] = {
-    val output = worksheetProvider.copyWorksheetOutput(worksheetPath)
-    if (output.nonEmpty) {
-      Future(output).asJavaObject
-    } else {
-      languageClient.showMessage(Messages.Worksheets.unableToExport)
-      Future.successful(()).asJavaObject
-    }
+    worksheetProvider
+      .copyWorksheetOutput(worksheetPath)
+      .map { output =>
+        if (output.nonEmpty) {
+          output
+        } else {
+          languageClient.showMessage(Messages.Worksheets.unableToExport)
+          ()
+        }
+      }
+      .asJavaObject
   }
 
   def analyzeStackTrace(content: String): Option[ExecuteCommandParams] =

@@ -36,7 +36,11 @@ abstract class BaseInlayHintsExpectSuite(
           )
           val inlayHints =
             compiler.inlayHints(pcParams).get().asScala.toList
-          TestInlayHints.applyInlayHints(file.code, inlayHints)
+          TestInlayHints.applyInlayHints(
+            file.code,
+            inlayHints,
+            withTooltip = false,
+          )
         },
       )
     }
