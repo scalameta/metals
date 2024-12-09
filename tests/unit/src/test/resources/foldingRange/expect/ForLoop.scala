@@ -7,14 +7,14 @@ class A >>region>>{
     }<<region<<
 
   def noSpacing =>>region>>
-    for>>region>>{
+    for{
       x <- ???
-    }<<region<<{
+    }>>region>>{
       ???
       ???
       ???
       ???
-    }<<region<<
+    }<<region<<<<region<<
 
   def why =>>region>>
     for

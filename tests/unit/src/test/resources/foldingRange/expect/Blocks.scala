@@ -19,20 +19,20 @@ class A >>region>>{
 
   def chain =>>region>> Seq(1).map{
     x =>
-    x + 1
+    >>region>>x + 1
      + 1
      + 1
      + 1
      + 1
      + 1
-     + 1
+     + 1<<region<<
   }.map>>region>>{
-    _ + 1
+    >>region>>_ + 1
     + 1
     + 1
     + 1
     + 1
-    + 1
+    + 1<<region<<
   }<<region<<<<region<<
 
   def chain =>>region>> Seq(1).map(

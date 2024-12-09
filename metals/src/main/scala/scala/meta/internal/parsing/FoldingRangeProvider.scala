@@ -4,7 +4,6 @@ import java.util
 import java.util.Collections
 
 import scala.meta.inputs.Input
-import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.FoldingRangeProvider._
@@ -16,6 +15,7 @@ final class FoldingRangeProvider(
     val trees: Trees,
     buffers: Buffers,
     foldOnlyLines: Boolean,
+    foldingRageMinimumSpan: Int,
 ) {
 
   def getRangedForScala(
@@ -32,7 +32,11 @@ final class FoldingRangeProvider(
       val distance = TokenEditDistance(fromTree, revised, trees).getOrElse(
         TokenEditDistance.NoMatch
       )
-      val extractor = new FoldingRangeExtractor(distance, foldOnlyLines)
+      val extractor = new FoldingRangeExtractor(
+        distance,
+        foldOnlyLines,
+        foldingRageMinimumSpan,
+      )
       extractor.extract(tree)
     }
     result.getOrElse(util.Collections.emptyList())
@@ -45,7 +49,9 @@ final class FoldingRangeProvider(
       code <- buffers.get(filePath)
       if filePath.isJava
     } yield {
-      JavaFoldingRangeExtractor.extract(code, filePath, foldOnlyLines).asJava
+      JavaFoldingRangeExtractor
+        .extract(code, filePath, foldOnlyLines, foldingRageMinimumSpan)
+        .asJava
     }
 
     result.getOrElse(util.Collections.emptyList())
@@ -60,11 +66,6 @@ final class FoldingRanges(foldOnlyLines: Boolean) {
   private val allRanges = new util.ArrayList[FoldingRange]()
 
   def get: util.List[FoldingRange] = Collections.unmodifiableList(allRanges)
-
-  def add(kind: String, pos: Position): Unit = {
-    val range = createRange(pos)
-    add(kind, range)
-  }
 
   def add(kind: String, range: FoldingRange): Unit = {
     range.setKind(kind)
@@ -91,13 +92,6 @@ final class FoldingRanges(foldOnlyLines: Boolean) {
 
       allRanges.add(range)
     }
-  }
-
-  private def createRange(pos: Position): FoldingRange = {
-    val range = new FoldingRange(pos.startLine, pos.endLine)
-    range.setStartCharacter(pos.startColumn)
-    range.setEndCharacter(pos.endColumn)
-    range
   }
 
   // examples of collapsed: "class A {}" or "def foo = {}"
