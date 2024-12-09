@@ -9,7 +9,6 @@ import scala.meta.internal.metals.CreateSession
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.ImportBuildChanges
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.PathWithContent
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.process.SystemProcess
@@ -455,7 +454,7 @@ class SbtServerSuite
       _ <- initialize(layout)
       // make sure to compile once
       _ <- server.server.compilations.compileFile(
-        PathWithContent(workspace.resolve("target/Foo.scala"))
+        workspace.resolve("target/Foo.scala")
       )
     } yield {
       // Sleep 100 ms: that should be enough to see the compilation looping
