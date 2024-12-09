@@ -1215,7 +1215,10 @@ class WorkspaceLspService(
 
         val textDocumentSyncOptions = new lsp4j.TextDocumentSyncOptions
         textDocumentSyncOptions.setChange(lsp4j.TextDocumentSyncKind.Full)
-        textDocumentSyncOptions.setSave(new lsp4j.SaveOptions(true))
+        // We don't use the text at all.
+        textDocumentSyncOptions.setSave(
+          new lsp4j.SaveOptions( /* includeText = */ false)
+        )
         textDocumentSyncOptions.setOpenClose(true)
 
         val scalaFilesPattern = new lsp4j.FileOperationPattern("**/*.scala")
