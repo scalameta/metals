@@ -101,8 +101,6 @@ The currently available settings for `InitializationOptions` are listed below.
         snippetAutoIndent?: boolean;
       }
       debuggingProvider?: boolean;
-      decorationProvider?: boolean;
-      inlineDecorationProvider?: boolean;
       didFocusProvider?: boolean;
       doctorProvider?: "json" | "html";
       executeClientCommandProvider?: boolean;
@@ -230,13 +228,6 @@ Boolean value to signify that the client supports the
 
 Default value: `false`
 
-##### `decorationProvider`
-
-Boolean value to signify that the client supports the
-[Decoration Protocol](../integrations/decoration-protocol.md).
-
-Default value: `false`
-
 ##### `didFocusProvider`
 
 Boolean value to signify that the client supports the
@@ -288,13 +279,6 @@ Possible values:
   macOS+Linux and `\` on Windows) and forward slashes `/` for relative parts.
   For example, `C:\Users\IEUser\workspace\project/*.{scala,sbt,properties}`.
   This mode is used by the VS Code client.
-
-##### `inlineDecorationProvider`
-
-If the client implements the Metals Decoration Protocol **and** supports
-decorations to be shown inline and not only at the end of a line.
-
-Default: `false`
 
 ##### `icons`
 
@@ -695,11 +679,6 @@ editor, see the
 Metals implements several custom JSON-RPC endpoints related to rendering tree
 views in the editor client, the
 [Tree View Protocol](../integrations/tree-view-protocol.md).
-
-### Decoration Protocol
-
-Metals implements an LSP extension to display non-editable text in the editor,
-see the [Decoration Protocol](../integrations/decoration-protocol.md).
 
 ### `metals/status`
 
