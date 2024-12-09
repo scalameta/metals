@@ -9,6 +9,7 @@ object DefinitionAlternatives {
    */
   def apply(symbol: Symbol): List[Symbol] = {
     List(
+      stripSyntheticPackageObjectFromObject(symbol),
       caseClassCompanionToType(symbol),
       caseClassApplyOrCopy(symbol),
       caseClassApplyOrCopyParams(symbol),
@@ -24,6 +25,21 @@ object DefinitionAlternatives {
       Symbol(Symbols.Global(owner.value, desc))
     def unapply(sym: Symbol): Option[(Symbol, Descriptor)] =
       Some(sym.owner -> sym.value.desc)
+  }
+
+  private def stripSyntheticPackageObjectFromObject(
+      symbol: Symbol
+  ): Option[Symbol] = {
+    val toplevel = symbol.toplevel
+    Option(toplevel).flatMap {
+      case GlobalSymbol(owner, Descriptor.Term(pkgName))
+          if pkgName.endsWith("$package") =>
+        val newSymbol =
+          Symbol(s"${owner.value}${symbol.value.stripPrefix(toplevel.value)}")
+        if (newSymbol.toplevel.isTerm) Some(newSymbol)
+        else None
+      case _ => None
+    }
   }
 
   /**

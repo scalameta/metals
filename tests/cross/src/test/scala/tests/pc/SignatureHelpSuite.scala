@@ -520,7 +520,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
       |
       |
     """.stripMargin,
-    """|apply(viewId: String, nodeUri: String, label: String, command: String = ..., icon: String = ..., tooltip: String = ..., collapseState: String = ...): TreeViewNode
+    """|apply(viewId: String, nodeUri: String, label: String, command: String = null, icon: String = null, tooltip: String = null, collapseState: String = null): TreeViewNode
        |      ^^^^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(

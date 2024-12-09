@@ -230,9 +230,10 @@ object MtagsEnrichments extends ScalametaCommonEnrichments:
     def stripBackticks: String = s.stripPrefix("`").stripSuffix("`")
 
   extension (search: SymbolSearch)
-    def symbolDocumentation(symbol: Symbol, contentType: ContentType = ContentType.MARKDOWN)(using
-        Context
-    ): Option[SymbolDocumentation] =
+    def symbolDocumentation(
+      symbol: Symbol,
+      contentType: ContentType = ContentType.MARKDOWN
+    )(using Context): Option[SymbolDocumentation] =
       def toSemanticdbSymbol(symbol: Symbol) =
         SemanticdbSymbols.symbolName(
           if !symbol.is(JavaDefined) && symbol.isPrimaryConstructor then
