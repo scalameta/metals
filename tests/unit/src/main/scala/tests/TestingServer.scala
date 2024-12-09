@@ -1058,7 +1058,7 @@ final case class TestingServer(
         fullServer
           .getServiceFor(path)
           .compilations
-          .compileFile(m.internal.metals.PathWithContent(path))
+          .compileFile(path)
       )
 
     for {
@@ -1120,9 +1120,7 @@ final case class TestingServer(
             codeLenses.trySuccess(lenses.toList)
           else if (retries > 0) {
             retries -= 1
-            server.compilations.compileFile(
-              m.internal.metals.PathWithContent(path)
-            )
+            server.compilations.compileFile(path)
           } else {
             val error = s"Could not fetch any code lenses in $maxRetries tries"
             codeLenses.tryFailure(new NoSuchElementException(error))

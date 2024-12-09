@@ -5,7 +5,6 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.PathWithContent
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.io.AbsolutePath
@@ -243,9 +242,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
            |""".stripMargin
       )
       (compileReport, _) <- server.server.compilations
-        .compileFile(
-          PathWithContent(workspace.resolve("src/com/App.scala"))
-        )
+        .compileFile(workspace.resolve("src/com/App.scala"))
         .zip {
           // wait until the compilation start
           while (!trace.contains(s"buildTarget/compile")) {
@@ -262,9 +259,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
       cancelId = cancelMatch.get.group(1)
       _ = assert(currentTrace.contains(s"buildTarget/compile - ($cancelId)"))
       compileReport <- server.server.compilations
-        .compileFile(
-          PathWithContent(workspace.resolve("src/com/App.scala"))
-        )
+        .compileFile(workspace.resolve("src/com/App.scala"))
       _ = assertEquals(compileReport.get.getStatusCode(), StatusCode.OK)
     } yield ()
   }

@@ -631,9 +631,7 @@ class ProjectMetalsLspService(
           for {
             _ <- connect(ImportBuildAndIndex(session))
           } {
-            focusedDocument().foreach(path =>
-              compilations.compileFile(PathWithContent(path))
-            )
+            focusedDocument().foreach(path => compilations.compileFile(path))
           }
       }
     }
