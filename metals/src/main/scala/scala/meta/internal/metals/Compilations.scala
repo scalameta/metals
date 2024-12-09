@@ -34,6 +34,7 @@ final class Compilations(
     downstreamTargets: PreviouslyCompiledDownsteamTargets,
     bestEffortEnabled: Boolean,
 )(implicit ec: ExecutionContext) {
+  private val fileChanges = new FileChanges(buildTargets, workspace)
   private val compileTimeout: Timeout =
     Timeout("compile", Duration(10, TimeUnit.MINUTES))
   private val cascadeTimeout: Timeout =
@@ -96,6 +97,7 @@ final class Compilations(
   def compileTarget(
       target: b.BuildTargetIdentifier
   ): Future[b.CompileResult] = {
+    fileChanges.willCompile(List(target))
     compileBatch(target).map { results =>
       results.getOrElse(target, new b.CompileResult(b.StatusCode.CANCELLED))
     }
@@ -104,44 +106,52 @@ final class Compilations(
   def compileTargets(
       targets: Seq[b.BuildTargetIdentifier]
   ): Future[Unit] = {
+    fileChanges.willCompile(targets.toList)
     compileBatch(targets).ignoreValue
   }
 
-  def compileFile(path: AbsolutePath): Future[b.CompileResult] = {
+  def compileFile(
+      path: AbsolutePath,
+      fingerprint: Option[Fingerprint] = None,
+      assumeDidNotChange: Boolean = false,
+  ): Future[Option[b.CompileResult]] = {
     def empty = new b.CompileResult(b.StatusCode.CANCELLED)
     for {
-      targetOpt <- expand(path)
+      targetOpt <- fileChanges.buildTargetToCompile(
+        path,
+        fingerprint,
+        assumeDidNotChange,
+      )
       result <- targetOpt match {
         case None => Future.successful(empty)
         case Some(target) =>
           compileBatch(target)
             .map(res => res.getOrElse(target, empty))
       }
-      _ <- compileWorksheets(Seq(path))
-    } yield result
+      _ <-
+        if (assumeDidNotChange && targetOpt.isEmpty) Future.successful(())
+        else compileWorksheets(Seq(path))
+    } yield Some(result)
   }
 
   def compileFiles(
-      paths: Seq[AbsolutePath],
+      paths: Seq[(AbsolutePath, Fingerprint)],
       focusedDocumentBuildTarget: Option[BuildTargetIdentifier],
   ): Future[Unit] = {
     for {
-      targets <- expand(paths)
+      targets <- fileChanges.buildTargetsToCompile(
+        paths,
+        focusedDocumentBuildTarget,
+      )
       _ <- compileBatch(targets)
-      _ <- focusedDocumentBuildTarget match {
-        case Some(bt)
-            if !targets.contains(bt) &&
-              buildTargets.isInverseDependency(bt, targets.toList) =>
-          compileBatch(bt)
-        case _ => Future.successful(())
-      }
-      _ <- compileWorksheets(paths)
+      _ <- compileWorksheets(paths.map(_._1))
     } yield ()
   }
 
   def cascadeCompile(targets: Seq[BuildTargetIdentifier]): Future[Unit] = {
     val inverseDependencyLeaves =
       targets.flatMap(buildTargets.inverseDependencyLeaves).distinct
+    fileChanges.willCompile(inverseDependencyLeaves.toList)
     cascadeBatch(inverseDependencyLeaves).map(_ => ())
   }
 
