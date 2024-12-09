@@ -744,15 +744,9 @@ abstract class MetalsLspService(
     // In some cases like peeking definition didOpen might be followed up by close
     // and we would lose the notion of the focused document
     recentlyOpenedFiles.add(path)
-    val prevBuildTarget = focusedDocumentBuildTarget.getAndUpdate { current =>
-      buildTargets
-        .inverseSources(path)
-        .getOrElse(current)
-    }
 
-    val content = FileIO.readAllBytes(path)
     // Update md5 fingerprint from file contents on disk
-    fingerprints.add(path, new String(content, charset))
+    val fingerprint = fingerprints.add(path, FileIO.slurp(path, charset))
     // Update in-memory buffer contents from LSP client
     buffers.put(path, params.getTextDocument.getText)
 
@@ -785,10 +779,7 @@ abstract class MetalsLspService(
           Future
             .sequence(
               List(
-                maybeCompileOnDidFocus(
-                  PathWithContent(path, content),
-                  prevBuildTarget,
-                ),
+                compilations.compileFile(path, Some(fingerprint)),
                 compilers.load(List(path)),
                 parser,
                 interactive,
@@ -811,11 +802,6 @@ abstract class MetalsLspService(
       uri: String
   ): CompletableFuture[DidFocusResult.Value] = {
     val path = uri.toAbsolutePath
-    val prevBuildTarget = focusedDocumentBuildTarget.getAndUpdate { current =>
-      buildTargets
-        .inverseSources(path)
-        .getOrElse(current)
-    }
     scalaCli.didFocus(path)
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
@@ -825,28 +811,15 @@ abstract class MetalsLspService(
       CompletableFuture.completedFuture(DidFocusResult.RecentlyActive)
     } else {
       worksheetProvider.onDidFocus(path)
-      maybeCompileOnDidFocus(PathWithContent(path), prevBuildTarget).asJava
+      compilations
+        .compileFile(path, assumeDidNotChange = true)
+        .map(
+          _.map(_ => DidFocusResult.Compiled)
+            .getOrElse(DidFocusResult.AlreadyCompiled)
+        )
+        .asJava
     }
   }
-
-  protected def maybeCompileOnDidFocus(
-      path: PathWithContent,
-      prevBuildTarget: b.BuildTargetIdentifier,
-  ): Future[DidFocusResult.Value] =
-    buildTargets.inverseSources(path.path) match {
-      case Some(target) if prevBuildTarget != target =>
-        compilations
-          .compileFile(path)
-          .map(_ => DidFocusResult.Compiled)
-      case _ if path.path.isWorksheet =>
-        compilations
-          .compileFile(path)
-          .map(_ => DidFocusResult.Compiled)
-      case Some(_) =>
-        Future.successful(DidFocusResult.AlreadyCompiled)
-      case None =>
-        Future.successful(DidFocusResult.NoBuildTarget)
-    }
 
   def pause(): Unit = pauseables.pause()
 
@@ -942,11 +915,10 @@ abstract class MetalsLspService(
   }
 
   protected def onChange(paths: Seq[AbsolutePath]): Future[Unit] = {
-    val pathsWithContent =
+    val pathsWithFingerPrints =
       paths.map { path =>
-        val content = FileIO.readAllBytes(path)
-        fingerprints.add(path, new String(content, charset))
-        PathWithContent(path, content)
+        val fingerprint = fingerprints.add(path, FileIO.slurp(path, charset))
+        (path, fingerprint)
       }
 
     Future
@@ -955,7 +927,7 @@ abstract class MetalsLspService(
           Future(indexer.reindexWorkspaceSources(paths)),
           compilations
             .compileFiles(
-              pathsWithContent,
+              pathsWithFingerPrints,
               Option(focusedDocumentBuildTarget.get()),
             ),
         ) ++ paths.map(f => Future(interactiveSemanticdbs.textDocument(f)))
@@ -969,7 +941,7 @@ abstract class MetalsLspService(
         List(
           compilations
             .compileFiles(
-              List(PathWithContent.deleted(path)),
+              List((path, null)),
               Option(focusedDocumentBuildTarget.get()),
             ),
           Future {

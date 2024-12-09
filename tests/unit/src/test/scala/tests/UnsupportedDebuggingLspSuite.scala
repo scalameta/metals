@@ -9,7 +9,6 @@ import scala.util.Success
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.PathWithContent
 
 class UnsupportedDebuggingLspSuite
     extends BaseLspSuite("unsupported-debugging") {
@@ -63,9 +62,7 @@ class UnsupportedDebuggingLspSuite
       )
       _ <-
         server.server.compilations
-          .compileFile(
-            PathWithContent(server.toPath("a/src/main/scala/Main.scala"))
-          )
+          .compileFile(server.toPath("a/src/main/scala/Main.scala"))
     } yield {
       val clientCommands = client.clientCommands.asScala.map(_.getCommand).toSet
       assert(!clientCommands.contains(ClientCommands.RefreshModel.id))
