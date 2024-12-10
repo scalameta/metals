@@ -1022,13 +1022,10 @@ abstract class MetalsLspService(
 
   def inlayHintResolve(
       inlayHint: InlayHint
-  ): CompletableFuture[InlayHint] = {
+  ): CompletableFuture[InlayHint] =
     CancelTokens.future { token =>
-      focusedDocument
-        .map(path => inlayHintResolveProvider.resolve(inlayHint, path, token))
-        .getOrElse(Future.successful(inlayHint))
+      inlayHintResolveProvider.resolve(inlayHint, token)
     }
-  }
 
   override def documentHighlights(
       params: TextDocumentPositionParams

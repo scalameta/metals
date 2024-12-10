@@ -1,15 +1,20 @@
 package scala.meta.internal.pc
 
+import java.net.URI
+
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.CommonMtagsEnrichments.XtensionText
 
+import com.google.gson.Gson
+import com.google.gson.JsonElement
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintKind
 import org.eclipse.{lsp4j => l}
 
 case class InlayHints(
+    uri: URI,
     inlayHints: List[InlayHint],
     definitions: Set[Int]
 ) {
@@ -34,18 +39,11 @@ case class InlayHints(
   ) = {
     val hint = new InlayHint()
     hint.setPosition(pos)
-    val (label, data) = labelParts.map(lp => (lp.label, getData(lp.data))).unzip
+    val (label, dataInfo) = labelParts.map(lp => (lp.label, lp.data)).unzip
     hint.setLabel(label.asJava)
-    hint.setData(data.toArray)
+    hint.setData(InlayHints.toData(uri, dataInfo))
     hint.setKind(kind)
     hint
-  }
-
-  private def getData(data: Either[String, l.Position]): Any = {
-    data match {
-      case Left(str) => str
-      case Right(pos) => pos
-    }
   }
 
   // If method has both type parameter and implicit parameter, we want the type parameter decoration to be displayed first,
@@ -60,7 +58,8 @@ case class InlayHints(
 }
 
 object InlayHints {
-  def empty: InlayHints = InlayHints(Nil, Set.empty)
+  private val gson = new Gson()
+  def empty(uri: URI): InlayHints = InlayHints(uri, Nil, Set.empty)
 
   /**
    * Creates a label for inlay hint by inserting `parts` on correct positions in `tpeStr`.
@@ -96,4 +95,40 @@ object InlayHints {
     buffer += LabelPart(tpeStr.substring(current, tpeStr.length))
     buffer.toList.filter(_.name.nonEmpty)
   }
+
+  def toData(uri: URI, data: List[Either[String, l.Position]]): JsonElement =
+    gson.toJsonTree(
+      InlineHintData(
+        uri,
+        data.map {
+          case Left(str) => LabelPartData("string", str, null)
+          case Right(pos) => LabelPartData("position", null, pos)
+        }.asJava
+      )
+    )
+
+  def fromData(json: JsonElement): (URI, List[Either[String, l.Position]]) = {
+    val data = gson.fromJson(json, classOf[InlineHintData])
+    (
+      data.uri,
+      data.labelParts.asScala.toList.map { part =>
+        part.dataType match {
+          case "position" => Right(part.position)
+          case "string" => Left(part.string)
+        }
+      }
+    )
+  }
 }
+
+final case class InlineHintData(
+    uri: URI,
+    labelParts: java.util.List[LabelPartData]
+)
+
+// "string" or "position"
+final case class LabelPartData(
+    dataType: String,
+    string: String,
+    position: l.Position
+)
