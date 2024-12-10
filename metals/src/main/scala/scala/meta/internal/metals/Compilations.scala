@@ -127,9 +127,7 @@ final class Compilations(
           compileBatch(target)
             .map(res => res.getOrElse(target, empty))
       }
-      _ <-
-        if (assumeDidNotChange && targetOpt.isEmpty) Future.successful(())
-        else compileWorksheets(Seq(path))
+      _ <- compileWorksheets(Seq(path))
     } yield Some(result)
   }
 
