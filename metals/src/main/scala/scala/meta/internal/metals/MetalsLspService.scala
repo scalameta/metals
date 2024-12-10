@@ -190,6 +190,8 @@ abstract class MetalsLspService(
   val buildTargets: BuildTargets =
     BuildTargets.from(folder, mainBuildTargetsData, tables)
 
+  val fileChanges: FileChanges = new FileChanges(buildTargets, () => folder)
+
   val buildTargetClasses =
     new BuildTargetClasses(buildTargets)
 
@@ -216,11 +218,12 @@ abstract class MetalsLspService(
         headDoctor.executeRefreshDoctor()
       else ()
     },
-    buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
+    () => Option(focusedDocumentBuildTarget.get()),
     worksheets => onWorksheetChanged(worksheets),
     onStartCompilation,
     () => userConfig,
     downstreamTargets,
+    fileChanges,
     clientConfig.initialConfig.enableBestEffort,
   )
   var indexingPromise: Promise[Unit] = Promise[Unit]()
@@ -732,9 +735,12 @@ abstract class MetalsLspService(
     // In some cases like peeking definition didOpen might be followed up by close
     // and we would lose the notion of the focused document
     recentlyOpenedFiles.add(path)
+    focusedDocumentBuildTarget.set(
+      buildTargets.inverseSources(path).getOrElse(null)
+    )
 
     // Update md5 fingerprint from file contents on disk
-    val fingerprint = fingerprints.add(path, FileIO.slurp(path, charset))
+    fingerprints.add(path, FileIO.slurp(path, charset))
     // Update in-memory buffer contents from LSP client
     buffers.put(path, params.getTextDocument.getText)
 
@@ -767,7 +773,7 @@ abstract class MetalsLspService(
           Future
             .sequence(
               List(
-                compilations.compileFile(path, Some(fingerprint)),
+                compilations.compileFile(path, assumeDidNotChange = true),
                 compilers.load(List(path)),
                 parser,
                 interactive,
@@ -791,6 +797,9 @@ abstract class MetalsLspService(
   ): CompletableFuture[DidFocusResult.Value] = {
     val path = uri.toAbsolutePath
     scalaCli.didFocus(path)
+    focusedDocumentBuildTarget.set(
+      buildTargets.inverseSources(path).getOrElse(null)
+    )
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
     if (path.isDependencySource(folder)) {
@@ -906,11 +915,7 @@ abstract class MetalsLspService(
       .sequence(
         List(
           Future(indexer.reindexWorkspaceSources(paths)),
-          compilations
-            .compileFiles(
-              pathsWithFingerPrints,
-              Option(focusedDocumentBuildTarget.get()),
-            ),
+          compilations.compileFiles(pathsWithFingerPrints),
         ) ++ paths.map(f => Future(interactiveSemanticdbs.textDocument(f)))
       )
       .ignoreValue
@@ -920,11 +925,7 @@ abstract class MetalsLspService(
     Future
       .sequence(
         List(
-          compilations
-            .compileFiles(
-              List((path, null)),
-              Option(focusedDocumentBuildTarget.get()),
-            ),
+          compilations.compileFiles(List((path, null))),
           Future {
             diagnostics.didDelete(path)
             testProvider.onFileDelete(path)
@@ -1193,7 +1194,9 @@ abstract class MetalsLspService(
           thresholdMillis = 1.second.toMillis,
         ) {
           val path = params.getTextDocument.getUri.toAbsolutePath
-          codeLensProvider.findLenses(path).map(_.toList.asJava)
+          codeLensProvider.findLenses(path).map(_.toList.asJava).map { found =>
+            found
+          }
         }
       }
     }

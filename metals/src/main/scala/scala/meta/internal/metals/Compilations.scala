@@ -27,14 +27,14 @@ final class Compilations(
     languageClient: MetalsLanguageClient,
     refreshTestSuites: () => Unit,
     afterSuccessfulCompilation: () => Unit,
-    isCurrentlyFocused: b.BuildTargetIdentifier => Boolean,
+    buildtargetInFocus: () => Option[b.BuildTargetIdentifier],
     compileWorksheets: Seq[AbsolutePath] => Future[Unit],
     onStartCompilation: () => Unit,
     userConfiguration: () => UserConfiguration,
     downstreamTargets: PreviouslyCompiledDownsteamTargets,
+    fileChanges: FileChanges,
     bestEffortEnabled: Boolean,
 )(implicit ec: ExecutionContext) {
-  private val fileChanges = new FileChanges(buildTargets, workspace)
   private val compileTimeout: Timeout =
     Timeout("compile", Duration(10, TimeUnit.MINUTES))
   private val cascadeTimeout: Timeout =
@@ -133,15 +133,9 @@ final class Compilations(
     } yield Some(result)
   }
 
-  def compileFiles(
-      paths: Seq[(AbsolutePath, Fingerprint)],
-      focusedDocumentBuildTarget: Option[BuildTargetIdentifier],
-  ): Future[Unit] = {
+  def compileFiles(paths: Seq[(AbsolutePath, Fingerprint)]): Future[Unit] = {
     for {
-      targets <- fileChanges.buildTargetsToCompile(
-        paths,
-        focusedDocumentBuildTarget,
-      )
+      targets <- fileChanges.buildTargetsToCompile(paths, buildtargetInFocus())
       _ <- compileBatch(targets)
       _ <- compileWorksheets(paths.map(_._1))
     } yield ()
@@ -301,7 +295,7 @@ final class Compilations(
           targets,
           () => {
             refreshTestSuites()
-            if (targets.exists(isCurrentlyFocused)) {
+            if (targets.exists(buildtargetInFocus().contains)) {
               languageClient.refreshModel()
             }
           },
