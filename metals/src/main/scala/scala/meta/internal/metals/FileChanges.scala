@@ -13,8 +13,13 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 class FileChanges(buildTargets: BuildTargets, workspace: () => AbsolutePath)(
     implicit ec: ExecutionContext
 ) {
-  private val previousCreateOrModify = TrieMap[AbsolutePath, String]()
+  private val previousSignature = TrieMap[AbsolutePath, String]()
   private val dirtyBuildTargets = mutable.Set[BuildTargetIdentifier]()
+
+  def addAllDirty(
+      targets: IterableOnce[BuildTargetIdentifier]
+  ): mutable.Set[BuildTargetIdentifier] =
+    dirtyBuildTargets.addAll(targets)
 
   def buildTargetsToCompile(
       paths: Seq[(AbsolutePath, Fingerprint)],
@@ -116,10 +121,10 @@ class FileChanges(buildTargets: BuildTargets, workspace: () => AbsolutePath)(
     fingerprint
       .map { fingerprint =>
         synchronized {
-          if (previousCreateOrModify.getOrElse(path, null) == fingerprint.md5)
+          if (previousSignature.getOrElse(path, null) == fingerprint.md5)
             false
           else {
-            previousCreateOrModify.put(path, fingerprint.md5)
+            previousSignature.put(path, fingerprint.md5)
             true
           }
         }
@@ -127,5 +132,5 @@ class FileChanges(buildTargets: BuildTargets, workspace: () => AbsolutePath)(
       .getOrElse(true)
   }
 
-  def cancel(): Unit = previousCreateOrModify.clear()
+  def cancel(): Unit = previousSignature.clear()
 }
