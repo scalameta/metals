@@ -185,9 +185,10 @@ class DidFocusWhileCompilingLspSuite
            |""".stripMargin
       }
       _ = fakeTime.elapseSeconds(10)
-      _ <- server.didSave("a/src/main/scala/a/A.scala")(
+      _ <- server.didChange("a/src/main/scala/a/A.scala")(
         _.replace("1", "\"\"")
       )
+      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         xMismatch,
