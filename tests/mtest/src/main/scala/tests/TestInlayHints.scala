@@ -5,7 +5,9 @@ import scala.collection.mutable.ListBuffer
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
+import scala.meta.internal.pc.InlayHints
 
+import com.google.gson.JsonElement
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.{lsp4j => l}
@@ -32,7 +34,8 @@ object TestInlayHints {
       case Right(labelParts) => labelParts.asScala.map(_.getValue()).toList
     }
     val data =
-      inlayHint.getData().asInstanceOf[Array[Any]]
+      InlayHints.fromData(inlayHint.getData().asInstanceOf[JsonElement])._2
+
     buffer += "/*"
     labels.zip(data).foreach { case (label, data) =>
       buffer += label
@@ -42,11 +45,11 @@ object TestInlayHints {
     buffer.toList.mkString
   }
 
-  private def readData(data: Any): List[String] = {
+  private def readData(data: Either[String, l.Position]): List[String] = {
     data match {
-      case data: String if data.isEmpty => Nil
-      case data: String => List("<<", data, ">>")
-      case data: l.Position =>
+      case Left("") => Nil
+      case Left(data) => List("<<", data, ">>")
+      case Right(data) =>
         val str = s"(${data.getLine()}:${data.getCharacter()})"
         List("<<", str, ">>")
     }
