@@ -25,9 +25,7 @@ final class InlayHintResolveProvider(
     try {
       val (uri, labelParts) =
         InlayHints.fromData(inlayHint.getData().asInstanceOf[JsonElement])
-      pprint.log(uri)
       val path = uri.toAbsolutePath
-      pprint.log(labelParts)
       resolve(inlayHint, getLabelParts(inlayHint).zip(labelParts), path, token)
     } catch {
       case error: Throwable =>
