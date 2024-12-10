@@ -168,9 +168,10 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
         server.client.workspaceShowMessages,
         s"Error importing Scala script ${workspace.resolve("main.sc")}. See the logs for more details.",
       )
-      _ <- server.didSave("main.sc") { text =>
+      _ <- server.didChange("main.sc") { text =>
         text.replace(fakeScalaVersion, scalaVersion)
       }
+      _ <- server.didSave("main.sc")(identity)
       _ <- server.server.indexingPromise.future
       targets <- server.executeCommand(ServerCommands.ListBuildTargets)
       _ = assertEquals(

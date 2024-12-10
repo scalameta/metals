@@ -232,6 +232,7 @@ class BestEffortCompilationSuite
            |""".stripMargin
       }
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ <- server.didOpen("b/src/main/scala/b/B.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/scala/a/A.scala:5:3: error: value completionUnknown is not a member of object B

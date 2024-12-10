@@ -185,23 +185,26 @@ class DidFocusWhileCompilingLspSuite
            |""".stripMargin
       }
       _ = fakeTime.elapseSeconds(10)
-      _ <- server.didSave("a/src/main/scala/a/A.scala")(
+      _ <- server.didChange("a/src/main/scala/a/A.scala")(
         _.replace("1", "\"\"")
       )
+      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         xMismatch,
       )
-      _ <- server.didSave("b/src/main/scala/b/B.scala")(
+      _ <- server.didChange("b/src/main/scala/b/B.scala")(
         _.replace("2", "\"\"")
       )
+      _ <- server.didSave("b/src/main/scala/b/B.scala")(identity)
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         xMismatch,
       )
-      _ <- server.didSave("a/src/main/scala/a/A.scala")(
+      _ <- server.didChange("a/src/main/scala/a/A.scala")(
         _.replace("Int", "String")
       )
+      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|b/src/main/scala/b/B.scala:3:16: error: type mismatch;
