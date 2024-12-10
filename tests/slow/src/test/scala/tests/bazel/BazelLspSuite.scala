@@ -234,7 +234,7 @@ class BazelLspSuite
         BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
       )
       _ <- server.didOpen("Hello.scala")
-      _ <- server.didSave("Hello.scala") { _ =>
+      _ <- server.didChange("Hello.scala") { _ =>
         """|package examples.scala3
            |
            |sealed trait A
@@ -251,6 +251,7 @@ class BazelLspSuite
            |}
            |""".stripMargin
       }
+      _ <- server.didSave("Hello.scala")(identity)
       _ = assertNoDiff(
         server.client.workspaceDiagnostics,
         """|Hello.scala:11:3: warning: match may not be exhaustive.
@@ -262,12 +263,13 @@ class BazelLspSuite
            |""".stripMargin,
       )
       // warnings should not disappear after updating
-      _ <- server.didSave("Hello.scala") { text =>
+      _ <- server.didChange("Hello.scala") { text =>
         s"""|$text
             |
             |class Additional
             |""".stripMargin
       }
+      _ <- server.didSave("Hello.scala")(identity)
       _ = assertNoDiff(
         server.client.workspaceDiagnostics,
         """|Hello.scala:11:3: warning: match may not be exhaustive.

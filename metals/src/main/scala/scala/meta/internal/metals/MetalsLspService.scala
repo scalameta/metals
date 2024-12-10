@@ -884,6 +884,9 @@ abstract class MetalsLspService(
   ): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     savedFiles.add(path)
+    if (!buffers.contains(path)) {
+      buffers.put(path, path.toInput.text)
+    }
     Future
       .sequence(
         List(

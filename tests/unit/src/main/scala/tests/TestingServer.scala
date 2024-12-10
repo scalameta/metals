@@ -785,6 +785,7 @@ final case class TestingServer(
     val abspath = toPath(filename)
     val oldText = abspath.toInputFromBuffers(buffers).text
     val newText = fn(oldText)
+    buffers.put(abspath, newText)
     didChange(filename, newText)
   }
 

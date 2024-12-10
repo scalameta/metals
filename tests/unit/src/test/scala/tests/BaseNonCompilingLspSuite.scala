@@ -105,9 +105,10 @@ abstract class BaseNonCompilingLspSuite(name: String)
                    |}
                    |""".stripMargin
       input = newText.replace("<<", "").replace(">>", "")
-      _ <- server.didSave("a/src/main/scala/a/A.scala") { _ =>
+      _ <- server.didChange("a/src/main/scala/a/A.scala") { _ =>
         newText.replace("<<", "").replace(">>", "")
       }
+      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
       _ <-
         server
           .assertCodeAction(
@@ -119,9 +120,10 @@ abstract class BaseNonCompilingLspSuite(name: String)
             kind = Nil,
           )
       // make sure that the now change UniqueObject is not suggested
-      _ <- server.didSave("a/src/main/scala/a/A.scala") { _ =>
+      _ <- server.didChange("a/src/main/scala/a/A.scala") { _ =>
         input.replace("UniqueObjectOther", "UniqueObject")
       }
+      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
       _ <-
         server
           .assertCodeAction(
