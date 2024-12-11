@@ -41,7 +41,7 @@ case class InlayHints(
     hint.setPosition(pos)
     val (label, dataInfo) = labelParts.map(lp => (lp.label, lp.data)).unzip
     hint.setLabel(label.asJava)
-    hint.setData(InlayHints.toData(uri, dataInfo))
+    hint.setData(InlayHints.toData(uri.toString(), dataInfo))
     hint.setKind(kind)
     hint
   }
@@ -96,22 +96,24 @@ object InlayHints {
     buffer.toList.filter(_.name.nonEmpty)
   }
 
-  def toData(uri: URI, data: List[Either[String, l.Position]]): JsonElement =
+  def toData(uri: String, data: List[Either[String, l.Position]]): JsonElement =
     gson.toJsonTree(
       InlineHintData(
         uri,
         data.map {
           case Left(str) => LabelPartData("string", str, null)
           case Right(pos) => LabelPartData("position", null, pos)
-        }.asJava
+        }.toArray
       )
     )
 
-  def fromData(json: JsonElement): (URI, List[Either[String, l.Position]]) = {
+  def fromData(
+      json: JsonElement
+  ): (String, List[Either[String, l.Position]]) = {
     val data = gson.fromJson(json, classOf[InlineHintData])
     (
       data.uri,
-      data.labelParts.asScala.toList.map { part =>
+      data.labelParts.toList.map { part =>
         part.dataType match {
           case "position" => Right(part.position)
           case "string" => Left(part.string)
@@ -122,8 +124,8 @@ object InlayHints {
 }
 
 final case class InlineHintData(
-    uri: URI,
-    labelParts: java.util.List[LabelPartData]
+    uri: String,
+    labelParts: Array[LabelPartData]
 )
 
 // "string" or "position"
