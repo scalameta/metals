@@ -36,7 +36,9 @@ final class PcInlayHintsProvider(
 
   def provide(): List[InlayHint] =
     treesInRange()
-      .flatMap(tpdTree => traverse(InlayHints.empty, tpdTree).result())
+      .flatMap(tpdTree =>
+        traverse(InlayHints.empty(params.uri()), tpdTree).result()
+      )
 
   private def adjustPos(pos: Position): Position =
     pos.adjust(text)._1

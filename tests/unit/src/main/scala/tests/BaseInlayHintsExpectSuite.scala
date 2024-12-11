@@ -3,6 +3,7 @@ package tests
 import scala.meta.internal.metals.CompilerInlayHintsParams
 import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.metals.InlayHintCompat
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.pc.PresentationCompiler
 
@@ -35,7 +36,15 @@ abstract class BaseInlayHintsExpectSuite(
             true,
           )
           val inlayHints =
-            compiler.inlayHints(pcParams).get().asScala.toList
+            compiler
+              .inlayHints(pcParams)
+              .get()
+              .asScala
+              .toList
+              .map(
+                InlayHintCompat
+                  .maybeFixInlayHintData(_, file.file.toURI.toString())
+              )
           TestInlayHints.applyInlayHints(file.code, inlayHints)
         },
       )

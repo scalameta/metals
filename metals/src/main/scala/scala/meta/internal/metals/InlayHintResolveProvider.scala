@@ -4,10 +4,11 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.pc.InlayHints
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
-import com.google.gson.JsonArray
+import com.google.gson.JsonElement
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintLabelPart
 import org.eclipse.lsp4j.TextDocumentIdentifier
@@ -19,21 +20,19 @@ final class InlayHintResolveProvider(
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext) {
   def resolve(
       inlayHint: InlayHint,
-      path: AbsolutePath,
       token: CancelToken,
-  ): Future[InlayHint] = {
-    scala.util.Try {
-      val data = inlayHint.getData().asInstanceOf[JsonArray]
-      getLabelParts(inlayHint).zip(parseData(data))
-    }.toEither match {
-      case Right(labelParts) =>
-        resolve(inlayHint, labelParts, path, token)
-      case Left(error) =>
+  ): Future[InlayHint] =
+    try {
+      val (uri, labelParts) =
+        InlayHints.fromData(inlayHint.getData().asInstanceOf[JsonElement])
+      val path = uri.toAbsolutePath
+      resolve(inlayHint, getLabelParts(inlayHint).zip(labelParts), path, token)
+    } catch {
+      case error: Throwable =>
         scribe.warn(s"Failed to resolve inlay hint: $error")
-        rc.unsanitized.create(report(inlayHint, path, error), ifVerbose = true)
+        rc.unsanitized.create(report(inlayHint, error), ifVerbose = true)
         Future.successful(inlayHint)
     }
-  }
 
   private def resolve(
       inlayHint: InlayHint,
@@ -87,19 +86,6 @@ final class InlayHintResolveProvider(
       case Right(labelParts) => labelParts.asScala.toList
     }
 
-  val symbol = new JsonParser.Of[String]
-  val range = new JsonParser.Of[l.Position]
-
-  private def parseData(
-      data: JsonArray
-  ): List[Either[String, l.Position]] = {
-    data.asScala.map {
-      case range.Jsonized(data) => Right(data)
-      case symbol.Jsonized(data) => Left(data)
-      case _ => Left("")
-    }.toList
-  }
-
   private def getSymbol(symbol: String, path: AbsolutePath) = {
     definitionProvider
       .fromSymbol(symbol, Some(path))
@@ -109,7 +95,6 @@ final class InlayHintResolveProvider(
 
   private def report(
       inlayHint: InlayHint,
-      path: AbsolutePath,
       error: Throwable,
   ) = {
     val pos = inlayHint.getPosition()
@@ -119,11 +104,33 @@ final class InlayHintResolveProvider(
           |
           |inlayHint: $inlayHint
           |""".stripMargin,
-      s"failed to resolve inlayHint in $path",
-      id = Some(s"$path::${pos.getLine()}:${pos.getCharacter()}"),
-      path = Some(path.toURI),
+      s"failed to resolve inlayHint",
       error = Some(error),
     )
   }
 
+}
+
+object InlayHintCompat {
+  private def parseData(
+      data: Array[Any]
+  ): List[Either[String, l.Position]] =
+    data.map {
+      case data: l.Position => Right(data)
+      case data: String => Left(data)
+    }.toList
+
+  // for compatibility with old inlay hint data
+  def maybeFixInlayHintData(hint: InlayHint, uri: String): InlayHint = {
+    if (hint.getData.isInstanceOf[Array[_]]) {
+      try {
+        val labelParts = parseData(hint.getData.asInstanceOf[Array[Any]])
+        hint.setData(InlayHints.toData(uri, labelParts))
+      } catch {
+        case e: Throwable =>
+          scribe.warn(s"Failed to fix inlay hint data: $e")
+      }
+    }
+    hint
+  }
 }
