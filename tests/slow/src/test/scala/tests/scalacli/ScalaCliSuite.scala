@@ -782,4 +782,19 @@ class ScalaCliSuite extends BaseScalaCliSuite("3.3.3") {
       _ = assertNoDiff(completion, "com.lihaoyi")
     } yield ()
   }
+
+  test("power-option") {
+    cleanWorkspace()
+    for {
+      _ <- scalaCliInitialize(useBsp = true)(
+        s"""|/MyTests.scala
+            |//> using scala ${scalaVersion}
+            |//> using packaging.dockerFrom openjdk:17
+            |
+            |def main() = println("Hello world!")
+            |""".stripMargin
+      )
+      _ <- server.didOpen("MyTests.scala")
+    } yield assertNoDiagnostics()
+  }
 }
