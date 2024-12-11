@@ -243,7 +243,7 @@ object ScalaCli {
         command.toList,
         workspace,
         redirectErrorOutput = false,
-        env = Map(),
+        env = Map("SCALA_CLI_POWER" -> "true"),
         processOut = None,
         processErr = Some(line => scribe.info("Scala CLI: " + line)),
         discardInput = false,
