@@ -606,7 +606,8 @@ class Compilers(
                 else InlayHintKind.Parameter
               hint.setKind(kind)
               hint.setData(
-                internal.pc.InlayHints.toData(params.uri(), List(Left("")))
+                internal.pc.InlayHints
+                  .toData(params.uri().toString(), List(Left("")))
               )
               hint
             }
@@ -624,7 +625,10 @@ class Compilers(
           }
           .map { hint =>
             hint.setPosition(adjust.adjustPos(hint.getPosition()))
-            hint
+            InlayHintCompat.maybeFixInlayHintData(
+              hint,
+              params.getTextDocument().getUri(),
+            )
           }
           .asJava
       }

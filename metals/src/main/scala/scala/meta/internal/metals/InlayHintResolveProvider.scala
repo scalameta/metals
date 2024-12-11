@@ -110,3 +110,27 @@ final class InlayHintResolveProvider(
   }
 
 }
+
+object InlayHintCompat {
+  private def parseData(
+      data: Array[Any]
+  ): List[Either[String, l.Position]] =
+    data.map {
+      case data: l.Position => Right(data)
+      case data: String => Left(data)
+    }.toList
+
+  // for compatibility with old inlay hint data
+  def maybeFixInlayHintData(hint: InlayHint, uri: String): InlayHint = {
+    if (hint.getData.isInstanceOf[Array[_]]) {
+      try {
+        val labelParts = parseData(hint.getData.asInstanceOf[Array[Any]])
+        hint.setData(InlayHints.toData(uri, labelParts))
+      } catch {
+        case e: Throwable =>
+          scribe.warn(s"Failed to fix inlay hint data: $e")
+      }
+    }
+    hint
+  }
+}
