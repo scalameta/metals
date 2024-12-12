@@ -92,6 +92,9 @@ trait PcCollector[T] { self: WithCompilationUnit =>
   def isCorrectPos(t: Tree): Boolean =
     t.pos.isRange || (t.pos.isDefined && allowZeroExtentImplicits && t.symbol != null && t.symbol.isImplicit)
 
+  def correctNamePos(t: MemberDef): Boolean =
+    t.pos.isDefined && t.namePosition.isRange
+
   def traverseSought(
       filter: Tree => Boolean,
       soughtFilter: (Symbol => Boolean) => Boolean
@@ -172,7 +175,8 @@ trait PcCollector[T] { self: WithCompilationUnit =>
          * class <<Foo>> = ???
          * etc.
          */
-        case df: MemberDef if isCorrectPos(df) && filter(df) =>
+        case df: MemberDef
+            if (isCorrectPos(df) || correctNamePos(df)) && filter(df) =>
           (annotationChildren(df) ++ df.children).foldLeft({
             val t = collect(
               df,
