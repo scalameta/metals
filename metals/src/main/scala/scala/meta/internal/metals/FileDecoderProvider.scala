@@ -565,6 +565,7 @@ final class FileDecoderProvider(
           propagateError = true,
           logInfo = false,
         )
+        .future
         .map(_ => {
           if (sbErr.nonEmpty)
             DecoderResponse.failed(path.toURI, sbErr.toString)
@@ -675,6 +676,7 @@ final class FileDecoderProvider(
               else
                 DecoderResponse.success(path.toURI, sbOut.toString)
             })
+            .future
         } catch {
           case NonFatal(e) =>
             scribe.error(e.toString())
