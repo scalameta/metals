@@ -77,7 +77,7 @@ case class SbtBuildTool(
 
   def shutdownBspServer(
       shellRunner: ShellRunner
-  ): Future[Int] = {
+  ): CancelableFuture[Int] = {
     val shutdownArgs =
       composeArgs(List("--client", "shutdown"), projectRoot, projectRoot.toNIO)
     scribe.info(s"running ${shutdownArgs.mkString(" ")}")
@@ -242,7 +242,7 @@ case class SbtBuildTool(
               if (promise.isCompleted) {
                 // executes when user chooses `restart` after the timeout
                 restartSbtBuildServer()
-              } else shutdownBspServer(shellRunner).ignoreValue
+              } else shutdownBspServer(shellRunner).future.ignoreValue
             case _ =>
               promise.trySuccess(())
               Future.successful(())

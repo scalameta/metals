@@ -4,10 +4,15 @@ import java.util.concurrent.TimeUnit
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.Promise
 
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.CancelSwitch
+import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.Confirmation
+import scala.meta.internal.metals.Interruptable
+import scala.meta.internal.metals.Interruptable._
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Tables
@@ -37,14 +42,14 @@ final class BloopInstall(
 
   def runUnconditionally(
       buildTool: BloopInstallProvider
-  ): Future[WorkspaceLoadedStatus] = {
+  ): CancelableFuture[WorkspaceLoadedStatus] = {
     buildTool.bloopInstall(
       workspace,
       args => {
         scribe.info(s"running '${args.mkString(" ")}'")
         val process =
           runArgumentsUnconditionally(buildTool, args, userConfig().javaHome)
-        process.foreach { e =>
+        process.future.foreach { e =>
           if (e.isFailed) {
             // Record the exact command that failed to help troubleshooting.
             scribe.error(s"$buildTool command failed: ${args.mkString(" ")}")
@@ -59,7 +64,7 @@ final class BloopInstall(
       buildTool: BloopInstallProvider,
       args: List[String],
       javaHome: Option[String],
-  ): Future[WorkspaceLoadedStatus] = {
+  ): CancelableFuture[WorkspaceLoadedStatus] = {
     persistChecksumStatus(Status.Started, buildTool)
     val processFuture = shellRunner
       .run(
@@ -81,7 +86,7 @@ final class BloopInstall(
         case ExitCodes.Cancel => WorkspaceLoadedStatus.Cancelled
         case result => WorkspaceLoadedStatus.Failed(result)
       }
-    processFuture.foreach { result =>
+    processFuture.future.foreach { result =>
       try result.toChecksumStatus.foreach(persistChecksumStatus(_, buildTool))
       catch {
         case _: InterruptedException =>
@@ -112,35 +117,36 @@ final class BloopInstall(
   def runIfApproved(
       buildTool: BloopInstallProvider,
       digest: String,
-  ): Future[WorkspaceLoadedStatus] =
+  ): CancelableFuture[WorkspaceLoadedStatus] =
     synchronized {
       oldInstallResult(digest) match {
         case Some(result)
             if result != WorkspaceLoadedStatus.Duplicate(Status.Requested) =>
           scribe.info(s"skipping build import with status '${result.name}'")
-          Future.successful(result)
+          CancelableFuture.successful(result)
         case _ =>
           if (userConfig().shouldAutoImportNewProject) {
             runUnconditionally(buildTool)
           } else {
             scribe.debug("Awaiting user response...")
-            for {
+            implicit val cancelSwitch = CancelSwitch(Promise[Unit]())
+            (for {
               userResponse <- requestImport(
                 buildTools,
                 buildTool,
                 languageClient,
                 digest,
-              )
+              ).withInterrupt
               installResult <- {
                 if (userResponse.isYes) {
-                  runUnconditionally(buildTool)
+                  runUnconditionally(buildTool).withInterrupt
                 } else {
                   // Don't spam the user with requests during rapid build changes.
                   notification.dismiss(2, TimeUnit.MINUTES)
-                  Future.successful(WorkspaceLoadedStatus.Rejected)
+                  Interruptable.successful(WorkspaceLoadedStatus.Rejected)
                 }
               }
-            } yield installResult
+            } yield installResult).toCancellable
           }
       }
     }
