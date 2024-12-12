@@ -774,7 +774,7 @@ class HoverTermSuite extends BaseHoverSuite {
   )
 
   check(
-    "i7012".tag(IgnoreScala3),
+    "i7012",
     """|object O {
        |  val x@@x, yy, zz = 1
        |}
