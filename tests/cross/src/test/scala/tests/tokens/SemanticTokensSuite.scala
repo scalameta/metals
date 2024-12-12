@@ -406,4 +406,12 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
     )
   )
 
+  check(
+    "i7012",
+    """|object <<O>>/*class*/ {
+       |  val <<xx>>/*variable,definition,readonly*/, <<yy>>/*variable,definition,readonly*/, <<zz>>/*variable,definition,readonly*/ = 1
+       |}
+       |""".stripMargin
+  )
+
 }
