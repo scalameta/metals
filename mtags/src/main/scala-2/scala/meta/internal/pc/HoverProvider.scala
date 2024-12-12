@@ -142,7 +142,7 @@ class HoverProvider(
       // Def, val or val definition, example `val x: Int = 1`
       // Matches only if the cursor is over the definition name.
       case v: ValOrDefDef if correctPosDef(v) =>
-        val symbol = v.symbol.getter match {
+        val symbol = (v.symbol.getter: Symbol) match {
           case NoSymbol => v.symbol
           case getter => getter
         }
@@ -194,7 +194,7 @@ class HoverProvider(
       case t @ Template(parents, self, body) =>
         t.body.collectFirst {
           case v: ValDef if correctPosDef(v) =>
-            val symbol = v.symbol.getter match {
+            val symbol = (v.symbol.getter: Symbol) match {
               case NoSymbol => v.symbol
               case getter => getter
             }
