@@ -125,7 +125,6 @@ object Messages {
     s"Import already running. \nPlease cancel the current import to run a new one.",
   )
 
-
   val ImportProjectPartiallyFailed = new MessageParams(
     MessageType.Warning,
     "Import project partially failed, limited functionality may work in some parts of the workspace. " +

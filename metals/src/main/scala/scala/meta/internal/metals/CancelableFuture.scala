@@ -4,7 +4,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Try
 
-case class CancelableFuture[T](
+case class CancelableFuture[+T](
     future: Future[T],
     cancelable: Cancelable = Cancelable.empty,
 ) extends Cancelable {

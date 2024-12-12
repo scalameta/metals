@@ -2,10 +2,9 @@ package scala.meta.internal.builds
 
 import java.security.MessageDigest
 
-import scala.concurrent.Future
-
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StatusBar
@@ -26,9 +25,11 @@ case class ScalaCliBuildTool(
 
   override def generateBspConfig(
       workspace: AbsolutePath,
-      systemProcess: List[String] => Future[BspConfigGenerationStatus],
+      systemProcess: List[String] => CancelableFuture[
+        BspConfigGenerationStatus
+      ],
       statusBar: StatusBar,
-  ): Future[BspConfigGenerationStatus] =
+  ): CancelableFuture[BspConfigGenerationStatus] =
     createBspFileArgs(workspace).map(systemProcess).getOrElse {
       // fallback to creating `.bsp/scala-cli.json` that starts JVM launcher
       val bspConfig =
@@ -37,7 +38,7 @@ case class ScalaCliBuildTool(
       bspConfig.writeText(
         ScalaCli.scalaCliBspJsonContent(projectRoot = projectRoot.toString())
       )
-      Future.successful(Generated)
+      CancelableFuture.successful(Generated)
     }
 
   override def createBspFileArgs(

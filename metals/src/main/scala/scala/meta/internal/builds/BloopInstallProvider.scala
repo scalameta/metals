@@ -2,8 +2,7 @@ package scala.meta.internal.builds
 import java.io.IOException
 import java.nio.file.Files
 
-import scala.concurrent.Future
-
+import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
@@ -18,8 +17,8 @@ trait BloopInstallProvider extends BuildTool {
    */
   def bloopInstall(
       workspace: AbsolutePath,
-      systemProcess: List[String] => Future[WorkspaceLoadedStatus],
-  ): Future[WorkspaceLoadedStatus] = {
+      systemProcess: List[String] => CancelableFuture[WorkspaceLoadedStatus],
+  ): CancelableFuture[WorkspaceLoadedStatus] = {
     cleanupStaleConfig()
     systemProcess(bloopInstallArgs(workspace))
   }

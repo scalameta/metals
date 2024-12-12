@@ -338,14 +338,15 @@ class ConnectionProvider(
           val curr = iter.next()
           request.cancelCompare(curr.request) match {
             case TakeOver => curr.cancel()
-            case Yield    => info.cancel()
-            case _        =>
+            case Yield => info.cancel()
+            case _ =>
           }
         }
         queue.add(info)
         // maybe cancel ongoing
         currentRequest.foreach(ongoing =>
-          if (request.cancelCompare(ongoing.request) == TakeOver) ongoing.cancel()
+          if (request.cancelCompare(ongoing.request) == TakeOver)
+            ongoing.cancel()
         )
         info
       }
@@ -359,26 +360,25 @@ class ConnectionProvider(
       }
 
       for (request <- optRequest) {
-        val cancelPromise = request.cancelPromise
+        implicit val cancelPromise = CancelSwitch(request.cancelPromise)
         val result =
-          if (cancelPromise.isCompleted)
+          if (request.cancelPromise.isCompleted)
             Interruptable.successful(BuildChange.Cancelled)
           else
             request.request match {
               case Disconnect(shutdownBuildServer) =>
-                disconnect(shutdownBuildServer, cancelPromise)
-              case Index(check) => index(check, cancelPromise)
+                disconnect(shutdownBuildServer)
+              case Index(check) => index(check)
               case ImportBuildAndIndex(session) =>
-                importBuildAndIndex(session, cancelPromise)
+                importBuildAndIndex(session)
               case ConnectToSession(session) =>
-                connectToSession(session, cancelPromise)
+                connectToSession(session)
               case CreateSession(shutdownBuildServer) =>
-                createSession(shutdownBuildServer, cancelPromise)
+                createSession(shutdownBuildServer)
               case GenerateBspConfigAndConnect(buildTool, shutdownServer) =>
                 generateBspConfigAndConnect(
                   buildTool,
                   shutdownServer,
-                  cancelPromise,
                 )
               case BloopInstallAndConnect(
                     buildTool,
@@ -391,7 +391,6 @@ class ConnectionProvider(
                   checksum,
                   forceImport,
                   shutdownServer,
-                  cancelPromise,
                 )
             }
         result.future.onComplete { res =>
@@ -407,22 +406,21 @@ class ConnectionProvider(
     }
 
     private def disconnect(
-        shutdownBuildServer: Boolean,
-        cancelPromise: Promise[Unit],
-    ): Interruptable[BuildChange] = {
-      def shutdownBsp(optMainBsp: Option[String]): Future[Boolean] = {
+        shutdownBuildServer: Boolean
+    )(implicit cancelSwitch: CancelSwitch): Interruptable[BuildChange] = {
+      def shutdownBsp(optMainBsp: Option[String]): Interruptable[Boolean] = {
         optMainBsp match {
           case Some(BloopServers.name) =>
-            Future { bloopServers.shutdownServer() }
+            Interruptable.successful { bloopServers.shutdownServer() }
           case Some(SbtBuildTool.name) =>
             for {
               res <- buildToolProvider.buildTool match {
                 case Some(sbt: SbtBuildTool) =>
-                  sbt.shutdownBspServer(shellRunner).map(_ == 0)
-                case _ => Future.successful(false)
+                  sbt.shutdownBspServer(shellRunner).withInterrupt.map(_ == 0)
+                case _ => Interruptable.successful(false)
               }
             } yield res
-          case s => Future.successful(s.nonEmpty)
+          case s => Interruptable.successful(s.nonEmpty)
         }
       }
 
@@ -434,33 +432,28 @@ class ConnectionProvider(
       )
 
       for {
-        _ <- scalaCli.stop(storeLast = true).withInterrupt(cancelPromise)
+        _ <- scalaCli.stop(storeLast = true).withInterrupt
         optMainBsp <- (bspSession match {
           case None => Future.successful(None)
           case Some(session) =>
             bspSession = None
             mainBuildTargetsData.resetConnections(List.empty)
             session.shutdown().map(_ => Some(session.main.name))
-        }).withInterrupt(cancelPromise)
+        }).withInterrupt
         _ <-
-          if (shutdownBuildServer)
-            shutdownBsp(optMainBsp).withInterrupt(cancelPromise)
+          if (shutdownBuildServer) shutdownBsp(optMainBsp)
           else Interruptable.successful(())
       } yield BuildChange.None
     }
 
-    private def index(
-        check: () => Unit,
-        cancelPromise: Promise[Unit],
-    ): Interruptable[BuildChange] =
+    private def index(check: () => Unit): Interruptable[BuildChange] =
       profiledIndexWorkspace(check)
         .map(_ => BuildChange.None)
-        .withInterrupt(cancelPromise)
+        .withInterrupt
 
     private def importBuildAndIndex(
-        session: BspSession,
-        cancelPromise: Promise[Unit],
-    ): Interruptable[BuildChange] = {
+        session: BspSession
+    )(implicit cancelSwitch: CancelSwitch): Interruptable[BuildChange] = {
       val importedBuilds0 = timerProvider.timed("Imported build") {
         session.importBuilds()
       }
@@ -470,7 +463,7 @@ class ConnectionProvider(
             Messages.importingBuild,
             importedBuilds0,
           )
-          .withInterrupt(cancelPromise)
+          .withInterrupt
         _ = {
           val idToConnection = bspBuilds.flatMap { bspBuild =>
             val targets =
@@ -481,7 +474,7 @@ class ConnectionProvider(
           saveProjectReferencesInfo(bspBuilds)
         }
         _ = compilers.cancel()
-        buildChange <- index(check, cancelPromise)
+        buildChange <- index(check)
       } yield buildChange
     }
 
@@ -504,9 +497,8 @@ class ConnectionProvider(
     }
 
     private def connectToSession(
-        session: BspSession,
-        cancelPromise: Promise[Unit],
-    ): Interruptable[BuildChange] = {
+        session: BspSession
+    )(implicit cancelSwitch: CancelSwitch): Interruptable[BuildChange] = {
       scribe.info(
         s"Connected to Build server: ${session.main.name} v${session.version}"
       )
@@ -517,7 +509,7 @@ class ConnectionProvider(
       bspSession = Some(session)
       isConnecting.set(false)
       for {
-        _ <- importBuildAndIndex(session, cancelPromise)
+        _ <- importBuildAndIndex(session)
         _ = buildToolProvider.buildTool.foreach(
           workspaceReload.persistChecksumStatus(Digest.Status.Installed, _)
         )
@@ -549,9 +541,8 @@ class ConnectionProvider(
     }
 
     def createSession(
-        shutdownServer: Boolean,
-        cancelPromise: Promise[Unit],
-    ): Interruptable[BuildChange] = {
+        shutdownServer: Boolean
+    )(implicit cancelSwitch: CancelSwitch): Interruptable[BuildChange] = {
       def compileAllOpenFiles: BuildChange => Future[BuildChange] = {
         case change if !change.isFailed =>
           Future
@@ -568,7 +559,7 @@ class ConnectionProvider(
 
       isConnecting.set(true)
       (for {
-        _ <- disconnect(shutdownServer, cancelPromise)
+        _ <- disconnect(shutdownServer)
         maybeSession <- timerProvider
           .timed(
             "Connected to build server",
@@ -581,10 +572,10 @@ class ConnectionProvider(
               shellRunner,
             )
           }
-          .withInterrupt(cancelPromise)
+          .withInterrupt
         result <- maybeSession match {
           case Some(session) =>
-            val result = connectToSession(session, cancelPromise)
+            val result = connectToSession(session)
             session.mainConnection.onReconnection { newMainConn =>
               val updSession = session.copy(main = newMainConn)
               connect(ConnectToSession(updSession))
@@ -599,11 +590,11 @@ class ConnectionProvider(
           .startForAllLastPaths(path =>
             !buildTargets.belongsToBuildTarget(path.toNIO)
           )
-          .withInterrupt(cancelPromise)
+          .withInterrupt
         _ = initTreeView()
       } yield result)
         .recover { case NonFatal(e) =>
-          disconnect(false, cancelPromise)
+          disconnect(false)
           val message =
             "Failed to connect with build server, no functionality will work."
           val details = " See logs for more details."
@@ -613,7 +604,7 @@ class ConnectionProvider(
           scribe.error(message, e)
           BuildChange.Failed
         }
-        .flatMap(compileAllOpenFiles(_).withInterrupt(cancelPromise))
+        .flatMap(compileAllOpenFiles(_).withInterrupt)
         .map { res =>
           buildServerPromise.trySuccess(())
           res
@@ -623,13 +614,12 @@ class ConnectionProvider(
     private def generateBspConfigAndConnect(
         buildTool: BuildServerProvider,
         shutdownServer: Boolean,
-        cancelPromise: Promise[Unit],
-    ): Interruptable[BuildChange] = {
+    )(implicit cancelSwitch: CancelSwitch): Interruptable[BuildChange] = {
       tables.buildTool.chooseBuildTool(buildTool.executableName)
       maybeChooseServer(buildTool.buildServerName, alreadySelected = false)
       for {
         _ <-
-          if (shutdownServer) disconnect(shutdownServer, cancelPromise)
+          if (shutdownServer) disconnect(shutdownServer)
           else Interruptable.successful(())
         status <- buildTool
           .generateBspConfig(
@@ -637,10 +627,10 @@ class ConnectionProvider(
             args => bspConfigGenerator.runUnconditionally(buildTool, args),
             statusBar,
           )
-          .withInterrupt(cancelPromise)
+          .withInterrupt
         shouldConnect = handleGenerationStatus(buildTool, status)
         status <-
-          if (shouldConnect) createSession(false, cancelPromise)
+          if (shouldConnect) createSession(false)
           else Interruptable.successful(BuildChange.Failed)
       } yield status
     }
@@ -681,8 +671,7 @@ class ConnectionProvider(
         checksum: String,
         forceImport: Boolean,
         shutdownServer: Boolean,
-        cancelPromise: Promise[Unit],
-    ): Interruptable[BuildChange] = {
+    )(implicit cancelSwitch: CancelSwitch): Interruptable[BuildChange] = {
       for {
         result <- {
           if (forceImport)
@@ -694,9 +683,9 @@ class ConnectionProvider(
               buildTool,
               checksum,
             )
-        }.withInterrupt(cancelPromise)
+        }.withInterrupt
         change <- {
-          if (result.isInstalled) createSession(shutdownServer, cancelPromise)
+          if (result.isInstalled) createSession(shutdownServer)
           else if (result.isFailed) {
             for {
               change <-
@@ -712,7 +701,7 @@ class ConnectionProvider(
                   // Connect nevertheless, many build import failures are caused
                   // by resolution errors in one weird module while other modules
                   // exported successfully.
-                  createSession(shutdownServer, cancelPromise)
+                  createSession(shutdownServer)
                 } else {
                   buildTool match {
                     case _: BuildServerProvider =>
@@ -721,10 +710,10 @@ class ConnectionProvider(
                           Messages.ImportProjectFailedSuggestBspSwitch.params()
                         )
                         .asScala
-                        .withInterrupt(cancelPromise)
+                        .withInterrupt
                         .flatMap {
                           case Messages.ImportProjectFailedSuggestBspSwitch.switchBsp =>
-                            switchBspServer().withInterrupt(cancelPromise)
+                            switchBspServer().withInterrupt
                           case _ => Interruptable.successful(BuildChange.Failed)
                         }
                     case _ =>
@@ -764,10 +753,11 @@ case object Queue extends ConflictBehaviour
 
 sealed trait ConnectRequest extends ConnectKind {
 
-  /** Decides what to do with a new connect request
+  /**
+   * Decides what to do with a new connect request
    * in presence of an another ongoing/queued request.
    * @param other the ongoing or queued request
-   * @return behavoiur of the incoming request 
+   * @return behavoiur of the incoming request
    * Yield    -- cancel this
    * TakeOver -- cancel other
    * Queue    -- queue
