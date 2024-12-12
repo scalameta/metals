@@ -82,6 +82,11 @@ class HoverProvider(
       )
     }
 
+    def correctPosDef(df: MemberDef): Boolean =
+      (df.namePosition.includes(pos) || pos.includes(
+        df.namePosition
+      )) && df.symbol != null
+
     tree match {
       case i @ Import(_, _) =>
         for {
@@ -136,12 +141,8 @@ class HoverProvider(
         )
       // Def, val or val definition, example `val x: Int = 1`
       // Matches only if the cursor is over the definition name.
-      case v: ValOrDefDef
-          if (v.namePosition
-            .includes(pos) || pos.includes(
-            v.namePosition
-          )) && v.symbol != null =>
-        val symbol = (v.symbol.getter: Symbol) match {
+      case v: ValOrDefDef if correctPosDef(v) =>
+        val symbol = v.symbol.getter match {
           case NoSymbol => v.symbol
           case getter => getter
         }
@@ -178,11 +179,7 @@ class HoverProvider(
           Some(report)
         )
       // Class, object, type definitions, matches only if the cursor is over the definition name.
-      case t: MemberDef
-          if (t.namePosition
-            .includes(pos) || pos.includes(
-            t.namePosition
-          )) && t.symbol != null =>
+      case t: MemberDef if correctPosDef(t) =>
         val symbol = tree.symbol
         val tpe = seenFromType(tree, symbol)
         toHover(
@@ -194,6 +191,23 @@ class HoverProvider(
           range = t.namePosition,
           Some(report)
         )
+      case t @ Template(parents, self, body) =>
+        t.body.collectFirst {
+          case v: ValDef if correctPosDef(v) =>
+            val symbol = v.symbol.getter match {
+              case NoSymbol => v.symbol
+              case getter => getter
+            }
+            toHover(
+              symbol,
+              v.symbol.keyString,
+              symbol.info,
+              symbol.info,
+              pos,
+              v.pos,
+              Some(report)
+            )
+        }.flatten
       case _ =>
         // Don't show hover for non-identifiers.
         None

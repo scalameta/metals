@@ -773,4 +773,15 @@ class HoverTermSuite extends BaseHoverSuite {
     )
   )
 
+  check(
+    "i7012".tag(IgnoreScala3),
+    """|object O {
+       |  val x@@x, yy, zz = 1
+       |}
+       |""".stripMargin,
+    """|
+       |val xx: Int
+       |""".stripMargin.hover
+  )
+
 }
