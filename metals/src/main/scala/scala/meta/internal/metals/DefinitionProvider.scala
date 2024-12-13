@@ -84,7 +84,7 @@ final class DefinitionProvider(
       token: CancelToken,
   ): Future[DefinitionResult] = {
     val fromSemanticdb =
-      semanticdbs().textDocument(path).documentIncludingStale
+      semanticdbs().textDocument(path).toOption
     val fromSnapshot = fromSemanticdb match {
       case Some(doc) =>
         definitionFromSnapshot(path, params, doc)
