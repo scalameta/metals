@@ -14,11 +14,11 @@ stability, but thanks to our contributors we also have a new code action.
   </tr>
   <tr>
     <td>Merged PRs</td>
-    <td align="center">67</td>
+    <td align="center">71</td>
   </tr>
     <tr>
     <td>Contributors</td>
-    <td align="center">12</td>
+    <td align="center">13</td>
   </tr>
   <tr>
     <td>Closed issues</td>
@@ -53,8 +53,8 @@ Metals to infer a method definition based on it's usage when symbol was not
 found.
 
 This works similar to the "Create new symbol" code action which would create a
-new Scala file with the added symbol. Now, for anything starting
-with a lower case we offer to create a method instead.
+new Scala file with the added symbol. Now, for anything starting with a lower
+case we offer to create a method instead.
 
 This will work both when the symbol is used as a parameter:
 
@@ -124,6 +124,9 @@ $ git shortlog -sn --no-merges v1.4.1..v1.4.2
 
 **Merged pull requests:**
 
+- chore: Update Bloop to 2.0.6
+  [\#7029](https://github.com/scalameta/metals/pull/7029)
+  ([tgodzik](https://github.com/tgodzik))
 - build(deps): Update coursier, ... from 2.1.20 to 2.1.21
   [\#7022](https://github.com/scalameta/metals/pull/7022)
   ([scalameta-bot](https://github.com/scalameta-bot))
