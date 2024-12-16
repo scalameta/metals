@@ -89,15 +89,14 @@ final class DefinitionProvider(
       fromCompiler <-
         if (path.isScalaFilename) compilers().definition(params, token)
         else Future.successful(DefinitionResult.empty)
+      semanticdb = semanticdbs().textDocument(path).documentIncludingStale
     } yield {
-      if (!fromCompiler.isEmpty) fromCompiler
+      if (!fromCompiler.isEmpty) fromCompiler.copy(semanticdb = semanticdb)
       else {
         val reportBuilder =
           new DefinitionProviderReportBuilder(path, params, fromCompiler)
-        val fromSemanticDB = semanticdbs()
-          .textDocument(path)
-          .documentIncludingStale
-          .map(definitionFromSnapshot(path, params, _))
+        val fromSemanticDB =
+          semanticdb.map(definitionFromSnapshot(path, params, _))
         fromSemanticDB.foreach(reportBuilder.withSemanticDBResult(_))
         val result = fromSemanticDB match {
           case Some(definition)
@@ -553,16 +552,15 @@ class DefinitionProviderReportBuilder(
     Option.when(!fundScaladocDef) {
       Report(
         "empty-definition",
-        s"""|empty definition, found symbol in pc: ${compilerDefn.querySymbol}
+        s"""|empty definition using pc, found symbol in pc: ${compilerDefn.querySymbol}
             |${semanticDBDefn match {
              case None =>
-               s"empty definition using semnticdb (not found) "
+               s"semanticdb not found"
              case Some(defn) if defn.isEmpty =>
-               s"empty definition using semnticdb"
+               s"empty definition using semanticdb"
              case Some(defn) =>
                s"found definition using semanticdb; symbol ${defn.symbol}"
            }}
-            |${}
             |${fallbackDefn.map {
              case defn if defn.isEmpty =>
                s"""|empty definition using fallback
@@ -578,7 +576,7 @@ class DefinitionProviderReportBuilder(
             |${Try(path.readText).toOption.getOrElse("Failed to read text")}
             |```
             |""".stripMargin,
-        s"empty definition, found symbol in pc: ${compilerDefn.querySymbol}",
+        s"empty definition using pc, found symbol in pc: ${compilerDefn.querySymbol}",
         path = Some(path.toURI),
         id = Some(
           if (compilerDefn.querySymbol != "") compilerDefn.querySymbol
