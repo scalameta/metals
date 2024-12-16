@@ -53,14 +53,14 @@ Metals to infer a method definition based on it's usage when symbol was not
 found.
 
 This works similar to the "Create new symbol" code action which would create a
-new Scala file with the added symbol, however in this case for anything starting
+new Scala file with the added symbol. Now, for anything starting
 with a lower case we offer to create a method instead.
 
 This will work both when the symbol is used as a parameter:
 
 ![first-example](https://i.imgur.com/9fWQ3Yg.gif)
 
-as well as standalone function call:
+as well as a standalone function call:
 
 ![second-example](https://i.imgur.com/gizIjBB.gif)
 
