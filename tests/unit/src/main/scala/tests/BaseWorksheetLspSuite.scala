@@ -285,12 +285,14 @@ abstract class BaseWorksheetLspSuite(
       _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
       _ <- cancelled.future
       _ = client.onWorkDoneProgressStart = (_, _) => {}
-      _ <- server.didSave("a/src/main/scala/Main.worksheet.sc")(
+      _ <- server.didChange("a/src/main/scala/Main.worksheet.sc")(
         _.replace("Stream", "// Stream")
       )
-      _ <- server.didSave("a/src/main/scala/Main.worksheet.sc")(
+      _ <- server.didSave("a/src/main/scala/Main.worksheet.sc")(identity)
+      _ <- server.didChange("a/src/main/scala/Main.worksheet.sc")(
         _.replace("42", "43")
       )
+      _ <- server.didSave("a/src/main/scala/Main.worksheet.sc")(identity)
       _ = assertNoDiff(
         client.syntheticDecorations,
         """|
@@ -469,9 +471,11 @@ abstract class BaseWorksheetLspSuite(
           |a.Util.increase(1) // : Int = 2
           |""".stripMargin,
       )
-      _ <- server.didSave("a/src/main/scala/a/Util.scala")(
+      _ <- server.didChange("a/src/main/scala/a/Util.scala")(
         _.replace("n + 1", "n + 2")
       )
+      _ <- server.didSave("a/src/main/scala/a/Util.scala")(identity)
+      _ <- server.didFocus("a/src/main/scala/a/Main.worksheet.sc")
       _ <- server.didSave("a/src/main/scala/a/Main.worksheet.sc")(identity)
       _ = assertNoDiff(
         client.workspaceDecorations("a/src/main/scala/a/Main.worksheet.sc"),
@@ -782,12 +786,13 @@ abstract class BaseWorksheetLspSuite(
           )
         ),
       )
-      _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(
+      _ <- server.didChange("a/src/main/scala/foo/Main.worksheet.sc")(
         _.replace(
           "Hi(1, 2, 3)",
           "Hi(7, 8, 9)",
         )
       )
+      _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
       export = server.exportEvaluation(
         "a/src/main/scala/foo/Main.worksheet.sc"
       )
@@ -951,9 +956,10 @@ abstract class BaseWorksheetLspSuite(
               Nil,
             )
         _ <- client.applyCodeAction(0, codeActions, server)
-        _ <- server.didSave(path) { _ =>
+        _ <- server.didChange(path) { _ =>
           server.bufferContents(path)
         }
+        _ <- server.didSave(path)(identity)
         // Assert if indentation is correct. See `AutoImports.renderImport`
         _ = assertNoDiff(
           server.bufferContents(path),

@@ -355,9 +355,10 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
            |               ^^
            |""".stripMargin,
       )
-      _ <- server.didSave("a/src/main/scala/a/A.scala")(
+      _ <- server.didChange("a/src/main/scala/a/A.scala")(
         _.replace("val n: Int = \"\"", "val n: Int = \" ")
       )
+      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/scala/a/A.scala:2:16: error: unclosed string literal
