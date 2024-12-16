@@ -4,9 +4,11 @@ import java.{util => ju}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.Try
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position.Range
+import scala.meta.internal.metals.LoggerReportContext.unsanitized
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
@@ -82,46 +84,45 @@ final class DefinitionProvider(
       path: AbsolutePath,
       params: TextDocumentPositionParams,
       token: CancelToken,
-  ): Future[DefinitionResult] = {
-    val fromSemanticdb =
-      semanticdbs().textDocument(path).toOption
-    val fromSnapshot = fromSemanticdb match {
-      case Some(doc) =>
-        definitionFromSnapshot(path, params, doc)
-      case _ =>
-        DefinitionResult.empty
-    }
-    val fromCompilerOrSemanticdb =
-      fromSnapshot match {
-        case defn if defn.isEmpty && path.isScalaFilename =>
-          compilers().definition(params, token)
-        case defn @ DefinitionResult(_, symbol, _, _, querySymbol)
-            if symbol != querySymbol && path.isScalaFilename =>
-          compilers().definition(params, token).map { compilerDefn =>
-            if (compilerDefn.isEmpty || compilerDefn.querySymbol == querySymbol)
-              defn
-            else compilerDefn.copy(semanticdb = defn.semanticdb)
-          }
-        case defn =>
-          if (fromSemanticdb.isEmpty) {
-            warnings().noSemanticdb(path)
-          }
-          Future.successful(defn)
-      }
+  ): Future[DefinitionResult] =
+    for {
+      fromCompiler <-
+        if (path.isScalaFilename) compilers().definition(params, token)
+        else Future.successful(DefinitionResult.empty)
+    } yield {
+      if (!fromCompiler.isEmpty) fromCompiler
+      else {
+        val reportBuilder =
+          new DefinitionProviderReportBuilder(path, params, fromCompiler)
+        val fromSemanticDB = semanticdbs()
+          .textDocument(path)
+          .documentIncludingStale
+          .map(definitionFromSnapshot(path, params, _))
+        fromSemanticDB.foreach(reportBuilder.withSemanticDBResult(_))
+        val result = fromSemanticDB match {
+          case Some(definition)
+              if !definition.isEmpty || definition.symbol.endsWith("/") =>
+            definition
+          case _ =>
+            val isScala3 =
+              ScalaVersions.isScala3Version(
+                scalaVersionSelector.scalaVersionForPath(path)
+              )
 
-    fromCompilerOrSemanticdb.map { definition =>
-      if (definition.isEmpty && !definition.symbol.endsWith("/")) {
-        val isScala3 =
-          ScalaVersions.isScala3Version(
-            scalaVersionSelector.scalaVersionForPath(path)
-          )
-        scaladocDefinitionProvider
-          .definition(path, params, isScala3)
-          .orElse(fallback.search(path, params.getPosition(), isScala3))
-          .getOrElse(definition)
-      } else definition
+            val fromScalaDoc =
+              scaladocDefinitionProvider.definition(path, params, isScala3)
+            fromScalaDoc.foreach(_ => reportBuilder.withFoundScaladocDef())
+            fromScalaDoc
+              .orElse(
+                fallback
+                  .search(path, params.getPosition(), isScala3, reportBuilder)
+              )
+              .getOrElse(fromCompiler)
+        }
+        reportBuilder.build().foreach(unsanitized.create(_))
+        result
+      }
     }
-  }
 
   def definition(
       path: AbsolutePath,
@@ -507,4 +508,84 @@ class DestinationProvider(
       case Some(id) => buildTargets.buildTargetTransitiveDependencies(id).toSet
     }
   }
+}
+
+class DefinitionProviderReportBuilder(
+    path: AbsolutePath,
+    params: TextDocumentPositionParams,
+    compilerDefn: DefinitionResult,
+) {
+  private var semanticDBDefn: Option[DefinitionResult] = None
+
+  private var fallbackDefn: Option[DefinitionResult] = None
+  private var nonLocalGuesses: List[String] = List.empty
+
+  private var fundScaladocDef = false
+
+  private var error: Option[Throwable] = None
+
+  def withSemanticDBResult(result: DefinitionResult): this.type = {
+    semanticDBDefn = Some(result)
+    this
+  }
+
+  def withFallbackResult(result: DefinitionResult): this.type = {
+    fallbackDefn = Some(result)
+    this
+  }
+
+  def withError(e: Throwable): this.type = {
+    error = Some(e)
+    this
+  }
+
+  def withNonLocalGuesses(guesses: List[String]): this.type = {
+    nonLocalGuesses = guesses
+    this
+  }
+
+  def withFoundScaladocDef(): this.type = {
+    fundScaladocDef = true
+    this
+  }
+
+  def build(): Option[Report] =
+    Option.when(!fundScaladocDef) {
+      Report(
+        "empty-definition",
+        s"""|empty definition, found symbol in pc: ${compilerDefn.querySymbol}
+            |${semanticDBDefn match {
+             case None =>
+               s"empty definition using semnticdb (not found) "
+             case Some(defn) if defn.isEmpty =>
+               s"empty definition using semnticdb"
+             case Some(defn) =>
+               s"found definition using semanticdb; symbol ${defn.symbol}"
+           }}
+            |${}
+            |${fallbackDefn.map {
+             case defn if defn.isEmpty =>
+               s"""|empty definition using fallback
+                |non-local guesses:
+                |${nonLocalGuesses.mkString("\t -", "\n\t -", "")}
+                |"""
+             case defn =>
+               s"found definition using fallback; symbol ${defn.symbol}"
+           }}
+            |Document text:
+            |
+            |```scala
+            |${Try(path.readText).toOption.getOrElse("Failed to read text")}
+            |```
+            |""".stripMargin,
+        s"empty definition, found symbol in pc: ${compilerDefn.querySymbol}",
+        path = Some(path.toURI),
+        id = Some(
+          if (compilerDefn.querySymbol != "") compilerDefn.querySymbol
+          else
+            s"${path.toURI}:${params.getPosition().getLine()}:${params.getPosition().getCharacter()}"
+        ),
+        error = error,
+      )
+    }
 }
