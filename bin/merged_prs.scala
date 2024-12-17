@@ -118,7 +118,7 @@ def template(
     contributors: List[String],
 ) = {
   s"""|---
-      |author: $author
+      |authors: $author
       |title: Metals $lastTag - $codename
       |---
       |
