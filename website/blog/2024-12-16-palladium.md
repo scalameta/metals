@@ -1,5 +1,5 @@
 ---
-author: tgodzik
+authors: tgodzik
 title: Metals v1.4.2 - Palladium
 ---
 
