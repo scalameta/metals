@@ -18,7 +18,7 @@ final class InlayHintResolveProvider(
     definitionProvider: DefinitionProvider,
     compilers: Compilers,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext) {
-  
+
   def resolve(
       inlayHint: InlayHint,
       token: CancelToken,

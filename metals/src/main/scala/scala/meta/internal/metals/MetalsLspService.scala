@@ -981,10 +981,7 @@ abstract class MetalsLspService(
     CancelTokens.future { token =>
       compilers
         .hover(params, token)
-        .map(_.map(_.toLsp()))
-        .map(
-          _.orNull
-        )
+        .map(_.map(_.toLsp()).orNull)
     }
   }
 
@@ -999,7 +996,7 @@ abstract class MetalsLspService(
             compilers.inlayHints(params, token)
           else Future.successful(List.empty[l.InlayHint].asJava)
         worksheet <- worksheetProvider.inlayHints(
-          params.getTextDocument().getUri().toAbsolutePath,
+          params.getTextDocument().getUri().toAbsolutePathSafe,
           token,
         )
       } yield (hints.asScala ++ worksheet).asJava
