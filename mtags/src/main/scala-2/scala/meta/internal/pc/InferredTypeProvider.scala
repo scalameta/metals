@@ -109,7 +109,8 @@ final class InferredTypeProvider(
        *     turns into
        * `val a: Int = 1` or `var b: Int = 2`
        */
-      case vl @ ValDef(_, name, tpt, rhs) if !vl.symbol.isParameter =>
+      case vl @ ValDef(_, name, tpt, rhs)
+          if !vl.symbol.isParameter && tpt.pos.isDefined =>
         val nameEnd = findNameEnd(tpt.pos.start, name)
         val nameEndPos = tpt.pos.withEnd(nameEnd).withStart(nameEnd).toLsp
         adjustOpt.foreach(adjust => nameEndPos.setEnd(adjust.adjustedEndPos))
@@ -124,7 +125,8 @@ final class InferredTypeProvider(
        *     turns into
        * `.map((a: Int) => a + a)`
        */
-      case vl @ ValDef(_, name, tpt, _) if vl.symbol.isParameter =>
+      case vl @ ValDef(_, name, tpt, _)
+          if vl.symbol.isParameter && tpt.pos.isDefined =>
         val nameEnd = findNameEnd(vl.pos.start, name)
         val namePos = tpt.pos.withEnd(nameEnd).withStart(nameEnd).toLsp
 
