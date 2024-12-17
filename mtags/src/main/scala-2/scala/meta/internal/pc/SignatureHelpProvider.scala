@@ -478,18 +478,21 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
     if (activeSignature == null) {
       activeSignature = 0
     }
-    val mainSignature = infos(activeSignature)
-    val deduplicated = infos
-      .filter { sig =>
-        sig != mainSignature && sig.getLabel() != mainSignature.getLabel()
-      }
-      .distinctBy(_.getLabel())
+    if (infos.isEmpty) new SignatureHelp()
+    else {
+      val mainSignature = infos(activeSignature)
+      val deduplicated = infos
+        .filter { sig =>
+          sig != mainSignature && sig.getLabel() != mainSignature.getLabel()
+        }
+        .distinctBy(_.getLabel())
 
-    new SignatureHelp(
-      (mainSignature :: deduplicated).asJava,
-      0,
-      activeParameter
-    )
+      new SignatureHelp(
+        (mainSignature :: deduplicated).asJava,
+        0,
+        activeParameter
+      )
+    }
   }
 
   def mparamss(
