@@ -208,7 +208,6 @@ abstract class BaseWorksheetLspSuite(
     cleanWorkspace()
     val cancelled = Promise[Unit]()
     client.onWorkDoneProgressStart = { (message, cancelParams) =>
-      scribe.info(message)
       if (message.startsWith("Evaluating worksheet")) {
         cancelled.trySuccess(())
         server.fullServer.didCancelWorkDoneProgress(cancelParams)
@@ -227,9 +226,7 @@ abstract class BaseWorksheetLspSuite(
       )
       _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
       _ <- cancelled.future.withTimeout(10.seconds)
-      _ = client.onWorkDoneProgressStart = (message, _) => {
-        scribe.info(message)
-      }
+      _ = client.onWorkDoneProgressStart = (_, _) => {}
       _ <- server.didSave("a/src/main/scala/Main.worksheet.sc")(
         _.replace("Stream", "// Stream")
       )

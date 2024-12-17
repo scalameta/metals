@@ -175,6 +175,16 @@ class WorksheetProvider(
   }
 
   def inlayHints(
+      path: Option[AbsolutePath],
+      token: CancelToken,
+  ): Future[List[InlayHint]] = {
+    path match {
+      case Some(path) => inlayHints(path, token)
+      case None => Future.successful(Nil)
+    }
+  }
+
+  def inlayHints(
       path: AbsolutePath,
       token: CancelToken,
   ): Future[List[InlayHint]] = if (path.isWorksheet) {
@@ -212,11 +222,9 @@ class WorksheetProvider(
           .map { stat =>
             val statEnd = stat.position().toLsp.getEnd()
             // Update positions so that they don't break
-            distance.toRevised(statEnd) match {
-              case Left(_) =>
-              case Right(right) =>
-                statEnd.setLine(right.startLine)
-                statEnd.setCharacter(right.startColumn)
+            distance.toRevised(statEnd).foreach { right =>
+              statEnd.setLine(right.startLine)
+              statEnd.setCharacter(right.startColumn)
             }
             val hint = new InlayHint(
               statEnd,
