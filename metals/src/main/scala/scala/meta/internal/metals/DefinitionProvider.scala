@@ -80,6 +80,9 @@ final class DefinitionProvider(
   val scaladocDefinitionProvider =
     new ScaladocDefinitionProvider(buffers, trees, destinationProvider)
 
+  private def isAmmonnite(path: AbsolutePath): Boolean =
+    path.isAmmoniteScript && buildTargets.inverseSources(path).flatMap(buildTargets.targetData).exists(_.isAmmonite)
+
   def definition(
       path: AbsolutePath,
       params: TextDocumentPositionParams,
@@ -87,7 +90,7 @@ final class DefinitionProvider(
   ): Future[DefinitionResult] =
     for {
       fromCompiler <-
-        if (path.isScalaFilename) compilers().definition(params, token)
+        if (path.isScalaFilename && !isAmmonnite(path)) compilers().definition(params, token)
         else Future.successful(DefinitionResult.empty)
       semanticdb = semanticdbs().textDocument(path).documentIncludingStale
     } yield {
