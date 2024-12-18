@@ -526,7 +526,20 @@ lazy val `sbt-metals` = project
       "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
     scalaVersion := V.scala212,
+    crossScalaVersions := Seq(V.scala212, V.scala3ForSBT2),
     scriptedLaunchOpts ++= Seq(s"-Dplugin.version=${version.value}"),
+    (pluginCrossBuild / sbtVersion) := {
+      scalaBinaryVersion.value match {
+        case "2.12" => "1.5.8"
+        case _ => "2.0.0-M3"
+      }
+    },
+    scalacOptions ++= {
+      scalaBinaryVersion.value match {
+        case "2.12" => "-Xsource:3" :: Nil
+        case _ => Nil
+      }
+    },
   )
   .settings(sharedScalacOptions)
   .enablePlugins(BuildInfoPlugin, SbtPlugin)
