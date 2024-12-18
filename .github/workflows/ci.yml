@@ -63,7 +63,7 @@ jobs:
             os: macOS-latest
             java: "17"
           - type: sbt
-            command: bin/test.sh 'slow/testOnly -- tests.sbt.*'
+            command: bin/test.sh '+sbt-metals/publishLocal; slow/testOnly -- tests.sbt.*'
             name: Sbt integration
             os: ubuntu-latest
             java: "17"
