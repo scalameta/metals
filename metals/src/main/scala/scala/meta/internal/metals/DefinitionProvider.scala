@@ -92,14 +92,15 @@ final class DefinitionProvider(
       fromCompiler <-
         if (path.isScalaFilename && !isAmmonnite(path)) compilers().definition(params, token)
         else Future.successful(DefinitionResult.empty)
-      semanticdb = semanticdbs().textDocument(path).documentIncludingStale
     } yield {
-      if (!fromCompiler.isEmpty) fromCompiler.copy(semanticdb = semanticdb)
-      else {
+      if (!fromCompiler.isEmpty) {
+        val pathToDef = fromCompiler.locations.asScala.head.getUri.toAbsolutePath
+        fromCompiler.copy(semanticdb = semanticdbs().textDocument(pathToDef).documentIncludingStale)
+      } else {
         val reportBuilder =
           new DefinitionProviderReportBuilder(path, params, fromCompiler)
         val fromSemanticDB =
-          semanticdb.map(definitionFromSnapshot(path, params, _))
+          semanticdbs().textDocument(path).documentIncludingStale.map(definitionFromSnapshot(path, params, _))
         fromSemanticDB.foreach(reportBuilder.withSemanticDBResult(_))
         val result = fromSemanticDB match {
           case Some(definition)

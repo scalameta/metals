@@ -7,6 +7,7 @@ import scala.concurrent.Future
 
 import scala.meta.Importee
 import scala.meta.Tree
+import scala.meta.inputs.Input
 import scala.meta.internal.async.ConcurrentQueue
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.AdjustRange
@@ -16,6 +17,7 @@ import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.PositionSyntax.XtensionPositionsScalafix
 import scala.meta.internal.metals.ReferenceProvider
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.TextEdits
@@ -32,6 +34,7 @@ import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+import scala.meta.tokens.Token.Ident
 
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.MessageParams
@@ -234,6 +237,7 @@ final class RenameProvider(
                       if (parentSymbols.isEmpty)
                         definition.locations.asScala
                           .filter(_.getUri().isScalaOrJavaFilename)
+                          .map(findDefinitionRage)
                       else parentSymbols
                     }
                     companionRefs = companionReferences(
@@ -329,6 +333,18 @@ final class RenameProvider(
               }
           }
       }
+  }
+
+  private def findDefinitionRage(location: Location): Location = {
+   val adjustedPosition = for {
+      source <- location.getUri().toAbsolutePathSafe
+      tree <- trees.get(source)
+      pos <- location.getRange().getStart().toMeta(Input.VirtualFile(source.toString(), tree.text))
+      token <- tree.tokens.collectFirst {
+        case token: Ident if token.pos.contains(pos) => token
+      }
+    } yield token.pos.toLsp
+    adjustedPosition.map(new Location(location.getUri(), _)).getOrElse(location)
   }
 
   def runSave(): Future[Unit] = {
