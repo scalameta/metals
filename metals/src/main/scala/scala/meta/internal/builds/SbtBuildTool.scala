@@ -302,11 +302,26 @@ object SbtBuildTool {
   def writeSbtMetalsPlugins(projectRoot: AbsolutePath): Boolean = {
     val mainMeta = projectRoot.resolve("project")
     val metaMeta = projectRoot.resolve("project").resolve("project")
-    val writtenPlugin =
-      writePlugins(mainMeta, metalsPluginDetails, debugAdapterPluginDetails)
-    val writtenMeta =
-      writePlugins(metaMeta, metalsPluginDetails, jdiToolsPluginDetails)
-    writtenPlugin || writtenMeta
+
+    val isSbt2 =
+      SbtBuildTool.loadVersion(projectRoot).exists(_.startsWith("2."))
+    if (isSbt2) {
+      val writtenPlugin = writePlugins(mainMeta, metalsPluginDetails)
+      val writtenMeta = writePlugins(
+        metaMeta,
+        metalsPluginDetails,
+      )
+      writtenMeta || writtenPlugin
+    } else {
+      val writtenPlugin = writePlugins(
+        mainMeta,
+        metalsPluginDetails,
+        debugAdapterPluginDetails,
+      )
+      val writtenMeta =
+        writePlugins(metaMeta, metalsPluginDetails, jdiToolsPluginDetails)
+      writtenMeta || writtenPlugin
+    }
   }
 
   private case class PluginDetails(

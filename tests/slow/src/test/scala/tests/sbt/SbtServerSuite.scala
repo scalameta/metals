@@ -176,6 +176,47 @@ class SbtServerSuite
     }
   }
 
+  test("sbt-2.0.0") {
+    cleanWorkspace()
+    client.importBuildChanges = ImportBuildChanges.yes
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=2.0.0-M3
+            |/build.sbt
+            |
+            |scalaVersion := "$scalaVersion"
+            |val a = project.in(file("a"))
+            |val b = project.in(file("b"))
+            |/a/src/main/scala/A.scala
+            |
+            |object A{
+            |  val foo = 1
+            |  foo + foo
+            |}
+            |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      references <- server.references("a/src/main/scala/A.scala", "foo")
+      _ = assertEmpty(client.workspaceDiagnostics)
+      _ = assertNoDiff(
+        references,
+        """|a/src/main/scala/A.scala:3:7: info: reference
+           |  val foo = 1
+           |      ^^^
+           |a/src/main/scala/A.scala:4:3: info: reference
+           |  foo + foo
+           |  ^^^
+           |a/src/main/scala/A.scala:4:9: info: reference
+           |  foo + foo
+           |        ^^^
+           |""".stripMargin,
+      )
+      _ = assertEmpty(client.workspaceShowMessages)
+    } yield ()
+
+  }
+
   test("reload") {
     cleanWorkspace()
     client.importBuildChanges = ImportBuildChanges.yes
