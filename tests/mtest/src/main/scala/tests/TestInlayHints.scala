@@ -40,12 +40,13 @@ object TestInlayHints {
         case Right(markdown) => markdown.getValue()
       }
     )
-    val data =
-      InlayHints.fromData(inlayHint.getData().asInstanceOf[JsonElement])._2
+    val data = inlayHint.getData()
 
     buffer += "/*"
     if (data != null) {
-      labels.zip(data).foreach { case (label, data) =>
+      val dataDecoded =
+        InlayHints.fromData(data.asInstanceOf[JsonElement])._2
+      labels.zip(dataDecoded).foreach { case (label, data) =>
         buffer += label
         buffer ++= readData(data)
       }
