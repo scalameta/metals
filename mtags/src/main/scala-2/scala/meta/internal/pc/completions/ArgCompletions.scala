@@ -23,6 +23,7 @@ trait ArgCompletions { this: MetalsGlobal =>
       case Apply(Block(defParams, app: Apply), _)
           if defParams.forall(p => p.isInstanceOf[ValDef]) =>
         app
+      case New(c) => c
       case t => t
     }
     val methodSym = method.symbol
