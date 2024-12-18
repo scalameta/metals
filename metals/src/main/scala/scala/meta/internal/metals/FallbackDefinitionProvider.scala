@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import scala.util.control.NonFatal
+
 import scala.meta.Term
 import scala.meta.Type
 import scala.meta._
@@ -175,7 +177,7 @@ class FallbackDefinitionProvider(
 
       defResult.flatten
     } catch {
-      case e: Exception =>
+      case NonFatal(e) =>
         reportBuilder.withError(e)
         None
     }

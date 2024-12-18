@@ -8,7 +8,6 @@ import scala.util.Try
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position.Range
-import scala.meta.internal.metals.LoggerReportContext.unsanitized
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
@@ -61,7 +60,6 @@ final class DefinitionProvider(
     scalaVersionSelector: ScalaVersionSelector,
     saveDefFileToDisk: Boolean,
     sourceMapper: SourceMapper,
-    warnings: () => Warnings,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
 
   private val fallback = new FallbackDefinitionProvider(trees, index)
@@ -132,7 +130,7 @@ final class DefinitionProvider(
               )
               .getOrElse(fromCompiler)
         }
-        reportBuilder.build().foreach(unsanitized.create(_))
+        reportBuilder.build().foreach(rc.unsanitized.create(_))
         result
       }
     }
@@ -592,12 +590,19 @@ class DefinitionProviderReportBuilder(
             |""".stripMargin,
         s"empty definition using pc, found symbol in pc: ${compilerDefn.querySymbol}",
         path = Some(path.toURI),
-        id = Some(
-          if (compilerDefn.querySymbol != "") compilerDefn.querySymbol
-          else
-            s"${path.toURI}:${params.getPosition().getLine()}:${params.getPosition().getCharacter()}"
+        id = querySymbol.orElse(
+          Some(s"${path.toURI}:${params.getPosition().getLine()}")
         ),
         error = error,
       )
+    }
+
+  private def querySymbol: Option[String] =
+    compilerDefn.querySymbol match {
+      case "" =>
+        semanticDBDefn
+          .map(_.querySymbol)
+          .orElse(fallbackDefn.map(_.querySymbol))
+      case q => Some(q)
     }
 }
