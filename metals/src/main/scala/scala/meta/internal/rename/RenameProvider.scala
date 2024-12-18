@@ -336,10 +336,13 @@ final class RenameProvider(
   }
 
   private def findDefinitionRage(location: Location): Location = {
-   val adjustedPosition = for {
+    val adjustedPosition = for {
       source <- location.getUri().toAbsolutePathSafe
       tree <- trees.get(source)
-      pos <- location.getRange().getStart().toMeta(Input.VirtualFile(source.toString(), tree.text))
+      pos <- location
+        .getRange()
+        .getStart()
+        .toMeta(Input.VirtualFile(source.toString(), tree.text))
       token <- tree.tokens.collectFirst {
         case token: Ident if token.pos.contains(pos) => token
       }
