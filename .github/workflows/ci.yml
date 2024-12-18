@@ -73,6 +73,12 @@ jobs:
             os: ubuntu-latest
             java: "11"
           - type: maven
+          - type: sbt-metals Sbt 2
+            command: bin/test.sh '++3.6.2; sbt-metals/scripted'
+            name: sbt-metals/scripted (Sbt 2)
+            os: ubuntu-latest
+            java: "17"
+          - type: maven
             command: bin/test.sh 'slow/testOnly -- tests.maven.*'
             name: Maven integration
             os: ubuntu-latest
