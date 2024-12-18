@@ -20,14 +20,22 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       cursor = cursor(params.offset(), params.text())
     )
     val pos = unit.position(params.offset())
-    typedTreeAt(pos)
-    val enclosingApply = new EnclosingApply(pos).find(unit.body)
-    val typedEnclosing = typedTreeAt(enclosingApply.pos)
-    new MethodCallTraverser(unit, pos)
-      .fromTree(typedEnclosing)
-      .map(toSignatureHelp)
-      .getOrElse(new SignatureHelp())
+    (for {
+      _ <- safeTypedTreeAt(pos)
+      enclosingApply = new EnclosingApply(pos).find(unit.body)
+      typedEnclosing <- safeTypedTreeAt(enclosingApply.pos)
+      encolsingCall <- new MethodCallTraverser(unit, pos).fromTree(
+        typedEnclosing
+      )
+    } yield toSignatureHelp(encolsingCall)) getOrElse new SignatureHelp()
   }
+
+  private def safeTypedTreeAt(pos: Position): Option[Tree] =
+    try {
+      Some(typedTreeAt(pos))
+    } catch {
+      case _: NullPointerException => None
+    }
 
   class EnclosingApply(pos: Position) extends Traverser {
     var last: Tree = EmptyTree
