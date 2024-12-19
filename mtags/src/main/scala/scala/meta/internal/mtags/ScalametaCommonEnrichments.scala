@@ -173,6 +173,28 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
       }
   }
 
+  implicit class XtensionPositionLspInverse(pos: l.Position) {
+
+    /**
+     * LSP position translated to scalameta position. Might return None if
+     * pos is not contained in input
+     *
+     * @param input file input the position relates to
+     * @return scalameta position with offset if the pos is contained in the file
+     */
+    def toMeta(input: m.Input): Option[m.Position] = {
+      Try(
+        m.Position.Range(
+          input,
+          pos.getLine,
+          pos.getCharacter,
+          pos.getLine,
+          pos.getCharacter
+        )
+      ).toOption
+    }
+  }
+
   protected def filenameToLanguage(filename: String): Language = {
     if (filename.endsWith(".java")) Language.JAVA
     else if (
