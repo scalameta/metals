@@ -7,6 +7,7 @@ import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.StatusBarConfig
 
 import bill.Bill
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -18,6 +19,7 @@ class ServerLivenessMonitorLspSuite extends BaseLspSuite("liveness-monitor") {
     MetalsServerConfig.default.copy(
       metalsToIdleTime = Duration("3m"),
       pingInterval = pingInterval,
+      bspStatusBar = StatusBarConfig.showMessage,
     )
 
   test("handle-not-responding-server") {
