@@ -1,11 +1,18 @@
 package scala.meta.internal.mtags
 
 import java.io.StringReader
+import java.net.URI
 import java.util.Comparator
+
+import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.CompilerRangeParamsUtils
+import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.metals.Report
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
@@ -19,16 +26,18 @@ import com.thoughtworks.qdox.model.JavaMember
 import com.thoughtworks.qdox.model.JavaMethod
 import com.thoughtworks.qdox.model.JavaModel
 import com.thoughtworks.qdox.parser.ParseException
+import org.eclipse.lsp4j
 
 object JavaMtags {
   def index(
       input: Input.VirtualFile,
       includeMembers: Boolean
-  ): MtagsIndexer =
+  )(implicit rc: ReportContext): MtagsIndexer =
     new JavaMtags(input, includeMembers)
 }
-class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)
-    extends MtagsIndexer { self =>
+class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
+    implicit rc: ReportContext
+) extends MtagsIndexer { self =>
   val builder = new JavaProjectBuilder()
   override def language: Language = Language.JAVA
 
@@ -47,9 +56,14 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)
       }
       source.getClasses.asScala.foreach(visitClass)
     } catch {
-      case _: ParseException | _: NullPointerException =>
-      // Parse errors are ignored because the Java source files we process
-      // are not written by the user so there is nothing they can do about it.
+      case e: ParseException =>
+        reportError(
+          "parse error",
+          e,
+          Some(new lsp4j.Position(e.getLine() - 1, e.getColumn()))
+        )
+      case e: NullPointerException =>
+        reportError("null pointer exception", e, None)
     }
   }
 
@@ -205,6 +219,47 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)
 
   implicit class XtensionJavaModel(m: JavaModel) {
     def lineNumber: Int = m.getLineNumber - 1
+  }
+
+  private def reportError(
+      errorName: String,
+      e: Exception,
+      position: Option[lsp4j.Position]
+  ) = {
+    try {
+      val content = position
+        .flatMap(_.toMeta(virtualFile))
+        .map(pos =>
+          CompilerRangeParamsUtils.fromPos(pos, EmptyCancelToken).printed()
+        )
+        .map(content => s"""|
+                            |file content:
+                            |```java
+                            |$content
+                            |```
+                            |""".stripMargin)
+        .getOrElse("")
+
+      val shortFileName = {
+        val index = virtualFile.path.indexOf("jar!")
+        if (index > 0) virtualFile.path.substring(index + 4)
+        else virtualFile.path
+      }
+
+      rc.unsanitized.create(
+        new Report(
+          name = "qdox-error",
+          text = s"""|error in qdox parser$content
+                     |""".stripMargin,
+          error = Some(e),
+          path = Some(new URI(virtualFile.path)),
+          shortSummary = s"QDox $errorName in $shortFileName",
+          id = Some(virtualFile.path)
+        )
+      )
+    } catch {
+      case NonFatal(_) =>
+    }
   }
 
 }

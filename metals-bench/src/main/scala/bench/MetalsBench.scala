@@ -180,7 +180,7 @@ class MetalsBench {
   def mtagsJavaParse(): Unit = {
     javaDependencySources.foreach { input =>
       JavaMtags
-        .index(input, includeMembers = true)
+        .index(input, includeMembers = true)(EmptyReportContext)
         .index()
     }
   }
