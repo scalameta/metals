@@ -88,52 +88,69 @@ final class DefinitionProvider(
       path: AbsolutePath,
       params: TextDocumentPositionParams,
       token: CancelToken,
-  ): Future[DefinitionResult] =
-    for {
-      fromCompiler <-
-        if (path.isScalaFilename && !isAmmonnite(path))
-          compilers().definition(params, token)
-        else Future.successful(DefinitionResult.empty)
-    } yield {
-      if (!fromCompiler.isEmpty) {
-        val pathToDef =
-          fromCompiler.locations.asScala.head.getUri.toAbsolutePath
-        fromCompiler.copy(semanticdb =
-          semanticdbs().textDocument(pathToDef).documentIncludingStale
-        )
-      } else {
-        val reportBuilder =
-          new DefinitionProviderReportBuilder(path, params, fromCompiler)
-        val fromSemanticDB =
-          semanticdbs()
-            .textDocument(path)
-            .documentIncludingStale
-            .map(definitionFromSnapshot(path, params, _))
-        fromSemanticDB.foreach(reportBuilder.withSemanticDBResult(_))
-        val result = fromSemanticDB match {
-          case Some(definition)
-              if !definition.isEmpty || definition.symbol.endsWith("/") =>
-            definition
-          case _ =>
-            val isScala3 =
-              ScalaVersions.isScala3Version(
-                scalaVersionSelector.scalaVersionForPath(path)
-              )
+  ): Future[DefinitionResult] = {
+    val reportBuilder = new DefinitionProviderReportBuilder(path, params)
+    lazy val isScala3 = ScalaVersions.isScala3Version(
+      scalaVersionSelector.scalaVersionForPath(path)
+    )
 
-            val fromScalaDoc =
-              scaladocDefinitionProvider.definition(path, params, isScala3)
-            fromScalaDoc.foreach(_ => reportBuilder.withFoundScaladocDef())
-            fromScalaDoc
-              .orElse(
-                fallback
-                  .search(path, params.getPosition(), isScala3, reportBuilder)
+    def fromCompiler() =
+      if (path.isScalaFilename) {
+        compilers()
+          .definition(params, token)
+          .map(reportBuilder.withCompilerResult)
+          .map {
+            case res if res.isEmpty => Some(res)
+            case res =>
+              val pathToDef = res.locations.asScala.head.getUri.toAbsolutePath
+              Some(
+                res.copy(semanticdb =
+                  semanticdbs().textDocument(pathToDef).documentIncludingStale
+                )
               )
-              .getOrElse(fromCompiler)
-        }
-        reportBuilder.build().foreach(rc.unsanitized.create(_))
-        result
-      }
+          }
+      } else Future.successful(None)
+
+    def fromSemanticDb() = Future.successful {
+      semanticdbs()
+        .textDocument(path)
+        .documentIncludingStale
+        .map(definitionFromSnapshot(path, params, _))
+        .map(reportBuilder.withSemanticDBResult)
     }
+
+    def fromScalaDoc() = Future.successful {
+      scaladocDefinitionProvider
+        .definition(path, params, isScala3)
+        .map(reportBuilder.withFoundScaladocDef)
+    }
+
+    def fromFallback() =
+      Future.successful(
+        fallback
+          .search(path, params.getPosition(), isScala3, reportBuilder)
+          .map(reportBuilder.withFallbackResult)
+      )
+
+    val strategies: List[() => Future[Option[DefinitionResult]]] =
+      if (isAmmonnite(path))
+        List(fromSemanticDb, fromCompiler, fromScalaDoc, fromFallback)
+      else List(fromCompiler, fromSemanticDb, fromScalaDoc, fromFallback)
+
+    for {
+      result <- strategies.foldLeft(Future.successful(DefinitionResult.empty)) {
+        case (acc, next) =>
+          acc.flatMap {
+            case res if res.isEmpty && !res.symbol.endsWith("/") =>
+              next().map(_.getOrElse(res))
+            case res => Future.successful(res)
+          }
+      }
+    } yield {
+      reportBuilder.build().foreach(rc.unsanitized.create(_))
+      result
+    }
+  }
 
   def definition(
       path: AbsolutePath,
@@ -524,85 +541,92 @@ class DestinationProvider(
 class DefinitionProviderReportBuilder(
     path: AbsolutePath,
     params: TextDocumentPositionParams,
-    compilerDefn: DefinitionResult,
 ) {
+  private var compilerDefn: Option[DefinitionResult] = None
   private var semanticDBDefn: Option[DefinitionResult] = None
 
   private var fallbackDefn: Option[DefinitionResult] = None
   private var nonLocalGuesses: List[String] = List.empty
 
-  private var fundScaladocDef = false
+  private var foundScalaDocDef = false
 
   private var error: Option[Throwable] = None
 
-  def withSemanticDBResult(result: DefinitionResult): this.type = {
+  def withCompilerResult(result: DefinitionResult): DefinitionResult = {
+    compilerDefn = Some(result)
+    result
+  }
+
+  def withSemanticDBResult(result: DefinitionResult): DefinitionResult = {
     semanticDBDefn = Some(result)
-    this
+    result
   }
 
-  def withFallbackResult(result: DefinitionResult): this.type = {
+  def withFallbackResult(result: DefinitionResult): DefinitionResult = {
     fallbackDefn = Some(result)
-    this
+    result
   }
 
-  def withError(e: Throwable): this.type = {
+  def withError(e: Throwable): Unit = {
     error = Some(e)
-    this
   }
 
-  def withNonLocalGuesses(guesses: List[String]): this.type = {
+  def withNonLocalGuesses(guesses: List[String]): Unit = {
     nonLocalGuesses = guesses
-    this
   }
 
-  def withFoundScaladocDef(): this.type = {
-    fundScaladocDef = true
-    this
+  def withFoundScaladocDef(result: DefinitionResult): DefinitionResult = {
+    foundScalaDocDef = true
+    result
   }
 
   def build(): Option[Report] =
-    Option.when(!fundScaladocDef) {
-      Report(
-        "empty-definition",
-        s"""|empty definition using pc, found symbol in pc: ${compilerDefn.querySymbol}
-            |${semanticDBDefn match {
-             case None =>
-               s"semanticdb not found"
-             case Some(defn) if defn.isEmpty =>
-               s"empty definition using semanticdb"
-             case Some(defn) =>
-               s"found definition using semanticdb; symbol ${defn.symbol}"
-           }}
-            |${fallbackDefn.map {
-             case defn if defn.isEmpty =>
-               s"""|empty definition using fallback
+    compilerDefn match {
+      case Some(compilerDefn) if !foundScalaDocDef =>
+        Some(
+          Report(
+            "empty-definition",
+            s"""|empty definition using pc, found symbol in pc: ${compilerDefn.querySymbol}
+                |${semanticDBDefn match {
+                 case None =>
+                   s"semanticdb not found"
+                 case Some(defn) if defn.isEmpty =>
+                   s"empty definition using semanticdb"
+                 case Some(defn) =>
+                   s"found definition using semanticdb; symbol ${defn.symbol}"
+               }}
+                |${fallbackDefn.filterNot(_.isEmpty) match {
+                 case None =>
+                   s"""|empty definition using fallback
                 |non-local guesses:
                 |${nonLocalGuesses.mkString("\t -", "\n\t -", "")}
                 |"""
-             case defn =>
-               s"found definition using fallback; symbol ${defn.symbol}"
-           }}
-            |Document text:
-            |
-            |```scala
-            |${Try(path.readText).toOption.getOrElse("Failed to read text")}
-            |```
-            |""".stripMargin,
-        s"empty definition using pc, found symbol in pc: ${compilerDefn.querySymbol}",
-        path = Some(path.toURI),
-        id = querySymbol.orElse(
-          Some(s"${path.toURI}:${params.getPosition().getLine()}")
-        ),
-        error = error,
-      )
+                 case Some(defn) =>
+                   s"found definition using fallback; symbol ${defn.symbol}"
+               }}
+                |Document text:
+                |
+                |```scala
+                |${Try(path.readText).toOption.getOrElse("Failed to read text")}
+                |```
+                |""".stripMargin,
+            s"empty definition using pc, found symbol in pc: ${compilerDefn.querySymbol}",
+            path = Some(path.toURI),
+            id = querySymbol.orElse(
+              Some(s"${path.toURI}:${params.getPosition().getLine()}")
+            ),
+            error = error,
+          )
+        )
+      case _ => None
     }
 
   private def querySymbol: Option[String] =
-    compilerDefn.querySymbol match {
-      case "" =>
+    compilerDefn.map(_.querySymbol) match {
+      case Some("") | None =>
         semanticDBDefn
           .map(_.querySymbol)
           .orElse(fallbackDefn.map(_.querySymbol))
-      case q => Some(q)
+      case res => res
     }
 }
