@@ -72,7 +72,6 @@ jobs:
             name: Sbt-metals/scripted jdk11
             os: ubuntu-latest
             java: "11"
-          - type: maven
           - type: sbt-metals Sbt 2
             command: bin/test.sh '++3.6.2; sbt-metals/scripted'
             name: sbt-metals/scripted (Sbt 2)
@@ -151,6 +150,7 @@ jobs:
       - name: ${{ matrix.command }}
         run: ${{ matrix.command }}
         env:
+          METALS_TEST: true
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
       - name: "test download dependencies"

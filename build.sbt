@@ -11,6 +11,7 @@ Global / resolvers += "scala-integration" at
 
 def localSnapshotVersion = "1.4.3-SNAPSHOT"
 def isCI = System.getenv("CI") != null
+def isTest = System.getenv("METALS_TEST") != null
 
 def isScala211(v: Option[(Long, Long)]): Boolean = v.contains((2, 11))
 def isScala212(v: Option[(Long, Long)]): Boolean = v.contains((2, 12))
@@ -41,7 +42,7 @@ ThisBuild / semanticdbVersion := V.semanticdb(scalaVersion.value)
 inThisBuild(
   List(
     version ~= { dynVer =>
-      if (isCI) dynVer
+      if (isCI && !isTest) dynVer
       else localSnapshotVersion // only for local publishing
     },
     scalaVersion := V.scala213,
