@@ -528,6 +528,7 @@ lazy val `sbt-metals` = project
     ),
     scalaVersion := V.scala212,
     crossScalaVersions := Seq(V.scala212, V.scala3ForSBT2),
+    scalacOptions := Seq("-release", "8"),
     scriptedLaunchOpts ++= Seq(s"-Dplugin.version=${version.value}"),
     (pluginCrossBuild / sbtVersion) := {
       scalaBinaryVersion.value match {
