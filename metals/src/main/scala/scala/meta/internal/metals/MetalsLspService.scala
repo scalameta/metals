@@ -303,7 +303,6 @@ abstract class MetalsLspService(
     scalaVersionSelector,
     saveDefFileToDisk = !clientConfig.isVirtualDocumentSupported(),
     sourceMapper,
-    () => warnings,
   )
 
   val stacktraceAnalyzer: StacktraceAnalyzer = new StacktraceAnalyzer(
