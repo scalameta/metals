@@ -70,7 +70,8 @@ class ScaladocIndexer(
     }
     def mparam(member: Member): SymbolDocumentation = {
       val default = member match {
-        case Term.Param(_, _, _, Some(term)) => term.syntax
+        case Term.Param(_, _, _, Some(term)) =>
+          term.syntax
         case _ =>
           ""
       }
