@@ -33,12 +33,14 @@ class FingerprintsLspSuite extends BaseLspSuite("fingerprints") {
       _ <- server.executeCommand(ServerCommands.CascadeCompile)
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ = server.assertReferenceDefinitionBijection()
-      _ <- server.didSave("a/src/main/scala/a/Names.scala")(text =>
+      _ <- server.didChange("a/src/main/scala/a/Names.scala")(text =>
         text.replace("+ surname", "+ surname2")
       )
-      _ <- server.didSave("a/src/main/scala/a/Adresses.scala")(text =>
+      _ <- server.didSave("a/src/main/scala/a/Names.scala")
+      _ <- server.didChange("a/src/main/scala/a/Adresses.scala")(text =>
         text.replace("+ number", "+ number2")
       )
+      _ <- server.didSave("a/src/main/scala/a/Adresses.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/scala/a/Adresses.scala:5:44: error: not found: value number2

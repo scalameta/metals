@@ -107,9 +107,7 @@ class WorkspaceFolderSuite extends BaseImportSuite("sbt-workspace-suite") {
                 |}
                 |""".stripMargin
       )
-      _ <- server.didSave(s"$libraryFolder/src/main/scala/example/A.scala")(
-        identity
-      )
+      _ <- server.didSave(s"$libraryFolder/src/main/scala/example/A.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|library-folder/src/main/scala/example/A.scala:3:19: error: type mismatch;

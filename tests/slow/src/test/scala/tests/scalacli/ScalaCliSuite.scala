@@ -417,7 +417,7 @@ class ScalaCliSuite extends BaseScalaCliSuite("3.3.3") {
       )
       _ = client.switchBuildTool = Messages.NewBuildToolDetected.switch
       _ = client.importBuild = Messages.ImportBuild.yes
-      _ <- server.didSave("build.sbt")(identity)
+      _ <- server.didSave("build.sbt")
       _ = assert(
         server.server.tables.buildTool.selectedBuildTool().contains("sbt")
       )
@@ -502,11 +502,12 @@ class ScalaCliSuite extends BaseScalaCliSuite("3.3.3") {
            |            ^^
            |""".stripMargin,
       )
-      _ <- server.didSave("Main.scala") { text =>
+      _ <- server.didChange("Main.scala") { text =>
         text.replace("// >", "//>")
       }
+      _ <- server.didSave("Main.scala")
       // cause another compilation to wait on workspace reload, the previous gets cancelled
-      _ <- server.didSave("Main.scala")(identity)
+      _ <- server.didSave("Main.scala")
       _ = assertEquals(
         server.client.workspaceDiagnostics,
         "",

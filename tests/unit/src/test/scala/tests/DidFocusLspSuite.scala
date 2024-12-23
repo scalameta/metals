@@ -58,9 +58,10 @@ class DidFocusLspSuite extends BaseLspSuite("did-focus") {
       // fake delete the diagnostic to see that `c` won't get recompiled
       _ = client.diagnostics(server.toPath("c/src/main/scala/c/C.scala")) =
         Seq.empty
-      _ <- server.didSave("a/src/main/scala/a/A.scala")(
+      _ <- server.didChange("a/src/main/scala/a/A.scala")(
         _.replace("val x = 1", "val x = \"string\"")
       )
+      _ <- server.didSave("a/src/main/scala/a/A.scala")
       _ = fakeTime.elapseSeconds(10)
       _ = assertNoDiagnostics()
       didCompile <- server.didFocus("a/src/main/scala/a/A2.scala")
@@ -113,9 +114,10 @@ class DidFocusLspSuite extends BaseLspSuite("did-focus") {
       _ = assertNoDiagnostics()
       _ = fakeTime.elapseSeconds(10)
       _ <- server.didFocus("b/src/main/scala/b/B.scala")
-      _ <- server.didSave("a/src/main/scala/a/A.scala")(
+      _ <- server.didChange("a/src/main/scala/a/A.scala")(
         _.replace("val x = 1", "val x = \"string\"")
       )
+      _ <- server.didSave("a/src/main/scala/a/A.scala")
       _ = fakeTime.elapseSeconds(10)
       _ = assertNoDiff(
         client.workspaceDiagnostics,
@@ -188,21 +190,23 @@ class DidFocusWhileCompilingLspSuite
       _ <- server.didChange("a/src/main/scala/a/A.scala")(
         _.replace("1", "\"\"")
       )
-      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
+      _ <- server.didSave("a/src/main/scala/a/A.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         xMismatch,
       )
-      _ <- server.didSave("b/src/main/scala/b/B.scala")(
+      _ <- server.didChange("b/src/main/scala/b/B.scala")(
         _.replace("2", "\"\"")
       )
+      _ <- server.didSave("b/src/main/scala/b/B.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         xMismatch,
       )
-      _ <- server.didSave("a/src/main/scala/a/A.scala")(
+      _ <- server.didChange("a/src/main/scala/a/A.scala")(
         _.replace("Int", "String")
       )
+      _ <- server.didSave("a/src/main/scala/a/A.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|b/src/main/scala/b/B.scala:3:16: error: type mismatch;

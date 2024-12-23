@@ -118,7 +118,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             |""".stripMargin,
       )
       _ <- server.didOpen("a/src/main/scala/a/Zero.scala")
-      _ <- server.didSave("a/src/main/scala/a/Zero.scala")(identity)
+      _ <- server.didSave("a/src/main/scala/a/Zero.scala")
       _ <- server.treeViewVisibilityDidChange(
         TreeViewProvider.Project,
         isVisible = true,
@@ -173,9 +173,10 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
            |c symbol-variable
            |""".stripMargin,
       )
-      _ <- server.didSave("a/src/main/scala/a/Zero.scala") { text =>
+      _ <- server.didChange("a/src/main/scala/a/Zero.scala") { text =>
         text.replace("val a = 1", "val a = 1\nval b = 1.0")
       }
+      _ <- server.didSave("a/src/main/scala/a/Zero.scala")
       _ = assertEquals(
         server.client.workspaceTreeViewChanges,
         s"metalsPackages projects-$folder:${server.buildTarget("a")}!/_root_/",
@@ -191,9 +192,10 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
         s"projects-$folder:${server.buildTarget("a")}!/_root_/",
         isCollapsed = true,
       )
-      _ <- server.didSave("a/src/main/scala/a/Zero.scala") { text =>
+      _ <- server.didChange("a/src/main/scala/a/Zero.scala") { text =>
         text.replace("val a = 1", "val a = 1\nval c = 1.0")
       }
+      _ <- server.didSave("a/src/main/scala/a/Zero.scala")
       _ = assertEmpty(
         server.client.workspaceTreeViewChanges
       )

@@ -269,10 +269,11 @@ class ImplementAbstractMembersLspSuite
     for {
       _ <- initialize(fullInput)
       _ <- server.didOpen(path)
-      _ <- server.didSave(path)(_ => """|package a
-                                        |
-                                        |object Impl extends Service
-                                        |""".stripMargin)
+      _ <- server.didChange(path)(_ => """|package a
+                                          |
+                                          |object Impl extends Service
+                                          |""".stripMargin)
+      _ <- server.didSave(path)
       codeActions <-
         server
           .assertCodeAction(

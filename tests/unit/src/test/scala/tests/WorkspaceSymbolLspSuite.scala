@@ -51,9 +51,10 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
         server.workspaceSymbol("a.b.PazQux"),
         "a.b.PazQux",
       )
-      _ <- server.didSave("a/src/main/scala/a/B.scala")(
+      _ <- server.didChange("a/src/main/scala/a/B.scala")(
         _.replace("class B", "  class HaddockBax")
       )
+      _ <- server.didSave("a/src/main/scala/a/B.scala")
       _ = assertNoDiff(
         server.workspaceSymbol("Had"),
         "a.HaddockBax",
@@ -297,7 +298,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
         Files.move(before, after)
       }
       _ <- server.didOpen("a/src/main/scala/a/After.scala")
-      _ <- server.didSave("a/src/main/scala/a/After.scala")(identity)
+      _ <- server.didSave("a/src/main/scala/a/After.scala")
       _ = assertNoDiagnostics()
       _ = assertNoDiff(
         server.workspaceSymbol("MyObjectSymbol", includeFilename = true),
