@@ -63,7 +63,9 @@ jobs:
             os: macOS-latest
             java: "17"
           - type: sbt
-            command: bin/test.sh '+sbt-metals/publishLocal; slow/testOnly -- tests.sbt.*'
+            command: |
+              bin/test.sh +sbt-metals/publishLocal
+              bin/test.sh 'slow/testOnly -- tests.sbt.*'
             name: Sbt integration
             os: ubuntu-latest
             java: "17"
@@ -148,7 +150,8 @@ jobs:
         with:
           sbt-runner-version: 1.10.3
       - name: ${{ matrix.command }}
-        run: ${{ matrix.command }}
+        run: |
+          ${{ matrix.command }}
         env:
           METALS_TEST: true
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
