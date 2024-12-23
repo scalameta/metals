@@ -64,7 +64,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |""".stripMargin
       )
       _ <- server.didOpen("main.sc")
-      _ <- server.didSave("main.sc")(identity)
+      _ <- server.didSave("main.sc")
       _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
 
       // via Ammonite-generated Semantic DB
@@ -136,7 +136,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       )
       _ <- server.didOpen("main.sc")
       _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
-      _ <- server.didSave("main.sc")(identity)
+      _ <- server.didSave("main.sc")
       _ = assertNoDiagnostics()
       _ <- server.didOpen("build.sc")
       _ = assertNoDiagnostics()
@@ -168,9 +168,10 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
         server.client.workspaceShowMessages,
         s"Error importing Scala script ${workspace.resolve("main.sc")}. See the logs for more details.",
       )
-      _ <- server.didSave("main.sc") { text =>
+      _ <- server.didChange("main.sc") { text =>
         text.replace(fakeScalaVersion, scalaVersion)
       }
+      _ <- server.didSave("main.sc")
       _ <- server.server.indexingPromise.future
       targets <- server.executeCommand(ServerCommands.ListBuildTargets)
       _ = assertEquals(
@@ -210,7 +211,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |""".stripMargin
       )
       _ <- server.didOpen("main.sc")
-      _ <- server.didSave("main.sc")(identity)
+      _ <- server.didSave("main.sc")
       _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
 
       expectedHoverRes = """```scala
@@ -230,15 +231,17 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
         }
         promise
       }
-      _ <- server.didSave("main.sc") { _ =>
+      _ <- server.didChange("main.sc") { _ =>
         s""" // scala $scalaVersion
            |import $$ivy.`com.github.alexarchambault::case-app:2.0.0-M16`
            |import caseapp.CaseApp
            |""".stripMargin
       }
+      _ <- server.didSave("main.sc")
       // wait for Ammonite build targets to be reloaded
       _ <- refreshedPromise.future
-      _ <- server.didSave("main.sc") { text => text + "\nval a = 1" }
+      _ <- server.didChange("main.sc") { text => text + "\nval a = 1" }
+      _ <- server.didSave("main.sc")
       // Hover on class defined in dependency loaded after the re-index.
       // Fails if interactive compilers were not properly discarded prior
       // to re-indexing.
@@ -289,11 +292,11 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       _ <- server.didOpen("b/others/Script.sc")
       _ <- server.didOpen("b/notThis.sc")
       _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
-      _ <- server.didSave("b/otherMain.sc")(identity)
-      _ <- server.didSave("b/other.sc")(identity)
-      _ <- server.didSave("b/otherScript.sc")(identity)
-      _ <- server.didSave("b/others/Script.sc")(identity)
-      _ <- server.didSave("b/notThis.sc")(identity)
+      _ <- server.didSave("b/otherMain.sc")
+      _ <- server.didSave("b/other.sc")
+      _ <- server.didSave("b/otherScript.sc")
+      _ <- server.didSave("b/others/Script.sc")
+      _ <- server.didSave("b/notThis.sc")
       expectedCompletionList = """|other.sc
                                   |otherScript.sc
                                   |others""".stripMargin
@@ -328,8 +331,8 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
       _ <- server.didOpen("foo.sc")
       _ <- server.didOpen("foos/Script.sc")
       _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
-      _ <- server.didSave("foo.sc")(identity)
-      _ <- server.didSave("foos/Script.sc")(identity)
+      _ <- server.didSave("foo.sc")
+      _ <- server.didSave("foos/Script.sc")
 
       expectedCompletionList = "Script.sc"
       completionList <- server.completion(
@@ -370,7 +373,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |""".stripMargin
       )
       _ <- server.didOpen("main.sc")
-      _ <- server.didSave("main.sc")(identity)
+      _ <- server.didSave("main.sc")
       _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
 
       expectedCompletionList = """noSpaces: String
@@ -404,7 +407,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |""".stripMargin
       )
       _ <- server.didOpen("main.sc")
-      _ <- server.didSave("main.sc")(identity)
+      _ <- server.didSave("main.sc")
       _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
       completionList <- server.completion("main.sc", "test.a@@")
       _ = assert(completionList.startsWith("aaa: Int\n"))
@@ -464,7 +467,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |""".stripMargin
       )
       _ <- server.didOpen("errored.sc")
-      _ <- server.didSave("errored.sc")(identity)
+      _ <- server.didSave("errored.sc")
       _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
 
       diagnostics = server.client.pathDiagnostics("errored.sc")
@@ -514,7 +517,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |""".stripMargin
       )
       _ <- server.didOpen("main.sc")
-      _ <- server.didSave("main.sc")(identity)
+      _ <- server.didSave("main.sc")
       _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
 
       // via Ammonite-generated Semantic DB
@@ -634,7 +637,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |""".stripMargin
       )
       _ <- server.didOpen("main.sc")
-      _ <- server.didSave("main.sc")(identity)
+      _ <- server.didSave("main.sc")
       _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
 
       groupExpectedCompletionList =
@@ -725,7 +728,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
           |""".stripMargin
       )
       _ <- server.didOpen("main.sc")
-      _ <- server.didSave("main.sc")(identity)
+      _ <- server.didSave("main.sc")
       _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
       _ <- server.assertSemanticHighlight(
         "main.sc",

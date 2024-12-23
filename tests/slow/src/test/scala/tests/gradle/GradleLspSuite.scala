@@ -50,7 +50,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       _ = assertStatus(_.isInstalled)
       _ <- server.didChange("build.gradle")(_ + "\n// comment")
       _ = assertNoDiff(client.workspaceMessageRequests, "")
-      _ <- server.didSave("build.gradle")(identity)
+      _ <- server.didSave("build.gradle")
       // Comment changes do not trigger "re-import project" request
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ <- server.didChange("build.gradle") { text =>
@@ -58,7 +58,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       }
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ = client.importBuildChanges = ImportBuildChanges.yes
-      _ <- server.didSave("build.gradle")(identity)
+      _ <- server.didSave("build.gradle")
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
@@ -97,7 +97,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
         workspace.resolve("inner"),
       )
       _ <- server.didOpen("inner/src/main/scala/A.scala")
-      _ <- server.didSave("inner/src/main/scala/A.scala")(identity)
+      _ <- server.didSave("inner/src/main/scala/A.scala")
       _ = assertNoDiff(
         client.pathDiagnostics("inner/src/main/scala/A.scala"),
         """|inner/src/main/scala/A.scala:2:18: error: type mismatch;
@@ -148,14 +148,14 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       _ = assertStatus(_.isInstalled)
       _ <- server.didChange("build.gradle")(_ + "\n// comment")
       _ = assertNoDiff(client.workspaceMessageRequests, "")
-      _ <- server.didSave("build.gradle")(identity)
+      _ <- server.didSave("build.gradle")
       // Comment changes do not trigger "re-import project" request
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ <- server.didChange("build.gradle") { text =>
         text + "\ndef version = \"1.0.0\"\n"
       }
       _ = assertNoDiff(client.workspaceMessageRequests, "")
-      _ <- server.didSave("build.gradle")(identity)
+      _ <- server.didSave("build.gradle")
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
@@ -196,7 +196,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       )
       _ = client.messageRequests.clear()
       _ = assertStatus(_.isInstalled)
-      _ <- server.didSave("src/main/java/a/Main.java")(identity)
+      _ <- server.didSave("src/main/java/a/Main.java")
       debugger <- server.startDebugging(
         javaOnlyTestName,
         DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
@@ -301,19 +301,21 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       _ <- server.didOpen("src/main/scala/reload/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ = client.importBuildChanges = ImportBuildChanges.yes
-      _ <- server.didSave("build.gradle") { text =>
+      _ <- server.didChange("build.gradle") { text =>
         s"""$text
            |dependencies {
            |    implementation 'com.lihaoyi:sourcecode_2.12:0.1.4'
            |}
            |""".stripMargin
       }
+      _ <- server.didSave("build.gradle")
       _ <-
         server
-          .didSave("src/main/scala/reload/Main.scala") { text =>
+          .didChange("src/main/scala/reload/Main.scala") { text =>
             text.replaceAll("\"", "")
           }
           .recover { case e => scribe.error("compile", e) }
+      _ <- server.didSave("src/main/scala/reload/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }
@@ -339,7 +341,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       )
       _ = assertStatus(!_.isInstalled)
       _ = client.messageRequests.clear()
-      _ <- server.didSave("build.gradle") { _ =>
+      _ <- server.didChange("build.gradle") { _ =>
         s"""|plugins {
             |    id 'scala'
             |}
@@ -351,6 +353,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
             |}
             |""".stripMargin
       }
+      _ <- server.didSave("build.gradle")
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         importBuildMessage,
@@ -528,7 +531,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
         "rootProject.name = 'new-name'\n"
       )
       _ = client.importBuildChanges = ImportBuildChanges.yes
-      _ <- server.didSave("inner/settings.gradle")(identity)
+      _ <- server.didSave("inner/settings.gradle")
       _ = assert(
         server.server.buildTargets.all
           .exists(_.getDisplayName() == "new-name"),

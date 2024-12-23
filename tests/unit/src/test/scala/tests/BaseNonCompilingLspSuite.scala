@@ -47,7 +47,7 @@ abstract class BaseNonCompilingLspSuite(name: String)
         }
       _ <-
         if (saveAfterChanges)
-          server.didSave("a/src/main/scala/b/B.scala")(identity)
+          server.didSave("a/src/main/scala/b/B.scala")
         else Future.unit
       _ <- assertCompletion(
         "b.UniqueObject.completeThisUniqueNa@@",
@@ -77,7 +77,7 @@ abstract class BaseNonCompilingLspSuite(name: String)
         }
       _ <-
         if (saveAfterChanges)
-          server.didSave("a/src/main/scala/b/B.scala")(identity)
+          server.didSave("a/src/main/scala/b/B.scala")
         else Future.unit
       _ <- assertCompletion(
         "b.UniqueObjectOther.completeThisUniqueNa@@",
@@ -105,9 +105,10 @@ abstract class BaseNonCompilingLspSuite(name: String)
                    |}
                    |""".stripMargin
       input = newText.replace("<<", "").replace(">>", "")
-      _ <- server.didSave("a/src/main/scala/a/A.scala") { _ =>
+      _ <- server.didChange("a/src/main/scala/a/A.scala") { _ =>
         newText.replace("<<", "").replace(">>", "")
       }
+      _ <- server.didSave("a/src/main/scala/a/A.scala")
       _ <-
         server
           .assertCodeAction(
@@ -119,9 +120,10 @@ abstract class BaseNonCompilingLspSuite(name: String)
             kind = Nil,
           )
       // make sure that the now change UniqueObject is not suggested
-      _ <- server.didSave("a/src/main/scala/a/A.scala") { _ =>
+      _ <- server.didChange("a/src/main/scala/a/A.scala") { _ =>
         input.replace("UniqueObjectOther", "UniqueObject")
       }
+      _ <- server.didSave("a/src/main/scala/a/A.scala")
       _ <-
         server
           .assertCodeAction(
@@ -355,7 +357,7 @@ abstract class BaseNonCompilingLspSuite(name: String)
            |}
            |""".stripMargin
       }
-      _ <- server.didSave("a/src/main/scala/b/B.scala")(identity)
+      _ <- server.didSave("a/src/main/scala/b/B.scala")
       // check if the change name is picked up despite the file not compiling
       newText = """|package a
                    |
@@ -366,7 +368,7 @@ abstract class BaseNonCompilingLspSuite(name: String)
                    |""".stripMargin
       input = newText.replace("<<", "").replace(">>", "")
       _ <- server.didChange("a/src/main/scala/a/A.scala")(_ => input)
-      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
+      _ <- server.didSave("a/src/main/scala/a/A.scala")
       _ <-
         server
           .assertCodeAction(

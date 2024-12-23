@@ -496,7 +496,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
            |}
            |""".stripMargin
       )
-      _ <- server.didSave("moduleB/src/main/scala/Main.scala")(identity)
+      _ <- server.didSave("moduleB/src/main/scala/Main.scala")
       _ <- server.didOpen("root/src/main/scala/Main.scala")
       _ <- server.didChange("root/src/main/scala/Main.scala")(_ =>
         """|import a.Person

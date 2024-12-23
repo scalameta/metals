@@ -20,7 +20,7 @@ class Ammonite213Suite extends tests.BaseAmmoniteSuite(V.ammonite213) {
            |""".stripMargin
       )
       _ <- server.didOpen("main.sc")
-      _ <- server.didSave("main.sc")(identity)
+      _ <- server.didSave("main.sc")
       _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
 
       groupCompletionList <- server.completion(
@@ -52,7 +52,7 @@ class Ammonite212Suite extends tests.BaseAmmoniteSuite(V.ammonite212) {
            |""".stripMargin
       )
       _ <- server.didOpen("main.sc")
-      _ <- server.didSave("main.sc")(identity)
+      _ <- server.didSave("main.sc")
       _ <- server.executeCommand(ServerCommands.StartAmmoniteBuildServer)
     } yield {
       assertEmpty(client.workspaceErrorShowMessages)

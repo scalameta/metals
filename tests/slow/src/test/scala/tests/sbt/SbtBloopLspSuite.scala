@@ -56,7 +56,7 @@ class SbtBloopLspSuite
       _ = assertStatus(_.isInstalled)
       _ <- server.didChange("build.sbt")(_ + "\n// comment")
       _ = assertNoDiff(client.workspaceMessageRequests, "")
-      _ <- server.didSave("build.sbt")(identity)
+      _ <- server.didSave("build.sbt")
       // Comment changes do not trigger "re-import project" request
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ = client.importBuildChanges = ImportBuildChanges.yes
@@ -64,7 +64,7 @@ class SbtBloopLspSuite
         text + "\nversion := \"1.0.0\"\n"
       }
       _ = assertNoDiff(client.workspaceMessageRequests, "")
-      _ <- server.didSave("build.sbt")(identity)
+      _ <- server.didSave("build.sbt")
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
@@ -93,7 +93,7 @@ class SbtBloopLspSuite
       _ = assert(workspace.resolve("inner/.bloop").exists)
       _ = assert(server.server.bspSession.get.main.isBloop)
       _ <- server.didOpen("inner/src/main/scala/A.scala")
-      _ <- server.didSave("inner/src/main/scala/A.scala")(identity)
+      _ <- server.didSave("inner/src/main/scala/A.scala")
       _ = assertNoDiff(
         client.pathDiagnostics("inner/src/main/scala/A.scala"),
         """|inner/src/main/scala/A.scala:3:16: error: type mismatch;
@@ -237,17 +237,19 @@ class SbtBloopLspSuite
       _ <- server.didOpen("src/main/scala/reload/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ = client.importBuildChanges = ImportBuildChanges.yes
-      _ <- server.didSave("build.sbt") { text =>
+      _ <- server.didChange("build.sbt") { text =>
         s"""$text
            |libraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.4"
            |""".stripMargin
       }
+      _ <- server.didSave("build.sbt")
       _ <-
         server
-          .didSave("src/main/scala/reload/Main.scala") { text =>
+          .didChange("src/main/scala/reload/Main.scala") { text =>
             text.replaceAll("\"", "")
           }
           .recover { case e => scribe.error("compile", e) }
+      _ <- server.didSave("src/main/scala/reload/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }
@@ -273,10 +275,12 @@ class SbtBloopLspSuite
       )
       _ = assertStatus(!_.isInstalled)
       _ = client.onWorkDoneProgressStart = (_, _) => {}
-      _ <- server.didSave("build.sbt")(_ + "\n// comment")
+      _ <- server.didChange("build.sbt")(_ + "\n// comment")
+      _ <- server.didSave("build.sbt")
       _ = assertNoDiff(client.workspaceShowMessages, "")
       _ = assertStatus(!_.isInstalled)
-      _ <- server.didSave("build.sbt")(_ => "version := \"1.1\" ")
+      _ <- server.didChange("build.sbt")(_ => "version := \"1.1\" ")
+      _ <- server.didSave("build.sbt")
       _ = assertNoDiff(client.workspaceShowMessages, "")
       _ = assertStatus(_.isInstalled)
     } yield ()
@@ -303,9 +307,10 @@ class SbtBloopLspSuite
       )
       _ = assertStatus(!_.isInstalled)
       _ = client.messageRequests.clear()
-      _ <- server.didSave("build.sbt") { _ =>
+      _ <- server.didChange("build.sbt") { _ =>
         s"""scalaVersion := "${V.scala213}" """
       }
+      _ <- server.didSave("build.sbt")
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         importBuildMessage,
@@ -378,9 +383,10 @@ class SbtBloopLspSuite
         client.clientCommands.clear()
       }
       _ = client.importBuildChanges = ImportBuildChanges.yes
-      _ <- server.didSave("build.sbt")(_ =>
+      _ <- server.didChange("build.sbt")(_ =>
         s"""scalaVersion := "${V.scala213}" """
       )
+      _ <- server.didSave("build.sbt")
       _ = {
         val expected = ClientCommands.ReloadDoctor.id
         val actual = client.workspaceClientCommands
@@ -817,7 +823,7 @@ class SbtBloopLspSuite
           |""".stripMargin
       )
       _ <- server.didOpen("build.sbt")
-      _ <- server.didSave("build.sbt")(identity)
+      _ <- server.didSave("build.sbt")
       _ <- server.assertSemanticHighlight(
         "build.sbt",
         expected,
@@ -846,7 +852,7 @@ class SbtBloopLspSuite
            |""".stripMargin
       )
       _ <- server.didOpen("build.sbt")
-      _ <- server.didSave("build.sbt")(identity)
+      _ <- server.didSave("build.sbt")
       _ = assertNoDiagnostics()
       _ <- server.assertInlayHints(
         "build.sbt",
