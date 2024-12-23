@@ -94,12 +94,13 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
            |""".stripMargin,
       )
       // add a new rule to scalafix configuration
-      _ <- server.didSave(".scalafix.conf") { old =>
+      _ <- server.didChange(".scalafix.conf") { old =>
         old.replace(
           "ExplicitResultTypes,",
           "ExplicitResultTypes,\n  ProcedureSyntax,",
         )
       }
+      _ <- server.didSave(".scalafix.conf")
       // execute the scalafix command again
       _ <- server.executeCommand(
         ServerCommands.RunScalafix,
@@ -222,12 +223,13 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
           |}
           |""".stripMargin
       )
-      _ <- server.didSave(".scalafix.conf") { old =>
+      _ <- server.didChange(".scalafix.conf") { old =>
         old.replace(
           "ExplicitResultTypes,",
           "ExplicitResultTypes,\n   \"class:fix.Examplescalafixrule_v1\",",
         )
       }
+      _ <- server.didSave(".scalafix.conf")
       _ <- server.executeCommand(
         ServerCommands.RunScalafix,
         textParams,

@@ -61,11 +61,11 @@ class MillDebugDiscoverySuite
           )
         )
         _ <- server.didOpen("a/src/Main.scala")
-        _ <- server.didSave("a/src/Main.scala")(
-          identity
+        _ <- server.didSave(
+          "a/src/Main.scala"
         ) // making sure it gets compiled to the correct destination
         _ <- server.didOpen(barPath)
-        _ <- server.didSave(barPath)(identity)
+        _ <- server.didSave(barPath)
         _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
         debugger <- server.startDebuggingUnresolved(
           new DebugDiscoveryParams(
@@ -108,7 +108,7 @@ class MillDebugDiscoverySuite
           )
         )
         _ <- server.didOpen(fooPath)
-        _ <- server.didSave(fooPath)(identity)
+        _ <- server.didSave(fooPath)
         _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
         debugger <- server.startDebugging(
           "a.test",
@@ -148,7 +148,7 @@ class MillDebugDiscoverySuite
         )
       )
       _ <- server.didOpen(fooPath)
-      _ <- server.didSave(fooPath)(identity)
+      _ <- server.didSave(fooPath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebugging(
         "a.test",

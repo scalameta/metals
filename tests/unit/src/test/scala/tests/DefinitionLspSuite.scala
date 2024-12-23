@@ -266,9 +266,10 @@ class DefinitionLspSuite
            |}
         """.stripMargin,
       )
-      _ <- server.didSave("a/src/main/scala/a/Main.scala")(
+      _ <- server.didChange("a/src/main/scala/a/Main.scala")(
         _.replace("max(1, 2)", "max")
       )
+      _ <- server.didSave("a/src/main/scala/a/Main.scala")
       _ = assertNoDiff(
         server.workspaceDefinitions,
         """|/a/src/main/scala/a/Main.scala

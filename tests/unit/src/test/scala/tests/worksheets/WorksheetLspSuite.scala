@@ -35,7 +35,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
              |""".stripMargin
         )
         _ <- server.didOpen(path)
-        _ <- server.didSave(path)(identity)
+        _ <- server.didSave(path)
         identity <- server.completion(
           path,
           "htmlFile.render@@",
@@ -182,7 +182,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
-      _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
+      _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")
       _ = assertNoDiagnostics()
     } yield ()
   }

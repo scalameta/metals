@@ -283,7 +283,7 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       _ <- server.didChange("a/src/main/scala/a/Main.scala")(_ => fileContent)
-      _ <- server.didSave("a/src/main/scala/a/Main.scala")(identity)
+      _ <- server.didSave("a/src/main/scala/a/Main.scala")
       _ <- server.didOpen("a/src/main/scala/a/OtherFile.scala")
       // triggers outline compile on `Main.scala`
       _ <- server.assertSemanticHighlight(

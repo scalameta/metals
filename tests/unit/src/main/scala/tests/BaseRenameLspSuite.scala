@@ -97,7 +97,10 @@ abstract class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
         // possible breaking changes for testing
         _ <- Future.sequence {
           openedFiles.map { file =>
-            server.didSave(file) { code => breakingChange(code) }
+            for {
+              _ <- server.didChange(file) { code => breakingChange(code) }
+              _ <- server.didSave(file)
+            } yield ()
           }
         }
         _ = if (!expectedError) assertNoDiagnostics()
@@ -124,9 +127,12 @@ abstract class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
                     Future
                       .sequence {
                         files.map { case (file, code) =>
-                          server.didSave(file)(_ =>
-                            code.replaceAll(allMarkersRegex, "")
-                          )
+                          for {
+                            _ <- server.didChange(file)(_ =>
+                              code.replaceAll(allMarkersRegex, "")
+                            )
+                            _ <- server.didSave(file)
+                          } yield ()
                         }.toList
 
                       }

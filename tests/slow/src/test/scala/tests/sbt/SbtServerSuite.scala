@@ -130,7 +130,7 @@ class SbtServerSuite
       _ = assert(workspace.resolve(".bsp/sbt.json").exists)
       _ = assert(server.server.bspSession.get.main.isSbt)
       _ <- server.didOpen("inner/a/src/main/scala/A.scala")
-      _ <- server.didSave("inner/a/src/main/scala/A.scala")(identity)
+      _ <- server.didSave("inner/a/src/main/scala/A.scala")
       _ = assertNoDiff(
         client.pathDiagnostics("inner/a/src/main/scala/A.scala"),
         """|inner/a/src/main/scala/A.scala:3:18: error: type mismatch;
@@ -235,11 +235,12 @@ class SbtServerSuite
       )
       // reload build after build.sbt changes
       _ <- server.executeCommand(ServerCommands.ResetNotifications)
-      _ <- server.didSave("build.sbt") { text =>
+      _ <- server.didChange("build.sbt") { text =>
         s"""$text
            |ibraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.3.0"
            |""".stripMargin
       }
+      _ <- server.didSave("build.sbt")
       _ = {
         assertNoDiff(
           client.workspaceErrorShowMessages,
@@ -250,9 +251,10 @@ class SbtServerSuite
       // This is a little hacky but up above this promise is succeeded already, so down
       // below it won't wait until it reconnects to Sbt and indexed like we want
       _ = server.server.indexingPromise = Promise()
-      _ <- server.didSave("build.sbt") { text =>
+      _ <- server.didChange("build.sbt") { text =>
         text.replace("ibraryDependencies", "libraryDependencies")
       }
+      _ <- server.didSave("build.sbt")
       _ = {
         assert(client.workspaceErrorShowMessages.isEmpty)
       }
@@ -272,7 +274,7 @@ class SbtServerSuite
            |        ^^^
            |""".stripMargin,
       )
-      _ <- server.didSave("build.sbt") { text =>
+      _ <- server.didChange("build.sbt") { text =>
         text.replace(
           "val a = project.in(file(\"a\"))",
           """|val a = project.in(file("a")).settings(
@@ -281,15 +283,17 @@ class SbtServerSuite
              |""".stripMargin,
         )
       }
+      _ <- server.didSave("build.sbt")
       _ = {
         assert(client.workspaceErrorShowMessages.isEmpty)
       }
-      _ <- server.didSave("a/src/main/scala/A.scala") { _ =>
+      _ <- server.didChange("a/src/main/scala/A.scala") { _ =>
         """|object A{
            |  val a: scala.meta.Defn.Class = ???
            |}
            |""".stripMargin
       }
+      _ <- server.didSave("a/src/main/scala/A.scala")
       _ <- server.assertHoverAtLine(
         "a/src/main/scala/A.scala",
         "  val a: scala.meta.Defn.C@@lass = ???",
@@ -502,7 +506,7 @@ class SbtServerSuite
           |""".stripMargin
       )
       _ <- server.didOpen("build.sbt")
-      _ <- server.didSave("build.sbt")(identity)
+      _ <- server.didSave("build.sbt")
       _ <- server.assertSemanticHighlight(
         "build.sbt",
         expected,
@@ -527,7 +531,7 @@ class SbtServerSuite
       )
       _ <- server.hover("a/src/main/java/A.java", "String na@@me", workspace)
       _ <- server.didOpen("build.sbt")
-      _ <- server.didSave("build.sbt")(identity)
+      _ <- server.didSave("build.sbt")
       _ <- server.assertHover(
         "a/src/main/java/a/Main.java",
         """"|package a;

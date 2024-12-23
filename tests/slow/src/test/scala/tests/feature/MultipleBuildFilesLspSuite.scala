@@ -53,7 +53,7 @@ class MultipleBuildFilesLspSuite
         text + "\nversion := \"1.0.0\"\n"
       }
       _ = assertNoDiff(client.workspaceMessageRequests, "")
-      _ <- server.didSave("build.sbt")(identity)
+      _ <- server.didSave("build.sbt")
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
