@@ -176,7 +176,6 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
       _ <- server.didChange("a/src/main/scala/a/Zero.scala") { text =>
         text.replace("val a = 1", "val a = 1\nval b = 1.0")
       }
-      _ <- server.didSave("a/src/main/scala/a/Zero.scala")
       _ = assertEquals(
         server.client.workspaceTreeViewChanges,
         s"metalsPackages projects-$folder:${server.buildTarget("a")}!/_root_/",
