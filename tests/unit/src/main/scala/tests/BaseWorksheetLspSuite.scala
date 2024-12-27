@@ -420,7 +420,8 @@ abstract class BaseWorksheetLspSuite(
       _ <- server.didChange("a/src/main/scala/a/Util.scala")(
         _.replace("n + 1", "n + 2")
       )
-      _ <- server.didSave("a/src/main/scala/a/Main.worksheet.sc")
+      _ <- server.didSave("a/src/main/scala/a/Util.scala")
+      _ <- server.didFocus("a/src/main/scala/a/Main.worksheet.sc")
       _ <- server.assertInlayHints(
         "a/src/main/scala/a/Main.worksheet.sc",
         """
