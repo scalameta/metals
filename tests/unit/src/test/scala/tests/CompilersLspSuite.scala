@@ -44,9 +44,17 @@ class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
         count,
       )
       _ <-
-        server.didSave("b/src/main/scala/b/B.scala")(_ => "package b; object B")
+        server.didChange("b/src/main/scala/b/B.scala")(_ =>
+          "package b; object B"
+        )
       _ <-
-        server.didSave("a/src/main/scala/a/A.scala")(_ => "package a; class A")
+        server.didSave("b/src/main/scala/b/B.scala")
+      _ <-
+        server.didChange("a/src/main/scala/a/A.scala")(_ =>
+          "package a; class A"
+        )
+      _ <-
+        server.didSave("a/src/main/scala/a/A.scala")
       _ = assertNoDiagnostics()
       countAfter = server.server.loadedPresentationCompilerCount()
       _ = assertEquals(

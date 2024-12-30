@@ -191,7 +191,7 @@ class BestEffortCompilationSuite
             |}
             |""".stripMargin
       }
-      _ <- server.didSave("b/src/main/scala/b/B.scala")(identity)
+      _ <- server.didSave("b/src/main/scala/b/B.scala")
       _ <- assertCompletion(
         "BCustom@@",
         """|BCustomChangedObject <empty>
@@ -264,7 +264,7 @@ class BestEffortCompilationSuite
             |    unseal.pos  // error
             |""".stripMargin
       }
-      _ <- server.didSave("b/src/main/scala/b/B.scala")(identity)
+      _ <- server.didSave("b/src/main/scala/b/B.scala")
       _ <- server.didChange("a/src/main/scala/a/A.scala") { _ =>
         """|object A:
            |  B.completionBar
@@ -273,7 +273,7 @@ class BestEffortCompilationSuite
            |  B.completionAdded // should not errored out, as now we do not recompile A.scala
            |""".stripMargin
       }
-      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
+      _ <- server.didSave("a/src/main/scala/a/A.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/scala/a/A.scala:4:3: error: value completionUnknown is not a member of object B

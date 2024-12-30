@@ -163,12 +163,13 @@ abstract class BaseCodeActionLspSuite(
         )
         codeActions <- assertCodeAction(retryAction)
         _ <- client.applyCodeAction(selectedActionIndex, codeActions, server)
-        _ <- server.didSave(newPath) { _ =>
+        _ <- server.didChange(newPath) { _ =>
           if (newPath != path)
             server.toPath(newPath).readText
           else
             server.bufferContents(newPath)
         }
+        _ <- server.didSave(newPath)
         _ = assertNoDiff(server.bufferContents(newPath), actualExpectedCode)
         _ = if (expectNoDiagnostics) assertNoDiagnostics() else ()
         _ = extraOperations

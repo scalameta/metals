@@ -93,13 +93,16 @@ class DebugProtocolSuite
       )
       failed = startDebugging()
       debugger <- failed.recoverWith { case _: ResponseErrorException =>
-        server
-          .didSave("a/src/main/scala/a/Main.scala") { text =>
-            text + "}"
-          }
-          .flatMap { _ =>
-            startDebugging()
-          }
+        for {
+          _ <- server
+            .didChange("a/src/main/scala/a/Main.scala") { text =>
+              text + "}"
+            }
+          _ <- server
+            .didSave("a/src/main/scala/a/Main.scala")
+          start <- startDebugging()
+        } yield start
+
       }
       _ <- debugger.initialize
       _ <- debugger.launch
@@ -169,9 +172,10 @@ class DebugProtocolSuite
       _ <- debugger.configurationDone
       _ <- debugger.awaitOutput("Foo\n")
 
-      _ <- server.didSave("a/src/main/scala/a/Main.scala")(
+      _ <- server.didChange("a/src/main/scala/a/Main.scala")(
         _.replace("Foo", "Bar").replace("synchronized(wait())", "")
       )
+      _ <- server.didSave("a/src/main/scala/a/Main.scala")
       _ <- debugger.restart
       _ <- debugger.initialize
       _ <- debugger.launch
@@ -401,12 +405,13 @@ class DebugProtocolSuite
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-      _ <- server.didSave("c/src/main/scala/c/Other.scala") { _ =>
+      _ <- server.didChange("c/src/main/scala/c/Other.scala") { _ =>
         """|package c
            |object Other {
            |  val a : Int = ""
            |}""".stripMargin
       }
+      _ <- server.didSave("c/src/main/scala/c/Other.scala")
       result <-
         server
           .startDebuggingUnresolved(
@@ -477,7 +482,7 @@ class DebugProtocolSuite
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/Foo.scala")
-      _ <- server.didSave("a/src/main/scala/a/Foo.scala") { _ =>
+      _ <- server.didChange("a/src/main/scala/a/Foo.scala") { _ =>
         """|package a
            |class Foo extends org.scalatest.funsuite.AnyFunSuite {
            |  test("foo") {
@@ -485,6 +490,7 @@ class DebugProtocolSuite
            |  }
            |}""".stripMargin
       }
+      _ <- server.didSave("a/src/main/scala/a/Foo.scala")
       result <-
         server
           .startDebuggingUnresolved(

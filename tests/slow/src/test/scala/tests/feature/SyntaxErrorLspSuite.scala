@@ -76,7 +76,8 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ <- server.didOpen("Main.scala")
       _ <- server.didOpen("project/plugins.sbt")
-      _ <- server.didSave("Main.scala")(_ => "object A\n")
+      _ <- server.didChange("Main.scala")(_ => "object A\n")
+      _ <- server.didSave("Main.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|project/plugins.sbt:1:8: error: `identifier` expected but `object` found
@@ -84,7 +85,8 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
            |       ^^^^^^
            |""".stripMargin,
       )
-      _ <- server.didSave("project/plugins.sbt")(_ => "lazy val x = 1\n")
+      _ <- server.didChange("project/plugins.sbt")(_ => "lazy val x = 1\n")
+      _ <- server.didSave("project/plugins.sbt")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }

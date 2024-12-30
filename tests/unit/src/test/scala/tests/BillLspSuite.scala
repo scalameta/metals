@@ -38,7 +38,8 @@ class BillLspSuite extends BaseLspSuite("bill") {
           |               ^^
         """.stripMargin,
       )
-      _ <- server.didSave("src/com/App.scala")(_ => "object App")
+      _ <- server.didChange("src/com/App.scala")(_ => "object App")
+      _ <- server.didSave("src/com/App.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         "",
@@ -156,7 +157,8 @@ class BillLspSuite extends BaseLspSuite("bill") {
           |               ^^
         """.stripMargin,
       )
-      _ <- server.didSave("src/com/App.scala")(_ => "object App")
+      _ <- server.didChange("src/com/App.scala")(_ => "object App")
+      _ <- server.didSave("src/com/App.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         "",
