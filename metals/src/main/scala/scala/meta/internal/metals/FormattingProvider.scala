@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.util.Try
 import scala.util.Failure
 import scala.util.Success
 
@@ -405,13 +406,17 @@ final class FormattingProvider(
   def validateWorkspace(projectRoot: AbsolutePath): Future[Unit] = {
     scalafmtConf(projectRoot) match {
       case Some(conf) =>
-        val text = conf.toInputFromBuffers(buffers).text
-        ScalafmtConfig.parse(text) match {
-          case Failure(e) =>
-            scribe.error(s"Failed to parse ${conf}", e)
+        getTextFromBuffers(conf) match {
+          case Some(text) =>
+            ScalafmtConfig.parse(text) match {
+              case Failure(e) =>
+                scribe.error(s"Failed to parse ${conf}", e)
+                Future.unit
+              case Success(values) =>
+                checkIfDialectUpgradeRequired(values, conf)
+            }
+          case None =>
             Future.unit
-          case Success(values) =>
-            checkIfDialectUpgradeRequired(values, conf)
         }
       case None =>
         Future.unit
@@ -428,6 +433,16 @@ final class FormattingProvider(
       List(defaultLocation, scalacliDefault, hiddenDefault).find(_.exists)
     }
     configpath.orElse(default)
+  }
+
+  def getTextFromBuffers(conf: AbsolutePath): Option[String] = {
+    Try(conf.toInputFromBuffers(buffers).text) match {
+      case Success(text) =>
+        Some(text)
+      case Failure(exception) =>
+        scribe.warn(s"Unable to get content from $conf", exception)
+        None
+    }
   }
 
   private def activeReporter(projectRoot: AbsolutePath): ScalafmtReporter =
