@@ -435,7 +435,7 @@ final class FormattingProvider(
     configpath.orElse(default)
   }
 
-  def getTextFromBuffers(conf: AbsolutePath): Option[String] = {
+  private def getTextFromBuffers(conf: AbsolutePath): Option[String] = {
     Try(conf.toInputFromBuffers(buffers).text) match {
       case Success(text) =>
         Some(text)
