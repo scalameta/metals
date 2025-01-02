@@ -55,6 +55,12 @@ It converts a chain of `map`, `flatMap`, `filter` and `filterNot` methods into a
 
 ![To For Comprehension](./gifs/FlatMapToForComprehension.gif)
 
+## filter then map to collect
+
+It converts a chain of `filter` and `map` methods into a `collect` method.
+
+![To Collect](./gifs/FilterMapToCollect.gif)
+
 ## Implement Abstract Members of the Parent Type
 
 Upon inheriting from a type, you also have to implement its abstract members. But manually looking them all up and copying their signature is time consuming, isn't it? You can just use this code action instead.
