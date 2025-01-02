@@ -16,9 +16,9 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.util.Try
 import scala.util.Failure
 import scala.util.Success
+import scala.util.Try
 
 import scala.meta._
 import scala.meta.internal.io.FileIO
