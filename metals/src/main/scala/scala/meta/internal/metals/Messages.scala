@@ -184,6 +184,28 @@ object Messages {
     }
   }
 
+  object StartHttpServer {
+    def yes = new MessageActionItem("Start")
+
+    def notNow: MessageActionItem = Messages.notNow
+
+    def params(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        s"Http server is required for such features as Metals Doctor, do you want to start it now?"
+      )
+      params.setType(MessageType.Info)
+      params.setActions(
+        List(
+          yes,
+          notNow,
+          dontShowAgain,
+        ).asJava
+      )
+      params
+    }
+  }
+
   object GenerateBspAndConnect {
     def yes = new MessageActionItem("Connect")
 

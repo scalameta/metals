@@ -2,6 +2,9 @@ package scala.meta.internal.metals.doctor
 
 import java.util.concurrent.atomic.AtomicBoolean
 
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
@@ -14,10 +17,10 @@ import scala.meta.internal.metals.config.DoctorFormat
 
 class HeadDoctor(
     doctors: () => List[Doctor],
-    httpServer: () => Option[MetalsHttpServer],
+    httpServer: () => Future[Option[MetalsHttpServer]],
     clientConfig: ClientConfiguration,
     languageClient: MetalsLanguageClient,
-) {
+)(implicit ec: ExecutionContext) {
   private val isVisible = new AtomicBoolean(false)
 
   def onVisibilityDidChange(newState: Boolean): Unit = {
@@ -82,7 +85,7 @@ class HeadDoctor(
         val params = clientCommand.toExecuteCommandParams(output)
         languageClient.metalsExecuteClientCommand(params)
       } else {
-        httpServer() match {
+        httpServer().map {
           case Some(server) =>
             onServer(server)
           case None =>
