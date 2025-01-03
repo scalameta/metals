@@ -158,6 +158,7 @@ class WorkspaceLspService(
       () => httpServer,
       clientConfig,
       languageClient,
+      clientConfig.isHttpEnabled(),
     )
 
   private val bspStatus = new BspStatus(
@@ -1263,8 +1264,8 @@ class WorkspaceLspService(
     workDoneProgress.start(sh, 0, 1, ju.concurrent.TimeUnit.SECONDS)
     for {
       _ <- userConfigSync.initSyncUserConfiguration(folderServices)
-      _ <- Future.sequence(folderServices.map(_.initialized()))
       _ <- Future(startHttpServer())
+      _ <- Future.sequence(folderServices.map(_.initialized()))
     } yield ()
   }
 
