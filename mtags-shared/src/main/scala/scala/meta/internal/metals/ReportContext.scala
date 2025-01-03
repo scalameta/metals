@@ -14,6 +14,7 @@ import scala.util.matching.Regex
 import scala.meta.internal.metals.utils.LimitedFilesManager
 import scala.meta.internal.metals.utils.TimestampedFile
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
+import scala.meta.internal.mtags.MD5
 
 trait ReportContext {
   def unsanitized: Reporter
@@ -235,7 +236,11 @@ case class Report(
   def fullText(withIdAndSummary: Boolean): String = {
     val sb = new StringBuilder
     if (withIdAndSummary) {
-      id.foreach(id => sb.append(s"${Report.idPrefix}$id\n"))
+      id.orElse(
+        error.map(error =>
+          MD5.compute(s"${name}:${error.getStackTrace().mkString("\n")}")
+        )
+      ).foreach(id => sb.append(s"${Report.idPrefix}$id\n"))
     }
     path.foreach(path => sb.append(s"$path\n"))
     error match {
