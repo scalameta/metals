@@ -6,6 +6,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import java.util.logging.Logger
 
 import scala.util.Try
 import scala.util.control.NonFatal
@@ -90,6 +91,8 @@ class StdReporter(
     level: ReportLevel,
     override val name: String
 ) extends Reporter {
+  private val logger = Logger.getLogger(classOf[ReportContext].getName)
+
   val maybeReportsDir: Path =
     workspace.resolve(pathToReports).resolve(name)
   private lazy val reportsDir = maybeReportsDir.createDirectories()
@@ -146,12 +149,18 @@ class StdReporter(
             duplicate <- reportedMap.get(id)
           } yield duplicate
 
-        optDuplicate.orElse {
+        val pathToReport = optDuplicate.getOrElse {
           path.createDirectories()
           path.writeText(sanitize(report.fullText(withIdAndSummary = true)))
-          Some(path)
+          path
         }
-      }.toOption.flatten
+        if (!ifVerbose) {
+          logger.severe(
+            s"${report.shortSummary} (full report at: $pathToReport)"
+          )
+        }
+        pathToReport
+      }.toOption
 
   override def sanitize(text: String): String = {
     val textAfterWokspaceReplace =
