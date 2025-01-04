@@ -55,7 +55,7 @@ final class Ammonite(
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
-  val buildTargetsData = new TargetData
+  val buildTargetsData = new TargetData(isAmmonite = true)
 
   def buildServer: Option[BuildServerConnection] =
     buildServer0
