@@ -20,7 +20,8 @@ trait ArgCompletions { this: MetalsGlobal =>
       pos.withStart(ident.pos.start).withEnd(pos.start).toLsp
     val funPos = apply.fun.pos
     val method: Tree = typedTreeAt(funPos) match {
-      case Apply(Block(defParams, app: Apply), _)
+      // Functions calls with default arguments expand into this form
+      case Apply(Block(defParams, app @ (_: Apply | _: Select)), _)
           if defParams.forall(p => p.isInstanceOf[ValDef]) =>
         app
       case New(c) => c
