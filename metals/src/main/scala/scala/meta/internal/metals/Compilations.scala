@@ -62,7 +62,6 @@ final class Compilations(
       shouldLogQueue = true,
       Some(Map.empty),
     )
-  def pauseables: List[Pauseable] = List(compileBatch, cascadeBatch)
 
   private val isCompiling = TrieMap.empty[b.BuildTargetIdentifier, Boolean]
   private var lastCompile: collection.Set[b.BuildTargetIdentifier] = Set.empty

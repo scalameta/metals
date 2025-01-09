@@ -452,9 +452,6 @@ notification.
 
 **Quick pick**: Editor client implements the `metals/quickPick` request.
 
-**Window state**: Editor client implements the `metals/windowStateDidChange`
-notification.
-
 **✅**: Editor implements all Metals extension endpoints.
 
 The Metals language server supports custom extensions that are not part of the

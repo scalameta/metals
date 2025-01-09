@@ -5,7 +5,6 @@ import java.util.concurrent.CompletableFuture
 
 import scala.meta.internal.metals.DidFocusResult
 import scala.meta.internal.metals.HoverExtParams
-import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
 import scala.meta.internal.metals.findfiles.FindTextInDependencyJarsRequest
 import scala.meta.internal.tvp.MetalsTreeViewChildrenResult
@@ -41,9 +40,6 @@ class DelegatingScalaService(
   override def didFocus(
       params: AnyRef
   ): CompletableFuture[DidFocusResult.Value] = underlying.didFocus(params)
-
-  override def windowStateDidChange(params: WindowStateDidChangeParams): Unit =
-    underlying.windowStateDidChange(params)
 
   override def didChange(
       params: DidChangeTextDocumentParams
