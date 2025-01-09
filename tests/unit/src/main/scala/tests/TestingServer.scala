@@ -60,7 +60,6 @@ import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.findfiles._
@@ -759,10 +758,6 @@ final case class TestingServer(
 
   def didFocus(filename: String): Future[DidFocusResult.Value] = {
     fullServer.didFocus(toPath(filename).toURI.toString).asScala
-  }
-
-  def windowStateDidChange(focused: Boolean): Unit = {
-    fullServer.windowStateDidChange(WindowStateDidChangeParams(focused))
   }
 
   def didSave(filename: String): Future[Unit] = {

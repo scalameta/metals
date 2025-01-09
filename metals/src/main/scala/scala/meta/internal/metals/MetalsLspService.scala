@@ -235,8 +235,6 @@ abstract class MetalsLspService(
     "trees",
   )
 
-  def pauseables: Pauseable
-
   protected val trees = new Trees(buffers, scalaVersionSelector)
 
   protected val documentSymbolProvider = new DocumentSymbolProvider(
@@ -831,10 +829,6 @@ abstract class MetalsLspService(
       case None =>
         Future.successful(DidFocusResult.NoBuildTarget)
     }
-
-  def pause(): Unit = pauseables.pause()
-
-  def unpause(): Unit = pauseables.unpause()
 
   override def didChange(
       params: DidChangeTextDocumentParams

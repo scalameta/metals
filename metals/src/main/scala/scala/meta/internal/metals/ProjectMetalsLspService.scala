@@ -191,12 +191,6 @@ class ProjectMetalsLspService(
       "onBuildChanged",
     )
 
-  val pauseables: Pauseable = Pauseable.fromPausables(
-    onBuildChanged ::
-      parseTrees ::
-      compilations.pauseables
-  )
-
   protected val semanticdbs: Semanticdbs = AggregateSemanticdbs(
     List(
       fileSystemSemanticdbs,
