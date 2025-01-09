@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import scala.annotation.tailrec
+import scala.util.matching.Regex
 
 import scala.meta._
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -85,17 +86,20 @@ object ScriptFirstImportPosition {
       beforeComment: Int,
       lastOffset: Int,
       newLines: Int,
-      foundShebang: Boolean
+      foundShebang: Boolean,
+      foundCommentThatIsNotUsingDirective: Boolean = false
   ): Int = {
     if (it.hasNext) {
-      it.next match {
+      val n = it.next()
+      n match {
         case t: Token.Comment if t.value.startsWith(shebang) =>
           skipComments(
             it,
             beforeComment,
             t.pos.end,
             newLines = 0,
-            foundShebang = true
+            foundShebang = true,
+            foundCommentThatIsNotUsingDirective
           )
         case t: Token.Comment if newLines > 1 =>
           skipComments(
@@ -103,7 +107,11 @@ object ScriptFirstImportPosition {
             lastOffset,
             t.pos.end,
             newLines = 0,
-            foundShebang
+            foundShebang,
+            foundCommentThatIsNotUsingDirective =
+              foundCommentThatIsNotUsingDirective || !isScalaCliUsingDirectiveComment(
+                t
+              )
           )
         case t: Token.Comment =>
           skipComments(
@@ -111,7 +119,11 @@ object ScriptFirstImportPosition {
             beforeComment,
             t.pos.end,
             newLines = 0,
-            foundShebang
+            foundShebang,
+            foundCommentThatIsNotUsingDirective =
+              foundCommentThatIsNotUsingDirective || !isScalaCliUsingDirectiveComment(
+                t
+              )
           )
         case t: Token.AtEOL =>
           skipComments(
@@ -119,21 +131,44 @@ object ScriptFirstImportPosition {
             beforeComment,
             lastOffset,
             newLines + t.newlines,
-            foundShebang
+            foundShebang,
+            foundCommentThatIsNotUsingDirective
           )
         case _: Token.Whitespace =>
-          skipComments(it, beforeComment, lastOffset, newLines, foundShebang)
+          skipComments(
+            it,
+            beforeComment,
+            lastOffset,
+            newLines,
+            foundShebang,
+            foundCommentThatIsNotUsingDirective
+          )
         case _: Token.BOF =>
-          skipComments(it, beforeComment, lastOffset, newLines, foundShebang)
+          skipComments(
+            it,
+            beforeComment,
+            lastOffset,
+            newLines,
+            foundShebang,
+            foundCommentThatIsNotUsingDirective
+          )
         case _ =>
           // There is an empty line between the comment and the code, so its not a doc
           val maybeOffset =
-            if (newLines > 1) lastOffset
+            if (newLines > 1 || !foundCommentThatIsNotUsingDirective) lastOffset
             else beforeComment
           if (foundShebang) maybeOffset - 2
           else maybeOffset
       }
     } else lastOffset
   }
+
+  val scalaCliUsingDirectiveRegex: Regex = """//>\s*using.*"""".r
+
+  private def isScalaCliUsingDirectiveComment(t: Token.Comment): Boolean =
+    t.text match {
+      case scalaCliUsingDirectiveRegex() => true
+      case _ => false
+    }
 
 }
