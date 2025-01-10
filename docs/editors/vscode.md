@@ -134,8 +134,9 @@ following locations:
 
 ## Using latest Metals <a name="SNAPSHOT">SNAPSHOT</a>
 
-Update the "Server Version" setting to try out the latest pending Metals
-features.
+Update the "metals.serverVersion" setting to try out the latest pending Metals
+features and fixes. To open settings go to `File -> Preferences -> Settings` and
+then use the search to find the specific option.
 
 ```scala mdoc:releases
 
