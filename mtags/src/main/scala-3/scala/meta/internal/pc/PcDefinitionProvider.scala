@@ -1,6 +1,8 @@
 package scala.meta.internal.pc
 
+import java.net.URI
 import java.nio.file.Paths
+import java.time.LocalDateTime
 import java.util.ArrayList
 
 import scala.annotation.tailrec
@@ -19,7 +21,9 @@ import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.ModuleClass
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.interactive.Interactive
+import dotty.tools.dotc.interactive.Interactive.Include
 import dotty.tools.dotc.interactive.InteractiveDriver
+import dotty.tools.dotc.transform.SymUtils.isLocal
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.lsp4j.Location
@@ -51,10 +55,10 @@ class PcDefinitionProvider(
     given ctx: Context = driver.localContext(params)
     val indexedContext = IndexedContext(ctx)
     val result =
-      if findTypeDef then findTypeDefinitions(path, pos, indexedContext)
-      else findDefinitions(path, pos, indexedContext)
+      if findTypeDef then findTypeDefinitions(path, pos, indexedContext, uri)
+      else findDefinitions(path, pos, indexedContext, uri)
 
-    if result.locations().isEmpty() then fallbackToUntyped(pos)(using ctx)
+    if result.locations().isEmpty() then fallbackToUntyped(pos, uri)(using ctx)
     else result
   end definitions
 
@@ -70,23 +74,24 @@ class PcDefinitionProvider(
    * @param pos cursor position
    * @return definition result
    */
-  private def fallbackToUntyped(pos: SourcePosition)(using Context) =
+  private def fallbackToUntyped(pos: SourcePosition, uri: URI)(using Context) =
     lazy val untpdPath = NavigateAST
       .untypedPath(pos.span)
       .collect { case t: untpd.Tree => t }
 
-    definitionsForSymbol(untpdPath.headOption.map(_.symbol).toList, pos)
+    definitionsForSymbol(untpdPath.headOption.map(_.symbol).toList, uri)
   end fallbackToUntyped
 
   private def findDefinitions(
       path: List[Tree],
       pos: SourcePosition,
       indexed: IndexedContext,
+      uri: URI,
   ): DefinitionResult =
     import indexed.ctx
     definitionsForSymbol(
       MetalsInteractive.enclosingSymbols(path, pos, indexed),
-      pos,
+      uri
     )
   end findDefinitions
 
@@ -94,6 +99,7 @@ class PcDefinitionProvider(
       path: List[Tree],
       pos: SourcePosition,
       indexed: IndexedContext,
+      uri: URI,
   ): DefinitionResult =
     import indexed.ctx
     val enclosing = path.expandRangeToEnclosingApply(pos)
@@ -106,25 +112,24 @@ class PcDefinitionProvider(
       case Nil =>
         path.headOption match
           case Some(value: Literal) =>
-            definitionsForSymbol(List(value.tpe.widen.typeSymbol), pos)
+            definitionsForSymbol(List(value.tpe.widen.typeSymbol), uri)
           case _ => DefinitionResultImpl.empty
       case _ =>
-        definitionsForSymbol(typeSymbols, pos)
+        definitionsForSymbol(typeSymbols, uri)
 
   end findTypeDefinitions
 
   private def definitionsForSymbol(
       symbols: List[Symbol],
-      pos: SourcePosition,
+      uri: URI
   )(using ctx: Context): DefinitionResult =
     symbols match
       case symbols @ (sym :: other) =>
-        val isLocal = sym.source == pos.source
-        if isLocal then
+        if sym.isLocal then
           @tailrec
           def findDefsForSymbol(sym: Symbol): DefinitionResult =
-            val defs =
-              Interactive.findDefinitions(List(sym), driver, false, false)
+            val include = Include.definitions | Include.local
+            val defs = Interactive.findTreesMatching(driver.openedTrees(uri), include, sym)
             defs.headOption match
               case Some(srcTree) =>
                 val pos = srcTree.namePos
