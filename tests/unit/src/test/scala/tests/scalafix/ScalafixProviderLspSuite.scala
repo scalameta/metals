@@ -60,9 +60,9 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
       _ = assertNoDiff(
         // we need warnings for scalafix rules
         client.workspaceDiagnostics,
-        """|a/src/main/scala/Main.scala:2:1: warning: Unused import
+        """|a/src/main/scala/Main.scala:2:16: warning: Unused import
            |import java.io.File
-           |^^^^^^^^^^^^^^^^^^^
+           |               ^^^^
            |a/src/main/scala/Main.scala:7:15: warning: private val notUsed in object Main is never used
            |  private val notUsed = 123 
            |              ^^^^^^^

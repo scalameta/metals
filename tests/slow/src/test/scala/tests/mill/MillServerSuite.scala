@@ -13,6 +13,7 @@ import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
 import tests.BaseImportSuite
+import tests.BaseMillServerSuite
 import tests.JavaHomeChangeTest
 import tests.MillBuildLayout
 import tests.MillServerInitializer
@@ -22,7 +23,8 @@ import tests.MillServerInitializer
  */
 class MillServerSuite
     extends BaseImportSuite("mill-server", MillServerInitializer)
-    with JavaHomeChangeTest {
+    with JavaHomeChangeTest
+    with BaseMillServerSuite {
 
   val preBspVersion = "0.9.10"
   val supportedBspVersion = V.millVersion
@@ -35,6 +37,10 @@ class MillServerSuite
       workspace: AbsolutePath
   ): Option[String] = MillDigest.current(workspace)
 
+  override def afterEach(context: AfterEach): Unit = {
+    super.afterEach(context)
+    killMillServer(workspace)
+  }
   override def beforeEach(context: BeforeEach): Unit = {
     super.beforeEach(context)
     cleanWorkspace()
@@ -172,7 +178,6 @@ class MillServerSuite
            |```
            |""".stripMargin,
       )
-
     } yield {}
   }
 
