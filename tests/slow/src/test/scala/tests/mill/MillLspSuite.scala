@@ -157,9 +157,9 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """
-          |foo/src/Warning.scala:1:1: error: Unused import
+          |foo/src/Warning.scala:1:25: error: Unused import
           |import scala.concurrent.Future // unused
-          |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          |                        ^^^^^^
         """.stripMargin,
       )
       // we should still have references despite fatal warning

@@ -3,6 +3,7 @@ package tests.mill
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.MetalsServerConfig
 
+import tests.BaseMillServerSuite
 import tests.MillBuildLayout
 import tests.MillServerInitializer
 import tests.debug.BaseStepDapSuite
@@ -12,7 +13,13 @@ class MillStepDapSuite
       "mill-debug-step",
       MillServerInitializer,
       MillBuildLayout,
-    ) {
+    )
+    with BaseMillServerSuite {
+
+  override def afterEach(context: AfterEach): Unit = {
+    super.afterEach(context)
+    killMillServer(workspace)
+  }
 
   // mill sometimes hangs and doesn't return main classes
   override protected val retryTimes: Int = 2
