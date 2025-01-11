@@ -12,6 +12,7 @@ import scala.meta.internal.metals.debug.Scalatest
 
 import ch.epfl.scala.bsp4j.TestParamsDataKind
 import tests.BaseDapSuite
+import tests.BaseMillServerSuite
 import tests.MillBuildLayout
 import tests.MillServerInitializer
 
@@ -20,10 +21,16 @@ class MillDebugDiscoverySuite
       "mill-debug-discovery",
       MillServerInitializer,
       MillBuildLayout,
-    ) {
+    )
+    with BaseMillServerSuite {
 
   private val fooPath = "a/test/src/Foo.scala"
   private val barPath = "a/test/src/Bar.scala"
+
+  override def afterEach(context: AfterEach): Unit = {
+    super.afterEach(context)
+    killMillServer(workspace)
+  }
 
   // mill sometimes hangs and doesn't return main classes
   override protected val retryTimes: Int = 2
@@ -78,6 +85,7 @@ class MillDebugDiscoverySuite
         _ <- debugger.configurationDone
         _ <- debugger.shutdown
         output <- debugger.allOutput
+        _ = server.server.cancel()
       } yield assert(output.contains("All tests in a.Bar passed"))
     }
 
@@ -126,6 +134,7 @@ class MillDebugDiscoverySuite
         _ <- debugger.configurationDone
         _ <- debugger.shutdown
         output <- debugger.allOutput
+        _ = server.server.cancel()
       } yield assert(output.contains("All tests in a.Foo passed"))
     }
   }
@@ -166,6 +175,7 @@ class MillDebugDiscoverySuite
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
+      _ = server.server.cancel()
     } yield assertNoDiff(
       output.replaceFirst("[0-9]+ms", "xxx"),
       """|Foo:

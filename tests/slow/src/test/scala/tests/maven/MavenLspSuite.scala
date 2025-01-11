@@ -231,9 +231,9 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """
-          |src/main/scala/warning/Warning.scala:1:1: error: Unused import
+          |src/main/scala/warning/Warning.scala:1:25: error: Unused import
           |import scala.concurrent.Future // unused
-          |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          |                        ^^^^^^
         """.stripMargin,
       )
       // we should still have references despite fatal warning

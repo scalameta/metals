@@ -43,21 +43,21 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       exampleDiagnostics = {
-        """|a/src/main/scala/a/Example.scala:2:1: warning: Unused import
+        """|a/src/main/scala/a/Example.scala:2:29: warning: Unused import
            |import java.util.concurrent.Future // unused
-           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-           |a/src/main/scala/a/Example.scala:3:1: warning: Unused import
+           |                            ^^^^^^
+           |a/src/main/scala/a/Example.scala:3:19: warning: Unused import
            |import scala.util.Failure // unused
-           |^^^^^^^^^^^^^^^^^^^^^^^^^
+           |                  ^^^^^^^
            |""".stripMargin
       }
       mainDiagnostics = {
-        """|a/src/main/scala/a/Main.scala:2:1: warning: Unused import
+        """|a/src/main/scala/a/Main.scala:2:29: warning: Unused import
            |import java.util.concurrent.Future // unused
-           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-           |a/src/main/scala/a/Main.scala:3:1: warning: Unused import
+           |                            ^^^^^^
+           |a/src/main/scala/a/Main.scala:3:19: warning: Unused import
            |import scala.util.Failure // unused
-           |^^^^^^^^^^^^^^^^^^^^^^^^^
+           |                  ^^^^^^^
            |""".stripMargin
       }
       _ = assertNoDiff(
@@ -66,12 +66,12 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       )
       _ <- server.didOpen("b/src/main/scala/a/MainSuite.scala")
       testDiagnostics = {
-        """|b/src/main/scala/a/MainSuite.scala:2:1: warning: Unused import
+        """|b/src/main/scala/a/MainSuite.scala:2:29: warning: Unused import
            |import java.util.concurrent.Future // unused
-           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-           |b/src/main/scala/a/MainSuite.scala:3:1: warning: Unused import
+           |                            ^^^^^^
+           |b/src/main/scala/a/MainSuite.scala:3:19: warning: Unused import
            |import scala.util.Failure // unused
-           |^^^^^^^^^^^^^^^^^^^^^^^^^
+           |                  ^^^^^^^
            |""".stripMargin
       }
       _ = assertNoDiff(
