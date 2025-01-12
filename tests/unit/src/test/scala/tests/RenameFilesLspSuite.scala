@@ -896,6 +896,25 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     expectedRenames = Map.empty,
   )
 
+  renamed(
+    "infer-base-package",
+    s"""|/$prefix/C/Sun.scala
+        |package org.someorg.<<C>>
+        |
+        |class Sun
+        |/$prefix/C/Moon.scala
+        |package org.someorg.C
+        |
+        |import org.someorg.<<C>>.Sun
+        |object Moon {
+        | val o = new Sun()
+        |}
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/C/Sun.scala" -> s"$prefix/C/D/Sun.scala"),
+    expectedRenames = Map("C" -> "C.D"),
+    sourcesAreCompiled = true,
+  )
+
   /* Cases that are not yet supported */
 
   renamed(
