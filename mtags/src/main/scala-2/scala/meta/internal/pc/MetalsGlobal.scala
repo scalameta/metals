@@ -124,7 +124,10 @@ class MetalsGlobal(
 
   def semanticdbSymbol(symbol: Symbol): String = {
     import semanticdbOps._
-    symbol.toSemantic
+    val semantic = symbol.toSemantic
+    if (symbol == null) ""
+    else if (semantic.isEmpty()) symbol.nameString
+    else semantic
   }
 
   def printPretty(pos: sourcecode.Text[Position]): Unit = {
