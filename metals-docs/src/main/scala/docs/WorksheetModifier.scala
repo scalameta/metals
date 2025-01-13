@@ -47,11 +47,11 @@ class WorksheetModifier extends StringModifier {
        |it in one of the following two ways.
        |
        |```scala
-       |// $$dep.`organisation`::artifact:version` style
-       |import $$dep.`com.lihaoyi::scalatags:0.7.0`
+       |// $dep.`organisation::artifact:version` style
+       |import $dep.`com.lihaoyi::scalatags:0.7.0`
        |
-       |// $$ivy.`organisation::artifact:version` style
-       |import $$ivy.`com.lihaoyi::scalatags:0.7.0`
+       |// $ivy.`organisation::artifact:version` style
+       |import $ivy.`com.lihaoyi::scalatags:0.7.0`
        |```
        |
        |`::` is the same as `%%` in sbt, which will append the current Scala binary version
@@ -60,7 +60,7 @@ class WorksheetModifier extends StringModifier {
        |You can also import `scalac` options in a special `$$scalac` import like below:
        |
        |```scala
-       |import $$scalac.`-Ywarn-unused`
+       |import $scalac.`-Ywarn-unused`
        |```
        |
        |### Troubleshooting
