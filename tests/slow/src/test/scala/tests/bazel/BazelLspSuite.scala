@@ -47,7 +47,8 @@ class BazelLspSuite
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          importMessage
+          importMessage,
+          Messages.DeprecatedRemovedScalaVersion.message(Set("2.13.12")),
         ).mkString("\n"),
       )
       _ = assert(bazelBspConfig.exists)
@@ -127,7 +128,10 @@ class BazelLspSuite
            |""".stripMargin,
       )
     } yield {
-      assertEmpty(client.workspaceMessageRequests)
+      assertEquals(
+        client.workspaceMessageRequests,
+        Messages.DeprecatedRemovedScalaVersion.message(Set("2.13.12")),
+      )
       assert(bazelBspConfig.exists)
       server.assertBuildServerConnection()
     }
@@ -193,7 +197,8 @@ class BazelLspSuite
       assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          Messages.ResetWorkspace.message
+          Messages.DeprecatedRemovedScalaVersion.message(Set("2.13.12")),
+          Messages.ResetWorkspace.message,
         ).mkString("\n"),
       )
       assert(bazelBspConfig.exists)
