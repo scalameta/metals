@@ -730,10 +730,24 @@ class MetalsGlobal(
         !tpe.isErroneous
   }
   implicit class XtensionImportMetals(imp: Import) {
+    private def importSelector(pos: Position): Option[ImportSelector] =
+      imp.selectors.reverseIterator.find(_.namePos <= pos.start)
+
+    private def selectorSymbol(sel: ImportSelector): Symbol =
+      imp.expr.symbol.info.member(sel.name)
+
     def selector(pos: Position): Option[Symbol] =
-      for {
-        sel <- imp.selectors.reverseIterator.find(_.namePos <= pos.start)
-      } yield imp.expr.symbol.info.member(sel.name)
+      importSelector(pos).map(selectorSymbol)
+
+    def selectorIdent(pos: Position): Option[Ident] = {
+      importSelector(pos).map { sel =>
+        val sym = selectorSymbol(sel)
+        val start = sel.namePos
+        val end = start + sel.name.decoded.trim.length()
+        val pos = Position.range(imp.pos.source, start, start, end)
+        Ident(sym.name).setSymbol(sym).setPos(pos)
+      }
+    }
   }
   implicit class XtensionPositionMetals(pos: Position) {
     // Same as `Position.includes` except handles an off-by-one bug when other.point > pos.end
