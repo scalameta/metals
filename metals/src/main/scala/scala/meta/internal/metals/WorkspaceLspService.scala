@@ -1180,7 +1180,7 @@ class WorkspaceLspService(
         capabilities.setCompletionProvider(
           new lsp4j.CompletionOptions(
             clientConfig.isCompletionItemResolve(),
-            List(".", "*").asJava,
+            List(".", "*", "$").asJava,
           )
         )
         capabilities.setCallHierarchyProvider(true)
