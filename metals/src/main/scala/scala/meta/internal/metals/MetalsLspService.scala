@@ -182,6 +182,7 @@ abstract class MetalsLspService(
   protected val savedFiles = new ActiveFiles(time)
   protected val recentlyOpenedFiles = new ActiveFiles(time)
 
+  @volatile
   var excludedPackageHandler: ExcludedPackagesHandler =
     ExcludedPackagesHandler.default
 
@@ -692,6 +693,9 @@ abstract class MetalsLspService(
   def setUserConfig(newConfig: UserConfiguration): UserConfiguration = {
     val old = userConfig
     userConfig = newConfig
+    excludedPackageHandler = ExcludedPackagesHandler.fromUserConfiguration(
+      userConfig.excludedPackages.getOrElse(Nil)
+    )
     userConfigPromise.trySuccess(())
     old
   }
@@ -699,9 +703,6 @@ abstract class MetalsLspService(
   def onUserConfigUpdate(newConfig: UserConfiguration): Future[Unit] = {
     val old = setUserConfig(newConfig)
     if (userConfig.excludedPackages != old.excludedPackages) {
-      excludedPackageHandler = ExcludedPackagesHandler.fromUserConfiguration(
-        userConfig.excludedPackages.getOrElse(Nil)
-      )
       workspaceSymbols.indexClasspath()
     }
 
