@@ -135,7 +135,7 @@ class FallbackDefinitionProvider(
         val nonLocalCandidates =
           (proposedImportedSymbols ++ fullyScopedName ++ standardScalaImports).distinct
 
-        reportBuilder.withNonLocalGuesses(nonLocalCandidates)
+        reportBuilder.setNonLocalGuesses(nonLocalCandidates)
 
         val nonLocalGuesses = nonLocalCandidates.flatMap(findInIndex)
 
@@ -178,7 +178,7 @@ class FallbackDefinitionProvider(
       defResult.flatten
     } catch {
       case NonFatal(e) =>
-        reportBuilder.withError(e)
+        reportBuilder.setError(e)
         None
     }
 

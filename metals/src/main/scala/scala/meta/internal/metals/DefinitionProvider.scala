@@ -98,7 +98,7 @@ final class DefinitionProvider(
       if (path.isScalaFilename) {
         compilers()
           .definition(params, token)
-          .map(reportBuilder.withCompilerResult)
+          .map(reportBuilder.setCompilerResult)
           .map {
             case res if res.isEmpty => Some(res)
             case res =>
@@ -116,20 +116,20 @@ final class DefinitionProvider(
         .textDocument(path)
         .documentIncludingStale
         .map(definitionFromSnapshot(path, params, _))
-        .map(reportBuilder.withSemanticDBResult)
+        .map(reportBuilder.setSemanticDBResult)
     }
 
     def fromScalaDoc() = Future.successful {
       scaladocDefinitionProvider
         .definition(path, params, isScala3)
-        .map(reportBuilder.withFoundScaladocDef)
+        .map(reportBuilder.setFoundScaladocDef)
     }
 
     def fromFallback() =
       Future.successful(
         fallback
           .search(path, params.getPosition(), isScala3, reportBuilder)
-          .map(reportBuilder.withFallbackResult)
+          .map(reportBuilder.setFallbackResult)
       )
 
     val strategies: List[() => Future[Option[DefinitionResult]]] =
@@ -552,30 +552,30 @@ class DefinitionProviderReportBuilder(
 
   private var error: Option[Throwable] = None
 
-  def withCompilerResult(result: DefinitionResult): DefinitionResult = {
+  def setCompilerResult(result: DefinitionResult): DefinitionResult = {
     compilerDefn = Some(result)
     result
   }
 
-  def withSemanticDBResult(result: DefinitionResult): DefinitionResult = {
+  def setSemanticDBResult(result: DefinitionResult): DefinitionResult = {
     semanticDBDefn = Some(result)
     result
   }
 
-  def withFallbackResult(result: DefinitionResult): DefinitionResult = {
+  def setFallbackResult(result: DefinitionResult): DefinitionResult = {
     fallbackDefn = Some(result)
     result
   }
 
-  def withError(e: Throwable): Unit = {
+  def setError(e: Throwable): Unit = {
     error = Some(e)
   }
 
-  def withNonLocalGuesses(guesses: List[String]): Unit = {
+  def setNonLocalGuesses(guesses: List[String]): Unit = {
     nonLocalGuesses = guesses
   }
 
-  def withFoundScaladocDef(result: DefinitionResult): DefinitionResult = {
+  def setFoundScaladocDef(result: DefinitionResult): DefinitionResult = {
     foundScalaDocDef = true
     result
   }
