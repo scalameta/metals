@@ -23,7 +23,6 @@ import ch.epfl.scala.{bsp4j => b}
 final class Compilations(
     buildTargets: BuildTargets,
     classes: BuildTargetClasses,
-    workspace: () => AbsolutePath,
     languageClient: MetalsLanguageClient,
     refreshTestSuites: () => Unit,
     afterSuccessfulCompilation: () => Unit,
@@ -89,9 +88,11 @@ final class Compilations(
       source: AbsolutePath,
       compileInverseDependencies: Boolean,
   ): Future[Unit] =
-    expand(source).flatMap(targets =>
-      compilationFinished(targets.toSeq, compileInverseDependencies)
-    )
+    fileChanges
+      .expand(source)
+      .flatMap(targets =>
+        compilationFinished(targets.toSeq, compileInverseDependencies)
+      )
 
   def compileTarget(
       target: b.BuildTargetIdentifier
@@ -196,28 +197,8 @@ final class Compilations(
       .ignoreValue
   }
 
-  private def expand(
-      path: AbsolutePath
-  ): Future[Option[b.BuildTargetIdentifier]] = {
-    val isCompilable =
-      (path.isScalaOrJava || path.isSbt) &&
-        !path.isDependencySource(workspace()) &&
-        !path.isInTmpDirectory(workspace())
-
-    if (isCompilable) {
-      val targetOpt = buildTargets.inverseSourcesBsp(path)
-      targetOpt.foreach {
-        case tgts if tgts.isEmpty => scribe.warn(s"no build target for: $path")
-        case _ =>
-      }
-
-      targetOpt
-    } else
-      Future.successful(None)
-  }
-
   def expand(paths: Seq[AbsolutePath]): Future[Seq[b.BuildTargetIdentifier]] = {
-    val expansions = paths.map(expand)
+    val expansions = paths.map(fileChanges.expand)
     Future.sequence(expansions).map(_.flatten)
   }
 

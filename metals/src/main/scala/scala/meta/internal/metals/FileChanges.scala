@@ -42,6 +42,11 @@ class FileChanges(buildTargets: BuildTargets, workspace: () => AbsolutePath)(
       allToCompile
     }
 
+  /**
+   * The `assumeDidNotChange` should be set when we want to assume that the file did not change
+   * if it is not present in the `previousSignatures` (opened for the first time),
+   * we set it to `true` for operations such as `didFocus` or `didOpen`.
+   */
   def buildTargetToCompile(
       path: AbsolutePath,
       fingerprint: Option[Fingerprint],
@@ -78,7 +83,7 @@ class FileChanges(buildTargets: BuildTargets, workspace: () => AbsolutePath)(
     )
   }
 
-  private def expand(
+  def expand(
       path: AbsolutePath
   ): Future[Option[BuildTargetIdentifier]] = {
     val isCompilable =
@@ -121,7 +126,7 @@ class FileChanges(buildTargets: BuildTargets, workspace: () => AbsolutePath)(
     fingerprint
       .map { fingerprint =>
         synchronized {
-          if (previousSignatures.getOrElse(path, null) == fingerprint.md5)
+          if (previousSignatures.getOrElse(path, "") == fingerprint.md5)
             false
           else {
             previousSignatures.put(path, fingerprint.md5)

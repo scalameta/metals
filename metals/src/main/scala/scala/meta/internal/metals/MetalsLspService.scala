@@ -210,7 +210,6 @@ abstract class MetalsLspService(
   val compilations: Compilations = new Compilations(
     buildTargets,
     buildTargetClasses,
-    () => folder,
     languageClient,
     () => testProvider.refreshTestSuites.apply(()),
     () => {
@@ -807,7 +806,6 @@ abstract class MetalsLspService(
     } else if (recentlyOpenedFiles.isRecentlyActive(path)) {
       CompletableFuture.completedFuture(DidFocusResult.RecentlyActive)
     } else {
-      worksheetProvider.onDidFocus(path)
       compilations
         .compileFile(path, assumeDidNotChange = true)
         .map(
@@ -925,7 +923,7 @@ abstract class MetalsLspService(
     Future
       .sequence(
         List(
-          compilations.compileFiles(List((path, null))),
+          compilations.compileFiles(List((path, Fingerprint.empty))),
           Future {
             diagnostics.didDelete(path)
             testProvider.onFileDelete(path)
@@ -1194,9 +1192,7 @@ abstract class MetalsLspService(
           thresholdMillis = 1.second.toMillis,
         ) {
           val path = params.getTextDocument.getUri.toAbsolutePath
-          codeLensProvider.findLenses(path).map(_.toList.asJava).map { found =>
-            found
-          }
+          codeLensProvider.findLenses(path).map(_.toList.asJava)
         }
       }
     }
