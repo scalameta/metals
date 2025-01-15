@@ -30,6 +30,7 @@ jobs:
           distribution: 'temurin'
           java-version: 11
           cache: 'sbt'
+      - uses: sbt/setup-sbt@v1
       - name: "Test and push tag"
         run: |
           sbt 'test-mtags-dyn ${{ github.event.inputs.scala_version }}'
