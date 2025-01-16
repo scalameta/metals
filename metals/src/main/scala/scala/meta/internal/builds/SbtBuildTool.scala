@@ -6,11 +6,14 @@ import java.util.Properties
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
+import scala.meta.internal.bsp.BspConfigGenerationStatus.BspConfigGenerationStatus
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.internal.semver.SemVer
@@ -59,6 +62,33 @@ case class SbtBuildTool(
 
   override def cleanupStaleConfig(): Unit = {
     // no need to cleanup, the plugin deals with that
+  }
+
+  override def generateBspConfig(
+      workspace: AbsolutePath,
+      systemProcess: List[String] => Future[BspConfigGenerationStatus],
+      statusBar: StatusBar,
+  ): Future[BspConfigGenerationStatus] = {
+    cleanUpPlugins()
+    super.generateBspConfig(workspace, systemProcess, statusBar)
+  }
+
+  def cleanUpPlugins(): Unit = {
+    @tailrec
+    def cleanUpMeta(root: AbsolutePath): Unit = {
+      val meta = root.resolve("project")
+      if (meta.exists) {
+        val metalsPlugins = meta.resolve("metals.sbt")
+        if (metalsPlugins.exists) metalsPlugins.delete()
+        cleanUpMeta(meta)
+      }
+    }
+    try {
+      cleanUpMeta(projectRoot)
+    } catch {
+      case NonFatal(e) =>
+        scribe.error(s"Failed to clean up sbt plugins: ${e.getMessage}")
+    }
   }
 
   override def digest(workspace: AbsolutePath): Option[String] =
@@ -182,25 +212,6 @@ case class SbtBuildTool(
   private def writeBloopPlugin(
       projectRoot: AbsolutePath
   ): Unit = {
-
-    def sbtMetaDirs(
-        meta: AbsolutePath,
-        acc: Set[AbsolutePath],
-    ): Set[AbsolutePath] = {
-      if (meta.exists) {
-        val files = meta.list.toList
-        val hasSbtSrc = files.exists(f => f.isSbt && f.filename != "metals.sbt")
-        if (hasSbtSrc) {
-          val forSbtSupport = meta.resolve("project/project")
-          sbtMetaDirs(meta.resolve("project"), acc + forSbtSupport)
-        } else {
-          acc
-        }
-      } else {
-        acc
-      }
-    }
-
     if (!userConfig().bloopSbtAlreadyInstalled) {
       val pluginVersion =
         // from 1.4.6 Bloop is not compatible with sbt < 1.3.0
@@ -212,10 +223,8 @@ case class SbtBuildTool(
 
       val plugin = bloopPluginDetails(pluginVersion)
       val mainMeta = projectRoot.resolve("project")
-      val metaMeta = projectRoot.resolve("project").resolve("project")
-      sbtMetaDirs(mainMeta, Set(mainMeta, metaMeta)).foreach(dir =>
-        writePlugins(dir, plugin)
-      )
+      val metaMeta = mainMeta.resolve("project")
+      List(mainMeta, metaMeta).foreach(dir => writePlugins(dir, plugin))
     }
   }
 
