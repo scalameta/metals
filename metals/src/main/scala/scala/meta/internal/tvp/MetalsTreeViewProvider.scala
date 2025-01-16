@@ -93,6 +93,8 @@ class MetalsTreeViewProvider(
               TreeViewNode
                 .fromCommand(ServerCommands.ConnectBuildServer, "connect"),
               TreeViewNode
+                .fromCommand(ServerCommands.BspSwitch, "discard"),
+              TreeViewNode
                 .fromCommand(ServerCommands.CascadeCompile, "cascade"),
               TreeViewNode.fromCommand(ServerCommands.CancelCompile, "cancel"),
               TreeViewNode.fromCommand(ServerCommands.CleanCompile, "clean"),
