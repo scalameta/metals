@@ -102,7 +102,7 @@ class WorkspaceFolders(
     } yield ()
   }
 
-  def convertToScalaProject(folder: Folder): Option[MetalsLspService] = {
+  def convertToScalaProject(folder: Folder): Option[ProjectMetalsLspService] = {
     val WorkspaceFoldersServices(after, _) =
       folderServices.updateAndGet {
         case wfs @ WorkspaceFoldersServices(
