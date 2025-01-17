@@ -87,13 +87,16 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         symbol.pos.source.eq(unit.source)
       ) {
         val focused = symbol.pos.focus
+        val actualName = symbol.decodedName.stripSuffix("_=").trim
         val namePos =
-          if (symbol.name.startsWith("x$") && symbol.isSynthetic) focused.toLsp
-          else focused.withEnd(focused.start + symbol.name.length()).toLsp
+          if (symbol.name.startsWith("x$") && symbol.isSynthetic) focused
+          else focused.withEnd(focused.start + actualName.length())
+        val adjusted = namePos.adjust(unit.source.content)._1
+
         DefinitionResultImpl(
           semanticdbSymbol(symbol),
           ju.Collections.singletonList(
-            new Location(params.uri().toString(), namePos)
+            new Location(params.uri().toString(), adjusted.toLsp)
           )
         )
       } else {

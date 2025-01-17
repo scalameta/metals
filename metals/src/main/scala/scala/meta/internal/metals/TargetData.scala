@@ -32,7 +32,7 @@ import ch.epfl.scala.bsp4j.SourceItemKind.FILE
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
 import org.eclipse.{lsp4j => l}
 
-final class TargetData {
+final class TargetData(val isAmmonite: Boolean = false) {
 
   val sourceItemsToBuildTarget
       : MMap[AbsolutePath, ConcurrentLinkedQueue[BuildTargetIdentifier]] =
