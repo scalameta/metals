@@ -3,7 +3,7 @@ authors: kmarek
 title: Metals v1.5.0 - Strontium
 ---
 
-We're happy to announce the release of Metals v1.5.0, which brings an array of bugfixes and improvements, as we keep working on Metals stability. Additionally, we deleted two custom extensions to the LSP depending on the standard instead.
+We're happy to announce the release of Metals v1.5.0, which brings an array of bugfixes and improvements as we keep working on Metals stability.
 
 <table>
 <tbody>
@@ -48,16 +48,18 @@ give Metals a try!
 - [Inlay hints for worksheets](inlay-hints-for-worksheets)
 
 ## Support for 2.13.16
-With the new release comes support for Scala 2.13.16. You can read release highlighs in [the Scala 2.13.16 release notes](https://github.com/scala/scala/releases/tag/v2.13.16).
+The new release comes with support for Scala 2.13.16. You can read release highlighs in [the Scala 2.13.16 release notes](https://github.com/scala/scala/releases/tag/v2.13.16).
 
 ## Fix for Metals stopped compiling bug
-A bug where Metals would stop compiling the code and failed to report any errors. This bug was related to a feature, where Metals would pause compilation in certain scenarions like focusing out of editor Window. The feature was removed completely, since there was little benefit from it and it was tricky to make it work. If you expirenced this bug or a similar one, let us know if this release fixes in for you. Thanks go to [tgodzik](https://github.com/tgodzik) for debugging this issue.
+Previous versions of Metals could sometimes stop compiling the code and fail to report any new errors. This bug was related to a feature, where Metals would pause compilation when focusing out of editor Window. The feature was removed completely, since there was little benefit from it and it was tricky to make it work. If you experienced this bug or a similar one, let us know if this release fixes in for you. Thanks go to [tgodzik](https://github.com/tgodzik) for debugging this issue.
 
 ## Error reports improvements
-We made small improvements to our error reporting. The reports will be now better deduplicated, also the information about created reports will be now logged to improve their visibility. As previously, full list of generated reports is visible in the Metals doctor, and you can find all the reports under `.metals/.reports` directory in your workspace.
+In one of the previous versions of Metals we added mechanisms to save error reports under `.metals/.reports`. In case an error was more prominent it could create a large number of duplicate reports.
+
+Now, the reports will be deduplicated properly and the information about created ones will be logged to improve their visibility. As previously, full list of generated reports is visible in the Metals doctor and the `.metals/.reports` directory.
 
 ## Inlay hints for worksheets
-Starting from this release, inlay hints will be used to display worksheet decorations. Since a custom Metals extension to LSP was used before, this will make worksheet support available for editors that don't implement this extension (e.g. Zed). Thanks [tgodzik](https://github.com/tgodzik) for implementing this transition.
+Starting from this release, worksheet decorations will be displayed using inlay hints instead of the previous custom solution. This will make worksheet support available for editors that don't implement this extension (e.g. Zed). Thanks [tgodzik](https://github.com/tgodzik) for implementing this transition.
 
 ## Miscellaneous
 - bugfix: correctly set `excludedPackages` on startup [harpocrates](https://github.com/harpocrates)
