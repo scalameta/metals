@@ -461,7 +461,7 @@ class DebugProvider(
       debugParams: DebugSessionParams
   )(implicit ec: ExecutionContext): Future[DebugSession] = {
     for {
-      server <- start(debugParams),
+      server <- start(debugParams)
     } yield {
       statusBar.addMessage("Started debug server!")
       DebugSession(server.sessionName, server.uri.toString)

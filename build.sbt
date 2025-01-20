@@ -342,7 +342,7 @@ val mtagsSettings = List(
         scala3ScalametaDependency,
         scala3SemanticdbDependency,
       ),
-    ),
+    )
   },
   libraryDependencies ++= {
     if (isCI) Nil

@@ -108,6 +108,7 @@ trait PcCollector[T] { self: WithCompilationUnit =>
         this.collect(parent)(t, pos, sym)
 
       tree match {
+
         /**
          * All indentifiers such as:
          * val a = <<b>>
@@ -225,6 +226,7 @@ trait PcCollector[T] { self: WithCompilationUnit =>
          */
         case tpe: TypeTree if tpe.original != null =>
           traverse(acc, tpe.original)
+
         /**
          * Some type trees don't have symbols attached such as:
          * type A = List[_ <: <<Iterable>>[Int]]
