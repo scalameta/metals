@@ -581,7 +581,9 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
     } yield ()
   }
 
-  test("decl-outgoing-call") { // https://github.com/scalameta/metals/issues/4489
+  test(
+    "decl-outgoing-call"
+  ) { // https://github.com/scalameta/metals/issues/4489
     for {
       _ <- assertOutgoingCalls(
         """|/a/src/main/scala/a/Demo.scala

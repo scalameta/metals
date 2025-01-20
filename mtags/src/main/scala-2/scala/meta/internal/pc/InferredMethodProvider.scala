@@ -49,6 +49,7 @@ final class InferredMethodProvider(
       case errorMethod: Ident if errorMethod.isErroneous =>
         val errorMethodName = Identifier.backtickWrap(errorMethod.name.decoded)
         lastVisitedParentTrees match {
+
           /**
            * Works for apply with unknown name:
            * ```scala

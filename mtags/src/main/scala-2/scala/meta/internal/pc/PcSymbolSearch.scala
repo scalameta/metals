@@ -26,9 +26,8 @@ trait PcSymbolSearch { self: WithCompilationUnit =>
       // might happen in type trees
       // also this doesn't seem to be picked up by semanticdb
       if (id.symbol == NoSymbol)
-        fallbackSymbol(id.name, pos).map(sym =>
-          (symbolAlternatives(sym), id.pos)
-        )
+        fallbackSymbol(id.name, pos)
+          .map(sym => (symbolAlternatives(sym), id.pos))
       else {
         Some(symbolAlternatives(id.symbol), id.pos)
       }
@@ -81,6 +80,7 @@ trait PcSymbolSearch { self: WithCompilationUnit =>
     case _ =>
       val apply = typedTree match {
         case (apply: Apply) => Some(apply)
+
         /**
          * For methods with multiple parameter lists and default args, the tree looks like this:
          * Block(List(val x&1, val x&2, ...), Apply(<<method>>, List(x&1, x&2, ...)))
