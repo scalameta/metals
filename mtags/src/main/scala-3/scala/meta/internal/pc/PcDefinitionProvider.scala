@@ -79,7 +79,7 @@ class PcDefinitionProvider(
       .untypedPath(pos.span)
       .collect { case t: untpd.Tree => t }
 
-    definitionsForSymbol(untpdPath.headOption.map(_.symbol).toList, uri)
+    definitionsForSymbol(untpdPath.headOption.map(_.symbol).toList, uri, pos)
   end fallbackToUntyped
 
   private def findDefinitions(
@@ -91,7 +91,8 @@ class PcDefinitionProvider(
     import indexed.ctx
     definitionsForSymbol(
       MetalsInteractive.enclosingSymbols(path, pos, indexed),
-      uri
+      uri,
+      pos
     )
   end findDefinitions
 
@@ -112,20 +113,22 @@ class PcDefinitionProvider(
       case Nil =>
         path.headOption match
           case Some(value: Literal) =>
-            definitionsForSymbol(List(value.tpe.widen.typeSymbol), uri)
+            definitionsForSymbol(List(value.tpe.widen.typeSymbol), uri, pos)
           case _ => DefinitionResultImpl.empty
       case _ =>
-        definitionsForSymbol(typeSymbols, uri)
+        definitionsForSymbol(typeSymbols, uri, pos)
 
   end findTypeDefinitions
 
   private def definitionsForSymbol(
       symbols: List[Symbol],
-      uri: URI
+      uri: URI,
+      pos: SourcePosition
   )(using ctx: Context): DefinitionResult =
     symbols match
       case symbols @ (sym :: other) =>
-        if sym.isLocal then
+        val isLocal = sym.source == pos.source
+        if isLocal then
           @tailrec
           def findDefsForSymbol(sym: Symbol): DefinitionResult =
             val include = Include.definitions | Include.local
