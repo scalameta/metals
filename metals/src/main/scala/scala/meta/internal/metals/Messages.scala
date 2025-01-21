@@ -105,6 +105,21 @@ object Messages {
     MessageType.Error,
     "Import project failed, no functionality will work. See the logs for more details",
   )
+
+  object ImportProjectFailedSuggestBspSwitch {
+    val switchBsp = new MessageActionItem("Switch build server")
+
+    def params(): ShowMessageRequestParams = {
+      val request = new ShowMessageRequestParams()
+      request.setMessage(
+        "Import project failed, no functionality will work. See the logs for more details. You can try using a different build server."
+      )
+      request.setType(MessageType.Error)
+      request.setActions(List(switchBsp).asJava)
+      request
+    }
+  }
+
   val ImportAlreadyRunning = new MessageParams(
     MessageType.Warning,
     s"Import already running. \nPlease cancel the current import to run a new one.",

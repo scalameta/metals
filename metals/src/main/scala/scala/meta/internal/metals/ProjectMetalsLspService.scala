@@ -1,10 +1,8 @@
 package scala.meta.internal.metals
 
-import java.util
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
@@ -94,17 +92,6 @@ class ProjectMetalsLspService(
   def buildServerPromise = connectionProvider.buildServerPromise
   def connect[T](config: ConnectRequest): Future[BuildChange] =
     connectionProvider.Connect.connect(config)
-
-  val willGenerateBspConfig = new AtomicReference(Set.empty[util.UUID])
-
-  def withWillGenerateBspConfig[T](body: => Future[T]): Future[T] = {
-    val uuid = util.UUID.randomUUID()
-    willGenerateBspConfig.updateAndGet(_ + uuid)
-    body.map { result =>
-      willGenerateBspConfig.updateAndGet(_ - uuid)
-      result
-    }
-  }
 
   override val fileWatcher: ProjectFileWatcher = register(
     new ProjectFileWatcher(
@@ -270,7 +257,7 @@ class ProjectMetalsLspService(
   }
 
   protected def onInitialized(): Future[Unit] =
-    withWillGenerateBspConfig {
+    connectionProvider.withWillGenerateBspConfig {
       for {
         _ <- maybeSetupScalaCli()
         _ <- connectionProvider.fullConnect()
@@ -280,7 +267,7 @@ class ProjectMetalsLspService(
   def onBuildChangedUnbatched(
       paths: Seq[AbsolutePath]
   ): Future[Unit] =
-    if (willGenerateBspConfig.get().nonEmpty) Future.unit
+    if (connectionProvider.willGenerateBspConfig) Future.unit
     else {
       val changedBuilds = paths.flatMap(buildTools.isBuildRelated)
       tables.buildTool.selectedBuildTool() match {
@@ -496,18 +483,7 @@ class ProjectMetalsLspService(
   def ammoniteStop(): Future[Unit] = ammonite.stop()
 
   def switchBspServer(): Future[Unit] =
-    withWillGenerateBspConfig {
-      for {
-        connectKind <- connectionProvider.bspConnector.switchBuildServer()
-        _ <-
-          connectKind match {
-            case None => Future.unit
-            case Some(SlowConnect) =>
-              connectionProvider.slowConnectToBuildServer(forceImport = true)
-            case Some(request: ConnectRequest) => connect(request)
-          }
-      } yield ()
-    }
+    connectionProvider.switchBspServer()
 
   def resetPopupChoice(value: String): Future[Unit] =
     popupChoiceReset.reset(value)

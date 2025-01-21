@@ -400,6 +400,12 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
         ) {
           chooseWorkspaceFolder(params.getActions().asScala.toSeq)
         } else if (
+          params.getMessage() == ImportProjectFailedSuggestBspSwitch
+            .params()
+            .getMessage()
+        ) {
+          new MessageActionItem("Ignore")
+        } else if (
           List(true, false)
             .map(isRestart =>
               ProjectJavaHomeUpdate.params(isRestart).getMessage()

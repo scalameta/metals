@@ -6,11 +6,14 @@ import java.util.Properties
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
+import scala.meta.internal.bsp.BspConfigGenerationStatus.BspConfigGenerationStatus
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.internal.semver.SemVer
@@ -59,6 +62,33 @@ case class SbtBuildTool(
 
   override def cleanupStaleConfig(): Unit = {
     // no need to cleanup, the plugin deals with that
+  }
+
+  override def generateBspConfig(
+      workspace: AbsolutePath,
+      systemProcess: List[String] => Future[BspConfigGenerationStatus],
+      statusBar: StatusBar,
+  ): Future[BspConfigGenerationStatus] = {
+    cleanUpPlugins()
+    super.generateBspConfig(workspace, systemProcess, statusBar)
+  }
+
+  def cleanUpPlugins(): Unit = {
+    @tailrec
+    def cleanUpMeta(root: AbsolutePath): Unit = {
+      val meta = root.resolve("project")
+      if (meta.exists) {
+        val metalsPlugins = meta.resolve("metals.sbt")
+        if (metalsPlugins.exists) metalsPlugins.delete()
+        cleanUpMeta(meta)
+      }
+    }
+    try {
+      cleanUpMeta(projectRoot)
+    } catch {
+      case NonFatal(e) =>
+        scribe.error(s"Failed to clean up sbt plugins: ${e.getMessage}")
+    }
   }
 
   override def digest(workspace: AbsolutePath): Option[String] =
