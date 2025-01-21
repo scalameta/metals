@@ -198,6 +198,7 @@ val sharedScalacOptions = List(
 )
 
 val sharedSettings = sharedJavacOptions ++ sharedScalacOptions ++ List(
+  Compile / packageDoc / publishArtifact := false,
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
     if2 = List(
@@ -316,8 +317,6 @@ val mtagsSettings = List(
     (ThisBuild / baseDirectory).value / "mtags",
     scalaVersion.value,
   ),
-  // @note needed to deal with issues with dottyDoc
-  Compile / doc / sources := Seq.empty,
   libraryDependencies ++= Seq(
     "com.lihaoyi" %% "geny" % V.genyVersion,
     "com.thoughtworks.qdox" % "qdox" % V.qdox, // for java mtags

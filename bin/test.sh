@@ -15,8 +15,8 @@ cat ~/.local/share/scalacli/bloop/daemon/output
 
 rm .jvmopts
 touch .jvmopts
-echo "-Xss4m" >> .jvmopts 
-echo "-Xmx1G"  >> .jvmopts 
+echo "-Xss4m" >> .jvmopts
+echo "-Xmx2G"  >> .jvmopts
 echo "-XX:ReservedCodeCacheSize=1024m" >> .jvmopts
 echo "-XX:+TieredCompilation" >> .jvmopts
 echo "-Dfile.encoding=UTF-8" >> .jvmopts
