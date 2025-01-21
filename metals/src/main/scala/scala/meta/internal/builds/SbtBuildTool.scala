@@ -415,7 +415,7 @@ object SbtBuildTool {
         "This plugin makes sure that the JDI tools are in the sbt classpath.",
         "JDI tools are used by the debug adapter server.",
       ),
-      s""""org.scala-debugger" % "sbt-jdi-tools" % "${BuildInfo.sbtJdiToolsVersion}"""",
+      s""""com.github.sbt" % "sbt-jdi-tools" % "${BuildInfo.sbtJdiToolsVersion}"""",
       resolver = None,
     )
 
