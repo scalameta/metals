@@ -3,16 +3,17 @@ authors: kmarek
 title: Metals v1.5.0 - Strontium
 ---
 
-We're happy to announce the release of Metals v1.5.0, which brings an array of bugfixes and improvements, as we keep working on Metals stability.
+We're happy to announce the release of Metals v1.5.0, which brings an array of bugfixes and improvements as we keep working on Metals stability.
+
 <table>
 <tbody>
   <tr>
     <td>Commits since last release</td>
-    <td align="center">64</td>
+    <td align="center">85</td>
   </tr>
   <tr>
     <td>Merged PRs</td>
-    <td align="center">45</td>
+    <td align="center">61</td>
   </tr>
     <tr>
     <td>Contributors</td>
@@ -20,11 +21,11 @@ We're happy to announce the release of Metals v1.5.0, which brings an array of b
   </tr>
   <tr>
     <td>Closed issues</td>
-    <td align="center"></td>
+    <td align="center">18</td>
   </tr>
   <tr>
     <td>New features</td>
-    <td align="center">0</td>
+    <td align="center">2</td>
   </tr>
 </tbody>
 </table>
@@ -38,26 +39,24 @@ with the help from contributors from the community.
 
 ## TL;DR
 
-Check out [https://scalameta.org/metals/](https://scalameta.org/metals/), and
-give Metals a try!
-
-
 - [Support for 2.13.16](#support-for-2.13.16)
 - [Fix for Metals stopped compiling bug](#fix-for-Metals-stopped-compiling-bug)
 - [Error reports improvements](error-reports-improvements)
 - [Inlay hints for worksheets](inlay-hints-for-worksheets)
 
 ## Support for 2.13.16
-With the new release comes support for Scala 2.13.16. You can read release highlighs in [the Scala 2.13.16 release notes](https://github.com/scala/scala/releases/tag/v2.13.16).
+With the new release comes support for Scala 2.13.16. You can read release highlighs in [the Scala 2.13.16 release notes] [the Scala 2.13.16 release notes](https://github.com/scala/scala/releases/tag/v2.13.16).
 
 ## Fix for Metals stopped compiling bug
-A bug where Metals would stop compiling the code and failed to report any errors. This bug was related to a feature, where Metals would pause compilation in certain scenarions like focusing out of editor Window. The feature was removed completely, since there was little benefit from it and it was tricky to make it work. If you expirenced this bug or a similar one, let us know if this release fixes in for you. Thanks go to [tgodzik](https://github.com/tgodzik) for debugging this issue.
+Previous versions of Metals could sometimes stop compiling the code and fail to report any new errors. This bug was related to a feature, where Metals would pause compilation when focusing out of editor Window. The feature was removed completely, since there was little benefit from it and it was tricky to make it work. If you experienced this bug or a similar one, let us know if this release fixes in for you. Thanks go to [tgodzik](https://github.com/tgodzik) for debugging this issue.
 
 ## Error reports improvements
-We made small improvements to our error reporting. The reports will be now better deduplicated, also the information about created reports will be now logged to improve their visibility. As previously, full list of generated reports is visible in the Metals doctor, and you can find all the reports under `.metals/.reports` directory in your workspace.
+In one of the previous versions of Metals we added mechanisms to save error reports under `.metals/.reports`. In case an error was more prominent it could create a large number of duplicate reports.
+
+Now, the reports will be deduplicated properly and the information about created ones will be logged to improve their visibility. As previously, full list of generated reports is visible in the Metals doctor and the `.metals/.reports` directory.
 
 ## Inlay hints for worksheets
-Starting from this release, inlay hints will be used to display worksheet decorations. Since a custom Metals extension to LSP was used before, this will make worksheet support available for editors that don't implement this extension (e.g. Zed). Thanks [tgodzik](https://github.com/tgodzik) for implementing this transition.
+Starting from this release, worksheet decorations will be displayed using inlay hints instead of the previous custom solution. This will make worksheet support available for editors that don't implement this extension (e.g. Zed). Thanks [tgodzik](https://github.com/tgodzik) for implementing this transition.
 
 ## Miscellaneous
 - bugfix: correctly set `excludedPackages` on startup [harpocrates](https://github.com/harpocrates)
@@ -71,6 +70,11 @@ Starting from this release, inlay hints will be used to display worksheet decora
 - improvement: make folding regions more consistent and allow for custom setting of folding threshold [kasiaMarek](https://github.com/kasiaMarek)
 - improvement: handle incorrect `scalafmtConfigPath` gracefully [Austinito](https://github.com/Austinito)
 - improvement: if no mode chosen by the client, use `log` for bsp status by default [tgodzik](https://github.com/tgodzik)
+- bugfix: skip `using` directives for auto import position when missing newline [kasiaMarek](https://github.com/kasiaMarek)
+- improvement: use presentation compiler as first strategy for go to definition [kasiaMarek](https://github.com/kasiaMarek)
+- feature: infer base package for package ralated functionalities [harpocrates](https://github.com/harpocrates)
+- feature: add switch build server button to `Build Commands` section [tgodzik](https://github.com/tgodzik)
+- improvement: suggest bsp switch if bloopInstall fails [kasiaMarek](https://github.com/kasiaMarek)
 
 ## Contributors
 
@@ -78,25 +82,75 @@ Big thanks to everybody who contributed to this release or reported an issue!
 
 ```
 $ git shortlog -sn --no-merges v1.4.2..v1.5.0
-    26	Tomasz Godzik
-    19	Scalameta Bot
-    10	kasiaMarek
-     3	Alec Theriault
+    31	Tomasz Godzik
+    26	Scalameta Bot
+    16	kasiaMarek
+     4	Alec Theriault
      2	Austinito
+     1	Adrien Piquerez
      1	Anton Sviridov
      1	Brian Tracey
      1	Lorenzo Gabriele
+     1	Timothy John Perisho Eccleston
      1	dependabot[bot]
 ```
 
 ## Merged PRs
 
-## [v1.4.3](https://github.com/scalameta/metals/tree/v1.4.3) (2025-01-16)
+## [v1.5.0](https://github.com/scalameta/metals/tree/v1.5.0) (2025-01-22)
 
-[Full Changelog](https://github.com/scalameta/metals/compare/v1.4.2...v1.4.3)
+[Full Changelog](https://github.com/scalameta/metals/compare/v1.4.2...v1.5.0)
 
 **Merged pull requests:**
 
+- chore: Update Bloop to 2.0.8
+  [\#7144](https://github.com/scalameta/metals/pull/7144)
+  ([tgodzik](https://github.com/tgodzik))
+- typo in vscode.md
+  [\#7146](https://github.com/scalameta/metals/pull/7146)
+  ([combinatorist](https://github.com/combinatorist))
+- update scala-debug-adapter and sbt-jdi-tools
+  [\#7143](https://github.com/scalameta/metals/pull/7143)
+  ([adpi2](https://github.com/adpi2))
+- improvement: suggest bsp switch if bloopInstall fails + clean up sbt bloop plugins
+  [\#7125](https://github.com/scalameta/metals/pull/7125)
+  ([kasiaMarek](https://github.com/kasiaMarek))
+- build(deps): Update scalafmt-core from 3.8.3 to 3.8.5
+  [\#7139](https://github.com/scalameta/metals/pull/7139)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- build(deps): Update bloop-config from 2.2.0 to 2.3.1
+  [\#7128](https://github.com/scalameta/metals/pull/7128)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- Infer base package in `PackageProvider`
+  [\#7107](https://github.com/scalameta/metals/pull/7107)
+  ([harpocrates](https://github.com/harpocrates))
+- improvement: Add switch command to metals tab
+  [\#7126](https://github.com/scalameta/metals/pull/7126)
+  ([tgodzik](https://github.com/tgodzik))
+- build(deps): Update scalafix-interfaces from 0.13.0 to 0.14.0
+  [\#7131](https://github.com/scalameta/metals/pull/7131)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- build(deps): Update flyway-core from 11.1.1 to 11.2.0
+  [\#7132](https://github.com/scalameta/metals/pull/7132)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- build(deps): Update sbt-scalafix from 0.12.1 to 0.14.0
+  [\#7130](https://github.com/scalameta/metals/pull/7130)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- bugfix: Fix release workflow to use sbt action
+  [\#7134](https://github.com/scalameta/metals/pull/7134)
+  ([tgodzik](https://github.com/tgodzik))
+- bugfix: Fix release and sbt dependency graph workflows
+  [\#7121](https://github.com/scalameta/metals/pull/7121)
+  ([tgodzik](https://github.com/tgodzik))
+- chore: Update Bloop to 2.0.7
+  [\#7127](https://github.com/scalameta/metals/pull/7127)
+  ([tgodzik](https://github.com/tgodzik))
+- improvement: use pc for go to def when stale semanticdb
+  [\#7028](https://github.com/scalameta/metals/pull/7028)
+  ([kasiaMarek](https://github.com/kasiaMarek))
+- fix: skip using directives for auto import position when missing newline
+  [\#7094](https://github.com/scalameta/metals/pull/7094)
+  ([kasiaMarek](https://github.com/kasiaMarek))
 - bugfix: fix incorrect `excludedPackages` on startup
   [\#7120](https://github.com/scalameta/metals/pull/7120)
   ([harpocrates](https://github.com/harpocrates))
@@ -145,7 +199,7 @@ $ git shortlog -sn --no-merges v1.4.2..v1.5.0
 - improvement: Don't sent text on didSave
   [\#7015](https://github.com/scalameta/metals/pull/7015)
   ([tgodzik](https://github.com/tgodzik))
-- improvement: deduplicate reports 
+- improvement: deduplicate reports
   [\#7048](https://github.com/scalameta/metals/pull/7048)
   ([kasiaMarek](https://github.com/kasiaMarek))
 - build(deps): Update sbt-welcome from 0.4.0 to 0.5.0
