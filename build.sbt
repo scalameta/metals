@@ -9,7 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
-def localSnapshotVersion = "1.4.3-SNAPSHOT"
+def localSnapshotVersion = "1.5.1-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 
@@ -221,6 +221,7 @@ lazy val interfaces = project
     mimaPreviousArtifacts := Set(
       "org.scalameta" % "mtags-interfaces" % "1.2.2",
       "org.scalameta" % "mtags-interfaces" % "1.3.2",
+      "org.scalameta" % "mtags-interfaces" % "1.4.2",
     ),
     crossPaths := false,
     libraryDependencies ++= List(

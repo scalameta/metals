@@ -14,7 +14,7 @@ import org.kohsuke.github.GHIssueState
 import java.text.SimpleDateFormat
 import java.util.Date
 
-val codename = "Palladium"
+val codename = "Strontium"
 
 @main
 def main(
