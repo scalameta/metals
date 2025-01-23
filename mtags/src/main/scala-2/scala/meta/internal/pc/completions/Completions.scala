@@ -9,6 +9,7 @@ import scala.reflect.internal.Chars
 import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -188,7 +189,7 @@ trait Completions { this: MetalsGlobal =>
       query: String,
       history: ShortenedNames,
       completion: CompletionPosition
-  ): Ordering[Member] =
+  )(implicit queryInfo: PcQueryContext): Ordering[Member] =
     new Ordering[Member] {
       val queryLower = query.toLowerCase()
       val fuzzyCache = mutable.Map.empty[Symbol, Int]
@@ -282,7 +283,9 @@ trait Completions { this: MetalsGlobal =>
       }
     }
 
-  def infoString(sym: Symbol, info: Type, history: ShortenedNames): String =
+  def infoString(sym: Symbol, info: Type, history: ShortenedNames)(implicit
+      queryInfo: PcQueryContext
+  ): String =
     sym match {
       case m: MethodSymbol =>
         new SignaturePrinter(m, history, info, includeDocs = false)
@@ -312,7 +315,9 @@ trait Completions { this: MetalsGlobal =>
       .setInfo(NoType)
   }
 
-  def detailString(r: Member, history: ShortenedNames): String = {
+  def detailString(r: Member, history: ShortenedNames)(implicit
+      queryInfo: PcQueryContext
+  ): String = {
     if (!r.sym.hasPackageFlag) {
       // Compute type parameters based on the qualifier.
       // Example: Map[Int, String].applyOrE@@
@@ -449,7 +454,7 @@ trait Completions { this: MetalsGlobal =>
       editRange: l.Range,
       completions: CompletionResult,
       latestEnclosing: List[Tree]
-  ): CompletionPosition = {
+  )(implicit queryInfo: PcQueryContext): CompletionPosition = {
     // the implementation of completionPositionUnsafe does a lot of `typedTreeAt(pos).tpe`
     // which often causes null pointer exceptions, it's easier to catch the error here than
     // enforce discipline in the code.
@@ -475,7 +480,7 @@ trait Completions { this: MetalsGlobal =>
       editRange: l.Range,
       completions: CompletionResult,
       latestEnclosingArg: List[Tree]
-  ): CompletionPosition = {
+  )(implicit queryInfo: PcQueryContext): CompletionPosition = {
     val ScalaCliExtractor = new ScalaCliExtractor(pos)
     def fromIdentApply(
         ident: Ident,
@@ -641,7 +646,7 @@ trait Completions { this: MetalsGlobal =>
       enclosing: List[Tree],
       completions: CompletionResult,
       editRange: l.Range
-  ): CompletionPosition = {
+  )(implicit queryInfo: PcQueryContext): CompletionPosition = {
     object ExhaustiveMatch {
       def unapply(sel: Select): Option[CompletionPosition] = {
         if (!isMatchPrefix(sel.name)) None

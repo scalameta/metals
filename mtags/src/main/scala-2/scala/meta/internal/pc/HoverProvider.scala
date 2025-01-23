@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import scala.reflect.internal.util.Position
 import scala.reflect.internal.{Flags => gf}
 
+import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -15,9 +16,7 @@ class HoverProvider(
     val compiler: MetalsGlobal,
     params: OffsetParams,
     contentType: ContentType
-)(implicit
-    reportContext: ReportContext
-) {
+)(implicit reportContext: ReportContext, queryInfo: PcQueryContext) {
   import compiler._
 
   def hover(): Option[HoverSignature] = params match {
