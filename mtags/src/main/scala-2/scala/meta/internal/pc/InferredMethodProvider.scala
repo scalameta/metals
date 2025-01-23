@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import scala.annotation.tailrec
 
+import scala.meta.internal.metals.PcQueryContext
 import scala.meta.pc.OffsetParams
 
 import org.eclipse.lsp4j.TextEdit
@@ -22,7 +23,7 @@ import org.eclipse.lsp4j.TextEdit
 final class InferredMethodProvider(
     val compiler: MetalsGlobal,
     params: OffsetParams
-) {
+)(implicit queryInfo: PcQueryContext) {
   import compiler._
   val unit: RichCompilationUnit = addCompilationUnit(
     code = params.text(),

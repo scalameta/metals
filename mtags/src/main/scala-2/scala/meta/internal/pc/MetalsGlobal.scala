@@ -306,7 +306,9 @@ class MetalsGlobal(
    * with fully qualified names. This method strips out package prefixes to shorten the names while
    * making sure to not convert two different symbols into same short name.
    */
-  def shortType(longType: Type, history: ShortenedNames): Type =
+  def shortType(longType: Type, history: ShortenedNames)(implicit
+      queryInfo: m.internal.metals.PcQueryContext
+  ): Type =
     try {
       val isVisited = mutable.Set.empty[(Type, Option[ShortName])]
       val cached = new ju.HashMap[(Type, Option[ShortName]), Type]()
@@ -542,14 +544,20 @@ class MetalsGlobal(
       }
     } catch {
       case NonFatal(e) =>
-        logger.warning(s"Failed to shorten type $longType: $e")
+        queryInfo.report(
+          "shorten-type",
+          e,
+          s"Failed to shorten type $longType"
+        )
         longType
     }
 
   /**
    * Custom `Type.toLongString` that shortens fully qualified package prefixes.
    */
-  def metalsToLongString(tpe: Type, history: ShortenedNames): String = {
+  def metalsToLongString(tpe: Type, history: ShortenedNames)(implicit
+      queryInfo: m.internal.metals.PcQueryContext
+  ): String = {
     shortType(tpe, history).toLongString
   }
 

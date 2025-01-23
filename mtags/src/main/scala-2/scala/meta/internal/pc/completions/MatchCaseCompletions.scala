@@ -7,6 +7,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.CompletionFuzzy
 import scala.meta.internal.pc.Identifier
@@ -39,7 +40,8 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       patternOnly: Option[String] = None,
       hasBind: Boolean = false,
       includeExhaustive: Option[NewLineOptions] = None
-  ) extends CompletionPosition {
+  )(implicit queryInfo: PcQueryContext)
+      extends CompletionPosition {
     val context: Context = doLocateContext(pos)
     val parents: Parents = selector match {
       case EmptyTree =>
@@ -254,7 +256,8 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       pos: Position,
       source: URI,
       text: String
-  ) extends CompletionPosition {
+  )(implicit queryInfo: PcQueryContext)
+      extends CompletionPosition {
     private def subclassesForType(tpe: Type): List[Symbol] = {
       if (tpe.typeSymbol.isRefinementClass) {
         val RefinedType(parents, _) = tpe

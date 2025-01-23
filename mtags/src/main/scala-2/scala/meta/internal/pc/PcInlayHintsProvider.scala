@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import scala.annotation.tailrec
 
+import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.InlayHintsParams
 
@@ -11,7 +12,7 @@ import org.eclipse.lsp4j.InlayHintKind
 final class PcInlayHintsProvider(
     protected val compiler: MetalsGlobal,
     val params: InlayHintsParams
-) {
+)(implicit queryInfo: PcQueryContext) {
   import compiler._
   val unit: RichCompilationUnit = addCompilationUnit(
     code = params.text(),

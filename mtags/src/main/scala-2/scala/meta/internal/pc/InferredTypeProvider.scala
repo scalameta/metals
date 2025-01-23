@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import scala.meta._
+import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
 import scala.meta.tokens.{Token => T}
@@ -27,7 +28,7 @@ import org.eclipse.{lsp4j => l}
 final class InferredTypeProvider(
     val compiler: MetalsGlobal,
     params: OffsetParams
-) {
+)(implicit queryInfo: PcQueryContext) {
   import compiler._
 
   case class AdjustTypeOpts(
