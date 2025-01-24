@@ -26,9 +26,10 @@ class BuildServerConnectionLspSuite
       _ = server.server.bspSession.get.cancel()
       _ = assertNoDiagnostics()
       _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
-      _ <- server.didSave("a/src/main/scala/a/A.scala")(
+      _ <- server.didChange("a/src/main/scala/a/A.scala")(
         _.replace("val n = 42", "val n: String = 42")
       )
+      _ <- server.didSave("a/src/main/scala/a/A.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/scala/a/A.scala:3:19: error: type mismatch;

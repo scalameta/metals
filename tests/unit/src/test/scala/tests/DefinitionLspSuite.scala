@@ -233,7 +233,7 @@ class DefinitionLspSuite
            |package a
            |object B/*L1*/ {
            |  def main/*L2*/() = {
-           |    println/*Predef.scala*/(A/*;A.scala:2;A.scala:3*/("John"))
+           |    println/*Predef.scala*/(A/*A.scala:2*/("John"))
            |    A/*A.scala:3*/.fun/*A.scala:5*/()
            |  }
            |}
@@ -266,9 +266,10 @@ class DefinitionLspSuite
            |}
         """.stripMargin,
       )
-      _ <- server.didSave("a/src/main/scala/a/Main.scala")(
+      _ <- server.didChange("a/src/main/scala/a/Main.scala")(
         _.replace("max(1, 2)", "max")
       )
+      _ <- server.didSave("a/src/main/scala/a/Main.scala")
       _ = assertNoDiff(
         server.workspaceDefinitions,
         """|/a/src/main/scala/a/Main.scala

@@ -359,6 +359,23 @@ class CompletionArgSuite extends BaseCompletionSuite {
     topLines = Some(2)
   )
 
+  check(
+    "default-args7",
+    """|trait Foo {
+       |  def bar(fst: String = null, snd: Int = 3 + 2, thd: Int = 23)
+       |}
+       |object Main {
+       |  def foo: Foo = ???
+       |  foo.bar(@@)
+       |}
+       |""".stripMargin,
+    """|fst = : String
+       |snd = : Int
+       |thd = : Int
+       |""".stripMargin,
+    topLines = Some(3)
+  )
+
   checkSnippet( // see: https://github.com/scalameta/metals/issues/2400
     "explicit-dollar",
     """

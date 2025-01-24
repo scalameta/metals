@@ -20,7 +20,9 @@ class HeadDoctor(
     httpServer: () => Future[Option[MetalsHttpServer]],
     clientConfig: ClientConfiguration,
     languageClient: MetalsLanguageClient,
+    isHttpEnabled: Boolean,
 )(implicit ec: ExecutionContext) {
+
   private val isVisible = new AtomicBoolean(false)
 
   def onVisibilityDidChange(newState: Boolean): Unit = {
@@ -88,9 +90,13 @@ class HeadDoctor(
         httpServer().map {
           case Some(server) =>
             onServer(server)
-          case None =>
+          case None if !isHttpEnabled =>
             scribe.warn(
               "Unable to run doctor. Make sure `isHttpEnabled` is set to `true`."
+            )
+          case None =>
+            scribe.info(
+              "Doctor was not yet started, check logs to make sure it's running"
             )
         }
       }

@@ -36,7 +36,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
       _ = assertStatus(_.isInstalled)
       _ <- server.didChange("build.sc")(_ + "\n// comment")
       _ = assertNoDiff(client.workspaceMessageRequests, "")
-      _ <- server.didSave("build.sc")(identity)
+      _ <- server.didSave("build.sc")
       // Comment changes do not trigger "re-import project" request
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ <- server.didChange("build.sc") { text =>
@@ -49,7 +49,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
       }
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ = client.importBuildChanges = ImportBuildChanges.yes
-      _ <- server.didSave("build.sc")(identity)
+      _ <- server.didSave("build.sc")
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
@@ -79,18 +79,20 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
       _ <- server.didOpen("foo/src/reload/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ = client.importBuildChanges = ImportBuildChanges.yes
-      _ <- server.didSave("build.sc") { text =>
+      _ <- server.didChange("build.sc") { text =>
         text.replace(
           "/*DEPS*/",
           "def ivyDeps = Agg(ivy\"com.lihaoyi::sourcecode::0.1.9\")",
         )
       }
+      _ <- server.didSave("build.sc")
       _ <-
         server
-          .didSave("foo/src/reload/Main.scala") { text =>
+          .didChange("foo/src/reload/Main.scala") { text =>
             text.replaceAll("\"", "")
           }
           .recover { case e => scribe.error("compile", e) }
+      _ <- server.didSave("foo/src/reload/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }
@@ -106,15 +108,13 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        importBuildMessage,
-      )
-      _ = assertNoDiff(
-        client.workspaceShowMessages,
-        ImportProjectFailed.getMessage,
+        s"""|$importBuildMessage
+            |${ImportProjectFailedSuggestBspSwitch.params().getMessage}
+            |""".stripMargin,
       )
       _ = assertStatus(!_.isInstalled)
       _ = client.messageRequests.clear()
-      _ <- server.didSave("build.sc") { _ =>
+      _ <- server.didChange("build.sc") { _ =>
         s"""
            |import mill._, scalalib._
            |object foo extends ScalaModule {
@@ -122,6 +122,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
            |}
         """.stripMargin
       }
+      _ <- server.didSave("build.sc")
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         importBuildMessage,
@@ -154,9 +155,9 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """
-          |foo/src/Warning.scala:1:1: error: Unused import
+          |foo/src/Warning.scala:1:25: error: Unused import
           |import scala.concurrent.Future // unused
-          |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          |                        ^^^^^^
         """.stripMargin,
       )
       // we should still have references despite fatal warning

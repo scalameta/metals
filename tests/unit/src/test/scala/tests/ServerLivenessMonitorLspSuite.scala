@@ -40,12 +40,13 @@ class ServerLivenessMonitorLspSuite extends BaseLspSuite("liveness-monitor") {
       )
       _ <- server.didOpen("src/com/App.scala")
       _ = Thread.sleep(sleepTime)
-      _ <- server.didSave("src/com/App.scala")(str => s"""|$str
-                                                          |
-                                                          |object O {
-                                                          | def i: Int = 3
-                                                          |}
-                                                          |""".stripMargin)
+      _ <- server.didChange("src/com/App.scala")(str => s"""|$str
+                                                            |
+                                                            |object O {
+                                                            | def i: Int = 3
+                                                            |}
+                                                            |""".stripMargin)
+      _ <- server.didSave("src/com/App.scala")
       _ = Thread.sleep(sleepTime)
       _ = assertNoDiff(
         server.client.workspaceMessageRequests,

@@ -58,13 +58,13 @@ trait JavaHomeChangeTest { self: BaseLspSuite =>
         _ <- server.didOpen("a/src/main/scala/a/A.scala")
         _ = assertNoDiagnostics()
         _ <- server.didChange("a/src/main/scala/a/A.scala")(_ => java11Code)
-        _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
+        _ <- server.didSave("a/src/main/scala/a/A.scala")
         _ = assertNoDiagnostics()
         _ <- server.server.onUserConfigUpdate(
           userConfig.copy(javaHome = Some(pathToJava11))
         )
         _ <- server.didChange("a/src/main/scala/a/A.scala")(_ => java17Code)
-        _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
+        _ <- server.didSave("a/src/main/scala/a/A.scala")
         _ = assertNoDiff(
           client.workspaceDiagnostics,
           errorMessage,

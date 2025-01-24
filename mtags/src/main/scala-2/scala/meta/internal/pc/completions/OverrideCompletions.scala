@@ -4,6 +4,7 @@ import scala.collection.immutable.Nil
 import scala.collection.mutable
 import scala.reflect.internal.Flags
 
+import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.pc.AutoImportPosition
 import scala.meta.internal.pc.CompletionFuzzy
 import scala.meta.internal.pc.Identifier
@@ -58,7 +59,8 @@ trait OverrideCompletions { this: MetalsGlobal =>
       text: String,
       start: Int,
       isCandidate: Symbol => Boolean
-  ) extends CompletionPosition {
+  )(implicit queryInfo: PcQueryContext)
+      extends CompletionPosition {
     val prefix: String = name.toString.stripSuffix(CURSOR)
     val typed: Tree = typedTreeAt(t.pos)
     val range: l.Range = pos.withStart(start).withEnd(pos.point).toLsp
@@ -132,7 +134,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
       shouldMoveCursor: Boolean,
       isCandidate: Symbol => Boolean,
       resolveNames: Boolean
-  ): List[OverrideDefMember] = {
+  )(implicit queryInfo: PcQueryContext): List[OverrideDefMember] = {
 
     // Returns all the symbols of all transitive supertypes in the enclosing scope.
     // For example:
@@ -193,7 +195,9 @@ trait OverrideCompletions { this: MetalsGlobal =>
       isCandidate(sym)
     }
 
-    case class OverrideCandidate(sym: Symbol) {
+    case class OverrideCandidate(sym: Symbol)(implicit
+        queryInfo: PcQueryContext
+    ) {
       val memberType: Type = typed.tpe.memberType(sym)
       val info: Type =
         if (memberType.isErroneous) sym.info
@@ -329,7 +333,9 @@ trait OverrideCompletions { this: MetalsGlobal =>
   private def isVarSetter(sym: Symbol): Boolean =
     !sym.isStable && !sym.isLazy && sym.isAccessor
 
-  def implementAllAt(pos: Position, text: String): List[l.TextEdit] = {
+  def implementAllAt(pos: Position, text: String)(implicit
+      queryInfo: PcQueryContext
+  ): List[l.TextEdit] = {
 
     def implementAllFor(
         t: Template
@@ -380,7 +386,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
       t: Template,
       text: String,
       isCandidate: Symbol => Boolean
-  ): List[l.TextEdit] = {
+  )(implicit queryInfo: PcQueryContext): List[l.TextEdit] = {
     val overrideMembers = getMembers(
       typed,
       range,

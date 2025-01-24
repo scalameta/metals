@@ -29,6 +29,7 @@ case class MillBuildTool(
         .readAllLines(path.toNIO)
         .asScala
         .headOption
+        .map(_.trim.stripSuffix("-native"))
         .getOrElse(version)
 
     if (millVersionPath.isFile) {
@@ -51,8 +52,8 @@ case class MillBuildTool(
 
   private def embeddedMillWrapper(workspace: AbsolutePath): AbsolutePath = {
     val millWrapper =
-      if (Properties.isWin) "millw.bat"
-      else "millw"
+      if (Properties.isWin) "mill.bat"
+      else "mill"
     val out =
       BuildTool.copyFromResource(
         workspace.resolve(".metals").toNIO,

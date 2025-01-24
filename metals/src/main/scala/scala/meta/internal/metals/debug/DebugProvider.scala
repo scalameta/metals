@@ -402,20 +402,29 @@ class DebugProvider(
         )
       } yield compilers.info(id, sym).map(_.map(pcInfo => (info, pcInfo)))
 
-    Future.sequence(symbolInfosList).map {
-      _.flatten.groupBy(_._1.framework).map { case (framework, testSuites) =>
-        (
-          framework,
-          testSuites.map { case (testInfo, pcInfo) =>
-            new Discovered(
-              pcInfo.symbol,
-              testInfo.fullyQualifiedName,
-              pcInfo.recursiveParents.map(_.symbolToFullQualifiedName).toSet,
-              (pcInfo.annotations ++ pcInfo.memberDefsAnnotations).toSet,
-              isModule = false,
-            )
-          },
+    Future.sequence(symbolInfosList).map { infos =>
+      val allInfo = infos.flatten
+      if (allInfo.isEmpty) {
+        val suitesString =
+          testClasses.getSuites().asScala.map(_.getClassName()).mkString(", ")
+        scribe.error(
+          s"Could not get information from the compiler about $suitesString"
         )
+      }
+      infos.flatten.groupBy(_._1.framework).map {
+        case (framework, testSuites) =>
+          (
+            framework,
+            testSuites.map { case (testInfo, pcInfo) =>
+              new Discovered(
+                pcInfo.symbol,
+                testInfo.fullyQualifiedName,
+                pcInfo.recursiveParents.map(_.symbolToFullQualifiedName).toSet,
+                (pcInfo.annotations ++ pcInfo.memberDefsAnnotations).toSet,
+                isModule = false,
+              )
+            },
+          )
       }
     }
   }
@@ -452,7 +461,7 @@ class DebugProvider(
       debugParams: DebugSessionParams
   )(implicit ec: ExecutionContext): Future[DebugSession] = {
     for {
-      server <- start(debugParams),
+      server <- start(debugParams)
     } yield {
       statusBar.addMessage("Started debug server!")
       DebugSession(server.sessionName, server.uri.toString)

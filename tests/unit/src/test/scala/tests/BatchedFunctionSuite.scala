@@ -4,7 +4,6 @@ import java.util.concurrent.Executors
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.util.Success
 
 import scala.meta.internal.metals.BatchedFunction
 import scala.meta.internal.metals.Cancelable
@@ -61,51 +60,6 @@ class BatchedFunctionSuite extends BaseSuite {
       },
       "example",
     )
-
-  test("pause") {
-
-    val mkString = batchedExample()
-
-    val unpaused = mkString(List("a"))
-    assertDiffEqual(unpaused.value, Some(Success("a")))
-
-    mkString.pause()
-
-    val paused = mkString("b")
-    assert(!paused.isCompleted)
-    val paused2 = mkString("c")
-    assert(!paused2.isCompleted)
-
-    mkString.unpause()
-
-    assertDiffEqual(paused.value, Some(Success("bc")))
-    assertDiffEqual(paused2.value, Some(Success("bc")))
-  }
-
-  test("cancel") {
-    val mkString = batchedExample()
-
-    val unpaused = mkString(List("a"))
-    assertDiffEqual(unpaused.value, Some(Success("a")))
-
-    mkString.pause()
-
-    val paused = mkString("b")
-    assert(!paused.isCompleted)
-    val paused2 = mkString("c")
-    assert(!paused2.isCompleted)
-
-    mkString.cancelAll()
-
-    mkString.unpause()
-
-    for {
-      _ <- paused.failed
-      _ <- paused2.failed
-      res <- mkString(List("a", "b"))
-      _ = assertEquals(res, "ab")
-    } yield ()
-  }
 
   test("cancel2") {
     val executorService = Executors.newFixedThreadPool(10)

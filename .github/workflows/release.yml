@@ -18,6 +18,7 @@ jobs:
           # Do not change the version of Java, it is the minimal version Metals works with
           java-version: 17
           cache: 'sbt'
+      - uses: sbt/setup-sbt@v1
       - name: Publish
         run: |
           COMMAND="ci-release"

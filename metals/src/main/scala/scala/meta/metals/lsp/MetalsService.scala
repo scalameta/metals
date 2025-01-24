@@ -4,7 +4,6 @@ import java.util
 import java.util.concurrent.CompletableFuture
 
 import scala.meta.internal.metals.DidFocusResult
-import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
 import scala.meta.internal.metals.findfiles.FindTextInDependencyJarsRequest
 import scala.meta.internal.tvp.MetalsTreeViewChildrenResult
@@ -64,6 +63,4 @@ trait MetalsService {
       params: AnyRef
   ): CompletableFuture[DidFocusResult.Value]
 
-  @JsonNotification("metals/windowStateDidChange")
-  def windowStateDidChange(params: WindowStateDidChangeParams): Unit
 }

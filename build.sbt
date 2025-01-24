@@ -9,7 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
-def localSnapshotVersion = "1.4.3-SNAPSHOT"
+def localSnapshotVersion = "1.5.2-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 
@@ -198,6 +198,7 @@ val sharedScalacOptions = List(
 )
 
 val sharedSettings = sharedJavacOptions ++ sharedScalacOptions ++ List(
+  Compile / doc / sources := Seq.empty,
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
     if2 = List(
@@ -221,6 +222,7 @@ lazy val interfaces = project
     mimaPreviousArtifacts := Set(
       "org.scalameta" % "mtags-interfaces" % "1.2.2",
       "org.scalameta" % "mtags-interfaces" % "1.3.2",
+      "org.scalameta" % "mtags-interfaces" % "1.4.2",
     ),
     crossPaths := false,
     libraryDependencies ++= List(
@@ -259,7 +261,7 @@ lazy val mtagsShared = project
     },
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "4.29.2",
+      "com.google.protobuf" % "protobuf-java" % "4.29.3",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
@@ -316,8 +318,6 @@ val mtagsSettings = List(
     (ThisBuild / baseDirectory).value / "mtags",
     scalaVersion.value,
   ),
-  // @note needed to deal with issues with dottyDoc
-  Compile / doc / sources := Seq.empty,
   libraryDependencies ++= Seq(
     "com.lihaoyi" %% "geny" % V.genyVersion,
     "com.thoughtworks.qdox" % "qdox" % V.qdox, // for java mtags
@@ -342,7 +342,7 @@ val mtagsSettings = List(
         scala3ScalametaDependency,
         scala3SemanticdbDependency,
       ),
-    ),
+    )
   },
   libraryDependencies ++= {
     if (isCI) Nil
@@ -427,7 +427,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.16.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "11.1.0",
+      "org.flywaydb" % "flyway-core" % "11.2.0",
       "com.h2database" % "h2" % "2.3.232",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
@@ -457,7 +457,7 @@ lazy val metals = project
       "com.outr" %% "scribe-file" % V.scribe,
       "com.outr" %% "scribe-slf4j2" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "4.0.2",
+      "com.lihaoyi" %% "ujson" % "4.1.0",
       // For fetching projects' templates
       "com.lihaoyi" %% "requests" % "0.9.0",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta

@@ -1,8 +1,10 @@
 package scala.meta.internal.metals
 
 import java.nio.charset.Charset
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
@@ -62,6 +64,18 @@ class ConnectionProvider(
 
   def resolveBsp(): bsp.BspResolvedResult =
     bspConnector.resolve(buildToolProvider.buildTool)
+
+  private val willGenerateBspConfig_ = new AtomicReference(Set.empty[UUID])
+  def willGenerateBspConfig: Boolean = willGenerateBspConfig_.get().nonEmpty
+
+  def withWillGenerateBspConfig[T](body: => Future[T]): Future[T] = {
+    val uuid = UUID.randomUUID()
+    willGenerateBspConfig_.updateAndGet(_ + uuid)
+    body.map { result =>
+      willGenerateBspConfig_.updateAndGet(_ - uuid)
+      result
+    }
+  }
 
   protected val bspServers: bsp.BspServers = new bsp.BspServers(
     folder,
@@ -616,7 +630,21 @@ class ConnectionProvider(
                   // exported successfully.
                   createSession(shutdownServer)
                 } else {
-                  languageClient.showMessage(Messages.ImportProjectFailed)
+                  buildTool match {
+                    case _: BuildServerProvider =>
+                      languageClient
+                        .showMessageRequest(
+                          Messages.ImportProjectFailedSuggestBspSwitch.params()
+                        )
+                        .asScala
+                        .flatMap {
+                          case Messages.ImportProjectFailedSuggestBspSwitch.switchBsp =>
+                            switchBspServer()
+                          case _ => Future.unit
+                        }
+                    case _ =>
+                      languageClient.showMessage(Messages.ImportProjectFailed)
+                  }
                   Future.successful(BuildChange.Failed)
                 }
             } yield change
@@ -625,6 +653,20 @@ class ConnectionProvider(
       } yield change
     }
   }
+
+  def switchBspServer(): Future[Unit] =
+    withWillGenerateBspConfig {
+      for {
+        connectKind <- bspConnector.switchBuildServer()
+        _ <-
+          connectKind match {
+            case None => Future.unit
+            case Some(SlowConnect) =>
+              slowConnectToBuildServer(forceImport = true)
+            case Some(request: ConnectRequest) => connect(request)
+          }
+      } yield ()
+    }
 }
 
 sealed trait ConnectKind

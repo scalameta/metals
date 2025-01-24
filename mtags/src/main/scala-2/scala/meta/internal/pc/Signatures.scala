@@ -5,6 +5,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.PcQueryContext
 import scala.meta.pc
 import scala.meta.pc.SymbolDocumentation
 
@@ -44,7 +45,7 @@ trait Signatures { compiler: MetalsGlobal =>
         pos: Position,
         scope: Context,
         importPosition: AutoImportPosition
-    ): (String, List[l.TextEdit]) = {
+    )(implicit queryInfo: PcQueryContext): (String, List[l.TextEdit]) = {
       val history = new ShortenedNames(
         lookupSymbol = name => {
           val companion =
@@ -66,7 +67,7 @@ trait Signatures { compiler: MetalsGlobal =>
         pos: Position,
         scope: Context,
         importPosition: AutoImportPosition
-    ): (String, List[l.TextEdit]) = {
+    )(implicit queryInfo: PcQueryContext): (String, List[l.TextEdit]) = {
       if (scope.symbolIsInScope(sym)) (Identifier(sym.name), Nil)
       else if (!scope.nameIsInScope(sym.name)) {
         val startPos = pos.withPoint(importPosition.offset).focus
@@ -289,7 +290,7 @@ trait Signatures { compiler: MetalsGlobal =>
       includeDocs: Boolean,
       includeDefaultParam: Boolean = true,
       printLongType: Boolean = true
-  ) {
+  )(implicit queryInfo: PcQueryContext) {
     private val info: Option[SymbolDocumentation] =
       if (includeDocs) {
         symbolDocumentation(gsym)

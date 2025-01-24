@@ -182,6 +182,7 @@ abstract class MetalsLspService(
   protected val savedFiles = new ActiveFiles(time)
   protected val recentlyOpenedFiles = new ActiveFiles(time)
 
+  @volatile
   var excludedPackageHandler: ExcludedPackagesHandler =
     ExcludedPackagesHandler.default
 
@@ -234,8 +235,6 @@ abstract class MetalsLspService(
       ),
     "trees",
   )
-
-  def pauseables: Pauseable
 
   protected val trees = new Trees(buffers, scalaVersionSelector)
 
@@ -303,7 +302,6 @@ abstract class MetalsLspService(
     scalaVersionSelector,
     saveDefFileToDisk = !clientConfig.isVirtualDocumentSupported(),
     sourceMapper,
-    () => warnings,
   )
 
   val stacktraceAnalyzer: StacktraceAnalyzer = new StacktraceAnalyzer(
@@ -694,6 +692,9 @@ abstract class MetalsLspService(
   def setUserConfig(newConfig: UserConfiguration): UserConfiguration = {
     val old = userConfig
     userConfig = newConfig
+    excludedPackageHandler = ExcludedPackagesHandler.fromUserConfiguration(
+      userConfig.excludedPackages.getOrElse(Nil)
+    )
     userConfigPromise.trySuccess(())
     old
   }
@@ -701,9 +702,6 @@ abstract class MetalsLspService(
   def onUserConfigUpdate(newConfig: UserConfiguration): Future[Unit] = {
     val old = setUserConfig(newConfig)
     if (userConfig.excludedPackages != old.excludedPackages) {
-      excludedPackageHandler = ExcludedPackagesHandler.fromUserConfiguration(
-        userConfig.excludedPackages.getOrElse(Nil)
-      )
       workspaceSymbols.indexClasspath()
     }
 
@@ -832,10 +830,6 @@ abstract class MetalsLspService(
         Future.successful(DidFocusResult.NoBuildTarget)
     }
 
-  def pause(): Unit = pauseables.pause()
-
-  def unpause(): Unit = pauseables.unpause()
-
   override def didChange(
       params: DidChangeTextDocumentParams
   ): CompletableFuture[Unit] = {
@@ -872,9 +866,6 @@ abstract class MetalsLspService(
   ): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     savedFiles.add(path)
-    // read file from disk, we only remove files from buffers on didClose.
-    val text = path.toInput.text
-    buffers.put(path, text)
     Future
       .sequence(
         List(

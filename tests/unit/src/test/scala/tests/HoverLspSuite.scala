@@ -116,7 +116,7 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
           |}
         """.stripMargin
       )
-      _ <- server.didSave("a/src/main/scala/a/Def.scala")(s => s) // index docs
+      _ <- server.didSave("a/src/main/scala/a/Def.scala") // index docs
       _ <- server.assertHover(
         "a/src/main/scala/a/Main.scala",
         """
@@ -148,7 +148,7 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
           |}
         """.stripMargin
       )
-      _ <- server.didSave("a/src/main/scala/a/Def.scala")(s => s)
+      _ <- server.didSave("a/src/main/scala/a/Def.scala")
       _ <- server.assertHover(
         "a/src/main/scala/a/Main.scala",
         """
@@ -162,9 +162,10 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
            |test
            |""".stripMargin.hover,
       )
-      _ <- server.didSave("a/src/main/scala/a/Def.scala")(s =>
+      _ <- server.didChange("a/src/main/scala/a/Def.scala")(s =>
         s.replace("test", "test2")
       )
+      _ <- server.didSave("a/src/main/scala/a/Def.scala")
       _ <- server.assertHover(
         "a/src/main/scala/a/Main.scala",
         """

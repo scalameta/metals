@@ -53,9 +53,10 @@ class ResetWorkspaceLspSuite extends BaseLspSuite(s"reset-workspace") {
         client.workspaceShowMessages,
         "",
       )
-      _ <- server.didSave("a/src/main/scala/b/B.scala")(
+      _ <- server.didChange("a/src/main/scala/b/B.scala")(
         _.replaceAll("val x: Int = 42", "val x: String = 42")
       )
+      _ <- server.didSave("a/src/main/scala/b/B.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/scala/b/B.scala:4:19: error: type mismatch;

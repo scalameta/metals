@@ -46,7 +46,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
           .replace("<!--URL-->", "<!--Your comment--><!--MARKER-->")
       )
       _ = assertNoDiff(client.workspaceMessageRequests, "")
-      _ <- server.didSave("pom.xml")(identity)
+      _ <- server.didSave("pom.xml")
       // Comment changes do not trigger "re-import project" request
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ <- server.didChange("pom.xml") { _ =>
@@ -54,7 +54,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
       }
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ = client.importBuildChanges = ImportBuildChanges.yes
-      _ <- server.didSave("pom.xml")(identity)
+      _ <- server.didSave("pom.xml")
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
@@ -146,7 +146,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
       _ <- server.didOpen("src/main/scala/reload/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ = client.importBuildChanges = ImportBuildChanges.yes
-      _ <- server.didSave("pom.xml") { text =>
+      _ <- server.didChange("pom.xml") { text =>
         text.replace(
           "<!--DEPENDENCY-->",
           s"""
@@ -158,12 +158,16 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
              |""".stripMargin,
         )
       }
+      _ <- server.didSave("pom.xml")
       _ <-
         server
-          .didSave("src/main/scala/reload/Main.scala") { text =>
+          .didChange("src/main/scala/reload/Main.scala") { text =>
             text.replaceAll("\"", "")
           }
           .recover { case e => scribe.error("compile", e) }
+      _ <-
+        server
+          .didSave("src/main/scala/reload/Main.scala")
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }
@@ -197,7 +201,8 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
       )
       _ = assertStatus(!_.isInstalled)
       _ = client.messageRequests.clear()
-      _ <- server.didSave("pom.xml")(_ => defaultPom)
+      _ <- server.didChange("pom.xml")(_ => defaultPom)
+      _ <- server.didSave("pom.xml")
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         importBuildMessage,
@@ -231,9 +236,9 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """
-          |src/main/scala/warning/Warning.scala:1:1: error: Unused import
+          |src/main/scala/warning/Warning.scala:1:25: error: Unused import
           |import scala.concurrent.Future // unused
-          |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          |                        ^^^^^^
         """.stripMargin,
       )
       // we should still have references despite fatal warning

@@ -8,14 +8,14 @@ on:
       metals_version:
         description: "Metals Version"
         required: true
-        default: "v1.4.2"
+        default: "v1.5.1"
       metals_ref:
         description: "Tag/branch-name from which run release"
         required: true
         # If you update this line after release
         #   just put the tag name (`v*.*.*`) here as in `metals_version.value` above.
         # Don't be confused if this value contains `*.*.*_mtags_release`
-        default: "v1.4.2"
+        default: "v1.5.1"
 jobs:
   test_and_release:
     runs-on: ubuntu-latest
@@ -30,6 +30,7 @@ jobs:
           distribution: 'temurin'
           java-version: 11
           cache: 'sbt'
+      - uses: sbt/setup-sbt@v1
       - name: "Test and push tag"
         run: |
           sbt 'test-mtags-dyn ${{ github.event.inputs.scala_version }}'

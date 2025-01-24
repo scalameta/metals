@@ -15,6 +15,7 @@ import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ResourceOperation
@@ -826,8 +827,76 @@ class PackageProvider(
     }
   }
 
-  private def deducePackageParts(path: AbsolutePath): Option[List[String]] =
+  private def deducePackageParts(path: AbsolutePath): Option[List[String]] = {
+    def basePackage = buildTargets
+      .inverseSources(path)
+      .flatMap(deduceBuildTargetBasePackage(_, _ != path))
+      .getOrElse(Nil)
+    deducePackagePartsFromPath(path).map(basePackage ++ _)
+  }
+
+  private def deducePackagePartsFromPath(
+      path: AbsolutePath
+  ): Option[List[String]] =
     calcPathToSourceRoot(path).map(_.dropRight(1))
+
+  /**
+   * Infer any implicit package prefix for a build target.
+   *
+   * This is to help with the case where packages in a build target all start
+   * with some common package prefix that is not reflected in the directory
+   * structure.
+   */
+  private def deduceBuildTargetBasePackage(
+      buildTargetId: BuildTargetIdentifier,
+      pathShouldBeSampled: AbsolutePath => Boolean,
+  ): Option[List[String]] = {
+
+    /**
+     * If a sequence ends in a given suffix, return the sequence without that
+     * suffix
+     *
+     * @param original original sequence
+     * @param maybeSuffix suffix to remove from that sequence
+     */
+    def stripSuffix[A](
+        original: List[A],
+        maybeSuffix: List[A],
+    ): Option[List[A]] = {
+      @tailrec
+      def loop(
+          originalRev: List[A],
+          maybeSuffixRev: List[A],
+      ): Option[List[A]] = {
+        maybeSuffixRev match {
+          case Nil => Some(originalRev.reverse)
+          case lastSuffix :: maybeRestSuffixRev =>
+            originalRev match {
+              case `lastSuffix` :: maybeRestOriginalRev =>
+                loop(maybeRestOriginalRev, maybeRestSuffixRev)
+              case _ => None
+            }
+        }
+      }
+
+      loop(original.reverse, maybeSuffix.reverse)
+    }
+
+    // Pull out an arbitrary source file from the build target to infering the base package
+    val sampleSourcePathAndTree = buildTargets
+      .buildTargetSources(buildTargetId)
+      .iterator
+      .filter(pathShouldBeSampled)
+      .flatMap(path => trees.get(path).map(path -> _))
+      .headOption
+
+    for {
+      (sampleSourcePath, tree) <- sampleSourcePathAndTree
+      packagePartsFromTree = findPackages(tree).allParts
+      packagePartsFromPath <- deducePackagePartsFromPath(sampleSourcePath)
+      packagePrefix <- stripSuffix(packagePartsFromTree, packagePartsFromPath)
+    } yield packagePrefix
+  }
 
   private def calcPathToSourceRoot(
       path: AbsolutePath

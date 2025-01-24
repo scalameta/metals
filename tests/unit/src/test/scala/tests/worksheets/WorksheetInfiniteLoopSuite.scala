@@ -58,7 +58,7 @@ class WorksheetInfiniteLoopSuite
       _ <- server.didChange("a/src/main/scala/foo/Main.worksheet.sc")(_ =>
         "val a = 1"
       )
-      _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")(identity)
+      _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")
       _ <- server.assertInlayHints(
         "a/src/main/scala/Main.worksheet.sc",
         """|val a = 1/* // : Int = 1*/

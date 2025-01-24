@@ -159,7 +159,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
           }
           client.applyCodeAction(selectedActionIndex, codeActions, server)
         }
-        _ <- server.didSave(path)(identity)
+        _ <- server.didSave(path)
         _ = if (expectNoDiagnostics) assertNoDiagnostics() else ()
         _ = {
           val (path, content) = newFile

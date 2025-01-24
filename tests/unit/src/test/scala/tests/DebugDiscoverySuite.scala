@@ -168,7 +168,7 @@ class DebugDiscoverySuite
            |""".stripMargin
       )
       _ <- server.didOpen(fooPath)
-      _ <- server.didSave(fooPath)(identity)
+      _ <- server.didSave(fooPath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
@@ -380,7 +380,7 @@ class DebugDiscoverySuite
            |""".stripMargin
       )
       _ <- server.didOpen(mainPath)
-      _ <- server.didSave(mainPath)(identity)
+      _ <- server.didSave(mainPath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       result <- server
         .startDebuggingUnresolved(
@@ -414,7 +414,7 @@ class DebugDiscoverySuite
            |""".stripMargin
       )
       _ <- server.didOpen(fooPath)
-      _ <- server.didSave(fooPath)(identity)
+      _ <- server.didSave(fooPath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
@@ -452,7 +452,7 @@ class DebugDiscoverySuite
            |""".stripMargin
       )
       _ <- server.didOpen(barPath)
-      _ <- server.didSave(barPath)(identity)
+      _ <- server.didSave(barPath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
@@ -516,7 +516,7 @@ class DebugDiscoverySuite
            |""".stripMargin
       )
       _ <- server.didOpen(fooPath)
-      _ <- server.didSave(fooPath)(identity)
+      _ <- server.didSave(fooPath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       _ = cleanCompileCache("a")
       result <- server
