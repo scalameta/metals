@@ -731,10 +731,11 @@ abstract class MetalsLspService(
     // In some cases like peeking definition didOpen might be followed up by close
     // and we would lose the notion of the focused document
     recentlyOpenedFiles.add(path)
+
     val prevBuildTarget = focusedDocumentBuildTarget.getAndUpdate { current =>
-      buildTargets
-        .inverseSources(path)
-        .getOrElse(current)
+      val shouldUpdate = !clientConfig.isDidFocusProvider() || current == null
+      if (shouldUpdate) buildTargets.inverseSources(path).getOrElse(current)
+      else current
     }
 
     // Update md5 fingerprint from file contents on disk

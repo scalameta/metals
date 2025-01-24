@@ -391,7 +391,8 @@ class WorkspaceLspService(
     focusedDocument.get().foreach(recentlyFocusedFiles.add)
     val uri = params.getTextDocument.getUri
     val path = uri.toAbsolutePath
-    setFocusedDocument(Some(path))
+    if (!clientConfig.isDidFocusProvider() || focusedDocument.get().isEmpty)
+      setFocusedDocument(Some(path))
     val service = getServiceForOpt(path)
       .orElse {
         if (path.filename.isScalaOrJavaFilename) {
@@ -419,7 +420,9 @@ class WorkspaceLspService(
 
   override def didClose(params: DidCloseTextDocumentParams): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    if (focusedDocument.get().contains(path)) {
+    if (
+      !clientConfig.isDidFocusProvider() && focusedDocument.get().contains(path)
+    ) {
       setFocusedDocument(recentlyFocusedFiles.pollRecent())
     }
     getServiceFor(params.getTextDocument().getUri()).didClose(params)
