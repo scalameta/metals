@@ -198,7 +198,7 @@ val sharedScalacOptions = List(
 )
 
 val sharedSettings = sharedJavacOptions ++ sharedScalacOptions ++ List(
-  Compile / packageDoc / publishArtifact := false,
+  Compile / doc / sources := Seq.empty,
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
     if2 = List(
