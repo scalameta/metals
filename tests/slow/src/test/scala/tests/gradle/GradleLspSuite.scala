@@ -67,6 +67,38 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
     }
   }
 
+  test("i7031") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        Map(
+          "root" -> s"""|/build.gradle
+                        |plugins {
+                        |    id 'scala'
+                        |}
+                        |repositories {
+                        |    mavenCentral()
+                        |}
+                        |dependencies {
+                        |    implementation 'org.scala-lang:scala-library:${V.scala213}'
+                        |}
+                        |""".stripMargin
+        ),
+        expectError = false,
+      )
+      _ <- server.fullServer
+        .executeCommand(ServerCommands.ImportBuild.toExecuteCommandParams())
+        .asScala
+    } yield {
+      assert(server.fullServer.folderServices.nonEmpty)
+      assert(
+        server.headServer.tables.buildTool
+          .selectedBuildTool()
+          .exists(_ == GradleBuildTool.name)
+      )
+    }
+  }
+
   test("inner") {
     client.importBuild = ImportBuild.yes
     cleanWorkspace()

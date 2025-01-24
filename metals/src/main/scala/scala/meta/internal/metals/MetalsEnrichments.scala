@@ -393,7 +393,10 @@ object MetalsEnrichments
     def isScalaProject(): Boolean =
       containsProjectFilesSatisfying(_.isScala)
     def isMetalsProject(): Boolean =
-      containsProjectFilesSatisfying(_.isScalaOrJavaFilename)
+      path.resolve(".metals").exists ||
+        path.resolve(".bloop").exists ||
+        path.resolve(".bsp").exists ||
+        containsProjectFilesSatisfying(_.isScalaOrJavaFilename)
 
     private def containsProjectFilesSatisfying(
         fileNamePredicate: String => Boolean
