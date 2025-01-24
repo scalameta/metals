@@ -21,11 +21,11 @@ We're happy to announce the release of Metals v1.5.1, which brings a hotfix for 
   </tr>
   <tr>
     <td>Closed issues</td>
-    <td align="center"></td>
+    <td align="center">4</td>
   </tr>
   <tr>
     <td>New features</td>
-    <td align="center"></td>
+    <td align="center">0</td>
   </tr>
 </tbody>
 </table>
