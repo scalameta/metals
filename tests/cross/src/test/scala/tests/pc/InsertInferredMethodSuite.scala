@@ -298,7 +298,7 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |""".stripMargin,
     """|trait Main {
        |  def main() = {
-       |    def otherMethod(arg0: (T1, T2, T3)) = ???
+       |    def otherMethod(arg0: (Int, Int, Int)) = ???
        |    List((1, 2, 3)).filter(_ => true).map(otherMethod)
        |  }
        |}
@@ -317,14 +317,13 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |""".stripMargin,
     """|trait Main {
        |  def main() = {
-       |    def otherMethod(arg0: (T1, T2, T3)) = ???
+       |    def otherMethod(arg0: (Int, Int, Int)) = ???
        |    List((1, 2, 3)).map(otherMethod)
        |  }
        |}
        |""".stripMargin
   )
 
-  // https://github.com/scalameta/metals/issues/6954
   checkEdit(
     "lambda-generic-complex-type",
     """|
@@ -339,7 +338,7 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
     """|trait Main {
        |  def main() = {
        |    val list = List((1, 2, 3))
-       |    def otherMethod(arg0: (T1, T2, T3)) = ???
+       |    def otherMethod(arg0: (Int, Int, Int)) = ???
        |    list.map(otherMethod)
        |  }
        |}
@@ -360,8 +359,35 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
     """|trait Main {
        |  def main() = {
        |    val list = List(1, 2, 3)
-       |    def otherMethod(arg0: Int) = ???
+       |    def otherMethod(arg0: Int): Boolean = ???
        |    list.filter(otherMethod)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "method-in-class",
+    """|
+       |class User(i: Int){
+       |  def map(s: String => Int) = i
+       |}
+       |trait Main {
+       |  def main() = {
+       |    val user = new User(1)
+       |    user.map(<<otherMethod>>)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|class User(i: Int){
+       |  def map(s: String => Int) = i
+       |}
+       |trait Main {
+       |  def main() = {
+       |    val user = new User(1)
+       |    def otherMethod(arg0: String): Int = ???
+       |    user.map(otherMethod)
        |  }
        |}
        |""".stripMargin

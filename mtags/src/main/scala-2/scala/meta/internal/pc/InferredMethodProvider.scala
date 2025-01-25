@@ -102,10 +102,14 @@ final class InferredMethodProvider(
           // val list = List(1,2,3)
           // list.map(nonExistent)
           case (Ident(_)) :: Apply(
-                Select(Ident(argumentList), _),
+                selectTree @ Select(qual @ Ident(_), _),
                 _ :: Nil
               ) :: _ =>
-            makeEditsForListApplyWithoutArgs(argumentList, errorMethodName)
+            makeEditsForListApplyWithoutArgs(
+              qual,
+              selectTree,
+              errorMethodName
+            )
           case _ => unimplemented(errorMethodName)
         }
       case errorMethod: Select =>
@@ -292,6 +296,14 @@ final class InferredMethodProvider(
     }
   }
 
+  private def createParameters(params: List[Type]): String = {
+    params.zipWithIndex
+      .map { case (p, index) =>
+        s"arg$index: ${prettyType(p)}"
+      }
+      .mkString(", ")
+  }
+
   private def makeEditsForListApply(
       arguments: List[Tree],
       containingMethod: Name,
@@ -309,12 +321,7 @@ final class InferredMethodProvider(
             // method1(<<nonExistent>>)
             case TypeRef(_, _, args) if definitions.isFunctionType(tpe) =>
               val params = args.take(args.size - 1)
-              val paramsString =
-                params.zipWithIndex
-                  .map { case (p, index) =>
-                    s"arg$index: ${prettyType(p)}"
-                  }
-                  .mkString(", ")
+              val paramsString = createParameters(params)
               val resultType = args.last
               val ret = prettyType(resultType)
               signature(
@@ -353,38 +360,51 @@ final class InferredMethodProvider(
   }
 
   private def makeEditsForListApplyWithoutArgs(
-      argumentList: Name,
+      qual: Ident,
+      select: Select,
       errorMethodName: String
   ): Either[String, List[TextEdit]] = {
-    val listSymbol = context.lookupSymbol(argumentList, _ => true)
-    if (listSymbol.isSuccess) {
-      listSymbol.symbol.tpe match {
-        // need to find the type of the value on which we are mapping
-        case TypeRef(_, _, TypeRef(_, inputType, _) :: Nil) =>
-          val paramsString = s"arg0: ${prettyType(inputType.tpe)}"
+
+    def signatureFromMethodType(sym: Symbol) =
+      sym.tpe match {
+        case tpe @ TypeRef(pre, sym, args)
+            if args.size > 0 && definitions.isFunctionType(tpe) =>
+          val ret = args.last
+          val paramsString = createParameters(args.dropRight(1))
+          val returnTpe =
+            if (ret.typeSymbol.isTypeParameter) None else Some(prettyType(ret))
           signature(
             name = errorMethodName,
             Option(paramsString),
-            None,
-            identity,
-            None
-          )
-        case NullaryMethodType(
-              TypeRef(_, _, TypeRef(_, inputType, _) :: Nil)
-            ) =>
-          val paramsString = s"arg0: ${prettyType(inputType.tpe)}"
-          signature(
-            name = errorMethodName,
-            Option(paramsString),
-            None,
+            returnTpe,
             identity,
             None
           )
         case _ =>
           unimplemented(errorMethodName)
       }
-    } else
-      unimplemented(errorMethodName)
+
+    def findMethodType(tpe: Type): Option[MethodType] = {
+      tpe match {
+        case p: PolyType => findMethodType(p.resultType)
+        case m: MethodType => Some(m)
+        case _ => None
+      }
+    }
+
+    val selectTpe = select.tpe
+    val foundType = if (selectTpe == null) {
+      val selectQualTpe = context.lookupSymbol(qual.name, _ => true).symbol.tpe
+      val selectNameSymbol = selectQualTpe.member(select.name)
+      selectQualTpe.memberType(selectNameSymbol)
+    } else selectTpe
+
+    findMethodType(foundType) match {
+      case Some(MethodType(List(selectNameSymbol), _)) =>
+        signatureFromMethodType(selectNameSymbol)
+      case _ =>
+        unimplemented(errorMethodName)
+    }
   }
 
   private def makeEditsMethodObject(
