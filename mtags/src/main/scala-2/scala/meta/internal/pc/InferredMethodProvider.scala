@@ -165,10 +165,7 @@ final class InferredMethodProvider(
             if (typ != null)
               Some(prettyType(arg.tpe))
             else {
-              logger.warning(
-                "infer-method: could not infer type of argument, defaulting to Any"
-              )
-              Some("Any")
+              Some(inferArgType(arg))
             }
         }
         tp.map(tp => s"arg$index: $tp")
@@ -177,6 +174,46 @@ final class InferredMethodProvider(
     if (paramsTypes.forall(_.nonEmpty)) {
       Some(paramsTypes.flatten.mkString(", "))
     } else None
+  }
+
+  private def inferArgType(arg: Tree): String = {
+    @tailrec
+    def findBefore(trees: List[Tree], prev: Tree): Tree = {
+      trees match {
+        case (_: Block | _: PackageDef | _: Template) :: _ =>
+          prev
+        case head :: tail =>
+          findBefore(tail, head)
+        case Nil => prev
+      }
+    }
+    val last = findBefore(lastVisitedParentTrees, lastVisitedParentTrees.head)
+    val updatedText = params
+      .text()
+      .substring(
+        0,
+        last.pos.start
+      ) + "val rand = " + arg.toString + ";" + params
+      .text()
+      .substring(last.pos.start)
+    val newParams =
+      new CompilerOffsetParams(
+        URI.create("InferMethod" + Random.nextLong() + ".scala"),
+        updatedText,
+        last.pos.start + "val ran".length,
+        params.token(),
+        params.outlineFiles()
+      )
+
+    val inferredTypeProvider = new InferredTypeProvider(compiler, newParams)
+    inferredTypeProvider.inferredTypeEdits() match {
+      case (edit: TextEdit) :: _ => edit.getNewText().stripPrefix(": ")
+      case _ =>
+        logger.warning(
+          "infer-method: could not infer type of argument, defaulting to Any"
+        )
+        "Any"
+    }
   }
 
   private def getPositionUri(position: Position): String = scala.util
