@@ -1,7 +1,11 @@
 package scala.meta.internal.pc
 
-import scala.annotation.tailrec
+import java.net.URI
 
+import scala.annotation.tailrec
+import scala.util.Random
+
+import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.PcQueryContext
 import scala.meta.pc.OffsetParams
 
@@ -91,16 +95,10 @@ final class InferredMethodProvider(
             makeEditsForListApply(arguments, containingMethod, errorMethodName)
           // List(1,2,3).map(myFn)
           case (_: Ident) :: Apply(
-                Select(
-                  Apply(
-                    Ident(_),
-                    _
-                  ),
-                  _
-                ),
+                Select(apply @ Apply(_, _), _),
                 _
               ) :: _ =>
-            unimplemented(errorMethodName)
+            modifyAndInferAgain(apply)
           // val list = List(1,2,3)
           // list.map(nonExistent)
           case (Ident(_)) :: Apply(
@@ -188,6 +186,51 @@ final class InferredMethodProvider(
     Left(
       s"Could not infer method for `$name`, please report an issue in github.com/scalameta/metals"
     )
+  }
+
+  /**
+   * Since we could get proper types when a tree doesn't fully typecheck,
+   * let's move the needed tree outside, where it typechecks and the
+   * infer method functionality works.
+   *
+   * @param untyped tree that we need to actually typecheck
+   */
+  private def modifyAndInferAgain(
+      untyped: Tree
+  ): Either[String, List[TextEdit]] = {
+    val enclosingStatementPos = insertPosition()
+    val internalName = "$metals_internal"
+    val before = params.text().substring(0, enclosingStatementPos.pos.start)
+    val after =
+      params.text().substring(enclosingStatementPos.start, untyped.pos.start) +
+        internalName + // replace tree with new name
+        params.text().substring(untyped.pos.end)
+    val internalVal = s"val $internalName = ${untyped.toString()};"
+    val updatedText = s"${before}${internalVal}$after"
+
+    val removedTreeLength = untyped.pos.end - untyped.pos.start
+    val addedCodeLength =
+      internalVal.length - removedTreeLength + internalName.size
+    val newParams =
+      new CompilerOffsetParams(
+        URI.create("InferMethod" + Random.nextLong() + ".scala"),
+        updatedText,
+        params.offset + addedCodeLength,
+        params.token(),
+        params.outlineFiles()
+      )
+
+    val inferredTypeProvider = new InferredMethodProvider(compiler, newParams)
+    inferredTypeProvider.inferredMethodEdits() match {
+      case right @ Right(List(edit)) =>
+        val range = untyped.pos.toLsp
+        range.setEnd(range.getStart())
+        edit.setRange(range)
+        val indent = indentation(params.text(), untyped.pos.start - 1)
+        edit.setNewText(edit.getNewText() + indent)
+        right
+      case otherwise => otherwise
+    }
   }
 
   private def signature(
