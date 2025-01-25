@@ -345,7 +345,6 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
-  // https://github.com/scalameta/metals/issues/6954
   checkEdit(
     "lambda-generic-complex-type",
     """|

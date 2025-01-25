@@ -173,37 +173,24 @@ final class InferredMethodProvider(
   }
 
   private def inferArgType(arg: Tree): String = {
-    @tailrec
-    def findBefore(trees: List[Tree], prev: Tree): Tree = {
-      trees match {
-        case (_: Block | _: PackageDef | _: Template) :: _ =>
-          prev
-        case head :: tail =>
-          findBefore(tail, head)
-        case Nil => prev
-      }
-    }
-    val last = findBefore(lastVisitedParentTrees, lastVisitedParentTrees.head)
-    val updatedText = params
-      .text()
-      .substring(
-        0,
-        last.pos.start
-      ) + "val rand = " + arg.toString + ";" + params
-      .text()
-      .substring(last.pos.start)
+    val last = insertPosition()
+    val before = params.text().substring(0, last.pos.start)
+    val after = params.text().substring(last.start)
+    val randomValName = s"val $$metals_internal"
+    val updatedText = s"${before}${randomValName} = ${arg.toString()};$after"
     val newParams =
       new CompilerOffsetParams(
         URI.create("InferMethod" + Random.nextLong() + ".scala"),
         updatedText,
-        last.pos.start + "val ran".length,
+        last.pos.start + randomValName.length - 1,
         params.token(),
         params.outlineFiles()
       )
 
     val inferredTypeProvider = new InferredTypeProvider(compiler, newParams)
     inferredTypeProvider.inferredTypeEdits() match {
-      case (edit: TextEdit) :: _ => edit.getNewText().stripPrefix(": ")
+      case (edit: TextEdit) :: _ =>
+        edit.getNewText().stripPrefix(": ")
       case _ =>
         logger.warning(
           "infer-method: could not infer type of argument, defaulting to Any"
