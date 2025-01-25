@@ -1,6 +1,7 @@
 package tests.scalacli
 
 import scala.concurrent.Future
+import scala.concurrent.Promise
 
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.FileOutOfScalaCliBspScope
@@ -502,10 +503,11 @@ class ScalaCliSuite extends BaseScalaCliSuite("3.3.3") {
            |            ^^
            |""".stripMargin,
       )
+      _ = server.server.indexingPromise = Promise[Unit]()
       _ <- server.didChange("Main.scala") { text =>
         text.replace("// >", "//>")
       }
-      _ <- server.didSave("Main.scala")
+      _ <- server.server.indexingPromise.future
       // cause another compilation to wait on workspace reload, the previous gets cancelled
       _ <- server.didSave("Main.scala")
       _ = assertEquals(

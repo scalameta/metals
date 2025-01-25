@@ -1055,7 +1055,10 @@ final case class TestingServer(
 
     val compilations =
       paths.map(path =>
-        fullServer.getServiceFor(path).compilations.compileFile(path)
+        fullServer
+          .getServiceFor(path)
+          .compilations
+          .compileFile(path)
       )
 
     for {

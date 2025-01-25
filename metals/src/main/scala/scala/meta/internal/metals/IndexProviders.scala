@@ -42,4 +42,5 @@ trait IndexProviders {
   def folder: AbsolutePath
   def implementationProvider: ImplementationProvider
   def resetService(): Unit
+  def fileChanges: FileChanges
 }
