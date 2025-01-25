@@ -125,8 +125,6 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
-  // doesn't work currently, User(1) is not being typed
-  // https://github.com/scalameta/metals/issues/6954
   checkEdit(
     "custom-type-advanced",
     """|
@@ -144,8 +142,31 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |
        |    case class User(i : Int)
        |
-       |    def otherMethod(arg0: Any, arg1: Int) = ???
+       |    def otherMethod(arg0: User, arg1: Int) = ???
        |    otherMethod(User(1), 1)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "custom-type-advanced-more",
+    """|
+       |trait Main {
+       |    def method1(b: Double, s : String) = 123
+       |
+       |    case class User(i : Int)
+       |
+       |    <<otherMethod>>(List(Set(User(1))), Map("1" -> 1))
+       |}
+       |
+       |""".stripMargin,
+    """|trait Main {
+       |    def method1(b: Double, s : String) = 123
+       |
+       |    case class User(i : Int)
+       |
+       |    def otherMethod(arg0: List[Set[User]], arg1: Map[String,Int]) = ???
+       |    otherMethod(List(Set(User(1))), Map("1" -> 1))
        |}
        |""".stripMargin
   )
