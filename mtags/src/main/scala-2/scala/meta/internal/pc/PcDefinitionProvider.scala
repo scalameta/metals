@@ -6,6 +6,7 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.OffsetParams
+import scala.meta.tokens.Token
 
 import org.eclipse.lsp4j.Location
 
@@ -55,7 +56,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   }
 
   private def definition(findTypeDef: Boolean): DefinitionResult = {
-    if (params.isWhitespace || params.isDelimiter || params.offset() == 0) {
+    if (params.offset() == 0) {
       DefinitionResultImpl.empty
     } else {
       val unit = addCompilationUnit(
@@ -117,7 +118,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     }
   }
 
-  def definitionTypedTreeAt(pos: Position): Tree = {
+  private def definitionTypedTreeAt(pos: Position): Tree = {
     def loop(tree: Tree): Tree = {
       tree match {
         case Select(qualifier, name) =>
@@ -151,6 +152,8 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     }
     val typedTree = locateTree(pos)
     val tree0 = typedTree match {
+      case _ if !tokensAtOffsetSupportDefinition(pos.start, typedTree) =>
+        EmptyTree
       case sel @ Select(qual, _) if sel.tpe == ErrorType => qual
       case Import(expr, _) => expr
       case t => t
@@ -188,4 +191,40 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     }
   }
 
+  /**
+   * Check if the offset, which should occur inside the tree, lines up with
+   * tokens against which a definition request makes sense.
+   *
+   * Ex. `1  @@  + 2` has the cursor in the `1.+` tree, but we don't want to
+   *     show definitions there since it is just whitespace.
+   *
+   * @param offset
+   * @param treeEnclosingOffset
+   * @return
+   */
+  private def tokensAtOffsetSupportDefinition(
+      offset: Int,
+      treeEnclosingOffset: Tree
+  ): Boolean = {
+    val treePos = treeEnclosingOffset.pos
+    if (treePos.isDefined) {
+      val treeSource = new String(
+        treePos.source.content.slice(treePos.start, treePos.end)
+      )
+
+      val relativeOffset = offset - treePos.start
+      treeSource.safeTokenize.toOption.exists { tokens =>
+        tokens
+          .exists {
+            case _: Token.Space | _: Token.OpenDelim | _: Token.CloseDelim |
+                _: Token.Comma | _: Token.Equals | _: Token.Dot =>
+              false
+            case token =>
+              token.pos.start <= relativeOffset && relativeOffset <= token.pos.end
+          }
+      }
+    } else {
+      false
+    }
+  }
 }
