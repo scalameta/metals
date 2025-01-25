@@ -286,7 +286,26 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
-  checkError(
+  checkEdit(
+    "lambda-generic-chain-type-list",
+    """|
+       |trait Main {
+       |  def main() = {
+       |    List((1, 2, 3)).filter(_ => true).map(<<otherMethod>>)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|trait Main {
+       |  def main() = {
+       |    def otherMethod(arg0: (T1, T2, T3)) = ???
+       |    List((1, 2, 3)).filter(_ => true).map(otherMethod)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
     "lambda-generic-complex-type-list",
     """|
        |trait Main {
@@ -296,7 +315,13 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |}
        |
        |""".stripMargin,
-    "Could not infer method for `otherMethod`, please report an issue in github.com/scalameta/metals"
+    """|trait Main {
+       |  def main() = {
+       |    def otherMethod(arg0: (T1, T2, T3)) = ???
+       |    List((1, 2, 3)).map(otherMethod)
+       |  }
+       |}
+       |""".stripMargin
   )
 
   // https://github.com/scalameta/metals/issues/6954

@@ -55,7 +55,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
   )
 
   checkNewSymbol(
-    "unsupported-method",
+    "list-literal",
     """|object X {
        |  List(1,2).map(s<<>>df)
        |}
@@ -70,7 +70,31 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
     pickedKind = "infer-method",
     newFile = "a/src/main/scala/a/A.scala" ->
       """| object X {
+         |  def sdf(arg0: Int) = ???
          |  List(1,2).map(sdf)
+         |}
+         |""".stripMargin,
+    expectNoDiagnostics = false,
+  )
+
+  checkNewSymbol(
+    "list-literal-error",
+    """|object X {
+       |  val list = List(1, 2, 3)
+       |  list.foldLeft(0)(s<<>>df)
+       |}
+       |""".stripMargin,
+    s"""|${CreateNewSymbol.method("sdf")}
+        |${RewriteBracesParensCodeAction.toBraces("")}
+        |${ExtractValueCodeAction.title("sdf")}
+        |${ConvertToNamedArguments.title("foldLeft()(...)")}
+        |""".stripMargin,
+    selectedActionIndex = 0,
+    pickedKind = "infer-method",
+    newFile = "a/src/main/scala/a/A.scala" ->
+      """| object X {
+         |  val list = List(1, 2, 3)
+         |  list.foldLeft(0)(sdf)
          |}
          |""".stripMargin,
     expectNoDiagnostics = false,
