@@ -2091,4 +2091,63 @@ class CompletionSuite extends BaseCompletionSuite {
     }
   )
 
+  val BacktickCompletionsTag: IgnoreScalaVersion =
+    IgnoreScala3.and(IgnoreScalaVersion.forLessThan("2.13.17"))
+
+  checkEdit(
+    "add-backticks-around-identifier".tag(BacktickCompletionsTag),
+    """|object Main {
+       |  def `Foo Bar` = 123
+       |  Foo@@
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  def `Foo Bar` = 123
+       |  `Foo Bar`
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "complete-inside-backticks".tag(BacktickCompletionsTag),
+    """|object Main {
+       |  def `Foo Bar` = 123
+       |  `Foo@@`
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  def `Foo Bar` = 123
+       |  `Foo Bar`
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "complete-inside-backticks-after-space".tag(BacktickCompletionsTag),
+    """|object Main {
+       |  def `Foo Bar` = 123
+       |  `Foo B@@`
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  def `Foo Bar` = 123
+       |  `Foo Bar`
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "complete-inside-empty-backticks".tag(BacktickCompletionsTag),
+    """|object Main {
+       |  def `Foo Bar` = 123
+       |  `@@`
+       |}
+       |""".stripMargin,
+    """|object Main {
+       |  def `Foo Bar` = 123
+       |  `Foo Bar`
+       |}
+       |""".stripMargin,
+    filter = _ == "`Foo Bar`: Int"
+  )
 }
