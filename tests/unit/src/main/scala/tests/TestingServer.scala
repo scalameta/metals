@@ -17,9 +17,11 @@ import java.{util => ju}
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.concurrent.duration._
 import scala.util.Failure
 import scala.util.Success
 import scala.util.matching.Regex
@@ -58,7 +60,6 @@ import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.findfiles._
@@ -759,18 +760,13 @@ final case class TestingServer(
     fullServer.didFocus(toPath(filename).toURI.toString).asScala
   }
 
-  def windowStateDidChange(focused: Boolean): Unit = {
-    fullServer.windowStateDidChange(WindowStateDidChangeParams(focused))
-  }
-
-  def didSave(filename: String)(fn: String => String): Future[Unit] = {
+  def didSave(filename: String): Future[Unit] = {
     Debug.printEnclosing(filename)
     val abspath = toPath(filename)
-    val oldText = abspath.toInputFromBuffers(buffers).text
-    val newText = fn(oldText)
+    val text = abspath.toInputFromBuffers(buffers).text
     Files.write(
       abspath.toNIO,
-      newText.getBytes(StandardCharsets.UTF_8),
+      text.getBytes(StandardCharsets.UTF_8),
     )
     fullServer
       .didSave(
@@ -785,6 +781,7 @@ final case class TestingServer(
     val abspath = toPath(filename)
     val oldText = abspath.toInputFromBuffers(buffers).text
     val newText = fn(oldText)
+    buffers.put(abspath, newText)
     didChange(filename, newText)
   }
 
@@ -809,7 +806,8 @@ final case class TestingServer(
 
   def exportEvaluation(filename: String): Option[String] = {
     val path = toPath(filename)
-    server.worksheetProvider.copyWorksheetOutput(path)
+    Await.result(server.worksheetProvider.copyWorksheetOutput(path), 5.minutes)
+
   }
 
   def didOpen(filename: String): Future[Unit] = {
@@ -1452,11 +1450,20 @@ final case class TestingServer(
       filename: String,
       expected: String,
       root: AbsolutePath = workspace,
+      withTooltip: Boolean = false,
+      postprocessObtained: String => String = identity,
   )(implicit
       location: munit.Location
   ): Future[Unit] = {
     val fileContent = TestInlayHints.removeInlayHints(expected)
-    assertInlayHints(filename, fileContent, expected, root)
+    assertInlayHints(
+      filename,
+      fileContent,
+      expected,
+      root,
+      withTooltip,
+      postprocessObtained,
+    )
   }
 
   def assertInlayHints(
@@ -1464,6 +1471,8 @@ final case class TestingServer(
       fileContent: String,
       expected: String,
       root: AbsolutePath,
+      withTooltip: Boolean,
+      postprocessObtained: String => String,
   )(implicit
       location: munit.Location
   ): Future[Unit] = {
@@ -1471,7 +1480,9 @@ final case class TestingServer(
       hints <- inlayHints(filename, fileContent, root)
     } yield {
       Assertions.assertNoDiff(
-        TestInlayHints.applyInlayHints(fileContent, hints),
+        postprocessObtained(
+          TestInlayHints.applyInlayHints(fileContent, hints, withTooltip)
+        ),
         expected,
       )
     }
@@ -1482,6 +1493,7 @@ final case class TestingServer(
       fileContent: String,
       root: AbsolutePath = workspace,
   ): Future[List[l.InlayHint]] = {
+    Debug.printEnclosing(filename)
     val path = root.resolve(filename)
     val input = m.Input.String(fileContent)
     path.touch()
@@ -1490,7 +1502,8 @@ final case class TestingServer(
     val range = pos.toLsp
     val params = new org.eclipse.lsp4j.InlayHintParams(uri, range)
     for {
-      _ <- didSave(filename)(_ => fileContent)
+      _ <- didChange(filename)(_ => fileContent)
+      _ <- didSave(filename)
       inlayHints <- fullServer.inlayHints(params).asScala
     } yield inlayHints.asScala.toList
   }
@@ -1575,7 +1588,7 @@ final case class TestingServer(
           Future.successful(new WorkspaceEdit)
         }
       // save current file to simulate user saving in the editor
-      _ <- didSave(filename)(identity)
+      _ <- didSave(filename)
     } yield {
       files.map { file =>
         val path = workspace.resolve(file)

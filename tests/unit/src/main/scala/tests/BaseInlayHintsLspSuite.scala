@@ -49,6 +49,8 @@ abstract class BaseInlayHintsLspSuite(name: String, scalaVersion: String)
           code,
           expected,
           workspace,
+          withTooltip = false,
+          postprocessObtained = identity,
         )
       } yield ()
     }

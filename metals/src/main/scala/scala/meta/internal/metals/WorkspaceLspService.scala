@@ -20,7 +20,6 @@ import scala.meta.internal.metals.DidFocusResult
 import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLspService
-import scala.meta.internal.metals.WindowStateDidChangeParams
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.config.StatusBarState
@@ -158,6 +157,7 @@ class WorkspaceLspService(
       () => httpServer,
       clientConfig,
       languageClient,
+      clientConfig.isHttpEnabled(),
     )
 
   private val bspStatus = new BspStatus(
@@ -722,13 +722,6 @@ class WorkspaceLspService(
     }
   }
 
-  override def windowStateDidChange(params: WindowStateDidChangeParams): Unit =
-    if (params.focused) {
-      folderServices.foreach(_.unpause())
-    } else {
-      folderServices.foreach(_.pause())
-    }
-
   private def failedRequest(
       message: String
   ): Future[Object] = {
@@ -1188,7 +1181,7 @@ class WorkspaceLspService(
         capabilities.setCompletionProvider(
           new lsp4j.CompletionOptions(
             clientConfig.isCompletionItemResolve(),
-            List(".", "*").asJava,
+            List(".", "*", "$").asJava,
           )
         )
         capabilities.setCallHierarchyProvider(true)
@@ -1215,7 +1208,10 @@ class WorkspaceLspService(
 
         val textDocumentSyncOptions = new lsp4j.TextDocumentSyncOptions
         textDocumentSyncOptions.setChange(lsp4j.TextDocumentSyncKind.Full)
-        textDocumentSyncOptions.setSave(new lsp4j.SaveOptions(true))
+        // We don't use the text at all.
+        textDocumentSyncOptions.setSave(
+          new lsp4j.SaveOptions( /* includeText = */ false)
+        )
         textDocumentSyncOptions.setOpenClose(true)
 
         val scalaFilesPattern = new lsp4j.FileOperationPattern("**/*.scala")
@@ -1263,8 +1259,8 @@ class WorkspaceLspService(
     workDoneProgress.start(sh, 0, 1, ju.concurrent.TimeUnit.SECONDS)
     for {
       _ <- userConfigSync.initSyncUserConfiguration(folderServices)
-      _ <- Future.sequence(folderServices.map(_.initialized()))
       _ <- Future(startHttpServer())
+      _ <- Future.sequence(folderServices.map(_.initialized()))
     } yield ()
   }
 

@@ -259,9 +259,8 @@ class IndexedSymbols(
   ): Array[SymbolDefinition] = {
     symbolsAt(path, dialect)
       .filter(defn =>
-        defn.kind.isEmpty || !defn.kind.exists(kind =>
-          kind.isParameter || kind.isTypeParameter
-        )
+        defn.kind.isEmpty || !defn.kind
+          .exists(kind => kind.isParameter || kind.isTypeParameter)
       )
       .toArray
   }

@@ -47,7 +47,8 @@ class BazelLspSuite
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          importMessage
+          importMessage,
+          Messages.DeprecatedRemovedScalaVersion.message(Set("2.13.12")),
         ).mkString("\n"),
       )
       _ = assert(bazelBspConfig.exists)
@@ -55,13 +56,13 @@ class BazelLspSuite
       _ = assertStatus(_.isInstalled)
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ <- server.didChange("WORKSPACE")(_ + "\n# comment")
-      _ <- server.didSave("WORKSPACE")(identity)
+      _ <- server.didSave("WORKSPACE")
       // Comment changes do not trigger "re-import project" request
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ <- server.didChange("Hello.scala") { text =>
         text.replace("def hello: String", "def hello: Int")
       }
-      _ <- server.didSave("Hello.scala")(identity)
+      _ <- server.didSave("Hello.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|Hello.scala:4:20: error: type mismatch;
@@ -78,7 +79,7 @@ class BazelLspSuite
       }
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ = client.generateBspAndConnect = GenerateBspAndConnect.yes
-      _ <- server.didSave(s"BUILD")(identity)
+      _ <- server.didSave(s"BUILD")
     } yield {
       assertNoDiff(
         client.workspaceMessageRequests,
@@ -105,7 +106,7 @@ class BazelLspSuite
       _ <- server.didChange(s"BUILD") { text =>
         text.replace("\"hello\"", "\"hello1\"")
       }
-      _ <- server.didSave(s"BUILD")(identity)
+      _ <- server.didSave(s"BUILD")
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ = server.headServer.connectionProvider.buildServerPromise = Promise()
       _ <- server.executeCommand(ServerCommands.GenerateBspConfig)
@@ -114,7 +115,7 @@ class BazelLspSuite
       _ <- server.didChange("Hello.scala") { text =>
         text.replace("def hello: String", "def hello: Int")
       }
-      _ <- server.didSave("Hello.scala")(identity)
+      _ <- server.didSave("Hello.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|Hello.scala:4:20: error: type mismatch;
@@ -127,7 +128,10 @@ class BazelLspSuite
            |""".stripMargin,
       )
     } yield {
-      assertEmpty(client.workspaceMessageRequests)
+      assertEquals(
+        client.workspaceMessageRequests,
+        Messages.DeprecatedRemovedScalaVersion.message(Set("2.13.12")),
+      )
       assert(bazelBspConfig.exists)
       server.assertBuildServerConnection()
     }
@@ -158,7 +162,7 @@ class BazelLspSuite
       _ <- server.didChange(s"BUILD") { text =>
         text.replace("\"hello\"", "\"hello1\"")
       }
-      _ <- server.didSave(s"BUILD")(identity)
+      _ <- server.didSave(s"BUILD")
       _ = assertNoDiff(client.workspaceMessageRequests, "")
       _ = server.headServer.connectionProvider.buildServerPromise = Promise()
       _ <- server.executeCommand(ServerCommands.ImportBuild)
@@ -193,7 +197,8 @@ class BazelLspSuite
       assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          Messages.ResetWorkspace.message
+          Messages.DeprecatedRemovedScalaVersion.message(Set("2.13.12")),
+          Messages.ResetWorkspace.message,
         ).mkString("\n"),
       )
       assert(bazelBspConfig.exists)
@@ -209,7 +214,7 @@ class BazelLspSuite
       )
       _ <- server.didOpen("Hello.scala")
       _ <- server.didOpen("Main.scala")
-      _ <- server.didSave("Main.scala")(identity)
+      _ <- server.didSave("Main.scala")
       references <- server.references("Hello.scala", "hello")
       _ = assertNoDiff(
         references,
@@ -234,7 +239,7 @@ class BazelLspSuite
         BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
       )
       _ <- server.didOpen("Hello.scala")
-      _ <- server.didSave("Hello.scala") { _ =>
+      _ <- server.didChange("Hello.scala") { _ =>
         """|package examples.scala3
            |
            |sealed trait A
@@ -251,6 +256,7 @@ class BazelLspSuite
            |}
            |""".stripMargin
       }
+      _ <- server.didSave("Hello.scala")
       _ = assertNoDiff(
         server.client.workspaceDiagnostics,
         """|Hello.scala:11:3: warning: match may not be exhaustive.
@@ -262,12 +268,13 @@ class BazelLspSuite
            |""".stripMargin,
       )
       // warnings should not disappear after updating
-      _ <- server.didSave("Hello.scala") { text =>
+      _ <- server.didChange("Hello.scala") { text =>
         s"""|$text
             |
             |class Additional
             |""".stripMargin
       }
+      _ <- server.didSave("Hello.scala")
       _ = assertNoDiff(
         server.client.workspaceDiagnostics,
         """|Hello.scala:11:3: warning: match may not be exhaustive.
@@ -313,7 +320,7 @@ class BazelLspSuite
       _ <- server.didChange("Hello.scala") { text =>
         text.replace("def hello: String", "def hello: Int")
       }
-      _ <- server.didSave("Hello.scala")(identity)
+      _ <- server.didSave("Hello.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|Hello.scala:4:20: error: type mismatch;
@@ -351,7 +358,7 @@ class BazelLspSuite
       _ <- server.didChange("Hello.scala") { text =>
         text.replace("def hello: String", "def hello: Int")
       }
-      _ <- server.didSave("Hello.scala")(identity)
+      _ <- server.didSave("Hello.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|Hello.scala:4:20: error: type mismatch;
@@ -365,12 +372,14 @@ class BazelLspSuite
       )
       _ = client.messageRequests.clear()
       _ <- server.didOpen("Hello.scala")
-      _ <- server.didSave("Hello.scala") { text =>
+      _ <- server.didChange("Hello.scala") { text =>
         text.replace("def hello: Int", "def hello: String")
       }
+      _ <- server.didSave("Hello.scala")
       _ = assertNoDiagnostics()
       _ <- server.didOpen("projectview.bazelproject")
-      _ <- server.didSave("projectview.bazelproject")(_ => "")
+      _ <- server.didChange("projectview.bazelproject")(_ => "")
+      _ <- server.didSave("projectview.bazelproject")
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         ImportBuildChanges.params("bazel").getMessage(),

@@ -46,8 +46,8 @@ case class DeprecatedScalaVersion(version: String) extends ScalaProblem {
 case class DeprecatedRemovedScalaVersion(version: String) extends ScalaProblem {
   private def recommendedVersion = ScalaVersions.recommendedVersion(version)
   override def message: String =
-    s"Scala $version is no longer supported by Metals, " +
-      s"to get the best support possible it's recommended to update to at least $recommendedVersion."
+    s"Support for Scala $version is no longer being updated or fixed, " +
+      s"it's recommended to update to at least $recommendedVersion."
 }
 
 case class FutureScalaVersion(version: String) extends ScalaProblem {

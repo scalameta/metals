@@ -23,6 +23,7 @@ public class Main >>region>>{
 
     abstract class A >>region>>{
         abstract void hello();
+        abstract void hello2();
     }<<region<<
 
     abstract class B extends A >>region>>{
@@ -41,13 +42,13 @@ public class Main >>region>>{
             return "asssd";
         }<<region<<
 
-        void openingCommentInStr() >>region>>{
+        void openingCommentInStr() {
             System.out.println("/* ignore");
-        }<<region<<
+        }
 
-        void closingCommentInStr() >>region>>{
+        void closingCommentInStr() {
             System.out.println("*/ ignore");
-        }<<region<<
+        }
 
         void handleLineWithBlockAndCode() >>region>>{
             if (true) >>region>>{

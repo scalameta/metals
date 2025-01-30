@@ -14,7 +14,7 @@ import org.kohsuke.github.GHIssueState
 import java.text.SimpleDateFormat
 import java.util.Date
 
-val codename = "Palladium"
+val codename = "Strontium"
 
 @main
 def main(
@@ -118,7 +118,7 @@ def template(
     contributors: List[String],
 ) = {
   s"""|---
-      |author: $author
+      |authors: $author
       |title: Metals $lastTag - $codename
       |---
       |

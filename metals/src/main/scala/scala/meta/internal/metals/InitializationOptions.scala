@@ -54,7 +54,9 @@ final case class InitializationOptions(
     compilerOptions: CompilerInitializationOptions,
     debuggingProvider: Option[Boolean],
     runProvider: Option[Boolean],
+    @deprecated("Decoration protocol is no longer used.")
     decorationProvider: Option[Boolean],
+    @deprecated("Decoration protocol is no longer used.")
     inlineDecorationProvider: Option[Boolean],
     didFocusProvider: Option[Boolean],
     doctorProvider: Option[String],
@@ -200,6 +202,9 @@ object InitializationOptions {
       isSignatureHelpDocumentationEnabled = compilerObj.flatMap(
         _.getBooleanOption("isSignatureHelpDocumentationEnabled")
       ),
+      isDetailIncludedInLabel = compilerObj.flatMap(
+        _.getBooleanOption("isDetailIncludedInLabel")
+      ),
       overrideDefFormat = compilerObj.flatMap(
         _.getStringOption("overrideDefFormat")
       ),
@@ -210,7 +215,6 @@ object InitializationOptions {
         compilerObj.flatMap(_.getBooleanOption("snippetAutoIndent")),
     )
   }
-
 }
 
 sealed trait CommandHTMLFormat {

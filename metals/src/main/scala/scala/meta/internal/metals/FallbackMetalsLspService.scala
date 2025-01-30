@@ -64,11 +64,6 @@ class FallbackMetalsLspService(
   private val files: AtomicReference[Set[AbsolutePath]] = new AtomicReference(
     Set.empty
   )
-
-  override val pauseables: Pauseable = Pauseable.fromPausables(
-    parseTrees ::
-      compilations.pauseables
-  )
   override protected val semanticdbs: Semanticdbs = interactiveSemanticdbs
   override val fileWatcher: FileWatcher = NoopFileWatcher
   override val projectInfo: MetalsServiceInfo =

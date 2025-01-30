@@ -6,6 +6,7 @@ import java.util.regex.Pattern
 import scala.collection.mutable
 import scala.util.control.NonFatal
 
+import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.debug.server.Discovered
 
@@ -27,7 +28,7 @@ final case class FingerprintInfo[+Print <: Fingerprint](
 object TestInternals {
   private final val sbtOrg = "org.scala-sbt"
   private final val testAgentId = "test-agent"
-  private final val testAgentVersion = "1.8.0"
+  private final val testAgentVersion = BuildInfo.sbtVersion
 
   lazy val testAgentFiles: List[Path] = {
     val dependency = Dependency.of(sbtOrg, testAgentId, testAgentVersion)

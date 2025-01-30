@@ -75,7 +75,7 @@ class CompletionItemResolver(
       }
     } else {
       val companionDoc = docs(companion)
-      if (companionDoc.isEmpty) gsymDoc
+      if (companionDoc.isEmpty || companionDoc == gsymDoc) gsymDoc
       else if (gsymDoc.isEmpty) companionDoc
       else {
         List(

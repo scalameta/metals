@@ -42,6 +42,23 @@ trait Compat { this: MetalsGlobal =>
     this.settings.Youtline.value = false
   }
 
+  /**
+   * Force opening package module to make sure we have access to all symbols.
+   * Connected to https://github.com/scala/bug/issues/12663
+   *
+   * The issue that were solved by making this lazy very mostly related to zinc
+   * so this should not be an issue here.
+   */
+  override def openPackageModule(pkgClass: Symbol, force: Boolean): Unit = {
+    val pkgModule = pkgClass.packageObject
+    def fromSource = pkgModule.rawInfo match {
+      case ltp: SymLoader => ltp.fromSource
+      case _ => false
+    }
+    if (pkgModule.isModule && !fromSource)
+      openPackageModule(pkgModule, pkgClass)
+  }
+
   private def runOutline(
       files: ju.List[VirtualFileParams],
       forceNewUnit: Boolean = false

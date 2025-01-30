@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import scala.collection.mutable
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.PcQueryContext
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.OffsetParams
 
@@ -12,7 +13,7 @@ final class AutoImportsProvider(
     val compiler: MetalsGlobal,
     name: String,
     params: OffsetParams
-) {
+)(implicit queryInfo: PcQueryContext) {
   import compiler._
 
   def autoImports(): List[AutoImportsResult] = {

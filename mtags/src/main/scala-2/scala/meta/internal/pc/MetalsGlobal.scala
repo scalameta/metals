@@ -124,7 +124,10 @@ class MetalsGlobal(
 
   def semanticdbSymbol(symbol: Symbol): String = {
     import semanticdbOps._
-    symbol.toSemantic
+    val semantic = symbol.toSemantic
+    if (symbol == null) ""
+    else if (semantic.isEmpty()) symbol.nameString
+    else semantic
   }
 
   def printPretty(pos: sourcecode.Text[Position]): Unit = {
@@ -306,84 +309,103 @@ class MetalsGlobal(
    * with fully qualified names. This method strips out package prefixes to shorten the names while
    * making sure to not convert two different symbols into same short name.
    */
-  def shortType(longType: Type, history: ShortenedNames): Type = {
-    val isVisited = mutable.Set.empty[(Type, Option[ShortName])]
-    val cached = new ju.HashMap[(Type, Option[ShortName]), Type]()
-    def loop(tpe: Type, name: Option[ShortName]): Type = {
-      val key = tpe -> name
-      // NOTE(olafur) Prevent infinite recursion, see https://github.com/scalameta/metals/issues/749
-      if (isVisited(key)) return cached.getOrDefault(key, tpe)
-      isVisited += key
-      val result = tpe match {
-        case TypeRef(pre, sym, args) =>
-          def shortSymbol = {
-            // workaround for Tuple1 (which is incorrectly printed by Scala 2 compiler)
-            def isTuple1 = sym == definitions.TupleClass(1)
-            /* If it's an alias type we want to prevent dealiasing it
+  def shortType(longType: Type, history: ShortenedNames)(implicit
+      queryInfo: m.internal.metals.PcQueryContext
+  ): Type =
+    try {
+      val isVisited = mutable.Set.empty[(Type, Option[ShortName])]
+      val cached = new ju.HashMap[(Type, Option[ShortName]), Type]()
+      def loop(tpe: Type, name: Option[ShortName]): Type = {
+        val key = tpe -> name
+        // NOTE(olafur) Prevent infinite recursion, see https://github.com/scalameta/metals/issues/749
+        if (isVisited(key)) return cached.getOrDefault(key, tpe)
+        isVisited += key
+        val result = tpe match {
+          case TypeRef(pre, sym, args) =>
+            def shortSymbol = {
+              // workaround for Tuple1 (which is incorrectly printed by Scala 2 compiler)
+              def isTuple1 = sym == definitions.TupleClass(1)
+              /* If it's an alias type we want to prevent dealiasing it
                AnyRef should stay to be dropped if neded later on since it's
                not an important class.
-             */
-            if ((sym.isAliasType && sym != definitions.AnyRefClass) || isTuple1)
-              backtickify(sym.newErrorSymbol(sym.name).updateInfo(sym.info))
-            else backtickify(sym)
-          }
-          if (history.isSymbolInScope(sym, pre)) {
-            TypeRef(
-              NoPrefix,
-              shortSymbol,
-              args.map(arg => loop(arg, None))
-            )
-          } else {
-            val ownerSymbol = pre.termSymbol
-            def hasConflictingMembersInScope =
-              history.lookupSymbol(sym.name).exists {
-                case _: LookupSucceeded => true
-                case _ => false
+               */
+              if (
+                (sym.isAliasType && sym != definitions.AnyRefClass) || isTuple1
+              )
+                backtickify(sym.newErrorSymbol(sym.name).updateInfo(sym.info))
+              else backtickify(sym)
+            }
+            if (history.isSymbolInScope(sym, pre)) {
+              TypeRef(
+                NoPrefix,
+                shortSymbol,
+                args.map(arg => loop(arg, None))
+              )
+            } else {
+              val ownerSymbol = pre.termSymbol
+              def hasConflictingMembersInScope =
+                history.lookupSymbol(sym.name).exists {
+                  case _: LookupSucceeded => true
+                  case _ => false
+                }
+
+              def canRename(rename: Name, ownerSym: Symbol): Boolean = {
+                val shouldRenamePrefix =
+                  !metalsConfig.isDefaultSymbolPrefixes || hasConflictingMembersInScope
+
+                if (shouldRenamePrefix) {
+                  val existingRename = history.rename(ownerSym)
+                  existingRename.isEmpty && history.tryShortenName(
+                    ShortName(rename, ownerSymbol)
+                  )
+                } else false
               }
 
-            def canRename(rename: Name, ownerSym: Symbol): Boolean = {
-              val shouldRenamePrefix =
-                !metalsConfig.isDefaultSymbolPrefixes || hasConflictingMembersInScope
-
-              if (shouldRenamePrefix) {
-                val existingRename = history.rename(ownerSym)
-                existingRename.isEmpty && history.tryShortenName(
-                  ShortName(rename, ownerSymbol)
-                )
-              } else false
-            }
-
-            history.config.get(ownerSymbol) match {
-              case Some(rename) if canRename(rename, ownerSymbol) =>
-                TypeRef(
-                  SingleType(
-                    NoPrefix,
-                    sym.newErrorSymbol(rename)
-                  ),
-                  shortSymbol,
-                  args.map(arg => loop(arg, None))
-                )
-              case _ =>
-                history.rename(sym) match {
-                  case Some(rename) =>
-                    TypeRef(
+              history.config.get(ownerSymbol) match {
+                case Some(rename) if canRename(rename, ownerSymbol) =>
+                  TypeRef(
+                    SingleType(
                       NoPrefix,
-                      sym.newErrorSymbol(rename),
-                      args.map(arg => loop(arg, None))
-                    )
-                  case _ =>
-                    if (
-                      sym.isAliasType &&
-                      (sym.isAbstract ||
-                        sym.overrides.lastOption.exists(_.isAbstract))
-                    ) {
+                      sym.newErrorSymbol(rename)
+                    ),
+                    shortSymbol,
+                    args.map(arg => loop(arg, None))
+                  )
+                case _ =>
+                  history.rename(sym) match {
+                    case Some(rename) =>
+                      TypeRef(
+                        NoPrefix,
+                        sym.newErrorSymbol(rename),
+                        args.map(arg => loop(arg, None))
+                      )
+                    case _ =>
+                      if (
+                        sym.isAliasType &&
+                        (sym.isAbstract ||
+                          sym.overrides.lastOption.exists(_.isAbstract))
+                      ) {
 
-                      // Always dealias abstract type aliases but leave concrete aliases alone.
-                      // trait Generic { type Repr /* dealias */ }
-                      // type Catcher[T] = PartialFunction[Throwable, T] // no dealias
-                      loop(tpe.dealias, name)
-                    } else if (history.owners(pre.typeSymbol)) {
-                      if (history.nameResolvesToSymbol(sym.name, sym)) {
+                        // Always dealias abstract type aliases but leave concrete aliases alone.
+                        // trait Generic { type Repr /* dealias */ }
+                        // type Catcher[T] = PartialFunction[Throwable, T] // no dealias
+                        loop(tpe.dealias, name)
+                      } else if (history.owners(pre.typeSymbol)) {
+                        if (history.nameResolvesToSymbol(sym.name, sym)) {
+                          TypeRef(
+                            NoPrefix,
+                            shortSymbol,
+                            args.map(arg => loop(arg, None))
+                          )
+                        } else {
+                          TypeRef(
+                            ThisType(pre.typeSymbol),
+                            shortSymbol,
+                            args.map(arg => loop(arg, None))
+                          )
+                        }
+                      } else if (sym.isMethod && sym.safeOwner.isImplicit) {
+                        history.tryShortenName(ShortName(sym.safeOwner))
                         TypeRef(
                           NoPrefix,
                           shortSymbol,
@@ -391,158 +413,154 @@ class MetalsGlobal(
                         )
                       } else {
                         TypeRef(
-                          ThisType(pre.typeSymbol),
+                          loop(pre, Some(ShortName(sym))),
                           shortSymbol,
                           args.map(arg => loop(arg, None))
                         )
                       }
-                    } else if (sym.isMethod && sym.safeOwner.isImplicit) {
-                      history.tryShortenName(ShortName(sym.safeOwner))
-                      TypeRef(
-                        NoPrefix,
-                        shortSymbol,
-                        args.map(arg => loop(arg, None))
-                      )
-                    } else {
-                      TypeRef(
-                        loop(pre, Some(ShortName(sym))),
-                        shortSymbol,
-                        args.map(arg => loop(arg, None))
-                      )
-                    }
-                }
-            }
-          }
-        case SingleType(pre, sym) =>
-          def backtickifiedSymbol = backtickify(sym)
-          if (sym.hasPackageFlag || sym.isPackageObjectOrClass) {
-            val dotSyntaxFriendlyName = name.map { name0 =>
-              if (name0.symbol.isStatic) name0
-              else {
-                // Use the prefix rather than the real owner to maximize the
-                // chances of shortening the reference: when `name` is directly
-                // nested in a non-statically addressable type (class or trait),
-                // its original owner is that type (requiring a type projection
-                // to reference it) while the prefix is its concrete owner value
-                // (for which the dot syntax works).
-                // https://docs.scala-lang.org/tour/inner-classes.html
-                // https://danielwestheide.com/blog/the-neophytes-guide-to-scala-part-13-path-dependent-types/
-                ShortName(name0.symbol.cloneSymbol(sym))
+                  }
               }
             }
-            if (history.tryShortenName(dotSyntaxFriendlyName)) NoPrefix
-            else SingleType(pre, backtickifiedSymbol)
-          } else {
-            if (history.isSymbolInScope(sym, pre))
-              SingleType(NoPrefix, backtickifiedSymbol)
-            else {
-              pre match {
-                case ThisType(psym) if history.isSymbolInScope(psym, pre) =>
-                  SingleType(NoPrefix, backtickifiedSymbol)
-                case _ =>
-                  SingleType(
-                    loop(pre, Some(ShortName(sym))),
-                    backtickifiedSymbol
-                  )
-              }
-            }
-          }
-        case ThisType(sym) =>
-          val owners = sym.ownerChain
-          // to make sure we always use renamed package
-          // what is saved in renames is actually companion module of a package
-          val renamedOwnerIndex =
-            owners.indexWhere(s => history.rename(s.companionModule).nonEmpty)
-          if (renamedOwnerIndex < 0 && history.tryShortenName(name)) NoPrefix
-          else {
-            val prefix =
-              if (renamedOwnerIndex < 0)
-                owners.indexWhere { owner =>
-                  owner.owner != definitions.ScalaPackageClass &&
-                  history.tryShortenName(
-                    Some(ShortName(owner.name, owner))
-                  )
+          case SingleType(pre, sym) =>
+            def backtickifiedSymbol = backtickify(sym)
+            if (sym.hasPackageFlag || sym.isPackageObjectOrClass) {
+              val dotSyntaxFriendlyName = name.map { name0 =>
+                if (name0.symbol.isStatic) name0
+                else {
+                  // Use the prefix rather than the real owner to maximize the
+                  // chances of shortening the reference: when `name` is directly
+                  // nested in a non-statically addressable type (class or trait),
+                  // its original owner is that type (requiring a type projection
+                  // to reference it) while the prefix is its concrete owner value
+                  // (for which the dot syntax works).
+                  // https://docs.scala-lang.org/tour/inner-classes.html
+                  // https://danielwestheide.com/blog/the-neophytes-guide-to-scala-part-13-path-dependent-types/
+                  ShortName(name0.symbol.cloneSymbol(sym))
                 }
-              else renamedOwnerIndex
-            if (prefix < 0) {
-              SingleType(
-                NoPrefix,
-                sym.newErrorSymbol(TypeName(history.fullname(sym)))
-              )
+              }
+              if (history.tryShortenName(dotSyntaxFriendlyName)) NoPrefix
+              else SingleType(pre, backtickifiedSymbol)
             } else {
-              val names = owners
-                .take(prefix + 1)
-                .reverse
-                .map(s =>
-                  m.Term.Name(
-                    history
-                      .rename(s.companionModule)
-                      .map(_.toString())
-                      .getOrElse(s.nameSyntax)
-                  )
-                )
-              val ref = names.tail.foldLeft(names.head: m.Term.Ref) {
-                case (qual, name) => m.Term.Select(qual, name)
+              if (history.isSymbolInScope(sym, pre))
+                SingleType(NoPrefix, backtickifiedSymbol)
+              else {
+                pre match {
+                  case ThisType(psym) if history.isSymbolInScope(psym, pre) =>
+                    SingleType(NoPrefix, backtickifiedSymbol)
+                  case _ =>
+                    SingleType(
+                      loop(pre, Some(ShortName(sym))),
+                      backtickifiedSymbol
+                    )
+                }
               }
-              SingleType(
-                NoPrefix,
-                sym.newErrorSymbol(TypeName(ref.syntax))
-              )
             }
-          }
-        case ConstantType(Constant(sym: TermSymbol))
-            if sym.hasFlag(gf.JAVA_ENUM) =>
-          loop(SingleType(sym.owner.thisPrefix, sym), None)
-        case ConstantType(Constant(tpe: Type)) =>
-          ConstantType(Constant(loop(tpe, None)))
-        case SuperType(thistpe, supertpe) =>
-          SuperType(loop(thistpe, None), loop(supertpe, None))
-        case RefinedType(parents, decls) =>
-          RefinedType(parents.map(parent => loop(parent, None)), decls)
-        case AnnotatedType(annotations, underlying) =>
-          AnnotatedType(annotations, loop(underlying, None))
-        case ExistentialType(quantified, underlying) =>
-          ExistentialType(
-            quantified.map(sym => sym.setInfo(loop(sym.info, None))),
-            loop(underlying, None)
-          )
-        case PolyType(typeParams, resultType) =>
-          resultType.map(t => loop(t, None)) match {
-            // [x] => F[x] is not printable in the code, we need to use just `F`
-            case TypeRef(_, sym, args)
-                if typeParams == args.map(_.typeSymbol) =>
-              TypeRef(
-                NoPrefix,
-                sym.newErrorSymbol(sym.name),
-                Nil
-              )
-            case otherType =>
-              PolyType(typeParams, otherType)
-          }
-        case NullaryMethodType(resultType) =>
-          loop(resultType, None)
-        case TypeBounds(lo, hi) =>
-          TypeBounds(loop(lo, None), loop(hi, None))
-        case MethodType(params, resultType) =>
-          MethodType(params, loop(resultType, None))
-        case ErrorType =>
-          definitions.AnyTpe
-        case t => t
+          case ThisType(sym) =>
+            val owners = sym.ownerChain
+            // to make sure we always use renamed package
+            // what is saved in renames is actually companion module of a package
+            val renamedOwnerIndex =
+              owners.indexWhere(s => history.rename(s.companionModule).nonEmpty)
+            if (renamedOwnerIndex < 0 && history.tryShortenName(name)) NoPrefix
+            else {
+              val prefix =
+                if (renamedOwnerIndex < 0)
+                  owners.indexWhere { owner =>
+                    owner.owner != definitions.ScalaPackageClass &&
+                    history.tryShortenName(
+                      Some(ShortName(owner.name, owner))
+                    )
+                  }
+                else renamedOwnerIndex
+              if (prefix < 0) {
+                SingleType(
+                  NoPrefix,
+                  sym.newErrorSymbol(TypeName(history.fullname(sym)))
+                )
+              } else {
+                val names = owners
+                  .take(prefix + 1)
+                  .reverse
+                  .map(s =>
+                    m.Term.Name(
+                      history
+                        .rename(s.companionModule)
+                        .map(_.toString())
+                        .getOrElse(s.nameSyntax)
+                    )
+                  )
+                val ref = names.tail.foldLeft(names.head: m.Term.Ref) {
+                  case (qual, name) => m.Term.Select(qual, name)
+                }
+                SingleType(
+                  NoPrefix,
+                  sym.newErrorSymbol(TypeName(ref.syntax))
+                )
+              }
+            }
+          case ConstantType(Constant(sym: TermSymbol))
+              if sym.hasFlag(gf.JAVA_ENUM) =>
+            loop(SingleType(sym.owner.thisPrefix, sym), None)
+          case ConstantType(Constant(tpe: Type)) =>
+            ConstantType(Constant(loop(tpe, None)))
+          case SuperType(thistpe, supertpe) =>
+            SuperType(loop(thistpe, None), loop(supertpe, None))
+          case RefinedType(parents, decls) =>
+            RefinedType(parents.map(parent => loop(parent, None)), decls)
+          case AnnotatedType(annotations, underlying) =>
+            AnnotatedType(annotations, loop(underlying, None))
+          case ExistentialType(quantified, underlying) =>
+            ExistentialType(
+              quantified.map(sym => sym.setInfo(loop(sym.info, None))),
+              loop(underlying, None)
+            )
+          case PolyType(typeParams, resultType) =>
+            resultType.map(t => loop(t, None)) match {
+              // [x] => F[x] is not printable in the code, we need to use just `F`
+              case TypeRef(_, sym, args)
+                  if typeParams == args.map(_.typeSymbol) =>
+                TypeRef(
+                  NoPrefix,
+                  sym.newErrorSymbol(sym.name),
+                  Nil
+                )
+              case otherType =>
+                PolyType(typeParams, otherType)
+            }
+          case NullaryMethodType(resultType) =>
+            loop(resultType, None)
+          case TypeBounds(lo, hi) =>
+            TypeBounds(loop(lo, None), loop(hi, None))
+          case MethodType(params, resultType) =>
+            MethodType(params, loop(resultType, None))
+          case ErrorType =>
+            definitions.AnyTpe
+          case t => t
+        }
+        cached.putIfAbsent(key, result)
+        result
       }
-      cached.putIfAbsent(key, result)
-      result
-    }
 
-    longType match {
-      case ThisType(_) => longType
-      case _ => loop(longType, None)
+      longType match {
+        case ThisType(_) => longType
+        case _ => loop(longType, None)
+      }
+    } catch {
+      case NonFatal(e) =>
+        queryInfo.report(
+          "shorten-type",
+          e,
+          s"Failed to shorten type $longType"
+        )
+        longType
     }
-  }
 
   /**
    * Custom `Type.toLongString` that shortens fully qualified package prefixes.
    */
-  def metalsToLongString(tpe: Type, history: ShortenedNames): String = {
+  def metalsToLongString(tpe: Type, history: ShortenedNames)(implicit
+      queryInfo: m.internal.metals.PcQueryContext
+  ): String = {
     shortType(tpe, history).toLongString
   }
 
@@ -712,10 +730,24 @@ class MetalsGlobal(
         !tpe.isErroneous
   }
   implicit class XtensionImportMetals(imp: Import) {
+    private def importSelector(pos: Position): Option[ImportSelector] =
+      imp.selectors.reverseIterator.find(_.namePos <= pos.start)
+
+    private def selectorSymbol(sel: ImportSelector): Symbol =
+      imp.expr.symbol.info.member(sel.name)
+
     def selector(pos: Position): Option[Symbol] =
-      for {
-        sel <- imp.selectors.reverseIterator.find(_.namePos <= pos.start)
-      } yield imp.expr.symbol.info.member(sel.name)
+      importSelector(pos).map(selectorSymbol)
+
+    def selectorIdent(pos: Position): Option[Ident] = {
+      importSelector(pos).map { sel =>
+        val sym = selectorSymbol(sel)
+        val start = sel.namePos
+        val end = start + sel.name.decoded.trim.length()
+        val pos = Position.range(imp.pos.source, start, start, end)
+        Ident(sym.name).setSymbol(sym).setPos(pos)
+      }
+    }
   }
   implicit class XtensionPositionMetals(pos: Position) {
     // Same as `Position.includes` except handles an off-by-one bug when other.point > pos.end
@@ -1164,5 +1196,4 @@ class MetalsGlobal(
       }
     }
   }
-
 }

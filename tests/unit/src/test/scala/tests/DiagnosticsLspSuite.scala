@@ -43,21 +43,21 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ <- server.didOpen("a/src/main/scala/a/Main.scala")
       exampleDiagnostics = {
-        """|a/src/main/scala/a/Example.scala:2:1: warning: Unused import
+        """|a/src/main/scala/a/Example.scala:2:29: warning: Unused import
            |import java.util.concurrent.Future // unused
-           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-           |a/src/main/scala/a/Example.scala:3:1: warning: Unused import
+           |                            ^^^^^^
+           |a/src/main/scala/a/Example.scala:3:19: warning: Unused import
            |import scala.util.Failure // unused
-           |^^^^^^^^^^^^^^^^^^^^^^^^^
+           |                  ^^^^^^^
            |""".stripMargin
       }
       mainDiagnostics = {
-        """|a/src/main/scala/a/Main.scala:2:1: warning: Unused import
+        """|a/src/main/scala/a/Main.scala:2:29: warning: Unused import
            |import java.util.concurrent.Future // unused
-           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-           |a/src/main/scala/a/Main.scala:3:1: warning: Unused import
+           |                            ^^^^^^
+           |a/src/main/scala/a/Main.scala:3:19: warning: Unused import
            |import scala.util.Failure // unused
-           |^^^^^^^^^^^^^^^^^^^^^^^^^
+           |                  ^^^^^^^
            |""".stripMargin
       }
       _ = assertNoDiff(
@@ -66,12 +66,12 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       )
       _ <- server.didOpen("b/src/main/scala/a/MainSuite.scala")
       testDiagnostics = {
-        """|b/src/main/scala/a/MainSuite.scala:2:1: warning: Unused import
+        """|b/src/main/scala/a/MainSuite.scala:2:29: warning: Unused import
            |import java.util.concurrent.Future // unused
-           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-           |b/src/main/scala/a/MainSuite.scala:3:1: warning: Unused import
+           |                            ^^^^^^
+           |b/src/main/scala/a/MainSuite.scala:3:19: warning: Unused import
            |import scala.util.Failure // unused
-           |^^^^^^^^^^^^^^^^^^^^^^^^^
+           |                  ^^^^^^^
            |""".stripMargin
       }
       _ = assertNoDiff(
@@ -107,9 +107,10 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/Main.scala")
-      _ <- server.didSave("a/src/main/scala/Main.scala")(
+      _ <- server.didChange("a/src/main/scala/Main.scala")(
         _.replace("val a = 2", "val a = 1\n  val a = 2")
       )
+      _ <- server.didSave("a/src/main/scala/Main.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         // Duplicate diagnostics are expected, the scala compiler reports them.
@@ -121,9 +122,10 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
            |      ^^^^^
            |""".stripMargin,
       )
-      _ <- server.didSave("a/src/main/scala/Main.scala")(
+      _ <- server.didChange("a/src/main/scala/Main.scala")(
         _.replace("val a = 1\n  ", "")
       )
+      _ <- server.didSave("a/src/main/scala/Main.scala")
       // FIXME: https://github.com/scalacenter/bloop/issues/785
       _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
@@ -257,9 +259,10 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       )
       _ <- server.executeCommand(ServerCommands.DisconnectBuildServer)
       _ = assertNoDiagnostics()
-      _ <- server.didSave("a/src/main/scala/a/B.scala")(
+      _ <- server.didChange("a/src/main/scala/a/B.scala")(
         _.replace("String", "Int")
       )
+      _ <- server.didSave("a/src/main/scala/a/B.scala")
       _ <- server.didClose("a/src/main/scala/a/B.scala")
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
@@ -295,7 +298,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
            |""".stripMargin,
       )
       _ = Files.delete(server.toPath("a/src/main/scala/a/B.scala").toNIO)
-      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
+      _ <- server.didSave("a/src/main/scala/a/A.scala")
       _ = assertNoDiagnostics()
     } yield ()
   }
@@ -355,9 +358,10 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
            |               ^^
            |""".stripMargin,
       )
-      _ <- server.didSave("a/src/main/scala/a/A.scala")(
+      _ <- server.didChange("a/src/main/scala/a/A.scala")(
         _.replace("val n: Int = \"\"", "val n: Int = \" ")
       )
+      _ <- server.didSave("a/src/main/scala/a/A.scala")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/scala/a/A.scala:2:16: error: unclosed string literal
@@ -387,7 +391,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       _ <- server.didOpen(B.path)
       _ = assertNoDiagnostics()
       _ <- server.didChange(B.path) { _ => B.content("String", "1") }
-      _ <- server.didSave(B.path)(identity)
+      _ <- server.didSave(B.path)
       _ = assertNoDiff(
         client.pathDiagnostics(B.path),
         """|b/src/main/scala/b/B.scala:4:19: error: type mismatch;
@@ -404,7 +408,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       )
       _ <- server.didOpen(A.path)
       _ <- server.didChange(A.path) { _ => A.content("String", "1") }
-      _ <- server.didSave(A.path)(identity)
+      _ <- server.didSave(A.path)
       _ = assertNoDiff(
         client.pathDiagnostics(A.path),
         """|a/src/main/scala/a/A.scala:4:19: error: type mismatch;
@@ -418,7 +422,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       _ = assertNoDiff(client.pathDiagnostics(B.path), "")
 
       _ <- server.didChange(A.path) { _ => A.content("String", "\"aa\"") }
-      _ <- server.didSave(A.path)(identity)
+      _ <- server.didSave(A.path)
       _ = assertNoDiff(client.pathDiagnostics(A.path), "")
 
       // we want the diagnostics for B to appear
@@ -434,7 +438,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
 
       _ <- server.didOpen(B.path)
       _ <- server.didChange(B.path) { _ => B.content("String", "\"aa\"") }
-      _ <- server.didSave(B.path)(identity)
+      _ <- server.didSave(B.path)
       _ = assertNoDiagnostics()
 
     } yield ()

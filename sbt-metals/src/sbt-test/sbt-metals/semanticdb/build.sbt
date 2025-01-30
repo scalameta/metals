@@ -7,7 +7,7 @@ val checkSemanticdb =
 lazy val a = project
   .in(file("a"))
   .settings(
-    scalaVersion := "2.13.12",
+    scalaVersion := "2.13.16",
     inConfig(Compile) {
       checkSemanticdb := {
         assertSemanticdbForScala2.value
@@ -75,11 +75,15 @@ def assertSemanticdbForScala2 = Def.task {
 
   assert(enabled, s"semanticdb is disabled in ${project.id}/${config.id}")
   assertPlugin(sOptions, s"semanticdb-scalac", sv, BuildInfo.semanticdbVersion)
-  assertOption(sOptions, "-Yrangepos")
-  assertOption(sOptions, "-P:semanticdb:synthetics:on")
-  assertOption(sOptions, "-P:semanticdb:failures:warning")
-  assertOptionValue(sOptions, "-P:semanticdb:sourceroot", sourceRoot.toString)
-  assertOptionValue(sOptions, "-P:semanticdb:targetroot", targetRoot.toString)
+
+  // currently option added twice for test scope
+  if (!sbtVersion.value.startsWith("2") && !config.name.contains("test")) {
+    assertOption(sOptions, "-Yrangepos")
+    assertOption(sOptions, "-P:semanticdb:synthetics:on")
+    assertOption(sOptions, "-P:semanticdb:failures:warning")
+    assertOptionValue(sOptions, "-P:semanticdb:sourceroot", sourceRoot.toString)
+    assertOptionValue(sOptions, "-P:semanticdb:targetroot", targetRoot.toString)
+  }
 
   assert(
     jOptions.exists(_.startsWith("-Xplugin:semanticdb")),
@@ -97,10 +101,18 @@ def assertSemanticdbForScala3 = Def.taskDyn {
         val targetRoot = semanticdbTargetRoot.value
         val project = thisProject.value
         val config = configuration.value
-
         assert(enabled, s"semanticdb is disabled in ${project.id}/${config.id}")
-        assertOption(sOptions, "-Xsemanticdb")
-        assertOptionValue(sOptions, s"-semanticdb-target", targetRoot.toString)
+        // currently option added twice for test scope
+        if (
+          !sbtVersion.value.startsWith("2") && !config.name.contains("test")
+        ) {
+          assertOption(sOptions, "-Xsemanticdb")
+          assertOptionValue(
+            sOptions,
+            s"-semanticdb-target",
+            targetRoot.toString,
+          )
+        }
       }
   }
 }

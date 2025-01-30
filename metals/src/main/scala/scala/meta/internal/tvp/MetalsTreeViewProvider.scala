@@ -93,6 +93,8 @@ class MetalsTreeViewProvider(
               TreeViewNode
                 .fromCommand(ServerCommands.ConnectBuildServer, "connect"),
               TreeViewNode
+                .fromCommand(ServerCommands.BspSwitch, "discard"),
+              TreeViewNode
                 .fromCommand(ServerCommands.CascadeCompile, "cascade"),
               TreeViewNode.fromCommand(ServerCommands.CancelCompile, "cancel"),
               TreeViewNode.fromCommand(ServerCommands.CleanCompile, "clean"),
@@ -132,9 +134,8 @@ class MetalsTreeViewProvider(
     val dialect =
       if (path.isJarFileSystem) {
         path.jarPath
-          .map { p =>
-            ScalaVersions.dialectForDependencyJar(p.filename)
-          }
+          .flatMap(p => ScalaVersions.scalaBinaryVersionFromJarName(p.filename))
+          .map(ScalaVersions.dialectForScalaVersion(_, includeSource3 = true))
           .getOrElse(dialects.Scala3)
       } else dialectFromWorkspace
     val input = path.toInput
@@ -264,7 +265,7 @@ class FolderTreeViewProvider(
     valueTooltip = _.toString,
     toplevels = () => buildTargets.allSourceJars.filter(_.exists),
     loadSymbols = (path, symbol) => {
-      val dialect = ScalaVersions.dialectForDependencyJar(path.filename)
+      val dialect = ScalaVersions.dialectForDependencyJar(path, buildTargets)
       classpath.jarSymbols(path, symbol, dialect)
     },
     toplevelIcon = "package",

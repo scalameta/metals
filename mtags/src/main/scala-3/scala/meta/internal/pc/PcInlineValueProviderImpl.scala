@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.pc.IndexedContext.Result
 import scala.meta.internal.pc.InlineValueProvider.Errors
 import scala.meta.pc.OffsetParams
 
@@ -43,7 +44,9 @@ final class PcInlineValueProviderImpl(
           DefinitionTree(defn, pos)
         }
         .toRight(Errors.didNotFindDefinition)
-      symbols = symbolsUsedInDefn(definition.tree.rhs)
+      path = Interactive.pathTo(unit.tpdTree, definition.tree.rhs.span)(using newctx)
+      indexedContext = IndexedContext(Interactive.contextOfPath(path)(using newctx))
+      symbols = symbolsUsedInDefn(definition.tree.rhs).filter(indexedContext.lookupSym(_) == Result.InScope)
       references <- getReferencesToInline(definition, allOccurences, symbols)
     yield
       val (deleteDefinition, refsEdits) = references
@@ -106,27 +109,28 @@ final class PcInlineValueProviderImpl(
     val adjustedEnd = extend(pos.end - 1, ')', 1) + 1
     text.slice(adjustedStart, adjustedEnd).mkString
 
-  private def symbolsUsedInDefn(
-      rhs: Tree
-  ): List[Symbol] =
+  /** 
+   * Return all scope symbols used in this
+   */
+  private def symbolsUsedInDefn(rhs: Tree): Set[Symbol] =
     def collectNames(
-        symbols: List[Symbol],
+        symbols: Set[Symbol],
         tree: Tree,
-    ): List[Symbol] =
+    ): Set[Symbol] =
       tree match
         case id: (Ident | Select)
             if !id.symbol.is(Synthetic) && !id.symbol.is(Implicit) =>
-          tree.symbol :: symbols
+          symbols + tree.symbol
         case _ => symbols
 
-    val traverser = new DeepFolder[List[Symbol]](collectNames)
-    traverser(List(), rhs)
+    val traverser = new DeepFolder[Set[Symbol]](collectNames)
+    traverser(Set(), rhs)
   end symbolsUsedInDefn
 
   private def getReferencesToInline(
       definition: DefinitionTree,
       allOccurences: List[Occurence],
-      symbols: List[Symbol],
+      symbols: Set[Symbol],
   ): Either[String, (Boolean, List[Reference])] =
     val defIsLocal = definition.tree.symbol.ownersIterator
       .drop(1)
@@ -151,7 +155,7 @@ final class PcInlineValueProviderImpl(
 
   private def makeRefsEdits(
       refs: List[Occurence],
-      symbols: List[Symbol],
+      symbols: Set[Symbol],
   ): Either[String, List[Reference]] =
     val newctx = driver.currentCtx.fresh.setCompilationUnit(unit)
     def buildRef(occurence: Occurence): Either[String, Reference] =

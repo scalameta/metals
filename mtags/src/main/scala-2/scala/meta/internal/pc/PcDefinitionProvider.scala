@@ -55,7 +55,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   }
 
   private def definition(findTypeDef: Boolean): DefinitionResult = {
-    if (params.isWhitespace || params.isDelimiter || params.offset() == 0) {
+    if (params.offset() == 0) {
       DefinitionResultImpl.empty
     } else {
       val unit = addCompilationUnit(
@@ -65,7 +65,13 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       )
       typeCheck(unit)
       val pos = unit.position(params.offset())
-      val tree = definitionTypedTreeAt(pos)
+      val tree = definitionTypedTreeAt(pos) match {
+        case ident: Ident if !ident.namePosition.includes(pos) =>
+          EmptyTree
+        case select: Select if !select.namePosition.includes(pos) =>
+          EmptyTree
+        case other => other
+      }
       val symbol =
         if (findTypeDef) typeSymbol(tree, pos)
         else namedParamSymbol(tree, pos).getOrElse(tree.symbol)
@@ -87,13 +93,16 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         symbol.pos.source.eq(unit.source)
       ) {
         val focused = symbol.pos.focus
+        val actualName = symbol.decodedName.stripSuffix("_=").trim
         val namePos =
-          if (symbol.name.startsWith("x$") && symbol.isSynthetic) focused.toLsp
-          else focused.withEnd(focused.start + symbol.name.length()).toLsp
+          if (symbol.name.startsWith("x$") && symbol.isSynthetic) focused
+          else focused.withEnd(focused.start + actualName.length())
+        val adjusted = namePos.adjust(unit.source.content)._1
+
         DefinitionResultImpl(
           semanticdbSymbol(symbol),
           ju.Collections.singletonList(
-            new Location(params.uri().toString(), namePos)
+            new Location(params.uri().toString(), adjusted.toLsp)
           )
         )
       } else {
@@ -114,7 +123,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     }
   }
 
-  def definitionTypedTreeAt(pos: Position): Tree = {
+  private def definitionTypedTreeAt(pos: Position): Tree = {
     def loop(tree: Tree): Tree = {
       tree match {
         case Select(qualifier, name) =>
@@ -168,10 +177,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         if (expr.pos.includes(pos)) {
           expr.findSubtree(pos)
         } else {
-          i.selector(pos) match {
-            case None => EmptyTree
-            case Some(sym) => Ident(sym.name).setSymbol(sym)
-          }
+          i.selectorIdent(pos).getOrElse(EmptyTree)
         }
       case sel @ Select(_, name) if sel.tpe == ErrorType =>
         val symbols = tree.tpe.member(name)
@@ -184,5 +190,4 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         loop(tree)
     }
   }
-
 }

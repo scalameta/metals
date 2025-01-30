@@ -32,7 +32,8 @@ class JavadocIndexer(
     input: Input.VirtualFile,
     fn: SymbolDocumentation => Unit,
     contentType: ContentType
-) extends JavaMtags(input, includeMembers = true) {
+)(implicit rc: ReportContext)
+    extends JavaMtags(input, includeMembers = true) {
   override def visitClass(
       cls: JavaClass,
       pos: Position,
@@ -171,7 +172,7 @@ object JavadocIndexer {
   def all(
       input: Input.VirtualFile,
       contentType: ContentType
-  ): List[SymbolDocumentation] = {
+  )(implicit rc: ReportContext): List[SymbolDocumentation] = {
     val buf = List.newBuilder[SymbolDocumentation]
     foreach(input, contentType)(buf += _)
     buf.result()
@@ -179,7 +180,7 @@ object JavadocIndexer {
   def foreach(
       input: Input.VirtualFile,
       contentType: ContentType
-  )(fn: SymbolDocumentation => Unit): Unit = {
+  )(fn: SymbolDocumentation => Unit)(implicit rc: ReportContext): Unit = {
     new JavadocIndexer(input, fn, contentType).indexRoot()
   }
 }

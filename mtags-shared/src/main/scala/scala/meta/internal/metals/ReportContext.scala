@@ -6,6 +6,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import java.util.logging.Logger
 
 import scala.util.Try
 import scala.util.control.NonFatal
@@ -14,6 +15,7 @@ import scala.util.matching.Regex
 import scala.meta.internal.metals.utils.LimitedFilesManager
 import scala.meta.internal.metals.utils.TimestampedFile
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
+import scala.meta.internal.mtags.MD5
 
 trait ReportContext {
   def unsanitized: Reporter
@@ -90,6 +92,8 @@ class StdReporter(
     level: ReportLevel,
     override val name: String
 ) extends Reporter {
+  private val logger = Logger.getLogger(classOf[ReportContext].getName)
+
   val maybeReportsDir: Path =
     workspace.resolve(pathToReports).resolve(name)
   private lazy val reportsDir = maybeReportsDir.createDirectories()
@@ -146,12 +150,18 @@ class StdReporter(
             duplicate <- reportedMap.get(id)
           } yield duplicate
 
-        optDuplicate.orElse {
+        val pathToReport = optDuplicate.getOrElse {
           path.createDirectories()
           path.writeText(sanitize(report.fullText(withIdAndSummary = true)))
-          Some(path)
+          path
         }
-      }.toOption.flatten
+        if (!ifVerbose) {
+          logger.severe(
+            s"${report.shortSummary} (full report at: $pathToReport)"
+          )
+        }
+        pathToReport
+      }.toOption
 
   override def sanitize(text: String): String = {
     val textAfterWokspaceReplace =
@@ -235,7 +245,11 @@ case class Report(
   def fullText(withIdAndSummary: Boolean): String = {
     val sb = new StringBuilder
     if (withIdAndSummary) {
-      id.foreach(id => sb.append(s"${Report.idPrefix}$id\n"))
+      id.orElse(
+        error.map(error =>
+          MD5.compute(s"${name}:${error.getStackTrace().mkString("\n")}")
+        )
+      ).foreach(id => sb.append(s"${Report.idPrefix}$id\n"))
     }
     path.foreach(path => sb.append(s"$path\n"))
     error match {

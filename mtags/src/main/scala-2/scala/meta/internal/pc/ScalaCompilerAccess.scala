@@ -7,7 +7,6 @@ import scala.tools.nsc.interactive.ShutdownReq
 import scala.tools.nsc.reporters.StoreReporter
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.ReportContext
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.VirtualFileParams
 
@@ -50,15 +49,13 @@ class ScalaCompilerWrapper(global: MetalsGlobal)
 class ScalaCompilerAccess(
     config: PresentationCompilerConfig,
     sh: Option[ScheduledExecutorService],
-    newCompiler: () => ScalaCompilerWrapper,
-    additionalReportingData: () => String
-)(implicit ec: ExecutionContextExecutor, rc: ReportContext)
+    newCompiler: () => ScalaCompilerWrapper
+)(implicit ec: ExecutionContextExecutor)
     extends CompilerAccess[StoreReporter, MetalsGlobal](
       config,
       sh,
       newCompiler,
-      shouldResetJobQueue = false,
-      additionalReportingData
+      shouldResetJobQueue = false
     ) {
 
   def newReporter = new StoreReporter

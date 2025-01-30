@@ -356,6 +356,24 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |""".stripMargin,
   )
 
+  checkScala("new-class-infer-base-package")(
+    directory = Some("a/src/main/scala/foo/bar"),
+    fileType = Right(Class),
+    fileName = Right("Baz"),
+    expectedFilePath = "a/src/main/scala/foo/bar/Baz.scala",
+    expectedContent = s"""|package org.someorg.foo.bar
+                          |
+                          |class Baz {
+                          |$indent
+                          |}
+                          |""".stripMargin,
+    existingFiles = """|/a/src/main/scala/foo/Qux.scala
+                       |package org.someorg.foo
+                       |
+                       |class Qux
+                       |""".stripMargin,
+  )
+
   checkJava("new-java-class")(
     directory = Some("a/src/main/java/foo/"),
     fileType = Right(JavaClass),

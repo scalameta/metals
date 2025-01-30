@@ -1,5 +1,7 @@
 package scala.meta.internal.mtags
 
+import java.util.Optional
+
 import scala.annotation.tailrec
 import scala.util.control.NonFatal
 
@@ -28,6 +30,7 @@ import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.core.Types.TypeBounds
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
+import dotty.tools.dotc.transform.SymUtils.isLocal
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.util.Spans.Span
@@ -230,9 +233,10 @@ object MtagsEnrichments extends ScalametaCommonEnrichments:
     def stripBackticks: String = s.stripPrefix("`").stripSuffix("`")
 
   extension (search: SymbolSearch)
-    def symbolDocumentation(symbol: Symbol, contentType: ContentType = ContentType.MARKDOWN)(using
-        Context
-    ): Option[SymbolDocumentation] =
+    def symbolDocumentation(
+      symbol: Symbol,
+      contentType: ContentType = ContentType.MARKDOWN
+    )(using Context): Option[SymbolDocumentation] =
       def toSemanticdbSymbol(symbol: Symbol) =
         SemanticdbSymbols.symbolName(
           if !symbol.is(JavaDefined) && symbol.isPrimaryConstructor then
@@ -247,12 +251,14 @@ object MtagsEnrichments extends ScalametaCommonEnrichments:
             symbol.maybeOwner.companion,
           ).filter(_ != NoSymbol) ++ symbol.allOverriddenSymbols
         else symbol.allOverriddenSymbols
-
-      val documentation = search.documentation(
-        sym,
-        () => parentSymbols.map(toSemanticdbSymbol).toList.asJava,
-        contentType
-      )
+      val documentation =
+        if symbol.isLocal then Optional.empty
+        else
+          search.documentation(
+            sym,
+            () => parentSymbols.map(toSemanticdbSymbol).toList.asJava,
+            contentType
+          )
       if documentation.isPresent then Some(documentation.get())
       else None
     end symbolDocumentation

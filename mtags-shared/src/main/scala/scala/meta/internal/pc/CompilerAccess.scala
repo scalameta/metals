@@ -10,12 +10,9 @@ import java.util.logging.Logger
 import scala.concurrent.ExecutionContextExecutor
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.Report
-import scala.meta.internal.metals.ReportContext
-import scala.meta.internal.mtags.CommonMtagsEnrichments._
+import scala.meta.internal.metals.PcQueryContext
 import scala.meta.pc.CancelToken
 import scala.meta.pc.PresentationCompilerConfig
-import scala.meta.pc.VirtualFileParams
 
 /**
  * Manages the lifecycle and multi-threaded access to the presentation compiler.
@@ -28,17 +25,8 @@ abstract class CompilerAccess[Reporter, Compiler](
     config: PresentationCompilerConfig,
     sh: Option[ScheduledExecutorService],
     newCompiler: () => CompilerWrapper[Reporter, Compiler],
-    shouldResetJobQueue: Boolean,
-    additionalReportingData: () => String
-)(implicit ec: ExecutionContextExecutor, rc: ReportContext) {
-
-  def this(
-      config: PresentationCompilerConfig,
-      sh: Option[ScheduledExecutorService],
-      newCompiler: () => CompilerWrapper[Reporter, Compiler],
-      shouldResetJobQueue: Boolean
-  )(implicit ec: ExecutionContextExecutor, rc: ReportContext) =
-    this(config, sh, newCompiler, shouldResetJobQueue, () => "")
+    shouldResetJobQueue: Boolean
+)(implicit ec: ExecutionContextExecutor) {
 
   private val logger: Logger =
     Logger.getLogger(classOf[CompilerAccess[_, _]].getName)
@@ -90,16 +78,18 @@ abstract class CompilerAccess[Reporter, Compiler](
   /**
    * Asynchronously execute a function on the compiler thread with `Thread.interrupt()` cancellation.
    */
-  def withInterruptableCompiler[T](params: Option[VirtualFileParams])(
+  def withInterruptableCompiler[T](
       default: T,
       token: CancelToken
-  )(thunk: CompilerWrapper[Reporter, Compiler] => T): CompletableFuture[T] = {
+  )(
+      thunk: CompilerWrapper[Reporter, Compiler] => T
+  )(implicit queryInfo: PcQueryContext): CompletableFuture[T] = {
     val isFinished = new AtomicBoolean(false)
     var queueThread = Option.empty[Thread]
     val result = onCompilerJobQueue(
       () => {
         queueThread = Some(Thread.currentThread())
-        try withSharedCompiler(params)(default)(thunk)
+        try withSharedCompiler(default)(thunk)
         finally isFinished.set(true)
       },
       token
@@ -133,13 +123,13 @@ abstract class CompilerAccess[Reporter, Compiler](
    * Note that the function is still cancellable.
    */
   def withNonInterruptableCompiler[T](
-      params: Option[VirtualFileParams]
-  )(
       default: T,
       token: CancelToken
-  )(thunk: CompilerWrapper[Reporter, Compiler] => T): CompletableFuture[T] = {
+  )(
+      thunk: CompilerWrapper[Reporter, Compiler] => T
+  )(implicit queryInfo: PcQueryContext): CompletableFuture[T] = {
     onCompilerJobQueue(
-      () => withSharedCompiler(params)(default)(thunk),
+      () => withSharedCompiler(default)(thunk),
       token
     )
   }
@@ -149,9 +139,11 @@ abstract class CompilerAccess[Reporter, Compiler](
    *
    * May potentially run in parallel with other requests, use carefully.
    */
-  def withSharedCompiler[T](params: Option[VirtualFileParams])(
+  def withSharedCompiler[T](
       default: T
-  )(thunk: CompilerWrapper[Reporter, Compiler] => T): T = {
+  )(
+      thunk: CompilerWrapper[Reporter, Compiler] => T
+  )(implicit queryInfo: PcQueryContext): T = {
     try {
       thunk(loadCompiler())
     } catch {
@@ -160,14 +152,14 @@ abstract class CompilerAccess[Reporter, Compiler](
       case other: Throwable =>
         handleSharedCompilerException(other)
           .map { message =>
-            retryWithCleanCompiler(params)(
+            retryWithCleanCompiler(
               thunk,
               default,
               message
             )
           }
           .getOrElse {
-            handleError(other, params)
+            handleError(other)
             default
           }
     }
@@ -178,12 +170,10 @@ abstract class CompilerAccess[Reporter, Compiler](
   protected def ignoreException(t: Throwable): Boolean
 
   private def retryWithCleanCompiler[T](
-      params: Option[VirtualFileParams]
-  )(
       thunk: CompilerWrapper[Reporter, Compiler] => T,
       default: T,
       cause: String
-  ): T = {
+  )(implicit queryInfo: PcQueryContext): T = {
     shutdownCurrentCompiler()
     logger.log(
       Level.INFO,
@@ -194,41 +184,15 @@ abstract class CompilerAccess[Reporter, Compiler](
       case InterruptException() =>
         default
       case NonFatal(e) =>
-        handleError(e, params)
+        handleError(e)
         default
     }
   }
 
   private def handleError(
-      e: Throwable,
-      params: Option[VirtualFileParams]
-  ): Unit = {
-    val error = CompilerThrowable.trimStackTrace(e)
-    val report =
-      Report(
-        "compiler-error",
-        s"""|occurred in the presentation compiler.
-            |
-            |presentation compiler configuration:
-            |${additionalReportingData()}
-            |
-            |action parameters:
-            |${params.map(_.printed()).getOrElse("<NONE>")}
-            |""".stripMargin,
-        error,
-        path = params.map(_.uri())
-      )
-    val pathToReport =
-      rc.unsanitized.create(report)
-    pathToReport match {
-      case Some(path) =>
-        logger.log(
-          Level.SEVERE,
-          s"A severe compiler error occurred, full details of the error can be found in the error report $path"
-        )
-      case _ =>
-        logger.log(Level.SEVERE, error.getMessage, error)
-    }
+      e: Throwable
+  )(implicit queryInfo: PcQueryContext): Unit = {
+    queryInfo.report("compiler-error", e, "")
     shutdownCurrentCompiler()
   }
 

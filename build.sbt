@@ -9,8 +9,9 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
-def localSnapshotVersion = "1.4.2-SNAPSHOT"
+def localSnapshotVersion = "1.5.2-SNAPSHOT"
 def isCI = System.getenv("CI") != null
+def isTest = System.getenv("METALS_TEST") != null
 
 def isScala211(v: Option[(Long, Long)]): Boolean = v.contains((2, 11))
 def isScala212(v: Option[(Long, Long)]): Boolean = v.contains((2, 12))
@@ -41,7 +42,7 @@ ThisBuild / semanticdbVersion := V.semanticdb(scalaVersion.value)
 inThisBuild(
   List(
     version ~= { dynVer =>
-      if (isCI) dynVer
+      if (isCI && !isTest) dynVer
       else localSnapshotVersion // only for local publishing
     },
     scalaVersion := V.scala213,
@@ -197,6 +198,7 @@ val sharedScalacOptions = List(
 )
 
 val sharedSettings = sharedJavacOptions ++ sharedScalacOptions ++ List(
+  Compile / doc / sources := Seq.empty,
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
     if2 = List(
@@ -220,6 +222,7 @@ lazy val interfaces = project
     mimaPreviousArtifacts := Set(
       "org.scalameta" % "mtags-interfaces" % "1.2.2",
       "org.scalameta" % "mtags-interfaces" % "1.3.2",
+      "org.scalameta" % "mtags-interfaces" % "1.4.2",
     ),
     crossPaths := false,
     libraryDependencies ++= List(
@@ -258,7 +261,7 @@ lazy val mtagsShared = project
     },
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "4.29.0",
+      "com.google.protobuf" % "protobuf-java" % "4.29.3",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
@@ -315,8 +318,6 @@ val mtagsSettings = List(
     (ThisBuild / baseDirectory).value / "mtags",
     scalaVersion.value,
   ),
-  // @note needed to deal with issues with dottyDoc
-  Compile / doc / sources := Seq.empty,
   libraryDependencies ++= Seq(
     "com.lihaoyi" %% "geny" % V.genyVersion,
     "com.thoughtworks.qdox" % "qdox" % V.qdox, // for java mtags
@@ -341,7 +342,7 @@ val mtagsSettings = List(
         scala3ScalametaDependency,
         scala3SemanticdbDependency,
       ),
-    ),
+    )
   },
   libraryDependencies ++= {
     if (isCI) Nil
@@ -417,7 +418,7 @@ lazy val metals = project
       // =================
       // for bloom filters
       V.guava,
-      "org.scalameta" %% "metaconfig-core" % "0.13.0",
+      "org.scalameta" %% "metaconfig-core" % "0.14.0",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching
@@ -426,7 +427,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.16.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "11.0.0",
+      "org.flywaydb" % "flyway-core" % "11.2.0",
       "com.h2database" % "h2" % "2.3.232",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
@@ -456,7 +457,7 @@ lazy val metals = project
       "com.outr" %% "scribe-file" % V.scribe,
       "com.outr" %% "scribe-slf4j2" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "4.0.2",
+      "com.lihaoyi" %% "ujson" % "4.1.0",
       // For fetching projects' templates
       "com.lihaoyi" %% "requests" % "0.9.0",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
@@ -468,7 +469,6 @@ lazy val metals = project
       // For starting Ammonite
       "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.4.0",
       "org.scala-lang.modules" %% "scala-xml" % "2.3.0",
-      "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.4",
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
         .exclude("ch.epfl.scala", "bsp4j"),
     ),
@@ -526,7 +526,21 @@ lazy val `sbt-metals` = project
       "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
     scalaVersion := V.scala212,
+    crossScalaVersions := Seq(V.scala212, V.scala3ForSBT2),
+    scalacOptions := Seq("-release", "8"),
     scriptedLaunchOpts ++= Seq(s"-Dplugin.version=${version.value}"),
+    (pluginCrossBuild / sbtVersion) := {
+      scalaBinaryVersion.value match {
+        case "2.12" => "1.5.8"
+        case _ => "2.0.0-M3"
+      }
+    },
+    scalacOptions ++= {
+      scalaBinaryVersion.value match {
+        case "2.12" => "-Xsource:3" :: Nil
+        case _ => Nil
+      }
+    },
   )
   .settings(sharedScalacOptions)
   .enablePlugins(BuildInfoPlugin, SbtPlugin)
@@ -646,6 +660,7 @@ lazy val mtest = project
       List(
         "org.scalameta" %% "munit" % {
           if (scalaVersion.value.startsWith("2.11")) "1.0.0-M10"
+          else if (scalaVersion.value == "2.13.14") "1.0.2"
           else if (scalaVersion.value == "2.13.13") "1.0.0"
           else if (scalaVersion.value == "2.13.12") "1.0.0-M11"
           else if (scalaVersion.value == "2.13.11") "1.0.0-M10"
@@ -804,7 +819,7 @@ lazy val docs = project
     publish / skip := true,
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
-    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.13.0",
+    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.14.0",
   )
   .dependsOn(metals)
   .enablePlugins(DocusaurusPlugin)

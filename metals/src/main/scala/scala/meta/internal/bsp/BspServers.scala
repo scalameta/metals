@@ -119,7 +119,7 @@ final class BspServers(
         args,
         projectDirectory,
         redirectErrorOutput = false,
-        variables,
+        variables + ("SCALA_CLI_POWER" -> "true"),
         processOut = None,
         processErr = Some(l => scribe.info("BSP server: " + l)),
         discardInput = false,

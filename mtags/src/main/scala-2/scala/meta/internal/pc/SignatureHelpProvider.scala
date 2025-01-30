@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
 
@@ -8,7 +9,9 @@ import org.eclipse.lsp4j.ParameterInformation
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureInformation
 
-class SignatureHelpProvider(val compiler: MetalsGlobal) {
+class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
+    queryInfo: PcQueryContext
+) {
   import compiler._
 
   def signatureHelp(
@@ -20,14 +23,22 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
       cursor = cursor(params.offset(), params.text())
     )
     val pos = unit.position(params.offset())
-    typedTreeAt(pos)
-    val enclosingApply = new EnclosingApply(pos).find(unit.body)
-    val typedEnclosing = typedTreeAt(enclosingApply.pos)
-    new MethodCallTraverser(unit, pos)
-      .fromTree(typedEnclosing)
-      .map(toSignatureHelp)
-      .getOrElse(new SignatureHelp())
+    (for {
+      _ <- safeTypedTreeAt(pos)
+      enclosingApply = new EnclosingApply(pos).find(unit.body)
+      typedEnclosing <- safeTypedTreeAt(enclosingApply.pos)
+      encolsingCall <- new MethodCallTraverser(unit, pos).fromTree(
+        typedEnclosing
+      )
+    } yield toSignatureHelp(encolsingCall)) getOrElse new SignatureHelp()
   }
+
+  private def safeTypedTreeAt(pos: Position): Option[Tree] =
+    try {
+      Some(typedTreeAt(pos))
+    } catch {
+      case _: NullPointerException => None
+    }
 
   class EnclosingApply(pos: Position) extends Traverser {
     var last: Tree = EmptyTree
@@ -478,18 +489,21 @@ class SignatureHelpProvider(val compiler: MetalsGlobal) {
     if (activeSignature == null) {
       activeSignature = 0
     }
-    val mainSignature = infos(activeSignature)
-    val deduplicated = infos
-      .filter { sig =>
-        sig != mainSignature && sig.getLabel() != mainSignature.getLabel()
-      }
-      .distinctBy(_.getLabel())
+    if (infos.isEmpty) new SignatureHelp()
+    else {
+      val mainSignature = infos(activeSignature)
+      val deduplicated = infos
+        .filter { sig =>
+          sig != mainSignature && sig.getLabel() != mainSignature.getLabel()
+        }
+        .distinctBy(_.getLabel())
 
-    new SignatureHelp(
-      (mainSignature :: deduplicated).asJava,
-      0,
-      activeParameter
-    )
+      new SignatureHelp(
+        (mainSignature :: deduplicated).asJava,
+        0,
+        activeParameter
+      )
+    }
   }
 
   def mparamss(

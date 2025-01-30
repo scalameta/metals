@@ -28,8 +28,7 @@ final class BatchedFunction[A, B](
     default: Option[B] = None,
 )(implicit ec: ExecutionContext)
     extends (Seq[A] => Future[B])
-    with Function2[Seq[A], () => Unit, Future[B]]
-    with Pauseable {
+    with Function2[Seq[A], () => Unit, Future[B]] {
 
   /**
    * Call the function with the given arguments.
@@ -73,10 +72,6 @@ final class BatchedFunction[A, B](
   def apply(
       argument: A
   ): Future[B] = apply(List(argument), () => ())
-
-  override def doUnpause(): Unit = {
-    unlock()
-  }
 
   def cancelAll(): Unit = {
     val requests = ConcurrentQueue.pollAll(queue)
@@ -125,7 +120,7 @@ final class BatchedFunction[A, B](
       p.future.onComplete { _ => unlock() }
       p
     }
-    if (!isPaused.get() && lock.compareAndSet(None, Some(promise))) {
+    if (lock.compareAndSet(None, Some(promise))) {
       runRelease(promise)
     } else {
       // Do nothing, the submitted arguments will be handled

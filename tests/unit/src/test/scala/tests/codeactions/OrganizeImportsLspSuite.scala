@@ -125,7 +125,7 @@ class OrganizeImportsLspSuite
       txt.replace(
         """|import scala.concurrent.ExecutionContext.global""".stripMargin,
         """|import scala.concurrent.ExecutionContext.global
-           |import java.nio.file.ClassDoNotExist
+           |import java.nio.files.Files
            |// comment""".stripMargin,
       )
     },

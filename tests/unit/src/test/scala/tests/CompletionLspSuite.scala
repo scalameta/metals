@@ -369,7 +369,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
           |}
           |""".stripMargin
       )
-      _ <- server.didSave("a/src/main/java/a/B.java")(identity)
+      _ <- server.didSave("a/src/main/java/a/B.java")
       _ <- assertCompletion(
         "a.n@@",
         """|name java.lang.String
@@ -409,7 +409,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
            |}
            |""".stripMargin
       )
-      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
+      _ <- server.didSave("a/src/main/scala/a/A.scala")
       _ <- assertCompletion(
         "  val k = Qu@@",
         """|QuadCurve2D - java.awt.geom
@@ -459,7 +459,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
            |}
            |""".stripMargin
       )
-      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
+      _ <- server.didSave("a/src/main/scala/a/A.scala")
       _ <- assertCompletion(
         "  Fut@@",
         """
@@ -511,7 +511,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
            |}
            |""".stripMargin
       )
-      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
+      _ <- server.didSave("a/src/main/scala/a/A.scala")
       _ <- assertCompletion(
         "  Fut@@",
         """
@@ -528,16 +528,17 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
           |""".stripMargin,
         saveCompletionOrder = true,
       )
-      _ <- server.didSave("a/src/main/scala/a/A.scala")(_ =>
+      _ <- server.didChange("a/src/main/scala/a/A.scala")(_ =>
         """|package a
            |
            |object A {
            |}""".stripMargin
       )
+      _ <- server.didSave("a/src/main/scala/a/A.scala")
 
       // add scala Future reference in other file
       _ = assertNoDiagnostics()
-      _ <- server.didSave("a/src/main/scala/a/B.scala")(_ =>
+      _ <- server.didChange("a/src/main/scala/a/B.scala")(_ =>
         """|package a
            |import scala.concurrent.Future
            |object E {
@@ -545,6 +546,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
            |}
            |""".stripMargin
       )
+      _ <- server.didSave("a/src/main/scala/a/B.scala")
       _ = assertNoDiagnostics()
       _ <- server.didChange("a/src/main/scala/a/A.scala")(_ =>
         """|package a
@@ -554,7 +556,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
            |}
            |""".stripMargin
       )
-      _ <- server.didSave("a/src/main/scala/a/A.scala")(identity)
+      _ <- server.didSave("a/src/main/scala/a/A.scala")
 
       // check that completions changed
       _ <- assertCompletion(
@@ -572,6 +574,41 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
           |CompletableFuture - java.util.concurrent
           |""".stripMargin,
         saveCompletionOrder = true,
+      )
+    } yield ()
+  }
+
+  test("package-object") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": { "scalaVersion": "${V.scala213}" }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |object Main extends App {
+           |  def foo(n: FancyInt, k: Int): Unit = {
+           |    // @@
+           |  }
+           |}
+           |/a/src/main/scala/a/package.scala
+           |package object a {
+           |  type FancyInt = Int
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ = assertNoDiagnostics()
+      _ <- assertCompletion(
+        "n.max@@",
+        """|max(that: Double): Double
+           |max(that: Float): Float
+           |max(that: Int): Int
+           |max(that: Long): Long
+           |""".stripMargin,
+        filename = Some("a/src/main/scala/a/Main.scala"),
       )
     } yield ()
   }

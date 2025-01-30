@@ -160,9 +160,8 @@ class MunitTestFinder(
   private def filterOccurences(doc: TextDocument): Vector[SymbolOccurrence] =
     doc.occurrences
       .filter(occ =>
-        testMethodSymbols.exists(testSymbol =>
-          occ.symbol.startsWith(testSymbol)
-        )
+        testMethodSymbols
+          .exists(testSymbol => occ.symbol.startsWith(testSymbol))
       )
       .toVector
 

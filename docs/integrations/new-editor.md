@@ -101,8 +101,6 @@ The currently available settings for `InitializationOptions` are listed below.
         snippetAutoIndent?: boolean;
       }
       debuggingProvider?: boolean;
-      decorationProvider?: boolean;
-      inlineDecorationProvider?: boolean;
       didFocusProvider?: boolean;
       doctorProvider?: "json" | "html";
       executeClientCommandProvider?: boolean;
@@ -230,13 +228,6 @@ Boolean value to signify that the client supports the
 
 Default value: `false`
 
-##### `decorationProvider`
-
-Boolean value to signify that the client supports the
-[Decoration Protocol](../integrations/decoration-protocol.md).
-
-Default value: `false`
-
 ##### `didFocusProvider`
 
 Boolean value to signify that the client supports the
@@ -288,13 +279,6 @@ Possible values:
   macOS+Linux and `\` on Windows) and forward slashes `/` for relative parts.
   For example, `C:\Users\IEUser\workspace\project/*.{scala,sbt,properties}`.
   This mode is used by the VS Code client.
-
-##### `inlineDecorationProvider`
-
-If the client implements the Metals Decoration Protocol **and** supports
-decorations to be shown inline and not only at the end of a line.
-
-Default: `false`
 
 ##### `icons`
 
@@ -696,11 +680,6 @@ Metals implements several custom JSON-RPC endpoints related to rendering tree
 views in the editor client, the
 [Tree View Protocol](../integrations/tree-view-protocol.md).
 
-### Decoration Protocol
-
-Metals implements an LSP extension to display non-editable text in the editor,
-see the [Decoration Protocol](../integrations/decoration-protocol.md).
-
 ### `metals/status`
 
 The Metals status notification is sent from the server to the client to notify
@@ -897,25 +876,6 @@ export interface MetalsQuickPickItem {
 export interface MetalsQuickPickResult {
   itemId?: string;
   cancelled?: boolean;
-}
-```
-
-### `metals/windowStateDidChange`
-
-The `metals/windowStateDidChange` notification is sent from the client to the
-server to indicate whether the editor application window is focused or not. When
-the editor window is not focused, Metals tries to avoid triggering expensive
-computation in the background such as compilation.
-
-_Notification_:
-
-- method: `metals/windowStateDidChange`
-- params: `WindowStateDidChangeParams` defined as follows:
-
-```ts
-interface WindowStateDidChangeParams( {
-  /** If true, the editor application window is focused. False, otherwise. */
-  focused: boolean;
 }
 ```
 

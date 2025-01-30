@@ -62,5 +62,5 @@ object Developers {
       "vchelyshov@virtuslab.com",
       url("https://github.com/dos65"),
     ),
-  ),
+  )
 }

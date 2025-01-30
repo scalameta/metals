@@ -46,8 +46,9 @@ class UserConfigurationSync(
       .orElse {
         val fullJson =
           params.getSettings.asInstanceOf[JsonElement].getAsJsonObject
+        val metalsSection =
+          Option(fullJson.getAsJsonObject(section)).getOrElse(new JsonObject())
         for {
-          metalsSection <- Option(fullJson.getAsJsonObject(section))
           newConfig <- userConfigFrom(metalsSection)
         } yield Future
           .sequence(services.map(_.onUserConfigUpdate(newConfig)))

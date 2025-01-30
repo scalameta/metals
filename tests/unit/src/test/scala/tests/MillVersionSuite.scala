@@ -27,6 +27,13 @@ class MillVersionSuite extends BaseSuite {
   )
 
   check(
+    """|.mill-version
+       |0.12.6-native
+       |""".stripMargin,
+    "0.12.6",
+  )
+
+  check(
     """|.config/mill-version
        |0.11.1
        |""".stripMargin,

@@ -527,4 +527,18 @@ class HoverDocSuite extends BaseHoverSuite {
                 |""".stripMargin
     )
   )
+
+  check(
+    "i7093",
+    """|object O {
+       |  /** Ooopsie daisy */
+       |  val computeLogicOwners: Unit = {
+       |    /** This is a comment */
+       |    <<def logi@@cOwners = ???>>
+       |    ???
+       |  }
+       |}
+       |""".stripMargin,
+    """def logicOwners: Nothing""".hover.stripMargin
+  )
 }

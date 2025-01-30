@@ -208,7 +208,9 @@ class OutgoingCallsFinder(
       source: AbsolutePath,
       doc: TextDocument,
       root: Tree,
-  )(implicit ec: ExecutionContext): Future[List[
+  )(implicit
+      ec: ExecutionContext
+  ): Future[List[
     FindOutgoingCallsResult
   ]] = {
     def getOutgoingCallResultFromSymbol(

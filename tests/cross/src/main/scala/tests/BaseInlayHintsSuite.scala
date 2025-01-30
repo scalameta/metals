@@ -47,7 +47,8 @@ class BaseInlayHintsSuite extends BasePCSuite {
         .asScala
         .toList
 
-      val obtained = TestInlayHints.applyInlayHints(withPkg, inlayHints)
+      val obtained =
+        TestInlayHints.applyInlayHints(withPkg, inlayHints, withTooltip = false)
 
       assertEquals(
         obtained,

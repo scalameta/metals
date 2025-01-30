@@ -24,9 +24,11 @@ abstract class BaseHoverSuite
       expected: String,
       includeRange: Boolean = false,
       automaticPackage: Boolean = true,
-      compat: Map[String, String] = Map.empty
+      compat: Map[String, String] = Map.empty,
+      repeat: Int = 1
   )(implicit loc: Location): Unit = {
     test(testOpt) {
+      assert(repeat > 0)
       val filename = "Hover.scala"
       val pkg = scala.meta.Term.Name(testOpt.name).syntax
       val noRange = original
@@ -42,10 +44,14 @@ abstract class BaseHoverSuite
       } else {
         CompilerRangeParams(Paths.get(filename).toUri(), code, so, eo)
       }
-      val hover = presentationCompiler
-        .hover(pcParams)
-        .get()
-        .asScala
+      val hover = (0 to repeat)
+        .map(_ =>
+          presentationCompiler
+            .hover(pcParams)
+            .get()
+            .asScala
+        )
+        .last
         .map(_.toLsp())
       val obtained: String = renderAsString(code, hover, includeRange)
       assertNoDiff(

@@ -44,7 +44,10 @@ class StandaloneSymbolSearch(
 
   private val index = OnDemandSymbolIndex.empty()
   sources.foreach(s =>
-    index.addSourceJar(s, ScalaVersions.dialectForDependencyJar(s.filename))
+    index.addSourceJar(
+      s,
+      ScalaVersions.dialectForDependencyJar(s, buildTargets),
+    )
   )
 
   private val docs = new Docstrings(index)

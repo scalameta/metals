@@ -9,7 +9,7 @@ package scala.meta.internal.metals
  * method signatures of the `PresentationCompiler` class.
  */
 class PresentationCompilerClassLoader(parent: ClassLoader)
-    extends ClassLoader(null) {
+    extends ClassLoader(ClassLoader.getSystemClassLoader().getParent()) {
   override def findClass(name: String): Class[_] = {
     val isShared =
       name.startsWith("org.eclipse.lsp4j") ||

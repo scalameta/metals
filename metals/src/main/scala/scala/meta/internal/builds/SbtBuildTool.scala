@@ -6,11 +6,14 @@ import java.util.Properties
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
+import scala.meta.internal.bsp.BspConfigGenerationStatus.BspConfigGenerationStatus
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.internal.semver.SemVer
@@ -59,6 +62,33 @@ case class SbtBuildTool(
 
   override def cleanupStaleConfig(): Unit = {
     // no need to cleanup, the plugin deals with that
+  }
+
+  override def generateBspConfig(
+      workspace: AbsolutePath,
+      systemProcess: List[String] => Future[BspConfigGenerationStatus],
+      statusBar: StatusBar,
+  ): Future[BspConfigGenerationStatus] = {
+    cleanUpPlugins()
+    super.generateBspConfig(workspace, systemProcess, statusBar)
+  }
+
+  def cleanUpPlugins(): Unit = {
+    @tailrec
+    def cleanUpMeta(root: AbsolutePath): Unit = {
+      val meta = root.resolve("project")
+      if (meta.exists) {
+        val metalsPlugins = meta.resolve("metals.sbt")
+        if (metalsPlugins.exists) metalsPlugins.delete()
+        cleanUpMeta(meta)
+      }
+    }
+    try {
+      cleanUpMeta(projectRoot)
+    } catch {
+      case NonFatal(e) =>
+        scribe.error(s"Failed to clean up sbt plugins: ${e.getMessage}")
+    }
   }
 
   override def digest(workspace: AbsolutePath): Option[String] =
@@ -302,11 +332,26 @@ object SbtBuildTool {
   def writeSbtMetalsPlugins(projectRoot: AbsolutePath): Boolean = {
     val mainMeta = projectRoot.resolve("project")
     val metaMeta = projectRoot.resolve("project").resolve("project")
-    val writtenPlugin =
-      writePlugins(mainMeta, metalsPluginDetails, debugAdapterPluginDetails)
-    val writtenMeta =
-      writePlugins(metaMeta, metalsPluginDetails, jdiToolsPluginDetails)
-    writtenPlugin || writtenMeta
+
+    val isSbt2 =
+      SbtBuildTool.loadVersion(projectRoot).exists(_.startsWith("2."))
+    if (isSbt2) {
+      val writtenPlugin = writePlugins(mainMeta, metalsPluginDetails)
+      val writtenMeta = writePlugins(
+        metaMeta,
+        metalsPluginDetails,
+      )
+      writtenMeta || writtenPlugin
+    } else {
+      val writtenPlugin = writePlugins(
+        mainMeta,
+        metalsPluginDetails,
+        debugAdapterPluginDetails,
+      )
+      val writtenMeta =
+        writePlugins(metaMeta, metalsPluginDetails, jdiToolsPluginDetails)
+      writtenMeta || writtenPlugin
+    }
   }
 
   private case class PluginDetails(
@@ -370,7 +415,7 @@ object SbtBuildTool {
         "This plugin makes sure that the JDI tools are in the sbt classpath.",
         "JDI tools are used by the debug adapter server.",
       ),
-      s""""org.scala-debugger" % "sbt-jdi-tools" % "${BuildInfo.sbtJdiToolsVersion}"""",
+      s""""com.github.sbt" % "sbt-jdi-tools" % "${BuildInfo.sbtJdiToolsVersion}"""",
       resolver = None,
     )
 

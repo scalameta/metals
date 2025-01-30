@@ -229,9 +229,10 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
           |}
           |""".stripMargin,
       )
-      _ <- server.didSave("a/src/main/scala/Main.scala")(text =>
+      _ <- server.didChange("a/src/main/scala/Main.scala")(text =>
         text.replace("object Main", "class Main")
       )
+      _ <- server.didSave("a/src/main/scala/Main.scala")
       _ <- assertNoCodeLenses("a/src/main/scala/Main.scala")
 
     } yield ()

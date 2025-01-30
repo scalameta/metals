@@ -1,5 +1,6 @@
 package scala.meta.internal.pc
 
+import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
@@ -10,7 +11,8 @@ final class ExtractMethodProvider(
     val compiler: MetalsGlobal,
     range: RangeParams,
     extractionPos: OffsetParams
-) extends ExtractMethodUtils {
+)(implicit queryInfo: PcQueryContext)
+    extends ExtractMethodUtils {
   import compiler._
   def extractMethod: List[l.TextEdit] = {
     val text = range.text()

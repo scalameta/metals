@@ -241,7 +241,13 @@ object MetalsInteractive:
            */
           else if head.isInstanceOf[TypeTree] then
             enclosingSymbolsWithExpressionType(tail, pos, indexed)
-          else Nil
+          else
+            path match
+              case (_: ValDef) :: (t : Template) :: _ =>
+                t.body.collectFirst {
+                  case d: ValDef if d.nameSpan.contains(pos.span) => List((d.symbol, d.symbol.info))
+                }.getOrElse(Nil)
+              case _ => Nil
         else
           val recovered = recoverError(head, indexed)
           if recovered.isEmpty then

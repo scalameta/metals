@@ -175,6 +175,27 @@ class ScalaCliActionsSuite
   )
 
   checkScalaCLI(
+    "i7071",
+    s"""|//> using scala "${BuildInfo.scala213}"
+        |object X {
+        |   <<FiniteDuration>>
+        |}
+        |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("FiniteDuration", "scala.concurrent.duration")}
+        |${CreateNewSymbol.title("FiniteDuration")}
+        |""".stripMargin,
+    s"""|//> using scala "${BuildInfo.scala213}"
+        |import scala.concurrent.duration.FiniteDuration
+        |object X {
+        |   FiniteDuration
+        |}
+        |""".stripMargin,
+    scalaCliOptions = List("--actions", "-S", scalaVersion),
+    expectNoDiagnostics = false,
+    fileName = "A.scala",
+  )
+
+  checkScalaCLI(
     "script-organize-imports",
     s"""|//> using scala "${BuildInfo.scala213}"
         |

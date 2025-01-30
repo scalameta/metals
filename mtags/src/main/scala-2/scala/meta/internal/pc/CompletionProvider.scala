@@ -7,6 +7,7 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
@@ -21,7 +22,7 @@ import org.eclipse.{lsp4j => l}
 class CompletionProvider(
     val compiler: MetalsGlobal,
     params: OffsetParams
-) {
+)(implicit val queryInfo: PcQueryContext) {
   import compiler._
 
   private def cursorName: String = {
@@ -110,8 +111,11 @@ class CompletionProvider(
         case _ => detailString(member, history)
       }
 
+      val includeDetailInLabel = compiler.metalsConfig.isDetailIncludedInLabel
       def labelWithSig =
-        if (member.sym.isMethod || member.sym.isValue) {
+        if (
+          includeDetailInLabel && (member.sym.isMethod || member.sym.isValue)
+        ) {
           ident + detail
         } else {
           ident
@@ -128,7 +132,7 @@ class CompletionProvider(
           o.label.getOrElse(labelWithSig)
         case _: WorkspaceImplicitMember =>
           s"$labelWithSig (implicit)"
-        case o: WorkspaceMember =>
+        case o: WorkspaceMember if includeDetailInLabel =>
           s"$ident - ${o.sym.owner.fullName}"
         case _ => labelWithSig
       }

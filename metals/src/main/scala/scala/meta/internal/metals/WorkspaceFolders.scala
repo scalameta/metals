@@ -36,9 +36,8 @@ class WorkspaceFolders(
     val scalaServices =
       scalaProjects
         .filterNot(path =>
-          path.optDelegatePath.exists(path =>
-            scalaProjects.exists(_.path == path)
-          ) ||
+          path.optDelegatePath
+            .exists(path => scalaProjects.exists(_.path == path)) ||
             knowProjectRefs(path.path)
         )
         .map(createService)
