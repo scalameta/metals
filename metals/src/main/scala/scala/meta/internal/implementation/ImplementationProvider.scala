@@ -36,7 +36,7 @@ import scala.meta.internal.semanticdb.Signature
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
-import scala.meta.internal.semanticdb.TypeRef
+import scala.meta.internal.semanticdb.{Type, TypeRef, StructuralType, WithType}
 import scala.meta.internal.semanticdb.TypeSignature
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.io.AbsolutePath
@@ -46,6 +46,7 @@ import scala.meta.pc.PcSymbolProperty
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.TextDocumentPositionParams
+import scala.meta.internal.semanticdb.Scope
 
 final class ImplementationProvider(
     semanticdbs: () => Semanticdbs,
@@ -254,15 +255,15 @@ final class ImplementationProvider(
           } yield Future.successful(found)
         def pcSearch = {
           val symbol = {
-            val inferredSymbol =
-              s"${implReal.symbol}${info.symbol.stripPrefix(classSymbol)}"
-            inferredSymbol.desc match {
+            val descPart = info.symbol.stripPrefix(classSymbol).desc match {
               case Method(value, _) => new Method(value, "()").toString()
-              case _ => inferredSymbol
+              case d => d
             }
+            s"${implReal.symbol}$descPart"
           }
           def overridesSym(info: PcSymbolInformation) =
             info.overriddenSymbols.contains(info.symbol)
+
           compilers.info(source, symbol).flatMap {
             case Some(info) if overridesSym(info) =>
               Future.successful(info.symbol)
@@ -545,9 +546,17 @@ object ImplementationProvider {
     def fromClassSignature(
         classSig: ClassSignature
     ): Seq[(String, ClassLocation)] = {
-      classSig.parents.collect { case t: TypeRef =>
-        t.symbol -> ClassLocation(symbol, filePath.map(_.toNIO))
+      // support `&`-types here?
+      def collectFn: Type => Seq[(String, ClassLocation)] = {
+        case t: TypeRef =>
+          Seq(t.symbol -> ClassLocation(symbol, filePath.map(_.toNIO)))
+        case StructuralType(WithType(ts), Some(Scope.defaultInstance)) =>
+          ts.flatMap(collectFn)
+        case _ => Seq.empty
       }
+      val parentPairs = classSig.parents.flatMap(collectFn)
+      val selfTypePair = Seq(classSig.self).flatMap(collectFn)
+      parentPairs ++ selfTypePair
     }
 
     def fromTypeSignature(typeSig: TypeSignature) = {
