@@ -2,6 +2,8 @@ package tests
 
 import java.nio.file.Files
 
+import scala.meta.internal.metals.{BuildInfo => V}
+
 class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
   private val prefix = "a/src/main/scala"
 
@@ -749,7 +751,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
       "A.B.*\nimport A.B.given" -> "C.D.given\nimport C.D.Sun",
     ),
     sourcesAreCompiled = true,
-    scalaVersion = Some("3.2.0"),
+    scalaVersion = Some(V.scala3),
   )
 
   renamed(
@@ -813,7 +815,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
       Map(s"$prefix/A/B/Solaris.scala" -> s"$prefix/A/D/Solaris.scala"),
     expectedRenames = Map("B" -> "D", "//" -> "import D.{Solaris, given}\n//"),
     sourcesAreCompiled = true,
-    scalaVersion = Some("3.2.0"),
+    scalaVersion = Some(V.scala3),
   )
 
   renamed(

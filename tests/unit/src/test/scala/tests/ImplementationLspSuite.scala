@@ -640,7 +640,7 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
        |""".stripMargin,
   )
 
-  if (isJava17) {
+  if (isJava21) {
     checkSymbols(
       "exception",
       """package a
@@ -648,7 +648,6 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
         |""".stripMargin,
       """|a/MyException#
          |com/sun/beans/finder/SignatureException#
-         |com/sun/imageio/plugins/jpeg/JFIFMarkerSegment#IllegalThumbException#
          |com/sun/jdi/AbsentInformationException#
          |com/sun/jdi/ClassNotLoadedException#
          |com/sun/jdi/ClassNotPreparedException#
@@ -663,6 +662,7 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
          |com/sun/jdi/InvocationException#
          |com/sun/jdi/NativeMethodException#
          |com/sun/jdi/ObjectCollectedException#
+         |com/sun/jdi/OpaqueFrameException#
          |com/sun/jdi/VMCannotBeModifiedException#
          |com/sun/jdi/VMDisconnectedException#
          |com/sun/jdi/VMMismatchException#

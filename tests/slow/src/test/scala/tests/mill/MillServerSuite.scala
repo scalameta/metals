@@ -65,7 +65,7 @@ class MillServerSuite
   }
 
   val versionsToTest: List[String] =
-    List("0.10.0", "0.10.8", supportedBspVersion)
+    List("0.11.13", supportedBspVersion)
 
   versionsToTest.foreach(testGenerationAndConnection)
 
