@@ -27,7 +27,7 @@ class FilterMapToCollectCodeAction(trees: Trees) extends CodeAction {
   ): Option[Future[l.CodeAction]] = {
     println(codeAction.getData.toJson)
     val edits = for {
-      data <- codeAction.getData.toJson.as[FilterMapCollectParams].toOption
+      data <- parseData[FilterMapCollectParams](codeAction) 
       params = data.param
       uri = params.getUri()
       path = uri.toAbsolutePath
