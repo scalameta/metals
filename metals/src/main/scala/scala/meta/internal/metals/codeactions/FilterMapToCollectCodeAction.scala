@@ -20,14 +20,13 @@ class FilterMapToCollectCodeAction(trees: Trees) extends CodeAction {
   private case class FilterMapCollectParams(
       param: l.TextDocumentIdentifier,
       pos: l.Position,
-  )
+  ) extends CodeActionResolveData
 
   override def resolveCodeAction(codeAction: l.CodeAction, token: CancelToken)(
       implicit ec: ExecutionContext
   ): Option[Future[l.CodeAction]] = {
-    println(codeAction.getData.toJson)
     val edits = for {
-      data <- parseData[FilterMapCollectParams](codeAction) 
+      data <- parseData[FilterMapCollectParams](codeAction)
       params = data.param
       uri = params.getUri()
       path = uri.toAbsolutePath
