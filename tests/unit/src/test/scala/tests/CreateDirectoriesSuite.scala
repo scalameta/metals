@@ -55,7 +55,7 @@ class CreateDirectoriesSuite extends BaseSuite {
 
     // check that we get an exception using the default nio method
     intercept[FileAlreadyExistsException] {
-      Files.createDirectories(symlinkPluginsPath)
+      Files.createDirectory(symlinkPluginsPath)
     }
     AbsolutePath(symlinkPluginsPath).createDirectories()
   }
