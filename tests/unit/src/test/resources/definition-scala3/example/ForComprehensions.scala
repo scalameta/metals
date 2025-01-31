@@ -6,7 +6,7 @@ class ForComprehensions/*ForComprehensions.scala*/ {
     b/*ForComprehensions.semanticdb*/ <- List/*package.scala*/(a/*ForComprehensions.semanticdb*/)
     if (
       a/*ForComprehensions.semanticdb*/,
-      b/*ForComprehensions.semanticdb*/,/*unexpected: local1*/
+      b/*ForComprehensions.semanticdb*/,
     ) ==/*Any.scala*/ (1, 2)
     (
       c/*ForComprehensions.semanticdb*/,
@@ -16,13 +16,13 @@ class ForComprehensions/*ForComprehensions.scala*/ {
       a/*ForComprehensions.semanticdb*/,
       b/*ForComprehensions.semanticdb*/,
       c/*ForComprehensions.semanticdb*/,
-      d/*ForComprehensions.semanticdb*/,/*unexpected: local4*/
+      d/*ForComprehensions.semanticdb*/,
     ) ==/*Any.scala*/ (1, 2, 3, 4)
     e/*ForComprehensions.semanticdb*/ = (
       a/*ForComprehensions.semanticdb*/,
       b/*ForComprehensions.semanticdb*/,
       c/*ForComprehensions.semanticdb*/,
-      d/*ForComprehensions.semanticdb*/,/*unexpected: local4*/
+      d/*ForComprehensions.semanticdb*/,
     )
     if e/*ForComprehensions.semanticdb*/ ==/*Any.scala*/ (1, 2, 3, 4)
     f/*ForComprehensions.semanticdb*/ <- List/*package.scala*/(e/*ForComprehensions.semanticdb*/)
@@ -33,7 +33,7 @@ class ForComprehensions/*ForComprehensions.scala*/ {
       c/*ForComprehensions.semanticdb*/,
       d/*ForComprehensions.semanticdb*/,
       e/*ForComprehensions.semanticdb*/,
-      f/*ForComprehensions.semanticdb*/,/*unexpected: local6*/
+      f/*ForComprehensions.semanticdb*/,
     )
   }
 
