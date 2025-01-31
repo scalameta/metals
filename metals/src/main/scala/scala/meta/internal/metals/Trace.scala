@@ -31,14 +31,15 @@ object Trace {
       // the path making it difficult to tail/cat from the terminal and cmd+click from VS Code.
       // Instead, we use the `cacheDir` which has no spaces. The logs are safe to remove so
       // putting them in the "cache directory" makes more sense compared to the "config directory".
-      projectDirectories.flatMap { dirs =>
-        val cacheDir = Paths.get(dirs.cacheDir)
-        // https://github.com/scalameta/metals/issues/5590
-        // deal with issue on windows and PowerShell, which would cause us to create a null directory in the workspace
-        if (cacheDir.isAbsolute())
-          Some(AbsolutePath(cacheDir))
-        else None
-      }
+      projectDirectories.collectFirst {
+        case dirs if !dirs.cacheDir.contains("null") =>
+          val cacheDir = Paths.get(dirs.cacheDir)
+          // https://github.com/scalameta/metals/issues/5590
+          // deal with issue on windows and PowerShell, which would cause us to create a null directory in the workspace
+          if (cacheDir.isAbsolute())
+            Some(AbsolutePath(cacheDir))
+          else None
+      }.flatten
     }.toOption.flatten
 
   private val localDirectory: AbsolutePath =
