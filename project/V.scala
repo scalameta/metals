@@ -15,7 +15,7 @@ object V {
   val ammonite213Version = "2.13.15"
   // Rules need to be manually updated to support
   val bazelScalaVersion = "2.13.12"
-  val ammonite3Version = "3.3.4"
+  val ammonite3Version = "3.3.5"
 
   val ammonite = "3.0.1"
   val betterMonadicFor = "0.3.1"
