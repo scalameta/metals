@@ -14,7 +14,7 @@ class Scalalib/*Scalalib.scala*/ {
         Short/*Short.scala*/,
         Double/*Double.scala*/,
         Float/*Float.scala*/,
-        Char/*Char.scala*/,/*unexpected: scala.Char#*/
+        Char/*Char.scala*/,
     )
   ](null)
   lst/*Scalalib.scala*/.isInstanceOf/*Any.scala*/[Any/*Any.scala*/]

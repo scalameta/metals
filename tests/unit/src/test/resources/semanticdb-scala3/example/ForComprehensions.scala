@@ -6,7 +6,7 @@ class ForComprehensions/*example.ForComprehensions#*/ {
     b/*local1*/ <- List/*scala.package.List.*/(a/*local0*/)
     if (
       a/*local0*/,
-      b,/*local1*/
+      b/*local1*/,
     ) ==/*scala.Any#`==`().*/ (1, 2)
     (
       c/*local3*/,
@@ -16,13 +16,13 @@ class ForComprehensions/*example.ForComprehensions#*/ {
       a/*local0*/,
       b/*local1*/,
       c/*local3*/,
-      d,/*local4*/
+      d/*local4*/,
     ) ==/*scala.Any#`==`().*/ (1, 2, 3, 4)
     e/*local5*//*local5*/ = (
       a/*local0*/,
       b/*local1*/,
       c/*local3*/,
-      d,/*local4*/
+      d/*local4*/,
     )
     if e/*local5*/ ==/*scala.Any#`==`().*/ (1, 2, 3, 4)
     f/*local6*/ <- List/*scala.package.List.*/(e/*local5*/)
@@ -33,7 +33,7 @@ class ForComprehensions/*example.ForComprehensions#*/ {
       c/*local3*/,
       d/*local4*/,
       e/*local5*/,
-      f,/*local6*/
+      f/*local6*/,
     )
   }
 

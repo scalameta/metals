@@ -23,7 +23,7 @@ object NamedArguments/*example.NamedArguments.*/ {
   // anonymous classes
   @deprecated/*scala.deprecated#*/(
     message/*scala.deprecated#`<init>`().(message)*/ = "a",
-    since/*scala.deprecated#`<init>`().(since)*/ = susan,/*example.NamedArguments.susan.*/
+    since/*scala.deprecated#`<init>`().(since)*/ = susan/*example.NamedArguments.susan.*/,
   ) def b/*example.NamedArguments.b().*/ = 1
 
   // vararg
