@@ -7,6 +7,7 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.MillifyScalaCliDependencyCodeAction._
+import scala.meta.internal.metals.scalacli.DependencyConverter
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -47,7 +48,8 @@ class MillifyScalaCliDependencyCodeAction(buffers: Buffers) extends CodeAction {
           .collectFirst {
             case comment: Comment
                 if isScalaCliUsingDirectiveComment(comment.toString()) =>
-              convertSbtToMillStyleIfPossible(comment.toString())
+              DependencyConverter
+                .convertSbtToMillStyleIfPossible(comment.toString())
                 .map(
                   buildAction(comment, kind, path, range.getStart.getLine)(_)
                 )
@@ -67,7 +69,7 @@ object MillifyScalaCliDependencyCodeAction {
       path: AbsolutePath,
       commentStartLine: Int,
   )(
-      suggestion: ReplacementSuggestion
+      suggestion: DependencyConverter.ReplacementSuggestion
   ) = {
     val pos = new l.Range(
       new l.Position(
@@ -84,50 +86,14 @@ object MillifyScalaCliDependencyCodeAction {
       kind = kind,
       changes = List(
         path -> List(
-          new l.TextEdit(pos, suggestion.replacementText)
+          new l.TextEdit(pos, suggestion.replacementDirective)
         )
       ),
     )
   }
 
-  private def convertSbtToMillStyleIfPossible(
-      sbtStyleDirective: String
-  ): Option[ReplacementSuggestion] =
-    sbtStyleDirective.split(" ").filterNot(_.isEmpty) match {
-      case Array(
-            "//>",
-            "using",
-            dependencyIdentifierLike,
-            groupId,
-            groupDelimiter,
-            artifactId,
-            "%",
-            version,
-          )
-          if dependencyIdentifiers(dependencyIdentifierLike) &&
-            sbtDependencyDelimiters(groupDelimiter) =>
-        val groupArtifactJoin = groupDelimiter.replace('%', ':')
-        val millStyleDependency =
-          s"$groupId$groupArtifactJoin$artifactId:$version".replace("\"", "")
-        Some(
-          ReplacementSuggestion(dependencyIdentifierLike, millStyleDependency)
-        )
-      case _ => None
-    }
-
-  private val dependencyIdentifiers = Set("dep", "lib", "plugin")
-  private val sbtDependencyDelimiters = Set("%", "%%", "%%%")
-
   private def actionTitle(millStyleDependency: String): String =
     s"""Convert to "$millStyleDependency""""
-
-  private case class ReplacementSuggestion(
-      dependencyIdentifier: String,
-      millStyleDependency: String,
-  ) {
-    val replacementText: String =
-      s"//> using $dependencyIdentifier \"$millStyleDependency\""
-  }
 
   private[codeactions] def isScalaCliUsingDirectiveComment(
       text: String

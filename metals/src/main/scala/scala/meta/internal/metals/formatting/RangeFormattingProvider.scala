@@ -35,6 +35,7 @@ class RangeFormattingProvider(
     userConfig: () => UserConfiguration,
 ) {
   val formatters: List[RangeFormatter] = List(
+    ScalaCliDependencyRangeFormatter,
     MultilineString(userConfig),
     IndentOnPaste(userConfig),
   )
