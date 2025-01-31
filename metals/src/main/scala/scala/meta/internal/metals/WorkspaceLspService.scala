@@ -158,8 +158,10 @@ class WorkspaceLspService(
 
   def getHttpServer(): Future[Option[MetalsHttpServer]] = {
     httpServer match {
-      // If there is no doctor format set then no doctor will be available otherwise
-      case HttpServerOff if clientConfig.doctorFormat() == None =>
+      // execute client command provider is used to provide the normal doctor
+      case HttpServerOff
+          if !clientConfig.isExecuteClientCommandProvider && !clientConfig
+            .isHttpEnabled() =>
         languageClient
           .showMessageRequest(Messages.StartHttpServer.params())
           .asScala
@@ -175,7 +177,7 @@ class WorkspaceLspService(
             }
           }
       case HttpServerOn(server) => Future.successful(Some(server))
-      case HttpServerIgnored => Future.successful(None)
+      case _ => Future.successful(None)
     }
   }
 
