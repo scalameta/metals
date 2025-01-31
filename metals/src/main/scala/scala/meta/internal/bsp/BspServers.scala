@@ -229,6 +229,10 @@ object BspServers {
         None
       },
       details => {
+        if (details.getVersion() == null) {
+          val json = ujson.read(text)
+          json("millVersion").strOpt.map(details.setVersion)
+        }
         Some(details)
       },
     )

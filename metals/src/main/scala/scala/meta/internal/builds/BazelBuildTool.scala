@@ -60,7 +60,10 @@ case class BazelBuildTool(
 
   override def buildServerName: String = BazelBuildTool.bspName
 
-  override def shouldRegenerateBspJson(currentVersion: String): Boolean = {
+  override def shouldRegenerateBspJson(
+      currentVersion: String,
+      workspace: AbsolutePath,
+  ): Boolean = {
     currentVersion != BazelBuildTool.version
   }
 
