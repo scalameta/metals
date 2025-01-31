@@ -210,6 +210,7 @@ object BspServers {
     dirs match {
       case Some(dirs) =>
         List(dirs.dataLocalDir, dirs.dataDir).distinct
+          .filterNot(_.contains("null"))
           .map(path => Try(AbsolutePath(path)).toOption)
           .flatten
       case None =>
