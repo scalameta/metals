@@ -38,12 +38,14 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.debug.Breakpoint
 import org.eclipse.lsp4j.debug.CompletionsResponse
+import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.StackFrame
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugResponseMessage
 import org.eclipse.lsp4j.jsonrpc.messages.Message
+import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 
@@ -264,25 +266,31 @@ private[debug] final class DebugProxy(
       client.consume(response)
     case message @ ErrorOutputNotification(output) =>
       initialized.trySuccess(())
-      val analyzedMessage =
-        if (output.getOutput().contains("at "))
-          stackTraceAnalyzer
-            .fileLocationFromLine(output.getOutput())
-            .map(DebugProtocol.stacktraceOutputResponse(output, _))
-            .getOrElse(message)
-        else message
-      client.consume(analyzedMessage)
-
+      client.consume(addStackTraceFileLocation(message, output))
     case message @ OutputNotification(output) if stripColor =>
       val raw = output.getOutput()
       val msgWithoutColorCodes = filterANSIColorCodes(raw)
       output.setOutput(msgWithoutColorCodes)
       message.setParams(output)
-      client.consume(message)
-
+      client.consume(addStackTraceFileLocation(message, output))
+    case message @ OutputNotification(output) =>
+      client.consume(addStackTraceFileLocation(message, output))
     case message =>
       initialized.trySuccess(())
       client.consume(message)
+  }
+
+  private def addStackTraceFileLocation(
+      message: NotificationMessage,
+      output: OutputEventArguments,
+  ) = {
+    val lineWithoutColors = filterANSIColorCodes(output.getOutput())
+    if (StackTraceMatcher.isStackTraceLine(lineWithoutColors))
+      stackTraceAnalyzer
+        .fileLocationFromLine(lineWithoutColors)
+        .map(DebugProtocol.stacktraceOutputResponse(output, _))
+        .getOrElse(message)
+    else message
   }
 
   def cancel(): Unit = {
@@ -359,4 +367,15 @@ private[debug] object DebugProxy {
       case Some(trace) => new EndpointLogger(endpoint, trace)
       case None => endpoint
     }
+}
+
+object StackTraceMatcher {
+  private val stacktraceRegex =
+    raw"at (?:[^\s(.]*\.)*[^\s(]*\([^\s).]*(?:.scala|.java|.sc)\:\d*\)".r
+  def isStackTraceLine(line: String): Boolean = {
+    line.trim() match {
+      case stacktraceRegex() => true
+      case _ => false
+    }
+  }
 }
