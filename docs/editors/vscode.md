@@ -40,7 +40,7 @@ It is also possible to opt in to install the pre-release version and try out the
 latest cutting edge features from Metals server. Apart from new features,
 pre-release versions also include many bugfixes. It's encouraged to use them
 with [SNAPSHOT](#SNAPSHOT) releases of Metals server. Using pre-release versions
-may result in less stable experience and it is not indented for beginners.
+may result in less stable experience and it is not intented for beginners.
 Pre-release versions follow `major.minor.PATCH` versioning.
 
 ![Install the pre-release extension](https://imgur.com/CzOTleE.png)
@@ -134,8 +134,9 @@ following locations:
 
 ## Using latest Metals <a name="SNAPSHOT">SNAPSHOT</a>
 
-Update the "Server Version" setting to try out the latest pending Metals
-features.
+Update the "metals.serverVersion" setting to try out the latest pending Metals
+features and fixes. To open settings go to `File -> Preferences -> Settings` and
+then use the search to find the specific option.
 
 ```scala mdoc:releases
 

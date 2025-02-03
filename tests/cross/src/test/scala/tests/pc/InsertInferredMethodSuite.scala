@@ -125,8 +125,6 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
-  // doesn't work currently, User(1) is not being typed
-  // https://github.com/scalameta/metals/issues/6954
   checkEdit(
     "custom-type-advanced",
     """|
@@ -144,8 +142,31 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |
        |    case class User(i : Int)
        |
-       |    def otherMethod(arg0: Any, arg1: Int) = ???
+       |    def otherMethod(arg0: User, arg1: Int) = ???
        |    otherMethod(User(1), 1)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "custom-type-advanced-more",
+    """|
+       |trait Main {
+       |    def method1(b: Double, s : String) = 123
+       |
+       |    case class User(i : Int)
+       |
+       |    <<otherMethod>>(List(Set(User(1))), Map("1" -> 1))
+       |}
+       |
+       |""".stripMargin,
+    """|trait Main {
+       |    def method1(b: Double, s : String) = 123
+       |
+       |    case class User(i : Int)
+       |
+       |    def otherMethod(arg0: List[Set[User]], arg1: Map[String,Int]) = ???
+       |    otherMethod(List(Set(User(1))), Map("1" -> 1))
        |}
        |""".stripMargin
   )
@@ -286,7 +307,26 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |""".stripMargin
   )
 
-  checkError(
+  checkEdit(
+    "lambda-generic-chain-type-list",
+    """|
+       |trait Main {
+       |  def main() = {
+       |    List((1, 2, 3)).filter(_ => true).map(<<otherMethod>>)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|trait Main {
+       |  def main() = {
+       |    def otherMethod(arg0: (Int, Int, Int)) = ???
+       |    List((1, 2, 3)).filter(_ => true).map(otherMethod)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
     "lambda-generic-complex-type-list",
     """|
        |trait Main {
@@ -296,10 +336,15 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |}
        |
        |""".stripMargin,
-    "Could not infer method for `otherMethod`, please report an issue in github.com/scalameta/metals"
+    """|trait Main {
+       |  def main() = {
+       |    def otherMethod(arg0: (Int, Int, Int)) = ???
+       |    List((1, 2, 3)).map(otherMethod)
+       |  }
+       |}
+       |""".stripMargin
   )
 
-  // https://github.com/scalameta/metals/issues/6954
   checkEdit(
     "lambda-generic-complex-type",
     """|
@@ -314,7 +359,7 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
     """|trait Main {
        |  def main() = {
        |    val list = List((1, 2, 3))
-       |    def otherMethod(arg0: (T1, T2, T3)) = ???
+       |    def otherMethod(arg0: (Int, Int, Int)) = ???
        |    list.map(otherMethod)
        |  }
        |}
@@ -335,8 +380,35 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
     """|trait Main {
        |  def main() = {
        |    val list = List(1, 2, 3)
-       |    def otherMethod(arg0: Int) = ???
+       |    def otherMethod(arg0: Int): Boolean = ???
        |    list.filter(otherMethod)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "method-in-class",
+    """|
+       |class User(i: Int){
+       |  def map(s: String => Int) = i
+       |}
+       |trait Main {
+       |  def main() = {
+       |    val user = new User(1)
+       |    user.map(<<otherMethod>>)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|class User(i: Int){
+       |  def map(s: String => Int) = i
+       |}
+       |trait Main {
+       |  def main() = {
+       |    val user = new User(1)
+       |    def otherMethod(arg0: String): Int = ???
+       |    user.map(otherMethod)
        |  }
        |}
        |""".stripMargin

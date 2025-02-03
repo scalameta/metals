@@ -453,5 +453,39 @@ class ExtractValueLspSuite
        |  )
        |}""".stripMargin,
   )
+  check(
+    "extract-value-fewer-braces",
+    """|import scala.util.Try
+       |
+       |def main =
+       |  val x = Try:
+       |    So<<m>>e(new Exception)""".stripMargin,
+    s"""${ExtractValueCodeAction.title("Some(new E` ... as value")}""",
+    """|import scala.util.Try
+       |
+       |def main =
+       |  val newValue = 
+       |    Some(new Exception)
+       |  val x = Try(newValue)""".stripMargin,
+    scalaVersion = "3.3.4",
+  )
+  check(
+    "extract-value-fewer-braces-multiline",
+    """|import scala.util.Try
+       |
+       |def main =
+       |  val x = Try:
+       |    println("hello")
+       |    So<<m>>e(new Exception)""".stripMargin,
+    s"""${ExtractValueCodeAction.title("println(\"h` ... as value")}""",
+    """|import scala.util.Try
+       |
+       |def main =
+       |  val newValue = 
+       |    println("hello")
+       |    Some(new Exception)
+       |  val x = Try(newValue)""".stripMargin,
+    scalaVersion = "3.3.4",
+  )
 
 }

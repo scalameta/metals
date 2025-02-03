@@ -19,13 +19,23 @@ abstract class SupportedScalaVersions {
   implicit val ec: scala.concurrent.ExecutionContext =
     scala.concurrent.ExecutionContext.global
 
+  type SupportedVersions = String
+  type SupportedAtRelease = String
+
   def supportedVersionsString(
       version: String,
       timeout: FiniteDuration,
-  ): String = {
-    findAllSupported(version, timeout).getOrElse(
-      formatVersions(BuildInfo.supportedScalaVersions)
-    )
+  ): Either[SupportedAtRelease, SupportedVersions] = {
+    findAllSupported(version, timeout) match {
+      case None =>
+        Left(
+          formatVersions(
+            BuildInfo.supportedScalaVersions
+          )
+        )
+      case Some(value) => Right(value)
+    }
+
   }
 
   private def findAllSupported(

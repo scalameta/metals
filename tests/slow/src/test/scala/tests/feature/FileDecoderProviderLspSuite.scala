@@ -648,7 +648,7 @@ object FileDecoderProviderLspSuite {
   private val tastySingle =
     s"""|Header:
         |  version: 28.3.0
-        |  tooling: Scala 3.3.4
+        |  tooling: Scala 3.3.5
         |     UUID: 000af99d-8578-97d4-00fd-3ab11b2e95b0
         |
         |Names (307 bytes, starting from 35):
@@ -781,7 +781,7 @@ object FileDecoderProviderLspSuite {
   private val tastyMultiple =
     s"""|Header:
         |  version: 28.3.0
-        |  tooling: Scala 3.3.4
+        |  tooling: Scala 3.3.5
         |     UUID: 00c4e36f-58ab-50ea-00a1-598e5ec4df86
         |
         |Names (208 bytes, starting from 35):
@@ -864,7 +864,7 @@ object FileDecoderProviderLspSuite {
   private val tastyToplevel =
     """|Header:
        |  version: 28.3.0
-       |  tooling: Scala 3.3.4
+       |  tooling: Scala 3.3.5
        |     UUID: 0086aea0-56eb-7ed4-0077-cbc6a31c7680
        |
        |Names (315 bytes, starting from 35):

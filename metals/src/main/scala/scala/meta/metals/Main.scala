@@ -27,10 +27,17 @@ object Main extends SupportedScalaVersions {
   }
   def main(args: Array[String]): Unit = {
     if (args.exists(Set("-v", "--version", "-version"))) {
+      val supported =
+        supportedVersionsString(BuildInfo.metalsVersion, 15.seconds) match {
+          case Left(value) => value
+          case Right(value) => value
+        }
+
       println(
         s"""|metals ${BuildInfo.metalsVersion}
             |
-            |${supportedVersionsString(BuildInfo.metalsVersion, 15.seconds)}
+            |$supported
+            |}
             |""".stripMargin
       )
       sys.exit(0)

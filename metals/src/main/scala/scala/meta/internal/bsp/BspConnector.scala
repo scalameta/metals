@@ -200,9 +200,8 @@ class BspConnector(
               .showMessageRequest(query.params)
               .asScala
               .map(item =>
-                Option(item).map(item =>
-                  distinctServers(query.mapping(item.getTitle))
-                )
+                Option(item)
+                  .map(item => distinctServers(query.mapping(item.getTitle)))
               )
             _ = tables.buildServers.chooseServer(item.getName())
             _ = optSetBuildTool(item.getName())

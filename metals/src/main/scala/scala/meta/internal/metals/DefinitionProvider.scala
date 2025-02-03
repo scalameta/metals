@@ -98,9 +98,10 @@ final class DefinitionProvider(
       if (path.isScalaFilename) {
         compilers()
           .definition(params, token)
-          .map(reportBuilder.setCompilerResult)
           .map {
-            case res if res.isEmpty => Some(res)
+            case res if res.isEmpty =>
+              reportBuilder.setCompilerResult(res)
+              Some(res)
             case res =>
               val pathToDef = res.locations.asScala.head.getUri.toAbsolutePath
               Some(
@@ -582,7 +583,7 @@ class DefinitionProviderReportBuilder(
 
   def build(): Option[Report] =
     compilerDefn match {
-      case Some(compilerDefn) if !foundScalaDocDef =>
+      case Some(compilerDefn) if !foundScalaDocDef && compilerDefn.isEmpty =>
         Some(
           Report(
             "empty-definition",

@@ -7,6 +7,7 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
@@ -21,7 +22,7 @@ import org.eclipse.{lsp4j => l}
 class CompletionProvider(
     val compiler: MetalsGlobal,
     params: OffsetParams
-) {
+)(implicit val queryInfo: PcQueryContext) {
   import compiler._
 
   private def cursorName: String = {

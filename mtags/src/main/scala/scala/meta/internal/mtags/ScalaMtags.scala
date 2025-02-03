@@ -294,8 +294,10 @@ class ScalaMtags(
             enterTypeParameters(t.tparams)
           }
         case t: Decl.Type =>
-          tpe(t.name, Kind.TYPE, 0); stop()
-          enterTypeParameters(t.tparams)
+          withFileOwner {
+            tpe(t.name, Kind.TYPE, 0); stop()
+            enterTypeParameters(t.tparams)
+          }
         case t: Defn.Val =>
           withFileOwner {
             enterPatterns(t.pats, Kind.METHOD, Property.VAL.value)

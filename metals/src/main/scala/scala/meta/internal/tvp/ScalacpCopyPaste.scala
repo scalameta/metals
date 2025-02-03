@@ -315,7 +315,7 @@ object ScalacpCopyPaste {
 
   private var nextId = 0
   private def freshSymbol(): String = {
-    val result = Symbols.Local(nextId.toString)
+    val result = Symbols.Local(nextId)
     nextId += 1
     result
   }
@@ -399,7 +399,7 @@ object ScalacpCopyPaste {
         if (sym.isType && sym.isCovariant) flip(p.COVARIANT)
         if (sym.isType && sym.isContravariant) flip(p.CONTRAVARIANT)
         // NOTE: Scalap doesn't expose locals.
-        if (/*kind.isLocal ||*/ sym.isUsefulField) {
+        if ( /*kind.isLocal ||*/ sym.isUsefulField) {
           if (sym.isMutable) flip(p.VAR)
           else flip(p.VAL)
         }

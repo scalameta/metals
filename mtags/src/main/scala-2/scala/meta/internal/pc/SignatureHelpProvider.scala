@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
 
@@ -8,7 +9,9 @@ import org.eclipse.lsp4j.ParameterInformation
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureInformation
 
-class SignatureHelpProvider(val compiler: MetalsGlobal) {
+class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
+    queryInfo: PcQueryContext
+) {
   import compiler._
 
   def signatureHelp(

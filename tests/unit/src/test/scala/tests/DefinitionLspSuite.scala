@@ -375,7 +375,9 @@ class DefinitionLspSuite
       _ = client.messageRequests.clear()
       _ <- server.didOpen("Main.scala")
       _ = server.workspaceDefinitions // trigger definition
-      _ <- server.didOpen("scala/package.scala")
+      // println should be found in Predef.scala
+      _ <- server.didOpen("scala/Predef.scala")
+      // toArray should be found in IterableOnce.scala
       _ <- server.didOpen("scala/collection/IterableOnce.scala")
       _ = assertNoDiff(
         client.workspaceMessageRequests,

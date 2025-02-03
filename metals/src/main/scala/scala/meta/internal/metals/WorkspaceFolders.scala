@@ -36,9 +36,8 @@ class WorkspaceFolders(
     val scalaServices =
       scalaProjects
         .filterNot(path =>
-          path.optDelegatePath.exists(path =>
-            scalaProjects.exists(_.path == path)
-          ) ||
+          path.optDelegatePath
+            .exists(path => scalaProjects.exists(_.path == path)) ||
             knowProjectRefs(path.path)
         )
         .map(createService)
@@ -102,7 +101,7 @@ class WorkspaceFolders(
     } yield ()
   }
 
-  def convertToScalaProject(folder: Folder): Option[MetalsLspService] = {
+  def convertToScalaProject(folder: Folder): Option[ProjectMetalsLspService] = {
     val WorkspaceFoldersServices(after, _) =
       folderServices.updateAndGet {
         case wfs @ WorkspaceFoldersServices(

@@ -69,9 +69,8 @@ class BuildTargetInfo(buildTargets: BuildTargets) {
       output += "  runtime - https://docs.oracle.com/en/java/javase/17/docs/specs/man/java.html#standard-options-for-java"
       output += "  "
       if (info.options.nonEmpty)
-        info.options.foreach(f =>
-          output += s"  ${if (f.isEmpty) "[BLANK]" else f}"
-        )
+        info.options
+          .foreach(f => output += s"  ${if (f.isEmpty) "[BLANK]" else f}")
       else
         output += "  [BLANK]"
     })

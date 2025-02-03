@@ -299,11 +299,9 @@ class SbtBloopLspSuite
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        importBuildMessage,
-      )
-      _ = assertNoDiff(
-        client.workspaceShowMessages,
-        ImportProjectFailed.getMessage,
+        s"""|$importBuildMessage
+            |${ImportProjectFailedSuggestBspSwitch.params().getMessage}
+            |""".stripMargin,
       )
       _ = assertStatus(!_.isInstalled)
       _ = client.messageRequests.clear()
