@@ -447,7 +447,7 @@ object BloopServers {
         if (Properties.isMac) bloopDirectories.cacheDir
         else bloopDirectories.dataLocalDir
       }
-      .filterNot(_.contains("null"))
+      .filter(MetalsProjectDirectories.isNotBroken)
     val baseDir = directory match {
       case None =>
         val userHome = Paths.get(System.getProperty("user.home"))
