@@ -34,7 +34,7 @@ object V {
   val javaSemanticdb = "0.10.3"
   val jsoup = "1.18.3"
   val kindProjector = "0.13.3"
-  val lsp4jV = "0.23.1"
+  val lsp4jV = "0.24.0"
   val mavenBloop = "2.0.1"
   val mill = "0.12.5"
   val mdoc = "2.6.2"
