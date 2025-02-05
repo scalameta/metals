@@ -290,6 +290,9 @@ object QuickBuild {
     "com.disneystreaming::weaver-cats" -> Config.TestFramework(
       List("weaver.framework.CatsEffect")
     ),
+    "com.lihaoyi:mill-contrib-testng" -> Config.TestFramework(
+      List("mill.testng.TestNGFramework")
+    ),
   )
 
   /**

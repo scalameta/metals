@@ -236,6 +236,7 @@ object TestFramework {
       case "munit" => MUnit
       case "ScalaTest" => Scalatest
       case "weaver-cats-effect" => WeaverCatsEffect
+      case "TestNG" => TestNG
       case _ => Unknown
     }
     .getOrElse(Unknown)
@@ -259,6 +260,10 @@ case object Scalatest extends TestFramework(true) {
 
 case object WeaverCatsEffect extends TestFramework(true) {
   def names: List[String] = List("weaver.BaseCatsSuite")
+}
+
+case object TestNG extends TestFramework(true) {
+  def names: List[String] = List("mill.testng.TestNGFramework")
 }
 
 case object Unknown extends TestFramework(false) {

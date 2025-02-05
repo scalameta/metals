@@ -26,12 +26,14 @@ import scala.meta.internal.metals.debug.JUnit4
 import scala.meta.internal.metals.debug.MUnit
 import scala.meta.internal.metals.debug.Scalatest
 import scala.meta.internal.metals.debug.TestFramework
+import scala.meta.internal.metals.debug.TestNG
 import scala.meta.internal.metals.debug.Unknown
 import scala.meta.internal.metals.debug.WeaverCatsEffect
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._
 import scala.meta.internal.metals.testProvider.frameworks.JunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.ScalatestTestFinder
+import scala.meta.internal.metals.testProvider.frameworks.TestNGTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.WeaverCatsEffectTestFinder
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -65,6 +67,7 @@ final class TestSuitesProvider(
 
   private val index = new TestSuitesIndex
   private val junitTestFinder = new JunitTestFinder
+  private val testNGTestFinder = new TestNGTestFinder
   private val munitTestFinder =
     new MunitTestFinder(trees, symbolIndex, semanticdbs)
   private val scalatestTestFinder =
@@ -333,6 +336,12 @@ final class TestSuitesProvider(
                 path = path,
                 suiteName = suite.fullyQualifiedName,
                 symbol = suite.symbol,
+              )
+            case TestNG =>
+              testNGTestFinder.findTests(
+                doc = semanticdb,
+                path = path,
+                suiteSymbol = suite.symbol,
               )
             case Unknown => Vector.empty
           }
