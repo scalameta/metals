@@ -4,7 +4,6 @@ import java.{util => ju}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.util.Try
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position.Range
@@ -89,7 +88,8 @@ final class DefinitionProvider(
       params: TextDocumentPositionParams,
       token: CancelToken,
   ): Future[DefinitionResult] = {
-    val reportBuilder = new DefinitionProviderReportBuilder(path, params)
+    val reportBuilder =
+      new DefinitionProviderReportBuilder(path, params, buffers)
     lazy val isScala3 = ScalaVersions.isScala3Version(
       scalaVersionSelector.scalaVersionForPath(path)
     )
@@ -542,6 +542,7 @@ class DestinationProvider(
 class DefinitionProviderReportBuilder(
     path: AbsolutePath,
     params: TextDocumentPositionParams,
+    buffers: Buffers,
 ) {
   private var compilerDefn: Option[DefinitionResult] = None
   private var semanticDBDefn: Option[DefinitionResult] = None
@@ -583,7 +584,9 @@ class DefinitionProviderReportBuilder(
 
   def build(): Option[Report] =
     compilerDefn match {
-      case Some(compilerDefn) if !foundScalaDocDef && compilerDefn.isEmpty =>
+      case Some(compilerDefn)
+          if !foundScalaDocDef && compilerDefn.isEmpty && !compilerDefn.querySymbol
+            .endsWith("/") =>
         Some(
           Report(
             "empty-definition",
@@ -598,18 +601,13 @@ class DefinitionProviderReportBuilder(
                }}
                 |${fallbackDefn.filterNot(_.isEmpty) match {
                  case None =>
-                   s"""|empty definition using fallback
+                   s"""empty definition using fallback
                 |non-local guesses:
-                |${nonLocalGuesses.mkString("\t -", "\n\t -", "")}
-                |"""
+                |${if (nonLocalGuesses.isEmpty) "" else nonLocalGuesses.mkString("\t -", "\n\t -", "")}"""
                  case Some(defn) =>
-                   s"found definition using fallback; symbol ${defn.symbol}"
+                   s"\nfound definition using fallback; symbol ${defn.symbol}"
                }}
-                |Document text:
-                |
-                |```scala
-                |${Try(path.readText).toOption.getOrElse("Failed to read text")}
-                |```
+                |${params.printed(buffers)}
                 |""".stripMargin,
             s"empty definition using pc, found symbol in pc: ${compilerDefn.querySymbol}",
             path = Some(path.toURI),
