@@ -1335,6 +1335,26 @@ object MetalsEnrichments
       )
   }
 
+  implicit class XtensionTextDocumentPositionParams(
+      params: l.TextDocumentPositionParams
+  ) {
+    def printed(buffers: Buffers): String = {
+      val absolutePath = params.getTextDocument().getUri().toAbsolutePath
+      val input = absolutePath.toInputFromBuffers(buffers)
+      Try(
+        params
+          .getPosition()
+          .toMeta(input)
+          .map { meta =>
+            CompilerRangeParamsUtils
+              .offsetOrRange(meta, EmptyCancelToken)
+              .printed()
+          }
+      ).toOption.flatten
+        .getOrElse(input.text)
+    }
+  }
+
   implicit class XtensionDebugSessionParams(params: b.DebugSessionParams) {
     def asScalaMainClass(): Either[String, b.ScalaMainClass] = {
       lazy val className = "ScalaMainClass"

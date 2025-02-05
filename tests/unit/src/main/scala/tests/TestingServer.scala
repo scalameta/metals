@@ -1814,47 +1814,49 @@ final case class TestingServer(
     val identifier = path.toTextDocumentIdentifier
     val occurrences = ListBuffer.empty[s.SymbolOccurrence]
     var last = List[String]()
-    trees.tokenized(input).get.foreach { token =>
-      val params = token.toPositionParams(identifier)
-      // Scala 3 doesn't count ` as part of the word which is the same as most editors
-      if (token.text.startsWith("`")) {
-        val position = params.getPosition()
-        position.setCharacter(position.getCharacter() + 1)
-      }
-      val definition = server
-        .definitionOrReferences(params, definitionOnly = true)
-        .asJava
-        .get()
-      definition.definition.foreach { path =>
-        if (path.isJarFileSystem) {
-          virtualDocSources(path.toString.stripPrefix("/")) = path
+    trees.tokenized(input).get.foreach {
+      case token: m.tokens.Token.Ident =>
+        val params = token.toPositionParams(identifier)
+        // Scala 3 doesn't count ` as part of the word which is the same as most editors
+        if (token.text.startsWith("`")) {
+          val position = params.getPosition()
+          position.setCharacter(position.getCharacter() + 1)
         }
-      }
-      val locations = definition.locations.asScala.toList
-      val symbols = locations.map { location =>
-        val isSameFile = identifier.getUri == location.getUri
-        if (isSameFile) {
-          s"L${location.getRange.getStart.getLine}"
+        val definition = server
+          .definitionOrReferences(params, definitionOnly = true)
+          .asJava
+          .get()
+        definition.definition.foreach { path =>
+          if (path.isJarFileSystem) {
+            virtualDocSources(path.toString.stripPrefix("/")) = path
+          }
+        }
+        val locations = definition.locations.asScala.toList
+        val symbols = locations.map { location =>
+          val isSameFile = identifier.getUri == location.getUri
+          if (isSameFile) {
+            s"L${location.getRange.getStart.getLine}"
+          } else {
+            val path = location.getUri.toAbsolutePath
+            val filename = path.toNIO.getFileName
+            if (path.isDependencySource(workspace)) filename.toString
+            else s"$filename:${location.getRange.getStart.getLine}"
+          }
+        }
+        last = symbols
+        val occurrence = if (token.isIdentifier) {
+          if (definition.symbol.isPackage) None // ignore packages
+          else if (symbols.isEmpty) Some("<no symbol>")
+          else Some(Symbols.Multi(symbols.sorted))
         } else {
-          val path = location.getUri.toAbsolutePath
-          val filename = path.toNIO.getFileName
-          if (path.isDependencySource(workspace)) filename.toString
-          else s"$filename:${location.getRange.getStart.getLine}"
+          if (symbols.isEmpty) None // OK, expected
+          else if (last == symbols) None // OK, expected
+          else Some(s"unexpected: ${Symbols.Multi(symbols.sorted)}")
         }
-      }
-      last = symbols
-      val occurrence = if (token.isIdentifier) {
-        if (definition.symbol.isPackage) None // ignore packages
-        else if (symbols.isEmpty) Some("<no symbol>")
-        else Some(Symbols.Multi(symbols.sorted))
-      } else {
-        if (symbols.isEmpty) None // OK, expected
-        else if (last == symbols) None // OK, expected
-        else Some(s"unexpected: ${Symbols.Multi(symbols.sorted)}")
-      }
-      occurrences ++= occurrence.map { symbol =>
-        s.SymbolOccurrence(Some(token.pos.toSemanticdb), symbol)
-      }
+        occurrences ++= occurrence.map { symbol =>
+          s.SymbolOccurrence(Some(token.pos.toSemanticdb), symbol)
+        }
+      case _ =>
     }
     s.TextDocument(
       schema = s.Schema.SEMANTICDB4,
