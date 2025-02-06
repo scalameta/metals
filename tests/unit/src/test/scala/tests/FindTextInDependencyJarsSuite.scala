@@ -6,6 +6,7 @@ import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
@@ -23,15 +24,12 @@ class FindTextInDependencyJarsSuite
     "find exact string match in .conf file inside jar",
     withoutVirtualDocs = true,
   ) {
-    val isJavaAtLeast9 = scala.util.Properties.isJavaAtLeast(9.toString)
-    val isJavaAtLeast17 = scala.util.Properties.isJavaAtLeast(17.toString)
-
     for {
       _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {
-           |    "scalaVersion": "2.12.4",
+           |    "scalaVersion": "${V.scala212}",
            |    "libraryDependencies": ["com.typesafe.akka::akka-actor-typed:2.6.16"]
            |  }
            |}
@@ -68,19 +66,20 @@ class FindTextInDependencyJarsSuite
       assertLocations(
         jdkLocations, {
           val line =
-            if (
+            if (isJava21) 1487
+            else if (
               SemVer.isCompatibleVersion(
                 "17.0.8",
                 // for 17.0.8+7 or 17.0.7-7 the suffix is irrelevant here
                 scala.util.Properties.javaVersion.replaceAll("(\\+|\\-).*", ""),
               )
             ) 1449
-            else if (isJavaAtLeast17) 1445
-            else if (isJavaAtLeast9) 626
+            else if (isJava17) 1445
+            else if (isJava11) 626
             else 578
 
           val pathPrefix =
-            if (isJavaAtLeast9) "/java.base/"
+            if (isJava11) "/java.base/"
             else "/"
 
           s"""|src.zip${pathPrefix}java/lang/String.java:$line:5: info: result

@@ -41,7 +41,7 @@ class RemovedScalaLspSuite extends BaseLspSuite("cascade") {
         s"""
            |/metals.json
            |{
-           |  "a": { "scalaVersion" : "2.13.1" }
+           |  "a": { "scalaVersion" : "2.13.11" }
            |}
            |/a/src/main/scala/a/A.scala
            |$fileContents
@@ -51,7 +51,7 @@ class RemovedScalaLspSuite extends BaseLspSuite("cascade") {
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        Messages.DeprecatedRemovedScalaVersion.message(Set("2.13.1")),
+        Messages.DeprecatedRemovedScalaVersion.message(Set("2.13.11")),
       )
       // document highlight is available in 0.11.10 for 3.0.0
       _ <- server.assertHighlight(
@@ -69,12 +69,11 @@ class RemovedScalaLspSuite extends BaseLspSuite("cascade") {
       _ <- server.assertSemanticHighlight(
         "a/src/main/scala/a/A.scala",
         // we get only semantic tokens for keywords, tokens for symbols are missing
-        """|<<package>>/*keyword*/ <<a>>/*variable,readonly*/
+        """|<<package>>/*keyword*/ <<a>>/*namespace*/
            |<<object>>/*keyword*/ <<A>>/*class*/ {
-           |  <<val>>/*keyword*/ <<age>>/*variable,readonly*/ = <<42>>/*number*/
-           |  <<age>>/*variable,readonly*/ + <<12>>/*number*/
-           |}
-           |""".stripMargin,
+           |  <<val>>/*keyword*/ <<age>>/*variable,definition,readonly*/ = <<42>>/*number*/
+           |  <<age>>/*variable,readonly*/ <<+>>/*method,abstract*/ <<12>>/*number*/
+           |}""".stripMargin,
         fileContents,
       )
     } yield ()

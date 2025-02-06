@@ -30,6 +30,9 @@ abstract class BaseSuite extends munit.FunSuite with Assertions {
   def isJava22: Boolean =
     Properties.isJavaAtLeast("22")
 
+  def isJava21: Boolean =
+    Properties.isJavaAtLeast("21")
+
   def isWindows: Boolean =
     Properties.isWin
 
