@@ -146,6 +146,8 @@ private[debug] final class RemoteServer(
             notify(notification, listener.onOutput)
           case "stopped" =>
             notify(notification, listener.onStopped)
+          case "testResult" =>
+            listener.onEvent(notification)
           case "terminated" =>
             listener.onTerminated()
           case _ =>
@@ -214,6 +216,7 @@ object RemoteServer {
   trait Listener {
     def onOutput(event: OutputEventArguments): Unit
     def onStopped(event: StoppedEventArguments): Unit
+    def onEvent(event: NotificationMessage): Unit
     def onTerminated(): Unit
   }
 

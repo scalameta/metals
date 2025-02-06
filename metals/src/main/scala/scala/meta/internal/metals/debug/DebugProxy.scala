@@ -31,10 +31,15 @@ import scala.meta.internal.metals.debug.DebugProtocol.InitializeRequest
 import scala.meta.internal.metals.debug.DebugProtocol.LaunchRequest
 import scala.meta.internal.metals.debug.DebugProtocol.OutputNotification
 import scala.meta.internal.metals.debug.DebugProtocol.SetBreakpointRequest
+import scala.meta.internal.metals.debug.DebugProtocol.TestResults
 import scala.meta.internal.metals.debug.DebugProxy._
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.debugadapter.TestResultEvent
+import ch.epfl.scala.debugadapter.testing.SingleTestResult.Failed
+import ch.epfl.scala.debugadapter.testing.TestLocation
+import ch.epfl.scala.debugadapter.testing.TestSuiteSummary
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.debug.Breakpoint
 import org.eclipse.lsp4j.debug.CompletionsResponse
@@ -275,6 +280,9 @@ private[debug] final class DebugProxy(
       client.consume(addStackTraceFileLocation(message, output))
     case message @ OutputNotification(output) =>
       client.consume(addStackTraceFileLocation(message, output))
+    case message @ TestResults(testResult) =>
+      message.setParams(modifyLocationInTests(testResult).toJson)
+      client.consume(message)
     case message =>
       initialized.trySuccess(())
       client.consume(message)
@@ -291,6 +299,49 @@ private[debug] final class DebugProxy(
         .map(DebugProtocol.stacktraceOutputResponse(output, _))
         .getOrElse(message)
     else message
+  }
+
+  private def modifyLocationInTests(
+      testResult: TestResultEvent
+  ): TestResultEvent = {
+    val updatedTests = for {
+      test <- testResult.data.tests.asScala
+    } yield {
+      test match {
+        case fail: Failed =>
+          val possibleLocations = for {
+            stack <- Option(fail.stackTrace).iterator
+            stackLine <- stack.linesIterator
+            location <- stackTraceAnalyzer.workspaceFileLocationFromLine(
+              stackLine
+            )
+          } yield location
+
+          possibleLocations.headOption match {
+            case Some(value) =>
+              Failed(
+                fail.testName,
+                fail.duration,
+                fail.error,
+                fail.stackTrace,
+                new TestLocation(
+                  value.getUri(),
+                  value.getRange().getStart().getLine(),
+                ),
+              )
+
+            case _ => fail
+          }
+        case other => other
+      }
+    }
+    TestResultEvent(
+      TestSuiteSummary(
+        testResult.data.suiteName,
+        testResult.data.duration,
+        updatedTests.toList.asJava,
+      )
+    )
   }
 
   def cancel(): Unit = {
