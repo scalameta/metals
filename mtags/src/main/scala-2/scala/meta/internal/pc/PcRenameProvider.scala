@@ -12,7 +12,7 @@ class PcRenameProvider(
 ) extends WithSymbolSearchCollector[l.TextEdit](compiler, params) {
   import compiler._
   private val forbiddenMethods =
-    Set("equals", "hashCode", "unapply", "unary_!", "!")
+    Set("equals", "hashCode", "unapply", "apply", "<init>", "unary_!", "!")
 
   private val soughtSymbolNames = soughtSymbols match {
     case Some((symbols, _)) =>
