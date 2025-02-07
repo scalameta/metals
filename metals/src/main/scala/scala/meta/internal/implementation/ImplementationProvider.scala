@@ -264,8 +264,9 @@ final class ImplementationProvider(
             }
             s"${implReal.symbol}$descPart"
           }
-          def overridesSym(info: PcSymbolInformation) =
-            info.overriddenSymbols.contains(info.symbol)
+
+          def overridesSym(info1: PcSymbolInformation) =
+            info1.overriddenSymbols.contains(info.symbol)
 
           compilers.info(source, symbol).flatMap {
             case Some(info) if overridesSym(info) =>
@@ -551,7 +552,7 @@ object ImplementationProvider {
     ): Seq[(String, ClassLocation)] = {
       // support `&`-types here?
       def collectFn: Type => Seq[(String, ClassLocation)] = {
-        case t: TypeRef =>
+        case t: TypeRef if t.symbol != symbol =>
           Seq(t.symbol -> ClassLocation(symbol, filePath.map(_.toNIO)))
         case StructuralType(WithType(ts), Some(Scope.defaultInstance)) =>
           ts.flatMap(collectFn)
