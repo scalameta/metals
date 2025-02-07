@@ -18,10 +18,24 @@ final class PcRenameProvider(
 ) extends WithSymbolSearchCollector[l.TextEdit](driver, params):
   private val forbiddenMethods =
     Set("equals", "hashCode", "unapply", "unary_!", "!")
+
+  private val soughtSymbolNames = soughtSymbols match
+    case Some((symbols, _)) =>
+      symbols.filterNot(_.isError).map(symbol => symbol.decodedName.toString)
+    case None => Set.empty[String]
+
   def canRenameSymbol(sym: Symbol)(using Context): Boolean =
-    (!sym.is(Method) || !forbiddenMethods(sym.decodedName))
-      && (sym.ownersIterator.drop(1).exists(ow => ow.is(Method))
-        || sym.source.path.isWorksheet)
+    val decodedName = sym.decodedName
+    def isNotForbiddenMethod =
+      !sym.is(Method) || !forbiddenMethods(decodedName)
+
+    def local = sym.ownersIterator.drop(1).exists(ow => ow.is(Method))
+
+    def isInWorksheet = sym.source.path.isWorksheet
+
+    isNotForbiddenMethod && (local || isInWorksheet) && soughtSymbolNames(
+      decodedName
+    )
 
   def prepareRename(): Option[l.Range] =
     soughtSymbols.flatMap((symbols, pos) =>
