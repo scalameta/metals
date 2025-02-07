@@ -11,8 +11,6 @@ pull_request_rules:
       - check-success=macOS-latest jdk-17 unit tests 2 / 2
       - check-success=ubuntu-latest jdk-17 unit tests 1 / 2
       - check-success=ubuntu-latest jdk-17 unit tests 2 / 2
-      - check-success=ubuntu-latest jdk-8 unit tests 1 / 2
-      - check-success=ubuntu-latest jdk-8 unit tests 2 / 2
       - check-success=Gradle MacOS integration
       - check-success=Gradle integration
       - check-success=Sbt integration
@@ -20,10 +18,14 @@ pull_request_rules:
       - check-success=Scalafix and docs
       - check-success=Formatting
       - check-success=Scala cross tests
-      - check-success=Scala3 latest NIGHTLY cross test
       - check-success=Sbt-metals/scripted jdk8
       - check-success=LSP integration tests
       - check-success=Mill integration
+      - check-success=Scala 2.11 cross tests
+      - check-success=MiMa
+      - check-success=Scala javapc tests
+      - check-success=sbt-metals/scripted (Sbt 2)
+      - check-success=Sbt-metals/scripted jdk11
     actions:
       merge:
         method: squash
