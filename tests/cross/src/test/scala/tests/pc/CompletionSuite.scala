@@ -2069,4 +2069,26 @@ class CompletionSuite extends BaseCompletionSuite {
     assertSingleItem = false
   )
 
+  check(
+    "overloaded-no-prefix",
+    """|trait Foo {
+       |  def overloaded(i: Int): Unit
+       |  def overloaded(s: String): Unit
+       |}
+       |trait Bar extends Foo {
+       |  val bar = overlo@@
+       |}
+       |""".stripMargin,
+    """|overloaded(i: Int): Unit
+       |overloaded(s: String): Unit
+       |""".stripMargin,
+    topLines = Some(2),
+    compat = Map {
+      "3" ->
+        """|overloaded(s: String): Unit
+           |overloaded(i: Int): Unit
+           |""".stripMargin
+    }
+  )
+
 }
