@@ -78,11 +78,15 @@ class CompletionProvider(
     @tailrec
     def findNonConflictingPrefix(sym: Symbol, acc: List[String]): String = {
       val symName = if (sym.name.isTermName) sym.name.dropLocal else sym.name
+
+      def notSameOwner(sym1: Symbol, sym2: Symbol): Boolean =
+        sym1.exists && sym2.exists &&
+          !sym2.isAnonymousFunction &&
+          !(if (sym2.isClass) sym2.isSubClass(sym1) else sym2 == sym1)
+
       context.lookupSymbol(symName, _ => true) match {
         case LookupSucceeded(_, symbol)
-            if sym.effectiveOwner.exists && symbol.effectiveOwner.exists &&
-              !symbol.effectiveOwner.isAnonymousFunction &&
-              symbol.effectiveOwner != sym.effectiveOwner =>
+            if notSameOwner(sym.effectiveOwner, symbol.effectiveOwner) =>
           findNonConflictingPrefix(
             sym.effectiveOwner,
             Identifier.backtickWrap(sym.effectiveOwner.name.decoded) :: acc
