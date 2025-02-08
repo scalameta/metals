@@ -1290,4 +1290,26 @@ class CompletionArgSuite extends BaseCompletionSuite {
     topLines = Some(1)
   )
 
+  check(
+    "inaccessible-defaults",
+    """|package object A {
+       |  private[A] val somePackagePrivStr = "foo"
+       |  private val somePrivStr = "foo"
+       |  val somePubStr = "bar"
+       |}
+       |package B {
+       |  import A._
+       |  object Testing {
+       |    def foo(arg: String): Unit = ()
+       |    foo(@@)
+       |  }
+       |}
+       |""".stripMargin,
+    """|arg = : String
+       |arg = somePubStr : String
+       |somePubStr: String
+       |""".stripMargin,
+    topLines = Some(3)
+  )
+
 }
