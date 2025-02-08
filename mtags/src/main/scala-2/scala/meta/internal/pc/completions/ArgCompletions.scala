@@ -126,7 +126,8 @@ trait ArgCompletions { this: MetalsGlobal =>
       completions match {
         case members: CompletionResult.ScopeMembers
             if paramType != definitions.AnyTpe =>
-          members.results
+          members
+            .matchingResults(_ => _ => true)
             .collect {
               case mem
                   if mem.sym.tpe <:< paramType && notNothingOrNull(
