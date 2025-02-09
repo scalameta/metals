@@ -318,8 +318,8 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |
        |""".stripMargin,
     """|trait Main {
+       |  def otherMethod(arg0: (Int, Int, Int)) = ???
        |  def main() = {
-       |    def otherMethod(arg0: (Int, Int, Int)) = ???
        |    List((1, 2, 3)).filter(_ => true).map(otherMethod)
        |  }
        |}
@@ -337,9 +337,28 @@ class InsertInferredMethodSuite extends BaseCodeActionSuite {
        |
        |""".stripMargin,
     """|trait Main {
+       |  def otherMethod(arg0: (Int, Int, Int)) = ???
+       |  def main() = {
+       |    List((1, 2, 3)).map(otherMethod)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "lambda-def-complex-type-list",
+    """|
+       |trait Main {
+       |  def main() = {
+       |    val res = List((1, 2, 3)).map(<<otherMethod>>)
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|trait Main {
        |  def main() = {
        |    def otherMethod(arg0: (Int, Int, Int)) = ???
-       |    List((1, 2, 3)).map(otherMethod)
+       |    val res = List((1, 2, 3)).map(otherMethod)
        |  }
        |}
        |""".stripMargin
