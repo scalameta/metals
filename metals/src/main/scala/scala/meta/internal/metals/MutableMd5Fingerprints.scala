@@ -33,8 +33,10 @@ final class MutableMd5Fingerprints extends Md5Fingerprints {
       path: AbsolutePath,
       text: String,
       md5: Option[String] = None,
-  ): Unit = {
-    add(path, Fingerprint(text, md5.getOrElse(MD5.compute(text))))
+  ): Fingerprint = {
+    val fingerprint = Fingerprint(text, md5.getOrElse(MD5.compute(text)))
+    add(path, fingerprint)
+    fingerprint
   }
 
   private def add(
@@ -89,4 +91,9 @@ final class MutableMd5Fingerprints extends Md5Fingerprints {
   override def toString: String = s"Md5FingerprintProvider($fingerprints)"
 }
 
-case class Fingerprint(text: String, md5: String)
+case class Fingerprint(text: String, md5: String) {
+  def isEmpty: Boolean = md5.isEmpty()
+}
+object Fingerprint {
+  def empty: Fingerprint = Fingerprint("", "")
+}
