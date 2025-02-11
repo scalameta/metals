@@ -784,4 +784,29 @@ class ScalaToplevelSuite extends BaseToplevelSuite {
     List("a/", "a/FormData.", "a/Strict#", "a/FormData.Strict#"),
     mode = ToplevelWithInner,
   )
+
+  check(
+    "i3808",
+    """|package a
+       |trait B
+       |trait A {
+       | self: B =>
+       |
+       |}
+       |""".stripMargin,
+    List("a/", "a/A# -> B", "a/B#"),
+    mode = All,
+  )
+
+  check(
+    "i3808-2",
+    """|package a
+       |trait B
+       |trait A:
+       | this: B =>
+       |""".stripMargin,
+    List("a/", "a/A# -> B", "a/B#"),
+    mode = All,
+    dialect = dialects.Scala3,
+  )
 }

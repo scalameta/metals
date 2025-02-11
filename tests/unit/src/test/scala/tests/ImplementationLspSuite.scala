@@ -765,6 +765,14 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
        |""".stripMargin,
   )
 
+  checkSymbols(
+    "self-type-in-lib",
+    """|trait A extends Ite@@rable[_]
+       |""".stripMargin,
+    "scala/collection/generic/DefaultSerializable#",
+    filter = _.contains("DefaultSerializable"),
+  )
+
   override protected def libraryDependencies: List[String] =
     List("org.scalatest::scalatest:3.2.16", "io.circe::circe-generic:0.12.0")
 
