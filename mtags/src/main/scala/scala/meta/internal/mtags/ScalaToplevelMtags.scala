@@ -427,8 +427,8 @@ class ScalaToplevelMtags(
                 isImplicitClass = expect.isImplicit
               )
               resetRegion(next)
-              scanner.mtagsNextToken()
-              loop(0, isAfterNewline = true, next, None)
+              val (newIdent, isAfterNewline) = maybeFindAndEmitSelfType(0, true)
+              loop(newIdent, isAfterNewline, next, None)
             case (Some(expect), true) =>
               val nextIndent = acceptWhileIndented(expect.indent)
               loop(
@@ -473,8 +473,10 @@ class ScalaToplevelMtags(
                     expect.isImplicit
                   )
                 resetRegion(next)
-                scanner.mtagsNextToken()
-                loop(indent, isAfterNewline = false, next, None)
+                val (newIdent, isAfterNewline) = maybeFindAndEmitSelfType(
+                  indent
+                )
+                loop(newIdent, isAfterNewline, next, None)
               }
             case _ =>
               acceptBalancedDelimeters(LBRACE, RBRACE)
@@ -602,6 +604,48 @@ class ScalaToplevelMtags(
           )
       }
     } else ()
+  }
+
+  private def maybeFindAndEmitSelfType(
+      ident: Int,
+      isAfterNewLine: Boolean = false
+  ): (Int, Boolean) = {
+    forSeq(
+      List(
+        () =>
+          (curr.token == IDENTIFIER || curr.token == THIS) && curr.strVal != "extension",
+        () => curr.token == COLON,
+        { () =>
+          curr.token match {
+            case IDENTIFIER =>
+              val res = identOrSelectName()
+              res.map(name =>
+                addOverridden(List(UnresolvedOverriddenSymbol(name)))
+              )
+              true
+            case _ => false
+          }
+
+        }
+      ),
+      ident,
+      isAfterNewLine
+    )
+  }
+
+  @tailrec
+  private def forSeq(
+      step: List[() => Boolean],
+      ident: Int,
+      isAfterNewLine: Boolean = false
+  ): (Int, Boolean) = {
+    val newIdent = acceptTrivia(isAfterNewLine)
+    step match {
+      case f :: tail if f() =>
+        if (tail.isEmpty) (newIdent.getOrElse(ident), false)
+        else forSeq(tail, newIdent.getOrElse(ident))
+      case _ => (newIdent.getOrElse(ident), newIdent.nonEmpty)
+    }
   }
 
   def emitPackage(owner: String): Boolean = {
@@ -996,8 +1040,10 @@ class ScalaToplevelMtags(
     }
   }
 
-  private def acceptTrivia(): Option[Int] = {
-    var includedNewline = false
+  private def acceptTrivia(
+      includedNewlineInit: Boolean = false
+  ): Option[Int] = {
+    var includedNewline = includedNewlineInit
     var indent = 0
     scanner.mtagsNextToken()
     while (

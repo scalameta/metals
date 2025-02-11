@@ -59,4 +59,13 @@ class InfoSuite extends BasePCSuite {
       correctOverridden
     )
   }
+
+  // scala.collection.generic.DefaultSerializable doesn't exist before 2.13
+  test("self-type".tag(IgnoreScala211.and(IgnoreScala212))) {
+    val info = getInfo("scala/collection/generic/DefaultSerializable#")
+    assertContains(
+      info.parents().asScala.mkString("\n"),
+      "scala/collection/Iterable#"
+    )
+  }
 }
