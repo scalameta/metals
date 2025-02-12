@@ -823,7 +823,11 @@ class WorkspaceLspService(
           ServerCommands.DisconnectBuildServer.title,
         ).asJavaObject
       case ServerCommands.DecodeFile(uri) =>
-        getServiceFor(uri).decodeFile(uri).asJavaObject
+        getServiceForOpt(uri)
+          .orElse(currentFolder)
+          .getOrElse(fallbackService)
+          .decodeFile(uri)
+          .asJavaObject
       case ServerCommands.DiscoverTestSuites(params) =>
         Option(params.uri) match {
           case None =>
