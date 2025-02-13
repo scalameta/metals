@@ -510,6 +510,7 @@ lazy val metals = project
       "bazelScalaVersion" -> V.bazelScalaVersion,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
+      "latestScala3Next" -> V.latestScala3Next,
       "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
   )
