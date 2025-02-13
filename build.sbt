@@ -471,6 +471,8 @@ lazy val metals = project
       "org.scala-lang.modules" %% "scala-xml" % "2.3.0",
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
         .exclude("ch.epfl.scala", "bsp4j"),
+      // For test frameworks
+      "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
     ),
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](
@@ -761,7 +763,6 @@ lazy val unit = project
     Test / javaOptions += "-Xmx2G",
     libraryDependencies ++= List(
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
-      "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       "org.scalameta" %% "munit" % V.munit,
     ),
     buildInfoPackage := "tests",

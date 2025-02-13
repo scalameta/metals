@@ -22,13 +22,7 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codelenses.CodeLens
 import scala.meta.internal.metals.debug.BuildTargetClasses
-import scala.meta.internal.metals.debug.JUnit4
-import scala.meta.internal.metals.debug.MUnit
-import scala.meta.internal.metals.debug.Scalatest
-import scala.meta.internal.metals.debug.TestFramework
-import scala.meta.internal.metals.debug.TestNG
-import scala.meta.internal.metals.debug.Unknown
-import scala.meta.internal.metals.debug.WeaverCatsEffect
+import scala.meta.internal.metals.debug.TestFrameworkUtils
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._
 import scala.meta.internal.metals.testProvider.frameworks.JunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
@@ -44,6 +38,7 @@ import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
 
+import bloop.config.Config
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.ScalaPlatform
 import ch.epfl.scala.{bsp4j => b}
@@ -281,7 +276,9 @@ final class TestSuitesProvider(
         metadata <- index.getMetadata(path).toList
         events = {
           val suites = metadata.entries.map(_.suiteDetails).distinct
-          val canResolve = suites.exists(_.framework.canResolveChildren)
+          val canResolve = suites.exists(suite =>
+            TestFrameworkUtils.canResolveTests(suite.framework)
+          )
           if (canResolve) getTestCasesForSuites(path, suites, textDocument)
           else Seq.empty
         }
@@ -310,40 +307,40 @@ final class TestSuitesProvider(
       .map { semanticdb =>
         suites.flatMap { suite =>
           val testCases = suite.framework match {
-            case JUnit4 =>
+            case Config.TestFramework.JUnit =>
               junitTestFinder.findTests(
                 doc = semanticdb,
                 path = path,
                 suiteSymbol = suite.symbol,
               )
-            case MUnit =>
+            case Config.TestFramework.munit =>
               munitTestFinder.findTests(
                 doc = semanticdb,
                 path = path,
                 suiteName = suite.fullyQualifiedName,
                 symbol = suite.symbol,
               )
-            case Scalatest =>
+            case Config.TestFramework.ScalaTest =>
               scalatestTestFinder.findTests(
                 doc = semanticdb,
                 path = path,
                 suiteName = suite.fullyQualifiedName,
                 symbol = suite.symbol,
               )
-            case WeaverCatsEffect =>
+            case TestFrameworkUtils.WeaverTestFramework =>
               weaverCatsEffect.findTests(
                 doc = semanticdb,
                 path = path,
                 suiteName = suite.fullyQualifiedName,
                 symbol = suite.symbol,
               )
-            case TestNG =>
+            case Config.TestFramework.TestNG =>
               testNGTestFinder.findTests(
                 doc = semanticdb,
                 path = path,
                 suiteSymbol = suite.symbol,
               )
-            case Unknown => Vector.empty
+            case _ => Vector.empty
           }
 
           if (testCases.nonEmpty) {
@@ -394,7 +391,8 @@ final class TestSuitesProvider(
     if (isExplorerEnabled) {
       val addedTestCases = addedEntries.mapValues {
         _.flatMap { entry =>
-          val canResolve = entry.suiteDetails.framework.canResolveChildren
+          val canResolve =
+            TestFrameworkUtils.canResolveTests(entry.suiteDetails.framework)
           if (canResolve && buffers.contains(entry.path))
             getTestCasesForSuites(entry.path, Vector(entry.suiteDetails), None)
           else Nil
@@ -571,9 +569,9 @@ final class TestSuitesProvider(
   def getFramework(
       target: BuildTarget,
       selection: ScalaTestSuiteSelection,
-  ): TestFramework = getFromCache(target, selection.className)
+  ): Config.TestFramework = getFromCache(target, selection.className)
     .map(_.suiteDetails.framework)
-    .getOrElse(Unknown)
+    .getOrElse(Config.TestFramework(Nil))
 
   def getFromCache(
       target: BuildTarget,

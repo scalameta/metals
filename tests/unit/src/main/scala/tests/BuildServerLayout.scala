@@ -1,10 +1,8 @@
 package tests
 
-import scala.meta.internal.metals.debug.JUnit4
-import scala.meta.internal.metals.debug.MUnit
-import scala.meta.internal.metals.debug.Scalatest
-import scala.meta.internal.metals.debug.TestFramework
 import scala.meta.internal.metals.{BuildInfo => V}
+
+import bloop.config.Config.TestFramework
 
 trait BuildToolLayout {
   def apply(sourceLayout: String, scalaVersion: String): String
@@ -65,9 +63,11 @@ object MillBuildLayout extends BuildToolLayout {
   ): String = {
     val optDepModule =
       testDep.map {
-        case Scalatest => ("ScalaTest", "org.scalatest::scalatest:3.2.16")
-        case MUnit => ("Munit", "org.scalameta::munit::0.7.29")
-        case JUnit4 => ("Junit4", "com.github.sbt:junit-interface:0.13.2")
+        case TestFramework.ScalaTest =>
+          ("ScalaTest", "org.scalatest::scalatest:3.2.16")
+        case TestFramework.munit => ("Munit", "org.scalameta::munit::0.7.29")
+        case TestFramework.JUnit =>
+          ("Junit4", "com.github.sbt:junit-interface:0.13.2")
         case testFramework =>
           throw new RuntimeException(
             s"No implementation for layout for $testFramework"
