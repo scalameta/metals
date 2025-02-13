@@ -23,6 +23,7 @@ import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
@@ -90,9 +91,8 @@ final class DefinitionProvider(
   ): Future[DefinitionResult] = {
     val reportBuilder =
       new DefinitionProviderReportBuilder(path, params, buffers)
-    lazy val isScala3 = ScalaVersions.isScala3Version(
-      scalaVersionSelector.scalaVersionForPath(path)
-    )
+    val scalaVersion = scalaVersionSelector.scalaVersionForPath(path)
+    val isScala3 = ScalaVersions.isScala3Version(scalaVersion)
 
     def fromCompiler() =
       if (path.isScalaFilename) {
@@ -133,8 +133,20 @@ final class DefinitionProvider(
           .map(reportBuilder.setFallbackResult)
       )
 
+    // Scala 3 prior to 3.7.0 has a bug where the definition is much slower
+    def scala3DefinitionBugFixed: Boolean =
+      SemVer.isCompatibleVersion("3.7.0", scalaVersion) ||
+        scalaVersion.startsWith(
+          "3.3."
+        ) && // LTS 3.3.7 will include fixes from 3.7.x
+        SemVer.isCompatibleVersion("3.3.7", scalaVersion) ||
+        BuildInfo.supportedScala3Versions.contains(scalaVersion)
+
+    val shouldUseOldOrder =
+      isAmmonnite(path) || isScala3 && !scala3DefinitionBugFixed
+
     val strategies: List[() => Future[Option[DefinitionResult]]] =
-      if (isAmmonnite(path))
+      if (shouldUseOldOrder)
         List(fromSemanticDb, fromCompiler, fromScalaDoc, fromFallback)
       else List(fromCompiler, fromSemanticDb, fromScalaDoc, fromFallback)
 
