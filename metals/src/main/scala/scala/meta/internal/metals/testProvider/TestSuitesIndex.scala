@@ -3,11 +3,12 @@ package scala.meta.internal.metals.testProvider
 import scala.collection.concurrent.TrieMap
 
 import scala.meta.internal.metals.debug.BuildTargetClasses
-import scala.meta.internal.metals.debug.TestFramework
+import scala.meta.internal.metals.debug.TestFrameworkUtils
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._
 import scala.meta.internal.mtags
 import scala.meta.io.AbsolutePath
 
+import bloop.config.Config
 import ch.epfl.scala.bsp4j.BuildTarget
 import org.eclipse.{lsp4j => l}
 
@@ -36,7 +37,7 @@ private[testProvider] final case class TestEntry(
 
 private[testProvider] final case class TestSuiteDetails(
     fullyQualifiedName: FullyQualifiedName,
-    framework: TestFramework,
+    framework: Config.TestFramework,
     className: ClassName,
     symbol: mtags.Symbol,
     location: l.Location,
@@ -46,7 +47,7 @@ private[testProvider] final case class TestSuiteDetails(
     className = className.value,
     symbol = symbol.value,
     location = location,
-    canResolveChildren = framework.canResolveChildren,
+    canResolveChildren = TestFrameworkUtils.canResolveTests(framework),
   )
 
   def asRemoveEvent: TestExplorerEvent = RemoveTestSuite(

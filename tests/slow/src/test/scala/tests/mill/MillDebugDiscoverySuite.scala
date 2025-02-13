@@ -8,9 +8,8 @@ import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTestSuiteSelection
 import scala.meta.internal.metals.ScalaTestSuites
-import scala.meta.internal.metals.debug.JUnit4
-import scala.meta.internal.metals.debug.Scalatest
 
+import bloop.config.Config.TestFramework
 import ch.epfl.scala.bsp4j.TestParamsDataKind
 import tests.BaseDapSuite
 import tests.BaseMillServerSuite
@@ -65,7 +64,7 @@ class MillDebugDiscoverySuite
                |}
                |""".stripMargin,
             scala,
-            Some(Scalatest),
+            Some(TestFramework.ScalaTest),
           )
         )
         _ <- server.didOpen("a/src/Main.scala")
@@ -113,7 +112,7 @@ class MillDebugDiscoverySuite
                 |}
                 |""".stripMargin,
             scala,
-            Some(JUnit4),
+            Some(TestFramework.JUnit),
           )
         )
         _ <- server.didOpen(fooPath)
@@ -154,7 +153,7 @@ class MillDebugDiscoverySuite
              |}
              |""".stripMargin,
           scalaVersion,
-          Some(Scalatest),
+          Some(TestFramework.ScalaTest),
         )
       )
       _ <- server.didOpen(fooPath)
@@ -207,7 +206,7 @@ class MillDebugDiscoverySuite
              |}
              |""".stripMargin,
           scalaVersion,
-          Some(Scalatest),
+          Some(TestFramework.ScalaTest),
         )
       )
       debugger <-
