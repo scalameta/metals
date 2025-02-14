@@ -112,7 +112,19 @@ class CompletionSuite extends BaseCompletionSuite {
        |override def toString(): String
        |override def clone(): Object
        |override def finalize(): Unit
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      ">=2.13.17" ->
+        """|default: Int
+           |def
+           |defaultArg - scala.annotation.meta
+           |override def equals(obj: Any): Boolean
+           |override def hashCode(): Int
+           |override def toString(): String
+           |override def clone(): Object
+           |override def finalize(): Unit
+           |""".stripMargin
+    )
   )
 
   val dot211: String =

@@ -1024,6 +1024,11 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
         """|def hello1: Int
            |override val hello2: Int
            |override def equals(that: Any): Boolean
+           |""".stripMargin,
+      ">=2.13.17&&2" ->
+        """|def hello1: Int
+           |def
+           |defaultArg - scala.annotation.meta
            |""".stripMargin
     )
   )
