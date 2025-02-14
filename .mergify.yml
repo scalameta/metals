@@ -20,7 +20,6 @@ pull_request_rules:
       - check-success=Scalafix and docs
       - check-success=Formatting
       - check-success=Scala cross tests
-      - check-success=Sbt-metals/scripted jdk8
       - check-success=LSP integration tests
       - check-success=Mill integration
       - check-success=Scala 2.11 cross tests
