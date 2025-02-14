@@ -418,7 +418,7 @@ lazy val metals = project
       // =================
       // for bloom filters
       V.guava,
-      "org.scalameta" %% "metaconfig-core" % "0.14.0",
+      "org.scalameta" %% "metaconfig-core" % "0.15.0",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching
@@ -819,7 +819,7 @@ lazy val docs = project
     publish / skip := true,
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
-    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.14.0",
+    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.15.0",
   )
   .dependsOn(metals)
   .enablePlugins(DocusaurusPlugin)
