@@ -1,6 +1,6 @@
 //> using jvm 17
 //> using scala 3
-//> using dep org.kohsuke:github-api:1.326
+//> using dep org.kohsuke:github-api:1.327
 //> using dep com.lihaoyi::os-lib:0.11.3
 //> using options -Wunused:all -deprecation
 
