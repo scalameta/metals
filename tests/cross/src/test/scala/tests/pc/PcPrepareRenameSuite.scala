@@ -27,8 +27,8 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
        |
        |object Renaming {
        |  def m() = {
-       |    import scala.util.{Try => StdLibTry}  
-       |    def foo(n: Int): StdLib@@Try[Int] = 
+       |    import scala.util.{Try => StdLibTry}
+       |    def foo(n: Int): StdLib@@Try[Int] =
        |      StdLibTryprepare(n)
        |  }
        |}
@@ -166,7 +166,7 @@ class PcPrepareRenameSuite extends BasePcRenameSuite {
 
   prepare(
     "colon-bad",
-    """|package a  
+    """|package a
        |object Main{
        |  def m() = {
        |    class User{

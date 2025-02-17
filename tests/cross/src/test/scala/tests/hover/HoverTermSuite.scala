@@ -724,7 +724,7 @@ class HoverTermSuite extends BaseHoverSuite {
     """object Obj {
       |  trait A extends Sup { self =>
       |    type T
-      |    def member : T 
+      |    def member : T
       |  }
       |  val x: A { type T = Int} = ???
       |

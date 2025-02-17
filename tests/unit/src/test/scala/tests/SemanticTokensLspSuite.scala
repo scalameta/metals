@@ -156,7 +156,7 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
        |  <<var>>/*keyword*/ <<abc>>/*variable,definition*/ = <<123>>/*number*/
        |  <<var>>/*keyword*/ <<edf>>/*variable,definition*/ = <<abc>>/*variable*/ <<+>>/*method,abstract*/ <<2>>/*number*/
        |  <<abc>>/*variable*/ = <<edf>>/*variable*/ <<->>/*method,abstract*/ <<2>>/*number*/
-       |  <<A>>/*class*/.<<edf>>/*variable*/ = <<A>>/*class*/.<<abc>>/*variable*/ 
+       |  <<A>>/*class*/.<<edf>>/*variable*/ = <<A>>/*class*/.<<abc>>/*variable*/
        |
        |  <<def>>/*keyword*/ <<m>>/*method,definition*/() = {
        |    <<var>>/*keyword*/ <<beta>>/*variable,definition*/ = <<3>>/*number*/

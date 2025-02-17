@@ -15,9 +15,9 @@ class CrossAnalyzeStacktraceSuite
        |<<1>>  throw new Exception("")
        |
        |@main
-       |def main() = 
+       |def main() =
        |<<2>>  fetch()
-       |  
+       |
        |def fetch(a: Int) = a + 2
        |""".stripMargin,
     """|Exception in thread "main" java.lang.Exception:
@@ -37,9 +37,9 @@ class CrossAnalyzeStacktraceSuite
        |<<1>>  throw new Exception("")
        |
        |@main
-       |def main() = 
+       |def main() =
        |<<2>>  fetch()
-       |  
+       |
        |def fetch(a: Int) = a + 2
        |""".stripMargin,
     """|Exception in thread "main" java.lang.Exception:
@@ -61,9 +61,9 @@ class CrossAnalyzeStacktraceSuite
        |<<1>>    throw new Exception("")
        |
        |@main
-       |def main() = 
+       |def main() =
        |<<2>>  fetch()
-       |  
+       |
        |def fetch(a: Int) = a + 2
        |""".stripMargin,
     """|Exception in thread "main" java.lang.Exception:

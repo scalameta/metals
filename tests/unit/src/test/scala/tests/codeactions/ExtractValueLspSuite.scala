@@ -147,7 +147,7 @@ class ExtractValueLspSuite
     """|object Main {
        |  def method2(i: Int) : Int = ???
        |  def method1(s: String): Unit = {
-       |    println("Hello!"); 
+       |    println("Hello!");
        |    val newValue = 1 + 2
        |    method2(1 + method2(newValue))
        |  }
@@ -464,7 +464,7 @@ class ExtractValueLspSuite
     """|import scala.util.Try
        |
        |def main =
-       |  val newValue = 
+       |  val newValue =
        |    Some(new Exception)
        |  val x = Try(newValue)""".stripMargin,
     scalaVersion = "3.3.4",
@@ -481,7 +481,7 @@ class ExtractValueLspSuite
     """|import scala.util.Try
        |
        |def main =
-       |  val newValue = 
+       |  val newValue =
        |    println("hello")
        |    Some(new Exception)
        |  val x = Try(newValue)""".stripMargin,

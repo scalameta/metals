@@ -16,8 +16,8 @@ object QuickBuildLayout extends BuildToolLayout {
       scalaVersion: String,
   ): String = {
     s"""|/metals.json
-        |{ 
-        |  "a": {"scalaVersion": "$scalaVersion"},  "b": {"scalaVersion": "$scalaVersion"} 
+        |{
+        |  "a": {"scalaVersion": "$scalaVersion"},  "b": {"scalaVersion": "$scalaVersion"}
         |}
         |$sourceLayout
         |""".stripMargin
@@ -80,7 +80,7 @@ object MillBuildLayout extends BuildToolLayout {
               |    def ivyDeps = Agg(
               |      ivy"$dep"
               |    )
-              |  }  
+              |  }
               |""".stripMargin
         case _ => ""
       }
@@ -165,11 +165,11 @@ object BazelBuildLayout extends BuildToolLayout {
         |
         |load("@io_bazel_rules_scala//scala:scala.bzl", "rules_scala_setup", "rules_scala_toolchain_deps_repositories")
         |
-        |# loads other rules Rules Scala depends on 
+        |# loads other rules Rules Scala depends on
         |rules_scala_setup()
         |
-        |# Loads Maven deps like Scala compiler and standard libs. On production projects you should consider 
-        |# defining a custom deps toolchains to use your project libs instead 
+        |# Loads Maven deps like Scala compiler and standard libs. On production projects you should consider
+        |# defining a custom deps toolchains to use your project libs instead
         |rules_scala_toolchain_deps_repositories(fetch_sources = True)
         |
         |load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")

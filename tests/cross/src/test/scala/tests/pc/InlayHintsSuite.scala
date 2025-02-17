@@ -436,15 +436,15 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
     "partial-fun".tag(IgnoreScalaVersion.forLessThan("2.13.0")),
     """|object Main {
        |  List(1).collect { case x => x }
-       |  val x: PartialFunction[Int, Int] = { 
-       |    case 1 => 2 
+       |  val x: PartialFunction[Int, Int] = {
+       |    case 1 => 2
        |  }
        |}
        |""".stripMargin,
     """|object Main {
        |  List/*[Int<<scala/Int#>>]*/(1).collect/*[Int<<scala/Int#>>]*/ { case x => x }
-       |  val x: PartialFunction[Int, Int] = { 
-       |    case 1 => 2 
+       |  val x: PartialFunction[Int, Int] = {
+       |    case 1 => 2
        |  }
        |}
        |""".stripMargin
@@ -719,11 +719,11 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |object O {
        |  val head :: tail = List(1)
        |  List(1) match {
-       |    case head :: next => 
+       |    case head :: next =>
        |    case Nil =>
        |  }
        |  Option(Option(1)) match {
-       |    case Some(Some(value)) => 
+       |    case Some(Some(value)) =>
        |    case None =>
        |  }
        |  val (local, _) = ("", 1.0)
@@ -740,11 +740,11 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |object O {
        |  val head :: tail = List/*[Int<<scala/Int#>>]*/(1)
        |  List/*[Int<<scala/Int#>>]*/(1) match {
-       |    case head :: next => 
+       |    case head :: next =>
        |    case Nil =>
        |  }
        |  Option/*[Option<<scala/Option#>>[Int<<scala/Int#>>]]*/(Option/*[Int<<scala/Int#>>]*/(1)) match {
-       |    case Some(Some(value)) => 
+       |    case Some(Some(value)) =>
        |    case None =>
        |  }
        |  val (local, _) = ("", 1.0)
@@ -763,11 +763,11 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
            |object O {
            |  val head :: tail = List/*[Int<<scala/Int#>>]*/(1)
            |  List/*[Int<<scala/Int#>>]*/(1) match {
-           |    case head :: next => 
+           |    case head :: next =>
            |    case Nil =>
            |  }
            |  Option/*[Option<<scala/Option#>>[Int<<scala/Int#>>]]*/(Option/*[Int<<scala/Int#>>]*/(1)) match {
-           |    case Some(Some(value)) => 
+           |    case Some(Some(value)) =>
            |    case None =>
            |  }
            |  val (local, _) = ("", 1.0)
@@ -789,11 +789,11 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |object O {
        |  val head :: tail = List(1)
        |  List(1) match {
-       |    case head :: next => 
+       |    case head :: next =>
        |    case Nil =>
        |  }
        |  Option(Option(1)) match {
-       |    case Some(Some(value)) => 
+       |    case Some(Some(value)) =>
        |    case None =>
        |  }
        |  val (local, _) = ("", 1.0)
@@ -810,11 +810,11 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |object O {
        |  val head/*: Int<<scala/Int#>>*/ :: tail/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ = List/*[Int<<scala/Int#>>]*/(1)
        |  List/*[Int<<scala/Int#>>]*/(1) match {
-       |    case head/*: Int<<scala/Int#>>*/ :: next/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ => 
+       |    case head/*: Int<<scala/Int#>>*/ :: next/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ =>
        |    case Nil =>
        |  }
        |  Option/*[Option<<scala/Option#>>[Int<<scala/Int#>>]]*/(Option/*[Int<<scala/Int#>>]*/(1)) match {
-       |    case Some(Some(value/*: Int<<scala/Int#>>*/)) => 
+       |    case Some(Some(value/*: Int<<scala/Int#>>*/)) =>
        |    case None =>
        |  }
        |  val (local/*: String<<java/lang/String#>>*/, _) = ("", 1.0)
@@ -833,11 +833,11 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
            |object O {
            |  val head/*: Int<<scala/Int#>>*/ :: tail/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ = List/*[Int<<scala/Int#>>]*/(1)
            |  List/*[Int<<scala/Int#>>]*/(1) match {
-           |    case head/*: Int<<scala/Int#>>*/ :: next/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ => 
+           |    case head/*: Int<<scala/Int#>>*/ :: next/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ =>
            |    case Nil =>
            |  }
            |  Option/*[Option<<scala/Option#>>[Int<<scala/Int#>>]]*/(Option/*[Int<<scala/Int#>>]*/(1)) match {
-           |    case Some(Some(value/*: Int<<scala/Int#>>*/)) => 
+           |    case Some(Some(value/*: Int<<scala/Int#>>*/)) =>
            |    case None =>
            |  }
            |  val (local/*: String<<java/lang/String#>>*/, _) = ("", 1.0)

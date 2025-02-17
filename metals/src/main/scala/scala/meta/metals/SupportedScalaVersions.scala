@@ -95,7 +95,7 @@ abstract class SupportedScalaVersions {
             |Scala 3 versions from 3.3.4 are automatically supported by Metals.
             |
             |Any older Scala versions will no longer get bugfixes, but should still
-            |work properly with newest Metals. 
+            |work properly with newest Metals.
             |""".stripMargin
       )
     } catch {

@@ -25,7 +25,7 @@ class HoverBench extends PcBenchmark {
         """|package a
            |
            |object Main extends App{
-           |  
+           |
            |}
            |""".stripMargin,
         "object Main extends Ap@@p",

@@ -53,7 +53,7 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
     "after-statement",
     """
       |class Perfect {
-      |  
+      |
       |  void println() {
       |    String name = "Tom";
       |    name.sub@@
@@ -71,7 +71,7 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
     "same-line",
     """
       |class Perfect {
-      |  
+      |
       |  void println() {
       |    String name = "Tom";
       |    name.sub@@  System.out.println("Perfect " + name);
@@ -88,7 +88,7 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
     "inside-parens-no-space",
     """
       |class Perfect {
-      |  
+      |
       |  void println() {
       |    String name = "Tom";
       |    System.out.println(name.sub@@);
@@ -105,7 +105,7 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
     "inside-word",
     """
       |class Perfect {
-      |  
+      |
       |  void println() {
       |    String name = "Tom";
       |    System.out.println(name.sub@@S );
@@ -122,7 +122,7 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
     "empty-select",
     """
       |class Perfect {
-      |  
+      |
       |  void println() {
       |    Perfect perfect = new Perfect();
       |    perfect.@@
@@ -151,7 +151,7 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
       |import java.util.concurrent.CompletableFuture;
       |
       |class Perfect {
-      |  
+      |
       |  void println() {
       |    CompletableFuture.@@
       |  }

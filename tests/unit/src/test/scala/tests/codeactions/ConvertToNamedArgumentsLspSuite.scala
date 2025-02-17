@@ -240,12 +240,12 @@ class ConvertToNamedArgumentsLspSuite
   check(
     "block",
     """|class C {
-       |  def f(o: Int) = 1 
+       |  def f(o: Int) = 1
        |  val g = f({<<>>2})
        |}""".stripMargin,
     s"${ConvertToNamedArguments.title("f(...)")}",
     """|class C {
-       |  def f(o: Int) = 1 
+       |  def f(o: Int) = 1
        |  val g = f(o = {2})
        |}""".stripMargin,
     filterAction = filterAction,

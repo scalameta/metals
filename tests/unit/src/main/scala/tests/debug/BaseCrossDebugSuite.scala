@@ -21,7 +21,7 @@ abstract class BaseCrossDebugSuite(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
-                |@main 
+                |@main
                 |def helloWorld(): Unit = {
                 |>>println("Hello world")
                 |  System.exit(0)
@@ -37,15 +37,15 @@ abstract class BaseCrossDebugSuite(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
-                |@main 
+                |@main
                 |def helloWorld(): Unit = {
                 |  object Even {
                 |>>  def unapply(s: String): Boolean = s.size % 2 == 0
                 |  }
                 |
                 |  "even" match {
-                |    case Even() => 
-                |    case _      => 
+                |    case Even() =>
+                |    case _      =>
                 |  }
                 |  System.exit(0)
                 |}
@@ -60,7 +60,7 @@ abstract class BaseCrossDebugSuite(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
-                |@main 
+                |@main
                 |def helloWorld(): Unit = {
                 |  object Hello{
                 |    def run() = {
@@ -82,12 +82,12 @@ abstract class BaseCrossDebugSuite(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
-                |@main 
-                |def hello(): Unit = 
+                |@main
+                |def hello(): Unit =
                 |  greet("Alice")
                 |  System.exit(0)
                 |
-                |def greet(name: String) = 
+                |def greet(name: String) =
                 |>>val message = s"Hello, $name!"
                 |>>println(message)
                 |
@@ -101,12 +101,12 @@ abstract class BaseCrossDebugSuite(
     source = """|/a/src/main/scala/a/Main.scala
                 |package a
                 |
-                |@main 
-                |def hello(): Unit = 
+                |@main
+                |def hello(): Unit =
                 |>>greet("Alice")
                 |>>System.exit(0)
                 |
-                |def greet(name: String) = 
+                |def greet(name: String) =
                 |  val message = s"Hello, $name!"
                 |  println(message)
                 |

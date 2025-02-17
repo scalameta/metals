@@ -441,7 +441,7 @@ class ScalaToplevelSuite extends BaseToplevelSuite {
        |given `given_Float`: Float = 3.0
        |given `* *` : Long = 5
        |given [T]: List[T] =
-       |  val m = 3 
+       |  val m = 3
        |  ???
        |given listOrd[T](using ord: List[T]): List[List[T]] = ???
        |""".stripMargin,
@@ -564,7 +564,7 @@ class ScalaToplevelSuite extends BaseToplevelSuite {
     """|class A:
        |  for
        |    _ <- Some(1)
-       |    _ <- 
+       |    _ <-
        |      def a(i: Int) = if i > 0 then Some(i) else None
        |      a(3)
        |  yield ()

@@ -520,7 +520,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |object Main {
            |  def <<foo>>/*1*/(user: User) {
            |    user match {
-           |      case <?<User>?>/*1*/(name, age) => 
+           |      case <?<User>?>/*1*/(name, age) =>
            |        println(s"My name is $name and I'm $age")
            |    }
            |  }
@@ -550,7 +550,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |object Main {
            |  def fo@@o(user: User) {
            |    user match {
-           |      case <?<User>?>/*1,2*/(name, age) => 
+           |      case <?<User>?>/*1,2*/(name, age) =>
            |        println(s"My name is $name and I'm $age")
            |    }
            |  }

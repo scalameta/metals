@@ -29,7 +29,7 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
   check("package-file")(
     "a/src/main/scala/a/package.scala",
     """|package object a {
-       |  
+       |
        |}
        |""".stripMargin,
   )
@@ -39,7 +39,7 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
     """|package a.b
        |
        |package object c {
-       |  
+       |
        |}
        |""".stripMargin,
   )
@@ -73,7 +73,7 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
     """|package `type`.a
        |
        |package object `this` {
-       |  
+       |
        |}
        |""".stripMargin,
   )

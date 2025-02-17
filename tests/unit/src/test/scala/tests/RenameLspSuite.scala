@@ -75,7 +75,7 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |import scala.util.{Try => <<StdLibTry>>}
        |
        |object Renaming {
-       |  def foo(n: Int): <<StdLib@@Try>>[Int] = 
+       |  def foo(n: Int): <<StdLib@@Try>>[Int] =
        |    <<StdLibTry>>(n)
        |}
        |""".stripMargin,
@@ -471,7 +471,7 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |
        |  <<Other>> other;
        |  public <<Other>>(){
-       |     
+       |
        |  }
        |}
        |/a/src/main/scala/a/Main.scala
@@ -491,7 +491,7 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |
        |  <<Ot@@her>> other;
        |  public <<Other>>(){
-       |     
+       |
        |  }
        |}
        |/a/src/main/scala/a/Main.scala

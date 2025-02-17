@@ -62,7 +62,7 @@ class ExtractMethodLspSuite
        |}
        |
        |object A{
-       | 
+       |
        |  <<val s: Simple = ???
        |  s.well("")>>
        |}""".stripMargin,
@@ -73,7 +73,7 @@ class ExtractMethodLspSuite
        |}
        |
        |object A{
-       | 
+       |
        |  def newMethod(): String = {
        |    val s: Simple = ???
        |    s.well("")
@@ -138,7 +138,7 @@ class ExtractMethodLspSuite
         |  val b = 4
         |  val c = 3
         |  def method(i: Int, j: Int) = i + 1
-        |  val a = { 
+        |  val a = {
         |    val c = 5
         |    <<123 + method(c, b) + method(b,c)>>
         |  }
@@ -153,7 +153,7 @@ class ExtractMethodLspSuite
         |  def newMethod(c: Int): Int =
         |    123 + method(c, b) + method(b,c)
         |
-        |  val a = { 
+        |  val a = {
         |    val c = 5
         |    newMethod(c)
         |  }

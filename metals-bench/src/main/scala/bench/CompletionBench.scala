@@ -31,7 +31,7 @@ class CompletionBench extends PcBenchmark {
         "A.scala",
         """|
            |object Main{
-           |  def foo = ""  
+           |  def foo = ""
            |  fo
            |}
            |""".stripMargin,

@@ -250,7 +250,7 @@ class BazelLspSuite
            |
            |class Hello {
            |  def hello: String = "Hello"
-           |  
+           |
            |  val asd: A = ???
            |  asd match {
            |    case B(_) =>

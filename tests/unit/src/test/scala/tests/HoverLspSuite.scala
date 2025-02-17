@@ -46,7 +46,7 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
            |{
            |  "a": {
            |    "scalaVersion": "${V.scala213}",
-           |    "libraryDependencies" : [ "org.scala-lang:scala-reflect:${V.scala213}"] 
+           |    "libraryDependencies" : [ "org.scala-lang:scala-reflect:${V.scala213}"]
            |  }
            |}
            |/a/src/main/scala/Main.scala

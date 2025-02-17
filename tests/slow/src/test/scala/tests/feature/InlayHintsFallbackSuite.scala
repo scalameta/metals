@@ -23,7 +23,7 @@ class InlayHintsFallbackSuite
        |    hello()/*(andy, boston)*/
        |    hello()/*(andy, boston)*/;    hello()/*(andy, boston)*/
        |  }
-       |  
+       |
        |  val ordered/*: String*/ = /*augmentString(*/"acb"/*)*/.sorted/*(Char)*/
        |  /*augmentString(*/"foo"/*)*/.map(c/*: Char*/ => c.toInt)
        |  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global

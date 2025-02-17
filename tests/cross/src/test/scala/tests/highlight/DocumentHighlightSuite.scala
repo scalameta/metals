@@ -59,7 +59,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |  val x = Foo(
       |    foo = 123,
       |    <<ba@@r>> = 456
-      |  ) 
+      |  )
       |
       |}""".stripMargin
   )
@@ -74,7 +74,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |    bar = 456
       |  )
       |  val y = x.<<foo>>
-      |  
+      |
       |
       |}""".stripMargin
   )
@@ -1001,7 +1001,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
     """
       |object Main {
       |  List(1).map {
-      |    someLongName: Int => 
+      |    someLongName: Int =>
       |      val <<ab@@c>> = 2
       |      someLongName + <<abc>>
       |  }

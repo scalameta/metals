@@ -124,7 +124,7 @@ class RewriteBracesParensLspSuite
        |
        |  List(1,2).foreach { a =>
        |    println(a)
-       |    <<>>a 
+       |    <<>>a
        |  }
        |}
        |""".stripMargin,

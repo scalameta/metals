@@ -59,7 +59,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
     """|<<run (top_Foo)>><<debug (top_Foo)>>
        |package foo.bar
        |
-       |import dfhdl.* 
+       |import dfhdl.*
        |@top class Foo extends EDDesign
        |
        |<<run>><<debug>>
@@ -320,7 +320,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
         |
         |object X {
         |  def main = {
-        |    class A { def afx(): Unit = ??? } 
+        |    class A { def afx(): Unit = ??? }
         |    val t = new A {
         |<< afx goto-position[{"uri":"${workspace.toURI}a/src/main/scala/a/Foo.scala","range":{"start":{"line":4,"character":18},"end":{"line":4,"character":21}}}]>>
         |    override def afx(): Unit = ???

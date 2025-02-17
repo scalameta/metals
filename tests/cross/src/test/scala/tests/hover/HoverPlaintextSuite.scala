@@ -18,7 +18,7 @@ class HoverPlaintextSuite extends BaseHoverSuite {
   check(
     "basic-plaintext",
     """|
-       |/** 
+       |/**
        |  * Some docstring
        |  */
        |case class Alpha(x: Int) {

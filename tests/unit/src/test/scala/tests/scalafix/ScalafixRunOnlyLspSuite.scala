@@ -57,7 +57,7 @@ class ScalafixRunOnlyLspSuite extends BaseLspSuite("run-scalafix-rules") {
        |object Main{
        |  def debug { println("debug") } // ProcedureSyntax rule is not defined, should not be changed
        |  val addTypeHere = new A{}
-       |  private val notUsed = 123 
+       |  private val notUsed = 123
        |}
        |""".stripMargin
 
@@ -79,7 +79,7 @@ class ScalafixRunOnlyLspSuite extends BaseLspSuite("run-scalafix-rules") {
            |object Main{
            |  def debug { println("debug") } // ProcedureSyntax rule is not defined, should not be changed
            |  val addTypeHere: A = new A{}
-           |  private val notUsed = 123 
+           |  private val notUsed = 123
            |}
            |""".stripMargin,
       )
@@ -107,7 +107,7 @@ class ScalafixRunOnlyLspSuite extends BaseLspSuite("run-scalafix-rules") {
            |object Main{
            |  def debug { println("debug") } // ProcedureSyntax rule is not defined, should not be changed
            |  val addTypeHere = new A{}
-           |   
+           |
            |}
            |""".stripMargin,
       )

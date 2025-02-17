@@ -15,7 +15,7 @@ class JavaToplevelSuite extends BaseToplevelSuite {
         |   */
         |public class Abc {
         |  public static void main(String[] args) {
-        |    System.out.println("asdsad"); 
+        |    System.out.println("asdsad");
         |    // comment
         |  }
         |  public static void foo(int a, int, b) {

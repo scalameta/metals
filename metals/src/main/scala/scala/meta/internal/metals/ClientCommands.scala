@@ -185,7 +185,7 @@ object ClientCommands {
   val StartRunSession = new Command(
     "metals-run-session-start",
     "Start run session",
-    s"""|Starts a run session. The address of a new Debug Adapter can be obtained 
+    s"""|Starts a run session. The address of a new Debug Adapter can be obtained
         | by using the ${ServerCommands.StartDebugAdapter.id} metals server command
         | with the same arguments as provided to this command.
     """.stripMargin,
@@ -208,7 +208,7 @@ object ClientCommands {
   val StartDebugSession = new Command(
     "metals-debug-session-start",
     "Start debug session",
-    s"""|Starts a debug session. The address of a new Debug Adapter can be obtained 
+    s"""|Starts a debug session. The address of a new Debug Adapter can be obtained
         | by using the ${ServerCommands.StartDebugAdapter.id} metals server command
         | with the same arguments as provided to this command.
     """.stripMargin,
@@ -308,10 +308,10 @@ object ClientCommands {
         "Goto location",
         "Move the cursor focus to the provided location",
         """|First required parameter is LSP `Location` object with `uri` and `range` fields.
-           |Second parameter is optional and has signature `otherWindow: Boolean`. 
+           |Second parameter is optional and has signature `otherWindow: Boolean`.
            |It gives a hint to client that if possible it would be good to open location in
            |another buffer/window.
-           |Example: 
+           |Example:
            |```json
            |[{
            |  "uri": "file://path/to/Definition.scala",
@@ -331,7 +331,7 @@ object ClientCommands {
     "Open a specified folder either in the same or new window",
     """Open a new window with the specified directory.""".stripMargin,
     """|An object with `uri` and `newWindow` fields.
-       |Example: 
+       |Example:
        |```json
        |{
        |  "uri": "file://path/to/directory",
@@ -346,7 +346,7 @@ object ClientCommands {
     "Copy Worksheet Output",
     s"""|Copy the contents of a worksheet to your local buffer.
         |
-        |Note: This command should execute the ${ServerCommands.CopyWorksheetOutput.id} 
+        |Note: This command should execute the ${ServerCommands.CopyWorksheetOutput.id}
         |      server command to get the output to copy into the buffer.
         |
         |Server will attempt to create code lens with this command if `copyWorksheetOutputProvider` option is set.

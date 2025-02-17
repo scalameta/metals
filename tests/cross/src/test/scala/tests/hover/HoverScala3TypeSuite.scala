@@ -121,7 +121,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |object Foo:
        |    extension (s: String)
        |        def double = s + s
-       |        def double2 = s + s        
+       |        def double2 = s + s
        |    end extension
        |    "".<<doub@@le2>>
        |end Foo
@@ -454,7 +454,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |
        |object Repro {
        |  def usage[A](f: ExtensionProvider ?=> A => Any): Any = ???
-       |  
+       |
        |  usage[Option[Int]](_.infer@@redTypeArg("str"))
        |}
        |""".stripMargin,
@@ -480,7 +480,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |
        |object Repro {
        |  def usage[A](f: ExtensionProvider ?=> A => Any): Any = ???
-       |  
+       |
        |  usage[Option[Int]](_.infer@@redTypeArg[String]("str"))
        |}
        |""".stripMargin,
@@ -506,7 +506,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |
        |object Repro {
        |  def usage[A](f: ExtensionProvider ?=> A => Any): Any = ???
-       |  
+       |
        |  usage[Option[Int]](_.typeArg[Some[Int]].value.infer@@redTypeArg("str"))
        |}
        |""".stripMargin,
@@ -532,7 +532,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
        |
        |object Repro {
        |  def usage[A](f: ExtensionProvider ?=> A => Any): Any = ???
-       |  
+       |
        |  usage[Option[Int]](_.typeArg[Some[Int]].value.infer@@redTypeArg[String]("str"))
        |}
        |""".stripMargin,
@@ -553,7 +553,7 @@ class HoverScala3TypeSuite extends BaseHoverSuite {
       |object B {
       |  extension (x: Int)(using Int)
       |    def foo: Int = ???
-      |    
+      |
       |  given Int = 42
       |  val bar = 42.fo@@o
       |}

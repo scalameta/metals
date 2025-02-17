@@ -74,7 +74,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
        |}
        |
        |object A{
-       |  
+       |
        |  def newMethod(): String = {
        |    val s: Simple = ???
        |    s.well("")
@@ -89,7 +89,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
            |}
            |
            |object A{
-           |  
+           |
            |  def newMethod(): String =
            |    val s: Simple = ???
            |    s.well("")
@@ -158,7 +158,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
     s"""|object A{
         |  val c = 3
         |  def method(i: Int, j: Int) = i + 1
-        |  @@val a = { 
+        |  @@val a = {
         |    val c = 5
         |    val b = 4
         |    <<123 + method(c, b) + method(b,c)>>
@@ -170,7 +170,7 @@ class ExtractMethodSuite extends BaseExtractMethodSuite {
         |  def newMethod(b: Int, c: Int): Int =
         |    123 + method(c, b) + method(b,c)
         |
-        |  val a = { 
+        |  val a = {
         |    val c = 5
         |    val b = 4
         |    newMethod(b, c)

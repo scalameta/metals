@@ -44,8 +44,8 @@ abstract class BaseAnalyzeStacktraceSuite(name: String)
         _ <- initialize(
           s"""
              |/metals.json
-             |{ 
-             |  "a": { 
+             |{
+             |  "a": {
              |    "scalaVersion": "$scalaVersion",
              |    "libraryDependencies": [ $dependency ]
              |   }
