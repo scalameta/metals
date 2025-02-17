@@ -19,6 +19,6 @@ class PatternMatching/*example.PatternMatching#*/ {
   def localDeconstruction/*example.PatternMatching#localDeconstruction().*/ = {
     val Some/*scala.Some.*/(number2/*local5*/) =
       some/*example.PatternMatching#some.*/
-    number2/*local4*/
+    number2/*local5*/
   }
 }
