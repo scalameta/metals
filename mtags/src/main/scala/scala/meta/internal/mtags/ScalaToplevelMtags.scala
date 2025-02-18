@@ -591,27 +591,36 @@ class ScalaToplevelMtags(
   private def maybeFindAndEmitSelfType(
       indent0: Indent
   ): Indent = {
-    var indent = indent0.withOptIndent(acceptTrivia())
-    var toEmit: Option[(String, List[OverriddenSymbol])] = None
+    var toEmit: List[String] = Nil
 
+    @tailrec
+    def collectType(indent0: Indent): Indent = {
+      val indent1 = indent0.withOptIndent(acceptTrivia())
+      if (curr.token == IDENTIFIER) {
+        identOrSelectName().map(name => toEmit = name :: toEmit)
+        val indent2 =
+          acceptAllAfterOverriddenIdentifier(indent1, alreadyMoved = true)
+        curr.token match {
+          case WITH => collectType(indent2)
+          case IDENTIFIER if curr.strVal == "|" | curr.strVal == "&" =>
+            collectType(indent2)
+          case _ => indent2
+        }
+      } else indent1
+    }
+
+    var indent = indent0.withOptIndent(acceptTrivia())
     if (
       (curr.token == IDENTIFIER || curr.token == THIS) && curr.strVal != "extension"
     ) {
       indent = indent.withOptIndent(acceptTrivia())
       if (curr.token == COLON) {
-        indent = indent.withOptIndent(acceptTrivia())
-        if (curr.token == IDENTIFIER) {
-          identOrSelectName().map(name =>
-            toEmit =
-              Some((currentOwner, List(UnresolvedOverriddenSymbol(name))))
-          )
-          indent =
-            acceptAllAfterOverriddenIdentifier(indent, alreadyMoved = true)
-          if (curr.token == ARROW) {
-            toEmit.map(overridden += _)
-            scanner.mtagsNextToken()
-            indent = indent.notAfterNewline
-          }
+        indent = collectType(indent)
+        if (curr.token == ARROW && toEmit.nonEmpty) {
+          overridden += ((
+            currentOwner,
+            toEmit.map(UnresolvedOverriddenSymbol(_))
+          ))
         }
       }
     }
