@@ -117,7 +117,7 @@ class HoverDocSuite extends BaseHoverSuite {
   check(
     "object",
     """|
-       |/** 
+       |/**
        |  * Doc about object
        |  */
        |object Alpha {
@@ -139,7 +139,7 @@ class HoverDocSuite extends BaseHoverSuite {
   check(
     "object1",
     """|
-       |/** 
+       |/**
        |  * Doc about object
        |  */
        |object Alpha {
@@ -170,7 +170,7 @@ class HoverDocSuite extends BaseHoverSuite {
        |  */
        |case class Alpha(x: Int)
        |
-       |/** 
+       |/**
        |  * Doc about object
        |  */
        |object Alpha {
@@ -201,7 +201,7 @@ class HoverDocSuite extends BaseHoverSuite {
        |  */
        |case class Alpha(x: Int)
        |
-       |/** 
+       |/**
        |  * Doc about object
        |  */
        |object Alpha {

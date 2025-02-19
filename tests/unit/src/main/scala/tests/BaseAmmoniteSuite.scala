@@ -271,7 +271,7 @@ abstract class BaseAmmoniteSuite(scalaVersion: String)
            |/b/otherScript.sc
            | // scala $scalaVersion
            |val a = ""
-           |           
+           |
            |/b/other.sc
            | // scala $scalaVersion
            |val a = ""

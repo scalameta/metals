@@ -17,7 +17,7 @@ class TestFrameworksModifier extends StringModifier {
        | - Junit
        | - MUnit
        | - Scalatest
-       | - Weaver Test 
+       | - Weaver Test
        |""".stripMargin
 
 }

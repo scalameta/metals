@@ -496,7 +496,7 @@ class Scala3DocumentHighlightSuite extends BaseDocumentHighlightSuite {
       |object B {
       |  extension (x: Int)(using Int)
       |    def <<foo>>: Int = ???
-      |    
+      |
       |  given Int = 42
       |  val bar = 42.<<fo@@o>>
       |}

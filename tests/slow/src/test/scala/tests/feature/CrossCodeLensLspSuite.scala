@@ -34,7 +34,7 @@ class CrossCodeLensLspSuite extends BaseCodeLensLspSuite("cross-code-lens") {
             |}
             |
             |object Main {
-            |  def main(args: Array[String]): Unit = 
+            |  def main(args: Array[String]): Unit =
             |    println("Hello again!")
             |}
             |""".stripMargin
@@ -51,7 +51,7 @@ class CrossCodeLensLspSuite extends BaseCodeLensLspSuite("cross-code-lens") {
            |
            |<<run>><<debug>>
            |object Main {
-           |  def main(args: Array[String]): Unit = 
+           |  def main(args: Array[String]): Unit =
            |    println("Hello again!")
            |}
            |""".stripMargin,
@@ -64,7 +64,7 @@ class CrossCodeLensLspSuite extends BaseCodeLensLspSuite("cross-code-lens") {
             |}
             |
             |object Main {
-            |  def main(args: Array[String]): Unit = 
+            |  def main(args: Array[String]): Unit =
             |    println("Hello again!")
             |}
             |""".stripMargin
@@ -79,7 +79,7 @@ class CrossCodeLensLspSuite extends BaseCodeLensLspSuite("cross-code-lens") {
            |
            |<<run>><<debug>>
            |object Main {
-           |  def main(args: Array[String]): Unit = 
+           |  def main(args: Array[String]): Unit =
            |    println("Hello again!")
            |}
            |""".stripMargin,
@@ -93,7 +93,7 @@ class CrossCodeLensLspSuite extends BaseCodeLensLspSuite("cross-code-lens") {
             |}
             |
             |//object Main {
-            |//  def main(args: Array[String]): Unit = 
+            |//  def main(args: Array[String]): Unit =
             |//    println("Hello again!")
             |//}
             |""".stripMargin
@@ -109,7 +109,7 @@ class CrossCodeLensLspSuite extends BaseCodeLensLspSuite("cross-code-lens") {
            |}
            |
            |//object Main {
-           |//  def main(args: Array[String]): Unit = 
+           |//  def main(args: Array[String]): Unit =
            |//    println("Hello again!")
            |//}
            |""".stripMargin,

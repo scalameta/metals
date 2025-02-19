@@ -733,7 +733,7 @@ class SbtBloopLspSuite
       _ <- initialize(
         s"""|/build.sbt
             |def foo(): String = "2.13.2"
-            |def bar(): String = foo() 
+            |def bar(): String = foo()
             |scalaVersion := "2.13.2"
          """.stripMargin
       )
@@ -744,7 +744,7 @@ class SbtBloopLspSuite
            |def foo(): String = "2.13.2"
            |    ^^^
            |build.sbt:2:21: info: reference
-           |def bar(): String = foo() 
+           |def bar(): String = foo()
            |                    ^^^
            |""".stripMargin,
       )
@@ -757,20 +757,20 @@ class SbtBloopLspSuite
       _ <- initialize(
         s"""|/build.sbt
             |def foo(): String = "2.13.2"
-            |def bar(): String = foo() 
+            |def bar(): String = foo()
             |scalaVersion := "2.13.2"
          """.stripMargin
       )
       _ <- server.assertRename(
         "build.sbt",
         s"""|def foo(): String = "2.13.2"
-            |def bar(): String = foo@@() 
+            |def bar(): String = foo@@()
             |scalaVersion := "2.13.2"
          """.stripMargin,
         Map(
           "build.sbt" ->
             s"""|def foo2(): String = "2.13.2"
-                |def bar(): String = foo2() 
+                |def bar(): String = foo2()
                 |scalaVersion := "2.13.2"
           """.stripMargin
         ),
@@ -835,7 +835,7 @@ class SbtBloopLspSuite
       _ <- initialize(
         s"""|/build.sbt
             |def foo() = "2.13.2"
-            |def bar() = foo() 
+            |def bar() = foo()
             |scalaVersion := "2.13.2"
            """.stripMargin
       )

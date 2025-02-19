@@ -421,12 +421,12 @@ class CompletionArgSuite extends BaseCompletionSuite {
       |  test($f@@)
       |}
       |""".stripMargin,
-    """|$$foo = 
+    """|$$foo =
        |$$foo = ${1:???}, | = ${2:???}
        |""".stripMargin,
     topLines = Option(2),
     compat = Map(
-      "3" -> """|$$foo = 
+      "3" -> """|$$foo =
                 |$$foo = ${1:???}, $$bar = ${2:???}
                 |""".stripMargin
     )
@@ -1208,7 +1208,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |    bbb = 123,
        |    aa@@
        |  )
-       |} 
+       |}
        |""".stripMargin,
     """|aaa = : Int
        |""".stripMargin,
@@ -1224,7 +1224,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |    ccc = 123,
        |    aa@@
        |  )
-       |} 
+       |}
        |""".stripMargin,
     """|aaa = : Int
        |""".stripMargin,
@@ -1240,7 +1240,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |    ccc = 123,
        |    aa@@
        |  )
-       |} 
+       |}
        |""".stripMargin,
     """|aaa = : Int
        |""".stripMargin,

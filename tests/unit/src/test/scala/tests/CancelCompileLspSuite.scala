@@ -36,9 +36,9 @@ class CancelCompileLspSuite extends BaseLspSuite("compile-cancel") {
           |
           |/b/src/main/scala/b/B.scala
           |package b
-          |object B { 
+          |object B {
           |  a.A.sleep()
-          |  val x = a.A.x 
+          |  val x = a.A.x
           |}
           |/c/src/main/scala/c/C.scala
           |package c

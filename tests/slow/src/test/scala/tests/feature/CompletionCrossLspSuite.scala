@@ -237,7 +237,7 @@ class CompletionCrossLspSuite
       _ <- initialize(
         s"""/metals.json
            |{
-           |  "a": { 
+           |  "a": {
            |    "scalaVersion": "${V.scala3}",
            |    "libraryDependencies": [
            |      "org.virtuslab::iskra:0.0.3"
@@ -248,7 +248,7 @@ class CompletionCrossLspSuite
            |
            |import org.virtuslab.iskra.api.*
            |import org.virtuslab.iskra.api.given
-           | 
+           |
            |given spark: SparkSession = SparkSession
            |  .builder()
            |  .master("local")

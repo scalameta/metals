@@ -29,7 +29,7 @@ class NewProjectModifier extends StringModifier {
       else ""
     s"""|## Create new project from template
         |
-        |It is possible using Metals to easily setup a new project using the exiting [giter8](https://github.com/foundweekends/giter8/wiki/giter8-templates) templates. 
+        |It is possible using Metals to easily setup a new project using the exiting [giter8](https://github.com/foundweekends/giter8/wiki/giter8-templates) templates.
         |This is an equivalent to the `sbt new` command, which uses the same mechanism.
         |There is a great number of templates already available and it should be easy to find something for yourself.
         |To start the setup you can use the $newScalaProject command, which works as following:
@@ -42,7 +42,7 @@ class NewProjectModifier extends StringModifier {
         |$chooseWindow
         |$fromButtons
         |
-        |If you feel like a template should be included in the default displayed ones do not hesitate to create a 
+        |If you feel like a template should be included in the default displayed ones do not hesitate to create a
         |[PR](https://github.com/scalameta/metals/blob/cda5b8c2029e5f201fb8d0636e0365d796407bd9/metals/src/main/scala/scala/meta/internal/builds/NewProjectProvider.scala#L308)
         |or file an issue.
         |""".stripMargin

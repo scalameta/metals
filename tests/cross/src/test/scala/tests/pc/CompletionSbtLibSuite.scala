@@ -9,7 +9,7 @@ class CompletionSbtLibSuite extends BaseCompletionSuite {
 
   check(
     "source",
-    """|val dependency = "io.cir@@" % 
+    """|val dependency = "io.cir@@" %
        |""".stripMargin,
     """|io.circe
        |io.circul

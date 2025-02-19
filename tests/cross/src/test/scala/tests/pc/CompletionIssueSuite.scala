@@ -257,7 +257,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
     """|import scala.concurrent.Future
        |
        |object OO {
-       |  
+       |
        |    def resolveActions(codeActions: List[Int]): Future[List[Int]] = {
        |      val afterResolved = codeActions.map {
        |         case action if act@@ => action
@@ -269,7 +269,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
     """|import scala.concurrent.Future
        |
        |object OO {
-       |  
+       |
        |    def resolveActions(codeActions: List[Int]): Future[List[Int]] = {
        |      val afterResolved = codeActions.map {
        |         case action if action => action

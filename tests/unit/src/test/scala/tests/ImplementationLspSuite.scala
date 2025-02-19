@@ -559,7 +559,7 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
     "type-implementation",
     """|/a/src/main/scala/a/Main.scala
        |trait Test {
-       |  type C@@C 
+       |  type C@@C
        |}
        |
        |trait Other extends Test {

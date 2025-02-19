@@ -138,7 +138,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
     """
       |object Main {
       |  val x = List(1)
-      |  val y = s'''|abc 
+      |  val y = s'''|abc
       |              |${x.mkString(s"\n")}''''.stripMargin
       |}""".stripMargin,
   )
@@ -439,7 +439,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |object Main {
        |  val str = sql'''SELECT 1
        |  FROM
-       |  ''' + sql''' mytable 
+       |  ''' + sql''' mytable
        |  '''
        |}""".stripMargin,
     triggerCharacter = "\n",

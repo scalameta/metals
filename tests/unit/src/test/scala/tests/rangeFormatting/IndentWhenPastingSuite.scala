@@ -498,21 +498,21 @@ class IndentWhenPastingSuite
     "methods",
     """
       |object Main {
-      |  def hello() = 
+      |  def hello() =
       |    println("hello")
       |    println("hello")
-      |    @@ 
+      |    @@
       |}""".stripMargin,
     """|def bye() =
        |  println("bye")
        |  println("bye") """.stripMargin,
     """|object Main {
-       |  def hello() = 
+       |  def hello() =
        |    println("hello")
        |    println("hello")
        |    def bye() =
        |      println("bye")
-       |      println("bye")  
+       |      println("bye")
        |}
        |""".stripMargin,
     scalaVersion,
@@ -523,10 +523,10 @@ class IndentWhenPastingSuite
     "methods-same-line",
     """
       |object Main {
-      |  def hello() = 
+      |  def hello() =
       |    println("hello")
       |    println("hello")
-      |  @@ 
+      |  @@
       |}""".stripMargin,
     """|
        |def bye() =
@@ -535,7 +535,7 @@ class IndentWhenPastingSuite
        |  println("bye")
        |""".stripMargin,
     """|object Main {
-       |  def hello() = 
+       |  def hello() =
        |    println("hello")
        |    println("hello")
        |

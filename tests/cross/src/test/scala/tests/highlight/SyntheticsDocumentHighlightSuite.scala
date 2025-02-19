@@ -8,11 +8,11 @@ class SyntheticsDocumentHighlightSuite extends BaseDocumentHighlightSuite {
     "advanced1",
     """
       |object Main {
-      |  for { 
-      |    abc <- Option(1) 
+      |  for {
+      |    abc <- Option(1)
       |    one = 1
       |    <<a@@dd>> = one + abc
-      |} yield { 
+      |} yield {
       |   <<add>>.toString.toList.map(_.toChar)
       |  }
       |}""".stripMargin
@@ -22,11 +22,11 @@ class SyntheticsDocumentHighlightSuite extends BaseDocumentHighlightSuite {
     "advanced2",
     """
       |object Main {
-      |  for { 
-      |    abc <- Option(1) 
+      |  for {
+      |    abc <- Option(1)
       |    one = 1
       |    <<add>> = one + abc
-      |} yield { 
+      |} yield {
       |   <<ad@@d>>.toString.toList.map(_.toChar)
       |  }
       |}""".stripMargin
@@ -36,11 +36,11 @@ class SyntheticsDocumentHighlightSuite extends BaseDocumentHighlightSuite {
     "advanced3",
     """
       |object Main {
-      |  for { 
-      |    <<a@@bc>> <- Option(1) 
+      |  for {
+      |    <<a@@bc>> <- Option(1)
       |    one = 1
       |    add = one + <<abc>>
-      |} yield { 
+      |} yield {
       |   <<abc>>.toString.toList.map(_.toChar)
       |  }
       |}""".stripMargin
@@ -50,11 +50,11 @@ class SyntheticsDocumentHighlightSuite extends BaseDocumentHighlightSuite {
     "advanced4",
     """
       |object Main {
-      |  for { 
-      |    <<abc>> <- Option(1) 
+      |  for {
+      |    <<abc>> <- Option(1)
       |    one = 1
       |    add = one + <<a@@bc>>
-      |} yield { 
+      |} yield {
       |   <<abc>>.toString.toList.map(_.toChar)
       |  }
       |}""".stripMargin
@@ -64,11 +64,11 @@ class SyntheticsDocumentHighlightSuite extends BaseDocumentHighlightSuite {
     "advanced5",
     """
       |object Main {
-      |  for { 
-      |    <<abc>> <- Option(1) 
+      |  for {
+      |    <<abc>> <- Option(1)
       |    one = 1
       |    add = one + <<abc>>
-      |} yield { 
+      |} yield {
       |   <<ab@@c>>.toString.toList.map(_.toChar)
       |  }
       |}""".stripMargin

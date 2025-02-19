@@ -48,7 +48,7 @@ class CancelCompileSuite
            |package b
            |object B {
            |  a.A.sleep()
-           |  val x = a.A.x 
+           |  val x = a.A.x
            |}
            |/c/src/main/scala/c/C.scala
            |package c

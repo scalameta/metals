@@ -24,7 +24,7 @@ class PcRenameSuite extends BasePcRenameSuite {
   check(
     "basic",
     """|val <<a>> = 123
-       |<<@@a>> + 1  
+       |<<@@a>> + 1
        |""".stripMargin
   )
 
@@ -35,7 +35,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |    val <<a>> = 123
        |    <<@@a>> + 1
        |  }
-       |}  
+       |}
        |""".stripMargin,
     wrap = false
   )
@@ -48,7 +48,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |    A(123)
        |    A.apply(123)
        |  }
-       |}  
+       |}
        |""".stripMargin,
     wrap = false
   )
@@ -61,7 +61,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |    A(123)
        |    A.apply(123)
        |  }
-       |}  
+       |}
        |""".stripMargin,
     wrap = false
   )
@@ -478,7 +478,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  val <<`to-Rename`>> = 123
        |}
        |object B{
-       |  val toRename = 
+       |  val toRename =
        |    List(
        |      A.<<`to-R@@ename`>>,
        |      A.<<`to-Rename`>>,
@@ -522,7 +522,7 @@ class PcRenameSuite extends BasePcRenameSuite {
        |  def <<ma@@p>>(f: Int => Int): Bar = Bar(x.map(f))
        |}
        |
-       |val f = 
+       |val f =
        |  for {
        |    b <- Bar(List(1,2,3))
        |  } yield b
@@ -548,7 +548,7 @@ class PcRenameSuite extends BasePcRenameSuite {
   check(
     "end-marker-wrong".tag(IgnoreScala2),
     """|def <<f@@oo>> =
-       |  def bar = 
+       |  def bar =
        |    ???
        |  end bar""".stripMargin
   )

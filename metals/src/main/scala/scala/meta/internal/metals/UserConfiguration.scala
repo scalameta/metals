@@ -329,8 +329,8 @@ object UserConfiguration {
         "false",
         "false",
         "Should display implicit parameter at usage sites",
-        """|When this option is enabled, each method that has implicit arguments has them 
-           |displayed either as additional decorations if they are supported by the editor or 
+        """|When this option is enabled, each method that has implicit arguments has them
+           |displayed either as additional decorations if they are supported by the editor or
            |shown in the hover.
            |""".stripMargin,
       ),
@@ -339,8 +339,8 @@ object UserConfiguration {
         "false",
         "false",
         "Should display implicit conversion at usage sites",
-        """|When this option is enabled, each place where an implicit method or class is used has it 
-           |displayed either as additional decorations if they are supported by the editor or 
+        """|When this option is enabled, each place where an implicit method or class is used has it
+           |displayed either as additional decorations if they are supported by the editor or
            |shown in the hover.
            |""".stripMargin,
       ),
@@ -387,7 +387,7 @@ object UserConfiguration {
         BuildInfo.scala3,
         BuildInfo.scala3,
         "Default fallback Scala version",
-        """|The Scala compiler version that is used as the default or fallback in case a file 
+        """|The Scala compiler version that is used as the default or fallback in case a file
            |doesn't belong to any build target or the specified Scala version isn't supported by Metals.
            |This applies to standalone Scala files, worksheets, and Ammonite scripts.
         """.stripMargin,
@@ -453,8 +453,8 @@ object UserConfiguration {
         "off",
         "all",
         "Import build when changes detected without prompting",
-        """|Automatically import builds rather than prompting the user to choose. "initial" will 
-           |only automatically import a build when a project is first opened, "all" will automate 
+        """|Automatically import builds rather than prompting the user to choose. "initial" will
+           |only automatically import a build when a project is first opened, "all" will automate
            |build imports after subsequent changes as well.""".stripMargin,
       ),
       UserConfigurationOption(

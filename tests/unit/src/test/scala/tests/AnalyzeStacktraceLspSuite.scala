@@ -125,7 +125,7 @@ class AnalyzeStacktraceLspSuite
        |<<4>>object Main extends IOApp.Simple {
        |<<2>>  val io = IO(5)
        |  override def run: IO[Unit] = io
-       |<<3>>      .map { _ => 
+       |<<3>>      .map { _ =>
        |<<1>>        throw new Exception
        |        ()
        |      }

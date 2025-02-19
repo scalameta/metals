@@ -381,7 +381,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |import java.io.Externalizable
        |
        |object Main extends Externalizable {
-       |  def@@ 
+       |  def@@
        |}
        |""".stripMargin,
     """|package example
@@ -394,7 +394,7 @@ class CompletionOverrideAllSuite extends BaseCompletionSuite {
        |  def writeExternal(out: ObjectOutput): Unit = ${0:???}
        |
        |  def readExternal(in: ObjectInput): Unit = ${0:???}
-       | 
+       |
        |}
        |""".stripMargin,
     filter = _.contains("Implement")

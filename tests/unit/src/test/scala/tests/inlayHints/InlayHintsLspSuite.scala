@@ -22,7 +22,7 @@ class InlayHintsLspSuite
        |    hello()/*(andy<<(6:15)>>, boston<<(9:17)>>)*/
        |    hello()/*(andy<<(6:15)>>, boston<<(9:17)>>)*/;    hello()/*(andy<<(6:15)>>, boston<<(9:17)>>)*/
        |  }
-       |  
+       |
        |  val ordered/*: String<<scala/Predef.String#>>*/ = /*augmentString<<scala/Predef.augmentString().>>(*/"acb"/*)*/.sorted/*(Char<<scala/math/Ordering.Char.>>)*/
        |  /*augmentString<<scala/Predef.augmentString().>>(*/"foo"/*)*/.map(c/*: Char<<scala/Char#>>*/ => c.toInt)
        |  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
@@ -55,7 +55,7 @@ class InlayHintsLspSuite
        |    hello()/*(andy<<(6:15)>>, boston<<(9:17)>>)*/
        |    hello()/*(andy<<(6:15)>>, boston<<(9:17)>>)*/;    hello()/*(andy<<(6:15)>>, boston<<(9:17)>>)*/
        |  }
-       |  
+       |
        |  val ordered/*: String<<scala/Predef.String#>>*/ = /*augmentString<<scala/Predef.augmentString().>>(*/"acb"/*)*/.sorted/*[Char<<scala/Char#>>]*//*(Char<<scala/math/Ordering.Char.>>)*/
        |  /*augmentString<<scala/Predef.augmentString().>>(*/"foo"/*)*/.map/*[Int<<scala/Int#>>]*/(c/*: Char<<scala/Char#>>*/ => c.toInt)
        |  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
@@ -255,8 +255,8 @@ class InlayHintsLspSuite
       _ <- server.assertInlayHints(
         "a/Main.worksheet.sc",
         """|def method(implicit str: String) = str + str
-           |implicit val name: String = "Susan".stripMargin/* // : String = "Susan"| name: String = "Susan" |*/ 
-           |val greeting = s"Hello $$name"/* // : String = "Hello $name"| greeting: String = "Hello $name" |*/ 
+           |implicit val name: String = "Susan".stripMargin/* // : String = "Susan"| name: String = "Susan" |*/
+           |val greeting = s"Hello $$name"/* // : String = "Hello $name"| greeting: String = "Hello $name" |*/
            |method/* // : String = "SusanSusan"| res0: String = "SusanSusan" |*/
            |""".stripMargin,
         withTooltip = true,

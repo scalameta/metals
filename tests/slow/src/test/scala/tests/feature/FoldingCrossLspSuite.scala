@@ -63,7 +63,7 @@ class FoldingCrossLspSuite extends BaseLspSuite("foldingRange-cross") {
             |    false
             |  }
             |  val args = List.empty[String]
-            |  func(args*) 
+            |  func(args*)
             |}
             |""".stripMargin
       )
@@ -83,7 +83,7 @@ class FoldingCrossLspSuite extends BaseLspSuite("foldingRange-cross") {
            |    false
            |  }<<region<<
            |  val args = List.empty[String]
-           |  func(args*) 
+           |  func(args*)
            |}<<region<<
            |""".stripMargin,
       )

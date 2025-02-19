@@ -52,7 +52,7 @@ class ReportsSuite extends BaseSuite {
       new String(Files.readAllBytes(path.get), StandardCharsets.UTF_8)
     assertNoDiff(
       s"""|${exampleText(StdReportContext.WORKSPACE_STR)}
-          |#### Short summary: 
+          |#### Short summary:
           |
           |Test error report.
           |""".stripMargin,
@@ -131,7 +131,7 @@ class ReportsSuite extends BaseSuite {
     assertNoDiff(
       s"""|error id: $testId
           |${exampleText(StdReportContext.WORKSPACE_STR)}
-          |#### Short summary: 
+          |#### Short summary:
           |
           |Test error
           |""".stripMargin,

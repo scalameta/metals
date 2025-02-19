@@ -146,7 +146,7 @@ abstract class BaseCodeLensLspSuite(
         _ <- initialize(
           s"""|/metals.json
               |{
-              |  "a": { 
+              |  "a": {
               |    "libraryDependencies" : [ ${wrap(library)} ],
               |    "compilerPlugins" : [ ${wrap(plugin)} ],
               |    "scalaVersion": "$actualScalaVersion"

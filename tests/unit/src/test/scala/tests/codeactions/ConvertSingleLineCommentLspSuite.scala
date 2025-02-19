@@ -126,7 +126,7 @@ class ConvertSingleLineCommentLspSuite
   checkNoAction(
     "show no action when cursor is before line comment",
     """|
-       |<<>> // start 
+       |<<>> // start
        |""".stripMargin,
     fileName = "script.sc",
   )
@@ -259,7 +259,7 @@ class ConvertSingleLineCommentLspSuite
   checkNoAction(
     "should not show action when cursor is after block comment",
     """|val a = 1
-       |/* comment middle */ <<>> 
+       |/* comment middle */ <<>>
        |val b = 2""".stripMargin,
     fileName = "script2.sc",
   )

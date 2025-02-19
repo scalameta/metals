@@ -519,7 +519,7 @@ object NewProjectLspSuite {
        |(Akka Streams and Kafka)
        |- [shigemk2/minimal-akka-scala.g8](https://github.com/shigemk2/minimal-akka-scala.g8)
        |(very simple and minimal akka-scala template)
-       |- [mhamrah/sbt.g8](https://github.com/mhamrah/sbt.g8) 
+       |- [mhamrah/sbt.g8](https://github.com/mhamrah/sbt.g8)
        |(A slimmer version of [ymasory's sbt](https://github.com/ymasory/sbt.g8) project with typesafe config, logback, scalatest and akka. Features a [spray](http://spray.io) option via `g8 mhamrah/sbt -b spray`.)
        |- [cfeduke/akka-scala-sbt.g8](https://github.com/cfeduke/akka-scala-sbt.g8)
        |(**2014**. Akka 2.2, Scala)

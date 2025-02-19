@@ -21,7 +21,7 @@ class ImplementationCrossLspSuite
       |
       |  override def newBuilder[A]: mutable.Builder[A, List[A]] = ???
       |
-      |  
+      |
       |}
       |""".stripMargin,
     """|a/A.

@@ -365,7 +365,7 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/scala/a/A.scala:2:16: error: unclosed string literal
-           |  val n: Int = " 
+           |  val n: Int = "
            |               ^
            |""".stripMargin,
       )

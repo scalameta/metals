@@ -228,7 +228,7 @@ class InlayHintsScala3Suite extends BaseInlayHintsSuite {
        |  def matchTypeImpl[T: Type](param1: Expr[T])(using Quotes) =
        |    import quotes.reflect.*
        |    Type.of[T] match
-       |      case '[f] => 
+       |      case '[f] =>
        |        val fr = TypeRepr.of[T]
        |""".stripMargin,
     """|package example
@@ -237,7 +237,7 @@ class InlayHintsScala3Suite extends BaseInlayHintsSuite {
        |  def matchTypeImpl[T: Type](param1: Expr[T])(using Quotes)/*: Unit<<scala/Unit#>>*/ =
        |    import quotes.reflect.*
        |    Type.of[T] match
-       |      case '[f] => 
+       |      case '[f] =>
        |        val fr/*: TypeRepr<<scala/quoted/Quotes#reflectModule#TypeRepr#>>*/ = TypeRepr.of[T]/*(using evidence$1<<(3:21)>>)*/
        |""".stripMargin
   )
@@ -247,14 +247,14 @@ class InlayHintsScala3Suite extends BaseInlayHintsSuite {
     """|package example
        |import scala.quoted.*
        |object O:
-       |  def rec[A : Type](using Quotes): List[String] = 
+       |  def rec[A : Type](using Quotes): List[String] =
        |    Type.of[A] match
        |      case '[field *: fields] => ???
        |""".stripMargin,
     """|package example
        |import scala.quoted.*
        |object O:
-       |  def rec[A : Type](using Quotes): List[String] = 
+       |  def rec[A : Type](using Quotes): List[String] =
        |    Type.of[A] match
        |      case '[field *: fields] => ???
        |""".stripMargin

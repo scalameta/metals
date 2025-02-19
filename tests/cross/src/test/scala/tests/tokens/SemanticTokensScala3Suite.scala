@@ -188,7 +188,7 @@ class SemanticTokensScala3Suite extends BaseSemanticTokensSuite {
       |object <<B>>/*class*/ {
       |  extension (<<x>>/*parameter,declaration,readonly*/: <<Int>>/*class,abstract*/)(using <<Int>>/*class,abstract*/)
       |    def <<foo>>/*method,definition*/: <<Int>>/*class,abstract*/ = <<???>>/*method*/
-      |    
+      |
       |  given <<Int>>/*class,abstract*/ = 42
       |  val <<bar>>/*variable,definition,readonly*/ = 42.<<foo>>/*method*/
       |}

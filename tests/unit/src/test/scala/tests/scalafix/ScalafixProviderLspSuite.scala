@@ -52,7 +52,7 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
            |object Main{
            |  def debug { println("debug") } // ProcedureSyntax rule is not defined, should not be changed
            |  val addTypeHere = new A{}
-           |  private val notUsed = 123 
+           |  private val notUsed = 123
            |}
            |""".stripMargin
       )
@@ -64,7 +64,7 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
            |import java.io.File
            |               ^^^^
            |a/src/main/scala/Main.scala:7:15: warning: private val notUsed in object Main is never used
-           |  private val notUsed = 123 
+           |  private val notUsed = 123
            |              ^^^^^^^
            |""".stripMargin,
       )
@@ -89,7 +89,7 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
            |object Main{
            |  def debug { println("debug") } // ProcedureSyntax rule is not defined, should not be changed
            |  val addTypeHere: A = new A{}
-           |   
+           |
            |}
            |""".stripMargin,
       )
@@ -118,7 +118,7 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
            |object Main{
            |  def debug: Unit = { println("debug") } // ProcedureSyntax rule is not defined, should not be changed
            |  val addTypeHere: A = new A{}
-           |   
+           |
            |}
            |""".stripMargin,
       )
@@ -142,7 +142,7 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
            |/a/src/main/scala/Main.scala
            |object Main{
            |  val addTypeHere = new A{}
-           |  private val notUsed = 123 
+           |  private val notUsed = 123
            |}
            |""".stripMargin
       )
@@ -171,7 +171,7 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
         contents,
         """|object Main{
            |  val addTypeHere = new A{}
-           |  private val notUsed = 123 
+           |  private val notUsed = 123
            |}
            |""".stripMargin,
       )
@@ -189,7 +189,7 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
            |/a/src/main/scala/Main.scala
            |class A
            |object Main{
-           |  private val notUsed = 123 
+           |  private val notUsed = 123
            |}
            |""".stripMargin
       )
@@ -211,7 +211,7 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
         """|
            |class A
            |object Main{
-           |   
+           |
            |}
            |""".stripMargin,
       )
@@ -241,7 +241,7 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
         contentsAfterConfigChange,
         """|class A
            |object Main{
-           |   
+           |
            |}
            |// Hello world!
            |""".stripMargin,
@@ -269,7 +269,7 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
            |object RemoveMe
            |object A {
            |  case class Bar(i: Int)
-           |  def func(a: Int, b: Int, c: Int) = a + b + c 
+           |  def func(a: Int, b: Int, c: Int) = a + b + c
            |}
            |object Main{
            |  val used = List()
@@ -296,7 +296,7 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
         contents,
         """|object A {
            |  final case class Bar(i: Int)
-           |  def func(a: Int, b: Int, c: Int) = a + b + c 
+           |  def func(a: Int, b: Int, c: Int) = a + b + c
            |}
            |object Main{
            |  val used = List.empty

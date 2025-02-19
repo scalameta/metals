@@ -92,14 +92,14 @@ class ScalaCliSuite extends BaseScalaCliSuite("3.3.3") {
     for {
       _ <- scalaCliInitialize(useBsp)(
         s"""/MyTests.sc
-           |#!/usr/bin/env -S scala-cli shebang --java-opt -Xms256m --java-opt -XX:MaxRAMPercentage=80 
+           |#!/usr/bin/env -S scala-cli shebang --java-opt -Xms256m --java-opt -XX:MaxRAMPercentage=80
            |//> using scala "$scalaVersion"
            |//> using dep "com.lihaoyi::utest::0.7.10"
            |//> using dep com.lihaoyi::pprint::0.6.6
            |
            |import foo.Foo
            |import utest._
-           | 
+           |
            |pprint.log(2) // top-level statement should be fine in a script
            |
            |object MyTests extends TestSuite {
@@ -196,14 +196,14 @@ class ScalaCliSuite extends BaseScalaCliSuite("3.3.3") {
       _ <- server.didOpen("MyTests.sc")
       _ <- server.assertInlayHints(
         "MyTests.sc",
-        s"""|#!/usr/bin/env -S scala-cli shebang --java-opt -Xms256m --java-opt -XX:MaxRAMPercentage=80 
+        s"""|#!/usr/bin/env -S scala-cli shebang --java-opt -Xms256m --java-opt -XX:MaxRAMPercentage=80
             |//> using scala "$scalaVersion"
             |//> using dep "com.lihaoyi::utest::0.7.10"
             |//> using dep com.lihaoyi::pprint::0.6.6
             |
             |import foo.Foo
             |import utest._
-            | 
+            |
             |pprint.log/*[Int<<scala/Int#>>]*/(2)/*(using generate<<sourcecode/LineMacros#generate().>>, generate<<sourcecode/FileNameMacros#generate().>>)*/ // top-level statement should be fine in a script
             |
             |object MyTests extends TestSuite {

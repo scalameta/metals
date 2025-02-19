@@ -17,7 +17,7 @@ class ConvertPatternMatchLspSuite
     "with-placeholder",
     """|object Main {
        |  var x = 0
-       |  List(1,2).map { 
+       |  List(1,2).map {
        |    _ match {
        |      case 1 => {
        |        x = <<1>>
@@ -35,7 +35,7 @@ class ConvertPatternMatchLspSuite
     PatternMatchRefactor.convertPatternMatch,
     """|object Main {
        |  var x = 0
-       |  List(1,2).map { 
+       |  List(1,2).map {
        |    case 1 => {
        |      x = 1
        |      Nil

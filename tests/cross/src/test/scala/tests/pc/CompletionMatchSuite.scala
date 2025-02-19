@@ -562,7 +562,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |
         |import Activity.*
         |
-        |def energySpend(act: Activity & (Physical | Chore)): Double = 
+        |def energySpend(act: Activity & (Physical | Chore)): Double =
         |  act mat@@
         |
         |""".stripMargin,
@@ -583,7 +583,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |
         |import Activity.*
         |
-        |def energySpend(act: Activity & (Physical | Chore)): Double = 
+        |def energySpend(act: Activity & (Physical | Chore)): Double =
         |  act match
         |\tcase Sports(time, intensity) => $$0
         |\tcase Cleaning =>
@@ -612,7 +612,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |
         |import Activity.*
         |
-        |def energySpend(act: Activity & Physical): Double = 
+        |def energySpend(act: Activity & Physical): Double =
         |  act mat@@
         |
         |""".stripMargin,
@@ -633,10 +633,10 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |
         |import Activity.*
         |
-        |def energySpend(act: Activity & Physical): Double = 
+        |def energySpend(act: Activity & Physical): Double =
         |  act match
         |\tcase Sports(time, intensity) => $$0
-        |\tcase Cleaning => 
+        |\tcase Cleaning =>
         |
         |""".stripMargin,
     filter = _.contains("exhaustive")
@@ -696,7 +696,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
   checkEdit(
     "exhaustive-rename".tag(IgnoreScala2),
     s"""|package b {
-        |  enum Color: 
+        |  enum Color:
         |    case Red, Blue, Green
         |}
         |
@@ -708,7 +708,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |}
         |}""".stripMargin,
     s"""|package b {
-        |  enum Color: 
+        |  enum Color:
         |    case Red, Blue, Green
         |}
         |
@@ -730,7 +730,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
     "stale-symbols".tag(IgnoreScala211),
     """
       |package example
-      |      
+      |
       |object Main {
       |  val x: ScalaTargetType = ???
       |  val y = x match@@
@@ -756,7 +756,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |
         | enum Animal:
         |   case Cat, Dog
-        | 
+        |
         | val animal: Id[Animal] = ???
         |
         | animal ma@@
@@ -767,7 +767,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |
        | enum Animal:
        |   case Cat, Dog
-       | 
+       |
        | val animal: Id[Animal] = ???
        |
        | animal match
@@ -789,7 +789,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
         |   case object Cat extends Animal
         |   case object Dog extends Animal
         |}
-        | 
+        |
         | val animal: Id[Animal] = ???
         |
         |animal ma@@
@@ -806,7 +806,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
        |   case object Cat extends Animal
        |   case object Dog extends Animal
        |}
-       | 
+       |
        | val animal: Id[Animal] = ???
        |
        |animal match {
@@ -828,7 +828,7 @@ class CompletionMatchSuite extends BaseCompletionSuite {
            |   case object Cat extends Animal
            |   case object Dog extends Animal
            |}
-           | 
+           |
            | val animal: Id[Animal] = ???
            |
            |animal match

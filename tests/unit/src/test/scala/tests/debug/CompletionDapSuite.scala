@@ -46,7 +46,7 @@ class CompletionDapSuite
   assertCompletion(
     "advanced",
     expression = "Preceding(@@)",
-    expectedCompletions = """|num = 
+    expectedCompletions = """|num =
                              |args: Array[String]
                              |Main a
                              |main(args: Array[String]): Unit

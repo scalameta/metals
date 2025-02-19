@@ -12,7 +12,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     "identity",
     s"""|/$prefix/A/Sun.scala
         |package A
-        |object Sun 
+        |object Sun
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/Sun.scala" -> s"$prefix/A/Sun.scala"),
     expectedRenames = Map.empty,
@@ -35,7 +35,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
   renamed(
     "no-package",
     s"""|/$prefix/A/Sun.scala
-        |object Sun 
+        |object Sun
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/Sun.scala" -> s"$prefix/A/Sun.scala"),
     expectedRenames = Map.empty,
@@ -46,7 +46,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     "single-package",
     s"""|/$prefix/A/Sun.scala
         |package <<A>>
-        |object Sun 
+        |object Sun
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/Sun.scala" -> s"$prefix/A/B/Sun.scala"),
     expectedRenames = Map("A" -> "A.B"),
@@ -57,7 +57,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     "outside-workspace",
     s"""|/$prefix/A/Sun.scala
         |package A
-        |object Sun 
+        |object Sun
         |""".stripMargin,
     fileRenames = Map(
       s"$prefix/A/Sun.scala" -> Files.createTempFile("Sun", ".scala").toString()
@@ -69,7 +69,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     "single-package-non-matching-structure",
     s"""|/$prefix/A/B/Sun.scala
         |package A
-        |object Sun 
+        |object Sun
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/A/C/Sun.scala"),
     expectedRenames = Map(),
@@ -94,7 +94,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     s"""|/$prefix/A/B/Sun.scala
         |package A
         |package <<B>>
-        |object Sun 
+        |object Sun
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/A/C/Sun.scala"),
     expectedRenames = Map("B" -> "C"),
@@ -166,7 +166,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     s"""|/$prefix/A/B/Sun.scala
         |package A
         |package <<B>>
-        |object Sun 
+        |object Sun
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/A/C/B/Sun.scala"),
     expectedRenames = Map("B" -> "C.B"),
@@ -177,7 +177,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     s"""|/$prefix/A/B/Sun.scala
         |package A
         |package <<B>>
-        |object Sun 
+        |object Sun
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/A/B/C/Sun.scala"),
     expectedRenames = Map("B" -> "B.C"),
@@ -202,10 +202,10 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     "multi-package-dir-to-less-nested",
     s"""|/$prefix/A/B/Sun.scala
         |package <<A.B>>
-        |object Sun 
+        |object Sun
         |/$prefix/A/B/Moon.scala
         |package <<A.B>>
-        |object Moon 
+        |object Moon
         |""".stripMargin,
     fileRenames = Map(
       s"$prefix/A/B" -> s"$prefix/A"
@@ -234,7 +234,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     "package-object",
     s"""|/$prefix/A/B/packageFile.scala
         |<<package A>>
-        |package object <<B>> 
+        |package object <<B>>
         |""".stripMargin,
     fileRenames = Map(
       s"$prefix/A/B" -> s"$prefix/C/D"
@@ -248,11 +248,11 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     "references-simple-file-move",
     s"""|/$prefix/A/Sun.scala
         |package <<A>>
-        |object Sun 
+        |object Sun
         |/$prefix/B/Moon.scala
         |package B
         |import <<A>>.Sun
-        |object Moon 
+        |object Moon
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/Sun.scala" -> s"$prefix/C/Sun.scala"),
     expectedRenames = Map("A" -> "C"),
@@ -304,7 +304,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |/$prefix/X/Moon.scala
         |package X
         |import <<A>>.<<B>>.Sun
-        |object Moon 
+        |object Moon
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B" -> s"$prefix/C/D"),
     expectedRenames = Map("B" -> "D", "A" -> "C"),
@@ -328,7 +328,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     "references-same-package-no-imports",
     s"""|/$prefix/A/Mars.scala
         |package <<A>>
-        |object Phobos 
+        |object Phobos
         |object Deimos
         |/$prefix/A/Earth.scala
         |package A
@@ -558,7 +558,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     s"""|/$prefix/A/Sun.scala
         |package <<A>>
         |object Sun
-        |object Moon 
+        |object Moon
         |/$prefix/B/Moon.scala
         |package B
         |import <<A.{Moon => _, _}>>
@@ -576,7 +576,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     s"""|/$prefix/A/Sun.scala
         |package <<A>>
         |object Sun
-        |object Moon 
+        |object Moon
         |/$prefix/B/Moon.scala
         |package B
         |import <<A._>>
@@ -614,7 +614,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     "qualified-refs",
     s"""|/$prefix/A/B/Sun.scala
         |package <<A>>.B
-        |object Sun 
+        |object Sun
         |/$prefix/X/Moon.scala
         |package X
         |
@@ -674,7 +674,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     "qualified-refs-dir-move",
     s"""|/$prefix/A/B/Sun.scala
         |package <<A>>.B
-        |object Sun 
+        |object Sun
         |/$prefix/X/Moon.scala
         |package X
         |
@@ -691,7 +691,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     "partially-qualified-names",
     s"""|/$prefix/A/B/Sun.scala
         |package A.<<B>>
-        |object Sun 
+        |object Sun
         |/$prefix/X/Moon.scala
         |package X
         |import A.B
@@ -892,7 +892,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     "do-not-make-changes-when-outside-of-root",
     s"""|/$prefix/A/Sun.scala
         |package A
-        |object Sun 
+        |object Sun
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/Sun.scala" -> s"random/path/Sun.scala"),
     expectedRenames = Map.empty,
@@ -923,7 +923,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     "unsupported-package-renames".ignore,
     s"""|/$prefix/A/B/Sun.scala
         |package A.<<B>>
-        |object Sun 
+        |object Sun
         |/$prefix/X/Moon.scala
         |package X
         |import A.{<<B>> => BB}

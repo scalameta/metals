@@ -128,7 +128,7 @@ class ClassBreakpointSuite extends BaseClassFinderSuite {
     "inner-class-scala3",
     """|package a
        |
-       |@main 
+       |@main
        |def helloWorld(): Unit = {
        |  object Even {
        |>>  def unapply(s: String): Boolean = s.size % 2 == 0
@@ -144,13 +144,13 @@ class ClassBreakpointSuite extends BaseClassFinderSuite {
     "optional-braces",
     """|package a
        |
-       |@main 
-       |def hello(): Unit = 
+       |@main
+       |def hello(): Unit =
        |  greet("Alice")
        |  greet("Bob")
        |  System.exit(0)
        |
-       |def greet(name: String) = 
+       |def greet(name: String) =
        |  val message = s"Hello, $name!"
        |>>println(message)
        |

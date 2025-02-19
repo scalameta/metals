@@ -466,8 +466,8 @@ class DefinitionLspSuite
         s"""
            |/metals.json
            |{
-           |  "a": { 
-           |    "libraryDependencies" : ["com.thoughtworks.dsl::dsl:2.0.0-M0+1-b691cde8"] 
+           |  "a": {
+           |    "libraryDependencies" : ["com.thoughtworks.dsl::dsl:2.0.0-M0+1-b691cde8"]
            |  }
            |}
            |/a/src/main/scala/example/MainA.scala
@@ -520,7 +520,7 @@ class DefinitionLspSuite
           |}
           |/a/src/main/scala/a/Main.scala
           |class A(
-          |  a: Int, 
+          |  a: Int,
           |  b: Int
           |) {}
           |object Main {
@@ -534,7 +534,7 @@ class DefinitionLspSuite
         server.workspaceDefinitions,
         """|/a/src/main/scala/a/Main.scala
            |class A/*L0*/(
-           |  a/*L1*/: Int/*Int.scala*/, 
+           |  a/*L1*/: Int/*Int.scala*/,
            |  b/*L2*/: Int/*Int.scala*/
            |) {}
            |object Main/*L4*/ {
@@ -658,7 +658,7 @@ class DefinitionLspSuite
         s"""
            |/metals.json
            |{
-           |  "a": { 
+           |  "a": {
            |      "libraryDependencies": [
            |        "com.daml:bindings-rxjava:2.0.0"
            |      ]

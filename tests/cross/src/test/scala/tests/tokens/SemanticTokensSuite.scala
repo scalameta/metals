@@ -222,7 +222,7 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
 
   check(
     "anonymous-class",
-    s"""|package <<example>>/*namespace*/ 
+    s"""|package <<example>>/*namespace*/
         |object <<A>>/*class*/ {
         |  trait <<Methodable>>/*interface,abstract*/[<<T>>/*typeParameter,declaration,abstract*/] {
         |    def <<method>>/*method,declaration,abstract*/(<<asf>>/*parameter,declaration,readonly*/: <<T>>/*typeParameter,abstract*/): <<Int>>/*class,abstract*/
@@ -237,7 +237,7 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
         |}""".stripMargin,
     // In Scala 3 methods in `trait` are not abstract
     compat = Map(
-      "3" -> s"""|package <<example>>/*namespace*/ 
+      "3" -> s"""|package <<example>>/*namespace*/
                  |object <<A>>/*class*/ {
                  |  trait <<Methodable>>/*interface,abstract*/[<<T>>/*typeParameter,definition,abstract*/] {
                  |    def <<method>>/*method,declaration*/(<<asf>>/*parameter,declaration,readonly*/: <<T>>/*typeParameter,abstract*/): <<Int>>/*class,abstract*/
@@ -270,12 +270,12 @@ class SemanticTokensSuite extends BaseSemanticTokensSuite {
     s"""|package <<example>>/*namespace*/
         |
         |class <<Imports>>/*class*/ {
-        |  
+        |
         |  val <<a>>/*variable,definition,readonly*/ = <<Option>>/*class*/(<<Option>>/*class*/(""))
         |  <<a>>/*variable,readonly*/ match {
         |    case <<Some>>/*class*/(<<Some>>/*class*/(<<b>>/*variable,definition,readonly*/)) => <<b>>/*variable,readonly*/
         |    case <<Some>>/*class*/(<<b>>/*variable,definition,readonly*/) => <<b>>/*variable,readonly*/
-        |    case <<other>>/*variable,definition,readonly*/ => 
+        |    case <<other>>/*variable,definition,readonly*/ =>
         |  }
         |}""".stripMargin
   )
