@@ -7,13 +7,13 @@ import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.debug.TestFramework
 import scala.meta.internal.metals.debug.server.testing.FingerprintInfo
 import scala.meta.internal.metals.debug.server.testing.LoggingEventHandler
 import scala.meta.internal.metals.debug.server.testing.TestInternals
 import scala.meta.internal.metals.debug.server.testing.TestServer
 import scala.meta.io.AbsolutePath
 
+import bloop.config.Config
 import ch.epfl.scala.bsp4j.ScalaTestSuites
 import ch.epfl.scala.debugadapter.CancelableFuture
 import ch.epfl.scala.debugadapter.DebuggeeListener
@@ -31,7 +31,7 @@ class TestSuiteDebugAdapter(
     testClasses: ScalaTestSuites,
     project: DebugeeProject,
     userJavaHome: Option[String],
-    discoveredTests: Map[TestFramework, List[Discovered]],
+    discoveredTests: Map[Config.TestFramework, List[Discovered]],
 )(implicit ec: ExecutionContext)
     extends MetalsDebuggee() {
 
