@@ -45,10 +45,17 @@ class SelectionRangeProvider(
         .flatMap {
           case (tree: DefDef) =>
             val paramsSelectionRange = (tree.tparams :: tree.vparamss)
-              .filter { paramList => paramList.exists(_.pos.encloses(pos)) && paramList.length >= 2 }
+              .filter { paramList =>
+                paramList.exists(_.pos.encloses(pos)) && paramList.length >= 2
+              }
               .map { paramList =>
                 val selectionRange = new SelectionRange()
-                selectionRange.setRange(new Range(paramList.head.pos.toLsp.getStart, paramList.last.pos.toLsp.getEnd))
+                selectionRange.setRange(
+                  new Range(
+                    paramList.head.pos.toLsp.getStart,
+                    paramList.last.pos.toLsp.getEnd
+                  )
+                )
                 selectionRange
               }
               .toList
