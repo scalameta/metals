@@ -26,13 +26,16 @@ trait InlineValueProvider {
 
   private def referenceTextEdit(
       definition: Definition
-  )(ref: Reference): l.TextEdit =
-    if (definition.requiresBrackets && ref.requiresBrackets)
+  )(ref: Reference): l.TextEdit = {
+    if (
+      definition.requiresBrackets == VeryMuch || (definition.requiresBrackets == Yes && ref.requiresBrackets)
+    ) {
       new l.TextEdit(
         ref.range,
-        s"""(${definition.rhs})"""
+        s"""{${definition.rhs}}"""
       )
-    else new l.TextEdit(ref.range, definition.rhs)
+    } else new l.TextEdit(ref.range, definition.rhs)
+  }
 
   private def definitionTextEdit(definition: Definition): l.TextEdit =
     new l.TextEdit(
@@ -85,11 +88,16 @@ object InlineValueProvider {
 
 case class RangeOffset(start: Int, end: Int)
 
+sealed trait RequiresBrackets
+case object Yes extends RequiresBrackets
+case object No extends RequiresBrackets
+case object VeryMuch extends RequiresBrackets
+
 case class Definition(
     range: l.Range,
     rhs: String,
     rangeOffsets: RangeOffset,
-    requiresBrackets: Boolean,
+    requiresBrackets: RequiresBrackets,
     shouldBeRemoved: Boolean
 )
 
