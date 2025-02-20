@@ -406,17 +406,12 @@ final class FormattingProvider(
   def validateWorkspace(projectRoot: AbsolutePath): Future[Unit] = {
     scalafmtConf(projectRoot) match {
       case Some(conf) =>
-        getTextFromBuffers(conf) match {
-          case Some(text) =>
-            ScalafmtConfig.parse(text) match {
-              case Failure(e) =>
-                scribe.error(s"Failed to parse ${conf}", e)
-                Future.unit
-              case Success(values) =>
-                checkIfDialectUpgradeRequired(values, conf)
-            }
-          case None =>
+        ScalafmtConfig.parse(conf) match {
+          case Failure(e) =>
+            scribe.error(s"Failed to parse ${conf}", e)
             Future.unit
+          case Success(values) =>
+            checkIfDialectUpgradeRequired(values, conf)
         }
       case None =>
         Future.unit
@@ -433,16 +428,6 @@ final class FormattingProvider(
       List(defaultLocation, scalacliDefault, hiddenDefault).find(_.exists)
     }
     configpath.orElse(default)
-  }
-
-  private def getTextFromBuffers(conf: AbsolutePath): Option[String] = {
-    Try(conf.toInputFromBuffers(buffers).text) match {
-      case Success(text) =>
-        Some(text)
-      case Failure(exception) =>
-        scribe.warn(s"Unable to get content from $conf", exception)
-        None
-    }
   }
 
   private def activeReporter(projectRoot: AbsolutePath): ScalafmtReporter =
