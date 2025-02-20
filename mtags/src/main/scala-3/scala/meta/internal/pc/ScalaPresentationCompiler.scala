@@ -476,4 +476,19 @@ case class ScalaPresentationCompiler(
 
   def emptyQueryContext = PcQueryContext(None, additionalReportData)
 
+  override def supportedCodeActions(): ju.List[String] = List(CodeActionId.ConvertToEnum).asJava
+
+  override def codeAction[T](params: OffsetParams, codeActionId: String, codeActionPayload: ju.Optional[T]): ju.concurrent.CompletableFuture[ju.List[l.TextEdit]] =
+    lazy val default = List.empty[l.TextEdit].asJava
+    codeActionId match {
+      case CodeActionId.ConvertToEnum =>
+        compilerAccess.withNonInterruptableCompiler(default,params.token,
+          ) { access =>
+            val driver = access.compiler()
+            PcConvertToEnum(driver, params).convertToEnum
+      }(params.toQueryContext)
+        
+      case _ => CompletableFuture.completedFuture(default)
+    }
+
 end ScalaPresentationCompiler
