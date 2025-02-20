@@ -6,7 +6,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
 
-import org.eclipse.lsp4j.SelectionRange
+import org.eclipse.lsp4j.{Range, SelectionRange}
 
 /**
  * Provides the functionality necessary for the `textDocument/selectionRange` request.
@@ -42,10 +42,24 @@ class SelectionRangeProvider(
       val _ = locateUntyped(pos)
 
       val bareRanges = lastVisitedParentTrees
-        .map { (tree: Tree) =>
-          val selectionRange = new SelectionRange()
-          selectionRange.setRange(tree.pos.toLsp)
-          selectionRange
+        .flatMap {
+          case (tree: DefDef) =>
+            val paramsSelectionRange = (tree.tparams :: tree.vparamss)
+              .filter { paramList => paramList.exists(_.pos.encloses(pos)) && paramList.length >= 2 }
+              .map { paramList =>
+                val selectionRange = new SelectionRange()
+                selectionRange.setRange(new Range(paramList.head.pos.toLsp.getStart, paramList.last.pos.toLsp.getEnd))
+                selectionRange
+              }
+              .toList
+            val defSelectionRange = new SelectionRange()
+            defSelectionRange.setRange(tree.pos.toLsp)
+            paramsSelectionRange :+ defSelectionRange
+
+          case tree =>
+            val selectionRange = new SelectionRange()
+            selectionRange.setRange(tree.pos.toLsp)
+            List(selectionRange)
         }
 
       val commentRanges =
