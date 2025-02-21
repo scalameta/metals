@@ -18,7 +18,7 @@ object V {
   val bazelScalaVersion = "2.13.12"
   val ammonite3Version = "3.3.4"
 
-  val ammonite = "3.0.0-2-6342755f"
+  val ammonite = "3.0.2"
   val betterMonadicFor = "0.3.1"
   val bloop = "2.0.8"
   val bloopConfig = "2.3.2"
