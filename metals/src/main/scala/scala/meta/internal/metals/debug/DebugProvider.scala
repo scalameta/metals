@@ -58,6 +58,7 @@ import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.io.AbsolutePath
 
+import bloop.config.Config
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.DebugSessionParams
 import ch.epfl.scala.bsp4j.ScalaMainClass
@@ -392,7 +393,7 @@ class DebugProvider(
   private def discoverTests(
       id: BuildTargetIdentifier,
       testClasses: b.ScalaTestSuites,
-  ): Future[Map[TestFramework, List[Discovered]]] = {
+  ): Future[Map[Config.TestFramework, List[Discovered]]] = {
     val symbolInfosList =
       for {
         selection <- testClasses.getSuites().asScala.toList
@@ -595,7 +596,8 @@ class DebugProvider(
             request.requestData.copy(
               suites = request.requestData.suites.map { suite =>
                 testProvider.getFramework(buildTarget, suite) match {
-                  case JUnit4 | MUnit =>
+                  case Config.TestFramework.JUnit |
+                      Config.TestFramework.munit =>
                     suite.copy(tests = suite.tests.map(escapeTestName))
                   case _ => suite
                 }
