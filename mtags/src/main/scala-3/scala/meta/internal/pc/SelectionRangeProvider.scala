@@ -115,7 +115,7 @@ object SelectionRangeProvider:
             .iterator
             .flatMap{ // parameter list to a sourcePosition covering the whole list
               case Seq(param) => None
-              case params @ Seq(head, tail*) if tail.size > 1 =>
+              case params @ Seq(head, tail*) if tail.size >= 1 =>
                 val srcPos = head.sourcePos
                 Some(srcPos.copy(span = srcPos.span union tail.last.span))
               case Seq() => None
