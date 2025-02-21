@@ -64,23 +64,29 @@ final class PcInlineValueProviderImpl(
     end for
   end defAndRefs
 
-  private def definitionRequiresBrackets(tree: Tree)(using Context): Boolean =
+  extension (blck: untpd.Block)
+    def isIndentationSensitive: Boolean =
+      val untpd.Block(stats, expr) = blck
+      (stats :+ expr).head.span != blck.span
+
+  private def definitionRequiresBrackets(tree: Tree)(using Context): RequiresBrackets =
     NavigateAST
       .untypedPath(tree.span)
       .headOption
       .map {
-        case _: untpd.If => true
-        case _: untpd.Function => true
-        case _: untpd.Match => true
-        case _: untpd.ForYield => true
-        case _: untpd.InfixOp => true
-        case _: untpd.ParsedTry => true
-        case _: untpd.Try => true
-        case _: untpd.Block => true
-        case _: untpd.Typed => true
-        case _ => false
+        case _: untpd.If => Yes
+        case _: untpd.Function => Yes
+        case _: untpd.Match => Yes
+        case _: untpd.ForYield => Yes
+        case _: untpd.InfixOp => Yes
+        case _: untpd.ParsedTry => Yes
+        case _: untpd.Try => Yes
+        case blck: untpd.Block =>
+          if blck.isIndentationSensitive then VeryMuch else Yes
+        case _: untpd.Typed => Yes
+        case _ => No
       }
-      .getOrElse(false)
+      .getOrElse(No)
 
   end definitionRequiresBrackets
 
