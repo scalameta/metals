@@ -208,7 +208,7 @@ class SelectionRangeSuite extends BaseSelectionRangeSuite {
   )
 
   check(
-    "def - type params".tag(IgnoreScala3),
+    "def - type params",
     """
     object Main extends App { def foo[Type@@ <: T1, B](hi: Int, b: Int, c:Int) = ??? }
     """.stripMargin,
