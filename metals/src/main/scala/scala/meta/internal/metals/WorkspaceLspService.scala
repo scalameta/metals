@@ -157,6 +157,7 @@ class WorkspaceLspService(
       () => httpServer,
       clientConfig,
       languageClient,
+      clientConfig.isHttpEnabled(),
     )
 
   private val bspStatus = new BspStatus(
@@ -329,17 +330,40 @@ class WorkspaceLspService(
   def onCurrentFolder[A](
       f: ProjectMetalsLspService => Future[A],
       actionName: String,
+      forceMetalsProject: Boolean,
       default: () => A,
   ): Future[A] = {
+    def forcedFocusedToBeMetalsProject(): Option[ProjectMetalsLspService] =
+      nonScalaProjects match {
+        case Nil => None
+        case head :: Nil if folderServices.isEmpty =>
+          workspaceFolders.convertToScalaProject(head)
+        case _ =>
+          focusedDocument
+            .get()
+            .flatMap(getFolderForOpt(_, nonScalaProjects))
+            .flatMap(workspaceFolders.convertToScalaProject)
+      }
     def currentService(): Future[Option[ProjectMetalsLspService]] =
       folderServices match {
+        case Nil if forceMetalsProject =>
+          Future { forcedFocusedToBeMetalsProject() }
         case Nil => Future { None }
-        case head :: Nil => Future { Some(head) }
-        case _ =>
+        case head :: rest =>
           focusedDocument.get().flatMap(getServiceForOpt) match {
             case Some(service) => Future { Some(service) }
             case None =>
-              workspaceChoicePopup.interactiveChooseFolder(actionName)
+              if (rest.isEmpty) {
+                Future { Some(head) }
+              } else if (forceMetalsProject) {
+                forcedFocusedToBeMetalsProject()
+                  .map(folder => Future.successful(Some(folder)))
+                  .getOrElse(
+                    workspaceChoicePopup.interactiveChooseFolder(actionName)
+                  )
+              } else {
+                workspaceChoicePopup.interactiveChooseFolder(actionName)
+              }
           }
       }
     currentService().flatMap {
@@ -357,8 +381,9 @@ class WorkspaceLspService(
   def onCurrentFolder(
       f: ProjectMetalsLspService => Future[Unit],
       actionName: String,
+      forceMetalsProject: Boolean = false,
   ): Future[Unit] =
-    onCurrentFolder(f, actionName, () => ())
+    onCurrentFolder(f, actionName, forceMetalsProject, () => ())
 
   def foreachSeq[A](
       f: ProjectMetalsLspService => Future[A],
@@ -390,7 +415,8 @@ class WorkspaceLspService(
     focusedDocument.get().foreach(recentlyFocusedFiles.add)
     val uri = params.getTextDocument.getUri
     val path = uri.toAbsolutePath
-    setFocusedDocument(Some(path))
+    if (!clientConfig.isDidFocusProvider() || focusedDocument.get().isEmpty)
+      setFocusedDocument(Some(path))
     val service = getServiceForOpt(path)
       .orElse {
         if (path.filename.isScalaOrJavaFilename) {
@@ -418,7 +444,9 @@ class WorkspaceLspService(
 
   override def didClose(params: DidCloseTextDocumentParams): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    if (focusedDocument.get().contains(path)) {
+    if (
+      !clientConfig.isDidFocusProvider() && focusedDocument.get().contains(path)
+    ) {
       setFocusedDocument(recentlyFocusedFiles.pollRecent())
     }
     getServiceFor(params.getTextDocument().getUri()).didClose(params)
@@ -773,18 +801,21 @@ class WorkspaceLspService(
         onCurrentFolder(
           _.generateBspConfig(),
           ServerCommands.GenerateBspConfig.title,
+          forceMetalsProject = true,
         ).asJavaObject
       case ServerCommands.ImportBuild() =>
         onCurrentFolder(
           _.connectionProvider.slowConnectToBuildServer(forceImport = true),
           ServerCommands.ImportBuild.title,
           default = () => BuildChange.None,
+          forceMetalsProject = true,
         ).asJavaObject
       case ServerCommands.ConnectBuildServer() =>
         onCurrentFolder(
           _.connectionProvider.quickConnectToBuildServer(),
           ServerCommands.ConnectBuildServer.title,
           default = () => BuildChange.None,
+          forceMetalsProject = true,
         ).asJavaObject
       case ServerCommands.DisconnectBuildServer() =>
         onCurrentFolder(
@@ -792,7 +823,11 @@ class WorkspaceLspService(
           ServerCommands.DisconnectBuildServer.title,
         ).asJavaObject
       case ServerCommands.DecodeFile(uri) =>
-        getServiceFor(uri).decodeFile(uri).asJavaObject
+        getServiceForOpt(uri)
+          .orElse(currentFolder)
+          .getOrElse(fallbackService)
+          .decodeFile(uri)
+          .asJavaObject
       case ServerCommands.DiscoverTestSuites(params) =>
         Option(params.uri) match {
           case None =>
@@ -1180,7 +1215,7 @@ class WorkspaceLspService(
         capabilities.setCompletionProvider(
           new lsp4j.CompletionOptions(
             clientConfig.isCompletionItemResolve(),
-            List(".", "*", "$").asJava,
+            List(".", "*", "$", "`").asJava,
           )
         )
         capabilities.setCallHierarchyProvider(true)
@@ -1258,8 +1293,8 @@ class WorkspaceLspService(
     workDoneProgress.start(sh, 0, 1, ju.concurrent.TimeUnit.SECONDS)
     for {
       _ <- userConfigSync.initSyncUserConfiguration(folderServices)
-      _ <- Future.sequence(folderServices.map(_.initialized()))
       _ <- Future(startHttpServer())
+      _ <- Future.sequence(folderServices.map(_.initialized()))
     } yield ()
   }
 
@@ -1379,8 +1414,7 @@ class Folder(
 ) {
 
   lazy val isMetalsProject: Boolean =
-    isKnownMetalsProject || path.resolve(".metals").exists || path
-      .isMetalsProject()
+    isKnownMetalsProject || path.isMetalsProject()
 
   /**
    * A workspace folder might be a project reference for an other project.

@@ -47,16 +47,14 @@ class CancelCompileLspSuite extends BaseLspSuite("compile-cancel") {
       )
       _ <- server.server.buildServerPromise.future
       (compileReport, _) <- server.server.compilations
-        .compileFile(
-          workspace.resolve("c/src/main/scala/c/C.scala")
-        )
+        .compileFile(workspace.resolve("c/src/main/scala/c/C.scala"))
         .zip {
           // wait until the compilation start
           Thread.sleep(1000)
           server.executeCommand(ServerCommands.CancelCompile)
         }
       _ = assertNoDiff(client.workspaceDiagnostics, "")
-      _ = assertEquals(compileReport.getStatusCode(), StatusCode.CANCELLED)
+      _ = assertEquals(compileReport.get.getStatusCode(), StatusCode.CANCELLED)
       _ <- server.server.compilations.compileFile(
         workspace.resolve("c/src/main/scala/c/C.scala")
       )

@@ -3,6 +3,7 @@ package tests.mill
 import java.util.concurrent.TimeUnit
 
 import scala.meta.internal.metals.DebugDiscoveryParams
+import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTestSuiteSelection
@@ -183,6 +184,48 @@ class MillDebugDiscoverySuite
          |Execution took xxx
          |1 tests, 1 passed
          |All tests in a.Foo passed
+         |""".stripMargin,
+    )
+  }
+
+  test("assert-location") {
+    cleanCompileCache("a")
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        MillBuildLayout(
+          s"""
+             |/${fooPath}
+             |package a
+             |class Foo extends org.scalatest.funsuite.AnyFunSuite {
+             |  test("foo") {
+             |    println("foo")
+             |    println("foo")
+             |    println("foo")
+             |    assert(1 == 2)
+             |  }
+             |}
+             |""".stripMargin,
+          scalaVersion,
+          Some(Scalatest),
+        )
+      )
+      debugger <-
+        server
+          .startDebuggingUnresolved(
+            new DebugUnresolvedTestClassParams(
+              "a.Foo"
+            ).toJson
+          )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allTestEvents
+    } yield assertNoDiff(
+      output,
+      """|a.Foo
+         |  foo - failed at Foo.scala, line 6
          |""".stripMargin,
     )
   }

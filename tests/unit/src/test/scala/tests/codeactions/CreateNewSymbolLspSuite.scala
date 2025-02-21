@@ -18,6 +18,10 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
 
   val docToolName = "javax.tools.DocumentationTool"
 
+  val additionalLocation: String =
+    if (isJava21)
+      "\nImport 'Location' from package 'java.lang.reflect.AccessFlag'"
+    else ""
   checkNewSymbol(
     "case-class",
     """|package a
@@ -26,9 +30,9 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Location", "javax.tools.JavaFileManager")}
         |${ImportMissingSymbol.title("Location", docToolName)}
-        |${ImportMissingSymbol.title("Location", "javax.xml.stream")}
+        |${ImportMissingSymbol.title("Location", "javax.xml.stream")}${additionalLocation}
         |${CreateNewSymbol.title("Location")}""".stripMargin,
-    selectedActionIndex = 3,
+    selectedActionIndex = if (isJava21) 4 else 3,
     pickedKind = "scala-case-class",
     newFile = "a/src/main/scala/a/Location.scala" ->
       """|package a
@@ -55,7 +59,7 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
   )
 
   checkNewSymbol(
-    "unsupported-method",
+    "list-literal",
     """|object X {
        |  List(1,2).map(s<<>>df)
        |}
@@ -70,7 +74,31 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
     pickedKind = "infer-method",
     newFile = "a/src/main/scala/a/A.scala" ->
       """| object X {
+         |  def sdf(arg0: Int) = ???
          |  List(1,2).map(sdf)
+         |}
+         |""".stripMargin,
+    expectNoDiagnostics = false,
+  )
+
+  checkNewSymbol(
+    "list-literal-error",
+    """|object X {
+       |  val list = List(1, 2, 3)
+       |  list.foldLeft(0)(s<<>>df)
+       |}
+       |""".stripMargin,
+    s"""|${CreateNewSymbol.method("sdf")}
+        |${RewriteBracesParensCodeAction.toBraces("")}
+        |${ExtractValueCodeAction.title("sdf")}
+        |${ConvertToNamedArguments.title("foldLeft()(...)")}
+        |""".stripMargin,
+    selectedActionIndex = 0,
+    pickedKind = "infer-method",
+    newFile = "a/src/main/scala/a/A.scala" ->
+      """| object X {
+         |  val list = List(1, 2, 3)
+         |  list.foldLeft(0)(sdf)
          |}
          |""".stripMargin,
     expectNoDiagnostics = false,
@@ -87,9 +115,9 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Location", "javax.tools.JavaFileManager")}
         |${ImportMissingSymbol.title("Location", docToolName)}
-        |${ImportMissingSymbol.title("Location", "javax.xml.stream")}
+        |${ImportMissingSymbol.title("Location", "javax.xml.stream")}${additionalLocation}
         |${CreateNewSymbol.title("Location")}""".stripMargin,
-    selectedActionIndex = 3,
+    selectedActionIndex = if (isJava21) 4 else 3,
     pickedKind = "scala-trait",
     newFile = "a/src/main/scala/a/Location.scala" ->
       s"""|package a
@@ -108,12 +136,12 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Location", "javax.tools.JavaFileManager")}
         |${ImportMissingSymbol.title("Location", docToolName)}
-        |${ImportMissingSymbol.title("Location", "javax.xml.stream")}
+        |${ImportMissingSymbol.title("Location", "javax.xml.stream")}${additionalLocation}
         |${CreateNewSymbol.title("Missing")}
         |${CreateNewSymbol.title("Location")}
         |${ExtractRenameMember.renameFileAsClassTitle(fileName = "A.scala", memberName = "School")}
         |""".stripMargin,
-    selectedActionIndex = 3,
+    selectedActionIndex = if (isJava21) 4 else 3,
     pickedKind = "scala-class",
     newFile = "a/src/main/scala/a/Missing.scala" ->
       s"""|package a

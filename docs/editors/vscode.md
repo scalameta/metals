@@ -134,8 +134,9 @@ following locations:
 
 ## Using latest Metals <a name="SNAPSHOT">SNAPSHOT</a>
 
-Update the "Server Version" setting to try out the latest pending Metals
-features.
+Update the "metals.serverVersion" setting to try out the latest pending Metals
+features and fixes. To open settings go to `File -> Preferences -> Settings` and
+then use the search to find the specific option.
 
 ```scala mdoc:releases
 
@@ -318,6 +319,27 @@ options for tests. To work around that you can use:
   only for your tests and/or you also want to use -X options.
 
 This will work for any method used to run tests.
+
+### Debugging Scala Native
+
+To debug Scala Native applications, you need to use the
+[LLDB DAP](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.lldb-dap)
+extension and modify the `launch.json` configuration according to the extension
+README.
+
+You should also us make sure all all optimizations are turned off and
+SourceLevelDebuggingConfig is fully enabled. This can be done by adding the
+following to your `build.sbt`:
+
+```
+import scala.scalanative.build._
+
+nativeConfig ~= { c =>
+  c.withSourceLevelDebuggingConfig(_.enableAll) // enable generation of debug information
+  .withOptimize(false)  // disable Scala Native optimizer
+  .withMode(Mode.debug) // compile using LLVM without optimizations
+}
+```
 
 ## On type formatting for multiline string formatting
 

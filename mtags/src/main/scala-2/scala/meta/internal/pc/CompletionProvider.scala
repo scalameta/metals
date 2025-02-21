@@ -57,10 +57,15 @@ class CompletionProvider(
     val pos = unit.position(params.offset)
     val isSnippet = isSnippetEnabled(pos, params.text())
 
-    val (i, completion, editRange, query) = safeCompletionsAt(pos, params.uri())
+    val (i, completion, identOffsets, editRange, query) =
+      safeCompletionsAt(pos, params.uri())
 
-    val start = inferIdentStart(pos, params.text())
-    val end = inferIdentEnd(pos, params.text())
+    val InferredIdentOffsets(
+      start,
+      end,
+      hadLeadingBacktick,
+      hadTrailingBacktick
+    ) = identOffsets
     val oldText = params.text().substring(start, end)
     val stripSuffix = pos.withStart(start).withEnd(end).toLsp
 
@@ -78,11 +83,15 @@ class CompletionProvider(
     @tailrec
     def findNonConflictingPrefix(sym: Symbol, acc: List[String]): String = {
       val symName = if (sym.name.isTermName) sym.name.dropLocal else sym.name
+
+      def notSameOwner(sym1: Symbol, sym2: Symbol): Boolean =
+        sym1.exists && sym2.exists &&
+          !sym2.isAnonymousFunction &&
+          !(if (sym2.isClass) sym2.isSubClass(sym1) else sym2 == sym1)
+
       context.lookupSymbol(symName, _ => true) match {
         case LookupSucceeded(_, symbol)
-            if sym.effectiveOwner.exists && symbol.effectiveOwner.exists &&
-              !symbol.effectiveOwner.isAnonymousFunction &&
-              symbol.effectiveOwner != sym.effectiveOwner =>
+            if notSameOwner(sym.effectiveOwner, symbol.effectiveOwner) =>
           findNonConflictingPrefix(
             sym.effectiveOwner,
             Identifier.backtickWrap(sym.effectiveOwner.name.decoded) :: acc
@@ -271,7 +280,12 @@ class CompletionProvider(
       if (item.getTextEdit == null) {
         val editText = member match {
           case _: NamedArgMember => item.getLabel
-          case _ => ident
+          case _ =>
+            val ident0 =
+              if (hadLeadingBacktick) ident.stripPrefix("`") else ident
+            val ident1 =
+              if (hadTrailingBacktick) ident0.stripSuffix("`") else ident0
+            ident1
         }
         item.setTextEdit(textEdit(editText))
       }
@@ -498,9 +512,16 @@ class CompletionProvider(
   private def safeCompletionsAt(
       pos: Position,
       source: URI
-  ): (InterestingMembers, CompletionPosition, l.Range, String) = {
+  ): (
+      InterestingMembers,
+      CompletionPosition,
+      InferredIdentOffsets,
+      l.Range,
+      String
+  ) = {
+    lazy val inferredIdentOffsets = inferIdentOffsets(pos, params.text())
     lazy val editRange = pos
-      .withStart(inferIdentStart(pos, params.text()))
+      .withStart(inferredIdentOffsets.start)
       .withEnd(pos.point)
       .toLsp
     val noQuery = "$a"
@@ -518,6 +539,7 @@ class CompletionProvider(
           (
             InterestingMembers(Nil, SymbolSearch.Result.COMPLETE),
             NoneCompletion,
+            inferredIdentOffsets,
             editRange,
             noQuery
           )
@@ -528,6 +550,7 @@ class CompletionProvider(
               SymbolSearch.Result.COMPLETE
             ),
             completion,
+            inferredIdentOffsets,
             editRange,
             noQuery
           )
@@ -575,7 +598,7 @@ class CompletionProvider(
         params.text()
       )
       params.checkCanceled()
-      (items, completion, editRange, query)
+      (items, completion, inferredIdentOffsets, editRange, query)
     } catch {
       case e: CyclicReference
           if e.getMessage.contains("illegal cyclic reference") =>

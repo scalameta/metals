@@ -5,6 +5,7 @@ import scala.concurrent.Promise
 import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BazelDigest
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.DecoderResponse
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.FileDecoderProvider
 import scala.meta.internal.metals.Messages
@@ -19,6 +20,7 @@ import scala.meta.io.AbsolutePath
 
 import coursierapi.Dependency
 import org.eclipse.lsp4j.MessageActionItem
+import org.eclipse.lsp4j.TextDocumentIdentifier
 import tests.BaseImportSuite
 import tests.BazelBuildLayout
 import tests.BazelServerInitializer
@@ -47,7 +49,8 @@ class BazelLspSuite
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          importMessage
+          importMessage,
+          Messages.DeprecatedRemovedScalaVersion.message(Set("2.13.12")),
         ).mkString("\n"),
       )
       _ = assert(bazelBspConfig.exists)
@@ -127,7 +130,10 @@ class BazelLspSuite
            |""".stripMargin,
       )
     } yield {
-      assertEmpty(client.workspaceMessageRequests)
+      assertEquals(
+        client.workspaceMessageRequests,
+        Messages.DeprecatedRemovedScalaVersion.message(Set("2.13.12")),
+      )
       assert(bazelBspConfig.exists)
       server.assertBuildServerConnection()
     }
@@ -193,7 +199,8 @@ class BazelLspSuite
       assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          Messages.ResetWorkspace.message
+          Messages.DeprecatedRemovedScalaVersion.message(Set("2.13.12")),
+          Messages.ResetWorkspace.message,
         ).mkString("\n"),
       )
       assert(bazelBspConfig.exists)
@@ -386,6 +393,35 @@ class BazelLspSuite
     } yield ()
   }
 
+  test("decode") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
+      )
+      _ <- server.didOpen("Decode.scala")
+      uri = server.toPath("Decode.scala").toURI.toString()
+      _ = client.showMessageRequestHandler =
+        _.getActions().asScala.find(_.getTitle() == "Decode$.class")
+      result <- server.fullServer
+        .executeCommand(
+          ServerCommands.ChooseClass.toExecuteCommandParams(
+            ServerCommands
+              .ChooseClassRequest(new TextDocumentIdentifier(uri), "class")
+          )
+        )
+        .asScala
+      cfr <- server.executeDecodeFileCommand(
+        s"${result.asInstanceOf[DecoderResponse].value}.cfr"
+      )
+      _ = assert(cfr.value.contains("Decompiled with CFR "))
+      javap <- server.executeDecodeFileCommand(
+        s"${result.asInstanceOf[DecoderResponse].value}.javap"
+      )
+      _ = assert(javap.value.contains("""Compiled from "Decode.scala""""))
+    } yield ()
+  }
+
   private val workspaceLayout =
     s"""|/BUILD
         |load("@io_bazel_rules_scala//scala:scala_toolchain.bzl", "scala_toolchain")
@@ -412,7 +448,7 @@ class BazelLspSuite
         |
         |scala_binary(
         |    name = "hello",
-        |    srcs = ["Main.scala"],
+        |    srcs = ["Main.scala", "Decode.scala"],
         |    main_class = "main",
         |    deps = [":hello_lib"],
         |)
@@ -438,6 +474,15 @@ class BazelLspSuite
         |
         |object Main {
         |def msg = new Hello().hello
+        |}
+        |
+        |/Decode.scala
+        |class Decode {
+        | def decoded = this
+        |}
+        |
+        |object Decode {
+        | def decode: String = "decode"
         |}
         |
         |""".stripMargin

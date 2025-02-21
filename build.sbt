@@ -9,7 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
-def localSnapshotVersion = "1.5.1-SNAPSHOT"
+def localSnapshotVersion = "1.5.2-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 
@@ -198,7 +198,7 @@ val sharedScalacOptions = List(
 )
 
 val sharedSettings = sharedJavacOptions ++ sharedScalacOptions ++ List(
-  Compile / packageDoc / publishArtifact := false,
+  Compile / doc / sources := Seq.empty,
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
     if2 = List(
@@ -418,7 +418,7 @@ lazy val metals = project
       // =================
       // for bloom filters
       V.guava,
-      "org.scalameta" %% "metaconfig-core" % "0.14.0",
+      "org.scalameta" %% "metaconfig-core" % "0.15.0",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching
@@ -427,7 +427,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.16.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "11.2.0",
+      "org.flywaydb" % "flyway-core" % "11.3.3",
       "com.h2database" % "h2" % "2.3.232",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
@@ -510,6 +510,7 @@ lazy val metals = project
       "bazelScalaVersion" -> V.bazelScalaVersion,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
+      "latestScala3Next" -> V.latestScala3Next,
       "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
   )
@@ -819,7 +820,7 @@ lazy val docs = project
     publish / skip := true,
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
-    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.14.0",
+    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.15.0",
   )
   .dependsOn(metals)
   .enablePlugins(DocusaurusPlugin)

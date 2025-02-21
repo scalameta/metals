@@ -31,19 +31,26 @@ import scala.meta.internal.metals.debug.DebugProtocol.InitializeRequest
 import scala.meta.internal.metals.debug.DebugProtocol.LaunchRequest
 import scala.meta.internal.metals.debug.DebugProtocol.OutputNotification
 import scala.meta.internal.metals.debug.DebugProtocol.SetBreakpointRequest
+import scala.meta.internal.metals.debug.DebugProtocol.TestResults
 import scala.meta.internal.metals.debug.DebugProxy._
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.debugadapter.TestResultEvent
+import ch.epfl.scala.debugadapter.testing.SingleTestResult.Failed
+import ch.epfl.scala.debugadapter.testing.TestLocation
+import ch.epfl.scala.debugadapter.testing.TestSuiteSummary
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.debug.Breakpoint
 import org.eclipse.lsp4j.debug.CompletionsResponse
+import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.StackFrame
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugResponseMessage
 import org.eclipse.lsp4j.jsonrpc.messages.Message
+import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 
@@ -264,25 +271,77 @@ private[debug] final class DebugProxy(
       client.consume(response)
     case message @ ErrorOutputNotification(output) =>
       initialized.trySuccess(())
-      val analyzedMessage =
-        if (output.getOutput().contains("at "))
-          stackTraceAnalyzer
-            .fileLocationFromLine(output.getOutput())
-            .map(DebugProtocol.stacktraceOutputResponse(output, _))
-            .getOrElse(message)
-        else message
-      client.consume(analyzedMessage)
-
+      client.consume(addStackTraceFileLocation(message, output))
     case message @ OutputNotification(output) if stripColor =>
       val raw = output.getOutput()
       val msgWithoutColorCodes = filterANSIColorCodes(raw)
       output.setOutput(msgWithoutColorCodes)
       message.setParams(output)
+      client.consume(addStackTraceFileLocation(message, output))
+    case message @ OutputNotification(output) =>
+      client.consume(addStackTraceFileLocation(message, output))
+    case message @ TestResults(testResult) =>
+      message.setParams(modifyLocationInTests(testResult).toJson)
       client.consume(message)
-
     case message =>
       initialized.trySuccess(())
       client.consume(message)
+  }
+
+  private def addStackTraceFileLocation(
+      message: NotificationMessage,
+      output: OutputEventArguments,
+  ) = {
+    val lineWithoutColors = filterANSIColorCodes(output.getOutput())
+    if (StackTraceMatcher.isStackTraceLine(lineWithoutColors))
+      stackTraceAnalyzer
+        .fileLocationFromLine(lineWithoutColors)
+        .map(DebugProtocol.stacktraceOutputResponse(output, _))
+        .getOrElse(message)
+    else message
+  }
+
+  private def modifyLocationInTests(
+      testResult: TestResultEvent
+  ): TestResultEvent = {
+    val updatedTests = for {
+      test <- testResult.data.tests.asScala
+    } yield {
+      test match {
+        case fail: Failed =>
+          val possibleLocations = for {
+            stack <- Option(fail.stackTrace).iterator
+            stackLine <- stack.linesIterator
+            location <- stackTraceAnalyzer.workspaceFileLocationFromLine(
+              stackLine
+            )
+          } yield location
+
+          possibleLocations.headOption match {
+            case Some(value) =>
+              Failed(
+                fail.testName,
+                fail.duration,
+                fail.error,
+                fail.stackTrace,
+                new TestLocation(
+                  value.getUri(),
+                  value.getRange().getStart().getLine(),
+                ),
+              )
+
+            case _ => fail
+          }
+        case other => other
+      }
+    }
+    TestResultEvent(
+      TestSuiteSummary(
+        testResult.data.suiteName,
+        testResult.data.duration,
+        updatedTests.toList.asJava,
+      )
+    )
   }
 
   def cancel(): Unit = {
@@ -359,4 +418,15 @@ private[debug] object DebugProxy {
       case Some(trace) => new EndpointLogger(endpoint, trace)
       case None => endpoint
     }
+}
+
+object StackTraceMatcher {
+  private val stacktraceRegex =
+    raw"at (?:[^\s(.]*\.)*[^\s(]*\([^\s).]*(?:.scala|.java|.sc)\:\d*\)".r
+  def isStackTraceLine(line: String): Boolean = {
+    line.trim() match {
+      case stacktraceRegex() => true
+      case _ => false
+    }
+  }
 }

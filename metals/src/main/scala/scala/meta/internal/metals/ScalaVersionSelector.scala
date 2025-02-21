@@ -64,6 +64,11 @@ class ScalaVersionSelector(
 
   def getDialect(path: AbsolutePath): Dialect = {
     Option(path.extension) match {
+      case _ if path.isMill =>
+        dialectFromBuildTarget(path)
+          .getOrElse(fallbackDialect(isAmmonite = false))
+          .withAllowToplevelTerms(true)
+          .withAllowToplevelStatements(true)
       case Some("scala") =>
         dialectFromBuildTarget(path).getOrElse(
           fallbackDialect(isAmmonite = false)

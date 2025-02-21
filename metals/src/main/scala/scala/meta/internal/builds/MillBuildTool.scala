@@ -48,6 +48,13 @@ case class MillBuildTool(
     }
   }
 
+  override def shouldRegenerateBspJson(
+      currentVersion: String,
+      workspace: AbsolutePath,
+  ): Boolean = {
+    currentVersion != getMillVersion(workspace)
+  }
+
   private val predefScriptName = "predef.sc"
 
   private def embeddedMillWrapper(workspace: AbsolutePath): AbsolutePath = {

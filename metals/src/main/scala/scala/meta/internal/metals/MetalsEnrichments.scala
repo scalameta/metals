@@ -393,7 +393,10 @@ object MetalsEnrichments
     def isScalaProject(): Boolean =
       containsProjectFilesSatisfying(_.isScala)
     def isMetalsProject(): Boolean =
-      containsProjectFilesSatisfying(_.isScalaOrJavaFilename)
+      path.resolve(".metals").exists ||
+        path.resolve(".bloop").exists ||
+        path.resolve(".bsp").exists ||
+        containsProjectFilesSatisfying(_.isScalaOrJavaFilename)
 
     private def containsProjectFilesSatisfying(
         fileNamePredicate: String => Boolean
@@ -1330,6 +1333,26 @@ object MetalsEnrichments
         new l.TextDocumentIdentifier(location.getUri()),
         location.getRange().getStart(),
       )
+  }
+
+  implicit class XtensionTextDocumentPositionParams(
+      params: l.TextDocumentPositionParams
+  ) {
+    def printed(buffers: Buffers): String = {
+      val absolutePath = params.getTextDocument().getUri().toAbsolutePath
+      val input = absolutePath.toInputFromBuffers(buffers)
+      Try(
+        params
+          .getPosition()
+          .toMeta(input)
+          .map { meta =>
+            CompilerRangeParamsUtils
+              .offsetOrRange(meta, EmptyCancelToken)
+              .printed()
+          }
+      ).toOption.flatten
+        .getOrElse(input.text)
+    }
   }
 
   implicit class XtensionDebugSessionParams(params: b.DebugSessionParams) {

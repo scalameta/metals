@@ -11,9 +11,9 @@ object StructuralTypes/*example.StructuralTypes.*/ {
   user/*example.StructuralTypes.user.*/.age/*local1*/
 
   val V/*example.StructuralTypes.V.*/: Object/*java.lang.Object#*/ {
-    def scalameta/*local2*/: String/*scala.Predef.String#*/
-  } = new /*local3*/{
-    def scalameta/*local4*/ = "4.0"
+    def scalameta/*local4*/: String/*scala.Predef.String#*/
+  } = new /*local2*/{
+    def scalameta/*local3*/ = "4.0"
   }
-  V/*example.StructuralTypes.V.*/.scalameta/*local2*/
+  V/*example.StructuralTypes.V.*/.scalameta/*local4*/
 }
