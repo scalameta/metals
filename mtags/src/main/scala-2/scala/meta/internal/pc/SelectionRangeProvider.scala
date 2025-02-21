@@ -44,7 +44,7 @@ class SelectionRangeProvider(
       val bareRanges = lastVisitedParentTrees
         .flatMap {
           case tree: DefDef =>
-            val paramsSelectionRange =(tree.tparams :: tree.vparamss)
+            val paramsSelectionRange = (tree.tparams :: tree.vparamss)
               .filter { paramList =>
                 paramList.exists(_.pos.encloses(pos)) && paramList.length >= 2
               }
@@ -58,11 +58,15 @@ class SelectionRangeProvider(
                   )
                 }
               }
-            val defSelectionRange = new l.SelectionRange() { setRange(tree.pos.toLsp) }
+            val defSelectionRange = new l.SelectionRange() {
+              setRange(tree.pos.toLsp)
+            }
             paramsSelectionRange :+ defSelectionRange
 
           case tree =>
-            val selectionRange = new l.SelectionRange() { setRange(tree.pos.toLsp) }
+            val selectionRange = new l.SelectionRange() {
+              setRange(tree.pos.toLsp)
+            }
             List(selectionRange)
         }
 
