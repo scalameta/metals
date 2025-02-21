@@ -20,6 +20,7 @@ final class CodeActionProvider(
     trees: Trees,
     diagnostics: Diagnostics,
     languageClient: MetalsLanguageClient,
+    scalaVersionSelector: ScalaVersionSelector,
 )(implicit ec: ExecutionContext) {
 
   private val extractMemberAction =
@@ -46,6 +47,7 @@ final class CodeActionProvider(
     new MillifyDependencyCodeAction(buffers),
     new MillifyScalaCliDependencyCodeAction(buffers),
     new ConvertCommentCodeAction(buffers),
+    new ConvertToEnumCodeAction(trees, compilers, scalaVersionSelector),
   )
 
   def actionsForParams(params: l.CodeActionParams): List[CodeAction] = {
