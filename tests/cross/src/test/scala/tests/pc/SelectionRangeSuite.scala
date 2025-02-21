@@ -198,12 +198,24 @@ class SelectionRangeSuite extends BaseSelectionRangeSuite {
   )
 
   check(
-    "def - braced".tag(IgnoreScala2),
+    "def - braced",
     """object Main extends App { def foo(hi: Int, b@@: Int, c:Int) = ??? } """.stripMargin,
     List(
       """object Main extends App { def foo(hi: Int, >>region>>b: Int<<region<<, c:Int) = ??? }""".stripMargin,
       """object Main extends App { def foo(>>region>>hi: Int, b: Int, c:Int<<region<<) = ??? }""".stripMargin,
       """object Main extends App { >>region>>def foo(hi: Int, b: Int, c:Int) = ???<<region<< }""".stripMargin
+    )
+  )
+
+  check(
+    "def - type params".tag(IgnoreScala3),
+    """
+    object Main extends App { def foo[Type@@ <: T1, B](hi: Int, b: Int, c:Int) = ??? }
+    """.stripMargin,
+    List(
+      """object Main extends App { def foo[>>region>>Type <: T1<<region<<, B](hi: Int, b: Int, c:Int) = ??? }""".stripMargin,
+      """object Main extends App { def foo[>>region>>Type <: T1, B<<region<<](hi: Int, b: Int, c:Int) = ??? }""".stripMargin,
+      """object Main extends App { >>region>>def foo[Type <: T1, B](hi: Int, b: Int, c:Int) = ???<<region<< }""".stripMargin
     )
   )
 }
