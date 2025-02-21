@@ -427,7 +427,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.16.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "11.3.2",
+      "org.flywaydb" % "flyway-core" % "11.3.3",
       "com.h2database" % "h2" % "2.3.232",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
@@ -661,10 +661,10 @@ lazy val mtest = project
       List(
         "org.scalameta" %% "munit" % {
           if (scalaVersion.value.startsWith("2.11")) "1.0.0-M10"
+          else if (scalaVersion.value == "2.13.15") "1.0.4"
           else if (scalaVersion.value == "2.13.14") "1.0.2"
           else if (scalaVersion.value == "2.13.13") "1.0.0"
           else if (scalaVersion.value == "2.13.12") "1.0.0-M11"
-          else if (scalaVersion.value == "2.13.11") "1.0.0-M10"
           else V.munit
         },
         "io.get-coursier" % "interface" % V.coursierInterfaces,

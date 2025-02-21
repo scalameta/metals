@@ -18,7 +18,7 @@ case class DefinitionResult(
     querySymbol: String,
 ) {
   def isEmpty: Boolean = locations.isEmpty()
-  def ++(other: DefinitionResult) = DefinitionResult(
+  def ++(other: DefinitionResult): DefinitionResult = DefinitionResult(
     (locations.asScala ++ other.locations.asScala).asJava,
     symbol,
     definition,

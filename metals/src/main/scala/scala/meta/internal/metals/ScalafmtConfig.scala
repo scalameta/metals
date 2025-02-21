@@ -124,9 +124,6 @@ object ScalafmtConfig {
   def parse(path: AbsolutePath): Try[ScalafmtConfig] =
     Try(ConfigFactory.parseFile(path.toFile)).flatMap(parse)
 
-  def parse(text: String): Try[ScalafmtConfig] =
-    Try(ConfigFactory.parseString(text)).flatMap(parse)
-
   def parse(config: Config): Try[ScalafmtConfig] = {
 
     def getVersion(conf: Config): Try[Option[SemVer.Version]] =
