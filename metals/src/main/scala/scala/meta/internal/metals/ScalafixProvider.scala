@@ -430,9 +430,16 @@ case class ScalafixProvider(
         if (produceSemanticdb) {
           // Clean up created file and semanticdbs from `.metals/.tmp` directory
           targetRoot.foreach { root =>
-            if (diskFilePath.toNIO.startsWith(root))
-              diskFilePath.deleteWithEmptyParents()
-            AbsolutePath(root.resolve("META-INF")).deleteRecursively()
+            try {
+              if (diskFilePath.toNIO.startsWith(root))
+                diskFilePath.deleteWithEmptyParents()
+              AbsolutePath(root.resolve("META-INF")).deleteRecursively()
+            } catch {
+              case NonFatal(e) =>
+                scribe.error(
+                  s"Failed to clean up temporary files after scalafix evaluation: $e"
+                )
+            }
           }
         }
         evaluated
