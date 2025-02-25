@@ -156,7 +156,7 @@ class StdReporter(
           path
         }
         if (!ifVerbose) {
-          logger.severe(
+          logger.warning(
             s"${report.shortSummary} (full report at: $pathToReport)"
           )
         }
