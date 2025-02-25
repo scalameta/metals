@@ -41,8 +41,7 @@ class SymbolInformationProvider(using Context):
             visited += sym
             if sym.isClass
             then sym.asClass.parentSyms.foreach {
-              case parent if !visited(parent) =>
-                  collect(parent)
+              case parent if !visited(parent) => collect(parent)
               case _ =>
             }
           }
@@ -56,12 +55,16 @@ class SymbolInformationProvider(using Context):
           sym.ownersIterator.drop(1).find(s => s.isClass || s.is(Flags.Module))
         val overridden = sym.denot.allOverriddenSymbols.toList
         val memberDefAnnots = sym.info.membersBasedOnFlags(Flags.Method, Flags.EmptyFlags).flatMap(_.allSymbols).flatMap(_.denot.annotations)
+        val selfTypeParents =
+          if classSym.isClass
+          then classSym.asClass.givenSelfType.classSymbols.filter(_ != classSym).map(SemanticdbSymbols.symbolName)
+          else Nil
 
         val pcSymbolInformation =
           PcSymbolInformation(
             symbol = SemanticdbSymbols.symbolName(sym),
             kind = getSymbolKind(sym),
-            parents = parents,
+            parents = selfTypeParents ++ parents,
             dealiasedSymbol = SemanticdbSymbols.symbolName(dealisedSymbol),
             classOwner = classOwner.map(SemanticdbSymbols.symbolName),
             overriddenSymbols = overridden.map(SemanticdbSymbols.symbolName),
