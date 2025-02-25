@@ -47,8 +47,6 @@ object DownloadDependencies {
     scribe.info("Downloading scala library and sources")
     BuildInfo.supportedScala2Versions.flatMap { scalaVersion =>
       Embedded.downloadScalaSources(scalaVersion)
-    } ++ BuildInfo.supportedScala3Versions.flatMap { scalaVersion =>
-      Embedded.downloadScala3Sources(scalaVersion)
     }
   }
 

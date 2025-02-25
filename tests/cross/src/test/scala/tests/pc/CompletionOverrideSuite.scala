@@ -436,7 +436,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "jlang".tag(IgnoreScalaVersion("3.3.3")),
+    "jlang",
     """|abstract class Mutable {
        |  def foo: java.lang.StringBuilder
        |}

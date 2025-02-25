@@ -139,8 +139,7 @@ final class DefinitionProvider(
         scalaVersion.startsWith(
           "3.3."
         ) && // LTS 3.3.7 will include fixes from 3.7.x
-        SemVer.isCompatibleVersion("3.3.7", scalaVersion) ||
-        BuildInfo.supportedScala3Versions.contains(scalaVersion)
+        SemVer.isCompatibleVersion("3.3.7", scalaVersion)
 
     val shouldUseOldOrder =
       isAmmonnite(path) || isScala3 && !scala3DefinitionBugFixed

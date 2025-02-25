@@ -3,7 +3,6 @@ package tests.feature
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.{BuildInfo => V}
-import scala.meta.internal.semver.SemVer
 
 import munit.Location
 import tests.BaseLspSuite
@@ -345,18 +344,11 @@ class SyntaxErrorLspSuite extends BaseLspSuite("syntax-error") {
 
   test("scala3-inline-position") {
     cleanWorkspace()
-    // works from 3.0.1-RC1
-    val latestScala3 =
-      V.nonDeprecatedScalaVersions
-        .map(SemVer.Version.fromString)
-        .filter(_.major == 3)
-        .sortWith(_ > _)
-        .head
     for {
       _ <- initialize(
         s"""
            |/metals.json
-           |{"a": { "scalaVersion": "$latestScala3" }}
+           |{"a": { "scalaVersion": "${V.scala3}" }}
            |/a/src/main/scala/A.scala
            |inline def mark[T] = compiletime.summonInline[T]
            |val x = mark[1 =:= 2]
