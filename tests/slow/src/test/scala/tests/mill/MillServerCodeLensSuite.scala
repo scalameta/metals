@@ -1,9 +1,9 @@
 package tests.mill
 
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.debug.MUnit
 import scala.meta.internal.metals.{BuildInfo => V}
 
+import bloop.config.Config.TestFramework
 import tests.BaseCodeLensLspSuite
 import tests.MillBuildLayout
 import tests.MillServerInitializer
@@ -32,7 +32,7 @@ class MillServerCodeLensSuite
            |class Foo extends munit.FunSuite {}
            |""".stripMargin,
         V.scala3,
-        testDep = Some(MUnit),
+        testDep = Some(TestFramework.munit),
       )
     )
 
