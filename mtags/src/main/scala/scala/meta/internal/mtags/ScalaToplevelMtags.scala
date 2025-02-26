@@ -602,8 +602,11 @@ class ScalaToplevelMtags(
           acceptAllAfterOverriddenIdentifier(indent1, alreadyMoved = true)
         curr.token match {
           case WITH => collectType(indent2)
-          case IDENTIFIER if curr.strVal == "|" | curr.strVal == "&" =>
+          case IDENTIFIER if curr.strVal == "&" =>
             collectType(indent2)
+          case IDENTIFIER if curr.strVal == "|" =>
+            toEmit = Nil
+            indent2
           case _ => indent2
         }
       } else indent1

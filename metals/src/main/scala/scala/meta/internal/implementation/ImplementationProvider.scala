@@ -30,6 +30,7 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.search.SymbolHierarchyOps._
 import scala.meta.internal.semanticdb.ClassSignature
+import scala.meta.internal.semanticdb.IntersectionType
 import scala.meta.internal.semanticdb.Scala.Descriptor.Method
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.Scope
@@ -550,13 +551,15 @@ object ImplementationProvider {
     def fromClassSignature(
         classSig: ClassSignature
     ): Seq[(String, ClassLocation)] = {
-      // support `&`-types here?
       def collectFn: Type => Seq[(String, ClassLocation)] = {
         case t: TypeRef if t.symbol != symbol =>
           Seq(t.symbol -> ClassLocation(symbol, filePath.map(_.toNIO)))
         case StructuralType(WithType(ts), Some(Scope.defaultInstance)) =>
           ts.flatMap(collectFn)
-        case _ => Seq.empty
+        case IntersectionType(ts) =>
+          ts.flatMap(collectFn)
+        case _ =>
+          Seq.empty
       }
       val parentPairs = classSig.parents.flatMap(collectFn)
       val selfTypePair = Seq(classSig.self).flatMap(collectFn)
