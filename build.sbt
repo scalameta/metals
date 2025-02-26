@@ -254,11 +254,6 @@ lazy val mtagsShared = project
     ),
     crossVersion := CrossVersion.full,
     Compile / packageSrc / publishArtifact := true,
-    Compile / scalacOptions ++= {
-      if (scalaVersion.value == V.lastPublishedScala3)
-        List("-Yexplicit-nulls", "-language:unsafeNulls")
-      else Nil
-    },
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
       "com.google.protobuf" % "protobuf-java" % "4.29.3",
@@ -368,27 +363,6 @@ val mtagsSettings = List(
       current
   },
 )
-
-lazy val mtags3 = project
-  .in(file(".mtags"))
-  .settings(
-    Compile / unmanagedSourceDirectories := Seq(),
-    sharedSettings,
-    mtagsSettings,
-    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags" / "src" / "main" / "scala",
-    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala",
-    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala-3",
-    moduleName := "mtags3",
-    scalaVersion := V.lastPublishedScala3,
-    target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3",
-    publish / skip := true,
-    libraryDependencies += V.guava,
-    scalafixConfig := Some(
-      (ThisBuild / baseDirectory).value / ".scalafix3.conf"
-    ),
-  )
-  .dependsOn(interfaces)
-  .enablePlugins(BuildInfoPlugin)
 
 lazy val mtags = project
   .settings(
@@ -500,7 +474,6 @@ lazy val metals = project
       "supportedScalaVersions" -> V.supportedScalaVersions,
       "supportedScala2Versions" -> V.scala2Versions,
       "minimumSupportedSbtVersion" -> V.minimumSupportedSbtVersion,
-      "supportedScala3Versions" -> V.scala3Versions,
       "supportedScalaBinaryVersions" -> V.supportedScalaBinaryVersions,
       "deprecatedScalaVersions" -> V.deprecatedScalaVersions,
       "nonDeprecatedScalaVersions" -> V.nonDeprecatedScalaVersions,
@@ -679,7 +652,6 @@ lazy val mtest = project
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
       "scala2Versions" -> V.scala2Versions,
-      "scala3Versions" -> V.scala3Versions,
       "scala2Versions" -> V.scala2Versions,
       "scalaVersion" -> scalaVersion.value,
       "kindProjector" -> V.kindProjector,

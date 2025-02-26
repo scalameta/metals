@@ -5,7 +5,6 @@ object V {
   val scala211 = "2.11.12"
   val scala212 = "2.12.20"
   val scala213 = "2.13.16"
-  val lastPublishedScala3 = "3.3.3"
   val scala3 = "3.3.5"
   val scala3ForSBT2 = "3.6.2"
   val latestScala3Next = "3.6.3"
@@ -129,12 +128,9 @@ object V {
   // List of supported Scala versions in SemanticDB. Needs to be manually updated
   // for every SemanticDB upgrade.
   def supportedScalaBinaryVersions =
-    supportedScalaVersions.iterator
+    "3" :: supportedScalaVersions.iterator
       .map(CrossVersion.partialVersion)
-      .collect {
-        case Some((3, _)) => "3"
-        case Some((a, b)) => s"$a.$b"
-      }
+      .collect { case Some((a, b)) => s"$a.$b" }
       .toList
       .distinct
 
@@ -167,17 +163,8 @@ object V {
 
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
-  // Scala 3
-  def nonDeprecatedScala3Versions =
-    Seq(lastPublishedScala3, "3.3.1")
-
-  // NOTE if you had a new Scala Version make sure it's contained in quickPublishScalaVersions
-  def scala3Versions = nonDeprecatedScala3Versions
-
-  def supportedScalaVersions =
-    scala2Versions ++ scala3Versions
-  def nonDeprecatedScalaVersions =
-    nonDeprecatedScala2Versions ++ nonDeprecatedScala3Versions
+  def supportedScalaVersions = scala2Versions
+  def nonDeprecatedScalaVersions = nonDeprecatedScala2Versions
   def deprecatedScalaVersions = deprecatedScala2Versions
 
   val quickPublishScalaVersions = Set(
@@ -188,6 +175,5 @@ object V {
     ammonite212Version,
     scala213,
     ammonite213Version,
-    lastPublishedScala3,
   ).toList
 }
