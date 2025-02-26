@@ -575,6 +575,7 @@ abstract class MetalsLspService(
     trees,
     diagnostics,
     languageClient,
+    scalaVersionSelector,
   )
 
   protected val inlayHintResolveProvider: InlayHintResolveProvider =
