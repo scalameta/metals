@@ -189,10 +189,12 @@ final class RenameProvider(
                     symbol: String,
                     path: AbsolutePath,
                     textDocument: TextDocument,
-                ) =
-                  !symbol.desc.isType && !(symbol.isLocal && symbolHierarchyOps
+                ) = {
+                  lazy val isClassOrTrait = symbolHierarchyOps
                     .defaultSymbolSearch(path, textDocument)(symbol)
-                    .exists(info => info.isTrait || info.isClass))
+                    .exists(info => info.isTrait || info.isClass)
+                  (!symbol.desc.isType || symbol.owner.isType && !isClassOrTrait) && !(symbol.isLocal && isClassOrTrait)
+                }
 
                 val allReferences =
                   for {
