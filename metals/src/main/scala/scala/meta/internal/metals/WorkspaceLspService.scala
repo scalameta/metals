@@ -110,7 +110,12 @@ class WorkspaceLspService(
   private val cancelables = new MutableCancelable()
   val fallbackIsInitialized: ju.concurrent.atomic.AtomicBoolean =
     new ju.concurrent.atomic.AtomicBoolean(false)
-  var httpServer: Option[MetalsHttpServer] = None
+  @volatile var httpServer: HttpServerStatus = HttpServerOff
+
+  sealed trait HttpServerStatus
+  case object HttpServerOff extends HttpServerStatus
+  case object HttpServerIgnored extends HttpServerStatus
+  case class HttpServerOn(server: MetalsHttpServer) extends HttpServerStatus
 
   private val clientConfig =
     ClientConfiguration(
@@ -151,10 +156,35 @@ class WorkspaceLspService(
 
   private val timerProvider: TimerProvider = new TimerProvider(time)
 
+  def getHttpServer(): Future[Option[MetalsHttpServer]] = {
+    httpServer match {
+      // execute client command provider is used to provide the normal doctor
+      case HttpServerOff
+          if !clientConfig.isExecuteClientCommandProvider && !clientConfig
+            .isHttpEnabled() =>
+        languageClient
+          .showMessageRequest(Messages.StartHttpServer.params())
+          .asScala
+          .flatMap { item =>
+            if (item == Messages.StartHttpServer.yes) {
+              startHttpServer(force = true)
+              getHttpServer()
+            } else if (item == Messages.dontShowAgain) {
+              httpServer = HttpServerIgnored
+              Future.successful(None)
+            } else {
+              Future.successful(None)
+            }
+          }
+      case HttpServerOn(server) => Future.successful(Some(server))
+      case _ => Future.successful(None)
+    }
+  }
+
   val doctor: HeadDoctor =
     new HeadDoctor(
       () => folderServices.map(_.doctor) ++ optFallback.map(_.doctor),
-      () => httpServer,
+      getHttpServer,
       clientConfig,
       languageClient,
       clientConfig.isHttpEnabled(),
@@ -1298,8 +1328,8 @@ class WorkspaceLspService(
     } yield ()
   }
 
-  private def startHttpServer(): Unit = {
-    if (clientConfig.isHttpEnabled()) {
+  private def startHttpServer(force: Boolean = false): Unit = {
+    if (force || clientConfig.isHttpEnabled()) {
       val host = "localhost"
       val port = 5031
       var url = s"http://$host:$port"
@@ -1318,7 +1348,7 @@ class WorkspaceLspService(
           this,
         )
       )
-      httpServer = Some(server)
+      httpServer = HttpServerOn(server)
       val newClient = new MetalsHttpClient(
         folders.map(_.path),
         () => url,
