@@ -1,8 +1,20 @@
 package tests.pc
 
+import coursierapi.Dependency
 import tests.BaseInlayHintsSuite
 
 class InlayHintsSuite extends BaseInlayHintsSuite {
+
+  override def extraDependencies(scalaVersion: String): Seq[Dependency] = {
+    val scalaBinaryVersion = createBinaryVersion(scalaVersion)
+    if (isScala3Version(scalaVersion) || scalaVersion.startsWith("2.11")) {
+      Seq.empty
+    } else {
+      Seq(
+        Dependency.of("com.chuusai", s"shapeless_$scalaBinaryVersion", "2.3.12")
+      )
+    }
+  }
 
   check(
     "local",
@@ -1023,6 +1035,20 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
                 |}
                 |""".stripMargin
     )
+  )
+
+  check(
+    "implicit-fn-shapeless".tag(IgnoreScala211),
+    """|object Main{
+       |  import shapeless.Generic
+       |  Generic[(String, Int)]
+       |}
+       |""".stripMargin,
+    """|object Main{
+       |  import shapeless.Generic
+       |  Generic[(String, Int)]/*(instance<<shapeless/Generic.instance().>>((x0$1: Tuple2<<scala/Tuple2#>>) => (?term: String :: Int :: shapeless.HNil)), (x0$2: ::<<shapeless/`::`#>>) => (?term: (String, Int)))))*/
+       |}
+       |""".stripMargin
   )
 
   check(
