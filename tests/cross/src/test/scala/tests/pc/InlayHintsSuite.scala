@@ -7,7 +7,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
 
   override def extraDependencies(scalaVersion: String): Seq[Dependency] = {
     val scalaBinaryVersion = createBinaryVersion(scalaVersion)
-    if (isScala3Version(scalaVersion) || scalaVersion.startsWith("2.11")) {
+    if (scalaVersion.startsWith("2.11")) {
       Seq.empty
     } else {
       Seq(
