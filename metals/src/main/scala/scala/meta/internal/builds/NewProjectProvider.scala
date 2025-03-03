@@ -134,6 +134,7 @@ class NewProjectProvider(
         javaHome,
         javaOptsMap = javaOpts,
       )
+      .future
       .flatMap {
         case ExitCodes.Success =>
           askForWindow(projectPath)
