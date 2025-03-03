@@ -196,6 +196,12 @@ final class PcInlayHintsProvider(
     }
 
     def partsFromImplicitArgs(trees: List[Tree]): List[LabelPart] = {
+      def safeLabel(t: Tree, treeLabel: String) =
+        if (t.symbol != null) labelPart(t.symbol, t.symbol.decodedName)
+        else if (t.tpe != null)
+          LabelPart(s"(?$treeLabel: ${t.tpe.toLongString})")
+        else LabelPart(s"(?$treeLabel: ???)")
+
       @tailrec
       def recurseImplicitArgs(
           currentArgs: List[Tree],
@@ -243,7 +249,7 @@ final class PcInlayHintsProvider(
                     LabelPart(", ") :: label :: parts
                   )
               case Apply(fun, args) =>
-                val applyLabel = labelPart(fun.symbol, fun.symbol.decodedName)
+                val applyLabel = safeLabel(fun, "apply")
                 recurseImplicitArgs(
                   args,
                   remainingArgs :: remainingArgsLists,
@@ -251,16 +257,18 @@ final class PcInlayHintsProvider(
                 )
               case t @ Function(vparams, body) =>
                 val funLabels =
-                  if (t.symbol.isSynthetic)
-                    reversedLabelPartsFromParams(vparams)
-                  else List(labelPart(t.symbol, t.symbol.decodedName))
+                  if (t.symbol != null)
+                    if (t.symbol.isSynthetic)
+                      reversedLabelPartsFromParams(vparams)
+                    else List(labelPart(t.symbol, t.symbol.decodedName))
+                  else safeLabel(t, "function") :: Nil
                 recurseImplicitArgs(
                   List(body),
                   remainingArgs :: remainingArgsLists,
                   LabelPart(" => ") :: funLabels ::: parts
                 )
               case t if t.isTerm =>
-                val termLabel = labelPart(t.symbol, t.symbol.decodedName)
+                val termLabel = safeLabel(t, "term")
                 if (remainingArgs.isEmpty)
                   recurseImplicitArgs(
                     remainingArgs,
@@ -281,6 +289,7 @@ final class PcInlayHintsProvider(
                 )
             }
         }
+
       (LabelPart(")") :: recurseImplicitArgs(
         trees,
         Nil,
