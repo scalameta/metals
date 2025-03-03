@@ -200,7 +200,7 @@ final class PcInlayHintsProvider(
         if (t.symbol != null) labelPart(t.symbol, t.symbol.decodedName)
         else if (t.tpe != null)
           LabelPart(s"(?$treeLabel: ${t.tpe.toLongString})")
-        else LabelPart(s"(?$treeLabel: ?)")
+        else LabelPart(s"(?$treeLabel: ???)")
 
       @tailrec
       def recurseImplicitArgs(
