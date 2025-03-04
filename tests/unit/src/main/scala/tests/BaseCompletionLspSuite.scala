@@ -2,6 +2,7 @@ package tests
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.TextEdits
 
 import munit.Location
@@ -56,14 +57,18 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
       query: String,
       project: Char = 'a',
       filter: String => Boolean = _ => true,
+      filenameOpt: Option[String] = None,
   )(
       fn: String => Unit
   ): Future[Unit] = {
     import scala.jdk.CollectionConverters._
-    val filename = s"$project/src/main/scala/$project/${project.toUpper}.scala"
+    val filename = filenameOpt.getOrElse(
+      s"$project/src/main/scala/$project/${project.toUpper}.scala"
+    )
     val text = server
       .textContentsOnDisk(filename)
       .replace("// @@", query.replace("@@", ""))
+
     for {
       _ <- server.didChange(filename)(_ => text)
       completion <- server.completionList(filename, query)
@@ -79,9 +84,11 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
       query: String,
       expected: String,
       project: Char = 'a',
+      filenameOpt: Option[String] = None,
       filter: String => Boolean = _ => true,
   )(implicit loc: Location): Future[Unit] = {
-    withCompletionEdit(query, project, filter) { obtained =>
+    Debug.printEnclosing()
+    withCompletionEdit(query, project, filter, filenameOpt) { obtained =>
       assertNoDiff(obtained, expected)
     }
   }
