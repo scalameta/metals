@@ -159,7 +159,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
   )
 
   checkEdit(
-    "interpolator-edit-scala2".tag(IgnoreScala3),
+    "interpolator-edit-scala2",
     """|package a
        |
        |object A {
@@ -175,24 +175,6 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |}
        |""".stripMargin,
     selection = 1
-  )
-
-  checkEdit(
-    "interpolator-edit-scala3".tag(IgnoreScala2),
-    """|package a
-       |
-       |object A {
-       |  val l = s"${<<Seq>>(2)}"
-       |}
-       |""".stripMargin,
-    """|package a
-       |
-       |import scala.collection.mutable
-       |
-       |object A {
-       |  val l = s"${mutable.Seq(2)}"
-       |}
-       |""".stripMargin
   )
 
   checkEdit(
