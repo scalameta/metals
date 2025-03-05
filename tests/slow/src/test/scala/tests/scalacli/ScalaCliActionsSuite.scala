@@ -128,7 +128,6 @@ class ScalaCliActionsSuite
         |}
         |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
-        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
         |${CreateNewSymbol.title("Future")}
         |""".stripMargin,
     s"""|//> using scala "${BuildInfo.scala213}"
@@ -156,7 +155,6 @@ class ScalaCliActionsSuite
         |}
         |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
-        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
         |${CreateNewSymbol.title("Future")}
         |""".stripMargin,
     s"""|#!/usr/bin/env -S scala-cli shebang
