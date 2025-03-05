@@ -52,13 +52,21 @@ final class AutoImportsProvider(
       case _ => false
     }
 
+    def correctInTreeContext(sym: Symbol) = lastVisitedParentTrees match {
+      case (_: Ident) :: (sel: Select) :: _ =>
+        sym.info.members.exists(_.name == sel.name)
+      case (_: Ident) :: (_: Apply) :: _ =>
+        sym.info.members.exists(_.name == nme.apply)
+      case _ => true
+    }
+
     def namePos: l.Range =
       pos.withEnd(pos.start + name.length()).toLsp
 
     def isExactMatch(sym: Symbol, name: String): Boolean =
       sym.name.dropLocal.decoded == name
 
-    symbols.result().collect {
+    val all = symbols.result().collect {
       case sym
           if isExactMatch(sym, name) && context.isAccessible(sym, sym.info) =>
         val pkg = sym.owner.fullName
@@ -90,7 +98,18 @@ final class AutoImportsProvider(
             s"Could not infer edits for $pkg, tree around the position were $trees, auto import position was ${importPosition}"
           )
         }
-        AutoImportsResultImpl(pkg, edits.asJava)
+        (AutoImportsResultImpl(pkg, edits.asJava), sym)
+    }
+
+    all match {
+      case (onlyResult, _) :: Nil => List(onlyResult)
+      case Nil => Nil
+      case moreResults =>
+        val moreExact = moreResults.filter { case (_, sym) =>
+          correctInTreeContext(sym)
+        }
+        if (moreExact.nonEmpty) moreExact.map(_._1)
+        else moreResults.map(_._1)
     }
   }
 
