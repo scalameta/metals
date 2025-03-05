@@ -482,7 +482,7 @@ class ProjectMetalsLspService(
   def ammoniteStart(): Future[Unit] = ammonite.start()
   def ammoniteStop(): Future[Unit] = ammonite.stop()
 
-  def switchBspServer(): Future[Unit] =
+  def switchBspServer(): Future[BuildChange] =
     connectionProvider.switchBspServer()
 
   def resetPopupChoice(value: String): Future[Unit] =
