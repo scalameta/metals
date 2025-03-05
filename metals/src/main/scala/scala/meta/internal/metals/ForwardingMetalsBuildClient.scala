@@ -215,7 +215,12 @@ final class ForwardingMetalsBuildClient(
             if (isSuccess) clientConfig.icons().check
             else clientConfig.icons().alert
           val message = s"${icon}Compiled $name (${compilation.timer})"
-          scribe.info(s"time: compiled $name in ${compilation.timer}")
+          if (report.getNoOp())
+            scribe.debug(
+              s"time: noop compilation of $name in ${compilation.timer}"
+            )
+          else
+            scribe.info(s"time: compiled $name in ${compilation.timer}")
           if (isSuccess) {
             if (hasReportedError.contains(target)) {
               // Only report success compilation if it fixes a previous compile error.
