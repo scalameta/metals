@@ -817,8 +817,10 @@ case class DebugUnresolvedTestClassParams(
 case class DebugUnresolvedAttachRemoteParams(
     hostName: String,
     port: Int,
-    buildTarget: String,
-)
+    @Nullable buildTarget: String = null,
+) {
+  def buildTargetOpt = Option(buildTarget)
+}
 
 case class DebugDiscoveryParams(
     @Nullable path: String,
