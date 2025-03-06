@@ -55,9 +55,14 @@ final class AutoImportsProvider(
     def correctInTreeContext(sym: Symbol) = lastVisitedParentTrees match {
       case (_: Ident) :: (sel: Select) :: _ =>
         sym.info.members.exists(_.name == sel.name)
-      case (_: Ident) :: (_: Apply) :: _ =>
-        sym.info.members.exists(_.name == nme.apply)
-      case _ => true
+      case (_: Ident) :: (_: Apply) :: _ if !sym.isMethod =>
+        def applyInObject =
+          sym.companionModule.info.members.exists(_.name == nme.apply)
+        def applyInClass = sym.info.members.exists(_.name == nme.apply)
+        applyInClass || applyInObject
+
+      case _ =>
+        true
     }
 
     def namePos: l.Range =

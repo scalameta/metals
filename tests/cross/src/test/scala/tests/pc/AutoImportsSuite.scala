@@ -14,6 +14,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
     """|scala.concurrent
        |""".stripMargin
   )
+
   check(
     "basic-apply",
     """|object A {
@@ -21,6 +22,32 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |}
        |""".stripMargin,
     """|scala.concurrent
+       |""".stripMargin,
+    compat = Map(
+      "2.11" ->
+        """|scala.concurrent
+           |scala.concurrent.impl
+           |""".stripMargin
+    )
+  )
+
+  check(
+    "basic-function-apply",
+    """|
+       |object ForgeFor{
+       |  def importMe(): Int = ???
+       |}
+       |object ForgeFor2{
+       |  case class importMe()
+       |}
+       |
+       |
+       |object test2 { 
+       |  <<importMe>>()
+       |}
+       |""".stripMargin,
+    """|ForgeFor
+       |ForgeFor2
        |""".stripMargin
   )
 
