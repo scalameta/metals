@@ -540,7 +540,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
 
   check(
     "i7267-2",
-    """|package a
+    """|package b
        |trait Foo {
        |  def someNum: Int
        |  def <<unapply>>(i: Int): Option[Int] = Some(i)
@@ -560,7 +560,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
 
   check(
     "i7267-3",
-    """|package a
+    """|package c
        |case class <<Bar()>>
        |object <<Bar>>
        |object O {
@@ -571,7 +571,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
 
   check(
     "i7267-4",
-    """|package a
+    """|package d
        |class <<Bar>>()
        |object <<Bar>> {
        |  def <<apply>>(): Bar = new Bar()
