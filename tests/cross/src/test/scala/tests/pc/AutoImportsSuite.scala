@@ -12,6 +12,89 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |}
        |""".stripMargin,
     """|scala.concurrent
+       |""".stripMargin
+  )
+
+  check(
+    "basic-apply",
+    """|object A {
+       |  <<Future>>(2)
+       |}
+       |""".stripMargin,
+    """|scala.concurrent
+       |""".stripMargin,
+    compat = Map(
+      "2.11" ->
+        """|scala.concurrent
+           |scala.concurrent.impl
+           |""".stripMargin
+    )
+  )
+
+  check(
+    "basic-function-apply",
+    """|
+       |object ForgeFor{
+       |  def importMe(): Int = ???
+       |}
+       |object ForgeFor2{
+       |  case class importMe()
+       |}
+       |
+       |
+       |object test2 { 
+       |  <<importMe>>()
+       |}
+       |""".stripMargin,
+    """|ForgeFor
+       |ForgeFor2
+       |""".stripMargin
+  )
+
+  check(
+    "basic-apply-wrong",
+    """|object A {
+       |  new <<Future>>(2)
+       |}
+       |""".stripMargin,
+    """|scala.concurrent
+       |java.util.concurrent
+       |""".stripMargin,
+    compat = Map(
+      "2.11" ->
+        """|scala.concurrent
+           |scala.concurrent.impl
+           |java.util.concurrent
+           |""".stripMargin
+    )
+  )
+
+  check(
+    "basic-fuzzy",
+    """|object A {
+       |  <<Future>>.thisMethodDoesntExist(2)
+       |}
+       |""".stripMargin,
+    """|scala.concurrent
+       |java.util.concurrent
+       |""".stripMargin,
+    compat = Map(
+      "2.11" ->
+        """|scala.concurrent
+           |scala.concurrent.impl
+           |java.util.concurrent
+           |""".stripMargin
+    )
+  )
+
+  check(
+    "typed-simple",
+    """|object A {
+       |  import scala.concurrent.Promise
+       |  val fut: <<Future>> = Promise[Unit]().future
+       |}
+       |""".stripMargin,
+    """|scala.concurrent
        |java.util.concurrent
        |""".stripMargin,
     compat = Map(
