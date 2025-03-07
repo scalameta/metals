@@ -4,13 +4,13 @@ import java.io.File
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
 import scala.util.Properties
 
 import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -45,7 +45,7 @@ class ShellRunner(time: Time, workDoneProvider: WorkDoneProgress)(implicit
       processErr: String => Unit = scribe.error(_),
       propagateError: Boolean = false,
       javaOptsMap: Map[String, String] = Map.empty,
-  ): Future[Int] = {
+  ): CancelableFuture[Int] = {
 
     val classpathSeparator = if (Properties.isWin) ";" else ":"
     val classpath = Fetch
@@ -92,7 +92,7 @@ class ShellRunner(time: Time, workDoneProvider: WorkDoneProgress)(implicit
       processErr: String => Unit = scribe.error(_),
       propagateError: Boolean = false,
       logInfo: Boolean = true,
-  ): Future[Int] = {
+  ): CancelableFuture[Int] = {
     val elapsed = new Timer(time)
     val env = additionalEnv ++ JdkSources.envVariables(javaHome)
     val ps = SystemProcess.run(
@@ -125,7 +125,7 @@ class ShellRunner(time: Time, workDoneProvider: WorkDoneProgress)(implicit
       result.trySuccess(code)
     }
     result.future.onComplete(_ => cancelables.remove(newCancelable))
-    result.future
+    CancelableFuture(result.future, newCancelable)
   }
 
 }
