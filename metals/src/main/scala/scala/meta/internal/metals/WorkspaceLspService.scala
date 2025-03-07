@@ -848,10 +848,20 @@ class WorkspaceLspService(
                   }
               }(_ => true)
               .flatMap { mains =>
-                mains.headOption.fold(
+                mains.fold(
                   Future.failed[DebugSessionParams](
-                    DiscoveryFailures
-                      .NoMainClassFoundException(unresolvedParams.mainClass)
+                    Option(unresolvedParams.buildTarget)
+                      .map(buildTarget =>
+                        DiscoveryFailures
+                          .ClassNotFoundInBuildTargetException(
+                            unresolvedParams.mainClass,
+                            buildTarget,
+                          )
+                      )
+                      .getOrElse(
+                        DiscoveryFailures
+                          .NoMainClassFoundException(unresolvedParams.mainClass)
+                      )
                   )
                 )(Future.successful(_))
               }
