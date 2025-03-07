@@ -29,6 +29,64 @@ class ImportMissingSymbolLspSuite
   )
 
   check(
+    "all-mixed",
+    """|package a
+       |
+       |object A {
+       |  <<val f = Future.successful(2)
+       |  val t: Future[Unit] = Promise[Unit]().future>>
+       |}
+       |""".stripMargin,
+    s"""|${ImportMissingSymbol.allSymbolsTitle}
+        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
+        |${ImportMissingSymbol.title("Promise", "scala.concurrent")}
+        |${ImportMissingSymbol.title("Promise", "scala.concurrent.impl")}
+        |${CreateNewSymbol.title("Future")}
+        |${CreateNewSymbol.title("Promise")}
+        |""".stripMargin,
+    """|package a
+       |
+       |import scala.concurrent.Future
+       |
+       |object A {
+       |  val f = Future.successful(2)
+       |  val t: Future[Unit] = Promise[Unit]().future
+       |}
+       |""".stripMargin,
+    expectNoDiagnostics = false,
+  )
+
+  check(
+    "all-mixed-rename",
+    """|package a
+       |
+       |import scala.{concurrent => cu}
+       |
+       |object A {
+       |  <<val f = Future.successful(2)
+       |  val t: Future[Unit] = Promise[Unit]().future>>
+       |}
+       |""".stripMargin,
+    s"""|${ImportMissingSymbol.allSymbolsTitle}
+        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
+        |${ImportMissingSymbol.title("Promise", "scala.concurrent")}
+        |${ImportMissingSymbol.title("Promise", "scala.concurrent.impl")}
+        |${CreateNewSymbol.title("Future")}
+        |${CreateNewSymbol.title("Promise")}
+        |""".stripMargin,
+    """|package a
+       |
+       |import scala.{concurrent => cu}
+       |
+       |object A {
+       |  val f = cu.Future.successful(2)
+       |  val t: cu.Future[Unit] = Promise[Unit]().future
+       |}
+       |""".stripMargin,
+    expectNoDiagnostics = false,
+  )
+
+  check(
     "enclosed-range",
     """|package a
        |
@@ -81,7 +139,8 @@ class ImportMissingSymbolLspSuite
        |  val b = ListBuffer.newBuilder[Int]
        |}
        |""".stripMargin,
-    s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
+    s"""|${ImportMissingSymbol.allSymbolsTitle}
+        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
         |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
         |${ImportMissingSymbol.title("Instant", "java.time")}
         |${CreateNewSymbol.title("Future")}
@@ -97,6 +156,7 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    selectedActionIndex = 1,
   )
 
   check(
