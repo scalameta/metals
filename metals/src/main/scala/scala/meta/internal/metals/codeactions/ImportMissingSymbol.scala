@@ -55,6 +55,18 @@ class ImportMissingSymbol(compilers: Compilers, buildTargets: BuildTargets)
         .toSeq
     }
 
+    def joinActions(actions: Seq[l.CodeAction]) = {
+      val mainAction = actions.head
+      val allDiagnostics =
+        actions.flatMap(_.getDiagnostics().asScala).asJava
+      mainAction.setDiagnostics(allDiagnostics)
+      val edits = joinActionEdits(actions.toSeq)
+      mainAction.setEdit(
+        new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava)
+      )
+      mainAction
+    }
+
     def importMissingSymbol(
         diagnostic: l.Diagnostic,
         name: String,
@@ -100,8 +112,7 @@ class ImportMissingSymbol(compilers: Compilers, buildTargets: BuildTargets)
         .flatten
         .toList
 
-      if (uniqueCodeActions.length > 1) {
-
+      if (codeActions.length > 1 && uniqueCodeActions.length > 0) {
         val diags = uniqueCodeActions.flatMap(_.getDiagnostics().asScala)
         val edits = joinActionEdits(uniqueCodeActions)
 
@@ -138,21 +149,50 @@ class ImportMissingSymbol(compilers: Compilers, buildTargets: BuildTargets)
           }
       )
       .map { actions =>
-        val deduplicated = actions.flatten
-          .groupBy(_.getTitle())
-          .map { case (_, actions) =>
-            val mainAction = actions.head
-            val allDiagnostics =
-              actions.flatMap(_.getDiagnostics().asScala).asJava
-            val edits = joinActionEdits(actions.toSeq)
-            mainAction.setDiagnostics(allDiagnostics)
-            mainAction
-              .setEdit(new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava))
-            mainAction
-          }
-          .toSeq
-          .sorted
-        importMissingSymbols(deduplicated.toSeq)
+        val groupedByImported = actions
+          .filter(_.nonEmpty)
+          .groupBy(
+            _.head.getDiagnostics().asScala.headOption.collect {
+              case ScalacDiagnostic.SymbolNotFound(name) => name
+            }
+          )
+        val deduplicated = groupedByImported.flatMap {
+          case (None, actions) =>
+            actions
+          case (_, actions) =>
+            if (actions.length > 1) {
+
+              /**
+               * If based on all possible imports, we try to minimize the possible
+               * imports that are needed to fix all the diagnostics.
+               *
+               * In same places such as Future.successful, we know that only Scala Future fits
+               * and the Java one doesn't have this static method. So we can filter out the Java one.
+               *
+               * Even if there is another place that is ok with using the Java Future,
+               * since importing the Java one would break one of the imports, we don't
+               * suggest it.
+               */
+              val minimalImportsSet =
+                actions.foldLeft(actions.head.map(_.getTitle()).toSet) {
+                  case (actions, action) =>
+                    actions.intersect(action.map(_.getTitle()).toSet)
+                }
+
+              val minimalActions =
+                actions.flatten.filter(a => minimalImportsSet(a.getTitle()))
+              val joined = minimalActions
+                .groupBy(_.getTitle())
+                .collect { case (_, actions) =>
+                  joinActions(actions.toSeq)
+                }
+              List(joined)
+
+            } else {
+              actions
+            }
+        }.flatten
+        importMissingSymbols(deduplicated.toSeq.sorted)
       }
   }
 
