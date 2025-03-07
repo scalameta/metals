@@ -170,10 +170,19 @@ object MetalsServerConfig {
     System.getProperty("metals.client")
   )
 
+  object MetalsClientType {
+    val vscode = "vscode"
+    val vimLsc = "vim-lsc"
+    val cocNvim = "coc.nvim"
+    val cocMetals = "coc-metals"
+    val sublime = "sublime"
+    val emacs = "emacs"
+  }
+
   def base: MetalsServerConfig = MetalsServerConfig()
   def default: MetalsServerConfig = {
     metalsClientType.getOrElse("default") match {
-      case "vscode" =>
+      case MetalsClientType.vscode =>
         base.copy(
           icons = Icons.vscode,
           globSyntax = GlobSyntaxConfig.vscode,
@@ -184,7 +193,7 @@ object MetalsServerConfig {
             overrideDefFormat = OverrideDefFormat.Unicode,
           ),
         )
-      case "vim-lsc" =>
+      case MetalsClientType.vimLsc =>
         base.copy(
           // window/logMessage output is always visible and non-invasive in vim-lsc
           statusBar = StatusBarConfig.logMessage,
@@ -194,7 +203,7 @@ object MetalsServerConfig {
             snippetAutoIndent = false
           ),
         )
-      case "coc.nvim" =>
+      case MetalsClientType.cocNvim =>
         base.copy(
           statusBar = StatusBarConfig.showMessage,
           isHttpEnabled = true,
@@ -206,7 +215,7 @@ object MetalsServerConfig {
             isCompletionItemResolve = false,
           ),
         )
-      case "coc-metals" =>
+      case MetalsClientType.cocMetals =>
         base.copy(
           compilers = base.compilers.copy(
             _parameterHintsCommand =
@@ -216,7 +225,7 @@ object MetalsServerConfig {
             isCompletionItemResolve = false,
           )
         )
-      case "sublime" =>
+      case MetalsClientType.sublime =>
         base.copy(
           isHttpEnabled = true,
           statusBar = StatusBarConfig.showMessage,
@@ -227,7 +236,7 @@ object MetalsServerConfig {
             isCompletionItemDetailEnabled = false
           ),
         )
-      case "emacs" =>
+      case MetalsClientType.emacs =>
         base.copy(
           executeClientCommand = ExecuteClientCommandConfig.on,
           compilers = base.compilers.copy(
