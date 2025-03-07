@@ -26,6 +26,15 @@ object ClientCommands {
       """`string`, the command ID to execute on the client.""".stripMargin,
   )
 
+  val FindTextInDependencyJars = new Command(
+    "find-text-in-dependency-jars",
+    "Search for text in dependency jars",
+    """|Search for text in the contents of the dependency jars of the workspace.
+       |
+       |Any supported client should prompt the user for the text to search for and the file mask to search in.
+       |""".stripMargin,
+  )
+
   val RunDoctor = new ParametrizedCommand[String](
     "metals-doctor-run",
     "Run doctor",
