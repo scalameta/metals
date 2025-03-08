@@ -8,6 +8,7 @@ import scala.collection.concurrent.TrieMap
 import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig.MetalsClientType
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -86,7 +87,7 @@ class MetalsTreeViewProvider(
       case Build =>
         Option(params.nodeUri) match {
           case None =>
-            Array(
+            val base = Array(
               TreeViewNode.fromCommand(ServerCommands.ImportBuild, "sync"),
               TreeViewNode
                 .fromCommand(ServerCommands.NewScalaProject, "empty-window"),
@@ -113,6 +114,18 @@ class MetalsTreeViewProvider(
                   "bug",
                 ),
             )
+            if (
+              MetalsServerConfig.metalsClientType.contains(
+                MetalsClientType.vscode
+              )
+            ) {
+              base :+
+                TreeViewNode
+                  .fromCommand(
+                    ClientCommands.FindTextInDependencyJars,
+                    "search",
+                  )
+            } else base
           case _ =>
             Array()
         }
