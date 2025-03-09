@@ -45,9 +45,9 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
           s"""|/$path
               |import $$dep/*<no symbol>*/.`com.lihaoyi::scalatags:0.9.0`/*<no symbol>*/
               |import scalatags.Text/*Text.scala*/.all/*Text.scala*/._
-              |val htmlFile/*L2*/ = html/*Text.scala*/(
-              |  body/*Text.scala*/(
-              |    p/*Text.scala*/("This is a big paragraph of text")
+              |val htmlFile/*L2*/ = html/*;Tags.scala;Text.scala*/(
+              |  body/*;Tags.scala;Text.scala*/(
+              |    p/*;Tags.scala;Text.scala*/("This is a big paragraph of text")
               |  )
               |)
               |htmlFile/*L2*/.render/*Text.scala*/

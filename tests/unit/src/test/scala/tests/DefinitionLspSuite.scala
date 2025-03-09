@@ -234,7 +234,7 @@ class DefinitionLspSuite
            |package a
            |object B/*L1*/ {
            |  def main/*L2*/() = {
-           |    println/*Predef.scala*/(A/*A.scala:2*/("John"))
+           |    println/*Predef.scala*/(A/*;A.scala:2;A.scala:3*/("John"))
            |    A/*A.scala:3*/.fun/*A.scala:5*/()
            |  }
            |}
