@@ -28,9 +28,9 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
        |
        |case class School(name: String, location: <<Location>>)
        |""".stripMargin,
-    s"""|${ImportMissingSymbol.title("Location", "javax.tools.JavaFileManager")}
+    s"""|${ImportMissingSymbol.title("Location", "javax.xml.stream")}${additionalLocation}
+        |${ImportMissingSymbol.title("Location", "javax.tools.JavaFileManager")}
         |${ImportMissingSymbol.title("Location", docToolName)}
-        |${ImportMissingSymbol.title("Location", "javax.xml.stream")}${additionalLocation}
         |${CreateNewSymbol.title("Location")}""".stripMargin,
     selectedActionIndex = if (isJava21) 4 else 3,
     pickedKind = "scala-case-class",
@@ -113,9 +113,9 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
        |
        |case class School(name: String, location: <<Location>>)
        |""".stripMargin,
-    s"""|${ImportMissingSymbol.title("Location", "javax.tools.JavaFileManager")}
+    s"""|${ImportMissingSymbol.title("Location", "javax.xml.stream")}${additionalLocation}
+        |${ImportMissingSymbol.title("Location", "javax.tools.JavaFileManager")}
         |${ImportMissingSymbol.title("Location", docToolName)}
-        |${ImportMissingSymbol.title("Location", "javax.xml.stream")}${additionalLocation}
         |${CreateNewSymbol.title("Location")}""".stripMargin,
     selectedActionIndex = if (isJava21) 4 else 3,
     pickedKind = "scala-trait",
@@ -134,9 +134,9 @@ class CreateNewSymbolLspSuite extends BaseCodeActionLspSuite("createNew") {
        |
        |<<case class School(name: Missing, location: Location)>>
        |""".stripMargin,
-    s"""|${ImportMissingSymbol.title("Location", "javax.tools.JavaFileManager")}
+    s"""|${ImportMissingSymbol.title("Location", "javax.xml.stream")}${additionalLocation}
+        |${ImportMissingSymbol.title("Location", "javax.tools.JavaFileManager")}
         |${ImportMissingSymbol.title("Location", docToolName)}
-        |${ImportMissingSymbol.title("Location", "javax.xml.stream")}${additionalLocation}
         |${CreateNewSymbol.title("Missing")}
         |${CreateNewSymbol.title("Location")}
         |${ExtractRenameMember.renameFileAsClassTitle(fileName = "A.scala", memberName = "School")}
