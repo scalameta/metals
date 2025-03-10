@@ -120,6 +120,15 @@ def crossTestDyn(state: State, scalaV: String): State = {
   out
 }
 
+def crossTestDynOnly(state: State, scalaV: String, testName: String): State = {
+  val configured = configureMtagsScalaVersionDynamically(state, scalaV)
+  val (out, _) =
+    Project
+      .extract(configured)
+      .runInputTask(cross / Test / testOnly, testName, configured)
+  out
+}
+
 commands ++= Seq(
   Command.command("save-expect") { s =>
     "unit/test:runMain tests.SaveExpect" :: "quick-publish-local" :: "slow/test:runMain tests.feature.SlowSaveExpect" :: s
@@ -138,6 +147,9 @@ commands ++= Seq(
   },
   Command.single("test-mtags-dyn") { (s, scalaV) =>
     crossTestDyn(s, scalaV)
+  },
+  Command.single("cross-test-only-2-11") { (s, testName) =>
+    crossTestDynOnly(s, V.scala211, " " + testName)
   },
 )
 

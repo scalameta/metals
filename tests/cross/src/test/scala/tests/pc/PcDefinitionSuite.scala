@@ -104,20 +104,14 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
     "apply",
     """|
        |object Main {
-       |  /*scala/collection/immutable/List.apply(). List.scala*/@@List(1)
+       |  /*scala/collection/immutable/List.apply(). List.scala*//*scala/collection/immutable/List. List.scala*//*scala/collection/immutable/List# List.scala*/@@List(1)
        |}
        |""".stripMargin,
     compat = Map(
       "2.13" ->
         """|
            |object Main {
-           |  /*scala/collection/IterableFactory#apply(). Factory.scala*/List(1)
-           |}
-           |""".stripMargin,
-      "3" ->
-        """|
-           |object Main {
-           |  /*scala/collection/IterableFactory#apply(). Factory.scala*/List(1)
+           |  /*scala/collection/IterableFactory#apply(). Factory.scala*//*scala/package.List. package.scala*/List(1)
            |}
            |""".stripMargin
     )
@@ -524,6 +518,67 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |    def multiply(k: Logarithm): Logarithm = ???
        |  val <<vv>> = 1.0
        |  (2.0).multiply(v@@v)
+       |""".stripMargin
+  )
+
+  check(
+    "i7267",
+    """|package a
+       |trait Foo {
+       |  def someNum: Int
+       |  def <<apply>>(i: Int): Unit = println(someNum)
+       |}
+       |object <<Bar>> extends Foo {
+       |  def someNum = 42
+       |}
+       |
+       |object Test {
+       |  B@@ar(2)
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "i7267-2",
+    """|package b
+       |trait Foo {
+       |  def someNum: Int
+       |  def <<unapply>>(i: Int): Option[Int] = Some(i)
+       |}
+       |object <<Bar>> extends Foo {
+       |  def someNum = 42
+       |}
+       |
+       |object Test {
+       |  Bar.someNum match {
+       |    case B@@ar(1) => ???
+       |    case _ => 
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "i7267-3",
+    """|package c
+       |case class <<Bar()>>
+       |object <<Bar>>
+       |object O {
+       |  val a = B@@ar()
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "i7267-4",
+    """|package d
+       |class <<Bar>>()
+       |object <<Bar>> {
+       |  def <<apply>>(): Bar = new Bar()
+       |}
+       |object O {
+       |  val a = B@@ar()
+       |}
        |""".stripMargin
   )
 

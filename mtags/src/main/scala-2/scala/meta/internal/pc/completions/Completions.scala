@@ -716,6 +716,9 @@ trait Completions { this: MetalsGlobal =>
       lastVisitedParentTrees = Nil
       traverse(root)
       lastVisitedParentTrees match {
+        case _ :: (sel @ Select(qual, name)) :: _
+            if name == termNames.unapply && qual.pos.includes(pos) =>
+          sel
         case head :: _ => head
         case _ => EmptyTree
       }
