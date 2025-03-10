@@ -100,8 +100,7 @@ class ImportMissingSymbol(compilers: Compilers, buildTargets: BuildTargets)
         .flatten
         .toList
 
-      if (uniqueCodeActions.length > 1) {
-
+      if (codeActions.length > 1 && uniqueCodeActions.length > 0) {
         val diags = uniqueCodeActions.flatMap(_.getDiagnostics().asScala)
         val edits = joinActionEdits(uniqueCodeActions)
 
@@ -138,21 +137,50 @@ class ImportMissingSymbol(compilers: Compilers, buildTargets: BuildTargets)
           }
       )
       .map { actions =>
-        val deduplicated = actions.flatten
-          .groupBy(_.getTitle())
-          .map { case (_, actions) =>
-            val mainAction = actions.head
-            val allDiagnostics =
-              actions.flatMap(_.getDiagnostics().asScala).asJava
-            val edits = joinActionEdits(actions.toSeq)
-            mainAction.setDiagnostics(allDiagnostics)
-            mainAction
-              .setEdit(new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava))
-            mainAction
-          }
-          .toSeq
-          .sorted
-        importMissingSymbols(deduplicated.toSeq)
+        val groupedByImported = actions
+          .filter(_.nonEmpty)
+          .groupBy(
+            _.head.getDiagnostics().asScala.headOption.collect {
+              case ScalacDiagnostic.SymbolNotFound(name) => name
+            }
+          )
+        val deduplicated = groupedByImported.flatMap {
+          case (None, actions) =>
+            actions
+          case (_, actions) =>
+            if (actions.length > 1) {
+              actions.minByOption(_.length) match {
+                case None => actions
+                /* Each diagnotsitc has a list of actions we can take
+                 * if we have a better (shorter) choice then we want to take it
+                 * and ignore the rest.
+                 * 
+                 * Once we have shorter list of actions we join each one by title
+                 * meaning that it will be joined by import in reality.
+                 */
+                case Some(intersect) =>
+                  val acceptedActions = intersect.map(_.getTitle()).toSet
+                  val joined = actions.flatten
+                    .filter(a => acceptedActions(a.getTitle()))
+                    .groupBy(_.getTitle())
+                    .collect { case (_, actions) =>
+                      val mainAction = actions.head
+                      val allDiagnostics =
+                        actions.flatMap(_.getDiagnostics().asScala).asJava
+                      mainAction.setDiagnostics(allDiagnostics)
+                      val edits = joinActionEdits(actions.toSeq)
+                      mainAction.setEdit(
+                        new l.WorkspaceEdit(Map(uri -> edits.asJava).asJava)
+                      )
+                      mainAction
+                    }
+                  List(joined)
+              }
+            } else {
+              actions
+            }
+        }.flatten
+        importMissingSymbols(deduplicated.toSeq.sorted)
       }
   }
 
