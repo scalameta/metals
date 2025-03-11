@@ -963,9 +963,25 @@ class MetalsGlobal(
       } else {
         other.dealiased == sym.dealiased ||
         other.companion == sym.dealiased ||
-        semanticdbSymbol(other.dealiased) == semanticdbSymbol(sym.dealiased)
+        semanticdbSymbol(other.dealiased) == semanticdbSymbol(sym.dealiased) ||
+        isScalaPackageObjectReexport(other)
       }
     }
+
+    /**
+     * Check if the symbol is a `scala.*` `val` re-export of `other`
+     *
+     * @param other
+     * @return
+     */
+    private def isScalaPackageObjectReexport(other: Symbol): Boolean =
+      sym.tpe match {
+        case NullaryMethodType(resultType: SingleType) =>
+          sym.isDefinedInPackage && sym.isStable &&
+          sym.effectiveOwner.name.toTermName == termNames.scala_ &&
+          resultType =:= other.tpe
+        case _ => false
+      }
 
     def snippetCursor: String =
       sym.paramss match {
