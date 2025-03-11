@@ -440,14 +440,7 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
         """|to(end: Int): scala.collection.immutable.Range.Inclusive
            |   ^^^^^^^^
            |to(end: Int, step: Int): scala.collection.immutable.Range.Inclusive
-           |""".stripMargin,
-      "2.11" -> """|^^^^^^
-                   |to(end: Int): immutable.Range.Inclusive
-                   |to(end: Int, step: Int): immutable.Range.Inclusive
-                   |to(end: T): NumericRange.Inclusive[T]
-                   |to(end: T): Range.Partial[T,NumericRange[T]]
-                   |to(end: T, step: T): NumericRange.Inclusive[T]
-                   |""".stripMargin
+           |""".stripMargin
     )
   )
 
