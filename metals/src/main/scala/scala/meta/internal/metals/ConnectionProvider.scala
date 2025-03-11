@@ -395,7 +395,7 @@ class ConnectionProvider(
             }
         result.future.onComplete { res =>
           res match {
-            case Failure(CancelConnectException) =>
+            case Failure(MetalsCancelException) =>
               request.promise.trySuccess(BuildChange.Cancelled)
             case _ => request.promise.tryComplete(res)
           }
@@ -773,17 +773,12 @@ case class Disconnect(shutdownBuildServer: Boolean) extends ConnectRequest {
     }
 }
 case class Index(check: () => Unit) extends ConnectRequest {
-  def cancelCompare(other: ConnectRequest): ConflictBehaviour =
-    other match {
-      case _: Disconnect => Queue
-      case _ => Yield
-    }
+  def cancelCompare(other: ConnectRequest): ConflictBehaviour = Yield
 }
 case class ImportBuildAndIndex(bspSession: BspSession) extends ConnectRequest {
   def cancelCompare(other: ConnectRequest): ConflictBehaviour =
     other match {
       case (_: Index) | (_: ImportBuildAndIndex) => TakeOver
-      case _: Disconnect => Queue
       case _ => Yield
     }
 }

@@ -4,7 +4,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 
-import scala.meta.internal.metals.Interruptable.CancelConnectException
+import scala.meta.internal.metals.Interruptable.MetalsCancelException
 
 class Interruptable[+T] private (
     futureIn: Future[T],
@@ -15,7 +15,7 @@ class Interruptable[+T] private (
       executor: ExecutionContext,
       cancelPromise: CancelSwitch,
   ): Future[T] = futureIn.map(
-    if (cancelPromise.promise.isCompleted) throw CancelConnectException else _
+    if (cancelPromise.promise.isCompleted) throw MetalsCancelException else _
   )
 
   def flatMap[S](
@@ -51,8 +51,8 @@ class Interruptable[+T] private (
       executor: ExecutionContext,
       cancelPromise: CancelSwitch,
   ): Interruptable[U] = {
-    val pf0: PartialFunction[Throwable, U] = { case CancelConnectException =>
-      throw CancelConnectException
+    val pf0: PartialFunction[Throwable, U] = { case MetalsCancelException =>
+      throw MetalsCancelException
     }
     new Interruptable(future.recover(pf0.orElse(pf)), cancelable)
   }
@@ -68,7 +68,7 @@ object Interruptable {
   def successful[T](result: T) =
     new Interruptable(Future.successful(result), Cancelable.empty)
 
-  object CancelConnectException extends RuntimeException
+  object MetalsCancelException extends RuntimeException
   implicit class XtensionFuture[+T](future: Future[T]) {
     def withInterrupt: Interruptable[T] =
       new Interruptable(future, Cancelable.empty)
