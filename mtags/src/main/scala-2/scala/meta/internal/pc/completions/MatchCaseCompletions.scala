@@ -75,7 +75,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
     }
     override def isPrioritized(member: Member): Boolean =
       member match {
-        case m: TextEditMember => !m.filterText.contains("(exhaustive)")
+        case m: CasePatternMember => !m.filterText.contains("(exhaustive)")
         case _ => false
       }
 
@@ -88,7 +88,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       if (definitions.isTupleType(parents.selector)) {
         if (patternOnly.isEmpty)
           List(
-            new TextEditMember(
+            new CasePatternMember(
               "case () =>",
               new l.TextEdit(
                 editRange,
@@ -221,7 +221,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
 
                 val detail =
                   s" ${metalsToLongString(selectorSym.tpe, new ShortenedNames())} (${sealedMembers.length} cases)"
-                val exhaustive = new TextEditMember(
+                val exhaustive = new CasePatternMember(
                   "case (exhaustive)",
                   newText,
                   selectorSym,
@@ -306,7 +306,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       val sortedSubclasses = sortSubclasses(subclassesResult, tpe, source)
 
       val members = sortedSubclasses.map(_._2)
-      val basicMatch = new TextEditMember(
+      val basicMatch = new CasePatternMember(
         "match",
         new l.TextEdit(
           editRange,
@@ -339,7 +339,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
           )
           val detail =
             s" ${metalsToLongString(tpe, new ShortenedNames())} (${members.length} cases)"
-          val exhaustiveMatch = new TextEditMember(
+          val exhaustiveMatch = new CasePatternMember(
             "match (exhaustive)",
             newText,
             tpe.typeSymbol,
@@ -454,26 +454,38 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
         else pattern
       val cursorSuffix = (if (patternOnly.nonEmpty) "" else " ") +
         (if (clientSupportsSnippets) "$0" else "")
-      new TextEditMember(
-        filterText = label,
-        edit = new l.TextEdit(
-          editRange,
-          label + cursorSuffix
-        ),
-        sym = sym,
-        label = Some(label),
-        additionalTextEdits = autoImports
+
+      val edit = new l.TextEdit(
+        editRange,
+        label + cursorSuffix
       )
+      if (patternOnly.nonEmpty && name == pattern) {
+        new TextEditMember(
+          filterText = label,
+          edit = edit,
+          sym = sym,
+          label = Some(label),
+          additionalTextEdits = autoImports
+        )
+      } else {
+        new CasePatternMember(
+          filterText = label,
+          edit = edit,
+          sym = sym,
+          label = Some(label),
+          additionalTextEdits = autoImports
+        )
+      }
     }
 
-    def caseKeywordOnly: List[TextEditMember] =
+    def caseKeywordOnly: List[CasePatternMember] =
       if (patternOnly.isEmpty) {
         val label = "case"
         val suffix =
           if (clientSupportsSnippets) " $0 =>"
           else " "
         List(
-          new TextEditMember(
+          new CasePatternMember(
             label,
             new l.TextEdit(editRange, label + suffix),
             NoSymbol.newErrorSymbol(TermName("case")).setInfo(NoType),

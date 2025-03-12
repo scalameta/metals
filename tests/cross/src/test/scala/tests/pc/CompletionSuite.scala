@@ -1028,9 +1028,13 @@ class CompletionSuite extends BaseCompletionSuite {
         |}
         |""".stripMargin,
     """|Some(value) scala
+       |Some scala
        |""".stripMargin,
     compat = Map(
-      "2.11" -> "Some(x) scala",
+      "2.11" ->
+        """|Some(x) scala
+           |Some scala
+           |""".stripMargin,
       "3" ->
         """|Some(value) scala
            |Some scala
@@ -1060,11 +1064,11 @@ class CompletionSuite extends BaseCompletionSuite {
     "adt",
     s"""|object Main {
         |  Option(1) match {
-        |    case No@@
+        |    case Non@@
         |}
         |""".stripMargin,
     """|None scala
-       |NoManifest scala.reflect
+       |NonFatal - scala.util.control
        |""".stripMargin,
     topLines = Some(2)
   )

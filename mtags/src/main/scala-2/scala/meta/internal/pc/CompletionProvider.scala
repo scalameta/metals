@@ -362,19 +362,20 @@ class CompletionProvider(
     val isIgnored = mutable.Set.empty[Symbol]
     val buf = List.newBuilder[Member]
     def visit(head: Member): Boolean = {
-      val id =
-        if (head.sym.isClass || head.sym.isModule) {
-          head.sym.fullName
-        } else {
-          head match {
-            case o: OverrideDefMember =>
-              o.label
-            case named: NamedArgMember =>
-              s"named-${semanticdbSymbol(named.sym)}"
-            case _ =>
-              semanticdbSymbol(head.sym)
+      val id = head match {
+        case o: OverrideDefMember =>
+          o.label
+        case named: NamedArgMember =>
+          s"named-${semanticdbSymbol(named.sym)}"
+        case pattern: CasePatternMember =>
+          s"case-pattern-${semanticdbSymbol(pattern.sym)}"
+        case _ =>
+          if (head.sym.isClass || head.sym.isModule) {
+            head.sym.fullName
+          } else {
+            semanticdbSymbol(head.sym)
           }
-        }
+      }
 
       def isIgnoredWorkspace: Boolean =
         head.isInstanceOf[WorkspaceMember] &&

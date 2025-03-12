@@ -910,4 +910,24 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin
   )
 
+  check(
+    "underscore-and-object",
+    """package myPackage1 {
+      |  class MyClass
+      |  object MyClass {
+      |    val TheValue = new MyClass
+      |  }
+      |}
+      |object Test {
+      |  val x = myPackage1.MyClass.TheValue
+      |  x match {
+      |    case My@@
+      |  }
+      |}
+      |""".stripMargin,
+    """_: MyClass myPackage1
+      |MyClass - myPackage1
+      |""".stripMargin
+  )
+
 }

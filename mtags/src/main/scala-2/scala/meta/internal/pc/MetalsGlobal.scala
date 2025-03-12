@@ -598,10 +598,12 @@ class MetalsGlobal(
                 case Descriptor.None =>
                   Nil
                 case Descriptor.Type(value) =>
-                  val member = owner.info.decl(TypeName(value).encode) :: Nil
-                  if (sym.isJava)
-                    owner.info.decl(TermName(value).encode) :: member
-                  else member
+                  val members =
+                    if (sym.isJava)
+                      owner.info.decl(TermName(value).encode) :: Nil
+                    else Nil
+                  // Put the type ahead of the Java-induced term for `inverseSemanticdbSymbol`
+                  owner.info.decl(TypeName(value).encode) :: members
                 case Descriptor.Term(value) =>
                   owner.info.decl(TermName(value).encode) :: Nil
                 case Descriptor.Package(value) =>
