@@ -103,7 +103,6 @@ abstract class MetalsLspService(
     val clientConfig: ClientConfiguration,
     val statusBar: StatusBar,
     getFocusedDocument: () => Option[AbsolutePath],
-    shellRunner: ShellRunner,
     val timerProvider: TimerProvider,
     val folder: AbsolutePath,
     folderVisibleName: Option[String],
@@ -118,6 +117,7 @@ abstract class MetalsLspService(
   import serverInputs._
 
   def focusedDocument: Option[AbsolutePath] = getFocusedDocument()
+  def shellRunner: ShellRunner
 
   @volatile
   var userConfig: UserConfiguration = initialUserConfig
