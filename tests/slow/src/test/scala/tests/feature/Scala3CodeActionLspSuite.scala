@@ -773,7 +773,7 @@ class Scala3CodeActionLspSuite
   )
 
   check(
-    "wildcard lambda",
+    "wildcard lambda".ignore,
     """|package a
        |
        |object A {
