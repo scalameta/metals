@@ -72,6 +72,7 @@ import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.query.QueryEngine
 
 /**
  * Metals implementation of the Scala Language Service.
@@ -290,6 +291,8 @@ abstract class MetalsLspService(
       classpathSearchIndexer = classpathSearchIndexer,
     )
 
+  val queryEngine = new QueryEngine(workspaceSymbols)
+
   protected def warnings: Warnings = NoopWarnings
 
   protected val definitionProvider: DefinitionProvider = new DefinitionProvider(
@@ -407,6 +410,9 @@ abstract class MetalsLspService(
     workspaceSymbols,
     definitionProvider,
   )
+
+  protected val httpSearchService: MetalsHttpSearchService =
+    register(MetalsHttpSearchService(queryEngine, "localhost", 8888))
 
   val worksheetProvider: WorksheetProvider = register(
     new WorksheetProvider(
