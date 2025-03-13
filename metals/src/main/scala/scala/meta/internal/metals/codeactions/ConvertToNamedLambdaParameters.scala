@@ -48,7 +48,7 @@ class ConvertToNamedLambdaParameters(
         data.position,
         token,
         CodeActionId.ConvertToNamedLambdaParameters,
-        null,
+        None,
       )
       _ = logging.logErrorWhen(
         edits.isEmpty(),
