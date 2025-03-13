@@ -123,6 +123,7 @@ case class UserConfiguration(
     promptBuildImport: Boolean = true,
     protobufLspConfig: ProtobufLspConfig = ProtobufLspConfig.default,
     enableBestEffort: Boolean = false,
+    defaultShell: Option[String] = None,
 ) {
 
   def isMbtDefinitionProviderEnabled: Boolean =
@@ -807,6 +808,7 @@ object UserConfiguration {
            |correctness when the workspace doesn't compile.
            |""".stripMargin,
       ),
+      UserConfigurationOption("default-shell", "", "", "", ""),
     )
 
   def fromJson(
@@ -1070,6 +1072,8 @@ object UserConfiguration {
       getBooleanKey("bloop-sbt-already-installed").getOrElse(false)
     val bloopVersion =
       getStringKey("bloop-version")
+    val defaultShell =
+      getStringKey("default-shell")
     val bloopJvmProperties = getStringListKey("bloop-jvm-properties")
     val superMethodLensesEnabled =
       getBooleanKey("super-method-lenses-enabled").getOrElse(false)
@@ -1382,6 +1386,7 @@ object UserConfiguration {
           promptBuildImport,
           protobufLspConfig,
           enableBestEffort,
+          defaultShell,
         )
       )
     } else {

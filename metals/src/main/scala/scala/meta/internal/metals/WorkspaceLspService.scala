@@ -164,7 +164,7 @@ class WorkspaceLspService(
   }
 
   private val shellRunner = register {
-    new ShellRunner(time, workDoneProgress)
+    new ShellRunner(time, workDoneProgress, () => UserConfiguration())
   }
 
   private val focusedDocument: AtomicReference[Option[AbsolutePath]] =
@@ -255,7 +255,6 @@ class WorkspaceLspService(
           clientConfig,
           statusBar,
           () => focusedDocument.get(),
-          shellRunner,
           timerProvider,
           initTreeView,
           uri,
