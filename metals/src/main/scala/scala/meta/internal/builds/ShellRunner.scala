@@ -14,6 +14,7 @@ import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.Time
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.process.ExitCodes
@@ -22,7 +23,11 @@ import scala.meta.io.AbsolutePath
 
 import coursierapi._
 
-class ShellRunner(time: Time, workDoneProvider: WorkDoneProgress)(implicit
+class ShellRunner(
+    time: Time,
+    workDoneProvider: WorkDoneProgress,
+    userConfiguration: () => UserConfiguration,
+)(implicit
     executionContext: scala.concurrent.ExecutionContext
 ) extends Cancelable {
 
@@ -88,7 +93,7 @@ class ShellRunner(time: Time, workDoneProvider: WorkDoneProgress)(implicit
     val elapsed = new Timer(time)
     val env = additionalEnv ++ JdkSources.envVariables(javaHome)
     val ps = SystemProcess.run(
-      args,
+      userConfiguration().defaultShell.toList ::: args,
       directory,
       redirectErrorOutput,
       env,
@@ -96,6 +101,7 @@ class ShellRunner(time: Time, workDoneProvider: WorkDoneProgress)(implicit
       Some(processErr),
       propagateError,
     )
+
     val result = Promise[Int]()
     val newCancelable: Cancelable = () => ps.cancel
     cancelables.add(newCancelable)

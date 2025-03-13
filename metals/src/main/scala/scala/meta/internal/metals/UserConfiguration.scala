@@ -56,6 +56,7 @@ case class UserConfiguration(
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
     scalaCliLauncher: Option[String] = None,
     defaultBspToBuildTool: Boolean = false,
+    defaultShell: Option[String] = None,
 ) {
 
   override def toString(): String = {
@@ -455,6 +456,7 @@ object UserConfiguration {
            |default to using it instead of Bloop.
            |""".stripMargin,
       ),
+      UserConfigurationOption("default-shell", "", "", "", ""),
     )
 
   def fromJson(
@@ -646,6 +648,8 @@ object UserConfiguration {
       getBooleanKey("bloop-sbt-already-installed").getOrElse(false)
     val bloopVersion =
       getStringKey("bloop-version")
+    val defaultShell =
+      getStringKey("default-shell")
     val bloopJvmProperties = getStringListKey("bloop-jvm-properties")
     val superMethodLensesEnabled =
       getBooleanKey("super-method-lenses-enabled").getOrElse(false)
@@ -758,6 +762,7 @@ object UserConfiguration {
           autoImportBuilds,
           scalaCliLauncher,
           defaultBspToBuildTool,
+          defaultShell,
         )
       )
     } else {
