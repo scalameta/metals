@@ -362,76 +362,6 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |""".stripMargin
   )
 
-  checkAmmoniteEdit(
-    "first-auto-import-amm-script",
-    ammoniteWrapper(
-      """|
-         |val p: <<Path>> = ???
-         |""".stripMargin
-    ),
-    ammoniteWrapper(
-      """|import java.nio.file.Path
-         |
-         |val p: Path = ???
-         |""".stripMargin
-    )
-  )
-
-  checkAmmoniteEdit(
-    "second-auto-import-amm-script",
-    ammoniteWrapper(
-      """import java.nio.file.Files
-        |val p: <<Path>> = ???
-        |""".stripMargin
-    ),
-    ammoniteWrapper(
-      """import java.nio.file.Files
-        |import java.nio.file.Path
-        |val p: Path = ???
-        |""".stripMargin
-    )
-  )
-
-  checkAmmoniteEdit(
-    "amm-objects",
-    ammoniteWrapper(
-      """|
-         |object a {
-         |  object b {
-         |    val p: <<Path>> = ???
-         |  }
-         |}
-         |""".stripMargin
-    ),
-    ammoniteWrapper(
-      """|import java.nio.file.Path
-         |
-         |object a {
-         |  object b {
-         |    val p: Path = ???
-         |  }
-         |}
-         |""".stripMargin
-    )
-  )
-
-  checkAmmoniteEdit(
-    "first-auto-import-amm-script-with-header",
-    ammoniteWrapper(
-      """|// scala 2.13.1
-         |
-         |val p: <<Path>> = ???
-         |""".stripMargin
-    ),
-    ammoniteWrapper(
-      """|// scala 2.13.1
-         |import java.nio.file.Path
-         |
-         |val p: Path = ???
-         |""".stripMargin
-    )
-  )
-
   checkEdit(
     "i6477".tag(IgnoreScala2),
     """|package a
@@ -475,23 +405,6 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |val l = ListBuffer(2)
        |""".stripMargin
   )
-
-  private def ammoniteWrapper(code: String): String =
-    // Vaguely looks like a scala file that Ammonite generates
-    // from a sc file.
-    // Just not referencing any Ammonite class, that we don't pull
-    // in the tests here.
-    s"""|package ammonite
-        |package $$file.`auto-import`
-        |import _root_.scala.collection.mutable.{
-        |  HashMap => MutableHashMap
-        |}
-        |
-        |object test{
-        |/*<start>*/
-        |$code
-        |}
-        |""".stripMargin
 
   // https://dotty.epfl.ch/docs/internals/syntax.html#soft-keywords
   List("infix", "inline", "opaque", "open", "transparent", "as", "derives",

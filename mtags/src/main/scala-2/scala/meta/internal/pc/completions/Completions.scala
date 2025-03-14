@@ -583,14 +583,8 @@ trait Completions { this: MetalsGlobal =>
           isCandidate
         )
       case (imp @ Import(select, selector)) :: _
-          if isAmmoniteFileCompletionPosition(imp, pos) =>
-        AmmoniteFileCompletion(select, selector, pos, editRange)
-      case (imp @ Import(select, selector)) :: _
-          if isAmmoniteIvyCompletionPosition(
-            imp,
-            pos
-          ) || isWorksheetIvyCompletionPosition(imp, pos) =>
-        AmmoniteIvyCompletion(
+          if isWorksheetIvyCompletionPosition(imp, pos) =>
+        WorksheetIvyCompletion(
           coursierComplete,
           select,
           selector,
@@ -609,26 +603,6 @@ trait Completions { this: MetalsGlobal =>
         )
     }
   }
-
-  private def isAmmoniteCompletionPosition(
-      magicImport: String,
-      tree: Tree,
-      pos: Position
-  ): Boolean = {
-    tree match {
-      case Import(select, _) =>
-        pos.source.file.name.isAmmoniteGeneratedFile && select
-          .toString()
-          .startsWith(magicImport)
-      case _ => false
-    }
-  }
-
-  def isAmmoniteFileCompletionPosition(tree: Tree, pos: Position): Boolean =
-    isAmmoniteCompletionPosition("$file", tree, pos)
-
-  def isAmmoniteIvyCompletionPosition(tree: Tree, pos: Position): Boolean =
-    isAmmoniteCompletionPosition("$ivy", tree, pos)
 
   def isWorksheetIvyCompletionPosition(tree: Tree, pos: Position): Boolean =
     tree match {
