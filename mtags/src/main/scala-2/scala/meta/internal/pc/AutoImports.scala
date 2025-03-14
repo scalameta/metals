@@ -59,12 +59,9 @@ trait AutoImports { this: MetalsGlobal =>
             )
           }
 
-        def forScript(isAmmonite: Boolean) = {
-          val startScriptOffest = {
-            if (isAmmonite)
-              ScriptFirstImportPosition.ammoniteScStartOffset(text)
-            else ScriptFirstImportPosition.scalaCliScStartOffset(text)
-          }
+        def forScript() = {
+          val startScriptOffest =
+            ScriptFirstImportPosition.scalaCliScStartOffset(text)
 
           val scriptModuleDefAndPos =
             startScriptOffest.flatMap { offset =>
@@ -113,8 +110,7 @@ trait AutoImports { this: MetalsGlobal =>
 
         val path = pos.source.path
         val scriptPos =
-          if (path.isAmmoniteGeneratedFile) forScript(isAmmonite = true)
-          else if (path.isScalaCLIGeneratedFile) forScript(isAmmonite = false)
+          if (path.isScalaCLIGeneratedFile) forScript()
           else None
 
         scriptPos

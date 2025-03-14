@@ -81,7 +81,7 @@ class AddPackageLspSuite extends BaseLspSuite("add-package") {
   def check(name: TestOptions)(
       fileToCreate: String,
       expectedContent: String,
-  ): Unit = {
+  )(implicit loc: munit.Location): Unit = {
     test(name) {
       val parent = Paths.get(fileToCreate).getParent()
       cleanCompileCache("a")

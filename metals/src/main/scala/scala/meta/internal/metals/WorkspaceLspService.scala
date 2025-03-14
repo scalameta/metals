@@ -1149,14 +1149,6 @@ class WorkspaceLspService(
           .map(getServiceFor)
           .getOrElse(fallbackService)
           .createFile(directoryURI, name, fileType, isScala = false)
-      case ServerCommands.StartAmmoniteBuildServer() =>
-        val res = for {
-          path <- focusedDocument.get()
-          service <- getServiceForOpt(path)
-        } yield service.ammoniteStart()
-        res.getOrElse(Future.unit).asJavaObject
-      case ServerCommands.StopAmmoniteBuildServer() =>
-        foreachSeq(_.ammoniteStop(), ignoreValue = false)
       case ServerCommands.StartScalaCliServer() =>
         val res = focusedDocument.get() match {
           case None => Future.unit

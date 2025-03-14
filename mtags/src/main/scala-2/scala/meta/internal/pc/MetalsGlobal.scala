@@ -43,8 +43,6 @@ class MetalsGlobal(
     val completionItemPriority: CompletionItemPriority
 ) extends Global(settings, reporter)
     with completions.Completions
-    with completions.AmmoniteFileCompletions
-    with completions.AmmoniteIvyCompletions
     with completions.ArgCompletions
     with completions.FilenameCompletions
     with completions.InterpolatorCompletions
@@ -57,6 +55,7 @@ class MetalsGlobal(
     with completions.DependencyCompletions
     with completions.ScalaCliCompletions
     with completions.MillIvyCompletions
+    with completions.WorksheetIvyCompletions
     with completions.SbtLibCompletions
     with completions.MultilineCommentCompletions
     with Signatures

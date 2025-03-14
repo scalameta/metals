@@ -703,18 +703,6 @@ object ServerCommands {
     "Stay up to date with the latest release announcements and learn new Scala code editing tricks.",
   )
 
-  val StartAmmoniteBuildServer = new Command(
-    "ammonite-start",
-    "Start Ammonite build server",
-    "Start Ammonite build server",
-  )
-
-  val StopAmmoniteBuildServer = new Command(
-    "ammonite-stop",
-    "Stop Ammonite build server",
-    "Stop Ammonite build server",
-  )
-
   val StartScalaCliServer = new Command(
     "scala-cli-start",
     "Start Scala CLI server",
@@ -761,14 +749,12 @@ object ServerCommands {
       DisconnectBuildServer,
       ListBuildTargets,
       ScanWorkspaceSources,
-      StartAmmoniteBuildServer,
       StartDebugAdapter,
       StartMainClass,
       StartTestSuite,
       ResolveAndStartTestSuite,
       StartAttach,
       DiscoverAndRun,
-      StopAmmoniteBuildServer,
       SuperMethodHierarchy,
       StartScalaCliServer,
       StopScalaCliServer,

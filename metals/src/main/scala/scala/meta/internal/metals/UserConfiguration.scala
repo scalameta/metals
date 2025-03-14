@@ -41,7 +41,6 @@ case class UserConfiguration(
     bloopSbtAlreadyInstalled: Boolean = false,
     bloopVersion: Option[String] = None,
     bloopJvmProperties: Option[List[String]] = None,
-    ammoniteJvmProperties: Option[List[String]] = None,
     superMethodLensesEnabled: Boolean = false,
     inlayHintsOptions: InlayHintsOptions = InlayHintsOptions(Map.empty),
     enableStripMarginOnTypeFormatting: Boolean = true,
@@ -101,7 +100,6 @@ case class UserConfiguration(
       Some(("bloopSbtAlreadyInstalled", bloopSbtAlreadyInstalled)),
       optStringField("bloopVersion", bloopVersion),
       listField("bloopJvmProperties", bloopJvmProperties),
-      listField("ammoniteJvmProperties", ammoniteJvmProperties),
       Some(("superMethodLensesEnabled", superMethodLensesEnabled)),
       mapField("inlayHintsOptions", inlayHintsOptions.options),
       Some(
@@ -251,15 +249,6 @@ object UserConfiguration {
           |""".stripMargin,
       ),
       UserConfigurationOption(
-        "ammonite-jvm-properties",
-        """`[]`.""",
-        """["-Xmx1G"]""",
-        "Ammonite JVM Properties",
-        """|Optional list of JVM properties to pass along to the Ammonite server.
-           |Each property needs to be a separate item.\n\nExample: `-Xmx1G` or `-Xms100M`"
-           |""".stripMargin,
-      ),
-      UserConfigurationOption(
         "excluded-packages",
         """`[]`.""",
         """["akka.actor.typed.javadsl"]""",
@@ -389,7 +378,7 @@ object UserConfiguration {
         "Default fallback Scala version",
         """|The Scala compiler version that is used as the default or fallback in case a file 
            |doesn't belong to any build target or the specified Scala version isn't supported by Metals.
-           |This applies to standalone Scala files, worksheets, and Ammonite scripts.
+           |This applies to standalone Scala files, worksheets and Scala CLI scripts.
         """.stripMargin,
       ),
       UserConfigurationOption(
@@ -653,7 +642,6 @@ object UserConfiguration {
     val worksheetCancelTimeout =
       getIntKey("worksheet-cancel-timeout")
         .getOrElse(default.worksheetCancelTimeout)
-    val ammoniteProperties = getStringListKey("ammonite-jvm-properties")
     val bloopSbtAlreadyInstalled =
       getBooleanKey("bloop-sbt-already-installed").getOrElse(false)
     val bloopVersion =
@@ -755,7 +743,6 @@ object UserConfiguration {
           bloopSbtAlreadyInstalled,
           bloopVersion,
           bloopJvmProperties,
-          ammoniteProperties,
           superMethodLensesEnabled,
           inlayHintsOptions,
           enableStripMarginOnTypeFormatting,

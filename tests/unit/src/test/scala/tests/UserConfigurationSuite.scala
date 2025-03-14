@@ -255,7 +255,6 @@ class UserConfigurationSuite extends BaseSuite {
       bloopSbtAlreadyInstalled = true,
       bloopVersion = Some("1.2.3"),
       bloopJvmProperties = Some(List("a", "b", "c")),
-      ammoniteJvmProperties = Some(List("aa", "bb", "cc")),
       superMethodLensesEnabled = true,
       inlayHintsOptions = InlayHintsOptions(
         Map(
@@ -300,11 +299,6 @@ class UserConfigurationSuite extends BaseSuite {
           |    "a",
           |    "b",
           |    "c"
-          |  ],
-          |  "ammoniteJvmProperties": [
-          |    "aa",
-          |    "bb",
-          |    "cc"
           |  ],
           |  "enableStripMarginOnTypeFormatting": false,
           |  "gradleScript": "gradle",

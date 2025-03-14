@@ -16,8 +16,6 @@ final class DismissedNotifications(conn: () => Connection, time: Time) {
   val ReconnectBsp = new Notification(6)
   val CreateScalafmtFile = new Notification(7)
   val ChangeScalafmtVersion = new Notification(8)
-  val AmmoniteImportAuto = new Notification(9)
-  val ReconnectAmmonite = new Notification(10)
   val UpdateScalafmtConf = new Notification(11)
   val UpdateBloopJson = new Notification(12)
   val ReconnectScalaCli = new Notification(13)
@@ -35,8 +33,6 @@ final class DismissedNotifications(conn: () => Connection, time: Time) {
     ReconnectBsp,
     CreateScalafmtFile,
     ChangeScalafmtVersion,
-    AmmoniteImportAuto,
-    ReconnectAmmonite,
     UpdateScalafmtConf,
     UpdateBloopJson,
     ReconnectScalaCli,
