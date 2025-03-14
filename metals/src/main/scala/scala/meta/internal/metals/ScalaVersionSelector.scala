@@ -2,7 +2,6 @@ package scala.meta.internal.metals
 
 import scala.meta._
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
 class ScalaVersionSelector(
@@ -13,10 +12,10 @@ class ScalaVersionSelector(
   def scalaVersionForPath(path: AbsolutePath): String = {
     buildTargets
       .scalaVersion(path)
-      .getOrElse(fallbackScalaVersion(path.isAmmoniteScript))
+      .getOrElse(fallbackScalaVersion())
   }
 
-  def fallbackScalaVersion(isAmmonite: Boolean): String = {
+  def fallbackScalaVersion(): String = {
     val selected = userConfig().fallbackScalaVersion match {
       case Some(v) => v
       case None =>
@@ -27,32 +26,15 @@ class ScalaVersionSelector(
           .getOrElse(BuildInfo.scala3)
     }
 
-    val binary = ScalaVersions.scalaBinaryVersionFromFullVersion(selected)
-    if (isAmmonite && ScalaVersions.isScala3Version(selected))
-      BuildInfo.ammonite3
-    else if (
-      isAmmonite && binary == "2.12" && SemVer.isLaterVersion(
-        BuildInfo.ammonite212,
-        selected,
-      )
-    )
-      BuildInfo.ammonite212
-    else if (
-      isAmmonite && binary == "2.13" && SemVer.isLaterVersion(
-        BuildInfo.ammonite213,
-        selected,
-      )
-    )
-      BuildInfo.ammonite213
-    else if (ScalaVersions.isSupportedAtReleaseMomentScalaVersion(selected))
+    if (ScalaVersions.isSupportedAtReleaseMomentScalaVersion(selected))
       selected
     else
       ScalaVersions.recommendedVersion(selected)
   }
 
-  def fallbackDialect(isAmmonite: Boolean): Dialect = {
+  def fallbackDialect(): Dialect = {
     ScalaVersions.dialectForScalaVersion(
-      fallbackScalaVersion(isAmmonite),
+      fallbackScalaVersion(),
       includeSource3 = true,
     )
   }
@@ -66,23 +48,22 @@ class ScalaVersionSelector(
     Option(path.extension) match {
       case _ if path.isMill =>
         dialectFromBuildTarget(path)
-          .getOrElse(fallbackDialect(isAmmonite = false))
+          .getOrElse(fallbackDialect())
           .withAllowToplevelTerms(true)
           .withAllowToplevelStatements(true)
       case Some("scala") =>
         dialectFromBuildTarget(path).getOrElse(
-          fallbackDialect(isAmmonite = false)
+          fallbackDialect()
         )
       case Some("sbt") => dialects.Sbt
       case Some("sc") =>
-        // worksheets support Scala 3, but ammonite scripts do not
         val dialect = dialectFromBuildTarget(path).getOrElse(
-          fallbackDialect(isAmmonite = path.isAmmoniteScript)
+          fallbackDialect()
         )
         dialect
           .withAllowToplevelTerms(true)
           .withToplevelSeparator("")
-      case _ => fallbackDialect(isAmmonite = false)
+      case _ => fallbackDialect()
     }
   }
 }

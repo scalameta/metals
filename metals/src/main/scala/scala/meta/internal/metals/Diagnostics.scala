@@ -78,12 +78,6 @@ final class Diagnostics(
       publishDiagnostics(path)
     }
 
-  def resetAmmoniteScripts(): Unit =
-    for (key <- diagnostics.keys if key.isAmmoniteScript) {
-      diagnostics.remove(key)
-      publishDiagnostics(key)
-    }
-
   def onStartCompileBuildTarget(target: BuildTargetIdentifier): Unit = {
     if (statistics.isDiagnostics) {
       compileTimer(target) = new Timer(Time.system)

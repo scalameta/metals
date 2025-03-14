@@ -75,7 +75,8 @@ class PackageProvider(
       packageParts <- Option
         .when(
           path.isScalaOrJava && !path.isJarFileSystem &&
-            !path.isScalaScript && path.toFile.length() == 0 && fileContent
+            !path.isScalaScript && !path.isWorksheet && path.toFile
+              .length() == 0 && fileContent
               .isEmpty()
         )(deducePackageParts(path))
         .flatten

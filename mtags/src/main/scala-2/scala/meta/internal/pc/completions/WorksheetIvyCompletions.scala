@@ -5,10 +5,10 @@ import scala.meta.internal.pc.MetalsGlobal
 
 import org.eclipse.{lsp4j => l}
 
-trait AmmoniteIvyCompletions {
+trait WorksheetIvyCompletions {
   this: MetalsGlobal =>
 
-  case class AmmoniteIvyCompletion(
+  case class WorksheetIvyCompletion(
       coursierComplete: CoursierComplete,
       select: Tree,
       selector: List[ImportSelector],

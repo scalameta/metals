@@ -470,9 +470,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
               )
               .map(_.getScalaVersion())
               .getOrElse(
-                scalaVersionSelector.fallbackScalaVersion(
-                  source.isAmmoniteScript
-                )
+                scalaVersionSelector.fallbackScalaVersion()
               )
           ScalaVersions.dialectForScalaVersion(
             scalaVersion,
@@ -511,7 +509,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
           if (
             sourceItem.isDefined &&
             !info.symbol.isPackage &&
-            (owner.isPackage || source.isAmmoniteScript)
+            (owner.isPackage || source.isScalaScript)
           ) {
             definitionIndex.addToplevelSymbol(
               reluri,

@@ -41,24 +41,6 @@ trait BaseAutoImportsSuite extends BaseCodeActionSuite {
   ): Unit =
     checkEditSelection(name, filename, original, expected, selection, compat)
 
-  def checkAmmoniteEdit(
-      name: TestOptions,
-      original: String,
-      expected: String,
-      selection: Int = 0,
-      compat: Map[String, String] = Map.empty
-  )(implicit
-      loc: Location
-  ): Unit =
-    checkEditSelection(
-      name,
-      "script.amm.sc.scala",
-      original,
-      expected,
-      selection,
-      compat
-    )
-
   def checkEditSelection(
       name: TestOptions,
       filename: String,
