@@ -89,29 +89,6 @@ If worksheet evaluation times out, you can also increase the timeout by setting 
 
 ![worksheet-timeout](https://i.imgur.com/v2GEanF.png)
 
-## Ammonite scripts
-
-### How do I use Scala 2.x.x for my script?
-
-Under the hood Metals uses
-[alexarchambault/ammonite-runner](https://github.com/alexarchambault/ammonite-runner)
-to help with Ammonite support. One of the features of `ammonite-runner` is that
-it allows you to specify the version of Scala for your script in a comment
-before you code.
-
-```scala
-// scala 2.13.3
-```
-
-### Can I use a specific version of Ammonite?
-
-Sure, the same as the above, but instead of specifying the version of Scala,
-specify the version of Ammonite.
-
-```scala
-// ammonite 2.2.0
-```
-
 ## Why do I get a warning to save my file when I try to organize imports?
 
 ![organize-imports-warning](https://i.imgur.com/g8d82bV.png)

@@ -145,7 +145,7 @@ class Compilers(
         PresentationCompilerKey.Default,
         (_, value) => {
           val scalaVersion =
-            scalaVersionSelector.fallbackScalaVersion(isAmmonite = false)
+            scalaVersionSelector.fallbackScalaVersion()
 
           Option(value) match {
             case Some(lazyPc) =>
@@ -1178,7 +1178,7 @@ class Compilers(
         case None =>
           val tmpDirectory = workspace.resolve(Directories.tmp)
           val scalaVersion =
-            scalaVersionSelector.fallbackScalaVersion(isAmmonite = false)
+            scalaVersionSelector.fallbackScalaVersion()
           if (!path.toNIO.startsWith(tmpDirectory.toNIO))
             scribe.info(
               s"no build target found for $path. Using presentation compiler with project's scala-library version: ${scalaVersion}"
@@ -1262,7 +1262,7 @@ class Compilers(
       jworksheetsCache.put(
         path, {
           val scalaVersion =
-            scalaVersionSelector.fallbackScalaVersion(isAmmonite = false)
+            scalaVersionSelector.fallbackScalaVersion()
           StandaloneCompiler(
             scalaVersion,
             classpath,

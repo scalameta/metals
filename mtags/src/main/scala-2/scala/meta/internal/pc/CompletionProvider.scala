@@ -357,7 +357,6 @@ class CompletionProvider(
       latestParentTrees: List[Tree],
       text: String
   ): InterestingMembers = {
-    lazy val isAmmoniteScript = pos.source.file.name.isAmmoniteGeneratedFile
     val isSeen = mutable.Set.empty[String]
     val isIgnored = mutable.Set.empty[Symbol]
     val buf = List.newBuilder[Member]
@@ -385,29 +384,11 @@ class CompletionProvider(
           !head.sym.pos.isAfter(pos) ||
           head.sym.isParameter
 
-      def isFileAmmoniteCompletion() =
-        isAmmoniteScript && {
-          head match {
-            /* By default Scala compiler tries to suggest completions based on
-             * generated file in `$file`, which is not valid from Ammonite point of view
-             * We create other completions as ScopeMember in AmmoniteFileCompletions and
-             * filter out the default ones here.
-             */
-            case _: TypeMember =>
-              latestParentTrees.headOption.exists(tree =>
-                isAmmoniteFileCompletionPosition(tree, pos)
-              )
-            case _ =>
-              false
-          }
-        }
-
       if (
         !isSeen(id) &&
         !isUninterestingSymbol(head.sym) &&
         !isUninterestingSymbolOwner(head.sym.owner) &&
         !isIgnoredWorkspace &&
-        !isFileAmmoniteCompletion() &&
         completion.isCandidate(head) &&
         !head.sym.name.containsName(CURSOR) &&
         isNotLocalForwardReference &&
@@ -430,8 +411,7 @@ class CompletionProvider(
       editRange,
       latestParentTrees,
       completion,
-      text,
-      isAmmoniteScript
+      text
     )
 
     val searchResults =
@@ -491,12 +471,7 @@ class CompletionProvider(
     else if (symbol.isClass) k.Class
     else if (symbol.isMethod) k.Method
     else if (symbol.isCaseAccessor) k.Field
-    else if (symbol.isVal && !symbolIsFunction)
-      member match {
-        case file: FileSystemMember =>
-          if (file.isDirectory) k.Folder else k.File
-        case _ => k.Value
-      }
+    else if (symbol.isVal && !symbolIsFunction) k.Value
     else if (symbol.isVar && !symbolIsFunction) k.Variable
     else if (symbol.isTypeParameterOrSkolem) k.TypeParameter
     else if (symbolIsFunction) k.Function

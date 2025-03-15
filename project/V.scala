@@ -11,13 +11,8 @@ object V {
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
   val sbtScala = "2.12.18"
-  val ammonite212Version = "2.12.20"
-  val ammonite213Version = "2.13.15"
   // Rules need to be manually updated to support
   val bazelScalaVersion = "2.13.12"
-  val ammonite3Version = "3.3.4"
-
-  val ammonite = "3.0.0-2-6342755f"
   val betterMonadicFor = "0.3.1"
   val bloop = "2.0.8"
   val bloopConfig = "2.3.2"
@@ -172,8 +167,6 @@ object V {
     scala211,
     sbtScala,
     scala212,
-    ammonite212Version,
     scala213,
-    ammonite213Version,
   ).toList
 }

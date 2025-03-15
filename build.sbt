@@ -452,8 +452,6 @@ lazy val metals = project
         scalaVersion.value
       ) cross CrossVersion.full,
       "org.scalameta" %% "semanticdb-shared" % V.semanticdb(scalaVersion.value),
-      // For starting Ammonite
-      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.4.0",
       "org.scala-lang.modules" %% "scala-xml" % "2.3.0",
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
         .exclude("ch.epfl.scala", "bsp4j"),
@@ -478,7 +476,6 @@ lazy val metals = project
       "semanticdbVersion" -> V.semanticdb(scalaVersion.value),
       "javaSemanticdbVersion" -> V.javaSemanticdb,
       "scalafmtVersion" -> V.scalafmt,
-      "ammoniteVersion" -> V.ammonite,
       "scalaCliVersion" -> V.scalaCli,
       "millVersion" -> V.mill,
       "debugAdapterVersion" -> V.debugAdapter,
@@ -491,9 +488,6 @@ lazy val metals = project
       "nonDeprecatedScalaVersions" -> V.nonDeprecatedScalaVersions,
       "scala211" -> V.scala211,
       "scala212" -> V.scala212,
-      "ammonite212" -> V.ammonite212Version,
-      "ammonite213" -> V.ammonite213Version,
-      "ammonite3" -> V.ammonite3Version,
       "bazelScalaVersion" -> V.bazelScalaVersion,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
@@ -722,7 +716,6 @@ lazy val metalsDependencies = project
     libraryDependencies ++= List(
       // The dependencies listed below are only listed so Scala Steward
       // will pick them up and update them. They aren't actually used.
-      "com.lihaoyi" %% "ammonite-util" % V.ammonite,
       // not available for Scala 2.13.13
       // "org.typelevel" % "kind-projector" % V.kindProjector cross CrossVersion.full,
       "com.olegpy" %% "better-monadic-for" % V.betterMonadicFor,

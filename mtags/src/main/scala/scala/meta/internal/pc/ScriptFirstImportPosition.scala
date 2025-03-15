@@ -8,7 +8,7 @@ import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.tokens.Token
 
 /**
- * For `.sc` Ammonite and Scala-Cli wraps the code for such files.
+ * For `.sc` Scala-Cli wraps the code for such files.
  * The following code:
  * ```scala
  * val a = 1
@@ -29,9 +29,6 @@ object ScriptFirstImportPosition {
 
   private def adjustShebang(text: String): String =
     text.replaceFirst(shebang, s"//$shebang")
-
-  def ammoniteScStartOffset(text: String): Option[Int] =
-    scriptStartOffset(text, "/*<start>*/")
 
   def scalaCliScStartOffset(text: String): Option[Int] =
     scriptStartOffset(text, "/*<script>*/")

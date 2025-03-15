@@ -27,7 +27,6 @@ import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.utils.RequestRegistry
@@ -107,8 +106,6 @@ class BuildServerConnection private (
   def isBazel: Boolean = name == BazelBuildTool.bspName
 
   def isScalaCLI: Boolean = ScalaCli.names(name)
-
-  def isAmmonite: Boolean = name == Ammonite.name
 
   def supportsLazyClasspathResolution: Boolean =
     capabilities.getJvmCompileClasspathProvider()
@@ -317,7 +314,7 @@ class BuildServerConnection private (
     val resultOnJavacOptionsUnsupported = new JavacOptionsResult(
       List.empty[JavacOptionsItem].asJava
     )
-    if (isSbt || isAmmonite) Future.successful(resultOnJavacOptionsUnsupported)
+    if (isSbt) Future.successful(resultOnJavacOptionsUnsupported)
     else {
       if (supportsJava) {
         val onFail = Some(
