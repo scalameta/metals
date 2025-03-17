@@ -1,11 +1,14 @@
 package scala.meta.internal.metals
 
+import java.io.File
+import java.net.MalformedURLException
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.util.ServiceLoader
 
 import scala.collection.concurrent.TrieMap
 import scala.util.Properties
+import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
@@ -13,8 +16,12 @@ import scala.meta.internal.worksheets.MdocClassLoader
 import scala.meta.io.Classpath
 import scala.meta.pc.PresentationCompiler
 
+import coursier.cache.CacheDefaults
+import coursier.cache.CacheUrl
+import coursier.ivy
 import coursierapi.Dependency
 import coursierapi.Fetch
+import coursierapi.IvyRepository
 import coursierapi.MavenRepository
 import coursierapi.Repository
 import coursierapi.ResolutionParams
@@ -171,6 +178,7 @@ final class Embedded(
 
 object Embedded {
   private val jdkVersion = JdkVersion.parse(Properties.javaVersion)
+  private def credentials = CacheDefaults.credentials
 
   lazy val repositories: List[Repository] =
     Repository.defaults().asScala.toList ++
@@ -183,13 +191,83 @@ object Embedded {
         MavenRepository.of(
           "https://oss.sonatype.org/content/repositories/snapshots/"
         ),
-      )
+      ).map(setCredentials)
 
   private[Embedded] def scala3CompilerDependencies(version: String) = List(
     Dependency.of("org.scala-lang", "scala3-library_3", version),
     Dependency.of("org.scala-lang", "scala3-compiler_3", version),
     Dependency.of("org.scala-lang", "tasty-core_3", version),
   ).map(d => (d.getModule, d.getVersion)).toMap.asJava
+
+  private def validateURL(url0: String) = {
+    try Some(CacheUrl.url(url0))
+    catch {
+      case e: MalformedURLException =>
+        val urlErrorMsg =
+          "Error parsing URL " + url0 + Option(e.getMessage).fold("")(
+            " (" + _ + ")"
+          )
+        if (url0.contains(File.separatorChar)) {
+          val f = new File(url0)
+          if (f.exists() && !f.isDirectory) {
+            scribe.warn(s"$urlErrorMsg, and $url0 not a directory")
+            None
+          } else
+            Some(f.toURI.toURL)
+        } else {
+          scribe.warn(urlErrorMsg)
+          None
+        }
+    }
+  }
+
+  private def urlFromRepo(repo: Repository): Option[String] = repo match {
+    case m: MavenRepository =>
+      Some(m.getBase())
+    case i: IvyRepository =>
+      ivy.IvyRepository.parse(i.getPattern()).toOption.map(_.pattern).map {
+        pat =>
+          pat.chunks
+            .takeWhile {
+              case _: coursier.ivy.Pattern.Chunk.Const => true
+              case _ => false
+            }
+            .map(_.string)
+            .mkString
+      }
+    case _ =>
+      None
+  }
+
+  def setCredentials(repo: Repository): Repository = try {
+    val url = urlFromRepo(repo)
+    val validatedUrl = url.flatMap(validateURL)
+
+    validatedUrl
+      .map { url =>
+        val creds =
+          credentials
+            .flatMap(_.get())
+            .find(_.autoMatches(url.toExternalForm(), realm0 = None))
+            .flatMap { cred =>
+              cred.usernameOpt.zip(cred.passwordOpt)
+            }
+        (creds, repo) match {
+          case (Some((user, pass)), mvn: MavenRepository) =>
+            val creds = coursierapi.Credentials.of(user, pass.value)
+            mvn.withCredentials(creds)
+          case (Some((user, pass)), ivy: IvyRepository) =>
+            val creds = coursierapi.Credentials.of(user, pass.value)
+            ivy.withCredentials(creds)
+          case _ => repo
+        }
+      }
+      .getOrElse(repo)
+  } catch {
+    case NonFatal(e) =>
+      scribe.error(s"Error setting credentials for $repo", e)
+      repo
+  }
 
   def fetchSettings(
       dep: Dependency,
