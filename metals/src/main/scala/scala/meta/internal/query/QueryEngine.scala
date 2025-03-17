@@ -1,22 +1,10 @@
 package scala.meta.internal.query
 
 import scala.meta.internal.metals.WorkspaceSymbolProvider
-import scala.meta.pc.SymbolSearchVisitor
-import java.nio.file.Path
-import org.eclipse.lsp4j
-import org.eclipse.lsp4j.SymbolKind
-import scala.collection.mutable.ListBuffer
 import scala.meta.internal.metals.WorkspaceSymbolQuery
-import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.GlobalSymbolIndex
-import scala.meta.internal.semanticdb.Scala.Descriptor
-import scala.meta.internal.semanticdb.Scala.DescriptorParser
-import scala.meta.io.AbsolutePath
-import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.internal.semanticdb.SymbolOccurrence
-import scala.meta.internal.mtags.SymbolDefinition
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.semanticdb.Scala.Symbols
+
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
 /**
  * Query engine for searching symbols in the workspace and classpath.
@@ -25,7 +13,9 @@ import scala.meta.internal.semanticdb.Scala.Symbols
  * @param workspaceSearchProvider Provider for workspace symbol search
  */
 class QueryEngine(
-    workspaceSearchProvider: WorkspaceSymbolProvider
+    workspaceSearchProvider: WorkspaceSymbolProvider,
+    focusedDocumentBuildTarget: () => Option[BuildTargetIdentifier],
+    index: GlobalSymbolIndex
 ) {
 
   /**
@@ -40,107 +30,13 @@ class QueryEngine(
       symbolTypes: Set[SymbolType] = Set.empty,
       enableDebug: Boolean = false,
   ): Seq[SymbolSearchResult] = {
-    val results = ListBuffer.empty[SymbolSearchResult]
 
-    val visitor = new SymbolSearchVisitor {
-      override def shouldVisitPackage(pkg: String): Boolean = {
-        val shouldIncludePackages = symbolTypes.isEmpty ||
-          symbolTypes.contains(SymbolType.Package)
-
-        if (enableDebug) {
-          pprint.log(
-            s"Encountered package: $pkg, query: $query, shouldIncludePackages: $shouldIncludePackages, containsIgnoreCase: ${containsIgnoreCase(pkg, query)}"
-          )
-        }
-        if (shouldIncludePackages && containsIgnoreCase(pkg, query)) {
-          results += PackageSearchResult(
-            name = pkg.substring(pkg.lastIndexOf('.') + 1),
-            path = pkg,
-          )
-        }
-        true // Continue searching even if this package doesn't match
-      }
-
-      override def visitClassfile(pkg: String, filename: String): Int = {
-        // Only process the classfile if we're interested in classes/objects
-        if (
-          symbolTypes.isEmpty ||
-          symbolTypes.exists(t =>
-            t == SymbolType.Class || t == SymbolType.Object || t == SymbolType.Trait
-          )
-        ) {
-          val className = filename.stripSuffix(".class")
-          if (containsIgnoreCase(className, query)) {
-            val fqcn = s"$pkg.$className"
-            // Determine if this is a class or object based on filename
-            // (This is simplified, real implementation would need to check the actual type)
-            val symbolType =
-              if (className.endsWith("$")) SymbolType.Object
-              else SymbolType.Trait
-
-            if (symbolTypes.isEmpty || symbolTypes.contains(symbolType)) {
-              results += ClassOrObjectSearchResult(
-                name = className.stripSuffix("$"),
-                path = fqcn,
-                symbolType = symbolType,
-              )
-
-              return 1
-            }
-          }
-        }
-
-        0
-      }
-
-      override def visitWorkspaceSymbol(
-          path: Path,
-          symbol: String,
-          kind: SymbolKind,
-          range: lsp4j.Range,
-      ): Int = {
-        val (desc, owner) = DescriptorParser(symbol)
-        val symbolName = desc.name.value
-
-        val startSize = results.size
-
-        if (enableDebug) {
-          pprint.log(
-            s"Encountered workspace symbol: $symbol, desc: $desc, kind: $kind, range: $range, symbolName: $symbolName, owner: $owner"
-          )
-        }
-
-        if (containsIgnoreCase(symbolName, query)) {
-          val symbolType =
-            kindToTypeString(kind).getOrElse(SymbolType.Unknown(kind.toString))
-
-          if (symbolTypes.isEmpty) {
-            results += WorkspaceSymbolSearchResult(
-              name = symbolName,
-              path = s"${owner.replace('/', '.')}.$symbolName",
-              symbolType = symbolType,
-              location = path.toUri.toString,
-            )
-          } else if (symbolTypes.contains(symbolType)) {
-            results += WorkspaceSymbolSearchResult(
-              name = symbolName,
-              path = s"${owner.replace('/', '.')}.$symbolName",
-              symbolType = symbolType,
-              location = path.toUri.toString,
-            )
-          }
-
-          val endSize = results.size
-
-          endSize - startSize
-        }
-
-        0
-      }
-
-      override def isCancelled(): Boolean = false
-    }
-
+    val visitor = new QuerySearchVisitor(
+      index,
+      symbolTypes,
+      query,
+      enableDebug,
+    )
     // Create a query that will match the glob pattern
     val wsQuery = WorkspaceSymbolQuery(
       query,
@@ -150,14 +46,11 @@ class QueryEngine(
       isShortQueryRetry = false,
     )
 
-    // should we run this on all build targets? doesn't it mean we'll get stuff from
-    // test scope in compile scope?
-    val buildTargets = workspaceSearchProvider.buildTargets.allBuildTargetIds
-    buildTargets.foreach { target =>
-      workspaceSearchProvider.search(wsQuery, visitor, Some(target))
-    }
+    // use focused document build target
+    workspaceSearchProvider.search(wsQuery, visitor, focusedDocumentBuildTarget())
+    workspaceSearchProvider.searchWorkspacePackages(visitor, focusedDocumentBuildTarget())
 
-    results.toSeq
+    visitor.getResults
   }
 
   /**
@@ -199,95 +92,6 @@ class QueryEngine(
     None // Placeholder - actual implementation would return meaningful results
   }
 
-  /**
-   * Find packages matching the given name.
-   *
-   * @param packageName The package name to search for
-   * @return Set of matching package names
-   */
-  def findPackage(
-      packageName: String
-  ): Set[String] = {
-    val packages = ListBuffer.empty[String]
-
-    // I think we might only index top level symbols such as classes
-    val visitor = new SymbolSearchVisitor {
-      override def shouldVisitPackage(pkg: String): Boolean = {
-        if (pkg.contains(packageName)) {
-          // we can capture packages this way, we don't notmally index them since they don't have a place for definition
-          packages += pkg
-          true
-        } else {
-          false
-        }
-      }
-
-      /* dependencies, more advanced example in WorkspaceSearchVisitor
-       * We usually construct semanticdb symbols from classfiles, then go to definition
-       * to find the source file, which we can then easily index using ScalaMtags or JavaMtags
-       *
-       */
-      override def visitClassfile(pkg: String, filename: String): Int = {
-        0
-      }
-
-      // For anything in local workspace
-      override def visitWorkspaceSymbol(
-          path: Path,
-          symbol: String,
-          kind: SymbolKind,
-          range: lsp4j.Range,
-      ): Int = {
-
-        pprint.log(symbol)
-        0
-      }
-
-      override def isCancelled(): Boolean = false
-
-    }
-    // matches method can be modified to better suite the needs
-    val query = WorkspaceSymbolQuery(
-      packageName,
-      WorkspaceSymbolQuery.AlternativeQuery.all(packageName),
-      false,
-      true,
-    )
-    val id = workspaceSearchProvider.buildTargets.allBuildTargetIds.headOption
-    workspaceSearchProvider.search(
-      query,
-      visitor,
-      id,
-    )
-    val set = packages.toList.toSet
-    set
-  }
-
-  // Helper methods
-
-  /**
-   * Check if a string contains another string, ignoring case.
-   */
-  private def containsIgnoreCase(str: String, query: String): Boolean = {
-    str.toLowerCase.contains(query.toLowerCase)
-  }
-
-  /**
-   * Convert SymbolKind to a string representation.
-   */
-  private def kindToTypeString(kind: SymbolKind): Option[SymbolType] =
-    kind match {
-      case SymbolKind.Class => Some(SymbolType.Class)
-      case SymbolKind.Interface => Some(SymbolType.Trait)
-      case SymbolKind.Object =>
-        Some(
-          SymbolType.Object // this is probably wrong, scala objects are classes on classfile level
-        )
-      case SymbolKind.Method => Some(SymbolType.Method)
-      case SymbolKind.Function => Some(SymbolType.Function)
-      case SymbolKind.Package => Some(SymbolType.Package)
-      case _ => None
-    }
 }
 
 /**
@@ -373,7 +177,7 @@ object SymbolType {
   }
 
   case class Unknown(kind: String) extends SymbolType {
-    override def name: String = "unknown"
+    override def name: String = kind
   }
 
   val values: List[SymbolType] =

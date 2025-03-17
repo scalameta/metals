@@ -57,6 +57,7 @@ import scala.meta.internal.parsing.ClassFinderGranularity
 import scala.meta.internal.parsing.DocumentSymbolProvider
 import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.Trees
+import scala.meta.internal.query.QueryEngine
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.search.SymbolHierarchyOps
 import scala.meta.internal.worksheets.WorksheetProvider
@@ -72,7 +73,6 @@ import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
-import scala.meta.internal.query.QueryEngine
 
 /**
  * Metals implementation of the Scala Language Service.
@@ -291,7 +291,7 @@ abstract class MetalsLspService(
       classpathSearchIndexer = classpathSearchIndexer,
     )
 
-  val queryEngine = new QueryEngine(workspaceSymbols)
+  val queryEngine = new QueryEngine(workspaceSymbols, () => Option(focusedDocumentBuildTarget.get()), definitionIndex)
 
   protected def warnings: Warnings = NoopWarnings
 

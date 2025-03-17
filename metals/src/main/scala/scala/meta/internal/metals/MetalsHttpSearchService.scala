@@ -1,20 +1,20 @@
 package scala.meta.internal.metals
 
-import com.github.plokhotnyuk.jsoniter_scala.core._
-import sttp.tapir._
-import sttp.model.StatusCode
-import sttp.tapir.json.jsoniter._
-import sttp.tapir.generic.auto._
-import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.meta.internal.query.{
-  QueryEngine,
-  PackageSearchResult,
-  ClassOrObjectSearchResult,
-  WorkspaceSymbolSearchResult,
-  SymbolType,
-}
+import scala.concurrent.Future
+
+import scala.meta.internal.query.ClassOrObjectSearchResult
+import scala.meta.internal.query.PackageSearchResult
+import scala.meta.internal.query.QueryEngine
+import scala.meta.internal.query.SymbolType
+import scala.meta.internal.query.WorkspaceSymbolSearchResult
+
+import com.github.plokhotnyuk.jsoniter_scala.core._
+import sttp.model.StatusCode
+import sttp.tapir._
+import sttp.tapir.generic.auto._
+import sttp.tapir.json.jsoniter._
+import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 
 sealed trait SearchMatch {
   def name: String

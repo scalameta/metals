@@ -370,4 +370,8 @@ public abstract class PresentationCompiler {
 		return "";
 	}
 
+	public CompletableFuture<List<Object>> inspect(String fqcn) {
+		return CompletableFuture.completedFuture(Collections.emptyList());
+	}
+
 }

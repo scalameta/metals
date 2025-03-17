@@ -36,6 +36,8 @@ final class WorkspaceSymbolProvider(
   val inWorkspace: TrieMap[Path, WorkspaceSymbolsIndex] =
     TrieMap.empty[Path, WorkspaceSymbolsIndex]
 
+  val packages: TrieMap[BuildTargetIdentifier, TrieMap[String, PackageNode]] = TrieMap.empty
+
   // symbols for extension methods
   val inWorkspaceMethods: TrieMap[Path, Seq[WorkspaceSymbolInformation]] =
     TrieMap.empty[Path, Seq[WorkspaceSymbolInformation]]
@@ -103,6 +105,26 @@ final class WorkspaceSymbolProvider(
     SymbolSearch.Result.COMPLETE
   }
 
+  def searchWorkspacePackages(
+      visitor: SymbolSearchVisitor,
+      target: Option[BuildTargetIdentifier],
+  ): SymbolSearch.Result = {
+    def loop(packages: TrieMap[String, PackageNode], owner: String): Unit = {
+      packages.foreach{ case (pkg, node) =>
+        visitor.visitWorkspacePackage(owner, pkg)
+        loop(node.children, s"$owner$pkg/")
+      }
+    }
+    target.foreach { id =>
+      buildTargets
+        .buildTargetTransitiveDependencies(id)
+        .foreach { dep =>
+          packages.get(dep).foreach(loop(_, ""))
+        }
+    }
+    SymbolSearch.Result.COMPLETE
+  }
+
   def indexClasspath(): Unit = {
     try {
       indexClasspathUnsafe()
@@ -113,7 +135,54 @@ final class WorkspaceSymbolProvider(
   }
 
   def didRemove(path: AbsolutePath): Unit = {
-    inWorkspace.remove(path.toNIO)
+    val prev = inWorkspace.remove(path.toNIO)
+    buildTargets.inverseSources(path).foreach(bti => prev.foreach(wsi => removeWorkspacePackages(wsi.symbols, bti)))
+  }
+
+  def addWorkspacePackages(symbols: Seq[WorkspaceSymbolInformation], buildTargetIdentifier: BuildTargetIdentifier): Unit = {
+    val toAdd = symbols.map(_.symbol.split("/").dropRight(1)).distinct
+    @tailrec
+    def loop(current: Seq[String], packages: TrieMap[String, PackageNode]): Unit = {
+      current match {
+        case Nil =>
+        case head :: next => 
+          packages.get(head) match {
+            case Some(pkg) =>
+              pkg.count += 1
+              loop(next, pkg.children)
+            case None =>
+              val newPkg = PackageNode()
+              packages.put(head, newPkg)
+              loop(next, newPkg.children)
+          }
+      }
+    }
+    toAdd.foreach(pkg => loop(pkg.toList, packages.getOrElseUpdate(buildTargetIdentifier, TrieMap.empty)))
+  }
+
+  def removeWorkspacePackages(symbols: Seq[WorkspaceSymbolInformation], buildTargetIdentifier: BuildTargetIdentifier): Unit = {
+    packages.get(buildTargetIdentifier) match {
+      case Some(packages) =>
+        val toRemove = symbols.map(_.symbol.split("/").dropRight(1)).distinct
+        @tailrec
+        def loop(current: Seq[String], packages: TrieMap[String, PackageNode]): Unit = {
+          current match {
+            case Nil =>
+            case head :: next => 
+              packages.get(head) match {
+                case Some(pkg) =>
+                  if(pkg.count == 1) packages.remove(head)
+                  else {
+                    pkg.count -= 1
+                    loop(next, pkg.children)
+                  }
+                case None =>
+              }
+          }
+        }
+        toRemove.foreach(pkg => loop(pkg.toList, packages))
+      case None =>
+    }
   }
 
   def didChange(
@@ -122,6 +191,7 @@ final class WorkspaceSymbolProvider(
       methodSymbols: Seq[WorkspaceSymbolInformation],
   ): Unit = {
     val bloom = Fuzzy.bloomFilterSymbolStrings(symbols.map(_.symbol))
+    val prev = inWorkspace.get(source.toNIO)
     inWorkspace(source.toNIO) = WorkspaceSymbolsIndex(bloom, symbols)
 
     // methodSymbols will be searched when we type `qual.x@@`
@@ -134,6 +204,12 @@ final class WorkspaceSymbolProvider(
     //   Therefore, we can expect symbol lookup for extension methods could be fast enough without bloom-filter.
     if (methodSymbols.nonEmpty)
       inWorkspaceMethods(source.toNIO) = methodSymbols
+
+    buildTargets.inverseSources(source).foreach {
+      buildTargetIdentifier =>
+        prev.foreach(prev => removeWorkspacePackages(prev.symbols, buildTargetIdentifier))
+        addWorkspacePackages(symbols, buildTargetIdentifier)
+    }
   }
 
   def buildTargetSymbols(
@@ -274,4 +350,9 @@ final class WorkspaceSymbolProvider(
       }
     }
   }
+}
+case class PackageNode(
+  children: TrieMap[String, PackageNode] = TrieMap.empty,
+) {
+  var count: Int = 1
 }

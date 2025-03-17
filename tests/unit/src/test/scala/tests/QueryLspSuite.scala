@@ -1,60 +1,15 @@
 package tests
 
-import scala.concurrent.Future
-import scala.meta.internal.metals.{MetalsEnrichments, BuildInfo => V}
-import scala.meta.internal.query._
-import com.google.gson.JsonElement
-import java.util.concurrent.CompletableFuture
-import com.google.gson.JsonObject
-import com.google.gson.JsonPrimitive
-import com.google.gson.JsonArray
-import scala.jdk.CollectionConverters._
-import scala.meta.internal.metals.GlobSearchResponse
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
+import scala.meta.internal.query._
+
 class QueryLspSuite extends BaseLspSuite("query") {
 
-  test("findPackage") {
-    val fut = for {
-      _ <- initialize(
-        """
-          |/metals.json
-          |{"a":
-          |  { 
-          |    "scalaVersion": "3.3.5",
-          |    "libraryDependencies": [
-          |       "org.virtuslab::besom-core:0.3.2",
-          |       "org.virtuslab::besom-aws:6.31.0-core.0.3"
-          |    ]
-          |  } 
-          |}
-          |/a/src/main/scala/a/A.scala
-          |package a
-          |object A
-          |""".stripMargin
-      )
-      _ <- server.didOpen("a/src/main/scala/a/A.scala")
-      _ = assertNoDiagnostics()
-      locations = server.server.queryEngine.findPackage("docdb").mkString("\n")
-      _ = {
-        pprint.log(s"query: findPackage(\"docdb\"), result:")
-        pprint.log(locations)
-        pprint.log("============")
-      }
-      expected = """|besom/api/aws/docdb/inputs/
-                    |besom/api/aws/docdb/
-                    |besom/api/aws/docdb/outputs/""".stripMargin
-      _ = assertEquals(
-        locations,
-        expected,
-      )
-    } yield ()
-
-    try Await.result(fut, 10.seconds)
-    finally cancelServer()
-  }
-
+  // @kasiaMarek: missing:
+  // - methods / values from dependencies (to think about)
+  // - type aliases from dependencies ???
   test("glob search all types - workspace") {
     val fut = for {
       _ <- initialize(
@@ -109,144 +64,65 @@ class QueryLspSuite extends BaseLspSuite("query") {
            |""".stripMargin
       )
       _ <- server.didOpen("src/main/scala/com/test/TestClass.scala")
-      _ <- server.didOpen("src/main/scala/com/test/matching/MatchingUtil.scala")
-      _ <- server.didOpen("src/main/scala/com/test/NonMatching.scala")
-      _ <- server.didOpen("src/main/scala/com/other/OtherPackage.scala")
       _ = assertNoDiagnostics()
 
       // Test searching for "test" - should find packages, classes, objects, traits
-      _ = {
-        val testResults =
-          server.server.queryEngine.globSearch("test", Set.empty)
-        // should find:
-        // packages: com.test
-        // classes: com.test.TestClass,
-        // objects: com.test.TestObject
-        // traits: com.test.TestTrait
-        // methods: com.test.TestClass.testMethod
-        // functions: com.test.TestObject.testFunction
-
-        pprint.log(s"query: globSearch(\"test\", Set.empty), result:")
-        pprint.log(testResults)
-        pprint.log("============")
-
-        // Positive assertions
-        assert(
-          testResults.exists(r =>
-            r.name == "com.test" && r.symbolType == SymbolType.Package
-          )
-        )
-        assert(
-          testResults.exists(r =>
-            r.name == "TestClass" && r.symbolType == SymbolType.Class
-          )
-        )
-        assert(
-          testResults.exists(r =>
-            r.name == "TestObject" && r.symbolType == SymbolType.Object
-          )
-        )
-        assert(
-          testResults.exists(r =>
-            r.name == "TestTrait" && r.symbolType == SymbolType.Trait
-          )
-        )
-
-        // Negative assertions - these should NOT match
-        assert(
-          !testResults.exists(r => r.name == "NonMatchingClass")
-        )
-        assert(
-          !testResults.exists(r => r.name == "HelperObject")
-        )
-        assert(
-          !testResults.exists(r => r.name == "someMethod")
-        )
-        assert(
-          !testResults.exists(r => r.name == "helperFunction")
-        )
-      }
+      _ = assertNoDiff(
+        timed(
+          server.server.queryEngine
+            .globSearch("test", Set.empty, enableDebug = true)
+        ).show,
+        """|class com.test.TestClass
+           |class java.awt.dnd.SerializationTester
+           |method com.test.TestClass.testMethod
+           |method com.test.TestClass.testValue
+           |method com.test.TestObject.testFunction
+           |object com.test.TestObject
+           |object scala.reflect.TypeTest
+           |package com.test
+           |trait com.test.TestTrait
+           |trait scala.quoted.Quotes.reflectModule.TypedOrTestMethods
+           |trait scala.quoted.Quotes.reflectModule.TypedOrTestModule
+           |trait scala.reflect.TypeTest
+           |""".stripMargin,
+        "query: globSearch(\"test\", Set.empty)",
+      )
 
       // Test searching for "matching" - should find package and object
-      _ = {
-        val matchingResults = server.server.queryEngine
-          .globSearch("matching", Set.empty, enableDebug = true)
-        // should find:
-        // package: com.test.matching
-        // class: NonMatchingClass (contains "matching" in name)
-        // object: MatchingUtil
-
-        pprint.log(s"query: globSearch(\"matching\", Set.empty), result:")
-        pprint.log(matchingResults)
-        pprint.log("============")
-
-        // Positive assertions
-        assert(
-          matchingResults.exists(r =>
-            r.name == "matching" && r.symbolType == SymbolType.Package
-          )
-        )
-        assert(
-          matchingResults.exists(r =>
-            r.name == "MatchingUtil" && r.symbolType == SymbolType.Object
-          )
-        )
-
-        // Negative assertions - these should NOT match
-        assert(
-          !matchingResults.exists(r => r.name == "OtherUtil")
-        )
-        assert(
-          !matchingResults.exists(r => r.name == "otherPattern")
-        )
-        assert(
-          !matchingResults.exists(r => r.path.contains("com.other"))
-        )
-      }
+      _ = assertNoDiff(
+        server.server.queryEngine.globSearch("matching", Set.empty).show,
+        """|class com.test.NonMatchingClass
+           |object com.test.matching.MatchingUtil
+           |object scala.quoted.runtime.QuoteMatching
+           |package com.test.matching
+           |trait scala.quoted.runtime.QuoteMatching
+           |""".stripMargin,
+        "query: globSearch(\"matching\", Set.empty)",
+      )
 
       // Test searching for "test" with class filter
-      _ = {
-        val classResults = server.server.queryEngine
-          .globSearch(
-            "test",
-            Set(SymbolType.Class),
-          )
-        // should find:
-        // classes: com.test.TestClass,
-
-        pprint.log(
-          s"query: globSearch(\"test\", Set(SymbolType.Class)), result:"
-        )
-        pprint.log(classResults)
-        pprint.log("============")
-        assert(classResults.forall(r => r.symbolType == SymbolType.Class))
-        assert(classResults.exists(r => r.name == "TestClass"))
-        assert(!classResults.exists(r => r.name == "TestObject"))
-      }
+      _ = assertNoDiff(
+        server.server.queryEngine
+          .globSearch("test", Set(SymbolType.Class))
+          .show,
+        """|class com.test.TestClass
+           |class java.awt.dnd.SerializationTester
+           |package com.test
+           |""".stripMargin,
+        "query: globSearch(\"test\", Set(SymbolType.Class))",
+      )
 
       // Test searching for methods
-      _ = {
-        val methodResults = server.server.queryEngine
-          .globSearch(
-            "method",
-            Set(SymbolType.Method, SymbolType.Function),
-          )
-        // should find:
-        // methods: com.test.TestClass.testMethod, com.test.TestTrait.abstractMethod
-
-        pprint.log(
-          s"query: globSearch(\"method\", Set(SymbolType.Method, SymbolType.Function)), result:"
-        )
-        pprint.log(methodResults)
-        pprint.log("============")
-        assert(
-          methodResults.forall(r =>
-            r.symbolType == SymbolType.Function || r.symbolType == SymbolType.Method
-          )
-        )
-        assert(methodResults.exists(r => r.name == "testMethod"))
-        assert(methodResults.exists(r => r.name == "abstractMethod"))
-      }
+      _ = assertNoDiff(
+        server.server.queryEngine
+          .globSearch("method", Set(SymbolType.Method, SymbolType.Function))
+          .show,
+        """|method com.test.NonMatchingClass.someMethod
+           |method com.test.TestClass.testMethod
+           |method com.test.TestTrait.abstractMethod
+           |""".stripMargin,
+        "query: globSearch(\"test\", Set(SymbolType.Class))",
+      )
     } yield ()
 
     try Await.result(fut, 10.seconds)
@@ -290,70 +166,24 @@ class QueryLspSuite extends BaseLspSuite("query") {
       _ = assertNoDiagnostics()
 
       // Case insensitive search for "camel"
-      _ = {
-        val camelResults = server.server.queryEngine
-          .globSearch("camel", Set.empty)
-        // should find:
-        // class: CamelCaseClass
-        // method: camelCaseMethod
-
-        pprint.log(s"query: globSearch(\"camel\", Set.empty), result:")
-        pprint.log(camelResults)
-        pprint.log("============")
-
-        // Positive assertions
-        assert(camelResults.exists(r => r.name == "CamelCaseClass"))
-        assert(camelResults.exists(r => r.name == "camelCaseMethod"))
-
-        // Negative assertions
-        assert(!camelResults.exists(r => r.name == "FuNnyCaSe"))
-        assert(!camelResults.exists(r => r.name == "ComelPrefix"))
-        assert(!camelResults.exists(r => r.name == "SUPERCASE"))
-      }
+      _ = assertNoDiff(server.server.queryEngine.globSearch("camel", Set.empty).show,
+      """|class com.test.CamelCaseClass
+         |method com.test.CamelCaseClass.camelCaseMethod
+         |""".stripMargin)
 
       // Case insensitive search for "UPPERCASE"
-      _ = {
-        val upperResults = server.server.queryEngine
-          .globSearch("uppercase", Set.empty)
-        // should find:
-        // object: UPPERCASE_OBJECT
-        // method: UPPERCASE_METHOD
-
-        pprint.log(s"query: globSearch(\"uppercase\", Set.empty), result:")
-        pprint.log(upperResults)
-        pprint.log("============")
-
-        // Positive assertions
-        assert(upperResults.exists(r => r.name == "UPPERCASE_OBJECT"))
-        assert(upperResults.exists(r => r.name == "UPPERCASE_METHOD"))
-
-        // Negative assertions
-        assert(!upperResults.exists(r => r.name == "SUPERCASE"))
-        assert(!upperResults.exists(r => r.name == "FuNnyCaSe"))
-        assert(!upperResults.exists(r => r.name == "ComelPrefix"))
-      }
+      _ = assertNoDiff(server.server.queryEngine.globSearch("uppercase", Set.empty).show,
+      """|class javax.swing.text.MaskFormatter.UpperCaseCharacter
+         |method com.test.UPPERCASE_OBJECT.UPPERCASE_METHOD
+         |object com.test.UPPERCASE_OBJECT
+         |""".stripMargin)
 
       // Case insensitive search for "lowercase"
-      _ = {
-        val lowerResults = server.server.queryEngine
-          .globSearch("lowercase", Set.empty)
-        // should find:
-        // object: lowercase_object
-        // method: lowercase_method
-
-        pprint.log(s"query: globSearch(\"lowercase\", Set.empty), result:")
-        pprint.log(lowerResults)
-        pprint.log("============")
-
-        // Positive assertions
-        assert(lowerResults.exists(r => r.name == "lowercase_object"))
-        assert(lowerResults.exists(r => r.name == "lowercase_method"))
-
-        // Negative assertions
-        assert(!lowerResults.exists(r => r.name == "FuNnyCaSe"))
-        assert(!lowerResults.exists(r => r.name == "ComelPrefix"))
-        assert(!lowerResults.exists(r => r.name == "SUPERCASE"))
-      }
+      _ = assertNoDiff(server.server.queryEngine.globSearch("lowercase", Set.empty).show,
+      """|class javax.swing.text.MaskFormatter.LowerCaseCharacter
+         |method com.test.lowercase_object.lowercase_method
+         |object com.test.lowercase_object
+         |""".stripMargin)
     } yield ()
 
     try Await.result(fut, 10.seconds)
@@ -401,94 +231,55 @@ class QueryLspSuite extends BaseLspSuite("query") {
       _ <- server.didOpen(
         "src/main/scala/com/test/nested/package1/Class1.scala"
       )
-      _ <- server.didOpen(
-        "src/main/scala/com/test/nested/package2/Class2.scala"
-      )
-      _ <- server.didOpen("src/main/scala/com/example/ExampleClass.scala")
-      _ <- server.didOpen("src/main/scala/com/test/pkgtools/NotAPackage.scala")
-      _ <- server.didOpen("src/main/scala/org/test/DistantTest.scala")
-      _ <- server.didOpen("src/main/scala/com/test/elements/NotNested.scala")
       _ = assertNoDiagnostics()
 
       // Search for all packages
-      _ = {
-        val packageResults = server.server.queryEngine
+      _ = assertNoDiff(server.server.queryEngine
           .globSearch(
             "package",
             Set(SymbolType.Package),
-          )
-        // should find:
-        // packages: com.test.nested.package1, com.test.nested.package2
-
-        pprint.log(
-          s"query: globSearch(\"package\", Set(SymbolType.Package)), result:"
-        )
-        pprint.log(packageResults)
-        pprint.log("============")
-
-        // Positive assertions
-        assert(packageResults.forall(r => r.symbolType == SymbolType.Package))
-        assert(packageResults.exists(r => r.name == "package1"))
-        assert(packageResults.exists(r => r.name == "package2"))
-
-        // Negative assertions
-        assert(!packageResults.exists(r => r.name == "NotAPackage"))
-        assert(!packageResults.exists(r => r.name == "pkgtools"))
-      }
+          ).show,
+          """|package com.test.nested.package1
+             |package com.test.nested.package2
+             |""".stripMargin)
 
       // Search for test packages
-      _ = {
-        val comTestResults = server.server.queryEngine
+      _ = assertNoDiff(server.server.queryEngine
           .globSearch(
             "test",
             Set(SymbolType.Package),
-          )
-        // should find:
-        // packages: com.test, org.test
-
-        pprint.log(
-          s"query: globSearch(\"test\", Set(SymbolType.Package)), result:"
-        )
-        pprint.log(comTestResults)
-        pprint.log("============")
-
-        // Positive assertions
-        assert(comTestResults.exists(r => r.path.contains("com.test")))
-        assert(comTestResults.exists(r => r.path.contains("org.test")))
-
-        // Negative assertions
-        assert(!comTestResults.exists(r => r.path.contains("com.example")))
-        assert(!comTestResults.exists(r => r.name == "DistantTest"))
-      }
+          ).show,
+          """|package com.test
+             |package org.test
+             |""".stripMargin)
 
       // Search for nested packages
-      _ = {
-        val nestedResults = server.server.queryEngine
+      _ = assertNoDiff(server.server.queryEngine
           .globSearch(
             "nested",
             Set(SymbolType.Package),
-          )
-        // should find:
-        // packages: com.test.nested
-
-        pprint.log(
-          s"query: globSearch(\"nested\", Set(SymbolType.Package)), result:"
-        )
-        pprint.log(nestedResults)
-        pprint.log("============")
-
-        // Positive assertions
-        assert(nestedResults.exists(r => r.name == "nested"))
-        assert(nestedResults.exists(r => r.path.contains("com.test.nested")))
-
-        // Negative assertions
-        assert(!nestedResults.exists(r => r.name == "NotNested"))
-        assert(!nestedResults.exists(r => r.path.contains("elements")))
-      }
+          ).show,
+          """|package com.test.nested
+             |""".stripMargin)
     } yield ()
 
     try Await.result(fut, 10.seconds)
     finally cancelServer()
   }
 
+  implicit class XtensionSearchResult(result: SymbolSearchResult) {
+    def show: String = s"${result.symbolType.name} ${result.path}"
+  }
+
+  implicit class XtensionSearchResultSeq(result: Seq[SymbolSearchResult]) {
+    def show: String = result.map(_.show).sorted.mkString("\n")
+  }
+
+  def timed[T](f: => T): T = {
+    val start = System.currentTimeMillis()
+    val res = f
+    val time = System.currentTimeMillis() - start
+    scribe.info(s"Time taken: ${time}ms")
+    res
+  }
 }
