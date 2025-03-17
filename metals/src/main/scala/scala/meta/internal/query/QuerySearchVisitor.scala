@@ -4,13 +4,13 @@ import java.nio.file.Path
 
 import scala.collection.mutable
 
+import scala.meta.Dialect
 import scala.meta.internal.metals.Classfile
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SemanticdbDefinition
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Symbol
-import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.DescriptorParser
 import scala.meta.internal.semanticdb.Scala.Symbols
@@ -66,14 +66,14 @@ class QuerySearchVisitor(
       var size = 0
 
       definition(pkg, filename).foreach {
-        case defn if !isVisited(defn.path) =>
-          isVisited += defn.path
-          val input = defn.path.toInput
+        case (path, dialect) if !isVisited(path) =>
+          isVisited += path
+          val input = path.toInput
           // @kasiaMarek: I think this shouldn't be needed,
           // we should make definition return the type instead
           SemanticdbDefinition.foreach(
             input,
-            defn.dialect,
+            dialect,
             includeMembers = false,
           ) { semanticdbDefn =>
             lazy val kind = kindToTypeString(semanticdbDefn.info.kind.toLsp).getOrElse(
@@ -82,7 +82,7 @@ class QuerySearchVisitor(
 
             if(matchesQuery(semanticdbDefn.info.displayName) && (symbolTypes.isEmpty || symbolTypes.contains(kind))) {
               results +=
-                ClassOrObjectSearchResult(
+          ClassOrObjectSearchResult(
                   name = semanticdbDefn.info.displayName,
                   path = fqcn(semanticdbDefn.info.symbol).stripSuffix("."),
                   symbolType = kind,
@@ -139,14 +139,13 @@ class QuerySearchVisitor(
   private def definition(
       pkg: String,
       filename: String,
-  ): List[SymbolDefinition] = {
+  ): List[(AbsolutePath, Dialect)] = {
     val nme = Classfile.name(filename)
     val tpe = Symbol(Symbols.Global(pkg, Descriptor.Type(nme)))
-    val forTpe = index.definitions(tpe)
-    if (forTpe.isEmpty) {
-      val term = Symbol(Symbols.Global(pkg, Descriptor.Term(nme)))
-      index.definitions(term)
-    } else forTpe
+    val forTpe = index.topLevels(tpe)
+    val term = Symbol(Symbols.Global(pkg, Descriptor.Term(nme)))
+    val forTerm = index.topLevels(term)
+    forTpe ++ forTerm
   }
 
   /**

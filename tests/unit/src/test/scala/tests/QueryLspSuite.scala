@@ -69,8 +69,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
       // Test searching for "test" - should find packages, classes, objects, traits
       _ = assertNoDiff(
         timed(
-          server.server.queryEngine
-            .globSearch("test", Set.empty, enableDebug = true)
+          server.server.queryEngine.globSearch("test", Set.empty)
         ).show,
         """|class com.test.TestClass
            |class java.awt.dnd.SerializationTester

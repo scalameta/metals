@@ -98,6 +98,7 @@ trait GlobalSymbolIndex {
       dialect: Dialect
   ): List[IndexingResult]
 
+  def topLevels(topLevelSymbol: mtags.Symbol): List[(AbsolutePath, Dialect)]
 }
 
 case class SymbolDefinition(
