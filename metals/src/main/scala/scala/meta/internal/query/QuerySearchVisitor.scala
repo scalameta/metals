@@ -29,13 +29,15 @@ class QuerySearchVisitor(
   private val lowerCaseQuery = query.toLowerCase
   private val results = mutable.ListBuffer.empty[SymbolSearchResult]
   private val packageResult = mutable.ListBuffer.empty[PackageSearchResult]
-  def getResults: Seq[SymbolSearchResult] = results.toSeq ++ packageResult.toSeq.distinctBy(_.path)
+  def getResults: Seq[SymbolSearchResult] =
+    results.toSeq ++ packageResult.toSeq.distinctBy(_.path)
 
   override def shouldVisitPackage(pkg: String): Boolean = {
-    val shouldIncludePackages = symbolTypes.isEmpty || symbolTypes.contains(SymbolType.Package)
+    val shouldIncludePackages =
+      symbolTypes.isEmpty || symbolTypes.contains(SymbolType.Package)
 
     if (shouldIncludePackages && matchesQuery(pkg)) {
-      results += 
+      results +=
         PackageSearchResult(
           name = pkg.substring(pkg.lastIndexOf('/') + 1),
           path = fqcn(pkg),
@@ -45,8 +47,11 @@ class QuerySearchVisitor(
   }
 
   override def visitWorkspacePackage(owner: String, name: String): Int = {
-    if(matchesQuery(name)) {
-      packageResult += PackageSearchResult(name, s"$owner$name".replace('/', '.'))
+    if (matchesQuery(name)) {
+      packageResult += PackageSearchResult(
+        name,
+        s"$owner$name".replace('/', '.'),
+      )
       1
     } else 0
   }
@@ -76,13 +81,18 @@ class QuerySearchVisitor(
             dialect,
             includeMembers = false,
           ) { semanticdbDefn =>
-            lazy val kind = kindToTypeString(semanticdbDefn.info.kind.toLsp).getOrElse(
-              SymbolType.Unknown(semanticdbDefn.info.kind.toString)
-            )
+            lazy val kind =
+              kindToTypeString(semanticdbDefn.info.kind.toLsp).getOrElse(
+                SymbolType.Unknown(semanticdbDefn.info.kind.toString)
+              )
 
-            if(matchesQuery(semanticdbDefn.info.displayName) && (symbolTypes.isEmpty || symbolTypes.contains(kind))) {
+            if (
+              matchesQuery(
+                semanticdbDefn.info.displayName
+              ) && (symbolTypes.isEmpty || symbolTypes.contains(kind))
+            ) {
               results +=
-          ClassOrObjectSearchResult(
+                ClassOrObjectSearchResult(
                   name = semanticdbDefn.info.displayName,
                   path = fqcn(semanticdbDefn.info.symbol).stripSuffix("."),
                   symbolType = kind,
@@ -91,7 +101,7 @@ class QuerySearchVisitor(
             }
 
           }(EmptyReportContext)
-        case _ => 
+        case _ =>
       }
 
       size
@@ -114,7 +124,9 @@ class QuerySearchVisitor(
       kindToTypeString(kind).getOrElse(SymbolType.Unknown(kind.toString))
 
     if (
-      matchesQuery(symbolName) && (symbolTypes.isEmpty || symbolTypes.contains(symbolType))
+      matchesQuery(symbolName) && (symbolTypes.isEmpty || symbolTypes.contains(
+        symbolType
+      ))
     ) {
       results +=
         WorkspaceSymbolSearchResult(
@@ -123,7 +135,7 @@ class QuerySearchVisitor(
           symbolType = symbolType,
           location = path.toUri.toString,
         )
-        1
+      1
     } else 0
 
   }

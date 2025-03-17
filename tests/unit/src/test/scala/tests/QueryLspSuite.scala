@@ -165,24 +165,30 @@ class QueryLspSuite extends BaseLspSuite("query") {
       _ = assertNoDiagnostics()
 
       // Case insensitive search for "camel"
-      _ = assertNoDiff(server.server.queryEngine.globSearch("camel", Set.empty).show,
-      """|class com.test.CamelCaseClass
-         |method com.test.CamelCaseClass.camelCaseMethod
-         |""".stripMargin)
+      _ = assertNoDiff(
+        server.server.queryEngine.globSearch("camel", Set.empty).show,
+        """|class com.test.CamelCaseClass
+           |method com.test.CamelCaseClass.camelCaseMethod
+           |""".stripMargin,
+      )
 
       // Case insensitive search for "UPPERCASE"
-      _ = assertNoDiff(server.server.queryEngine.globSearch("uppercase", Set.empty).show,
-      """|class javax.swing.text.MaskFormatter.UpperCaseCharacter
-         |method com.test.UPPERCASE_OBJECT.UPPERCASE_METHOD
-         |object com.test.UPPERCASE_OBJECT
-         |""".stripMargin)
+      _ = assertNoDiff(
+        server.server.queryEngine.globSearch("uppercase", Set.empty).show,
+        """|class javax.swing.text.MaskFormatter.UpperCaseCharacter
+           |method com.test.UPPERCASE_OBJECT.UPPERCASE_METHOD
+           |object com.test.UPPERCASE_OBJECT
+           |""".stripMargin,
+      )
 
       // Case insensitive search for "lowercase"
-      _ = assertNoDiff(server.server.queryEngine.globSearch("lowercase", Set.empty).show,
-      """|class javax.swing.text.MaskFormatter.LowerCaseCharacter
-         |method com.test.lowercase_object.lowercase_method
-         |object com.test.lowercase_object
-         |""".stripMargin)
+      _ = assertNoDiff(
+        server.server.queryEngine.globSearch("lowercase", Set.empty).show,
+        """|class javax.swing.text.MaskFormatter.LowerCaseCharacter
+           |method com.test.lowercase_object.lowercase_method
+           |object com.test.lowercase_object
+           |""".stripMargin,
+      )
     } yield ()
 
     try Await.result(fut, 10.seconds)
@@ -233,33 +239,42 @@ class QueryLspSuite extends BaseLspSuite("query") {
       _ = assertNoDiagnostics()
 
       // Search for all packages
-      _ = assertNoDiff(server.server.queryEngine
+      _ = assertNoDiff(
+        server.server.queryEngine
           .globSearch(
             "package",
             Set(SymbolType.Package),
-          ).show,
-          """|package com.test.nested.package1
-             |package com.test.nested.package2
-             |""".stripMargin)
+          )
+          .show,
+        """|package com.test.nested.package1
+           |package com.test.nested.package2
+           |""".stripMargin,
+      )
 
       // Search for test packages
-      _ = assertNoDiff(server.server.queryEngine
+      _ = assertNoDiff(
+        server.server.queryEngine
           .globSearch(
             "test",
             Set(SymbolType.Package),
-          ).show,
-          """|package com.test
-             |package org.test
-             |""".stripMargin)
+          )
+          .show,
+        """|package com.test
+           |package org.test
+           |""".stripMargin,
+      )
 
       // Search for nested packages
-      _ = assertNoDiff(server.server.queryEngine
+      _ = assertNoDiff(
+        server.server.queryEngine
           .globSearch(
             "nested",
             Set(SymbolType.Package),
-          ).show,
-          """|package com.test.nested
-             |""".stripMargin)
+          )
+          .show,
+        """|package com.test.nested
+           |""".stripMargin,
+      )
     } yield ()
 
     try Await.result(fut, 10.seconds)

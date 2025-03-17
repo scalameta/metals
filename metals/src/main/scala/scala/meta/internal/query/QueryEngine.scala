@@ -15,7 +15,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 class QueryEngine(
     workspaceSearchProvider: WorkspaceSymbolProvider,
     focusedDocumentBuildTarget: () => Option[BuildTargetIdentifier],
-    index: GlobalSymbolIndex
+    index: GlobalSymbolIndex,
 ) {
 
   /**
@@ -47,8 +47,15 @@ class QueryEngine(
     )
 
     // use focused document build target
-    workspaceSearchProvider.search(wsQuery, visitor, focusedDocumentBuildTarget())
-    workspaceSearchProvider.searchWorkspacePackages(visitor, focusedDocumentBuildTarget())
+    workspaceSearchProvider.search(
+      wsQuery,
+      visitor,
+      focusedDocumentBuildTarget(),
+    )
+    workspaceSearchProvider.searchWorkspacePackages(
+      visitor,
+      focusedDocumentBuildTarget(),
+    )
 
     visitor.getResults
   }

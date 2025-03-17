@@ -174,11 +174,13 @@ class SymbolIndexBucket(
   }
 
   def topLevels(topLevelSymbol: Symbol): List[(AbsolutePath, Dialect)] = {
-    toplevels.get(topLevelSymbol.toString()).map(_.toList)
-    .orElse(loadFromSourceJars(trivialPaths(topLevelSymbol)))
-    .orElse(loadFromSourceJars(modulePaths(topLevelSymbol)))
-    .getOrElse(Nil)
-    .map(x => (x, dialect))
+    toplevels
+      .get(topLevelSymbol.toString())
+      .map(_.toList)
+      .orElse(loadFromSourceJars(trivialPaths(topLevelSymbol)))
+      .orElse(loadFromSourceJars(modulePaths(topLevelSymbol)))
+      .getOrElse(Nil)
+      .map(x => (x, dialect))
   }
 
   def query(symbol: Symbol): List[SymbolDefinition] =
