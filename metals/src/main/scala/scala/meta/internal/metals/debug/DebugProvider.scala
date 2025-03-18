@@ -21,6 +21,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
@@ -66,8 +67,11 @@ import ch.epfl.scala.{bsp4j => b}
 import ch.epfl.scala.{debugadapter => dap}
 import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement
+import org.eclipse.lsp4j.ExecuteCommandParams
+import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.ShowMessageRequestParams
 
 /**
  * @param supportsTestSelection test selection hasn't been defined in BSP spec yet.
@@ -484,6 +488,29 @@ class DebugProvider(
   )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
     val result = foundClasses match {
       case (_, target) :: _ if buildClient.buildHasErrors(target.getId()) =>
+        val msg = "Cannot launch due to compile errors."
+        if (clientConfig.isExecuteClientCommandProvider()) {
+          val params = new ShowMessageRequestParams
+          params.setMessage(msg)
+          params.setType(MessageType.Error)
+          params.setActions(List(new MessageActionItem("View Problems")).asJava)
+          languageClient
+            .showMessageRequest(params)
+            .asScala
+            .foreach(_ =>
+              languageClient.metalsExecuteClientCommand(
+                new ExecuteCommandParams(
+                  ClientCommands.FocusDiagnostics.id,
+                  Nil.asJava,
+                )
+              )
+            )
+        } else {
+          val params = new MessageParams
+          params.setMessage(msg)
+          params.setType(MessageType.Error)
+          languageClient.showMessage(params)
+        }
         Future.failed(WorkspaceErrorsException)
       case (clazz, target) :: others =>
         if (others.nonEmpty) {

@@ -426,7 +426,17 @@ class DebugProtocolSuite
           }
     } yield assertNoDiff(
       result.toString(),
-      WorkspaceErrorsException.getMessage(),
+      """
+        |ShowMessageRequestParams [
+        |  actions = SeqWrapper (
+        |    MessageActionItem [
+        |      title = "View Problems"
+        |    ]
+        |  )
+        |  type = Error
+        |  message = "Cannot launch due to compile errors."
+        |]
+      """.stripMargin,
     )
   }
 
