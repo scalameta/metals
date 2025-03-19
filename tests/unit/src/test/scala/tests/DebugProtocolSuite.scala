@@ -545,7 +545,7 @@ class DebugProtocolSuite
     } yield assertNoDiff(
       output,
       """|a.Foo
-         |  foo - failed
+         |  foo - failed at Foo.scala, line 6
          |""".stripMargin,
     )
   }
