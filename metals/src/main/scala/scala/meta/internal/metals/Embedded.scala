@@ -180,18 +180,32 @@ object Embedded {
   private val jdkVersion = JdkVersion.parse(Properties.javaVersion)
   private def credentials = CacheDefaults.credentials
 
+  private lazy val mavenLocal = {
+    val str = new File(sys.props("user.home")).toURI.toString
+    val homeUri =
+      if (str.endsWith("/"))
+        str
+      else
+        str + "/"
+    MavenRepository.of(homeUri + ".m2/repository")
+  }
+
   lazy val repositories: List[Repository] =
-    Repository.defaults().asScala.toList ++
+    (Repository.defaults().asScala.toList ++
       List(
-        Repository.central(),
-        Repository.ivy2Local(),
+        mavenLocal,
         MavenRepository.of(
           "https://oss.sonatype.org/content/repositories/public/"
         ),
         MavenRepository.of(
           "https://oss.sonatype.org/content/repositories/snapshots/"
         ),
-      ).map(setCredentials)
+      ))
+      .distinctBy {
+        case m: MavenRepository => m.getBase()
+        case i: IvyRepository => i.getPattern()
+      }
+      .map(setCredentials)
 
   private[Embedded] def scala3CompilerDependencies(version: String) = List(
     Dependency.of("org.scala-lang", "scala3-library_3", version),

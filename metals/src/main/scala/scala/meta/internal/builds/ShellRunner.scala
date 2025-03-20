@@ -1,7 +1,5 @@
 package scala.meta.internal.builds
 
-import java.io.File
-
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -11,6 +9,7 @@ import scala.language.postfixOps
 import scala.util.Properties
 
 import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -51,7 +50,7 @@ class ShellRunner(time: Time, workDoneProvider: WorkDoneProgress)(implicit
     val classpath = Fetch
       .create()
       .withDependencies(dependency)
-      .withRepositories(ShellRunner.defaultRepositories: _*)
+      .withRepositories(Embedded.repositories: _*)
       .fetch()
       .asScala
       .mkString(classpathSeparator)
@@ -131,28 +130,6 @@ class ShellRunner(time: Time, workDoneProvider: WorkDoneProgress)(implicit
 }
 
 object ShellRunner {
-
-  private lazy val mavenLocal = {
-    val str = new File(sys.props("user.home")).toURI.toString
-    val homeUri =
-      if (str.endsWith("/"))
-        str
-      else
-        str + "/"
-    MavenRepository.of(homeUri + ".m2/repository")
-  }
-
-  private lazy val sonatypePublic = MavenRepository.of(
-    "https://oss.sonatype.org/content/repositories/public"
-  )
-
-  val defaultRepositories: List[Repository] =
-    List(
-      Repository.ivy2Local(),
-      Repository.central(),
-      mavenLocal,
-      sonatypePublic,
-    )
 
   def runSync(
       args: List[String],
