@@ -1,5 +1,6 @@
 package scala.meta.internal.builds
 
+import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
@@ -34,7 +35,7 @@ case class BazelBuildTool(
     val classpath = Fetch
       .create()
       .withDependencies(BazelBuildTool.dependency)
-      .withRepositories(ShellRunner.defaultRepositories: _*)
+      .withRepositories(Embedded.repositories: _*)
       .fetch()
       .asScala
       .mkString(classpathSeparator)
