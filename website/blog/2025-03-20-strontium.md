@@ -6,8 +6,7 @@ title: Metals v1.5.2 - Strontium
 We're happy to announce the release of Metals v1.5.2, which continues to improve
 overall user experience and stability of Metals. This release includes a number
 of new features, bug fixes and improvements. Especially worth mentioning is the
-fix for the Scala 2 issue, which would break most interactive features if a type
-was used that was defined in a package object.
+fix for the Scala 2 issue, which previously caused most interactive features to break when using a type defined in a package object.
 
 <table>
 <tbody>
@@ -79,8 +78,7 @@ make it easier to navigate to the failing test.
 Thanks to [majk-p](https://github.com/majk-p) any sbt style dependencies that
 you paste into a Scala CLI file after `//> using dep` will be automatically
 converted to Scala CLI style dependencies. This was previously only supported in
-a code action, but turns out to be a very useful feature that should be
-available in more places.
+a code action, but turns out to be useful enough to apply the rewrite automatically on paste.
 
 ![paste-dep](https://i.imgur.com/6BNvmmO.gif)
 
@@ -107,8 +105,8 @@ class TestNG {
 
 Whenever importing a particular symbol, Metals would previously suggest all the
 possible symbol with the expected name. However, in a lot of cases, those symbol
-might already have a method being invoked on them, which means that only symbol
-containing that method should only be suggested.
+might already have a method being invoked on them, which means that only symbols
+containing that method should be suggested.
 
 For example in the following code:
 
@@ -139,9 +137,8 @@ being aware of them. Which points to the fact that the feature is not widely
 used.
 
 This will also help to to ease the maintenance burden and to focus more on
-stability of Metals. Scala Scripts are still supported via
-[Scala CLI](https://scala-cli.virtuslab.org/), which we believe is overall a
-better experience and is the default Scala runner for Scala 3.
+stability of Metals. Scala Scripts still are and will be supported via
+[Scala CLI](https://scala-cli.virtuslab.org/), so for anyone using Ammonite we suggest switching to Scala CLI. Scala CLI is the default Scala runner for Scala 3 and we believe it offers overall better experience. If you see any useful Ammonite feature missing from Scala CLI don't hesitate to start a discussion in the Scala CLI repository.
 
 ## Miscellaneous
 
