@@ -7,7 +7,6 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
 import coursierapi.Dependency
-import coursierapi.Fetch
 
 case class BazelBuildTool(
     userConfig: () => UserConfiguration,
@@ -32,12 +31,8 @@ case class BazelBuildTool(
 
   private def composeArgs(): List[String] = {
     val classpathSeparator = java.io.File.pathSeparator
-    val classpath = Fetch
-      .create()
-      .withDependencies(BazelBuildTool.dependency)
-      .withRepositories(Embedded.repositories: _*)
-      .fetch()
-      .asScala
+    val classpath = Embedded
+      .downloadDependency(BazelBuildTool.dependency)
       .mkString(classpathSeparator)
     List(
       JavaBinary(userConfig().javaHome),
