@@ -47,7 +47,7 @@ def main(
     s"$firstTag..$lastTag",
     "--first-parent",
     "main",
-    "--pretty=format:%H",
+    "--first-parent",
   )
 
   val output = os.proc(command).call().out.trim()
