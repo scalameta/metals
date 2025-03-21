@@ -28,6 +28,7 @@ jobs:
             shard: 2
     steps:
       - uses: actions/checkout@v4
+      - uses: coursier/setup-action@v1
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'

@@ -12,7 +12,6 @@ import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JdkSources
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
@@ -47,14 +46,8 @@ class ShellRunner(time: Time, workDoneProvider: WorkDoneProgress)(implicit
   ): Future[Int] = {
 
     val classpathSeparator = if (Properties.isWin) ";" else ":"
-    val classpath = Fetch
-      .create()
-      .withDependencies(dependency)
-      .withRepositories(Embedded.repositories: _*)
-      .fetch()
-      .asScala
-      .mkString(classpathSeparator)
-
+    val classpath =
+      Embedded.downloadDependency(dependency).mkString(classpathSeparator)
     val javaOpts = javaOptsMap.map { case (key, value) =>
       s"-D$key=$value"
     }.toList

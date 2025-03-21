@@ -122,6 +122,7 @@ object TestGroups {
       "tests.decorations.SyntheticDecorationsExpectSuite",
       "tests.codeactions.ConvertSingleLineCommentLspSuite",
       "tests.ServerLivenessMonitorSuite", "tests.ResetWorkspaceLspSuite",
-      "tests.ToplevelWithInnerScala3Suite", "tests.OutlineLspSuite"),
+      "tests.ToplevelWithInnerScala3Suite", "tests.OutlineLspSuite",
+      "tests.FallbackDownloadSuite"),
   )
 }

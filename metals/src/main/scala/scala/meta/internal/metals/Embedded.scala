@@ -3,16 +3,22 @@ package scala.meta.internal.metals
 import java.io.File
 import java.net.MalformedURLException
 import java.net.URLClassLoader
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.ServiceLoader
 
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContextExecutor
 import scala.util.Properties
 import scala.util.control.NonFatal
 
+import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.internal.worksheets.MdocClassLoader
+import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 import scala.meta.pc.PresentationCompiler
 
@@ -393,13 +399,23 @@ object Embedded {
       scalaVersion: Option[String] = None,
       classfiers: Seq[String] = Seq.empty,
       resolution: Option[ResolutionParams] = None,
-  ): List[Path] = {
+  ): List[Path] = try {
     fetchSettings(dep, scalaVersion, resolution)
       .addClassifiers(classfiers: _*)
       .fetch()
       .asScala
       .toList
       .map(_.toPath())
+  } catch {
+    case NonFatal(e) =>
+      scribe.error(s"Error downloading $dep", e)
+      val result = fallbackDownload(dep)
+      if (result.isEmpty) {
+        throw e
+      } else {
+        result
+      }
+
   }
 
   def downloadScalaSources(scalaVersion: String): List[Path] =
@@ -481,6 +497,88 @@ object Embedded {
       else
         scalaLibraryDependency(scalaVersion)
     downloadDependency(dependency, Some(scalaVersion))
+  }
+
+  private val userHome = Paths.get(System.getProperty("user.home"))
+
+  /**
+   * There are some cases where Metals wouldn't be able to download
+   * dependencies using coursier, in those cases we can try to use a locally
+   * installed coursier to fetch the dependency.
+   *
+   * One potential issue is when we have credential issues
+   */
+  def fallbackDownload(
+      dependency: Dependency
+  ): List[Path] = {
+    // This is a fallback so it should be fine to use the global execution context
+    implicit val ec: ExecutionContextExecutor = ExecutionContext.global
+
+    /* Metals VS Code extension will download coursier for us most of the times */
+    def inVsCodeMetals = {
+      val cs = userHome.resolve(".metals/cs")
+      val csExe = userHome.resolve(".metals/cs.exe")
+      if (Files.exists(cs)) Some(cs)
+      else if (Files.exists(csExe)) Some(csExe)
+      else None
+    }
+    findInPath("cs")
+      .orElse(findInPath("coursier"))
+      .orElse(inVsCodeMetals) match {
+      case None => Nil
+      case Some(path) =>
+        scribe.info(
+          s"Found coursier in path under $path, using it to fetch dependency"
+        )
+        val module = dependency.getModule()
+        val depString =
+          s"${module.getOrganization()}:${module.getName()}:${dependency.getVersion}"
+        ShellRunner.runSync(
+          List(path.toString(), "fetch", depString),
+          AbsolutePath(userHome),
+          redirectErrorOutput = false,
+        ) match {
+          case Some(out) =>
+            val lines = out.linesIterator.toList
+            val jars = lines.map(Paths.get(_))
+            jars
+          case None => Nil
+        }
+    }
+  }
+
+  def findInPath(app: String): Option[Path] = {
+
+    def endsWithCaseInsensitive(s: String, suffix: String): Boolean =
+      s.length >= suffix.length &&
+        s.regionMatches(
+          true,
+          s.length - suffix.length,
+          suffix,
+          0,
+          suffix.length,
+        )
+
+    val asIs = Paths.get(app)
+    if (Paths.get(app).getNameCount >= 2) Some(asIs)
+    else {
+      def pathEntries =
+        Option(System.getenv("PATH")).iterator
+          .flatMap(_.split(File.pathSeparator).iterator)
+      def pathExts =
+        if (Properties.isWin)
+          Option(System.getenv("PATHEXT")).iterator
+            .flatMap(_.split(File.pathSeparator).iterator)
+        else Iterator("")
+      def matches = for {
+        dir <- pathEntries
+        ext <- pathExts
+        app0 = if (endsWithCaseInsensitive(app, ext)) app else app + ext
+        path = Paths.get(dir).resolve(app0)
+        if Files.isExecutable(path)
+      } yield path
+      matches.toStream.headOption
+    }
   }
 
 }
