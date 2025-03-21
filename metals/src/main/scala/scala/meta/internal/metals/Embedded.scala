@@ -266,13 +266,18 @@ object Embedded {
             .flatMap { cred =>
               cred.usernameOpt.zip(cred.passwordOpt)
             }
+
+        def newCredentials(user: String, pass: String) = {
+          scribe.info(
+            s"Setting credentials $user:${"*" * pass.length} for $url"
+          )
+          coursierapi.Credentials.of(user, pass)
+        }
         (creds, repo) match {
           case (Some((user, pass)), mvn: MavenRepository) =>
-            val creds = coursierapi.Credentials.of(user, pass.value)
-            mvn.withCredentials(creds)
+            mvn.withCredentials(newCredentials(user, pass.value))
           case (Some((user, pass)), ivy: IvyRepository) =>
-            val creds = coursierapi.Credentials.of(user, pass.value)
-            ivy.withCredentials(creds)
+            ivy.withCredentials(newCredentials(user, pass.value))
           case _ => repo
         }
       }
