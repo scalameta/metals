@@ -45,7 +45,6 @@ class ProjectMetalsLspService(
     override val clientConfig: ClientConfiguration,
     override val statusBar: StatusBar,
     focusedDocument: () => Option[AbsolutePath],
-    shellRunner: ShellRunner,
     override val timerProvider: TimerProvider,
     initTreeView: () => Unit,
     override val folder: AbsolutePath,
@@ -63,7 +62,6 @@ class ProjectMetalsLspService(
       clientConfig,
       statusBar,
       focusedDocument,
-      shellRunner,
       timerProvider,
       folder,
       folderVisibleName,
@@ -103,6 +101,10 @@ class ProjectMetalsLspService(
       },
     )
   )
+
+  override val shellRunner = register {
+    new ShellRunner(time, workDoneProgress, () => userConfig)
+  }
 
   protected val bspConfigGenerator: BspConfigGenerator = new BspConfigGenerator(
     folder,
