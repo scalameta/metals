@@ -9,7 +9,9 @@ import java.{util => ju}
 
 import scala.concurrent.ExecutionContext
 import scala.io.Source
+import scala.util.Failure
 import scala.util.Properties
+import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.builds.ShellRunner
@@ -19,11 +21,23 @@ import scala.meta.internal.pc.JavaMetalsGlobal
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 
-class JavaInteractiveSemanticdb(
+trait JavaInteractiveSemanticdb {
+  def textDocument(source: AbsolutePath, text: String): s.TextDocument
+}
+
+class NoopJavaInteractiveSemanticdb extends JavaInteractiveSemanticdb {
+  override def textDocument(
+      source: AbsolutePath,
+      text: String,
+  ): s.TextDocument =
+    s.TextDocument()
+}
+
+class DownloadedJavaInteractiveSemanticdb(
     pluginJars: List[Path],
     workspace: AbsolutePath,
     buildTargets: BuildTargets,
-) {
+) extends JavaInteractiveSemanticdb {
 
   private val readonly = workspace.resolve(Directories.readonly)
 
@@ -178,13 +192,20 @@ object JavaInteractiveSemanticdb {
       workspace: AbsolutePath,
       buildTargets: BuildTargets,
   ): JavaInteractiveSemanticdb = {
-
-    val pluginJars = Embedded.downloadSemanticdbJavac
-    new JavaInteractiveSemanticdb(
-      pluginJars,
-      workspace,
-      buildTargets,
-    )
+    Try(Embedded.downloadSemanticdbJavac) match {
+      case Failure(exception) =>
+        scribe.error(
+          "Failed to download semanticdb-javac, Java semanticdb for standalone files will not be available",
+          exception,
+        )
+        new NoopJavaInteractiveSemanticdb()
+      case Success(pluginJars) =>
+        new DownloadedJavaInteractiveSemanticdb(
+          pluginJars,
+          workspace,
+          buildTargets,
+        )
+    }
   }
 }
 
