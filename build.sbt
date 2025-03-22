@@ -404,6 +404,7 @@ lazy val metals = project
       // =================
       // for bloom filters
       V.guava,
+      "com.google.code.findbugs" % "jsr305" % "3.0.2",
       "org.scalameta" %% "metaconfig-core" % "0.15.0",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
