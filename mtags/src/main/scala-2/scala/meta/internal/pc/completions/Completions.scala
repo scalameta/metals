@@ -17,7 +17,6 @@ import scala.meta.internal.pc.IdentifierComparator
 import scala.meta.internal.pc.InterpolationSplice
 import scala.meta.internal.pc.MemberOrdering
 import scala.meta.internal.pc.MetalsGlobal
-import scala.meta.internal.semanticdb.Scala._
 
 import org.eclipse.{lsp4j => l}
 
@@ -355,7 +354,7 @@ trait Completions { this: MetalsGlobal =>
     else Nil
   }
   def dealiasedValForwarder(sym: Symbol): List[Symbol] = {
-    if (sym.isValue && sym.hasRawInfo && !semanticdbSymbol(sym).isLocal) {
+    if (sym.isValue && sym.hasRawInfo && !sym.isLocallyDefined) {
       sym.rawInfo match {
         case SingleType(_, dealias) if dealias.isModule =>
           dealias :: dealias.companion :: Nil
