@@ -26,7 +26,7 @@ object DependencyConverter {
       case _ => None
     }
 
-  private val dependencyIdentifiers = Set("dep", "lib", "plugin")
+  private val dependencyIdentifiers = Set("dep", "test.dep", "lib", "plugin")
   private val sbtDependencyDelimiters = Set("%", "%%", "%%%")
 
   case class ReplacementSuggestion(

@@ -21,6 +21,21 @@ class ScalaCliDependencyRangeFormatterPastingSuite
   )
 
   check(
+    "change-test-dep-format-on-paste",
+    s"""
+       |//> using test.dep @@
+       |object Main {
+       |  println("hello")
+       |}""".stripMargin,
+    s"""|"org.scalameta" %% "munit" % "0.7.26"""".stripMargin,
+    s"""
+       |//> using test.dep org.scalameta::munit:0.7.26
+       |object Main {
+       |  println("hello")
+       |}""".stripMargin,
+  )
+
+  check(
     "change-dep-format-within-existing-deps",
     s"""
        |//> using dep com.lihaoyi::utest::0.7.10
