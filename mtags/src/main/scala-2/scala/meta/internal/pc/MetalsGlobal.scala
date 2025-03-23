@@ -865,6 +865,10 @@ class MetalsGlobal(
   }
 
   implicit class XtensionSymbolMetals(sym: Symbol) {
+    def isLocallyDefined: Boolean =
+      sym.ownersIterator
+        .drop(1)
+        .exists(owner => owner.isMethod || owner.isAnonymousFunction)
     def foreachKnownDirectSubClass(fn: Symbol => Unit): Unit = {
       // NOTE(olafur) The logic in this method is fairly involved because `knownDirectSubClasses`
       // returns a lot of redundant and unrelevant symbols in long-running sessions. For example,

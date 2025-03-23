@@ -25,10 +25,7 @@ class PcRenameProvider(
   def canRenameSymbol(sym: Symbol): Boolean = {
     val name = sym.decodedName.toString
     def sameName = soughtSymbolNames(name)
-    def isLocal =
-      sym.ownersIterator
-        .drop(1)
-        .exists(owner => owner.isMethod || owner.isAnonymousFunction)
+    def isLocal = sym.isLocallyDefined
 
     // this also works for worksheets, since they are wrapped in `method main`
     (!sym.isMethod || !forbiddenMethods(name)) && isLocal && sameName
