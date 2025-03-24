@@ -8,6 +8,8 @@ import scala.reflect.NameTransformer
 import scala.util.control.NonFatal
 
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.pc.InspectResultImpl
+import scala.meta.pc.InspectResult
 import scala.meta.pc.PcSymbolKind
 import scala.meta.pc.PcSymbolProperty
 import scala.meta.pc.SymbolSearchVisitor
@@ -112,25 +114,32 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
   def compilerSymbol(symbol: String): Option[Symbol] =
     compilerSymbols(symbol).find(sym => semanticdbSymbol(sym) == symbol)
 
-  private def compilerSymbols(symbol: String) = {
-    val info = SymbolInfo.getPartsFromSymbol(symbol)
+  private def compilerSymbols(symbol: String): List[Symbol] =
+    compilerSymbols(SymbolInfo.getPartsFromSymbol(symbol))
+
+  private def compilerSymbols(info: SymbolInfo.SymbolParts): List[Symbol] = {
     val pkg = packageSymbolFromString(info.packagePart)
     val symbols = info.names.foldLeft(pkg.toList) {
       case (owners, (nameStr, isClass)) =>
         owners.flatMap { owner =>
           val encoded = NameTransformer.encode(nameStr.stripBackticks)
-          val name =
-            if (encoded == nme.CONSTRUCTOR.encoded) nme.CONSTRUCTOR
-            else if (isClass) TypeName(encoded)
-            else TermName(encoded)
+          val names =
+            if (encoded == nme.CONSTRUCTOR.encoded) List(nme.CONSTRUCTOR)
+            else
+              isClass match {
+                case Some(true) => List(TypeName(encoded))
+                case Some(false) => List(TermName(encoded))
+                case None => List(TypeName(encoded), TermName(encoded))
+              }
 
-          val foundChild = owner.info.member(name)
-          if (foundChild.exists) {
-            foundChild.info match {
-              case OverloadedType(_, alts) => alts
-              case _ => List(foundChild)
-            }
-          } else Nil
+          names.map(owner.info.member(_)).flatMap {
+            case foundChild if foundChild.exists =>
+              foundChild.info match {
+                case OverloadedType(_, alts) => alts
+                case _ => List(foundChild)
+              }
+            case _ => Nil
+          }
         }
     }
 
@@ -140,6 +149,42 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
       case _ => symbols
     }
   }
+
+  // TODO: possibly we need to print things better
+  def inspect(fqcn: String): List[InspectResult] = {
+    def resultWithMembers(symbol: Symbol, members: List[InspectResultImpl]) =
+      InspectResultImpl(
+        semanticdbSymbol(symbol),
+        getSymbolLspKind(symbol),
+        symbol.info.finalResultType.toString(),
+        symbol.accessString,
+        (symbol.typeParams :: symbol.paramss).collect { case params =>
+          val isType = params.headOption.map(_.isTypeParameter).getOrElse(true)
+          InspectResultParamsListImp(
+            if (isType) params.map(_.nameString)
+            else params.map(p => s"${p.decodedName}: ${p.info}"),
+            isType0 = isType,
+            implicitOrUsingKeyword =
+              if (params.headOption.exists(_.isImplicit)) "implicit" else ""
+          )
+        },
+        members
+      )
+
+    val symbols = compilerSymbols(SymbolInfo.getPartsFromFQCN(fqcn))
+    symbols.map { symbol =>
+      val members = symbol.info.members.iterator.collect {
+        case sym
+            if !sym.isPrivate && !sym.isSynthetic && !(sym.isMethod && WorkspaceSymbolSearch
+              .ignoredMethodsForInspect(sym.nameString)) =>
+          resultWithMembers(sym, Nil)
+      }.toList
+      resultWithMembers(symbol, members)
+    }
+  }
+
+  def symbols(fqcn: String): List[String] =
+    compilerSymbols(SymbolInfo.getPartsFromFQCN(fqcn)).map(semanticdbSymbol)
 
   private def getSymbolKind(sym: Symbol): PcSymbolKind =
     if (sym.isJavaInterface) PcSymbolKind.INTERFACE
@@ -155,6 +200,18 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
     else if (sym.isTypeParameter) PcSymbolKind.TYPE_PARAMETER
     else if (sym.isType) PcSymbolKind.TYPE
     else PcSymbolKind.UNKNOWN_KIND
+
+  private def getSymbolLspKind(sym: Symbol): l.SymbolKind =
+    if (sym.isJavaInterface || sym.isTrait) l.SymbolKind.Interface
+    else if (sym.isConstructor) l.SymbolKind.Constructor
+    else if (sym.hasPackageFlag) l.SymbolKind.Package
+    else if (sym.isModuleClass || sym.isModule) l.SymbolKind.Object
+    else if (sym.isType) l.SymbolKind.Class
+    else if (sym.isParameter) l.SymbolKind.Variable
+    else if (sym.isTypeParameter) l.SymbolKind.TypeParameter
+    else if (sym.isMethod && sym.owner.isModuleClass) l.SymbolKind.Function
+    else if (sym.isMethod) l.SymbolKind.Method
+    else l.SymbolKind.Class
 
   class CompilerSearchVisitor(
       context: Context,
@@ -237,4 +294,13 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
       case NonFatal(_) => Nil
     }
   }
+}
+
+object WorkspaceSymbolSearch {
+  val ignoredMethodsForInspect: Set[String] =
+    Set(
+      "synchronized", "##", "!=", "==", "ne", "eq", "finalize", "wait", "wait",
+      "wait", "notifyAll", "notify", "toString", "clone", "equals", "hashCode",
+      "getClass", "asInstanceOf", "isInstanceOf"
+    )
 }

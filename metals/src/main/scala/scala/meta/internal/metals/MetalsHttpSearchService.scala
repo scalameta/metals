@@ -3,10 +3,16 @@ package scala.meta.internal.metals
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
+import scala.meta.internal.query.ClassInspectResult
 import scala.meta.internal.query.ClassOrObjectSearchResult
+import scala.meta.internal.query.MethodInspectResult
 import scala.meta.internal.query.PackageSearchResult
 import scala.meta.internal.query.QueryEngine
+import scala.meta.internal.query.SymbolInspectResult
 import scala.meta.internal.query.SymbolType
+import scala.meta.internal.query.TemplateInspectResult
+import scala.meta.internal.query.TermParamList
+import scala.meta.internal.query.TypedParamList
 import scala.meta.internal.query.WorkspaceSymbolSearchResult
 
 import com.github.plokhotnyuk.jsoniter_scala.core._
@@ -40,19 +46,20 @@ case class FunctionMatch(name: String, path: String) extends SearchMatch {
 
 case class GlobSearchResponse(matches: List[SearchMatch])
 
-case class Method(
-    name: String,
-    visibility: String,
-    parameters: List[String],
-    returnType: String,
-)
-
 case class InspectResponse(
-    `type`: String,
     name: String,
     path: String,
-    constructors: Option[List[String]] = None,
-    methods: Option[List[Method]] = None,
+    results: List[InspectResult],
+)
+
+case class InspectResult(
+    `type`: String,
+    visibility: Option[String],
+    returnType: Option[String],
+    constructors: Option[List[InspectResult]] = None,
+    membersFull: Option[List[InspectResult]] = None,
+    membersNames: Option[List[String]] = None,
+    params: Option[String] = None,
 )
 
 case class DocParameter(name: String, description: String)
@@ -80,7 +87,7 @@ object Codecs {
   implicit val globSearchResponseCodec: JsonValueCodec[GlobSearchResponse] =
     JsonCodecMaker.make
   implicit val inspectResponseCodec: JsonValueCodec[InspectResponse] =
-    JsonCodecMaker.make
+    JsonCodecMaker.make(CodecMakerConfig.withAllowRecursiveTypes(true))
   implicit val docsResponseCodec: JsonValueCodec[DocsResponse] =
     JsonCodecMaker.make
   implicit val errorResponseCodec: JsonValueCodec[ErrorResponse] =
@@ -178,45 +185,75 @@ object MetalsHttpSearchService {
         }
       },
       inspectEndpoint.serverLogicSuccess[Future] { fqcn =>
-        Future {
-          queryEngine.inspect(fqcn) match {
-            case Some(result) =>
-              // Transform the inspect result to InspectResponse
-              // This would depend on the specific type of result
-              InspectResponse(
-                `type` = result.symbolType.name,
-                name = result.name,
-                path = result.path,
-                // Additional fields would be populated based on result type
-                constructors = None,
-                methods = None,
+        queryEngine.inspect(fqcn).map {
+          case all @ (head :: _) =>
+            // Transform the inspect result to InspectResponse
+            // This would depend on the specific type of result
+            def toRes(info: SymbolInspectResult): InspectResult =
+              InspectResult(
+                `type` = info.symbolType.name,
+                visibility = info match {
+                  case m: MethodInspectResult => Some(m.visibility)
+                  case _ => None
+                },
+                returnType = info match {
+                  case m: MethodInspectResult => Some(m.returnType)
+                  case _ => None
+                },
+                constructors = info match {
+                  case c: ClassInspectResult => Some(c.constructors.map(toRes))
+                  case _ => None
+                },
+                membersFull = None, // should only be supplied for deep
+                // info match {
+                //   case t : TemplateInspectResult => Some(t.membersFull.map(toRes))
+                //   case _ => None
+                // }
+                membersNames = info match {
+                  case t: TemplateInspectResult => Some(t.members.map(_.name))
+                  case _ => None
+                },
+                params = info match {
+                  case m: MethodInspectResult =>
+                    Some(m.parameters.map {
+                      case TermParamList(params, prefix) =>
+                        val prefixStr = if (prefix == "") "" else s"$prefix "
+                        params
+                          .map(_.toString)
+                          .mkString(s"($prefixStr", ", ", ")")
+                      case TypedParamList(params) =>
+                        params.map(_.toString).mkString("[", ", ", "]")
+                    }.mkString)
+                  case _ => None
+                },
               )
-            case None =>
-              throw new Exception(s"Symbol not found: $fqcn")
-          }
+            InspectResponse(
+              name = head.name,
+              path = head.path,
+              results = all.map { res => toRes(res) },
+            )
+          case Nil =>
+            throw new Exception(s"Symbol not found: $fqcn")
         }
       },
       docsEndpoint.serverLogicSuccess[Future] { fqcn =>
-        Future {
-          queryEngine.getDocumentation(fqcn) match {
-            case Some(docs) =>
-              DocsResponse(
-                `type` =
-                  "unknown", // Would be determined from the actual symbol
-                name = fqcn.substring(fqcn.lastIndexOf('.') + 1),
-                path = fqcn,
-                documentation = Documentation(
-                  description = docs.description,
-                  parameters = docs.parameters.map { case (name, desc) =>
-                    DocParameter(name, desc)
-                  },
-                  returnValue = docs.returnValue,
-                  examples = docs.examples,
-                ),
-              )
-            case None =>
-              throw new Exception(s"Documentation not found for: $fqcn")
-          }
+        queryEngine.getDocumentation(fqcn).map {
+          case Some(docs) =>
+            DocsResponse(
+              `type` = "unknown", // Would be determined from the actual symbol
+              name = fqcn.substring(fqcn.lastIndexOf('.') + 1),
+              path = fqcn,
+              documentation = Documentation(
+                description = docs.description,
+                parameters = docs.params.map { case (name, desc) =>
+                  DocParameter(name, desc)
+                },
+                returnValue = docs.returnValue,
+                examples = docs.examples,
+              ),
+            )
+          case None =>
+            throw new Exception(s"Documentation not found for: $fqcn")
         }
       },
     )

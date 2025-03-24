@@ -291,12 +291,6 @@ abstract class MetalsLspService(
       classpathSearchIndexer = classpathSearchIndexer,
     )
 
-  val queryEngine = new QueryEngine(
-    workspaceSymbols,
-    () => Option(focusedDocumentBuildTarget.get()),
-    definitionIndex,
-  )
-
   protected def warnings: Warnings = NoopWarnings
 
   protected val definitionProvider: DefinitionProvider = new DefinitionProvider(
@@ -455,6 +449,14 @@ abstract class MetalsLspService(
       worksheetProvider,
       () => referencesProvider,
     )
+  )
+
+  val queryEngine = new QueryEngine(
+    workspaceSymbols,
+    () => Option(focusedDocumentBuildTarget.get()),
+    definitionIndex,
+    compilers,
+    symbolDocs,
   )
 
   val referencesProvider: ReferenceProvider = new ReferenceProvider(

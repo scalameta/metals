@@ -3,6 +3,8 @@ package tests
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
+import scala.meta.internal.metals.docstrings.query.SymbolDocumentation
+import scala.meta.internal.query.SymbolType.Constructor
 import scala.meta.internal.query._
 
 class QueryLspSuite extends BaseLspSuite("query") {
@@ -281,12 +283,153 @@ class QueryLspSuite extends BaseLspSuite("query") {
     finally cancelServer()
   }
 
+  test("inspect") {
+    cleanWorkspace()
+    val fut = for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/test/nested/package1/Class1.scala
+           |package com.test.nested.package1
+           |
+           |class Class1(m: Int) {
+           |  def add(x: Int, y: Int): Int = x + y
+           |  def substract(x: Int, y: Int): Int = x - y
+           |}
+           |
+           |object Class1 {
+           |  def someFunction(x: Int): Int = x * 2
+           |}
+           |
+           |/a/src/main/scala/com/test/nested/package2/Class2.scala
+           |package com.test.nested.package2
+           |
+           |class Class2
+           |
+           |""".stripMargin
+      )
+      _ <- server.didOpen(
+        "a/src/main/scala/com/test/nested/package1/Class1.scala"
+      )
+      _ = assertNoDiagnostics()
+      res <- server.server.queryEngine.inspect(
+        "com.test.nested.package1.Class1"
+      )
+
+      _ = assertNoDiff(
+        res.show,
+        """|class com.test.nested.package1.Class1
+           |	 - constructor Class1(m: Int)
+           |	 - method add(x: Int, y: Int)Int
+           |	 - method substract(x: Int, y: Int)Int
+           |object com.test.nested.package1.Class1
+           |	 - function someFunction(x: Int)Int
+           |""".stripMargin,
+      )
+    } yield ()
+
+    try Await.result(fut, 10.seconds)
+    finally cancelServer()
+  }
+
+  test("docstrings") {
+    cleanWorkspace()
+    val fut = for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/test/nested/package1/Class1.scala
+           |package com.test.nested.package1
+           |
+           |class Class1(m: Int) {
+           |  /**
+           |  * Adds two integers
+           |  * @param x first argument
+           |  * @param y second argument
+           |  * @return sum of x and y
+           |  */
+           |  def add(x: Int, y: Int): Int = x + y
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(
+        "a/src/main/scala/com/test/nested/package1/Class1.scala"
+      )
+      _ = assertNoDiagnostics()
+      res <- server.server.queryEngine.getDocumentation(
+        "com.test.nested.package1.Class1.add"
+      )
+
+      _ = assertNoDiff(
+        res.map(_.show).getOrElse(""),
+        """|Adds two integers
+           | - y - second argument
+           | - x - first argument
+           |sum of x and y 
+           |""".stripMargin,
+      )
+    } yield ()
+
+    try Await.result(fut, 10.seconds)
+    finally cancelServer()
+  }
+
   implicit class XtensionSearchResult(result: SymbolSearchResult) {
     def show: String = s"${result.symbolType.name} ${result.path}"
   }
 
+  implicit class XtensionSymbolInspectResult(result: SymbolInspectResult) {
+    def show(fullPath: Boolean = true): String = {
+      def showMembers(members: List[SymbolInspectResult]): String =
+        if (members.isEmpty) ""
+        else
+          members.ssorted
+            .map(_.show(fullPath = false))
+            .mkString("\n\t -", "\n\t -", "")
+      def name = if (fullPath) result.path else result.name
+      result match {
+        case ObjectInspectResult(_, members) =>
+          s"object $name${showMembers(members)}"
+        case ClassInspectResult(_, members, constructors) =>
+          s"class $name${showMembers(constructors)}${showMembers(members)}"
+        case TraitInspectResult(_, members) =>
+          s"trait $name${showMembers(members)}"
+        case MethodInspectResult(_, returnType, parameters, visibility, kind) =>
+          val kindString = kind match {
+            case Constructor => "constructor"
+            case SymbolType.Function => "function"
+            case _ => "method"
+          }
+          s"$visibility $kindString $name${parameters.collect {
+              case TermParamList(params, "") => s"(${params.mkString(", ")})"
+              case TermParamList(params, prefix) => s"($prefix${params.mkString(", ")})"
+              case TypedParamList(params) if params.nonEmpty => s"[${params.mkString(", ")}]"
+            }.mkString}${if (kind == SymbolType.Constructor) "" else returnType}"
+        case PackageInspectResult(_, members) =>
+          s"package $name${showMembers(members)}"
+      }
+    }
+  }
+
   implicit class XtensionSearchResultSeq(result: Seq[SymbolSearchResult]) {
     def show: String = result.map(_.show).sorted.mkString("\n")
+  }
+
+  implicit class XtensionSymbolInspectResultList(
+      result: List[SymbolInspectResult]
+  ) {
+    def ssorted: List[SymbolInspectResult] =
+      result.sortBy(x => (x.symbolType.toString(), x.name))
+    def show: String = ssorted.map(_.show()).mkString("\n")
+  }
+
+  implicit class XtensionSymbolDocumentation(result: SymbolDocumentation) {
+    def show: String =
+      result.description ++ result.params.map { case (name, description) =>
+        s" - $name - $description"
+      }.mkString ++ result.returnValue ++ result.examples.mkString
   }
 
   def timed[T](f: => T): T = {

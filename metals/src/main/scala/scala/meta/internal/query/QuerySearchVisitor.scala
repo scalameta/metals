@@ -11,6 +11,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SemanticdbDefinition
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.query.QueryEngine.kindToTypeString
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.DescriptorParser
 import scala.meta.internal.semanticdb.Scala.Symbols
@@ -40,7 +41,7 @@ class QuerySearchVisitor(
       results +=
         PackageSearchResult(
           name = pkg.substring(pkg.lastIndexOf('/') + 1),
-          path = fqcn(pkg),
+          path = pkg.fqcn,
         )
     }
     true // Continue searching even if this package doesn't match
@@ -94,7 +95,7 @@ class QuerySearchVisitor(
               results +=
                 ClassOrObjectSearchResult(
                   name = semanticdbDefn.info.displayName,
-                  path = fqcn(semanticdbDefn.info.symbol).stripSuffix("."),
+                  path = semanticdbDefn.info.symbol.fqcn,
                   symbolType = kind,
                 )
               size += 1
@@ -131,7 +132,7 @@ class QuerySearchVisitor(
       results +=
         WorkspaceSymbolSearchResult(
           name = symbolName,
-          path = s"${fqcn(owner)}$symbolName",
+          path = s"${owner.fqcn}.$symbolName",
           symbolType = symbolType,
           location = path.toUri.toString,
         )
@@ -159,21 +160,4 @@ class QuerySearchVisitor(
     val forTerm = index.topLevels(term)
     forTpe ++ forTerm
   }
-
-  /**
-   * Convert SymbolKind to a string representation.
-   */
-  private def kindToTypeString(kind: SymbolKind): Option[SymbolType] =
-    kind match {
-      case SymbolKind.Class => Some(SymbolType.Class)
-      case SymbolKind.Interface => Some(SymbolType.Trait)
-      case SymbolKind.Object => Some(SymbolType.Object)
-      case SymbolKind.Method => Some(SymbolType.Method)
-      case SymbolKind.Function => Some(SymbolType.Function)
-      case SymbolKind.Package => Some(SymbolType.Package)
-      case _ => None
-    }
-
-  private def fqcn(symbol: String) =
-    symbol.replace('/', '.').replace('#', '.').replace('$', '.')
 }

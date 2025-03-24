@@ -157,15 +157,9 @@ final class WorkspaceSymbolProvider(
       current match {
         case Nil =>
         case head :: next =>
-          packages.get(head) match {
-            case Some(pkg) =>
-              pkg.count += 1
-              loop(next, pkg.children)
-            case None =>
-              val newPkg = PackageNode()
-              packages.put(head, newPkg)
-              loop(next, newPkg.children)
-          }
+          val pkg = packages.getOrElseUpdate(head, PackageNode())
+          pkg.count += 1
+          loop(next, pkg.children)
       }
     }
     toAdd.foreach(pkg =>
@@ -191,13 +185,14 @@ final class WorkspaceSymbolProvider(
           current match {
             case Nil =>
             case head :: next =>
+              packages.get(head).foreach(_.count -= 1)
+              packages.synchronized {
+                if (packages.get(head).exists(_.count <= 0)) {
+                  packages.remove(head)
+                }
+              }
               packages.get(head) match {
-                case Some(pkg) =>
-                  if (pkg.count == 1) packages.remove(head)
-                  else {
-                    pkg.count -= 1
-                    loop(next, pkg.children)
-                  }
+                case Some(pkg) => loop(next, pkg.children)
                 case None =>
               }
           }
@@ -377,5 +372,5 @@ final class WorkspaceSymbolProvider(
 case class PackageNode(
     children: TrieMap[String, PackageNode] = TrieMap.empty
 ) {
-  var count: Int = 1
+  @volatile var count: Int = 0
 }

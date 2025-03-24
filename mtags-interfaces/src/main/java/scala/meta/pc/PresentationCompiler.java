@@ -370,7 +370,16 @@ public abstract class PresentationCompiler {
 		return "";
 	}
 
-	public CompletableFuture<List<Object>> inspect(String fqcn) {
+    /**
+	 * Get inspect information about symbols with the given fully qualified class name.
+	 * @param fqcn the fully qualified class name to inspect.
+	 * @param symbolOnly if true, only return the symbol and symbol kind
+	 */
+	public CompletableFuture<List<InspectResult>> inspect(String fqcn) {
+		return CompletableFuture.completedFuture(Collections.emptyList());
+	}
+
+	public CompletableFuture<List<String>> symbols(String fqcn) {
 		return CompletableFuture.completedFuture(Collections.emptyList());
 	}
 

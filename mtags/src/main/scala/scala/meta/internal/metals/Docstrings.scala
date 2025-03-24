@@ -23,6 +23,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.ContentType
 import scala.meta.pc.ContentType.MARKDOWN
 import scala.meta.pc.ContentType.PLAINTEXT
+import scala.meta.pc.ContentType.QUERY
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 
@@ -206,11 +207,13 @@ object Docstrings {
 sealed trait Content extends Any
 class Markdown(val text: String) extends AnyVal with Content
 class Plain(val text: String) extends AnyVal with Content
+class Query(val text: String) extends AnyVal with Content
 
 object Content {
   def from(text: String, contentType: ContentType): Content =
     contentType match {
       case MARKDOWN => new Markdown(text)
       case PLAINTEXT => new Plain(text)
+      case QUERY => new Query(text)
     }
 }

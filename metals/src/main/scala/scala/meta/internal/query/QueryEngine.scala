@@ -1,10 +1,23 @@
 package scala.meta.internal.query
 
+import java.{util => ju}
+
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+
+import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.Docstrings
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.internal.metals.WorkspaceSymbolQuery
+import scala.meta.internal.metals.docstrings.query
 import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.pc.ContentType
+import scala.meta.pc.InspectResult
+import scala.meta.pc.ParentSymbols
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import org.eclipse.lsp4j.SymbolKind
 
 /**
  * Query engine for searching symbols in the workspace and classpath.
@@ -16,7 +29,9 @@ class QueryEngine(
     workspaceSearchProvider: WorkspaceSymbolProvider,
     focusedDocumentBuildTarget: () => Option[BuildTargetIdentifier],
     index: GlobalSymbolIndex,
-) {
+    compilers: Compilers,
+    docstrings: Docstrings,
+)(implicit ec: ExecutionContext) {
 
   /**
    * Search for symbols matching a glob pattern.
@@ -70,7 +85,8 @@ class QueryEngine(
   def inspect(
       fqcn: String,
       deep: Boolean = false,
-  ): Option[SymbolInspectResult] = {
+  ): Future[List[SymbolInspectResult]] = {
+
     // Implementation would need to:
     // 1. Find the symbol definition
     // 2. Extract information based on symbol type
@@ -80,7 +96,63 @@ class QueryEngine(
     // use the workspace provider and index to resolve the symbol
     // and extract detailed information about its members
 
-    None // Placeholder - actual implementation would return meaningful results
+    focusedDocumentBuildTarget()
+      .map { buildTarget =>
+        compilers.inspect(buildTarget, fqcn).map {
+          _.flatMap { res =>
+            val (constructorMembers, otherMembers) = res
+              .members()
+              .asScala
+              .toList
+              .partition(_.kind() == SymbolKind.Constructor)
+            val members =
+              otherMembers.flatMap(res => mapPcInspectResult(res, Nil, Nil))
+            val constructors = constructorMembers
+              .flatMap(mapPcInspectResult(_, Nil, Nil))
+              .collect { case m: MethodInspectResult => m }
+            mapPcInspectResult(res, members, constructors)
+          }
+        }
+      }
+      .getOrElse(Future.successful(Nil))
+  }
+
+  private def mapPcInspectResult(
+      result: InspectResult,
+      members: List[SymbolInspectResult],
+      constructors: List[MethodInspectResult],
+  ) = {
+    val kind = QueryEngine
+      .kindToTypeString(result.kind())
+      .getOrElse(SymbolType.Unknown(result.kind().toString))
+    val path = result.symbol().fqcn
+    kind match {
+      case SymbolType.Package => Some(PackageInspectResult(path, members))
+      case SymbolType.Class =>
+        Some(ClassInspectResult(path, members, constructors))
+      case SymbolType.Object => Some(ObjectInspectResult(path, members))
+      case SymbolType.Trait => Some(TraitInspectResult(path, members))
+      case SymbolType.Method | SymbolType.Function | SymbolType.Constructor =>
+        Some(
+          MethodInspectResult(
+            path = path,
+            returnType = result.resultType(),
+            parameters = result.paramss().asScala.toList.map {
+              case paramList if paramList.isType() == java.lang.Boolean.TRUE =>
+                TypedParamList(paramList.params().asScala.toList)
+              case paramList =>
+                TermParamList(
+                  paramList.params().asScala.toList,
+                  paramList.implicitOrUsingKeyword(),
+                )
+
+            },
+            visibility = result.visibility(),
+            symbolType = kind,
+          )
+        )
+      case _ => None
+    }
   }
 
   /**
@@ -89,14 +161,33 @@ class QueryEngine(
    * @param fqcn Fully qualified class name (or symbol)
    * @return Documentation for the symbol
    */
-  def getDocumentation(fqcn: String): Option[SymbolDocumentation] = {
+  def getDocumentation(
+      fqcn: String
+  ): Future[Option[query.SymbolDocumentation]] = {
+
     // Implementation would need to:
     // 1. Find the symbol definition
     // 2. Extract the Scaladoc information
 
     // This is a placeholder - the actual implementation would
     // parse Scaladoc from the source file
-    None // Placeholder - actual implementation would return meaningful results
+    focusedDocumentBuildTarget()
+      .map { bt =>
+        compilers.symbols(bt, fqcn).map { syms =>
+          syms.iterator
+            .flatMap(s =>
+              docstrings
+                .documentation(
+                  s,
+                  QueryEngine.emptyParentsSymbols,
+                  ContentType.QUERY,
+                )
+                .asScala
+            )
+            .collectFirst { case doc: query.SymbolDocumentation => doc }
+        }
+      }
+      .getOrElse(Future.successful(None))
   }
 
 }
@@ -137,24 +228,63 @@ case class WorkspaceSymbolSearchResult(
     location: String,
 ) extends SymbolSearchResult
 
+case class MethodSignature(
+    name: String
+)
+
 /**
  * Base trait for inspection results.
  */
 sealed trait SymbolInspectResult {
-  def name: String
+  def name: String = path.split('.').last
   def path: String
   def symbolType: SymbolType
 }
 
-/**
- * Documentation for a symbol.
- */
-case class SymbolDocumentation(
-    description: String,
-    parameters: List[(String, String)], // name -> description
-    returnValue: String,
-    examples: List[String],
-)
+trait TemplateInspectResult extends SymbolInspectResult {
+  def members: List[SymbolInspectResult]
+}
+
+case class ObjectInspectResult(
+    override val path: String,
+    override val members: List[SymbolInspectResult],
+) extends TemplateInspectResult {
+  override val symbolType: SymbolType = SymbolType.Object
+}
+
+case class TraitInspectResult(
+    override val path: String,
+    override val members: List[SymbolInspectResult],
+) extends TemplateInspectResult {
+  override val symbolType: SymbolType = SymbolType.Trait
+}
+
+case class ClassInspectResult(
+    override val path: String,
+    override val members: List[SymbolInspectResult],
+    val constructors: List[MethodInspectResult],
+) extends TemplateInspectResult {
+  override val symbolType: SymbolType = SymbolType.Class
+}
+
+case class MethodInspectResult(
+    override val path: String,
+    returnType: String,
+    parameters: List[ParamList],
+    visibility: String,
+    override val symbolType: SymbolType,
+) extends SymbolInspectResult
+
+sealed trait ParamList
+case class TypedParamList(params: List[String]) extends ParamList
+case class TermParamList(params: List[String], prefix: String) extends ParamList
+
+case class PackageInspectResult(
+    override val path: String,
+    override val members: List[SymbolInspectResult],
+) extends TemplateInspectResult {
+  override val symbolType: SymbolType = SymbolType.Package
+}
 
 /**
  * Symbol type for glob search.
@@ -183,10 +313,36 @@ object SymbolType {
     override def name: String = "method"
   }
 
+  case object Constructor extends SymbolType {
+    override def name: String = "constructor"
+  }
+
   case class Unknown(kind: String) extends SymbolType {
     override def name: String = kind
   }
 
   val values: List[SymbolType] =
     List(Trait, Package, Class, Object, Function, Method)
+}
+
+object QueryEngine {
+
+  /**
+   * Convert SymbolKind to a string representation.
+   */
+  def kindToTypeString(kind: SymbolKind): Option[SymbolType] =
+    kind match {
+      case SymbolKind.Class => Some(SymbolType.Class)
+      case SymbolKind.Interface => Some(SymbolType.Trait)
+      case SymbolKind.Object => Some(SymbolType.Object)
+      case SymbolKind.Method => Some(SymbolType.Method)
+      case SymbolKind.Function => Some(SymbolType.Function)
+      case SymbolKind.Package => Some(SymbolType.Package)
+      case SymbolKind.Constructor => Some(SymbolType.Constructor)
+      case _ => None
+    }
+
+  val emptyParentsSymbols: ParentSymbols = new ParentSymbols {
+    override def parents(): ju.List[String] = Nil.asJava
+  }
 }
