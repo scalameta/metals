@@ -12,11 +12,11 @@ fix for the Scala 2 issue, which previously caused most interactive features to 
 <tbody>
   <tr>
     <td>Commits since last release</td>
-    <td align="center">127</td>
+    <td align="center">145</td>
   </tr>
   <tr>
     <td>Merged PRs</td>
-    <td align="center">114</td>
+    <td align="center">132</td>
   </tr>
     <tr>
     <td>Contributors</td>
@@ -24,7 +24,7 @@ fix for the Scala 2 issue, which previously caused most interactive features to 
   </tr>
   <tr>
     <td>Closed issues</td>
-    <td align="center">41</td>
+    <td align="center">42</td>
   </tr>
   <tr>
     <td>New features</td>
@@ -194,6 +194,20 @@ stability of Metals. Scala Scripts still are and will be supported via
 - fix: colliding pattern and scope completions
   [\#7295](https://github.com/scalameta/metals/pull/7295)
   ([harpocrates](https://github.com/harpocrates))
+- improvement: add CompileTarget server command
+  [cvogt](https://github.com/cvogt)
+- bugfix: Try and improve credentials handling when downloading dependencies
+  [tgodzik](https://github.com/tgodzik)
+- Suggest open diagnostics for debug compile errors
+  [cvogt](https://github.com/cvogt)
+- feat: convert sbt style deps on paste in for scala-cli test.dep
+  [scarf005](https://github.com/scarf005)
+- bugfix: Fix issues when we would rename more symbols than needed
+  [tgodzik](https://github.com/tgodzik)
+- bugfix: Make sure to choose the best import option in unambiguous cases
+  [tgodzik](https://github.com/tgodzik)
+- improvement: Add scalafix and Scala 3 Presentation Compiler to DownloadDependencies
+  [tgodzik](https://github.com/tgodzik)
 
 ## Contributors
 
@@ -201,22 +215,23 @@ Big thanks to everybody who contributed to this release or reported an issue!
 
 ```
 $ git shortlog -sn --no-merges v1.5.1..v1.5.2
-    25	Tomasz Godzik
-    22	Scalameta Bot
-    13	scalameta-bot
+    38	Tomasz Godzik
+    24	Scalameta Bot
+    16	scalameta-bot
     10	kasiaMarek
      7	dependabot[bot]
      6	Alec Theriault
      5	Blaz Kranjc
      4	tgodzik
+     3	Christopher Vogt
      3	Katarzyna Marek
      2	Chris Birchall
-     1	Christopher Vogt
      1	Francesco Nero
      1	Kacper Korban
      1	Lorenzo Gabriele
      1	Quentin Bernet
      1	Seth Tisue
+     1	scarf
 ```
 
 ## Merged PRs
@@ -227,6 +242,60 @@ $ git shortlog -sn --no-merges v1.5.1..v1.5.2
 
 **Merged pull requests:**
 
+- bugfix: Make sure to choose the best import option
+  [\#7285](https://github.com/scalameta/metals/pull/7285)
+  ([tgodzik](https://github.com/tgodzik))
+- improvement: Add scalafix and Scala 3 PC to DownloadDependencies
+  [\#7332](https://github.com/scalameta/metals/pull/7332)
+  ([tgodzik](https://github.com/tgodzik))
+- bugfix: Fix issues when we would rename more symbols
+  [\#7334](https://github.com/scalameta/metals/pull/7334)
+  ([tgodzik](https://github.com/tgodzik))
+- improvement: Retry downloading dependencies using a local coursier
+  [\#7330](https://github.com/scalameta/metals/pull/7330)
+  ([tgodzik](https://github.com/tgodzik))
+- improvement: Forward all LSP data from BSP
+  [\#7294](https://github.com/scalameta/metals/pull/7294)
+  ([tgodzik](https://github.com/tgodzik))
+- build(deps): Update flyway-core from 11.4.0 to 11.4.1
+  [\#7335](https://github.com/scalameta/metals/pull/7335)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- feat: convert sbt style deps on paste in for scala-cli test.dep
+  [\#7333](https://github.com/scalameta/metals/pull/7333)
+  ([scarf005](https://github.com/scarf005))
+- build(deps): Update guava from 33.4.0-jre to 33.4.5-jre
+  [\#7324](https://github.com/scalameta/metals/pull/7324)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- Suggest open diagnostics for debug compile errors
+  [\#7321](https://github.com/scalameta/metals/pull/7321)
+  ([cvogt](https://github.com/cvogt))
+- improvement: Log when setting credentials
+  [\#7329](https://github.com/scalameta/metals/pull/7329)
+  ([tgodzik](https://github.com/tgodzik))
+- improvement: Don't crash the server if failed to download java semanticdb
+  [\#7328](https://github.com/scalameta/metals/pull/7328)
+  ([tgodzik](https://github.com/tgodzik))
+- build(deps): Update sbt, scripted-plugin from 1.10.10 to 1.10.11
+  [\#7326](https://github.com/scalameta/metals/pull/7326)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- build(deps): Update cli_3, scala-cli-bsp from 1.7.0 to 1.7.1
+  [\#7327](https://github.com/scalameta/metals/pull/7327)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- bugfix: Add credentials automatically for coursier API
+  [\#7314](https://github.com/scalameta/metals/pull/7314)
+  ([tgodzik](https://github.com/tgodzik))
+- build(deps): Update mill-contrib-testng from 0.12.8 to 0.12.9
+  [\#7325](https://github.com/scalameta/metals/pull/7325)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- chore: Update Bloop to 2.0.9
+  [\#7322](https://github.com/scalameta/metals/pull/7322)
+  ([tgodzik](https://github.com/tgodzik))
+- improvement: add CompileTarget server command
+  [\#7315](https://github.com/scalameta/metals/pull/7315)
+  ([cvogt](https://github.com/cvogt))
+- chore: Change doctor to log less relevant data on debug
+  [\#7318](https://github.com/scalameta/metals/pull/7318)
+  ([tgodzik](https://github.com/tgodzik))
 - chore: Bump mdoc to 2.6.5
   [\#7313](https://github.com/scalameta/metals/pull/7313)
   ([tgodzik](https://github.com/tgodzik))
