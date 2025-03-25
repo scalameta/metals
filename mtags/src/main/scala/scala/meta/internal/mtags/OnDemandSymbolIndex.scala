@@ -144,6 +144,12 @@ final class OnDemandSymbolIndex(
       .sortBy(d => (!d.isExact, d.dialect != dialects.Scala3))
   }
 
+  def findFileForToplevel(
+      topLevelSymbol: Symbol
+  ): List[(AbsolutePath, Dialect)] = {
+    dialectBuckets.values.flatMap(_.findFileForToplevel(topLevelSymbol)).toList
+  }
+
 }
 
 object OnDemandSymbolIndex {
