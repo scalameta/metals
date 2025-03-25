@@ -174,7 +174,7 @@ class ImportMissingSymbol(compilers: Compilers, buildTargets: BuildTargets)
                * suggest it.
                */
               val minimalImportsSet =
-                actions.foldLeft(actions.head.map(_.getTitle()).toSet) {
+                actions.tail.foldLeft(actions.head.map(_.getTitle()).toSet) {
                   case (actions, action) =>
                     actions.intersect(action.map(_.getTitle()).toSet)
                 }
