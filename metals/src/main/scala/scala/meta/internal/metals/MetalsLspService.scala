@@ -409,9 +409,6 @@ abstract class MetalsLspService(
     definitionProvider,
   )
 
-  protected val httpSearchService: MetalsHttpSearchService =
-    register(MetalsHttpSearchService(queryEngine, "localhost", 8888))
-
   val worksheetProvider: WorksheetProvider = register(
     new WorksheetProvider(
       folder,
@@ -458,6 +455,9 @@ abstract class MetalsLspService(
     compilers,
     symbolDocs,
   )
+
+  protected val httpSearchService: MetalsHttpSearchService =
+    register(MetalsHttpSearchService(queryEngine, "localhost", 8888))
 
   val referencesProvider: ReferenceProvider = new ReferenceProvider(
     folder,

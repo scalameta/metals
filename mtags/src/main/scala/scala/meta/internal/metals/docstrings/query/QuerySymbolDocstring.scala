@@ -12,17 +12,23 @@ import scala.meta.pc
 object QuerySymbolDocstringCreator {
   def createDocstring(
       sinfo: SymbolInformation,
-      comment: Comment
-  ): pc.SymbolDocumentation =
-    SymbolDocumentation(
-      sinfo.symbol,
-      PlaintextGenerator.toText(comment.body),
-      comment.valueParams.map { case (name, desc) =>
-        name -> PlaintextGenerator.toText(desc)
-      }.toList,
-      comment.result.map(PlaintextGenerator.toText(_)).getOrElse(""),
-      comment.example.map(PlaintextGenerator.toText(_))
-    )
+      comment: Comment,
+      docstring: String
+  ): Option[pc.SymbolDocumentation] = {
+    if (docstring == "") return None
+    else
+      Some(
+        SymbolDocumentation(
+          sinfo.symbol,
+          PlaintextGenerator.toText(comment.body),
+          comment.valueParams.map { case (name, desc) =>
+            name -> PlaintextGenerator.toText(desc)
+          }.toList,
+          comment.result.map(PlaintextGenerator.toText(_)),
+          comment.example.map(PlaintextGenerator.toText(_))
+        )
+      )
+  }
 }
 
 /**
@@ -32,7 +38,7 @@ case class SymbolDocumentation(
     override val symbol: String,
     description: String,
     params: List[(String, String)], // name -> description
-    returnValue: String,
+    returnValue: Option[String],
     examples: List[String]
 ) extends scala.meta.pc.SymbolDocumentation {
   override def displayName(): String = symbol.fqcn

@@ -1078,20 +1078,12 @@ class Compilers(
   def inspect(
       id: BuildTargetIdentifier,
       symbol: String,
+      inspectLevel: Int,
   ): Future[List[InspectResult]] = {
     loadCompiler(id)
       .map { pc =>
-        pc.inspect(symbol).asScala.map(_.asScala.toList)
+        pc.inspect(symbol, inspectLevel).asScala.map(_.asScala.toList)
       }
-      .getOrElse(Future(Nil))
-  }
-
-  def symbols(
-      id: BuildTargetIdentifier,
-      symbol: String,
-  ): Future[List[String]] = {
-    loadCompiler(id)
-      .map(_.symbols(symbol).asScala.map(_.asScala.toList))
       .getOrElse(Future(Nil))
   }
 

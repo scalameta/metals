@@ -494,22 +494,14 @@ case class ScalaPresentationCompiler(
   }
 
   override def inspect(
-      fqcn: String
+      fqcn: String,
+      inspectLevel: Integer
   ): CompletableFuture[util.List[InspectResult]] = {
     compilerAccess.withNonInterruptableCompiler[util.List[InspectResult]](
       Nil.asJava,
       EmptyCancelToken
     ) { pc =>
-      pc.compiler().inspect(fqcn).asJava
-    }(emptyQueryContext)
-  }
-
-  override def symbols(fqcn: String): CompletableFuture[util.List[String]] = {
-    compilerAccess.withNonInterruptableCompiler[util.List[String]](
-      Nil.asJava,
-      EmptyCancelToken
-    ) { pc =>
-      pc.compiler().symbols(fqcn).asJava
+      pc.compiler().inspect(fqcn, inspectLevel).asJava
     }(emptyQueryContext)
   }
 

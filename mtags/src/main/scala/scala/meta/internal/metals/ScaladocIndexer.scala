@@ -71,7 +71,8 @@ class ScaladocIndexer(
             comment
           )
         case QUERY =>
-          Some(QuerySymbolDocstringCreator.createDocstring(sinfo, comment))
+          QuerySymbolDocstringCreator
+            .createDocstring(sinfo, comment, docstring)
       }
     info.foreach(fn)
   }

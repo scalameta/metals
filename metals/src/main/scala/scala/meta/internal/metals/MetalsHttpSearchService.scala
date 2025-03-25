@@ -4,16 +4,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 import scala.meta.internal.query.ClassInspectResult
-import scala.meta.internal.query.ClassOrObjectSearchResult
 import scala.meta.internal.query.MethodInspectResult
-import scala.meta.internal.query.PackageSearchResult
 import scala.meta.internal.query.QueryEngine
 import scala.meta.internal.query.SymbolInspectResult
 import scala.meta.internal.query.SymbolType
 import scala.meta.internal.query.TemplateInspectResult
 import scala.meta.internal.query.TermParamList
 import scala.meta.internal.query.TypedParamList
-import scala.meta.internal.query.WorkspaceSymbolSearchResult
 
 import com.github.plokhotnyuk.jsoniter_scala.core._
 import sttp.model.StatusCode
@@ -22,27 +19,11 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.jsoniter._
 import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 
-sealed trait SearchMatch {
-  def name: String
-  def path: String
-  def `type`: String
-}
-
-case class PackageMatch(name: String, path: String) extends SearchMatch {
-  val `type`: String = "package"
-}
-
-case class ClassMatch(name: String, path: String) extends SearchMatch {
-  val `type`: String = "class"
-}
-
-case class ObjectMatch(name: String, path: String) extends SearchMatch {
-  val `type`: String = "object"
-}
-
-case class FunctionMatch(name: String, path: String) extends SearchMatch {
-  val `type`: String = "function"
-}
+case class SearchMatch(
+    name: String,
+    path: String,
+    `type`: String,
+)
 
 case class GlobSearchResponse(matches: List[SearchMatch])
 
@@ -58,7 +39,7 @@ case class InspectResult(
     returnType: Option[String],
     constructors: Option[List[InspectResult]] = None,
     membersFull: Option[List[InspectResult]] = None,
-    membersNames: Option[List[String]] = None,
+    members: Option[List[String]] = None,
     params: Option[String] = None,
 )
 
@@ -67,7 +48,7 @@ case class DocParameter(name: String, description: String)
 case class Documentation(
     description: String,
     parameters: List[DocParameter],
-    returnValue: String,
+    returnValue: Option[String],
     examples: List[String],
 )
 
@@ -75,7 +56,7 @@ case class DocsResponse(
     `type`: String,
     name: String,
     path: String,
-    documentation: Documentation,
+    documentation: Option[Documentation],
 )
 
 case class ErrorResponse(error: ErrorDetails)
@@ -143,6 +124,7 @@ object MetalsHttpSearchService {
     val inspectEndpoint = baseEndpoint.get
       .in("api" / "inspect")
       .in(query[String]("fqcn"))
+      .in(query[Boolean]("inspectMembers"))
       .out(jsonBody[InspectResponse])
 
     val docsEndpoint = baseEndpoint.get
@@ -155,102 +137,92 @@ object MetalsHttpSearchService {
         case (query, filterSymbolTypes) => {
           Future {
             val searchResults = queryEngine.globSearch(query, filterSymbolTypes)
-
-            val matches = searchResults.map {
-              case PackageSearchResult(name, path) =>
-                PackageMatch(name, path)
-              case ClassOrObjectSearchResult(name, path, symbolType) =>
-                symbolType match {
-                  case SymbolType.Class => ClassMatch(name, path)
-                  case SymbolType.Object => ObjectMatch(name, path)
-                  case _ => ClassMatch(name, path) // Default fallback
-                }
-              case WorkspaceSymbolSearchResult(name, path, symbolType, _) =>
-                symbolType match {
-                  case SymbolType.Function => FunctionMatch(name, path)
-                  case SymbolType.Method =>
-                    FunctionMatch(
-                      name,
-                      path,
-                    ) // Treating methods as functions for UI
-                  case SymbolType.Class => ClassMatch(name, path)
-                  case SymbolType.Object => ObjectMatch(name, path)
-                  case SymbolType.Package => PackageMatch(name, path)
-                  case _ => FunctionMatch(name, path) // Default fallback
-                }
+            val matches = searchResults.map { res =>
+              SearchMatch(res.name, res.path, res.symbolType.name)
             }
-
             GlobSearchResponse(matches.toList)
           }
         }
       },
-      inspectEndpoint.serverLogicSuccess[Future] { fqcn =>
-        queryEngine.inspect(fqcn).map {
-          case all @ (head :: _) =>
-            // Transform the inspect result to InspectResponse
-            // This would depend on the specific type of result
-            def toRes(info: SymbolInspectResult): InspectResult =
-              InspectResult(
-                `type` = info.symbolType.name,
-                visibility = info match {
-                  case m: MethodInspectResult => Some(m.visibility)
-                  case _ => None
-                },
-                returnType = info match {
-                  case m: MethodInspectResult => Some(m.returnType)
-                  case _ => None
-                },
-                constructors = info match {
-                  case c: ClassInspectResult => Some(c.constructors.map(toRes))
-                  case _ => None
-                },
-                membersFull = None, // should only be supplied for deep
-                // info match {
-                //   case t : TemplateInspectResult => Some(t.membersFull.map(toRes))
-                //   case _ => None
-                // }
-                membersNames = info match {
-                  case t: TemplateInspectResult => Some(t.members.map(_.name))
-                  case _ => None
-                },
-                params = info match {
-                  case m: MethodInspectResult =>
-                    Some(m.parameters.map {
-                      case TermParamList(params, prefix) =>
-                        val prefixStr = if (prefix == "") "" else s"$prefix "
-                        params
-                          .map(_.toString)
-                          .mkString(s"($prefixStr", ", ", ")")
-                      case TypedParamList(params) =>
-                        params.map(_.toString).mkString("[", ", ", "]")
-                    }.mkString)
-                  case _ => None
-                },
+      inspectEndpoint.serverLogicSuccess[Future] {
+        case (fqcn, inspectMembers) =>
+          queryEngine.inspect(fqcn).map {
+            case all @ (head :: _) =>
+              // Transform the inspect result to InspectResponse
+              // This would depend on the specific type of result
+              def toRes(info: SymbolInspectResult): InspectResult =
+                InspectResult(
+                  `type` = info.symbolType.name,
+                  visibility = info match {
+                    case m: MethodInspectResult => Some(m.visibility)
+                    case _ => None
+                  },
+                  returnType = info match {
+                    case m: MethodInspectResult => Some(m.returnType)
+                    case _ => None
+                  },
+                  constructors = info match {
+                    case c: ClassInspectResult =>
+                      Some(c.constructors.map(toRes))
+                    case _ => None
+                  },
+                  membersFull =
+                    if (inspectMembers)
+                      info match {
+                        case t: TemplateInspectResult =>
+                          Some(t.members.map(toRes))
+                        case _ => None
+                      }
+                    else None,
+                  members =
+                    if (inspectMembers) None
+                    else
+                      info match {
+                        case t: TemplateInspectResult =>
+                          Some(t.members.map(_.name))
+                        case _ => None
+                      },
+                  params = info match {
+                    case m: MethodInspectResult =>
+                      Some(m.parameters.map {
+                        case TermParamList(params, prefix) =>
+                          val prefixStr = if (prefix == "") "" else s"$prefix "
+                          params
+                            .map(_.toString)
+                            .mkString(s"($prefixStr", ", ", ")")
+                        case TypedParamList(params) if params.nonEmpty =>
+                          params.map(_.toString).mkString("[", ", ", "]")
+                        case _ => ""
+                      }.mkString)
+                    case _ => None
+                  },
+                )
+              InspectResponse(
+                name = head.name,
+                path = head.path,
+                results = all.map { res => toRes(res) },
               )
-            InspectResponse(
-              name = head.name,
-              path = head.path,
-              results = all.map { res => toRes(res) },
-            )
-          case Nil =>
-            throw new Exception(s"Symbol not found: $fqcn")
-        }
+            case Nil =>
+              throw new Exception(s"Symbol not found: $fqcn")
+          }
       },
       docsEndpoint.serverLogicSuccess[Future] { fqcn =>
         queryEngine.getDocumentation(fqcn).map {
-          case Some(docs) =>
+          case Some(result) =>
             DocsResponse(
-              `type` = "unknown", // Would be determined from the actual symbol
-              name = fqcn.substring(fqcn.lastIndexOf('.') + 1),
-              path = fqcn,
-              documentation = Documentation(
-                description = docs.description,
-                parameters = docs.params.map { case (name, desc) =>
-                  DocParameter(name, desc)
-                },
-                returnValue = docs.returnValue,
-                examples = docs.examples,
-              ),
+              `type` = result.symbolType.name,
+              name = result.name,
+              path = result.path,
+              documentation = result.documentation.map { docs =>
+                Documentation(
+                  description = docs.description,
+                  parameters = docs.params.map { case (name, desc) =>
+                    DocParameter(name, desc)
+                  },
+                  returnValue = docs.returnValue,
+                  examples = docs.examples,
+                )
+              },
             )
           case None =>
             throw new Exception(s"Documentation not found for: $fqcn")

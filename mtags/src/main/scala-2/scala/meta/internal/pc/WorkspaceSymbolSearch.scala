@@ -151,7 +151,7 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
   }
 
   // TODO: possibly we need to print things better
-  def inspect(fqcn: String): List[InspectResult] = {
+  def inspect(fqcn: String, inspectLevel: Int): List[InspectResult] = {
     def resultWithMembers(symbol: Symbol, members: List[InspectResultImpl]) =
       InspectResultImpl(
         semanticdbSymbol(symbol),
@@ -171,14 +171,16 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
         members
       )
 
-    val symbols = compilerSymbols(SymbolInfo.getPartsFromFQCN(fqcn))
+    val symbols = compilerSymbols(SymbolInfo.getPartsFromFQCN(fqcn)).filterNot(_.isSynthetic)
     symbols.map { symbol =>
-      val members = symbol.info.members.iterator.collect {
-        case sym
-            if !sym.isPrivate && !sym.isSynthetic && !(sym.isMethod && WorkspaceSymbolSearch
-              .ignoredMethodsForInspect(sym.nameString)) =>
-          resultWithMembers(sym, Nil)
-      }.toList
+      val members =
+        if (inspectLevel > 0) symbol.info.members.iterator.collect {
+          case sym
+              if !sym.isPrivate && !sym.isSynthetic && !(sym.isMethod && WorkspaceSymbolSearch
+                .ignoredMethodsForInspect(sym.nameString)) =>
+            resultWithMembers(sym, Nil)
+        }.toList
+        else Nil
       resultWithMembers(symbol, members)
     }
   }

@@ -373,13 +373,11 @@ public abstract class PresentationCompiler {
     /**
 	 * Get inspect information about symbols with the given fully qualified class name.
 	 * @param fqcn the fully qualified class name to inspect.
-	 * @param symbolOnly if true, only return the symbol and symbol kind
+	 * @param inspectLevel the level of inspection to perform:
+	 * 		- 0: do not return members
+	 * 		- 1: return members (one level deep)
 	 */
-	public CompletableFuture<List<InspectResult>> inspect(String fqcn) {
-		return CompletableFuture.completedFuture(Collections.emptyList());
-	}
-
-	public CompletableFuture<List<String>> symbols(String fqcn) {
+	public CompletableFuture<List<InspectResult>> inspect(String fqcn, Integer inspectLevel) {
 		return CompletableFuture.completedFuture(Collections.emptyList());
 	}
 

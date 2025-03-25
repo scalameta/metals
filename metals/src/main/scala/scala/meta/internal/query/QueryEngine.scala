@@ -98,7 +98,7 @@ class QueryEngine(
 
     focusedDocumentBuildTarget()
       .map { buildTarget =>
-        compilers.inspect(buildTarget, fqcn).map {
+        compilers.inspect(buildTarget, fqcn, inspectLevel = 1).map {
           _.flatMap { res =>
             val (constructorMembers, otherMembers) = res
               .members()
@@ -163,7 +163,7 @@ class QueryEngine(
    */
   def getDocumentation(
       fqcn: String
-  ): Future[Option[query.SymbolDocumentation]] = {
+  ): Future[Option[SymbolDocumentationSearchResult]] = {
 
     // Implementation would need to:
     // 1. Find the symbol definition
@@ -173,18 +173,45 @@ class QueryEngine(
     // parse Scaladoc from the source file
     focusedDocumentBuildTarget()
       .map { bt =>
-        compilers.symbols(bt, fqcn).map { syms =>
-          syms.iterator
-            .flatMap(s =>
-              docstrings
-                .documentation(
-                  s,
-                  QueryEngine.emptyParentsSymbols,
-                  ContentType.QUERY,
+        compilers.inspect(bt, fqcn, inspectLevel = 0).map { syms =>
+          val res = syms.iterator.flatMap { s =>
+            docstrings
+              .documentation(
+                s.symbol(),
+                QueryEngine.emptyParentsSymbols,
+                ContentType.QUERY,
+              )
+              .asScala match {
+              case Some(value: query.SymbolDocumentation) =>
+                val kind = QueryEngine
+                  .kindToTypeString(s.kind())
+                  .getOrElse(SymbolType.Unknown(s.kind().toString))
+                Some(
+                  SymbolDocumentationSearchResult(
+                    kind,
+                    Some(value),
+                    s.symbol().fqcn,
+                  )
                 )
-                .asScala
-            )
-            .collectFirst { case doc: query.SymbolDocumentation => doc }
+              case _ => None
+            }
+          }.headOption
+
+          res.orElse {
+            // when no documentation is found, return the first symbol
+            syms.headOption.map { s =>
+              val kind = QueryEngine
+                .kindToTypeString(s.kind())
+                .getOrElse(SymbolType.Unknown(s.kind().toString))
+              SymbolDocumentationSearchResult(
+                kind,
+                None,
+                s.symbol().fqcn,
+              )
+
+            }
+          }
+
         }
       }
       .getOrElse(Future.successful(None))
@@ -241,7 +268,7 @@ sealed trait SymbolInspectResult {
   def symbolType: SymbolType
 }
 
-trait TemplateInspectResult extends SymbolInspectResult {
+sealed trait TemplateInspectResult extends SymbolInspectResult {
   def members: List[SymbolInspectResult]
 }
 
@@ -285,6 +312,15 @@ case class PackageInspectResult(
 ) extends TemplateInspectResult {
   override val symbolType: SymbolType = SymbolType.Package
 }
+
+/**
+ * Result for documentation query.
+ */
+case class SymbolDocumentationSearchResult(
+    val symbolType: SymbolType,
+    val documentation: Option[query.SymbolDocumentation],
+    val path: String,
+) extends SymbolInspectResult
 
 /**
  * Symbol type for glob search.

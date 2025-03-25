@@ -3,7 +3,6 @@ package tests
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-import scala.meta.internal.metals.docstrings.query.SymbolDocumentation
 import scala.meta.internal.query.SymbolType.Constructor
 import scala.meta.internal.query._
 
@@ -23,6 +22,8 @@ class QueryLspSuite extends BaseLspSuite("query") {
            |  def testMethod(param: String): String = param
            |  val testValue: Int = 42
            |}
+           |
+           |case class TestCaseClass()
            |
            |object TestObject {
            |  def apply(): TestClass = new TestClass()
@@ -73,7 +74,8 @@ class QueryLspSuite extends BaseLspSuite("query") {
         timed(
           server.server.queryEngine.globSearch("test", Set.empty)
         ).show,
-        """|class com.test.TestClass
+        """|class com.test.TestCaseClass
+           |class com.test.TestClass
            |class java.awt.dnd.SerializationTester
            |method com.test.TestClass.testMethod
            |method com.test.TestClass.testValue
@@ -425,11 +427,17 @@ class QueryLspSuite extends BaseLspSuite("query") {
     def show: String = ssorted.map(_.show()).mkString("\n")
   }
 
-  implicit class XtensionSymbolDocumentation(result: SymbolDocumentation) {
+  implicit class XtensionSymbolDocumentation(
+      result: SymbolDocumentationSearchResult
+  ) {
     def show: String =
-      result.description ++ result.params.map { case (name, description) =>
-        s" - $name - $description"
-      }.mkString ++ result.returnValue ++ result.examples.mkString
+      result.documentation
+        .map { docs =>
+          docs.description ++ docs.params.map { case (name, description) =>
+            s" - $name - $description"
+          }.mkString ++ docs.returnValue.getOrElse("") ++ docs.examples.mkString
+        }
+        .getOrElse("Found symbol but no documentation")
   }
 
   def timed[T](f: => T): T = {
