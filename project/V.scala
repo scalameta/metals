@@ -5,9 +5,8 @@ object V {
   val scala211 = "2.11.12"
   val scala212 = "2.12.21"
   val scala213 = "2.13.18"
-  val lastPublishedScala3 = "3.3.3"
-  val scala3 = "3.7.4"
-  val scala3ForSBT2 = "3.6.2"
+  val scala3 = "3.3.5"
+  val scala3ForSBT2 = "3.6.4"
   val latestScala3Next = "3.6.4"
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
