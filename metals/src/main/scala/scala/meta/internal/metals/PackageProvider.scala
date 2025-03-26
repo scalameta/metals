@@ -120,66 +120,67 @@ class PackageProvider(
           oldFile -> AbsoluteFile(newDirPath.resolve(oldFile, oldDirPath))
         }
       )
-      .flatMap { case rename @ (oldPath, _) =>
-        trees.get(oldPath.value).map((rename, _))
+      .flatMap { case rename @ (oldPath, newPath) =>
+        for {
+          oldPkgParts <- deducePackageParts(oldPath.value)
+          newPkgParts <- deducePackageParts(newPath.value)
+          tree <- trees.get(oldPath.value)
+        } yield (rename, oldPkgParts, newPkgParts, tree)
       }
       .toList
 
     val changesInMovedFiles = Future
-      .traverse(filesWithTrees) { case ((oldFilePath, newFilePath), tree) =>
-        Future {
-          (for {
-            oldPkgParts <- deducePackageParts(oldFilePath.value)
-            newPkgParts <- deducePackageParts(newFilePath.value)
-            edit <- calcMovedFileEdits(
+      .traverse(filesWithTrees) {
+        case ((oldFilePath, _), oldPkgParts, newPkgParts, tree) =>
+          Future {
+            calcMovedFileEdits(
               tree,
               oldFilePath,
               oldPkgParts,
               newPkgParts,
-            )
-          } yield edit).getOrElse(new WorkspaceEdit())
-        }
+            ).getOrElse(new WorkspaceEdit())
+          }
       }
       .map(_.mergeChanges)
-    val chagesInReferences =
-      calcRefsEditsForDirMove(
-        oldDirPath,
-        newDirPath,
-        filesWithTrees.map { case ((oldPath, _), _) => oldPath },
-      )
+
+    val shortestPkg = filesWithTrees.minByOption { case (_, oldPkg, _, _) =>
+      oldPkg.size
+    }
+
+    val changesInReferences = shortestPkg.map {
+      case (_, oldPkgParts, newPkgParts, _) =>
+        calcRefsEditsForDirMove(
+          oldPkgParts,
+          newPkgParts,
+          filesWithTrees.map { case ((oldFilePath, _), _, _, _) => oldFilePath },
+        )
+    }
     Future
-      .sequence(List(changesInMovedFiles, chagesInReferences))
+      .sequence(List(changesInMovedFiles) ++ changesInReferences)
       .map(_.mergeChanges)
   }
 
   private def calcRefsEditsForDirMove(
-      oldDirPath: AbsoluteDir,
-      newDirPath: AbsoluteDir,
+      oldPackageParts: List[String],
+      newPackageParts: List[String],
       files: List[AbsoluteFile],
   )(implicit ec: ExecutionContext): Future[WorkspaceEdit] = Future {
     def isOneOfMovedFiles(uri: String) =
       files.exists(_.value.toURI.toString() == uri)
-    val result =
-      for {
-        oldPackageParts <- calcPathToSourceRoot(oldDirPath.value)
-        newPackageParts <- calcPathToSourceRoot(newDirPath.value)
-      } yield {
-        val references =
-          files.flatMap { path =>
-            for {
-              decl <- findTopLevelDecls(path, oldPackageParts)
-              reference <- findReferences(decl, path)
-            } yield reference
-          }
-
-        calcRefsEdits(
-          oldPackageParts,
-          newPackageParts,
-          references,
-          !isOneOfMovedFiles(_),
-        )
+    val references =
+      files.flatMap { path =>
+        for {
+          decl <- findTopLevelDecls(path, oldPackageParts)
+          reference <- findReferences(decl, path)
+        } yield reference
       }
-    result.getOrElse(new WorkspaceEdit())
+
+    calcRefsEdits(
+      oldPackageParts,
+      newPackageParts,
+      references,
+      !isOneOfMovedFiles(_),
+    )
   }
 
   private def willMoveFile(oldPath: AbsoluteFile, newPath: AbsoluteFile)(
@@ -466,7 +467,9 @@ class PackageProvider(
     lazy val directlyImportedSymbols =
       importersAndParts
         .withFilter { case (_, parts) =>
-          importerRenamer.renames.exists(_.oldPackageParts == parts)
+          importerRenamer.renames.exists(rename =>
+            parts.startsWith(rename.oldPackageParts)
+          )
         }
         .flatMap(_._1.importees)
         .collect {
@@ -509,7 +512,7 @@ class PackageProvider(
       .map { case (newPackageName, referencesNames) =>
         lazy val wildcardImportsOnlyFromMovedFiles = {
           val symbolsImportedByWildcard = defProvider
-            .symbolOccurrence(source, importer.ref.pos.toLsp.getEnd())
+            .symbolOccurrence(source, importer.ref.pos.toLsp.getEnd)
             .map { case (so, _) => so.symbol }
             .toList
             .flatMap(symbol =>
@@ -1168,10 +1171,9 @@ class ImporterRenamer(
   ): Option[(List[String], Set[TopLevelDeclaration])] = renames.collectFirst {
     case PackagePartsRenamer(oldParts, newParts)
         if (importParts.startsWith(oldParts) && referencesNamesByPackage
-          .get(importParts.drop(oldParts.length))
-          .isDefined) =>
+          .contains(importParts.drop(oldParts.length))) =>
       val otherParts = importParts.drop(oldParts.length)
-      (newParts ++ otherParts, referencesNamesByPackage.get(otherParts).get)
+      (newParts ++ otherParts, referencesNamesByPackage(otherParts))
   }
 }
 
