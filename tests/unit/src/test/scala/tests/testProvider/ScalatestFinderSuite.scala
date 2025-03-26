@@ -90,6 +90,84 @@ class ScalatestFinderSuite extends FunSuite {
   )
 
   check(
+    "async-word-spec",
+    """|class AsyncSetSpec extends AsyncWordSpec {
+       |
+       |  "A Set" when {
+       |    "empty" should {
+       |      "have size 0" in {
+       |        assert(Set.empty.size == 0)
+       |      }
+       |
+       |      "produce NoSuchElementException when head is invoked" in {
+       |        assertThrows[NoSuchElementException] {
+       |          Set.empty.head
+       |        }
+       |      }
+       |
+       |      "have size 1" ignore {
+       |        assert(Set.empty.size == 1)
+       |      }
+       |
+       |    }
+       |  }
+       |}
+       |""".stripMargin,
+    FullyQualifiedName("AsyncSetSpec"),
+    Set(
+      ("A Set when empty should have size 0", QuickRange(4, 6, 4, 19)),
+      (
+        "A Set when empty should produce NoSuchElementException when head is invoked",
+        QuickRange(8, 6, 8, 59),
+      ),
+      ( // this is ignored test
+        "A Set when empty should have size 1",
+        QuickRange(14, 6, 14, 19),
+      ),
+    ),
+    ScalatestStyle.AnyWordSpec,
+  )
+
+  check(
+    "fixture-async-word-spec",
+    """|class FixtureAsyncSetSpec extends FixtureAsyncWordSpec {
+       |
+       |  "A Set" when {
+       |    "empty" should {
+       |      "have size 0" in {
+       |        assert(Set.empty.size == 0)
+       |      }
+       |
+       |      "produce NoSuchElementException when head is invoked" in {
+       |        assertThrows[NoSuchElementException] {
+       |          Set.empty.head
+       |        }
+       |      }
+       |
+       |      "have size 1" ignore {
+       |        assert(Set.empty.size == 1)
+       |      }
+       |
+       |    }
+       |  }
+       |}
+       |""".stripMargin,
+    FullyQualifiedName("FixtureAsyncSetSpec"),
+    Set(
+      ("A Set when empty should have size 0", QuickRange(4, 6, 4, 19)),
+      (
+        "A Set when empty should produce NoSuchElementException when head is invoked",
+        QuickRange(8, 6, 8, 59),
+      ),
+      ( // this is ignored test
+        "A Set when empty should have size 1",
+        QuickRange(14, 6, 14, 19),
+      ),
+    ),
+    ScalatestStyle.AnyWordSpec,
+  )
+
+  check(
     "any-flat-spec",
     """|import org.scalatest.flatspec.AnyFlatSpec
        |
