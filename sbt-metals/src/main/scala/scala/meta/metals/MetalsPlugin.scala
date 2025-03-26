@@ -1,10 +1,10 @@
 package metals
 
 import java.nio.file.Paths
-import java.{util => ju}
+import java.util as ju
 
 import scala.io.Source
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 import scala.util.Properties
 import scala.util.Try
 import scala.util.control.NonFatal
@@ -12,8 +12,8 @@ import scala.util.control.NonFatal
 import scala.meta.internal.sbtmetals.BuildInfo
 
 import sbt.Keys
-import sbt.Keys._
-import sbt._
+import sbt.Keys.*
+import sbt.*
 import sbt.internal.inc.ScalaInstance
 import sbt.plugins.SemanticdbPlugin
 
@@ -25,9 +25,9 @@ object MetalsPlugin extends AutoPlugin {
     lazy val javaSemanticdbEnabled =
       settingKey[Boolean]("Enables SemanticDB Javac plugin")
   }
-  import autoImport._
+  import autoImport.*
 
-  override lazy val projectSettings: Seq[Def.Setting[_]] = Def.settings(
+  override lazy val projectSettings: Seq[Def.Setting[?]] = Def.settings(
     Keys.semanticdbVersion := {
       if (requiresSemanticdb.value && !isScala3.value)
         BuildInfo.lastSupportedSemanticdb.getOrElse(
