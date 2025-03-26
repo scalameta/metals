@@ -686,6 +686,9 @@ object UserConfiguration {
       getStringKey("bloop-version")
     val defaultShell =
       getStringKey("default-shell")
+    println(
+      s"Hello from UserConfiguration.scala line:654 printing defaultShell => ${defaultShell}"
+    )
     val bloopJvmProperties = getStringListKey("bloop-jvm-properties")
     val superMethodLensesEnabled =
       getBooleanKey("super-method-lenses-enabled").getOrElse(false)

@@ -38,6 +38,9 @@ object SystemProcess {
   )(implicit ec: ExecutionContext): SystemProcess = {
 
     try {
+      println(
+        s"cmd from SystemProcess.scala line:41 => ${cmd}"
+      ) // if bash, then List("/usr/bin/bash", "-l", "-c", "sbt -Dbloop.export-jar-classifiers=sources bloopInstall")
       val builder = new ProcessBuilder(cmd.asJava)
       builder.directory(cwd.toNIO.toFile)
       val envMap = builder.environment()

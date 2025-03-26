@@ -92,8 +92,16 @@ class ShellRunner(
   ): CancelableFuture[Int] = {
     val elapsed = new Timer(time)
     val env = additionalEnv ++ JdkSources.envVariables(javaHome)
+    println(
+      s"Hello from ShellRunner.scala line:96 => ${userConfiguration().defaultShell.toList ::: List("-l", "-c", args.mkString(" "))}"
+    )
     val ps = SystemProcess.run(
-      userConfiguration().defaultShell.toList ::: args,
+      userConfiguration().defaultShell.toList ::: List(
+        "-i",
+        "-l",
+        "-c",
+        args.mkString(" "),
+      ),
       directory,
       redirectErrorOutput,
       env,
