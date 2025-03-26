@@ -518,12 +518,6 @@ lazy val `sbt-metals` = project
         case _ => "2.0.0-M4"
       }
     },
-    scalacOptions ++= {
-      scalaBinaryVersion.value match {
-        case "2.12" => "-Xsource:3" :: Nil
-        case _ => Nil
-      }
-    },
   )
   .settings(sharedScalacOptions)
   .enablePlugins(BuildInfoPlugin, SbtPlugin)
