@@ -373,7 +373,7 @@ object QueryEngine {
       case SymbolKind.Object => Some(SymbolType.Object)
       case SymbolKind.Method => Some(SymbolType.Method)
       case SymbolKind.Function => Some(SymbolType.Function)
-      case SymbolKind.Package => Some(SymbolType.Package)
+      case SymbolKind.Package | SymbolKind.Module => Some(SymbolType.Package)
       case SymbolKind.Constructor => Some(SymbolType.Constructor)
       case _ => None
     }

@@ -171,7 +171,8 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
         members
       )
 
-    val symbols = compilerSymbols(SymbolInfo.getPartsFromFQCN(fqcn)).filterNot(_.isSynthetic)
+    val symbols = compilerSymbols(SymbolInfo.getPartsFromFQCN(fqcn))
+      .filterNot(_.isSynthetic)
     symbols.map { symbol =>
       val members =
         if (inspectLevel > 0) symbol.info.members.iterator.collect {

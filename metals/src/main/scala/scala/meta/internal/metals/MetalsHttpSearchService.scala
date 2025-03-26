@@ -31,10 +31,12 @@ case class InspectResponse(
     name: String,
     path: String,
     results: List[InspectResult],
+    error: Option[String] = None,
 )
 
 case class InspectResult(
     `type`: String,
+    path: String,
     visibility: Option[String],
     returnType: Option[String],
     constructors: Option[List[InspectResult]] = None,
@@ -53,10 +55,11 @@ case class Documentation(
 )
 
 case class DocsResponse(
-    `type`: String,
+    `type`: Option[String],
     name: String,
     path: String,
     documentation: Option[Documentation],
+    error: Option[String] = None,
 )
 
 case class ErrorResponse(error: ErrorDetails)
@@ -153,6 +156,7 @@ object MetalsHttpSearchService {
               def toRes(info: SymbolInspectResult): InspectResult =
                 InspectResult(
                   `type` = info.symbolType.name,
+                  path = info.path,
                   visibility = info match {
                     case m: MethodInspectResult => Some(m.visibility)
                     case _ => None
@@ -203,14 +207,19 @@ object MetalsHttpSearchService {
                 results = all.map { res => toRes(res) },
               )
             case Nil =>
-              throw new Exception(s"Symbol not found: $fqcn")
+              InspectResponse(
+                name = fqcn.split('.').last,
+                path = fqcn,
+                results = Nil,
+                error = Some("Symbol not found"),
+              )
           }
       },
       docsEndpoint.serverLogicSuccess[Future] { fqcn =>
         queryEngine.getDocumentation(fqcn).map {
           case Some(result) =>
             DocsResponse(
-              `type` = result.symbolType.name,
+              `type` = Some(result.symbolType.name),
               name = result.name,
               path = result.path,
               documentation = result.documentation.map { docs =>
@@ -225,7 +234,13 @@ object MetalsHttpSearchService {
               },
             )
           case None =>
-            throw new Exception(s"Documentation not found for: $fqcn")
+            DocsResponse(
+              `type` = None,
+              name = fqcn.split('.').last,
+              path = fqcn,
+              documentation = None,
+              error = Some("Symbol not found"),
+            )
         }
       },
     )
