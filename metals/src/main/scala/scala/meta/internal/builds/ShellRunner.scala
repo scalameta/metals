@@ -92,13 +92,14 @@ class ShellRunner(
   ): CancelableFuture[Int] = {
     val elapsed = new Timer(time)
     val env = additionalEnv ++ JdkSources.envVariables(javaHome)
+
+    val shellArguments = userConfiguration().defaultShell match {
+      case Some(shell) => List(shell, "-i", "-l", "-c", args.mkString(" "))
+      case None => args
+    }
+
     val ps = SystemProcess.run(
-      userConfiguration().defaultShell.toList ::: List(
-        "-i", // without this ~/.bashrc doesn't get loaded
-        "-l",
-        "-c",
-        args.mkString(" "), // -c expects a string of commands to run
-      ),
+      shellArguments,
       directory,
       redirectErrorOutput,
       env,

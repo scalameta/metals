@@ -313,6 +313,7 @@ class BazelLspSuite
     val shellRunner = new ShellRunner(
       Time.system,
       new WorkDoneProgress(NoopLanguageClient, Time.system),
+      () => userConfig,
     )
 
     def jsonFile =
