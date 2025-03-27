@@ -37,6 +37,26 @@ class SbtBloopLspSuite
       workspace: AbsolutePath
   ): Option[String] = SbtDigest.current(workspace)
 
+  test("environment-variables") {
+    cleanWorkspace()
+    workspace.resolve("sbt").createDirectories()
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=$sbtVersion
+            |/build.sbt
+            |scalaVersion := "${V.scala213}"
+            |sys.env.get("MY_ENV_VAR").get
+            |""".stripMargin
+      )
+    } yield {
+      assertNoDiff(
+        client.workspaceMessageRequests,
+        importBuildChangesMessage,
+      )
+    }
+  }
+
   test("basic") {
     cleanWorkspace()
     // directory should not be used as sbt script
