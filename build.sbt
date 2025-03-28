@@ -365,7 +365,7 @@ lazy val mtagsShared = project
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "com.google.protobuf" % "protobuf-java-util" % V.protobuf,
-      "com.google.protobuf" % "protobuf-java" % "4.30.1",
+      "com.google.protobuf" % "protobuf-java" % "4.30.2",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
       "org.lz4" % "lz4-java" % "1.8.0",
