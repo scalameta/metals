@@ -58,7 +58,8 @@ trait Signatures { compiler: MetalsGlobal =>
         config = renameConfig
       )
       val tpeString = shortType(tpe, history).toString()
-      val edits = history.autoImports(pos, importPosition)
+      val edits =
+        history.autoImports(pos, importPosition)
       (tpeString, edits)
     }
 
@@ -70,11 +71,12 @@ trait Signatures { compiler: MetalsGlobal =>
     )(implicit queryInfo: PcQueryContext): (String, List[l.TextEdit]) = {
       if (scope.symbolIsInScope(sym)) (Identifier(sym.name), Nil)
       else if (!scope.nameIsInScope(sym.name)) {
-        val startPos = pos.withPoint(importPosition.offset).focus
-        val indent = " " * importPosition.indent
+        val impPos = importPosition.findPosition(sym.fullNameSyntax)
+        val startPos = pos.withPoint(impPos.offset).focus
+        val indent = " " * impPos.indent
         val edit = new l.TextEdit(
           startPos.toLsp,
-          s"${indent}import ${sym.fullNameSyntax}\n"
+          s"${impPos.padBefore}${indent}import ${sym.fullNameSyntax}${impPos.padAfter}"
         )
         (Identifier(sym.name), edit :: Nil)
       } else {
@@ -220,9 +222,7 @@ trait Signatures { compiler: MetalsGlobal =>
       autoImports(
         pos,
         compiler.doLocateImportContext(pos, Some(autoImportPosition)),
-        autoImportPosition.offset,
-        autoImportPosition.indent,
-        autoImportPosition.padTop
+        autoImportPosition
       )
     }
 
@@ -230,9 +230,7 @@ trait Signatures { compiler: MetalsGlobal =>
     def autoImports(
         pos: Position,
         context: => Context,
-        lineStart: Int,
-        inferIndent: => Int,
-        padTop: Boolean
+        autoImportPosition: AutoImportPosition
     ): List[l.TextEdit] = {
 
       val toImport = mutable.Map.empty[Symbol, List[ShortName]]
@@ -249,12 +247,9 @@ trait Signatures { compiler: MetalsGlobal =>
         toImport(owner) = sym :: toImport.getOrElse(owner, Nil)
       }
       if (toImport.nonEmpty) {
-        val indent = " " * inferIndent
-        val topPadding =
-          if (padTop) "\n"
-          else ""
+
         val scope = new ShortenedNames(context)
-        val formatted = toImport.toSeq
+        toImport.toList
           .sortBy { case (owner, _) =>
             owner.fullName
           }
@@ -266,11 +261,17 @@ trait Signatures { compiler: MetalsGlobal =>
             val name =
               if (isGroup) importNames.mkString("{", ", ", "}")
               else importNames.mkString
-            s"${indent}import ${scope.fullname(owner)}.${name}"
+            val formatted = s"${scope.fullname(owner)}.${name}"
+            val impPos = autoImportPosition.findPosition(formatted)
+            val indent = " " * impPos.indent
+            val startPos =
+              pos.withPoint(impPos.offset).focus
+            new l.TextEdit(
+              startPos.toLsp,
+              s"${impPos.padBefore}${indent}import ${formatted}${impPos.padAfter}"
+            )
+
           }
-          .mkString(topPadding, "\n", "\n")
-        val startPos = pos.withPoint(lineStart).focus
-        new l.TextEdit(startPos.toLsp, formatted) :: Nil
       } else {
         Nil
       }

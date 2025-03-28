@@ -31,6 +31,32 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
     )
   )
 
+  checkEdit(
+    "basic-apply-multi",
+    """|
+       |import java.util.concurrent.Phaser
+       |
+       |import scala.concurrent.ExecutionContext
+       |import scala.concurrent.Promise
+       |
+       |object A {
+       |  <<Future>>.successful(2)
+       |}
+       |""".stripMargin,
+    """|
+       |import java.util.concurrent.Phaser
+       |
+       |import scala.concurrent.ExecutionContext
+       |import scala.concurrent.Future
+       |import scala.concurrent.Promise
+       |
+       |object A {
+       |  Future.successful(2)
+       |}
+       |
+       |""".stripMargin
+  )
+
   check(
     "basic-function-apply",
     """|
@@ -177,6 +203,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |""".stripMargin,
     """|object main {
        |/*<script>*///> using scala "3.1.3"
+       |
        |import scala.util.Try
        |
        |object x {
