@@ -88,7 +88,9 @@ object BazelBuildTool {
   )
 
   private def hasProjectView(dir: AbsolutePath): Option[AbsolutePath] =
-    dir.list.find(_.filename.endsWith(".bazelproject"))
+    Some(dir.resolve(".bazelproject"))
+      .filter(_.isFile)
+      .orElse(dir.list.find(_.filename.endsWith(".bazelproject")))
 
   val fallbackProjectView: String = {
     """|targets:
