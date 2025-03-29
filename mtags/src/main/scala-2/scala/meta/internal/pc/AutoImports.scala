@@ -12,7 +12,7 @@ trait AutoImports { this: MetalsGlobal =>
   ): Context = {
     try
       doLocateContext(
-        autoImport.fold(pos)(i => pos.focus.withPoint(i.offset))
+        autoImport.fold(pos)(i => pos.focus.withPoint(i.lastImportIndex))
       )
     catch {
       case _: FatalError =>
@@ -32,6 +32,39 @@ trait AutoImports { this: MetalsGlobal =>
       case _ => true
     }
 
+  def insertPosFromImports(
+      importToAdd: String,
+      imports: Seq[Import]
+  ): (Int, String, String) = {
+
+    val longest = imports
+      .collect { case imp: Import =>
+        val prefix = imp.expr
+          .toString()
+          .zip(importToAdd)
+          .takeWhile { case (x, y) => x == y }
+          .map(_._1)
+
+        prefix.mkString
+      }
+      .maxBy { str =>
+        str.length()
+      }
+    val prefixImports = imports.filter(
+      _.expr.toString().startsWith(longest)
+    )
+
+    val where = prefixImports.takeWhile { imp =>
+      val fullName = imp.expr.toString() + "." + imp.selectors.head.name.decoded
+      fullName < importToAdd
+    }
+
+    where match {
+      case Nil => (prefixImports.head.pos.end, "\n", "")
+      case head :: next =>
+        (head.pos.end, "\n", "")
+    }
+  }
   def autoImportPosition(
       pos: Position,
       text: String
@@ -50,13 +83,30 @@ trait AutoImports { this: MetalsGlobal =>
             val lastImportOpt = pkg.stats
               .takeWhile(_.isInstanceOf[Import])
               .lastOption
-            val padTop = lastImportOpt.isEmpty
-            val lastImportOrPkg = lastImportOpt.getOrElse(pkg.pid)
-            new AutoImportPosition(
-              pos.source.lineToOffset(lastImportOrPkg.pos.focusEnd.line),
-              text,
-              padTop
+            val func = (importToAdd: String) => {
+              val imports = pkg.stats.collect { case imp: Import =>
+                imp
+              }
+              val lastImportOrPkg = lastImportOpt.getOrElse(pkg.pid)
+
+              val (index, newlineBefore, newlineAfter) =
+                if (imports.nonEmpty) insertPosFromImports(importToAdd, imports)
+                else {
+                  (lastImportOrPkg.pos.end, "\n\n", "")
+                }
+
+              ImportPosition(
+                index,
+                newlineBefore,
+                newlineAfter
+              )
+            }
+            AutoImportPosition(
+              func,
+              None,
+              lastImportOpt.map(_.pos.start).getOrElse(0)
             )
+
           }
 
         def forScript() = {
@@ -89,25 +139,36 @@ trait AutoImports { this: MetalsGlobal =>
               .takeWhile(_.isInstanceOf[Import])
               .lastOption
 
-            val offset = lastImportOpt
-              .map(_.pos.focusEnd.line)
-              .map(pos.source.lineToOffset)
-              .getOrElse(firstImportOffset)
-            new AutoImportPosition(
-              offset,
-              text,
-              padTop = false
+            val func = (importToAdd: String) => {
+              val imports = obj.impl.body.collect { case imp: Import =>
+                imp
+              }
+
+              val (index, newlineBefore, newlineAfter) =
+                if (imports.nonEmpty) insertPosFromImports(importToAdd, imports)
+                else {
+                  (firstImportOffset, "\n", "\n")
+                }
+
+              ImportPosition(
+                index,
+                newlineBefore,
+                newlineAfter
+              )
+            }
+            AutoImportPosition(
+              func,
+              Some(text),
+              lastImportOpt.map(_.pos.start).getOrElse(0)
             )
           }
         }
 
-        def fileStart =
-          AutoImportPosition(
-            ScriptFirstImportPosition.infer(text),
-            0,
-            padTop = false
-          )
-
+        def fileStart = AutoImportPosition(
+          _ => ImportPosition(ScriptFirstImportPosition.infer(text), "", "\n"),
+          Some(""),
+          0
+        )
         val path = pos.source.path
         val scriptPos =
           if (path.isScalaCLIGeneratedFile) forScript()
