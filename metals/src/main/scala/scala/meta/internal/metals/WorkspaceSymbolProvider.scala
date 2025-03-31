@@ -8,7 +8,6 @@ import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
 
 import scala.meta.internal.mtags.GlobalSymbolIndex
-import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -246,18 +245,18 @@ final class WorkspaceSymbolProvider(
   }
 
   class PreferredScalaVersionOrdering(preferredScalaVersions: Set[String])
-      extends Ordering[SymbolDefinition] {
+      extends Ordering[AbsolutePath] {
     private def pathMatchesPreferred(path: AbsolutePath) =
       buildTargets
         .possibleScalaVersions(path)
         .exists(preferredScalaVersions(_))
 
-    private def pathLength(symbolDef: SymbolDefinition) =
-      symbolDef.path.toURI.toString().length()
+    private def pathLength(path: AbsolutePath) =
+      path.toURI.toString().length()
 
-    override def compare(x: SymbolDefinition, y: SymbolDefinition): Int = {
-      val xVersionMatches = pathMatchesPreferred(x.path)
-      val yVersionMatches = pathMatchesPreferred(y.path)
+    override def compare(x: AbsolutePath, y: AbsolutePath): Int = {
+      val xVersionMatches = pathMatchesPreferred(x)
+      val yVersionMatches = pathMatchesPreferred(y)
 
       if (xVersionMatches && !yVersionMatches) -1
       else if (yVersionMatches && !xVersionMatches) 1
@@ -266,7 +265,7 @@ final class WorkspaceSymbolProvider(
   }
 
   object SymbolDefinitionOrdering {
-    def fromOptPath(path: Option[AbsolutePath]): Ordering[SymbolDefinition] = {
+    def fromOptPath(path: Option[AbsolutePath]): Ordering[AbsolutePath] = {
       path.toList.flatMap(buildTargets.possibleScalaVersions(_)) match {
         case Nil => DefaultSymbolDefinitionOrdering
         case preferredScalaVersions =>

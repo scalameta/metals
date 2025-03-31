@@ -42,4 +42,9 @@ class DelegatingGlobalSymbolIndex(
   ): List[mtags.IndexingResult] = {
     underlying.addSourceDirectory(dir, dialect)
   }
+
+  def findFileForToplevel(
+      topLevelSymbol: mtags.Symbol
+  ): List[(AbsolutePath, Dialect)] =
+    underlying.findFileForToplevel(topLevelSymbol)
 }

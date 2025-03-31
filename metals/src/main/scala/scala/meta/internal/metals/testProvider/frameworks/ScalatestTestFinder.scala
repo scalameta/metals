@@ -299,6 +299,12 @@ object ScalatestStyle {
     val symbols: Set[String] = Set(
       "org/scalatest/wordspec/AnyWordSpec#",
       "org/scalatest/wordspec/AnyWordSpecLike#",
+      "org/scalatest/wordspec/AsyncWordSpec#",
+      "org/scalatest/wordspec/AsyncWordSpecLike#",
+      "org/scalatest/wordspec/FixtureAnyWordSpec#",
+      "org/scalatest/wordspec/FixtureAnyWordSpecLike#",
+      "org/scalatest/wordspec/FixtureAsyncWordSpec#",
+      "org/scalatest/wordspec/FixtureAsyncWordSpecLike#",
     )
     override val intermediateMethods: Set[String] =
       Set("when", "should", "must", "can", "which")
