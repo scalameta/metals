@@ -658,7 +658,8 @@ class PackageProvider(
         ) ++ toImportGivens.map(decl => (decl.innerPackageParts, "given")))
           .groupMap(_._1)(_._2)
           .map { case (innerPackageParts, names) =>
-            (innerPackageParts :+ mkImportees(names.toList)).mkString(".")
+            (innerPackageParts :+ mkImportees(names.toList.sorted))
+              .mkString(".")
           }
 
       if (newPackageName.isEmpty)
