@@ -190,6 +190,9 @@ afterwards without the release pressure.
       tag should include
       [these changes in `release.yml`](https://github.com/scalameta/scalameta/pull/2562/commits/1dfc99677659f5a9919c0dc9166547a0b332d35c)
 
-- Release mtags artifact. Open
-  [`Mtags auto release` action page](https://github.com/scalameta/metals/actions/workflows/mtags-auto-release.yml),
-  click `Run Workflow`, specify Scala version and confirm.
+- Release mtags artifact. To do this push a tag to the metals repository in a form of:
+
+  `v1.3.5@2.13.16@mtags/publishSigned@mtagsShared/publishSigned`
+
+  This will trigger a release workflow that will publish the mtags artifact to
+  Sonatype. Replace `v1.3.5` and `2.13.16` with the version of the release you are making.
