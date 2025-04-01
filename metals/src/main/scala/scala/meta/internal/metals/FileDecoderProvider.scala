@@ -606,7 +606,6 @@ final class FileDecoderProvider(
       path: AbsolutePath,
       jar: Option[AbsolutePath],
   ): Future[DecoderResponse] = {
-    val cfrDependency = Dependency.of("org.benf", "cfr", "0.151")
     val cfrMain = "org.benf.cfr.reader.Main"
 
     val filesystemPath = jar.getOrElse(path)
@@ -688,7 +687,7 @@ final class FileDecoderProvider(
         try {
           shellRunner
             .runJava(
-              cfrDependency,
+              FileDecoderProvider.cfrDependency,
               cfrMain,
               parent,
               args,
@@ -708,7 +707,7 @@ final class FileDecoderProvider(
               if (sbOut.isEmpty && sbErr.nonEmpty)
                 DecoderResponse.failed(
                   path.toURI,
-                  s"$cfrDependency\n$cfrMain\n$parent\n$args\n${sbErr.toString}",
+                  s"${FileDecoderProvider.cfrDependency}\n$cfrMain\n$parent\n$args\n${sbErr.toString}",
                 )
               else
                 DecoderResponse.success(path.toURI, sbOut.toString)
@@ -823,6 +822,8 @@ final class FileDecoderProvider(
 }
 
 object FileDecoderProvider {
+  val cfrDependency: Dependency = Dependency.of("org.benf", "cfr", "0.151")
+
   def createBuildTargetURI(
       workspaceFolder: AbsolutePath,
       buildTargetName: String,
