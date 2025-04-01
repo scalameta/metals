@@ -107,7 +107,8 @@ class QueryLspSuite extends BaseLspSuite("query") {
         server.server.queryEngine
           .globSearch("test", Set(SymbolType.Class))
           .show,
-        """|class com.test.TestClass
+        """|class com.test.TestCaseClass
+           |class com.test.TestClass
            |class java.awt.dnd.SerializationTester
            |package com.test
            |""".stripMargin,
@@ -322,10 +323,10 @@ class QueryLspSuite extends BaseLspSuite("query") {
         res.show,
         """|class com.test.nested.package1.Class1
            |	 - constructor Class1(m: Int)
-           |	 - method add(x: Int, y: Int)Int
-           |	 - method substract(x: Int, y: Int)Int
+           |	 - method add(x: Int, y: Int): Int
+           |	 - method substract(x: Int, y: Int): Int
            |object com.test.nested.package1.Class1
-           |	 - function someFunction(x: Int)Int
+           |	 - function someFunction(x: Int): Int
            |""".stripMargin,
       )
     } yield ()

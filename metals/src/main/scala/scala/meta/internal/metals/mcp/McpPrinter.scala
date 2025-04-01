@@ -31,9 +31,10 @@ object McpPrinter {
               case TermParamList(params, "") => s"(${params.mkString(", ")})"
               case TermParamList(params, prefix) => s"($prefix${params.mkString(", ")})"
               case TypedParamList(params) if params.nonEmpty => s"[${params.mkString(", ")}]"
-            }.mkString}${if (kind == SymbolType.Constructor) "" else returnType}"
+            }.mkString}${if (kind == SymbolType.Constructor) "" else s": $returnType"}"
         case PackageInspectResult(_, members) =>
           s"package $name${showMembers(members)}"
+        case _ => s"${result.symbolType.name} $name"
       }
     }
   }
