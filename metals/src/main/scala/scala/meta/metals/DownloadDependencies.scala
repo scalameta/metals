@@ -9,6 +9,7 @@ import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Embedded
+import scala.meta.internal.metals.FileDecoderProvider
 import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.logging.MetalsLogger
@@ -61,6 +62,7 @@ object DownloadDependencies {
       downloadScala() ++
       downloadBloop() ++
       downloadBazelBsp() ++
+      downloadCfr() ++
       downloadScala3PresentationCompiler(filterVersions) ++
       downloadAllScalafixVersions(filterVersions)
 
@@ -196,6 +198,11 @@ object DownloadDependencies {
       BazelBuildTool.dependency,
       None,
     )
+  }
+
+  def downloadCfr(): Seq[Path] = {
+    scribe.info("Downloading cfr")
+    Embedded.downloadDependency(FileDecoderProvider.cfrDependency)
   }
 
   def downloadAllScalafixVersions(
