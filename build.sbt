@@ -444,11 +444,6 @@ lazy val metals = project
       "com.outr" %% "scribe-slf4j2" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
       "com.lihaoyi" %% "ujson" % "4.1.0",
-      // for MCP jsonrpc-2.0
-      "com.softwaremill.sttp.tapir" %% "tapir-pekko-http-server" % "1.11.14",
-      "com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % "1.11.14",
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.33.0",
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.3.0" % "provided",
       // For fetching projects' templates
       "com.lihaoyi" %% "requests" % "0.9.0",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
@@ -462,6 +457,10 @@ lazy val metals = project
         .exclude("ch.epfl.scala", "bsp4j"),
       // For test frameworks
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
+      // For MCP
+      "io.modelcontextprotocol.sdk" % "mcp" % "0.8.1",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.15.0",
+      "io.undertow" % "undertow-servlet" % "2.3.12.Final",
     ),
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](

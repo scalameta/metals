@@ -456,8 +456,9 @@ abstract class MetalsLspService(
     symbolDocs,
   )
 
-  protected val httpSearchService: MetalsHttpSearchService =
-    register(MetalsHttpSearchService(queryEngine, "localhost", 8888))
+  protected val mcpServer: MetalsMcpServer =
+    register(new MetalsMcpServer(queryEngine, folder.toNIO.toString))
+  mcpServer.run()
 
   val referencesProvider: ReferenceProvider = new ReferenceProvider(
     folder,
