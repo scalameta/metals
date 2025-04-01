@@ -2,6 +2,7 @@ package scala.meta.internal.metals.mcp
 
 import java.io.File
 import java.net.InetSocketAddress
+import java.nio.file.Path
 import java.util.ArrayList
 import java.util.Arrays
 import java.util.{List => JList}
@@ -10,12 +11,16 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
+import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.Compilations
+import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.mcp.McpPrinter._
 import scala.meta.internal.metals.mcp.QueryEngine
 import scala.meta.internal.metals.mcp.SymbolType
+import scala.meta.io.AbsolutePath
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.modelcontextprotocol.server.McpServer
@@ -31,8 +36,14 @@ import io.modelcontextprotocol.spec.McpSchema.Tool
 import io.undertow.Undertow
 import io.undertow.servlet.Servlets
 import io.undertow.servlet.api.InstanceHandle
-
-class MetalsMcpServer(queryEngine: QueryEngine, projectPath: String)(implicit
+class MetalsMcpServer(
+    queryEngine: QueryEngine,
+    projectPath: AbsolutePath,
+    compilations: Compilations,
+    focusedDocument: () => Option[AbsolutePath],
+    diagnostics: Diagnostics,
+    buildTargets: BuildTargets,
+)(implicit
     ec: ExecutionContext
 ) extends Cancelable {
 
@@ -63,8 +74,9 @@ class MetalsMcpServer(queryEngine: QueryEngine, projectPath: String)(implicit
     cancelable.add(() => syncServer.close())
 
     // Register tools
-    syncServer.addTool(createCompileTool(projectPath))
-    syncServer.addTool(createTestTool(projectPath))
+    syncServer.addTool(createFileCompileTool())
+    syncServer.addTool(createCompileTool())
+    syncServer.addTool(createTestTool(projectPath.toString()))
     syncServer.addTool(createGlobSearchTool())
     syncServer.addTool(createTypedGlobSearchTool())
     syncServer.addTool(createInspectTool())
@@ -126,24 +138,66 @@ class MetalsMcpServer(queryEngine: QueryEngine, projectPath: String)(implicit
 
   override def cancel(): Unit = cancelable.cancel()
 
-  private def createCompileTool(projectPath: String): SyncToolSpecification = {
-    val schema = """{"type": "object", "properties": {}}"""
+  private def createCompileTool(): SyncToolSpecification = {
+    val schema = """{"type": "object", "properties": { }}"""
     new SyncToolSpecification(
-      new Tool("compile", "Compile Scala project", schema),
+      new Tool("compile-full", "Compile Scala project", schema),
       (exchange, _) => {
+        val res =
+          compilations.cascadeCompile(buildTargets.allBuildTargetIds).map { _ =>
+            val content = diagnostics.allDiagnostics
+              .map { case (path, diag) =>
+                val startLine = diag.getRange().getStart().getLine()
+                val endLine = diag.getRange().getEnd().getLine()
+                s"${path.toRelative(projectPath)} ($startLine-$endLine): ${diag.getMessage()}"
+              }
+              .mkString("\n")
+            new CallToolResult(createContent(content), false)
+          }
+        Await.result(res, 10.seconds)
+      },
+    )
+  }
+
+  private def createFileCompileTool(): SyncToolSpecification = {
+    val schema =
+      """{"type": "object", "properties": { "fileUri": { "type": "string" } }}"""
+    new SyncToolSpecification(
+      new Tool("compile-file", "Compile Scala file", schema),
+      (exchange, arguments) => {
         try {
-          val pb = new ProcessBuilder("scala", "compile", ".")
-          pb.directory(new File(projectPath))
-          val process = pb.start()
-
-          val output = new String(process.getInputStream.readAllBytes())
-          val error = new String(process.getErrorStream.readAllBytes())
-
-          process.waitFor()
-          val result =
-            s"stdout:\n$output${if (error.isEmpty) "" else s"stderr:\n$error"}"
-
-          new CallToolResult(createContent(result), false)
+          val path =
+            Option(arguments.get("fileUri").asInstanceOf[String])
+              .map(fileUri => AbsolutePath(Path.of(fileUri))(projectPath))
+              .orElse { focusedDocument() }
+          path match {
+            case Some(path) =>
+              val res = compilations.compileFile(path).map {
+                case Some(_) =>
+                  val result = diagnostics
+                    .forFile(path)
+                    .map { d =>
+                      val startLine = d.getRange().getStart().getLine()
+                      val endLine = d.getRange().getEnd().getLine()
+                      s"($startLine-$endLine):\n${d.getMessage()}"
+                    }
+                    .mkString("\n")
+                  new CallToolResult(createContent(result), false)
+                case None =>
+                  new CallToolResult(
+                    createContent(
+                      s"Error: Incorrect file path: ${path.toString()}"
+                    ),
+                    true,
+                  )
+              }
+              Await.result(res, 10.seconds)
+            case None =>
+              new CallToolResult(
+                createContent("Error: No file path provided"),
+                true,
+              )
+          }
         } catch {
           case e: Exception =>
             new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)

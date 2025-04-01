@@ -66,6 +66,18 @@ final class Diagnostics(
   private val compilationStatus =
     TrieMap.empty[BuildTargetIdentifier, CompilationStatus]
 
+  def forFile(path: AbsolutePath): Seq[Diagnostic] = {
+    diagnostics
+      .getOrElse(path, new ConcurrentLinkedQueue[Diagnostic]())
+      .asScala
+      .toList
+  }
+
+  def allDiagnostics: Seq[(AbsolutePath, Diagnostic)] =
+    diagnostics.toList.flatMap { case (path, queue) =>
+      queue.asScala.map(diag => (path, diag))
+    }
+
   def reset(): Unit = {
     val keys = diagnostics.keys
     diagnostics.clear()

@@ -1468,7 +1468,16 @@ abstract class MetalsLspService(
   def startMcpServer(): Future[Unit] =
     Future {
       if (!isMcpServerRunning.getAndSet(true))
-        register(new MetalsMcpServer(queryEngine, folder.toNIO.toString)).run()
+        register(
+          new MetalsMcpServer(
+            queryEngine,
+            folder,
+            compilations,
+            () => focusedDocument,
+            diagnostics,
+            buildTargets,
+          )
+        ).run()
     }.recover { case e: Exception =>
       scribe.error("Error starting MCP server", e)
     }
