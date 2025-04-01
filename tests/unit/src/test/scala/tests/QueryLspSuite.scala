@@ -67,11 +67,12 @@ class QueryLspSuite extends BaseLspSuite("query") {
       )
       _ <- server.didOpen("src/main/scala/com/test/TestClass.scala")
       _ = assertNoDiagnostics()
+      path = server.toPath("src/main/scala/com/test/TestClass.scala")
 
       // Test searching for "test" - should find packages, classes, objects, traits
       _ = assertNoDiff(
         timed(
-          server.server.queryEngine.globSearch("test", Set.empty)
+          server.server.queryEngine.globSearch("test", Set.empty, path)
         ).show,
         """|class com.test.TestCaseClass
            |class com.test.TestClass
@@ -92,7 +93,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
 
       // Test searching for "matching" - should find package and object
       _ = assertNoDiff(
-        server.server.queryEngine.globSearch("matching", Set.empty).show,
+        server.server.queryEngine.globSearch("matching", Set.empty, path).show,
         """|class com.test.NonMatchingClass
            |object com.test.matching.MatchingUtil
            |object scala.quoted.runtime.QuoteMatching
@@ -105,7 +106,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
       // Test searching for "test" with class filter
       _ = assertNoDiff(
         server.server.queryEngine
-          .globSearch("test", Set(SymbolType.Class))
+          .globSearch("test", Set(SymbolType.Class), path)
           .show,
         """|class com.test.TestCaseClass
            |class com.test.TestClass
@@ -118,7 +119,11 @@ class QueryLspSuite extends BaseLspSuite("query") {
       // Test searching for methods
       _ = assertNoDiff(
         server.server.queryEngine
-          .globSearch("method", Set(SymbolType.Method, SymbolType.Function))
+          .globSearch(
+            "method",
+            Set(SymbolType.Method, SymbolType.Function),
+            path,
+          )
           .show,
         """|method com.test.NonMatchingClass.someMethod
            |method com.test.TestClass.testMethod
@@ -167,10 +172,11 @@ class QueryLspSuite extends BaseLspSuite("query") {
       )
       _ <- server.didOpen("src/main/scala/com/test/CaseSensitivity.scala")
       _ = assertNoDiagnostics()
+      path = server.toPath("src/main/scala/com/test/CaseSensitivity.scala")
 
       // Case insensitive search for "camel"
       _ = assertNoDiff(
-        server.server.queryEngine.globSearch("camel", Set.empty).show,
+        server.server.queryEngine.globSearch("camel", Set.empty, path).show,
         """|class com.test.CamelCaseClass
            |method com.test.CamelCaseClass.camelCaseMethod
            |""".stripMargin,
@@ -178,7 +184,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
 
       // Case insensitive search for "UPPERCASE"
       _ = assertNoDiff(
-        server.server.queryEngine.globSearch("uppercase", Set.empty).show,
+        server.server.queryEngine.globSearch("uppercase", Set.empty, path).show,
         """|class javax.swing.text.MaskFormatter.UpperCaseCharacter
            |method com.test.UPPERCASE_OBJECT.UPPERCASE_METHOD
            |object com.test.UPPERCASE_OBJECT
@@ -187,7 +193,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
 
       // Case insensitive search for "lowercase"
       _ = assertNoDiff(
-        server.server.queryEngine.globSearch("lowercase", Set.empty).show,
+        server.server.queryEngine.globSearch("lowercase", Set.empty, path).show,
         """|class javax.swing.text.MaskFormatter.LowerCaseCharacter
            |method com.test.lowercase_object.lowercase_method
            |object com.test.lowercase_object
@@ -241,6 +247,9 @@ class QueryLspSuite extends BaseLspSuite("query") {
         "src/main/scala/com/test/nested/package1/Class1.scala"
       )
       _ = assertNoDiagnostics()
+      path = server.toPath(
+        "src/main/scala/com/test/nested/package1/Class1.scala"
+      )
 
       // Search for all packages
       _ = assertNoDiff(
@@ -248,6 +257,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
           .globSearch(
             "package",
             Set(SymbolType.Package),
+            path,
           )
           .show,
         """|package com.test.nested.package1
@@ -261,6 +271,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
           .globSearch(
             "test",
             Set(SymbolType.Package),
+            path,
           )
           .show,
         """|package com.test
@@ -274,6 +285,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
           .globSearch(
             "nested",
             Set(SymbolType.Package),
+            path,
           )
           .show,
         """|package com.test.nested
@@ -315,8 +327,12 @@ class QueryLspSuite extends BaseLspSuite("query") {
         "a/src/main/scala/com/test/nested/package1/Class1.scala"
       )
       _ = assertNoDiagnostics()
+      path = server.toPath(
+        "a/src/main/scala/com/test/nested/package1/Class1.scala"
+      )
       res <- server.server.queryEngine.inspect(
-        "com.test.nested.package1.Class1"
+        "com.test.nested.package1.Class1",
+        path,
       )
 
       _ = assertNoDiff(
@@ -359,9 +375,13 @@ class QueryLspSuite extends BaseLspSuite("query") {
       _ <- server.didOpen(
         "a/src/main/scala/com/test/nested/package1/Class1.scala"
       )
+      path = server.toPath(
+        "a/src/main/scala/com/test/nested/package1/Class1.scala"
+      )
       _ = assertNoDiagnostics()
       res <- server.server.queryEngine.getDocumentation(
-        "com.test.nested.package1.Class1.add"
+        "com.test.nested.package1.Class1.add",
+        path,
       )
 
       _ = assertNoDiff(

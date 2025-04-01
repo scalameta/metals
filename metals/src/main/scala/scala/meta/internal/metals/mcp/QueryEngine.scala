@@ -5,6 +5,7 @@ import java.{util => ju}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.Docstrings
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -12,11 +13,11 @@ import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.internal.metals.docstrings.query
 import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.io.AbsolutePath
 import scala.meta.pc.ContentType
 import scala.meta.pc.InspectResult
 import scala.meta.pc.ParentSymbols
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.SymbolKind
 
 /**
@@ -27,10 +28,10 @@ import org.eclipse.lsp4j.SymbolKind
  */
 class QueryEngine(
     workspaceSearchProvider: WorkspaceSymbolProvider,
-    focusedDocumentBuildTarget: () => Option[BuildTargetIdentifier],
     index: GlobalSymbolIndex,
     compilers: Compilers,
     docstrings: Docstrings,
+    buildTargets: BuildTargets,
 )(implicit ec: ExecutionContext) {
 
   /**
@@ -38,11 +39,13 @@ class QueryEngine(
    *
    * @param query The search query (e.g., "matching" will search for "*matching*")
    * @param symbolTypes Set of symbol types to filter results (empty means all types)
+   * @param path Path to the file in context
    * @return Collection of matching symbols with their information
    */
   def globSearch(
       query: String,
       symbolTypes: Set[SymbolType] = Set.empty,
+      path: AbsolutePath,
       enableDebug: Boolean = false,
   ): Seq[SymbolSearchResult] = {
 
@@ -61,15 +64,18 @@ class QueryEngine(
       isShortQueryRetry = false,
     )
 
+    val buildTarget =
+      buildTargets.sourceBuildTargets(path).flatMap(_.headOption)
+
     // use focused document build target
     workspaceSearchProvider.search(
       wsQuery,
       visitor,
-      focusedDocumentBuildTarget(),
+      buildTarget,
     )
     workspaceSearchProvider.searchWorkspacePackages(
       visitor,
-      focusedDocumentBuildTarget(),
+      buildTarget,
     )
 
     visitor.getResults
@@ -79,12 +85,12 @@ class QueryEngine(
    * Inspect a specific symbol to get detailed information.
    *
    * @param fqcn Fully qualified class name (or symbol)
-   * @param deep Whether to perform a deep inspection
+   * @param path Path to the file in context
    * @return Information about the symbol
    */
   def inspect(
       fqcn: String,
-      deep: Boolean = false,
+      path: AbsolutePath,
   ): Future[List[SymbolInspectResult]] = {
 
     // Implementation would need to:
@@ -96,7 +102,9 @@ class QueryEngine(
     // use the workspace provider and index to resolve the symbol
     // and extract detailed information about its members
 
-    focusedDocumentBuildTarget()
+    buildTargets
+      .sourceBuildTargets(path)
+      .flatMap(_.headOption)
       .map { buildTarget =>
         compilers.inspect(buildTarget, fqcn, inspectLevel = 1).map {
           _.flatMap { res =>
@@ -162,7 +170,8 @@ class QueryEngine(
    * @return Documentation for the symbol
    */
   def getDocumentation(
-      fqcn: String
+      fqcn: String,
+      path: AbsolutePath,
   ): Future[Option[SymbolDocumentationSearchResult]] = {
 
     // Implementation would need to:
@@ -171,7 +180,9 @@ class QueryEngine(
 
     // This is a placeholder - the actual implementation would
     // parse Scaladoc from the source file
-    focusedDocumentBuildTarget()
+    buildTargets
+      .sourceBuildTargets(path)
+      .flatMap(_.headOption)
       .map { bt =>
         compilers.inspect(bt, fqcn, inspectLevel = 0).map { syms =>
           val res = syms.iterator.flatMap { s =>

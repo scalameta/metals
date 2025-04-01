@@ -1459,10 +1459,10 @@ abstract class MetalsLspService(
   lazy val queryEngine =
     new QueryEngine(
       workspaceSymbols,
-      () => Option(focusedDocumentBuildTarget.get()),
       definitionIndex,
       compilers,
       symbolDocs,
+      buildTargets,
     )
 
   def startMcpServer(): Future[Unit] =

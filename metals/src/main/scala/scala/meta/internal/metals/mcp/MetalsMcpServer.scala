@@ -161,42 +161,32 @@ class MetalsMcpServer(
 
   private def createFileCompileTool(): SyncToolSpecification = {
     val schema =
-      """{"type": "object", "properties": { "fileUri": { "type": "string" } }}"""
+      """{"type": "object", "properties": { "file": { "type": "string" } }}"""
     new SyncToolSpecification(
       new Tool("compile-file", "Compile Scala file", schema),
       (exchange, arguments) => {
         try {
-          val path =
-            Option(arguments.get("fileUri").asInstanceOf[String])
-              .map(fileUri => AbsolutePath(Path.of(fileUri))(projectPath))
-              .orElse { focusedDocument() }
-          path match {
-            case Some(path) =>
-              val res = compilations.compileFile(path).map {
-                case Some(_) =>
-                  val result = diagnostics
-                    .forFile(path)
-                    .map { d =>
-                      val startLine = d.getRange().getStart().getLine()
-                      val endLine = d.getRange().getEnd().getLine()
-                      s"($startLine-$endLine):\n${d.getMessage()}"
-                    }
-                    .mkString("\n")
-                  new CallToolResult(createContent(result), false)
-                case None =>
-                  new CallToolResult(
-                    createContent(
-                      s"Error: Incorrect file path: ${path.toString()}"
-                    ),
-                    true,
-                  )
-              }
-              Await.result(res, 10.seconds)
-            case None =>
-              new CallToolResult(
-                createContent("Error: No file path provided"),
-                true,
-              )
+          withPath(arguments) { path =>
+            val res = compilations.compileFile(path).map {
+              case Some(_) =>
+                val result = diagnostics
+                  .forFile(path)
+                  .map { d =>
+                    val startLine = d.getRange().getStart().getLine()
+                    val endLine = d.getRange().getEnd().getLine()
+                    s"($startLine-$endLine):\n${d.getMessage()}"
+                  }
+                  .mkString("\n")
+                new CallToolResult(createContent(result), false)
+              case None =>
+                new CallToolResult(
+                  createContent(
+                    s"Error: Incorrect file path: ${path.toString()}"
+                  ),
+                  true,
+                )
+            }
+            Await.result(res, 10.seconds)
           }
         } catch {
           case e: Exception =>
@@ -239,6 +229,9 @@ class MetalsMcpServer(
         "properties": {
           "query": {
             "type": "string"
+          },
+          "file": {
+            "type": "string"
           }
         },
         "required": ["query"]
@@ -249,8 +242,13 @@ class MetalsMcpServer(
       (exchange, arguments) => {
         try {
           val query = arguments.get("query").asInstanceOf[String]
-          val result = queryEngine.globSearch(query).map(_.show).mkString("\n")
-          new CallToolResult(createContent(result), false)
+          withPath(arguments) { path =>
+            val result = queryEngine
+              .globSearch(query, Set.empty, path)
+              .map(_.show)
+              .mkString("\n")
+            new CallToolResult(createContent(result), false)
+          }
         } catch {
           case e: Exception =>
             new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
@@ -273,6 +271,9 @@ class MetalsMcpServer(
               "type": "string",
               "enum": ["package", "class", "object", "function", "method", "trait"]
             }
+          },
+          "file": {
+            "type": "string"
           }
         },
         "required": ["query", "symbolType"]
@@ -287,18 +288,20 @@ class MetalsMcpServer(
       (exchange, arguments) => {
         try {
           val query = arguments.get("query").asInstanceOf[String]
-          val symbolTypes = arguments
-            .get("symbolType")
-            .asInstanceOf[ArrayList[String]]
-            .asScala
-            .flatMap(s => SymbolType.values.find(_.name == s))
-            .toSet
+          withPath(arguments) { path =>
+            val symbolTypes = arguments
+              .get("symbolType")
+              .asInstanceOf[ArrayList[String]]
+              .asScala
+              .flatMap(s => SymbolType.values.find(_.name == s))
+              .toSet
 
-          val result = queryEngine
-            .globSearch(query, symbolTypes)
-            .map(_.show)
-            .mkString("\n")
-          new CallToolResult(createContent(result), false)
+            val result = queryEngine
+              .globSearch(query, symbolTypes, path)
+              .map(_.show)
+              .mkString("\n")
+            new CallToolResult(createContent(result), false)
+          }
         } catch {
           case e: Exception =>
             new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
@@ -315,8 +318,8 @@ class MetalsMcpServer(
           "fqcn": {
             "type": "string"
           },
-          "inspectMembers": {
-            "type": "boolean"
+          "file": {
+            "type": "string"
           }
         },
         "required": ["fqcn"]
@@ -327,15 +330,13 @@ class MetalsMcpServer(
       (exchange, arguments) => {
         try {
           val fqcn = arguments.get("fqcn").asInstanceOf[String]
-          val inspectMembers = arguments
-            .getOrDefault("inspectMembers", false)
-            .asInstanceOf[Boolean]
-
-          val result = queryEngine.inspect(fqcn, inspectMembers).map(_.show)
-          new CallToolResult(
-            createContent(Await.result(result, 10.seconds)),
-            false,
-          )
+          withPath(arguments) { path =>
+            val result = queryEngine.inspect(fqcn, path).map(_.show)
+            new CallToolResult(
+              createContent(Await.result(result, 10.seconds)),
+              false,
+            )
+          }
         } catch {
           case e: Exception =>
             new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
@@ -350,7 +351,10 @@ class MetalsMcpServer(
         "type": "object",
         "properties": {
           "fqcn": {
-            "type": "string"
+            "type": "string",
+            "file": {
+              "type": "string"
+            }
           }
         },
         "required": ["fqcn"]
@@ -365,20 +369,36 @@ class MetalsMcpServer(
       (exchange, arguments) => {
         try {
           val fqcn = arguments.get("fqcn").asInstanceOf[String]
-
-          val result = queryEngine.getDocumentation(fqcn).map {
-            case Some(result) => result.show
-            case None => "Error: Symbol not found"
+          withPath(arguments) { path =>
+            val result = queryEngine.getDocumentation(fqcn, path).map {
+              case Some(result) => result.show
+              case None => "Error: Symbol not found"
+            }
+            new CallToolResult(
+              createContent(Await.result(result, 10.seconds)),
+              false,
+            )
           }
-          new CallToolResult(
-            createContent(Await.result(result, 10.seconds)),
-            false,
-          )
         } catch {
           case e: Exception =>
             new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
         }
       },
     )
+  }
+
+  private def withPath(
+      arguments: java.util.Map[String, Object]
+  )(f: AbsolutePath => CallToolResult): CallToolResult = {
+    Option(arguments.get("file").asInstanceOf[String])
+      .map(path => AbsolutePath(Path.of(path))(projectPath))
+      .orElse { focusedDocument() } match {
+      case Some(value) => f(value)
+      case None =>
+        new CallToolResult(
+          createContent("Error: No file path provided or incorrect file path"),
+          true,
+        )
+    }
   }
 }
