@@ -278,10 +278,11 @@ class HoverProvider(
         )
         val name =
           if (symbol.isConstructor) "this"
-          else symbol.name.decoded
-        val flags = List(symbolFlagString(symbol), keyword, name)
-          .filterNot(_.isEmpty)
-          .mkString(" ")
+          else Identifier.backtickWrap(symbol.name.decoded)
+        val flags =
+          List(symbolFlagString(symbol), keyword, name)
+            .filterNot(_.isEmpty)
+            .mkString(" ")
         val prettyType =
           metalsToLongString(tpe.widen.finalResultType.map(_.dealias), history)
         val macroSuffix =
