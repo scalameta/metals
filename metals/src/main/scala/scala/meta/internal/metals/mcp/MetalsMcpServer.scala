@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.mcp
 
 import java.io.File
+import java.net.InetSocketAddress
 import java.util.ArrayList
 import java.util.Arrays
 import java.util.{List => JList}
@@ -108,11 +109,17 @@ class MetalsMcpServer(queryEngine: QueryEngine, projectPath: String)(implicit
 
     val undertowServer = Undertow
       .builder()
-      .addHttpListener(8080, "localhost")
+      .addHttpListener(0, "localhost")
       .setHandler(deployment.start())
       .build()
-
     undertowServer.start()
+
+    val listenerInfo = undertowServer.getListenerInfo()
+    val port =
+      listenerInfo.get(0).getAddress().asInstanceOf[InetSocketAddress].getPort()
+
+    scribe.info(s"MCP server started on port: $port")
+
     cancelable.add(() => undertowServer.stop())
 
   }
