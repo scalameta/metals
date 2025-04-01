@@ -449,18 +449,6 @@ abstract class MetalsLspService(
     )
   )
 
-  val queryEngine = new QueryEngine(
-    workspaceSymbols,
-    () => Option(focusedDocumentBuildTarget.get()),
-    definitionIndex,
-    compilers,
-    symbolDocs,
-  )
-
-  protected val mcpServer: MetalsMcpServer =
-    register(new MetalsMcpServer(queryEngine, folder.toNIO.toString))
-  mcpServer.run()
-
   val referencesProvider: ReferenceProvider = new ReferenceProvider(
     folder,
     semanticdbs,
@@ -693,6 +681,9 @@ abstract class MetalsLspService(
                 onInitialized(),
                 Future(workspaceSymbols.indexClasspath()),
                 Future(formattingProvider.load()),
+                if (serverInputs.initialServerConfig.mcpEnabled)
+                  startMcpServer()
+                else Future.unit,
               )
             )
       } yield ()
@@ -1462,6 +1453,25 @@ abstract class MetalsLspService(
     )
   )
   buildClient.registerLogForwarder(debugProvider)
+
+  private val isMcpServerRunning = new AtomicBoolean(false)
+
+  lazy val queryEngine =
+    new QueryEngine(
+      workspaceSymbols,
+      () => Option(focusedDocumentBuildTarget.get()),
+      definitionIndex,
+      compilers,
+      symbolDocs,
+    )
+
+  def startMcpServer(): Future[Unit] =
+    Future {
+      if (!isMcpServerRunning.getAndSet(true))
+        register(new MetalsMcpServer(queryEngine, folder.toNIO.toString)).run()
+    }.recover { case e: Exception =>
+      scribe.error("Error starting MCP server", e)
+    }
 
   def debugDiscovery(params: DebugDiscoveryParams): Future[DebugSession] =
     debugDiscovery
