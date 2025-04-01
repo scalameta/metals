@@ -839,7 +839,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/C/D/Sun.scala"),
     expectedRenames =
-      Map("A" -> "C", "B" -> "D", "_" -> "{m, Sun, XtentionSun}"),
+      Map("A" -> "C", "B" -> "D", "_" -> "{Sun, XtentionSun, m}"),
     sourcesAreCompiled = true,
   )
 
