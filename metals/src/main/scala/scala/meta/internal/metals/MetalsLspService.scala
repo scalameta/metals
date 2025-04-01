@@ -45,6 +45,8 @@ import scala.meta.internal.metals.doctor.MetalsServiceInfo
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
+import scala.meta.internal.metals.mcp.MetalsMcpServer
+import scala.meta.internal.metals.mcp.QueryEngine
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.scalacli.ScalaCliServers
@@ -57,7 +59,6 @@ import scala.meta.internal.parsing.ClassFinderGranularity
 import scala.meta.internal.parsing.DocumentSymbolProvider
 import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.Trees
-import scala.meta.internal.query.QueryEngine
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.search.SymbolHierarchyOps
 import scala.meta.internal.worksheets.WorksheetProvider

@@ -3,8 +3,8 @@ package tests
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-import scala.meta.internal.query.McpPrinter._
-import scala.meta.internal.query._
+import scala.meta.internal.metals.mcp.McpPrinter._
+import scala.meta.internal.metals.mcp.SymbolType
 class QueryLspSuite extends BaseLspSuite("query") {
 
   // @kasiaMarek: missing:

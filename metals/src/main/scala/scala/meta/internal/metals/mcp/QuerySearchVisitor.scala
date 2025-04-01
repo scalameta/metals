@@ -1,4 +1,4 @@
-package scala.meta.internal.query
+package scala.meta.internal.metals.mcp
 
 import java.nio.file.Path
 
@@ -9,9 +9,9 @@ import scala.meta.internal.metals.Classfile
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SemanticdbDefinition
+import scala.meta.internal.metals.mcp.QueryEngine.kindToTypeString
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Symbol
-import scala.meta.internal.query.QueryEngine.kindToTypeString
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.DescriptorParser
 import scala.meta.internal.semanticdb.Scala.Symbols

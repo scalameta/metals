@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.metals.mcp
 
 import java.io.File
 import java.util.ArrayList
@@ -9,10 +9,12 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
+import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.query.McpPrinter._
-import scala.meta.internal.query.QueryEngine
-import scala.meta.internal.query.SymbolType
+import scala.meta.internal.metals.MutableCancelable
+import scala.meta.internal.metals.mcp.McpPrinter._
+import scala.meta.internal.metals.mcp.QueryEngine
+import scala.meta.internal.metals.mcp.SymbolType
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.modelcontextprotocol.server.McpServer

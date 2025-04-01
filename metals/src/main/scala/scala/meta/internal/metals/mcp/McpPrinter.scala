@@ -1,4 +1,4 @@
-package scala.meta.internal.query
+package scala.meta.internal.metals.mcp
 
 object McpPrinter {
   implicit class XtensionSearchResult(result: SymbolSearchResult) {

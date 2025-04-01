@@ -1,4 +1,4 @@
-package scala.meta.internal.query
+package scala.meta.internal.metals.mcp
 
 import java.{util => ju}
 
