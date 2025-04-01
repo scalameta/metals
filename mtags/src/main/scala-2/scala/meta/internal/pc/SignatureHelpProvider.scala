@@ -27,10 +27,10 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
       _ <- safeTypedTreeAt(pos)
       enclosingApply = new EnclosingApply(pos).find(unit.body)
       typedEnclosing <- safeTypedTreeAt(enclosingApply.pos)
-      encolsingCall <- new MethodCallTraverser(unit, pos).fromTree(
+      enclosingCall <- new MethodCallTraverser(unit, pos).fromTree(
         typedEnclosing
       )
-    } yield toSignatureHelp(encolsingCall)) getOrElse new SignatureHelp()
+    } yield toSignatureHelp(enclosingCall)) getOrElse new SignatureHelp()
   }
 
   private def safeTypedTreeAt(pos: Position): Option[Tree] =
@@ -153,20 +153,36 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
           else fromOverload
         )
     }
-    def alternatives: List[Symbol] =
+
+    /** Available overloads along with their type as seen from the current method call */
+    def alternatives: List[(Symbol, Type)] =
       symbol match {
         case o: ModuleSymbol =>
-          o.info.member(compiler.nme.apply).alternatives
+          o.info
+            .member(compiler.nme.apply)
+            .alternatives
+            .map(alt => alt -> qual.tpe.memberType(alt))
         case o: ClassSymbol =>
-          o.info.member(compiler.termNames.CONSTRUCTOR).alternatives
+          o.info
+            .member(compiler.termNames.CONSTRUCTOR)
+            .alternatives
+            .map(alt => alt -> alt.tpe)
         case m: MethodSymbol if !m.isLocalToBlock =>
-          m.owner.info.member(symbol.name).alternatives
+          val recieverTpe = qual match {
+            case Select(qualifier, _) if qualifier.tpe ne null => qualifier.tpe
+            case _ => m.owner.info
+          }
+          recieverTpe
+            .member(symbol.name)
+            .alternatives
+            .map(alt => alt -> recieverTpe.memberType(alt))
         case _ =>
-          symbol.alternatives
+          symbol.alternatives.map(alt => alt -> alt.tpe)
       }
+
     def nonOverload: Symbol =
       if (!symbol.isOverloaded) symbol
-      else alternatives.headOption.getOrElse(symbol)
+      else alternatives.headOption.fold(symbol)(_._1)
     def gparamss: List[List[Symbol]] = {
       if (qualTpe.typeParams.isEmpty) nonOverload.paramLists
       else nonOverload.typeParams :: nonOverload.paramLists
@@ -278,7 +294,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
       call: MethodCall,
       activeArg: Arg
   ) {
-    def alternatives: List[Symbol] = call.alternatives
+    def alternatives: List[(Symbol, Type)] = call.alternatives
     def symbol: Symbol = call.symbol
   }
 
@@ -450,11 +466,13 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
     var activeParameter: Integer = null
     val shortenedNames = new ShortenedNames()
     val infos = t.alternatives.zipWithIndex.collect {
-      case (method, i) if !method.isErroneous =>
+      case ((method, alternativeTpe), i) if !method.isErroneous =>
+
         val isActiveSignature = method == activeParent
         val tpe =
           if (isActiveSignature) t.call.qualTpe
-          else method.info
+          else alternativeTpe
+
         val paramss: List[List[Symbol]] =
           if (!isActiveSignature) {
             mparamss(tpe, t.call.isUnapplyMethod)
