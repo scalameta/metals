@@ -1,6 +1,5 @@
 package scala.meta.internal.metals.mcp
 
-import java.io.File
 import java.net.InetSocketAddress
 import java.nio.file.Path
 import java.util.ArrayList
@@ -43,6 +42,7 @@ class MetalsMcpServer(
     focusedDocument: () => Option[AbsolutePath],
     diagnostics: Diagnostics,
     buildTargets: BuildTargets,
+    mcpTestRunner: McpTestRunner,
 )(implicit
     ec: ExecutionContext
 ) extends Cancelable {
@@ -76,7 +76,7 @@ class MetalsMcpServer(
     // Register tools
     syncServer.addTool(createFileCompileTool())
     syncServer.addTool(createCompileTool())
-    syncServer.addTool(createTestTool(projectPath.toString()))
+    syncServer.addTool(createTestTool())
     syncServer.addTool(createGlobSearchTool())
     syncServer.addTool(createTypedGlobSearchTool())
     syncServer.addTool(createInspectTool())
@@ -196,24 +196,24 @@ class MetalsMcpServer(
     )
   }
 
-  private def createTestTool(projectPath: String): SyncToolSpecification = {
-    val schema = """{"type": "object", "properties": {}}"""
+  private def createTestTool(): SyncToolSpecification = {
+    val schema =
+      """{"type": "object", "properties": { "file": { "type": "string" }, "testClass": { "type": "string" }}}"""
     new SyncToolSpecification(
       new Tool("test", "Run Scala tests", schema),
-      (exchange, _) => {
+      (exchange, arguments) => {
         try {
-          val pb = new ProcessBuilder("scala", "test", ".")
-          pb.directory(new File(projectPath))
-          val process = pb.start()
-
-          val output = new String(process.getInputStream.readAllBytes())
-          val error = new String(process.getErrorStream.readAllBytes())
-
-          process.waitFor()
-          val result =
-            output + (if (error.isEmpty) "" else s"\nErrors:\n$error")
-
-          new CallToolResult(createContent(result), false)
+          val testClass = arguments.get("testClass").asInstanceOf[String]
+          withPath(arguments) { path =>
+            val result = mcpTestRunner.runTests(path, testClass)
+            result match {
+              case Right(value) =>
+                val content = Await.result(value, 10.seconds)
+                new CallToolResult(createContent(content), false)
+              case Left(error) =>
+                new CallToolResult(createContent(s"Error: $error"), true)
+            }
+          }
         } catch {
           case e: Exception =>
             new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)

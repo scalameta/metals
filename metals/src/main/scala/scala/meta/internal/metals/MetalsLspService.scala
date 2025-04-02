@@ -45,6 +45,7 @@ import scala.meta.internal.metals.doctor.MetalsServiceInfo
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
+import scala.meta.internal.metals.mcp.McpTestRunner
 import scala.meta.internal.metals.mcp.MetalsMcpServer
 import scala.meta.internal.metals.mcp.QueryEngine
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
@@ -1465,6 +1466,13 @@ abstract class MetalsLspService(
       buildTargets,
     )
 
+  lazy val mcpTestRunner = new McpTestRunner(
+    debugProvider,
+    buildTargets,
+    folder,
+    () => userConfig,
+  )
+
   def startMcpServer(): Future[Unit] =
     Future {
       if (!isMcpServerRunning.getAndSet(true))
@@ -1476,6 +1484,7 @@ abstract class MetalsLspService(
             () => focusedDocument,
             diagnostics,
             buildTargets,
+            mcpTestRunner,
           )
         ).run()
     }.recover { case e: Exception =>

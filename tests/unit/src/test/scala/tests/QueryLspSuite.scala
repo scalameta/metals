@@ -11,7 +11,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
   // - methods / values from dependencies (to think about)
   // - type aliases from dependencies ???
   test("glob search all types - workspace") {
-    val fut = for {
+    for {
       _ <- initialize(
         s"""
            |/src/main/scala/com/test/TestClass.scala
@@ -132,9 +132,6 @@ class QueryLspSuite extends BaseLspSuite("query") {
         "query: globSearch(\"test\", Set(SymbolType.Class))",
       )
     } yield ()
-
-    try Await.result(fut, 10.seconds)
-    finally cancelServer()
   }
 
   test("glob search case insensitive - workspace") {
@@ -206,7 +203,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
   }
 
   test("glob search packages - workspace") {
-    val fut = for {
+    for {
       _ <- initialize(
         s"""
            |/src/main/scala/com/test/nested/package1/Class1.scala
@@ -292,14 +289,11 @@ class QueryLspSuite extends BaseLspSuite("query") {
            |""".stripMargin,
       )
     } yield ()
-
-    try Await.result(fut, 10.seconds)
-    finally cancelServer()
   }
 
   test("inspect") {
     cleanWorkspace()
-    val fut = for {
+    for {
       _ <- initialize(
         s"""
            |/metals.json
@@ -346,14 +340,11 @@ class QueryLspSuite extends BaseLspSuite("query") {
            |""".stripMargin,
       )
     } yield ()
-
-    try Await.result(fut, 10.seconds)
-    finally cancelServer()
   }
 
   test("docstrings") {
     cleanWorkspace()
-    val fut = for {
+    for {
       _ <- initialize(
         s"""
            |/metals.json
@@ -393,9 +384,6 @@ class QueryLspSuite extends BaseLspSuite("query") {
            |""".stripMargin,
       )
     } yield ()
-
-    try Await.result(fut, 10.seconds)
-    finally cancelServer()
   }
 
   def timed[T](f: => T): T = {
