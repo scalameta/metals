@@ -1485,6 +1485,9 @@ abstract class MetalsLspService(
             diagnostics,
             buildTargets,
             mcpTestRunner,
+            initializeParams.getClientInfo().getName(),
+            getVisibleName,
+            languageClient,
           )
         ).run()
     }.recover { case e: Exception =>

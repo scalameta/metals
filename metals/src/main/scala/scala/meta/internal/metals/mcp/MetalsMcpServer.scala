@@ -35,6 +35,9 @@ import io.modelcontextprotocol.spec.McpSchema.Tool
 import io.undertow.Undertow
 import io.undertow.servlet.Servlets
 import io.undertow.servlet.api.InstanceHandle
+import org.eclipse.lsp4j.services.LanguageClient
+import org.eclipse.lsp4j.MessageParams
+import org.eclipse.lsp4j.MessageType
 class MetalsMcpServer(
     queryEngine: QueryEngine,
     projectPath: AbsolutePath,
@@ -43,6 +46,9 @@ class MetalsMcpServer(
     diagnostics: Diagnostics,
     buildTargets: BuildTargets,
     mcpTestRunner: McpTestRunner,
+    editorName: String,
+    projectName: String,
+    languageClient: LanguageClient,
 )(implicit
     ec: ExecutionContext
 ) extends Cancelable {
@@ -130,7 +136,16 @@ class MetalsMcpServer(
     val port =
       listenerInfo.get(0).getAddress().asInstanceOf[InetSocketAddress].getPort()
 
-    scribe.info(s"MCP server started on port: $port")
+    if (editorName == "Cursor") {
+      CursorMcpConfig.generateConfig(port, projectName, projectPath)
+    } else {
+      languageClient.showMessage(
+        new MessageParams(
+          MessageType.Info,
+          s"MCP server started on port: $port",
+        )
+      )
+    }
 
     cancelable.add(() => undertowServer.stop())
 
