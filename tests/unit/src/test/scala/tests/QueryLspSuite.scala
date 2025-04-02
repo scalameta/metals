@@ -327,6 +327,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
       res <- server.server.queryEngine.inspect(
         "com.test.nested.package1.Class1",
         path,
+        provideMethodSignatures = true,
       )
 
       _ = assertNoDiff(

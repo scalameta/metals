@@ -320,6 +320,10 @@ class MetalsMcpServer(
           },
           "file": {
             "type": "string"
+          },
+          "provideMethodSignatures": {
+            "type": "boolean",
+            "default": false
           }
         },
         "required": ["fqcn"]
@@ -330,8 +334,12 @@ class MetalsMcpServer(
       (exchange, arguments) => {
         try {
           val fqcn = arguments.get("fqcn").asInstanceOf[String]
+          val provideMethodSignatures =
+            arguments.get("provideMethodSignatures").asInstanceOf[Boolean]
           withPath(arguments) { path =>
-            val result = queryEngine.inspect(fqcn, path).map(_.show)
+            val result = queryEngine
+              .inspect(fqcn, path, provideMethodSignatures)
+              .map(_.show)
             new CallToolResult(
               createContent(Await.result(result, 10.seconds)),
               false,

@@ -86,22 +86,14 @@ class QueryEngine(
    *
    * @param fqcn Fully qualified class name (or symbol)
    * @param path Path to the file in context
+   * @param provideMethodSignatures Whether to provide signatures for method members
    * @return Information about the symbol
    */
   def inspect(
       fqcn: String,
       path: AbsolutePath,
+      provideMethodSignatures: Boolean = true,
   ): Future[List[SymbolInspectResult]] = {
-
-    // Implementation would need to:
-    // 1. Find the symbol definition
-    // 2. Extract information based on symbol type
-    // 3. If deep=true, fetch nested information in multiple queries in parallel up to 3 levels deep
-
-    // This is a placeholder - the actual implementation would
-    // use the workspace provider and index to resolve the symbol
-    // and extract detailed information about its members
-
     buildTargets
       .sourceBuildTargets(path)
       .flatMap(_.headOption)
@@ -114,9 +106,11 @@ class QueryEngine(
               .toList
               .partition(_.kind() == SymbolKind.Constructor)
             val members =
-              otherMembers.flatMap(res => mapPcInspectResult(res, Nil, Nil))
+              otherMembers.flatMap(res =>
+                mapPcInspectResult(res, Nil, Nil, provideMethodSignatures)
+              )
             val constructors = constructorMembers
-              .flatMap(mapPcInspectResult(_, Nil, Nil))
+              .flatMap(mapPcInspectResult(_, Nil, Nil, provideMethodSignatures))
               .collect { case m: MethodInspectResult => m }
             mapPcInspectResult(res, members, constructors)
           }
@@ -129,6 +123,7 @@ class QueryEngine(
       result: InspectResult,
       members: List[SymbolInspectResult],
       constructors: List[MethodInspectResult],
+      provideMethodSignatures: Boolean = true,
   ) = {
     val kind = QueryEngine
       .kindToTypeString(result.kind())
@@ -140,7 +135,8 @@ class QueryEngine(
         Some(ClassInspectResult(path, members, constructors))
       case SymbolType.Object => Some(ObjectInspectResult(path, members))
       case SymbolType.Trait => Some(TraitInspectResult(path, members))
-      case SymbolType.Method | SymbolType.Function | SymbolType.Constructor =>
+      case SymbolType.Method | SymbolType.Function | SymbolType.Constructor
+          if provideMethodSignatures =>
         Some(
           MethodInspectResult(
             path = path,
@@ -156,6 +152,13 @@ class QueryEngine(
 
             },
             visibility = result.visibility(),
+            symbolType = kind,
+          )
+        )
+      case SymbolType.Method | SymbolType.Function | SymbolType.Constructor =>
+        Some(
+          ShortMethodInspectResult(
+            path = path,
             symbolType = kind,
           )
         )
@@ -310,6 +313,11 @@ case class MethodInspectResult(
     returnType: String,
     parameters: List[ParamList],
     visibility: String,
+    override val symbolType: SymbolType,
+) extends SymbolInspectResult
+
+case class ShortMethodInspectResult(
+    override val path: String,
     override val symbolType: SymbolType,
 ) extends SymbolInspectResult
 

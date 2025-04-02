@@ -12,7 +12,7 @@ object McpPrinter {
         else
           members.ssorted
             .map(_.show(fullPath = false))
-            .mkString("\n\t -", "\n\t -", "")
+            .mkString("\n\t - ", "\n\t - ", "")
       def name = if (fullPath) result.path else result.name
       result match {
         case ObjectInspectResult(_, members) =>
@@ -27,11 +27,20 @@ object McpPrinter {
             case SymbolType.Function => "function"
             case _ => "method"
           }
-          s"$visibility $kindString $name${parameters.collect {
+          val visibilityString =
+            if (visibility.nonEmpty) s"$visibility " else ""
+          s"$visibilityString$kindString $name${parameters.collect {
               case TermParamList(params, "") => s"(${params.mkString(", ")})"
               case TermParamList(params, prefix) => s"($prefix${params.mkString(", ")})"
               case TypedParamList(params) if params.nonEmpty => s"[${params.mkString(", ")}]"
             }.mkString}${if (kind == SymbolType.Constructor) "" else s": $returnType"}"
+        case ShortMethodInspectResult(_, kind) =>
+          val kindString = kind match {
+            case SymbolType.Constructor => "constructor"
+            case SymbolType.Function => "function"
+            case _ => "method"
+          }
+          s"$kindString $name"
         case PackageInspectResult(_, members) =>
           s"package $name${showMembers(members)}"
         case _ => s"${result.symbolType.name} $name"
