@@ -40,6 +40,7 @@ class SbtBloopLspSuite
   test("environment-variables") {
     cleanWorkspace()
     workspace.resolve("sbt").createDirectories()
+
     for {
       _ <- initialize(
         s"""|/project/build.properties
@@ -47,14 +48,15 @@ class SbtBloopLspSuite
             |/build.sbt
             |scalaVersion := "${V.scala213}"
             |sys.env.get("MY_ENV_VAR").get
+            |/fake-shell.sh
+            |#!/bin/sh
+            |export MY_ENV_VAR="test-value"
             |""".stripMargin
       )
-    } yield {
-      assertNoDiff(
-        client.workspaceMessageRequests,
-        importBuildChangesMessage,
+      _ <- server.didChangeConfiguration(
+        userConfig.copy(defaultShell = Some("./fake-shell.sh")).toString
       )
-    }
+    } yield {}
   }
 
   test("basic") {
