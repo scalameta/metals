@@ -1312,4 +1312,16 @@ class CompletionArgSuite extends BaseCompletionSuite {
     topLines = Some(3)
   )
 
+  check(
+    "autofill arguments",
+    """
+      |case class A(x: Int, y: Int)
+      |
+      |object Main {
+      | A.apply(x@@)
+      |}
+      |""".stripMargin,
+    """x = : Int
+      |x = ???, y = ???""".stripMargin
+  )
 }
