@@ -165,4 +165,62 @@ class MillServerSuite
                        |""".stripMargin,
   )
 
+  test(s"no-ide-modules-are-not-loaded") {
+    def millBspConfig = workspace.resolve(".bsp/mill-bsp.json")
+    writeLayout(
+      s"""
+         |/.mill-version
+         |$supportedBspVersion
+         |/build.sc
+         |package build
+         |import mill.scalalib.bsp.BspBuildTarget
+         |import mill.scalalib.bsp.BspModule
+         |  
+         |import mill._
+         |import scalalib._
+         |  
+         |object foo extends ScalaModule {
+         |  def scalaVersion = "2.13.13"
+         |}
+         |  
+         |object bar extends ScalaModule with BspModule  {
+         |  def scalaVersion = "2.13.13"
+         |  
+         |  override def bspBuildTarget: BspBuildTarget = {
+         |    val original = super.bspBuildTarget
+         |    original.copy(tags = original.tags :+ BspModule.Tag.NoIDE)
+         |  }
+         |}
+         |/foo/src/Main.scala
+         |package foo
+         |
+         |object Main extends App {
+         |  println("Hello, world!")
+         |}
+         |
+         |/bar/src/Main.scala
+         |package foo
+         |
+         |object Main extends App {
+         |  println("Hello, world!")
+         |}
+         |""".stripMargin
+    )
+    for {
+      _ <- server.initialize()
+      _ <- server.initialized()
+      _ <- server.executeCommand(ServerCommands.GenerateBspConfig)
+      _ <- server.server.buildServerPromise.future
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        importBuildMessage,
+      )
+      targets <- server.listBuildTargets
+    } yield {
+      assert(millBspConfig.exists)
+      server.assertBuildServerConnection()
+      assertEquals(targets, List("foo", "mill-build/"))
+    }
+  }
+
 }

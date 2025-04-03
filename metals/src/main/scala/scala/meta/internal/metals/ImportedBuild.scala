@@ -121,7 +121,8 @@ object ImportedBuild {
     val targets = workspaceBuildTargets.getTargets.asScala.toList
     val scalaJavaTargets = targets.filter { target =>
       val langIds = target.getLanguageIds.asScala.toList
-      langIds.contains("scala") || langIds.contains("java")
+      val isNoIde = target.getTags().contains("no-ide")
+      !isNoIde && (langIds.contains("scala") || langIds.contains("java"))
     }
     workspaceBuildTargets.setTargets(scalaJavaTargets.asJava)
     workspaceBuildTargets
