@@ -16,7 +16,7 @@ class McpConfigSuite extends BaseSuite {
       expected: String,
   ): Unit = {
     test(name) {
-      val obtained = CursorMcpConfig.generate(inputConfig, port, projectName)
+      val obtained = CursorMcpConfig.writeConfig(inputConfig, port, projectName)
       assertNoDiff(obtained, expected)
     }
   }
@@ -85,7 +85,7 @@ class McpConfigSuite extends BaseSuite {
     val projectName = "test-project"
 
     // First generation
-    CursorMcpConfig.generateConfig(port, projectName, projectPath)
+    CursorMcpConfig.writeConfig(port, projectName, projectPath)
     val configFile = projectPath.resolve(".cursor/mcp.json")
     assert(configFile.exists)
     val firstContent = new String(
@@ -104,7 +104,7 @@ class McpConfigSuite extends BaseSuite {
     )
 
     // Update with different port
-    CursorMcpConfig.generateConfig(5678, projectName, projectPath)
+    CursorMcpConfig.writeConfig(5678, projectName, projectPath)
     val secondContent = new String(
       Files.readAllBytes(configFile.toNIO),
       StandardCharsets.UTF_8,
@@ -118,6 +118,67 @@ class McpConfigSuite extends BaseSuite {
         |    }
         |  }
         |}""".stripMargin,
+    )
+  }
+
+  test("getPort - valid config with port") {
+    val config = """{
+      "mcpServers": {
+        "test-project-metals": {
+          "url": "http://localhost:8080/sse"
+        }
+      }
+    }"""
+
+    assertEquals(
+      CursorMcpConfig.getPort(config, "test-project"),
+      Some(8080),
+    )
+  }
+
+  test("getPort - missing mcpServers") {
+    val config = "{}"
+    assertEquals(
+      CursorMcpConfig.getPort(config, "test-project"),
+      None,
+    )
+  }
+
+  test("getPort - missing project config") {
+    val config = """{
+      "mcpServers": {
+        "other-project-metals": {
+          "url": "http://localhost:8080/sse"
+        }
+      }
+    }"""
+
+    assertEquals(
+      CursorMcpConfig.getPort(config, "test-project"),
+      None,
+    )
+  }
+
+  test("getPort - invalid url format") {
+    val config = """{
+      "mcpServers": {
+        "test-project-metals": {
+          "url": "invalid-url"
+        }
+      }
+    }"""
+
+    assertEquals(
+      CursorMcpConfig.getPort(config, "test-project"),
+      None,
+    )
+  }
+
+  test("getPort - invalid JSON") {
+    val config = "invalid json"
+    assertEquals(
+      CursorMcpConfig.getPort(config, "test-project"),
+      None,
     )
   }
 }

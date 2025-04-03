@@ -125,9 +125,10 @@ class MetalsMcpServer(
     val deployment = manager.addDeployment(servletDeployment)
     deployment.deploy()
 
+    val configPort = CursorMcpConfig.readPort(projectPath, projectName)
     val undertowServer = Undertow
       .builder()
-      .addHttpListener(0, "localhost")
+      .addHttpListener(configPort.getOrElse(0), "localhost")
       .setHandler(deployment.start())
       .build()
     undertowServer.start()
@@ -136,13 +137,13 @@ class MetalsMcpServer(
     val port =
       listenerInfo.get(0).getAddress().asInstanceOf[InetSocketAddress].getPort()
 
-    if (editorName == "Cursor") {
-      CursorMcpConfig.generateConfig(port, projectName, projectPath)
+    if (editorName == "Cursor" && !configPort.isDefined) {
+      CursorMcpConfig.writeConfig(port, projectName, projectPath)
     } else {
       languageClient.showMessage(
         new MessageParams(
           MessageType.Info,
-          s"MCP server started on port: $port",
+          s"Metals MCP server started on port: $port. Refresh connection if needed.",
         )
       )
     }
