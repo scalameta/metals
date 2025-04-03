@@ -318,11 +318,11 @@ class QueryLspSuite extends BaseLspSuite("query") {
            |""".stripMargin
       )
       _ <- server.didOpen(
-        "a/src/main/scala/com/test/nested/package1/Class1.scala"
+        "a/src/main/scala/com/test/nested/package2/Class2.scala"
       )
       _ = assertNoDiagnostics()
       path = server.toPath(
-        "a/src/main/scala/com/test/nested/package1/Class1.scala"
+        "a/src/main/scala/com/test/nested/package2/Class2.scala"
       )
       res <- server.server.queryEngine.inspect(
         "com.test.nested.package1.Class1",
@@ -382,6 +382,49 @@ class QueryLspSuite extends BaseLspSuite("query") {
            | - y - second argument
            | - x - first argument
            |sum of x and y 
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("usages") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/test/Class1.scala
+           |package com.test
+           |
+           |class Class1(m: Int) {
+           |  def add(x: Int, y: Int): Int = x + y
+           |  def superAdd(x: Int, y: Int): Int = add(x, y) + m
+           |}
+           |/a/src/main/scala/com/test/Class2.scala
+           |package com.test
+           |
+           |object Class2 {
+           |  def foo = new Class1(1).add(2, 3)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      _ <- server.didOpen(
+        "a/src/main/scala/com/test/Class2.scala"
+      )
+      path = server.toPath(
+        "a/src/main/scala/com/test/Class2.scala"
+      )
+      res <- server.server.queryEngine.getUsages(
+        "com.test.Class1.add",
+        path,
+      )
+      _ = assertNoDiff(
+        res.show(server.workspace),
+        """|a/src/main/scala/com/test/Class1.scala:4
+           |a/src/main/scala/com/test/Class1.scala:5
+           |a/src/main/scala/com/test/Class2.scala:4
            |""".stripMargin,
       )
     } yield ()

@@ -1,5 +1,7 @@
 package scala.meta.internal.metals.mcp
 
+import scala.meta.io.AbsolutePath
+
 object McpPrinter {
   implicit class XtensionSearchResult(result: SymbolSearchResult) {
     def show: String = s"${result.symbolType.name} ${result.path}"
@@ -71,5 +73,15 @@ object McpPrinter {
           }.mkString ++ docs.returnValue.getOrElse("") ++ docs.examples.mkString
         }
         .getOrElse("Found symbol but no documentation")
+  }
+
+  implicit class XtensionSymbolUsage(result: SymbolUsage) {
+    def show(projectRoot: AbsolutePath): String =
+      s"${result.path.toRelative(projectRoot)}:${result.line}"
+  }
+
+  implicit class XtensionSymbolUsageList(result: List[SymbolUsage]) {
+    def show(projectRoot: AbsolutePath): String =
+      result.map(_.show(projectRoot)).sorted.mkString("\n")
   }
 }

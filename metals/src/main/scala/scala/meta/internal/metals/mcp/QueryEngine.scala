@@ -9,6 +9,7 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.Docstrings
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ReferenceProvider
 import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.internal.metals.docstrings.query
@@ -32,6 +33,7 @@ class QueryEngine(
     compilers: Compilers,
     docstrings: Docstrings,
     buildTargets: BuildTargets,
+    referenceProvider: ReferenceProvider,
 )(implicit ec: ExecutionContext) {
 
   /**
@@ -231,7 +233,44 @@ class QueryEngine(
       .getOrElse(Future.successful(None))
   }
 
+  def getUsages(
+      fqcn: String,
+      path: AbsolutePath,
+  ): Future[List[SymbolUsage]] = {
+    scribe.info(s"getUsages: $fqcn, $path")
+    val res = buildTargets
+      .sourceBuildTargets(path)
+      .flatMap(_.headOption)
+      .map { buildTarget =>
+        scribe.info(s"build target: $buildTarget")
+        compilers.inspect(buildTarget, fqcn, inspectLevel = 0).map { syms =>
+          scribe.info(s"syms: ${syms.map(_.symbol())}")
+          syms.map(_.symbol()).toSet
+          referenceProvider.workspaceReferences(
+            path,
+            syms.map(_.symbol()).toSet,
+            isIncludeDeclaration = true,
+            includeSynthetics = _ => false,
+          )
+        }
+      }
+      .getOrElse(Future.successful(Nil))
+    res.map { usages =>
+      usages.map { usage =>
+        SymbolUsage(
+          usage.getUri.toAbsolutePath,
+          usage.getRange.getStart.getLine + 1, // +1 because line is 0-indexed
+        )
+      }.toList
+    }
+  }
+
 }
+
+case class SymbolUsage(
+    path: AbsolutePath,
+    line: Int,
+)
 
 /**
  * Base trait for symbol search results.

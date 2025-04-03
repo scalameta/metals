@@ -87,6 +87,7 @@ class MetalsMcpServer(
     syncServer.addTool(createTypedGlobSearchTool())
     syncServer.addTool(createInspectTool())
     syncServer.addTool(createGetDocsTool())
+    syncServer.addTool(createGetUsagesTool())
 
     // Log server initialization
     syncServer.loggingNotification(
@@ -149,7 +150,6 @@ class MetalsMcpServer(
     }
 
     cancelable.add(() => undertowServer.stop())
-
   }
 
   override def cancel(): Unit = cancelable.cancel()
@@ -180,7 +180,7 @@ class MetalsMcpServer(
       """|{
          |  "type": "object",
          |  "properties": {
-         |    "file": {
+         |    "fileInFocus": {
          |      "type": "string"
          |    }
          |  }
@@ -224,7 +224,7 @@ class MetalsMcpServer(
       """|{
          |  "type": "object",
          |    "properties": {
-         |      "file": {
+         |      "fileInFocus": {
          |        "type": "string"
          |      },
          |      "testClass": {
@@ -265,7 +265,7 @@ class MetalsMcpServer(
           "query": {
             "type": "string"
           },
-          "file": {
+          "fileInFocus": {
             "type": "string"
           }
         },
@@ -307,7 +307,7 @@ class MetalsMcpServer(
               "enum": ["package", "class", "object", "function", "method", "trait"]
             }
           },
-          "file": {
+          "fileInFocus": {
             "type": "string"
           }
         },
@@ -353,7 +353,7 @@ class MetalsMcpServer(
           "fqcn": {
             "type": "string"
           },
-          "file": {
+          "fileInFocus": {
             "type": "string"
           },
           "provideMethodSignatures": {
@@ -395,7 +395,7 @@ class MetalsMcpServer(
         "properties": {
           "fqcn": {
             "type": "string",
-            "file": {
+            "fileInFocus": {
               "type": "string"
             }
           }
@@ -430,10 +430,45 @@ class MetalsMcpServer(
     )
   }
 
+  private def createGetUsagesTool(): SyncToolSpecification = {
+    val schema = """
+      {
+        "type": "object",
+        "properties": {
+          "fqcn": { 
+            "type": "string"
+          },
+          "fileInFocus": {
+            "type": "string"
+          }
+        },
+        "required": ["fqcn"]
+      }
+    """
+    new SyncToolSpecification(
+      new Tool(
+        "get-usages",
+        "Get usages for a fully qualified class name",
+        schema,
+      ),
+      (exchange, arguments) => {
+        val fqcn = arguments.get("fqcn").asInstanceOf[String]
+        withPath(arguments) { path =>
+          val result =
+            queryEngine.getUsages(fqcn, path).map(_.show(projectPath))
+          new CallToolResult(
+            createContent(Await.result(result, 10.seconds)),
+            false,
+          )
+        }
+      },
+    )
+  }
+
   private def withPath(
       arguments: java.util.Map[String, Object]
   )(f: AbsolutePath => CallToolResult): CallToolResult = {
-    Option(arguments.get("file").asInstanceOf[String])
+    Option(arguments.get("fileInFocus").asInstanceOf[String])
       .map(path => AbsolutePath(Path.of(path))(projectPath))
       .orElse { focusedDocument() } match {
       case Some(value) => f(value)

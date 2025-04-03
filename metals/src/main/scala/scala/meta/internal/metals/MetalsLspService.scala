@@ -1464,6 +1464,7 @@ abstract class MetalsLspService(
       compilers,
       symbolDocs,
       buildTargets,
+      referencesProvider,
     )
 
   lazy val mcpTestRunner = new McpTestRunner(

@@ -150,7 +150,6 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
     }
   }
 
-  // TODO: possibly we need to print things better
   def inspect(fqcn: String, inspectLevel: Int): List[InspectResult] = {
     def resultWithMembers(symbol: Symbol, members: List[InspectResultImpl]) =
       InspectResultImpl(
@@ -172,8 +171,7 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
       )
 
     val symbols = compilerSymbols(SymbolInfo.getPartsFromFQCN(fqcn))
-      .filterNot(_.isSynthetic)
-    symbols.map { symbol =>
+    symbols.filterNot(_.isSynthetic).map { symbol =>
       val members =
         if (inspectLevel > 0) symbol.info.members.iterator.collect {
           case sym
