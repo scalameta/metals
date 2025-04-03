@@ -1,10 +1,11 @@
 package tests
 
-import scala.meta.io.AbsolutePath
-import java.nio.file.Files
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.mcp.CursorMcpConfig
+import scala.meta.io.AbsolutePath
 
 class McpConfigSuite extends BaseSuite {
   def check(
@@ -87,8 +88,10 @@ class McpConfigSuite extends BaseSuite {
     CursorMcpConfig.generateConfig(port, projectName, projectPath)
     val configFile = projectPath.resolve(".cursor/mcp.json")
     assert(configFile.exists)
-    val firstContent =
-      new String(Files.readAllBytes(configFile.toNIO), StandardCharsets.UTF_8)
+    val firstContent = new String(
+      Files.readAllBytes(configFile.toNIO),
+      StandardCharsets.UTF_8,
+    )
     assertNoDiff(
       firstContent,
       """{
@@ -102,8 +105,10 @@ class McpConfigSuite extends BaseSuite {
 
     // Update with different port
     CursorMcpConfig.generateConfig(5678, projectName, projectPath)
-    val secondContent =
-      new String(Files.readAllBytes(configFile.toNIO), StandardCharsets.UTF_8)
+    val secondContent = new String(
+      Files.readAllBytes(configFile.toNIO),
+      StandardCharsets.UTF_8,
+    )
     assertNoDiff(
       secondContent,
       """{

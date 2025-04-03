@@ -35,9 +35,9 @@ import io.modelcontextprotocol.spec.McpSchema.Tool
 import io.undertow.Undertow
 import io.undertow.servlet.Servlets
 import io.undertow.servlet.api.InstanceHandle
-import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.services.LanguageClient
 class MetalsMcpServer(
     queryEngine: QueryEngine,
     projectPath: AbsolutePath,
@@ -176,7 +176,14 @@ class MetalsMcpServer(
 
   private def createFileCompileTool(): SyncToolSpecification = {
     val schema =
-      """{"type": "object", "properties": { "file": { "type": "string" } }}"""
+      """|{
+         |  "type": "object",
+         |  "properties": {
+         |    "file": {
+         |      "type": "string"
+         |    }
+         |  }
+         |}""".stripMargin
     new SyncToolSpecification(
       new Tool("compile-file", "Compile Scala file", schema),
       (exchange, arguments) => {
@@ -213,7 +220,19 @@ class MetalsMcpServer(
 
   private def createTestTool(): SyncToolSpecification = {
     val schema =
-      """{"type": "object", "properties": { "file": { "type": "string" }, "testClass": { "type": "string" }}}"""
+      """|{
+         |  "type": "object",
+         |    "properties": {
+         |      "file": {
+         |        "type": "string"
+         |      },
+         |      "testClass": {
+         |        "type": "string"
+         |      }
+         |    },
+         |    "required": ["testClass"]
+         |  }
+         |}""".stripMargin
     new SyncToolSpecification(
       new Tool("test", "Run Scala tests", schema),
       (exchange, arguments) => {

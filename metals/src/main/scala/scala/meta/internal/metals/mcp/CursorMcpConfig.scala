@@ -2,10 +2,14 @@ package scala.meta.internal.metals.mcp
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
-import com.google.gson.{JsonObject, JsonParser, GsonBuilder}
+
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import com.google.gson.Gson
 
 object CursorMcpConfig {
-  val gson = new GsonBuilder()
+  val gson: Gson = new GsonBuilder()
     .setPrettyPrinting()
     .create()
 
