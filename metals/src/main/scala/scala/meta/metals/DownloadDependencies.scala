@@ -12,10 +12,12 @@ import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.FileDecoderProvider
 import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.ScalaVersions
+import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
 import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.debugadapter.ScalaVersion
 import coursier.LocalRepositories
 import coursier.paths.CoursierPaths
 import coursierapi.Dependency
@@ -64,7 +66,8 @@ object DownloadDependencies {
       downloadBazelBsp() ++
       downloadCfr() ++
       downloadScala3PresentationCompiler(filterVersions) ++
-      downloadAllScalafixVersions(filterVersions)
+      downloadAllScalafixVersions(filterVersions) ++
+      downloadAllScalaDebugToolVersions(filterVersions)
 
     val distinctFiles = allPaths.distinct
     val copyToDest = args.indexOf("--copy-to") match {
@@ -241,5 +244,38 @@ object DownloadDependencies {
         throw new Exception(s"Could not pre-download Bloop $version", ex)
       case Right(files) => files.map(_.toPath)
     }
+  }
+
+  def downloadAllScalaDebugToolVersions(
+      filterVersions: String => Boolean
+  ): Seq[Path] = {
+    scribe.info("Downloading all Scala debug tool versions")
+    val resolver = new MetalsDebugToolsResolver()
+    def downloadExpressionCompiler(scalaVersion: String) =
+      Embedded.downloadDependency(
+        resolver.expressionCompilerDependency(ScalaVersion(scalaVersion)),
+        Some(scalaVersion),
+      )
+
+    def downloadDebugDecoderCompiler(scalaVersion: String) =
+      Embedded.downloadDependency(
+        resolver.debugDecoderDependency(ScalaVersion(scalaVersion)),
+        Some(scalaVersion),
+      )
+
+    (allSupportedScala3Versions ++ BuildInfo.supportedScala2Versions)
+      .filter(filterVersions)
+      .flatMap { scalaVersion =>
+        val noExpressionCompiler = Seq("3.6.0", "2.11.12")
+        val expressionCompilerJars =
+          if (!noExpressionCompiler.contains(scalaVersion))
+            downloadExpressionCompiler(scalaVersion)
+          else Seq.empty
+        val debugDecoderJars =
+          if (scalaVersion.startsWith("3."))
+            downloadDebugDecoderCompiler(scalaVersion)
+          else Seq.empty
+        expressionCompilerJars ++ debugDecoderJars
+      }
   }
 }
