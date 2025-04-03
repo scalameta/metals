@@ -20,8 +20,8 @@ object MillDigest extends Digestable {
       imported.forall(script => analyzeBuildScript(script)) && Digest
         .digestFile(file, digest)
     }
-    List("build.sc", "build.mill", "build.mill.scala").exists { fileName =>
-      val file = workspace.resolve("build.sc")
+    List("build.sc", "build.mill", "build.mill.scala").forall { fileName =>
+      val file = workspace.resolve(fileName)
       analyzeBuildScript(file)
     }
   }

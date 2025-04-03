@@ -106,6 +106,42 @@ class MillDigestSuite extends BaseDigestSuite {
     """.stripMargin,
   )
 
+  checkDiff(
+    "significant-tokens-build.mill",
+    s"""
+       |/build.mill
+       |import mill._, scalalib._
+       |object foo extends ScalaModule {
+       |  def scalaVersion = "${V.scala213}"
+       |}
+    """.stripMargin,
+    """
+      |/build.mill
+      |import mill._, scalalib._
+      |object foo extends ScalaModule {
+      |  def scalaVersion = "2.12.7"
+      |}
+    """.stripMargin,
+  )
+
+  checkDiff(
+    "significant-tokens-build.mill.scala",
+    s"""
+       |/build.mill.scala
+       |import mill._, scalalib._
+       |object foo extends ScalaModule {
+       |  def scalaVersion = "${V.scala213}"
+       |}
+    """.stripMargin,
+    """
+      |/build.mill.scala
+      |import mill._, scalalib._
+      |object foo extends ScalaModule {
+      |  def scalaVersion = "2.12.7"
+      |}
+    """.stripMargin,
+  )
+
   def project(name: String): String =
     s"""
        |import mill._, scalalib._
