@@ -49,7 +49,7 @@ class QueryEngine(
       symbolTypes: Set[SymbolType] = Set.empty,
       path: AbsolutePath,
       enableDebug: Boolean = false,
-  ): Seq[SymbolSearchResult] = {
+  ): Future[Seq[SymbolSearchResult]] = Future {
 
     val visitor = new QuerySearchVisitor(
       index,

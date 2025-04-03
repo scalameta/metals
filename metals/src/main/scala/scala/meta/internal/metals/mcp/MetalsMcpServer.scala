@@ -6,9 +6,8 @@ import java.util.ArrayList
 import java.util.Arrays
 import java.util.{List => JList}
 
-import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.Future
 
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
@@ -23,7 +22,7 @@ import scala.meta.io.AbsolutePath
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.modelcontextprotocol.server.McpServer
-import io.modelcontextprotocol.server.McpServerFeatures.SyncToolSpecification
+import io.modelcontextprotocol.server.McpServerFeatures.AsyncToolSpecification
 import io.modelcontextprotocol.server.transport.HttpServletSseServerTransportProvider
 import io.modelcontextprotocol.spec.McpSchema.CallToolResult
 import io.modelcontextprotocol.spec.McpSchema.Content
@@ -38,6 +37,7 @@ import io.undertow.servlet.api.InstanceHandle
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.services.LanguageClient
+import reactor.core.publisher.Mono
 class MetalsMcpServer(
     queryEngine: QueryEngine,
     projectPath: AbsolutePath,
@@ -71,26 +71,26 @@ class MetalsMcpServer(
       .build();
 
     // Create server with configuration
-    val syncServer = McpServer
-      .sync(servlet)
+    val asyncServer = McpServer
+      .async(servlet)
       .serverInfo("scala-mcp-server", "0.1.0")
       .capabilities(capabilities)
       .build()
 
-    cancelable.add(() => syncServer.close())
+    cancelable.add(() => asyncServer.close())
 
     // Register tools
-    syncServer.addTool(createFileCompileTool())
-    syncServer.addTool(createCompileTool())
-    syncServer.addTool(createTestTool())
-    syncServer.addTool(createGlobSearchTool())
-    syncServer.addTool(createTypedGlobSearchTool())
-    syncServer.addTool(createInspectTool())
-    syncServer.addTool(createGetDocsTool())
-    syncServer.addTool(createGetUsagesTool())
+    asyncServer.addTool(createFileCompileTool()).subscribe()
+    asyncServer.addTool(createCompileTool()).subscribe()
+    asyncServer.addTool(createTestTool()).subscribe()
+    asyncServer.addTool(createGlobSearchTool()).subscribe()
+    asyncServer.addTool(createTypedGlobSearchTool()).subscribe()
+    asyncServer.addTool(createInspectTool()).subscribe()
+    asyncServer.addTool(createGetDocsTool()).subscribe()
+    asyncServer.addTool(createGetUsagesTool()).subscribe()
 
     // Log server initialization
-    syncServer.loggingNotification(
+    asyncServer.loggingNotification(
       LoggingMessageNotification
         .builder()
         .level(LoggingLevel.INFO)
@@ -154,13 +154,14 @@ class MetalsMcpServer(
 
   override def cancel(): Unit = cancelable.cancel()
 
-  private def createCompileTool(): SyncToolSpecification = {
+  private def createCompileTool(): AsyncToolSpecification = {
     val schema = """{"type": "object", "properties": { }}"""
-    new SyncToolSpecification(
+    new AsyncToolSpecification(
       new Tool("compile-full", "Compile Scala project", schema),
       (exchange, _) => {
-        val res =
-          compilations.cascadeCompile(buildTargets.allBuildTargetIds).map { _ =>
+        compilations
+          .cascadeCompile(buildTargets.allBuildTargetIds)
+          .map { _ =>
             val content = diagnostics.allDiagnostics
               .map { case (path, diag) =>
                 val startLine = diag.getRange().getStart().getLine()
@@ -170,12 +171,12 @@ class MetalsMcpServer(
               .mkString("\n")
             new CallToolResult(createContent(content), false)
           }
-        Await.result(res, 10.seconds)
+          .toMono
       },
     )
   }
 
-  private def createFileCompileTool(): SyncToolSpecification = {
+  private def createFileCompileTool(): AsyncToolSpecification = {
     val schema =
       """|{
          |  "type": "object",
@@ -185,12 +186,12 @@ class MetalsMcpServer(
          |    }
          |  }
          |}""".stripMargin
-    new SyncToolSpecification(
+    new AsyncToolSpecification(
       new Tool("compile-file", "Compile Scala file", schema),
       (exchange, arguments) => {
         try {
           withPath(arguments) { path =>
-            val res = compilations.compileFile(path).map {
+            compilations.compileFile(path).map {
               case Some(_) =>
                 val result = diagnostics
                   .forFile(path)
@@ -209,17 +210,18 @@ class MetalsMcpServer(
                   true,
                 )
             }
-            Await.result(res, 10.seconds)
-          }
+          }.toMono
         } catch {
           case e: Exception =>
-            new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
+            Mono.just(
+              new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
+            )
         }
       },
     )
   }
 
-  private def createTestTool(): SyncToolSpecification = {
+  private def createTestTool(): AsyncToolSpecification = {
     val schema =
       """|{
          |  "type": "object",
@@ -234,7 +236,7 @@ class MetalsMcpServer(
          |    "required": ["testClass"]
          |  }
          |}""".stripMargin
-    new SyncToolSpecification(
+    new AsyncToolSpecification(
       new Tool("test", "Run Scala tests", schema),
       (exchange, arguments) => {
         try {
@@ -243,21 +245,26 @@ class MetalsMcpServer(
             val result = mcpTestRunner.runTests(path, testClass)
             result match {
               case Right(value) =>
-                val content = Await.result(value, 10.seconds)
-                new CallToolResult(createContent(content), false)
+                value.map(content =>
+                  new CallToolResult(createContent(content), false)
+                )
               case Left(error) =>
-                new CallToolResult(createContent(s"Error: $error"), true)
+                Future.successful(
+                  new CallToolResult(createContent(s"Error: $error"), true)
+                )
             }
-          }
+          }.toMono
         } catch {
           case e: Exception =>
-            new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
+            Mono.just(
+              new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
+            )
         }
       },
     )
   }
 
-  private def createGlobSearchTool(): SyncToolSpecification = {
+  private def createGlobSearchTool(): AsyncToolSpecification = {
     val schema = """
       {
         "type": "object",
@@ -272,27 +279,32 @@ class MetalsMcpServer(
         "required": ["query"]
       }
     """
-    new SyncToolSpecification(
+    new AsyncToolSpecification(
       new Tool("glob-search", "Search for symbols using glob pattern", schema),
       (exchange, arguments) => {
         try {
           val query = arguments.get("query").asInstanceOf[String]
           withPath(arguments) { path =>
-            val result = queryEngine
+            queryEngine
               .globSearch(query, Set.empty, path)
-              .map(_.show)
-              .mkString("\n")
-            new CallToolResult(createContent(result), false)
-          }
+              .map(result =>
+                new CallToolResult(
+                  createContent(result.map(_.show).mkString("\n")),
+                  false,
+                )
+              )
+          }.toMono
         } catch {
           case e: Exception =>
-            new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
+            Mono.just(
+              new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
+            )
         }
       },
     )
   }
 
-  private def createTypedGlobSearchTool(): SyncToolSpecification = {
+  private def createTypedGlobSearchTool(): AsyncToolSpecification = {
     val schema = """
       {
         "type": "object",
@@ -314,7 +326,7 @@ class MetalsMcpServer(
         "required": ["query", "symbolType"]
       }
     """
-    new SyncToolSpecification(
+    new AsyncToolSpecification(
       new Tool(
         "typed-glob-search",
         "Search for symbols by type using glob pattern",
@@ -331,21 +343,26 @@ class MetalsMcpServer(
               .flatMap(s => SymbolType.values.find(_.name == s))
               .toSet
 
-            val result = queryEngine
+            queryEngine
               .globSearch(query, symbolTypes, path)
-              .map(_.show)
-              .mkString("\n")
-            new CallToolResult(createContent(result), false)
-          }
+              .map(result =>
+                new CallToolResult(
+                  createContent(result.map(_.show).mkString("\n")),
+                  false,
+                )
+              )
+          }.toMono
         } catch {
           case e: Exception =>
-            new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
+            Mono.just(
+              new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
+            )
         }
       },
     )
   }
 
-  private def createInspectTool(): SyncToolSpecification = {
+  private def createInspectTool(): AsyncToolSpecification = {
     val schema = """
       {
         "type": "object",
@@ -364,7 +381,7 @@ class MetalsMcpServer(
         "required": ["fqcn"]
       }
     """
-    new SyncToolSpecification(
+    new AsyncToolSpecification(
       new Tool("inspect", "Inspect a fully qualified class name", schema),
       (exchange, arguments) => {
         try {
@@ -372,23 +389,26 @@ class MetalsMcpServer(
           val provideMethodSignatures =
             arguments.get("provideMethodSignatures").asInstanceOf[Boolean]
           withPath(arguments) { path =>
-            val result = queryEngine
+            queryEngine
               .inspect(fqcn, path, provideMethodSignatures)
-              .map(_.show)
-            new CallToolResult(
-              createContent(Await.result(result, 10.seconds)),
-              false,
-            )
-          }
+              .map(result =>
+                new CallToolResult(
+                  createContent(result.show),
+                  false,
+                )
+              )
+          }.toMono
         } catch {
           case e: Exception =>
-            new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
+            Mono.just(
+              new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
+            )
         }
       },
     )
   }
 
-  private def createGetDocsTool(): SyncToolSpecification = {
+  private def createGetDocsTool(): AsyncToolSpecification = {
     val schema = """
       {
         "type": "object",
@@ -403,7 +423,7 @@ class MetalsMcpServer(
         "required": ["fqcn"]
       }
     """
-    new SyncToolSpecification(
+    new AsyncToolSpecification(
       new Tool(
         "get-docs",
         "Get documentation for a fully qualified class name",
@@ -413,24 +433,27 @@ class MetalsMcpServer(
         try {
           val fqcn = arguments.get("fqcn").asInstanceOf[String]
           withPath(arguments) { path =>
-            val result = queryEngine.getDocumentation(fqcn, path).map {
-              case Some(result) => result.show
-              case None => "Error: Symbol not found"
+            queryEngine.getDocumentation(fqcn, path).map {
+              case Some(result) =>
+                new CallToolResult(createContent(result.show), false)
+              case None =>
+                new CallToolResult(
+                  createContent("Error: Symbol not found"),
+                  false,
+                )
             }
-            new CallToolResult(
-              createContent(Await.result(result, 10.seconds)),
-              false,
-            )
-          }
+          }.toMono
         } catch {
           case e: Exception =>
-            new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
+            Mono.just(
+              new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
+            )
         }
       },
     )
   }
 
-  private def createGetUsagesTool(): SyncToolSpecification = {
+  private def createGetUsagesTool(): AsyncToolSpecification = {
     val schema = """
       {
         "type": "object",
@@ -445,21 +468,30 @@ class MetalsMcpServer(
         "required": ["fqcn"]
       }
     """
-    new SyncToolSpecification(
+    new AsyncToolSpecification(
       new Tool(
         "get-usages",
         "Get usages for a fully qualified class name",
         schema,
       ),
       (exchange, arguments) => {
-        val fqcn = arguments.get("fqcn").asInstanceOf[String]
-        withPath(arguments) { path =>
-          val result =
-            queryEngine.getUsages(fqcn, path).map(_.show(projectPath))
-          new CallToolResult(
-            createContent(Await.result(result, 10.seconds)),
-            false,
-          )
+        try {
+          val fqcn = arguments.get("fqcn").asInstanceOf[String]
+          withPath(arguments) { path =>
+            queryEngine
+              .getUsages(fqcn, path)
+              .map(result =>
+                new CallToolResult(
+                  createContent(result.show(projectPath)),
+                  false,
+                )
+              )
+          }.toMono
+        } catch {
+          case e: Exception =>
+            Mono.just(
+              new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
+            )
         }
       },
     )
@@ -467,16 +499,24 @@ class MetalsMcpServer(
 
   private def withPath(
       arguments: java.util.Map[String, Object]
-  )(f: AbsolutePath => CallToolResult): CallToolResult = {
+  )(f: AbsolutePath => Future[CallToolResult]): Future[CallToolResult] = {
     Option(arguments.get("fileInFocus").asInstanceOf[String])
       .map(path => AbsolutePath(Path.of(path))(projectPath))
       .orElse { focusedDocument() } match {
       case Some(value) => f(value)
       case None =>
-        new CallToolResult(
-          createContent("Error: No file path provided or incorrect file path"),
-          true,
+        Future.successful(
+          new CallToolResult(
+            createContent(
+              "Error: No file path provided or incorrect file path"
+            ),
+            true,
+          )
         )
     }
+  }
+
+  implicit class XtensionFuture[T](val f: Future[T]) {
+    def toMono: Mono[T] = Mono.fromFuture(f.asJava)
   }
 }

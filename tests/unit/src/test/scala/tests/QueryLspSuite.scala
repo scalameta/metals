@@ -5,6 +5,7 @@ import scala.concurrent.duration._
 
 import scala.meta.internal.metals.mcp.McpPrinter._
 import scala.meta.internal.metals.mcp.SymbolType
+
 class QueryLspSuite extends BaseLspSuite("query") {
 
   // @kasiaMarek: missing:
@@ -69,11 +70,10 @@ class QueryLspSuite extends BaseLspSuite("query") {
       _ = assertNoDiagnostics()
       path = server.toPath("src/main/scala/com/test/TestClass.scala")
 
-      // Test searching for "test" - should find packages, classes, objects, traits
+      // Test searching for "test" - should find packages, classes, objects, trait
+      result <- server.server.queryEngine.globSearch("test", Set.empty, path)
       _ = assertNoDiff(
-        timed(
-          server.server.queryEngine.globSearch("test", Set.empty, path)
-        ).show,
+        result.show,
         """|class com.test.TestCaseClass
            |class com.test.TestClass
            |class java.awt.dnd.SerializationTester
@@ -92,8 +92,13 @@ class QueryLspSuite extends BaseLspSuite("query") {
       )
 
       // Test searching for "matching" - should find package and object
+      matching <- server.server.queryEngine.globSearch(
+        "matching",
+        Set.empty,
+        path,
+      )
       _ = assertNoDiff(
-        server.server.queryEngine.globSearch("matching", Set.empty, path).show,
+        matching.show,
         """|class com.test.NonMatchingClass
            |object com.test.matching.MatchingUtil
            |object scala.quoted.runtime.QuoteMatching
@@ -103,11 +108,14 @@ class QueryLspSuite extends BaseLspSuite("query") {
         "query: globSearch(\"matching\", Set.empty)",
       )
 
+      testClasses <- server.server.queryEngine.globSearch(
+        "test",
+        Set(SymbolType.Class),
+        path,
+      )
       // Test searching for "test" with class filter
       _ = assertNoDiff(
-        server.server.queryEngine
-          .globSearch("test", Set(SymbolType.Class), path)
-          .show,
+        testClasses.show,
         """|class com.test.TestCaseClass
            |class com.test.TestClass
            |class java.awt.dnd.SerializationTester
@@ -116,15 +124,15 @@ class QueryLspSuite extends BaseLspSuite("query") {
         "query: globSearch(\"test\", Set(SymbolType.Class))",
       )
 
+      methods <- server.server.queryEngine
+        .globSearch(
+          "method",
+          Set(SymbolType.Method, SymbolType.Function),
+          path,
+        )
       // Test searching for methods
       _ = assertNoDiff(
-        server.server.queryEngine
-          .globSearch(
-            "method",
-            Set(SymbolType.Method, SymbolType.Function),
-            path,
-          )
-          .show,
+        methods.show,
         """|method com.test.NonMatchingClass.someMethod
            |method com.test.TestClass.testMethod
            |method com.test.TestTrait.abstractMethod
@@ -172,25 +180,36 @@ class QueryLspSuite extends BaseLspSuite("query") {
       path = server.toPath("src/main/scala/com/test/CaseSensitivity.scala")
 
       // Case insensitive search for "camel"
+      camel <- server.server.queryEngine.globSearch("camel", Set.empty, path)
       _ = assertNoDiff(
-        server.server.queryEngine.globSearch("camel", Set.empty, path).show,
+        camel.show,
         """|class com.test.CamelCaseClass
            |method com.test.CamelCaseClass.camelCaseMethod
            |""".stripMargin,
       )
 
+      uppercase <- server.server.queryEngine.globSearch(
+        "uppercase",
+        Set.empty,
+        path,
+      )
       // Case insensitive search for "UPPERCASE"
       _ = assertNoDiff(
-        server.server.queryEngine.globSearch("uppercase", Set.empty, path).show,
+        uppercase.show,
         """|class javax.swing.text.MaskFormatter.UpperCaseCharacter
            |method com.test.UPPERCASE_OBJECT.UPPERCASE_METHOD
            |object com.test.UPPERCASE_OBJECT
            |""".stripMargin,
       )
 
+      lowercase <- server.server.queryEngine.globSearch(
+        "lowercase",
+        Set.empty,
+        path,
+      )
       // Case insensitive search for "lowercase"
       _ = assertNoDiff(
-        server.server.queryEngine.globSearch("lowercase", Set.empty, path).show,
+        lowercase.show,
         """|class javax.swing.text.MaskFormatter.LowerCaseCharacter
            |method com.test.lowercase_object.lowercase_method
            |object com.test.lowercase_object
@@ -249,42 +268,42 @@ class QueryLspSuite extends BaseLspSuite("query") {
       )
 
       // Search for all packages
+      packages <- server.server.queryEngine
+        .globSearch(
+          "package",
+          Set(SymbolType.Package),
+          path,
+        )
       _ = assertNoDiff(
-        server.server.queryEngine
-          .globSearch(
-            "package",
-            Set(SymbolType.Package),
-            path,
-          )
-          .show,
+        packages.show,
         """|package com.test.nested.package1
            |package com.test.nested.package2
            |""".stripMargin,
       )
 
       // Search for test packages
+      testPackages <- server.server.queryEngine
+        .globSearch(
+          "test",
+          Set(SymbolType.Package),
+          path,
+        )
       _ = assertNoDiff(
-        server.server.queryEngine
-          .globSearch(
-            "test",
-            Set(SymbolType.Package),
-            path,
-          )
-          .show,
+        testPackages.show,
         """|package com.test
            |package org.test
            |""".stripMargin,
       )
 
       // Search for nested packages
+      nestedPackages <- server.server.queryEngine
+        .globSearch(
+          "nested",
+          Set(SymbolType.Package),
+          path,
+        )
       _ = assertNoDiff(
-        server.server.queryEngine
-          .globSearch(
-            "nested",
-            Set(SymbolType.Package),
-            path,
-          )
-          .show,
+        nestedPackages.show,
         """|package com.test.nested
            |""".stripMargin,
       )
