@@ -237,14 +237,11 @@ class QueryEngine(
       fqcn: String,
       path: AbsolutePath,
   ): Future[List[SymbolUsage]] = {
-    scribe.info(s"getUsages: $fqcn, $path")
     val res = buildTargets
       .sourceBuildTargets(path)
       .flatMap(_.headOption)
       .map { buildTarget =>
-        scribe.info(s"build target: $buildTarget")
         compilers.inspect(buildTarget, fqcn, inspectLevel = 0).map { syms =>
-          scribe.info(s"syms: ${syms.map(_.symbol())}")
           syms.map(_.symbol()).toSet
           referenceProvider.workspaceReferences(
             path,
