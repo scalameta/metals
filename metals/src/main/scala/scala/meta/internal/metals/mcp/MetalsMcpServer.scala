@@ -227,7 +227,7 @@ class MetalsMcpServer(
       """|{
          |  "type": "object",
          |    "properties": {
-         |      "fileInFocus": {
+         |      "testFile": {
          |        "type": "string",
          |        "description": "The file containing the test suite, if empty we will try to detect it"
          |      },
@@ -244,19 +244,19 @@ class MetalsMcpServer(
       (exchange, arguments) => {
         try {
           val testClass = arguments.get("testClass").asInstanceOf[String]
-          withPath(arguments) { path =>
-            val result = mcpTestRunner.runTests(path, testClass)
-            result match {
-              case Right(value) =>
-                value.map(content =>
-                  new CallToolResult(createContent(content), false)
-                )
-              case Left(error) =>
-                Future.successful(
-                  new CallToolResult(createContent(s"Error: $error"), true)
-                )
-            }
-          }.toMono
+          val optPath = Option(arguments.get("testFile").asInstanceOf[String])
+            .map(path => AbsolutePath(Path.of(path))(projectPath))
+          val result = mcpTestRunner.runTests(testClass, optPath)
+          (result match {
+            case Right(value) =>
+              value.map(content =>
+                new CallToolResult(createContent(content), false)
+              )
+            case Left(error) =>
+              Future.successful(
+                new CallToolResult(createContent(s"Error: $error"), true)
+              )
+          }).toMono
         } catch {
           case e: Exception =>
             Mono.just(

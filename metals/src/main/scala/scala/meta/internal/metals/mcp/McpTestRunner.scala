@@ -8,6 +8,7 @@ import scala.concurrent.Promise
 
 import scala.meta.internal.ansi.AnsiFilter
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.debug.DebugProvider
@@ -23,13 +24,12 @@ class McpTestRunner(
     buildTargets: BuildTargets,
     workspace: AbsolutePath,
     userConfig: () => UserConfiguration,
+    definitionProvider: DefinitionProvider,
 )(implicit ec: ExecutionContext) {
   def runTests(
-      path: AbsolutePath,
       testClass: String,
+      optPath: Option[AbsolutePath],
   ): Either[String, Future[String]] = {
-    val buildTarget =
-      buildTargets.sourceBuildTargets(path).flatMap(_.headOption)
     val testSuites = new b.ScalaTestSuites(
       List(
         new b.ScalaTestSuiteSelection(testClass, Nil.asJava)
@@ -39,7 +39,13 @@ class McpTestRunner(
     )
     val cancelPromise = Promise[Unit]()
     for {
-      id <- buildTarget.toRight(s"Missing build target in debug params.")
+      path <- optPath
+        .orElse(resolvePath(testClass))
+        .toRight(s"Missing path to test suite and failed to resolve it.")
+      id <- buildTargets
+        .sourceBuildTargets(path)
+        .flatMap(_.headOption)
+        .toRight(s"Missing build target in debug params.")
       projectInfo <- debugProvider.debugConfigCreator.create(id, cancelPromise)
     } yield {
       for {
@@ -56,6 +62,22 @@ class McpTestRunner(
         listner = new McpDebuggeeListener()
         _ <- adapter.run(listner).future
       } yield listner.result
+    }
+  }
+
+  private def resolvePath(fqcn: String): Option[AbsolutePath] = {
+    topLevelSymbols(fqcn).iterator
+      .flatMap(definitionProvider.destinationProvider.findDefinitionFile(_))
+      .headOption
+  }
+
+  private def topLevelSymbols(fqcn: String): List[String] = {
+    val parts = fqcn.split('.')
+    val idx = parts.indexWhere(_.headOption.exists(!_.isLower))
+    if (idx == -1) Nil
+    else {
+      val sym = parts.take(idx + 1).mkString("/")
+      List(sym + "#", sym + ".")
     }
   }
 }

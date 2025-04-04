@@ -1472,6 +1472,7 @@ abstract class MetalsLspService(
     buildTargets,
     folder,
     () => userConfig,
+    definitionProvider,
   )
 
   def startMcpServer(): Future[Unit] =

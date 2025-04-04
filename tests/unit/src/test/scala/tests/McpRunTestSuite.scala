@@ -1,6 +1,6 @@
 package tests
 
-class CursorMcpConfigSuite extends BaseLspSuite("mcp-test") {
+class McpRunTestSuite extends BaseLspSuite("mcp-test") {
   test("basic") {
     cleanWorkspace()
     for {
@@ -31,11 +31,21 @@ class CursorMcpConfigSuite extends BaseLspSuite("mcp-test") {
         "a/src/main/scala/a/b/c/MunitTestSuite.scala"
       )
       _ = assertNoDiagnostics()
+      _ <- server.server.indexingPromise.future
       path = server.toPath("a/src/main/scala/a/b/c/MunitTestSuite.scala")
-      res <- server.server.mcpTestRunner
-        .runTests(path, "a.b.MunitTestSuite")
-        .getOrElse(throw new RuntimeException("Failed to run tests"))
-      _ = assert(res.contains("2 tests, 1 passed, 1 failed"))
+      res1 <- server.server.mcpTestRunner
+        .runTests("a.b.MunitTestSuite", Some(path)) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      _ = assert(res1.contains("2 tests, 1 passed, 1 failed"))
+      res2 <- server.server.mcpTestRunner
+        .runTests("a.b.MunitTestSuite", None) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+
+      _ = assert(res2.contains("2 tests, 1 passed, 1 failed"))
     } yield ()
   }
 }
