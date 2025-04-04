@@ -195,7 +195,7 @@ class CompletionProvider(
         case d: DependecyMember =>
           item.setTextEdit(d.edit)
         case m: WorkspaceImplicitMember =>
-          val impPos = importPosition.getOrElse(AutoImportPosition(0, 0, false))
+          val impPos = importPosition.getOrElse(AutoImportPosition.empty)
           val suffix =
             if (
               clientSupportsSnippets && m.sym.paramss.headOption.exists(
