@@ -12,7 +12,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferenceProvider
 import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.internal.metals.WorkspaceSymbolQuery
-import scala.meta.internal.metals.docstrings.query
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.ContentType
@@ -197,22 +196,19 @@ class QueryEngine(
               .documentation(
                 s.symbol(),
                 QueryEngine.emptyParentsSymbols,
-                ContentType.QUERY,
+                ContentType.PLAINTEXT,
               )
-              .asScala match {
-              case Some(value: query.SymbolDocumentation) =>
+              .asScala
+              .map { doc =>
                 val kind = QueryEngine
                   .kindToTypeString(s.kind())
                   .getOrElse(SymbolType.Unknown(s.kind().toString))
-                Some(
-                  SymbolDocumentationSearchResult(
-                    kind,
-                    Some(value),
-                    s.symbol().fqcn,
-                  )
+                SymbolDocumentationSearchResult(
+                  kind,
+                  Option(doc.docstring()),
+                  s.symbol().fqcn,
                 )
-              case _ => None
-            }
+              }
           }.headOption
 
           res.orElse {
@@ -375,7 +371,7 @@ case class PackageInspectResult(
  */
 case class SymbolDocumentationSearchResult(
     val symbolType: SymbolType,
-    val documentation: Option[query.SymbolDocumentation],
+    val documentation: Option[String],
     val path: String,
 ) extends SymbolInspectResult
 

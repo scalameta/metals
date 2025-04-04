@@ -398,9 +398,11 @@ class QueryLspSuite extends BaseLspSuite("query") {
       _ = assertNoDiff(
         res.map(_.show).getOrElse(""),
         """|Adds two integers
-           | - y - second argument
-           | - x - first argument
-           |sum of x and y 
+           |
+           |@param x: first argument
+           |@param y: second argument
+           |
+           |@returns sum of x and y
            |""".stripMargin,
       )
     } yield ()

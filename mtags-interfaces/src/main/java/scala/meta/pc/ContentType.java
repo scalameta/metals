@@ -2,8 +2,7 @@ package scala.meta.pc;
 
 public enum ContentType {
   MARKDOWN("markdown"),
-  PLAINTEXT("plaintext"),
-  QUERY("query");
+  PLAINTEXT("plaintext");
 
   private final String name;
   ContentType(String name) {

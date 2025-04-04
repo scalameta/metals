@@ -66,13 +66,7 @@ object McpPrinter {
       result: SymbolDocumentationSearchResult
   ) {
     def show: String =
-      result.documentation
-        .map { docs =>
-          docs.description ++ docs.params.map { case (name, description) =>
-            s" - $name - $description"
-          }.mkString ++ docs.returnValue.getOrElse("") ++ docs.examples.mkString
-        }
-        .getOrElse("Found symbol but no documentation")
+      result.documentation.getOrElse("Found symbol but no documentation")
   }
 
   implicit class XtensionSymbolUsage(result: SymbolUsage) {

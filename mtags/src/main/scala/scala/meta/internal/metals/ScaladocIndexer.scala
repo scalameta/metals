@@ -6,7 +6,6 @@ import scala.meta._
 import scala.meta.internal.docstrings._
 import scala.meta.internal.docstrings.printers.ScalaDocPrinter
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.docstrings.query.QuerySymbolDocstringCreator
 import scala.meta.internal.mtags.ScalaMtags
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
@@ -15,7 +14,6 @@ import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.pc.ContentType
 import scala.meta.pc.ContentType.MARKDOWN
 import scala.meta.pc.ContentType.PLAINTEXT
-import scala.meta.pc.ContentType.QUERY
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.tokens.Token
 import scala.meta.trees.Origin
@@ -70,9 +68,6 @@ class ScaladocIndexer(
             docstring,
             comment
           )
-        case QUERY =>
-          QuerySymbolDocstringCreator
-            .createDocstring(sinfo, comment, docstring)
       }
     info.foreach(fn)
   }
