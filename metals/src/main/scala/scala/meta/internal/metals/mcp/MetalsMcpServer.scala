@@ -157,7 +157,7 @@ class MetalsMcpServer(
   private def createCompileTool(): AsyncToolSpecification = {
     val schema = """{"type": "object", "properties": { }}"""
     new AsyncToolSpecification(
-      new Tool("compile-full", "Compile Scala project", schema),
+      new Tool("compile-full", "Compile the whole Scalaproject", schema),
       (exchange, _) => {
         compilations
           .cascadeCompile(buildTargets.allBuildTargetIds)
@@ -182,12 +182,13 @@ class MetalsMcpServer(
          |  "type": "object",
          |  "properties": {
          |    "fileInFocus": {
-         |      "type": "string"
+         |      "type": "string",
+         |      "description": "The file to compile, if empty we will try to detect file in focus"
          |    }
          |  }
          |}""".stripMargin
     new AsyncToolSpecification(
-      new Tool("compile-file", "Compile Scala file", schema),
+      new Tool("compile-file", "Compile a chosenScala file", schema),
       (exchange, arguments) => {
         try {
           withPath(arguments) { path =>
@@ -227,17 +228,19 @@ class MetalsMcpServer(
          |  "type": "object",
          |    "properties": {
          |      "fileInFocus": {
-         |        "type": "string"
+         |        "type": "string",
+         |        "description": "The file containing the test suite, if empty we will try to detect it"
          |      },
          |      "testClass": {
-         |        "type": "string"
+         |        "type": "string",
+         |        "description": "Fully qualified name of the test class to run"
          |      }
          |    },
          |    "required": ["testClass"]
          |  }
          |}""".stripMargin
     new AsyncToolSpecification(
-      new Tool("test", "Run Scala tests", schema),
+      new Tool("test", "Run Scala test suite", schema),
       (exchange, arguments) => {
         try {
           val testClass = arguments.get("testClass").asInstanceOf[String]
@@ -270,10 +273,12 @@ class MetalsMcpServer(
         "type": "object",
         "properties": {
           "query": {
-            "type": "string"
+            "type": "string",
+            "description": "Substring of the symbol to search for"
           },
           "fileInFocus": {
-            "type": "string"
+            "type": "string",
+            "description": "The current file in focus for context, if empty we will try to detect it"
           }
         },
         "required": ["query"]
@@ -310,17 +315,20 @@ class MetalsMcpServer(
         "type": "object",
         "properties": {
           "query": {
-            "type": "string"
+            "type": "string",
+            "description": "Substring of the symbol to search for"
           },
           "symbolType": {
             "type": "array",
             "items": {
               "type": "string",
               "enum": ["package", "class", "object", "function", "method", "trait"]
-            }
+            },
+            "description": "The type of symbol to search for"
           },
           "fileInFocus": {
-            "type": "string"
+            "type": "string",
+            "description": "The current file in focus for context, if empty we will try to detect it"
           }
         },
         "required": ["query", "symbolType"]
@@ -368,21 +376,31 @@ class MetalsMcpServer(
         "type": "object",
         "properties": {
           "fqcn": {
-            "type": "string"
+            "type": "string",
+            "description": "Fully qualified name of the symbol to inspect"
           },
           "fileInFocus": {
-            "type": "string"
+            "type": "string",
+            "description": "The current file in focus for context, if empty we will try to detect it"
           },
           "provideMethodSignatures": {
             "type": "boolean",
-            "default": false
+            "default": false,
+            "description": "Whether to provide method members with signatures (when set to true) or names only (when set to false)"
           }
         },
         "required": ["fqcn"]
       }
     """
     new AsyncToolSpecification(
-      new Tool("inspect", "Inspect a fully qualified class name", schema),
+      new Tool(
+        "inspect",
+        """|Inspect a chosen Scala symbol.
+           |For packages, objects and traits returns list of members.
+           |For classes returns list of members and constructors.
+           |For methods returns signatures of all overloaded methods.""".stripMargin,
+        schema,
+      ),
       (exchange, arguments) => {
         try {
           val fqcn = arguments.get("fqcn").asInstanceOf[String]
@@ -415,9 +433,11 @@ class MetalsMcpServer(
         "properties": {
           "fqcn": {
             "type": "string",
-            "fileInFocus": {
-              "type": "string"
-            }
+            "description": "Fully qualified name of the symbol to get documentation for"
+          },
+          "fileInFocus": {
+            "type": "string",
+            "description": "The current file in focus for context, if empty we will try to detect it"
           }
         },
         "required": ["fqcn"]
@@ -426,7 +446,7 @@ class MetalsMcpServer(
     new AsyncToolSpecification(
       new Tool(
         "get-docs",
-        "Get documentation for a fully qualified class name",
+        "Get documentation for a chosen Scala symbol",
         schema,
       ),
       (exchange, arguments) => {
@@ -459,10 +479,12 @@ class MetalsMcpServer(
         "type": "object",
         "properties": {
           "fqcn": { 
-            "type": "string"
+            "type": "string",
+            "description": "Fully qualified name of the symbol to get usages for"
           },
           "fileInFocus": {
-            "type": "string"
+            "type": "string",
+            "description": "The current file in focus for context, if empty we will try to detect it"
           }
         },
         "required": ["fqcn"]
@@ -471,7 +493,7 @@ class MetalsMcpServer(
     new AsyncToolSpecification(
       new Tool(
         "get-usages",
-        "Get usages for a fully qualified class name",
+        "Get usages for a chosen Scala symbol. Returns list of files with line numbers.",
         schema,
       ),
       (exchange, arguments) => {
