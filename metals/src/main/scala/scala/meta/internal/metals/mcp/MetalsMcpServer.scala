@@ -234,6 +234,11 @@ class MetalsMcpServer(
          |      "testClass": {
          |        "type": "string",
          |        "description": "Fully qualified name of the test class to run"
+         |      },
+         |      "verbose": {
+         |        "type": "boolean",
+         |        "description": "Print all output from the test suite, otherwise prints only errors and summary",
+         |        "default": false
          |      }
          |    },
          |    "required": ["testClass"]
@@ -244,9 +249,17 @@ class MetalsMcpServer(
       (exchange, arguments) => {
         try {
           val testClass = arguments.get("testClass").asInstanceOf[String]
-          val optPath = Option(arguments.get("testFile").asInstanceOf[String])
+          val optPath = Option(arguments.get("testFile"))
+            .map(_.asInstanceOf[String])
+            .filter(_.nonEmpty)
             .map(path => AbsolutePath(Path.of(path))(projectPath))
-          val result = mcpTestRunner.runTests(testClass, optPath)
+          val printOnlyErrorsAndSummary =
+            arguments.get("verbose").asInstanceOf[Boolean]
+          val result = mcpTestRunner.runTests(
+            testClass,
+            optPath,
+            printOnlyErrorsAndSummary,
+          )
           (result match {
             case Right(value) =>
               value.map(content =>
@@ -522,7 +535,9 @@ class MetalsMcpServer(
   private def withPath(
       arguments: java.util.Map[String, Object]
   )(f: AbsolutePath => Future[CallToolResult]): Future[CallToolResult] = {
-    Option(arguments.get("fileInFocus").asInstanceOf[String])
+    Option(arguments.get("fileInFocus"))
+      .map(_.asInstanceOf[String])
+      .filter(_.nonEmpty)
       .map(path => AbsolutePath(Path.of(path))(projectPath))
       .orElse { focusedDocument() } match {
       case Some(value) => f(value)

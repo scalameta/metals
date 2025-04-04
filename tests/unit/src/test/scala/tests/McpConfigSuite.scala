@@ -7,9 +7,11 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.mcp.CursorMcpConfig
 import scala.meta.io.AbsolutePath
 
+import munit.TestOptions
+
 class McpConfigSuite extends BaseSuite {
   def check(
-      name: String,
+      name: TestOptions,
       inputConfig: String,
       port: Int,
       projectName: String,
