@@ -1,6 +1,6 @@
 package tests
 
-class McpTestSuite extends BaseLspSuite("mcp-test") {
+class CursorMcpConfigSuite extends BaseLspSuite("mcp-test") {
   test("basic") {
     cleanWorkspace()
     for {
