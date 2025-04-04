@@ -37,21 +37,23 @@ class QuerySearchVisitor(
     val shouldIncludePackages =
       symbolTypes.isEmpty || symbolTypes.contains(SymbolType.Package)
 
-    if (shouldIncludePackages && matchesQuery(pkg)) {
+    lazy val pkgFqcn = pkg.fqcn
+    if (shouldIncludePackages && matchesQuery(pkgFqcn)) {
       results +=
         PackageSearchResult(
           name = pkg.substring(pkg.lastIndexOf('/') + 1),
-          path = pkg.fqcn,
+          path = pkgFqcn,
         )
     }
     true // Continue searching even if this package doesn't match
   }
 
   override def visitWorkspacePackage(owner: String, name: String): Int = {
-    if (matchesQuery(name)) {
+    lazy val pkgFqcn = s"$owner$name".fqcn
+    if (matchesQuery(pkgFqcn)) {
       packageResult += PackageSearchResult(
         name,
-        s"$owner$name".replace('/', '.'),
+        pkgFqcn,
       )
       1
     } else 0
@@ -87,15 +89,15 @@ class QuerySearchVisitor(
                 SymbolType.Unknown(semanticdbDefn.info.kind.toString)
               )
 
+            val fqcn = semanticdbDefn.info.symbol.fqcn
             if (
-              matchesQuery(
-                semanticdbDefn.info.displayName
-              ) && (symbolTypes.isEmpty || symbolTypes.contains(kind))
+              matchesQuery(fqcn) && (symbolTypes.isEmpty || symbolTypes
+                .contains(kind))
             ) {
               results +=
                 ClassOrObjectSearchResult(
                   name = semanticdbDefn.info.displayName,
-                  path = semanticdbDefn.info.symbol.fqcn,
+                  path = fqcn,
                   symbolType = kind,
                 )
               size += 1
@@ -124,15 +126,16 @@ class QuerySearchVisitor(
     lazy val symbolType =
       kindToTypeString(kind).getOrElse(SymbolType.Unknown(kind.toString))
 
+    val fqcn = s"${owner.fqcn}.$symbolName"
     if (
-      matchesQuery(symbolName) && (symbolTypes.isEmpty || symbolTypes.contains(
+      matchesQuery(fqcn) && (symbolTypes.isEmpty || symbolTypes.contains(
         symbolType
       ))
     ) {
       results +=
         WorkspaceSymbolSearchResult(
           name = symbolName,
-          path = s"${owner.fqcn}.$symbolName",
+          path = fqcn,
           symbolType = symbolType,
           location = path.toUri.toString,
         )

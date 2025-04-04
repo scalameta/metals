@@ -57,10 +57,12 @@ class QueryEngine(
       query,
       enableDebug,
     )
+
     // Create a query that will match the glob pattern
+    val shortQuery = query.split(".").lastOption.getOrElse(query)
     val wsQuery = WorkspaceSymbolQuery(
-      query,
-      WorkspaceSymbolQuery.AlternativeQuery.all(query),
+      shortQuery,
+      WorkspaceSymbolQuery.AlternativeQuery.all(shortQuery),
       isTrailingDot = false,
       isClasspath = true,
       isShortQueryRetry = false,
