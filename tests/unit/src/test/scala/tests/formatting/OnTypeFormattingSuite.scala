@@ -612,11 +612,58 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
        |}""".stripMargin,
   )
 
+  check(
+    "vscode-add-missing-interp-string-context",
+    """
+      |object Main {
+      |  val str = "not yet interp $@@"
+      |}""".stripMargin,
+    """
+      |object Main {
+      |  val str = s"not yet interp ${}"
+      |}""".stripMargin,
+    triggerCharacter = "{",
+    autoInserted = "}",
+  )
+
+  check(
+    "vscode-escape-existing-dollar-in-string-interp",
+    """
+      |object Main {
+      |  val str = "not yet $interp $@@"
+      |}""".stripMargin,
+    """
+      |object Main {
+      |  val str = s"not yet $$interp ${}"
+      |}""".stripMargin,
+    triggerCharacter = "{",
+    autoInserted = "}",
+  )
+
+  check(
+    "vscode-multi-line-string-interp",
+    """
+      |object Main {
+      |  val str = '''not ${} yet interp
+      |              |and multiline $@@
+      |              |$content'''.stripMargin
+      |}""".stripMargin,
+    """
+      |object Main {
+      |  val str = s'''not $${} yet interp
+      |              |and multiline ${}
+      |              |$$content'''.stripMargin
+      |}""".stripMargin,
+    triggerCharacter = "{",
+    autoInserted = "}",
+  )
+
   def check(
       name: TestOptions,
       testCase: String,
       expectedCase: String,
       autoIndent: String = indent,
+      autoInserted: String = "",
       triggerCharacter: String = "\n",
       stripMarginEnabled: Boolean = true,
       additionalRequests: TestingServer => Future[Unit] = _ => Future.unit,
@@ -652,6 +699,7 @@ class OnTypeFormattingSuite extends BaseLspSuite("onTypeFormatting") {
           testCode,
           expected,
           autoIndent,
+          autoInserted,
           triggerCharacter,
         )
       } yield ()
