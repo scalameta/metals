@@ -1244,7 +1244,10 @@ class WorkspaceLspService(
         capabilities.setRenameProvider(renameOptions)
         capabilities.setDocumentHighlightProvider(true)
         capabilities.setDocumentOnTypeFormattingProvider(
-          new lsp4j.DocumentOnTypeFormattingOptions("\n", List("\"").asJava)
+          new lsp4j.DocumentOnTypeFormattingOptions(
+            "\n",
+            List("\"", "{").asJava,
+          )
         )
         capabilities.setDocumentRangeFormattingProvider(
           initialServerConfig.allowMultilineStringFormatting
