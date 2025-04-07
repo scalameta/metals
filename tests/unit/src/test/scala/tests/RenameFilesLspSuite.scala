@@ -839,7 +839,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/C/D/Sun.scala"),
     expectedRenames =
-      Map("A" -> "C", "B" -> "D", "_" -> "{m, Sun, XtentionSun}"),
+      Map("A" -> "C", "B" -> "D", "_" -> "{Sun, XtentionSun, m}"),
     sourcesAreCompiled = true,
   )
 
@@ -914,6 +914,79 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |""".stripMargin,
     fileRenames = Map(s"$prefix/C/Sun.scala" -> s"$prefix/C/D/Sun.scala"),
     expectedRenames = Map("C" -> "C.D"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "rename directory",
+    s"""|/$prefix/Z/A/Sun.scala
+        |package org.someorg.Z.<<A>>
+        |
+        |class Sun
+        |/$prefix/B/Moon.scala
+        |package org.someorg.B
+        |
+        |import org.someorg.Z.<<A._>>
+        |object Moon {
+        | val o = new Sun()
+        |}
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/Z/A" -> s"$prefix/Z/C"),
+    expectedRenames = Map("A" -> "C", "A._" -> "C.Sun"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "rename directory 2",
+    s"""|/$prefix/Z/A/Sun.scala
+        |package org.someorg.Z.<<A>>
+        |
+        |class Sun
+        |/$prefix/Z/A/Mercury.scala
+        |package org.someorg.Z.<<A>>
+        |
+        |class Mercury
+        |/$prefix/B/Moon.scala
+        |package org.someorg.B
+        |
+        |import org.someorg.Z.<<A._>>
+        |object Moon {
+        | val o = new Sun()
+        | val o1 = new Mercury()
+        |}
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/Z/A" -> s"$prefix/Z/C"),
+    expectedRenames = Map("A" -> "C", "A._" -> "C.{Mercury, Sun}"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "rename directory 3",
+    s"""|/$prefix/Z/A/Sun.scala
+        |package org.someorg.Z.<<A>>
+        |
+        |class Sun
+        |/$prefix/Z/A/Mercury.scala
+        |package org.someorg.Z.<<A>>
+        |
+        |class Mercury
+        |/$prefix/Z/A/D/Mars.scala
+        |package org.someorg.Z.<<A>>.D
+        |
+        |class Mars
+        |/$prefix/B/Moon.scala
+        |package org.someorg.B
+        |
+        |import org.someorg.Z.<<A>>.D.Mars
+        |import org.someorg.Z.<<A._>>
+        |object Moon {
+        | val o = new Sun()
+        | val o1 = new Mercury()
+        | val o2 = new Mars()
+        |}
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/Z/A" -> s"$prefix/Z/C"),
+    expectedRenames = Map("A" -> "C", "A._" -> "C.{Mercury, Sun}"),
     sourcesAreCompiled = true,
   )
 

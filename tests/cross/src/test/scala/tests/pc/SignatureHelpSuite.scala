@@ -1050,4 +1050,113 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |""".stripMargin
   )
 
+  check(
+    "generic-refinement-1",
+    """
+      |trait Foo[T] {
+      |  def bar(t1: T, t2: T): Int = ???
+      |  def bar(i: Int): Int = ???
+      |}
+      |object Baz extends Foo[String]
+      |object Main {
+      |  Baz.bar(@@)
+      |}
+      |""".stripMargin,
+    """|bar(i: Int): Int
+       |    ^^^^^^
+       |bar(t1: String, t2: String): Int
+       |""".stripMargin
+  )
+
+  check(
+    "generic-refinement-2",
+    """
+      |trait Foo[T] {
+      |  def bar(t1: T, t2: T): Int = ???
+      |  def bar(i: Int): Int = ???
+      |}
+      |object Baz extends Foo[String]
+      |object Main {
+      |  Baz.bar("foo", @@)
+      |}
+      |""".stripMargin,
+    """|bar(t1: String, t2: String): Int
+       |                ^^^^^^^^^^
+       |bar(i: Int): Int
+       |""".stripMargin
+  )
+
+  check(
+    "generic-refinement-3",
+    """
+      |trait Foo[T] {
+      |  def apply(t1: T, t2: T): Int = ???
+      |  def apply(i: Int): Int = ???
+      |}
+      |object Baz extends Foo[String]
+      |object Main {
+      |  Baz(@@)
+      |}
+      |""".stripMargin,
+    """|apply(i: Int): Int
+       |      ^^^^^^
+       |apply(t1: String, t2: String): Int
+       |""".stripMargin
+  )
+
+  check(
+    "generic-refinement-4",
+    """
+      |abstract class Base1[A, B, C, R] extends Base2[(A, B, C), R] {
+      |  def apply(a: A, b: B, c: C): R = ???
+      |}
+      |abstract class Base2[IN, OUT] extends Base3 {
+      |  type In = IN
+      |  type Out = OUT
+      |}
+      |trait Base3 {
+      |  type In
+      |  type Out
+      |
+      |  def apply(in: In): Out = ???
+      |}
+      |
+      |object Baz extends Base1[String, Int, Double, Boolean]
+      |object Main {
+      |  Baz("foo", @@)
+      |}
+      |""".stripMargin,
+    """|apply(a: String, b: Int, c: Double): Boolean
+       |apply(in: (String, Int, Double)): Boolean
+       |""".stripMargin
+  )
+
+  check(
+    "generic-refinement-5",
+    """
+      |abstract class Base1[A, B, C, R] extends Base2[(A, B, C), R] {
+      |  def apply(a: A, b: B, c: C): R = ???
+      |}
+      |abstract class Base2[IN, OUT] extends Base3 {
+      |  type In = IN
+      |  type Out = OUT
+      |}
+      |trait Base3 {
+      |  type In
+      |  type Out
+      |
+      |  def apply(in: In): Out = ???
+      |}
+      |
+      |object Baz extends Base1[String, Int, Double, Boolean]
+      |object Main {
+      |  Baz(@@)
+      |}
+      |""".stripMargin,
+    """|apply(in: (String, Int, Double)): Boolean
+       |      ^^^^^^^^^^^^^^^^^^^^^^^^^
+       |apply(a: String, b: Int, c: Double): Boolean
+       |""".stripMargin
+  )
+
 }

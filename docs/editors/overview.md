@@ -357,7 +357,7 @@ projects.
 
 ## Worksheets
 
-**✅**: Worksheets work via inlay hints.
+**✅**: Worksheets work via inlay hints. A worksheet needs to have the `.worksheet.sc` extension to be picked up by Metals.
 
 By default there is a 30 second timeout on worksheet evaluation, this setting can be overridden by `-Dmetals.worksheet-timeout=<number of seconds>` server property.
 

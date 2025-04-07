@@ -15,29 +15,33 @@ import ch.epfl.scala.debugadapter.ScalaVersion
 import coursierapi.Dependency
 
 class MetalsDebugToolsResolver extends DebugToolsResolver {
+  def expressionCompilerDependency(scalaVersion: ScalaVersion): Dependency = {
+    val module = s"${BuildInfo.expressionCompilerName}_$scalaVersion"
+    Dependency.of(BuildInfo.organization, module, BuildInfo.version)
+  }
+
+  def debugDecoderDependency(scalaVersion: ScalaVersion): Dependency = {
+    val module = s"${BuildInfo.decoderName}_${scalaVersion.binaryVersion}"
+    Dependency.of(BuildInfo.organization, module, BuildInfo.version)
+  }
+
   override def resolveExpressionCompiler(
       scalaVersion: ScalaVersion
   ): Try[ClassLoader] = {
-    val module = s"${BuildInfo.expressionCompilerName}_$scalaVersion"
-    val dependency =
-      Dependency.of(BuildInfo.organization, module, BuildInfo.version)
     getOrTryDownload(
       MetalsDebugToolsResolver.expressionCompilerCache,
       scalaVersion,
-      dependency,
+      expressionCompilerDependency(scalaVersion),
     ) { downloaded =>
       new URLClassLoader(downloaded.map(_.toUri.toURL).toArray, null)
     }
   }
 
   override def resolveDecoder(scalaVersion: ScalaVersion): Try[Seq[Path]] = {
-    val module = s"${BuildInfo.decoderName}_${scalaVersion.binaryVersion}"
-    val dependency =
-      Dependency.of(BuildInfo.organization, module, BuildInfo.version)
     getOrTryDownload(
       MetalsDebugToolsResolver.decoderCache,
       scalaVersion,
-      dependency,
+      debugDecoderDependency(scalaVersion),
     )(identity)
   }
 

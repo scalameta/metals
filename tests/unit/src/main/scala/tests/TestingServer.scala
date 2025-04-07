@@ -952,6 +952,7 @@ final case class TestingServer(
       query: String,
       expected: String,
       autoIndent: String,
+      autoInserted: String,
       triggerChar: String,
       root: AbsolutePath = workspace,
   )(implicit loc: munit.Location): Future[Unit] = {
@@ -961,6 +962,7 @@ final case class TestingServer(
         query,
         root,
         autoIndent,
+        autoInserted,
         triggerChar,
       )
       multiline <- fullServer.onTypeFormatting(params).asScala
@@ -1262,6 +1264,7 @@ final case class TestingServer(
       original: String,
       root: AbsolutePath,
       autoIndent: String,
+      autoInserted: String,
       triggerChar: String,
   ): Future[(String, DocumentOnTypeFormattingParams)] = {
     positionFromString(
@@ -1269,11 +1272,14 @@ final case class TestingServer(
       original,
       root,
       replaceWith =
-        if (triggerChar == "\n") triggerChar + autoIndent else triggerChar,
+        if (triggerChar == "\n") triggerChar + autoIndent
+        else triggerChar + autoInserted,
     ) { case (text, textId, start) =>
       if (triggerChar == "\n") {
         start.setLine(start.getLine() + 1) // + newline
         start.setCharacter(autoIndent.size)
+      } else {
+        start.setCharacter(start.getCharacter() + autoInserted.length)
       }
       val params = new DocumentOnTypeFormattingParams(
         textId,

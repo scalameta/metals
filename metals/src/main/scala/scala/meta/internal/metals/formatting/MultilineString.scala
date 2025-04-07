@@ -353,6 +353,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
     params.triggerChar.head match {
       case '"' => contributeQuotes(params)
       case '\n' => contributeNewline(params)
+      case _ => None
     }
   }
 

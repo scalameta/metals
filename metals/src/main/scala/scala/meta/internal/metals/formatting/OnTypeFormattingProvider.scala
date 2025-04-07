@@ -38,7 +38,8 @@ class OnTypeFormattingProvider(
 
   // The order of which this is important to know which will first return the Edits
   val formatters: List[OnTypeFormatter] = List(
-    MultilineString(userConfig)
+    MultilineString(userConfig),
+    InterpolateStringContext,
   )
 
   def format(
