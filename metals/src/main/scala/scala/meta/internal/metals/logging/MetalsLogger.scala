@@ -178,7 +178,7 @@ object MetalsLogger {
 
   def silent: LoggerSupport[Unit] =
     new LoggerSupport[Unit] {
-      override def log(record: LogRecord): Unit = ()
+      override def log(record: => LogRecord): Unit = ()
     }
   def default: LoggerSupport[Unit] = scribe.Logger.root
   def silentInTests: LoggerSupport[Unit] =
