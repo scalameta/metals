@@ -22,6 +22,12 @@ trait PcSymbolSearch { self: WithCompilationUnit =>
     /* simple identifier:
      * val a = val@@ue + value
      */
+    case (block: Block) =>
+
+      block.stats.collectFirst {
+        case vd: ValDef if vd.namePos.includes(pos) && !vd.symbol.isSynthetic =>
+          (Set(vd.symbol), vd.namePos)
+      }
     case (id: Ident) =>
       // might happen in type trees
       // also this doesn't seem to be picked up by semanticdb

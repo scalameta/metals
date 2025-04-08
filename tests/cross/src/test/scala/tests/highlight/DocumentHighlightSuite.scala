@@ -32,7 +32,33 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
   )
 
   check(
-    "multiple3",
+    "multiple3".tag(IgnoreScalaVersion.forLessThan("2.13.17")),
+    """
+      |object O {
+      |    def runtimeResources = {
+      |        val (<<si@@ngleFiles>>, correctEntries) = (???, ???)
+      |        <<singleFiles>>
+      |        correctEntries
+      |    }
+      |
+      |}""".stripMargin
+  )
+
+  check(
+    "multiple4".tag(IgnoreScalaVersion.forLessThan("2.13.17")),
+    """
+      |object O {
+      |    def runtimeResources = {
+      |        val (singleFiles, <<corr@@ectEntries>>) = (???, ???)
+      |        singleFiles
+      |        <<correctEntries>>
+      |    }
+      |
+      |}""".stripMargin
+  )
+
+  check(
+    "multiple5",
     """
       |object Main {
       |  val <<abc>> = 123
