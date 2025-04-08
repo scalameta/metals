@@ -87,9 +87,7 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
        |  spaced@@
        |}
        |""".stripMargin,
-    // NOTE(olafur) expected output is not backticked because the compiler symbol does not
-    // distinguish if the symbol was defined with backticks in source.
-    """spaced: Int
+    """`spaced`: Int
       |""".stripMargin,
     filterText = ""
   )
@@ -204,4 +202,20 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
+  check(
+    "preserve-backticks",
+    """|trait Foo {
+       |  def withoutBackticks: Unit
+       |  def `withUnecessaryBackticks`: Unit
+       |  def `with necessary backticks`: Unit
+       |
+       |  with@@
+       |}
+       |""".stripMargin,
+    """|`with necessary backticks`: Unit
+       |`withUnecessaryBackticks`: Unit
+       |withoutBackticks: Unit
+       |""".stripMargin,
+    topLines = Some(3)
+  )
 }

@@ -102,8 +102,17 @@ class CompletionProvider(
 
     val items = sorted.iterator.zipWithIndex.map { case (member, idx) =>
       params.checkCanceled()
+      val definitionSiteHasBackticks = {
+        val defnNameStart = member.sym.pos.focus
+        defnNameStart.isDefined && defnNameStart.source.content
+          .lift(defnNameStart.start)
+          .contains('`')
+      }
       val symbolName = member.symNameDropLocal.decoded
-      val simpleIdent = Identifier.backtickWrap(symbolName)
+      val simpleIdent = Identifier.backtickWrap(
+        symbolName,
+        wrapUnconditionally = definitionSiteHasBackticks
+      )
       val ident =
         member match {
           case _: WorkspaceMember | _: WorkspaceImplicitMember |

@@ -49,12 +49,14 @@ trait KeywordWrapper {
   final def backtickWrap(
       s: String,
       exclusions: Set[String] = Set.empty,
-      wrapOperators: Boolean = false
+      wrapOperators: Boolean = false,
+      wrapUnconditionally: Boolean = false
   ): String = {
-    if (exclusions.contains(s)) s
+    if (exclusions.contains(s) && !wrapUnconditionally) s
     else if (s.isEmpty) "``"
     else if (s(0) == '`' && s.last == '`') s
-    else if (needsBacktick(s, wrapOperators)) "" + ('`') + s + '`'
+    else if (needsBacktick(s, wrapOperators) || wrapUnconditionally)
+      "" + ('`') + s + '`'
     else s
   }
 }

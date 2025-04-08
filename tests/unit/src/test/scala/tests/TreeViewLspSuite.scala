@@ -35,7 +35,6 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
   val expectedLibraries: SortedSet[String] = SortedSet(
     "cats-core_2.13",
     "cats-kernel_2.13",
-    "checker-qual",
     "circe-core_2.13",
     "circe-numbers_2.13",
     "error_prone_annotations",
@@ -44,7 +43,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
     "guava",
     "j2objc-annotations",
     jdkSourcesName,
-    "jsr305",
+    "jspecify",
     "org.eclipse.lsp4j",
     "org.eclipse.lsp4j.generator",
     "org.eclipse.lsp4j.jsonrpc",
@@ -278,7 +277,7 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
             "class Paths",
           ),
           s"""|root
-              |  Libraries (22) library
+              |  Libraries (21) library
               |    $jdkSourcesName package
               |      java/ symbol-folder
               |        nio/ symbol-folder
@@ -311,8 +310,8 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
           ),
           s"""|root
               |  Projects (0) project
-              |  Libraries (22) library
-              |  Libraries (22) library
+              |  Libraries (21) library
+              |  Libraries (21) library
               |    $jdkSourcesName package
               |    sourcecode_2.13-0.1.7-sources.jar package
               |    sourcecode_2.13-0.1.7-sources.jar package
