@@ -44,14 +44,11 @@ class WorksheetModifier extends StringModifier {
        |### Using dependencies in worksheets
        |
        |You are able to include an external dependency in your worksheet by including
-       |it in one of the following two ways.
+       |it with using directives:
        |
        |```scala
-       |// $dep.`organisation::artifact:version` style
-       |import $dep.`com.lihaoyi::scalatags:0.7.0`
+       |//> using dep com.lihaoyi::scalatags:0.7.0
        |
-       |// $ivy.`organisation::artifact:version` style
-       |import $ivy.`com.lihaoyi::scalatags:0.7.0`
        |```
        |
        |`::` is the same as `%%` in sbt, which will append the current Scala binary version
@@ -60,7 +57,7 @@ class WorksheetModifier extends StringModifier {
        |You can also import `scalac` options in a special `$$scalac` import like below:
        |
        |```scala
-       |import $scalac.`-Ywarn-unused`
+       |//> using options -Ywarn-unused
        |```
        |
        |### Troubleshooting
