@@ -29,6 +29,7 @@ import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.ScalatestTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.TestNGTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.WeaverCatsEffectTestFinder
+import scala.meta.internal.metals.testProvider.frameworks.ZioTestFinder
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Semanticdbs
@@ -69,6 +70,7 @@ final class TestSuitesProvider(
     new ScalatestTestFinder(trees, symbolIndex, semanticdbs)
   private val weaverCatsEffect =
     new WeaverCatsEffectTestFinder(trees, symbolIndex, semanticdbs)
+  private val zioTestFinder = new ZioTestFinder(trees)
 
   private def isExplorerEnabled = clientConfig.isTestExplorerProvider() &&
     userConfig().testUserInterface == TestUserInterfaceKind.TestExplorer
@@ -339,6 +341,11 @@ final class TestSuitesProvider(
                 doc = semanticdb,
                 path = path,
                 suiteSymbol = suite.symbol,
+              )
+            case TestFrameworkUtils.ZioTestFramework =>
+              zioTestFinder.findTests(
+                path = path,
+                suiteName = suite.fullyQualifiedName,
               )
             case _ => Vector.empty
           }
