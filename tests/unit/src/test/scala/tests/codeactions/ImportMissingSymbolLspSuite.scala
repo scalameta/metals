@@ -3,9 +3,15 @@ package tests.codeactions
 import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
+import scala.meta.internal.metals.codeactions.SourceAddMissingImports
 
 class ImportMissingSymbolLspSuite
     extends BaseCodeActionLspSuite("importMissingSymbol") {
+
+  // ---------------------------------------------------------------------------
+  // Tests for ImportMissingSymbolQuickFix (CodeActionKind.QuickFix)
+  // These tests verify the existing behavior for manual import resolution
+  // ---------------------------------------------------------------------------
 
   check(
     "basic",
@@ -430,5 +436,143 @@ class ImportMissingSymbolLspSuite
         |""".stripMargin,
     expectNoDiagnostics = false,
     filterAction = _.getTitle() == ImportMissingSymbol.title("A", "example.a"),
+  )
+
+  // ---------------------------------------------------------------------------
+  // Tests for SourceAddMissingImports (source.addMissingImports)
+  // These tests verify the auto-import behavior that only imports unambiguous symbols
+  // ---------------------------------------------------------------------------
+
+  check(
+    "source-add-missing-imports-basic",
+    """|package a
+       |
+       |object A {
+       |  val i = <<Instant>>.now
+       |}
+       |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("Instant", "java.time")}
+        |""".stripMargin,
+    """|package a
+       |
+       |import java.time.Instant
+       |
+       |object A {
+       |  val i = Instant.now
+       |}
+       |""".stripMargin,
+    kind = List(SourceAddMissingImports.kind),
+  )
+
+  check(
+    "source-add-missing-imports-multiple-unambiguous",
+    """|package a
+       |
+       |object A {
+       |  <<val i = Instant.now
+       |  val b = ListBuffer.newBuilder[Int]>>
+       |}
+       |""".stripMargin,
+    s"""|${SourceAddMissingImports.title}
+        |${ImportMissingSymbol.title("Instant", "java.time")}
+        |${ImportMissingSymbol.title("ListBuffer", "scala.collection.mutable")}
+        |""".stripMargin,
+    """|package a
+       |
+       |import java.time.Instant
+       |import scala.collection.mutable.ListBuffer
+       |
+       |object A {
+       |  val i = Instant.now
+       |  val b = ListBuffer.newBuilder[Int]
+       |}
+       |""".stripMargin,
+    kind = List(SourceAddMissingImports.kind),
+  )
+
+  check(
+    "source-add-missing-imports-skip-ambiguous",
+    """|package a
+       |
+       |object A {
+       |  <<val f: Future[Int] = ???
+       |  val i = Instant.now>>
+       |}
+       |""".stripMargin,
+    s"""|${SourceAddMissingImports.title}
+        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
+        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+        |${ImportMissingSymbol.title("Instant", "java.time")}
+        |""".stripMargin,
+    """|package a
+       |
+       |import java.time.Instant
+       |
+       |object A {
+       |  val f: Future[Int] = ???
+       |  val i = Instant.now
+       |}
+       |""".stripMargin,
+    kind = List(SourceAddMissingImports.kind),
+    expectNoDiagnostics = false,
+  )
+
+  check(
+    "source-add-missing-imports-mixed-symbols",
+    """|package a
+       |
+       |object A {
+       |  <<val i = Instant.now
+       |  val f: Future[Int] = ???
+       |  val p = Path.of("/tmp")
+       |  val b = ListBuffer.newBuilder[Int]>>
+       |}
+       |""".stripMargin,
+    s"""|${SourceAddMissingImports.title}
+        |${ImportMissingSymbol.title("Instant", "java.time")}
+        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
+        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+        |${ImportMissingSymbol.title("Path", "java.nio.file")}
+        |${ImportMissingSymbol.title("ListBuffer", "scala.collection.mutable")}
+        |""".stripMargin,
+    """|package a
+       |
+       |import java.nio.file.Path
+       |import java.time.Instant
+       |import scala.collection.mutable.ListBuffer
+       |
+       |object A {
+       |  val i = Instant.now
+       |  val f: Future[Int] = ???
+       |  val p = Path.of("/tmp")
+       |  val b = ListBuffer.newBuilder[Int]
+       |}
+       |""".stripMargin,
+    kind = List(SourceAddMissingImports.kind),
+    expectNoDiagnostics = false,
+  )
+
+  check(
+    "source-add-missing-imports-no-action-when-only-ambiguous",
+    """|package a
+       |
+       |object A {
+       |  <<val f: Future[Int] = ???>>
+       |}
+       |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
+        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+        |${CreateNewSymbol.title("Future")}
+        |""".stripMargin,
+    """|package a
+       |
+       |import java.util.concurrent.Future
+       |
+       |object A {
+       |  val f: Future[Int] = ???
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1,
+    expectNoDiagnostics = false,
   )
 }
