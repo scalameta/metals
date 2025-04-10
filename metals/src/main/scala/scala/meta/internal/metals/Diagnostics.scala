@@ -337,13 +337,15 @@ final class Diagnostics(
             )
             // Scala 3 sets the diagnostic code to -1 for NoExplanation Messages. Ideally
             // this will change and we won't need this check in the future, but for now
-            // let's not forward them.
+            // let's not forward them, since they are not valid for all clients.
             val isScala3NoExplanationDiag = d.getCode() != null && d
               .getCode()
               .isLeft() && d.getCode().getLeft() == "-1"
             if (!isScala3NoExplanationDiag) ld.setCode(d.getCode())
 
             ld.setTags(d.getTags())
+            ld.setRelatedInformation(d.getRelatedInformation)
+            ld.setCodeDescription(d.getCodeDescription())
             adjustedDiagnosticData(d, edit).map(newData => ld.setData(newData))
             ld
           }

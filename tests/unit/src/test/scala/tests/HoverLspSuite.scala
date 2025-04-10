@@ -296,4 +296,25 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
     } yield ()
   }
 
+  test("backticked-name".tag(FlakyWindows)) {
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{"a":{}}
+        """.stripMargin
+      )
+      _ <- server.assertHover(
+        "a/src/main/scala/a/Main.scala",
+        """
+          |object Main {
+          |  def `foo ba@@r baz` = 123
+          |}""".stripMargin,
+        """|```scala
+           |def `foo bar baz`: Int
+           |```
+           |""".stripMargin.hover,
+      )
+    } yield ()
+  }
+
 }

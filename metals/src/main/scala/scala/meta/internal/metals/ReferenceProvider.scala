@@ -149,28 +149,15 @@ final class ReferenceProvider(
       source: AbsolutePath,
       directlyImportedSymbols: Set[String],
   ): List[String] = {
-    def matchesOwner(symbol: String) = {
-      symbol.startsWith(owner) && {
-        val rest = symbol.stripPrefix(owner)
-        rest match {
-          case "" => true
-          case "/package." => true
-          case SyntheticPackageObject(_) => true
-          case _ => false
-        }
-      }
-    }
+
     semanticdbs().textDocument(source).documentIncludingStale match {
       case Some(doc) =>
         doc.occurrences
           .map(_.symbol)
           .distinct
           .filter { s =>
-            val reversedOwners = s.ownerChain.reverse
-
-            (reversedOwners.length > 1
-            && matchesOwner(reversedOwners(1))
-            && !directlyImportedSymbols.contains(s))
+            s.startsWith(owner) && s.isType && !directlyImportedSymbols
+              .contains(s)
           }
           .toList
       case None => List()

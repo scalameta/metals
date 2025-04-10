@@ -407,7 +407,7 @@ class DestinationProvider(
 ) {
 
   def findDefinitionFile(symbol: String): List[AbsolutePath] = {
-    index.topLevels(Symbol(symbol).toplevel).map(_._1)
+    index.findFileForToplevel(Symbol(symbol).toplevel).map(_._1)
   }
 
   private def bestTextDocument(

@@ -1,12 +1,12 @@
 package scala.meta.internal.builds
 
+import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
 import coursierapi.Dependency
-import coursierapi.Fetch
 
 case class BazelBuildTool(
     userConfig: () => UserConfiguration,
@@ -31,12 +31,8 @@ case class BazelBuildTool(
 
   private def composeArgs(): List[String] = {
     val classpathSeparator = java.io.File.pathSeparator
-    val classpath = Fetch
-      .create()
-      .withDependencies(BazelBuildTool.dependency)
-      .withRepositories(ShellRunner.defaultRepositories: _*)
-      .fetch()
-      .asScala
+    val classpath = Embedded
+      .downloadDependency(BazelBuildTool.dependency)
       .mkString(classpathSeparator)
     List(
       JavaBinary(userConfig().javaHome),
@@ -92,7 +88,9 @@ object BazelBuildTool {
   )
 
   private def hasProjectView(dir: AbsolutePath): Option[AbsolutePath] =
-    dir.list.find(_.filename.endsWith(".bazelproject"))
+    Some(dir.resolve(".bazelproject"))
+      .filter(_.isFile)
+      .orElse(dir.list.find(_.filename.endsWith(".bazelproject")))
 
   val fallbackProjectView: String = {
     """|targets:

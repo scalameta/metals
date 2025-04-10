@@ -9,7 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
-def localSnapshotVersion = "1.5.2-SNAPSHOT"
+def localSnapshotVersion = "1.5.3-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 
@@ -268,7 +268,7 @@ lazy val mtagsShared = project
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "4.30.1",
+      "com.google.protobuf" % "protobuf-java" % "4.30.2",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
@@ -404,6 +404,7 @@ lazy val metals = project
       // =================
       // for bloom filters
       V.guava,
+      "com.google.code.findbugs" % "jsr305" % "3.0.2",
       "org.scalameta" %% "metaconfig-core" % "0.15.0",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
@@ -413,7 +414,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.16.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "11.4.0",
+      "org.flywaydb" % "flyway-core" % "11.6.0",
       "com.h2database" % "h2" % "2.3.232",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
@@ -518,13 +519,7 @@ lazy val `sbt-metals` = project
     (pluginCrossBuild / sbtVersion) := {
       scalaBinaryVersion.value match {
         case "2.12" => "1.5.8"
-        case _ => "2.0.0-M3"
-      }
-    },
-    scalacOptions ++= {
-      scalaBinaryVersion.value match {
-        case "2.12" => "-Xsource:3" :: Nil
-        case _ => Nil
+        case _ => "2.0.0-M4"
       }
     },
   )

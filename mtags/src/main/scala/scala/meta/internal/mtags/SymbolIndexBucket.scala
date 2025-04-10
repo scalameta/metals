@@ -173,7 +173,9 @@ class SymbolIndexBucket(
     }
   }
 
-  def topLevels(topLevelSymbol: Symbol): List[(AbsolutePath, Dialect)] = {
+  def findFileForToplevel(
+      topLevelSymbol: Symbol
+  ): List[(AbsolutePath, Dialect)] = {
     toplevels
       .get(topLevelSymbol.toString())
       .map(_.toList)

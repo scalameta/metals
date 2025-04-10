@@ -6,7 +6,7 @@ object V {
   val scala212 = "2.12.20"
   val scala213 = "2.13.16"
   val scala3 = "3.3.5"
-  val scala3ForSBT2 = "3.6.2"
+  val scala3ForSBT2 = "3.6.4"
   val latestScala3Next = "3.6.4"
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
@@ -14,7 +14,7 @@ object V {
   // Rules need to be manually updated to support
   val bazelScalaVersion = "2.13.12"
   val betterMonadicFor = "0.3.1"
-  val bloop = "2.0.8"
+  val bloop = "2.0.9"
   val bloopConfig = "2.3.2"
   val bsp = "2.2.0-M2"
   val coursier = "2.1.24"
@@ -31,20 +31,20 @@ object V {
   val kindProjector = "0.13.3"
   val lsp4jV = "0.24.0"
   val mavenBloop = "2.0.1"
-  val mill = "0.12.8"
+  val mill = "0.12.10"
   val mdoc = "2.6.5"
   val munit = "1.1.0"
   val pprint = "0.7.3"
   val sbtBloop = bloop
   val sbtJdiTools = "1.2.0"
-  val scalaCli = "1.7.0"
+  val scalaCli = "1.7.1"
   val scalafix = "0.14.2"
   val scalafmt = "3.7.15"
   val scalameta = "4.13.4"
-  val scribe = "3.16.0"
+  val scribe = "3.16.1"
   val qdox = "2.2.0"
 
-  val guava = "com.google.guava" % "guava" % "33.4.0-jre"
+  val guava = "com.google.guava" % "guava" % "33.4.6-jre"
   val lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   val dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
 

@@ -158,9 +158,9 @@ class QuerySearchVisitor(
   ): List[(AbsolutePath, Dialect)] = {
     val nme = Classfile.name(filename)
     val tpe = Symbol(Symbols.Global(pkg, Descriptor.Type(nme)))
-    val forTpe = index.topLevels(tpe)
+    val forTpe = index.findFileForToplevel(tpe)
     val term = Symbol(Symbols.Global(pkg, Descriptor.Term(nme)))
-    val forTerm = index.topLevels(term)
+    val forTerm = index.findFileForToplevel(term)
     forTpe ++ forTerm
   }
 }

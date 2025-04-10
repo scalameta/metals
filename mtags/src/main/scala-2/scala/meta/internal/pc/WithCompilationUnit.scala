@@ -47,12 +47,19 @@ class WithCompilationUnit(
         val info =
           if (sym.owner.isClass) sym.owner.info
           else sym.owner.owner.info
-        Set(
-          sym,
-          info.member(sym.getterName),
-          info.member(sym.setterName),
-          info.member(sym.localName)
-        ) ++ constructorParam(sym) ++ sym.allOverriddenSymbols.toSet
+        val additionalSymbols =
+          Set(
+            info.member(sym.getterName),
+            info.member(sym.setterName),
+            info.member(sym.localName)
+          )
+        // check if the symbol is actually getter/setter/local value, otherwise we should not show it
+        val base =
+          if (additionalSymbols(sym))
+            additionalSymbols + sym
+          else
+            Set(sym)
+        base ++ constructorParam(sym) ++ sym.allOverriddenSymbols.toSet
       } else Set(sym)
     all.filter(s => s != NoSymbol && !s.isError)
   }

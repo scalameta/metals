@@ -98,7 +98,16 @@ trait GlobalSymbolIndex {
       dialect: Dialect
   ): List[IndexingResult]
 
-  def topLevels(topLevelSymbol: mtags.Symbol): List[(AbsolutePath, Dialect)]
+  /**
+   * Get files for top level symbol
+   *
+   * @param topLevelSymbol
+   * @return List of files that contain the top level symbol and dialect used in the file
+   */
+  def findFileForToplevel(
+      topLevelSymbol: mtags.Symbol
+  ): List[(AbsolutePath, Dialect)]
+
 }
 
 case class SymbolDefinition(
