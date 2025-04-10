@@ -2,6 +2,13 @@ package scala.meta.internal.pc
 
 import scala.annotation.tailrec
 
+case class ImportPosition(
+    offset: Int,
+    padBefore: String,
+    padAfter: String,
+    indent: Int = 0
+)
+
 /**
  * A position to insert new imports
  *
@@ -11,16 +18,23 @@ import scala.annotation.tailrec
  *               in the case that it is the first one after the package def
  */
 case class AutoImportPosition(
-    offset: Int,
-    indent: Int,
-    padTop: Boolean
+    findPosition: String => ImportPosition,
+    indent: Option[String],
+    lastImportIndex: Int
 ) {
 
-  def this(offset: Int, text: String, padTop: Boolean) =
-    this(offset, AutoImportPosition.inferIndent(offset, text), padTop)
+  // def this(offset: Int, text: String, padTop: Boolean) =
+  //   this(offset, AutoImportPosition.inferIndent(offset, text), padTop) // TODO
 }
 
 object AutoImportPosition {
+
+  def empty: AutoImportPosition = AutoImportPosition(
+    _ => ImportPosition(0, "\n", "\n"),
+    indent = None,
+    0
+  )
+
   private val endOfLineCharacters = Set('\r', '\n')
 
   // Infers the indentation at the completion position by counting the number of leading

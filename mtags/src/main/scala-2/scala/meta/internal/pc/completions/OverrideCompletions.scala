@@ -8,6 +8,7 @@ import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.pc.AutoImportPosition
 import scala.meta.internal.pc.CompletionFuzzy
 import scala.meta.internal.pc.Identifier
+import scala.meta.internal.pc.ImportPosition
 import scala.meta.internal.pc.MetalsGlobal
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 
@@ -167,9 +168,11 @@ trait OverrideCompletions { this: MetalsGlobal =>
       autoImportPosition(pos, text)
     val autoImport: AutoImportPosition = baseAutoImport.getOrElse(
       AutoImportPosition(
-        lineStart,
-        inferIndent(lineStart, text)._1,
-        padTop = false
+        _ => ImportPosition(lineStart, "\n", ""),
+        Some(
+          " " * inferIndent(lineStart, text)._1
+        ), // TODO we might yse it above
+        lineStart
       )
     )
     val importContext: Context =
@@ -287,9 +290,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
           history.autoImports(
             pos,
             importContext,
-            autoImport.offset,
-            autoImport.indent,
-            autoImport.padTop
+            autoImport
           ),
           details
         )
