@@ -110,7 +110,12 @@ class WorkspaceLspService(
   private val cancelables = new MutableCancelable()
   val fallbackIsInitialized: ju.concurrent.atomic.AtomicBoolean =
     new ju.concurrent.atomic.AtomicBoolean(false)
-  var httpServer: Option[MetalsHttpServer] = None
+  @volatile var httpServer: HttpServerStatus = HttpServerOff
+
+  sealed trait HttpServerStatus
+  case object HttpServerOff extends HttpServerStatus
+  case object HttpServerIgnored extends HttpServerStatus
+  case class HttpServerOn(server: MetalsHttpServer) extends HttpServerStatus
 
   private val clientConfig =
     ClientConfiguration(
@@ -151,10 +156,35 @@ class WorkspaceLspService(
 
   private val timerProvider: TimerProvider = new TimerProvider(time)
 
+  def getHttpServer(): Future[Option[MetalsHttpServer]] = {
+    httpServer match {
+      // execute client command provider is used to provide the normal doctor
+      case HttpServerOff
+          if !clientConfig.isExecuteClientCommandProvider && !clientConfig
+            .isHttpEnabled() =>
+        languageClient
+          .showMessageRequest(Messages.StartHttpServer.params())
+          .asScala
+          .flatMap { item =>
+            if (item == Messages.StartHttpServer.yes) {
+              startHttpServer(force = true)
+              getHttpServer()
+            } else if (item == Messages.dontShowAgain) {
+              httpServer = HttpServerIgnored
+              Future.successful(None)
+            } else {
+              Future.successful(None)
+            }
+          }
+      case HttpServerOn(server) => Future.successful(Some(server))
+      case _ => Future.successful(None)
+    }
+  }
+
   val doctor: HeadDoctor =
     new HeadDoctor(
       () => folderServices.map(_.doctor) ++ optFallback.map(_.doctor),
-      () => httpServer,
+      getHttpServer,
       clientConfig,
       languageClient,
       clientConfig.isHttpEnabled(),
@@ -415,7 +445,8 @@ class WorkspaceLspService(
     focusedDocument.get().foreach(recentlyFocusedFiles.add)
     val uri = params.getTextDocument.getUri
     val path = uri.toAbsolutePath
-    setFocusedDocument(Some(path))
+    if (!clientConfig.isDidFocusProvider() || focusedDocument.get().isEmpty)
+      setFocusedDocument(Some(path))
     val service = getServiceForOpt(path)
       .orElse {
         if (path.filename.isScalaOrJavaFilename) {
@@ -443,7 +474,9 @@ class WorkspaceLspService(
 
   override def didClose(params: DidCloseTextDocumentParams): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    if (focusedDocument.get().contains(path)) {
+    if (
+      !clientConfig.isDidFocusProvider() && focusedDocument.get().contains(path)
+    ) {
       setFocusedDocument(recentlyFocusedFiles.pollRecent())
     }
     getServiceFor(params.getTextDocument().getUri()).didClose(params)
@@ -820,7 +853,11 @@ class WorkspaceLspService(
           ServerCommands.DisconnectBuildServer.title,
         ).asJavaObject
       case ServerCommands.DecodeFile(uri) =>
-        getServiceFor(uri).decodeFile(uri).asJavaObject
+        getServiceForOpt(uri)
+          .orElse(currentFolder)
+          .getOrElse(fallbackService)
+          .decodeFile(uri)
+          .asJavaObject
       case ServerCommands.DiscoverTestSuites(params) =>
         Option(params.uri) match {
           case None =>
@@ -845,10 +882,20 @@ class WorkspaceLspService(
                   }
               }(_ => true)
               .flatMap { mains =>
-                mains.headOption.fold(
+                mains.fold(
                   Future.failed[DebugSessionParams](
-                    DiscoveryFailures
-                      .NoMainClassFoundException(unresolvedParams.mainClass)
+                    Option(unresolvedParams.buildTarget)
+                      .map(buildTarget =>
+                        DiscoveryFailures
+                          .ClassNotFoundInBuildTargetException(
+                            unresolvedParams.mainClass,
+                            buildTarget,
+                          )
+                      )
+                      .getOrElse(
+                        DiscoveryFailures
+                          .NoMainClassFoundException(unresolvedParams.mainClass)
+                      )
                   )
                 )(Future.successful(_))
               }
@@ -927,6 +974,14 @@ class WorkspaceLspService(
           _.cleanCompile(),
           ServerCommands.CleanCompile.title,
         ).asJavaObject
+      case ServerCommands.CompileTarget(target) =>
+        onCurrentFolder(
+          _.compileTarget(target),
+          ServerCommands.CompileTarget.title,
+          false,
+          () =>
+            null, // shouldn't happen, but json null is fine as a default here
+        ).liftToLspError.asJavaObject
       case ServerCommands.CancelCompile() =>
         foreachSeqIncludeFallback(_.cancelCompile(), ignoreValue = true)
       case ServerCommands.PresentationCompilerRestart() =>
@@ -1112,14 +1167,6 @@ class WorkspaceLspService(
           .map(getServiceFor)
           .getOrElse(fallbackService)
           .createFile(directoryURI, name, fileType, isScala = false)
-      case ServerCommands.StartAmmoniteBuildServer() =>
-        val res = for {
-          path <- focusedDocument.get()
-          service <- getServiceForOpt(path)
-        } yield service.ammoniteStart()
-        res.getOrElse(Future.unit).asJavaObject
-      case ServerCommands.StopAmmoniteBuildServer() =>
-        foreachSeq(_.ammoniteStop(), ignoreValue = false)
       case ServerCommands.StartScalaCliServer() =>
         val res = focusedDocument.get() match {
           case None => Future.unit
@@ -1197,7 +1244,10 @@ class WorkspaceLspService(
         capabilities.setRenameProvider(renameOptions)
         capabilities.setDocumentHighlightProvider(true)
         capabilities.setDocumentOnTypeFormattingProvider(
-          new lsp4j.DocumentOnTypeFormattingOptions("\n", List("\"").asJava)
+          new lsp4j.DocumentOnTypeFormattingOptions(
+            "\n",
+            List("\"", "{").asJava,
+          )
         )
         capabilities.setDocumentRangeFormattingProvider(
           initialServerConfig.allowMultilineStringFormatting
@@ -1208,7 +1258,7 @@ class WorkspaceLspService(
         capabilities.setCompletionProvider(
           new lsp4j.CompletionOptions(
             clientConfig.isCompletionItemResolve(),
-            List(".", "*", "$").asJava,
+            List(".", "*", "$", "`").asJava,
           )
         )
         capabilities.setCallHierarchyProvider(true)
@@ -1291,8 +1341,8 @@ class WorkspaceLspService(
     } yield ()
   }
 
-  private def startHttpServer(): Unit = {
-    if (clientConfig.isHttpEnabled()) {
+  private def startHttpServer(force: Boolean = false): Unit = {
+    if (force || clientConfig.isHttpEnabled()) {
       val host = "localhost"
       val port = 5031
       var url = s"http://$host:$port"
@@ -1311,7 +1361,7 @@ class WorkspaceLspService(
           this,
         )
       )
-      httpServer = Some(server)
+      httpServer = HttpServerOn(server)
       val newClient = new MetalsHttpClient(
         folders.map(_.path),
         () => url,

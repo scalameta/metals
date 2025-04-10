@@ -4,7 +4,6 @@ import java.{util => ju}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.util.Try
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position.Range
@@ -24,6 +23,7 @@ import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
@@ -78,21 +78,15 @@ final class DefinitionProvider(
   val scaladocDefinitionProvider =
     new ScaladocDefinitionProvider(buffers, trees, destinationProvider)
 
-  private def isAmmonnite(path: AbsolutePath): Boolean =
-    path.isAmmoniteScript && buildTargets
-      .inverseSources(path)
-      .flatMap(buildTargets.targetData)
-      .exists(_.isAmmonite)
-
   def definition(
       path: AbsolutePath,
       params: TextDocumentPositionParams,
       token: CancelToken,
   ): Future[DefinitionResult] = {
-    val reportBuilder = new DefinitionProviderReportBuilder(path, params)
-    lazy val isScala3 = ScalaVersions.isScala3Version(
-      scalaVersionSelector.scalaVersionForPath(path)
-    )
+    val reportBuilder =
+      new DefinitionProviderReportBuilder(path, params, buffers)
+    val scalaVersion = scalaVersionSelector.scalaVersionForPath(path)
+    val isScala3 = ScalaVersions.isScala3Version(scalaVersion)
 
     def fromCompiler() =
       if (path.isScalaFilename) {
@@ -133,8 +127,18 @@ final class DefinitionProvider(
           .map(reportBuilder.setFallbackResult)
       )
 
+    // Scala 3 prior to 3.7.0 has a bug where the definition is much slower
+    def scala3DefinitionBugFixed: Boolean =
+      SemVer.isCompatibleVersion("3.7.0", scalaVersion) ||
+        scalaVersion.startsWith(
+          "3.3."
+        ) && // LTS 3.3.7 will include fixes from 3.7.x
+        SemVer.isCompatibleVersion("3.3.7", scalaVersion)
+
+    val shouldUseOldOrder = isScala3 && !scala3DefinitionBugFixed
+
     val strategies: List[() => Future[Option[DefinitionResult]]] =
-      if (isAmmonnite(path))
+      if (shouldUseOldOrder)
         List(fromSemanticDb, fromCompiler, fromScalaDoc, fromFallback)
       else List(fromCompiler, fromSemanticDb, fromScalaDoc, fromFallback)
 
@@ -416,7 +420,7 @@ class DestinationProvider(
     }
 
     val path = symbolDefinition.path
-    if (path.isAmmoniteScript || parsed.occurrences.isEmpty) {
+    if (path.isScalaScript || parsed.occurrences.isEmpty) {
       // Fall back to SemanticDB on disk, if any
 
       def fromSemanticdbs(p: AbsolutePath): Option[TextDocument] =
@@ -542,6 +546,7 @@ class DestinationProvider(
 class DefinitionProviderReportBuilder(
     path: AbsolutePath,
     params: TextDocumentPositionParams,
+    buffers: Buffers,
 ) {
   private var compilerDefn: Option[DefinitionResult] = None
   private var semanticDBDefn: Option[DefinitionResult] = None
@@ -583,7 +588,9 @@ class DefinitionProviderReportBuilder(
 
   def build(): Option[Report] =
     compilerDefn match {
-      case Some(compilerDefn) if !foundScalaDocDef && compilerDefn.isEmpty =>
+      case Some(compilerDefn)
+          if !foundScalaDocDef && compilerDefn.isEmpty && !compilerDefn.querySymbol
+            .endsWith("/") =>
         Some(
           Report(
             "empty-definition",
@@ -598,18 +605,13 @@ class DefinitionProviderReportBuilder(
                }}
                 |${fallbackDefn.filterNot(_.isEmpty) match {
                  case None =>
-                   s"""|empty definition using fallback
+                   s"""empty definition using fallback
                 |non-local guesses:
-                |${nonLocalGuesses.mkString("\t -", "\n\t -", "")}
-                |"""
+                |${if (nonLocalGuesses.isEmpty) "" else nonLocalGuesses.mkString("\t -", "\n\t -", "")}"""
                  case Some(defn) =>
-                   s"found definition using fallback; symbol ${defn.symbol}"
+                   s"\nfound definition using fallback; symbol ${defn.symbol}"
                }}
-                |Document text:
-                |
-                |```scala
-                |${Try(path.readText).toOption.getOrElse("Failed to read text")}
-                |```
+                |${params.printed(buffers)}
                 |""".stripMargin,
             s"empty definition using pc, found symbol in pc: ${compilerDefn.querySymbol}",
             path = Some(path.toURI),

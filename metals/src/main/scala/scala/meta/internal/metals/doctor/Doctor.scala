@@ -104,10 +104,10 @@ final class Doctor(
    * Checks if there are any potential problems and if any, notifies the user.
    */
   def check(headDoctor: HeadDoctor): Unit = {
-    scribe.info(s"running doctor check")
+    scribe.debug(s"running doctor check")
     val scalaTargets = buildTargets.allScala.toList
     val javaTargets = buildTargets.allJava.toList
-    scribe.info(
+    scribe.debug(
       s"java targets: ${javaTargets.map(_.info.getDisplayName()).mkString(", ")}"
     )
     val summary = problemResolver.problemMessage(scalaTargets, javaTargets)
@@ -651,7 +651,6 @@ final class Doctor(
           DoctorStatus.alert,
           problemResolver.recommendation(target),
         )
-      case None if scalaTarget.isAmmonite => (DoctorStatus.info, None)
       case None => (DoctorStatus.alert, None)
     }
 
@@ -663,8 +662,6 @@ final class Doctor(
     val sbtRecommendation =
       if (scalaTarget.isSbt)
         Some("Diagnostics and debugging for sbt are not supported currently.")
-      else if (scalaTarget.isAmmonite)
-        Some("Debugging for Ammonite are not supported currently.")
       else None
     DoctorTargetInfo(
       scalaTarget.displayName,

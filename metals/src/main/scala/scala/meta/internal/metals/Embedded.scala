@@ -1,20 +1,33 @@
 package scala.meta.internal.metals
 
+import java.io.File
+import java.net.MalformedURLException
 import java.net.URLClassLoader
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.ServiceLoader
 
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContextExecutor
 import scala.util.Properties
+import scala.util.control.NonFatal
 
+import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.internal.worksheets.MdocClassLoader
+import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 import scala.meta.pc.PresentationCompiler
 
+import coursier.cache.CacheDefaults
+import coursier.cache.CacheUrl
+import coursier.ivy
 import coursierapi.Dependency
 import coursierapi.Fetch
+import coursierapi.IvyRepository
 import coursierapi.MavenRepository
 import coursierapi.Repository
 import coursierapi.ResolutionParams
@@ -171,25 +184,115 @@ final class Embedded(
 
 object Embedded {
   private val jdkVersion = JdkVersion.parse(Properties.javaVersion)
+  private def credentials = CacheDefaults.credentials
+
+  private lazy val mavenLocal = {
+    val str = new File(sys.props("user.home")).toURI.toString
+    val homeUri =
+      if (str.endsWith("/"))
+        str
+      else
+        str + "/"
+    MavenRepository.of(homeUri + ".m2/repository")
+  }
 
   lazy val repositories: List[Repository] =
-    Repository.defaults().asScala.toList ++
+    (Repository.defaults().asScala.toList ++
       List(
-        Repository.central(),
-        Repository.ivy2Local(),
+        mavenLocal,
         MavenRepository.of(
           "https://oss.sonatype.org/content/repositories/public/"
         ),
         MavenRepository.of(
           "https://oss.sonatype.org/content/repositories/snapshots/"
         ),
-      )
+      ))
+      .distinctBy {
+        case m: MavenRepository => m.getBase()
+        case i: IvyRepository => i.getPattern()
+      }
+      .map(setCredentials)
 
   private[Embedded] def scala3CompilerDependencies(version: String) = List(
     Dependency.of("org.scala-lang", "scala3-library_3", version),
     Dependency.of("org.scala-lang", "scala3-compiler_3", version),
     Dependency.of("org.scala-lang", "tasty-core_3", version),
   ).map(d => (d.getModule, d.getVersion)).toMap.asJava
+
+  private def validateURL(url0: String) = {
+    try Some(CacheUrl.url(url0))
+    catch {
+      case e: MalformedURLException =>
+        val urlErrorMsg =
+          "Error parsing URL " + url0 + Option(e.getMessage).fold("")(
+            " (" + _ + ")"
+          )
+        if (url0.contains(File.separatorChar)) {
+          val f = new File(url0)
+          if (f.exists() && !f.isDirectory) {
+            scribe.warn(s"$urlErrorMsg, and $url0 not a directory")
+            None
+          } else
+            Some(f.toURI.toURL)
+        } else {
+          scribe.warn(urlErrorMsg)
+          None
+        }
+    }
+  }
+
+  private def urlFromRepo(repo: Repository): Option[String] = repo match {
+    case m: MavenRepository =>
+      Some(m.getBase())
+    case i: IvyRepository =>
+      ivy.IvyRepository.parse(i.getPattern()).toOption.map(_.pattern).map {
+        pat =>
+          pat.chunks
+            .takeWhile {
+              case _: coursier.ivy.Pattern.Chunk.Const => true
+              case _ => false
+            }
+            .map(_.string)
+            .mkString
+      }
+    case _ =>
+      None
+  }
+
+  def setCredentials(repo: Repository): Repository = try {
+    val url = urlFromRepo(repo)
+    val validatedUrl = url.flatMap(validateURL)
+
+    validatedUrl
+      .map { url =>
+        val creds =
+          credentials
+            .flatMap(_.get())
+            .find(_.autoMatches(url.toExternalForm(), realm0 = None))
+            .flatMap { cred =>
+              cred.usernameOpt.zip(cred.passwordOpt)
+            }
+
+        def newCredentials(user: String, pass: String) = {
+          scribe.info(
+            s"Setting credentials $user:${"*" * pass.length} for $url"
+          )
+          coursierapi.Credentials.of(user, pass)
+        }
+        (creds, repo) match {
+          case (Some((user, pass)), mvn: MavenRepository) =>
+            mvn.withCredentials(newCredentials(user, pass.value))
+          case (Some((user, pass)), ivy: IvyRepository) =>
+            ivy.withCredentials(newCredentials(user, pass.value))
+          case _ => repo
+        }
+      }
+      .getOrElse(repo)
+  } catch {
+    case NonFatal(e) =>
+      scribe.error(s"Error setting credentials for $repo", e)
+      repo
+  }
 
   def fetchSettings(
       dep: Dependency,
@@ -296,13 +399,23 @@ object Embedded {
       scalaVersion: Option[String] = None,
       classfiers: Seq[String] = Seq.empty,
       resolution: Option[ResolutionParams] = None,
-  ): List[Path] = {
+  ): List[Path] = try {
     fetchSettings(dep, scalaVersion, resolution)
       .addClassifiers(classfiers: _*)
       .fetch()
       .asScala
       .toList
       .map(_.toPath())
+  } catch {
+    case NonFatal(e) =>
+      scribe.error(s"Error downloading $dep", e)
+      val result = fallbackDownload(dep)
+      if (result.isEmpty) {
+        throw e
+      } else {
+        result
+      }
+
   }
 
   def downloadScalaSources(scalaVersion: String): List[Path] =
@@ -384,6 +497,88 @@ object Embedded {
       else
         scalaLibraryDependency(scalaVersion)
     downloadDependency(dependency, Some(scalaVersion))
+  }
+
+  private val userHome = Paths.get(System.getProperty("user.home"))
+
+  /**
+   * There are some cases where Metals wouldn't be able to download
+   * dependencies using coursier, in those cases we can try to use a locally
+   * installed coursier to fetch the dependency.
+   *
+   * One potential issue is when we have credential issues
+   */
+  def fallbackDownload(
+      dependency: Dependency
+  ): List[Path] = {
+    // This is a fallback so it should be fine to use the global execution context
+    implicit val ec: ExecutionContextExecutor = ExecutionContext.global
+
+    /* Metals VS Code extension will download coursier for us most of the times */
+    def inVsCodeMetals = {
+      val cs = userHome.resolve(".metals/cs")
+      val csExe = userHome.resolve(".metals/cs.exe")
+      if (Files.exists(cs)) Some(cs)
+      else if (Files.exists(csExe)) Some(csExe)
+      else None
+    }
+    findInPath("cs")
+      .orElse(findInPath("coursier"))
+      .orElse(inVsCodeMetals) match {
+      case None => Nil
+      case Some(path) =>
+        scribe.info(
+          s"Found coursier in path under $path, using it to fetch dependency"
+        )
+        val module = dependency.getModule()
+        val depString =
+          s"${module.getOrganization()}:${module.getName()}:${dependency.getVersion}"
+        ShellRunner.runSync(
+          List(path.toString(), "fetch", depString),
+          AbsolutePath(userHome),
+          redirectErrorOutput = false,
+        ) match {
+          case Some(out) =>
+            val lines = out.linesIterator.toList
+            val jars = lines.map(Paths.get(_))
+            jars
+          case None => Nil
+        }
+    }
+  }
+
+  def findInPath(app: String): Option[Path] = {
+
+    def endsWithCaseInsensitive(s: String, suffix: String): Boolean =
+      s.length >= suffix.length &&
+        s.regionMatches(
+          true,
+          s.length - suffix.length,
+          suffix,
+          0,
+          suffix.length,
+        )
+
+    val asIs = Paths.get(app)
+    if (Paths.get(app).getNameCount >= 2) Some(asIs)
+    else {
+      def pathEntries =
+        Option(System.getenv("PATH")).iterator
+          .flatMap(_.split(File.pathSeparator).iterator)
+      def pathExts =
+        if (Properties.isWin)
+          Option(System.getenv("PATHEXT")).iterator
+            .flatMap(_.split(File.pathSeparator).iterator)
+        else Iterator("")
+      def matches = for {
+        dir <- pathEntries
+        ext <- pathExts
+        app0 = if (endsWithCaseInsensitive(app, ext)) app else app + ext
+        path = Paths.get(dir).resolve(app0)
+        if Files.isExecutable(path)
+      } yield path
+      matches.toStream.headOption
+    }
   }
 
 }

@@ -9,7 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
-def localSnapshotVersion = "1.5.2-SNAPSHOT"
+def localSnapshotVersion = "1.5.3-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 
@@ -120,6 +120,15 @@ def crossTestDyn(state: State, scalaV: String): State = {
   out
 }
 
+def crossTestDynOnly(state: State, scalaV: String, testName: String): State = {
+  val configured = configureMtagsScalaVersionDynamically(state, scalaV)
+  val (out, _) =
+    Project
+      .extract(configured)
+      .runInputTask(cross / Test / testOnly, testName, configured)
+  out
+}
+
 commands ++= Seq(
   Command.command("save-expect") { s =>
     "unit/test:runMain tests.SaveExpect" :: "quick-publish-local" :: "slow/test:runMain tests.feature.SlowSaveExpect" :: s
@@ -138,6 +147,9 @@ commands ++= Seq(
   },
   Command.single("test-mtags-dyn") { (s, scalaV) =>
     crossTestDyn(s, scalaV)
+  },
+  Command.single("cross-test-only-2-11") { (s, testName) =>
+    crossTestDynOnly(s, V.scala211, " " + testName)
   },
 )
 
@@ -254,14 +266,9 @@ lazy val mtagsShared = project
     ),
     crossVersion := CrossVersion.full,
     Compile / packageSrc / publishArtifact := true,
-    Compile / scalacOptions ++= {
-      if (scalaVersion.value == V.lastPublishedScala3)
-        List("-Yexplicit-nulls", "-language:unsafeNulls")
-      else Nil
-    },
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "4.29.3",
+      "com.google.protobuf" % "protobuf-java" % "4.30.2",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
@@ -369,27 +376,6 @@ val mtagsSettings = List(
   },
 )
 
-lazy val mtags3 = project
-  .in(file(".mtags"))
-  .settings(
-    Compile / unmanagedSourceDirectories := Seq(),
-    sharedSettings,
-    mtagsSettings,
-    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags" / "src" / "main" / "scala",
-    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala",
-    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala-3",
-    moduleName := "mtags3",
-    scalaVersion := V.lastPublishedScala3,
-    target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3",
-    publish / skip := true,
-    libraryDependencies += V.guava,
-    scalafixConfig := Some(
-      (ThisBuild / baseDirectory).value / ".scalafix3.conf"
-    ),
-  )
-  .dependsOn(interfaces)
-  .enablePlugins(BuildInfoPlugin)
-
 lazy val mtags = project
   .settings(
     sharedSettings,
@@ -418,7 +404,8 @@ lazy val metals = project
       // =================
       // for bloom filters
       V.guava,
-      "org.scalameta" %% "metaconfig-core" % "0.14.0",
+      "com.google.code.findbugs" % "jsr305" % "3.0.2",
+      "org.scalameta" %% "metaconfig-core" % "0.15.0",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching
@@ -427,7 +414,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.16.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "11.3.0",
+      "org.flywaydb" % "flyway-core" % "11.6.0",
       "com.h2database" % "h2" % "2.3.232",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
@@ -466,11 +453,11 @@ lazy val metals = project
         scalaVersion.value
       ) cross CrossVersion.full,
       "org.scalameta" %% "semanticdb-shared" % V.semanticdb(scalaVersion.value),
-      // For starting Ammonite
-      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.4.0",
       "org.scala-lang.modules" %% "scala-xml" % "2.3.0",
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
         .exclude("ch.epfl.scala", "bsp4j"),
+      // For test frameworks
+      "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
     ),
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](
@@ -490,7 +477,6 @@ lazy val metals = project
       "semanticdbVersion" -> V.semanticdb(scalaVersion.value),
       "javaSemanticdbVersion" -> V.javaSemanticdb,
       "scalafmtVersion" -> V.scalafmt,
-      "ammoniteVersion" -> V.ammonite,
       "scalaCliVersion" -> V.scalaCli,
       "millVersion" -> V.mill,
       "debugAdapterVersion" -> V.debugAdapter,
@@ -498,18 +484,15 @@ lazy val metals = project
       "supportedScalaVersions" -> V.supportedScalaVersions,
       "supportedScala2Versions" -> V.scala2Versions,
       "minimumSupportedSbtVersion" -> V.minimumSupportedSbtVersion,
-      "supportedScala3Versions" -> V.scala3Versions,
       "supportedScalaBinaryVersions" -> V.supportedScalaBinaryVersions,
       "deprecatedScalaVersions" -> V.deprecatedScalaVersions,
       "nonDeprecatedScalaVersions" -> V.nonDeprecatedScalaVersions,
       "scala211" -> V.scala211,
       "scala212" -> V.scala212,
-      "ammonite212" -> V.ammonite212Version,
-      "ammonite213" -> V.ammonite213Version,
-      "ammonite3" -> V.ammonite3Version,
       "bazelScalaVersion" -> V.bazelScalaVersion,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
+      "latestScala3Next" -> V.latestScala3Next,
       "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
   )
@@ -532,13 +515,7 @@ lazy val `sbt-metals` = project
     (pluginCrossBuild / sbtVersion) := {
       scalaBinaryVersion.value match {
         case "2.12" => "1.5.8"
-        case _ => "2.0.0-M3"
-      }
-    },
-    scalacOptions ++= {
-      scalaBinaryVersion.value match {
-        case "2.12" => "-Xsource:3" :: Nil
-        case _ => Nil
+        case _ => "2.0.0-M4"
       }
     },
   )
@@ -660,10 +637,10 @@ lazy val mtest = project
       List(
         "org.scalameta" %% "munit" % {
           if (scalaVersion.value.startsWith("2.11")) "1.0.0-M10"
+          else if (scalaVersion.value == "2.13.15") "1.0.4"
           else if (scalaVersion.value == "2.13.14") "1.0.2"
           else if (scalaVersion.value == "2.13.13") "1.0.0"
           else if (scalaVersion.value == "2.13.12") "1.0.0-M11"
-          else if (scalaVersion.value == "2.13.11") "1.0.0-M10"
           else V.munit
         },
         "io.get-coursier" % "interface" % V.coursierInterfaces,
@@ -676,7 +653,6 @@ lazy val mtest = project
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
       "scala2Versions" -> V.scala2Versions,
-      "scala3Versions" -> V.scala3Versions,
       "scala2Versions" -> V.scala2Versions,
       "scalaVersion" -> scalaVersion.value,
       "kindProjector" -> V.kindProjector,
@@ -735,7 +711,6 @@ lazy val metalsDependencies = project
     libraryDependencies ++= List(
       // The dependencies listed below are only listed so Scala Steward
       // will pick them up and update them. They aren't actually used.
-      "com.lihaoyi" %% "ammonite-util" % V.ammonite,
       // not available for Scala 2.13.13
       // "org.typelevel" % "kind-projector" % V.kindProjector cross CrossVersion.full,
       "com.olegpy" %% "better-monadic-for" % V.betterMonadicFor,
@@ -760,7 +735,6 @@ lazy val unit = project
     Test / javaOptions += "-Xmx2G",
     libraryDependencies ++= List(
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
-      "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       "org.scalameta" %% "munit" % V.munit,
     ),
     buildInfoPackage := "tests",
@@ -819,7 +793,7 @@ lazy val docs = project
     publish / skip := true,
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
-    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.14.0",
+    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.15.0",
   )
   .dependsOn(metals)
   .enablePlugins(DocusaurusPlugin)

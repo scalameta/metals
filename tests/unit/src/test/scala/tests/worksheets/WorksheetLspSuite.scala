@@ -45,9 +45,9 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
           s"""|/$path
               |import $$dep/*<no symbol>*/.`com.lihaoyi::scalatags:0.9.0`/*<no symbol>*/
               |import scalatags.Text/*Text.scala*/.all/*Text.scala*/._
-              |val htmlFile/*L2*/ = html/*Text.scala*/(
-              |  body/*Text.scala*/(
-              |    p/*Text.scala*/("This is a big paragraph of text")
+              |val htmlFile/*L2*/ = html/*;Tags.scala;Text.scala*/(
+              |  body/*;Tags.scala;Text.scala*/(
+              |    p/*;Tags.scala;Text.scala*/("This is a big paragraph of text")
               |  )
               |)
               |htmlFile/*L2*/.render/*Text.scala*/
@@ -142,8 +142,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
            |
            |implicit val system: ActorSystem = ActorSystem("QuickStart")
            |val source: Source[Int, NotUsed] = Source(1 to 2)
-           |val future = source.runWith(Sink.foreach(_ => ()))
-           |Await.result(future, 3.seconds)
+           |Await.result(source.runWith(Sink.foreach(_ => ())), 3.seconds)
            |
            |""".stripMargin
       )
@@ -163,8 +162,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
            |
            |implicit val system: ActorSystem = ActorSystem("QuickStart")/* // : ActorSystem = akka://QuickStart*/
            |val source: Source[Int, NotUsed] = Source(1 to 2)/* // : Source[Int, NotUsed] = Source(SourceShape(StatefulMapConcat.out(...*/
-           |val future = source.runWith(Sink.foreach(_ => ()))/* // : concurrent.Future[akka.Done] = Future(<not completed>)*/
-           |Await.result(future, 3.seconds)/* // : akka.Done = Done*/
+           |Await.result(source.runWith(Sink.foreach(_ => ())), 3.seconds)/* // : akka.Done = Done*/
            |""".stripMargin,
         postprocessObtained = _.replaceAll(".out\\(.*", ".out(...*/"),
       )

@@ -21,8 +21,10 @@ trait ArgCompletions { this: MetalsGlobal =>
     val funPos = apply.fun.pos
     val method: Tree = typedTreeAt(funPos) match {
       // Functions calls with default arguments expand into this form
-      case Apply(Block(defParams, app @ (_: Apply | _: Select)), _)
-          if defParams.forall(p => p.isInstanceOf[ValDef]) =>
+      case Apply(
+            Block(defParams, app @ (_: Apply | _: Select | _: TypeApply)),
+            _
+          ) if defParams.forall(p => p.isInstanceOf[ValDef]) =>
         app
       case New(c) => c
       case t => t
@@ -124,7 +126,8 @@ trait ArgCompletions { this: MetalsGlobal =>
       completions match {
         case members: CompletionResult.ScopeMembers
             if paramType != definitions.AnyTpe =>
-          members.results
+          members
+            .matchingResults(_ => _ => true)
             .collect {
               case mem
                   if mem.sym.tpe <:< paramType && notNothingOrNull(
@@ -167,12 +170,19 @@ trait ArgCompletions { this: MetalsGlobal =>
           }
           .mkString(", ")
         val edit = new l.TextEdit(editRange, editText)
+        val labelText = allParams
+          .collect {
+            case param if !param.hasDefault =>
+              s"${Identifier.backtickWrap(param.name).replace("$", "$$")} = ???"
+          }
+          .mkString(", ")
         List(
           new TextEditMember(
             filterText = s"$prefix-$suffix",
             edit = edit,
             methodSym,
-            label = Some("Autofill with default values")
+            label = Option(labelText),
+            detail = Option("")
           )
         )
       } else {

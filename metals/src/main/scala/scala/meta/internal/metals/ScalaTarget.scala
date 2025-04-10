@@ -84,8 +84,6 @@ case class ScalaTarget(
       )
   }
 
-  def isAmmonite: Boolean = displayName.endsWith(".sc")
-
   def semanticdbFilesPresent(): Boolean = targetroot
     .resolve(Directories.semanticdb)
     .listRecursive
@@ -93,7 +91,7 @@ case class ScalaTarget(
 
   def isSemanticdbEnabled: Boolean =
     scalac.isSemanticdbEnabled(scalaVersion) ||
-      semanticDbEnabledAlternatively || isAmmonite
+      semanticDbEnabledAlternatively
 
   def isSourcerootDeclared: Boolean =
     scalac.isSourcerootDeclared(scalaVersion) || semanticDbEnabledAlternatively

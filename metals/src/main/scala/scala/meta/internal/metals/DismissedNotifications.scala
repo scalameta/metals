@@ -16,15 +16,13 @@ final class DismissedNotifications(conn: () => Connection, time: Time) {
   val ReconnectBsp = new Notification(6)
   val CreateScalafmtFile = new Notification(7)
   val ChangeScalafmtVersion = new Notification(8)
-  val AmmoniteImportAuto = new Notification(9)
-  val ReconnectAmmonite = new Notification(10)
   val UpdateScalafmtConf = new Notification(11)
   val UpdateBloopJson = new Notification(12)
   val ReconnectScalaCli = new Notification(13)
   val ScalaCliImportAuto = new Notification(14)
   val BspErrors = new Notification(15)
   val RequestTimeout = new Notification(16)
-  val ScalafixConfAmend = new Notification(16)
+  val ScalafixConfAmend = new Notification(17)
 
   val all: List[Notification] = List(
     Only212Navigation,
@@ -35,13 +33,13 @@ final class DismissedNotifications(conn: () => Connection, time: Time) {
     ReconnectBsp,
     CreateScalafmtFile,
     ChangeScalafmtVersion,
-    AmmoniteImportAuto,
-    ReconnectAmmonite,
     UpdateScalafmtConf,
     UpdateBloopJson,
     ReconnectScalaCli,
     ScalaCliImportAuto,
     BspErrors,
+    RequestTimeout,
+    ScalafixConfAmend,
   )
 
   def resetAll(): Unit = {

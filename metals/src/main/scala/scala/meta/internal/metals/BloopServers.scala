@@ -436,15 +436,21 @@ object BloopServers {
 
   def createBloopWorkingDir(implicit ec: ExecutionContext): AbsolutePath = {
 
-    val baseDir = MetalsProjectDirectories.from(
-      null,
-      null,
-      "ScalaCli",
-      silent = false,
-    ) match {
+    val directory = MetalsProjectDirectories
+      .from(
+        null,
+        null,
+        "ScalaCli",
+        silent = false,
+      )
+      .map { bloopDirectories =>
+        if (Properties.isMac) bloopDirectories.cacheDir
+        else bloopDirectories.dataLocalDir
+      }
+      .filter(MetalsProjectDirectories.isNotBroken)
+    val baseDir = directory match {
       case None =>
         val userHome = Paths.get(System.getProperty("user.home"))
-
         val potential =
           if (Properties.isWin) userHome.resolve("AppData/Local/ScalaCli/data")
           else if (Properties.isMac) userHome.resolve("Library/Caches/ScalaCli")
@@ -455,10 +461,7 @@ object BloopServers {
           throw new IllegalStateException(
             s"Could not create directory $potential for Bloop, please try using a different BSP server and reporting your issue."
           )
-      case Some(bloopDirectories) =>
-        val baseDir =
-          if (Properties.isMac) bloopDirectories.cacheDir
-          else bloopDirectories.dataLocalDir
+      case Some(baseDir) =>
         Paths.get(baseDir)
     }
     AbsolutePath(baseDir.resolve("bloop"))

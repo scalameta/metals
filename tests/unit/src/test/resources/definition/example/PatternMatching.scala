@@ -19,6 +19,6 @@ class PatternMatching/*PatternMatching.scala*/ {
   def localDeconstruction/*PatternMatching.scala*/ = {
     val Some/*Option.scala*/(number2/*PatternMatching.semanticdb*/) =
       some/*PatternMatching.scala*/
-    number2/*no local definition*/
+    number2/*PatternMatching.semanticdb*/
   }
 }

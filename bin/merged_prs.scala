@@ -1,7 +1,7 @@
 //> using jvm 17
 //> using scala 3
-//> using dep org.kohsuke:github-api:1.326
-//> using dep com.lihaoyi::os-lib:0.11.3
+//> using dep org.kohsuke:github-api:1.327
+//> using dep com.lihaoyi::os-lib:0.11.4
 //> using options -Wunused:all -deprecation
 
 import scala.collection.mutable.ListBuffer
@@ -45,9 +45,9 @@ def main(
     "git",
     "log",
     s"$firstTag..$lastTag",
+    "--format=format:%H",
     "--first-parent",
     "main",
-    "--pretty=format:%H",
   )
 
   val output = os.proc(command).call().out.trim()

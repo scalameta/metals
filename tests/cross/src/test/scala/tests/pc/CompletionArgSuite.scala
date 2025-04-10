@@ -376,6 +376,29 @@ class CompletionArgSuite extends BaseCompletionSuite {
     topLines = Some(3)
   )
 
+  check(
+    "default-args8",
+    """|trait Foo {
+       |  def bar[A](fst: A, snd: Int, thd: Int = 23)
+       |}
+       |object Main {
+       |  def foo: Foo = ???
+       |  foo.bar(123, @@)
+       |}
+       |""".stripMargin,
+    """|snd = : Int
+       |thd = : Int
+       |""".stripMargin,
+    topLines = Some(2),
+    compat = Map(
+      // TODO: this isn't right, we should see `snd = : Int` here as well
+      ">=3.3.1" ->
+        """|thd = : Int
+           |Main `default-args8`
+           |""".stripMargin
+    )
+  )
+
   checkSnippet( // see: https://github.com/scalameta/metals/issues/2400
     "explicit-dollar",
     """
@@ -1267,4 +1290,38 @@ class CompletionArgSuite extends BaseCompletionSuite {
     topLines = Some(1)
   )
 
+  check(
+    "inaccessible-defaults",
+    """|package object A {
+       |  private[A] val somePackagePrivStr = "foo"
+       |  private val somePrivStr = "foo"
+       |  val somePubStr = "bar"
+       |}
+       |package B {
+       |  import A._
+       |  object Testing {
+       |    def foo(arg: String): Unit = ()
+       |    foo(@@)
+       |  }
+       |}
+       |""".stripMargin,
+    """|arg = : String
+       |arg = somePubStr : String
+       |somePubStr: String
+       |""".stripMargin,
+    topLines = Some(3)
+  )
+
+  check(
+    "autofill arguments",
+    """
+      |case class A(x: Int, y: Int)
+      |
+      |object Main {
+      | A.apply(x@@)
+      |}
+      |""".stripMargin,
+    """x = : Int
+      |x = ???, y = ???""".stripMargin
+  )
 }

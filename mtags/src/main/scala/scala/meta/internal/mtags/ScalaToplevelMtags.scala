@@ -85,7 +85,7 @@ class ScalaToplevelMtags(
   override def language: Language = Language.SCALA
 
   override def indexRoot(): Unit =
-    loop(0, true, new Region.RootRegion, None)
+    loop(Indent.init, new Region.RootRegion, None)
 
   def isDone: Boolean = curr.token == EOF
 
@@ -110,8 +110,7 @@ class ScalaToplevelMtags(
 
   @tailrec
   private def loop(
-      indent: Int,
-      isAfterNewline: Boolean,
+      indent: Indent,
       region: Region,
       expectTemplate: Option[ExpectTemplate],
       prevWasDot: Boolean = false
@@ -119,7 +118,7 @@ class ScalaToplevelMtags(
     def newExpectTemplate(isImplicit: Boolean = false): Some[ExpectTemplate] =
       Some(
         ExpectTemplate(
-          indent,
+          indent.indent,
           currentOwner,
           false,
           false,
@@ -129,7 +128,7 @@ class ScalaToplevelMtags(
     def newExpectCaseClassTemplate(): Some[ExpectTemplate] =
       Some(
         ExpectTemplate(
-          indent,
+          indent.indent,
           currentOwner,
           false,
           false,
@@ -142,7 +141,7 @@ class ScalaToplevelMtags(
     ): Some[ExpectTemplate] =
       Some(
         ExpectTemplate(
-          indent,
+          indent.indent,
           currentOwner,
           false,
           false,
@@ -151,17 +150,23 @@ class ScalaToplevelMtags(
         )
       )
     def newExpectPkgTemplate: Some[ExpectTemplate] =
-      Some(ExpectTemplate(indent, currentOwner, true, false))
+      Some(ExpectTemplate(indent.indent, currentOwner, true, false))
     def newExpectExtensionTemplate(owner: String): Some[ExpectTemplate] =
-      Some(ExpectTemplate(indent, owner, false, true))
+      Some(ExpectTemplate(indent.indent, owner, false, true))
     def newExpectImplicitTemplate: Some[ExpectTemplate] =
       Some(
-        ExpectTemplate(indent, currentOwner, false, false, isImplicit = true)
+        ExpectTemplate(
+          indent.indent,
+          currentOwner,
+          false,
+          false,
+          isImplicit = true
+        )
       )
     def newExpectIgnoreBody: Some[ExpectTemplate] =
       Some(
         ExpectTemplate(
-          indent = indent,
+          indent = indent.indent,
           owner = currentOwner,
           isPackageBody = false,
           isExtension = false,
@@ -192,7 +197,7 @@ class ScalaToplevelMtags(
             case token if isWhitespace(token) => region
             case COMMENT => region
             case _ =>
-              resetRegion(exitIndented(region, indent))
+              resetRegion(exitIndented(region, indent.indent))
           }
         } else region
       data.token match {
@@ -200,9 +205,9 @@ class ScalaToplevelMtags(
           val isNotPackageObject = emitPackage(currRegion.owner)
           if (isNotPackageObject) {
             val nextRegion = new Region.Package(currentOwner, currRegion)
-            loop(indent, false, nextRegion, newExpectPkgTemplate)
+            loop(indent.notAfterNewline, nextRegion, newExpectPkgTemplate)
           } else
-            loop(indent, false, currRegion, newExpectTemplate())
+            loop(indent.notAfterNewline, currRegion, newExpectTemplate())
         case IDENTIFIER
             if dialect.allowExtensionMethods && data.strVal == "extension" =>
           val nextOwner =
@@ -226,8 +231,7 @@ class ScalaToplevelMtags(
             } else currRegion.termOwner
           scanner.mtagsNextToken()
           loop(
-            indent,
-            isAfterNewline = false,
+            indent.notAfterNewline,
             currRegion.withTermOwner(nextOwner),
             newExpectExtensionTemplate(nextOwner)
           )
@@ -258,8 +262,7 @@ class ScalaToplevelMtags(
               newExpectClassTemplate(isImplicit = false)
           }
           loop(
-            indent,
-            isAfterNewline = false,
+            indent.notAfterNewline,
             if (needsToGenerateFileClass) currRegion.withTermOwner(owner)
             else currRegion,
             template
@@ -279,10 +282,8 @@ class ScalaToplevelMtags(
               )
             }
           }
-          val newIndent = parseMemberDefinitionLhs(DEF)
           loop(
-            newIndent.getOrElse(indent),
-            isAfterNewline = newIndent.isDefined,
+            parseMemberDefinitionLhs(DEF, indent),
             currRegion,
             newExpectIgnoreBody
           )
@@ -308,7 +309,7 @@ class ScalaToplevelMtags(
                   )
                 }
               }
-              loop(indent, isAfterNewline = false, currRegion, None)
+              loop(indent.notAfterNewline, currRegion, None)
           }
         case DEF | VAL | VAR | GIVEN | TYPE
             if dialect.allowToplevelStatements &&
@@ -319,8 +320,7 @@ class ScalaToplevelMtags(
             term(name, pos, Kind.OBJECT, 0)
           }
           loop(
-            indent,
-            isAfterNewline = false,
+            indent.notAfterNewline,
             currRegion.withTermOwner(owner),
             expectTemplate
           )
@@ -335,10 +335,9 @@ class ScalaToplevelMtags(
           withOwner(currRegion.termOwner) {
             emitTerm(currRegion, isImplicit, needEmitTermMember())
           }
-          val newIndent = parseMemberDefinitionLhs(t)
+          val newIndent = parseMemberDefinitionLhs(t, indent)
           loop(
-            newIndent.getOrElse(indent),
-            isAfterNewline = newIndent.isDefined,
+            newIndent,
             currRegion,
             if (isInParenthesis(region)) expectTemplate else newExpectIgnoreBody
           )
@@ -348,15 +347,15 @@ class ScalaToplevelMtags(
               emitType(needEmitTermMember())
             }
           } else scanner.mtagsNextToken()
-          loop(indent, isAfterNewline = false, currRegion, newExpectIgnoreBody)
+          loop(indent.notAfterNewline, currRegion, newExpectIgnoreBody)
         case IMPORT | EXPORT =>
           // skip imports because they might have `given` kw
           acceptToStatSep()
-          loop(indent, isAfterNewline = false, currRegion, expectTemplate)
+          loop(indent.notAfterNewline, currRegion, expectTemplate)
         case COMMENT =>
           // skip comment because they might break indentation
           scanner.mtagsNextToken()
-          loop(indent, isAfterNewline = false, currRegion, expectTemplate)
+          loop(indent.notAfterNewline, currRegion, expectTemplate)
         case EQUALS
             if expectTemplate.exists(
               _.ignoreBody
@@ -365,7 +364,6 @@ class ScalaToplevelMtags(
             acceptWhileIndented(expectTemplate.get.indent, isInsideBody = false)
           loop(
             nextIndent,
-            isAfterNewline = false,
             currRegion,
             None
           )
@@ -380,23 +378,21 @@ class ScalaToplevelMtags(
                   expect.startIndentedRegion(currRegion, expect.isExtension)
                 resetRegion(next)
                 scanner.mtagsNextToken()
-                loop(0, isAfterNewline = true, next, None)
+                loop(Indent.init, next, None)
               case _ =>
                 scanner.mtagsNextToken()
                 loop(
-                  0,
-                  isAfterNewline = true,
+                  Indent.init,
                   currRegion,
                   expectTemplate
                 )
             }
           } else {
             val nextIndentLevel =
-              if (isAfterNewline) indent + 1 else indent
+              if (indent.isAfterNewline) indent.indent + 1 else indent.indent
             scanner.mtagsNextToken()
             loop(
-              nextIndentLevel,
-              isAfterNewline,
+              Indent(nextIndentLevel, indent.isAfterNewline),
               currRegion,
               expectTemplate
             )
@@ -404,17 +400,14 @@ class ScalaToplevelMtags(
         case MATCH | THEN | ELSE | DO | WHILE | TRY | FINALLY | THROW | RETURN |
             YIELD | FOR if dialect.allowSignificantIndentation =>
           if (nextIsNL()) {
-            val nextIndent = acceptWhileIndented(indent)
             loop(
-              nextIndent,
-              isAfterNewline = false,
+              acceptWhileIndented(indent.indent),
               currRegion,
               None
             )
           } else {
             loop(
-              indent,
-              isAfterNewline = false,
+              indent.notAfterNewline,
               currRegion,
               expectTemplate
             )
@@ -427,29 +420,25 @@ class ScalaToplevelMtags(
                 isImplicitClass = expect.isImplicit
               )
               resetRegion(next)
-              scanner.mtagsNextToken()
-              loop(0, isAfterNewline = true, next, None)
+              loop(maybeFindAndEmitSelfType(Indent.init), next, None)
             case (Some(expect), true) =>
               val nextIndent = acceptWhileIndented(expect.indent)
               loop(
                 nextIndent,
-                isAfterNewline = false,
                 currRegion,
                 None
               )
             case (_, true) =>
-              val nextIndent = acceptWhileIndented(indent)
+              val nextIndent = acceptWhileIndented(indent.indent)
               loop(
                 nextIndent,
-                isAfterNewline = false,
                 currRegion,
                 expectTemplate
               )
             case _ =>
               scanner.mtagsNextToken()
               loop(
-                indent,
-                isAfterNewline = false,
+                indent.notAfterNewline,
                 currRegion,
                 expectTemplate
               )
@@ -464,7 +453,7 @@ class ScalaToplevelMtags(
                 //                           ^
                 acceptBalancedDelimeters(LBRACE, RBRACE)
                 scanner.mtagsNextToken()
-                loop(indent, isAfterNewline = false, currRegion, expectTemplate)
+                loop(indent.notAfterNewline, currRegion, expectTemplate)
               } else {
                 val next =
                   expect.startInBraceRegion(
@@ -473,13 +462,16 @@ class ScalaToplevelMtags(
                     expect.isImplicit
                   )
                 resetRegion(next)
-                scanner.mtagsNextToken()
-                loop(indent, isAfterNewline = false, next, None)
+                loop(
+                  maybeFindAndEmitSelfType(indent.notAfterNewline),
+                  next,
+                  None
+                )
               }
             case _ =>
               acceptBalancedDelimeters(LBRACE, RBRACE)
               scanner.mtagsNextToken()
-              loop(indent, isAfterNewline = false, currRegion, None)
+              loop(indent.notAfterNewline, currRegion, None)
           }
         case RBRACE =>
           val nextRegion = currRegion match {
@@ -487,19 +479,18 @@ class ScalaToplevelMtags(
             case r => r
           }
           scanner.mtagsNextToken()
-          loop(indent, isAfterNewline, nextRegion, None)
+          loop(indent, nextRegion, None)
         case LBRACKET =>
           acceptBalancedDelimeters(LBRACKET, RBRACKET)
           scanner.mtagsNextToken()
-          loop(indent, isAfterNewline = false, currRegion, expectTemplate)
+          loop(indent.notAfterNewline, currRegion, expectTemplate)
         case LPAREN =>
           expectTemplate match {
             case Some(expect)
                 if expect.isClassConstructor && includeInnerClasses => {
               scanner.mtagsNextToken()
               loop(
-                indent,
-                isAfterNewline = false,
+                indent.notAfterNewline,
                 expect.startInParenRegion(
                   currRegion,
                   expect.isCaseClassConstructor
@@ -510,7 +501,7 @@ class ScalaToplevelMtags(
             case _ => {
               acceptBalancedDelimeters(LPAREN, RPAREN)
               scanner.mtagsNextToken()
-              loop(indent, isAfterNewline = false, currRegion, expectTemplate)
+              loop(indent.notAfterNewline, currRegion, expectTemplate)
             }
           }
         case RPAREN if (currRegion match {
@@ -520,8 +511,7 @@ class ScalaToplevelMtags(
             }) =>
           scanner.mtagsNextToken()
           loop(
-            indent,
-            isAfterNewline = false,
+            indent.notAfterNewline,
             currRegion.prev,
             newExpectTemplate(
               // we still need the information if the current template is implicit
@@ -532,13 +522,12 @@ class ScalaToplevelMtags(
           val nextExpectTemplate = expectTemplate.filter(!_.isPackageBody)
           scanner.mtagsNextToken()
           loop(
-            indent,
-            isAfterNewline = false,
+            indent.notAfterNewline,
             currRegion.changeCaseClassState(true),
             nextExpectTemplate
           )
         case EXTENDS =>
-          val (overridden, maybeNewIndent) = findOverridden(List.empty)
+          val (overridden, newIndent) = findOverridden(List.empty, indent)
           expectTemplate.map(tmpl =>
             withOwner(tmpl.owner) {
               addOverridden(
@@ -550,8 +539,7 @@ class ScalaToplevelMtags(
             }
           )
           loop(
-            maybeNewIndent.getOrElse(indent),
-            isAfterNewline = maybeNewIndent.isDefined,
+            newIndent,
             currRegion,
             expectTemplate
           )
@@ -565,8 +553,7 @@ class ScalaToplevelMtags(
             )
           }
           loop(
-            indent,
-            isAfterNewline = false,
+            indent.notAfterNewline,
             currRegion.changeCaseClassState(false),
             expectTemplate
           )
@@ -575,8 +562,7 @@ class ScalaToplevelMtags(
           val isAfterNewline =
             emitEnumCases(region, nextIsNewLine)
           loop(
-            indent,
-            isAfterNewline,
+            Indent(indent.indent, isAfterNewline),
             currRegion,
             if (curr.token == CLASS) newExpectCaseClassTemplate()
             else newExpectClassTemplate()
@@ -585,7 +571,6 @@ class ScalaToplevelMtags(
           scanner.mtagsNextToken()
           loop(
             indent,
-            isAfterNewline,
             currRegion,
             newExpectImplicitTemplate,
             prevWasDot
@@ -594,14 +579,55 @@ class ScalaToplevelMtags(
           val nextExpectTemplate = expectTemplate.filter(!_.isPackageBody)
           scanner.mtagsNextToken()
           loop(
-            indent,
-            isAfterNewline = false,
+            indent.notAfterNewline,
             currRegion,
             nextExpectTemplate,
             t == DOT
           )
       }
     } else ()
+  }
+
+  private def maybeFindAndEmitSelfType(
+      indent0: Indent
+  ): Indent = {
+    var toEmit: List[String] = Nil
+
+    @tailrec
+    def collectType(indent0: Indent): Indent = {
+      val indent1 = indent0.withOptIndent(acceptTrivia())
+      if (curr.token == IDENTIFIER) {
+        identOrSelectName().map(name => toEmit = name :: toEmit)
+        val indent2 =
+          acceptAllAfterOverriddenIdentifier(indent1, alreadyMoved = true)
+        curr.token match {
+          case WITH => collectType(indent2)
+          case IDENTIFIER if curr.strVal == "&" =>
+            collectType(indent2)
+          case IDENTIFIER if curr.strVal == "|" =>
+            toEmit = Nil
+            indent2
+          case _ => indent2
+        }
+      } else indent1
+    }
+
+    var indent = indent0.withOptIndent(acceptTrivia())
+    if (
+      (curr.token == IDENTIFIER || curr.token == THIS) && curr.strVal != "extension"
+    ) {
+      indent = indent.withOptIndent(acceptTrivia())
+      if (curr.token == COLON) {
+        indent = collectType(indent)
+        if (curr.token == ARROW && toEmit.nonEmpty) {
+          overridden += ((
+            currentOwner,
+            toEmit.map(UnresolvedOverriddenSymbol(_))
+          ))
+        }
+      }
+    }
+    indent
   }
 
   def emitPackage(owner: String): Boolean = {
@@ -645,89 +671,95 @@ class ScalaToplevelMtags(
   }
 
   @tailrec
-  private def acceptAllAfterOverriddenIdentifier(): Option[Int] = {
-    val maybeNewIndent = acceptTrivia()
+  private def acceptAllAfterOverriddenIdentifier(
+      indent: Indent,
+      alreadyMoved: Boolean = false
+  ): Indent = {
+    val newIndent =
+      if (alreadyMoved) indent else indent.withOptIndent(acceptTrivia())
     curr.token match {
       case LPAREN =>
         acceptBalancedDelimeters(LPAREN, RPAREN)
-        acceptAllAfterOverriddenIdentifier()
+        acceptAllAfterOverriddenIdentifier(newIndent.notAfterNewline)
       case LBRACKET =>
         acceptBalancedDelimeters(LBRACKET, RBRACKET)
-        acceptAllAfterOverriddenIdentifier()
-      case _ => maybeNewIndent
+        acceptAllAfterOverriddenIdentifier(newIndent.notAfterNewline)
+      case _ => newIndent
     }
 
   }
 
-  private def parseMemberDefinitionLhs(token: LegacyToken): Option[Int] =
+  private def parseMemberDefinitionLhs(
+      token: LegacyToken,
+      indent0: Indent
+  ): Indent =
     token match {
       case DEF =>
-        val ident = parseMethodArgs()
-        val ident0 = parseTypeAnnotation(ident)
-        ident0
-      case _ => parseTypeAnnotation(None)
+        val ident1 = parseMethodArgs(indent0)
+        parseTypeAnnotation(ident1)
+      case _ => parseTypeAnnotation(indent0)
     }
 
-  private def parseTypeAnnotation(ident: Option[Int]) = {
+  private def parseTypeAnnotation(indent: Indent) = {
     curr.token match {
       case COLON =>
-        val newIdent = acceptTrivia()
+        val newIdent = indent.withOptIndent(acceptTrivia())
         curr.token match {
           case IDENTIFIER =>
-            acceptAllAfterOverriddenIdentifier()
+            acceptAllAfterOverriddenIdentifier(newIdent)
           case _ => newIdent
         }
-      case _ => ident
+      case _ => indent
     }
   }
 
   @tailrec
-  private def parseMethodArgs(): Option[Int] = {
-    val additionalIdent = acceptTrivia()
+  private def parseMethodArgs(indent0: Indent): Indent = {
+    val indent = indent0.withOptIndent(acceptTrivia())
     curr.token match {
       case LBRACKET =>
         acceptBalancedDelimeters(LBRACKET, RBRACKET)
-        parseMethodArgs()
+        parseMethodArgs(indent)
       case LPAREN =>
         acceptBalancedDelimeters(LPAREN, RPAREN)
-        parseMethodArgs()
-      case _ => additionalIdent
+        parseMethodArgs(indent)
+      case _ => indent
     }
   }
 
   @tailrec
   private def findOverridden(
-      acc0: List[Identifier]
-  ): (List[Identifier], Option[Int]) = {
-    val maybeNewIndent0 = acceptTrivia()
+      acc0: List[Identifier],
+      indent: Indent
+  ): (List[Identifier], Indent) = {
+    val newIndent = indent.withOptIndent(acceptTrivia())
     curr.token match {
       case IDENTIFIER =>
         @tailrec
-        def getIdentifier(): (Option[Identifier], Option[Int]) = {
+        def getIdentifier(indent: Indent): (Option[Identifier], Indent) = {
           val currentIdentifier = newIdentifier
-          val maybeNewIndent = acceptAllAfterOverriddenIdentifier()
+          val newIndent = acceptAllAfterOverriddenIdentifier(indent)
           curr.token match {
             case DOT =>
-              scanner.mtagsNextToken()
-              getIdentifier()
-            case _ => (currentIdentifier, maybeNewIndent)
+              getIdentifier(newIndent.withOptIndent(acceptTrivia()))
+            case _ => (currentIdentifier, newIndent)
           }
         }
-        val (identifier, maybeNewIndent) = getIdentifier()
+        val (identifier, currIdent) = getIdentifier(newIndent)
         val acc = identifier.toList ++ acc0
         curr.token match {
-          case WITH => findOverridden(acc)
-          case COMMA => findOverridden(acc)
-          case _ => (acc, maybeNewIndent)
+          case WITH => findOverridden(acc, currIdent)
+          case COMMA => findOverridden(acc, currIdent)
+          case _ => (acc, currIdent)
         }
       case LBRACE =>
         acceptBalancedDelimeters(LBRACE, RBRACE)
-        val maybeNewIndent = acceptTrivia()
+        val currIdent = newIndent.withOptIndent(acceptTrivia())
         curr.token match {
-          case WITH => findOverridden(acc0)
-          case _ => (acc0, maybeNewIndent)
+          case WITH => findOverridden(acc0, currIdent)
+          case _ => (acc0, currIdent)
         }
-      case _ => (acc0, maybeNewIndent0)
+      case _ => (acc0, newIndent)
     }
   }
 
@@ -944,7 +976,7 @@ class ScalaToplevelMtags(
   def acceptWhileIndented(
       exitIndent: Int,
       isInsideBody: Boolean = true
-  ): Int = {
+  ): Indent = {
     @tailrec
     def loop(indent: Int, isAfterNL: Boolean, isInsideBody: Boolean): Int = {
       if (!isDone) {
@@ -977,7 +1009,7 @@ class ScalaToplevelMtags(
         }
       } else indent
     }
-    loop(0, true, isInsideBody)
+    Indent(loop(0, true, isInsideBody), false)
   }
 
   def acceptToStatSep(): Unit = {
@@ -997,7 +1029,7 @@ class ScalaToplevelMtags(
   }
 
   private def acceptTrivia(): Option[Int] = {
-    var includedNewline = false
+    var includedNewline = isNewline
     var indent = 0
     scanner.mtagsNextToken()
     while (
@@ -1328,5 +1360,18 @@ object ScalaToplevelMtags {
       override val changeCaseClassState: Boolean => Region = ei =>
         this.copy(emitIdentifier = ei)
     }
+  }
+
+  case class Indent(indent: Int, isAfterNewline: Boolean) {
+    def notAfterNewline: Indent = copy(isAfterNewline = false)
+    def withOptIndent(optIndent: Option[Int]): Indent =
+      copy(
+        indent = optIndent.getOrElse(indent),
+        isAfterNewline = optIndent.isDefined
+      )
+  }
+
+  object Indent {
+    def init: Indent = Indent(0, true)
   }
 }

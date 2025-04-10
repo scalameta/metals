@@ -357,7 +357,7 @@ projects.
 
 ## Worksheets
 
-**✅**: Worksheets work via inlay hints.
+**✅**: Worksheets work via inlay hints. A worksheet needs to have the `.worksheet.sc` extension to be picked up by Metals.
 
 By default there is a 30 second timeout on worksheet evaluation, this setting can be overridden by `-Dmetals.worksheet-timeout=<number of seconds>` server property.
 
@@ -471,7 +471,7 @@ on the current line.
 ## Additional file types
 
 Not all features are supported in all possible scenarios, especially when it
-comes to non-standard Scala files like Ammonite scripts, worksheets or sbt
+comes to non-standard Scala files like Scala CLI scripts, worksheets or sbt
 scripts.
 
 <table>
@@ -480,7 +480,7 @@ scripts.
     <td />
     <td align="center">sbt scripts</td>
     <td align="center">Worksheets</td>
-    <td align="center">Ammonite scripts*</td>
+    <td align="center">Scala CLI scripts*</td>
     <td align="center">Standalone Scala files</td>
   </tr>
 </thead>
@@ -537,7 +537,7 @@ scripts.
   <tr>
     <td>Find implementations</td>
     <td align="center">✅</td>
-    <td align="center"></td>
+    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
   </tr>
@@ -598,9 +598,9 @@ scripts.
      <td align="center"></td>
   </tr>
   <tr>
-    <td>Implicit decorations</td>
+    <td>Inlay hints</td>
     <td align="center">✅</td>
-    <td align="center"></td>
+    <td align="center">✅</td>
     <td align="center">✅</td>
     <td align="center">✅</td>
   </tr>
@@ -613,10 +613,6 @@ scripts.
   </tr>
 </tbody>
 </table>
-
-\* Note that there are some specific Ammonite features that aren't supported
-like [multi-stage](https://ammonite.io/#Multi-stageScripts) scripts. Currently
-Ammonite support is also limited to Scala 2.
 
 \* Diagnostics for sbt script and standalone Scala files will only show parsing
 errors, but not diagnostics coming from the compiler.

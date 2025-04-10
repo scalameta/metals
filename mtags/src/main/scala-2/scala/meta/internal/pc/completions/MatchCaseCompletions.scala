@@ -10,7 +10,6 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.pc.CompletionFuzzy
-import scala.meta.internal.pc.Identifier
 import scala.meta.internal.pc.MetalsGlobal
 
 import org.eclipse.{lsp4j => l}
@@ -76,19 +75,20 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
     }
     override def isPrioritized(member: Member): Boolean =
       member match {
-        case m: TextEditMember => !m.filterText.contains("(exhaustive)")
+        case m: CasePatternMember => !m.filterText.contains("(exhaustive)")
         case _ => false
       }
 
     override def contribute: List[Member] = {
 
       val selectorSym = parents.selector.typeSymbol
+      val autoImport = autoImportPosition(pos, text)
 
       // Special handle case when selector is a tuple or `FunctionN`.
       if (definitions.isTupleType(parents.selector)) {
         if (patternOnly.isEmpty)
           List(
-            new TextEditMember(
+            new CasePatternMember(
               "case () =>",
               new l.TextEdit(
                 editRange,
@@ -110,11 +110,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
         )
         val result = ListBuffer.empty[(Symbol, TextEditMember)]
         val isVisited = mutable.Set.empty[Symbol]
-        def visit(
-            sym: Symbol,
-            name: String,
-            autoImports: List[l.TextEdit]
-        ): Unit = {
+        def visit(sym: Symbol): Unit = {
           val fsym = sym.dealiasedSingleType
           def recordVisit(s: Symbol): Unit = {
             if (s != NoSymbol && !isVisited(s)) {
@@ -127,6 +123,16 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
           if (!isVisited(sym) && !isVisited(fsym)) {
             recordVisit(sym)
             recordVisit(fsym)
+
+            val (name, autoImports) = autoImport match {
+              case Some(value) =>
+                val (shortName, edits) =
+                  ShortenedNames.synthesize(sym, pos, context, value)
+                (shortName, edits)
+              case None =>
+                (sym.fullNameSyntax, Nil)
+            }
+
             if (fuzzyMatches(name))
               result += ((
                 sym,
@@ -150,7 +156,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
               !(selectorSym.isSealed &&
                 (selectorSym.isAbstract || selectorSym.isTrait))
             )
-              visit(selectorSym, Identifier(selectorSym.name), Nil)
+              visit(selectorSym)
         }
 
         // Step 1: walk through scope members.
@@ -163,24 +169,16 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
                 fsym.hasModuleFlag ||
                 fsym.isInstanceOf[TypeSymbol]) &&
               parents.isSubClass(fsym, includeReverse = false)
-            if (isValid) visit(sym, Identifier(m.sym.name), Nil)
+            if (isValid) visit(sym)
           }
 
         // Step 2: walk through known direct subclasses of sealed types.
         // In `List(foo).map { cas@@} we want to provide also `case (exhaustive)` completion
         // which works like exhaustive match, so we need to collect only members from this step
-        val autoImport = autoImportPosition(pos, text)
         val sealedDescs = mutable.Set.empty[Symbol]
         selectorSym.foreachKnownDirectSubClass { sym =>
           sealedDescs += sym.dealiased
-          autoImport match {
-            case Some(value) =>
-              val (shortName, edits) =
-                ShortenedNames.synthesize(sym, pos, context, value)
-              visit(sym, shortName, edits)
-            case None =>
-              visit(sym, sym.fullNameSyntax, Nil)
-          }
+          visit(sym)
         }
         val members = result.result()
         val edits = {
@@ -223,7 +221,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
 
                 val detail =
                   s" ${metalsToLongString(selectorSym.tpe, new ShortenedNames())} (${sealedMembers.length} cases)"
-                val exhaustive = new TextEditMember(
+                val exhaustive = new CasePatternMember(
                   "case (exhaustive)",
                   newText,
                   selectorSym,
@@ -308,7 +306,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       val sortedSubclasses = sortSubclasses(subclassesResult, tpe, source)
 
       val members = sortedSubclasses.map(_._2)
-      val basicMatch = new TextEditMember(
+      val basicMatch = new CasePatternMember(
         "match",
         new l.TextEdit(
           editRange,
@@ -341,7 +339,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
           )
           val detail =
             s" ${metalsToLongString(tpe, new ShortenedNames())} (${members.length} cases)"
-          val exhaustiveMatch = new TextEditMember(
+          val exhaustiveMatch = new CasePatternMember(
             "match (exhaustive)",
             newText,
             tpe.typeSymbol,
@@ -456,26 +454,38 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
         else pattern
       val cursorSuffix = (if (patternOnly.nonEmpty) "" else " ") +
         (if (clientSupportsSnippets) "$0" else "")
-      new TextEditMember(
-        filterText = label,
-        edit = new l.TextEdit(
-          editRange,
-          label + cursorSuffix
-        ),
-        sym = sym,
-        label = Some(label),
-        additionalTextEdits = autoImports
+
+      val edit = new l.TextEdit(
+        editRange,
+        label + cursorSuffix
       )
+      if (patternOnly.nonEmpty && name == pattern) {
+        new TextEditMember(
+          filterText = label,
+          edit = edit,
+          sym = sym,
+          label = Some(label),
+          additionalTextEdits = autoImports
+        )
+      } else {
+        new CasePatternMember(
+          filterText = label,
+          edit = edit,
+          sym = sym,
+          label = Some(label),
+          additionalTextEdits = autoImports
+        )
+      }
     }
 
-    def caseKeywordOnly: List[TextEditMember] =
+    def caseKeywordOnly: List[CasePatternMember] =
       if (patternOnly.isEmpty) {
         val label = "case"
         val suffix =
           if (clientSupportsSnippets) " $0 =>"
           else " "
         List(
-          new TextEditMember(
+          new CasePatternMember(
             label,
             new l.TextEdit(editRange, label + suffix),
             NoSymbol.newErrorSymbol(TermName("case")).setInfo(NoType),

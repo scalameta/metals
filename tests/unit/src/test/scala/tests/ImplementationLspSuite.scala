@@ -640,7 +640,7 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
        |""".stripMargin,
   )
 
-  if (isJava17) {
+  if (isJava21) {
     checkSymbols(
       "exception",
       """package a
@@ -648,7 +648,6 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
         |""".stripMargin,
       """|a/MyException#
          |com/sun/beans/finder/SignatureException#
-         |com/sun/imageio/plugins/jpeg/JFIFMarkerSegment#IllegalThumbException#
          |com/sun/jdi/AbsentInformationException#
          |com/sun/jdi/ClassNotLoadedException#
          |com/sun/jdi/ClassNotPreparedException#
@@ -663,6 +662,7 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
          |com/sun/jdi/InvocationException#
          |com/sun/jdi/NativeMethodException#
          |com/sun/jdi/ObjectCollectedException#
+         |com/sun/jdi/OpaqueFrameException#
          |com/sun/jdi/VMCannotBeModifiedException#
          |com/sun/jdi/VMDisconnectedException#
          |com/sun/jdi/VMMismatchException#
@@ -726,6 +726,51 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
          |}
          |""".stripMargin
     ),
+  )
+
+  check(
+    "self-type",
+    """|/a/src/main/scala/a/Main.scala
+       |trait A { def a@@a: Unit }
+       |trait B {
+       | this : A =>
+       |  override def <<aa>>: Unit = ()
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "self-type-1",
+    """|/a/src/main/scala/a/Main.scala
+       |trait A {
+       |  def aa(i: Int): String = ""
+       |  def a@@a: Unit
+       |}
+       |trait B {
+       | this : A =>
+       |  override def <<aa>>: Unit = ()
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "self-type-with",
+    """|/a/src/main/scala/a/Main.scala
+       |trait C
+       |trait A { def a@@a: Unit }
+       |trait B {
+       | this : A with C =>
+       |  override def <<aa>>: Unit = ()
+       |}
+       |""".stripMargin,
+  )
+
+  checkSymbols(
+    "self-type-in-lib",
+    """|trait A extends Ite@@rable[_]
+       |""".stripMargin,
+    "scala/collection/generic/DefaultSerializable#",
+    filter = _.contains("DefaultSerializable"),
   )
 
   override protected def libraryDependencies: List[String] =

@@ -148,7 +148,8 @@ class BspConnector(
           buildTool match {
             case Some(bsp: BuildServerProvider)
                 if bsp.shouldRegenerateBspJson(
-                  details.getVersion()
+                  details.getVersion(),
+                  workspace,
                 ) && !regeneratedConfig =>
               scribe.info(
                 s"Regenerating ${details.getName()} json config to latest."

@@ -558,7 +558,7 @@ class SbtBloopLspSuite
         "build.sbt",
         "sc@@alaVersion := \"2.12.11\"",
         "sbt/Keys.scala",
-        expectedLine = 191,
+        expectedLine = 192,
       )
     } yield ()
   }

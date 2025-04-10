@@ -270,6 +270,18 @@ object ServerCommands {
        |""".stripMargin,
   )
 
+  val CompileTarget = new ParametrizedCommand[b.BuildTargetIdentifier](
+    "compile-target",
+    "CompileTarget",
+    """|Compile the currently open file.
+       |
+       |Can be used as an explicit command in order
+       |to force compilation to start and finish e.g. before executing a codeLens.
+       |Returns CompileResult with field 'statusCode' being 1 for success, 2 for errors or 3 for compile cancelled.
+       |""".stripMargin,
+    "BuildTargetIdentifier",
+  )
+
   val CancelCompile = new Command(
     "compile-cancel",
     "Cancel compilation",
@@ -703,18 +715,6 @@ object ServerCommands {
     "Stay up to date with the latest release announcements and learn new Scala code editing tricks.",
   )
 
-  val StartAmmoniteBuildServer = new Command(
-    "ammonite-start",
-    "Start Ammonite build server",
-    "Start Ammonite build server",
-  )
-
-  val StopAmmoniteBuildServer = new Command(
-    "ammonite-stop",
-    "Stop Ammonite build server",
-    "Stop Ammonite build server",
-  )
-
   val StartScalaCliServer = new Command(
     "scala-cli-start",
     "Start Scala CLI server",
@@ -735,6 +735,7 @@ object ServerCommands {
       CancelCompile,
       CascadeCompile,
       CleanCompile,
+      CompileTarget,
       CopyWorksheetOutput,
       DiscoverMainClasses,
       DiscoverTestSuites,
@@ -761,14 +762,12 @@ object ServerCommands {
       DisconnectBuildServer,
       ListBuildTargets,
       ScanWorkspaceSources,
-      StartAmmoniteBuildServer,
       StartDebugAdapter,
       StartMainClass,
       StartTestSuite,
       ResolveAndStartTestSuite,
       StartAttach,
       DiscoverAndRun,
-      StopAmmoniteBuildServer,
       SuperMethodHierarchy,
       StartScalaCliServer,
       StopScalaCliServer,

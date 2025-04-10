@@ -34,8 +34,16 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
       "https://scala-ci.typesafe.com/artifactory/scala-integration/"
     )
 
+  val scalaPRValidationRepo: MavenRepository =
+    MavenRepository.of(
+      "https://scala-ci.typesafe.com/artifactory/scala-pr-validation-snapshots/"
+    )
+
   override val allRepos: Seq[Repository] =
-    Repository.defaults().asScala.toSeq :+ scalaNightlyRepo
+    Repository
+      .defaults()
+      .asScala
+      .toSeq :+ scalaNightlyRepo :+ scalaPRValidationRepo
 
   val executorService: ScheduledExecutorService =
     Executors.newSingleThreadScheduledExecutor()

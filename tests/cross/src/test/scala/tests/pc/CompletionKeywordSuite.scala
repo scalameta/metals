@@ -20,7 +20,15 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     """|superVisorStrategy: Int (commit: '')
        |super (commit: '')
        |""".stripMargin,
-    includeCommitCharacter = true
+    includeCommitCharacter = true,
+    compat = Map(
+      ">=2.13.17&&2" ->
+        """|superVisorStrategy: Int (commit: '')
+           |super (commit: '')
+           |superArg - scala.annotation.meta (commit: '')
+           |superFwdArg - scala.annotation.meta (commit: '')
+           |""".stripMargin
+    )
   )
 
   check(
@@ -38,11 +46,10 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "3" -> """|transient scala
-                |transparentTrait(): transparentTrait
-                |transparentTrait - scala.annotation
-                |""".stripMargin,
-      ">=3.3.2" -> ""
+      "3.3.1" -> """|transient scala
+                    |transparentTrait(): transparentTrait
+                    |transparentTrait - scala.annotation
+                    |""".stripMargin
     )
   )
 
@@ -63,11 +70,10 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "3" -> """|transient scala
-                |transparentTrait(): transparentTrait
-                |transparentTrait - scala.annotation
-                |""".stripMargin,
-      ">=3.3.2" -> ""
+      "3.3.1" -> """|transient scala
+                    |transparentTrait(): transparentTrait
+                    |transparentTrait - scala.annotation
+                    |""".stripMargin
     )
   )
 
@@ -88,7 +94,15 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|superVisorStrategy: Int
        |super
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      ">=2.13.17&&2" ->
+        """|superVisorStrategy: Int
+           |super
+           |superArg - scala.annotation.meta
+           |superFwdArg - scala.annotation.meta
+           |""".stripMargin
+    )
   )
 
   check(
@@ -108,7 +122,15 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|superVisorStrategy: Int
        |super
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      ">=2.13.17&&2" ->
+        """|superVisorStrategy: Int
+           |super
+           |superArg - scala.annotation.meta
+           |superFwdArg - scala.annotation.meta
+           |""".stripMargin
+    )
   )
 
   check(
@@ -128,7 +150,15 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """|superVisorStrategy: Int
        |super
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      ">=2.13.17&&2" ->
+        """|superVisorStrategy: Int
+           |super
+           |superArg - scala.annotation.meta
+           |superFwdArg - scala.annotation.meta
+           |""".stripMargin
+    )
   )
 
   check(
@@ -145,7 +175,14 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|super
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      ">=2.13.17&&2" ->
+        """|super
+           |superArg - scala.annotation.meta
+           |superFwdArg - scala.annotation.meta
+           |""".stripMargin
+    )
   )
 
   check(
@@ -452,7 +489,15 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     """.stripMargin,
     """|supervisorStrategy: Int
        |super
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      ">=2.13.17&&2" ->
+        """|supervisorStrategy: Int
+           |super
+           |superArg - scala.annotation.meta
+           |superFwdArg - scala.annotation.meta
+           |""".stripMargin
+    )
   )
 
   check(

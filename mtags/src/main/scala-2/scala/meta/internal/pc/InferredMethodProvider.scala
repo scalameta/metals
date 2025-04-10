@@ -247,15 +247,15 @@ final class InferredMethodProvider(
         params.token(),
         params.outlineFiles()
       )
+    val insertRange = insertPosition().toLsp
+    val ident = "\n" + " " * insertRange.getStart().getCharacter()
 
     val inferredTypeProvider = new InferredMethodProvider(compiler, newParams)
     inferredTypeProvider.inferredMethodEdits() match {
       case right @ Right(List(edit)) =>
-        val range = untyped.pos.toLsp
-        range.setEnd(range.getStart())
-        edit.setRange(range)
-        val indent = indentation(params.text(), untyped.pos.start - 1)
-        edit.setNewText(edit.getNewText() + indent)
+        insertRange.setEnd(insertRange.getStart())
+        edit.setRange(insertRange)
+        edit.setNewText(edit.getNewText().trim() + ident)
         right
       case otherwise => otherwise
     }

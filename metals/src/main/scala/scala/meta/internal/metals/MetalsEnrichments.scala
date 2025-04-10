@@ -978,11 +978,42 @@ object MetalsEnrichments
         else diag.getSeverity.toLsp,
         if (diag.getSource == null) "scalac" else diag.getSource,
       )
+
       Option(diag.getCode()).foreach { code =>
         ld.setCode(diag.getCode())
-        if (DiagnosticCodes.isEqual(code, DiagnosticCodes.Unused)) {
-          ld.setTags(java.util.List.of(l.DiagnosticTag.Unnecessary))
+      }
+
+      Option(diag.getTags()).foreach { tags =>
+        val converted = tags.asScala.flatMap {
+          case num if (l.DiagnosticTag.Unnecessary.getValue() == num) =>
+            Some(l.DiagnosticTag.Unnecessary)
+          case num if (l.DiagnosticTag.Deprecated.getValue() == num) =>
+            Some(l.DiagnosticTag.Deprecated)
+          case _ => None
         }
+        val all =
+          if (DiagnosticCodes.isEqual(diag.getCode(), DiagnosticCodes.Unused))
+            converted :+ l.DiagnosticTag.Unnecessary
+          else converted
+        ld.setTags(all.distinct.asJava)
+      }
+
+      Option(diag.getCodeDescription()).foreach { codeDesc =>
+        ld.setCodeDescription(
+          new l.DiagnosticCodeDescription(codeDesc.getHref())
+        )
+      }
+
+      Option(diag.getRelatedInformation()).foreach { related =>
+        ld.setRelatedInformation(related.asScala.map { r =>
+          new l.DiagnosticRelatedInformation(
+            new l.Location(
+              r.getLocation().getUri(),
+              r.getLocation().getRange().toLsp,
+            ),
+            r.getMessage(),
+          )
+        }.asJava)
       }
 
       ld.setData(diag.getData)
@@ -1333,6 +1364,26 @@ object MetalsEnrichments
         new l.TextDocumentIdentifier(location.getUri()),
         location.getRange().getStart(),
       )
+  }
+
+  implicit class XtensionTextDocumentPositionParams(
+      params: l.TextDocumentPositionParams
+  ) {
+    def printed(buffers: Buffers): String = {
+      val absolutePath = params.getTextDocument().getUri().toAbsolutePath
+      val input = absolutePath.toInputFromBuffers(buffers)
+      Try(
+        params
+          .getPosition()
+          .toMeta(input)
+          .map { meta =>
+            CompilerRangeParamsUtils
+              .offsetOrRange(meta, EmptyCancelToken)
+              .printed()
+          }
+      ).toOption.flatten
+        .getOrElse(input.text)
+    }
   }
 
   implicit class XtensionDebugSessionParams(params: b.DebugSessionParams) {

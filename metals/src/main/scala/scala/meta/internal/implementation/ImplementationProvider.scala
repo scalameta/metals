@@ -30,14 +30,19 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.search.SymbolHierarchyOps._
 import scala.meta.internal.semanticdb.ClassSignature
+import scala.meta.internal.semanticdb.IntersectionType
 import scala.meta.internal.semanticdb.Scala.Descriptor.Method
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Scope
 import scala.meta.internal.semanticdb.Signature
+import scala.meta.internal.semanticdb.StructuralType
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
+import scala.meta.internal.semanticdb.Type
 import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.semanticdb.TypeSignature
+import scala.meta.internal.semanticdb.WithType
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PcSymbolKind
@@ -254,15 +259,16 @@ final class ImplementationProvider(
           } yield Future.successful(found)
         def pcSearch = {
           val symbol = {
-            val inferredSymbol =
-              s"${implReal.symbol}${info.symbol.stripPrefix(classSymbol)}"
-            inferredSymbol.desc match {
+            val descPart = info.symbol.stripPrefix(classSymbol).desc match {
               case Method(value, _) => new Method(value, "()").toString()
-              case _ => inferredSymbol
+              case d => d
             }
+            s"${implReal.symbol}$descPart"
           }
-          def overridesSym(info: PcSymbolInformation) =
-            info.overriddenSymbols.contains(info.symbol)
+
+          def overridesSym(info1: PcSymbolInformation) =
+            info1.overriddenSymbols.contains(info.symbol)
+
           compilers.info(source, symbol).flatMap {
             case Some(info) if overridesSym(info) =>
               Future.successful(info.symbol)
@@ -545,9 +551,19 @@ object ImplementationProvider {
     def fromClassSignature(
         classSig: ClassSignature
     ): Seq[(String, ClassLocation)] = {
-      classSig.parents.collect { case t: TypeRef =>
-        t.symbol -> ClassLocation(symbol, filePath.map(_.toNIO))
+      def collectFn: Type => Seq[(String, ClassLocation)] = {
+        case t: TypeRef if t.symbol != symbol =>
+          Seq(t.symbol -> ClassLocation(symbol, filePath.map(_.toNIO)))
+        case StructuralType(WithType(ts), Some(Scope.defaultInstance)) =>
+          ts.flatMap(collectFn)
+        case IntersectionType(ts) =>
+          ts.flatMap(collectFn)
+        case _ =>
+          Seq.empty
       }
+      val parentPairs = classSig.parents.flatMap(collectFn)
+      val selfTypePair = Seq(classSig.self).flatMap(collectFn)
+      parentPairs ++ selfTypePair
     }
 
     def fromTypeSignature(typeSig: TypeSignature) = {

@@ -5,6 +5,7 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatisticsConfig
+import scala.meta.internal.metals.{BuildInfo => V}
 
 class DefinitionLspSuite
     extends BaseLspSuite("definition")
@@ -233,7 +234,7 @@ class DefinitionLspSuite
            |package a
            |object B/*L1*/ {
            |  def main/*L2*/() = {
-           |    println/*Predef.scala*/(A/*A.scala:2*/("John"))
+           |    println/*Predef.scala*/(A/*;A.scala:2;A.scala:3*/("John"))
            |    A/*A.scala:3*/.fun/*A.scala:5*/()
            |  }
            |}
@@ -704,7 +705,7 @@ class DefinitionLspSuite
         s"""
            |/metals.json
            |{
-           |  "a": { "scalaVersion": "3.4.1" }
+           |  "a": { "scalaVersion": "${V.latestScala3Next}" }
            |}
            |/a/src/main/scala/a/Main.scala
            |${testCase.replace("@@", "")}
@@ -723,10 +724,17 @@ class DefinitionLspSuite
         workspace,
       )
       _ = assert(locations.length == 1)
-      _ = assert(locations.forall(_.getUri().endsWith("a/Other.scala")))
+      (expectedFile, expectedLine) =
+        if (V.latestScala3Next.startsWith("3.6")) {
+          // We changed order to first look for definition, but there is a performance bug fixed in 3.7.0
+          ("a/Main.scala", 5)
+        } else {
+          ("a/Other.scala", 3)
+        }
+      _ = assert(locations.forall(_.getUri().endsWith(expectedFile)))
       _ = assertEquals(
         locations.map(_.getRange().getStart().getLine()),
-        List(3),
+        List(expectedLine),
       )
     } yield ()
   }

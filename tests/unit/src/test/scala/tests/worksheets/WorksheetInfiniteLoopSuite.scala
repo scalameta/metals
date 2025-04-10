@@ -29,7 +29,7 @@ class WorksheetInfiniteLoopSuite
       worksheetTimeout = 8
     )
 
-  test("infinite-loop", maxRetry = 3) {
+  test("infinite-loop".tag(FlakyWindows), maxRetry = 3) {
     for {
       _ <- initialize(
         s"""

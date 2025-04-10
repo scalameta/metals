@@ -69,13 +69,25 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
           collect(compilerSymbol)
           visited.toList.map(semanticdbSymbol)
         }
+
+        val selfTypeParents =
+          if (compilerSymbol.hasSelfType) {
+            compilerSymbol.selfType match {
+              case RefinedType(parents, _) =>
+                parents.map(_.typeSymbol).filter(_ != compilerSymbol)
+              case parent => List(parent.typeSymbol)
+            }
+          } else Nil
+
         val defnAnn =
           compilerSymbol.info.members.filter(_.isMethod).flatMap(_.annotations)
         Some(
           PcSymbolInformation(
             symbol = symbol,
             kind = getSymbolKind(compilerSymbol),
-            parents = compilerSymbol.parentSymbols.map(semanticdbSymbol),
+            parents = selfTypeParents.map(
+              semanticdbSymbol
+            ) ++ compilerSymbol.parentSymbols.map(semanticdbSymbol),
             dealiasedSymbol = semanticdbSymbol(compilerSymbol.dealiased),
             classOwner = compilerSymbol.ownerChain
               .find(c => c.isClass || c.isModule)

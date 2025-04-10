@@ -1020,6 +1020,61 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
     },
   )
 
+  checkEvents(
+    "testNG",
+    List(
+      "org.testng:testng:7.7.1",
+      "com.lihaoyi:mill-contrib-testng:0.12.1",
+    ),
+    s"""|/app/src/main/scala/a/b/TestNG.scala
+        |package a.b
+        |
+        |import org.testng.annotations.Test
+        |
+        |class TestNG {
+        |    @Test
+        |    def testOK(): Unit = {
+        |        assert(true)
+        |    }
+        |}
+        |
+        |""".stripMargin,
+    "app/src/main/scala/a/b/TestNG.scala",
+    () => {
+      List(
+        rootBuildTargetUpdate(
+          "app",
+          targetUri,
+          List[TestExplorerEvent](
+            AddTestSuite(
+              "a.b.TestNG",
+              "TestNG",
+              "a/b/TestNG#",
+              QuickLocation(
+                classUriFor("app/src/main/scala/a/b/TestNG.scala"),
+                (4, 6, 4, 12),
+              ).toLsp,
+              canResolveChildren = true,
+            ),
+            AddTestCases(
+              "a.b.TestNG",
+              "TestNG",
+              List(
+                TestCaseEntry(
+                  "testOK",
+                  QuickLocation(
+                    classUriFor("app/src/main/scala/a/b/TestNG.scala"),
+                    (6, 8, 6, 14),
+                  ).toLsp,
+                )
+              ).asJava,
+            ),
+          ).asJava,
+        )
+      )
+    },
+  )
+
   /**
    * Discovers all tests in project or test cases in file
    *

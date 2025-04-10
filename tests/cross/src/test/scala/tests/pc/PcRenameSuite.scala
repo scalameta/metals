@@ -41,6 +41,32 @@ class PcRenameSuite extends BasePcRenameSuite {
   )
 
   check(
+    "apply-rename",
+    """|object B{
+       |  def locally = {
+       |    object A{ def app@@ly(a: Int) = ??? }
+       |    A(123)
+       |    A.apply(123)
+       |  }
+       |}  
+       |""".stripMargin,
+    wrap = false
+  )
+
+  check(
+    "constructor-rename",
+    """|object B{
+       |  def locally = {
+       |    class A(a : String){ def th@@is(a: Int) = this(a.toString) }
+       |    A(123)
+       |    A.apply(123)
+       |  }
+       |}  
+       |""".stripMargin,
+    wrap = false
+  )
+
+  check(
     "generics",
     """|trait S1[X] { def <<torename>>(p: X): String = "" }
        |trait T1[Z] extends S1[Z] { override def <<torename>>(p: Z): String = super.<<torename>>(p) }

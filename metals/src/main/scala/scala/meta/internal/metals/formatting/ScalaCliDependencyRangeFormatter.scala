@@ -17,11 +17,15 @@ object ScalaCliDependencyRangeFormatter extends RangeFormatter {
       range.endPos.end,
     )
     DependencyConverter
-      .convertSbtToMillStyleIfPossible(
-        line
-      )
+      .convertSbtToMillStyleIfPossible(line)
       .map(converted =>
-        new l.TextEdit(range.range, converted.millStyleDependency)
+        new l.TextEdit(
+          new l.Range(
+            new l.Position(range.startPos.startLine, 0),
+            new l.Position(range.startPos.startLine, line.length),
+          ),
+          converted.replacementDirective.replace("\"", ""),
+        )
       )
       .map(List(_))
 

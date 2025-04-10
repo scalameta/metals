@@ -200,6 +200,29 @@ object Messages {
     }
   }
 
+  object StartHttpServer {
+    def yes = new MessageActionItem("Start")
+
+    def notNow: MessageActionItem = Messages.notNow
+
+    def params(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        s"Http server is required for such features as Metals Doctor, do you want to start it now?" +
+          "To avoid this pop up start metals with -Dmetals.http=on property or isHttpEnabled initialization option"
+      )
+      params.setType(MessageType.Info)
+      params.setActions(
+        List(
+          yes,
+          notNow,
+          dontShowAgain,
+        ).asJava
+      )
+      params
+    }
+  }
+
   object GenerateBspAndConnect {
     def yes = new MessageActionItem("Connect")
 
@@ -438,29 +461,6 @@ object Messages {
       params.setActions(
         List(
           reconnect,
-          notNow,
-        ).asJava
-      )
-      params
-    }
-  }
-
-  object AmmoniteJvmParametersChange {
-    def restart: MessageActionItem =
-      new MessageActionItem("Restart Ammonite")
-
-    def notNow: MessageActionItem =
-      new MessageActionItem("Not now")
-
-    def params(): ShowMessageRequestParams = {
-      val params = new ShowMessageRequestParams()
-      params.setMessage(
-        s"Ammonite JVM parameters have been updated, do you want to restart the ammonite BSP server? (the changes will only be picked up after the restart)"
-      )
-      params.setType(MessageType.Info)
-      params.setActions(
-        List(
-          restart,
           notNow,
         ).asJava
       )
@@ -848,13 +848,11 @@ object Messages {
   object ImportScalaScript {
     val message: String = "Scala script detected. Import it as…"
     val doImportScalaCli: String = "Scala CLI"
-    val doImportAmmonite: String = "Ammonite"
     val dismiss: String = "Dismiss"
     def params(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams(
         List(
           doImportScalaCli,
-          doImportAmmonite,
           dismiss,
         )
           .map(new MessageActionItem(_))
@@ -873,11 +871,6 @@ object Messages {
       new MessageParams(
         MessageType.Info,
         "Scala CLI project imported.",
-      )
-    def ImportedAmmonite =
-      new MessageParams(
-        MessageType.Info,
-        "Ammonite project imported.",
       )
   }
 

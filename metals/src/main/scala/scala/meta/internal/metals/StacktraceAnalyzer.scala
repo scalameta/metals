@@ -62,6 +62,13 @@ class StacktraceAnalyzer(
     } yield makeGotoLocationCodeLens(location, range)).toSeq
   }
 
+  def workspaceFileLocationFromLine(line: String): Option[l.Location] = {
+    fileLocationFromLine(line).filter { location =>
+      val path = location.getUri().toAbsolutePath
+      !path.isJarFileSystem && !path.isInReadonlyDirectory(workspace)
+    }
+  }
+
   def fileLocationFromLine(line: String): Option[l.Location] = {
     def findLocationForSymbol(s: String): Option[Location] =
       definitionProvider.fromSymbol(s, None).asScala.headOption

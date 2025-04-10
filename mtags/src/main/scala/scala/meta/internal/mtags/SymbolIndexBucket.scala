@@ -132,7 +132,7 @@ class SymbolIndexBucket(
         .filterNot(_.symbol.isPackage)
         .map(_.symbol)
     val topLevels =
-      if (source.isAmmoniteScript) sourceTopLevels.toList
+      if (source.isScalaScript) sourceTopLevels.toList
       else if (isJava) {
         sourceTopLevels.toList.headOption
           .filter(sym => !isTrivialToplevelSymbol(uri, sym, "java"))
@@ -165,12 +165,24 @@ class SymbolIndexBucket(
       source: AbsolutePath,
       toplevel: String
   ): Unit = {
-    if (source.isAmmoniteScript || !isTrivialToplevelSymbol(path, toplevel)) {
+    if (source.isScalaScript || !isTrivialToplevelSymbol(path, toplevel)) {
       toplevels.updateWith(toplevel) {
         case Some(acc) => Some(acc + source)
         case None => Some(Set(source))
       }
     }
+  }
+
+  def findFileForToplevel(
+      topLevelSymbol: Symbol
+  ): List[(AbsolutePath, Dialect)] = {
+    toplevels
+      .get(topLevelSymbol.toString())
+      .map(_.toList)
+      .orElse(loadFromSourceJars(trivialPaths(topLevelSymbol)))
+      .orElse(loadFromSourceJars(modulePaths(topLevelSymbol)))
+      .getOrElse(Nil)
+      .map(x => (x, dialect))
   }
 
   def query(symbol: Symbol): List[SymbolDefinition] =

@@ -1,6 +1,7 @@
 package tests
 
 import scala.meta.internal.builds.GradleBuildTool
+import scala.meta.internal.metals.Embedded
 
 import coursierapi.Credentials
 import coursierapi.IvyRepository
@@ -15,6 +16,38 @@ class GradleRepositoriesTest extends BaseSuite {
        |    mavenCentral()
        |  }
        |""".stripMargin,
+  )
+
+  val userHomeString: String =
+    userHome
+      .toUri()
+      .toString()
+      .replace("file:///", "file:/")
+
+  check(
+    Embedded.repositories,
+    s"""|  repositories {
+        |    mavenCentral()
+        |    maven {
+        |      url "https://oss.sonatype.org/content/repositories/snapshots"
+        |    }
+        |    ivy {
+        |      url "${userHomeString + ".ivy2/local"}"
+        |      patternLayout {
+        |        artifact "[organisation]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]"
+        |      }
+        |    }
+        |    maven {
+        |      url "${userHomeString + ".m2/repository"}"
+        |    }
+        |    maven {
+        |      url "https://oss.sonatype.org/content/repositories/public/"
+        |    }
+        |    maven {
+        |      url "https://oss.sonatype.org/content/repositories/snapshots/"
+        |    }
+        |  }
+        |""".stripMargin,
   )
 
   check(

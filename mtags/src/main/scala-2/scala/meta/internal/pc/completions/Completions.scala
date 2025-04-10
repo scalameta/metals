@@ -17,7 +17,6 @@ import scala.meta.internal.pc.IdentifierComparator
 import scala.meta.internal.pc.InterpolationSplice
 import scala.meta.internal.pc.MemberOrdering
 import scala.meta.internal.pc.MetalsGlobal
-import scala.meta.internal.semanticdb.Scala._
 
 import org.eclipse.{lsp4j => l}
 
@@ -77,6 +76,25 @@ trait Completions { this: MetalsGlobal =>
       val additionalTextEdits: List[l.TextEdit] = Nil,
       val commitCharacter: Option[String] = None
   ) extends ScopeMember(sym, NoType, true, EmptyTree)
+
+  class CasePatternMember(
+      override val filterText: String,
+      override val edit: l.TextEdit,
+      sym: Symbol,
+      override val label: Option[String] = None,
+      override val detail: Option[String] = None,
+      override val command: Option[String] = None,
+      override val additionalTextEdits: List[l.TextEdit] = Nil
+  ) extends TextEditMember(
+        filterText,
+        edit,
+        sym,
+        label,
+        detail,
+        command,
+        additionalTextEdits,
+        None
+      )
 
   val packageSymbols: mutable.Map[String, Option[Symbol]] =
     mutable.Map.empty[String, Option[Symbol]]
@@ -336,7 +354,7 @@ trait Completions { this: MetalsGlobal =>
     else Nil
   }
   def dealiasedValForwarder(sym: Symbol): List[Symbol] = {
-    if (sym.isValue && sym.hasRawInfo && !semanticdbSymbol(sym).isLocal) {
+    if (sym.isValue && sym.hasRawInfo && !sym.isLocallyDefined) {
       sym.rawInfo match {
         case SingleType(_, dealias) if dealias.isModule =>
           dealias :: dealias.companion :: Nil
@@ -583,14 +601,8 @@ trait Completions { this: MetalsGlobal =>
           isCandidate
         )
       case (imp @ Import(select, selector)) :: _
-          if isAmmoniteFileCompletionPosition(imp, pos) =>
-        AmmoniteFileCompletion(select, selector, pos, editRange)
-      case (imp @ Import(select, selector)) :: _
-          if isAmmoniteIvyCompletionPosition(
-            imp,
-            pos
-          ) || isWorksheetIvyCompletionPosition(imp, pos) =>
-        AmmoniteIvyCompletion(
+          if isWorksheetIvyCompletionPosition(imp, pos) =>
+        WorksheetIvyCompletion(
           coursierComplete,
           select,
           selector,
@@ -609,26 +621,6 @@ trait Completions { this: MetalsGlobal =>
         )
     }
   }
-
-  private def isAmmoniteCompletionPosition(
-      magicImport: String,
-      tree: Tree,
-      pos: Position
-  ): Boolean = {
-    tree match {
-      case Import(select, _) =>
-        pos.source.file.name.isAmmoniteGeneratedFile && select
-          .toString()
-          .startsWith(magicImport)
-      case _ => false
-    }
-  }
-
-  def isAmmoniteFileCompletionPosition(tree: Tree, pos: Position): Boolean =
-    isAmmoniteCompletionPosition("$file", tree, pos)
-
-  def isAmmoniteIvyCompletionPosition(tree: Tree, pos: Position): Boolean =
-    isAmmoniteCompletionPosition("$ivy", tree, pos)
 
   def isWorksheetIvyCompletionPosition(tree: Tree, pos: Position): Boolean =
     tree match {
@@ -716,6 +708,9 @@ trait Completions { this: MetalsGlobal =>
       lastVisitedParentTrees = Nil
       traverse(root)
       lastVisitedParentTrees match {
+        case _ :: (sel @ Select(qual, name)) :: _
+            if name == termNames.unapply && qual.pos.includes(pos) =>
+          sel
         case head :: _ => head
         case _ => EmptyTree
       }
@@ -905,19 +900,71 @@ trait Completions { this: MetalsGlobal =>
     result
   }
 
-  def inferStart(
+  case class InferredIdentOffsets(
+      start: Int,
+      end: Int,
+      strippedLeadingBacktick: Boolean,
+      strippedTrailingBacktick: Boolean
+  )
+
+  def inferIdentOffsets(
       pos: Position,
-      text: String,
-      charPred: Char => Boolean
-  ): Int = {
-    def fallback: Int = {
+      text: String
+  ): InferredIdentOffsets = {
+
+    // If we fail to find a tree, approximate with a heurstic about ident characters
+    def fallbackStart: Int = {
       var i = pos.point - 1
-      while (i >= 0 && charPred(text.charAt(i))) {
+      while (i >= 0 && Chars.isIdentifierPart(text.charAt(i))) {
         i -= 1
       }
       i + 1
     }
-    def loop(enclosing: List[Tree]): Int =
+    def fallbackEnd: Int = {
+      findEnd(false)
+    }
+
+    def findEnd(hasBacktick: Boolean): Int = {
+      val predicate: Char => Boolean = if (hasBacktick) { (ch: Char) =>
+        !Chars.isLineBreakChar(ch) && ch != '`'
+      } else {
+        Chars.isIdentifierPart(_)
+      }
+
+      var i = pos.point
+      while (i < text.length && predicate(text.charAt(i))) {
+        i += 1
+      }
+      i
+    }
+    def fallback =
+      InferredIdentOffsets(fallbackStart, fallbackEnd, false, false)
+
+    def refTreePos(refTree: RefTree): InferredIdentOffsets = {
+      val refTreePos = treePos(refTree)
+      var startPos = refTreePos.point
+      var strippedLeadingBacktick = false
+      if (text.charAt(startPos) == '`') {
+        startPos += 1
+        strippedLeadingBacktick = true
+      }
+
+      val endPos = findEnd(strippedLeadingBacktick)
+      var strippedTrailingBacktick = false
+      if (endPos < text.length) {
+        if (text.charAt(endPos) == '`') {
+          strippedTrailingBacktick = true
+        }
+      }
+      InferredIdentOffsets(
+        Math.min(startPos, pos.point),
+        endPos,
+        strippedLeadingBacktick,
+        strippedTrailingBacktick
+      )
+    }
+
+    def loop(enclosing: List[Tree]): InferredIdentOffsets =
       enclosing match {
         case Nil => fallback
         case head :: tl =>
@@ -925,37 +972,21 @@ trait Completions { this: MetalsGlobal =>
           else {
             head match {
               case i: Ident =>
-                treePos(i).point
-              case Select(qual, _) if !treePos(qual).includes(pos) =>
-                treePos(head).point
+                refTreePos(i)
+              case sel @ Select(qual, _) if !treePos(qual).includes(pos) =>
+                refTreePos(sel)
               case _ => fallback
             }
           }
       }
-    val start = loop(lastVisitedParentTrees)
-    Math.min(start, pos.point)
+    loop(lastVisitedParentTrees)
   }
-
-  /** Can character form part of an alphanumeric Scala identifier? */
-  private def isIdentifierPart(c: Char) =
-    (c == '$') || Character.isUnicodeIdentifierPart(c)
 
   /**
    * Returns the start offset of the identifier starting as the given offset position.
    */
   def inferIdentStart(pos: Position, text: String): Int =
-    inferStart(pos, text, isIdentifierPart)
-
-  /**
-   * Returns the end offset of the identifier starting as the given offset position.
-   */
-  def inferIdentEnd(pos: Position, text: String): Int = {
-    var i = pos.point
-    while (i < text.length && Chars.isIdentifierPart(text.charAt(i))) {
-      i += 1
-    }
-    i
-  }
+    inferIdentOffsets(pos, text).start
 
   def isSnippetEnabled(pos: Position, text: String): Boolean = {
     pos.point < text.length() && {

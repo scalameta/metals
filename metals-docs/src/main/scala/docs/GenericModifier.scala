@@ -19,7 +19,7 @@ class GenericModifier extends StringModifier {
        |`project` directories depending on how deep `*.sbt` files need to be supported. 
        |To support each `*.sbt` file Metals needs to create an additional file at 
        |`./project/project/metals.sbt` relative to the sbt file.
-       |Working with Ammonite scripts will place compiled scripts into the `.ammonite` directory.
+       |Working with Scala CLI scripts will place compiled scripts into the `.scala-build` directory.
        |It's recommended to exclude these directories and files
        |from version control systems like git.
        |
@@ -27,7 +27,7 @@ class GenericModifier extends StringModifier {
        |# ~/.gitignore
        |.metals/
        |.bloop/
-       |.ammonite/
+       |.scala-build/
        |metals.sbt
        |```
        |
