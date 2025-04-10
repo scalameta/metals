@@ -661,7 +661,9 @@ final class Doctor(
       else DoctorStatus.error
     val sbtRecommendation =
       if (scalaTarget.isSbt)
-        Some("Diagnostics and debugging for sbt are not supported currently.")
+        Some(
+          "Diagnostics and debugging for sbt are not supported. This might be improved in future."
+        )
       else None
     DoctorTargetInfo(
       scalaTarget.displayName,
