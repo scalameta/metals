@@ -9,9 +9,11 @@ import java.util.{List => JList}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilations
+import scala.meta.internal.metals.ConnectionProvider
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
@@ -49,6 +51,7 @@ class MetalsMcpServer(
     editorName: String,
     projectName: String,
     languageClient: LanguageClient,
+    connectionProvider: ConnectionProvider,
 )(implicit
     ec: ExecutionContext
 ) extends Cancelable {
@@ -88,6 +91,7 @@ class MetalsMcpServer(
     asyncServer.addTool(createInspectTool()).subscribe()
     asyncServer.addTool(createGetDocsTool()).subscribe()
     asyncServer.addTool(createGetUsagesTool()).subscribe()
+    asyncServer.addTool(importBuildTool()).subscribe()
 
     // Log server initialization
     asyncServer.loggingNotification(
@@ -153,6 +157,39 @@ class MetalsMcpServer(
   }
 
   override def cancel(): Unit = cancelable.cancel()
+
+  private def importBuildTool(): AsyncToolSpecification = {
+    val schema = """{"type": "object", "properties": { }}"""
+    new AsyncToolSpecification(
+      new Tool(
+        "import-build",
+        "Import the build to IDE. Should be performed after any build changes, e.g. adding dependepcies, any changes in build.sbt.",
+        schema,
+      ),
+      (exchange, _) => {
+        connectionProvider
+          .slowConnectToBuildServer(forceImport = true)
+          .map {
+            case BuildChange.None =>
+              new CallToolResult(createContent("No changes detected"), false)
+            case BuildChange.Reconnected =>
+              new CallToolResult(
+                createContent("Reconnected to build server"),
+                false,
+              )
+            case BuildChange.Reloaded =>
+              new CallToolResult(createContent("Build reloaded"), false)
+            case BuildChange.Failed =>
+              new CallToolResult(
+                createContent("Failed to reimport build."),
+                false,
+              )
+          }
+          .toMono
+      },
+    )
+
+  }
 
   private def createCompileTool(): AsyncToolSpecification = {
     val schema = """{"type": "object", "properties": { }}"""

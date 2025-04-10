@@ -71,7 +71,11 @@ class QueryLspSuite extends BaseLspSuite("query") {
       path = server.toPath("src/main/scala/com/test/TestClass.scala")
 
       // Test searching for "test" - should find packages, classes, objects, trait
-      result <- server.server.queryEngine.globSearch("test", Set.empty, path)
+      result <- server.headServer.queryEngine.globSearch(
+        "test",
+        Set.empty,
+        path,
+      )
       _ = assertNoDiff(
         result.show,
         """|class com.test.TestCaseClass
@@ -92,7 +96,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
       )
 
       // Test searching for "matching" - should find package and object
-      matching <- server.server.queryEngine.globSearch(
+      matching <- server.headServer.queryEngine.globSearch(
         "matching",
         Set.empty,
         path,
@@ -108,7 +112,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
         "query: globSearch(\"matching\", Set.empty)",
       )
 
-      testClasses <- server.server.queryEngine.globSearch(
+      testClasses <- server.headServer.queryEngine.globSearch(
         "test",
         Set(SymbolType.Class),
         path,
@@ -124,7 +128,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
         "query: globSearch(\"test\", Set(SymbolType.Class))",
       )
 
-      methods <- server.server.queryEngine
+      methods <- server.headServer.queryEngine
         .globSearch(
           "method",
           Set(SymbolType.Method, SymbolType.Function),
@@ -180,7 +184,11 @@ class QueryLspSuite extends BaseLspSuite("query") {
       path = server.toPath("src/main/scala/com/test/CaseSensitivity.scala")
 
       // Case insensitive search for "camel"
-      camel <- server.server.queryEngine.globSearch("camel", Set.empty, path)
+      camel <- server.headServer.queryEngine.globSearch(
+        "camel",
+        Set.empty,
+        path,
+      )
       _ = assertNoDiff(
         camel.show,
         """|class com.test.CamelCaseClass
@@ -188,7 +196,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
            |""".stripMargin,
       )
 
-      uppercase <- server.server.queryEngine.globSearch(
+      uppercase <- server.headServer.queryEngine.globSearch(
         "uppercase",
         Set.empty,
         path,
@@ -202,7 +210,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
            |""".stripMargin,
       )
 
-      lowercase <- server.server.queryEngine.globSearch(
+      lowercase <- server.headServer.queryEngine.globSearch(
         "lowercase",
         Set.empty,
         path,
@@ -268,7 +276,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
       )
 
       // Search for all packages
-      packages <- server.server.queryEngine
+      packages <- server.headServer.queryEngine
         .globSearch(
           "package",
           Set(SymbolType.Package),
@@ -282,7 +290,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
       )
 
       // Search for test packages
-      testPackages <- server.server.queryEngine
+      testPackages <- server.headServer.queryEngine
         .globSearch(
           "test",
           Set(SymbolType.Package),
@@ -296,7 +304,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
       )
 
       // Search for nested packages
-      nestedPackages <- server.server.queryEngine
+      nestedPackages <- server.headServer.queryEngine
         .globSearch(
           "nested",
           Set(SymbolType.Package),
@@ -343,7 +351,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
       path = server.toPath(
         "a/src/main/scala/com/test/nested/package2/Class2.scala"
       )
-      res <- server.server.queryEngine.inspect(
+      res <- server.headServer.queryEngine.inspect(
         "com.test.nested.package1.Class1",
         path,
         provideMethodSignatures = true,
@@ -390,7 +398,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
         "a/src/main/scala/com/test/nested/package1/Class1.scala"
       )
       _ = assertNoDiagnostics()
-      res <- server.server.queryEngine.getDocumentation(
+      res <- server.headServer.queryEngine.getDocumentation(
         "com.test.nested.package1.Class1.add",
         path,
       )
@@ -437,7 +445,7 @@ class QueryLspSuite extends BaseLspSuite("query") {
       path = server.toPath(
         "a/src/main/scala/com/test/Class2.scala"
       )
-      res <- server.server.queryEngine.getUsages(
+      res <- server.headServer.queryEngine.getUsages(
         "com.test.Class1.add",
         path,
       )

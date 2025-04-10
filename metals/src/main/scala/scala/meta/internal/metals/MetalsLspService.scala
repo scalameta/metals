@@ -45,9 +45,6 @@ import scala.meta.internal.metals.doctor.MetalsServiceInfo
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
-import scala.meta.internal.metals.mcp.McpTestRunner
-import scala.meta.internal.metals.mcp.MetalsMcpServer
-import scala.meta.internal.metals.mcp.QueryEngine
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.scalacli.ScalaCliServers
@@ -682,9 +679,6 @@ abstract class MetalsLspService(
                 onInitialized(),
                 Future(workspaceSymbols.indexClasspath()),
                 Future(formattingProvider.load()),
-                if (serverInputs.initialServerConfig.mcpEnabled)
-                  startMcpServer()
-                else Future.unit,
               )
             )
       } yield ()
@@ -1457,47 +1451,6 @@ abstract class MetalsLspService(
     )
   )
   buildClient.registerLogForwarder(debugProvider)
-
-  private val isMcpServerRunning = new AtomicBoolean(false)
-
-  lazy val queryEngine =
-    new QueryEngine(
-      workspaceSymbols,
-      definitionIndex,
-      compilers,
-      symbolDocs,
-      buildTargets,
-      referencesProvider,
-    )
-
-  lazy val mcpTestRunner = new McpTestRunner(
-    debugProvider,
-    buildTargets,
-    folder,
-    () => userConfig,
-    definitionProvider,
-  )
-
-  def startMcpServer(): Future[Unit] =
-    Future {
-      if (!isMcpServerRunning.getAndSet(true))
-        register(
-          new MetalsMcpServer(
-            queryEngine,
-            folder,
-            compilations,
-            () => focusedDocument,
-            diagnostics,
-            buildTargets,
-            mcpTestRunner,
-            initializeParams.getClientInfo().getName(),
-            getVisibleName,
-            languageClient,
-          )
-        ).run()
-    }.recover { case e: Exception =>
-      scribe.error("Error starting MCP server", e)
-    }
 
   def debugDiscovery(params: DebugDiscoveryParams): Future[DebugSession] =
     debugDiscovery

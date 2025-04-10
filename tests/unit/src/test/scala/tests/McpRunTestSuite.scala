@@ -36,7 +36,7 @@ class McpRunTestSuite extends BaseLspSuite("mcp-test") {
       path = server.toPath("a/src/main/scala/a/b/c/MunitTestSuite.scala")
 
       // Test with explicit path and verbose output
-      res1 <- server.server.mcpTestRunner
+      res1 <- server.headServer.mcpTestRunner
         .runTests("a.b.MunitTestSuite", Some(path), verbose = true) match {
         case Right(value) => value
         case Left(error) => throw new RuntimeException(error)
@@ -46,7 +46,7 @@ class McpRunTestSuite extends BaseLspSuite("mcp-test") {
       _ = assert(res1.contains("Some string"))
 
       // Test without path and non-verbose output
-      res2 <- server.server.mcpTestRunner
+      res2 <- server.headServer.mcpTestRunner
         .runTests("a.b.MunitTestSuite", None, verbose = false) match {
         case Right(value) => value
         case Left(error) => throw new RuntimeException(error)
