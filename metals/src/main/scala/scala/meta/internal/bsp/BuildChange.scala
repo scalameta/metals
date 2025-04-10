@@ -12,4 +12,5 @@ object BuildChange {
   case object Failed extends BuildChange
   case object Reconnected extends BuildChange
   case object Reloaded extends BuildChange
+  case object Cancelled extends BuildChange
 }
