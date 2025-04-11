@@ -698,7 +698,9 @@ class ProjectMetalsLspService(
     val old = userConfig
     super.onUserConfigUpdate(newConfig)
     val slowConnect =
-      if (userConfig.customProjectRoot != old.customProjectRoot) {
+      if (
+        userConfig.customProjectRoot != old.customProjectRoot || userConfig.enableBestEffort != old.enableBestEffort
+      ) {
         tables.buildTool.reset()
         tables.buildServers.reset()
         connectionProvider.fullConnect()

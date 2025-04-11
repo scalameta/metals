@@ -173,6 +173,7 @@ class ScalaCliServers(
         buildClient,
         languageClient,
         config,
+        userConfig,
         cliCommand,
         parseTreesAndPublishDiags,
         path,

@@ -617,6 +617,7 @@ object BuildServerConnection {
       requestTimeOutNotification: DismissedNotifications#Notification,
       reconnectNotification: DismissedNotifications#Notification,
       config: MetalsServerConfig,
+      userConfiguration: UserConfiguration,
       serverName: String,
       bspStatusOpt: Option[ConnectionBspStatus] = None,
       retry: Int = 5,
@@ -654,6 +655,7 @@ object BuildServerConnection {
               server,
               serverName,
               config,
+              userConfiguration,
             )
           } catch {
             case e: TimeoutException =>
@@ -722,6 +724,7 @@ object BuildServerConnection {
             reconnectNotification,
             requestTimeOutNotification,
             config,
+            userConfiguration,
             serverName,
             bspStatusOpt,
             retry - 1,
@@ -783,6 +786,7 @@ object BuildServerConnection {
       server: MetalsBuildServer,
       serverName: String,
       config: MetalsServerConfig,
+      userConfiguration: UserConfiguration,
   ): InitializeBuildResult = {
     val isBazel = serverName == BazelBuildTool.bspName
     val gson = new Gson
@@ -801,7 +805,7 @@ object BuildServerConnection {
               BuildInfo.javaSemanticdbVersion,
               BuildInfo.scalametaVersion,
               BuildInfo.supportedScala2Versions.asJava,
-              config.enableBestEffort,
+              config.enableBestEffort || userConfiguration.enableBestEffort,
             )
           ),
           "bloop-data-kind",

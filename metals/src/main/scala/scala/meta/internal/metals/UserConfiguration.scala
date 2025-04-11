@@ -122,6 +122,7 @@ case class UserConfiguration(
       BatchSemanticdbConfig.default,
     promptBuildImport: Boolean = true,
     protobufLspConfig: ProtobufLspConfig = ProtobufLspConfig.default,
+    enableBestEffort: Boolean = false,
 ) {
 
   def isMbtDefinitionProviderEnabled: Boolean =
@@ -359,6 +360,12 @@ case class UserConfiguration(
             ).asJava,
           )
         ),
+      Some(
+        (
+          "enableBestEffort",
+          enableBestEffort,
+        )
+      ),
       ).flatten
     )
     val gson = new GsonBuilder().setPrettyPrinting().create()
@@ -769,6 +776,15 @@ object UserConfiguration {
         """|If enabled, Metals will prompt you to import or connect to a build server
            |when a new workspace is detected. When disabled, you can still manually
            |trigger import via the "Import build" command.
+          |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "enable-best-effort",
+        "false",
+        "true",
+        "Use best effort compilation for Scala 3.",
+        """|When using Scala 3, use best effort compilation to improve Metals 
+           |correctness when the workspace doesn't yet compile properly.
            |""".stripMargin,
       ),
     )
@@ -1281,6 +1297,8 @@ object UserConfiguration {
           }
         },
       ).getOrElse(ProtobufLspConfig.defaultFromFeatureFlags(featureFlags))
+    val enableBestEffort =
+      getBooleanKey("enable-best-effort").getOrElse(false)
 
     if (errors.isEmpty) {
       Right(
@@ -1343,6 +1361,7 @@ object UserConfiguration {
           batchSemanticdbCompilerInstances,
           promptBuildImport,
           protobufLspConfig,
+          enableBestEffort,
         )
       )
     } else {
