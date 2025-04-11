@@ -4,6 +4,7 @@ import scala.collection.mutable
 
 import scala.meta._
 import scala.meta.internal.docstrings._
+import scala.meta.internal.docstrings.printers.ScalaDocPrinter
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.ScalaMtags
 import scala.meta.internal.semanticdb.Scala.Descriptor
@@ -32,12 +33,6 @@ class ScaladocIndexer(
       sinfo: SymbolInformation,
       owner: String
   ): Unit = {
-    val printer =
-      contentType match {
-        case MARKDOWN => printers.MarkdownGenerator
-        case PLAINTEXT => printers.PlaintextGenerator
-      }
-
     val docstring = currentTree.origin match {
       case Origin.Parsed(_, start, _) =>
         val leadingDocstring =
@@ -54,6 +49,36 @@ class ScaladocIndexer(
     // Register `@define` macros to use for expanding in later docstrings.
     defines ++= ScaladocParser.extractDefines(docstring)
     val comment = ScaladocParser.parseComment(docstring, defines)
+
+    val info =
+      contentType match {
+        case MARKDOWN =>
+          createSymbolInfoWithPrinter(
+            occ,
+            sinfo,
+            printers.MarkdownGenerator,
+            docstring,
+            comment
+          )
+        case PLAINTEXT =>
+          createSymbolInfoWithPrinter(
+            occ,
+            sinfo,
+            printers.PlaintextGenerator,
+            docstring,
+            comment
+          )
+      }
+    info.foreach(fn)
+  }
+
+  private def createSymbolInfoWithPrinter(
+      occ: SymbolOccurrence,
+      sinfo: SymbolInformation,
+      printer: ScalaDocPrinter,
+      docstring: String,
+      comment: Comment
+  ): Option[MetalsSymbolDocumentation] = {
     val docstringContent = printer.toText(comment, docstring)
     def param(name: String, default: String): SymbolDocumentation = {
       val paramDoc = comment.valueParams
@@ -77,7 +102,7 @@ class ScaladocIndexer(
       }
       param(member.name.value, default)
     }
-    val info = currentTree match {
+    currentTree match {
       case _: Defn.Trait | _: Pkg.Object | _: Defn.Val | _: Defn.Var |
           _: Decl.Val | _: Decl.Var | _: Defn.Type | _: Decl.Type =>
         Some(
@@ -133,7 +158,6 @@ class ScaladocIndexer(
       case _ =>
         None
     }
-    info.foreach(fn)
   }
 }
 

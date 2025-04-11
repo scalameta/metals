@@ -35,6 +35,7 @@ import scala.meta.pc.DefinitionResult
 import scala.meta.pc.DisplayableException
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.InlayHintsParams
+import scala.meta.pc.InspectResult
 import scala.meta.pc.Node
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
@@ -489,6 +490,18 @@ case class ScalaPresentationCompiler(
       val result: Option[IPcSymbolInformation] =
         pc.compiler().info(symbol).map(_.asJava)
       result.asJava
+    }(emptyQueryContext)
+  }
+
+  override def inspect(
+      fqcn: String,
+      inspectLevel: Integer
+  ): CompletableFuture[util.List[InspectResult]] = {
+    compilerAccess.withNonInterruptableCompiler[util.List[InspectResult]](
+      Nil.asJava,
+      EmptyCancelToken
+    ) { pc =>
+      pc.compiler().inspect(fqcn, inspectLevel).asJava
     }(emptyQueryContext)
   }
 

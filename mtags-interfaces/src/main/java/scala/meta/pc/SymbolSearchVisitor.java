@@ -43,4 +43,8 @@ public abstract class SymbolSearchVisitor {
      */
     abstract public boolean isCancelled();
 
+    public int visitWorkspacePackage(String owner, String name) {
+        return 0;
+    }
+
 }
