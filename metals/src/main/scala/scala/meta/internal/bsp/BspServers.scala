@@ -162,6 +162,7 @@ final class BspServers(
       tables.dismissedNotifications.ReconnectBsp,
       tables.dismissedNotifications.RequestTimeout,
       config,
+      userConfig(),
       details.getName(),
       bspStatusOpt,
       workDoneProgress = workDoneProgress,

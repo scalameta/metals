@@ -56,6 +56,7 @@ case class UserConfiguration(
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
     scalaCliLauncher: Option[String] = None,
     defaultBspToBuildTool: Boolean = false,
+    enableBestEffort: Boolean = false,
 ) {
 
   override def toString(): String = {
@@ -139,6 +140,12 @@ case class UserConfiguration(
         (
           "defaultBspToBuildTool",
           defaultBspToBuildTool,
+        )
+      ),
+      Some(
+        (
+          "enableBestEffort",
+          enableBestEffort,
         )
       ),
     ).flatten.toMap.asJava
@@ -455,6 +462,15 @@ object UserConfiguration {
            |default to using it instead of Bloop.
            |""".stripMargin,
       ),
+      UserConfigurationOption(
+        "enable-best-effort",
+        "false",
+        "true",
+        "Use best effort compilation for Scala 3.",
+        """|When using Scala 3, use best effort compilation to improve Metals 
+           |correctness when the workspace doesn't yet compile properly.
+           |""".stripMargin,
+      ),
     )
 
   def fromJson(
@@ -727,6 +743,8 @@ object UserConfiguration {
     val defaultBspToBuildTool =
       getBooleanKey("default-bsp-to-build-tool").getOrElse(false)
 
+    val enableBestEffort =
+      getBooleanKey("enable-best-effort").getOrElse(false)
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -758,6 +776,7 @@ object UserConfiguration {
           autoImportBuilds,
           scalaCliLauncher,
           defaultBspToBuildTool,
+          enableBestEffort,
         )
       )
     } else {

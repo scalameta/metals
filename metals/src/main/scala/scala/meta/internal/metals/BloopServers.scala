@@ -105,6 +105,7 @@ final class BloopServers(
         tables.dismissedNotifications.ReconnectBsp,
         tables.dismissedNotifications.RequestTimeout,
         serverConfig,
+        userConfiguration(),
         name,
         bspStatusOpt,
         workDoneProgress = workDoneProgress,
