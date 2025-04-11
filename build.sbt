@@ -226,7 +226,8 @@ lazy val interfaces = project
     ),
     crossPaths := false,
     libraryDependencies ++= List(
-      V.lsp4j
+      V.lsp4j,
+      "ch.epfl.scala" % "scalafix-interfaces" % V.scalafix,
     ),
     javacOptions := Seq("--release", "8"),
     crossVersion := CrossVersion.disabled,

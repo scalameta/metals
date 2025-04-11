@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
+import scalafix.interfaces.imports.OrganizeImportsDirect;
 /**
  * The public API of the presentation compiler.
  *
@@ -305,6 +306,10 @@ public abstract class PresentationCompiler {
 	 * Provide CompletionItemPriority for additional sorting completion items.
 	 */
 	public PresentationCompiler withCompletionItemPriority(CompletionItemPriority priority) {
+		return this;
+	}
+
+	public PresentationCompiler withOrganizeImports(OrganizeImportsDirect organize) {
 		return this;
 	}
 

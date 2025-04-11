@@ -26,6 +26,8 @@ import scala.meta.pc.SymbolSearch
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.InitializeParams
 
+import scalafix.interfaces.imports.OrganizeImportsDirect
+
 class CompilerConfiguration(
     workspace: AbsolutePath,
     config: ClientConfiguration,
@@ -53,6 +55,7 @@ class CompilerConfiguration(
       symbolSearch: SymbolSearch,
       classpath: Seq[Path],
       referenceCounter: CompletionItemPriority,
+      organizeImportsDirect: OrganizeImportsDirect,
   ) extends MtagsPresentationCompiler {
     private val mtags =
       mtagsResolver.resolve(scalaVersion).getOrElse(MtagsBinaries.BuildIn)
@@ -65,6 +68,7 @@ class CompilerConfiguration(
         "default",
         symbolSearch,
         referenceCounter,
+        organizeImportsDirect,
       )
 
     def shutdown(): Unit = standalone.shutdown()
@@ -79,6 +83,7 @@ class CompilerConfiguration(
         sources: Seq[Path],
         workspaceFallback: Option[SymbolSearch],
         referenceCounter: CompletionItemPriority,
+        organizeImportsDirect: OrganizeImportsDirect,
     ): StandaloneCompiler = {
       val search =
         createStandaloneSearch(classpath, sources, workspaceFallback)
@@ -87,6 +92,7 @@ class CompilerConfiguration(
         search,
         classpath,
         referenceCounter,
+        organizeImportsDirect,
       )
     }
   }
@@ -160,6 +166,7 @@ class CompilerConfiguration(
       mtags: MtagsBinaries,
       search: SymbolSearch,
       referenceCounter: CompletionItemPriority,
+      organizeImportsDirect: OrganizeImportsDirect,
       additionalClasspath: Seq[Path] = Nil,
   ) extends LazyCompiler {
 
@@ -199,6 +206,7 @@ class CompilerConfiguration(
         name,
         search,
         referenceCounter,
+        organizeImportsDirect,
       )
         .withBuildTargetName(scalaTarget.displayName)
     }
@@ -210,6 +218,7 @@ class CompilerConfiguration(
         Nil,
         Some(search),
         referenceCounter,
+        organizeImportsDirect,
       ).standalone
 
   }
@@ -233,6 +242,7 @@ class CompilerConfiguration(
         mtags,
         worksheetSearch,
         referenceCounter,
+        OrganizeImportsDirect.noopInstance(),
         classpath,
       )
     }
@@ -248,7 +258,12 @@ class CompilerConfiguration(
 
     protected def newCompiler(classpath: Seq[Path]): PresentationCompiler = {
       val pc = JavaPresentationCompiler()
-      configure(pc, search, completionItemPriority)
+      configure(
+        pc,
+        search,
+        completionItemPriority,
+        OrganizeImportsDirect.noopInstance(),
+      )
         .newInstance(
           targetId.getUri(),
           classpath.asJava,
@@ -264,10 +279,12 @@ class CompilerConfiguration(
       pc: PresentationCompiler,
       search: SymbolSearch,
       completionItemPriority: CompletionItemPriority,
+      organizeImportsDirect: OrganizeImportsDirect,
   ): PresentationCompiler =
     pc.withSearch(search)
       .withExecutorService(ec)
       .withCompletionItemPriority(completionItemPriority)
+      .withOrganizeImports(organizeImportsDirect)
       .withWorkspace(workspace.toNIO)
       .withScheduledExecutorService(sh)
       .withReportsLoggerLevel(MetalsServerConfig.default.loglevel)
@@ -293,6 +310,7 @@ class CompilerConfiguration(
       name: String,
       symbolSearch: SymbolSearch,
       referenceCounter: CompletionItemPriority,
+      organizeImportsDirect: OrganizeImportsDirect,
   ): PresentationCompiler = {
     val pc = mtags match {
       case MtagsBinaries.BuildIn => new ScalaPresentationCompiler()
@@ -301,7 +319,7 @@ class CompilerConfiguration(
     }
 
     val filteredOptions = plugins.filterSupportedOptions(options)
-    configure(pc, symbolSearch, referenceCounter)
+    configure(pc, symbolSearch, referenceCounter, organizeImportsDirect)
       .newInstance(
         name,
         classpathSeq.asJava,

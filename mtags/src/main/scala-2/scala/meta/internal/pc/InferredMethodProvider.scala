@@ -10,6 +10,7 @@ import scala.meta.internal.metals.PcQueryContext
 import scala.meta.pc.OffsetParams
 
 import org.eclipse.lsp4j.TextEdit
+import scalafix.interfaces.imports.OrganizeImportsDirect
 
 /**
  * Tries to calculate edits needed to create a method that will fix missing symbol
@@ -144,7 +145,11 @@ final class InferredMethodProvider(
       // existing symbols in scope, so we just do nothing
       Nil
     case Some(importPosition) =>
-      history.autoImports(pos, importPosition)
+      history.autoImports(
+        pos,
+        importPosition,
+        OrganizeImportsDirect.noopInstance()
+      )
   }
 
   private def prettyType(tpe: Type) =

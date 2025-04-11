@@ -9,10 +9,12 @@ import java.{util => ju}
 import scala.annotation.nowarn
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
+import scala.meta._
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal
@@ -90,6 +92,7 @@ class Compilers(
     sourceMapper: SourceMapper,
     worksheetProvider: WorksheetProvider,
     completionItemPriority: () => CompletionItemPriority,
+    scalafixProvider: () => ScalafixProvider,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Cancelable {
 
@@ -154,19 +157,29 @@ class Compilers(
                 lazyPc
               } else {
                 presentationCompiler.shutdown()
+                val scalafix = scala.concurrent.Await.result(
+                  scalafixProvider().getScalafix(scalaVersion),
+                  scala.concurrent.duration.Duration.Inf,
+                )
                 StandaloneCompiler(
                   scalaVersion,
                   search,
                   Nil,
                   completionItemPriority(),
+                  scalafix.loadOrganizeImports(java.util.Optional.empty()),
                 )
               }
             case None =>
+              val scalafix = scala.concurrent.Await.result(
+                scalafixProvider().getScalafix(scalaVersion),
+                scala.concurrent.duration.Duration.Inf,
+              )
               StandaloneCompiler(
                 scalaVersion,
                 search,
                 Nil,
                 completionItemPriority(),
+                scalafix.loadOrganizeImports(java.util.Optional.empty()),
               )
           }
         },
@@ -673,6 +686,7 @@ class Compilers(
         outlineFilesProvider.getOutlineFiles(pc.buildTargetId())
       val offsetParams =
         CompilerOffsetParamsUtils.fromPos(pos, token, outlineFiles)
+
       pc.complete(offsetParams)
         .asScala
         .map { list =>
@@ -1263,12 +1277,18 @@ class Compilers(
         path, {
           val scalaVersion =
             scalaVersionSelector.fallbackScalaVersion(isAmmonite = false)
+
+          val scalafix = scala.concurrent.Await.result(
+            scalafixProvider().getScalafix(scalaVersion),
+            scala.concurrent.duration.Duration.Inf,
+          )
           StandaloneCompiler(
             scalaVersion,
             classpath,
             sources,
             Some(search),
             completionItemPriority(),
+            scalafix.loadOrganizeImports(java.util.Optional.empty()),
           )
         },
       )
@@ -1312,11 +1332,17 @@ class Compilers(
             workDoneProgress.trackBlocking(
               s"${config.icons().sync}Loading presentation compiler"
             ) {
+              // TODO
+              val scalafix = scala.concurrent.Await.result(
+                scalafixProvider().getScalafix(scalaVersion),
+                scala.concurrent.duration.Duration.Inf,
+              )
               ScalaLazyCompiler(
                 scalaTarget,
                 mtags,
                 search,
                 completionItemPriority(),
+                scalafix.loadOrganizeImports(java.util.Optional.empty()),
               )
             }
           val key =

@@ -444,6 +444,7 @@ abstract class MetalsLspService(
       sourceMapper,
       worksheetProvider,
       () => referencesProvider,
+      () => scalafixProvider,
     )
   )
 

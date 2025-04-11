@@ -10,6 +10,11 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.FileSystemWatcher
 import org.eclipse.lsp4j.jsonrpc.messages.Either
+import metaconfig._
+import metaconfig.generic._
+import scala.reflect.ClassTag
+import scala.meta.Importer
+import scala.util.matching.Regex
 
 object Configs {
 
@@ -115,5 +120,4 @@ object Configs {
       )
     }
   }
-
 }

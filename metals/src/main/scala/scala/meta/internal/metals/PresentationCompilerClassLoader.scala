@@ -15,6 +15,7 @@ class PresentationCompilerClassLoader(parent: ClassLoader)
       name.startsWith("org.eclipse.lsp4j") ||
         name.startsWith("com.google.gson") ||
         name.startsWith("scala.meta.pc") ||
+        name.startsWith("scalafix") ||
         name.startsWith("javax")
     if (isShared) {
       parent.loadClass(name)

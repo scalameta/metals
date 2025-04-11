@@ -31,6 +31,8 @@ import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 
+import scalafix.interfaces.imports.OrganizeImportsDirect
+
 import org.eclipse.{lsp4j => l}
 
 class MetalsGlobal(
@@ -40,7 +42,8 @@ class MetalsGlobal(
     val buildTargetIdentifier: String,
     val metalsConfig: PresentationCompilerConfig,
     val workspace: Option[Path],
-    val completionItemPriority: CompletionItemPriority
+    val completionItemPriority: CompletionItemPriority,
+    val orgImports: OrganizeImportsDirect
 ) extends Global(settings, reporter)
     with completions.Completions
     with completions.AmmoniteFileCompletions

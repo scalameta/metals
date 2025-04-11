@@ -137,6 +137,7 @@ object AutoImports:
    * @param indexedContext A context of the position where the autoImport is invoked
    * @param renames A function that returns the name of the given symbol which is renamed on import statement.
    */
+
   class AutoImportsGenerator(
       val pos: SourcePosition,
       importPosition: AutoImportPosition,

@@ -8,6 +8,7 @@ import scala.meta.tokens.{Token => T}
 
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.{lsp4j => l}
+import scalafix.interfaces.imports.OrganizeImportsDirect
 
 /**
  * Tries to calculate edits needed to insert the inferred type annotation
@@ -66,7 +67,11 @@ final class InferredTypeProvider(
         // existing symbols in scope, so we just do nothing
         Nil
       case Some(importPosition) =>
-        history.autoImports(pos, importPosition)
+        history.autoImports(
+          pos,
+          importPosition,
+          OrganizeImportsDirect.noopInstance()
+        )
     }
 
     def prettyType(tpe: Type) =

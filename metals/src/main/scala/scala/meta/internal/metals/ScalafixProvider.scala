@@ -574,12 +574,13 @@ case class ScalafixProvider(
     }
   }
 
-  private def getScalafix(
+  def getScalafix(
       scalaVersion: ScalaVersion
   ): Future[Scalafix] = Future {
     scalafixCache.getOrElseUpdate(
       scalaVersion, {
         workDoneProgress.trackBlocking("Downloading scalafix") {
+          scribe.info(s"GET SCALAFIX")
           val scalafix =
             if (scalaVersion.startsWith("2.11")) scala211Fallback
             else
@@ -633,6 +634,7 @@ case class ScalafixProvider(
             Embedded.rulesClasspath(
               rulesDependencies.toList ++ organizeImportRule
             )
+          scribe.info(s"RULE CLASSLOADER: ${paths}")
           val classloader = Embedded.toClassLoader(
             Classpath(paths.map(AbsolutePath(_))),
             scalafixClassLoader,
@@ -712,6 +714,9 @@ object ScalafixProvider {
       userConfig: UserConfiguration,
       rules: List[String],
   ): Set[Dependency] = {
+    scribe.info(
+      s"here is scalafixRulesDependencies: ${userConfig.scalafixRulesDependencies}"
+    )
     val fromSettings =
       userConfig.scalafixRulesDependencies.flatMap { dependencyString =>
         Try {

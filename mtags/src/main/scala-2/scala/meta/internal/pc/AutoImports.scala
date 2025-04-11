@@ -52,11 +52,13 @@ trait AutoImports { this: MetalsGlobal =>
               .lastOption
             val padTop = lastImportOpt.isEmpty
             val lastImportOrPkg = lastImportOpt.getOrElse(pkg.pid)
-            new AutoImportPosition(
-              pos.source.lineToOffset(lastImportOrPkg.pos.focusEnd.line),
-              text,
-              padTop
-            )
+            val aipos =
+              new AutoImportPosition(
+                pos.source.lineToOffset(lastImportOrPkg.pos.focusEnd.line),
+                text,
+                padTop
+              )
+            aipos
           }
 
         def forScript(isAmmonite: Boolean) = {
