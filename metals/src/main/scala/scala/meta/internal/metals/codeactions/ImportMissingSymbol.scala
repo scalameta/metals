@@ -306,7 +306,6 @@ class SourceAddMissingImports(
       if (actions.length == 1) actions else Seq.empty
     }
 
-    pprint.log("source.addMissingImports filteredActions: " + filteredActions)
     filteredActions
   }
 }
