@@ -232,7 +232,7 @@ class PackageProvider(
     optObj match {
       case None if oldPackagesMatchOldPath && !oldPackagesMatchNewPath =>
         calcPackageEdit(pkgs, newPackageParts, oldPath)
-      case Some(obj) if oldPackagesMatchOldPath =>
+      case Some(obj) if oldPackagesMatchOldPath && !oldPackagesMatchNewPath =>
         for {
           lastPart <- newPackageParts.lastOption
           edits <- calcPackageEdit(pkgs, newPackageParts.dropRight(1), oldPath)
@@ -246,7 +246,7 @@ class PackageProvider(
           else List(edits, objectEdit).mergeChanges
         }
       case Some(_)
-          if !oldPackagesMatchNewPath && oldPackagesWithoutObjectMatchOldPath && !oldPackagesMatchNewPath =>
+          if !oldPackagesMatchNewPath && oldPackagesWithoutObjectMatchOldPath =>
         calcPackageEdit(pkgs, newPackageParts, oldPath)
       case _ => None
     }
