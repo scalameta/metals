@@ -15,11 +15,11 @@ object MacroAnnotations {
   // IntelliJ has never managed to goto definition for the inner classes from Trees.scala
   // due to the macro annotations.
   val x: Defn.Class = Defn.Class(
-    Nil,
-    Type.Name("test")/*(current<<scala/meta/internal/dialects/InternalDialect#current().>>)*/,
-    Nil,
-    Ctor.Primary(Nil, Term.Name("this")/*(current<<scala/meta/internal/dialects/InternalDialect#current().>>)*/, Nil)/*(current<<scala/meta/internal/dialects/InternalDialect#current().>>)*/,
-    Template(Nil, Nil, Self(Name.Anonymous()/*(current<<scala/meta/internal/dialects/InternalDialect#current().>>)*/, None), Nil),
+    /*mods = */Nil,
+    /*name = */Type.Name(/*value = */"test")/*(current<<scala/meta/internal/dialects/InternalDialect#current().>>)*/,
+    /*tparams = */Nil,
+    /*ctor = */Ctor.Primary(/*mods = */Nil, /*name = */Term.Name(/*value = */"this")/*(current<<scala/meta/internal/dialects/InternalDialect#current().>>)*/, /*paramss = */Nil)/*(current<<scala/meta/internal/dialects/InternalDialect#current().>>)*/,
+    /*templ = */Template(/*early = */Nil, /*inits = */Nil, /*self = */Self(/*name = */Name.Anonymous()/*(current<<scala/meta/internal/dialects/InternalDialect#current().>>)*/, /*decltpe = */None), /*stats = */Nil),
   )/*(current<<scala/meta/internal/dialects/InternalDialect#current().>>)*/
   val y: Mod.Final = Mod.Final()/*(current<<scala/meta/internal/dialects/InternalDialect#current().>>)*/
 }

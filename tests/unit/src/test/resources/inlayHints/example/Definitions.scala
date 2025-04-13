@@ -13,6 +13,6 @@ class Definitions {
   ](
     elems = null
   )
-  println(deriveDecoder[MacroAnnotation])
-  println(deriveEncoder[MacroAnnotation])
+  println(/*x = */deriveDecoder[MacroAnnotation])
+  println(/*x = */deriveEncoder[MacroAnnotation])
 }
