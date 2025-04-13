@@ -49,6 +49,14 @@ final class PcInlayHintsProvider(
       inlayHints: InlayHints
   ): InlayHints =
     tree match {
+      case NamedParameters(params) =>
+        params.foldLeft(inlayHints) { case (acc, (name, pos)) =>
+          acc.add(
+            adjustPos(pos).focusStart.toLsp,
+            LabelPart(name.toString() + " = ") :: Nil,
+            InlayHintKind.Parameter
+          )
+        }
       case ImplicitConversion(symbol, range) =>
         val adjusted = adjustPos(range)
         inlayHints
@@ -150,6 +158,60 @@ final class PcInlayHintsProvider(
     } else {
       LabelPart(label, symbol = semanticdbSymbol(symbol))
     }
+
+  protected lazy val namedArgCache: Map[Position, Tree] = {
+    val parsedTree = parseTree(unit.source)
+    parsedTree.collect { case arg @ AssignOrNamedArg(_, rhs) =>
+      rhs.pos -> arg
+    }.toMap
+  }
+
+  object NamedParameters {
+    def unapply(tree: Tree): Option[List[(Name, Position)]] =
+      if (params.namedParameters())
+        tree match {
+          case Apply(fun: Select, args) if isNotInterestingApply(fun) =>
+            None
+          case Apply(TypeApply(fun: Select, _), args)
+              if isNotInterestingApply(fun) =>
+            None
+          case Apply(fun, args)
+              if isRealApply(fun) &&
+                /* We don't want to show named parameters for unapplies*/
+                args.exists(arg => arg.pos.isRange && arg.pos != fun.pos) &&
+                /* It's most likely a block argument, even if it's not it's
+                   doubtful that anyone wants to see the named parameters */
+                !isSingleBlock(args) =>
+            val params = fun.tpe.params
+            Some(args.zip(params).collect {
+              case (arg, param)
+                  if !fun.symbol.isJavaDefined && // We don't have a quick way of getting java param names
+                    !namedArgCache.exists(p => p._1.includes(arg.pos)) =>
+                (param.name, arg.pos)
+            })
+          case _ => None
+        }
+      else None
+
+    private def isNotInterestingApply(sel: Select) =
+      isForComprehensionMethod(sel) || syntheticTupleApply(sel) ||
+        isInfix(sel, textStr) || sel.symbol.isSetter
+
+    private def isSingleBlock(args: List[Tree]): Boolean =
+      args.size == 1 && args.forall {
+        case _: Block => true
+        case Typed(_: Block, _) => true
+        case _ => false
+      }
+
+    private def isNotStringContextApply(fun: Tree) =
+      fun.symbol.owner != definitions.StringContextClass && !fun.symbol.isMacro
+
+    private def isRealApply(fun: Tree) =
+      fun.pos.isRange && fun.symbol != null && !fun.symbol.isImplicit &&
+        isNotStringContextApply(fun) && fun.symbol.paramss.nonEmpty
+  }
+
   object ImplicitConversion {
     def unapply(tree: Tree): Option[(Symbol, Position)] =
       if (params.implicitConversions())

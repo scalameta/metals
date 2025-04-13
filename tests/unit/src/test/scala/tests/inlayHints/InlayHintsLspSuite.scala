@@ -13,21 +13,21 @@ class InlayHintsLspSuite
        |case class Location(city: String)
        |object Main{
        |  def hello()(implicit name: String, from: Location)/*: Unit<<scala/Unit#>>*/ = {
-       |    println(s"Hello $$name from $${from.city}")
+       |    println(/*x = */s"Hello $$name from $${from.city}")
        |  }
        |  implicit val andy : String = "Andy"
        |
        |  def greeting()/*: Unit<<scala/Unit#>>*/ = {
-       |    implicit val boston/*: Location<<(1:11)>>*/ = Location("Boston")
+       |    implicit val boston/*: Location<<(1:11)>>*/ = Location(/*city = */"Boston")
        |    hello()/*(andy<<(6:15)>>, boston<<(9:17)>>)*/
        |    hello()/*(andy<<(6:15)>>, boston<<(9:17)>>)*/;    hello()/*(andy<<(6:15)>>, boston<<(9:17)>>)*/
        |  }
        |  
        |  val ordered/*: String<<scala/Predef.String#>>*/ = /*augmentString<<scala/Predef.augmentString().>>(*/"acb"/*)*/.sorted/*(Char<<scala/math/Ordering.Char.>>)*/
-       |  /*augmentString<<scala/Predef.augmentString().>>(*/"foo"/*)*/.map(c/*: Char<<scala/Char#>>*/ => c.toInt)
+       |  /*augmentString<<scala/Predef.augmentString().>>(*/"foo"/*)*/.map(/*f = */c/*: Char<<scala/Char#>>*/ => c.toInt)
        |  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
        |  Future{
-       |    println("")
+       |    /*body = */println(/*x = */"")
        |  }/*(ec<<(16:15)>>)*/
        |}
        |""".stripMargin,
@@ -35,7 +35,8 @@ class InlayHintsLspSuite
       """|"implicitArguments": {"enable": true},
          |"implicitConversions": {"enable": true},
          |"inferredTypes": {"enable": true},
-         |"hintsInPatternMatch": {"enable": true}
+         |"hintsInPatternMatch": {"enable": true},
+         |"namedParameters": {"enable": true}
          |""".stripMargin
     ),
   )
