@@ -836,6 +836,7 @@ class Compilers(
         typeParameters = options.typeParameters,
         byNameParameters = options.byNameParameters,
         hintsInPatternMatch = options.hintsInPatternMatch,
+        namedParameters = options.namedParameters,
       )
 
       pc
