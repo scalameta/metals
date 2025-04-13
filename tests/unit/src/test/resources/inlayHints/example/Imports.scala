@@ -5,6 +5,6 @@ import math.{floor => _, _}
 
 class Imports {
   // rename reference
-  NotGood/*[Nothing<<scala/Nothing#>>]*/(null)
-  max(1, 2)
+  NotGood/*[Nothing<<scala/Nothing#>>]*/(/*exception = */null)
+  max(/*x = */1, /*y = */2)
 }

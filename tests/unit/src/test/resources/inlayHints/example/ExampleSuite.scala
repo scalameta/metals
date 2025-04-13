@@ -1,5 +1,5 @@
 package example
 
 object ExampleSuite {
-  println(NamedArguments.user2)
+  println(/*x = */NamedArguments.user2)
 }
