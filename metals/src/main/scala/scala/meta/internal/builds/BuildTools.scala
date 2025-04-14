@@ -176,6 +176,7 @@ final class BuildTools(
       SbtBuildTool.name,
       MillBuildTool.bspName,
       BazelBuildTool.bspName,
+      MezelBuildTool.name,
     ) ++ ScalaCli.names
 
   private def customProjectRoot = userConfig().getCustomProjectRoot(workspace)
@@ -209,6 +210,7 @@ final class BuildTools(
       MillBuildTool(userConfig, workspace),
       ScalaCliBuildTool(workspace, workspace, userConfig),
       BazelBuildTool(userConfig, workspace),
+      MezelBuildTool(userConfig, workspace),
     )
   }
 
@@ -219,7 +221,10 @@ final class BuildTools(
     if (isMill) buf += "Mill"
     if (isGradle) buf += "Gradle"
     if (isMaven) buf += "Maven"
-    if (isBazel) buf += "Bazel"
+    if (isBazel) {
+      buf += "Bazel"
+      buf += "Mezel"
+    }
     buf.result()
   }
 
@@ -235,7 +240,10 @@ final class BuildTools(
     mavenProject.foreach(buf += MavenBuildTool(userConfig, _))
     millProject.foreach(buf += MillBuildTool(userConfig, _))
     scalaCliProject.foreach(buf += ScalaCliBuildTool(workspace, _, userConfig))
-    bazelProject.foreach(buf += BazelBuildTool(userConfig, _))
+    bazelProject.foreach { root =>
+      buf += BazelBuildTool(userConfig, root)
+      buf += MezelBuildTool(userConfig, root)
+    }
     buf.addAll(customBsps)
 
     buf.result()
@@ -249,22 +257,22 @@ final class BuildTools(
 
   def isBuildRelated(
       path: AbsolutePath
-  ): Option[String] = {
+  ): List[String] = {
     if (sbtProject.exists(SbtBuildTool.isSbtRelatedPath(_, path)))
-      Some(SbtBuildTool.name)
+      List(SbtBuildTool.name)
     else if (gradleProject.exists(GradleBuildTool.isGradleRelatedPath(_, path)))
-      Some(GradleBuildTool.name)
+      List(GradleBuildTool.name)
     else if (mavenProject.exists(MavenBuildTool.isMavenRelatedPath(_, path)))
-      Some(MavenBuildTool.name)
+      List(MavenBuildTool.name)
     else if (isMill && MillBuildTool.isMillRelatedPath(path))
-      Some(MillBuildTool.name)
+      List(MillBuildTool.name)
     else if (bazelProject.exists(BazelBuildTool.isBazelRelatedPath(_, path)))
-      Some(BazelBuildTool.name)
+      List(BazelBuildTool.name, MezelBuildTool.name)
     else if (isInBsp(path)) {
       val name = path.filename.stripSuffix(".json")
-      if (knownBsps(name) && !ScalaCli.names(name)) None
-      else Some(name)
-    } else None
+      if (knownBsps(name) && !ScalaCli.names(name)) Nil
+      else List(name)
+    } else Nil
   }
 
   def initialize(): Set[BuildTool] = {

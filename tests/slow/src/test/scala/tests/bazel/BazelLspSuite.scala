@@ -2,58 +2,53 @@ package tests.bazel
 
 import scala.concurrent.Promise
 
-import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BazelDigest
-import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.builds.MezelBuildTool
 import scala.meta.internal.metals.DecoderResponse
-import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.FileDecoderProvider
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.WorkDoneProgress
-import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
-import coursierapi.Dependency
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import tests.BaseImportSuite
 import tests.BazelBuildLayout
-import tests.BazelServerInitializer
+import tests.MezelServerInitializer
 
 class BazelLspSuite
-    extends BaseImportSuite("bazel-import", BazelServerInitializer) {
-  val buildTool: BazelBuildTool = BazelBuildTool(() => userConfig, workspace)
+    extends BaseImportSuite("bazel-import", MezelServerInitializer) {
+  val buildTool: MezelBuildTool = MezelBuildTool(() => userConfig, workspace)
 
-  val bazelVersion = "6.4.0"
+  val bazelVersion = "7.5.0"
 
-  def bazelBspConfig: AbsolutePath = workspace.resolve(".bsp/bazelbsp.json")
+  def mezelBspConfig: AbsolutePath = workspace.resolve(".bsp/mezel.json")
 
   override def currentDigest(
       workspace: AbsolutePath
   ): Option[String] = BazelDigest.current(workspace)
 
-  val importMessage: String =
-    GenerateBspAndConnect.params("bazel", "bazelbsp").getMessage()
+  // mezel is sometimes slow, wait for diagnostics
+  def waitForMezel(): Unit = Thread.sleep(5000)
 
   test("basic") {
     cleanWorkspace()
+
     for {
       _ <- initialize(
         BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        List(
-          importMessage,
-          Messages.DeprecatedRemovedScalaVersion.message(Set("2.13.12")),
-        ).mkString("\n"),
+        s"""|${ChooseBuildTool.message}
+            |${GenerateBspAndConnect.params(buildTool.executableName, buildTool.buildServerName).getMessage()}
+            |${Messages.DeprecatedRemovedScalaVersion.message(Set("2.13.12"))}
+            |""".stripMargin,
       )
-      _ = assert(bazelBspConfig.exists)
+      _ = assert(mezelBspConfig.exists)
       _ = client.messageRequests.clear() // restart
       _ = assertStatus(_.isInstalled)
       _ = assertNoDiff(client.workspaceDiagnostics, "")
@@ -65,15 +60,14 @@ class BazelLspSuite
         text.replace("def hello: String", "def hello: Int")
       }
       _ <- server.didSave("Hello.scala")
+      _ = waitForMezel()
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|Hello.scala:4:20: error: type mismatch;
            | found   : String("Hello")
            | required: Int
            |  def hello: Int = "Hello"
-           |                   ^
-           |  def hello: Int = "Hello"
-           |                   ^
+           |                   ^^^^^^^
            |""".stripMargin,
       )
       _ <- server.didChange(s"BUILD") { text =>
@@ -101,16 +95,19 @@ class BazelLspSuite
     for {
       _ <- server.initialize()
       _ <- server.initialized()
-      _ = assertNoDiff(client.workspaceMessageRequests, importMessage)
+      _ = assertNoDiff(client.workspaceMessageRequests, ChooseBuildTool.message)
       _ = client.messageRequests.clear()
-      // We dismissed the import request, so bsp should not be configured
-      _ = assert(!bazelBspConfig.exists)
       _ <- server.didChange(s"BUILD") { text =>
         text.replace("\"hello\"", "\"hello1\"")
       }
       _ <- server.didSave(s"BUILD")
-      _ = assertNoDiff(client.workspaceMessageRequests, "")
+      _ = assertNoDiff(client.workspaceMessageRequests, ChooseBuildTool.message)
       _ = server.headServer.connectionProvider.buildServerPromise = Promise()
+      _ = client.showMessageRequestHandler = { params =>
+        if (params.getMessage() == BspProvider.multipleBuildToolsMessage) {
+          params.getActions().asScala.find(_.getTitle() == MezelBuildTool.name)
+        } else None
+      }
       _ <- server.executeCommand(ServerCommands.GenerateBspConfig)
       // We need to wait a bit just to ensure the connection is made
       _ <- server.server.buildServerPromise.future
@@ -118,23 +115,24 @@ class BazelLspSuite
         text.replace("def hello: String", "def hello: Int")
       }
       _ <- server.didSave("Hello.scala")
+      _ = waitForMezel()
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|Hello.scala:4:20: error: type mismatch;
            | found   : String("Hello")
            | required: Int
            |  def hello: Int = "Hello"
-           |                   ^
-           |  def hello: Int = "Hello"
-           |                   ^
+           |                   ^^^^^^^
            |""".stripMargin,
       )
     } yield {
-      assertEquals(
+      assertNoDiff(
         client.workspaceMessageRequests,
-        Messages.DeprecatedRemovedScalaVersion.message(Set("2.13.12")),
+        s"""|${ChooseBuildTool.message}
+            |${BspProvider.multipleBuildToolsMessage}
+            |${Messages.DeprecatedRemovedScalaVersion.message(Set("2.13.12"))}
+            |""".stripMargin,
       )
-      assert(bazelBspConfig.exists)
       server.assertBuildServerConnection()
     }
   }
@@ -157,15 +155,15 @@ class BazelLspSuite
     for {
       _ <- server.initialize()
       _ <- server.initialized()
-      _ = assertNoDiff(client.workspaceMessageRequests, importMessage)
+      _ = assertNoDiff(client.workspaceMessageRequests, ChooseBuildTool.message)
       _ = client.messageRequests.clear()
       // We dismissed the import request, so bsp should not be configured
-      _ = assert(!bazelBspConfig.exists)
       _ <- server.didChange(s"BUILD") { text =>
         text.replace("\"hello\"", "\"hello1\"")
       }
       _ <- server.didSave(s"BUILD")
-      _ = assertNoDiff(client.workspaceMessageRequests, "")
+      _ = client.chooseBuildTool = { _ => new MessageActionItem("Mezel") }
+      _ = assertNoDiff(client.workspaceMessageRequests, ChooseBuildTool.message)
       _ = server.headServer.connectionProvider.buildServerPromise = Promise()
       _ <- server.executeCommand(ServerCommands.ImportBuild)
       // We need to wait a bit just to ensure the connection is made
@@ -177,14 +175,14 @@ class BazelLspSuite
            |  @//:hello1
            |
            |Tags
-           |  application
+           |  library
            |
            |Languages
            |  scala
            |
            |Capabilities
-           |  Debug
-           |  Run
+           |  Debug <- NOT SUPPORTED
+           |  Run <- NOT SUPPORTED
            |  Test <- NOT SUPPORTED
            |  Compile""".stripMargin
       _ = assertNoDiff(result, expectedTarget)
@@ -199,11 +197,12 @@ class BazelLspSuite
       assertNoDiff(
         client.workspaceMessageRequests,
         List(
+          ChooseBuildTool.message,
+          ChooseBuildTool.message,
           Messages.DeprecatedRemovedScalaVersion.message(Set("2.13.12")),
           Messages.ResetWorkspace.message,
         ).mkString("\n"),
       )
-      assert(bazelBspConfig.exists)
       server.assertBuildServerConnection()
     }
   }
@@ -217,6 +216,7 @@ class BazelLspSuite
       _ <- server.didOpen("Hello.scala")
       _ <- server.didOpen("Main.scala")
       _ <- server.didSave("Main.scala")
+      _ = waitForMezel()
       references <- server.references("Hello.scala", "hello")
       _ = assertNoDiff(
         references,
@@ -259,14 +259,13 @@ class BazelLspSuite
            |""".stripMargin
       }
       _ <- server.didSave("Hello.scala")
+      _ = waitForMezel()
       _ = assertNoDiff(
         server.client.workspaceDiagnostics,
         """|Hello.scala:11:3: warning: match may not be exhaustive.
            |It would fail on the following input: C(_)
            |  asd match {
-           |  ^
-           |  asd match {
-           |  ^
+           |  ^^^
            |""".stripMargin,
       )
       // warnings should not disappear after updating
@@ -282,113 +281,8 @@ class BazelLspSuite
         """|Hello.scala:11:3: warning: match may not be exhaustive.
            |It would fail on the following input: C(_)
            |  asd match {
-           |  ^
-           |  asd match {
-           |  ^
+           |  ^^^
            |""".stripMargin,
-      )
-    } yield ()
-  }
-
-  test("update-bazel-bsp") {
-    cleanWorkspace()
-    writeLayout(
-      BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
-    )
-
-    val shellRunner = new ShellRunner(
-      Time.system,
-      new WorkDoneProgress(NoopLanguageClient, Time.system),
-    )
-
-    def jsonFile =
-      workspace.resolve(Directories.bsp).resolve("bazelbsp.json").readText
-    for {
-      _ <- shellRunner.runJava(
-        Dependency.of(
-          BazelBuildTool.dependency.getModule(),
-          "3.2.0-20240508-f3a81e7-NIGHTLY",
-        ),
-        BazelBuildTool.mainClass,
-        workspace,
-        BazelBuildTool.projectViewArgs(workspace),
-        None,
-      )
-      _ = assertContains(jsonFile, "3.2.0-20240508-f3a81e7-NIGHTLY")
-      _ <- initialize(
-        BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
-      )
-      _ <- server.didOpen("Hello.scala")
-      _ <- server.didChange("Hello.scala") { text =>
-        text.replace("def hello: String", "def hello: Int")
-      }
-      _ <- server.didSave("Hello.scala")
-      _ = assertNoDiff(
-        client.workspaceDiagnostics,
-        """|Hello.scala:4:20: error: type mismatch;
-           | found   : String("Hello")
-           | required: Int
-           |  def hello: Int = "Hello"
-           |                   ^
-           |  def hello: Int = "Hello"
-           |                   ^
-           |""".stripMargin,
-      )
-      _ = assertContains(jsonFile, BazelBuildTool.version)
-    } yield ()
-  }
-
-  test("update-projectview") {
-    cleanWorkspace()
-    writeLayout(
-      BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
-    )
-
-    val projectview = workspace.resolve("projectview.bazelproject")
-    projectview.touch()
-
-    for {
-      _ <- initialize(
-        BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
-      )
-      _ = { client.importBuildChanges = ImportBuildChanges.yes }
-      _ <- server.didOpen("Hello.scala")
-      _ = assertNoDiff(
-        projectview.readText,
-        BazelBuildTool.fallbackProjectView,
-      )
-      _ <- server.didChange("Hello.scala") { text =>
-        text.replace("def hello: String", "def hello: Int")
-      }
-      _ <- server.didSave("Hello.scala")
-      _ = assertNoDiff(
-        client.workspaceDiagnostics,
-        """|Hello.scala:4:20: error: type mismatch;
-           | found   : String("Hello")
-           | required: Int
-           |  def hello: Int = "Hello"
-           |                   ^
-           |  def hello: Int = "Hello"
-           |                   ^
-           |""".stripMargin,
-      )
-      _ = client.messageRequests.clear()
-      _ <- server.didOpen("Hello.scala")
-      _ <- server.didChange("Hello.scala") { text =>
-        text.replace("def hello: Int", "def hello: String")
-      }
-      _ <- server.didSave("Hello.scala")
-      _ = assertNoDiagnostics()
-      _ <- server.didOpen("projectview.bazelproject")
-      _ <- server.didChange("projectview.bazelproject")(_ => "")
-      _ <- server.didSave("projectview.bazelproject")
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        ImportBuildChanges.params("bazel").getMessage(),
-      )
-      _ = assertNoDiff(
-        projectview.readText,
-        BazelBuildTool.fallbackProjectView,
       )
     } yield ()
   }
@@ -400,6 +294,7 @@ class BazelLspSuite
         BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
       )
       _ <- server.didOpen("Decode.scala")
+      _ = waitForMezel()
       uri = server.toPath("Decode.scala").toURI.toString()
       _ = client.showMessageRequestHandler =
         _.getActions().asScala.find(_.getTitle() == "Decode$.class")
@@ -430,6 +325,7 @@ class BazelLspSuite
         |scala_toolchain(
         |    name = "semanticdb_toolchain_impl",
         |    enable_semanticdb = True,
+        |    enable_diagnostics_report = True,
         |    semanticdb_bundle_in_jar = False,
         |    visibility = ["//visibility:public"],
         |)

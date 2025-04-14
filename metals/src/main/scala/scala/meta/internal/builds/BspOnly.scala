@@ -21,7 +21,6 @@ case class BspOnly(
     if (isSuccess) Some(MD5.bytesToHex(digest.digest()))
     else None
   }
-  override val forcesBuildServer = true
 
   override def isBspGenerated(workspace: AbsolutePath): Boolean = true
 }

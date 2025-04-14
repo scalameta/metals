@@ -70,13 +70,14 @@ object Messages {
       message,
     )
 
+    val multipleBuildToolsMessage =
+      "Multiple build tools found that could be build servers. Which would you like to use?"
+
     def params(buildTools: List[BuildTool]): ShowMessageRequestParams = {
       val messageActionItems =
         buildTools.map(bt => new MessageActionItem(bt.executableName))
       val params = new ShowMessageRequestParams()
-      params.setMessage(
-        "Multiple build tools found that could be build servers. Which would you like to use?"
-      )
+      params.setMessage(multipleBuildToolsMessage)
       params.setType(MessageType.Info)
       params.setActions(messageActionItems.asJava)
       params

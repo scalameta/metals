@@ -61,8 +61,6 @@ case class ScalaCliBuildTool(
 
   override def executableName: String = ScalaCliBuildTool.name
 
-  override val forcesBuildServer = true
-
   override def possibleBuildServerNames = ScalaCli.names.toList
 }
 

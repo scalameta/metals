@@ -205,7 +205,7 @@ object MillServerInitializer extends BuildServerInitializer {
   }
 }
 
-object BazelServerInitializer extends BuildServerInitializer {
+object MezelServerInitializer extends BuildServerInitializer {
   this: BaseLspSuite =>
   override def initialize(
       workspace: AbsolutePath,
@@ -217,7 +217,8 @@ object BazelServerInitializer extends BuildServerInitializer {
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
     for {
       initializeResult <- server.initialize()
-      // Import build using Bazel
+      // Import build using Mezel
+      _ = client.chooseBuildTool = { _ => new MessageActionItem("Mezel") }
       _ = client.generateBspAndConnect = GenerateBspAndConnect.yes
       _ <- server.initialized()
       _ <- server.didChangeConfiguration(userConfig.toString)
