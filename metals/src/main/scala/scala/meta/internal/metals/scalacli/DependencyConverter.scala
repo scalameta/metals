@@ -10,17 +10,23 @@ object DependencyConverter {
         case "//>" :: "using" :: rest => Some("dep" -> rest)
         case _ => None
       }
-    suggestion <- sbtDirective match {
-      case List(groupId, Delim(delim), artifactId, "%", version) =>
-        val groupArtifactJoin = delim.replace('%', ':')
-        val millStyleDependency =
-          s"$groupId$groupArtifactJoin$artifactId:$version".replace("\"", "")
-        Some(
-          ReplacementSuggestion(dependencyIdentifierLike, millStyleDependency)
-        )
+    (groupId, delim, artifactId, version, rest) <- sbtDirective match {
+      case groupId :: Delim(delim) :: artifactId :: "%" :: version :: rest =>
+        Some((groupId, delim, artifactId, version, rest))
       case _ => None
     }
-  } yield suggestion
+    scalaCliDependencyIdentifier <- rest match {
+      case Nil => Some(dependencyIdentifierLike)
+      case "%" :: TestConfig(_) :: Nil => Some("test.dep")
+      case _ => None
+    }
+  } yield {
+    val groupArtifactJoin = delim.replace('%', ':')
+    val millStyleDependency =
+      s"$groupId$groupArtifactJoin$artifactId:$version".replace("\"", "")
+
+    ReplacementSuggestion(scalaCliDependencyIdentifier, millStyleDependency)
+  }
 
   /** scala-cli style dependency identifiers */
   private object Dep {
@@ -34,6 +40,12 @@ object DependencyConverter {
     private val sbtDependencyDelimiters = Set("%", "%%", "%%%")
     def unapply(delimiter: String): Option[String] =
       Option.when(sbtDependencyDelimiters(delimiter))(delimiter)
+  }
+
+  /** @see https://www.scala-sbt.org/1.x/docs/Library-Dependencies.html#Per-configuration+dependencies */
+  private object TestConfig {
+    def unapply(scope: String): Option[String] =
+      Option.when(scope.toLowerCase.replace("\"", "") == "test")(scope)
   }
 
   case class ReplacementSuggestion(

@@ -36,6 +36,36 @@ class ScalaCliDependencyRangeFormatterPastingSuite
   )
 
   check(
+    "change-no-dep-format-test-configuration",
+    s"""
+       |//> using @@
+       |object Main {
+       |  println("hello")
+       |}""".stripMargin,
+    s"""|"org.scalameta" %% "munit" % "1.0.4" % "test""""".stripMargin,
+    s"""
+       |//> using test.dep org.scalameta::munit:1.0.4
+       |object Main {
+       |  println("hello")
+       |}""".stripMargin,
+  )
+
+  check(
+    "change-no-dep-format-test-configuration-configuration",
+    s"""
+       |//> using @@
+       |object Main {
+       |  println("hello")
+       |}""".stripMargin,
+    s"""|"org.scalameta" %% "munit" % "1.0.4" % Test""".stripMargin,
+    s"""
+       |//> using test.dep org.scalameta::munit:1.0.4
+       |object Main {
+       |  println("hello")
+       |}""".stripMargin,
+  )
+
+  check(
     "change-no-dep-format-within-existing-deps",
     s"""
        |//> using dep com.lihaoyi::utest::0.7.10
