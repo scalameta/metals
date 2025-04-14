@@ -32,7 +32,7 @@ class BazelLspSuite
   ): Option[String] = BazelDigest.current(workspace)
 
   // mezel is sometimes slow, wait for diagnostics
-  def waitForMezel(): Unit = Thread.sleep(5000)
+  def waitForMezel(): Unit = Thread.sleep(20000)
 
   test("basic") {
     cleanWorkspace()
