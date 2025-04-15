@@ -36,6 +36,8 @@ import io.modelcontextprotocol.spec.McpSchema.Tool
 import io.undertow.Undertow
 import io.undertow.servlet.Servlets
 import io.undertow.servlet.api.InstanceHandle
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.services.LanguageClient
@@ -64,8 +66,42 @@ class MetalsMcpServer(
 
   private def cancelable = new MutableCancelable()
 
+  private val sseEndpoint = "/sse"
+
   def run(): Unit = {
-    val servlet = new HttpServletSseServerTransportProvider(objectMapper, "/")
+    val servlet = new HttpServletSseServerTransportProvider(
+      objectMapper,
+      "/",
+      sseEndpoint,
+    ) {
+      override def doGet(
+          request: HttpServletRequest,
+          response: HttpServletResponse,
+      ): Unit = {
+        super.doGet(request, response)
+        val pathInfo = request.getPathInfo();
+        if (sseEndpoint.equals(pathInfo)) {
+          val scheduler =
+            java.util.concurrent.Executors.newSingleThreadScheduledExecutor()
+          val pingTask = new Runnable {
+            override def run(): Unit = {
+              try {
+                response.getWriter().write("data: {\"type\":\"ping\"}\n\n")
+                response.getWriter().flush()
+              } catch {
+                case _: Exception => scheduler.shutdown()
+              }
+            }
+          }
+          scheduler.scheduleAtFixedRate(
+            pingTask,
+            30,
+            30,
+            java.util.concurrent.TimeUnit.SECONDS,
+          )
+        }
+      }
+    }
 
     val capabilities = ServerCapabilities
       .builder()
