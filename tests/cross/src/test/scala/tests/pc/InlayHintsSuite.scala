@@ -544,17 +544,17 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |class DemoSpec {
        |  import ScalatestMock._
        |
-       |  /*StringTestOps<<(6:17)>>(*/"foo"/*)*/ should {
-       |    /*StringTestOps<<(6:17)>>(*/"checkThing1"/*)*/ in {
+       |  /*StringTestOps<<(6:17)>>(*/"foo"/*)*/ should {/*=> */
+       |    /*StringTestOps<<(6:17)>>(*/"checkThing1"/*)*/ in {/*=> */
        |      checkThing1[String]/*(instancesString<<(10:15)>>)*/
        |    }/*(here<<(5:15)>>)*/
-       |    /*StringTestOps<<(6:17)>>(*/"checkThing2"/*)*/ in {
+       |    /*StringTestOps<<(6:17)>>(*/"checkThing2"/*)*/ in {/*=> */
        |      checkThing2[String]/*(instancesString<<(10:15)>>, instancesString<<(10:15)>>)*/
        |    }/*(here<<(5:15)>>)*/
        |  }/*(subjectRegistrationFunction<<(3:15)>>)*/
        |
-       |  /*StringTestOps<<(6:17)>>(*/"bar"/*)*/ should {
-       |    /*StringTestOps<<(6:17)>>(*/"checkThing1"/*)*/ in {
+       |  /*StringTestOps<<(6:17)>>(*/"bar"/*)*/ should {/*=> */
+       |    /*StringTestOps<<(6:17)>>(*/"checkThing1"/*)*/ in {/*=> */
        |      checkThing1[String]/*(instancesString<<(10:15)>>)*/
        |    }/*(here<<(5:15)>>)*/
        |  }/*(subjectRegistrationFunction<<(3:15)>>)*/
@@ -1064,4 +1064,58 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |""".stripMargin
   )
 
+  check(
+    "by-name-regular",
+    """|object Main{
+       |  def foo(x: => Int, y: Int, z: => Int)(w: Int, v: => Int): Unit = ()
+       |  foo(1, 2, 3)(4, 5)
+       |}
+       |""".stripMargin,
+    """|object Main{
+       |  def foo(x: => Int, y: Int, z: => Int)(w: Int, v: => Int): Unit = ()
+       |  foo(/*=> */1, 2, /*=> */3)(4, /*=> */5)
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "by-name-block",
+    """|object Main{
+       |  def Future[A](arg: => A): A = arg
+       |
+       |  Future(1 + 2)
+       |  Future {
+       |    1 + 2
+       |  }
+       |  Future {
+       |    val x = 1
+       |    val y = 2
+       |    x + y
+       |  }
+       |  Some(Option(2).getOrElse {
+       |    List(1,2)
+       |      .headOption
+       |  })
+       |}
+       |""".stripMargin,
+    """|package `by-name-block`
+       |object Main{
+       |  def Future[A](arg: => A): A = arg
+       |
+       |  Future/*[Int<<scala/Int#>>]*/(/*=> */1 + 2)
+       |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
+       |    1 + 2
+       |  }
+       |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
+       |    val x/*: Int<<scala/Int#>>*/ = 1
+       |    val y/*: Int<<scala/Int#>>*/ = 2
+       |    x + y
+       |  }
+       |  Some/*[Any<<scala/Any#>>]*/(Option/*[Int<<scala/Int#>>]*/(2).getOrElse/*[Any<<scala/Any#>>]*/ {/*=> */
+       |    List/*[Int<<scala/Int#>>]*/(1,2)
+       |      .headOption
+       |  })
+       |}
+       |""".stripMargin
+  )
 }
