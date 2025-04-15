@@ -1266,7 +1266,7 @@ class WorkspaceLspService(
         capabilities.setDocumentSymbolProvider(true)
         capabilities.setDocumentFormattingProvider(true)
         val codeActionOptions = new lsp4j.CodeActionOptions()
-        
+
         if (initializeParams.supportsCodeActionLiterals) {
           codeActionOptions.setCodeActionKinds(
             List(
