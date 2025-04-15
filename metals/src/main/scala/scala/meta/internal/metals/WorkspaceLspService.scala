@@ -1266,12 +1266,13 @@ class WorkspaceLspService(
         capabilities.setDocumentSymbolProvider(true)
         capabilities.setDocumentFormattingProvider(true)
         val codeActionOptions = new lsp4j.CodeActionOptions()
-
+        
         if (initializeParams.supportsCodeActionLiterals) {
           codeActionOptions.setCodeActionKinds(
             List(
               lsp4j.CodeActionKind.QuickFix,
               lsp4j.CodeActionKind.Refactor,
+              "source.addMissingImports",
               lsp4j.CodeActionKind.SourceOrganizeImports,
             ).asJava
           )

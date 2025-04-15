@@ -20,10 +20,6 @@ sealed abstract class ImportMissingSymbol(
 ) extends CodeAction {
 
   protected def title: String
-  protected def isCallAllowed(
-      file: AbsolutePath,
-      params: l.CodeActionParams,
-  ): Boolean
 
   protected def isScalaOrSbt(file: AbsolutePath): Boolean =
     Seq("scala", "sbt", "sc").contains(file.extension)
@@ -33,11 +29,13 @@ sealed abstract class ImportMissingSymbol(
    * This can be overridden by subclasses to implement different filtering strategies.
    */
   protected def filterImportActions(
-      allActions: Seq[Seq[l.CodeAction]]
+      allActions: Seq[l.CodeAction]
   ): Seq[l.CodeAction] = {
     // Default implementation returns all actions
-    allActions.flatten
+    allActions
   }
+
+  protected def isImportAllSourceAction: Boolean
 
   override def contribute(
       params: l.CodeActionParams,
@@ -54,10 +52,6 @@ sealed abstract class ImportMissingSymbol(
           target.scalaInfo.getScalaVersion()
         )
       } yield isScala3).getOrElse(false)
-
-    if (!isCallAllowed(file, params)) {
-      return Future.successful(Seq.empty)
-    }
 
     def getChanges(codeAction: l.CodeAction): IterableOnce[l.TextEdit] =
       codeAction
@@ -163,13 +157,19 @@ sealed abstract class ImportMissingSymbol(
           .asScala
           .collect {
             case diag @ ScalacDiagnostic.SymbolNotFound(name)
-                if params.getRange().overlapsWith(diag.getRange()) =>
+                if this.isImportAllSourceAction || params
+                  .getRange()
+                  .overlapsWith(
+                    diag.getRange()
+                  ) =>
               importMissingSymbol(diag, name)
             // `foo.xxx` where `xxx` is not a member of `foo`
             // we search for `xxx` only when the target is Scala3
             // considering there might be an extension method.
             case d @ ScalacDiagnostic.NotAMember(name)
-                if isScala3 && params.getRange().overlapsWith(d.getRange()) =>
+                if isScala3 && (this.isImportAllSourceAction || params
+                  .getRange()
+                  .overlapsWith(d.getRange())) =>
               importMissingSymbol(d, name, findExtensionMethods = true)
           }
       )
@@ -218,12 +218,14 @@ sealed abstract class ImportMissingSymbol(
             }
         }.flatten
 
+        // Generate the "Import all" action if applicable
+        val allActions = importMissingSymbols(deduplicated.toSeq.sorted)
+
         // Apply the filtering strategy from the implementation class
         val filteredActions =
-          filterImportActions(deduplicated.toSeq.sorted.map(Seq(_)))
+          filterImportActions(allActions)
 
-        // Generate the "Import all" action if applicable
-        importMissingSymbols(filteredActions)
+        filteredActions
       }
   }
 }
@@ -247,21 +249,7 @@ class ImportMissingSymbolQuickFix(
 
   override val kind: String = ImportMissingSymbolQuickFix.kind
   override protected val title: String = ImportMissingSymbol.allSymbolsTitle
-
-  override protected def isCallAllowed(
-      file: AbsolutePath,
-      params: l.CodeActionParams,
-  ): Boolean = {
-    // This is used for per-diagnostic fixes, so it's always allowed as long as there
-    // are diagnostics and the range overlaps with them
-    params
-      .getContext()
-      .getDiagnostics()
-      .asScala
-      .exists { diag =>
-        params.getRange().overlapsWith(diag.getRange())
-      }
-  }
+  override protected def isImportAllSourceAction: Boolean = false
 }
 
 object ImportMissingSymbolQuickFix {
@@ -283,34 +271,25 @@ class SourceAddMissingImports(
 
   override val kind: String = SourceAddMissingImports.kind
   override protected val title: String = SourceAddMissingImports.title
-
-  override protected def isCallAllowed(
-      file: AbsolutePath,
-      params: l.CodeActionParams,
-  ): Boolean = {
-    // Only proceed if explicitly called with source.addMissingImports kind
-    isScalaOrSbt(file) && Option(params.getContext.getOnly)
-      .map(_.asScala.toList.contains(kind))
-      .isDefined
-  }
+  override protected def isImportAllSourceAction: Boolean = true
 
   /**
    * Override the filtering method to only keep unambiguous imports.
    * This ensures we only auto-import symbols with exactly one available import.
    */
   override protected def filterImportActions(
-      allActions: Seq[Seq[l.CodeAction]]
+      allActions: Seq[l.CodeAction]
   ): Seq[l.CodeAction] = {
-    // Only keep imports that have exactly one solution (unambiguous)
-    val filteredActions = allActions.flatMap { actions =>
-      if (actions.length == 1) actions else Seq.empty
+    if (allActions.length > 1) {
+      allActions.find(a => a.getTitle == SourceAddMissingImports.title).toSeq
+    } else {
+      allActions
     }
-
-    filteredActions
   }
 }
 
 object SourceAddMissingImports {
-  final val kind: String = l.CodeActionKind.Source
-  final val title: String = "Add all missing imports that are unambiguous"
+  final val kind: String = "source.addMissingImports"
+  final val title: String =
+    "Add all missing imports that are unambiguous for the entire file"
 }
