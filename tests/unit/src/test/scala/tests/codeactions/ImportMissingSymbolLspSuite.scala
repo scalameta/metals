@@ -4,6 +4,8 @@ import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.codeactions.SourceAddMissingImports
+import scala.meta.internal.metals.codeactions.ImportMissingSymbolQuickFix
+import org.eclipse.lsp4j.CodeActionKind
 
 class ImportMissingSymbolLspSuite
     extends BaseCodeActionLspSuite("importMissingSymbol") {
@@ -32,6 +34,7 @@ class ImportMissingSymbolLspSuite
        |  val f = Future.successful(2)
        |}
        |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -60,6 +63,7 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -90,6 +94,7 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -111,6 +116,7 @@ class ImportMissingSymbolLspSuite
        |  val f = Future.successful(2)
        |}
        |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -134,6 +140,7 @@ class ImportMissingSymbolLspSuite
        |  val g = Try{}
        |}
        |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -163,6 +170,7 @@ class ImportMissingSymbolLspSuite
        |""".stripMargin,
     expectNoDiagnostics = false,
     selectedActionIndex = 1,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -195,6 +203,8 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    kind =
+      List(ImportMissingSymbolQuickFix.kind, CodeActionKind.RefactorRewrite),
   )
 
   check(
@@ -230,6 +240,7 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -265,6 +276,7 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -294,6 +306,8 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    kind =
+      List(ImportMissingSymbolQuickFix.kind, CodeActionKind.RefactorRewrite),
   )
 
   check(
@@ -322,6 +336,7 @@ class ImportMissingSymbolLspSuite
        |  }
        |}
        |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -347,6 +362,7 @@ class ImportMissingSymbolLspSuite
        |  ) extends Foo
        |}
        |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -378,6 +394,7 @@ class ImportMissingSymbolLspSuite
         |  }
         |}
         |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -406,6 +423,7 @@ class ImportMissingSymbolLspSuite
         |}
         |""".stripMargin,
     expectNoDiagnostics = false,
+    kind = List(ImportMissingSymbolQuickFix.kind),
     filterAction = _.getTitle() == ImportMissingSymbol.title("A", "example.a"),
   )
 
@@ -436,6 +454,7 @@ class ImportMissingSymbolLspSuite
         |""".stripMargin,
     expectNoDiagnostics = false,
     filterAction = _.getTitle() == ImportMissingSymbol.title("A", "example.a"),
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   // ---------------------------------------------------------------------------
@@ -444,11 +463,11 @@ class ImportMissingSymbolLspSuite
   // ---------------------------------------------------------------------------
 
   check(
-    "source-add-missing-imports-basic",
+    "source-add-missing-imports-single-unambiguous",
     """|package a
        |
-       |object A {
-       |  val i = <<Instant>>.now
+       |object <<A>> {
+       |  val i = Instant.now
        |}
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Instant", "java.time")}
@@ -468,14 +487,12 @@ class ImportMissingSymbolLspSuite
     "source-add-missing-imports-multiple-unambiguous",
     """|package a
        |
-       |object A {
-       |  <<val i = Instant.now
-       |  val b = ListBuffer.newBuilder[Int]>>
+       |object <<A>> {
+       |  val i = Instant.now
+       |  val b = ListBuffer.newBuilder[Int]
        |}
        |""".stripMargin,
     s"""|${SourceAddMissingImports.title}
-        |${ImportMissingSymbol.title("Instant", "java.time")}
-        |${ImportMissingSymbol.title("ListBuffer", "scala.collection.mutable")}
         |""".stripMargin,
     """|package a
        |
@@ -500,9 +517,6 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     s"""|${SourceAddMissingImports.title}
-        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
-        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
-        |${ImportMissingSymbol.title("Instant", "java.time")}
         |""".stripMargin,
     """|package a
        |
@@ -515,6 +529,7 @@ class ImportMissingSymbolLspSuite
        |""".stripMargin,
     kind = List(SourceAddMissingImports.kind),
     expectNoDiagnostics = false,
+    filterAction = _.getTitle() == SourceAddMissingImports.title,
   )
 
   check(
@@ -529,11 +544,6 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     s"""|${SourceAddMissingImports.title}
-        |${ImportMissingSymbol.title("Instant", "java.time")}
-        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
-        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
-        |${ImportMissingSymbol.title("Path", "java.nio.file")}
-        |${ImportMissingSymbol.title("ListBuffer", "scala.collection.mutable")}
         |""".stripMargin,
     """|package a
        |
@@ -550,6 +560,7 @@ class ImportMissingSymbolLspSuite
        |""".stripMargin,
     kind = List(SourceAddMissingImports.kind),
     expectNoDiagnostics = false,
+    filterAction = _.getTitle() == SourceAddMissingImports.title,
   )
 
   check(
