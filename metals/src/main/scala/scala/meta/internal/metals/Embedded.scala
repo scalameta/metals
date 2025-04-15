@@ -155,6 +155,7 @@ final class Embedded(
     // We want to keep a minimal set of jars needed here
     val runtimeClasspath = jars.filter { path =>
       val pathString = path.toString
+      pathString.contains("using_directives") ||
       pathString.contains("scala-lang") ||
       pathString.contains("fansi") ||
       pathString.contains("pprint") ||

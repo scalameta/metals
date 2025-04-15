@@ -32,7 +32,7 @@ object V {
   val lsp4jV = "0.24.0"
   val mavenBloop = "2.0.1"
   val mill = "0.12.10"
-  val mdoc = "2.6.5"
+  val mdoc = "2.7.0"
   val munit = "1.1.0"
   val pprint = "0.7.3"
   val sbtBloop = bloop
@@ -44,7 +44,7 @@ object V {
   val scribe = "3.16.1"
   val qdox = "2.2.0"
 
-  val guava = "com.google.guava" % "guava" % "33.4.6-jre"
+  val guava = "com.google.guava" % "guava" % "33.4.7-jre"
   val lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   val dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
 

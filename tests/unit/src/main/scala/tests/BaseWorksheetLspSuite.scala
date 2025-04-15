@@ -10,6 +10,7 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.semver.SemVer
 
 abstract class BaseWorksheetLspSuite(
     scalaVersion: String
@@ -852,6 +853,74 @@ abstract class BaseWorksheetLspSuite(
       _ = assertNoDiff(noCompletions, "")
     } yield ()
   }
+
+  if (
+    SemVer.isLaterVersion("3.7.0", scalaVersion) || !ScalaVersions
+      .isScala3Version(scalaVersion)
+  )
+    test("using-completion") {
+      for {
+        _ <- initialize(
+          s"""
+             |/metals.json
+             |{
+             |  "a": {
+             |    "scalaVersion": "${scalaVersion}"
+             |  }
+             |}
+             |/a/src/main/scala/foo/Main.worksheet.sc
+             |//> using dep io.cir
+             |//> using dep io.circe::circe-ref
+             |//> using dep com.lihaoyi::upickle:1.4
+             |""".stripMargin
+        )
+        _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
+        groupCompletionList <- server.completion(
+          "a/src/main/scala/foo/Main.worksheet.sc",
+          "//> using dep io.cir@@",
+        )
+        _ = assertNoDiff(
+          groupCompletionList,
+          """|io.circe
+             |io.circul""".stripMargin,
+        )
+
+        artefactExpectedCompletionList = getExpected(
+          """|circe-refined
+             |circe-refined_native0.4
+             |circe-refined_native0.5
+             |circe-refined_sjs0.6
+             |circe-refined_sjs1
+             |""".stripMargin,
+          Map(
+            "3" -> """|circe-refined
+                      |circe-refined_native0.4
+                      |circe-refined_native0.5
+                      |circe-refined_sjs1
+                      |""".stripMargin
+          ),
+          scalaVersion,
+        )
+        artefactCompletionList <- server.completion(
+          "a/src/main/scala/foo/Main.worksheet.sc",
+          "//> using dep io.circe::circe-ref@@",
+        )
+        _ = assertNoDiff(artefactCompletionList, artefactExpectedCompletionList)
+
+        versionExpectedCompletionList =
+          List("1.4.4", "1.4.3", "1.4.2", "1.4.1", "1.4.0")
+        response <- server.completionList(
+          "a/src/main/scala/foo/Main.worksheet.sc",
+          "//> using dep com.lihaoyi::upickle:1.4@@",
+        )
+        versionCompletionList = response
+          .getItems()
+          .asScala
+          .map(_.getLabel())
+          .toList
+        _ = assertEquals(versionCompletionList, versionExpectedCompletionList)
+      } yield ()
+    }
 
   private val ignoreForScala3Versions = Set("3.4.0", "3.4.1")
   if (
