@@ -12,6 +12,7 @@ case class CompilerInlayHintsParams(
     inferredTypes: Boolean,
     typeParameters: Boolean,
     implicitParameters: Boolean,
+    override val byNameParameters: Boolean,
     implicitConversions: Boolean,
     override val hintsInPatternMatch: Boolean
 ) extends InlayHintsParams {
@@ -27,7 +28,8 @@ case class CompilerInlayHintsParams(
       inferredTypes = inferredTypes,
       typeParameters = typeParameters,
       implicitConversions = implicitConversions,
-      implicitParameters = implicitParameters
+      implicitParameters = implicitParameters,
+      byNameParameters = byNameParameters
     )
   }
 

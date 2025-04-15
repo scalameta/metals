@@ -661,6 +661,7 @@ class Compilers(
         implicitParameters = options.implicitArguments,
         implicitConversions = options.implicitConversions,
         typeParameters = options.typeParameters,
+        byNameParameters = options.byNameParameters,
         hintsInPatternMatch = options.hintsInPatternMatch,
       )
 

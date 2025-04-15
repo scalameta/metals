@@ -75,6 +75,14 @@ final class PcInlayHintsProvider(
           label,
           InlayHintKind.Type
         )
+      case ByNameParameters(byNameArgs) =>
+        byNameArgs.foldLeft(inlayHints) { case (ih, pos) =>
+          ih.add(
+            adjustPos(pos.focusStart).toLsp,
+            List(LabelPart("=> ")),
+            InlayHintKind.Parameter
+          )
+        }
       case InferredType(tpe, pos) if tpe != null && !tpe.isError =>
         val adjustedPos = adjustPos(pos).focusEnd
         if (inlayHints.containsDef(adjustedPos.start)) inlayHints
@@ -386,6 +394,62 @@ final class PcInlayHintsProvider(
       val afterDef = text.drop(vd.namePosition.end)
       val index = indexAfterSpacesAndComments(afterDef)
       index >= 0 && index < afterDef.size && afterDef(index) == '@'
+    }
+  }
+
+  object ByNameParameters {
+    // Extract the positions at which `=>` hints should be inserted
+    def unapply(tree: Tree): Option[List[Position]] =
+      if (params.byNameParameters())
+        tree match {
+          case Apply(sel: Select, _)
+              if isForComprehensionMethod(
+                sel
+              ) || sel.symbol.name == nme.unapply =>
+            None
+          case Apply(fun, args) =>
+            val params = fun.tpe.params
+
+            /* Special handling for a single block argument:
+             *
+             *     someOption.getOrElse {/*=> */
+             *       fallbackCode
+             *     }
+             *
+             * We cannot just match on the `Block` node because the case of a single expression in
+             * braces is not represented as a block. Instead, we search for the braces directly in
+             * the source code.
+             */
+            def singleArgBlockCase = (args, params) match {
+              case (Seq(_), Seq(param)) if param.isByNameParam =>
+                byNamePosForBlockLike(tree.pos.withStart(fun.pos.end))
+                  .map(List(_))
+              case _ => None
+            }
+
+            /* For all other cases, we just insert the label before the argument tree:
+             *
+             *     someOption.getOrElse(/*=> */fallbackCode)
+             */
+            Some(singleArgBlockCase.getOrElse {
+              args
+                .zip(params)
+                .collect { case (tree, param) if param.isByNameParam => tree }
+                .map(tree => tree.pos)
+            })
+          case _ => None
+        }
+      else None
+
+    // If the position passed in wraps a brace-delimited expression, return the position after the opening brace
+    private def byNamePosForBlockLike(pos: Position): Option[Position] = {
+      val start = text.indexWhere(!_.isWhitespace, pos.start)
+      val end = text.lastIndexWhere(!_.isWhitespace, pos.end - 1)
+      if (text.lift(start).contains('{') && text.lift(end).contains('}')) {
+        Some(pos.withStart(start + 1))
+      } else {
+        None
+      }
     }
   }
 
