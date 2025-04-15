@@ -91,6 +91,25 @@ class CompilerConfiguration(
     }
   }
 
+  case class StandaloneJavaCompiler(
+      symbolSearch: SymbolSearch,
+      referenceCounter: CompletionItemPriority,
+  ) extends MtagsPresentationCompiler {
+    val standalone: PresentationCompiler = {
+      val pc = new JavaPresentationCompiler()
+      configure(pc, symbolSearch, referenceCounter)
+        .newInstance(
+          "",
+          Nil.asJava,
+          log.asJava,
+        )
+    }
+
+    override def await: PresentationCompiler = standalone
+
+    override def shutdown(): Unit = standalone.shutdown()
+  }
+
   trait LazyCompiler extends MtagsPresentationCompiler {
 
     def buildTargetId: BuildTargetIdentifier
