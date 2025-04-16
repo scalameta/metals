@@ -6,7 +6,7 @@ import scala.concurrent.duration._
 import scala.meta.internal.metals.mcp.McpPrinter._
 import scala.meta.internal.metals.mcp.SymbolType
 
-class QueryLspSuite extends BaseLspSuite("query") {
+class McpQueryLspSuite extends BaseLspSuite("query") {
 
   // @kasiaMarek: missing:
   // - methods / values from dependencies (to think about)
@@ -69,7 +69,6 @@ class QueryLspSuite extends BaseLspSuite("query") {
       _ <- server.didOpen("src/main/scala/com/test/TestClass.scala")
       _ = assertNoDiagnostics()
       path = server.toPath("src/main/scala/com/test/TestClass.scala")
-
       // Test searching for "test" - should find packages, classes, objects, trait
       result <- server.headServer.queryEngine.globSearch(
         "test",

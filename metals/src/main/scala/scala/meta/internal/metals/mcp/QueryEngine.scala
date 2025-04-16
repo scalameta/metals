@@ -34,6 +34,7 @@ class QueryEngine(
     buildTargets: BuildTargets,
     referenceProvider: ReferenceProvider,
 )(implicit ec: ExecutionContext) {
+  private def mcpDefinitionProvider = new McpDefinitionProvider(index)
 
   /**
    * Search for symbols matching a glob pattern.
@@ -51,17 +52,15 @@ class QueryEngine(
   ): Future[Seq[SymbolSearchResult]] = Future {
 
     val visitor = new QuerySearchVisitor(
-      index,
+      mcpDefinitionProvider,
       symbolTypes,
       query,
       enableDebug,
     )
 
-    // Create a query that will match the glob pattern
-    val shortQuery = query.split(".").lastOption.getOrElse(query)
     val wsQuery = WorkspaceSymbolQuery(
-      shortQuery,
-      WorkspaceSymbolQuery.AlternativeQuery.all(shortQuery),
+      query,
+      WorkspaceSymbolQuery.AlternativeQuery.all(query),
       isTrailingDot = false,
       isClasspath = true,
       isShortQueryRetry = false,
@@ -270,38 +269,11 @@ case class SymbolUsage(
 /**
  * Base trait for symbol search results.
  */
-sealed trait SymbolSearchResult {
-  def name: String
-  def path: String
-  def symbolType: SymbolType
-}
-
-/**
- * Result for package symbols.
- */
-case class PackageSearchResult(name: String, path: String)
-    extends SymbolSearchResult {
-  val symbolType: SymbolType = SymbolType.Package
-}
-
-/**
- * Result for class or object symbols.
- */
-case class ClassOrObjectSearchResult(
-    name: String,
-    path: String,
-    symbolType: SymbolType,
-) extends SymbolSearchResult
-
-/**
- * Result for workspace symbols.
- */
-case class WorkspaceSymbolSearchResult(
-    name: String,
-    path: String,
-    symbolType: SymbolType,
-    location: String,
-) extends SymbolSearchResult
+case class SymbolSearchResult(
+  name: String,
+  path: String,
+  symbolType: SymbolType
+)
 
 case class MethodSignature(
     name: String
