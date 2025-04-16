@@ -4,8 +4,10 @@ import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
+import scala.meta.internal.metals.codeactions.ImportMissingSymbolQuickFix
 import scala.meta.internal.metals.{BuildInfo => V}
 
+import org.eclipse.lsp4j.CodeActionKind
 import tests.codeactions.BaseCodeActionLspSuite
 
 class ImportMissingSymbolCrossLspSuite
@@ -39,7 +41,7 @@ class ImportMissingSymbolCrossLspSuite
             |""".stripMargin,
         s"""|${ImportMissingSymbol.title("A", "example")}
             |${CreateNewSymbol.title("A")}""".stripMargin,
-        Nil,
+        List(ImportMissingSymbolQuickFix.kind),
       )
     } yield ()
   }
@@ -75,6 +77,8 @@ class ImportMissingSymbolCrossLspSuite
         |def main =
         |  println(1.incr)
         |""".stripMargin,
+    kind =
+      List(ImportMissingSymbolQuickFix.kind, CodeActionKind.RefactorRewrite),
   )
 
   checkEdit(
@@ -111,6 +115,8 @@ class ImportMissingSymbolCrossLspSuite
         |def main =
         |  println(1.incr)
         |""".stripMargin,
+    kind =
+      List(ImportMissingSymbolQuickFix.kind, CodeActionKind.RefactorRewrite),
   )
 
   checkEdit(
@@ -142,6 +148,7 @@ class ImportMissingSymbolCrossLspSuite
         |case class B(
         |) extends Foo
         |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -195,6 +202,7 @@ class ImportMissingSymbolCrossLspSuite
        |}
        |""".stripMargin,
     scalaVersion = V.scala3,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -228,6 +236,7 @@ class ImportMissingSymbolCrossLspSuite
        |}
        |""".stripMargin,
     scalaVersion = V.scala3,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -259,6 +268,7 @@ class ImportMissingSymbolCrossLspSuite
         |}
         |""".stripMargin,
     scalaVersion = V.latestScala3Next,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
