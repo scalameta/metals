@@ -5,12 +5,12 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
+import scala.meta.internal.metals.codeactions.ImportMissingSymbolQuickFix
 import scala.meta.internal.metals.codeactions.SourceOrganizeImports
 import scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion
 import scala.meta.internal.mtags.CoursierComplete
 
 import coursier.core.Version
-import scala.meta.internal.metals.codeactions.ImportMissingSymbolQuickFix
 
 class ScalaCliActionsSuite
     extends BaseScalaCLIActionSuite("actionableDiagnostic") {
