@@ -123,7 +123,7 @@ class ProjectMetalsLspService(
       // on every build sync ends up being expensive in large projects.
       NoopFileWatcher
 
-  override val shellRunner = register {
+  override val shellRunner: ShellRunner = register {
     new ShellRunner(time, workDoneProgress, () => userConfig)
   }
 
