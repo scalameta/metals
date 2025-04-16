@@ -289,7 +289,7 @@ class SourceAddMissingImports(
 }
 
 object SourceAddMissingImports {
-  final val kind: String = "source.addMissingImports"
+  final val kind: String = CustomCodeActionKind.SourceAddMissingImports
   final val title: String =
     "Add all missing imports that are unambiguous for the entire file"
 }
