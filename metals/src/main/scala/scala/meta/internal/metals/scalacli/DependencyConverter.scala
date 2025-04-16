@@ -17,7 +17,7 @@ object DependencyConverter {
     }
     scalaCliDependencyIdentifier <- rest match {
       case Nil => Some(dependencyIdentifierLike)
-      case "%" :: TestConfig(_) :: Nil => Some("test.dep")
+      case List("%", Scope(dep)) => Some(dep)
       case _ => None
     }
   } yield {
@@ -43,9 +43,13 @@ object DependencyConverter {
   }
 
   /** @see https://www.scala-sbt.org/1.x/docs/Library-Dependencies.html#Per-configuration+dependencies */
-  private object TestConfig {
+  private object Scope {
+    private val dependencyScope = Map(
+      "test" -> "test.dep",
+      "provided" -> "compileOnly.dep",
+    )
     def unapply(scope: String): Option[String] =
-      Option.when(scope.toLowerCase.replace("\"", "") == "test")(scope)
+      dependencyScope.get(scope.toLowerCase.replace("\"", ""))
   }
 
   case class ReplacementSuggestion(
