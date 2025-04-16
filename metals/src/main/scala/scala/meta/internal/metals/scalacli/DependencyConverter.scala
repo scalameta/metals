@@ -30,7 +30,12 @@ object DependencyConverter {
 
   /** scala-cli style dependency identifiers */
   private object Dep {
-    private val dependencyIdentifiers = Set("dep", "test.dep", "lib", "plugin")
+    private val dependencyIdentifiers = Set("dependencies",
+      "scalafix.dependencies", "libs", "compileOnly.dependencies", "lib",
+      "compileOnly.dep", "scalafix.deps", "compileOnly.deps", "test.dependency",
+      "deps", "test.dep", "test.dependencies", "dep", "test.deps",
+      "compileOnly.libs", "compileOnly.lib", "scalafix.dep")
+
     def unapply(identifier: String): Option[String] =
       Option.when(dependencyIdentifiers(identifier))(identifier)
   }
