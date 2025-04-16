@@ -5,14 +5,14 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
-import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
-import org.eclipse.lsp4j as l
+import org.eclipse.{lsp4j => l}
 
 sealed abstract class ImportMissingSymbol(
     compilers: Compilers,
