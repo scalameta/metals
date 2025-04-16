@@ -456,7 +456,17 @@ object UserConfiguration {
            |default to using it instead of Bloop.
            |""".stripMargin,
       ),
-      UserConfigurationOption("default-shell", "", "", "", ""),
+      UserConfigurationOption(
+        "default-shell",
+        """empty string `""`.""",
+        "/usr/bin/fish",
+        "Full path to the shell executable to be used as the default",
+        """|Optionally provide a default shell executable to use for build operations.
+           |This allows customizing the shell environment before build execution.
+           |When specified, must use absolute path to the shell.
+           |The configured shell will be used for all build-related subprocesses.
+           |""".stripMargin,
+      ),
     )
 
   def fromJson(
