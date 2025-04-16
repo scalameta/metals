@@ -102,7 +102,7 @@ class ProjectMetalsLspService(
     )
   )
 
-  override val shellRunner = register {
+  override val shellRunner: ShellRunner = register {
     new ShellRunner(time, workDoneProgress, () => userConfig)
   }
 
