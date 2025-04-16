@@ -14,8 +14,8 @@ import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.Timer
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.process.ExitCodes
 import scala.meta.internal.process.SystemProcess
