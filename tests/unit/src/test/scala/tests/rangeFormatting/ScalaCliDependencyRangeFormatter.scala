@@ -66,6 +66,21 @@ class ScalaCliDependencyRangeFormatterPastingSuite
   )
 
   check(
+    "change-no-dep-format-provided-configuration",
+    s"""
+       |//> using @@
+       |object Main {
+       |  println("hello")
+       |}""".stripMargin,
+    s"""|"com.github.dwickern" %% "scala-nameof" % "4.0.0" % "provided"""".stripMargin,
+    s"""
+       |//> using compileOnly.dep com.github.dwickern::scala-nameof:4.0.0
+       |object Main {
+       |  println("hello")
+       |}""".stripMargin,
+  )
+
+  check(
     "change-no-dep-format-within-existing-deps",
     s"""
        |//> using dep com.lihaoyi::utest::0.7.10
