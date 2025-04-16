@@ -39,23 +39,30 @@ class SbtBloopLspSuite
 
   test("environment-variables") {
     cleanWorkspace()
-    workspace.resolve("sbt").createDirectories()
+
+    val fakeShell = workspace.resolve("fake-shell")
+    fakeShell.writeText("""#!/bin/sh
+        export MY_ENV_VAR="test-value"
+        exec "$$@"
+        """)
+    fakeShell.toFile.setExecutable(true)
 
     for {
       _ <- initialize(
         s"""|/project/build.properties
             |sbt.version=$sbtVersion
             |/build.sbt
-            |scalaVersion := "${V.scala213}"
-            |sys.env.get("MY_ENV_VAR").get
-            |/fake-shell.sh
-            |#!/bin/sh
-            |export MY_ENV_VAR="test-value"
-            |""".stripMargin
+            |name := sys.env("MY_ENV_VAR")
+            |""".stripMargin,
+        expectError = true,
       )
       _ <- server.didChangeConfiguration(
-        userConfig.copy(defaultShell = Some("./fake-shell.sh")).toString
+        userConfig
+          .copy(defaultShell = Some(fakeShell.toString))
+          .toString
       )
+      _ <- server.executeCommand(ServerCommands.ImportBuild)
+
     } yield {}
   }
 
