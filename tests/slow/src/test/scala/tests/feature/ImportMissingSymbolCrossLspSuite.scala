@@ -77,8 +77,11 @@ class ImportMissingSymbolCrossLspSuite
         |def main =
         |  println(1.incr)
         |""".stripMargin,
-    kind =
-      List(ImportMissingSymbolQuickFix.kind, CodeActionKind.RefactorRewrite),
+    kind = List(
+      ImportMissingSymbolQuickFix.kind,
+      CodeActionKind.RefactorRewrite,
+      CodeActionKind.RefactorExtract,
+    ),
   )
 
   checkEdit(
@@ -115,8 +118,11 @@ class ImportMissingSymbolCrossLspSuite
         |def main =
         |  println(1.incr)
         |""".stripMargin,
-    kind =
-      List(ImportMissingSymbolQuickFix.kind, CodeActionKind.RefactorRewrite),
+    kind = List(
+      ImportMissingSymbolQuickFix.kind,
+      CodeActionKind.RefactorRewrite,
+      CodeActionKind.RefactorExtract,
+    ),
   )
 
   checkEdit(
