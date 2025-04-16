@@ -3,8 +3,9 @@ package tests.codeactions
 import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
-import scala.meta.internal.metals.codeactions.SourceAddMissingImports
 import scala.meta.internal.metals.codeactions.ImportMissingSymbolQuickFix
+import scala.meta.internal.metals.codeactions.SourceAddMissingImports
+
 import org.eclipse.lsp4j.CodeActionKind
 
 class ImportMissingSymbolLspSuite
