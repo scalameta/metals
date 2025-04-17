@@ -321,6 +321,26 @@ object UserConfiguration {
            |""".stripMargin,
       ),
       UserConfigurationOption(
+        "inlay-hints.named-parameters.enable",
+        "false",
+        "false",
+        "Should display parameter names next to arguments",
+        """|When this option is enabled, each method has an added parameter name next to its arguments
+           |displayed either as additional decorations if they are supported by the editor or 
+           |shown in the hover.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "inlay-hints.by-name-parameters.enable",
+        "false",
+        "false",
+        "Should display if a parameter is by-name at usage sites",
+        """|When this option is enabled, each method that has by-name parameters has them 
+           |displayed either as additional '=>' decorations if they are supported by the editor or 
+           |shown in the hover.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
         "inlay-hints.implicit-arguments.enable",
         "false",
         "false",
