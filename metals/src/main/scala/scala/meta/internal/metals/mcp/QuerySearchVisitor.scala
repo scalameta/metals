@@ -35,7 +35,7 @@ class QuerySearchVisitor(
           name = pkgName,
           path = pkg.fqcn,
           SymbolType.Package,
-          symbol = pkg
+          symbol = pkg,
         )
     }
     true // Continue searching even if this package doesn't match
@@ -76,7 +76,8 @@ class QuerySearchVisitor(
         },
       ) { searchResult =>
         if (
-          matchesQuery(searchResult.name) && (symbolTypes.isEmpty || symbolTypes.contains(searchResult.symbolType))
+          matchesQuery(searchResult.name) && (symbolTypes.isEmpty || symbolTypes
+            .contains(searchResult.symbolType))
         ) {
           results += searchResult
           size += 1

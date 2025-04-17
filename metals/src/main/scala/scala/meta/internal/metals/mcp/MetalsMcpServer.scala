@@ -526,7 +526,8 @@ class MetalsMcpServer(
       ),
       (exchange, arguments) => {
         try {
-          val fqcn = arguments.get("fqcn").asInstanceOf[String].stripPrefix("_empty_/")
+          val fqcn =
+            arguments.get("fqcn").asInstanceOf[String].stripPrefix("_empty_/")
           Future {
             queryEngine.getDocumentation(fqcn) match {
               case Some(result) =>
@@ -615,10 +616,12 @@ class MetalsMcpServer(
     def toMono: Mono[T] = Mono.fromFuture(f.asJava)
   }
 
-  implicit class XtensionArguments(val arguments: java.util.Map[String, Object]) {
-    def getFqcn: String = arguments.get("fqcn").asInstanceOf[String].stripPrefix("_empty_/")
-    
-  }
+  implicit class XtensionArguments(
+      val arguments: java.util.Map[String, Object]
+  ) {
+    def getFqcn: String =
+      arguments.get("fqcn").asInstanceOf[String].stripPrefix("_empty_/")
 
+  }
 
 }

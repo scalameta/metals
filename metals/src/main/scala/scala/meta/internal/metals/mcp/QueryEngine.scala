@@ -108,7 +108,9 @@ class QueryEngine(
         .toList
       symbol <- mcpDefinitionProvider.symbols(fqcn).distinctBy(_.symbolType)
       (shouldGetCompletions) = symbol.symbolType match {
-        case SymbolType.Class | SymbolType.Trait | SymbolType.Object | SymbolType.Package => true
+        case SymbolType.Class | SymbolType.Trait | SymbolType.Object |
+            SymbolType.Package =>
+          true
         case _ => false
       }
       shouldGetSignature = symbol.symbolType match {
@@ -168,7 +170,8 @@ class QueryEngine(
           .getItems()
           .asScala
           .collect {
-            case completion if isInteresting(completion) && !isDeprecated(completion) =>
+            case completion
+                if isInteresting(completion) && !isDeprecated(completion) =>
               completion.getLabel()
           }
           .toList
@@ -189,22 +192,29 @@ class QueryEngine(
       }
   }
 
-  private def makeCompilerOffsetParams(symbol: SymbolSearchResult, forSignature: Boolean) = {
+  private def makeCompilerOffsetParams(
+      symbol: SymbolSearchResult,
+      forSignature: Boolean,
+  ) = {
     val lastTypeIndx =
-      (if (forSignature) symbol.symbol.stripSuffix("#") else symbol.symbol).lastIndexOf('#')
+      (if (forSignature) symbol.symbol.stripSuffix("#") else symbol.symbol)
+        .lastIndexOf('#')
     val completionText =
-      if (lastTypeIndx == -1) {symbol.path}
+      if (lastTypeIndx == -1) { symbol.path }
       else {
         val memberPart =
-          if(symbol.symbol.length() == lastTypeIndx + 1) ""
+          if (symbol.symbol.length() == lastTypeIndx + 1) ""
           else "." ++ symbol.path.substring(lastTypeIndx + 1)
-        val classMemberPart = symbol.symbol.substring(0, lastTypeIndx).replace('/', '.').replace('$', '.')
+        val classMemberPart = symbol.symbol
+          .substring(0, lastTypeIndx)
+          .replace('/', '.')
+          .replace('$', '.')
         s"???.asInstanceOf[$classMemberPart]$memberPart"
       }
 
     val completionOrSignature =
       if (forSignature) {
-        if(symbol.symbol.endsWith("#")) s"new $completionText()"
+        if (symbol.symbol.endsWith("#")) s"new $completionText()"
         else s"$completionText()"
       } else s"$completionText."
 
@@ -213,7 +223,7 @@ class QueryEngine(
     CompilerOffsetParams(
       URI.create(s"mcp-$randm.scala"),
       withWrapper,
-      withWrapper.length() - (if(forSignature) 3 else 2),
+      withWrapper.length() - (if (forSignature) 3 else 2),
       EmptyCancelToken,
     )
   }
@@ -429,7 +439,6 @@ object QueryEngine {
     "asInstanceOf[T0]: T0", "equals(x$1: Object): Boolean",
     "getClass(): Class[_ <: Object]", "hashCode(): Int",
     "isInstanceOf[T0]: Boolean", "synchronized[T0](x$1: T0): T0",
-    "toString(): String",
-    "+(other: String): String"
+    "toString(): String", "+(other: String): String",
   )
 }
