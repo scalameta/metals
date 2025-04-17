@@ -34,7 +34,6 @@ import scala.meta.pc.CancelToken
 import scala.meta.pc.CodeActionId
 import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.HoverSignature
-import scala.meta.pc.InspectResult
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
@@ -1082,18 +1081,6 @@ class Compilers(
           .map(_.asScala.map(PcSymbolInformation.from))
       )
       .getOrElse(Future(None))
-  }
-
-  def inspect(
-      id: BuildTargetIdentifier,
-      symbol: String,
-      inspectLevel: Int,
-  ): Future[List[InspectResult]] = {
-    loadCompiler(id)
-      .map { pc =>
-        pc.inspect(symbol, inspectLevel).asScala.map(_.asScala.toList)
-      }
-      .getOrElse(Future(Nil))
   }
 
   private def definition(

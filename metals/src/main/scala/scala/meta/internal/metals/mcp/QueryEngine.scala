@@ -22,9 +22,9 @@ import scala.meta.pc.ContentType
 import scala.meta.pc.ParentSymbols
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import org.eclipse.lsp4j.SymbolKind
-import org.eclipse.lsp4j.CompletionItemTag
 import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.CompletionItemTag
+import org.eclipse.lsp4j.SymbolKind
 
 /**
  * Query engine for searching symbols in the workspace and classpath.
@@ -425,7 +425,7 @@ object QueryEngine {
     override def parents(): ju.List[String] = Nil.asJava
   }
 
-  val uninterestingCompletions = Set(
+  val uninterestingCompletions: Set[String] = Set(
     "asInstanceOf[T0]: T0", "equals(x$1: Object): Boolean",
     "getClass(): Class[_ <: Object]", "hashCode(): Int",
     "isInstanceOf[T0]: Boolean", "synchronized[T0](x$1: T0): T0",

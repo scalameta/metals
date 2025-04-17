@@ -370,15 +370,4 @@ public abstract class PresentationCompiler {
 		return "";
 	}
 
-    /**
-	 * Get inspect information about symbols with the given fully qualified class name.
-	 * @param fqcn the fully qualified class name to inspect.
-	 * @param inspectLevel the level of inspection to perform:
-	 * 		- 0: do not return members
-	 * 		- 1: return members (one level deep)
-	 */
-	public CompletableFuture<List<InspectResult>> inspect(String fqcn, Integer inspectLevel) {
-		return CompletableFuture.completedFuture(Collections.emptyList());
-	}
-
 }
