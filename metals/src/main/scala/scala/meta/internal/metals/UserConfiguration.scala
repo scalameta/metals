@@ -56,6 +56,7 @@ case class UserConfiguration(
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
     scalaCliLauncher: Option[String] = None,
     defaultBspToBuildTool: Boolean = false,
+    startMcpServer: Boolean = false,
 ) {
 
   override def toString(): String = {
@@ -726,6 +727,7 @@ object UserConfiguration {
     val scalaCliLauncher = getStringKey("scala-cli-launcher")
     val defaultBspToBuildTool =
       getBooleanKey("default-bsp-to-build-tool").getOrElse(false)
+    val startMcpServer = getBooleanKey("start-mcp-server").getOrElse(false)
 
     if (errors.isEmpty) {
       Right(
@@ -758,6 +760,7 @@ object UserConfiguration {
           autoImportBuilds,
           scalaCliLauncher,
           defaultBspToBuildTool,
+          startMcpServer
         )
       )
     } else {

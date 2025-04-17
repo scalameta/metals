@@ -303,9 +303,12 @@ class ProjectMetalsLspService(
 
   protected def onInitialized(): Future[Unit] = {
     val starMcp =
-      if (serverInputs.initialServerConfig.mcpEnabled)
-        startMcpServer()
-      else Future.unit
+      userConfigPromise.future.flatMap { _ =>
+        if(userConfig.startMcpServer || serverInputs.initialServerConfig.mcpEnabled)
+          startMcpServer()
+        else Future.unit
+      }
+
     val setUpScalaCli = connectionProvider.withWillGenerateBspConfig {
       for {
         _ <- maybeSetupScalaCli()
@@ -628,6 +631,10 @@ class ProjectMetalsLspService(
   ): Future[Unit] = {
     val old = userConfig
     super.onUserConfigUpdate(newConfig)
+    val startMcp =
+      if (newConfig.startMcpServer && newConfig.startMcpServer != userConfig.startMcpServer) startMcpServer()
+      else Future.unit
+
     val slowConnect =
       if (userConfig.customProjectRoot != old.customProjectRoot) {
         tables.buildTool.reset()
@@ -635,12 +642,12 @@ class ProjectMetalsLspService(
         connectionProvider.fullConnect()
       } else Future.successful(())
 
-    val resetDecorations =
+    def resetDecorations =
       if (userConfig.inlayHintsOptions != old.inlayHintsOptions) {
         languageClient.refreshInlayHints().asScala
       } else Future.successful(())
 
-    val restartBuildServer = bspSession
+    def restartBuildServer = bspSession
       .map { session =>
         if (session.main.isBloop) {
           bloopServers
@@ -671,7 +678,7 @@ class ProjectMetalsLspService(
 
     for {
       _ <- slowConnect
-      _ <- Future.sequence(List(restartBuildServer, resetDecorations))
+      _ <- Future.sequence(List(restartBuildServer, resetDecorations, startMcp))
     } yield ()
   }
 
