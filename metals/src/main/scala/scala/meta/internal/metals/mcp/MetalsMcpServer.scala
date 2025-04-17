@@ -489,7 +489,7 @@ class MetalsMcpServer(
       ),
       (exchange, arguments) => {
         try {
-          val fqcn = arguments.get("fqcn").asInstanceOf[String]
+          val fqcn = arguments.getFqcn
           val provideMethodSignatures =
             arguments.get("provideMethodSignatures").asInstanceOf[Boolean]
           withPath(arguments) { path =>
@@ -520,10 +520,6 @@ class MetalsMcpServer(
           "fqcn": {
             "type": "string",
             "description": "Fully qualified name of the symbol to get documentation for"
-          },
-          "fileInFocus": {
-            "type": "string",
-            "description": "The current file in focus for context, if empty we will try to detect it"
           }
         },
         "required": ["fqcn"]
@@ -537,9 +533,9 @@ class MetalsMcpServer(
       ),
       (exchange, arguments) => {
         try {
-          val fqcn = arguments.get("fqcn").asInstanceOf[String]
-          withPath(arguments) { path =>
-            queryEngine.getDocumentation(fqcn, path).map {
+          val fqcn = arguments.getFqcn
+          Future {
+            queryEngine.getDocumentation(fqcn) match {
               case Some(result) =>
                 new CallToolResult(createContent(result.show), false)
               case None =>
@@ -584,16 +580,12 @@ class MetalsMcpServer(
       ),
       (exchange, arguments) => {
         try {
-          val fqcn = arguments.get("fqcn").asInstanceOf[String]
+          val fqcn = arguments.getFqcn
           withPath(arguments) { path =>
-            queryEngine
-              .getUsages(fqcn, path)
-              .map(result =>
-                new CallToolResult(
-                  createContent(result.show(projectPath)),
-                  false,
-                )
-              )
+            Future {
+              val result = queryEngine.getUsages(fqcn, path)
+              new CallToolResult(createContent(result.show(projectPath)), false)
+            }
           }.toMono
         } catch {
           case e: Exception =>
@@ -629,4 +621,11 @@ class MetalsMcpServer(
   implicit class XtensionFuture[T](val f: Future[T]) {
     def toMono: Mono[T] = Mono.fromFuture(f.asJava)
   }
+
+  implicit class XtensionArguments(val arguments: java.util.Map[String, Object]) {
+    def getFqcn: String = arguments.get("fqcn").asInstanceOf[String].stripPrefix("_empty_/")
+    
+  }
+
+
 }

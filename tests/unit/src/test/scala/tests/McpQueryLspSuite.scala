@@ -393,13 +393,9 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ <- server.didOpen(
         "a/src/main/scala/com/test/nested/package1/Class1.scala"
       )
-      path = server.toPath(
-        "a/src/main/scala/com/test/nested/package1/Class1.scala"
-      )
       _ = assertNoDiagnostics()
-      res <- server.headServer.queryEngine.getDocumentation(
-        "com.test.nested.package1.Class1.add",
-        path,
+      res = server.headServer.queryEngine.getDocumentation(
+        "com.test.nested.package1.Class1.add"
       )
 
       _ = assertNoDiff(
@@ -444,7 +440,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       path = server.toPath(
         "a/src/main/scala/com/test/Class2.scala"
       )
-      res <- server.headServer.queryEngine.getUsages(
+      res = server.headServer.queryEngine.getUsages(
         "com.test.Class1.add",
         path,
       )
@@ -453,6 +449,48 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
         """|a/src/main/scala/com/test/Class1.scala:4
            |a/src/main/scala/com/test/Class1.scala:5
            |a/src/main/scala/com/test/Class2.scala:4
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("usages-empty-package") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/EmptyPackageClass.scala
+           |class EmptyPackageClass(m: Int) {
+           |  def add(x: Int, y: Int): Int = x + y
+           |  def superAdd(x: Int, y: Int): Int = add(x, y) + m
+           |}
+           |
+           |/a/src/main/scala/EmptyPackageUsage.scala
+           |object EmptyPackageUsage {
+           |  def foo = new EmptyPackageClass(1).add(2, 3)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      _ <- server.didOpen(
+        "a/src/main/scala/EmptyPackageUsage.scala"
+      )
+      _ = assertNoDiagnostics()
+      path = server.toPath(
+        "a/src/main/scala/EmptyPackageUsage.scala"
+      )
+      _ = assertNoDiff(
+        server.headServer.queryEngine
+          .getUsages(
+            "EmptyPackageClass.add",
+            path,
+          )
+          .show(server.workspace),
+        """|a/src/main/scala/EmptyPackageClass.scala:2
+           |a/src/main/scala/EmptyPackageClass.scala:3
+           |a/src/main/scala/EmptyPackageUsage.scala:2
            |""".stripMargin,
       )
     } yield ()

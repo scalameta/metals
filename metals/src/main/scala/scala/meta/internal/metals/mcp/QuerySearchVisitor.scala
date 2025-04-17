@@ -35,6 +35,7 @@ class QuerySearchVisitor(
           name = pkgName,
           path = pkg.fqcn,
           SymbolType.Package,
+          symbol = pkg
         )
     }
     true // Continue searching even if this package doesn't match
@@ -46,6 +47,7 @@ class QuerySearchVisitor(
         name,
         s"$owner$name".fqcn,
         SymbolType.Package,
+        symbol = s"$owner$name",
       )
       1
     } else 0
@@ -109,6 +111,7 @@ class QuerySearchVisitor(
           name = symbolName,
           path = s"${owner.fqcn}.$symbolName",
           symbolType = symbolType,
+          symbol = symbol,
         )
       1
     } else 0

@@ -175,88 +175,62 @@ class QueryEngine(
    * @return Documentation for the symbol
    */
   def getDocumentation(
-      fqcn: String,
-      path: AbsolutePath,
-  ): Future[Option[SymbolDocumentationSearchResult]] = {
+      fqcn: String
+  ): Option[SymbolDocumentationSearchResult] = {
 
     // Implementation would need to:
     // 1. Find the symbol definition
     // 2. Extract the Scaladoc information
 
-    // This is a placeholder - the actual implementation would
-    // parse Scaladoc from the source file
-    buildTargets
-      .sourceBuildTargets(path)
-      .flatMap(_.headOption)
-      .map { bt =>
-        compilers.inspect(bt, fqcn, inspectLevel = 0).map { syms =>
-          val res = syms.iterator.flatMap { s =>
-            docstrings
-              .documentation(
-                s.symbol(),
-                QueryEngine.emptyParentsSymbols,
-                ContentType.PLAINTEXT,
-              )
-              .asScala
-              .map { doc =>
-                val kind = QueryEngine
-                  .kindToTypeString(s.kind())
-                  .getOrElse(SymbolType.Unknown(s.kind().toString))
-                SymbolDocumentationSearchResult(
-                  kind,
-                  Option(doc.docstring()),
-                  s.symbol().fqcn,
-                )
-              }
-          }.headOption
-
-          res.orElse {
-            // when no documentation is found, return the first symbol
-            syms.headOption.map { s =>
-              val kind = QueryEngine
-                .kindToTypeString(s.kind())
-                .getOrElse(SymbolType.Unknown(s.kind().toString))
-              SymbolDocumentationSearchResult(
-                kind,
-                None,
-                s.symbol().fqcn,
-              )
-
-            }
-          }
-
+    val syms = mcpDefinitionProvider.symbols(fqcn)
+    val res = syms.iterator.flatMap { s =>
+      docstrings
+        .documentation(
+          s.symbol,
+          QueryEngine.emptyParentsSymbols,
+          ContentType.PLAINTEXT,
+        )
+        .asScala
+        .map { doc =>
+          SymbolDocumentationSearchResult(
+            s.symbolType,
+            Option(doc.docstring()),
+            s.path,
+          )
         }
+    }.headOption
+
+    res.orElse {
+      // when no documentation is found, return the first symbol
+      syms.headOption.map { s =>
+        SymbolDocumentationSearchResult(
+          s.symbolType,
+          None,
+          s.path,
+        )
       }
-      .getOrElse(Future.successful(None))
+    }
   }
 
   def getUsages(
       fqcn: String,
       path: AbsolutePath,
-  ): Future[List[SymbolUsage]] = {
-    val res = buildTargets
-      .sourceBuildTargets(path)
-      .flatMap(_.headOption)
-      .map { buildTarget =>
-        compilers.inspect(buildTarget, fqcn, inspectLevel = 0).map { syms =>
-          syms.map(_.symbol()).toSet
-          referenceProvider.workspaceReferences(
-            path,
-            syms.map(_.symbol()).toSet,
-            isIncludeDeclaration = true,
-            includeSynthetics = _ => false,
-          )
-        }
-      }
-      .getOrElse(Future.successful(Nil))
-    res.map { usages =>
-      usages.map { usage =>
+  ): List[SymbolUsage] = {
+    val syms = mcpDefinitionProvider.symbols(fqcn)
+    referenceProvider
+      .workspaceReferences(
+        path,
+        syms.map(_.symbol).toSet,
+        isIncludeDeclaration = true,
+        includeSynthetics = _ => false,
+      )
+      .map { usage =>
         SymbolUsage(
           usage.getUri.toAbsolutePath,
           usage.getRange.getStart.getLine + 1, // +1 because line is 0-indexed
         )
-      }.toList
-    }
+      }
+      .toList
   }
 
 }
@@ -270,9 +244,10 @@ case class SymbolUsage(
  * Base trait for symbol search results.
  */
 case class SymbolSearchResult(
-  name: String,
-  path: String,
-  symbolType: SymbolType
+    name: String,
+    path: String,
+    symbolType: SymbolType,
+    symbol: String,
 )
 
 case class MethodSignature(

@@ -1,5 +1,7 @@
 package scala.meta.internal.metals.mcp
 
+import scala.collection.mutable.ListBuffer
+
 import scala.meta.Dialect
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -13,10 +15,31 @@ import scala.meta.io.AbsolutePath
 
 class McpDefinitionProvider(index: GlobalSymbolIndex) {
 
+  def symbols(fqcn: String): List[SymbolSearchResult] = {
+    val parts = fqcn.split('.').toList
+    val pkg = parts.takeWhile(_.charAt(0).isLower) match {
+      case Nil => "_empty_/"
+      case pkgParts => pkgParts.mkString("", "/", "/")
+    }
+    val names = parts.dropWhile(_.charAt(0).isLower).toList
+    (for {
+      toplevel <- names.headOption
+    } yield {
+      val symbolsBuffer = ListBuffer.empty[SymbolSearchResult]
+      forEachDefinition(pkg, toplevel, includeMembers = true){ sym =>
+        if(sym.path == fqcn) {
+          symbolsBuffer += sym
+        }
+      }
+      symbolsBuffer.toList
+    }).getOrElse(Nil)
+  }
+
   def forEachDefinition(
       pkg: String,
       name: String,
-      shouldVisitFile: AbsolutePath => Boolean,
+      shouldVisitFile: AbsolutePath => Boolean = _ => true,
+      includeMembers: Boolean = false,
   )(f: SymbolSearchResult => Unit): Unit = {
     definition(pkg, name).foreach {
       case (path, dialect) if shouldVisitFile(path) =>
@@ -24,7 +47,7 @@ class McpDefinitionProvider(index: GlobalSymbolIndex) {
         SemanticdbDefinition.foreach(
           input,
           dialect,
-          includeMembers = false,
+          includeMembers,
         ) { semanticdbDefn =>
           lazy val kind =
             kindToTypeString(semanticdbDefn.info.kind.toLsp).getOrElse(
@@ -35,6 +58,7 @@ class McpDefinitionProvider(index: GlobalSymbolIndex) {
             name = semanticdbDefn.info.displayName,
             path = fqcn,
             symbolType = kind,
+            symbol = semanticdbDefn.info.symbol
           )
           f(searchResult)
         }(EmptyReportContext)
