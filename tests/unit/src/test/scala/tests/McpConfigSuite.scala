@@ -4,7 +4,10 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.mcp.CursorMcpConfig
+import scala.meta.internal.metals.mcp.CursorEditor
+import scala.meta.internal.metals.mcp.Editor
+import scala.meta.internal.metals.mcp.McpConfig
+import scala.meta.internal.metals.mcp.VSCodeEditor
 import scala.meta.io.AbsolutePath
 
 import munit.TestOptions
@@ -16,12 +19,43 @@ class McpConfigSuite extends BaseSuite {
       port: Int,
       projectName: String,
       expected: String,
+      editor: Editor = CursorEditor,
   ): Unit = {
     test(name) {
-      val obtained = CursorMcpConfig.writeConfig(inputConfig, port, projectName)
+      val obtained = McpConfig.createConfig(inputConfig, port, projectName, editor)
       assertNoDiff(obtained, expected)
     }
   }
+
+  check(
+    "new-config",
+    "{ }",
+    1234,
+    "test-project",
+    """{
+      |  "mcpServers": {
+      |    "test-project-metals": {
+      |      "url": "http://localhost:1234/sse"
+      |    }
+      |  }
+      |}""".stripMargin,
+  )
+
+  check(
+    "new-config-vscode",
+    "{ }",
+    1234,
+    "test-project",
+    """{
+      |  "servers": {
+      |    "test-project-metals": {
+      |      "url": "http://localhost:1234/sse",
+      |      "type": "sse"
+      |    }
+      |  }
+      |}""".stripMargin,
+    editor = VSCodeEditor,
+  )
 
   check(
     "new-config",
@@ -87,7 +121,7 @@ class McpConfigSuite extends BaseSuite {
     val projectName = "test-project"
 
     // First generation
-    CursorMcpConfig.writeConfig(port, projectName, projectPath)
+    McpConfig.writeConfig(port, projectName, projectPath)
     val configFile = projectPath.resolve(".cursor/mcp.json")
     assert(configFile.exists)
     val firstContent = new String(
@@ -106,7 +140,7 @@ class McpConfigSuite extends BaseSuite {
     )
 
     // Update with different port
-    CursorMcpConfig.writeConfig(5678, projectName, projectPath)
+    McpConfig.writeConfig(5678, projectName, projectPath)
     val secondContent = new String(
       Files.readAllBytes(configFile.toNIO),
       StandardCharsets.UTF_8,
@@ -133,7 +167,7 @@ class McpConfigSuite extends BaseSuite {
     }"""
 
     assertEquals(
-      CursorMcpConfig.getPort(config, "test-project"),
+      McpConfig.getPort(config, "test-project"),
       Some(8080),
     )
   }
@@ -141,7 +175,7 @@ class McpConfigSuite extends BaseSuite {
   test("getPort - missing mcpServers") {
     val config = "{}"
     assertEquals(
-      CursorMcpConfig.getPort(config, "test-project"),
+      McpConfig.getPort(config, "test-project"),
       None,
     )
   }
@@ -156,7 +190,7 @@ class McpConfigSuite extends BaseSuite {
     }"""
 
     assertEquals(
-      CursorMcpConfig.getPort(config, "test-project"),
+      McpConfig.getPort(config, "test-project"),
       None,
     )
   }
@@ -171,7 +205,7 @@ class McpConfigSuite extends BaseSuite {
     }"""
 
     assertEquals(
-      CursorMcpConfig.getPort(config, "test-project"),
+      McpConfig.getPort(config, "test-project"),
       None,
     )
   }
@@ -179,7 +213,7 @@ class McpConfigSuite extends BaseSuite {
   test("getPort - invalid JSON") {
     val config = "invalid json"
     assertEquals(
-      CursorMcpConfig.getPort(config, "test-project"),
+      McpConfig.getPort(config, "test-project"),
       None,
     )
   }

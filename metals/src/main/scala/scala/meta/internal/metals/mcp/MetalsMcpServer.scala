@@ -166,7 +166,8 @@ class MetalsMcpServer(
     val deployment = manager.addDeployment(servletDeployment)
     deployment.deploy()
 
-    val configPort = CursorMcpConfig.readPort(projectPath, projectName)
+    val editor = Editor.allEditors.find(_.name == editorName)
+    val configPort = editor.flatMap(e => McpConfig.readPort(projectPath, projectName, e))
     val undertowServer = Undertow
       .builder()
       .addHttpListener(configPort.getOrElse(0), "localhost")
@@ -178,8 +179,8 @@ class MetalsMcpServer(
     val port =
       listenerInfo.get(0).getAddress().asInstanceOf[InetSocketAddress].getPort()
 
-    if (editorName == "Cursor" && !configPort.isDefined) {
-      CursorMcpConfig.writeConfig(port, projectName, projectPath)
+    if (editor.isDefined && !configPort.isDefined) {
+      McpConfig.writeConfig(port, projectName, projectPath, editor.get)
     } else {
       languageClient.showMessage(
         new MessageParams(
