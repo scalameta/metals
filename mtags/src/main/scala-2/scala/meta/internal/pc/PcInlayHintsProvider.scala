@@ -47,13 +47,13 @@ final class PcInlayHintsProvider(
   def collectDecorations(
       tree: Tree,
       inlayHints: InlayHints
-  ): InlayHints =
+  ): InlayHints = {
     tree match {
       case NamedParameters(params) =>
-        params.foldLeft(inlayHints) { case (acc, (name, pos)) =>
+        params.foldLeft(inlayHints) { case (acc, (prefix, name, pos)) =>
           acc.add(
             adjustPos(pos).focusStart.toLsp,
-            LabelPart(name.toString() + " = ") :: Nil,
+            LabelPart(name.toString() + " = " + prefix) :: Nil,
             InlayHintKind.Parameter
           )
         }
@@ -104,6 +104,7 @@ final class PcInlayHintsProvider(
             .addDefinition(adjustedPos.start)
       case _ => inlayHints
     }
+  }
 
   def traverse(
       acc: InlayHints,
@@ -159,16 +160,9 @@ final class PcInlayHintsProvider(
       LabelPart(label, symbol = semanticdbSymbol(symbol))
     }
 
-  protected lazy val namedArgCache: Map[Position, Tree] = {
-    val parsedTree = parseTree(unit.source)
-    parsedTree.collect { case arg @ AssignOrNamedArg(_, rhs) =>
-      rhs.pos -> arg
-    }.toMap
-  }
-
   object NamedParameters {
-    def unapply(tree: Tree): Option[List[(Name, Position)]] =
-      if (params.namedParameters())
+    def unapply(tree: Tree): Option[List[(String, Name, Position)]] =
+      if (params.namedParameters()) {
         tree match {
           case Apply(fun: Select, args) if isNotInterestingApply(fun) =>
             None
@@ -182,20 +176,35 @@ final class PcInlayHintsProvider(
                 /* It's most likely a block argument, even if it's not it's
                    doubtful that anyone wants to see the named parameters */
                 !isSingleBlock(args) =>
-            val params = fun.tpe.params
-            Some(args.zip(params).collect {
+            val applyParams = fun.tpe.params
+            Some(args.zip(applyParams).collect {
               case (arg, param)
-                  if !fun.symbol.isJavaDefined && // We don't have a quick way of getting java param names
-                    !namedArgCache.exists(p => p._1.includes(arg.pos)) =>
-                (param.name, arg.pos)
+                  if !isNamedArg(arg) && !isDefaultArgument(arg) =>
+                val prefix =
+                  if (param.isByNameParam && params.byNameParameters()) "=> "
+                  else ""
+                (prefix, param.name, arg.pos)
             })
           case _ => None
         }
-      else None
+      } else None
+
+    private def isDefaultArgument(arg: Tree) = {
+      arg.symbol != null && arg.symbol.isDefaultGetter
+    }
+    private def isNamedArg(arg: Tree) = {
+      def loop(i: Int): Boolean = {
+        if (text(i) == '=') true
+        else if (text(i).isWhitespace)
+          loop(i - 1)
+        else false
+      }
+      loop(arg.pos.start - 1)
+    }
 
     private def isNotInterestingApply(sel: Select) =
       isForComprehensionMethod(sel) || syntheticTupleApply(sel) ||
-        isInfix(sel, textStr) || sel.symbol.isSetter
+        isInfix(sel, textStr) || sel.symbol.isSetter || sel.symbol.isJavaDefined
 
     private def isSingleBlock(args: List[Tree]): Boolean =
       args.size == 1 && args.forall {

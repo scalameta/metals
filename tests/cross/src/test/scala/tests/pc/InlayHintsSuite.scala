@@ -958,6 +958,21 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |  def foo(x: => Int, y: Int, z: => Int)(w: Int, v: => Int): Unit = ()
        |  foo(/*=> */1, 2, /*=> */3)(4, /*=> */5)
        |}
+       |""".stripMargin,
+    namedParameters = false
+  )
+
+  check(
+    "by-name-regular-named",
+    """|object Main{
+       |  def foo(x: => Int, y: Int, z: => Int)(w: Int, v: => Int): Unit = ()
+       |  foo(1, 2, 3)(4, 5)
+       |}
+       |""".stripMargin,
+    """|object Main{
+       |  def foo(x: => Int, y: Int, z: => Int)(w: Int, v: => Int): Unit = ()
+       |  foo(/*x = => */1, /*y = */2, /*z = => */3)(/*w = */4, /*v = => */5)
+       |}
        |""".stripMargin
   )
 
@@ -999,7 +1014,91 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |      .headOption
        |  })
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    namedParameters = false
+  )
+
+  check(
+    "by-name-block-named",
+    """|object Main{
+       |  def Future[A](arg: => A): A = arg
+       |
+       |  Future(1 + 2)
+       |  Future {
+       |    1 + 2
+       |  }
+       |  Future {
+       |    val x = 1
+       |    val y = 2
+       |    x + y
+       |  }
+       |  Some(Option(2).getOrElse {
+       |    List(1,2)
+       |      .headOption
+       |  })
+       |}
+       |""".stripMargin,
+    """|package `by-name-block-named`
+       |object Main{
+       |  def Future[A](arg: => A): A = arg
+       |
+       |  Future/*[Int<<scala/Int#>>]*/(/*arg = => */1 + 2)
+       |  Future/*[Int<<scala/Int#>>]*/ {
+       |    /*arg = => */1 + 2
+       |  }
+       |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
+       |    val x/*: Int<<scala/Int#>>*/ = 1
+       |    val y/*: Int<<scala/Int#>>*/ = 2
+       |    x + y
+       |  }
+       |  Some/*[Any<<scala/Any#>>]*/(/*value = */Option/*[Int<<scala/Int#>>]*/(/*x = */2).getOrElse/*[Any<<scala/Any#>>]*/ {
+       |    /*default = => */List/*[Int<<scala/Int#>>]*/(/*xs = */1,2)
+       |      .headOption
+       |  })
+       |}
+       |""".stripMargin,
+    compat = Map(
+      ">=2.13.0" ->
+        """|package `by-name-block-named`
+           |object Main{
+           |  def Future[A](arg: => A): A = arg
+           |
+           |  Future/*[Int<<scala/Int#>>]*/(/*arg = => */1 + 2)
+           |  Future/*[Int<<scala/Int#>>]*/ {
+           |    /*arg = => */1 + 2
+           |  }
+           |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
+           |    val x/*: Int<<scala/Int#>>*/ = 1
+           |    val y/*: Int<<scala/Int#>>*/ = 2
+           |    x + y
+           |  }
+           |  Some/*[Any<<scala/Any#>>]*/(/*value = */Option/*[Int<<scala/Int#>>]*/(/*x = */2).getOrElse/*[Any<<scala/Any#>>]*/ {
+           |    /*default = => */List/*[Int<<scala/Int#>>]*/(/*elems = */1,2)
+           |      .headOption
+           |  })
+           |}
+           |""".stripMargin,
+      "2.11.12" ->
+        """|package `by-name-block-named`
+           |object Main{
+           |  def Future[A](arg: => A): A = arg
+           |
+           |  Future/*[Int<<scala/Int#>>]*/(/*arg = => */1 + 2)
+           |  Future/*[Int<<scala/Int#>>]*/ {
+           |    /*arg = => */1 + 2
+           |  }
+           |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
+           |    val x/*: Int<<scala/Int#>>*/ = 1
+           |    val y/*: Int<<scala/Int#>>*/ = 2
+           |    x + y
+           |  }
+           |  Some/*[Any<<scala/Any#>>]*/(/*x = */Option/*[Int<<scala/Int#>>]*/(/*x = */2).getOrElse/*[Any<<scala/Any#>>]*/ {
+           |    /*default = => */List/*[Int<<scala/Int#>>]*/(/*xs = */1,2)
+           |      .headOption
+           |  })
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -1016,11 +1115,29 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |  def foo(a: => Int = 1 + 2)/*: Unit<<scala/Unit#>>*/ = ()
        |
        |  foo()
-       |  foo(/*=> */4 + 2)
+       |  foo(/*a = => */4 + 2)
        |}
        |""".stripMargin
   )
 
+  check(
+    "by-name-default-arguments2",
+    """|object Main{
+       |  def foo(a: => Int = 1 + 2) = ()
+       |
+       |  foo()
+       |  foo(4 + 2)
+       |}
+       |""".stripMargin,
+    """|object Main{
+       |  def foo(a: => Int = 1 + 2)/*: Unit<<scala/Unit#>>*/ = ()
+       |
+       |  foo()
+       |  foo(/*=> */4 + 2)
+       |}
+       |""".stripMargin,
+    namedParameters = false
+  )
 
   check(
     "multi-argument",
@@ -1031,6 +1148,8 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |  fun(1)(2)(3.14)
        |  fun(1)(2)
        |  fun(a = 1)(2)
+       |  fun(a = 
+       | 1)(2)
        |}
        |""".stripMargin,
     """|object Main{
@@ -1040,6 +1159,8 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |  fun/*[Int<<scala/Int#>>]*/(/*a = */1)(/*b = */2)(/*c = */3.14)
        |  fun/*[Int<<scala/Int#>>]*/(/*a = */1)(/*b = */2)/*(isImplicit<<(2:15)>>)*/
        |  fun/*[Int<<scala/Int#>>]*/(a = 1)(/*b = */2)/*(isImplicit<<(2:15)>>)*/
+       |  fun/*[Int<<scala/Int#>>]*/(a = 
+       | 1)(/*b = */2)/*(isImplicit<<(2:15)>>)*/
        |}
        |""".stripMargin
   )
@@ -1070,6 +1191,97 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
     """|import java.nio.file.Paths
        |object Vars {
        |  val a/*: Path<<java/nio/file/Path#>>*/ = Paths.get(".")
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "defaults".tag(IgnoreScala211),
+    """|import java.nio.file.Paths
+       |import java.nio.file.Path
+       |object Main {
+       |  case class Dependency()
+       |  object Dependency{
+       |    def of(
+       |      organization: String,
+       |      name: String,
+       |      version: String,
+       |    ): Dependency = ???
+       |  }
+       |  def downloadDependency(
+       |      dep: Dependency,
+       |      scalaVersion: Option[String] = None,
+       |      classfiers: Seq[String] = Seq.empty,
+       |      resolution: Option[Object] = None,
+       |  ): List[Path] = ???
+       |
+       |  def downloadSemanticdbJavac: List[Path] = {
+       |    downloadDependency(
+       |      Dependency.of(
+       |        "com.sourcegraph",
+       |        "semanticdb-javac",
+       |        "BuildInfo.javaSemanticdbVersion",
+       |      ),
+       |      None,
+       |    )
+       |  }
+       |
+       |  def downloadSemanticdbJavac2: List[Path] = {
+       |    downloadDependency(
+       |      Dependency.of(
+       |        "com.sourcegraph",
+       |        "semanticdb-javac",
+       |        "BuildInfo.javaSemanticdbVersion",
+       |      ),
+       |      None,
+       |      resolution = None
+       |    )
+       |  }
+       |
+       |}
+       |""".stripMargin,
+    """|package defaults
+       |import java.nio.file.Paths
+       |import java.nio.file.Path
+       |object Main {
+       |  case class Dependency()
+       |  object Dependency{
+       |    def of(
+       |      organization: String,
+       |      name: String,
+       |      version: String,
+       |    ): Dependency = ???
+       |  }
+       |  def downloadDependency(
+       |      dep: Dependency,
+       |      scalaVersion: Option[String] = None,
+       |      classfiers: Seq[String] = Seq.empty/*[Nothing<<scala/Nothing#>>]*/,
+       |      resolution: Option[Object] = None,
+       |  ): List[Path] = ???
+       |
+       |  def downloadSemanticdbJavac: List[Path] = {
+       |    downloadDependency(
+       |      /*dep = */Dependency.of(
+       |        /*organization = */"com.sourcegraph",
+       |        /*name = */"semanticdb-javac",
+       |        /*version = */"BuildInfo.javaSemanticdbVersion",
+       |      ),
+       |      /*scalaVersion = */None,
+       |    )
+       |  }
+       |
+       |  def downloadSemanticdbJavac2: List[Path] = {
+       |    downloadDependency(
+       |      Dependency.of(
+       |        /*organization = */"com.sourcegraph",
+       |        /*name = */"semanticdb-javac",
+       |        /*version = */"BuildInfo.javaSemanticdbVersion",
+       |      ),
+       |      None,
+       |      resolution = None
+       |    )
+       |  }
+       |
        |}
        |""".stripMargin
   )
