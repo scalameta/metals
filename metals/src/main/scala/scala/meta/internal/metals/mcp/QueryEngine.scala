@@ -54,14 +54,12 @@ class QueryEngine(
       query: String,
       symbolTypes: Set[SymbolType] = Set.empty,
       path: AbsolutePath,
-      enableDebug: Boolean = false,
   ): Future[Seq[SymbolSearchResult]] = Future {
 
     val visitor = new QuerySearchVisitor(
       mcpDefinitionProvider,
       symbolTypes,
       query,
-      enableDebug,
     )
 
     val wsQuery = WorkspaceSymbolQuery(

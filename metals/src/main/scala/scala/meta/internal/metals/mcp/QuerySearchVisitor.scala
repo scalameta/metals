@@ -18,7 +18,6 @@ class QuerySearchVisitor(
     mcpDefinitionProvider: McpDefinitionProvider,
     symbolTypes: Set[SymbolType],
     query: String,
-    enableDebug: Boolean,
 ) extends SymbolSearchVisitor {
   private val lowerCaseQuery = query.toLowerCase
   private val results = mutable.ListBuffer.empty[SymbolSearchResult]
@@ -95,9 +94,6 @@ class QuerySearchVisitor(
   ): Int = {
     val (desc, owner) = DescriptorParser(symbol)
     val symbolName = desc.name.value
-    debug(
-      s"Encountered workspace symbol: $symbol, desc: $desc, kind: $kind, range: $range, symbolName: $symbolName, owner: $owner"
-    )
 
     lazy val symbolType =
       kindToTypeString(kind).getOrElse(SymbolType.Unknown(kind.toString))
@@ -118,8 +114,6 @@ class QuerySearchVisitor(
     } else 0
 
   }
-
-  private def debug(string: String): Unit = if (enableDebug) pprint.log(string)
 
   override def isCancelled(): Boolean = false
 
