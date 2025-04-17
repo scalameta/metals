@@ -329,6 +329,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |
            |class Class1(m: Int) {
            |  def add(x: Int, y: Int): Int = x + y
+           |  def add(x: Int): Int = x + m
            |  def substract(x: Int, y: Int): Int = x - y
            |}
            |
@@ -336,11 +337,17 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |  def someFunction(x: Int): Int = x * 2
            |}
            |
+           |trait Trait1
+           |
            |/a/src/main/scala/com/test/nested/package2/Class2.scala
            |package com.test.nested.package2
            |
            |class Class2
            |
+           |/a/src/main/scala/com/test/nested/package1/deeper/Class2.scala
+           |package com.test.nested.package1.deeper
+           |
+           |object O
            |""".stripMargin
       )
       _ <- server.didOpen(
@@ -353,17 +360,38 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       res <- server.headServer.queryEngine.inspect(
         "com.test.nested.package1.Class1",
         path,
-        provideMethodSignatures = true,
       )
-
       _ = assertNoDiff(
         res.show,
-        """|class com.test.nested.package1.Class1
-           |	 - constructor Class1(m: Int)
-           |	 - method add(x: Int, y: Int): Int
-           |	 - method substract(x: Int, y: Int): Int
-           |object com.test.nested.package1.Class1
-           |	 - function someFunction(x: Int): Int
+        """|class Class1
+           |	 - <init>(m: Int): Class1
+           |	 - add(x: Int): Int
+           |	 - add(x: Int, y: Int): Int
+           |	 - substract(x: Int, y: Int): Int
+           |object Class1
+           |	 - someFunction(x: Int): Int
+           |""".stripMargin,
+      )
+      resPkg <- server.headServer.queryEngine.inspect(
+        "com.test.nested.package1",
+        path,
+      )
+      _ = assertNoDiff(
+        resPkg.show,
+        """|package com.test.nested.package1
+           |	 - Class1 com.test.nested.package1
+           |	 - Trait1
+           |	 - deeper
+           |""".stripMargin,
+      )
+      resMethod <- server.headServer.queryEngine.inspect(
+        "com.test.nested.package1.Class1.add",
+        path,
+      )
+      _ = assertNoDiff(
+        resMethod.show,
+        """|method add(x: Int): Int
+           |method add(x: Int, y: Int): Int
            |""".stripMargin,
       )
     } yield ()

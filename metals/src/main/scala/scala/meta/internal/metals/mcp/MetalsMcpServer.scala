@@ -468,11 +468,6 @@ class MetalsMcpServer(
           "fileInFocus": {
             "type": "string",
             "description": "The current file in focus for context, if empty we will try to detect it"
-          },
-          "provideMethodSignatures": {
-            "type": "boolean",
-            "default": false,
-            "description": "Whether to provide method members with signatures (when set to true) or names only (when set to false)"
           }
         },
         "required": ["fqcn"]
@@ -490,11 +485,9 @@ class MetalsMcpServer(
       (exchange, arguments) => {
         try {
           val fqcn = arguments.getFqcn
-          val provideMethodSignatures =
-            arguments.get("provideMethodSignatures").asInstanceOf[Boolean]
           withPath(arguments) { path =>
             queryEngine
-              .inspect(fqcn, path, provideMethodSignatures)
+              .inspect(fqcn, path)
               .map(result =>
                 new CallToolResult(
                   createContent(result.show),
@@ -533,7 +526,7 @@ class MetalsMcpServer(
       ),
       (exchange, arguments) => {
         try {
-          val fqcn = arguments.getFqcn
+          val fqcn = arguments.get("fqcn").asInstanceOf[String].stripPrefix("_empty_/")
           Future {
             queryEngine.getDocumentation(fqcn) match {
               case Some(result) =>

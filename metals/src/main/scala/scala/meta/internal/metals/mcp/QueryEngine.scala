@@ -1,13 +1,17 @@
 package scala.meta.internal.metals.mcp
 
+import java.net.URI
 import java.{util => ju}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.Random
 
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.Docstrings
+import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferenceProvider
 import scala.meta.internal.metals.WorkspaceSymbolProvider
@@ -15,10 +19,12 @@ import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.ContentType
-import scala.meta.pc.InspectResult
 import scala.meta.pc.ParentSymbols
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.SymbolKind
+import org.eclipse.lsp4j.CompletionItemTag
+import org.eclipse.lsp4j.CompletionItem
 
 /**
  * Query engine for searching symbols in the workspace and classpath.
@@ -94,78 +100,122 @@ class QueryEngine(
   def inspect(
       fqcn: String,
       path: AbsolutePath,
-      provideMethodSignatures: Boolean = true,
   ): Future[List[SymbolInspectResult]] = {
-    buildTargets
-      .sourceBuildTargets(path)
-      .flatMap(_.headOption)
-      .map { buildTarget =>
-        compilers.inspect(buildTarget, fqcn, inspectLevel = 1).map {
-          _.flatMap { res =>
-            val (constructorMembers, otherMembers) = res
-              .members()
-              .asScala
-              .toList
-              .partition(_.kind() == SymbolKind.Constructor)
-            val members =
-              otherMembers.flatMap(res =>
-                mapPcInspectResult(res, Nil, Nil, provideMethodSignatures)
-              )
-            val constructors = constructorMembers
-              .flatMap(mapPcInspectResult(_, Nil, Nil, provideMethodSignatures))
-              .collect { case m: MethodInspectResult => m }
-            mapPcInspectResult(res, members, constructors)
-          }
-        }
+    val results = for {
+      buildTarget <- buildTargets
+        .sourceBuildTargets(path)
+        .flatMap(_.headOption)
+        .toList
+      symbol <- mcpDefinitionProvider.symbols(fqcn).distinctBy(_.symbolType)
+      (shouldGetCompletions) = symbol.symbolType match {
+        case SymbolType.Class | SymbolType.Trait | SymbolType.Object | SymbolType.Package => true
+        case _ => false
       }
-      .getOrElse(Future.successful(Nil))
+      shouldGetSignature = symbol.symbolType match {
+        case SymbolType.Method | SymbolType.Function | SymbolType.Constructor |
+            SymbolType.Class =>
+          true
+        case _ => false
+      }
+    } yield for {
+      completions <-
+        if (shouldGetCompletions) getCompletions(symbol, buildTarget)
+        else Future.successful(Nil)
+      signatures <-
+        if (shouldGetSignature) getSignatures(symbol, buildTarget)
+        else Future.successful(Nil)
+    } yield {
+      val res: Option[SymbolInspectResult] = symbol.symbolType match {
+        case SymbolType.Package =>
+          Some(PackageInspectResult(symbol.path, completions))
+        case SymbolType.Class =>
+          Some(ClassInspectResult(symbol.path, completions, signatures))
+        case SymbolType.Object =>
+          Some(ObjectInspectResult(symbol.path, completions))
+        case SymbolType.Trait =>
+          Some(TraitInspectResult(symbol.path, completions))
+        case SymbolType.Method | SymbolType.Function | SymbolType.Constructor =>
+          Some(MethodInspectResult(symbol.path, signatures, symbol.symbolType))
+        case _ => None
+      }
+      res
+    }
+
+    Future.sequence(results).map(_.flatten)
   }
 
-  private def mapPcInspectResult(
-      result: InspectResult,
-      members: List[SymbolInspectResult],
-      constructors: List[MethodInspectResult],
-      provideMethodSignatures: Boolean = true,
+  private def getCompletions(
+      symbol: SymbolSearchResult,
+      buildTarget: BuildTargetIdentifier,
   ) = {
-    val kind = QueryEngine
-      .kindToTypeString(result.kind())
-      .getOrElse(SymbolType.Unknown(result.kind().toString))
-    val path = result.symbol().fqcn
-    kind match {
-      case SymbolType.Package => Some(PackageInspectResult(path, members))
-      case SymbolType.Class =>
-        Some(ClassInspectResult(path, members, constructors))
-      case SymbolType.Object => Some(ObjectInspectResult(path, members))
-      case SymbolType.Trait => Some(TraitInspectResult(path, members))
-      case SymbolType.Method | SymbolType.Function | SymbolType.Constructor
-          if provideMethodSignatures =>
-        Some(
-          MethodInspectResult(
-            path = path,
-            returnType = result.resultType(),
-            parameters = result.paramss().asScala.toList.map {
-              case paramList if paramList.isType() == java.lang.Boolean.TRUE =>
-                TypedParamList(paramList.params().asScala.toList)
-              case paramList =>
-                TermParamList(
-                  paramList.params().asScala.toList,
-                  paramList.implicitOrUsingKeyword(),
-                )
-
-            },
-            visibility = result.visibility(),
-            symbolType = kind,
-          )
-        )
-      case SymbolType.Method | SymbolType.Function | SymbolType.Constructor =>
-        Some(
-          ShortMethodInspectResult(
-            path = path,
-            symbolType = kind,
-          )
-        )
-      case _ => None
+    def isInteresting(completion: CompletionItem): Boolean = {
+      !QueryEngine.uninterestingCompletions(completion.getLabel())
     }
+
+    def isDeprecated(completion: CompletionItem): Boolean = {
+      Option(completion.getTags.asScala)
+        .getOrElse(Nil)
+        .contains(CompletionItemTag.Deprecated)
+    }
+
+    compilers
+      .completions(
+        buildTarget,
+        makeCompilerOffsetParams(symbol, forSignature = false),
+      )
+      .map { completionList =>
+        completionList
+          .getItems()
+          .asScala
+          .collect {
+            case completion if isInteresting(completion) && !isDeprecated(completion) =>
+              completion.getLabel()
+          }
+          .toList
+      }
+  }
+
+  private def getSignatures(
+      symbol: SymbolSearchResult,
+      buildTarget: BuildTargetIdentifier,
+  ): Future[List[String]] = {
+    compilers
+      .signatureHelp(
+        buildTarget,
+        makeCompilerOffsetParams(symbol, forSignature = true),
+      )
+      .map {
+        _.getSignatures().asScala.map(_.getLabel()).toList
+      }
+  }
+
+  private def makeCompilerOffsetParams(symbol: SymbolSearchResult, forSignature: Boolean) = {
+    val lastTypeIndx =
+      (if (forSignature) symbol.symbol.stripSuffix("#") else symbol.symbol).lastIndexOf('#')
+    val completionText =
+      if (lastTypeIndx == -1) {symbol.path}
+      else {
+        val memberPart =
+          if(symbol.symbol.length() == lastTypeIndx + 1) ""
+          else "." ++ symbol.path.substring(lastTypeIndx + 1)
+        val classMemberPart = symbol.symbol.substring(0, lastTypeIndx).replace('/', '.').replace('$', '.')
+        s"???.asInstanceOf[$classMemberPart]$memberPart"
+      }
+
+    val completionOrSignature =
+      if (forSignature) {
+        if(symbol.symbol.endsWith("#")) s"new $completionText()"
+        else s"$completionText()"
+      } else s"$completionText."
+
+    val randm = Random.nextLong()
+    val withWrapper = s"object `mcp-$randm`{ $completionOrSignature }"
+    CompilerOffsetParams(
+      URI.create(s"mcp-$randm.scala"),
+      withWrapper,
+      withWrapper.length() - (if(forSignature) 3 else 2),
+      EmptyCancelToken,
+    )
   }
 
   /**
@@ -264,41 +314,34 @@ sealed trait SymbolInspectResult {
 }
 
 sealed trait TemplateInspectResult extends SymbolInspectResult {
-  def members: List[SymbolInspectResult]
+  def members: List[String]
 }
 
 case class ObjectInspectResult(
     override val path: String,
-    override val members: List[SymbolInspectResult],
+    override val members: List[String],
 ) extends TemplateInspectResult {
   override val symbolType: SymbolType = SymbolType.Object
 }
 
 case class TraitInspectResult(
     override val path: String,
-    override val members: List[SymbolInspectResult],
+    override val members: List[String],
 ) extends TemplateInspectResult {
   override val symbolType: SymbolType = SymbolType.Trait
 }
 
 case class ClassInspectResult(
     override val path: String,
-    override val members: List[SymbolInspectResult],
-    val constructors: List[MethodInspectResult],
+    override val members: List[String],
+    val constructors: List[String],
 ) extends TemplateInspectResult {
   override val symbolType: SymbolType = SymbolType.Class
 }
 
 case class MethodInspectResult(
     override val path: String,
-    returnType: String,
-    parameters: List[ParamList],
-    visibility: String,
-    override val symbolType: SymbolType,
-) extends SymbolInspectResult
-
-case class ShortMethodInspectResult(
-    override val path: String,
+    signatures: List[String],
     override val symbolType: SymbolType,
 ) extends SymbolInspectResult
 
@@ -308,7 +351,7 @@ case class TermParamList(params: List[String], prefix: String) extends ParamList
 
 case class PackageInspectResult(
     override val path: String,
-    override val members: List[SymbolInspectResult],
+    override val members: List[String],
 ) extends TemplateInspectResult {
   override val symbolType: SymbolType = SymbolType.Package
 }
@@ -381,4 +424,12 @@ object QueryEngine {
   val emptyParentsSymbols: ParentSymbols = new ParentSymbols {
     override def parents(): ju.List[String] = Nil.asJava
   }
+
+  val uninterestingCompletions = Set(
+    "asInstanceOf[T0]: T0", "equals(x$1: Object): Boolean",
+    "getClass(): Class[_ <: Object]", "hashCode(): Int",
+    "isInstanceOf[T0]: Boolean", "synchronized[T0](x$1: T0): T0",
+    "toString(): String",
+    "+(other: String): String"
+  )
 }

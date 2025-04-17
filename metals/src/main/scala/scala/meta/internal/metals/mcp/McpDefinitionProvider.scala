@@ -22,17 +22,30 @@ class McpDefinitionProvider(index: GlobalSymbolIndex) {
       case pkgParts => pkgParts.mkString("", "/", "/")
     }
     val names = parts.dropWhile(_.charAt(0).isLower).toList
-    (for {
-      toplevel <- names.headOption
-    } yield {
-      val symbolsBuffer = ListBuffer.empty[SymbolSearchResult]
-      forEachDefinition(pkg, toplevel, includeMembers = true){ sym =>
-        if(sym.path == fqcn) {
-          symbolsBuffer += sym
+
+    val memberResult =
+      for {
+        toplevel <- names.headOption
+      } yield {
+        val symbolsBuffer = ListBuffer.empty[SymbolSearchResult]
+        forEachDefinition(pkg, toplevel, includeMembers = true) { sym =>
+          if (sym.path == fqcn) {
+            symbolsBuffer += sym
+          }
         }
+        symbolsBuffer.toList
       }
-      symbolsBuffer.toList
-    }).getOrElse(Nil)
+
+    memberResult.getOrElse(
+      List(
+        SymbolSearchResult(
+          name = fqcn.split('.').lastOption.getOrElse(fqcn),
+          path = fqcn,
+          symbolType = SymbolType.Package,
+          symbol = pkg,
+        )
+      )
+    )
   }
 
   def forEachDefinition(
@@ -58,7 +71,7 @@ class McpDefinitionProvider(index: GlobalSymbolIndex) {
             name = semanticdbDefn.info.displayName,
             path = fqcn,
             symbolType = kind,
-            symbol = semanticdbDefn.info.symbol
+            symbol = semanticdbDefn.info.symbol,
           )
           f(searchResult)
         }(EmptyReportContext)
