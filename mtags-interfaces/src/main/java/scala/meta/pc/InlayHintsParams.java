@@ -37,6 +37,13 @@ public interface InlayHintsParams extends RangeParams {
   boolean implicitConversions();
 
   /**
+   * Response should contain decorations for named parameters.
+   */
+  default boolean namedParameters(){
+    return false;
+  }
+
+  /**
    * Response should contain decorations in pattern matches.
    */
   default boolean hintsInPatternMatch() {
