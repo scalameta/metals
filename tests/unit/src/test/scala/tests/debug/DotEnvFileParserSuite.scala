@@ -11,6 +11,10 @@ class DotEnvFileParserSuite extends BaseSuite {
     assertDiffEqual(parse("KEY="), Map("KEY" -> ""))
   }
 
+  test("parse empty values and do not spill over to next line") {
+    assertDiffEqual(parse("KEY=\nKEY2=value"), Map("KEY" -> "", "KEY2" -> "value"))
+  }
+
   test("parse values separated by :") {
     assertDiffEqual(parse("KEY:value"), keyValue)
   }
@@ -81,11 +85,8 @@ class DotEnvFileParserSuite extends BaseSuite {
     assertDiffEqual(parse(" \nKEY=value"), keyValue)
   }
 
-  test("allow # and spaces in unquoted values") {
-    assertDiffEqual(
-      parse("KEY=v a l u e # not a comment"),
-      Map("KEY" -> "v a l u e # not a comment"),
-    )
+  test("ignore inline comments after unquoted values") {
+    assertDiffEqual(parse("KEY=value # comment"), keyValue)
   }
 
   test("ignore inline comments after single quoted values") {
