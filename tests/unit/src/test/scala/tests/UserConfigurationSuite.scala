@@ -330,6 +330,7 @@ class UserConfigurationSuite extends BaseSuite {
           |  "verboseCompilation": true,
           |  "worksheetCancelTimeout": 10,
           |  "worksheetScreenWidth": 140,
+          |  "enableBestEffort": false,
           |  "scalafmtConfigPath": "$fakePathString",
           |  "javaHome": "/fake/home"
           |}
