@@ -6,6 +6,7 @@ import scala.util.Try
 import scala.meta.Dialect
 import scala.meta.dialects._
 import scala.meta.internal.builds.BazelBuildTool
+import scala.meta.internal.builds.MezelBuildTool
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.semver.SemVer
@@ -77,6 +78,7 @@ case class ScalaTarget(
   private def semanticDbEnabledAlternatively = bspConnection.exists {
     buildServer =>
       buildServer.name == BazelBuildTool.bspName ||
+      buildServer.name == MezelBuildTool.name ||
       buildServer.name == MillBuildTool.bspName &&
       SemVer.isCompatibleVersion(
         MillBuildTool.scalaSemanticDbSupport,

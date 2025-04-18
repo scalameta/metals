@@ -435,6 +435,13 @@ final class FileDecoderProvider(
             buildMetadata <- findBuildTargetMetadata(path).mapLeft(
               DecoderResponse.failed(requestedURI, _)
             )
+            _ <-
+              if (buildMetadata.classDir.exists) Right(())
+              else
+                Left(
+                  DecoderResponse
+                    .failed(requestedURI, "Class directory doesn't exist")
+                )
           } yield {
             val pathToResource =
               if (buildMetadata.classDir.isJar) {

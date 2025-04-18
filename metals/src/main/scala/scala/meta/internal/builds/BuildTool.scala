@@ -43,8 +43,6 @@ trait BuildTool {
 
   def projectRoot: AbsolutePath
 
-  val forcesBuildServer = false
-
   val isBloopInstallProvider = false
 
   /**
@@ -59,7 +57,11 @@ trait BuildTool {
 
   def isBspGenerated(workspace: AbsolutePath): Boolean =
     possibleBuildServerNames
-      .map(name => workspace.resolve(Directories.bsp).resolve(s"$name.json"))
+      .map(name =>
+        workspace
+          .resolve(Directories.bsp)
+          .resolve(s"${name.toLowerCase()}.json")
+      )
       .exists(_.isFile)
 }
 

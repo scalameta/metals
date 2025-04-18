@@ -52,8 +52,6 @@ case class BazelBuildTool(
 
   override def executableName = BazelBuildTool.name
 
-  override val forcesBuildServer = true
-
   override def buildServerName: String = BazelBuildTool.bspName
 
   override def shouldRegenerateBspJson(
