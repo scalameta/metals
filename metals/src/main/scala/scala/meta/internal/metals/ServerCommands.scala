@@ -819,7 +819,7 @@ case class DebugUnresolvedAttachRemoteParams(
     port: Int,
     @Nullable buildTarget: String = null,
 ) {
-  def buildTargetOpt = Option(buildTarget)
+  def buildTargetOpt: Option[String] = Option(buildTarget)
 }
 
 case class DebugDiscoveryParams(

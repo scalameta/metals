@@ -1099,7 +1099,7 @@ class WorkspaceLspService(
             service.createDebugSession(someTarget.get.getId()),
           () =>
             failedRequest(
-              s"Could not find '${params.buildTarget}' build target"
+              s"Could not find '${Option(params.buildTarget).getOrElse("")}' build target"
             ),
         ).asJavaObject
       case ServerCommands.DiscoverAndRun(params) =>
