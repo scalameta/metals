@@ -44,6 +44,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * @param maxLogBackups The maximum number of backup log files.
  * @param metalsToIdleTime The time that needs to pass with no action to consider metals as idle.
  * @param pingInterval Interval in which we ping the build server.
+ * @param mcpEnabled Whether MCP is enabled.
  */
 final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
@@ -126,6 +127,10 @@ final case class MetalsServerConfig(
         .filter(_.forall(Character.isDigit(_)))
         .map(_.toInt)
         .getOrElse(3),
+    mcpEnabled: Boolean = MetalsServerConfig.binaryOption(
+      "metals.mcp",
+      default = false,
+    ),
 ) {
   override def toString: String =
     List[String](
@@ -150,6 +155,7 @@ final case class MetalsServerConfig(
       s"debug-server-start-timeout=$debugServerStartTimeout",
       s"enable-best-effort=$enableBestEffort",
       s"folding-range-minimum-span=$foldingRageMinimumSpan",
+      s"mcp=$mcpEnabled",
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {

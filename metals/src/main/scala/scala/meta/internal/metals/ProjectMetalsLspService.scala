@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
@@ -22,6 +23,9 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
+import scala.meta.internal.metals.mcp.McpTestRunner
+import scala.meta.internal.metals.mcp.MetalsMcpServer
+import scala.meta.internal.metals.mcp.QueryEngine
 import scala.meta.internal.metals.watcher.FileWatcherEvent
 import scala.meta.internal.metals.watcher.FileWatcherEvent.EventType
 import scala.meta.internal.metals.watcher.ProjectFileWatcher
@@ -199,6 +203,48 @@ class ProjectMetalsLspService(
     }
   }
 
+  private val isMcpServerRunning = new AtomicBoolean(false)
+
+  lazy val queryEngine =
+    new QueryEngine(
+      workspaceSymbols,
+      definitionIndex,
+      compilers,
+      symbolDocs,
+      buildTargets,
+      referencesProvider,
+    )
+
+  lazy val mcpTestRunner = new McpTestRunner(
+    debugProvider,
+    buildTargets,
+    folder,
+    () => userConfig,
+    definitionProvider,
+  )
+
+  def startMcpServer(): Future[Unit] =
+    Future {
+      if (!isMcpServerRunning.getAndSet(true))
+        register(
+          new MetalsMcpServer(
+            queryEngine,
+            folder,
+            compilations,
+            () => focusedDocument,
+            diagnostics,
+            buildTargets,
+            mcpTestRunner,
+            initializeParams.getClientInfo().getName(),
+            getVisibleName,
+            languageClient,
+            connectionProvider,
+          )
+        ).run()
+    }.recover { case e: Exception =>
+      scribe.error("Error starting MCP server", e)
+    }
+
   override def didChange(
       params: DidChangeTextDocumentParams
   ): CompletableFuture[Unit] = {
@@ -255,13 +301,19 @@ class ProjectMetalsLspService(
     } else Future.successful(())
   }
 
-  protected def onInitialized(): Future[Unit] =
-    connectionProvider.withWillGenerateBspConfig {
+  protected def onInitialized(): Future[Unit] = {
+    val starMcp =
+      if (serverInputs.initialServerConfig.mcpEnabled)
+        startMcpServer()
+      else Future.unit
+    val setUpScalaCli = connectionProvider.withWillGenerateBspConfig {
       for {
         _ <- maybeSetupScalaCli()
         _ <- connectionProvider.fullConnect()
       } yield ()
     }
+    Future.sequence(List(starMcp, setUpScalaCli)).ignoreValue
+  }
 
   def onBuildChangedUnbatched(
       paths: Seq[AbsolutePath]
