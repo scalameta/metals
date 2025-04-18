@@ -12,7 +12,10 @@ class DotEnvFileParserSuite extends BaseSuite {
   }
 
   test("parse empty values and do not spill over to next line") {
-    assertDiffEqual(parse("KEY=\nKEY2=value"), Map("KEY" -> "", "KEY2" -> "value"))
+    assertDiffEqual(
+      parse("KEY=\nKEY2=value"),
+      Map("KEY" -> "", "KEY2" -> "value"),
+    )
   }
 
   test("parse values separated by :") {
