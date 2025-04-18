@@ -4,6 +4,7 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
+import scala.meta.internal.metals.codeactions.ImportMissingSymbolQuickFix
 
 abstract class BaseNonCompilingLspSuite(name: String)
     extends BaseCompletionLspSuite(name) {
@@ -117,7 +118,7 @@ abstract class BaseNonCompilingLspSuite(name: String)
             s"""|${ImportMissingSymbol.title("UniqueObjectOther", "b")}
                 |${CreateNewSymbol.title("UniqueObjectOther")}
                 |""".stripMargin,
-            kind = Nil,
+            kind = List(ImportMissingSymbolQuickFix.kind),
           )
       // make sure that the now change UniqueObject is not suggested
       _ <- server.didChange("a/src/main/scala/a/A.scala") { _ =>
@@ -377,7 +378,7 @@ abstract class BaseNonCompilingLspSuite(name: String)
             s"""|${ImportMissingSymbol.title("UniqueObject", "b.W")}
                 |${CreateNewSymbol.title("UniqueObject")}
                 |""".stripMargin,
-            kind = Nil,
+            kind = List(ImportMissingSymbolQuickFix.kind),
           )
       _ <- assertCompletionEdit(
         "UniqueObject@@",
