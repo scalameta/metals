@@ -5,7 +5,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
-import scala.meta.internal.metals.codeactions.ImportMissingSymbolQuickFix
+import scala.meta.internal.metals.codeactions.SourceAddMissingImports
 import scala.meta.internal.metals.codeactions.SourceOrganizeImports
 import scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion
 import scala.meta.internal.mtags.CoursierComplete
@@ -129,6 +129,7 @@ class ScalaCliActionsSuite
         |}
         |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
+        |${SourceAddMissingImports.title}
         |${CreateNewSymbol.title("Future")}
         |""".stripMargin,
     s"""|//> using scala "${BuildInfo.scala213}"
@@ -139,7 +140,6 @@ class ScalaCliActionsSuite
         |  Future.successful(2)
         |}
         |""".stripMargin,
-    kind = List(ImportMissingSymbolQuickFix.kind),
     scalaCliOptions = List("--actions", "-S", scalaVersion),
     expectNoDiagnostics = false,
     fileName = "A.sc",
@@ -157,6 +157,7 @@ class ScalaCliActionsSuite
         |}
         |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
+        |${SourceAddMissingImports.title}
         |${CreateNewSymbol.title("Future")}
         |""".stripMargin,
     s"""|#!/usr/bin/env -S scala-cli shebang
@@ -169,7 +170,6 @@ class ScalaCliActionsSuite
         |  Future.successful(2)
         |}
         |""".stripMargin,
-    kind = List(ImportMissingSymbolQuickFix.kind),
     scalaCliOptions = List("--actions", "-S", scalaVersion),
     expectNoDiagnostics = false,
     fileName = "A.sc",
@@ -183,6 +183,7 @@ class ScalaCliActionsSuite
         |}
         |""".stripMargin,
     s"""|${ImportMissingSymbol.title("FiniteDuration", "scala.concurrent.duration")}
+        |${SourceAddMissingImports.title}
         |${CreateNewSymbol.title("FiniteDuration")}
         |""".stripMargin,
     s"""|//> using scala "${BuildInfo.scala213}"
@@ -191,7 +192,6 @@ class ScalaCliActionsSuite
         |   FiniteDuration
         |}
         |""".stripMargin,
-    kind = List(ImportMissingSymbolQuickFix.kind),
     scalaCliOptions = List("--actions", "-S", scalaVersion),
     expectNoDiagnostics = false,
     fileName = "A.scala",

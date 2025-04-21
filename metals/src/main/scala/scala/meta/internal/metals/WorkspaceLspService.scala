@@ -22,7 +22,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLspService
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.metals.codeactions.CustomCodeActionKind
 import scala.meta.internal.metals.config.StatusBarState
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.debug.DiscoveryFailures
@@ -1273,7 +1272,7 @@ class WorkspaceLspService(
             List(
               lsp4j.CodeActionKind.QuickFix,
               lsp4j.CodeActionKind.Refactor,
-              CustomCodeActionKind.SourceAddMissingImports,
+              lsp4j.CodeActionKind.Source,
               lsp4j.CodeActionKind.SourceOrganizeImports,
             ).asJava
           )

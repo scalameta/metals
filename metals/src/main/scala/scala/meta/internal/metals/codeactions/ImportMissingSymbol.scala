@@ -19,7 +19,7 @@ sealed abstract class ImportMissingSymbol(
     buildTargets: BuildTargets,
 ) extends CodeAction {
 
-  protected def title: String
+  protected def allSymbolsTitle: String
 
   protected def isScalaOrSbt(file: AbsolutePath): Boolean =
     Seq("scala", "sbt", "sc").contains(file.extension)
@@ -137,7 +137,7 @@ sealed abstract class ImportMissingSymbol(
 
         val allSymbols: l.CodeAction =
           CodeActionBuilder.build(
-            title = this.title,
+            title = this.allSymbolsTitle,
             kind = this.kind,
             diagnostics = diags,
             changes = List(uri.toAbsolutePath -> edits),
@@ -248,7 +248,8 @@ class ImportMissingSymbolQuickFix(
 ) extends ImportMissingSymbol(compilers, buildTargets) {
 
   override val kind: String = ImportMissingSymbolQuickFix.kind
-  override protected val title: String = ImportMissingSymbol.allSymbolsTitle
+  override protected val allSymbolsTitle: String =
+    ImportMissingSymbol.allSymbolsTitle
   override protected def isImportAllSourceAction: Boolean = false
 }
 
@@ -270,7 +271,7 @@ class SourceAddMissingImports(
 ) extends ImportMissingSymbol(compilers, buildTargets) {
 
   override val kind: String = SourceAddMissingImports.kind
-  override protected val title: String = SourceAddMissingImports.title
+  override protected val allSymbolsTitle: String = SourceAddMissingImports.title
   override protected def isImportAllSourceAction: Boolean = true
 
   /**
@@ -283,13 +284,14 @@ class SourceAddMissingImports(
     if (allActions.length > 1) {
       allActions.find(a => a.getTitle == SourceAddMissingImports.title).toSeq
     } else {
+      allActions.foreach(a=>a.setTitle(SourceAddMissingImports.title) )
       allActions
     }
   }
 }
 
 object SourceAddMissingImports {
-  final val kind: String = CustomCodeActionKind.SourceAddMissingImports
+  final val kind: String = l.CodeActionKind.Source
   final val title: String =
     "Add all missing imports that are unambiguous for the entire file"
 }

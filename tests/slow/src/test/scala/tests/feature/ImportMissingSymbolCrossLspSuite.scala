@@ -41,7 +41,7 @@ class ImportMissingSymbolCrossLspSuite
             |""".stripMargin,
         s"""|${ImportMissingSymbol.title("A", "example")}
             |${CreateNewSymbol.title("A")}""".stripMargin,
-        List(ImportMissingSymbolQuickFix.kind),
+        Nil,
       )
     } yield ()
   }
