@@ -284,7 +284,7 @@ class SourceAddMissingImports(
     if (allActions.length > 1) {
       allActions.find(a => a.getTitle == SourceAddMissingImports.title).toSeq
     } else {
-      allActions.foreach(a=>a.setTitle(SourceAddMissingImports.title) )
+      allActions.foreach(a => a.setTitle(SourceAddMissingImports.title))
       allActions
     }
   }
