@@ -5,6 +5,7 @@ import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbolQuickFix
 import scala.meta.internal.metals.codeactions.SourceAddMissingImports
+import scala.meta.internal.metals.codeactions.SourceOrganizeImports
 
 import org.eclipse.lsp4j.CodeActionKind
 
@@ -471,7 +472,8 @@ class ImportMissingSymbolLspSuite
        |  val i = Instant.now
        |}
        |""".stripMargin,
-    s"""|${ImportMissingSymbol.title("Instant", "java.time")}
+    s"""|${SourceAddMissingImports.title}
+        |${SourceOrganizeImports.title} (disabled)
         |""".stripMargin,
     """|package a
        |
@@ -494,6 +496,7 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     s"""|${SourceAddMissingImports.title}
+        |${SourceOrganizeImports.title} (disabled)
         |""".stripMargin,
     """|package a
        |
