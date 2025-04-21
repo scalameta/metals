@@ -230,12 +230,18 @@ object TestFrameworkUtils {
   val WeaverTestFramework: TestFramework = TestFramework(
     List("weaver.framework.CatsEffect")
   )
+
+  val ZioTestFramework: TestFramework = TestFramework(
+    List("zio.test.ZIOSuite")
+  )
+
   private lazy val supportedFrameworks = Set(
     TestFramework.JUnit,
     TestFramework.munit,
     TestFramework.ScalaTest,
     WeaverTestFramework,
     TestFramework.TestNG,
+    ZioTestFramework,
   )
 
   def from(framework: Option[String]): TestFramework = framework
@@ -245,6 +251,7 @@ object TestFrameworkUtils {
       case "ScalaTest" => TestFramework.ScalaTest
       case "weaver-cats-effect" => WeaverTestFramework
       case "TestNG" => TestFramework.TestNG
+      case x if x.contains("ZIO Test") => ZioTestFramework
       case _ => TestFramework(Nil)
     }
     .getOrElse(TestFramework(Nil))

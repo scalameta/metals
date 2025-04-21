@@ -814,7 +814,10 @@ class MetalsGlobal(
         if (defn.symbol.isPackageObject) defn.symbol.enclosingPackageClass.name
         else defn.name
       val start = defn.pos.point
-      val end = start + name.dropLocal.decoded.length()
+      val decoded = name.dropLocal.decoded
+      val hasBackticks = defn.pos.source.content.lift(start).contains('`')
+      val backtickLen = if (hasBackticks) 2 else 0
+      val end = start + decoded.length() + backtickLen
       Position.range(defn.pos.source, start, start, end)
     }
   }
