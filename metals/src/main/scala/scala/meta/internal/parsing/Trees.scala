@@ -1,6 +1,7 @@
 package scala.meta.internal.parsing
 
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
 import scala.reflect.ClassTag
 
 import scala.meta._
@@ -119,6 +120,41 @@ final class Trees(
       lastEnc <- loop(tree, pos)
     } yield lastEnc
 
+  }
+
+  /**
+   * Find all trees matching T that overlap with the specified range.
+   *
+   * Does not recurse into subtrees of a tree that itself matches.
+   *
+   * @param source    source to load the tree for
+   * @param lspRange  selection range
+   * @return found tree nodes of type T (in traversal order)
+   */
+  def findAllInRange[T <: Tree: ClassTag](
+      source: AbsolutePath,
+      lspRange: l.Range,
+  ): Seq[T] = {
+    get(source) match {
+      case None => Nil
+      case Some(root) =>
+        val matches = Seq.newBuilder[T]
+        val toVisit = mutable.Stack[Tree](root)
+        while (!toVisit.isEmpty) {
+
+          val tree = toVisit.pop()
+          if (lspRange.overlapsWith(tree.pos.toLsp)) {
+            tree match {
+              case t: T =>
+                matches += t
+              case other =>
+                // reverse to preserve traversal order
+                toVisit.pushAll(other.children.reverse)
+            }
+          }
+        }
+        matches.result()
+    }
   }
 
   /**

@@ -47,13 +47,7 @@ sealed abstract class ImportMissingSymbol(
     val uri = params.getTextDocument().getUri()
     val file = uri.toAbsolutePath
     lazy val isScala3 =
-      (for {
-        buildId <- buildTargets.inverseSources(file)
-        target <- buildTargets.scalaTarget(buildId)
-        isScala3 = ScalaVersions.isScala3Version(
-          target.scalaInfo.getScalaVersion()
-        )
-      } yield isScala3).getOrElse(false)
+      buildTargets.scalaVersion(file).exists(ScalaVersions.isScala3Version)
 
     def getChanges(codeAction: l.CodeAction): IterableOnce[l.TextEdit] =
       codeAction
@@ -304,7 +298,7 @@ class SourceAddMissingImports(
 }
 
 object SourceAddMissingImports {
-  final val kind: String = l.CodeActionKind.Source
+  final val kind: String = l.CodeActionKind.Source + ".addMissingImports"
   final val title: String =
     "Add all missing imports that are unambiguous for the entire file"
 }
