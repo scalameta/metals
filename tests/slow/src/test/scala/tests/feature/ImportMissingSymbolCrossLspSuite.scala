@@ -9,6 +9,7 @@ import scala.meta.internal.metals.{BuildInfo => V}
 
 import org.eclipse.lsp4j.CodeActionKind
 import tests.codeactions.BaseCodeActionLspSuite
+import scala.meta.internal.metals.codeactions.SourceAddMissingImports
 
 class ImportMissingSymbolCrossLspSuite
     extends BaseCodeActionLspSuite("importMissingSymbol-cross") {
@@ -40,6 +41,7 @@ class ImportMissingSymbolCrossLspSuite
             |class B(a: <<A>>)
             |""".stripMargin,
         s"""|${ImportMissingSymbol.title("A", "example")}
+            |${SourceAddMissingImports.title}
             |${CreateNewSymbol.title("A")}""".stripMargin,
         Nil,
       )
