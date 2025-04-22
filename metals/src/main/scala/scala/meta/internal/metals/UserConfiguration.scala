@@ -468,7 +468,7 @@ object UserConfiguration {
         "true",
         "Use best effort compilation for Scala 3.",
         """|When using Scala 3, use best effort compilation to improve Metals 
-           |correctness when the workspace doesn't yet compile properly.
+           |correctness when the workspace doesn't compile.
            |""".stripMargin,
       ),
     )
