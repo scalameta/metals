@@ -5,6 +5,7 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.ScalacDiagnostic
@@ -36,6 +37,7 @@ sealed abstract class ImportMissingSymbol(
   }
 
   protected def isImportAllSourceAction: Boolean
+  protected def getDiagnostics(params: l.CodeActionParams): Seq[l.Diagnostic]
 
   override def contribute(
       params: l.CodeActionParams,
@@ -151,10 +153,7 @@ sealed abstract class ImportMissingSymbol(
 
     Future
       .sequence(
-        params
-          .getContext()
-          .getDiagnostics()
-          .asScala
+        getDiagnostics(params)
           .collect {
             case diag @ ScalacDiagnostic.SymbolNotFound(name)
                 if this.isImportAllSourceAction || params
@@ -247,6 +246,11 @@ class ImportMissingSymbolQuickFix(
     buildTargets: BuildTargets,
 ) extends ImportMissingSymbol(compilers, buildTargets) {
 
+  override protected def getDiagnostics(
+      params: l.CodeActionParams
+  ): Seq[l.Diagnostic] =
+    params.getContext().getDiagnostics().asScala.toSeq
+
   override val kind: String = ImportMissingSymbolQuickFix.kind
   override protected val allSymbolsTitle: String =
     ImportMissingSymbol.allSymbolsTitle
@@ -268,7 +272,16 @@ object ImportMissingSymbolQuickFix {
 class SourceAddMissingImports(
     compilers: Compilers,
     buildTargets: BuildTargets,
+    diagnostics: Diagnostics,
 ) extends ImportMissingSymbol(compilers, buildTargets) {
+
+  override protected def getDiagnostics(
+      params: l.CodeActionParams
+  ): Seq[l.Diagnostic] = {
+    val uri = params.getTextDocument().getUri()
+    val file = uri.toAbsolutePath
+    this.diagnostics.getFileDiagnostics(file).toSeq
+  }
 
   override val kind: String = SourceAddMissingImports.kind
   override protected val allSymbolsTitle: String = SourceAddMissingImports.title
