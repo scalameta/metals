@@ -5,6 +5,9 @@ import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ExtractMethodCodeAction
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbolQuickFix
+import scala.meta.internal.metals.codeactions.SourceAddMissingImports
+
+import org.eclipse.lsp4j.CodeActionKind
 
 class ImportMissingSymbolLspSuite
     extends BaseCodeActionLspSuite("importMissingSymbol") {
@@ -435,6 +438,33 @@ class ImportMissingSymbolLspSuite
         |""".stripMargin,
     expectNoDiagnostics = false,
     filterAction = _.getTitle() == ImportMissingSymbol.title("A", "example.a"),
+    kind = List(ImportMissingSymbolQuickFix.kind),
+  )
+
+  // ---------------------------------------------------------------------------
+  // Tests for SourceAddMissingImports (source.addMissingImports)
+  // These tests verify the auto-import behavior that only imports unambiguous symbols
+  // ---------------------------------------------------------------------------
+
+  check(
+    "source-add-missing-imports-single-unambiguous",
+    """|package a
+       |
+       |object <<A>> {
+       |  val i = Instant.now
+       |}
+       |""".stripMargin,
+    s"""|${SourceAddMissingImports.title}
+        |""".stripMargin,
+    """|package a
+       |
+       |import java.time.Instant
+       |
+       |object A {
+       |  val i = Instant.now
+       |}
+       |""".stripMargin,
+    kind = List(SourceAddMissingImports.kind),
   )
 
   check(
@@ -448,10 +478,7 @@ class ImportMissingSymbolLspSuite
        |  val test = <<Macros.createCodecIgnoreNone[Test]()>> // trigger code action on this line
        |}
        |""".stripMargin,
-    s"""|${ImportMissingSymbol.title("DocumentCodecProvider", "org.bson.codecs")}
-        |${ImportMissingSymbol.title("DocumentCodecProvider", "org.mongodb.scala.bson.codecs")}
-        |${CreateNewSymbol.title("DocumentCodecProvider")}
-        |${ExtractMethodCodeAction.title("object `A`")}
+    s"""|${SourceAddMissingImports.title}
         |""".stripMargin,
     """|package a
        |import org.mongodb.scala.bson.codecs.Macros
