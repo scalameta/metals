@@ -576,7 +576,7 @@ object Embedded {
         ext <- pathExts
         app0 = if (endsWithCaseInsensitive(app, ext)) app else app + ext
         path = Paths.get(dir).resolve(app0)
-        if Files.isExecutable(path)
+        if Files.isExecutable(path) && !Files.isDirectory(path)
       } yield path
       matches.toStream.headOption
     }
