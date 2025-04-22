@@ -15,7 +15,9 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
     for {
       _ <- initialize(
         s"""
-           |/src/main/scala/com/test/TestClass.scala
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/test/TestClass.scala
            |package com.test
            |
            |class TestClass {
@@ -34,7 +36,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |  def abstractMethod(x: Double): Double
            |}
            |
-           |/src/main/scala/com/test/matching/MatchingUtil.scala
+           |/a/src/main/scala/com/test/matching/MatchingUtil.scala
            |package com.test.matching
            |
            |object MatchingUtil {
@@ -43,7 +45,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |  }
            |}
            |
-           |/src/main/scala/com/test/NonMatching.scala
+           |/a/src/main/scala/com/test/NonMatching.scala
            |package com.test
            |
            |// This class should NOT match "test" queries but should match "matching" queries
@@ -57,7 +59,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |  def helperFunction(): Unit = ()
            |}
            |
-           |/src/main/scala/com/other/OtherPackage.scala
+           |/a/src/main/scala/com/other/OtherPackage.scala
            |package com.other
            |
            |// This should NOT match "matching" queries or "test" queries
@@ -66,9 +68,9 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |}
            |""".stripMargin
       )
-      _ <- server.didOpen("src/main/scala/com/test/TestClass.scala")
+      _ <- server.didOpen("a/src/main/scala/com/test/TestClass.scala")
       _ = assertNoDiagnostics()
-      path = server.toPath("src/main/scala/com/test/TestClass.scala")
+      path = server.toPath("a/src/main/scala/com/test/TestClass.scala")
       // Test searching for "test" - should find packages, classes, objects, trait
       result <- server.headServer.queryEngine.globSearch(
         "test",
@@ -149,7 +151,9 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
     val fut = for {
       _ <- initialize(
         s"""
-           |/src/main/scala/com/test/CaseSensitivity.scala
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/test/CaseSensitivity.scala
            |package com.test
            |
            |class CamelCaseClass {
@@ -178,9 +182,9 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |}
            |""".stripMargin
       )
-      _ <- server.didOpen("src/main/scala/com/test/CaseSensitivity.scala")
+      _ <- server.didOpen("a/src/main/scala/com/test/CaseSensitivity.scala")
       _ = assertNoDiagnostics()
-      path = server.toPath("src/main/scala/com/test/CaseSensitivity.scala")
+      path = server.toPath("a/src/main/scala/com/test/CaseSensitivity.scala")
 
       // Case insensitive search for "camel"
       camel <- server.headServer.queryEngine.globSearch(
@@ -232,34 +236,36 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
     for {
       _ <- initialize(
         s"""
-           |/src/main/scala/com/test/nested/package1/Class1.scala
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/test/nested/package1/Class1.scala
            |package com.test.nested.package1
            |
            |class Class1
            |
-           |/src/main/scala/com/test/nested/package2/Class2.scala
+           |/a/src/main/scala/com/test/nested/package2/Class2.scala
            |package com.test.nested.package2
            |
            |class Class2
            |
-           |/src/main/scala/com/example/ExampleClass.scala
+           |/a/src/main/scala/com/example/ExampleClass.scala
            |package com.example
            |
            |class ExampleClass
            |
-           |/src/main/scala/com/test/pkgtools/NotAPackage.scala
+           |/a/src/main/scala/com/test/pkgtools/NotAPackage.scala
            |package com.test.pkgtools
            |
            |// Should NOT match "package" query
            |class NotAPackage
            |
-           |/src/main/scala/org/test/DistantTest.scala
+           |/a/src/main/scala/org/test/DistantTest.scala
            |package org.test
            |
            |// Should NOT match "com.test" query
            |class DistantTest
            |
-           |/src/main/scala/com/test/elements/NotNested.scala
+           |/a/src/main/scala/com/test/elements/NotNested.scala
            |package com.test.elements
            |
            |// Should NOT match "nested" query
@@ -267,11 +273,11 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |""".stripMargin
       )
       _ <- server.didOpen(
-        "src/main/scala/com/test/nested/package1/Class1.scala"
+        "a/src/main/scala/com/test/nested/package1/Class1.scala"
       )
       _ = assertNoDiagnostics()
       path = server.toPath(
-        "src/main/scala/com/test/nested/package1/Class1.scala"
+        "a/src/main/scala/com/test/nested/package1/Class1.scala"
       )
 
       // Search for all packages
