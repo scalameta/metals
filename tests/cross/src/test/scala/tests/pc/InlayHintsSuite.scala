@@ -1118,4 +1118,23 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |}
        |""".stripMargin
   )
+
+  check(
+    "by-name-default-arguments",
+    """|object Main{
+       |  def foo(a: => Int = 1 + 2) = ()
+       |
+       |  foo()
+       |  foo(4 + 2)
+       |}
+       |""".stripMargin,
+    """|package `by-name-default-arguments`
+       |object Main{
+       |  def foo(a: => Int = 1 + 2)/*: Unit<<scala/Unit#>>*/ = ()
+       |
+       |  foo()
+       |  foo(/*=> */4 + 2)
+       |}
+       |""".stripMargin
+  )
 }
