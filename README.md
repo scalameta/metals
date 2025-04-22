@@ -16,6 +16,9 @@ See the website: https://scalameta.org/metals/
 
 ## Contributing
 
+We organize regular online events for anyone interested in contributing to Scala tooling, everyone is invited to join us!
+You can find more information on the [Scala Tooling Spree](https://scalameta.org/scala-tooling-spree/) page.
+
 See the contributing guide:
 https://scalameta.org/metals/docs/contributors/getting-started.html
 
