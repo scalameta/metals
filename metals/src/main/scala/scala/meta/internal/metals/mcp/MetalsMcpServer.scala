@@ -181,14 +181,16 @@ class MetalsMcpServer(
 
     if (editor.isDefined && !configPort.isDefined) {
       McpConfig.writeConfig(port, projectName, projectPath, editor.get)
-    } else {
-      languageClient.showMessage(
-        new MessageParams(
-          MessageType.Info,
-          s"Metals MCP server started on port: $port. Refresh connection if needed.",
-        )
-      )
     }
+
+    languageClient.showMessage(
+      new MessageParams(
+        MessageType.Info,
+        s"Metals MCP server started on port: $port. Refresh connection if needed.",
+      )
+    )
+
+    scribe.info(s"Metals MCP server started on port: $port.")
 
     cancelable.add(() => undertowServer.stop())
   }
