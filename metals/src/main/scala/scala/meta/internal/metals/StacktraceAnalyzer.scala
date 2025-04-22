@@ -76,7 +76,7 @@ class StacktraceAnalyzer(
     for {
       symbol <- symbolFromLine(line)
       location <- toToplevelSymbol(symbol)
-        .collectFirst(Function.unlift(findLocationForSymbol))
+        .collectFirst(scala.Function.unlift(findLocationForSymbol))
     } yield trySetLineFromStacktrace(location, line)
 
   }

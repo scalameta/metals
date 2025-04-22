@@ -79,6 +79,7 @@ class MtagsScala2Suite
           "PatternMatching",
           "ImplicitConversions",
           "MacroAnnotation",
+          "SQLQueries"
         ).exists { name => file.file.toNIO.endsWith(s"$name.scala") }
       },
     )
