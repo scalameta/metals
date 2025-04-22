@@ -632,7 +632,7 @@ class ProjectMetalsLspService(
     val old = userConfig
     super.onUserConfigUpdate(newConfig)
     val startMcp =
-      if (newConfig.startMcpServer && newConfig.startMcpServer != userConfig.startMcpServer) startMcpServer()
+      if (newConfig.startMcpServer && newConfig.startMcpServer != old.startMcpServer) startMcpServer()
       else Future.unit
 
     val slowConnect =
