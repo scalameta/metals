@@ -118,18 +118,87 @@ object SemanticTokensProvider {
       }
       val buffer = ListBuffer.empty[Integer]
 
-      var delta = Line(0, 0)
-      var nodesIterator: List[Node] = nodes
-      for (tk <- tokens) {
-        val (toAdd, nodesIterator0, delta0) =
-          handleToken(tk, nodesIterator, isScala3, delta)
-        nodesIterator = nodesIterator0
-        buffer.addAll(
-          toAdd
-        )
-        delta = delta0
+      tokens.foldLeft((Line(0, 0), nodes, false, Option.empty[SQLToken])) {
+        case ((delta, nodesIterator, isSQLInterpolator, lastSQLToken), tk) =>
+          val (
+            (toAdd, nodesIterator0, delta0),
+            isSQLInterpolator0,
+            lastSQLToken0,
+          ) =
+            handleTokenWithSQLSupport(
+              tk,
+              nodesIterator,
+              isScala3,
+              delta,
+              isSQLInterpolator,
+              lastSQLToken,
+            )
+          buffer.addAll(
+            toAdd
+          )
+          (delta0, nodesIterator0, isSQLInterpolator0, lastSQLToken0)
       }
       buffer.toList
+    }
+  }
+
+  private def handleTokenWithSQLSupport(
+      tk: scala.meta.tokens.Token,
+      nodesIterator: List[Node],
+      isScala3: Boolean,
+      delta: Line,
+      isSQLInterpolator: Boolean,
+      lastSQLToken: Option[SQLToken],
+  ): ((List[Integer], List[Node], Line), Boolean, Option[SQLToken]) = tk match {
+    case Token.Interpolation.Id("sql") | Token.Interpolation.Id("fr") =>
+      (handleToken(tk, nodesIterator, isScala3, delta), true, None)
+    case Token.Interpolation.Part(value) if isSQLInterpolator =>
+      val buffer = ListBuffer.empty[Integer]
+      val sqlTokens = SQLTokenizer.tokenize(value, lastSQLToken)
+
+      val (delta0, lastToken0) =
+        sqlTokens.foldLeft((delta, Option.empty[SQLToken])) {
+          case ((delta, _), tk) =>
+            val (toAdd, delta0) = handleSQLToken(tk, delta)
+            buffer.addAll(toAdd)
+            (delta0, Some(tk))
+        }
+      ((buffer.toList, nodesIterator, delta0), isSQLInterpolator, lastToken0)
+    case Token.Interpolation.End() if isSQLInterpolator =>
+      (handleToken(tk, nodesIterator, isScala3, delta), false, None)
+    case _ =>
+      (
+        handleToken(tk, nodesIterator, isScala3, delta),
+        isSQLInterpolator,
+        lastSQLToken,
+      )
+  }
+
+  private def handleSQLToken(
+      tk: SQLToken,
+      delta: Line,
+  ): (List[Integer], Line) = {
+    def emitToken(token: String, tokenTypeId: Int) = convertTokensToIntList(
+      token,
+      delta,
+      tokenTypeId,
+    )
+
+    tk match {
+      case Keyword(value) =>
+        emitToken(value, getTypeId(SemanticTokenTypes.Keyword))
+      case Identifier(value) =>
+        emitToken(value, getTypeId(SemanticTokenTypes.Variable))
+      case Function(value) =>
+        emitToken(value, getTypeId(SemanticTokenTypes.Function))
+      case Number(value) =>
+        emitToken(value, getTypeId(SemanticTokenTypes.Number))
+      case Operator(value) =>
+        emitToken(value, getTypeId(SemanticTokenTypes.Operator))
+      case Literal(value, _) =>
+        emitToken(value, getTypeId(SemanticTokenTypes.String))
+      case Whitespace(value) => emitToken(value, -1)
+      case Other(value) => emitToken(value, -1)
     }
   }
 
