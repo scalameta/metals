@@ -760,7 +760,7 @@ object UserConfiguration {
           autoImportBuilds,
           scalaCliLauncher,
           defaultBspToBuildTool,
-          startMcpServer
+          startMcpServer,
         )
       )
     } else {

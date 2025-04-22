@@ -57,14 +57,22 @@ object McpConfig {
     gson.toJson(config)
   }
 
-  def readPort(projectPath: AbsolutePath, projectName: String, editor: Editor): Option[Int] = {
+  def readPort(
+      projectPath: AbsolutePath,
+      projectName: String,
+      editor: Editor,
+  ): Option[Int] = {
     val configFile = projectPath.resolve(s"${editor.settingsPath}mcp.json")
     if (configFile.exists)
       getPort(configFile.readText, projectName, editor)
     else None
   }
 
-  def getPort(configInput: String, projectName: String, editor: Editor = CursorEditor): Option[Int] = {
+  def getPort(
+      configInput: String,
+      projectName: String,
+      editor: Editor = CursorEditor,
+  ): Option[Int] = {
     for {
       config <- Try(
         JsonParser.parseString(configInput).getAsJsonObject()
@@ -79,27 +87,29 @@ object McpConfig {
 }
 
 case class Editor(
-  name: String,
-  settingsPath: String,
-  serverField: String,
-  additionalProperties: List[(String, String)],
+    name: String,
+    settingsPath: String,
+    serverField: String,
+    additionalProperties: List[(String, String)],
 )
 
-object VSCodeEditor extends Editor(
-  name = "Visual Studio Code",
-  settingsPath = ".vscode/",
-  serverField = "servers",
-  additionalProperties = List(
-    "type" -> "sse",
-  ),
-)
+object VSCodeEditor
+    extends Editor(
+      name = "Visual Studio Code",
+      settingsPath = ".vscode/",
+      serverField = "servers",
+      additionalProperties = List(
+        "type" -> "sse"
+      ),
+    )
 
-object CursorEditor extends Editor(
-  name = "Cursor",
-  settingsPath = ".cursor/",
-  serverField = "mcpServers",
-  additionalProperties = Nil,
-)
+object CursorEditor
+    extends Editor(
+      name = "Cursor",
+      settingsPath = ".cursor/",
+      serverField = "mcpServers",
+      additionalProperties = Nil,
+    )
 
 object Editor {
   val allEditors: List[Editor] = List(VSCodeEditor, CursorEditor)

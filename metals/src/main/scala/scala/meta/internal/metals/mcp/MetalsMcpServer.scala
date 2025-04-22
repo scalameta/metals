@@ -167,7 +167,8 @@ class MetalsMcpServer(
     deployment.deploy()
 
     val editor = Editor.allEditors.find(_.name == editorName)
-    val configPort = editor.flatMap(e => McpConfig.readPort(projectPath, projectName, e))
+    val configPort =
+      editor.flatMap(e => McpConfig.readPort(projectPath, projectName, e))
     val undertowServer = Undertow
       .builder()
       .addHttpListener(configPort.getOrElse(0), "localhost")

@@ -22,7 +22,8 @@ class McpConfigSuite extends BaseSuite {
       editor: Editor = CursorEditor,
   ): Unit = {
     test(name) {
-      val obtained = McpConfig.createConfig(inputConfig, port, projectName, editor)
+      val obtained =
+        McpConfig.createConfig(inputConfig, port, projectName, editor)
       assertNoDiff(obtained, expected)
     }
   }

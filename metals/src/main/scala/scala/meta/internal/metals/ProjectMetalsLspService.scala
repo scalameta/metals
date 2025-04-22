@@ -304,7 +304,9 @@ class ProjectMetalsLspService(
   protected def onInitialized(): Future[Unit] = {
     val starMcp =
       userConfigPromise.future.flatMap { _ =>
-        if(userConfig.startMcpServer || serverInputs.initialServerConfig.mcpEnabled)
+        if (
+          userConfig.startMcpServer || serverInputs.initialServerConfig.mcpEnabled
+        )
           startMcpServer()
         else Future.unit
       }
@@ -632,7 +634,9 @@ class ProjectMetalsLspService(
     val old = userConfig
     super.onUserConfigUpdate(newConfig)
     val startMcp =
-      if (newConfig.startMcpServer && newConfig.startMcpServer != old.startMcpServer) startMcpServer()
+      if (
+        newConfig.startMcpServer && newConfig.startMcpServer != old.startMcpServer
+      ) startMcpServer()
       else Future.unit
 
     val slowConnect =
