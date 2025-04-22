@@ -436,6 +436,7 @@ final class PcInlayHintsProvider(
                 .zip(params)
                 .collect { case (tree, param) if param.isByNameParam => tree }
                 .map(tree => tree.pos)
+                .filter(_.isRange) // filter out default arguments
             })
           case _ => None
         }
