@@ -377,6 +377,7 @@ abstract class BaseNonCompilingLspSuite(name: String)
             "a/src/main/scala/a/A.scala",
             newText,
             s"""|${ImportMissingSymbol.title("UniqueObject", "b.W")}
+                |${SourceAddMissingImports.title}
                 |${CreateNewSymbol.title("UniqueObject")}
                 |""".stripMargin,
             kind = Nil,
