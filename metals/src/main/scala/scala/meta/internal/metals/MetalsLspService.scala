@@ -1387,6 +1387,28 @@ abstract class MetalsLspService(
       .asJavaObject
   }
 
+  def copyFQNOfSymbol(
+      params: l.TextDocumentPositionParams
+  ): CompletableFuture[Object] = {
+    Future.successful {
+      val path = params.getTextDocument.getUri.toAbsolutePath
+      val dialect = scalaVersionSelector.getDialect(path)
+      val pos = params.getPosition
+      Mtags
+        .index(path, dialect)
+        .occurrences
+        .filter(_.range.exists(_.encloses(pos)))
+        .map(_.symbol.symbolToFullQualifiedName)
+        .headOption
+    }.asJavaObject
+    // TODO(kπ) for methods with overloads, we need types of arguments, so need to call pc
+    // CancelTokens.future { token =>
+    //   compilers
+    //     .fqn(params, token)
+    //     .map(_.orNull)
+    // }
+  }
+
   def analyzeStackTrace(content: String): Option[ExecuteCommandParams] =
     stacktraceAnalyzer.analyzeCommand(content)
 

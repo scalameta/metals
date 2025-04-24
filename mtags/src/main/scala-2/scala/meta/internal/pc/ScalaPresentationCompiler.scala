@@ -486,6 +486,19 @@ case class ScalaPresentationCompiler(
     }
   }
 
+  override def fullyQualifiedName(
+      params: OffsetParams
+  ): CompletableFuture[Optional[String]] = {
+    compilerAccess.withNonInterruptableCompiler(
+      Optional.empty[String](),
+      params.token
+    ) { pc =>
+      new PcDefinitionProvider(pc.compiler(params), params)
+        .fullyQualifiedName()
+        .asJava
+    }(emptyQueryContext)
+  }
+
   def definition(params: OffsetParams): CompletableFuture[DefinitionResult] = {
     compilerAccess.withNonInterruptableCompiler(
       DefinitionResultImpl.empty,

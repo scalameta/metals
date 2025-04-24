@@ -619,6 +619,18 @@ object ServerCommands {
     "[uri], the uri of the worksheet that you'd like to copy the contents of.",
   )
 
+  val CopyFQNOfSymbol = new ParametrizedCommand[TextDocumentPositionParams](
+    "copy-fqn",
+    "Copy fully qualified name of symbol",
+    s"""|Copy the fully qualified name of a symbol to the clipboard.
+        |
+        |Note: This command returns the fully qualified name of the symbol, and the LSP client
+        |is in charge of taking that content and putting it into your local buffer.
+        |""".stripMargin,
+    """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
+       |""".stripMargin,
+  )
+
   val ExtractMemberDefinition =
     new ParametrizedCommand[TextDocumentPositionParams](
       "extract-member-definition",
@@ -755,6 +767,7 @@ object ServerCommands {
       CleanCompile,
       CompileTarget,
       CopyWorksheetOutput,
+      CopyFQNOfSymbol,
       DiscoverMainClasses,
       DiscoverTestSuites,
       ExtractMemberDefinition,

@@ -10,8 +10,8 @@ import scala.meta.pc.OffsetParams
 
 import org.eclipse.lsp4j.Location
 
-class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
-  import compiler._
+class PcDefinitionProvider(val cp: MetalsGlobal, params: OffsetParams) {
+  import cp._
 
   def definition(): DefinitionResult =
     definition(findTypeDef = false)
@@ -37,7 +37,30 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         case _: Literal => expanded.tpe.widen.typeSymbol
         case _ => tree.symbol
       }
+  }
 
+  val pcCollector: WithSymbolSearchCollector[(Tree, Position)] =
+    new WithSymbolSearchCollector[(Tree, Position)](cp, params) {
+      def collect(parent: Option[compiler.Tree])(
+          tree: compiler.Tree,
+          pos: Position,
+          sym: Option[compiler.Symbol]
+      ): (Tree, Position) = (tree.asInstanceOf[Tree], pos)
+    }
+
+  def fullyQualifiedName(): Option[String] = {
+    if (params.offset() == 0) {
+      None
+    } else {
+      val unit = addCompilationUnit(
+        params.text(),
+        params.uri().toString(),
+        None
+      )
+      typeCheck(unit)
+      val pos = unit.position(params.offset())
+      Some(definitionTypedTreeAt(pos).symbol.fullName)
+    }
   }
 
   /**

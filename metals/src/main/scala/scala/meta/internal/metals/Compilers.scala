@@ -1038,6 +1038,22 @@ class Compilers(
     }
   }.getOrElse(Future.successful(None))
 
+  def fullyQualifiedName(
+      params: TextDocumentPositionParams,
+      token: CancelToken,
+  ): Future[Option[String]] = {
+    withPCAndAdjustLsp(params) { (pc, pos, _) =>
+      pc.fullyQualifiedName(
+        CompilerOffsetParamsUtils.fromPos(
+          pos,
+          token,
+          outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
+        )
+      ).asScala
+        .map(_.asScala)
+    }
+  }.getOrElse(Future.successful(None))
+
   def prepareRename(
       params: TextDocumentPositionParams,
       token: CancelToken,
