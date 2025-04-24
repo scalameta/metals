@@ -54,14 +54,20 @@ class CompilerConfiguration(
       classpath: Seq[Path],
       referenceCounter: CompletionItemPriority,
   ) extends MtagsPresentationCompiler {
+    private val resolvedMtags = mtagsResolver.resolve(scalaVersion)
+
     private val mtags =
-      mtagsResolver.resolve(scalaVersion).getOrElse(MtagsBinaries.BuildIn)
+      resolvedMtags.getOrElse(MtagsBinaries.BuildIn)
+
+    private val classPathExtension =
+      if (resolvedMtags.nonEmpty) Embedded.scalaLibrary(scalaVersion)
+      else Embedded.scalaLibrary(MtagsBinaries.BuildIn.scalaVersion)
 
     val standalone: PresentationCompiler =
       fromMtags(
         mtags,
         options = Nil,
-        classpath ++ Embedded.scalaLibrary(scalaVersion),
+        classpath ++ classPathExtension,
         "default",
         symbolSearch,
         referenceCounter,
