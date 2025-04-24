@@ -1,7 +1,6 @@
 package tests
 
-import scala.concurrent.Await
-import scala.concurrent.duration._
+import java.nio.file.Path
 
 import scala.meta.internal.metals.mcp.McpPrinter._
 import scala.meta.internal.metals.mcp.SymbolType
@@ -12,6 +11,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
   // - methods / values from dependencies (to think about)
   // - type aliases from dependencies ???
   test("glob search all types - workspace") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""
@@ -86,12 +86,8 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |method com.test.TestClass.testValue
            |method com.test.TestObject.testFunction
            |object com.test.TestObject
-           |object scala.reflect.TypeTest
            |package com.test
            |trait com.test.TestTrait
-           |trait scala.quoted.Quotes.reflectModule.TypedOrTestMethods
-           |trait scala.quoted.Quotes.reflectModule.TypedOrTestModule
-           |trait scala.reflect.TypeTest
            |""".stripMargin,
         "query: globSearch(\"test\", Set.empty)",
       )
@@ -106,9 +102,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
         matching.show,
         """|class com.test.NonMatchingClass
            |object com.test.matching.MatchingUtil
-           |object scala.quoted.runtime.QuoteMatching
            |package com.test.matching
-           |trait scala.quoted.runtime.QuoteMatching
            |""".stripMargin,
         "query: globSearch(\"matching\", Set.empty)",
       )
@@ -148,7 +142,8 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
   }
 
   test("glob search case insensitive - workspace") {
-    val fut = for {
+    cleanWorkspace()
+    for {
       _ <- initialize(
         s"""
            |/metals.json
@@ -227,12 +222,10 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |""".stripMargin,
       )
     } yield ()
-
-    try Await.result(fut, 10.seconds)
-    finally cancelServer()
   }
 
   test("glob search packages - workspace") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         s"""
@@ -474,16 +467,14 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       path = server.toPath(
         "a/src/main/scala/com/test/Class2.scala"
       )
-      res = server.headServer.queryEngine.getUsages(
-        "com.test.Class1.add",
-        path,
-      )
       _ = assertNoDiff(
-        res.show(server.workspace),
-        """|a/src/main/scala/com/test/Class1.scala:4
-           |a/src/main/scala/com/test/Class1.scala:5
-           |a/src/main/scala/com/test/Class2.scala:4
-           |""".stripMargin,
+        server.headServer.queryEngine
+          .getUsages("com.test.Class1.add", path)
+          .show(server.workspace),
+        s"""|${Path.of("a/src/main/scala/com/test/Class1.scala")}:4
+            |${Path.of("a/src/main/scala/com/test/Class1.scala")}:5
+            |${Path.of("a/src/main/scala/com/test/Class2.scala")}:4
+            |""".stripMargin,
       )
     } yield ()
   }
@@ -522,10 +513,10 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
             path,
           )
           .show(server.workspace),
-        """|a/src/main/scala/EmptyPackageClass.scala:2
-           |a/src/main/scala/EmptyPackageClass.scala:3
-           |a/src/main/scala/EmptyPackageUsage.scala:2
-           |""".stripMargin,
+        s"""|${Path.of("a/src/main/scala/EmptyPackageClass.scala")}:2
+            |${Path.of("a/src/main/scala/EmptyPackageClass.scala")}:3
+            |${Path.of("a/src/main/scala/EmptyPackageUsage.scala")}:2
+            |""".stripMargin,
       )
     } yield ()
   }
