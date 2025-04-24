@@ -101,10 +101,46 @@ object ScalatestTestFinder {
 
           case AnyFunSpec =>
             findAnyFunSpecTests(path, template)
+
+          case AnyFeatureSpec =>
+            findAnyFeatureSpecTests(path, template)
         }
       case None =>
         Vector.empty
     }
+
+  private def findAnyFeatureSpecTests(
+      path: AbsolutePath,
+      template: Template,
+  ): Vector[TestCaseEntry] = {
+
+    def findScenarios(
+        stats: List[Stat],
+        namePrefix: String,
+    ): List[TestCaseEntry] =
+      stats.flatMap {
+        // format: off
+        //
+        case Term.Apply(appl @ Term.Apply(Term.Name(opName), Lit.String(scenarioName) :: _), _)
+          if AnyFeatureSpec.leafMethods.contains(opName) =>
+        // format: on
+          val testname = s"$namePrefix $scenarioName"
+          TestCaseEntry(testname, appl.pos.toLsp.toLocation(path.toURI)) :: Nil
+
+        case _ =>
+          List.empty
+      }
+
+    template.stats.flatMap {
+        // format: off
+        //
+        case Term.Apply(Term.Apply(Term.Name(opName), Lit.String(featureName) :: _), Term.Block(stats) :: Nil)
+          if AnyFeatureSpec.intermediateMethods.contains(opName) =>
+        // format: on
+        findScenarios(stats, featureName)
+    }.toVector
+
+  }
 
   private def findAnyFunSuiteTests(
       path: AbsolutePath,
@@ -320,4 +356,18 @@ object ScalatestStyle {
     override val leafMethods: Set[String] = Set("in", "ignore")
   }
 
+  case object AnyFeatureSpec extends ScalatestStyle {
+    val symbols: Set[String] = Set(
+      "org/scalatest/freespec/AnyFeatureSpec#",
+      "org/scalatest/freespec/AnyFeatureSpecLike#",
+      "org/scalatest/freespec/AsyncFeatureSpec#",
+      "org/scalatest/freespec/AsyncFeatureSpecLike#",
+      "org/scalatest/freespec/FixtureAnyFeatureSpec#",
+      "org/scalatest/freespec/FixtureAnyFeatureSpecLike#",
+      "org/scalatest/freespec/FixtureAsyncFeatureSpec#",
+      "org/scalatest/freespec/FixtureAsyncFeatureSpecLike#",
+    )
+    override val intermediateMethods: Set[String] = Set("Feature", "feature")
+    override val leafMethods: Set[String] = Set("Scenario", "scenario")
+  }
 }
