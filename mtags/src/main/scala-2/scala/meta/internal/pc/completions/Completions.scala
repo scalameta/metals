@@ -743,6 +743,10 @@ trait Completions { this: MetalsGlobal =>
               Option(qual.symbol).exists(sym => sym.isValue && sym.isSynthetic)
             qualifierIsSyntheticVal &&
             !sel.namePosition.isTransparent && sel.namePosition.encloses(pos)
+          // val (foo, bar) = (???, ???)
+          // gets desugared case match
+          case b @ Bind(_, Ident(_)) =>
+            !b.namePosition.isTransparent && b.namePosition.encloses(pos)
           case _ => false
         }
       }

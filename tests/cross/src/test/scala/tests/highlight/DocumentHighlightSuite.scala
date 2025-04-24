@@ -1156,4 +1156,20 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
        |""".stripMargin
   )
 
+  check(
+    "destruct-tuple".tag(IgnoreScalaVersion.forLessThan("2.13.17")),
+    """|object O {
+       |  val (<<f@@oo>>, bar) = (???, ???)
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "destruct-tuple-2".tag(IgnoreScalaVersion.forLessThan("2.13.17")),
+    """|object O {
+       |  val (foo, <<b@@ar>>) = (???, ???)
+       |}
+       |""".stripMargin
+  )
+
 }
