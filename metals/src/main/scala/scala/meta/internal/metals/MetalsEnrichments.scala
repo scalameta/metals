@@ -38,6 +38,7 @@ import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.debug.DiscoveryFailures
 import scala.meta.internal.mtags.MtagsEnrichments
 import scala.meta.internal.parsing.EmptyResult
 import scala.meta.internal.semanticdb.Scala.Descriptor
@@ -243,14 +244,21 @@ object MetalsEnrichments
     def liftToLspError(implicit ec: ExecutionContext): Future[A] =
       future.recoverWith { case NonFatal(e) =>
         scribe.error(e)
-        val newException = new ResponseErrorException(
-          new messages.ResponseError(
-            messages.ResponseErrorCode.InvalidRequest,
-            e.getMessage(),
-            null,
-          )
-        )
-        Future.failed(newException)
+        val responseError = e match {
+          case DiscoveryFailures.WorkspaceErrorsException =>
+            new messages.ResponseError(
+              543, // some number we picked to represent compile errors
+              e.getMessage(),
+              null,
+            )
+          case _ =>
+            new messages.ResponseError(
+              messages.ResponseErrorCode.InvalidRequest,
+              e.getMessage(),
+              null,
+            )
+        }
+        Future.failed(new ResponseErrorException(responseError))
       }
     def asJavaUnit(implicit ec: ExecutionContext): CompletableFuture[Unit] =
       future.ignoreValue.asJava
