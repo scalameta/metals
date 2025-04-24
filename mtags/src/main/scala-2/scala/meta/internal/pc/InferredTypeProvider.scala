@@ -49,7 +49,8 @@ final class InferredTypeProvider(
     )
 
     val pos = unit.position(params.offset)
-    val typedTree = typedTreeAt(pos)
+    typeCheck(unit)
+    val typedTree = locateTree(pos)
     val importPosition = autoImportPosition(pos, params.text())
     val context = doLocateImportContext(pos)
     val re: scala.collection.Map[Symbol, Name] = renamedSymbols(context)
@@ -214,7 +215,7 @@ final class InferredTypeProvider(
          * case (head : Int) :: tail =>
          */
         val needsParens = lastVisitedParentTrees match {
-          case _ :: Apply(_: Ident, args) :: _ if args.size > 1 =>
+          case _ :: Apply(_, args) :: _ if args.size > 1 =>
             val firstEnd = args(0).pos.end
             val secondStart = args(1).pos.start
             val hasDot = params
