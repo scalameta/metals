@@ -823,7 +823,11 @@ object MetalsEnrichments
     }
 
     def symbolToFullQualifiedName: String =
-      value.replaceAll("/|#", ".").stripSuffix(".")
+      value
+        .replace("/", ".")
+        .stripSuffix(".")
+        .stripSuffix("#")
+        .replaceAll(raw"(\+\d+)", "")
   }
 
   implicit class XtensionTextDocumentSemanticdb(textDocument: s.TextDocument) {

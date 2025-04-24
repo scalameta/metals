@@ -1182,6 +1182,9 @@ class WorkspaceLspService(
           .asJavaObject
       case ServerCommands.CopyWorksheetOutput(path) =>
         getServiceFor(path).copyWorksheetOutput(path.toAbsolutePath)
+      case ServerCommands.CopyFQNOfSymbol(params) =>
+        getServiceFor(params.getTextDocument.getUri())
+          .copyFQNOfSymbol(params)
       case actionCommand
           if currentOrHeadOrFallback.allActionCommandsIds(
             actionCommand.getCommand()
