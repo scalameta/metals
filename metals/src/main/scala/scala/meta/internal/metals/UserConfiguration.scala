@@ -149,6 +149,12 @@ case class UserConfiguration(
           enableBestEffort,
         )
       ),
+      Some(
+        (
+          "startMcpServer",
+          startMcpServer,
+        )
+      ),
     ).flatten.toMap.asJava
     val gson = new GsonBuilder().setPrettyPrinting().create()
     gson.toJson(fields).toString()
@@ -492,6 +498,14 @@ object UserConfiguration {
            |correctness when the workspace doesn't compile.
            |""".stripMargin,
       ),
+      UserConfigurationOption(
+        "start-mcp-server",
+        "false",
+        "true",
+        "Start MCP server",
+        """|If Metals should start the MCP (SSE) server, that an AI agent can connect to.
+           |""".stripMargin,
+      ),
     )
 
   def fromJson(
@@ -763,10 +777,11 @@ object UserConfiguration {
     val scalaCliLauncher = getStringKey("scala-cli-launcher")
     val defaultBspToBuildTool =
       getBooleanKey("default-bsp-to-build-tool").getOrElse(false)
-    val startMcpServer = getBooleanKey("start-mcp-server").getOrElse(false)
 
     val enableBestEffort =
       getBooleanKey("enable-best-effort").getOrElse(false)
+
+    val startMcpServer = getBooleanKey("start-mcp-server").getOrElse(false)
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
