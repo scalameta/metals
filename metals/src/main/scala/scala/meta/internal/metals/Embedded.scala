@@ -155,6 +155,7 @@ final class Embedded(
     // We want to keep a minimal set of jars needed here
     val runtimeClasspath = jars.filter { path =>
       val pathString = path.toString
+      pathString.contains("using_directives") ||
       pathString.contains("scala-lang") ||
       pathString.contains("fansi") ||
       pathString.contains("pprint") ||
@@ -575,7 +576,7 @@ object Embedded {
         ext <- pathExts
         app0 = if (endsWithCaseInsensitive(app, ext)) app else app + ext
         path = Paths.get(dir).resolve(app0)
-        if Files.isExecutable(path)
+        if Files.isExecutable(path) && !Files.isDirectory(path)
       } yield path
       matches.toStream.headOption
     }

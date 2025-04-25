@@ -56,6 +56,7 @@ case class UserConfiguration(
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
     scalaCliLauncher: Option[String] = None,
     defaultBspToBuildTool: Boolean = false,
+    enableBestEffort: Boolean = false,
     startMcpServer: Boolean = false,
 ) {
 
@@ -140,6 +141,12 @@ case class UserConfiguration(
         (
           "defaultBspToBuildTool",
           defaultBspToBuildTool,
+        )
+      ),
+      Some(
+        (
+          "enableBestEffort",
+          enableBestEffort,
         )
       ),
     ).flatten.toMap.asJava
@@ -315,6 +322,26 @@ object UserConfiguration {
            |""".stripMargin,
       ),
       UserConfigurationOption(
+        "inlay-hints.named-parameters.enable",
+        "false",
+        "false",
+        "Should display parameter names next to arguments",
+        """|When this option is enabled, each method has an added parameter name next to its arguments
+           |displayed either as additional decorations if they are supported by the editor or 
+           |shown in the hover.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "inlay-hints.by-name-parameters.enable",
+        "false",
+        "false",
+        "Should display if a parameter is by-name at usage sites",
+        """|When this option is enabled, each method that has by-name parameters has them 
+           |displayed either as additional '=>' decorations if they are supported by the editor or 
+           |shown in the hover.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
         "inlay-hints.implicit-arguments.enable",
         "false",
         "false",
@@ -454,6 +481,15 @@ object UserConfiguration {
         "Default to using build tool as your build server.",
         """|If your build tool can also serve as a build server,
            |default to using it instead of Bloop.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "enable-best-effort",
+        "false",
+        "true",
+        "Use best effort compilation for Scala 3.",
+        """|When using Scala 3, use best effort compilation to improve Metals 
+           |correctness when the workspace doesn't compile.
            |""".stripMargin,
       ),
     )
@@ -729,6 +765,8 @@ object UserConfiguration {
       getBooleanKey("default-bsp-to-build-tool").getOrElse(false)
     val startMcpServer = getBooleanKey("start-mcp-server").getOrElse(false)
 
+    val enableBestEffort =
+      getBooleanKey("enable-best-effort").getOrElse(false)
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -760,6 +798,7 @@ object UserConfiguration {
           autoImportBuilds,
           scalaCliLauncher,
           defaultBspToBuildTool,
+          enableBestEffort,
           startMcpServer,
         )
       )

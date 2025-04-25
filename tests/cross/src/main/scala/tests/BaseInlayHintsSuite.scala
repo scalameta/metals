@@ -16,7 +16,8 @@ class BaseInlayHintsSuite extends BasePCSuite {
       base: String,
       expected: String,
       compat: Map[String, String] = Map.empty,
-      hintsInPatternMatch: Boolean = false
+      hintsInPatternMatch: Boolean = false,
+      namedParameters: Boolean = true
   )(implicit location: Location): Unit =
     test(name) {
       def pkgWrap(text: String) =
@@ -36,6 +37,8 @@ class BaseInlayHintsSuite extends BasePCSuite {
         true,
         true,
         true,
+        true,
+        namedParameters,
         hintsInPatternMatch
       )
 

@@ -5,6 +5,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
+import scala.meta.internal.metals.codeactions.SourceAddMissingImports
 import scala.meta.internal.metals.codeactions.SourceOrganizeImports
 import scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion
 import scala.meta.internal.mtags.CoursierComplete
@@ -128,6 +129,7 @@ class ScalaCliActionsSuite
         |}
         |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
+        |${SourceAddMissingImports.title}
         |${CreateNewSymbol.title("Future")}
         |""".stripMargin,
     s"""|//> using scala "${BuildInfo.scala213}"
@@ -155,6 +157,7 @@ class ScalaCliActionsSuite
         |}
         |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
+        |${SourceAddMissingImports.title}
         |${CreateNewSymbol.title("Future")}
         |""".stripMargin,
     s"""|#!/usr/bin/env -S scala-cli shebang
@@ -180,6 +183,7 @@ class ScalaCliActionsSuite
         |}
         |""".stripMargin,
     s"""|${ImportMissingSymbol.title("FiniteDuration", "scala.concurrent.duration")}
+        |${SourceAddMissingImports.title}
         |${CreateNewSymbol.title("FiniteDuration")}
         |""".stripMargin,
     s"""|//> using scala "${BuildInfo.scala213}"

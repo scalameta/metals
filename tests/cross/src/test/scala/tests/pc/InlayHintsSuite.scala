@@ -30,21 +30,10 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |  def foo()/*: Unit<<scala/Unit#>>*/ = {
        |    implicit val imp: Int = 2
        |    def addOne(x: Int)(implicit one: Int)/*: Int<<scala/Int#>>*/ = x + one
-       |    val x/*: Int<<scala/Int#>>*/ = addOne(1)/*(imp<<(3:17)>>)*/
+       |    val x/*: Int<<scala/Int#>>*/ = addOne(/*x = */1)/*(imp<<(3:17)>>)*/
        |  }
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|object Main {
-           |  def foo()/*: Unit<<scala/Unit#>>*/ = {
-           |    implicit val imp: Int = 2
-           |    def addOne(x: Int)(implicit one: Int)/*: Int<<scala/Int#>>*/ = x + one
-           |    val x/*: Int<<scala/Int#>>*/ = addOne(1)/*(using imp<<(3:17)>>)*/
-           |  }
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -56,9 +45,17 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |""".stripMargin,
     """|object Main {
        |  def hello[T](t: T)/*: T<<(2:12)>>*/ = t
-       |  val x/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ = hello/*[List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]]*/(List/*[Int<<scala/Int#>>]*/(1))
+       |  val x/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ = hello/*[List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]]*/(/*t = */List/*[Int<<scala/Int#>>]*/(/*xs = */1))
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      ">=2.13.0" ->
+        """|object Main {
+           |  def hello[T](t: T)/*: T<<(2:12)>>*/ = t
+           |  val x/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ = hello/*[List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]]*/(/*t = */List/*[Int<<scala/Int#>>]*/(/*elems = */1))
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -68,19 +65,12 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |  val x = hello(Map((1,"abc")))
        |}
        |""".stripMargin,
-    """|object Main {
+    """|package `type-params2`
+       |object Main {
        |  def hello[T](t: T)/*: T<<(2:12)>>*/ = t
-       |  val x/*: Map<<scala/collection/immutable/Map#>>[Int<<scala/Int#>>,String<<java/lang/String#>>]*/ = hello/*[Map<<scala/collection/immutable/Map#>>[Int<<scala/Int#>>,String<<java/lang/String#>>]]*/(Map/*[Int<<scala/Int#>>, String<<java/lang/String#>>]*/((1,"abc")))
+       |  val x/*: Map<<scala/collection/immutable/Map#>>[Int<<scala/Int#>>,String<<java/lang/String#>>]*/ = hello/*[Map<<scala/collection/immutable/Map#>>[Int<<scala/Int#>>,String<<java/lang/String#>>]]*/(/*t = */Map/*[Int<<scala/Int#>>, String<<java/lang/String#>>]*/(/*elems = */(1,"abc")))
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|object Main {
-           |  def hello[T](t: T)/*: T<<(2:12)>>*/ = t
-           |  val x/*: Map<<scala/collection/immutable/Map#>>[Int<<scala/Int#>>, String<<java/lang/String#>>]*/ = hello/*[Map<<scala/collection/immutable/Map#>>[Int<<scala/Int#>>, String<<java/lang/String#>>]]*/(Map/*[Int<<scala/Int#>>, String<<java/lang/String#>>]*/((1,"abc")))
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -96,19 +86,9 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |object Main {
        |  implicit val imp: Int = 2
        |  def addOne(x: Int)(implicit one: Int)/*: Int<<scala/Int#>>*/ = x + one
-       |  val x/*: Int<<scala/Int#>>*/ = addOne(1)/*(imp<<(3:15)>>)*/
+       |  val x/*: Int<<scala/Int#>>*/ = addOne(/*x = */1)/*(imp<<(3:15)>>)*/
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|case class User(name: String)
-           |object Main {
-           |  implicit val imp: Int = 2
-           |  def addOne(x: Int)(implicit one: Int)/*: Int<<scala/Int#>>*/ = x + one
-           |  val x/*: Int<<scala/Int#>>*/ = addOne(1)/*(using imp<<(3:15)>>)*/
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -121,7 +101,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |""".stripMargin,
     """|case class User(name: String)
        |object Main {
-       |  implicit def intToUser(x: Int): User = new User(x.toString)
+       |  implicit def intToUser(x: Int): User = new User(/*name = */x.toString)
        |  val y: User = /*intToUser<<(3:15)>>(*/1/*)*/
        |}
        |""".stripMargin
@@ -146,9 +126,16 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |}
        |""".stripMargin,
     """|object Main {
-       |  val foo/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ = List[Int](123)
+       |  val foo/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ = List[Int](/*xs = */123)
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      ">=2.13.0" ->
+        """|object Main {
+           |  val foo/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ = List[Int](/*elems = */123)
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -158,9 +145,16 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |}
        |""".stripMargin,
     """|object O {
-       |  def m/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ = 1 :: List/*[Int<<scala/Int#>>]*/(1)
+       |  def m/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ = 1 :: List/*[Int<<scala/Int#>>]*/(/*xs = */1)
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      ">=2.13.0" ->
+        """|object O {
+           |  def m/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ = 1 :: List/*[Int<<scala/Int#>>]*/(/*elems = */1)
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -170,16 +164,9 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |}
        |""".stripMargin,
     """|object Main {
-       |  val foo/*: Map<<scala/collection/immutable/Map#>>[Int<<scala/Int#>>,String<<java/lang/String#>>]*/ = Map/*[Int<<scala/Int#>>, String<<java/lang/String#>>]*/((1, "abc"))
+       |  val foo/*: Map<<scala/collection/immutable/Map#>>[Int<<scala/Int#>>,String<<java/lang/String#>>]*/ = Map/*[Int<<scala/Int#>>, String<<java/lang/String#>>]*/(/*elems = */(1, "abc"))
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|object Main {
-           |  val foo/*: Map<<scala/collection/immutable/Map#>>[Int<<scala/Int#>>, String<<java/lang/String#>>]*/ = Map/*[Int<<scala/Int#>>, String<<java/lang/String#>>]*/((1, "abc"))
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -201,13 +188,13 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |}
        |""".stripMargin,
     """|object Main {
-       |  val foo/*: Buffer<<scala/collection/mutable/Buffer#>>[String<<scala/Predef.String#>>]*/ = List[String]("").toBuffer[String]
+       |  val foo/*: Buffer<<scala/collection/mutable/Buffer#>>[String<<scala/Predef.String#>>]*/ = List[String](/*xs = */"").toBuffer[String]
        |}
        |""".stripMargin,
     compat = Map(
-      "3" ->
+      ">=2.13.0" ->
         """|object Main {
-           |  val foo/*: Buffer<<scala/collection/mutable/Buffer#>>[String<<java/lang/String#>>]*/ = List[String]("").toBuffer[String]
+           |  val foo/*: Buffer<<scala/collection/mutable/Buffer#>>[String<<scala/Predef.String#>>]*/ = List[String](/*elems = */"").toBuffer[String]
            |}
            |""".stripMargin
     )
@@ -324,7 +311,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |}
        |""".stripMargin,
     """|object Main {
-       |  val x/*: (Int<<scala/Int#>>, Int<<scala/Int#>>)*/ = Tuple2.apply/*[Int<<scala/Int#>>, Int<<scala/Int#>>]*/(1, 2)
+       |  val x/*: (Int<<scala/Int#>>, Int<<scala/Int#>>)*/ = Tuple2.apply/*[Int<<scala/Int#>>, Int<<scala/Int#>>]*/(/*_1 = */1, /*_2 = */2)
        |}
        |""".stripMargin
   )
@@ -336,7 +323,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |}
        |""".stripMargin,
     """|object Main {
-       |  val x/*: (Int<<scala/Int#>>, Int<<scala/Int#>>)*/ = Tuple2/*[Int<<scala/Int#>>, Int<<scala/Int#>>]*/(1, 2)
+       |  val x/*: (Int<<scala/Int#>>, Int<<scala/Int#>>)*/ = Tuple2/*[Int<<scala/Int#>>, Int<<scala/Int#>>]*/(/*_1 = */1, /*_2 = */2)
        |}
        |""".stripMargin
   )
@@ -363,9 +350,16 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |}
        |""".stripMargin,
     """|object Main {
-       |  val hd :: tail = List/*[Int<<scala/Int#>>]*/(1, 2)
+       |  val hd :: tail = List/*[Int<<scala/Int#>>]*/(/*xs = */1, 2)
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      ">=2.13.0" ->
+        """|object Main {
+           |  val hd :: tail = List/*[Int<<scala/Int#>>]*/(/*elems = */1, 2)
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -377,11 +371,20 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |}
        |""".stripMargin,
     """|object Main {
-       |  val x/*: Int<<scala/Int#>>*/ = List/*[Int<<scala/Int#>>]*/(1, 2) match {
+       |  val x/*: Int<<scala/Int#>>*/ = List/*[Int<<scala/Int#>>]*/(/*xs = */1, 2) match {
        |    case hd :: tail => hd
        |  }
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      ">=2.13.0" ->
+        """|object Main {
+           |  val x/*: Int<<scala/Int#>>*/ = List/*[Int<<scala/Int#>>]*/(/*elems = */1, 2) match {
+           |    case hd :: tail => hd
+           |  }
+           |}
+           |""".stripMargin
+    )
   )
 
   check(
@@ -393,7 +396,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |""".stripMargin,
     """|object Main {
        |case class Foo[A](x: A, y: A)
-       |  val Foo(fst/*: Int<<scala/Int#>>*/, snd/*: Int<<scala/Int#>>*/) = Foo/*[Int<<scala/Int#>>]*/(1, 2)
+       |  val Foo(fst/*: Int<<scala/Int#>>*/, snd/*: Int<<scala/Int#>>*/) = Foo/*[Int<<scala/Int#>>]*/(/*x = */1, /*y = */2)
        |}
        |""".stripMargin,
     hintsInPatternMatch = true
@@ -454,7 +457,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |}
        |""".stripMargin,
     """|object Main {
-       |  List/*[Int<<scala/Int#>>]*/(1).collect/*[Int<<scala/Int#>>]*/ { case x => x }
+       |  List/*[Int<<scala/Int#>>]*/(/*elems = */1).collect/*[Int<<scala/Int#>>]*/ { case x => x }
        |  val x: PartialFunction[Int, Int] = { 
        |    case 1 => 2 
        |  }
@@ -544,17 +547,17 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |class DemoSpec {
        |  import ScalatestMock._
        |
-       |  /*StringTestOps<<(6:17)>>(*/"foo"/*)*/ should {
-       |    /*StringTestOps<<(6:17)>>(*/"checkThing1"/*)*/ in {
+       |  /*StringTestOps<<(6:17)>>(*/"foo"/*)*/ should {/*=> */
+       |    /*StringTestOps<<(6:17)>>(*/"checkThing1"/*)*/ in {/*=> */
        |      checkThing1[String]/*(instancesString<<(10:15)>>)*/
        |    }/*(here<<(5:15)>>)*/
-       |    /*StringTestOps<<(6:17)>>(*/"checkThing2"/*)*/ in {
+       |    /*StringTestOps<<(6:17)>>(*/"checkThing2"/*)*/ in {/*=> */
        |      checkThing2[String]/*(instancesString<<(10:15)>>, instancesString<<(10:15)>>)*/
        |    }/*(here<<(5:15)>>)*/
        |  }/*(subjectRegistrationFunction<<(3:15)>>)*/
        |
-       |  /*StringTestOps<<(6:17)>>(*/"bar"/*)*/ should {
-       |    /*StringTestOps<<(6:17)>>(*/"checkThing1"/*)*/ in {
+       |  /*StringTestOps<<(6:17)>>(*/"bar"/*)*/ should {/*=> */
+       |    /*StringTestOps<<(6:17)>>(*/"checkThing1"/*)*/ in {/*=> */
        |      checkThing1[String]/*(instancesString<<(10:15)>>)*/
        |    }/*(here<<(5:15)>>)*/
        |  }/*(subjectRegistrationFunction<<(3:15)>>)*/
@@ -562,47 +565,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |  def checkThing1[A](implicit ev: Eq[A])/*: Nothing<<scala/Nothing#>>*/ = ???
        |  def checkThing2[A](implicit ev: Eq[A], sem: Semigroup[A])/*: Nothing<<scala/Nothing#>>*/ = ???
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|object ScalatestMock {
-           |  class SRF
-           |  implicit val subjectRegistrationFunction: SRF = new SRF()
-           |  class Position
-           |  implicit val here: Position = new Position()
-           |  implicit class StringTestOps(name: String) {
-           |    def should(right: => Unit)(implicit config: SRF): Unit = ()
-           |    def in(f: => Unit)(implicit pos: Position): Unit = ()
-           |  }
-           |  implicit def instancesString: Eq[String] with Semigroup[String] = ???
-           |}
-           |
-           |trait Eq[A]
-           |trait Semigroup[A]
-           |
-           |class DemoSpec {
-           |  import ScalatestMock._
-           |
-           |  /*StringTestOps<<(6:17)>>(*/"foo"/*)*/ should {
-           |    /*StringTestOps<<(6:17)>>(*/"checkThing1"/*)*/ in {
-           |      checkThing1[String]/*(using instancesString<<(10:15)>>)*/
-           |    }/*(using here<<(5:15)>>)*/
-           |    /*StringTestOps<<(6:17)>>(*/"checkThing2"/*)*/ in {
-           |      checkThing2[String]/*(using instancesString<<(10:15)>>, instancesString<<(10:15)>>)*/
-           |    }/*(using here<<(5:15)>>)*/
-           |  }/*(using subjectRegistrationFunction<<(3:15)>>)*/
-           |
-           |  /*StringTestOps<<(6:17)>>(*/"bar"/*)*/ should {
-           |    /*StringTestOps<<(6:17)>>(*/"checkThing1"/*)*/ in {
-           |      checkThing1[String]/*(using instancesString<<(10:15)>>)*/
-           |    }/*(using here<<(5:15)>>)*/
-           |  }/*(using subjectRegistrationFunction<<(3:15)>>)*/
-           |
-           |  def checkThing1[A](implicit ev: Eq[A])/*: Nothing<<scala/Nothing#>>*/ = ???
-           |  def checkThing2[A](implicit ev: Eq[A], sem: Semigroup[A])/*: Nothing<<scala/Nothing#>>*/ = ???
-           |}
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -625,11 +588,11 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |
        |object Main {
        |  def test(d: S[Int], f: S[Char]): AB[Int, String] = {
-       |    val x/*: S<<scala/collection/Set#>>[String<<java/lang/String#>>]*/ = d.map/*[String<<java/lang/String#>>, S<<scala/collection/Set#>>[String<<java/lang/String#>>]]*/(_.toString)/*(canBuildFrom<<scala/collection/Set.canBuildFrom().>>)*/
+       |    val x/*: S<<scala/collection/Set#>>[String<<java/lang/String#>>]*/ = d.map/*[String<<java/lang/String#>>, S<<scala/collection/Set#>>[String<<java/lang/String#>>]]*/(/*f = */_.toString)/*(canBuildFrom<<scala/collection/Set.canBuildFrom().>>)*/
        |    val y/*: S<<scala/collection/Set#>>[Char<<scala/Char#>>]*/ = f
        |    ???
        |  }
-       |  val x/*: AB<<scala/collection/AbstractMap#>>[Int<<scala/Int#>>,String<<scala/Predef.String#>>]*/ = test(Set/*[Int<<scala/Int#>>]*/(1), Set/*[Char<<scala/Char#>>]*/('a'))
+       |  val x/*: AB<<scala/collection/AbstractMap#>>[Int<<scala/Int#>>,String<<scala/Predef.String#>>]*/ = test(/*d = */Set/*[Int<<scala/Int#>>]*/(/*elems = */1), /*f = */Set/*[Char<<scala/Char#>>]*/(/*elems = */'a'))
        |}
        |""".stripMargin,
     compat = Map(
@@ -640,25 +603,11 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
            |
            |object Main {
            |  def test(d: S[Int], f: S[Char]): AB[Int, String] = {
-           |    val x/*: S<<scala/collection/Set#>>[String<<java/lang/String#>>]*/ = d.map/*[String<<java/lang/String#>>]*/(_.toString)
+           |    val x/*: S<<scala/collection/Set#>>[String<<java/lang/String#>>]*/ = d.map/*[String<<java/lang/String#>>]*/(/*f = */_.toString)
            |    val y/*: S<<scala/collection/Set#>>[Char<<scala/Char#>>]*/ = f
            |    ???
            |  }
-           |  val x/*: AB<<scala/collection/AbstractMap#>>[Int<<scala/Int#>>,String<<scala/Predef.String#>>]*/ = test(Set/*[Int<<scala/Int#>>]*/(1), Set/*[Char<<scala/Char#>>]*/('a'))
-           |}
-           |""".stripMargin,
-      "3" ->
-        """|package `import-rename`
-           |import scala.collection.{AbstractMap => AB}
-           |import scala.collection.{Set => S}
-           |
-           |object Main {
-           |  def test(d: S[Int], f: S[Char]): AB[Int, String] = {
-           |    val x/*: S<<scala/collection/Set#>>[String<<java/lang/String#>>]*/ = d.map/*[String<<java/lang/String#>>]*/(_.toString)
-           |    val y/*: S<<scala/collection/Set#>>[Char<<scala/Char#>>]*/ = f
-           |    ???
-           |  }
-           |  val x/*: AB<<scala/collection/AbstractMap#>>[Int<<scala/Int#>>, String<<scala/Predef.String#>>]*/ = test(Set/*[Int<<scala/Int#>>]*/(1), Set/*[Char<<scala/Char#>>]*/('a'))
+           |  val x/*: AB<<scala/collection/AbstractMap#>>[Int<<scala/Int#>>,String<<scala/Predef.String#>>]*/ = test(/*d = */Set/*[Int<<scala/Int#>>]*/(/*elems = */1), /*f = */Set/*[Char<<scala/Char#>>]*/(/*elems = */'a'))
            |}
            |""".stripMargin
     )
@@ -685,17 +634,9 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
     """|package example
        |object O {
        |  def test[T: Ordering](x: T)/*: Nothing<<scala/Nothing#>>*/ = ???
-       |  test/*[Int<<scala/Int#>>]*/(1)/*(Int<<scala/math/Ordering.Int.>>)*/
+       |  test/*[Int<<scala/Int#>>]*/(/*x = */1)/*(Int<<scala/math/Ordering.Int.>>)*/
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" -> """|package example
-                |object O {
-                |  def test[T: Ordering](x: T)/*: Nothing<<scala/Nothing#>>*/ = ???
-                |  test/*[Int<<scala/Int#>>]*/(1)/*(using Int<<scala/math/Ordering.Int.>>)*/
-                |}
-                |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -711,18 +652,9 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |object O {
        |  implicit val i: Int = 123
        |  def test[T: Ordering](x: T)(implicit v: Int)/*: Nothing<<scala/Nothing#>>*/ = ???
-       |  test/*[Int<<scala/Int#>>]*/(1)/*(Int<<scala/math/Ordering.Int.>>, i<<(2:15)>>)*/
+       |  test/*[Int<<scala/Int#>>]*/(/*x = */1)/*(Int<<scala/math/Ordering.Int.>>, i<<(2:15)>>)*/
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" -> """|package example
-                |object O {
-                |  implicit val i: Int = 123
-                |  def test[T: Ordering](x: T)(implicit v: Int)/*: Nothing<<scala/Nothing#>>*/ = ???
-                |  test/*[Int<<scala/Int#>>]*/(1)/*(using Int<<scala/math/Ordering.Int.>>, i<<(2:15)>>)*/
-                |}
-                |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -750,19 +682,19 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |""".stripMargin,
     """|package example
        |object O {
-       |  val head :: tail = List/*[Int<<scala/Int#>>]*/(1)
-       |  List/*[Int<<scala/Int#>>]*/(1) match {
+       |  val head :: tail = List/*[Int<<scala/Int#>>]*/(/*xs = */1)
+       |  List/*[Int<<scala/Int#>>]*/(/*xs = */1) match {
        |    case head :: next => 
        |    case Nil =>
        |  }
-       |  Option/*[Option<<scala/Option#>>[Int<<scala/Int#>>]]*/(Option/*[Int<<scala/Int#>>]*/(1)) match {
+       |  Option/*[Option<<scala/Option#>>[Int<<scala/Int#>>]]*/(/*x = */Option/*[Int<<scala/Int#>>]*/(/*x = */1)) match {
        |    case Some(Some(value)) => 
        |    case None =>
        |  }
        |  val (local, _) = ("", 1.0)
-       |  val Some(x) = Option/*[Int<<scala/Int#>>]*/(1)
+       |  val Some(x) = Option/*[Int<<scala/Int#>>]*/(/*x = */1)
        |  for {
-       |    x <- List/*[(Int<<scala/Int#>>, Int<<scala/Int#>>)]*/((1,2))
+       |    x <- List/*[(Int<<scala/Int#>>, Int<<scala/Int#>>)]*/(/*xs = */(1,2))
        |    (z, y) = x/*(canBuildFrom<<scala/collection/immutable/List.canBuildFrom().>>)*/
        |  } yield {
        |    x/*(canBuildFrom<<scala/collection/immutable/List.canBuildFrom().>>)*/
@@ -773,19 +705,19 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
       ">=2.13.10" ->
         """|package example
            |object O {
-           |  val head :: tail = List/*[Int<<scala/Int#>>]*/(1)
-           |  List/*[Int<<scala/Int#>>]*/(1) match {
+           |  val head :: tail = List/*[Int<<scala/Int#>>]*/(/*elems = */1)
+           |  List/*[Int<<scala/Int#>>]*/(/*elems = */1) match {
            |    case head :: next => 
            |    case Nil =>
            |  }
-           |  Option/*[Option<<scala/Option#>>[Int<<scala/Int#>>]]*/(Option/*[Int<<scala/Int#>>]*/(1)) match {
+           |  Option/*[Option<<scala/Option#>>[Int<<scala/Int#>>]]*/(/*x = */Option/*[Int<<scala/Int#>>]*/(/*x = */1)) match {
            |    case Some(Some(value)) => 
            |    case None =>
            |  }
            |  val (local, _) = ("", 1.0)
-           |  val Some(x) = Option/*[Int<<scala/Int#>>]*/(1)
+           |  val Some(x) = Option/*[Int<<scala/Int#>>]*/(/*x = */1)
            |  for {
-           |    x <- List/*[(Int<<scala/Int#>>, Int<<scala/Int#>>)]*/((1,2))
+           |    x <- List/*[(Int<<scala/Int#>>, Int<<scala/Int#>>)]*/(/*elems = */(1,2))
            |    (z, y) = x
            |  } yield {
            |    x
@@ -820,19 +752,19 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |""".stripMargin,
     """|package example
        |object O {
-       |  val head/*: Int<<scala/Int#>>*/ :: tail/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ = List/*[Int<<scala/Int#>>]*/(1)
-       |  List/*[Int<<scala/Int#>>]*/(1) match {
+       |  val head/*: Int<<scala/Int#>>*/ :: tail/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ = List/*[Int<<scala/Int#>>]*/(/*xs = */1)
+       |  List/*[Int<<scala/Int#>>]*/(/*xs = */1) match {
        |    case head/*: Int<<scala/Int#>>*/ :: next/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ => 
        |    case Nil =>
        |  }
-       |  Option/*[Option<<scala/Option#>>[Int<<scala/Int#>>]]*/(Option/*[Int<<scala/Int#>>]*/(1)) match {
+       |  Option/*[Option<<scala/Option#>>[Int<<scala/Int#>>]]*/(/*x = */Option/*[Int<<scala/Int#>>]*/(/*x = */1)) match {
        |    case Some(Some(value/*: Int<<scala/Int#>>*/)) => 
        |    case None =>
        |  }
        |  val (local/*: String<<java/lang/String#>>*/, _) = ("", 1.0)
-       |  val Some(x/*: Int<<scala/Int#>>*/) = Option/*[Int<<scala/Int#>>]*/(1)
+       |  val Some(x/*: Int<<scala/Int#>>*/) = Option/*[Int<<scala/Int#>>]*/(/*x = */1)
        |  for {
-       |    x/*: (Int<<scala/Int#>>, Int<<scala/Int#>>)*/ <- List/*[(Int<<scala/Int#>>, Int<<scala/Int#>>)]*/((1,2))
+       |    x/*: (Int<<scala/Int#>>, Int<<scala/Int#>>)*/ <- List/*[(Int<<scala/Int#>>, Int<<scala/Int#>>)]*/(/*xs = */(1,2))
        |    (z/*: Int<<scala/Int#>>*/, y/*: Int<<scala/Int#>>*/) = x/*(canBuildFrom<<scala/collection/immutable/List.canBuildFrom().>>)*/
        |  } yield {
        |    x/*(canBuildFrom<<scala/collection/immutable/List.canBuildFrom().>>)*/
@@ -843,19 +775,19 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
       ">=2.13.0" ->
         """|package example
            |object O {
-           |  val head/*: Int<<scala/Int#>>*/ :: tail/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ = List/*[Int<<scala/Int#>>]*/(1)
-           |  List/*[Int<<scala/Int#>>]*/(1) match {
+           |  val head/*: Int<<scala/Int#>>*/ :: tail/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ = List/*[Int<<scala/Int#>>]*/(/*elems = */1)
+           |  List/*[Int<<scala/Int#>>]*/(/*elems = */1) match {
            |    case head/*: Int<<scala/Int#>>*/ :: next/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/ => 
            |    case Nil =>
            |  }
-           |  Option/*[Option<<scala/Option#>>[Int<<scala/Int#>>]]*/(Option/*[Int<<scala/Int#>>]*/(1)) match {
+           |  Option/*[Option<<scala/Option#>>[Int<<scala/Int#>>]]*/(/*x = */Option/*[Int<<scala/Int#>>]*/(/*x = */1)) match {
            |    case Some(Some(value/*: Int<<scala/Int#>>*/)) => 
            |    case None =>
            |  }
            |  val (local/*: String<<java/lang/String#>>*/, _) = ("", 1.0)
-           |  val Some(x/*: Int<<scala/Int#>>*/) = Option/*[Int<<scala/Int#>>]*/(1)
+           |  val Some(x/*: Int<<scala/Int#>>*/) = Option/*[Int<<scala/Int#>>]*/(/*x = */1)
            |  for {
-           |    x/*: (Int<<scala/Int#>>, Int<<scala/Int#>>)*/ <- List/*[(Int<<scala/Int#>>, Int<<scala/Int#>>)]*/((1,2))
+           |    x/*: (Int<<scala/Int#>>, Int<<scala/Int#>>)*/ <- List/*[(Int<<scala/Int#>>, Int<<scala/Int#>>)]*/(/*elems = */(1,2))
            |    (z/*: Int<<scala/Int#>>*/, y/*: Int<<scala/Int#>>*/) = x
            |  } yield {
            |    x
@@ -901,17 +833,9 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |  case class B()
        |  implicit val theA: A = A()
        |  def foo(b: B)(implicit a: A): String = "aaa"
-       |  val g: String = foo(B())/*(theA<<(4:15)>>)*/
+       |  val g: String = foo(/*b = */B())/*(theA<<(4:15)>>)*/
        |}
-       |""".stripMargin,
-    compat = Map("3" -> """|object Main {
-                           |  case class A()
-                           |  case class B()
-                           |  implicit val theA: A = A()
-                           |  def foo(b: B)(implicit a: A): String = "aaa"
-                           |  val g: String = foo(B())/*(using theA<<(4:15)>>)*/
-                           |}
-                           |""".stripMargin)
+       |""".stripMargin
   )
 
   check(
@@ -928,26 +852,14 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |""".stripMargin,
     """|object Main{
        |  def hello()(implicit string: String, integer: Int, long: Long): String = {
-       |    println(s"Hello $string, $long, $integer!")
+       |    println(/*x = */s"Hello $string, $long, $integer!")
        |  }
        |  implicit def theString(implicit i: Int): String = i.toString
        |  implicit def theInt(implicit l: Long): Int = l
        |  implicit val theLong: Long = 42
        |  hello()/*(theString<<(5:15)>>(theInt<<(6:15)>>(theLong<<(7:15)>>)), theInt<<(6:15)>>(theLong<<(7:15)>>), theLong<<(7:15)>>)*/
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" -> """|object Main{
-                |  def hello()(implicit string: String, integer: Int, long: Long): String = {
-                |    println(s"Hello $string, $long, $integer!")
-                |  }
-                |  implicit def theString(implicit i: Int): String = i.toString
-                |  implicit def theInt(implicit l: Long): Int = l
-                |  implicit val theLong: Long = 42
-                |  hello()/*(using theString<<(5:15)>>(theInt<<(6:15)>>(theLong<<(7:15)>>)), theInt<<(6:15)>>(theLong<<(7:15)>>), theLong<<(7:15)>>)*/
-                |}
-                |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -964,26 +876,14 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |""".stripMargin,
     """|object Main{
        |  def hello()(implicit string: String, integer: Int, long: Long): String = {
-       |    println(s"Hello $string, $long, $integer!")
+       |    println(/*x = */s"Hello $string, $long, $integer!")
        |  }
        |  implicit def theString(implicit i: Int): String = i.toString
        |  implicit def theInt: Int = 43
        |  implicit def theLong: Long = 42
        |  hello()/*(theString<<(5:15)>>(theInt<<(6:15)>>), theInt<<(6:15)>>, theLong<<(7:15)>>)*/
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" -> """|object Main{
-                |  def hello()(implicit string: String, integer: Int, long: Long): String = {
-                |    println(s"Hello $string, $long, $integer!")
-                |  }
-                |  implicit def theString(implicit i: Int): String = i.toString
-                |  implicit def theInt: Int = 43
-                |  implicit def theLong: Long = 42
-                |  hello()/*(using theString<<(5:15)>>(theInt<<(6:15)>>), theInt<<(6:15)>>, theLong<<(7:15)>>)*/
-                |}
-                |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -1003,17 +903,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |  implicit val namedStringLength: String => Long = (s: String) => s.length.toLong
        |  implicitly[String => Long]/*(namedStringLength<<(5:15)>>)*/
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" -> """|object Main{
-                |  implicit def stringLength(s: String): Int = s.length
-                |  implicitly[String => Int]
-                |
-                |  implicit val namedStringLength: String => Long = (s: String) => s.length.toLong
-                |  implicitly[String => Long]/*(using namedStringLength<<(5:15)>>)*/
-                |}
-                |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -1027,14 +917,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |  implicit def stringLength(s: String, i: Int): Int = s.length
        |  implicitly[(String, Int) => Int]/*((s: String<<java/lang/String#>>, i: Int<<scala/Int#>>) => stringLength<<(2:15)>>(s, i)))*/
        |}
-       |""".stripMargin,
-    compat = Map(
-      "3" -> """|object Main{
-                |  implicit def stringLength(s: String, i: Int): Int = s.length
-                |  implicitly[(String, Int) => Int]
-                |}
-                |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -1060,6 +943,345 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
     """|package `strip-margin`
        |object Main{
        |  /*augmentString<<scala/Predef.augmentString().>>(*/""/*)*/.stripMargin
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "by-name-regular",
+    """|object Main{
+       |  def foo(x: => Int, y: Int, z: => Int)(w: Int, v: => Int): Unit = ()
+       |  foo(1, 2, 3)(4, 5)
+       |}
+       |""".stripMargin,
+    """|object Main{
+       |  def foo(x: => Int, y: Int, z: => Int)(w: Int, v: => Int): Unit = ()
+       |  foo(/*=> */1, 2, /*=> */3)(4, /*=> */5)
+       |}
+       |""".stripMargin,
+    namedParameters = false
+  )
+
+  check(
+    "by-name-regular-named",
+    """|object Main{
+       |  def foo(x: => Int, y: Int, z: => Int)(w: Int, v: => Int): Unit = ()
+       |  foo(1, 2, 3)(4, 5)
+       |}
+       |""".stripMargin,
+    """|object Main{
+       |  def foo(x: => Int, y: Int, z: => Int)(w: Int, v: => Int): Unit = ()
+       |  foo(/*x = => */1, /*y = */2, /*z = => */3)(/*w = */4, /*v = => */5)
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "by-name-block",
+    """|object Main{
+       |  def Future[A](arg: => A): A = arg
+       |
+       |  Future(1 + 2)
+       |  Future {
+       |    1 + 2
+       |  }
+       |  Future {
+       |    val x = 1
+       |    val y = 2
+       |    x + y
+       |  }
+       |  Some(Option(2).getOrElse {
+       |    List(1,2)
+       |      .headOption
+       |  })
+       |}
+       |""".stripMargin,
+    """|package `by-name-block`
+       |object Main{
+       |  def Future[A](arg: => A): A = arg
+       |
+       |  Future/*[Int<<scala/Int#>>]*/(/*=> */1 + 2)
+       |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
+       |    1 + 2
+       |  }
+       |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
+       |    val x/*: Int<<scala/Int#>>*/ = 1
+       |    val y/*: Int<<scala/Int#>>*/ = 2
+       |    x + y
+       |  }
+       |  Some/*[Any<<scala/Any#>>]*/(Option/*[Int<<scala/Int#>>]*/(2).getOrElse/*[Any<<scala/Any#>>]*/ {/*=> */
+       |    List/*[Int<<scala/Int#>>]*/(1,2)
+       |      .headOption
+       |  })
+       |}
+       |""".stripMargin,
+    namedParameters = false
+  )
+
+  check(
+    "by-name-block-named",
+    """|object Main{
+       |  def Future[A](arg: => A): A = arg
+       |
+       |  Future(1 + 2)
+       |  Future {
+       |    1 + 2
+       |  }
+       |  Future {
+       |    val x = 1
+       |    val y = 2
+       |    x + y
+       |  }
+       |  Some(Option(2).getOrElse {
+       |    List(1,2)
+       |      .headOption
+       |  })
+       |}
+       |""".stripMargin,
+    """|package `by-name-block-named`
+       |object Main{
+       |  def Future[A](arg: => A): A = arg
+       |
+       |  Future/*[Int<<scala/Int#>>]*/(/*arg = => */1 + 2)
+       |  Future/*[Int<<scala/Int#>>]*/ {
+       |    /*arg = => */1 + 2
+       |  }
+       |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
+       |    val x/*: Int<<scala/Int#>>*/ = 1
+       |    val y/*: Int<<scala/Int#>>*/ = 2
+       |    x + y
+       |  }
+       |  Some/*[Any<<scala/Any#>>]*/(/*value = */Option/*[Int<<scala/Int#>>]*/(/*x = */2).getOrElse/*[Any<<scala/Any#>>]*/ {
+       |    /*default = => */List/*[Int<<scala/Int#>>]*/(/*xs = */1,2)
+       |      .headOption
+       |  })
+       |}
+       |""".stripMargin,
+    compat = Map(
+      ">=2.13.0" ->
+        """|package `by-name-block-named`
+           |object Main{
+           |  def Future[A](arg: => A): A = arg
+           |
+           |  Future/*[Int<<scala/Int#>>]*/(/*arg = => */1 + 2)
+           |  Future/*[Int<<scala/Int#>>]*/ {
+           |    /*arg = => */1 + 2
+           |  }
+           |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
+           |    val x/*: Int<<scala/Int#>>*/ = 1
+           |    val y/*: Int<<scala/Int#>>*/ = 2
+           |    x + y
+           |  }
+           |  Some/*[Any<<scala/Any#>>]*/(/*value = */Option/*[Int<<scala/Int#>>]*/(/*x = */2).getOrElse/*[Any<<scala/Any#>>]*/ {
+           |    /*default = => */List/*[Int<<scala/Int#>>]*/(/*elems = */1,2)
+           |      .headOption
+           |  })
+           |}
+           |""".stripMargin,
+      "2.11.12" ->
+        """|package `by-name-block-named`
+           |object Main{
+           |  def Future[A](arg: => A): A = arg
+           |
+           |  Future/*[Int<<scala/Int#>>]*/(/*arg = => */1 + 2)
+           |  Future/*[Int<<scala/Int#>>]*/ {
+           |    /*arg = => */1 + 2
+           |  }
+           |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
+           |    val x/*: Int<<scala/Int#>>*/ = 1
+           |    val y/*: Int<<scala/Int#>>*/ = 2
+           |    x + y
+           |  }
+           |  Some/*[Any<<scala/Any#>>]*/(/*x = */Option/*[Int<<scala/Int#>>]*/(/*x = */2).getOrElse/*[Any<<scala/Any#>>]*/ {
+           |    /*default = => */List/*[Int<<scala/Int#>>]*/(/*xs = */1,2)
+           |      .headOption
+           |  })
+           |}
+           |""".stripMargin
+    )
+  )
+
+  check(
+    "by-name-default-arguments",
+    """|object Main{
+       |  def foo(a: => Int = 1 + 2) = ()
+       |
+       |  foo()
+       |  foo(4 + 2)
+       |}
+       |""".stripMargin,
+    """|package `by-name-default-arguments`
+       |object Main{
+       |  def foo(a: => Int = 1 + 2)/*: Unit<<scala/Unit#>>*/ = ()
+       |
+       |  foo()
+       |  foo(/*a = => */4 + 2)
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "by-name-default-arguments2",
+    """|object Main{
+       |  def foo(a: => Int = 1 + 2) = ()
+       |
+       |  foo()
+       |  foo(4 + 2)
+       |}
+       |""".stripMargin,
+    """|object Main{
+       |  def foo(a: => Int = 1 + 2)/*: Unit<<scala/Unit#>>*/ = ()
+       |
+       |  foo()
+       |  foo(/*=> */4 + 2)
+       |}
+       |""".stripMargin,
+    namedParameters = false
+  )
+
+  check(
+    "multi-argument",
+    """|object Main{
+       |  implicit val isImplicit: Double = 3.14
+       |  def fun[T](a: Int)(b: T)(implicit c: Double) = ???
+       |  fun(1)("2")
+       |  fun(1)(2)(3.14)
+       |  fun(1)(2)
+       |  fun(a = 1)(2)
+       |  fun(a = 
+       | 1)(2)
+       |}
+       |""".stripMargin,
+    """|object Main{
+       |  implicit val isImplicit: Double = 3.14
+       |  def fun[T](a: Int)(b: T)(implicit c: Double)/*: Nothing<<scala/Nothing#>>*/ = ???
+       |  fun/*[String<<java/lang/String#>>]*/(/*a = */1)(/*b = */"2")/*(isImplicit<<(2:15)>>)*/
+       |  fun/*[Int<<scala/Int#>>]*/(/*a = */1)(/*b = */2)(/*c = */3.14)
+       |  fun/*[Int<<scala/Int#>>]*/(/*a = */1)(/*b = */2)/*(isImplicit<<(2:15)>>)*/
+       |  fun/*[Int<<scala/Int#>>]*/(a = 1)(/*b = */2)/*(isImplicit<<(2:15)>>)*/
+       |  fun/*[Int<<scala/Int#>>]*/(a = 
+       | 1)(/*b = */2)/*(isImplicit<<(2:15)>>)*/
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "no-setter-arg",
+    """|object Vars {
+       |  var a = 2
+       |  a = 2
+       |  Vars.a = 3
+       |}
+       |""".stripMargin,
+    """|object Vars {
+       |  var a/*: Int<<scala/Int#>>*/ = 2
+       |  a = 2
+       |  Vars.a = 3
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "java-method",
+    """|import java.nio.file.Paths
+       |object Vars {
+       |  val a = Paths.get(".")
+       |}
+       |""".stripMargin,
+    """|import java.nio.file.Paths
+       |object Vars {
+       |  val a/*: Path<<java/nio/file/Path#>>*/ = Paths.get(".")
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "defaults".tag(IgnoreScala211),
+    """|import java.nio.file.Paths
+       |import java.nio.file.Path
+       |object Main {
+       |  case class Dependency()
+       |  object Dependency{
+       |    def of(
+       |      organization: String,
+       |      name: String,
+       |      version: String,
+       |    ): Dependency = ???
+       |  }
+       |  def downloadDependency(
+       |      dep: Dependency,
+       |      scalaVersion: Option[String] = None,
+       |      classfiers: Seq[String] = Seq.empty,
+       |      resolution: Option[Object] = None,
+       |  ): List[Path] = ???
+       |
+       |  def downloadSemanticdbJavac: List[Path] = {
+       |    downloadDependency(
+       |      Dependency.of(
+       |        "com.sourcegraph",
+       |        "semanticdb-javac",
+       |        "BuildInfo.javaSemanticdbVersion",
+       |      ),
+       |      None,
+       |    )
+       |  }
+       |
+       |  def downloadSemanticdbJavac2: List[Path] = {
+       |    downloadDependency(
+       |      Dependency.of(
+       |        "com.sourcegraph",
+       |        "semanticdb-javac",
+       |        "BuildInfo.javaSemanticdbVersion",
+       |      ),
+       |      None,
+       |      resolution = None
+       |    )
+       |  }
+       |
+       |}
+       |""".stripMargin,
+    """|package defaults
+       |import java.nio.file.Paths
+       |import java.nio.file.Path
+       |object Main {
+       |  case class Dependency()
+       |  object Dependency{
+       |    def of(
+       |      organization: String,
+       |      name: String,
+       |      version: String,
+       |    ): Dependency = ???
+       |  }
+       |  def downloadDependency(
+       |      dep: Dependency,
+       |      scalaVersion: Option[String] = None,
+       |      classfiers: Seq[String] = Seq.empty/*[Nothing<<scala/Nothing#>>]*/,
+       |      resolution: Option[Object] = None,
+       |  ): List[Path] = ???
+       |
+       |  def downloadSemanticdbJavac: List[Path] = {
+       |    downloadDependency(
+       |      /*dep = */Dependency.of(
+       |        /*organization = */"com.sourcegraph",
+       |        /*name = */"semanticdb-javac",
+       |        /*version = */"BuildInfo.javaSemanticdbVersion",
+       |      ),
+       |      /*scalaVersion = */None,
+       |    )
+       |  }
+       |
+       |  def downloadSemanticdbJavac2: List[Path] = {
+       |    downloadDependency(
+       |      Dependency.of(
+       |        /*organization = */"com.sourcegraph",
+       |        /*name = */"semanticdb-javac",
+       |        /*version = */"BuildInfo.javaSemanticdbVersion",
+       |      ),
+       |      None,
+       |      resolution = None
+       |    )
+       |  }
+       |
        |}
        |""".stripMargin
   )

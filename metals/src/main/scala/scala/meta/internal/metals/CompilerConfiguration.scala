@@ -54,14 +54,20 @@ class CompilerConfiguration(
       classpath: Seq[Path],
       referenceCounter: CompletionItemPriority,
   ) extends MtagsPresentationCompiler {
+    private val resolvedMtags = mtagsResolver.resolve(scalaVersion)
+
     private val mtags =
-      mtagsResolver.resolve(scalaVersion).getOrElse(MtagsBinaries.BuildIn)
+      resolvedMtags.getOrElse(MtagsBinaries.BuildIn)
+
+    private val classPathExtension =
+      if (resolvedMtags.nonEmpty) Embedded.scalaLibrary(scalaVersion)
+      else Embedded.scalaLibrary(MtagsBinaries.BuildIn.scalaVersion)
 
     val standalone: PresentationCompiler =
       fromMtags(
         mtags,
         options = Nil,
-        classpath ++ Embedded.scalaLibrary(scalaVersion),
+        classpath ++ classPathExtension,
         "default",
         symbolSearch,
         referenceCounter,
@@ -89,6 +95,25 @@ class CompilerConfiguration(
         referenceCounter,
       )
     }
+  }
+
+  case class StandaloneJavaCompiler(
+      symbolSearch: SymbolSearch,
+      referenceCounter: CompletionItemPriority,
+  ) extends MtagsPresentationCompiler {
+    val standalone: PresentationCompiler = {
+      val pc = new JavaPresentationCompiler()
+      configure(pc, symbolSearch, referenceCounter)
+        .newInstance(
+          "",
+          Nil.asJava,
+          log.asJava,
+        )
+    }
+
+    override def await: PresentationCompiler = standalone
+
+    override def shutdown(): Unit = standalone.shutdown()
   }
 
   trait LazyCompiler extends MtagsPresentationCompiler {

@@ -11,6 +11,7 @@ case class CompilerSyntheticDecorationsParams(
     inferredTypes: Boolean,
     typeParameters: Boolean,
     implicitParameters: Boolean,
+    byNameParameters: Boolean,
     implicitConversions: Boolean
 ) extends SyntheticDecorationsParams {
   override def uri(): URI = virtualFileParams.uri

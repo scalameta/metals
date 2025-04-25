@@ -73,7 +73,7 @@ class ScalaToplevelMtags(
 
   implicit class XtensionScanner(scanner: LegacyScanner) {
     def mtagsNextToken(): Any = {
-      curr = scanner.nextToken()
+      curr = scanner.nextTokenOrEof()
       if (collectIdentifiers)
         curr.token match {
           case IDENTIFIER => identifiers += curr.strVal
@@ -87,7 +87,7 @@ class ScalaToplevelMtags(
   override def indexRoot(): Unit =
     loop(Indent.init, new Region.RootRegion, None)
 
-  def isDone: Boolean = curr.token == EOF
+  def isDone: Boolean = curr.token == EOF || curr.token == PASTEOF
 
   private def resetRegion(region: Region): Region = {
     currentOwner = region.owner

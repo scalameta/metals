@@ -47,8 +47,16 @@ final class PcInlayHintsProvider(
   def collectDecorations(
       tree: Tree,
       inlayHints: InlayHints
-  ): InlayHints =
+  ): InlayHints = {
     tree match {
+      case NamedParameters(params) =>
+        params.foldLeft(inlayHints) { case (acc, (prefix, name, pos)) =>
+          acc.add(
+            adjustPos(pos).focusStart.toLsp,
+            LabelPart(name.toString() + " = " + prefix) :: Nil,
+            InlayHintKind.Parameter
+          )
+        }
       case ImplicitConversion(symbol, range) =>
         val adjusted = adjustPos(range)
         inlayHints
@@ -75,6 +83,14 @@ final class PcInlayHintsProvider(
           label,
           InlayHintKind.Type
         )
+      case ByNameParameters(byNameArgs) =>
+        byNameArgs.foldLeft(inlayHints) { case (ih, pos) =>
+          ih.add(
+            adjustPos(pos.focusStart).toLsp,
+            List(LabelPart("=> ")),
+            InlayHintKind.Parameter
+          )
+        }
       case InferredType(tpe, pos) if tpe != null && !tpe.isError =>
         val adjustedPos = adjustPos(pos).focusEnd
         if (inlayHints.containsDef(adjustedPos.start)) inlayHints
@@ -88,6 +104,7 @@ final class PcInlayHintsProvider(
             .addDefinition(adjustedPos.start)
       case _ => inlayHints
     }
+  }
 
   def traverse(
       acc: InlayHints,
@@ -142,6 +159,68 @@ final class PcInlayHintsProvider(
     } else {
       LabelPart(label, symbol = semanticdbSymbol(symbol))
     }
+
+  object NamedParameters {
+    def unapply(tree: Tree): Option[List[(String, Name, Position)]] =
+      if (params.namedParameters()) {
+        tree match {
+          case Apply(fun: Select, args) if isNotInterestingApply(fun) =>
+            None
+          case Apply(TypeApply(fun: Select, _), args)
+              if isNotInterestingApply(fun) =>
+            None
+          case Apply(fun, args)
+              if isRealApply(fun) &&
+                /* We don't want to show named parameters for unapplies*/
+                args.exists(arg => arg.pos.isRange && arg.pos != fun.pos) &&
+                /* It's most likely a block argument, even if it's not it's
+                   doubtful that anyone wants to see the named parameters */
+                !isSingleBlock(args) =>
+            val applyParams = fun.tpe.params
+            Some(args.zip(applyParams).collect {
+              case (arg, param)
+                  if !isNamedArg(arg) && !isDefaultArgument(arg) =>
+                val prefix =
+                  if (param.isByNameParam && params.byNameParameters()) "=> "
+                  else ""
+                (prefix, param.name, arg.pos)
+            })
+          case _ => None
+        }
+      } else None
+
+    private def isDefaultArgument(arg: Tree) = {
+      arg.symbol != null && arg.symbol.isDefaultGetter
+    }
+    private def isNamedArg(arg: Tree) = {
+      def loop(i: Int): Boolean = {
+        if (text(i) == '=') true
+        else if (text(i).isWhitespace)
+          loop(i - 1)
+        else false
+      }
+      loop(arg.pos.start - 1)
+    }
+
+    private def isNotInterestingApply(sel: Select) =
+      isForComprehensionMethod(sel) || syntheticTupleApply(sel) ||
+        isInfix(sel, textStr) || sel.symbol.isSetter || sel.symbol.isJavaDefined
+
+    private def isSingleBlock(args: List[Tree]): Boolean =
+      args.size == 1 && args.forall {
+        case _: Block => true
+        case Typed(_: Block, _) => true
+        case _ => false
+      }
+
+    private def isNotStringContextApply(fun: Tree) =
+      fun.symbol.owner != definitions.StringContextClass && !fun.symbol.isMacro
+
+    private def isRealApply(fun: Tree) =
+      fun.pos.isRange && fun.symbol != null && !fun.symbol.isImplicit &&
+        isNotStringContextApply(fun) && fun.symbol.paramss.nonEmpty
+  }
+
   object ImplicitConversion {
     def unapply(tree: Tree): Option[(Symbol, Position)] =
       if (params.implicitConversions())
@@ -386,6 +465,63 @@ final class PcInlayHintsProvider(
       val afterDef = text.drop(vd.namePosition.end)
       val index = indexAfterSpacesAndComments(afterDef)
       index >= 0 && index < afterDef.size && afterDef(index) == '@'
+    }
+  }
+
+  object ByNameParameters {
+    // Extract the positions at which `=>` hints should be inserted
+    def unapply(tree: Tree): Option[List[Position]] =
+      if (params.byNameParameters())
+        tree match {
+          case Apply(sel: Select, _)
+              if isForComprehensionMethod(
+                sel
+              ) || sel.symbol.name == nme.unapply =>
+            None
+          case Apply(fun, args) =>
+            val params = fun.tpe.params
+
+            /* Special handling for a single block argument:
+             *
+             *     someOption.getOrElse {/*=> */
+             *       fallbackCode
+             *     }
+             *
+             * We cannot just match on the `Block` node because the case of a single expression in
+             * braces is not represented as a block. Instead, we search for the braces directly in
+             * the source code.
+             */
+            def singleArgBlockCase = (args, params) match {
+              case (Seq(_), Seq(param)) if param.isByNameParam =>
+                byNamePosForBlockLike(tree.pos.withStart(fun.pos.end))
+                  .map(List(_))
+              case _ => None
+            }
+
+            /* For all other cases, we just insert the label before the argument tree:
+             *
+             *     someOption.getOrElse(/*=> */fallbackCode)
+             */
+            Some(singleArgBlockCase.getOrElse {
+              args
+                .zip(params)
+                .collect { case (tree, param) if param.isByNameParam => tree }
+                .map(tree => tree.pos)
+                .filter(_.isRange) // filter out default arguments
+            })
+          case _ => None
+        }
+      else None
+
+    // If the position passed in wraps a brace-delimited expression, return the position after the opening brace
+    private def byNamePosForBlockLike(pos: Position): Option[Position] = {
+      val start = text.indexWhere(!_.isWhitespace, pos.start)
+      val end = text.lastIndexWhere(!_.isWhitespace, pos.end - 1)
+      if (text.lift(start).contains('{') && text.lift(end).contains('}')) {
+        Some(pos.withStart(start + 1))
+      } else {
+        None
+      }
     }
   }
 

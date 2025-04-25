@@ -270,6 +270,9 @@ final class Diagnostics(
     }
   }
 
+  def getFileDiagnostics(path: AbsolutePath): List[Diagnostic] =
+    diagnostics.get(path).map(_.asScala.toList).getOrElse(Nil)
+
   private def publishDiagnostics(
       path: AbsolutePath,
       queue: ju.Queue[Diagnostic],

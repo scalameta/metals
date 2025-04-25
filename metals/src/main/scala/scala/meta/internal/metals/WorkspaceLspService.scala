@@ -1272,6 +1272,7 @@ class WorkspaceLspService(
             List(
               lsp4j.CodeActionKind.QuickFix,
               lsp4j.CodeActionKind.Refactor,
+              lsp4j.CodeActionKind.Source,
               lsp4j.CodeActionKind.SourceOrganizeImports,
             ).asJava
           )

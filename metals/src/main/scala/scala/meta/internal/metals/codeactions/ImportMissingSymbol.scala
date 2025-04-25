@@ -5,18 +5,39 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
 
-class ImportMissingSymbol(compilers: Compilers, buildTargets: BuildTargets)
-    extends CodeAction {
+sealed abstract class ImportMissingSymbol(
+    compilers: Compilers,
+    buildTargets: BuildTargets,
+) extends CodeAction {
 
-  override def kind: String = l.CodeActionKind.QuickFix
+  protected def allSymbolsTitle: String
+
+  protected def isScalaOrSbt(file: AbsolutePath): Boolean =
+    Seq("scala", "sbt", "sc").contains(file.extension)
+
+  /**
+   * Filter the import actions based on specific implementation rules.
+   * This can be overridden by subclasses to implement different filtering strategies.
+   */
+  protected def filterImportActions(
+      allActions: Seq[l.CodeAction]
+  ): Seq[l.CodeAction] = {
+    // Default implementation returns all actions
+    allActions
+  }
+
+  protected def isImportAllSourceAction: Boolean
+  protected def getDiagnostics(params: l.CodeActionParams): Seq[l.Diagnostic]
 
   override def contribute(
       params: l.CodeActionParams,
@@ -94,7 +115,7 @@ class ImportMissingSymbol(compilers: Compilers, buildTargets: BuildTargets)
 
             CodeActionBuilder.build(
               title = ImportMissingSymbol.title(name, i.packageName),
-              kind = l.CodeActionKind.QuickFix,
+              kind = this.kind,
               diagnostics = List(diagnostic),
               changes = edit,
             )
@@ -118,8 +139,8 @@ class ImportMissingSymbol(compilers: Compilers, buildTargets: BuildTargets)
 
         val allSymbols: l.CodeAction =
           CodeActionBuilder.build(
-            title = ImportMissingSymbol.allSymbolsTitle,
-            kind = l.CodeActionKind.QuickFix,
+            title = this.allSymbolsTitle,
+            kind = this.kind,
             diagnostics = diags,
             changes = List(uri.toAbsolutePath -> edits),
           )
@@ -132,19 +153,22 @@ class ImportMissingSymbol(compilers: Compilers, buildTargets: BuildTargets)
 
     Future
       .sequence(
-        params
-          .getContext()
-          .getDiagnostics()
-          .asScala
+        getDiagnostics(params)
           .collect {
             case diag @ ScalacDiagnostic.SymbolNotFound(name)
-                if params.getRange().overlapsWith(diag.getRange()) =>
+                if this.isImportAllSourceAction || params
+                  .getRange()
+                  .overlapsWith(
+                    diag.getRange()
+                  ) =>
               importMissingSymbol(diag, name)
             // `foo.xxx` where `xxx` is not a member of `foo`
             // we search for `xxx` only when the target is Scala3
             // considering there might be an extension method.
             case d @ ScalacDiagnostic.NotAMember(name)
-                if isScala3 && params.getRange().overlapsWith(d.getRange()) =>
+                if isScala3 && (this.isImportAllSourceAction || params
+                  .getRange()
+                  .overlapsWith(d.getRange())) =>
               importMissingSymbol(d, name, findExtensionMethods = true)
           }
       )
@@ -192,17 +216,95 @@ class ImportMissingSymbol(compilers: Compilers, buildTargets: BuildTargets)
               actions
             }
         }.flatten
-        importMissingSymbols(deduplicated.toSeq.sorted)
+
+        // Generate the "Import all" action if applicable
+        val allActions = importMissingSymbols(deduplicated.toSeq.sorted)
+
+        // Apply the filtering strategy from the implementation class
+        val filteredActions =
+          filterImportActions(allActions)
+
+        filteredActions
       }
   }
-
 }
 
 object ImportMissingSymbol {
-
   def title(name: String, packageName: String): String =
     s"Import '$name' from package '$packageName'"
 
   def allSymbolsTitle: String =
     s"Import all missing symbols that are unambiguous"
+}
+
+/**
+ * The QuickFix implementation of ImportMissingSymbol, which is used
+ * when handling missing imports one at a time.
+ */
+class ImportMissingSymbolQuickFix(
+    compilers: Compilers,
+    buildTargets: BuildTargets,
+) extends ImportMissingSymbol(compilers, buildTargets) {
+
+  override protected def getDiagnostics(
+      params: l.CodeActionParams
+  ): Seq[l.Diagnostic] =
+    params.getContext().getDiagnostics().asScala.toSeq
+
+  override val kind: String = ImportMissingSymbolQuickFix.kind
+  override protected val allSymbolsTitle: String =
+    ImportMissingSymbol.allSymbolsTitle
+  override protected def isImportAllSourceAction: Boolean = false
+}
+
+object ImportMissingSymbolQuickFix {
+  final val kind: String = l.CodeActionKind.QuickFix
+}
+
+/**
+ * The "source" implementation of ImportMissingSymbol, which is used
+ * for automatically importing all unambiguous symbols for the entire file.
+ *
+ * This implementation only imports symbols that have exactly one unambiguous import source.
+ * Any symbols with multiple possible imports (like Future from scala.concurrent and
+ * java.util.concurrent) will be skipped and require manual resolution.
+ */
+class SourceAddMissingImports(
+    compilers: Compilers,
+    buildTargets: BuildTargets,
+    diagnostics: Diagnostics,
+) extends ImportMissingSymbol(compilers, buildTargets) {
+
+  override protected def getDiagnostics(
+      params: l.CodeActionParams
+  ): Seq[l.Diagnostic] = {
+    val uri = params.getTextDocument().getUri()
+    val file = uri.toAbsolutePath
+    this.diagnostics.getFileDiagnostics(file).toSeq
+  }
+
+  override val kind: String = SourceAddMissingImports.kind
+  override protected val allSymbolsTitle: String = SourceAddMissingImports.title
+  override protected def isImportAllSourceAction: Boolean = true
+
+  /**
+   * Override the filtering method to only keep unambiguous imports.
+   * This ensures we only auto-import symbols with exactly one available import.
+   */
+  override protected def filterImportActions(
+      allActions: Seq[l.CodeAction]
+  ): Seq[l.CodeAction] = {
+    if (allActions.length > 1) {
+      allActions.find(a => a.getTitle == SourceAddMissingImports.title).toSeq
+    } else {
+      allActions.foreach(a => a.setTitle(SourceAddMissingImports.title))
+      allActions
+    }
+  }
+}
+
+object SourceAddMissingImports {
+  final val kind: String = l.CodeActionKind.Source
+  final val title: String =
+    "Add all missing imports that are unambiguous for the entire file"
 }

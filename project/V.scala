@@ -24,7 +24,7 @@ object V {
   val debugAdapter = "4.2.4"
   val genyVersion = "1.0.0"
   val gitter8Version = "0.17.0"
-  val gradleBloop = "1.6.2"
+  val gradleBloop = "1.6.3"
   val java8Compat = "1.0.2"
   val javaSemanticdb = "0.10.4"
   val jsoup = "1.19.1"
@@ -32,7 +32,7 @@ object V {
   val lsp4jV = "0.24.0"
   val mavenBloop = "2.0.1"
   val mill = "0.12.10"
-  val mdoc = "2.6.5"
+  val mdoc = "2.7.1"
   val munit = "1.1.0"
   val pprint = "0.7.3"
   val sbtBloop = bloop
@@ -44,7 +44,7 @@ object V {
   val scribe = "3.16.1"
   val qdox = "2.2.0"
 
-  val guava = "com.google.guava" % "guava" % "33.4.6-jre"
+  val guava = "com.google.guava" % "guava" % "33.4.8-jre"
   val lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   val dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
 

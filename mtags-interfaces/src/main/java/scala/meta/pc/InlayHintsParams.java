@@ -25,9 +25,23 @@ public interface InlayHintsParams extends RangeParams {
   boolean implicitParameters();
 
   /**
+   * Response should contain decorations for by name parameters.
+   */
+  default boolean byNameParameters() {
+    return false;
+  }
+
+  /**
    * Response should contain decorations for implicit conversions.
    */
   boolean implicitConversions();
+
+  /**
+   * Response should contain decorations for named parameters.
+   */
+  default boolean namedParameters(){
+    return false;
+  }
 
   /**
    * Response should contain decorations in pattern matches.

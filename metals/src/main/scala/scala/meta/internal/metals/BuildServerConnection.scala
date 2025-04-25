@@ -588,6 +588,7 @@ object BuildServerConnection {
       requestTimeOutNotification: DismissedNotifications#Notification,
       reconnectNotification: DismissedNotifications#Notification,
       config: MetalsServerConfig,
+      userConfiguration: UserConfiguration,
       serverName: String,
       bspStatusOpt: Option[ConnectionBspStatus] = None,
       retry: Int = 5,
@@ -625,6 +626,7 @@ object BuildServerConnection {
               server,
               serverName,
               config,
+              userConfiguration,
             )
           } catch {
             case e: TimeoutException =>
@@ -692,6 +694,7 @@ object BuildServerConnection {
             reconnectNotification,
             requestTimeOutNotification,
             config,
+            userConfiguration,
             serverName,
             bspStatusOpt,
             retry - 1,
@@ -719,12 +722,13 @@ object BuildServerConnection {
       server: MetalsBuildServer,
       serverName: String,
       config: MetalsServerConfig,
+      userConfiguration: UserConfiguration,
   ): InitializeBuildResult = {
     val extraParams = BspExtraBuildParams(
       BuildInfo.javaSemanticdbVersion,
       BuildInfo.scalametaVersion,
       BuildInfo.supportedScala2Versions.asJava,
-      config.enableBestEffort,
+      config.enableBestEffort || userConfiguration.enableBestEffort,
     )
 
     val capabilities = new BuildClientCapabilities(
