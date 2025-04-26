@@ -94,6 +94,7 @@ class ShellRunner(
     val env = additionalEnv ++ JdkSources.envVariables(javaHome)
 
     val shellArguments = userConfiguration().defaultShell match {
+      case Some(shell) if shell.contains("fish") => shell :: args
       case Some(shell) => List(shell, "-i", "-l", "-c", args.mkString(" "))
       case None => args
     }

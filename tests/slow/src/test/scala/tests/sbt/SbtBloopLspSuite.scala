@@ -40,14 +40,15 @@ class SbtBloopLspSuite
   test("environment-variables") {
     cleanWorkspace()
 
-    val fakeShell = workspace.resolve("fake-shell")
-    fakeShell.writeText("""#!/bin/sh
-        export MY_ENV_VAR="test-value"
-        exec "$$@"
-        """)
+    val fakeShell = workspace.resolve("fake-shell.sh")
+    fakeShell.writeText("""
+                          |export MY_ENV_VAR="test-value"
+                          |exec bash "$@"
+                          |""".stripMargin)
     fakeShell.toFile.setExecutable(true)
 
     for {
+      // should fail with NoSuchElementException
       _ <- initialize(
         s"""|/project/build.properties
             |sbt.version=$sbtVersion
@@ -55,15 +56,23 @@ class SbtBloopLspSuite
             |name := sys.env("MY_ENV_VAR")
             |""".stripMargin,
         expectError = true,
-      )
+      ).recover {
+        case t: java.util.NoSuchElementException =>
+          assert(t.getMessage.contains("key not found: MY_ENV_VAR"))
+        case t => fail(s"Expected NoSuchElementException but got $t")
+      }
+
       _ <- server.didChangeConfiguration(
-        userConfig
-          .copy(defaultShell = Some(fakeShell.toString))
-          .toString
+        s"""{
+           |  "defaultShell": "$fakeShell"
+           |}""".stripMargin
       )
+
       _ <- server.executeCommand(ServerCommands.ImportBuild)
 
-    } yield {}
+      _ = assertStatus(_.isInstalled)
+
+    } yield ()
   }
 
   test("basic") {
