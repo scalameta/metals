@@ -396,6 +396,20 @@ final class PcInlayHintsProvider(
               case _ => fun.pos
             }
             Some(args.map(_.tpe.widen), pos)
+          /* Case matching <<.>>> in the following code:
+           *
+           * class Foo[T](val t: T)
+           * val foo = <<new Foo/*[String]*/>>("foo")
+           */
+          case New(tpt: TypeTree)
+              if tpt.pos.isRange && tpt.tpe.typeArgs.nonEmpty =>
+            tpt.original match {
+              /* orginal (untyped tree) is an AppliedTypeTree
+               * if the type parameter is explicitly passed by the user
+               */
+              case _: AppliedTypeTree => None
+              case _ => Some(tpt.tpe.typeArgs.map(_.widen), tpt.pos)
+            }
           case _ => None
         }
       else None
