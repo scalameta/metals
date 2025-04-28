@@ -1286,4 +1286,51 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |""".stripMargin
   )
 
+  check(
+    "i4474",
+    """|object Main extends App {
+       |  class Wrapper[A](val value: A) {
+       |   def this() = this(???)
+       |  }
+       |  def wrap[A](value: A): Wrapper[A] = new Wrapper(value)
+       |
+       |  val x = new Wrapper(5)
+       |  val x2 = wrap(5)
+       |  val x3 = new Wrapper[Int](5)
+       |  val x4 = new Wrapper()
+       |}
+       |""".stripMargin,
+    """|object Main extends App {
+       |  class Wrapper[A](val value: A) {
+       |   def this() = this(???)
+       |  }
+       |  def wrap[A](value: A): Wrapper[A] = new Wrapper/*[A<<(5:11)>>]*/(/*value = */value)
+       |
+       |  val x/*: Wrapper<<(2:8)>>[Int<<scala/Int#>>]*/ = new Wrapper/*[Int<<scala/Int#>>]*/(/*value = */5)
+       |  val x2/*: Wrapper<<(2:8)>>[Int<<scala/Int#>>]*/ = wrap/*[Int<<scala/Int#>>]*/(/*value = */5)
+       |  val x3/*: Wrapper<<(2:8)>>[Int<<scala/Int#>>]*/ = new Wrapper[Int](/*value = */5)
+       |  val x4/*: Wrapper<<(2:8)>>[Nothing<<scala/Nothing#>>]*/ = new Wrapper/*[Nothing<<scala/Nothing#>>]*/()
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "i4474-2",
+    """|object Main extends App {
+       |  object O {
+       |    class Wrapper[A, B](val value: A, val value2: B)
+       |  }
+       |  val x = new O.Wrapper(5, "aaa")
+       |  val x2 = new O.Wrapper[Int, String](5, "aaa")
+       |}
+       |""".stripMargin,
+    """|object Main extends App {
+       |  object O {
+       |    class Wrapper[A, B](val value: A, val value2: B)
+       |  }
+       |  val x/*: O<<(2:9)>>.Wrapper<<(3:10)>>[Int<<scala/Int#>>,String<<java/lang/String#>>]*/ = new O.Wrapper/*[Int<<scala/Int#>>, String<<java/lang/String#>>]*/(/*value = */5, /*value2 = */"aaa")
+       |  val x2/*: O<<(2:9)>>.Wrapper<<(3:10)>>[Int<<scala/Int#>>,String<<scala/Predef.String#>>]*/ = new O.Wrapper[Int, String](/*value = */5, /*value2 = */"aaa")
+       |}
+       |""".stripMargin
+  )
 }
