@@ -6,8 +6,6 @@ import java.{util => ju}
 
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.Docstrings
-import scala.meta.internal.metals.EmptyReportContext
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.WorkspaceSymbolInformation
 import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -20,6 +18,8 @@ import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
+import scala.meta.pc.reports.EmptyReportContext
+import scala.meta.pc.reports.ReportContext
 
 import org.eclipse.lsp4j.Location
 
@@ -30,11 +30,12 @@ import org.eclipse.lsp4j.Location
  */
 class TestingSymbolSearch(
     classpath: ClasspathSearch = ClasspathSearch.empty,
-    docs: Docstrings = Docstrings.empty(EmptyReportContext),
+    docs: Docstrings = Docstrings.empty(new EmptyReportContext()),
     workspace: TestingWorkspaceSearch =
-      TestingWorkspaceSearch.empty(EmptyReportContext),
-    index: GlobalSymbolIndex = OnDemandSymbolIndex.empty()(EmptyReportContext)
-)(implicit rc: ReportContext = EmptyReportContext)
+      TestingWorkspaceSearch.empty(new EmptyReportContext()),
+    index: GlobalSymbolIndex =
+      OnDemandSymbolIndex.empty()(new EmptyReportContext())
+)(implicit rc: ReportContext = new EmptyReportContext())
     extends SymbolSearch {
 
   override def documentation(

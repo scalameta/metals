@@ -1,5 +1,7 @@
 package scala.meta.internal.parsing
 
+import java.util.Optional
+
 import scala.collection.concurrent.TrieMap
 import scala.reflect.ClassTag
 
@@ -183,14 +185,16 @@ final class Trees(
     } catch {
       // if the parsers breaks we should not throw the exception further
       case _: StackOverflowError =>
-        val newPathCopy = reports.unsanitized.create(
-          Report(
-            s"stackoverflow_${path.filename}",
-            text,
-            s"Stack overflow in ${path.filename}",
-            path = Some(path.toURI),
+        val newPathCopy = reports
+          .unsanitized()
+          .create(() =>
+            Report(
+              s"stackoverflow_${path.filename}",
+              text,
+              s"Stack overflow in ${path.filename}",
+              path = Optional.of(path.toURI),
+            )
           )
-        )
         val message =
           s"Could not parse $path, saved the current snapshot to ${newPathCopy}"
         scribe.warn(message)

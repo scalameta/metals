@@ -296,6 +296,7 @@ class CompilerConfiguration(
       .withWorkspace(workspace.toNIO)
       .withScheduledExecutorService(sh)
       .withReportsLoggerLevel(MetalsServerConfig.default.loglevel)
+      .withReportContext(rc)
       .withConfiguration {
         val options =
           InitializationOptions.from(initializeParams).compilerOptions
@@ -370,7 +371,7 @@ class CompilerConfiguration(
               |""".stripMargin,
           error,
         )
-      rc.unsanitized.create(report)
+      rc.unsanitized().create(() => report)
       EmptySymbolSearch
     }
   }

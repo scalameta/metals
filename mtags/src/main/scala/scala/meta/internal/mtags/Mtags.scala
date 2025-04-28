@@ -3,13 +3,13 @@ package scala.meta.internal.mtags
 import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.EmptyReportContext
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.reports.EmptyReportContext
+import scala.meta.pc.reports.ReportContext
 
 final class Mtags(implicit rc: ReportContext) {
   def totalLinesOfCode: Long = javaLines + scalaLines
@@ -125,7 +125,7 @@ final class Mtags(implicit rc: ReportContext) {
 }
 object Mtags {
   def index(path: AbsolutePath, dialect: Dialect)(implicit
-      rc: ReportContext = EmptyReportContext
+      rc: ReportContext = new EmptyReportContext()
   ): TextDocument = {
     new Mtags().index(path.toLanguage, path, dialect)
   }
@@ -144,7 +144,7 @@ object Mtags {
       input: Input.VirtualFile,
       dialect: Dialect,
       includeMembers: Boolean = true
-  )(implicit rc: ReportContext = EmptyReportContext): TextDocument =
+  )(implicit rc: ReportContext = new EmptyReportContext()): TextDocument =
     input.toLanguage match {
       case Language.JAVA =>
         new JavaMtags(input, includeMembers = true).index()
@@ -159,7 +159,7 @@ object Mtags {
   def toplevels(
       path: AbsolutePath,
       dialect: Dialect = dialects.Scala213
-  )(implicit rc: ReportContext = EmptyReportContext): TextDocument = {
+  )(implicit rc: ReportContext = new EmptyReportContext()): TextDocument = {
     new Mtags().toplevels(path, dialect)
   }
 
@@ -168,7 +168,7 @@ object Mtags {
       dialect: Dialect = dialects.Scala213,
       includeMembers: Boolean = false
   )(implicit
-      rc: ReportContext = EmptyReportContext
+      rc: ReportContext = new EmptyReportContext()
   ): (TextDocument, MtagsIndexer.AllOverrides) = {
     new Mtags().indexWithOverrides(path, dialect, includeMembers)
   }
@@ -176,7 +176,7 @@ object Mtags {
   def topLevelSymbols(
       path: AbsolutePath,
       dialect: Dialect = dialects.Scala213
-  )(implicit rc: ReportContext = EmptyReportContext): List[String] = {
+  )(implicit rc: ReportContext = new EmptyReportContext()): List[String] = {
     new Mtags().topLevelSymbols(path, dialect)
   }
 

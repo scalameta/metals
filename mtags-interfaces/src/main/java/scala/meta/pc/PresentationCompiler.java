@@ -1,5 +1,7 @@
 package scala.meta.pc;
 
+import scala.meta.pc.reports.ReportContext;
+
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionList;
 import org.eclipse.lsp4j.DocumentHighlight;
@@ -305,6 +307,13 @@ public abstract class PresentationCompiler {
 	 * Provide CompletionItemPriority for additional sorting completion items.
 	 */
 	public PresentationCompiler withCompletionItemPriority(CompletionItemPriority priority) {
+		return this;
+	}
+
+	/**
+	 * Provide a reporting context for reporting errors.
+	 */
+	public PresentationCompiler withReportContext(ReportContext reportContext) {
 		return this;
 	}
 
