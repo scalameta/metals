@@ -401,18 +401,14 @@ final class PcInlayHintsProvider(
            * class Foo[T](val t: T)
            * val foo = <<new Foo/*[String]*/>>("foo")
            */
-          case Select(New(tpt: TypeTree), nme.CONSTRUCTOR) if tpt.pos.isRange =>
+          case New(tpt: TypeTree)
+              if tpt.pos.isRange && tpt.tpe.typeArgs.nonEmpty =>
             tpt.original match {
               /* orginal (untyped tree) is an AppliedTypeTree
-               * if the type parameter is explicitly written by user
+               * if the type parameter is explicitly passed by the user
                */
               case _: AppliedTypeTree => None
-              case _ =>
-                tpt.tpe match {
-                  case TypeRef(_, sym, args) if args.nonEmpty =>
-                    Some(args.map(_.widen), tpt.pos)
-                  case _ => None
-                }
+              case _ => Some(tpt.tpe.typeArgs.map(_.widen), tpt.pos)
             }
           case _ => None
         }
