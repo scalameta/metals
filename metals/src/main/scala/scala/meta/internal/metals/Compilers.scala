@@ -752,6 +752,29 @@ class Compilers(
     }
   }.getOrElse(Future.successful(Nil.asJava))
 
+  def convertToEnum(
+      params: TextDocumentPositionParams,
+      token: CancelToken,
+  ): Future[ju.List[TextEdit]] = {
+    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+      if (pc.supportedCodeActions().contains(CodeActionId.ConvertToEnum)) {
+        val offsetParams = CompilerOffsetParamsUtils.fromPos(
+          pos,
+          token,
+          outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
+        )
+        val result = pc.codeAction(
+          offsetParams,
+          CodeActionId.ConvertToEnum,
+          ju.Optional.empty(),
+        )
+        result.asScala.map { edits =>
+          adjust.adjustTextEdits(edits)
+        }
+      } else Future.successful(List.empty[TextEdit].asJava)
+    }.getOrElse(Future.successful(Nil.asJava))
+  }
+
   def inlineEdits(
       params: TextDocumentPositionParams,
       token: CancelToken,
