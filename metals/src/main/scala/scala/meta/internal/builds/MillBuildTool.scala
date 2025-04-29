@@ -63,7 +63,7 @@ case class MillBuildTool(
 
   }
 
-  private val usingMillVersionPattern = "//[|] +mill-version: +([^ ]+) *$".r
+  private val yamlMillVersionPattern = "//[|] +mill-version: +([^ ]+) *$".r
 
   def readMillVersionYamlFrontmatter(file: AbsolutePath): Option[String] =
     file match {
@@ -72,7 +72,7 @@ case class MillBuildTool(
           .readAllLines(f.toNIO)
           .asScala
           .takeWhile(_.startsWith("//|"))
-          .collectFirst { case usingMillVersionPattern(version) =>
+          .collectFirst { case yamlMillVersionPattern(version) =>
             version
           }
       case _ => None
