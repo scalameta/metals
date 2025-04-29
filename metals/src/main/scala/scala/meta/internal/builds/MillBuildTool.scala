@@ -8,6 +8,7 @@ import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
+import scala.jdk.CollectionConverters._
 
 case class MillBuildTool(
     userConfig: () => UserConfiguration,
@@ -22,20 +23,29 @@ case class MillBuildTool(
     val millVersionPath = workspace.resolve(".mill-version")
     lazy val altMillVersionPath =
       workspace.resolve(".config").resolve("mill-version")
+    lazy val buildFile = workspace.resolve("build.mill")
+    lazy val buildFile1 = workspace.resolve("build.mill.scala")
+    lazy val buildFile2 = workspace.resolve("build.sc")
     lazy val millPath = workspace.resolve("mill")
+
+    lazy val versionFromBuildfiles = LazyList(buildFile, buildFile1, buildFile2)
+      .find(_.isFile)
+      .flatMap(readMillVersionYamlFrontmatter(_))
 
     def readMillVersion(path: AbsolutePath) =
       Files
         .readAllLines(path.toNIO)
         .asScala
         .headOption
-        .map(_.trim.stripSuffix("-native"))
+        .map(_.trim)
         .getOrElse(version)
 
-    if (millVersionPath.isFile) {
+    val read = if (millVersionPath.isFile) {
       readMillVersion(millVersionPath)
     } else if (altMillVersionPath.isFile) {
       readMillVersion(altMillVersionPath)
+    } else if (versionFromBuildfiles.isDefined) {
+      versionFromBuildfiles.get
     } else if (millPath.isFile) {
       Files
         .readAllLines(millPath.toNIO)
@@ -46,7 +56,27 @@ case class MillBuildTool(
     } else {
       version
     }
+
+    read
+      .stripSuffix("-native")
+      .stripSuffix("-jvm")
+
   }
+
+  private val usingMillVersionPattern = "//[|] +mill-version: +([^ ]+) *$".r
+
+  def readMillVersionYamlFrontmatter(file: AbsolutePath): Option[String] =
+    file match {
+      case f if f.isFile =>
+        Files
+          .readAllLines(f.toNIO)
+          .asScala
+          .takeWhile(_.startsWith("//|"))
+          .collectFirst { case usingMillVersionPattern(version) =>
+            version
+          }
+      case _ => None
+    }
 
   override def shouldRegenerateBspJson(
       currentVersion: String,
