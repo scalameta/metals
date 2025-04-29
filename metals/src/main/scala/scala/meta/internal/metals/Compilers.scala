@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.Collections
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
 import java.{util => ju}
 
@@ -241,10 +242,16 @@ class Compilers(
     didFocus(path)
   }
 
-  def didFocus(path: AbsolutePath): Unit = {
-    for (pc <- loadCompiler(path); contents <- buffers.get(path)) {
-      pc.didChange(CompilerVirtualFileParams(path.toNIO.toUri, contents))
-    }
+  def didFocus(path: AbsolutePath): Future[List[Diagnostic]] = {
+    val maybeDiagnostics =
+      for (pc <- loadCompiler(path); contents <- buffers.get(path))
+        yield {
+          pc.didChange(CompilerVirtualFileParams(path.toNIO.toUri, contents))
+            .asScala
+            .map(_.asScala.toList)
+        }
+
+    maybeDiagnostics.getOrElse(Future.successful(List.empty))
   }
 
   def didChange(path: AbsolutePath): Future[List[Diagnostic]] = {
@@ -273,12 +280,11 @@ class Compilers(
         outlineFilesProvider.didChange(pc.buildTargetId(), path)
 
         for {
-          ds <-
-            pc
-              .didChange(
-                CompilerVirtualFileParams(path.toNIO.toUri(), input.value)
-              )
-              .asScala
+          ds <- pc
+            .didChange(
+              CompilerVirtualFileParams(path.toNIO.toUri(), input.value)
+            )
+            .asScala
         } yield {
           ds.asScala.toList
         }
@@ -1327,7 +1333,22 @@ class Compilers(
       targetId: BuildTargetIdentifier
   ): Option[PresentationCompiler] =
     withKeyAndDefault(targetId) { case (key, getCompiler) =>
-      Option(jcache.computeIfAbsent(key, { _ => getCompiler() }).await)
+      val sources = buildTargets.buildTargetSources(targetId)
+      val modifiedFiles =
+        buffers.open.filter(buf => sources.exists(buf.startWith)).toList
+      pprint.pprintln(
+        s"Adding modified files to PC of $targetId: \n${modifiedFiles.mkString("\n")}"
+      )
+
+      // in case of a restart, the presentation compiler should know all files that have been modified
+      // and use their up to date contents when type checking
+      val pc = jcache.computeIfAbsent(key, { _ => getCompiler() }).await
+      modifiedFiles.foreach(path =>
+        pc.didChange(
+          CompilerVirtualFileParams(path.toNIO.toUri, buffers.get(path).get)
+        )
+      )
+      Option(pc)
     }
 
   private def withKeyAndDefault[T](

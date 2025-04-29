@@ -31,5 +31,4 @@ case class Buffers(
       TokenEditDistance.NoMatch
     )
   }
-
 }

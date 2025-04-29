@@ -800,7 +800,11 @@ abstract class MetalsLspService(
       buildTargets.inverseSources(path).getOrElse(null)
     )
 
-    compilers.didFocus(path)
+    // when focusing on a new file, display updated diagnostics
+    compilers
+      .didFocus(path)
+      .map(diagnostics.publishDiagnosticsNotAdjusted(path, _))
+
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
     if (path.isDependencySource(folder)) {
