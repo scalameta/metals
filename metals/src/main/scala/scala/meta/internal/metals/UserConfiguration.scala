@@ -57,6 +57,7 @@ case class UserConfiguration(
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
     scalaCliLauncher: Option[String] = None,
     defaultBspToBuildTool: Boolean = false,
+    presentationCompilerDiagnostics: Boolean = true,
     buildOnChange: Boolean = true,
     buildOnFocus: Boolean = true,
 ) {
@@ -145,6 +146,7 @@ case class UserConfiguration(
           defaultBspToBuildTool,
         )
       ),
+      Some("presentationCompilerDiagnostics", presentationCompilerDiagnostics),
       Some(
         (
           "buildOnChange",
@@ -481,6 +483,16 @@ object UserConfiguration {
            |""".stripMargin,
       ),
       UserConfigurationOption(
+        "presentation-compiler-diagnostics",
+        "true",
+        "false",
+        "[Experimental] Show diagnostics messages from the Scala presentation compiler",
+        """|Show presentation compiler errors and warnings as you type. This gives a
+           |much faster feedback loop but may show incorrect or incomplete error messages. Only
+           |supported in Scala 2.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
         "build-on-change",
         "true",
         "false",
@@ -769,6 +781,8 @@ object UserConfiguration {
     val defaultBspToBuildTool =
       getBooleanKey("default-bsp-to-build-tool").getOrElse(false)
 
+    val presentationCompilerDiagnostics =
+      getBooleanKey("presentation-compiler-diagnostics").getOrElse(true)
     val buildOnChange = getBooleanKey("build-on-change").getOrElse(true)
     val buildOnFocus = getBooleanKey("build-on-focus").getOrElse(true)
 
@@ -804,6 +818,7 @@ object UserConfiguration {
           autoImportBuilds,
           scalaCliLauncher,
           defaultBspToBuildTool,
+          presentationCompilerDiagnostics,
           buildOnChange,
           buildOnFocus,
         )

@@ -22,6 +22,9 @@ trait GlobalProxy { this: MetalsGlobal =>
     metalsAsk[List[Member]](r => getScopeCompletion(pos, r))
   }
 
+  /**
+   * Run the given function on a freshly created response, **on the current thread**.
+   */
   def metalsAsk[T](fn: Response[T] => Unit): T = {
     val r = new Response[T]
     fn(r)

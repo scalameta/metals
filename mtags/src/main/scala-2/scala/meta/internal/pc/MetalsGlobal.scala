@@ -17,7 +17,7 @@ import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.interactive.GlobalProxy
 import scala.tools.nsc.interactive.InteractiveAnalyzer
-import scala.tools.nsc.reporters.Reporter
+import scala.tools.nsc.interactive.InteractiveReporter
 import scala.util.control.NonFatal
 import scala.{meta => m}
 
@@ -35,7 +35,7 @@ import org.eclipse.{lsp4j => l}
 
 class MetalsGlobal(
     settings: Settings,
-    reporter: Reporter,
+    reporter: MetalsReporter,
     val search: SymbolSearch,
     val buildTargetIdentifier: String,
     val metalsConfig: PresentationCompilerConfig,
@@ -64,6 +64,7 @@ class MetalsGlobal(
     with GlobalProxy
     with AutoImports
     with Keywords
+    with PcDiagnostics
     with WorkspaceSymbolSearch { compiler =>
   hijackPresentationCompilerThread()
 
@@ -1179,4 +1180,11 @@ class MetalsGlobal(
       }
     }
   }
+}
+
+class MetalsReporter(initSettings: Settings) extends InteractiveReporter {
+  private[pc] var _metalsGlobal: MetalsGlobal = null
+  override def compiler: Global = _metalsGlobal
+
+  override def settings: Settings = initSettings
 }

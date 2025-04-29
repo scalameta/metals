@@ -133,4 +133,5 @@ public interface PresentationCompilerConfig {
 		return ContentType.MARKDOWN;
 	}
 
+	default boolean emitDiagnostics() { return false; }
 }

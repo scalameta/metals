@@ -283,6 +283,7 @@ class CompilerConfiguration(
             _isStripMarginOnTypeFormattingEnabled =
               () => userConfig().enableStripMarginOnTypeFormatting,
             hoverContentType = config.hoverContentType(),
+            emitDiagnostics = userConfig().presentationCompilerDiagnostics,
           )
       }
 

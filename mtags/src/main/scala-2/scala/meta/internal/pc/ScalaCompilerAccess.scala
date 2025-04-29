@@ -4,14 +4,14 @@ import java.util.concurrent.ScheduledExecutorService
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.tools.nsc.interactive.ShutdownReq
-import scala.tools.nsc.reporters.StoreReporter
+import scala.tools.nsc.Settings
 import scala.util.control.NonFatal
 
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.VirtualFileParams
 
 class ScalaCompilerWrapper(global: MetalsGlobal)
-    extends CompilerWrapper[StoreReporter, MetalsGlobal] {
+    extends CompilerWrapper[MetalsReporter, MetalsGlobal] {
 
   override def compiler(params: VirtualFileParams): MetalsGlobal = {
     if (params.outlineFiles().isPresent()) {
@@ -23,9 +23,9 @@ class ScalaCompilerWrapper(global: MetalsGlobal)
 
   override def resetReporter(): Unit = global.reporter.reset()
 
-  override def reporterAccess: ReporterAccess[StoreReporter] =
-    new ReporterAccess[StoreReporter] {
-      def reporter = global.reporter.asInstanceOf[StoreReporter]
+  override def reporterAccess: ReporterAccess[MetalsReporter] =
+    new ReporterAccess[MetalsReporter] {
+      def reporter = global.reporter.asInstanceOf[MetalsReporter]
     }
 
   override def askShutdown(): Unit = {
@@ -51,14 +51,14 @@ class ScalaCompilerAccess(
     sh: Option[ScheduledExecutorService],
     newCompiler: () => ScalaCompilerWrapper
 )(implicit ec: ExecutionContextExecutor)
-    extends CompilerAccess[StoreReporter, MetalsGlobal](
+    extends CompilerAccess[MetalsReporter, MetalsGlobal](
       config,
       sh,
       newCompiler,
       shouldResetJobQueue = false
     ) {
 
-  def newReporter = new StoreReporter
+  def newReporter = new MetalsReporter(new Settings())
 
   protected def handleSharedCompilerException(
       t: Throwable

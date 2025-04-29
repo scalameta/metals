@@ -169,7 +169,24 @@ case class ScalaPresentationCompiler(
   override def didChange(
       params: VirtualFileParams
   ): CompletableFuture[ju.List[Diagnostic]] = {
-    CompletableFuture.completedFuture(Nil.asJava)
+    val noDiags = Seq[Diagnostic]().asJava
+    if (config.emitDiagnostics) {
+      compilerAccess.withInterruptableCompiler(noDiags, EmptyCancelToken) {
+        pc =>
+          val mGlobal = pc.compiler()
+          import mGlobal._
+
+          val sourceFile = new MetalsSourceFile(
+            params.uri().toString,
+            params.text().toCharArray
+          )
+          metalsAsk[Unit](askReload(List(sourceFile), _))
+
+          val diags = mGlobal.diagnosticsOf(sourceFile)
+          pprint.pprintln(diags)
+          diags.asJava
+      }(emptyQueryContext)
+    } else { CompletableFuture.completedFuture(noDiags) }
   }
 
   def didClose(uri: URI): Unit = {
@@ -177,6 +194,8 @@ case class ScalaPresentationCompiler(
       (),
       EmptyCancelToken
     ) { pc =>
+      pc.compiler()
+        .removeUnitOf(new MetalsSourceFile(uri.toString, Array.empty))
       pc.compiler().richCompilationCache.remove(uri.toString())
     }(emptyQueryContext)
   }
@@ -578,6 +597,7 @@ case class ScalaPresentationCompiler(
     val vd = new VirtualDirectory("(memory)", None)
     val settings = new Settings
     settings.Ymacroexpand.value = "discard"
+    settings.YpresentationDelay.value = 500
     settings.outputDirs.setSingleOutput(vd)
     settings.classpath.value = classpath
     settings.YpresentationAnyThread.value = true
@@ -598,15 +618,20 @@ case class ScalaPresentationCompiler(
     if (unprocessed.nonEmpty || !isSuccess) {
       logger.warning(s"Unknown compiler options: ${unprocessed.mkString(", ")}")
     }
-    new MetalsGlobal(
+    // settings are needed during the constructor of interactive.Global
+    // and the reporter doesn't have a reference to global yet
+    val reporter = new MetalsReporter(settings)
+    val mg = new MetalsGlobal(
       settings,
-      new StoreReporter,
+      reporter,
       search,
       buildTargetIdentifier,
       config,
       folderPath,
       completionItemPriority
     )
+    reporter._metalsGlobal = mg
+    mg
   }
 
   // ================
@@ -614,23 +639,7 @@ case class ScalaPresentationCompiler(
   // ================
 
   override def diagnosticsForDebuggingPurposes(): util.List[String] = {
-    compilerAccess.reporter.infos.iterator
-      .map { info =>
-        new StringBuilder()
-          .append(info.pos.source.file.path)
-          .append(":")
-          .append(info.pos.column)
-          .append(" ")
-          .append(info.msg)
-          .append("\n")
-          .append(info.pos.lineContent)
-          .append("\n")
-          .append(info.pos.lineCaret)
-          .toString
-      }
-      .filterNot(_.contains("_CURSOR_"))
-      .toList
-      .asJava
+    Nil.asJava
   }
 
   implicit class XtensionParams(params: VirtualFileParams) {
