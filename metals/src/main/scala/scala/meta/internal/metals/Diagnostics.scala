@@ -292,6 +292,18 @@ final class Diagnostics(
     languageClient.publishDiagnostics(new PublishDiagnosticsParams(uri, all))
   }
 
+  def publishDiagnosticsNotAdjusted(
+      path: AbsolutePath,
+      ds: List[Diagnostic],
+  ): Unit = {
+    languageClient.publishDiagnostics(
+      new PublishDiagnosticsParams(
+        path.toURI.toString,
+        ds.asJava,
+      )
+    )
+  }
+
   private def publishDiagnosticsBuffer(): Unit = {
     clearDiagnosticsBuffer().foreach { path => publishDiagnostics(path) }
   }

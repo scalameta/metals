@@ -237,6 +237,16 @@ class Compilers(
     loadCompiler(path).foreach(_.didClose(path.toNIO.toUri()))
   }
 
+  def didOpen(path: AbsolutePath): Unit = {
+    didFocus(path)
+  }
+
+  def didFocus(path: AbsolutePath): Unit = {
+    for (pc <- loadCompiler(path); contents <- buffers.get(path)) {
+      pc.didChange(CompilerVirtualFileParams(path.toNIO.toUri, contents))
+    }
+  }
+
   def didChange(path: AbsolutePath): Future[List[Diagnostic]] = {
     def originInput =
       path
@@ -270,8 +280,7 @@ class Compilers(
               )
               .asScala
         } yield {
-          ds.asScala.map(adjust.adjustDiagnostic).toList
-
+          ds.asScala.toList
         }
       }
       .getOrElse(Future.successful(Nil))

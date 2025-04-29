@@ -762,6 +762,7 @@ abstract class MetalsLspService(
     }
 
     val parser = parseTrees(path)
+    compilers.didOpen(path)
 
     if (path.isDependencySource(folder)) {
       parser.asJava
@@ -798,6 +799,8 @@ abstract class MetalsLspService(
     focusedDocumentBuildTarget.set(
       buildTargets.inverseSources(path).getOrElse(null)
     )
+
+    compilers.didFocus(path)
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
     if (path.isDependencySource(folder)) {
@@ -831,7 +834,9 @@ abstract class MetalsLspService(
         val path = params.getTextDocument.getUri.toAbsolutePath
         buffers.put(path, change.getText)
         diagnostics.didChange(path)
-        compilers.didChange(path)
+        compilers
+          .didChange(path)
+          .map(diagnostics.publishDiagnosticsNotAdjusted(path, _))
         referencesProvider.didChange(path, change.getText)
         parseTrees(path).asJava
     }

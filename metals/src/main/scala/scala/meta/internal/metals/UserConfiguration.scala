@@ -56,6 +56,7 @@ case class UserConfiguration(
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
     scalaCliLauncher: Option[String] = None,
     defaultBspToBuildTool: Boolean = false,
+    presentationCompilerDiagnostics: Boolean = false,
 ) {
 
   override def toString(): String = {
@@ -141,6 +142,7 @@ case class UserConfiguration(
           defaultBspToBuildTool,
         )
       ),
+      Some("presentationCompilerDiagnostics", presentationCompilerDiagnostics),
     ).flatten.toMap.asJava
     val gson = new GsonBuilder().setPrettyPrinting().create()
     gson.toJson(fields).toString()
@@ -455,6 +457,15 @@ object UserConfiguration {
            |default to using it instead of Bloop.
            |""".stripMargin,
       ),
+      UserConfigurationOption(
+        "presentation-compiler-diagnostics",
+        "false",
+        "true",
+        "Show diagnostics messages from the Scala presentation compiler",
+        """|Show presentation compiler errors and warnings as you type. This gives a
+           |much faster feedback loop but may show incorrect or incomplete error messages.
+           |""".stripMargin,
+      ),
     )
 
   def fromJson(
@@ -727,6 +738,8 @@ object UserConfiguration {
     val defaultBspToBuildTool =
       getBooleanKey("default-bsp-to-build-tool").getOrElse(false)
 
+    val presentationCompilerDiagnostics =
+      getBooleanKey("presentation-compiler-diagnostics").getOrElse(false)
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -758,6 +771,7 @@ object UserConfiguration {
           autoImportBuilds,
           scalaCliLauncher,
           defaultBspToBuildTool,
+          presentationCompilerDiagnostics,
         )
       )
     } else {

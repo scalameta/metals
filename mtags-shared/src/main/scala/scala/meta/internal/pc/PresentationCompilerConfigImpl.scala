@@ -29,7 +29,8 @@ case class PresentationCompilerConfigImpl(
     timeoutUnit: TimeUnit = TimeUnit.SECONDS,
     semanticdbCompilerOptions: util.List[String] =
       PresentationCompilerConfig.defaultSemanticdbCompilerOptions(),
-    override val hoverContentType: ContentType = ContentType.MARKDOWN
+    override val hoverContentType: ContentType = ContentType.MARKDOWN,
+    override val emitDiagnostics: Boolean = false
 ) extends PresentationCompilerConfig {
 
   override def isStripMarginOnTypeFormattingEnabled(): Boolean =
