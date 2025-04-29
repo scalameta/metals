@@ -65,7 +65,9 @@ case class MillBuildTool(
 
   private val yamlMillVersionPattern = "//[|] +mill-version: +([^ ]+) *$".r
 
-  def readMillVersionYamlFrontmatter(file: AbsolutePath): Option[String] =
+  private def readMillVersionYamlFrontmatter(
+      file: AbsolutePath
+  ): Option[String] =
     file match {
       case f if f.isFile =>
         Files
