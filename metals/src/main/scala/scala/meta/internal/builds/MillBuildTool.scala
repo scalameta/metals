@@ -2,13 +2,13 @@ package scala.meta.internal.builds
 import java.nio.file.Files
 import java.nio.file.Path
 
+import scala.jdk.CollectionConverters._
 import scala.util.Properties
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
-import scala.jdk.CollectionConverters._
 
 case class MillBuildTool(
     userConfig: () => UserConfiguration,
