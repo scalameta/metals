@@ -6,6 +6,7 @@ import java.nio.file.Path
 
 import scala.util.control.NonFatal
 
+import scala.meta.internal.io.PlatformFileIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.mtags.SemanticdbPath
@@ -25,15 +26,20 @@ class SemanticdbIndexer(
     providers: List[SemanticdbFeatureProvider],
     buildTargets: BuildTargets,
     workspace: AbsolutePath,
+    semanticdbFilesInJar: Boolean = true,
 ) {
 
   def onTargetRoots(): Unit = {
     for {
       targetRoot <- buildTargets.allTargetRoots
     } {
-      onChangeDirectory(
-        targetRoot.resolve(Directories.semanticdb).toNIO
-      )
+      if (semanticdbFilesInJar) {
+        onChangeJar(targetRoot.toNIO)
+      } else {
+        onChangeDirectory(
+          targetRoot.resolve(Directories.semanticdb).toNIO
+        )
+      }
     }
   }
 
@@ -63,6 +69,40 @@ class SemanticdbIndexer(
       onTargetRoots()
     } else {
       path.semanticdbRoot.foreach(onChangeDirectory(_))
+    }
+  }
+
+  private def onChangeJar(path: Path): Unit = {
+    if (AbsolutePath(path).isFile) {
+      val jarFS =
+        PlatformFileIO.newJarFileSystem(AbsolutePath(path), create = false)
+      jarFS.getRootDirectories.forEach { root =>
+        val stream = Files.walk(root)
+        try {
+          stream.forEach { pathInJar =>
+            {
+              val pathInJarAbs = AbsolutePath(pathInJar)
+              if (
+                pathInJarAbs.isFile && pathInJar.getFileName.toString.endsWith(
+                  ".semanticdb"
+                )
+              ) {
+                val docs =
+                  TextDocuments.parseFrom(
+                    Files.readAllBytes(pathInJarAbs.toNIO)
+                  )
+                SemanticdbClasspath
+                  .toScala(workspace, SemanticdbPath(pathInJarAbs))
+                  .foreach { sourceFile =>
+                    onChange(sourceFile, docs)
+                  }
+              }
+            }
+          }
+        } finally {
+          stream.close()
+        }
+      }
     }
   }
 

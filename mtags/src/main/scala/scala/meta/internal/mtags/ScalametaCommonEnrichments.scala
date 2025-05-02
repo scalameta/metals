@@ -213,8 +213,8 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
       else filenameToLanguage(filename.toString)
     }
     def semanticdbRoot: Option[Path] = {
-      val end = Paths.get("META-INF").resolve("semanticdb")
       @tailrec def root(path: Path): Option[Path] = {
+        val end = path.getFileSystem().getPath("META-INF", "semanticdb")
         if (path.endsWith(end)) Some(path)
         else {
           Option(path.getParent) match {

@@ -594,10 +594,11 @@ object MetalsEnrichments
      */
     def resolveIfJar: AbsolutePath = {
       if (path.isJar) {
-        val filename = path.toNIO.getFileName.toString
-        val filename0 = filename.stripSuffix(".jar").stripSuffix(".srcjar")
-        val targetroot = path.parent.resolve(s"_semanticdb/$filename0")
-        targetroot
+        path
+        // val filename = path.toNIO.getFileName.toString
+        // val filename0 = filename.stripSuffix(".jar").stripSuffix(".srcjar")
+        // val targetroot = path.parent.resolve(s"_semanticdb/$filename0")
+        // targetroot
       } else {
         path
       }

@@ -63,6 +63,7 @@ object SemanticdbClasspath {
           semanticdb.absolutePath
             .resolveSibling(_.stripSuffix(".semanticdb"))
             .toRelative(AbsolutePath(root))
+            .toString // Converting to string to make relative path work across filesystems (like with JARs)
         )
         .dealias
     }

@@ -17,6 +17,7 @@ import ch.epfl.scala.bsp4j.JvmBuildTarget
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalaPlatform
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
+import scala.meta.internal.io.PlatformFileIO
 
 case class ScalaTarget(
     info: BuildTarget,
@@ -86,10 +87,19 @@ case class ScalaTarget(
 
   def isAmmonite: Boolean = displayName.endsWith(".sc")
 
-  def semanticdbFilesPresent(): Boolean = targetroot
-    .resolve(Directories.semanticdb)
-    .listRecursive
-    .exists(_.isSemanticdb)
+  def semanticdbFilesPresent(): Boolean =
+    if (targetroot.isJar)
+      targetroot.isFile && AbsolutePath(
+        PlatformFileIO
+          .newJarFileSystem(targetroot, create = false)
+          .getPath("/" + Directories.semanticdb.toString)
+      ).listRecursive
+        .exists(_.isSemanticdb)
+    else
+      targetroot
+        .resolve(Directories.semanticdb)
+        .listRecursive
+        .exists(_.isSemanticdb)
 
   def isSemanticdbEnabled: Boolean =
     scalac.isSemanticdbEnabled(scalaVersion) ||
