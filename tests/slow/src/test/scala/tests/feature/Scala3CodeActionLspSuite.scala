@@ -773,7 +773,7 @@ class Scala3CodeActionLspSuite
   )
 
   check(
-    "wildcard lambda".ignore,
+    "wildcard lambda",
     """|package a
        |
        |object A {
@@ -781,7 +781,7 @@ class Scala3CodeActionLspSuite
        |  l.map(_ + <<1>>)
        |}
        |""".stripMargin,
-    s"""|${ConvertToNamedArguments.title("l.map(...)")}
+    s"""|${ConvertToNamedArguments.title("map(...)")}
         |${ConvertToNamedLambdaParameters.title}
         |""".stripMargin,
     """|package a
@@ -792,6 +792,7 @@ class Scala3CodeActionLspSuite
        |}
        |""".stripMargin,
     selectedActionIndex = 1,
+    scalaVersion = "3.7.1-RC1-bin-20250501-83ffe00-NIGHTLY",
   )
 
   private def getPath(name: String) = s"a/src/main/scala/a/$name"

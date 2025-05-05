@@ -5,9 +5,9 @@ import scala.concurrent.Future
 
 import scala.meta.Term
 import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.JsonParser
+import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.metals.logging
@@ -26,39 +26,42 @@ import org.eclipse.{lsp4j => l}
 class ConvertToNamedLambdaParameters(
     trees: Trees,
     compilers: Compilers,
-    languageClient: MetalsLanguageClient,
 ) extends CodeAction {
 
   override val kind: String = l.CodeActionKind.RefactorRewrite
 
-  override type CommandData =
-    ServerCommands.ConvertToNamedLambdaParametersRequest
+  private val parser = new JsonParser.Of[ConvertToNamedLambdaParametersParams]
 
-  override def command: Option[ActionCommand] = Some(
-    ServerCommands.ConvertToNamedLambdaParameters
+  private case class ConvertToNamedLambdaParametersParams(
+      position: l.TextDocumentPositionParams
   )
 
-  override def handleCommand(
-      data: ServerCommands.ConvertToNamedLambdaParametersRequest,
+  override def resolveCodeAction(
+      codeAction: l.CodeAction,
       token: CancelToken,
-  )(implicit ec: ExecutionContext): Future[Unit] = {
-    val uri = data.position.getTextDocument().getUri()
-    for {
-      edits <- compilers.codeAction(
-        data.position,
-        token,
-        CodeActionId.ConvertToNamedLambdaParameters,
-        None,
-      )
-      _ = logging.logErrorWhen(
-        edits.isEmpty(),
-        s"Could not convert lambda at position ${data.position} to named lambda",
-      )
-      workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
-      _ <- languageClient
-        .applyEdit(new l.ApplyWorkspaceEditParams(workspaceEdit))
-        .asScala
-    } yield ()
+  )(implicit ec: ExecutionContext): Option[Future[l.CodeAction]] = {
+    val data = codeAction.getData()
+    data match {
+      case parser.Jsonized(data) =>
+        Some {
+          val uri = data.position.getTextDocument().getUri()
+          for {
+            edits <- compilers.codeAction(
+              data.position,
+              token,
+              CodeActionId.ConvertToNamedLambdaParameters,
+              None,
+            )
+            _ = logging.logErrorWhen(
+              edits.isEmpty(),
+              s"Could not convert lambda at position ${data.position} to named lambda",
+            )
+            workspaceEdit = new l.WorkspaceEdit(Map(uri -> edits).asJava)
+            _ = codeAction.setEdit(workspaceEdit)
+          } yield codeAction
+        }
+      case _ => None
+    }
   }
 
   override def contribute(
@@ -75,14 +78,14 @@ class ConvertToNamedLambdaParameters(
           params.getTextDocument(),
           new l.Position(lambda.pos.startLine, lambda.pos.startColumn),
         )
-        val command =
-          ServerCommands.ConvertToNamedLambdaParameters.toLsp(
-            ServerCommands.ConvertToNamedLambdaParametersRequest(position)
+        val data =
+          ConvertToNamedLambdaParametersParams(
+            position = position
           )
         val codeAction = CodeActionBuilder.build(
           title = ConvertToNamedLambdaParameters.title,
           kind = kind,
-          command = Some(command),
+          data = Some(data.toJsonObject),
         )
         Future.successful(Seq(codeAction))
       }
