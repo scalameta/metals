@@ -40,7 +40,7 @@ class HeadDoctor(
         List(livereload, HtmlBuilder.htmlCSS),
         HtmlBuilder.bodyStyle,
       ) { html =>
-        html.section("Build targets", buildTargetsTable)
+        html.section("Build targets", buildTargetsTable(_, None))
       }
       .render
   }
@@ -66,13 +66,26 @@ class HeadDoctor(
       },
     )
 
+  def showErrorsForBuildTarget(focusOnBuildTarget: String): Unit = {
+    onVisibilityDidChange(true)
+    executeDoctor(
+      clientCommand = ClientCommands.RunDoctor,
+      onServer = server => {
+        Urls.openBrowser(server.address + "/doctor")
+      },
+      Some(focusOnBuildTarget),
+    )
+  }
+
   /**
    * @param clientCommand RunDoctor or ReloadDoctor
    * @param onServer piece of logic that will be executed when http server is enabled
+   * @param focusOnBuildTarget optional build target to scroll to in format (it's name)
    */
   private def executeDoctor(
       clientCommand: ParametrizedCommand[String],
       onServer: MetalsHttpServer => Unit,
+      focusOnBuildTarget: Option[String] = None,
   ): Unit = {
     val isVisibilityProvider = clientConfig.isDoctorVisibilityProvider()
     val shouldDisplay = isVisibilityProvider && isVisible.get()
@@ -82,7 +95,7 @@ class HeadDoctor(
       ) {
         val output = clientConfig.doctorFormat match {
           case DoctorFormat.Json => buildTargetsJson()
-          case DoctorFormat.Html => buildTargetsHtml()
+          case DoctorFormat.Html => buildTargetsHtml(focusOnBuildTarget)
         }
         val params = clientCommand.toExecuteCommandParams(output)
         languageClient.metalsExecuteClientCommand(params)
@@ -103,13 +116,33 @@ class HeadDoctor(
     }
   }
 
-  private def buildTargetsHtml(): String =
-    new HtmlBuilder()
-      .element("h1")(_.text(doctorTitle))
-      .call(buildTargetsTable)
-      .render
+  private def buildTargetsHtml(focusOnBuildTarget: Option[String]): String = {
+    doctors().map(_.buildTargetsJson())
+    val html =
+      new HtmlBuilder()
+        .element("h1")(_.text(doctorTitle))
+        .call(buildTargetsTable(_, focusOnBuildTarget))
+        .render
+    val script = focusOnBuildTarget.map(scrollToBuildTarget).getOrElse("")
 
-  private def buildTargetsTable(html: HtmlBuilder): Unit = {
+    script + html
+  }
+
+  private def scrollToBuildTarget(focusOnBuildTarget: String): String =
+    s"""|<script>
+        |  document.addEventListener("DOMContentLoaded", function() {
+        |    const header = document.getElementById('reports-${focusOnBuildTarget}');
+        |    if (header) {
+        |      header.scrollIntoView({ behavior: 'smooth' });
+        |    }
+        |  });
+        |</script>
+        |""".stripMargin
+
+  private def buildTargetsTable(
+      html: HtmlBuilder,
+      focusOnBuildTarget: Option[String],
+  ): Unit = {
     val jdkInfo = getJdkInfo()
 
     jdkInfo.foreach { jdkMsg =>
@@ -128,7 +161,9 @@ class HeadDoctor(
       _.text(buildTargetDescription)
     }
     val includeWorkspaceFolderName = areMultipleWorkspaceFolders
-    doctors().foreach(_.buildTargetsTable(html, includeWorkspaceFolderName))
+    doctors().foreach(
+      _.buildTargetsTable(html, includeWorkspaceFolderName, focusOnBuildTarget)
+    )
   }
 
   private def buildTargetsJson(): String = {

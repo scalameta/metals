@@ -117,6 +117,7 @@ class ConnectionProvider(
   )
 
   val cancelables = new MutableCancelable
+  // Can be set only in tests
   var buildServerPromise: Promise[Unit] = Promise[Unit]()
   val isConnecting = new AtomicBoolean(false)
 

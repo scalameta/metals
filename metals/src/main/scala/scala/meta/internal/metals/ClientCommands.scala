@@ -11,6 +11,9 @@ import org.eclipse.{lsp4j => l}
 
 /**
  * Optional commands that metals expects the client to implement.
+ *
+ * Those are executed either via `MetalsLanguageClient#executeClientCommand`
+ * or may be passed as an onlick action for a treeview or status bar.
  */
 object ClientCommands {
 
