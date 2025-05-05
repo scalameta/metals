@@ -3,17 +3,18 @@ package scala.meta.internal.metals
 import java.lang
 import java.nio.file.Path
 import java.util.Optional
+import java.util.function.Supplier
 
 import scala.meta.internal.metals.utils.TimestampedFile
-import scala.meta.pc.reports.LazyReport
+import scala.meta.pc.reports.Report
 
 object LoggerReporter extends Reporter {
 
   override def create(
-      lazyReport: LazyReport,
+      lazyReport: Supplier[Report],
       ifVerbose: lang.Boolean,
   ): Optional[Path] = {
-    val report = lazyReport.create()
+    val report = lazyReport.get()
     scribe.info(
       s"Report ${report.name}: ${report.fullText( /* withIdAndSummary = */ false)}"
     )

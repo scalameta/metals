@@ -8,6 +8,7 @@ import java.nio.file.Paths
 import java.util.Optional
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import java.util.function.Supplier
 import java.util.logging.Logger
 
 import scala.util.Try
@@ -131,7 +132,7 @@ class StdReporter(
   }
 
   override def create(
-      lazyReport: jreports.LazyReport,
+      lazyReport: Supplier[jreports.Report],
       ifVerbose: lang.Boolean,
   ): Optional[Path] =
     if (ifVerbose && !level.isVerbose) Optional.empty()
@@ -141,7 +142,7 @@ class StdReporter(
           readInIds()
         }
 
-        val report = lazyReport.create()
+        val report = lazyReport.get()
         val sanitizedId = report.id().asScala.map(sanitize)
         val path = reportPath(report)
 
@@ -219,7 +220,7 @@ object EmptyReporter extends Reporter {
     Nil
 
   override def create(
-      report: jreports.LazyReport,
+      report: Supplier[jreports.Report],
       ifVerbose: lang.Boolean,
   ): Optional[Path] =
     Optional.empty()
