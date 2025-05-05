@@ -1196,6 +1196,12 @@ class Compilers(
     )
   }
 
+  def getZombieCompilerCount(buildTargetId: BuildTargetIdentifier): Int = {
+    loadCompiler(buildTargetId)
+      .map(_.getZombieCompilerCount().toInt)
+      .getOrElse(0)
+  }
+
   /**
    * Gets presentation compiler for a file.
    * @param path for which presentation compiler should be loaded,
