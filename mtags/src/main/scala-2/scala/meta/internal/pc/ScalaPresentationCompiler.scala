@@ -473,16 +473,7 @@ case class ScalaPresentationCompiler(
       Optional.empty[HoverSignature](),
       params.token
     ) { pc =>
-      val global = pc.compiler()
-      import global._
-      // make sure the file is loaded and known to the presentation compiler
-      val srcFile = new MetalsSourceFile(params)
-      val wasLoaded = unitOfFile.contains(srcFile)
-      if (!wasLoaded) {
-        metalsAsk[Unit](askReload(List(srcFile), _))
-      }
-
-      val hoverSig = Optional.ofNullable(
+      Optional.ofNullable(
         new HoverProvider(
           pc.compiler(params),
           params,
@@ -491,10 +482,6 @@ case class ScalaPresentationCompiler(
           .hover()
           .orNull
       )
-      if (!wasLoaded) {
-        removeUnitOf(srcFile)
-      }
-      hoverSig
     }
   }
 
