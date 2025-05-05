@@ -40,7 +40,7 @@ object V {
   val scalaCli = "1.7.1"
   val scalafix = "0.14.2"
   val scalafmt = "3.7.15"
-  val scalameta = "4.13.4"
+  val scalameta = "4.13.5"
   val scribe = "3.16.1"
   val qdox = "2.2.0"
 
