@@ -5,7 +5,6 @@ import scala.concurrent.Future
 
 import scala.meta.Term
 import scala.meta.internal.metals.Compilers
-import scala.meta.internal.metals.JsonParser
 import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CodeAction
@@ -30,19 +29,17 @@ class ConvertToNamedLambdaParameters(
 
   override val kind: String = l.CodeActionKind.RefactorRewrite
 
-  private val parser = new JsonParser.Of[ConvertToNamedLambdaParametersParams]
-
-  private case class ConvertToNamedLambdaParametersParams(
-      position: l.TextDocumentPositionParams
-  )
+  private case class ConvertToNamedLambdaParametersData(
+      codeActionId: String,
+      position: l.TextDocumentPositionParams,
+  ) extends CodeActionResolveData
 
   override def resolveCodeAction(
       codeAction: l.CodeAction,
       token: CancelToken,
   )(implicit ec: ExecutionContext): Option[Future[l.CodeAction]] = {
-    val data = codeAction.getData()
-    data match {
-      case parser.Jsonized(data) =>
+    parseData[ConvertToNamedLambdaParametersData](codeAction) match {
+      case Some(data) =>
         Some {
           val uri = data.position.getTextDocument().getUri()
           for {
@@ -79,8 +76,9 @@ class ConvertToNamedLambdaParameters(
           new l.Position(lambda.pos.startLine, lambda.pos.startColumn),
         )
         val data =
-          ConvertToNamedLambdaParametersParams(
-            position = position
+          ConvertToNamedLambdaParametersData(
+            codeActionId = CodeActionId.ConvertToNamedLambdaParameters,
+            position = position,
           )
         val codeAction = CodeActionBuilder.build(
           title = ConvertToNamedLambdaParameters.title,
