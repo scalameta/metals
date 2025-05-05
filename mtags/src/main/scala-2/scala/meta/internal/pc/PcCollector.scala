@@ -15,6 +15,8 @@ trait PcCollector[T] { self: WithCompilationUnit =>
   )(tree: Tree, pos: Position, sym: Option[Symbol]): T
 
   def resultWithSought(soughtSet: Set[Symbol]): List[T] = {
+    // fast track for empty results
+    if (soughtSet.isEmpty) return List()
     val sought = new SoughtSymbols(soughtSet, semanticdbSymbol)
     val owners = soughtSet
       .map(_.owner)
