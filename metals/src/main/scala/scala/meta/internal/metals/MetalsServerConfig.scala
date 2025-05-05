@@ -15,6 +15,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * @param globSyntax pattern used for `DidChangeWatchedFilesRegistrationOptions`.
  * @param statusBar how to handle metals/status notifications with {"statusType": "metals"}.
  * @param bspStatusBar how to handle metals/status notifications with {"statusType": "bsp"}.
+ * @param moduleStatusBar how to handle metals/status notifications with {"statusType": "module"}.
  * @param executeClientCommand whether client provides the ability to support the
  *                             `metals/executeClientCommand` command.
  * @param snippetAutoIndent if the client defaults to adding the identation of
@@ -49,6 +50,7 @@ final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
     statusBar: StatusBarConfig = StatusBarConfig.default,
     bspStatusBar: StatusBarConfig = StatusBarConfig.bspDefault,
+    moduleStatusBar: StatusBarConfig = StatusBarConfig.moduleDefault,
     executeClientCommand: ExecuteClientCommandConfig =
       ExecuteClientCommandConfig.default,
     snippetAutoIndent: Boolean = MetalsServerConfig.binaryOption(

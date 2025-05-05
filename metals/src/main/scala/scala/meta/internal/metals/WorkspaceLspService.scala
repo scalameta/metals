@@ -44,6 +44,7 @@ import scala.meta.internal.tvp.TreeViewVisibilityDidChangeParams
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.ScalaLspService
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.DebugSessionParams
 import com.google.gson.Gson
 import com.google.gson.JsonPrimitive
@@ -152,6 +153,7 @@ class WorkspaceLspService(
 
   private val focusedDocument: AtomicReference[Option[AbsolutePath]] =
     new AtomicReference(None)
+  new AtomicReference(None)
   private val recentlyFocusedFiles = new ActiveFiles(time)
 
   private val timerProvider: TimerProvider = new TimerProvider(time)
@@ -195,12 +197,21 @@ class WorkspaceLspService(
     isBspStatusProvider = clientConfig.bspStatusBarState() == StatusBarState.On,
   )
 
+  val moduleStatus: ModuleStatus =
+    new ModuleStatus(
+      client,
+      () => focusedDocument.get(),
+      (path) => getServiceFor(path),
+      clientConfig.icons(),
+    )
+
   def setFocusedDocument(newFocusedDocument: Option[AbsolutePath]): Unit = {
     focusedDocument.get().foreach(focused => recentlyFocusedFiles.add(focused))
     focusedDocument.set(newFocusedDocument)
     newFocusedDocument
       .flatMap(getServiceForOpt)
       .foreach(service => bspStatus.focus(service.path))
+    moduleStatus.refresh()
   }
 
   lazy val fallbackService: FallbackMetalsLspService = {
@@ -221,6 +232,7 @@ class WorkspaceLspService(
       doctor,
       workDoneProgress,
       bspStatus,
+      moduleStatus,
     )
   }
 
@@ -244,6 +256,7 @@ class WorkspaceLspService(
           bspStatus,
           workDoneProgress,
           maxScalaCliServers = 3,
+          moduleStatus,
         )
     }
 
@@ -1181,6 +1194,21 @@ class WorkspaceLspService(
           .asJavaObject
       case ServerCommands.CopyWorksheetOutput(path) =>
         getServiceFor(path).copyWorksheetOutput(path.toAbsolutePath)
+      case ServerCommands.ShowReportsForBuildTarget(target) =>
+        Future {
+          folderServices.iterator
+            .flatMap(
+              _.buildTargets.jvmTarget(new BuildTargetIdentifier(target))
+            )
+            .headOption
+            .map { target =>
+              moduleStatus.clearReports(target.id)
+              doctor.showErrorsForBuildTarget(target.displayName)
+            }
+            .getOrElse {
+              doctor.executeRunDoctor()
+            }
+        }.asJavaObject
       case actionCommand
           if currentOrHeadOrFallback.allActionCommandsIds(
             actionCommand.getCommand()

@@ -109,6 +109,7 @@ abstract class MetalsLspService(
     bspStatus: BspStatus,
     val workDoneProgress: WorkDoneProgress,
     maxScalaCliServers: Int,
+    moduleStatus: ModuleStatus,
 ) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
     with Cancelable
     with TextDocumentService
@@ -157,6 +158,26 @@ abstract class MetalsLspService(
 
   val tables: Tables = register(new Tables(folder, time))
 
+  def javaHome = userConfig.javaHome
+
+  protected val fingerprints = new MutableMd5Fingerprints
+  val focusedDocumentBuildTarget =
+    new AtomicReference[b.BuildTargetIdentifier]()
+  val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
+
+  def bspSession: Option[BspSession] = indexer.bspSession
+  protected val savedFiles = new ActiveFiles(time)
+  protected val recentlyOpenedFiles = new ActiveFiles(time)
+
+  @volatile
+  var excludedPackageHandler: ExcludedPackagesHandler =
+    ExcludedPackagesHandler.default
+
+  protected val mainBuildTargetsData = new TargetData
+
+  val buildTargets: BuildTargets =
+    BuildTargets.from(folder, mainBuildTargetsData, tables)
+
   implicit val reports: StdReportContext = new StdReportContext(
     folder.toNIO,
     _.flatMap { uri =>
@@ -167,27 +188,12 @@ abstract class MetalsLspService(
       } yield name
     },
     ReportLevel.fromString(MetalsServerConfig.default.loglevel),
+    reportTrackers = List(moduleStatus),
   )
 
-  def javaHome = userConfig.javaHome
-
-  protected val fingerprints = new MutableMd5Fingerprints
   protected val mtags = new Mtags
-  val focusedDocumentBuildTarget =
-    new AtomicReference[b.BuildTargetIdentifier]()
-  val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
+
   val symbolDocs = new Docstrings(definitionIndex)
-  def bspSession: Option[BspSession] = indexer.bspSession
-  protected val savedFiles = new ActiveFiles(time)
-  protected val recentlyOpenedFiles = new ActiveFiles(time)
-
-  @volatile
-  var excludedPackageHandler: ExcludedPackagesHandler =
-    ExcludedPackagesHandler.default
-
-  protected val mainBuildTargetsData = new TargetData
-  val buildTargets: BuildTargets =
-    BuildTargets.from(folder, mainBuildTargetsData, tables)
 
   val fileChanges: FileChanges = new FileChanges(buildTargets, () => folder)
 
