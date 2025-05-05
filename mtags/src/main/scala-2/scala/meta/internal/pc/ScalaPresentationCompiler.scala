@@ -141,7 +141,8 @@ case class ScalaPresentationCompiler(
     new ScalaCompilerAccess(
       config,
       sh,
-      () => new ScalaCompilerWrapper(newCompiler())
+      () => new ScalaCompilerWrapper(newCompiler()),
+      buildTargetIdentifier
     )(ec)
 
   override def shutdown(): Unit = {
@@ -176,14 +177,10 @@ case class ScalaPresentationCompiler(
           val mGlobal = pc.compiler()
           import mGlobal._
 
-          val sourceFile = new MetalsSourceFile(
-            params.uri().toString,
-            params.text().toCharArray
-          )
+          val sourceFile = new MetalsSourceFile(params)
           metalsAsk[Unit](askReload(List(sourceFile), _))
 
           val diags = mGlobal.diagnosticsOf(sourceFile)
-          pprint.pprintln(diags)
           diags.asJava
       }(emptyQueryContext)
     } else { CompletableFuture.completedFuture(noDiags) }
@@ -476,7 +473,16 @@ case class ScalaPresentationCompiler(
       Optional.empty[HoverSignature](),
       params.token
     ) { pc =>
-      Optional.ofNullable(
+      val global = pc.compiler()
+      import global._
+      // make sure the file is loaded and known to the presentation compiler
+      val srcFile = new MetalsSourceFile(params)
+      val wasLoaded = unitOfFile.contains(srcFile)
+      if (!wasLoaded) {
+        metalsAsk[Unit](askReload(List(srcFile), _))
+      }
+
+      val hoverSig = Optional.ofNullable(
         new HoverProvider(
           pc.compiler(params),
           params,
@@ -485,6 +491,10 @@ case class ScalaPresentationCompiler(
           .hover()
           .orNull
       )
+      if (!wasLoaded) {
+        removeUnitOf(srcFile)
+      }
+      hoverSig
     }
   }
 
@@ -598,6 +608,7 @@ case class ScalaPresentationCompiler(
     val settings = new Settings
     settings.Ymacroexpand.value = "discard"
     settings.YpresentationDelay.value = 500
+//    settings.YpresentationDebug.value = true
     settings.outputDirs.setSingleOutput(vd)
     settings.classpath.value = classpath
     settings.YpresentationAnyThread.value = true

@@ -86,7 +86,7 @@ class WorksheetProvider(
   // Worksheet evaluation happens on a single threaded job queue. Jobs are
   // prioritized using the same order as completion/hover requests:
   // first-come last-out.
-  private val jobs = CompilerJobQueue()
+  private val jobs = CompilerJobQueue("worksheet")
   // Executor for stopping threads. We don't reuse the scheduled executor from
   // MetalsLanguageServer because this exector service may occasionally block
   // and we don't want to block on other features like the status bar.

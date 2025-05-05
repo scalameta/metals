@@ -25,13 +25,14 @@ abstract class CompilerAccess[Reporter, Compiler](
     config: PresentationCompilerConfig,
     sh: Option[ScheduledExecutorService],
     newCompiler: () => CompilerWrapper[Reporter, Compiler],
-    shouldResetJobQueue: Boolean
+    shouldResetJobQueue: Boolean,
+    id: String = ""
 )(implicit ec: ExecutionContextExecutor) {
 
   private val logger: Logger =
     Logger.getLogger(classOf[CompilerAccess[_, _]].getName)
 
-  private val jobs = CompilerJobQueue()
+  private val jobs = CompilerJobQueue(id)
   private var _compiler: CompilerWrapper[Reporter, Compiler] = _
   private def isEmpty: Boolean = _compiler == null
   private def isDefined: Boolean = !isEmpty

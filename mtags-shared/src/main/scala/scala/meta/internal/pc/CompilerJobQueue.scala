@@ -118,14 +118,16 @@ object CompilerJobQueue {
     case object Stopped extends State
   }
 
-  def apply(): CompilerJobQueue = {
+  def apply(id: String = ""): CompilerJobQueue = {
     new CompilerJobQueue(() => {
       val singleThreadExecutor = new ThreadPoolExecutor(
         /* corePoolSize */ 1,
         /* maximumPoolSize */ 1,
         /* keepAliveTime */ 0,
         /* unit */ TimeUnit.MILLISECONDS,
-        /* workQueue */ new LastInFirstOutBlockingQueue
+        /* workQueue */ new LastInFirstOutBlockingQueue,
+        (runnable: Runnable) =>
+          new Thread(runnable, s"Compiler Job Thread [$id]")
       )
       singleThreadExecutor.setRejectedExecutionHandler((r, _) => {
         r match {

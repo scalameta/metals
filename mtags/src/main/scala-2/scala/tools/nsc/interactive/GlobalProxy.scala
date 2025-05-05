@@ -54,7 +54,8 @@ trait GlobalProxy { this: MetalsGlobal =>
       }
     }
     this.scheduler = new WorkScheduler
-    compileRunner = new MetalsGlobalThread(this, "Metals")
+    compileRunner =
+      new MetalsGlobalThread(this, s"Metals/${buildTargetIdentifier}")
     compileRunner.setDaemon(true)
     compileRunner.start()
     compileRunner

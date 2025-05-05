@@ -49,13 +49,15 @@ class ScalaCompilerWrapper(global: MetalsGlobal)
 class ScalaCompilerAccess(
     config: PresentationCompilerConfig,
     sh: Option[ScheduledExecutorService],
-    newCompiler: () => ScalaCompilerWrapper
+    newCompiler: () => ScalaCompilerWrapper,
+    id: String = ""
 )(implicit ec: ExecutionContextExecutor)
     extends CompilerAccess[MetalsReporter, MetalsGlobal](
       config,
       sh,
       newCompiler,
-      shouldResetJobQueue = false
+      shouldResetJobQueue = false,
+      id
     ) {
 
   def newReporter = new MetalsReporter(new Settings())

@@ -691,7 +691,9 @@ class MetalsGlobal(
         code.take(offset) + cursorName + code.drop(offset)
       case _ => code
     }
-    val unit = newCompilationUnit(codeWithCursor, filename)
+    val unit = new CompilationUnit(
+      new MetalsSourceFile(filename, codeWithCursor.toCharArray)
+    )
 
     val source =
       if (filename.isScalaScript || filename.isSbt || filename.isMill)

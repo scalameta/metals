@@ -2,6 +2,8 @@ package scala.meta.internal.pc
 import scala.reflect.internal.util.BatchSourceFile
 import scala.reflect.io.VirtualFile
 
+import scala.meta.pc.VirtualFileParams
+
 /**
  * An implementation of BatchSourceFile that implements equality based on virtual file path name.
  *
@@ -11,6 +13,10 @@ import scala.reflect.io.VirtualFile
  */
 class MetalsSourceFile(filename: String, contents: Array[Char])
     extends BatchSourceFile(new VirtualFile(filename), contents) {
+
+   def this(params: VirtualFileParams) = {
+    this(params.uri().toString, params.text().toCharArray)
+  }
 
   override def equals(that: Any): Boolean = that match {
     case other: MetalsSourceFile => this.file == other.file
