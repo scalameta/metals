@@ -380,6 +380,12 @@ object ClientCommands {
     ServerCommands.ConnectBuildServer.description,
   )
 
+  val RestartMetalsServer = new Command(
+    "metals.restart-server",
+    "Restart the Metals server.",
+    "Restart the Metals server.",
+  )
+
   def all: List[BaseCommand] =
     List(
       OpenFolder,

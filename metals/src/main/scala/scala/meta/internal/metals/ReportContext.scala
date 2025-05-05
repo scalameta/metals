@@ -245,6 +245,10 @@ object EmptyReportContext extends ReportContext {
   override def bloop: Reporter = EmptyReporter
 }
 
+trait ReportTracker {
+  def reportCreated(report: jreports.Report): Unit
+}
+
 object ReportFileName {
   val pattern: Regex = "r_(?<name>[^()]*)(_\\((?<buildTarget>.*)\\))?_".r
 

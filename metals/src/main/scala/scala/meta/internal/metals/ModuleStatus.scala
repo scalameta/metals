@@ -1,6 +1,8 @@
 package scala.meta.internal.metals
 
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 
 import scala.concurrent.Promise
 
@@ -16,10 +18,6 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 
-trait ReportTracker {
-  def reportCreated(report: Report): Unit
-}
-
 class ModuleStatus(
     client: MetalsLanguageClient,
     focusedPath: () => Option[AbsolutePath],
@@ -27,12 +25,74 @@ class ModuleStatus(
       def buildTargets: BuildTargets
       def folder: AbsolutePath
       def buildServerPromise: Promise[Unit]
+      def compilers: Compilers
     },
     icons: Icons,
-) extends ReportTracker {
+    sh: ScheduledExecutorService,
+) extends ReportTracker
+    with Cancelable {
 
   private val reports =
     new ConcurrentHashMap[BuildTargetIdentifier, List[Report]]()
+  private val currentZombieCompilersCount =
+    new ConcurrentHashMap[BuildTargetIdentifier, Int]()
+  private val scheduledFuture =
+    sh.scheduleAtFixedRate(
+      () => updateZombiesForFocused(),
+      60,
+      30,
+      TimeUnit.SECONDS,
+    )
+
+  def refresh(): Unit = {
+    focusedPath() match {
+      case None => client.metalsStatus(ModuleStatus.clear())
+      case Some(path) =>
+        val handler = serviceForPath(path)
+        val inferredBuildTarget = for {
+          buildTargetId <- handler.buildTargets.inverseSources(path)
+          buildTarget <- handler.buildTargets.jvmTarget(buildTargetId)
+        } yield buildTarget
+
+        inferredBuildTarget match {
+          case None if !handler.buildServerPromise.isCompleted =>
+            client.metalsStatus(ModuleStatus.importing())
+          case None =>
+            client.metalsStatus(ModuleStatus.noBuildTarget(icons))
+          case Some(buildTarget) =>
+            val zombieCompilersCount =
+              currentZombieCompilersCount.put(
+                buildTarget.id,
+                handler.compilers.getZombieCompilerCount(buildTarget.id),
+              )
+            if (zombieCompilersCount > 0) {
+              client.metalsStatus(
+                ModuleStatus.zombieCompilers(
+                  zombieCompilersCount,
+                  buildTarget.displayName,
+                  icons,
+                )
+              )
+            } else {
+              reports.getOrDefault(buildTarget.id, Nil) match {
+                case Nil =>
+                  client.metalsStatus(
+                    ModuleStatus.ok(buildTarget.displayName, icons)
+                  )
+                case errorReports =>
+                  client.metalsStatus(
+                    ModuleStatus.warnings(
+                      buildTarget.displayName,
+                      buildTarget.id,
+                      errorReports.size,
+                      icons,
+                    )
+                  )
+              }
+            }
+        }
+    }
+  }
 
   override def reportCreated(report: Report): Unit = {
     for {
@@ -54,43 +114,33 @@ class ModuleStatus(
     }
   }
 
-  def refresh(): Unit = {
-    focusedPath() match {
-      case None => client.metalsStatus(ModuleStatus.clear())
-      case Some(path) =>
-        val handler = serviceForPath(path)
-        val inferredBuildTarget = for {
-          buildTargetId <- handler.buildTargets.inverseSources(path)
-          buildTarget <- handler.buildTargets.jvmTarget(buildTargetId)
-        } yield buildTarget
-
-        inferredBuildTarget match {
-          case None if !handler.buildServerPromise.isCompleted =>
-            client.metalsStatus(ModuleStatus.importing())
-          case None =>
-            client.metalsStatus(ModuleStatus.noBuildTarget(icons))
-          case Some(buildTarget) =>
-            reports.getOrDefault(buildTarget.id, Nil) match {
-              case Nil =>
-                client.metalsStatus(
-                  ModuleStatus.ok(buildTarget.displayName, icons)
-                )
-              case errorReports =>
-                client.metalsStatus(
-                  ModuleStatus.warnings(
-                    buildTarget.displayName,
-                    buildTarget.id,
-                    errorReports.size,
-                    icons,
-                  )
-                )
-            }
-        }
+  def clearReports(id: BuildTargetIdentifier): Unit = {
+    val removed = reports.remove(id)
+    if (removed != null && removed.nonEmpty) {
+      refresh()
     }
   }
 
-  def clearReports(id: BuildTargetIdentifier): List[Report] = {
-    reports.remove(id)
+  private def updateZombiesForFocused() = {
+    for {
+      path <- focusedPath()
+      handler = serviceForPath(path)
+      buildTargetId <- handler.buildTargets.inverseSources(path)
+    } yield {
+      val prev = currentZombieCompilersCount.getOrDefault(buildTargetId, 0)
+      val zombieCompilersCount =
+        currentZombieCompilersCount.put(
+          buildTargetId,
+          handler.compilers.getZombieCompilerCount(buildTargetId),
+        )
+      if (prev != zombieCompilersCount) refresh()
+    }
+  }
+
+  override def cancel(): Unit = {
+    if (scheduledFuture != null) {
+      scheduledFuture.cancel(false)
+    }
   }
 
 }
@@ -138,6 +188,20 @@ object ModuleStatus {
         Array(id.getUri()),
       ),
       commandTooltip = "Show error reports.",
+    ).withStatusType(StatusType.module)
+
+  def zombieCompilers(
+      count: Int,
+      buildTargetName: String,
+      icons: Icons,
+  ): MetalsStatusParams =
+    MetalsStatusParams(
+      s"$buildTargetName ($count)${icons.zombies}",
+      "error",
+      show = true,
+      tooltip = s"$count zombie compilers detected.",
+      command = ClientCommands.RestartMetalsServer.id,
+      commandTooltip = "Restart Metals server.",
     ).withStatusType(StatusType.module)
 
   def bspErrorParams(

@@ -7,7 +7,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.logging.Level
 import java.util.logging.Logger
 
+import scala.collection.mutable
 import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.Promise
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.PcQueryContext
@@ -44,6 +46,19 @@ abstract class CompilerAccess[Reporter, Compiler](
   }
 
   protected def newReporter: Reporter
+
+  private val zombies = mutable.Set[Promise[Unit]]()
+
+  def getZombieCompilerCount(): Int = {
+    var counter = 0
+    val iter = zombies.iterator
+    while (iter.hasNext) {
+      val zombie = iter.next()
+      if (zombie.isCompleted) zombies.remove(zombie)
+      else counter += 1
+    }
+    counter
+  }
 
   def reporter: Reporter =
     if (isEmpty) newReporter
@@ -201,12 +216,14 @@ abstract class CompilerAccess[Reporter, Compiler](
       token: CancelToken
   ): CompletableFuture[T] = {
     val result = new CompletableFuture[T]()
+    val wasResolved = Promise[Unit]
     jobs.submit(
       result,
       { () =>
         token.checkCanceled()
         Thread.interrupted() // clear interrupt bit
         result.complete(thunk())
+        wasResolved.success(())
         ()
       }
     )
@@ -228,6 +245,7 @@ abstract class CompilerAccess[Reporter, Compiler](
             try {
               if (shouldResetJobQueue) jobs.reset()
               result.cancel(false)
+              zombies.add(wasResolved)
               shutdownCurrentCompiler()
             } catch {
               case NonFatal(_) =>
