@@ -8,7 +8,6 @@ import scala.concurrent.Promise
 
 import scala.meta.internal.ansi.AnsiFilter
 import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.debug.DebugProvider
@@ -25,7 +24,7 @@ class McpTestRunner(
     buildTargets: BuildTargets,
     workspace: AbsolutePath,
     userConfig: () => UserConfiguration,
-    definitionProvider: DefinitionProvider,
+    mcpSearch: McpSymbolSearch,
 )(implicit ec: ExecutionContext) {
   def runTests(
       testClass: String,
@@ -67,19 +66,7 @@ class McpTestRunner(
   }
 
   private def resolvePath(fqcn: String): Option[AbsolutePath] = {
-    topLevelSymbols(fqcn).iterator
-      .flatMap(definitionProvider.destinationProvider.findDefinitionFile(_))
-      .headOption
-  }
-
-  private def topLevelSymbols(fqcn: String): List[String] = {
-    val parts = fqcn.split('.')
-    val idx = parts.indexWhere(_.headOption.exists(!_.isLower))
-    if (idx == -1) Nil
-    else {
-      val sym = parts.take(idx + 1).mkString("/")
-      List(sym + "#", sym + ".")
-    }
+    mcpSearch.exactSearch(fqcn, None).flatMap(_.definitionPath).headOption
   }
 }
 

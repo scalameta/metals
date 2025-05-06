@@ -14,9 +14,7 @@ import scala.meta.internal.metals.Docstrings
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferenceProvider
-import scala.meta.internal.metals.WorkspaceSymbolProvider
-import scala.meta.internal.metals.WorkspaceSymbolQuery
-import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.ContentType
 import scala.meta.pc.ParentSymbols
@@ -32,15 +30,16 @@ import org.eclipse.lsp4j.SymbolKind
  *
  * @param workspaceSearchProvider Provider for workspace symbol search
  */
-class QueryEngine(
-    workspaceSearchProvider: WorkspaceSymbolProvider,
-    index: GlobalSymbolIndex,
+class McpQueryEngine(
     compilers: Compilers,
     docstrings: Docstrings,
     buildTargets: BuildTargets,
     referenceProvider: ReferenceProvider,
+    scalaVersionSelector: ScalaVersionSelector,
+    mcpSearch: McpSymbolSearch,
 )(implicit ec: ExecutionContext) {
-  private def mcpDefinitionProvider = new McpDefinitionProvider(index)
+  private val mcpDefinitionProvider =
+    new McpSymbolProvider(scalaVersionSelector, mcpSearch)
 
   /**
    * Search for symbols matching a glob pattern.
@@ -55,36 +54,13 @@ class QueryEngine(
       symbolTypes: Set[SymbolType] = Set.empty,
       path: AbsolutePath,
   ): Future[Seq[SymbolSearchResult]] = Future {
-
-    val visitor = new QuerySearchVisitor(
-      mcpDefinitionProvider,
-      symbolTypes,
-      query,
-    )
-
-    val wsQuery = WorkspaceSymbolQuery(
-      query,
-      WorkspaceSymbolQuery.AlternativeQuery.all(query),
-      isTrailingDot = false,
-      isClasspath = true,
-      isShortQueryRetry = false,
-    )
-
-    val buildTarget =
-      buildTargets.sourceBuildTargets(path).flatMap(_.headOption)
-
-    // use focused document build target
-    workspaceSearchProvider.search(
-      wsQuery,
-      visitor,
-      buildTarget,
-    )
-    workspaceSearchProvider.searchWorkspacePackages(
-      visitor,
-      buildTarget,
-    )
-
-    visitor.getResults
+    mcpSearch
+      .nameSearch(
+        query,
+        symbolTypes,
+        Some(path),
+      )
+      .map(_.toMcpSymbolSearchResult)
   }
 
   /**
@@ -104,7 +80,9 @@ class QueryEngine(
         .sourceBuildTargets(path)
         .flatMap(_.headOption)
         .toList
-      symbol <- mcpDefinitionProvider.symbols(fqcn).distinctBy(_.symbolType)
+      symbol <- mcpDefinitionProvider
+        .symbols(fqcn, Some(path))
+        .distinctBy(_.symbolType)
       (shouldGetCompletions) = symbol.symbolType match {
         case SymbolType.Class | SymbolType.Trait | SymbolType.Object |
             SymbolType.Package =>
@@ -149,7 +127,7 @@ class QueryEngine(
       buildTarget: BuildTargetIdentifier,
   ) = {
     def isInteresting(completion: CompletionItem): Boolean = {
-      !QueryEngine.uninterestingCompletions(completion.getLabel())
+      !McpQueryEngine.uninterestingCompletions(completion.getLabel())
     }
 
     def isDeprecated(completion: CompletionItem): Boolean = {
@@ -260,17 +238,12 @@ class QueryEngine(
   def getDocumentation(
       fqcn: String
   ): Option[SymbolDocumentationSearchResult] = {
-
-    // Implementation would need to:
-    // 1. Find the symbol definition
-    // 2. Extract the Scaladoc information
-
-    val syms = mcpDefinitionProvider.symbols(fqcn)
+    val syms = mcpDefinitionProvider.symbols(fqcn, None)
     val res = syms.iterator.flatMap { s =>
       docstrings
         .documentation(
           s.symbol,
-          QueryEngine.emptyParentsSymbols,
+          McpQueryEngine.emptyParentsSymbols,
           ContentType.PLAINTEXT,
         )
         .asScala
@@ -299,7 +272,7 @@ class QueryEngine(
       fqcn: String,
       path: AbsolutePath,
   ): List[SymbolUsage] = {
-    val syms = mcpDefinitionProvider.symbols(fqcn)
+    val syms = mcpDefinitionProvider.symbols(fqcn, Some(path))
     referenceProvider
       .workspaceReferences(
         path,
@@ -327,11 +300,12 @@ case class SymbolUsage(
  * Base trait for symbol search results.
  */
 case class SymbolSearchResult(
-    name: String,
     path: String,
     symbolType: SymbolType,
     symbol: String,
-)
+) {
+  def name: String = path.split('.').lastOption.getOrElse(path)
+}
 
 case class MethodSignature(
     name: String
@@ -437,7 +411,7 @@ object SymbolType {
     List(Trait, Package, Class, Object, Function, Method)
 }
 
-object QueryEngine {
+object McpQueryEngine {
 
   /**
    * Convert SymbolKind to a string representation.

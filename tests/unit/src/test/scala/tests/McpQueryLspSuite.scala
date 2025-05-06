@@ -9,7 +9,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
 
   // @kasiaMarek: missing:
   // - methods / values from dependencies (to think about)
-  // - type aliases from dependencies ???
+  // - type aliases from dependencies
   test("glob search all types - workspace") {
     cleanWorkspace()
     for {

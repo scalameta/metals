@@ -23,9 +23,10 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
+import scala.meta.internal.metals.mcp.McpQueryEngine
+import scala.meta.internal.metals.mcp.McpSymbolSearch
 import scala.meta.internal.metals.mcp.McpTestRunner
 import scala.meta.internal.metals.mcp.MetalsMcpServer
-import scala.meta.internal.metals.mcp.QueryEngine
 import scala.meta.internal.metals.watcher.FileWatcherEvent
 import scala.meta.internal.metals.watcher.FileWatcherEvent.EventType
 import scala.meta.internal.metals.watcher.ProjectFileWatcher
@@ -205,23 +206,30 @@ class ProjectMetalsLspService(
 
   private val isMcpServerRunning = new AtomicBoolean(false)
 
+  lazy val mcpSearch = new McpSymbolSearch(
+    definitionIndex,
+    buildTargets,
+    workspaceSymbols,
+  )
+
   lazy val queryEngine =
-    new QueryEngine(
-      workspaceSymbols,
-      definitionIndex,
+    new McpQueryEngine(
       compilers,
       symbolDocs,
       buildTargets,
       referencesProvider,
+      scalaVersionSelector,
+      mcpSearch,
     )
 
-  lazy val mcpTestRunner = new McpTestRunner(
-    debugProvider,
-    buildTargets,
-    folder,
-    () => userConfig,
-    definitionProvider,
-  )
+  lazy val mcpTestRunner =
+    new McpTestRunner(
+      debugProvider,
+      buildTargets,
+      folder,
+      () => userConfig,
+      mcpSearch,
+    )
 
   def startMcpServer(): Future[Unit] =
     Future {

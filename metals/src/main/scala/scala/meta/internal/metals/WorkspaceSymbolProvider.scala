@@ -110,9 +110,10 @@ final class WorkspaceSymbolProvider(
       target: Option[BuildTargetIdentifier],
   ): SymbolSearch.Result = {
     def loop(packages: TrieMap[String, PackageNode], owner: String): Unit = {
-      packages.foreach { case (pkg, node) =>
-        visitor.visitWorkspacePackage(owner, pkg)
-        loop(node.children, s"$owner$pkg/")
+      packages.foreach { case (name, node) =>
+        val pkg = s"$owner$name/"
+        visitor.visitWorkspacePackage(pkg)
+        loop(node.children, pkg)
       }
     }
     target.foreach { id =>

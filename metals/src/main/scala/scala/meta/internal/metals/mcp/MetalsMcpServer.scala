@@ -23,7 +23,7 @@ import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.mcp.McpPrinter._
-import scala.meta.internal.metals.mcp.QueryEngine
+import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.internal.metals.mcp.SymbolType
 import scala.meta.io.AbsolutePath
 
@@ -50,7 +50,7 @@ import org.eclipse.lsp4j.services.LanguageClient
 import reactor.core.publisher.Mono
 
 class MetalsMcpServer(
-    queryEngine: QueryEngine,
+    queryEngine: McpQueryEngine,
     projectPath: AbsolutePath,
     compilations: Compilations,
     focusedDocument: () => Option[AbsolutePath],
