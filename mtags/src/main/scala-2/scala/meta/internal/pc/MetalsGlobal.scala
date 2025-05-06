@@ -119,6 +119,13 @@ class MetalsGlobal(
   def isJavaSymbol(sym: Symbol): Boolean =
     !sym.hasPackageFlag && sym.isJava
 
+  override def assertCorrectThread(): Unit = {
+    val name = Thread.currentThread().getName
+    if (!name.startsWith("Compiler Job Thread")) {
+      println(s"Wrong thread: $name")
+    }
+  }
+
   class MetalsGlobalSemanticdbOps(val global: compiler.type)
       extends SemanticdbOps
   lazy val semanticdbOps = new MetalsGlobalSemanticdbOps(compiler)

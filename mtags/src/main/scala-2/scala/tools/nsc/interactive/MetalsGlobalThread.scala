@@ -25,15 +25,17 @@ final class MetalsGlobalThread(var compiler: Global, name: String = "")
         }
       )
       compiler.pollForWork(compiler.NoPosition)
-      while (compiler.isOutOfDate) {
-        try {
-          compiler.backgroundCompile()
-        } catch {
-          case _: FreshRunReq =>
-            compiler.debugLog("fresh run req caught, starting new pass")
-        }
-        compiler.log.flush()
-      }
+      // the compiler thread does not do type checking, just servicing other requests as they come in
+      // in particular, askReload which adds sources to be managed
+//      while (compiler.isOutOfDate) {
+//        try {
+//          //compiler.backgroundCompile()
+//        } catch {
+//          case _: FreshRunReq =>
+//            compiler.debugLog("fresh run req caught, starting new pass")
+//        }
+//        compiler.log.flush()
+//      }
     } catch {
       case ShutdownReq =>
         compiler.debugLog("exiting presentation compiler")

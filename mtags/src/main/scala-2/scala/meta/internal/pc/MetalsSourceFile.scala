@@ -14,7 +14,7 @@ import scala.meta.pc.VirtualFileParams
 class MetalsSourceFile(filename: String, contents: Array[Char])
     extends BatchSourceFile(new VirtualFile(filename), contents) {
 
-   def this(params: VirtualFileParams) = {
+  def this(params: VirtualFileParams) = {
     this(params.uri().toString, params.text().toCharArray)
   }
 

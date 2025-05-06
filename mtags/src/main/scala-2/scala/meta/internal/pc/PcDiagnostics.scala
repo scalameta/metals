@@ -2,11 +2,14 @@ package scala.meta.internal.pc
 
 import org.eclipse.{lsp4j => l}
 
+import scala.annotation.nowarn
 import scala.reflect.internal.util.SourceFile
 import scala.reflect.internal.Reporter.{ERROR, INFO, WARNING}
-import scala.tools.nsc.interactive.Problem
+import scala.tools.nsc.interactive.{FreshRunReq, Global, Problem, ShutdownReq}
+import scala.util.control.ControlThrowable
 
-trait PcDiagnostics { compiler: MetalsGlobal =>
+trait PcDiagnostics {
+  compiler: MetalsGlobal =>
 
   /**
    * Return all problems issued by the presentation compiler for the given file. This method may block
@@ -17,10 +20,10 @@ trait PcDiagnostics { compiler: MetalsGlobal =>
   ): Seq[l.Diagnostic] = {
     unitOfFile get source.file match {
       case Some(unit) =>
-        metalsAsk[Tree] { response =>
-          askLoadedTyped(unit.source, keepLoaded = false, response)
-          response.get
-        }
+        // run our own compilation here, on the CompilerJob queue
+        // this solves the various race conditions in the compiler type checker compared to using the "right way"
+        // but it clogs the PC until the type checker is done
+        backgroundCompile()
         unit.problems.toList.flatMap(toLspDiagnostic)
 
       case None =>
@@ -52,4 +55,122 @@ trait PcDiagnostics { compiler: MetalsGlobal =>
     } else None
   }
 
+  /**
+   * Compile all loaded source files in the order given by `allSources`.
+   *
+   * Adapted from iteractive.Global.
+   */
+  private final def backgroundCompile(): Unit = {
+    reporter.reset()
+
+    // remove any files in first that are no longer maintained by presentation compiler (i.e. closed)
+    allSources = allSources filter (s => unitOfFile contains (s.file))
+
+    // ensure all loaded units are parsed
+    for (s <- allSources; unit <- getUnit(s)) {
+      // checkForMoreWork(NoPosition)  // disabled, as any work done here would be in an inconsistent state
+      ensureUpToDate(unit)
+      parseAndEnter(unit)
+    }
+
+    // sleep window
+    // - removed check for lastWasReload
+    val afterTypeDelay = settings.YpresentationDelay.value
+    if (afterTypeDelay > 0) {
+      val limit = System.currentTimeMillis() + afterTypeDelay
+      while (System.currentTimeMillis() < limit) {
+        Thread.sleep(10)
+        checkForMoreWork(NoPosition)
+      }
+    }
+
+    // ensure all loaded units are typechecked
+    for (s <- allSources; unit <- getUnit(s)) {
+      try {
+        if (!unit.isUpToDate)
+          if (unit.problems.isEmpty || !settings.YpresentationStrict.value)
+            typeCheck(unit)
+          else
+            debugLog("%s has syntax errors. Skipped typechecking".format(unit))
+        else debugLog("already up to date: " + unit)
+        for (r <- waitLoadedTypeResponses(unit.source))
+          r set unit.body
+        //        serviceParsedEntered()
+      } catch {
+        case ex: FreshRunReq => throw ex // propagate a new run request
+        case ShutdownReq => throw ShutdownReq // propagate a shutdown request
+        case ex: ControlThrowable => throw ex
+        case ex: Throwable =>
+          println(
+            "[%s]: exception during background compile: ".format(
+              unit.source
+            ) + ex
+          )
+          ex.printStackTrace()
+          for (r <- waitLoadedTypeResponses(unit.source)) {
+            r.raise(ex)
+          }
+          //          serviceParsedEntered()
+
+          //          lastException = Some(ex)
+//          ignoredFiles += unit.source.file
+//          println("[%s] marking unit as crashed (crashedFiles: %s)".format(unit, ignoredFiles))
+
+          reporter.error(
+            unit.body.pos,
+            "Presentation compiler crashed while type checking this file: %s"
+              .format(ex.toString())
+          )
+      }
+    }
+
+    // move units removable after this run to the "to-be-removed" buffer
+    toBeRemoved.synchronized {
+      toBeRemovedAfterRun.synchronized {
+        toBeRemoved ++= toBeRemovedAfterRun
+      }
+    }
+
+    // clean out stale waiting responses
+    //    cleanAllResponses()
+
+    // wind down
+    informIDE("Everything is now up to date")
+  }
+
+  private def ensureUpToDate(unit: RichCompilationUnit) =
+    if (!unit.isUpToDate && unit.status != JustParsed)
+      reset(unit) // reparse previously typechecked units.
+
+  /** Parse unit and create a name index, unless this has already been done before */
+  private def parseAndEnter(unit: RichCompilationUnit): Unit =
+    if (unit.status == NotLoaded) {
+      debugLog("parsing: " + unit)
+      runReporting.clearSuppressionsComplete(unit.source)
+      currentTyperRun.compileLate(unit)
+      if (debugIDE && !reporter.hasErrors) validatePositions(unit.body)
+      if (!unit.isJava) syncTopLevelSyms(unit)
+      unit.status = JustParsed
+    }
+
+  def currentTyperRun: TyperRun = {
+    val ctr = classOf[Global].getDeclaredField("currentTyperRun")
+    ctr.setAccessible(true)
+    ctr.get(this).asInstanceOf[TyperRun]
+  }
+
+  /** Reset unit to unloaded state */
+  private def reset(unit: RichCompilationUnit): Unit = {
+    unit.depends.clear(): @nowarn("cat=deprecation")
+    unit.defined.clear(): @nowarn("cat=deprecation")
+    unit.synthetics.clear()
+    unit.toCheck.clear()
+    unit.checkedFeatures = Set()
+    unit.targetPos = NoPosition
+    unit.contexts.clear()
+    unit.problems.clear()
+    unit.body = EmptyTree
+    unit.status = NotLoaded
+    unit.transformed.clear()
+  }
 }

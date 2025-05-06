@@ -15,7 +15,8 @@ class ScalaCompilerWrapper(global: MetalsGlobal)
 
   override def compiler(params: VirtualFileParams): MetalsGlobal = {
     if (params.outlineFiles().isPresent()) {
-      global.runOutline(params.outlineFiles().get())
+      // disable outline compilation to see if it fixes compiler race conditions in typer
+//      global.runOutline(params.outlineFiles().get())
     }
     global
   }

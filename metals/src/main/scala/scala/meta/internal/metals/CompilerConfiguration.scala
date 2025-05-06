@@ -95,25 +95,32 @@ class CompilerConfiguration(
 
     def buildTargetId: BuildTargetIdentifier
     protected def fallback: PresentationCompiler
-    protected def newCompiler(classpath: Seq[Path]): PresentationCompiler
+    protected def newCompiler(
+        classpath: Seq[Path],
+        srcFiles: Seq[AbsolutePath] = Seq(),
+    ): PresentationCompiler
 
     protected val presentationCompilerRef =
       new ju.concurrent.atomic.AtomicReference[PresentationCompiler]()
 
     protected val cancelCompilerPromise: Promise[Unit] = Promise[Unit]()
-    protected val presentationCompilerFuture: Future[PresentationCompiler] =
-      buildTargets
-        .targetClasspath(buildTargetId, cancelCompilerPromise)
-        .getOrElse(Future.successful(Nil))
-        .map { classpath =>
-          // set wasResolved to avoid races on timeout below
-          val classpathSeq = classpath.toAbsoluteClasspath.map(_.toNIO).toSeq
-          val result = newCompiler(classpathSeq)
-          // Request finished, we can remove and shut down the fallback
-          Option(presentationCompilerRef.getAndSet(result))
-            .foreach(_.shutdown())
-          result
-        }
+    protected val presentationCompilerFuture: Future[PresentationCompiler] = {
+      for {
+        classpath <- buildTargets
+          .targetClasspath(buildTargetId, cancelCompilerPromise)
+          .getOrElse(Future.successful(Nil))
+      } yield {
+        val srcFiles = buildTargets.buildTargetSources(buildTargetId)
+
+        // set wasResolved to avoid races on timeout below
+        val classpathSeq = classpath.toAbsoluteClasspath.map(_.toNIO).toSeq
+        val result = newCompiler(classpathSeq, srcFiles.toSeq)
+        // Request finished, we can remove and shut down the fallback
+        Option(presentationCompilerRef.getAndSet(result))
+          .foreach(_.shutdown())
+        result
+      }
+    }
 
     def await: PresentationCompiler = {
       val compilerConfig = config.initialConfig.compilers
@@ -165,7 +172,10 @@ class CompilerConfiguration(
 
     def buildTargetId: BuildTargetIdentifier = scalaTarget.id
 
-    protected def newCompiler(classpath: Seq[Path]): PresentationCompiler = {
+    protected def newCompiler(
+        classpath: Seq[Path],
+        srcFiles: Seq[AbsolutePath] = Seq(),
+    ): PresentationCompiler = {
       val name = scalaTarget.scalac.getTarget().getUri
       val options = enrichWithReleaseOption(scalaTarget)
       // Best Effort option `-Ybest-effort` is useless for PC,
@@ -246,7 +256,10 @@ class CompilerConfiguration(
 
     def buildTargetId: BuildTargetIdentifier = targetId
 
-    protected def newCompiler(classpath: Seq[Path]): PresentationCompiler = {
+    protected def newCompiler(
+        classpath: Seq[Path],
+        srcFiles: Seq[AbsolutePath] = Seq(),
+    ): PresentationCompiler = {
       val pc = JavaPresentationCompiler()
       configure(pc, search, completionItemPriority)
         .newInstance(

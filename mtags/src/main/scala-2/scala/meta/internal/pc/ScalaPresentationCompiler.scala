@@ -16,7 +16,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
 import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.Settings
-import scala.tools.nsc.reporters.StoreReporter
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerVirtualFileParams
@@ -594,7 +593,6 @@ case class ScalaPresentationCompiler(
     val vd = new VirtualDirectory("(memory)", None)
     val settings = new Settings
     settings.Ymacroexpand.value = "discard"
-    settings.YpresentationDelay.value = 500
 //    settings.YpresentationDebug.value = true
     settings.outputDirs.setSingleOutput(vd)
     settings.classpath.value = classpath
