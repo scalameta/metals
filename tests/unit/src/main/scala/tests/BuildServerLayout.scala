@@ -97,21 +97,6 @@ object MillBuildLayout extends BuildToolLayout {
         |$sourceLayout
         |""".stripMargin
   }
-
-  // def apply(
-  //     sourceLayout: String,
-  //     scalaVersion: String,
-  //     millVersion: String,
-  //     includeMunit: Boolean = false,
-  // ): String =
-  //   s"""|${apply(sourceLayout, scalaVersion)}
-  //       |${apply(
-  //        sourceLayout,
-  //        scalaVersion,
-  //        if (includeMunit) Some(MUnit) else None,
-  //        millVersion,
-  //      )}
-  //       |""".stripMargin
 }
 
 object BazelBuildLayout extends BuildToolLayout {
@@ -176,12 +161,23 @@ object BazelBuildLayout extends BuildToolLayout {
         |rules_proto_dependencies()
         |rules_proto_toolchains()
         |
-        |load("@io_bazel_rules_scala//scala:toolchains.bzl", "scala_register_toolchains")
-        |scala_register_toolchains()
+        |register_toolchains("//:semanticdb_toolchain")
         |
         |# optional: setup ScalaTest toolchain and dependencies
         |load("@io_bazel_rules_scala//testing:scalatest.bzl", "scalatest_repositories", "scalatest_toolchain")
         |scalatest_repositories()
         |scalatest_toolchain()
+        |
+        |mezel_version = "0a37e40b6d1faed610aa7ddcb57b39af3d9d1fc5"
+        |http_archive(
+        |    name = "mezel",
+        |    sha256 = "9cd64491542bcc4a3a4c1fa7fcbb61756cb186104ad7b4316c58695feef4738f",
+        |    strip_prefix = "mezel-%s" % mezel_version,
+        |    type = "zip",
+        |    url = "https://github.com/valdemargr/mezel/archive/%s.zip" % mezel_version,
+        |)
+        |# loads the bsp binary
+        |load("@mezel//rules:load_mezel.bzl", "load_mezel")
+        |load_mezel()
         |""".stripMargin
 }
