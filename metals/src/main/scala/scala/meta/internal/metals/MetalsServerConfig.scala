@@ -127,10 +127,6 @@ final case class MetalsServerConfig(
         .filter(_.forall(Character.isDigit(_)))
         .map(_.toInt)
         .getOrElse(3),
-    mcpEnabled: Boolean = MetalsServerConfig.binaryOption(
-      "metals.mcp",
-      default = false,
-    ),
 ) {
   override def toString: String =
     List[String](
@@ -155,7 +151,6 @@ final case class MetalsServerConfig(
       s"debug-server-start-timeout=$debugServerStartTimeout",
       s"enable-best-effort=$enableBestEffort",
       s"folding-range-minimum-span=$foldingRageMinimumSpan",
-      s"mcp=$mcpEnabled",
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {

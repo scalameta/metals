@@ -190,6 +190,31 @@ class QueryEngine(
       }
   }
 
+  /**
+   * Creates `CompilerOffsetParams` - a code fragment with cursor position,
+   * that can be used to get completions or signature using presentation compiler.
+   *
+   * E.g.:,
+   *
+   * for completions:
+   * ````
+   * // `scala.collection.Bar$`
+   * object `mcp-1234`{ scala.collection.Bar.@@ }
+   * // `scala.collection.Seq#Foo#`
+   * object `mcp-1234`{ ???.asInstanceOf[scala.collection.Seq#Foo].@@ }
+   * ```
+   *
+   * for signatures:
+   * ```
+   * // `scala.collection.Seq#Bar$foo().`
+   * object `mcp-1234`{ ???.asInstanceOf[scala.collection.Seq].Bar.foo(@@) }
+   * // `scala.collection.Seq#`
+   * object `mcp-1234`{ new scala.collection.Seq(@@) }
+   * ```
+   * @param symbol The symbol to create parameters for
+   * @param forSignature Whether to create parameters for signature help
+   * @return Compiler offset parameters
+   */
   private def makeCompilerOffsetParams(
       symbol: SymbolSearchResult,
       forSignature: Boolean,

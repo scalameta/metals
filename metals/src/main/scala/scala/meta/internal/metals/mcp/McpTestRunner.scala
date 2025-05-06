@@ -49,10 +49,8 @@ class McpTestRunner(
         .toRight(s"Could not find build target for $path")
       projectInfo <- debugProvider.debugConfigCreator.create(id, cancelPromise)
     } yield {
-      scribe.info(s"Okk")
       for {
         discovered <- debugProvider.discoverTests(id, testSuites)
-        _ = scribe.info(discovered.toString())
         project <- projectInfo
         adapter = new TestSuiteDebugAdapter(
           workspace,
@@ -64,10 +62,7 @@ class McpTestRunner(
         )
         listner = new McpDebuggeeListener(verbose)
         _ <- adapter.run(listner).future
-      } yield {
-        scribe.info(s"McpTestRunner result: ${listner.result}")
-        listner.result
-      }
+      } yield listner.result
     }
   }
 

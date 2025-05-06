@@ -303,10 +303,7 @@ class ProjectMetalsLspService(
 
   protected def onInitialized(): Future[Unit] = {
     val starMcp =
-      if (
-        userConfig.startMcpServer || serverInputs.initialServerConfig.mcpEnabled
-      )
-        startMcpServer()
+      if (userConfig.startMcpServer) startMcpServer()
       else Future.unit
 
     val setUpScalaCli = connectionProvider.withWillGenerateBspConfig {

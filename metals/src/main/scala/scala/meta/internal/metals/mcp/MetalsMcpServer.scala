@@ -4,10 +4,14 @@ import java.net.InetSocketAddress
 import java.nio.file.Path
 import java.util.ArrayList
 import java.util.Arrays
+import java.util.function.BiFunction
 import java.util.{List => JList}
+import java.util.{Map => JMap}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.Try
+import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.metals.BuildTargets
@@ -15,6 +19,7 @@ import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.ConnectionProvider
 import scala.meta.internal.metals.Diagnostics
+import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.mcp.McpPrinter._
@@ -23,6 +28,7 @@ import scala.meta.internal.metals.mcp.SymbolType
 import scala.meta.io.AbsolutePath
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.modelcontextprotocol.server.McpAsyncServerExchange
 import io.modelcontextprotocol.server.McpServer
 import io.modelcontextprotocol.server.McpServerFeatures.AsyncToolSpecification
 import io.modelcontextprotocol.server.transport.HttpServletSseServerTransportProvider
@@ -42,6 +48,7 @@ import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.services.LanguageClient
 import reactor.core.publisher.Mono
+
 class MetalsMcpServer(
     queryEngine: QueryEngine,
     projectPath: AbsolutePath,
@@ -83,6 +90,9 @@ class MetalsMcpServer(
         if (sseEndpoint.equals(pathInfo)) {
           val scheduler =
             java.util.concurrent.Executors.newSingleThreadScheduledExecutor()
+          // Scheduling a ping task to keep the connection alive,
+          // see: https://github.com/AltimateAI/vscode-dbt-power-user/pull/1631 or
+          // https://github.com/modelcontextprotocol/rust-sdk/pull/74
           val pingTask = new Runnable {
             override def run(): Unit = {
               try {
@@ -203,10 +213,10 @@ class MetalsMcpServer(
     new AsyncToolSpecification(
       new Tool(
         "import-build",
-        "Import the build to IDE. Should be performed after any build changes, e.g. adding dependepcies, any changes in build.sbt.",
+        "Import the build to IDE. Should be performed after any build changes, e.g. adding dependepcies or any changes in build.sbt.",
         schema,
       ),
-      (exchange, _) => {
+      withErrorHandling { (exchange, _) =>
         connectionProvider
           .slowConnectToBuildServer(forceImport = true)
           .map {
@@ -235,7 +245,7 @@ class MetalsMcpServer(
     val schema = """{"type": "object", "properties": { }}"""
     new AsyncToolSpecification(
       new Tool("compile-full", "Compile the whole Scalaproject", schema),
-      (exchange, _) => {
+      withErrorHandling { (exchange, _) =>
         compilations
           .cascadeCompile(buildTargets.allBuildTargetIds)
           .map { _ =>
@@ -266,35 +276,30 @@ class MetalsMcpServer(
          |}""".stripMargin
     new AsyncToolSpecification(
       new Tool("compile-file", "Compile a chosenScala file", schema),
-      (exchange, arguments) => {
-        try {
-          withPath(arguments) { path =>
-            compilations.compileFile(path).map {
-              case Some(_) =>
-                val result = diagnostics
-                  .forFile(path)
-                  .map { d =>
-                    val startLine = d.getRange().getStart().getLine()
-                    val endLine = d.getRange().getEnd().getLine()
-                    s"($startLine-$endLine):\n${d.getMessage()}"
-                  }
-                  .mkString("\n")
-                new CallToolResult(createContent(result), false)
-              case None =>
-                new CallToolResult(
-                  createContent(
-                    s"Error: Incorrect file path: ${path.toString()}"
-                  ),
-                  true,
-                )
-            }
-          }.toMono
-        } catch {
-          case e: Exception =>
-            Mono.just(
-              new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
-            )
-        }
+      withErrorHandling { (exchange, arguments) =>
+        val path = arguments.getFileInFocus
+        compilations
+          .compileFile(path)
+          .map {
+            case Some(_) =>
+              val result = diagnostics
+                .forFile(path)
+                .map { d =>
+                  val startLine = d.getRange().getStart().getLine()
+                  val endLine = d.getRange().getEnd().getLine()
+                  s"($startLine-$endLine):\n${d.getMessage()}"
+                }
+                .mkString("\n")
+              new CallToolResult(createContent(result), false)
+            case None =>
+              new CallToolResult(
+                createContent(
+                  s"Error: Incorrect file path: ${path.toString()}"
+                ),
+                true,
+              )
+          }
+          .toMono
       },
     )
   }
@@ -323,36 +328,27 @@ class MetalsMcpServer(
          |}""".stripMargin
     new AsyncToolSpecification(
       new Tool("test", "Run Scala test suite", schema),
-      (exchange, arguments) => {
-        try {
-          val testClass = arguments.get("testClass").asInstanceOf[String]
-          val optPath = Option(arguments.get("testFile"))
-            .map(_.asInstanceOf[String])
-            .filter(_.nonEmpty)
-            .map(path => AbsolutePath(Path.of(path))(projectPath))
-          val printOnlyErrorsAndSummary =
-            arguments.get("verbose").asInstanceOf[Boolean]
-          val result = mcpTestRunner.runTests(
-            testClass,
-            optPath,
-            printOnlyErrorsAndSummary,
-          )
-          (result match {
-            case Right(value) =>
-              value.map(content =>
-                new CallToolResult(createContent(content), false)
-              )
-            case Left(error) =>
-              Future.successful(
-                new CallToolResult(createContent(s"Error: $error"), true)
-              )
-          }).toMono
-        } catch {
-          case e: Exception =>
-            Mono.just(
-              new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
+      withErrorHandling { (exchange, arguments) =>
+        val testClass = arguments.getAs[String]("testClass")
+        val optPath = arguments
+          .getOptAs[String]("testFile")
+          .map(path => AbsolutePath(Path.of(path))(projectPath))
+        val printOnlyErrorsAndSummary = arguments.getAs[Boolean]("verbose")
+        val result = mcpTestRunner.runTests(
+          testClass,
+          optPath,
+          printOnlyErrorsAndSummary,
+        )
+        (result match {
+          case Right(value) =>
+            value.map(content =>
+              new CallToolResult(createContent(content), false)
             )
-        }
+          case Left(error) =>
+            Future.successful(
+              new CallToolResult(createContent(s"Error: $error"), true)
+            )
+        }).toMono
       },
     )
   }
@@ -376,25 +372,18 @@ class MetalsMcpServer(
     """
     new AsyncToolSpecification(
       new Tool("glob-search", "Search for symbols using glob pattern", schema),
-      (exchange, arguments) => {
-        try {
-          val query = arguments.get("query").asInstanceOf[String]
-          withPath(arguments) { path =>
-            queryEngine
-              .globSearch(query, Set.empty, path)
-              .map(result =>
-                new CallToolResult(
-                  createContent(result.map(_.show).mkString("\n")),
-                  false,
-                )
-              )
-          }.toMono
-        } catch {
-          case e: Exception =>
-            Mono.just(
-              new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
+      withErrorHandling { (exchange, arguments) =>
+        val query = arguments.getAs[String]("query")
+        val path = arguments.getFileInFocus
+        queryEngine
+          .globSearch(query, Set.empty, path)
+          .map(result =>
+            new CallToolResult(
+              createContent(result.map(_.show).mkString("\n")),
+              false,
             )
-        }
+          )
+          .toMono
       },
     )
   }
@@ -430,32 +419,24 @@ class MetalsMcpServer(
         "Search for symbols by type using glob pattern",
         schema,
       ),
-      (exchange, arguments) => {
-        try {
-          val query = arguments.get("query").asInstanceOf[String]
-          withPath(arguments) { path =>
-            val symbolTypes = arguments
-              .get("symbolType")
-              .asInstanceOf[ArrayList[String]]
-              .asScala
-              .flatMap(s => SymbolType.values.find(_.name == s))
-              .toSet
+      withErrorHandling { (exchange, arguments) =>
+        val query = arguments.getAs[String]("query")
+        val path = arguments.getFileInFocus
+        val symbolTypes = arguments
+          .getAs[ArrayList[String]]("symbolType")
+          .asScala
+          .flatMap(s => SymbolType.values.find(_.name == s))
+          .toSet
 
-            queryEngine
-              .globSearch(query, symbolTypes, path)
-              .map(result =>
-                new CallToolResult(
-                  createContent(result.map(_.show).mkString("\n")),
-                  false,
-                )
-              )
-          }.toMono
-        } catch {
-          case e: Exception =>
-            Mono.just(
-              new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
+        queryEngine
+          .globSearch(query, symbolTypes, path)
+          .map(result =>
+            new CallToolResult(
+              createContent(result.map(_.show).mkString("\n")),
+              false,
             )
-        }
+          )
+          .toMono
       },
     )
   }
@@ -486,25 +467,18 @@ class MetalsMcpServer(
            |For methods returns signatures of all overloaded methods.""".stripMargin,
         schema,
       ),
-      (exchange, arguments) => {
-        try {
-          val fqcn = arguments.getFqcn
-          withPath(arguments) { path =>
-            queryEngine
-              .inspect(fqcn, path)
-              .map(result =>
-                new CallToolResult(
-                  createContent(result.show),
-                  false,
-                )
-              )
-          }.toMono
-        } catch {
-          case e: Exception =>
-            Mono.just(
-              new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
+      withErrorHandling { (exchange, arguments) =>
+        val fqcn = arguments.getFqcn
+        val path = arguments.getFileInFocus
+        queryEngine
+          .inspect(fqcn, path)
+          .map(result =>
+            new CallToolResult(
+              createContent(result.show),
+              false,
             )
-        }
+          )
+          .toMono
       },
     )
   }
@@ -528,27 +502,19 @@ class MetalsMcpServer(
         "Get documentation for a chosen Scala symbol",
         schema,
       ),
-      (exchange, arguments) => {
-        try {
-          val fqcn =
-            arguments.get("fqcn").asInstanceOf[String].stripPrefix("_empty_/")
-          Future {
-            queryEngine.getDocumentation(fqcn) match {
-              case Some(result) =>
-                new CallToolResult(createContent(result.show), false)
-              case None =>
-                new CallToolResult(
-                  createContent("Error: Symbol not found"),
-                  false,
-                )
-            }
-          }.toMono
-        } catch {
-          case e: Exception =>
-            Mono.just(
-              new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
-            )
-        }
+      withErrorHandling { (exchange, arguments) =>
+        val fqcn = arguments.getFqcn
+        Future {
+          queryEngine.getDocumentation(fqcn) match {
+            case Some(result) =>
+              new CallToolResult(createContent(result.show), false)
+            case None =>
+              new CallToolResult(
+                createContent("Error: Symbol not found"),
+                false,
+              )
+          }
+        }.toMono
       },
     )
   }
@@ -576,39 +542,36 @@ class MetalsMcpServer(
         "Get usages for a chosen Scala symbol. Returns list of files with line numbers.",
         schema,
       ),
-      (exchange, arguments) => {
-        try {
-          val fqcn = arguments.getFqcn
-          withPath(arguments) { path =>
-            Future {
-              val result = queryEngine.getUsages(fqcn, path)
-              new CallToolResult(createContent(result.show(projectPath)), false)
-            }
-          }.toMono
-        } catch {
-          case e: Exception =>
-            Mono.just(
-              new CallToolResult(createContent(s"Error: ${e.getMessage}"), true)
-            )
-        }
+      withErrorHandling { (exchange, arguments) =>
+        val fqcn = arguments.getFqcn
+        val path = arguments.getFileInFocus
+        Future {
+          val result = queryEngine.getUsages(fqcn, path)
+          new CallToolResult(createContent(result.show(projectPath)), false)
+        }.toMono
       },
     )
   }
 
-  private def withPath(
-      arguments: java.util.Map[String, Object]
-  )(f: AbsolutePath => Future[CallToolResult]): Future[CallToolResult] = {
-    Option(arguments.get("fileInFocus"))
-      .map(_.asInstanceOf[String])
-      .filter(_.nonEmpty)
-      .map(path => AbsolutePath(Path.of(path))(projectPath))
-      .orElse { focusedDocument() } match {
-      case Some(value) => f(value)
-      case None =>
-        Future.successful(
+  private def withErrorHandling(
+      f: (McpAsyncServerExchange, JMap[String, Object]) => Mono[CallToolResult]
+  ): BiFunction[
+    McpAsyncServerExchange,
+    JMap[String, Object],
+    Mono[CallToolResult],
+  ] = { (exchange, arguments) =>
+    try {
+      f(exchange, arguments)
+    } catch {
+      case NonFatal(e) =>
+        scribe.warn(
+          s"Error while processing request: ${e.getMessage}, arguments: ${arguments.toJson}, stacktrace:" +
+            e.getStackTrace.mkString("\n")
+        )
+        Mono.just(
           new CallToolResult(
             createContent(
-              "Error: No file path provided or incorrect file path"
+              s"Error: ${e.getMessage}, arguments: ${arguments.toJson}"
             ),
             true,
           )
@@ -624,8 +587,50 @@ class MetalsMcpServer(
       val arguments: java.util.Map[String, Object]
   ) {
     def getFqcn: String =
-      arguments.get("fqcn").asInstanceOf[String].stripPrefix("_empty_/")
+      getAs[String]("fqcn").stripPrefix("_empty_.")
 
+    def getAs[T](key: String): T =
+      arguments.get(key) match {
+        case null => throw new MissingArgumentException(key)
+        case value =>
+          Try(value.asInstanceOf[T]).toOption.getOrElse(
+            throw new IncorrectArgumentTypeException(
+              key,
+              value.getClass.getName,
+            )
+          )
+      }
+
+    def getOptAs[T](key: String): Option[T] =
+      arguments.get(key) match {
+        case null => None
+        case value =>
+          Try(value.asInstanceOf[T]).toOption.orElse(
+            throw new IncorrectArgumentTypeException(
+              key,
+              value.getClass.getName,
+            )
+          )
+      }
+
+    def getFileInFocus: AbsolutePath =
+      getOptAs[String]("fileInFocus")
+        .filter(_.nonEmpty)
+        .map(path => AbsolutePath(Path.of(path))(projectPath))
+        .orElse { focusedDocument() }
+        .getOrElse(throw MissingFileInFocusException)
   }
-
 }
+
+sealed trait IncorrectArgumentException extends Exception
+class MissingArgumentException(key: String)
+    extends Exception(s"Missing argument: $key")
+    with IncorrectArgumentException
+
+class IncorrectArgumentTypeException(key: String, expected: String)
+    extends Exception(s"Incorrect argument type for $key, expected: $expected")
+    with IncorrectArgumentException
+
+object MissingFileInFocusException
+    extends Exception(s"Missing fileInFocus and failed to infer it.")
+    with IncorrectArgumentException
