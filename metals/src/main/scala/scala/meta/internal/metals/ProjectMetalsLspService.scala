@@ -33,6 +33,7 @@ import scala.meta.internal.metals.watcher.NoopFileWatcher
 import scala.meta.internal.metals.watcher.ProjectFileWatcher
 import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.parsing.ClassFinder
 import scala.meta.internal.tvp.FolderTreeViewProvider
 import scala.meta.io.AbsolutePath
 
@@ -126,6 +127,19 @@ class ProjectMetalsLspService(
   override val shellRunner: ShellRunner = register {
     new ShellRunner(time, workDoneProgress, () => userConfig)
   }
+
+  override protected def fileDecoderProvider: FileDecoderProvider =
+    new FileDecoderProvider(
+      folder,
+      compilers,
+      buildTargets,
+      () => userConfig,
+      shellRunner,
+      optFileSystemSemanticdbs,
+      interactiveSemanticdbs,
+      languageClient,
+      new ClassFinder(trees),
+    )
 
   protected val bspConfigGenerator: BspConfigGenerator = new BspConfigGenerator(
     folder,

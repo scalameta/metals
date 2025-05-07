@@ -808,7 +808,7 @@ object UserConfiguration {
            |correctness when the workspace doesn't compile.
            |""".stripMargin,
       ),
-     UserConfigurationOption(
+      UserConfigurationOption(
         "default-shell",
         """empty string `""`.""",
         "/usr/bin/fish",
