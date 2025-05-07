@@ -3,14 +3,16 @@ package scala.tools.nsc.interactive
 import scala.meta.internal.pc.InterruptException
 
 /**
- * Adapation of PresentationCompilerThread from scala/scala.
- *
- * Changes are marked with "+- scalac deviation" comments.
- * Note that most of the work with the presentation compiler does not happen on
- * this thread, see CompilerJobQueue.
+ * A version of [[MetalsGlobalThread]] that does not do backgroundCompilation. In case the user
+ * wants to see error diagnostics from the presentation compiler, we run compilation explicitly
+ * on the CompilerJobQueue.
  */
-final class MetalsGlobalThread(var compiler: Global, name: String = "")
-    extends Thread("Scala Presentation Compiler [" + name + "]") {
+final class MetalsGlobalThreadNoBackgroundCompilation(
+    var compiler: Global,
+    name: String = ""
+) extends Thread(
+      "Scala Presentation Compiler w/o backgroundCompile[" + name + "]"
+    ) {
 
   /**
    * The presentation compiler loop.
@@ -25,15 +27,9 @@ final class MetalsGlobalThread(var compiler: Global, name: String = "")
         }
       )
       compiler.pollForWork(compiler.NoPosition)
-      while (compiler.isOutOfDate) {
-        try {
-          compiler.backgroundCompile()
-        } catch {
-          case _: FreshRunReq =>
-            compiler.debugLog("fresh run req caught, starting new pass")
-        }
-        compiler.log.flush()
-      }
+
+      // the compiler thread does not do type checking, just servicing other requests as they come in
+      // in particular, askReload which adds sources to be managed
     } catch {
       case ShutdownReq =>
         compiler.debugLog("exiting presentation compiler")

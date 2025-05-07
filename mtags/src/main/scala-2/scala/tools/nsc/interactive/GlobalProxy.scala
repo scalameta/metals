@@ -9,7 +9,8 @@ import scala.meta.internal.pc.MetalsGlobal
 
 trait GlobalProxy { this: MetalsGlobal =>
   def presentationCompilerThread: Thread = this.compileRunner
-  def hijackPresentationCompilerThread(): Unit = newRunnerThread()
+  def hijackPresentationCompilerThread(backgroundCompilation: Boolean): Unit =
+    newRunnerThread(backgroundCompilation)
 
   /**
    * Forwarder to package private `typeMembers` method.
@@ -39,7 +40,7 @@ trait GlobalProxy { this: MetalsGlobal =>
   /**
    * Shuts down the default presentation compiler thread and replaces it with a custom implementation.
    */
-  private def newRunnerThread(): Thread = {
+  private def newRunnerThread(backgroundCompilation: Boolean): Thread = {
     if (compileRunner.isAlive) {
       try {
         this.askShutdown()
@@ -54,8 +55,13 @@ trait GlobalProxy { this: MetalsGlobal =>
       }
     }
     this.scheduler = new WorkScheduler
-    compileRunner =
+    compileRunner = if (backgroundCompilation) {
       new MetalsGlobalThread(this, s"Metals/${buildTargetIdentifier}")
+    } else
+      new MetalsGlobalThreadNoBackgroundCompilation(
+        this,
+        s"Metals/${buildTargetIdentifier}"
+      )
     compileRunner.setDaemon(true)
     compileRunner.start()
     compileRunner

@@ -581,6 +581,15 @@ abstract class MetalsLspService(
       compilers,
     )
 
+  protected val diagnosticsDebouncer =
+    new DiagnosticsDebouncer(
+      buffers,
+      diagnostics,
+      compilers,
+      sh,
+      sys.Prop[Int]("metals.errors-delay").option.getOrElse(500).millis,
+    )
+
   def optFileSystemSemanticdbs(): Option[FileSystemSemanticdbs] = None
 
   protected val fileDecoderProvider: FileDecoderProvider =
@@ -857,9 +866,8 @@ abstract class MetalsLspService(
         val path = params.getTextDocument.getUri.toAbsolutePath
         buffers.put(path, change.getText)
         diagnostics.didChange(path)
-        compilers
-          .didChange(path)
-          .map(diagnostics.publishDiagnosticsNotAdjusted(path, _))
+        compilers.didChange(path)
+        diagnosticsDebouncer.didChange(params.getTextDocument.getVersion, path)
         referencesProvider.didChange(path, change.getText)
         parseTrees(path).asJava
     }

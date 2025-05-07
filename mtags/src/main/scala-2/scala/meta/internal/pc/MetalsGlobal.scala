@@ -66,7 +66,9 @@ class MetalsGlobal(
     with Keywords
     with PcDiagnostics
     with WorkspaceSymbolSearch { compiler =>
-  hijackPresentationCompilerThread()
+  hijackPresentationCompilerThread(
+    backgroundCompilation = !metalsConfig.emitDiagnostics()
+  )
 
   val logger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)
 

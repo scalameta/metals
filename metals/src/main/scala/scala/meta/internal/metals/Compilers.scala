@@ -264,15 +264,7 @@ class Compilers(
 
         outlineFilesProvider.didChange(pc.buildTargetId(), path)
 
-        for {
-          ds <- pc
-            .didChange(
-              CompilerVirtualFileParams(path.toNIO.toUri(), input.value)
-            )
-            .asScala
-        } yield {
-          ds.asScala.toList
-        }
+        Future.successful(Nil)
       }
       .getOrElse(Future.successful(Nil))
   }
