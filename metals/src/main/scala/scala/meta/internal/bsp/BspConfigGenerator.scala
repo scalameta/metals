@@ -10,6 +10,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
 import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.Messages.BspProvider
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -31,7 +32,7 @@ final class BspConfigGenerator(
   def runUnconditionally(
       buildTool: BuildServerProvider,
       args: List[String],
-  ): Future[BspConfigGenerationStatus] =
+  ): CancelableFuture[BspConfigGenerationStatus] =
     shellRunner
       .run(
         s"${buildTool.buildServerName} bspConfig",
