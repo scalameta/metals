@@ -3,13 +3,14 @@ package tests
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.StatusBar
+import scala.meta.internal.metals.clients.language.StatusType
 
 class StatusBarSuite extends BaseSuite {
   val time = new FakeTime
   val client = new TestingClient(PathIO.workingDirectory, Buffers())
   var status = new StatusBar(client, time)
   override def beforeEach(context: BeforeEach): Unit = {
-    client.statusParams.clear()
+    client.getStatusParams(StatusType.metals).clear()
     status.cancel()
   }
 
@@ -26,7 +27,7 @@ class StatusBarSuite extends BaseSuite {
     time.elapseSeconds(11)
     status.tick()
     assertNoDiff(
-      client.statusBarHistory,
+      client.statusBarHistory(StatusType.metals),
       """|
          |<show> - tick 1
          |tick 2

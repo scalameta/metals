@@ -153,7 +153,6 @@ class WorkspaceLspService(
 
   private val focusedDocument: AtomicReference[Option[AbsolutePath]] =
     new AtomicReference(None)
-  new AtomicReference(None)
   private val recentlyFocusedFiles = new ActiveFiles(time)
 
   private val timerProvider: TimerProvider = new TimerProvider(time)
