@@ -52,7 +52,6 @@ import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.mtags._
-import scala.meta.internal.parsing.ClassFinder
 import scala.meta.internal.parsing.ClassFinderGranularity
 import scala.meta.internal.parsing.DocumentSymbolProvider
 import scala.meta.internal.parsing.FoldingRangeProvider
@@ -585,18 +584,7 @@ abstract class MetalsLspService(
 
   def optFileSystemSemanticdbs(): Option[FileSystemSemanticdbs] = None
 
-  protected val fileDecoderProvider: FileDecoderProvider =
-    new FileDecoderProvider(
-      folder,
-      compilers,
-      buildTargets,
-      () => userConfig,
-      shellRunner,
-      optFileSystemSemanticdbs,
-      interactiveSemanticdbs,
-      languageClient,
-      new ClassFinder(trees),
-    )
+  protected def fileDecoderProvider: FileDecoderProvider
 
   def loadedPresentationCompilerCount(): Int =
     compilers.loadedPresentationCompilerCount()
