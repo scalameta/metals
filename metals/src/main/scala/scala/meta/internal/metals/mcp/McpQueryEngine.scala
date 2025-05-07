@@ -1,17 +1,13 @@
 package scala.meta.internal.metals.mcp
 
-import java.net.URI
 import java.{util => ju}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.util.Random
 
 import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.Docstrings
-import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferenceProvider
 import scala.meta.internal.metals.ScalaVersionSelector
@@ -19,9 +15,6 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.ContentType
 import scala.meta.pc.ParentSymbols
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import org.eclipse.lsp4j.CompletionItem
-import org.eclipse.lsp4j.CompletionItemTag
 import org.eclipse.lsp4j.SymbolKind
 
 /**
@@ -83,150 +76,9 @@ class McpQueryEngine(
       symbol <- mcpDefinitionProvider
         .symbols(fqcn, Some(path))
         .distinctBy(_.symbolType)
-      (shouldGetCompletions) = symbol.symbolType match {
-        case SymbolType.Class | SymbolType.Trait | SymbolType.Object |
-            SymbolType.Package =>
-          true
-        case _ => false
-      }
-      shouldGetSignature = symbol.symbolType match {
-        case SymbolType.Method | SymbolType.Function | SymbolType.Constructor |
-            SymbolType.Class =>
-          true
-        case _ => false
-      }
-    } yield for {
-      completions <-
-        if (shouldGetCompletions) getCompletions(symbol, buildTarget)
-        else Future.successful(Nil)
-      signatures <-
-        if (shouldGetSignature) getSignatures(symbol, buildTarget)
-        else Future.successful(Nil)
-    } yield {
-      val res: Option[SymbolInspectResult] = symbol.symbolType match {
-        case SymbolType.Package =>
-          Some(PackageInspectResult(symbol.path, completions))
-        case SymbolType.Class =>
-          Some(ClassInspectResult(symbol.path, completions, signatures))
-        case SymbolType.Object =>
-          Some(ObjectInspectResult(symbol.path, completions))
-        case SymbolType.Trait =>
-          Some(TraitInspectResult(symbol.path, completions))
-        case SymbolType.Method | SymbolType.Function | SymbolType.Constructor =>
-          Some(MethodInspectResult(symbol.path, signatures, symbol.symbolType))
-        case _ => None
-      }
-      res
-    }
+    } yield McpInspectProvider.inspect(compilers, symbol, buildTarget)
 
     Future.sequence(results).map(_.flatten)
-  }
-
-  private def getCompletions(
-      symbol: SymbolSearchResult,
-      buildTarget: BuildTargetIdentifier,
-  ) = {
-    def isInteresting(completion: CompletionItem): Boolean = {
-      !McpQueryEngine.uninterestingCompletions(completion.getLabel())
-    }
-
-    def isDeprecated(completion: CompletionItem): Boolean = {
-      Option(completion.getTags.asScala)
-        .getOrElse(Nil)
-        .contains(CompletionItemTag.Deprecated)
-    }
-
-    compilers
-      .completions(
-        buildTarget,
-        makeCompilerOffsetParams(symbol, forSignature = false),
-      )
-      .map { completionList =>
-        completionList
-          .getItems()
-          .asScala
-          .collect {
-            case completion
-                if isInteresting(completion) && !isDeprecated(completion) =>
-              completion.getLabel()
-          }
-          .toList
-      }
-  }
-
-  private def getSignatures(
-      symbol: SymbolSearchResult,
-      buildTarget: BuildTargetIdentifier,
-  ): Future[List[String]] = {
-    compilers
-      .signatureHelp(
-        buildTarget,
-        makeCompilerOffsetParams(symbol, forSignature = true),
-      )
-      .map {
-        _.getSignatures().asScala.map(_.getLabel()).toList
-      }
-  }
-
-  /**
-   * Creates `CompilerOffsetParams` - a code fragment with cursor position,
-   * that can be used to get completions or signature using presentation compiler.
-   *
-   * E.g.:,
-   *
-   * for completions:
-   * ````
-   * // `scala.collection.Bar$`
-   * object `mcp-1234`{ scala.collection.Bar.@@ }
-   * // `scala.collection.Seq#Foo#`
-   * object `mcp-1234`{ ???.asInstanceOf[scala.collection.Seq#Foo].@@ }
-   * ```
-   *
-   * for signatures:
-   * ```
-   * // `scala.collection.Seq#Bar$foo().`
-   * object `mcp-1234`{ ???.asInstanceOf[scala.collection.Seq].Bar.foo(@@) }
-   * // `scala.collection.Seq#`
-   * object `mcp-1234`{ new scala.collection.Seq(@@) }
-   * ```
-   * @param symbol The symbol to create parameters for
-   * @param forSignature Whether to create parameters for signature help
-   * @return Compiler offset parameters
-   */
-  private def makeCompilerOffsetParams(
-      symbol: SymbolSearchResult,
-      forSignature: Boolean,
-  ) = {
-    val lastTypeIndx =
-      (if (forSignature) symbol.symbol.stripSuffix("#") else symbol.symbol)
-        .lastIndexOf('#')
-    val completionText =
-      if (lastTypeIndx == -1) { symbol.path }
-      else {
-        val memberPart =
-          if (symbol.symbol.length() == lastTypeIndx + 1) ""
-          else "." ++ symbol.path.substring(lastTypeIndx + 1)
-        val classMemberPart = symbol.symbol
-          .substring(0, lastTypeIndx)
-          .replace('/', '.')
-          .replace('$', '.')
-        s"???.asInstanceOf[$classMemberPart]$memberPart"
-      }
-
-    val completionOrSignature =
-      if (forSignature) {
-        if (symbol.symbol.endsWith("#")) s"new $completionText()"
-        else s"$completionText()"
-      } else s"$completionText."
-
-    val randm = Random.nextLong()
-    val withWrapper = s"object `mcp-$randm`{ $completionOrSignature }"
-    CompilerOffsetParams(
-      URI.create(s"mcp-$randm.scala"),
-      withWrapper,
-      withWrapper.length() - (if (forSignature) 3 else 2),
-      EmptyCancelToken,
-    )
   }
 
   /**
@@ -327,6 +179,7 @@ sealed trait TemplateInspectResult extends SymbolInspectResult {
 case class ObjectInspectResult(
     override val path: String,
     override val members: List[String],
+    val auxilaryContext: String,
 ) extends TemplateInspectResult {
   override val symbolType: SymbolType = SymbolType.Object
 }
@@ -342,6 +195,7 @@ case class ClassInspectResult(
     override val path: String,
     override val members: List[String],
     val constructors: List[String],
+    val auxilaryContext: String,
 ) extends TemplateInspectResult {
   override val symbolType: SymbolType = SymbolType.Class
 }

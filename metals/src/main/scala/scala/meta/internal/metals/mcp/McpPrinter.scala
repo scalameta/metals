@@ -12,11 +12,14 @@ object McpPrinter {
       def showMembers(members: List[String]): String =
         if (members.isEmpty) ""
         else members.mkString("\n\t - ", "\n\t - ", "")
+      def showAuxContext(auxilaryContext: String): String =
+        if (auxilaryContext.isEmpty) ""
+        else auxilaryContext.split('\n').map("\n\t" + _).mkString
       result match {
-        case ObjectInspectResult(_, members) =>
-          s"object ${result.name}${showMembers(members)}"
-        case ClassInspectResult(_, members, constructors) =>
-          s"class ${result.name}${showMembers(constructors)}${showMembers(members)}"
+        case ObjectInspectResult(_, members, auxilaryContext) =>
+          s"object ${result.name}${showMembers(members)}${showAuxContext(auxilaryContext)}"
+        case ClassInspectResult(_, members, constructors, auxilaryContext) =>
+          s"class ${result.name}${showMembers(constructors)}${showMembers(members)}${showAuxContext(auxilaryContext)}"
         case TraitInspectResult(_, members) =>
           s"trait ${result.name}${showMembers(members)}"
         case MethodInspectResult(_, signatures, kind) =>

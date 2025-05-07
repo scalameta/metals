@@ -347,6 +347,16 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |package com.test.nested.package1.deeper
            |
            |object O
+           |/a/src/main/scala/com/test/nested/package2/Nested.scala
+           |package com.test.nested.package2
+           |
+           |class Bar {
+           |  object Foo {
+           |    class Nested {
+           |      def someMethod: Int = 42
+           |    }
+           |  }
+           |}
            |""".stripMargin
       )
       _ <- server.didOpen(
@@ -391,6 +401,19 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
         resMethod.show,
         """|method add(x: Int): Int
            |method add(x: Int, y: Int): Int
+           |""".stripMargin,
+      )
+      resNested <- server.headServer.queryEngine.inspect(
+        "com.test.nested.package2.Bar.Foo.Nested",
+        path,
+      )
+      _ = assertNoDiff(
+        resNested.show,
+        """|class Nested
+           |	 - <init>(): mcp0.Foo.Nested
+           |	 - someMethod: Int
+           |	Given synthetic values for path-dependent types:
+           |	 - mcp0: com.test.nested.package2.Bar
            |""".stripMargin,
       )
     } yield ()
