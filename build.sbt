@@ -619,7 +619,8 @@ lazy val metals = project
       V.dap4j,
       "ch.epfl.scala" %% "scala-debug-adapter" % V.debugAdapter,
       // for finding paths of global log/cache directories
-      "dev.dirs" % "directories" % "26",
+      "io.get-coursier.util" % "directories" % "0.1.2",
+      "io.get-coursier.util" % "directories-jni" % "0.1.2",
       // for decompiling Java code
       "org.benf" % "cfr" % "0.152",
 
