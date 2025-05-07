@@ -27,9 +27,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.EmptyCancelToken
-import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.PcQueryContext
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.metals.SimpleTimer
 import scala.meta.internal.metals.StdReportContext
@@ -54,6 +52,8 @@ import scala.meta.pc.SemanticdbFileManager
 import scala.meta.pc.SourcePathMode
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
+import scala.meta.pc.reports.EmptyReportContext
+import scala.meta.pc.reports.ReportContext
 import scala.meta.pc.{PcSymbolInformation => IPcSymbolInformation}
 
 import com.google.common.base.Stopwatch
@@ -83,8 +83,11 @@ case class ScalaPresentationCompiler(
     reportsLevel: ReportLevel = ReportLevel.Info,
     completionItemPriority: CompletionItemPriority = (_: String) => 0,
     sourcePath: ju.function.Supplier[ju.List[Path]] = () => Nil.asJava,
-    semanticdbFileManager: SemanticdbFileManager = SemanticdbFileManager.EMPTY
+    semanticdbFileManager: SemanticdbFileManager = SemanticdbFileManager.EMPTY,
+    optReportContext: Option[ReportContext] = None
 ) extends PresentationCompiler {
+  implicit val reportContext: ReportContext =
+    optReportContext.getOrElse(new EmptyReportContext())
 
   implicit val executionContext: ExecutionContextExecutor = ec
 
@@ -136,6 +139,11 @@ case class ScalaPresentationCompiler(
       semanticdbFileManager: SemanticdbFileManager
   ): PresentationCompiler =
     copy(semanticdbFileManager = semanticdbFileManager)
+    
+  override def withReportContext(
+      reportContext: ReportContext
+  ): PresentationCompiler =
+    copy(optReportContext = Some(reportContext))
 
   override def supportedCodeActions(): util.List[String] = List(
     CodeActionId.ConvertToNamedArguments,

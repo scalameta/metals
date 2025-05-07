@@ -1,6 +1,7 @@
 package scala.meta.internal.builds
 
 import java.security.MessageDigest
+import java.util.Optional
 
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.ConnectionBspStatus
@@ -19,7 +20,7 @@ class BspErrorHandler(
   def onError(message: String): Unit = {
     if (shouldShowBspError) {
       for {
-        report <- createReport(message)
+        report <- createReport(message).asScala
         if !tables.dismissedNotifications.BspErrors.isDismissed
       } bspStatus.showError(message, report)
     } else logError(message)
@@ -35,15 +36,15 @@ class BspErrorHandler(
     val digest = MessageDigest.getInstance("MD5").digest(message.getBytes)
     val id = BaseEncoding.base64().encode(digest)
     val sanitized = reportContext.bloop.sanitize(message)
-    reportContext.bloop.create(
+    reportContext.bloop.create(() =>
       Report(
         sanitized.trimTo(20),
         s"""|### Bloop error:
             |
             |$message""".stripMargin,
         shortSummary = sanitized.trimTo(100),
-        path = None,
-        id = Some(id),
+        path = Optional.empty(),
+        id = Optional.of(id),
       )
     )
   }

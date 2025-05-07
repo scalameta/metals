@@ -14,6 +14,8 @@ import scala.meta.internal.metals.ExcludedPackagesHandler
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.mtags.Mtags
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.reports.EmptyReportContext
+import scala.meta.pc.reports.ReportContext
 
 import coursierapi.Fetch
 import coursierapi.Repository
@@ -46,6 +48,8 @@ trait PCSuite {
 
   protected def search(
       myclasspath: Seq[Path]
+  )(implicit
+      rc: ReportContext = new EmptyReportContext()
   ): TestingSymbolSearch = {
     new TestingSymbolSearch(
       ClasspathSearch

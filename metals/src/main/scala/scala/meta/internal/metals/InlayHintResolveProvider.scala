@@ -42,7 +42,8 @@ final class InlayHintResolveProvider(
       case Right(labelParts) => labelParts
       case Left(error) =>
         scribe.warn(s"Failed to resolve inlay hint: $error")
-        rc.unsanitized.create(report(inlayHint, error), ifVerbose = true)
+        rc.unsanitized()
+          .create(() => report(inlayHint, error), /* ifVerbose = */ true)
         Future.successful(inlayHint)
     }
   }

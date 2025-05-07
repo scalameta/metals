@@ -4,9 +4,11 @@ import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.Optional
 
 import scala.meta.internal.metals.FolderReportsZippper
 import scala.meta.internal.metals.Icons
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportFileName
 import scala.meta.internal.metals.StdReportContext
@@ -38,7 +40,7 @@ class ReportsSuite extends BaseSuite {
         |""".stripMargin
 
   def exampleReport(name: String, path: Option[URI] = None): Report =
-    Report(name, exampleText(), "Test error report.", path)
+    Report(name, exampleText(), "Test error report.", path.asJava)
 
   override def afterEach(context: AfterEach): Unit = {
     reportsProvider.deleteAll()
@@ -47,7 +49,7 @@ class ReportsSuite extends BaseSuite {
 
   test("create-report") {
     val path =
-      reportsProvider.incognito.create(exampleReport("test_error"))
+      reportsProvider.incognito.create(() => exampleReport("test_error"))
     val obtained =
       new String(Files.readAllBytes(path.get), StandardCharsets.UTF_8)
     assertNoDiff(
@@ -75,8 +77,8 @@ class ReportsSuite extends BaseSuite {
       "test_error2",
       Some(URI.create("file://file.scala")),
     )
-    reportsProvider.incognito.create(report)
-    reportsProvider.incognito.create(report2)
+    reportsProvider.incognito.create(() => report)
+    reportsProvider.incognito.create(() => report2)
     val reports = reportsProvider.incognito
       .getReports()
       .map { report =>
@@ -96,17 +98,13 @@ class ReportsSuite extends BaseSuite {
   }
 
   test("delete-old-reports") {
-    reportsProvider.incognito.create(
-      exampleReport("some_test_error_old")
-    )
-    reportsProvider.incognito.create(
+    reportsProvider.incognito.create(() => exampleReport("some_test_error_old"))
+    reportsProvider.incognito.create(() =>
       exampleReport("some_different_test_error_old")
     )
     Thread.sleep(2) // to make sure, that the new tests have a later timestamp
-    reportsProvider.incognito.create(
-      exampleReport("some_test_error_new")
-    )
-    reportsProvider.incognito.create(
+    reportsProvider.incognito.create(() => exampleReport("some_test_error_new"))
+    reportsProvider.incognito.create(() =>
       exampleReport("some_different_test_error_new")
     )
     val deleted = reportsProvider.incognito.cleanUpOldReports(2)
@@ -124,8 +122,13 @@ class ReportsSuite extends BaseSuite {
   test("save-with-id") {
     val testId = "test-id"
     val path = reportsProvider.incognito
-      .create(
-        Report("test_error", exampleText(), "Test error", id = Some(testId))
+      .create(() =>
+        Report(
+          "test_error",
+          exampleText(),
+          "Test error",
+          id = Optional.of(testId),
+        )
       )
       .map(_.toRealPath())
     val obtained =
@@ -139,8 +142,13 @@ class ReportsSuite extends BaseSuite {
           |""".stripMargin,
       obtained,
     )
-    val none1 = reportsProvider.incognito.create(
-      Report("test_error_again", exampleText(), "Test error", id = Some(testId))
+    val none1 = reportsProvider.incognito.create(() =>
+      Report(
+        "test_error_again",
+        exampleText(),
+        "Test error",
+        id = Optional.of(testId),
+      )
     )
     assertEquals(
       none1.map(_.toRealPath()),
@@ -148,8 +156,13 @@ class ReportsSuite extends BaseSuite {
     ) // check that it returns the path to the original report
     val newReportsProvider =
       new StdReportContext(workspace.toNIO, _ => Some("buildTarget"))
-    val none2 = newReportsProvider.incognito.create(
-      Report("test_error_again", exampleText(), "Test error", id = Some(testId))
+    val none2 = newReportsProvider.incognito.create(() =>
+      Report(
+        "test_error_again",
+        exampleText(),
+        "Test error",
+        id = Optional.of(testId),
+      )
     )
     assertEquals(none2.map(_.toRealPath()), path)
     val reports = newReportsProvider.incognito.getReports()
@@ -160,8 +173,10 @@ class ReportsSuite extends BaseSuite {
   }
 
   test("zip-reports") {
-    reportsProvider.incognito.create(exampleReport("test_error"))
-    reportsProvider.incognito.create(exampleReport("different_test_error"))
+    reportsProvider.incognito.create(() => exampleReport("test_error"))
+    reportsProvider.incognito.create(() =>
+      exampleReport("different_test_error")
+    )
     val pathToReadMe = ZipReportsProvider.zip(List(folderReportsZippper))
     val zipPath =
       reportsProvider.reportsDir.resolve(StdReportContext.ZIP_FILE_NAME)

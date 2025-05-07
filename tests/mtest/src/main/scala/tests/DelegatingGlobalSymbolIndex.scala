@@ -6,13 +6,14 @@ import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.reports.EmptyReportContext
 
 /**
  * Symbol index that delegates all methods to an underlying implementation
  */
 class DelegatingGlobalSymbolIndex(
     var underlying: OnDemandSymbolIndex =
-      OnDemandSymbolIndex.empty(mtags = () => mtags.Mtags.testingSingleton)
+      OnDemandSymbolIndex.empty(mtags = () => mtags.Mtags.testingSingleton)(new EmptyReportContext())
 ) extends GlobalSymbolIndex {
 
   def definitions(symbol: mtags.Symbol): List[SymbolDefinition] =

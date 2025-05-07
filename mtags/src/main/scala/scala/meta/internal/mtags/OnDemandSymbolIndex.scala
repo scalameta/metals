@@ -10,6 +10,7 @@ import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.internal.io.{ListFiles => _}
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.reports.ReportContext
 
 /**
  * An implementation of GlobalSymbolIndex with fast indexing and low memory usage.

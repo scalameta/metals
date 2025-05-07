@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
 import scala.meta.internal.pc.CompilerThrowable
 import scala.meta.pc.VirtualFileParams
+import scala.meta.pc.reports.ReportContext
 
 case class PcQueryContext(
     params: Option[VirtualFileParams],
@@ -27,6 +28,6 @@ case class PcQueryContext(
         error,
         path = params.map(_.uri())
       )
-    rc.unsanitized.create(report)
+    rc.unsanitized().create(() => report)
   }
 }
