@@ -16,7 +16,7 @@ class PopupChoiceReset(
     languageClient: MetalsLanguageClient,
     executeRefreshDoctor: () => Unit,
     slowConnect: () => Future[BuildChange],
-    switchBspServer: () => Future[Unit],
+    switchBspServer: () => Future[BuildChange],
 ) {
   import PopupChoiceReset._
 
@@ -35,7 +35,7 @@ class PopupChoiceReset(
       Future.successful(())
     }
     result.foreach(_ => executeRefreshDoctor())
-    result
+    result.ignoreValue
   }
 
   def interactiveReset()(implicit ec: ExecutionContext): Future[Unit] = {

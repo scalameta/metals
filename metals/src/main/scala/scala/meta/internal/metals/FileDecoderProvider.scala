@@ -605,6 +605,7 @@ final class FileDecoderProvider(
           propagateError = true,
           logInfo = false,
         )
+        .future
         .map(_ => {
           if (sbErr.nonEmpty)
             DecoderResponse.failed(path.toURI, sbErr.toString)

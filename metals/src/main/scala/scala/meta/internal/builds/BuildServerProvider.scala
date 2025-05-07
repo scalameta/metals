@@ -4,6 +4,7 @@ import scala.annotation.nowarn
 import scala.concurrent.Future
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus._
+import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.StatusBar
 import scala.meta.io.AbsolutePath
@@ -20,12 +21,16 @@ trait BuildServerProvider extends BuildTool {
   @nowarn("msg=parameter statusBar in method generateBspConfig is never used")
   def generateBspConfig(
       workspace: AbsolutePath,
-      systemProcess: List[String] => Future[BspConfigGenerationStatus],
+      systemProcess: List[String] => CancelableFuture[
+        BspConfigGenerationStatus
+      ],
       statusBar: StatusBar,
-  ): Future[BspConfigGenerationStatus] =
+  ): CancelableFuture[BspConfigGenerationStatus] =
     createBspFileArgs(workspace).map(systemProcess).getOrElse {
-      Future.successful(
-        Failed(Right(Messages.NoBspSupport.toString()))
+      CancelableFuture(
+        Future.successful(
+          Failed(Right(Messages.NoBspSupport.toString()))
+        )
       )
     }
 

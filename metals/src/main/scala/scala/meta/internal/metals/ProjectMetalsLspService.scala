@@ -545,7 +545,7 @@ class ProjectMetalsLspService(
     }
   }
 
-  def switchBspServer(): Future[Unit] =
+  def switchBspServer(): Future[BuildChange] =
     connectionProvider.switchBspServer()
 
   def resetPopupChoice(value: String): Future[Unit] =

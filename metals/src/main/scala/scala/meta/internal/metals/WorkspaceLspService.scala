@@ -1171,7 +1171,7 @@ class WorkspaceLspService(
         }.asJavaObject
       case ServerCommands.BspSwitch() =>
         onCurrentFolder(
-          _.switchBspServer(),
+          _.switchBspServer().ignoreValue,
           ServerCommands.BspSwitch.title,
         ).asJavaObject
       case ServerCommands.OpenIssue() =>

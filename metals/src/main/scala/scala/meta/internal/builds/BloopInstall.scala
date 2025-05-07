@@ -1,14 +1,18 @@
 package scala.meta.internal.builds
 
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.Promise
 
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.CancelSwitch
+import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.Confirmation
+import scala.meta.internal.metals.Interruptable
+import scala.meta.internal.metals.Interruptable._
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Tables
@@ -37,40 +41,30 @@ final class BloopInstall(
   override def toString: String = s"BloopInstall($workspace)"
 
   def runUnconditionally(
-      buildTool: BloopInstallProvider,
-      isImportInProcess: AtomicBoolean,
-  ): Future[WorkspaceLoadedStatus] = {
-    if (isImportInProcess.compareAndSet(false, true)) {
-      buildTool.bloopInstall(
-        workspace,
-        args => {
-          scribe.info(s"running '${args.mkString(" ")}'")
-          val process =
-            runArgumentsUnconditionally(buildTool, args, userConfig().javaHome)
-          process.foreach { e =>
-            if (e.isFailed) {
-              // Record the exact command that failed to help troubleshooting.
-              scribe.error(s"$buildTool command failed: ${args.mkString(" ")}")
-            }
+      buildTool: BloopInstallProvider
+  ): CancelableFuture[WorkspaceLoadedStatus] = {
+    buildTool.bloopInstall(
+      workspace,
+      args => {
+        scribe.info(s"running '${args.mkString(" ")}'")
+        val process =
+          runArgumentsUnconditionally(buildTool, args, userConfig().javaHome)
+        process.future.foreach { e =>
+          if (e.isFailed) {
+            // Record the exact command that failed to help troubleshooting.
+            scribe.error(s"$buildTool command failed: ${args.mkString(" ")}")
           }
-          process.onComplete(_ => isImportInProcess.set(false))
-          process
-        },
-      )
-    } else {
-      Future
-        .successful {
-          languageClient.showMessage(ImportAlreadyRunning)
-          WorkspaceLoadedStatus.Dismissed
         }
-    }
+        process
+      },
+    )
   }
 
   private def runArgumentsUnconditionally(
       buildTool: BloopInstallProvider,
       args: List[String],
       javaHome: Option[String],
-  ): Future[WorkspaceLoadedStatus] = {
+  ): CancelableFuture[WorkspaceLoadedStatus] = {
     persistChecksumStatus(Status.Started, buildTool)
     val processFuture = shellRunner
       .run(
@@ -92,7 +86,7 @@ final class BloopInstall(
         case ExitCodes.Cancel => WorkspaceLoadedStatus.Cancelled
         case result => WorkspaceLoadedStatus.Failed(result)
       }
-    processFuture.foreach { result =>
+    processFuture.future.foreach { result =>
       try result.toChecksumStatus.foreach(persistChecksumStatus(_, buildTool))
       catch {
         case _: InterruptedException =>
@@ -123,36 +117,36 @@ final class BloopInstall(
   def runIfApproved(
       buildTool: BloopInstallProvider,
       digest: String,
-      isImportInProcess: AtomicBoolean,
-  ): Future[WorkspaceLoadedStatus] =
+  ): CancelableFuture[WorkspaceLoadedStatus] =
     synchronized {
       oldInstallResult(digest) match {
         case Some(result)
             if result != WorkspaceLoadedStatus.Duplicate(Status.Requested) =>
           scribe.info(s"skipping build import with status '${result.name}'")
-          Future.successful(result)
+          CancelableFuture.successful(result)
         case _ =>
           if (userConfig().shouldAutoImportNewProject) {
-            runUnconditionally(buildTool, isImportInProcess)
+            runUnconditionally(buildTool)
           } else {
             scribe.debug("Awaiting user response...")
-            for {
+            implicit val cancelSwitch = CancelSwitch(Promise[Unit]())
+            (for {
               userResponse <- requestImport(
                 buildTools,
                 buildTool,
                 languageClient,
                 digest,
-              )
+              ).withInterrupt
               installResult <- {
                 if (userResponse.isYes) {
-                  runUnconditionally(buildTool, isImportInProcess)
+                  runUnconditionally(buildTool).withInterrupt
                 } else {
                   // Don't spam the user with requests during rapid build changes.
                   notification.dismiss(2, TimeUnit.MINUTES)
-                  Future.successful(WorkspaceLoadedStatus.Rejected)
+                  Interruptable.successful(WorkspaceLoadedStatus.Rejected)
                 }
               }
-            } yield installResult
+            } yield installResult).toCancellable
           }
       }
     }
