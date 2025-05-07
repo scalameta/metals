@@ -21,11 +21,8 @@ import scala.tools.nsc.reporters.StoreReporter
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.EmptyCancelToken
-import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.PcQueryContext
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ReportLevel
-import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.AutoImportsResult
@@ -44,6 +41,8 @@ import scala.meta.pc.ReferencesRequest
 import scala.meta.pc.ReferencesResult
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
+import scala.meta.pc.reports.EmptyReportContext
+import scala.meta.pc.reports.ReportContext
 import scala.meta.pc.{PcSymbolInformation => IPcSymbolInformation}
 
 import org.eclipse.lsp4j.CompletionItem
@@ -67,8 +66,11 @@ case class ScalaPresentationCompiler(
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     folderPath: Option[Path] = None,
     reportsLevel: ReportLevel = ReportLevel.Info,
-    completionItemPriority: CompletionItemPriority = (_: String) => 0
+    completionItemPriority: CompletionItemPriority = (_: String) => 0,
+    optReportContext: Option[ReportContext] = None
 ) extends PresentationCompiler {
+  implicit val reportContext: ReportContext =
+    optReportContext.getOrElse(new EmptyReportContext())
 
   implicit val executionContext: ExecutionContextExecutor = ec
 
@@ -76,11 +78,6 @@ case class ScalaPresentationCompiler(
 
   val logger: Logger =
     Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
-
-  implicit val reportContex: ReportContext =
-    folderPath
-      .map(new StdReportContext(_, _ => buildTargetName, reportsLevel))
-      .getOrElse(EmptyReportContext)
 
   override def withBuildTargetName(
       buildTargetName: String
@@ -115,6 +112,11 @@ case class ScalaPresentationCompiler(
       priority: CompletionItemPriority
   ): PresentationCompiler =
     copy(completionItemPriority = priority)
+
+  override def withReportContext(
+      reportContext: ReportContext
+  ): PresentationCompiler =
+    copy(optReportContext = Some(reportContext))
 
   override def supportedCodeActions(): util.List[String] = List(
     CodeActionId.ConvertToNamedArguments,

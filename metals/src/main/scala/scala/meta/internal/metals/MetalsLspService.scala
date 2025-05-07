@@ -1687,7 +1687,7 @@ abstract class MetalsLspService(
         case e: IndexingExceptions.PathIndexingException =>
           scribe.error(s"issues while parsing: ${e.path}", e.getCause)
         case e: IndexingExceptions.InvalidSymbolException =>
-          reports.incognito.create(
+          reports.incognito.create(() =>
             Report(
               "invalid-symbol",
               s"""Symbol: ${e.symbol}""".stripMargin,

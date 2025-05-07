@@ -1,19 +1,19 @@
 package scala.meta.internal.mtags
 
 import java.nio.file.Paths
+import java.util.Optional
 
 import scala.annotation.tailrec
-import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.dialects
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Report
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.tokenizers.CharArrayReader
+import scala.meta.pc.reports.ReportContext
 
 class JavaToplevelMtags(
     val input: Input.VirtualFile,
@@ -43,20 +43,21 @@ class JavaToplevelMtags(
       }
     } catch {
       case NonFatal(e) =>
-        rc.unsanitized.create(
-          new Report(
-            s"failed-idex-java",
-            s"""|Java indexer failed with and exception.
-                |```Java
-                |${input.text}
-                |```
-                |""".stripMargin,
-            s"Java indexer failed with and exception.",
-            path = Try(Paths.get(input.path).toUri()).toOption,
-            id = Some(input.path),
-            error = Some(e)
+        rc.unsanitized()
+          .create(() =>
+            new Report(
+              s"failed-idex-java",
+              s"""|Java indexer failed with and exception.
+                  |```Java
+                  |${input.text}
+                  |```
+                  |""".stripMargin,
+              s"Java indexer failed with and exception.",
+              path = Optional.of(Paths.get(input.path).toUri()),
+              id = Optional.of(input.path),
+              error = Some(e)
+            )
           )
-        )
     }
   }
 

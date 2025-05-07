@@ -6,21 +6,23 @@ import scala.collection.mutable
 
 import scala.meta.Dialect
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.EmptyReportContext
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.SemanticdbDefinition
 import scala.meta.internal.metals.WorkspaceSymbolInformation
 import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.internal.mtags.ScalametaCommonEnrichments.XtensionWorkspaceSymbolQuery
 import scala.meta.pc.SymbolSearchVisitor
+import scala.meta.pc.reports.EmptyReportContext
+import scala.meta.pc.reports.ReportContext
 
 object TestingWorkspaceSearch {
   def empty(implicit
-      rc: ReportContext = EmptyReportContext
+      rc: ReportContext = new EmptyReportContext()
   ): TestingWorkspaceSearch = new TestingWorkspaceSearch
 }
 
-class TestingWorkspaceSearch(implicit rc: ReportContext = EmptyReportContext) {
+class TestingWorkspaceSearch(implicit
+    rc: ReportContext = new EmptyReportContext()
+) {
   val inputs: mutable.Map[String, (String, Dialect)] =
     mutable.Map.empty[String, (String, Dialect)]
   def search(

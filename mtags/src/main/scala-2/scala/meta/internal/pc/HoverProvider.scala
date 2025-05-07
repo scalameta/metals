@@ -1,16 +1,18 @@
 package scala.meta.internal.pc
 
+import java.util.Optional
+
 import scala.reflect.internal.util.Position
 import scala.reflect.internal.{Flags => gf}
 
 import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.metals.Report
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.ContentType
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
+import scala.meta.pc.reports.ReportContext
 
 class HoverProvider(
     val compiler: MetalsGlobal,
@@ -76,8 +78,8 @@ class HoverProvider(
             |```
             |""".stripMargin,
         s"empty hover in $fileName",
-        id = Some(s"$fileName::$posId"),
-        path = Some(fileName)
+        id = Optional.of(s"$fileName::$posId"),
+        path = Optional.of(fileName)
       )
     }
 
@@ -305,7 +307,9 @@ class HoverProvider(
       }
 
     if (result.isEmpty) {
-      report.foreach(reportContext.unsanitized.create(_, ifVerbose = true))
+      report.foreach(r =>
+        reportContext.unsanitized().create(() => r, /*ifVerbose = true*/ true)
+      )
     }
     result
   }

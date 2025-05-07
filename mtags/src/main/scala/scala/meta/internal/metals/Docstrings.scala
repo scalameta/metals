@@ -25,6 +25,7 @@ import scala.meta.pc.ContentType.MARKDOWN
 import scala.meta.pc.ContentType.PLAINTEXT
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
+import scala.meta.pc.reports.ReportContext
 
 /**
  * Implementation of the `documentation(symbol: String): Option[SymbolDocumentation]` method in `SymbolSearch`.
