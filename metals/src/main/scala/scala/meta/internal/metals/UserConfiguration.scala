@@ -57,6 +57,8 @@ case class UserConfiguration(
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
     scalaCliLauncher: Option[String] = None,
     defaultBspToBuildTool: Boolean = false,
+    buildOnChange: Boolean = true,
+    buildOnFocus: Boolean = true,
 ) {
 
   override def toString(): String = {
@@ -141,6 +143,18 @@ case class UserConfiguration(
         (
           "defaultBspToBuildTool",
           defaultBspToBuildTool,
+        )
+      ),
+      Some(
+        (
+          "buildOnChange",
+          buildOnChange,
+        )
+      ),
+      Some(
+        (
+          "buildOnFocus",
+          buildOnFocus,
         )
       ),
     ).flatten.toMap.asJava
@@ -466,6 +480,22 @@ object UserConfiguration {
            |default to using it instead of Bloop.
            |""".stripMargin,
       ),
+      UserConfigurationOption(
+        "build-on-change",
+        "true",
+        "false",
+        "Disable build-on-change",
+        """|If enabled, Metals will not automatically build the project when a file changes.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "build-on-focus",
+        "true",
+        "false",
+        "Disable build-on-focus",
+        """|If enabled, Metals will not automatically build the project when a file is focused (opened).
+           |""".stripMargin,
+      ),
     )
 
   def fromJson(
@@ -739,6 +769,9 @@ object UserConfiguration {
     val defaultBspToBuildTool =
       getBooleanKey("default-bsp-to-build-tool").getOrElse(false)
 
+    val buildOnChange = getBooleanKey("build-on-change").getOrElse(true)
+    val buildOnFocus = getBooleanKey("build-on-focus").getOrElse(true)
+
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -771,6 +804,8 @@ object UserConfiguration {
           autoImportBuilds,
           scalaCliLauncher,
           defaultBspToBuildTool,
+          buildOnChange,
+          buildOnFocus,
         )
       )
     } else {

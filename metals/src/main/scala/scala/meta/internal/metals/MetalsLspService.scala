@@ -771,7 +771,11 @@ abstract class MetalsLspService(
           Future
             .sequence(
               List(
-                maybeCompileOnDidFocus(path, prevBuildTarget),
+                userConfigPromise.future.flatMap { _ =>
+                  if (userConfig.buildOnFocus)
+                    maybeCompileOnDidFocus(path, prevBuildTarget)
+                  else Future.successful(())
+                },
                 compilers.load(List(path)),
                 parser,
                 interactive,
@@ -925,8 +929,12 @@ abstract class MetalsLspService(
       .sequence(
         List(
           Future(indexer.reindexWorkspaceSources(paths)),
-          compilations
-            .compileFiles(paths, Option(focusedDocumentBuildTarget.get())),
+          userConfigPromise.future.flatMap { _ =>
+            if (userConfig.buildOnChange)
+              compilations
+                .compileFiles(paths, Option(focusedDocumentBuildTarget.get()))
+            else Future.successful(())
+          },
         ) ++ paths.map(f => Future(interactiveSemanticdbs.textDocument(f)))
       )
       .ignoreValue
@@ -936,8 +944,15 @@ abstract class MetalsLspService(
     Future
       .sequence(
         List(
-          compilations
-            .compileFiles(List(path), Option(focusedDocumentBuildTarget.get())),
+          userConfigPromise.future.flatMap { _ =>
+            if (userConfig.buildOnChange)
+              compilations
+                .compileFiles(
+                  List(path),
+                  Option(focusedDocumentBuildTarget.get()),
+                )
+            else Future.successful(())
+          },
           Future {
             diagnostics.didDelete(path)
             testProvider.onFileDelete(path)
