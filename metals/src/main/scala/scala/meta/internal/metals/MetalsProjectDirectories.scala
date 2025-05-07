@@ -9,6 +9,7 @@ import scala.util.Success
 import scala.util.Try
 
 import dev.dirs.ProjectDirectories
+import dev.dirs.jni.WindowsJni
 
 object MetalsProjectDirectories {
 
@@ -25,14 +26,19 @@ object MetalsProjectDirectories {
       ec: ExecutionContext
   ): Option[ProjectDirectories] =
     wrap(silent) { () =>
-      ProjectDirectories.from(qualifier, organization, application)
+      ProjectDirectories.from(
+        qualifier,
+        organization,
+        application,
+        WindowsJni.getJdkAwareSupplier(),
+      )
     }
 
   def fromPath(path: String, silent: Boolean)(implicit
       ec: ExecutionContext
   ): Option[ProjectDirectories] =
     wrap(silent) { () =>
-      ProjectDirectories.fromPath(path)
+      ProjectDirectories.fromPath(path, WindowsJni.getJdkAwareSupplier())
     }
 
   private def wrap(silent: Boolean)(
