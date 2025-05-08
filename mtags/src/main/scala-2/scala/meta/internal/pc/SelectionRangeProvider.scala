@@ -139,16 +139,18 @@ class SelectionRangeProvider(
 
     // Contribute extra ranges that don't otherwise have their own `Tree` node
     tree match {
-      case defdef: DefDef =>
-        maybeContributeRange(defdef.namePosition)
-        maybeContributeSeqRange(defdef.tparams)
-        defdef.vparamss.foreach(maybeContributeSeqRange)
+      case defTree: DefTree =>
+        maybeContributeRange(defTree.namePosition)
+        defTree match {
+          case defdef: DefDef =>
+            maybeContributeSeqRange(defdef.tparams)
+            defdef.vparamss.foreach(maybeContributeSeqRange)
 
-      case apply: Apply =>
+          case _ => ()
+        }
+
+      case apply: GenericApply =>
         maybeContributeSeqRange(apply.args)
-
-      case typeApply: TypeApply =>
-        maybeContributeSeqRange(typeApply.args)
 
       case appliedTypeTree: AppliedTypeTree =>
         maybeContributeSeqRange(appliedTypeTree.args)
