@@ -466,7 +466,7 @@ case class ScalafixProvider(
                   |""".stripMargin,
               serviceError,
             )
-          rc.incognito.create(report)
+          rc.incognito().create(() => report)
           if (shouldRetry) {
             rulesClassloaderCache.remove(scalafixRulesKey)
             scalafixEvaluate(

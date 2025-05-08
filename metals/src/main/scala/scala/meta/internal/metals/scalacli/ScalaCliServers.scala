@@ -49,6 +49,9 @@ class ScalaCliServers(
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
+  private val lastServerPaths =
+    new AtomicReference[Set[AbsolutePath]](Set.empty)
+
   private def localTmpWorkspace(path: AbsolutePath) = {
     val root = if (path.isDirectory) path else path.parent
     root.resolve(s".metals-scala-cli/")
@@ -128,6 +131,11 @@ class ScalaCliServers(
 
   def paths: Iterable[AbsolutePath] = servers.map(_.path)
 
+  def startForAllLastPaths(filter: AbsolutePath => Boolean): Future[Set[Unit]] =
+    Future.sequence(
+      lastServerPaths.getAndSet(Set.empty).withFilter(filter).map(start)
+    )
+
   def start(path: AbsolutePath): Future[Unit] = {
     val customWorkspace =
       if (path.isDirectory) None
@@ -202,8 +210,11 @@ class ScalaCliServers(
     } yield ()
   }
 
-  def stop(): Future[Unit] = {
+  def stop(storeLast: Boolean = false): Future[Unit] = {
     val servers = serversRef.getAndSet(Queue.empty)
+    if (storeLast) {
+      lastServerPaths.updateAndGet(_ ++ servers.map(_.path))
+    }
     Future.sequence(servers.map(_.stop()).toSeq).ignoreValue
   }
 

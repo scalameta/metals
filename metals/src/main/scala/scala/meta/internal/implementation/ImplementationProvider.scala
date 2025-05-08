@@ -2,6 +2,7 @@ package scala.meta.internal.implementation
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
@@ -179,16 +180,17 @@ final class ImplementationProvider(
               .toSet
 
         if (sourceFiles.isEmpty) {
-          rc.unsanitized.create(
-            Report(
-              "missing-definition",
-              s"""|Missing definition symbol for:
-                  |$dealisedSymbol
-                  |""".stripMargin,
-              s"missing def: $dealisedSymbol",
-              Some(source.toURI),
+          rc.unsanitized()
+            .create(() =>
+              Report(
+                "missing-definition",
+                s"""|Missing definition symbol for:
+                    |$dealisedSymbol
+                    |""".stripMargin,
+                s"missing def: $dealisedSymbol",
+                path = Optional.of(source.toURI),
+              )
             )
-          )
         }
 
         val isWorkspaceSymbol =

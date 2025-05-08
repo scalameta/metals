@@ -160,6 +160,7 @@ class BspConnector(
                   args => bspConfigGenerator.runUnconditionally(bsp, args),
                   statusBar,
                 )
+                .future
                 .flatMap { _ =>
                   connect(
                     projectRoot,

@@ -3,6 +3,7 @@ package scala.meta.internal.mtags
 import java.io.StringReader
 import java.net.URI
 import java.util.Comparator
+import java.util.Optional
 
 import scala.util.control.NonFatal
 
@@ -12,11 +13,11 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerRangeParamsUtils
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.Report
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.semanticdb.SymbolInformation.Property
+import scala.meta.pc.reports.ReportContext
 
 import com.thoughtworks.qdox._
 import com.thoughtworks.qdox.model.JavaClass
@@ -246,17 +247,18 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
         else virtualFile.path
       }
 
-      rc.unsanitized.create(
-        new Report(
-          name = "qdox-error",
-          text = s"""|error in qdox parser$content
-                     |""".stripMargin,
-          error = Some(e),
-          path = Some(new URI(virtualFile.path)),
-          shortSummary = s"QDox $errorName in $shortFileName",
-          id = Some(virtualFile.path)
+      rc.unsanitized()
+        .create(() =>
+          new Report(
+            name = "qdox-error",
+            text = s"""|error in qdox parser$content
+                       |""".stripMargin,
+            error = Some(e),
+            path = Optional.of(new URI(virtualFile.path)),
+            shortSummary = s"QDox $errorName in $shortFileName",
+            id = Optional.of(virtualFile.path)
+          )
         )
-      )
     } catch {
       case NonFatal(_) =>
     }

@@ -299,21 +299,24 @@ class BazelLspSuite
     val shellRunner = new ShellRunner(
       Time.system,
       new WorkDoneProgress(NoopLanguageClient, Time.system),
+      () => userConfig,
     )
 
     def jsonFile =
       workspace.resolve(Directories.bsp).resolve("bazelbsp.json").readText
     for {
-      _ <- shellRunner.runJava(
-        Dependency.of(
-          BazelBuildTool.dependency.getModule(),
-          "3.2.0-20240508-f3a81e7-NIGHTLY",
-        ),
-        BazelBuildTool.mainClass,
-        workspace,
-        BazelBuildTool.projectViewArgs(workspace),
-        None,
-      )
+      _ <- shellRunner
+        .runJava(
+          Dependency.of(
+            BazelBuildTool.dependency.getModule(),
+            "3.2.0-20240508-f3a81e7-NIGHTLY",
+          ),
+          BazelBuildTool.mainClass,
+          workspace,
+          BazelBuildTool.projectViewArgs(workspace),
+          None,
+        )
+        .future
       _ = assertContains(jsonFile, "3.2.0-20240508-f3a81e7-NIGHTLY")
       _ <- initialize(
         BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)

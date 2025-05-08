@@ -405,7 +405,7 @@ lazy val metals = project
       // for bloom filters
       V.guava,
       "com.google.code.findbugs" % "jsr305" % "3.0.2",
-      "org.scalameta" %% "metaconfig-core" % "0.15.0",
+      "org.scalameta" %% "metaconfig-core" % "0.16.0",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching
@@ -414,7 +414,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.16.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "11.7.2",
+      "org.flywaydb" % "flyway-core" % "11.8.0",
       "com.h2database" % "h2" % "2.3.232",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
@@ -426,7 +426,8 @@ lazy val metals = project
       V.dap4j,
       "ch.epfl.scala" %% "scala-debug-adapter" % V.debugAdapter,
       // for finding paths of global log/cache directories
-      "dev.dirs" % "directories" % "26",
+      "io.get-coursier.util" % "directories" % "0.1.2",
+      "io.get-coursier.util" % "directories-jni" % "0.1.2",
       // ==================
       // Scala dependencies
       // ==================
@@ -797,7 +798,7 @@ lazy val docs = project
     publish / skip := true,
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
-    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.15.0",
+    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.16.0",
   )
   .dependsOn(metals)
   .enablePlugins(DocusaurusPlugin)

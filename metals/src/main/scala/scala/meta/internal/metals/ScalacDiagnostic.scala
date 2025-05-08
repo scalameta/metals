@@ -28,7 +28,8 @@ object ScalacDiagnostic {
   }
 
   object SymbolNotFound {
-    private val regex = """(n|N)ot found: (value|type)?\s?(\w+)(\s|\S)*""".r
+    private val regex =
+      """(n|N)ot found: (value|type|object)?\s?(\w+)(\s|\S)*""".r
     def unapply(d: l.Diagnostic): Option[String] =
       d.getMessage().trim() match {
         case regex(_, _, name, _) => Some(name)
@@ -96,6 +97,15 @@ object ScalacDiagnostic {
     def unapply(d: l.Diagnostic): Option[String] =
       d.getMessage().trim() match {
         case regex() => Some(d.getMessage())
+        case _ => None
+      }
+  }
+
+  object ObjectNotAMemberOfPackage {
+    private val regex = """(?s)object (.+) is not a member of package.*""".r
+    def unapply(d: l.Diagnostic): Option[String] =
+      d.getMessage().trim() match {
+        case regex(name) => Some(name)
         case _ => None
       }
   }

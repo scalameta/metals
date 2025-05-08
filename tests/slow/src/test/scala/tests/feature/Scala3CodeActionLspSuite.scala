@@ -2,6 +2,7 @@ package tests.feature
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
+import scala.meta.internal.metals.codeactions.ConvertToNamedLambdaParameters
 import scala.meta.internal.metals.codeactions.CreateCompanionObjectCodeAction
 import scala.meta.internal.metals.codeactions.ExtractMethodCodeAction
 import scala.meta.internal.metals.codeactions.ExtractRenameMember
@@ -769,6 +770,29 @@ class Scala3CodeActionLspSuite
        |
        |class B extends A(2) with C(c = 4)
        |""".stripMargin,
+  )
+
+  check(
+    "wildcard lambda",
+    """|package a
+       |
+       |object A {
+       |  val l = List(1, 2, 3)
+       |  l.map(_ + <<1>>)
+       |}
+       |""".stripMargin,
+    s"""|${ConvertToNamedArguments.title("map(...)")}
+        |${ConvertToNamedLambdaParameters.title}
+        |""".stripMargin,
+    """|package a
+       |
+       |object A {
+       |  val l = List(1, 2, 3)
+       |  l.map(i => i + 1)
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1,
+    scalaVersion = "3.7.1-RC1-bin-20250501-83ffe00-NIGHTLY",
   )
 
   private def getPath(name: String) = s"a/src/main/scala/a/$name"

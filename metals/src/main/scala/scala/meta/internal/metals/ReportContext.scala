@@ -1,11 +1,14 @@
 package scala.meta.internal.metals
 
+import java.lang
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.Optional
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import java.util.function.Supplier
 import java.util.logging.Logger
 
 import scala.util.Try
@@ -15,9 +18,9 @@ import scala.util.matching.Regex
 import scala.meta.internal.metals.utils.LimitedFilesManager
 import scala.meta.internal.metals.utils.TimestampedFile
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
-import scala.meta.internal.mtags.MD5
+import scala.meta.pc.{reports => jreports}
 
-trait ReportContext {
+trait ReportContext extends jreports.ReportContext {
   def unsanitized: Reporter
   def incognito: Reporter
   def bloop: Reporter
@@ -29,9 +32,8 @@ trait ReportContext {
   def deleteAll(): Unit = all.foreach(_.deleteAll())
 }
 
-trait Reporter {
+trait Reporter extends jreports.Reporter {
   def name: String
-  def create(report: => Report, ifVerbose: Boolean = false): Option[Path]
   def cleanUpOldReports(
       maxReportsNumber: Int = StdReportContext.MAX_NUMBER_OF_REPORTS
   ): List[TimestampedFile]
@@ -43,7 +45,7 @@ trait Reporter {
 class StdReportContext(
     workspace: Path,
     resolveBuildTarget: Option[URI] => Option[String],
-    level: ReportLevel = ReportLevel.Info
+    level: ReportLevel = ReportLevel.Info,
 ) extends ReportContext {
   val reportsDir: Path = workspace.resolve(StdReportContext.reportsDir)
 
@@ -53,7 +55,7 @@ class StdReportContext(
       StdReportContext.reportsDir,
       resolveBuildTarget,
       level,
-      "metals-full"
+      "metals-full",
     )
   val incognito: StdReporter =
     new StdReporter(
@@ -61,7 +63,7 @@ class StdReportContext(
       StdReportContext.reportsDir,
       resolveBuildTarget,
       level,
-      "metals"
+      "metals",
     )
   val bloop: StdReporter =
     new StdReporter(
@@ -69,7 +71,7 @@ class StdReportContext(
       StdReportContext.reportsDir,
       resolveBuildTarget,
       level,
-      "bloop"
+      "bloop",
     )
 
   override def cleanUpOldReports(
@@ -90,8 +92,9 @@ class StdReporter(
     pathToReports: Path,
     resolveBuildTarget: Option[URI] => Option[String],
     level: ReportLevel,
-    override val name: String
+    override val name: String,
 ) extends Reporter {
+
   private val logger = Logger.getLogger(classOf[ReportContext].getName)
 
   val maybeReportsDir: Path =
@@ -102,7 +105,7 @@ class StdReporter(
       maybeReportsDir,
       StdReportContext.MAX_NUMBER_OF_REPORTS,
       ReportFileName.pattern,
-      ".md"
+      ".md",
     )
 
   private lazy val userHome = Option(System.getProperty("user.home"))
@@ -129,16 +132,18 @@ class StdReporter(
   }
 
   override def create(
-      report: => Report,
-      ifVerbose: Boolean = false
-  ): Option[Path] =
-    if (ifVerbose && !level.isVerbose) None
+      lazyReport: Supplier[jreports.Report],
+      ifVerbose: lang.Boolean,
+  ): Optional[Path] =
+    if (ifVerbose && !level.isVerbose) Optional.empty()
     else
       Try {
         if (initialized.compareAndSet(false, true)) {
           readInIds()
         }
-        val sanitizedId = report.id.map(sanitize)
+
+        val report = lazyReport.get()
+        val sanitizedId = report.id().asScala.map(sanitize)
         val path = reportPath(report)
 
         val optDuplicate =
@@ -152,16 +157,18 @@ class StdReporter(
 
         val pathToReport = optDuplicate.getOrElse {
           path.createDirectories()
-          path.writeText(sanitize(report.fullText(withIdAndSummary = true)))
+          path.writeText(
+            sanitize(report.fullText( /* withIdAndSummary = */ true))
+          )
           path
         }
         if (!ifVerbose) {
           logger.warning(
-            s"${report.shortSummary} (full report at: $pathToReport)"
+            s"${report.shortSummary()} (full report at: $pathToReport)"
           )
         }
         pathToReport
-      }.toOption
+      }.toOption.asJava
 
   override def sanitize(text: String): String = {
     val textAfterWokspaceReplace =
@@ -171,12 +178,14 @@ class StdReporter(
       .getOrElse(textAfterWokspaceReplace)
   }
 
-  private def reportPath(report: Report): Path = {
+  private def reportPath(report: jreports.Report): Path = {
     val date = TimeFormatter.getDate()
     val time = TimeFormatter.getTime()
     val buildTargetPart =
-      resolveBuildTarget(report.path).map("_(" ++ _ ++ ")").getOrElse("")
-    val filename = s"r_${report.name}${buildTargetPart}_${time}.md"
+      resolveBuildTarget(report.path().asScala)
+        .map("_(" ++ _ ++ ")")
+        .getOrElse("")
+    val filename = s"r_${report.name()}${buildTargetPart}_${time}.md"
     reportsDir.resolve(date).resolve(filename)
   }
 
@@ -207,12 +216,16 @@ object StdReportContext {
 
 object EmptyReporter extends Reporter {
 
-  override def name = "empty-reporter"
-  override def create(report: => Report, ifVerbose: Boolean): Option[Path] =
-    None
-
   override def cleanUpOldReports(maxReportsNumber: Int): List[TimestampedFile] =
-    List()
+    Nil
+
+  override def create(
+      report: Supplier[jreports.Report],
+      ifVerbose: lang.Boolean,
+  ): Optional[Path] =
+    Optional.empty()
+
+  override def name = "empty-reporter"
 
   override def getReports(): List[TimestampedFile] = List()
 
@@ -226,97 +239,6 @@ object EmptyReportContext extends ReportContext {
   override def incognito: Reporter = EmptyReporter
 
   override def bloop: Reporter = EmptyReporter
-}
-
-case class Report(
-    name: String,
-    text: String,
-    shortSummary: String,
-    path: Option[URI] = None,
-    id: Option[String] = None,
-    error: Option[Throwable] = None
-) {
-  def extend(moreInfo: String): Report =
-    this.copy(
-      text = s"""|${this.text}
-                 |$moreInfo"""".stripMargin
-    )
-
-  def fullText(withIdAndSummary: Boolean): String = {
-    val sb = new StringBuilder
-    if (withIdAndSummary) {
-      id.orElse(
-        error.map(error =>
-          MD5.compute(s"${name}:${error.getStackTrace().mkString("\n")}")
-        )
-      ).foreach(id => sb.append(s"${Report.idPrefix}$id\n"))
-    }
-    path.foreach(path => sb.append(s"$path\n"))
-    error match {
-      case Some(error) =>
-        sb.append(
-          s"""|### $error
-              |
-              |$text
-              |
-              |#### Error stacktrace:
-              |
-              |```
-              |${error.getStackTrace().mkString("\n\t")}
-              |```
-              |""".stripMargin
-        )
-      case None => sb.append(s"$text\n")
-    }
-    if (withIdAndSummary)
-      sb.append(s"""|${Report.summaryTitle}
-                    |
-                    |$shortSummary""".stripMargin)
-    sb.result()
-  }
-}
-
-object Report {
-
-  def apply(
-      name: String,
-      text: String,
-      error: Throwable,
-      path: Option[URI]
-  ): Report =
-    Report(
-      name,
-      text,
-      shortSummary = error.toString(),
-      path = path,
-      error = Some(error)
-    )
-
-  def apply(name: String, text: String, error: Throwable): Report =
-    Report(name, text, error, path = None)
-
-  val idPrefix = "error id: "
-  val summaryTitle = "#### Short summary: "
-}
-
-sealed trait ReportLevel {
-  def isVerbose: Boolean
-}
-
-object ReportLevel {
-  case object Info extends ReportLevel {
-    def isVerbose = false
-  }
-
-  case object Debug extends ReportLevel {
-    def isVerbose = true
-  }
-
-  def fromString(level: String): ReportLevel =
-    level match {
-      case "debug" => Debug
-      case _ => Info
-    }
 }
 
 object ReportFileName {

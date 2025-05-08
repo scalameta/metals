@@ -422,20 +422,12 @@ class DebugProtocolSuite
             ).toJson
           )
           .recover { case e: ResponseErrorException =>
-            e.getMessage()
+            (e.getResponseError().getCode(), e.getMessage())
           }
     } yield assertNoDiff(
       result.toString(),
       """
-        |ShowMessageRequestParams [
-        |  actions = SeqWrapper (
-        |    MessageActionItem [
-        |      title = "View Problems"
-        |    ]
-        |  )
-        |  type = Error
-        |  message = "Cannot launch due to compile errors."
-        |]
+        |(543,Cannot run class, since the workspace has errors.)
       """.stripMargin,
     )
   }

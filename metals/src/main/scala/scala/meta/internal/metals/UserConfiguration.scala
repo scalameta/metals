@@ -57,6 +57,7 @@ case class UserConfiguration(
     scalaCliLauncher: Option[String] = None,
     defaultBspToBuildTool: Boolean = false,
     enableBestEffort: Boolean = false,
+    defaultShell: Option[String] = None,
     startMcpServer: Boolean = false,
 ) {
 
@@ -499,6 +500,17 @@ object UserConfiguration {
            |""".stripMargin,
       ),
       UserConfigurationOption(
+        "default-shell",
+        """empty string `""`.""",
+        "/usr/bin/fish",
+        "Full path to the shell executable to be used as the default",
+        """|Optionally provide a default shell executable to use for build operations.
+           |This allows customizing the shell environment before build execution.
+           |When specified, must use absolute path to the shell.
+           |The configured shell will be used for all build-related subprocesses.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
         "start-mcp-server",
         "false",
         "true",
@@ -697,6 +709,8 @@ object UserConfiguration {
       getBooleanKey("bloop-sbt-already-installed").getOrElse(false)
     val bloopVersion =
       getStringKey("bloop-version")
+    val defaultShell =
+      getStringKey("default-shell")
     val bloopJvmProperties = getStringListKey("bloop-jvm-properties")
     val superMethodLensesEnabled =
       getBooleanKey("super-method-lenses-enabled").getOrElse(false)
@@ -814,6 +828,7 @@ object UserConfiguration {
           scalaCliLauncher,
           defaultBspToBuildTool,
           enableBestEffort,
+          defaultShell,
           startMcpServer,
         )
       )

@@ -14,6 +14,7 @@ final class ExtractMethodProvider(
 )(implicit queryInfo: PcQueryContext)
     extends ExtractMethodUtils {
   import compiler._
+
   def extractMethod: List[l.TextEdit] = {
     val text = range.text()
     val unit = addCompilationUnit(
