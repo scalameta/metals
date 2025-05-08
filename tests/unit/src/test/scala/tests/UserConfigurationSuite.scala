@@ -285,9 +285,10 @@ class UserConfigurationSuite extends BaseSuite {
     assertNoDiff(
       json,
       s"""|{
+          |  "presentationCompilerDiagnostics": true,
           |  "enableIndentOnPaste": true,
           |  "customProjectRoot": "customs",
-          |  "millScript": "mill",
+          |  "buildOnChange": true,
           |  "javaFormat": {
           |    "eclipseConfigPath": "$fakePathString",
           |    "eclipseProfile": "profile"
@@ -310,6 +311,8 @@ class UserConfigurationSuite extends BaseSuite {
           |  "gradleScript": "gradle",
           |  "scalafixConfigPath": "$fakePathString",
           |  "superMethodLensesEnabled": true,
+          |  "buildOnFocus": true,
+          |  "millScript": "mill",
           |  "bloopSbtAlreadyInstalled": true,
           |  "symbolPrefixes": {
           |    "java/util/": "hello."

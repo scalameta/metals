@@ -3,7 +3,6 @@ package scala.meta.internal.metals
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.Collections
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
 import java.{util => ju}
 

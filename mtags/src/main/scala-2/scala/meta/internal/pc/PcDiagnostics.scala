@@ -1,12 +1,17 @@
 package scala.meta.internal.pc
 
-import org.eclipse.{lsp4j => l}
-
 import scala.annotation.nowarn
+import scala.reflect.internal.Reporter.ERROR
+import scala.reflect.internal.Reporter.INFO
+import scala.reflect.internal.Reporter.WARNING
 import scala.reflect.internal.util.SourceFile
-import scala.reflect.internal.Reporter.{ERROR, INFO, WARNING}
-import scala.tools.nsc.interactive.{FreshRunReq, Global, Problem, ShutdownReq}
+import scala.tools.nsc.interactive.FreshRunReq
+import scala.tools.nsc.interactive.Global
+import scala.tools.nsc.interactive.Problem
+import scala.tools.nsc.interactive.ShutdownReq
 import scala.util.control.ControlThrowable
+
+import org.eclipse.{lsp4j => l}
 
 trait PcDiagnostics {
   compiler: MetalsGlobal =>

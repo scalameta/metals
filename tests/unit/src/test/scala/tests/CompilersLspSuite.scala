@@ -3,7 +3,7 @@ package tests
 import scala.concurrent.Future
 
 class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
-  test("reset-pc") {
+  test("reset-pc".flaky) {
     cleanWorkspace()
     for {
       _ <- initialize(

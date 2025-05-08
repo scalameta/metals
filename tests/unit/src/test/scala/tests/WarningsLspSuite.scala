@@ -69,7 +69,8 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
     } yield ()
   }
 
-  test("deprecated-scala-211") {
+  // we don't support 2.11 in our fork
+  test("deprecated-scala-211".ignore) {
     cleanWorkspace()
     val using = V.scala211
     for {

@@ -7,6 +7,7 @@ import scala.meta.Dialect
 import scala.meta.dialects._
 import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.MillBuildTool
+import scala.meta.internal.io.PlatformFileIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
@@ -17,7 +18,6 @@ import ch.epfl.scala.bsp4j.JvmBuildTarget
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalaPlatform
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
-import scala.meta.internal.io.PlatformFileIO
 
 case class ScalaTarget(
     info: BuildTarget,

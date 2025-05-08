@@ -1,13 +1,13 @@
 package scala.meta.internal.metals
 
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{
-  ConcurrentLinkedQueue,
-  ScheduledExecutorService,
-  ScheduledFuture,
-  TimeUnit,
-}
+
 import scala.concurrent.duration.FiniteDuration
+
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 

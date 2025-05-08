@@ -3,8 +3,8 @@ package scala.meta.internal.pc
 import java.util.concurrent.ScheduledExecutorService
 
 import scala.concurrent.ExecutionContextExecutor
-import scala.tools.nsc.interactive.ShutdownReq
 import scala.tools.nsc.Settings
+import scala.tools.nsc.interactive.ShutdownReq
 import scala.util.control.NonFatal
 
 import scala.meta.pc.PresentationCompilerConfig
@@ -15,8 +15,7 @@ class ScalaCompilerWrapper(global: MetalsGlobal)
 
   override def compiler(params: VirtualFileParams): MetalsGlobal = {
     if (params.outlineFiles().isPresent()) {
-      // disable outline compilation to see if it fixes compiler race conditions in typer
-//      global.runOutline(params.outlineFiles().get())
+      global.runOutline(params.outlineFiles().get())
     }
     global
   }
