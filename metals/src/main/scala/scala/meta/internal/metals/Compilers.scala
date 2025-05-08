@@ -283,6 +283,7 @@ class Compilers(
         )
       ) {
         pc.restart()
+        loadCompiler(report.getTarget)
       }
     }
 
