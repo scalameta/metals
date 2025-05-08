@@ -170,7 +170,6 @@ case class ScalaPresentationCompiler(
       params: VirtualFileParams
   ): CompletableFuture[ju.List[Diagnostic]] = {
     val noDiags = Seq[Diagnostic]().asJava
-    new Exception().printStackTrace()
     if (config.emitDiagnostics) {
       compilerAccess.withInterruptableCompiler(noDiags, EmptyCancelToken) {
         pc =>

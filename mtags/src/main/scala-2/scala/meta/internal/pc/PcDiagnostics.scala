@@ -27,7 +27,7 @@ trait PcDiagnostics {
         unit.problems.toList.flatMap(toLspDiagnostic)
 
       case None =>
-        pprint.pprintln(
+        logger.warning(
           s"Missing unit for file ${source.file} when retrieving errors. Errors will not be shown in this file. Loaded units are: $unitOfFile"
         )
         Nil

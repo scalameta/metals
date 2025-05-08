@@ -1303,22 +1303,27 @@ class Compilers(
       targetId: BuildTargetIdentifier
   ): Option[PresentationCompiler] =
     withKeyAndDefault(targetId) { case (key, getCompiler) =>
-      val sources = buildTargets.buildTargetSources(targetId)
-      val modifiedFiles =
-        buffers.open.filter(buf => sources.exists(buf.startWith)).toList
-      pprint.pprintln(
-        s"Adding modified files to PC of $targetId: \n${modifiedFiles.mkString("\n")}"
-      )
+      def loadInitialFiles(pc: PresentationCompiler): PresentationCompiler = {
+        val sources = buildTargets.buildTargetSources(targetId)
+        val modifiedFiles =
+          buffers.open.filter(buf => sources.exists(buf.startWith)).toList
+
+        modifiedFiles.foreach(path =>
+          pc.didChange(
+            CompilerVirtualFileParams(path.toNIO.toUri, buffers.get(path).get)
+          )
+        )
+        pc
+      }
+
+      var newCompiler = false
 
       // in case of a restart, the presentation compiler should know all files that have been modified
       // and use their up to date contents when type checking
-      val pc = jcache.computeIfAbsent(key, { _ => getCompiler() }).await
-      modifiedFiles.foreach(path =>
-        pc.didChange(
-          CompilerVirtualFileParams(path.toNIO.toUri, buffers.get(path).get)
-        )
-      )
-      Option(pc)
+      val pc = jcache
+        .computeIfAbsent(key, { _ => newCompiler = true; getCompiler() })
+        .await
+      Option(loadInitialFiles(pc))
     }
 
   private def withKeyAndDefault[T](
