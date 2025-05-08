@@ -96,7 +96,7 @@ class MetalsMcpServer(
           val pingTask = new Runnable {
             override def run(): Unit = {
               try {
-                response.getWriter().write("data: {\"type\":\"ping\"}\n\n")
+                response.getWriter().write(": ping\n\n")
                 response.getWriter().flush()
               } catch {
                 case _: Exception => scheduler.shutdown()
