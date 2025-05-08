@@ -133,9 +133,9 @@ commands ++= Seq(
       "mtags-java/publishLocal" ::
       publishMtags
   },
-  Command.command("cross-test-2-11") { s =>
-    crossTestDyn(s, V.scala211)
-  },
+//  Command.command("cross-test-2-11") { s =>
+//    crossTestDyn(s, V.scala211)
+//  },
   Command.single("test-mtags-dyn") { (s, scalaV) =>
     crossTestDyn(s, scalaV)
   },
@@ -671,7 +671,7 @@ lazy val mtest = project
     buildInfoPackage := "tests",
     buildInfoObject := "BuildInfoVersions",
     buildInfoKeys := Seq[BuildInfoKey](
-      "scala211" -> V.scala211,
+//      "scala211" -> V.scala211,
       "scala212" -> V.scala212,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,

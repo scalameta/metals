@@ -1,11 +1,12 @@
 package scala.meta.internal.pc
 
+import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.PriorityBlockingQueue
+import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 import java.{util => ju}
 
 /**
@@ -126,8 +127,10 @@ object CompilerJobQueue {
         /* keepAliveTime */ 0,
         /* unit */ TimeUnit.MILLISECONDS,
         /* workQueue */ new LastInFirstOutBlockingQueue,
-        (runnable: Runnable) =>
-          new Thread(runnable, s"Compiler Job Thread [$id]")
+        (
+            (runnable: Runnable) =>
+              new Thread(runnable, s"Compiler Job Thread [$id]")
+        ): ThreadFactory // type annotation needed to help Scala 3 overload resolution
       )
       singleThreadExecutor.setRejectedExecutionHandler((r, _) => {
         r match {
