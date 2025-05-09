@@ -667,6 +667,10 @@ lazy val metals = project
       "com.google.googlejavaformat" % "google-java-format" % "1.28.0",
       // For test frameworks
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
+      // For MCP
+      "io.modelcontextprotocol.sdk" % "mcp" % "0.8.1",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.15.0",
+      "io.undertow" % "undertow-servlet" % "2.3.12.Final",
     ),
     Compile / resourceGenerators += packageJavaHeaderCompiler,
     Compile / resourceGenerators += Def.task {

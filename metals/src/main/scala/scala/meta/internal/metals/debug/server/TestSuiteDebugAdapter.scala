@@ -32,6 +32,7 @@ class TestSuiteDebugAdapter(
     project: DebugeeProject,
     userJavaHome: Option[String],
     discoveredTests: Map[Config.TestFramework, List[Discovered]],
+    isDebug: Boolean = true,
 )(implicit ec: ExecutionContext)
     extends MetalsDebuggee() {
 
@@ -152,6 +153,7 @@ class TestSuiteDebugAdapter(
       jvmOptions,
       envOptions,
       new Logger(listener),
+      isDebug,
     )
   }
 

@@ -39,8 +39,8 @@ public abstract class SymbolSearchVisitor {
    */
   public abstract int visitWorkspaceSymbol(Path path, String symbol, SymbolKind kind, Range range);
 
-  /**
-   * @return returns true if the search has been cancelled, false otherwise.
-   */
-  public abstract boolean isCancelled();
+    public int visitWorkspacePackage(String pkg) {
+        return 0;
+    }
+
 }

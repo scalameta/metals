@@ -465,5 +465,13 @@ trait CommonMtagsEnrichments {
     def withOptional(key: String, value: Option[String]): Event =
       value.fold(event)(event.withLabel(key, _))
   }
+  
+  implicit class XtensionSymbol(symbol: String) {
+    def fqcn: String =
+      symbol
+        .stripPrefix("_empty_/")
+        .replaceAll("[#/$]|(`<init>`)?\\((\\+[0-9]+)?\\)\\.", ".")
+        .stripSuffix(".")
+  }
 
 }

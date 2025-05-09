@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
@@ -27,6 +28,10 @@ import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
 import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.watcher.FileWatcher
+import scala.meta.internal.metals.mcp.McpQueryEngine
+import scala.meta.internal.metals.mcp.McpSymbolSearch
+import scala.meta.internal.metals.mcp.McpTestRunner
+import scala.meta.internal.metals.mcp.MetalsMcpServer
 import scala.meta.internal.metals.watcher.FileWatcherEvent
 import scala.meta.internal.metals.watcher.FileWatcherEvent.EventType
 import scala.meta.internal.metals.watcher.NoopFileWatcher
@@ -244,6 +249,55 @@ class ProjectMetalsLspService(
     }
   }
 
+  private val isMcpServerRunning = new AtomicBoolean(false)
+
+  lazy val mcpSearch = new McpSymbolSearch(
+    definitionIndex,
+    buildTargets,
+    workspaceSymbols,
+  )
+
+  lazy val queryEngine =
+    new McpQueryEngine(
+      compilers,
+      symbolDocs,
+      buildTargets,
+      referencesProvider,
+      scalaVersionSelector,
+      mcpSearch,
+    )
+
+  lazy val mcpTestRunner =
+    new McpTestRunner(
+      debugProvider,
+      buildTargets,
+      folder,
+      () => userConfig,
+      mcpSearch,
+    )
+
+  def startMcpServer(): Future[Unit] =
+    Future {
+      if (!isMcpServerRunning.getAndSet(true))
+        register(
+          new MetalsMcpServer(
+            queryEngine,
+            folder,
+            compilations,
+            () => focusedDocument,
+            diagnostics,
+            buildTargets,
+            mcpTestRunner,
+            initializeParams.getClientInfo().getName(),
+            getVisibleName,
+            languageClient,
+            connectionProvider,
+          )
+        ).run()
+    }.recover { case e: Exception =>
+      scribe.error("Error starting MCP server", e)
+    }
+
   override def didChange(
       params: DidChangeTextDocumentParams
   ): CompletableFuture[Unit] = {
@@ -301,13 +355,19 @@ class ProjectMetalsLspService(
     } else Future.successful(())
   }
 
-  protected def onInitialized(): Future[Unit] =
-    connectionProvider.withWillGenerateBspConfig {
+  protected def onInitialized(): Future[Unit] = {
+    val startMcp =
+      if (userConfig.startMcpServer) startMcpServer()
+      else Future.unit
+
+    val setUpScalaCli = connectionProvider.withWillGenerateBspConfig {
       for {
         _ <- maybeSetupScalaCli()
         _ <- connectionProvider.fullConnect()
       } yield ()
     }
+    Future.sequence(List(startMcp, setUpScalaCli)).ignoreValue
+  }
 
   def onBuildChangedUnbatched(
       paths: Seq[AbsolutePath]
@@ -713,6 +773,12 @@ class ProjectMetalsLspService(
   ): Future[Unit] = {
     val old = userConfig
     super.onUserConfigUpdate(newConfig)
+    val startMcp =
+      if (
+        newConfig.startMcpServer && newConfig.startMcpServer != old.startMcpServer
+      ) startMcpServer()
+      else Future.unit
+
     val slowConnect =
       if (
         userConfig.customProjectRoot != old.customProjectRoot || userConfig.enableBestEffort != old.enableBestEffort
@@ -722,12 +788,12 @@ class ProjectMetalsLspService(
         connectionProvider.fullConnect()
       } else Future.successful(())
 
-    val resetDecorations =
+    def resetDecorations =
       if (userConfig.inlayHintsOptions != old.inlayHintsOptions) {
         languageClient.refreshInlayHints().asScala
       } else Future.successful(())
 
-    val restartBuildServer = bspSession
+    def restartBuildServer = bspSession
       .map { session =>
         if (session.main.isBloop) {
           bloopServers
@@ -758,7 +824,7 @@ class ProjectMetalsLspService(
 
     for {
       _ <- slowConnect
-      _ <- Future.sequence(List(restartBuildServer, resetDecorations))
+      _ <- Future.sequence(List(restartBuildServer, resetDecorations, startMcp))
     } yield ()
   }
 

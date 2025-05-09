@@ -20,6 +20,8 @@ project/plugins/project/
 
 .idea
 
+.cursor
+
 # ENSIME specific
 .ensime_cache/
 .ensime

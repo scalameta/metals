@@ -871,6 +871,17 @@ class Compilers(
         }
     }.getOrElse(Future.successful(new CompletionList(Nil.asJava)))
 
+  def completions(
+      id: BuildTargetIdentifier,
+      offsetParams: CompilerOffsetParams,
+  ): Future[CompletionList] = {
+    loadCompiler(id)
+      .map { pc =>
+        pc.complete(offsetParams).asScala
+      }
+      .getOrElse(Future.successful(new CompletionList(Nil.asJava)))
+  }
+
   def autoImports(
       params: TextDocumentPositionParams,
       name: String,
@@ -1375,6 +1386,16 @@ class Compilers(
         )
       ).asScala
     }.getOrElse(Future.successful(new SignatureHelp()))
+
+  def signatureHelp(
+      id: BuildTargetIdentifier,
+      offsetParams: CompilerOffsetParams,
+  ): Future[SignatureHelp] =
+    loadCompiler(id)
+      .map { pc =>
+        pc.signatureHelp(offsetParams).asScala
+      }
+      .getOrElse(Future.successful(new SignatureHelp()))
 
   def selectionRange(
       params: SelectionRangeParams,

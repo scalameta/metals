@@ -124,6 +124,7 @@ case class UserConfiguration(
     protobufLspConfig: ProtobufLspConfig = ProtobufLspConfig.default,
     enableBestEffort: Boolean = false,
     defaultShell: Option[String] = None,
+    startMcpServer: Boolean = false,
 ) {
 
   def isMbtDefinitionProviderEnabled: Boolean =
@@ -365,6 +366,12 @@ case class UserConfiguration(
         (
           "enableBestEffort",
           enableBestEffort,
+        )
+      ),
+      Some(
+        (
+          "startMcpServer",
+          startMcpServer,
         )
       ),
       ).flatten
@@ -817,6 +824,14 @@ object UserConfiguration {
            |This allows customizing the shell environment before build execution.
            |When specified, must use absolute path to the shell.
            |The configured shell will be used for all build-related subprocesses.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "start-mcp-server",
+        "false",
+        "true",
+        "Start MCP server",
+        """|If Metals should start the MCP (SSE) server, that an AI agent can connect to.
            |""".stripMargin,
       ),
     )
@@ -1334,6 +1349,7 @@ object UserConfiguration {
     val enableBestEffort =
       getBooleanKey("enable-best-effort").getOrElse(false)
 
+    val startMcpServer = getBooleanKey("start-mcp-server").getOrElse(false)
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -1397,6 +1413,7 @@ object UserConfiguration {
           protobufLspConfig,
           enableBestEffort,
           defaultShell,
+          startMcpServer,
         )
       )
     } else {
