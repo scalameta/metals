@@ -26,6 +26,7 @@ class ModuleStatus(
       def folder: AbsolutePath
       def buildServerPromise: Promise[Unit]
       def compilers: Compilers
+      def diagnostics: Diagnostics
     },
     icons: Icons,
     sh: ScheduledExecutorService,
@@ -60,35 +61,49 @@ class ModuleStatus(
           case None =>
             client.metalsStatus(ModuleStatus.noBuildTarget(icons))
           case Some(buildTarget) =>
-            val zombieCompilersCount =
-              currentZombieCompilersCount.put(
-                buildTarget.id,
-                handler.compilers.getZombieCompilerCount(buildTarget.id),
-              )
-            if (zombieCompilersCount > 0) {
-              client.metalsStatus(
-                ModuleStatus.zombieCompilers(
-                  zombieCompilersCount,
-                  buildTarget.displayName,
-                  icons,
-                )
-              )
-            } else {
-              reports.getOrDefault(buildTarget.id, Nil) match {
-                case Nil =>
-                  client.metalsStatus(
-                    ModuleStatus.ok(buildTarget.displayName, icons)
+            handler.diagnostics
+              .upstreamTargetsWithCompilationErrors(buildTarget.id)
+              .flatMap(handler.buildTargets.jvmTarget)
+              .headOption match {
+              case Some(buildTargetWithError) =>
+                client.metalsStatus(
+                  ModuleStatus.upstreamCompilatonIssues(
+                    buildTarget.displayName,
+                    buildTargetWithError.displayName,
+                    icons,
                   )
-                case errorReports =>
+                )
+              case None =>
+                lazy val zombieCompilersCount =
+                  currentZombieCompilersCount.put(
+                    buildTarget.id,
+                    handler.compilers.getZombieCompilerCount(buildTarget.id),
+                  )
+                if (zombieCompilersCount > 0) {
                   client.metalsStatus(
-                    ModuleStatus.warnings(
+                    ModuleStatus.zombieCompilers(
+                      zombieCompilersCount,
                       buildTarget.displayName,
-                      buildTarget.id,
-                      errorReports.size,
                       icons,
                     )
                   )
-              }
+                } else {
+                  reports.getOrDefault(buildTarget.id, Nil) match {
+                    case Nil =>
+                      client.metalsStatus(
+                        ModuleStatus.ok(buildTarget.displayName, icons)
+                      )
+                    case errorReports =>
+                      client.metalsStatus(
+                        ModuleStatus.warnings(
+                          buildTarget.displayName,
+                          buildTarget.id,
+                          errorReports.size,
+                          icons,
+                        )
+                      )
+                  }
+                }
             }
         }
     }
@@ -202,6 +217,18 @@ object ModuleStatus {
       tooltip = s"$count zombie compilers detected.",
       command = ClientCommands.RestartMetalsServer.id,
       commandTooltip = "Restart Metals server.",
+    ).withStatusType(StatusType.module)
+
+  def upstreamCompilatonIssues(
+      buildTargetName: String,
+      buildTargetWithErrorName: String,
+      icons: Icons,
+  ): MetalsStatusParams =
+    MetalsStatusParams(
+      s"$buildTargetName ($buildTargetWithErrorName ${icons.error})",
+      "error",
+      show = true,
+      tooltip = s"Upstream module $buildTargetWithErrorName has compiler errors.",
     ).withStatusType(StatusType.module)
 
   def bspErrorParams(
