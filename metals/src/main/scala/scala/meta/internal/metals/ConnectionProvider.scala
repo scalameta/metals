@@ -470,7 +470,7 @@ class ConnectionProvider(
           Future
             .sequence(
               compilations
-                .cascadeCompileFiles(buffers.open.toSeq)
+                .compileFiles(buffers.open.toSeq, None)
                 .ignoreValue ::
                 compilers.load(buffers.open.toSeq) ::
                 Nil

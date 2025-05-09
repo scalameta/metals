@@ -616,6 +616,13 @@ abstract class MetalsLspService(
       saveJarFileToDisk = !clientConfig.isVirtualDocumentSupported(),
     )
 
+  protected val incrementalImporter: IncrementalImporter =
+    new IncrementalImporter(
+      languageClient,
+      workDoneProgress,
+      compilations,
+    )
+
   def parseTreesAndPublishDiags(paths: Seq[AbsolutePath]): Future[Unit] = {
     Future
       .traverse(paths.distinct) { path =>
@@ -733,6 +740,21 @@ abstract class MetalsLspService(
     Future.unit
   }
 
+  private def maybePromptForImport(path: AbsolutePath): Unit = {
+    buildServerPromise.future.andThen { _ =>
+      if (
+        focusedDocument
+          .contains(path)
+        && path.isScala
+        && buildTargets
+          .inverseSources(path)
+          .isEmpty
+      ) {
+        incrementalImporter.promptForImport(path)
+      }
+    }
+  }
+
   override def didOpen(
       params: DidOpenTextDocumentParams
   ): CompletableFuture[Unit] = {
@@ -819,6 +841,7 @@ abstract class MetalsLspService(
     compilers
       .didFocus(path)
       .map(diagnostics.publishDiagnosticsNotAdjusted(path, _))
+    maybePromptForImport(path)
 
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
