@@ -133,6 +133,7 @@ case class MetalsStatusParams(
     @Nullable hide: java.lang.Boolean = null,
     @Nullable tooltip: String = null,
     @Nullable command: String = null,
+    @Nullable metalsCommand: MetalsCommand = null,
     @Nullable commandTooltip: String = null,
     @Nullable statusType: String = StatusType.metals.toString(),
 ) {
@@ -142,7 +143,10 @@ case class MetalsStatusParams(
       if (icons != Icons.unicode && icons != Icons.none)
         icons.all.foldLeft(text)((acc, icon) => acc.replace(icon, ""))
       else text
-    if (statusType == StatusType.bsp.toString())
+    if (
+      statusType == StatusType.bsp.toString() || statusType == StatusType.module
+        .toString()
+    )
       if (level == "info") ""
       else s"$decodedText: $tooltip"
     else decodedText
@@ -157,7 +161,7 @@ case class MetalsStatusParams(
 
 object StatusType extends Enumeration {
   type StatusType = Value
-  val metals, bsp = Value
+  val metals, bsp, module = Value
 }
 
 case class MetalsInputBoxParams(

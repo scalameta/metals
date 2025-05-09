@@ -51,6 +51,7 @@ final class ConfiguredLanguageClient(
     val statusBarState =
       params.getStatusType match {
         case StatusType.bsp => clientConfig.bspStatusBarState()
+        case StatusType.module => clientConfig.moduleStatusBarState()
         case _ => clientConfig.statusBarState()
       }
 
