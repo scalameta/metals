@@ -95,7 +95,7 @@ class ImplementationCrossLspSuite
        | this : A & C =>
        |  override def <<aa>>: Unit = ()
        |""".stripMargin,
-    scalaVersion = Some("3.3.5"),
+    scalaVersion = Some(V.scala3),
   )
 
 }
