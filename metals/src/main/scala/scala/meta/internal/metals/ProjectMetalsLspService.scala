@@ -326,7 +326,7 @@ class ProjectMetalsLspService(
   }
 
   protected def onInitialized(): Future[Unit] = {
-    val starMcp =
+    val startMcp =
       if (userConfig.startMcpServer) startMcpServer()
       else Future.unit
 
@@ -336,7 +336,7 @@ class ProjectMetalsLspService(
         _ <- connectionProvider.fullConnect()
       } yield ()
     }
-    Future.sequence(List(starMcp, setUpScalaCli)).ignoreValue
+    Future.sequence(List(startMcp, setUpScalaCli)).ignoreValue
   }
 
   def onBuildChangedUnbatched(

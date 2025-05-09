@@ -44,7 +44,6 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * @param maxLogBackups The maximum number of backup log files.
  * @param metalsToIdleTime The time that needs to pass with no action to consider metals as idle.
  * @param pingInterval Interval in which we ping the build server.
- * @param mcpEnabled Whether MCP is enabled.
  */
 final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
