@@ -265,6 +265,10 @@ final class FoldingRangeExtractor(
             case _: Term.Block | _: Term.Function | _: Template | _: Defn =>
               (tree.pos, false)
           }
+
+        case _: Term.ArgClause =>
+          Some((tree.pos, false))
+
         case _ => None
       }
     }
