@@ -95,7 +95,7 @@ class DebugProvider(
 
   import DebugProvider._
 
-  private val debugConfigCreator = new DebugeeParamsCreator(buildTargetClasses)
+  val debugConfigCreator = new DebugeeParamsCreator(buildTargetClasses)
 
   private val runningLocal = new ju.concurrent.atomic.AtomicBoolean(false)
 
@@ -390,7 +390,7 @@ class DebugProvider(
       }
     }
 
-  private def discoverTests(
+  def discoverTests(
       id: BuildTargetIdentifier,
       testClasses: b.ScalaTestSuites,
   ): Future[Map[Config.TestFramework, List[Discovered]]] = {

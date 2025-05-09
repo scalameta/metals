@@ -304,6 +304,7 @@ class UserConfigurationSuite extends BaseSuite {
           |  "gradleScript": "gradle",
           |  "scalafixConfigPath": "$fakePathString",
           |  "superMethodLensesEnabled": true,
+          |  "startMcpServer": false,
           |  "bloopSbtAlreadyInstalled": true,
           |  "symbolPrefixes": {
           |    "java/util/": "hello."

@@ -549,12 +549,7 @@ final class ReferenceProvider(
       if (sourceContainsDefinition) Set(source)
       else {
         val foundDefinitionLocations =
-          isSymbol
-            .flatMap { sym =>
-              definition.destinationProvider
-                .definition(sym, Some(source))
-                .map(_.path)
-            }
+          isSymbol.flatMap(definition.destinationProvider.findDefinitionFile)
 
         if (foundDefinitionLocations.isEmpty) Set(source)
         else foundDefinitionLocations

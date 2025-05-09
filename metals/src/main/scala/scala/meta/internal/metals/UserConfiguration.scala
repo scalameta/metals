@@ -58,6 +58,7 @@ case class UserConfiguration(
     defaultBspToBuildTool: Boolean = false,
     enableBestEffort: Boolean = false,
     defaultShell: Option[String] = None,
+    startMcpServer: Boolean = false,
 ) {
 
   override def toString(): String = {
@@ -147,6 +148,12 @@ case class UserConfiguration(
         (
           "enableBestEffort",
           enableBestEffort,
+        )
+      ),
+      Some(
+        (
+          "startMcpServer",
+          startMcpServer,
         )
       ),
     ).flatten.toMap.asJava
@@ -503,6 +510,14 @@ object UserConfiguration {
            |The configured shell will be used for all build-related subprocesses.
            |""".stripMargin,
       ),
+      UserConfigurationOption(
+        "start-mcp-server",
+        "false",
+        "true",
+        "Start MCP server",
+        """|If Metals should start the MCP (SSE) server, that an AI agent can connect to.
+           |""".stripMargin,
+      ),
     )
 
   def fromJson(
@@ -779,6 +794,8 @@ object UserConfiguration {
 
     val enableBestEffort =
       getBooleanKey("enable-best-effort").getOrElse(false)
+
+    val startMcpServer = getBooleanKey("start-mcp-server").getOrElse(false)
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -812,6 +829,7 @@ object UserConfiguration {
           defaultBspToBuildTool,
           enableBestEffort,
           defaultShell,
+          startMcpServer,
         )
       )
     } else {

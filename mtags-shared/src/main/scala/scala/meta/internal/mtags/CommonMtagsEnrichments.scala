@@ -432,4 +432,12 @@ trait CommonMtagsEnrichments {
       else None
   }
 
+  implicit class XtensionSymbol(symbol: String) {
+    def fqcn: String =
+      symbol
+        .stripPrefix("_empty_/")
+        .replaceAll("[#/$]|(`<init>`)?\\((\\+[0-9]+)?\\)\\.", ".")
+        .stripSuffix(".")
+  }
+
 }

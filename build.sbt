@@ -459,6 +459,10 @@ lazy val metals = project
         .exclude("ch.epfl.scala", "bsp4j"),
       // For test frameworks
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
+      // For MCP
+      "io.modelcontextprotocol.sdk" % "mcp" % "0.8.1",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.15.0",
+      "io.undertow" % "undertow-servlet" % "2.3.12.Final",
     ),
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](
