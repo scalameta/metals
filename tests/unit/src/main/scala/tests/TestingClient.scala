@@ -124,6 +124,9 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   var quickPickHandler: MetalsQuickPickParams => RawMetalsQuickPickResult = {
     (_: MetalsQuickPickParams) => RawMetalsQuickPickResult(cancelled = true)
   }
+  var onMetalsStatus: MetalsStatusParams => Unit = { (_: MetalsStatusParams) =>
+    ()
+  }
 
   private val refreshCount = new AtomicInteger
   var refreshModelHandler: Int => Unit = (_) => ()
@@ -425,7 +428,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
 
   override def metalsStatus(params: MetalsStatusParams): Unit = {
     statusParams.add(params)
-
+    onMetalsStatus(params)
   }
 
   override def createProgress(
