@@ -79,6 +79,11 @@ public abstract class PresentationCompiler {
 	public abstract CompletableFuture<Optional<HoverSignature>> hover(OffsetParams params);
 
 	/**
+	 * Returns the fully qualified name of the symbol at the current position
+	 */
+	public abstract CompletableFuture<Optional<String>> fullyQualifiedName(OffsetParams params);
+
+	/**
 	 * Checks if the symbol at given position can be renamed using presentation
 	 * compiler. Returns Some(range) if symbol is defined inside a method or the
 	 * file is a worksheet, None otherwise
