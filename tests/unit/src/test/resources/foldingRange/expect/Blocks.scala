@@ -44,14 +44,14 @@ class A >>region>>{
      + 1
      + 1
      + 1<<region<<
-  ).map(
+  ).map>>region>>(
     x => >>region>>x + 1
     + 1
     + 1
     + 1
     + 1
     + 1<<region<<
-  )<<region<<
+  )<<region<<<<region<<
 
   def mappedSequence =>>region>> Seq().map {
     x => x.toString()
