@@ -130,7 +130,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       val adjusted = namePos.adjust(unit.source.content)._1
       List(new Location(params.uri().toString(), adjusted.toLsp))
     } else {
-      symbol.alternatives
+      symbol.safeAlternatives
         .map(semanticdbSymbol)
         .sorted
         .flatMap { sym =>

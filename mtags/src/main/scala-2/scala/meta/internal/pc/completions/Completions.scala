@@ -837,7 +837,7 @@ trait Completions { this: MetalsGlobal =>
       definitions.PredefModule,
       TermName("valueOf")
     )
-  ).flatMap(_.alternatives)
+  ).flatMap(_.safeAlternatives)
 
   lazy val renameConfig: collection.Map[Symbol, Name] =
     metalsConfig
