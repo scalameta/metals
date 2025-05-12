@@ -518,7 +518,7 @@ abstract class MetalsLspService(
     )
   )
 
-  protected val compilers: Compilers = register(
+  val compilers: Compilers = register(
     new Compilers(
       folder,
       clientConfig,

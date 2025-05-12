@@ -1125,7 +1125,6 @@ object MetalsEnrichments
     def toAbsoluteClasspath: Iterator[AbsolutePath] = {
       classpath.iterator
         .map(_.toAbsolutePath)
-        .filter(p => Files.exists(p.toNIO))
     }
   }
 
