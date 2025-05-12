@@ -56,7 +56,7 @@ give Metals a try!
 - [Miscellaneous](#miscellaneous)
 
 ## MCP support
-Starting with this release, Metals can serve an sse, MCP server.
+Starting with this release, Metals can serve an SSE, MCP server.
 
 ### Why?
 AI agents have the tendency to make up the existence of some functions, classes, arguments, and so on. If we allow them to use the information that Metals already has and provide them with such capabilities as searching for symbols, discovering class members, signature help, and getting symbol documentation, we expect AI agents to yield much more relevant suggestions.
@@ -71,7 +71,7 @@ To enable Metals MCP support, set `metals.startMcpServer` to `true`. For common 
 - `compile-full` -- Compile the whole Scala project.
 - `test` -- Run Scala test suite.
 - `glob-search` -- Search for symbols containing substring
-- `typed-glob-search` -- Search for symbols containing a substring, that match the allowed symbol kinds (e.g., class, method).
+- `typed-glob-search` -- Search for symbols containing a substring that match the allowed symbol kinds (e.g., class, method).
 - `inspect` -- Inspect a chosen Scala symbol. For packages, objects, and traits, it returns a list of members; for classes, it returns a list of members and constructors; and for methods, it returns signatures of all overloaded methods.
 - `get-docs` -- Get documentation for a chosen Scala symbol
 - `get-usages` -- Get usages for a chosen Scala symbol.
@@ -103,7 +103,7 @@ This release also has a new code action for removing invalid imports, saving you
 
 ## Convert to named lambda parameters code action
 
-Thanks to [KacperFKorban](https://github.com/KacperFKorban) we have a new code action that converts a wildcard lambda into a lambda with parameters. This was only implemented for Scala 3 and will work from versions `3.8.x` and LTS `3.3.8`.
+Thanks to [KacperFKorban](https://github.com/KacperFKorban) we have a new code action that converts a wildcard lambda into a lambda with parameters. This was only implemented for Scala 3 and will work from versions `3.7.2` and LTS `3.3.7`.
 
 ![convert-to-named-1](https://private-user-images.githubusercontent.com/39772805/357097128-93561630-b626-4cff-8248-806e4c32744a.gif?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NDY4MDY1MjksIm5iZiI6MTc0NjgwNjIyOSwicGF0aCI6Ii8zOTc3MjgwNS8zNTcwOTcxMjgtOTM1NjE2MzAtYjYyNi00Y2ZmLTgyNDgtODA2ZTRjMzI3NDRhLmdpZj9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNTA1MDklMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjUwNTA5VDE1NTcwOVomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTlhOWNhODVhOWIyZTYyMjJhNmVhNjc5YmFkYjY1MTUzMjIwZDRlNzJiNzQ4N2M1NGM5MmNmYzY4YjJhM2IwY2YmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.ZWuIhWZL488kMbn4oai3UzBJbNYBveP1X8bTeL5MJv4)
 *Convert to named lambda parameters with single wildcard.*
