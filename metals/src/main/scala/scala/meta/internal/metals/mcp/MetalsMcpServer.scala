@@ -244,7 +244,7 @@ class MetalsMcpServer(
   private def createCompileTool(): AsyncToolSpecification = {
     val schema = """{"type": "object", "properties": { }}"""
     new AsyncToolSpecification(
-      new Tool("compile-full", "Compile the whole Scalaproject", schema),
+      new Tool("compile-full", "Compile the whole Scala project", schema),
       withErrorHandling { (exchange, _) =>
         compilations
           .cascadeCompile(buildTargets.allBuildTargetIds)
@@ -275,7 +275,7 @@ class MetalsMcpServer(
          |  }
          |}""".stripMargin
     new AsyncToolSpecification(
-      new Tool("compile-file", "Compile a chosenScala file", schema),
+      new Tool("compile-file", "Compile a chosen Scala file", schema),
       withErrorHandling { (exchange, arguments) =>
         val path = arguments.getFileInFocus
         compilations
