@@ -803,11 +803,7 @@ abstract class MetalsLspService(
           Future
             .sequence(
               List(
-                userConfigPromise.future.flatMap { _ =>
-                  if (userConfig.buildOnFocus)
-                    maybeCompileOnDidFocus(path, prevBuildTarget)
-                  else Future.successful(())
-                },
+                maybeCompileOnDidFocus(path, prevBuildTarget),
                 compilers.load(List(path)),
                 parser,
                 interactive,
@@ -857,21 +853,25 @@ abstract class MetalsLspService(
   protected def maybeCompileOnDidFocus(
       path: AbsolutePath,
       prevBuildTarget: b.BuildTargetIdentifier,
-  ): Future[DidFocusResult.Value] =
-    buildTargets.inverseSources(path) match {
-      case Some(target) if prevBuildTarget != target =>
-        compilations
-          .compileFile(path)
-          .map(_ => DidFocusResult.Compiled)
-      case _ if path.isWorksheet =>
-        compilations
-          .compileFile(path)
-          .map(_ => DidFocusResult.Compiled)
-      case Some(_) =>
-        Future.successful(DidFocusResult.AlreadyCompiled)
-      case None =>
-        Future.successful(DidFocusResult.NoBuildTarget)
+  ): Future[DidFocusResult.Value] = {
+    userConfigPromise.future.flatMap { _ =>
+      buildTargets.inverseSources(path) match {
+        case Some(target)
+            if userConfig.buildOnFocus && prevBuildTarget != target =>
+          compilations
+            .compileFile(path)
+            .map(_ => DidFocusResult.Compiled)
+        case _ if userConfig.buildOnFocus && path.isWorksheet =>
+          compilations
+            .compileFile(path)
+            .map(_ => DidFocusResult.Compiled)
+        case Some(_) =>
+          Future.successful(DidFocusResult.AlreadyCompiled)
+        case None =>
+          Future.successful(DidFocusResult.NoBuildTarget)
+      }
     }
+  }
 
   override def didChange(
       params: DidChangeTextDocumentParams
