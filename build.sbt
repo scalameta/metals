@@ -12,7 +12,7 @@ Global / resolvers += "scala-integration" at
 
 // The OSS version of Metals that this Databricks-internal fork is based on.
 // Make sure to bump up this version when we merge with upstream.
-val forkBaseVersion = "1.5.3"
+val forkBaseVersion = "1.6.0"
 
 def localSnapshotVersion = sys.env.getOrElse(
   "METALS_VERSION",
@@ -286,6 +286,7 @@ lazy val interfaces = project
       "org.scalameta" % "mtags-interfaces" % "1.2.2",
       "org.scalameta" % "mtags-interfaces" % "1.3.2",
       "org.scalameta" % "mtags-interfaces" % "1.4.2",
+      "org.scalameta" % "mtags-interfaces" % "1.5.2",
     ),
     crossPaths := false,
     libraryDependencies ++= List(
