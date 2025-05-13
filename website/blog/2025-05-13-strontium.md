@@ -129,6 +129,9 @@ For a while now, Metals had a special completion for auto-filling argument names
 
 With this release also comes support for discovering and running single test cases from Metals when using the ZIO test framework. Thanks go to [kaplan-shaked](https://github.com/kaplan-shaked), making this their first contribution!
 
+![run-zio-test](https://i.imgur.com/j4uP6qh.gif)
+*Run single ZIO test testcase.*
+
 ## Miscellaneous
 - improvement : Able to get environment variables from shell [ajafri2001](https://github.com/ajafri2001)
 - improvement: prefer `.bazelproject` as the Bazel BSP root [harpocrates](https://github.com/harpocrates)
@@ -182,7 +185,7 @@ $ git shortlog -sn --no-merges v1.5.2..v1.5.3
 
 ## Merged PRs
 
-## [v1.5.3](https://github.com/scalameta/metals/tree/v1.5.3) (2025-05-12)
+## [v1.5.3](https://github.com/scalameta/metals/tree/v1.5.3) (2025-05-13)
 
 [Full Changelog](https://github.com/scalameta/metals/compare/v1.5.2...v1.5.3)
 
