@@ -197,15 +197,12 @@ class WorkspaceLspService(
   )
 
   val moduleStatus: ModuleStatus =
-    register {
-      new ModuleStatus(
-        client,
-        () => focusedDocument.get(),
-        (path) => getServiceFor(path),
-        clientConfig.icons(),
-        sh,
-      )
-    }
+    new ModuleStatus(
+      client,
+      () => focusedDocument.get(),
+      (path) => getServiceFor(path),
+      clientConfig.icons(),
+    )
 
   def setFocusedDocument(newFocusedDocument: Option[AbsolutePath]): Unit = {
     focusedDocument.get().foreach(focused => recentlyFocusedFiles.add(focused))

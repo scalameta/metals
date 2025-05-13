@@ -379,12 +379,4 @@ public abstract class PresentationCompiler {
 		return "";
 	}
 
-	/**
-	 * Returns number of zombie compilers. Sometimes, when answering a query takes too long, we will cancel the request
-	 * and create a new compiler instance to use. Until the old compiler instance finishes it is a zombie compiler.
-	 */
-	public Integer getZombieCompilerCount() {
-		return 0;
-	}
-
 }
