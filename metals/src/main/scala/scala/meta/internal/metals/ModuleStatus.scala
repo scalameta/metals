@@ -27,9 +27,12 @@ class ModuleStatus(
     icons: Icons,
 ) extends ReportTracker {
 
-  private val reports = new ConcurrentHashMap[BuildTargetIdentifier, List[Report]]()
+  private val reports =
+    new ConcurrentHashMap[BuildTargetIdentifier, List[Report]]()
 
-  def onFinishCompileBuildTarget(compiled: BuildTargetIdentifier): Option[Unit] = {
+  def onFinishCompileBuildTarget(
+      compiled: BuildTargetIdentifier
+  ): Option[Unit] = {
     for {
       path <- focusedPath()
       handler = serviceForPath(path)
@@ -171,7 +174,8 @@ object ModuleStatus {
       s"$buildTargetName ($buildTargetWithErrorName ${icons.error})",
       "error",
       show = true,
-      tooltip = s"Upstream module `$buildTargetWithErrorName` has compiler errors.",
+      tooltip =
+        s"Upstream module `$buildTargetWithErrorName` has compiler errors.",
     ).withStatusType(StatusType.module)
 
   def noBuildTarget(

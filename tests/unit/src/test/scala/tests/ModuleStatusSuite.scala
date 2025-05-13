@@ -21,27 +21,27 @@ class ModuleStatusSuite extends BaseLspSuite("bsp-status-suite") {
     for {
       _ <- initialize(
         s"""|/metals.json
-           |{
-           |  "a": {},
-           |  "b": {"dependsOn": ["a"]}
-           |}
-           |
-           |/$mainPath
-           |package a
-           |object Main {
-           |  val x: Int = 1
-           |}
-           |/$barPath
-           |package b
-           |object Bar {
-           |  val x: Int = 1
-           |}
-           |/$noBuildTargetPath
-           |package b
-           |object NoBuildTarget {
-           |  val x: Int = 1
-           |}
-           |""".stripMargin
+            |{
+            |  "a": {},
+            |  "b": {"dependsOn": ["a"]}
+            |}
+            |
+            |/$mainPath
+            |package a
+            |object Main {
+            |  val x: Int = 1
+            |}
+            |/$barPath
+            |package b
+            |object Bar {
+            |  val x: Int = 1
+            |}
+            |/$noBuildTargetPath
+            |package b
+            |object NoBuildTarget {
+            |  val x: Int = 1
+            |}
+            |""".stripMargin
       )
       // should show ok status when no issues
       _ <- server.didOpen(mainPath)
@@ -58,13 +58,11 @@ class ModuleStatusSuite extends BaseLspSuite("bsp-status-suite") {
       // should correctly show upstream compilation issues
       _ <- server.didOpen(mainPath)
       _ = assestModuleStatus(ModuleStatus.ok("a", icons))
-      _ <- server.didChange(mainPath)(_ =>
-        """|package a
-           |object Main {
-           |  val x: String = yyy
-           |}
-           |""".stripMargin
-      )
+      _ <- server.didChange(mainPath)(_ => """|package a
+                                              |object Main {
+                                              |  val x: String = yyy
+                                              |}
+                                              |""".stripMargin)
       _ <- server.didSave(mainPath)
       _ <- server.didOpen(barPath)
       _ = assestModuleStatus(
@@ -83,17 +81,20 @@ class ModuleStatusSuite extends BaseLspSuite("bsp-status-suite") {
            |""".stripMargin,
         workspace,
       )
-      bt = server.server.buildTargets.inverseSources(server.toPath(mainPath)).get
+      bt = server.server.buildTargets
+        .inverseSources(server.toPath(mainPath))
+        .get
       _ = assestModuleStatus(ModuleStatus.warnings("a", bt, 1, icons))
       // should update on go to reports (clear reports)
-      _ <- server.executeCommand(ServerCommands.ShowReportsForBuildTarget, bt.getUri())
-      _ = assestModuleStatus(ModuleStatus.ok("a", icons))
-      _ <- server.didChange(mainPath)(_ =>
-        """|package a
-           |object Main {
-           |}
-           |""".stripMargin
+      _ <- server.executeCommand(
+        ServerCommands.ShowReportsForBuildTarget,
+        bt.getUri(),
       )
+      _ = assestModuleStatus(ModuleStatus.ok("a", icons))
+      _ <- server.didChange(mainPath)(_ => """|package a
+                                              |object Main {
+                                              |}
+                                              |""".stripMargin)
       // should update on upstream compilation finish
       saveMain = server.didSave(mainPath)
       _ <- server.didFocus(barPath)
@@ -103,9 +104,13 @@ class ModuleStatusSuite extends BaseLspSuite("bsp-status-suite") {
     } yield ()
   }
 
-  private def assestModuleStatus(status: MetalsStatusParams, latestOnly: Boolean = false) = {
+  private def assestModuleStatus(
+      status: MetalsStatusParams,
+      latestOnly: Boolean = false,
+  ) = {
     assertNoDiff(
-      if(latestOnly) client.latestStatusBar(StatusType.module) else client.pollStatusBar(StatusType.module),
+      if (latestOnly) client.latestStatusBar(StatusType.module)
+      else client.pollStatusBar(StatusType.module),
       status.text,
     )
   }

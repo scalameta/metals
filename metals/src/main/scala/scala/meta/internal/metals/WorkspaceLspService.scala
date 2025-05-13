@@ -207,7 +207,7 @@ class WorkspaceLspService(
   def setFocusedDocument(newFocusedDocument: Option[AbsolutePath]): Unit = {
     focusedDocument.get().foreach(focused => recentlyFocusedFiles.add(focused))
     val prev = focusedDocument.getAndSet(newFocusedDocument)
-    if(prev != newFocusedDocument) moduleStatus.refresh()
+    if (prev != newFocusedDocument) moduleStatus.refresh()
     newFocusedDocument
       .flatMap(getServiceForOpt)
       .foreach(service => bspStatus.focus(service.path))
