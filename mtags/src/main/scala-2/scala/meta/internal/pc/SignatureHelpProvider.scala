@@ -160,12 +160,12 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
         case o: ModuleSymbol =>
           o.info
             .member(compiler.nme.apply)
-            .alternatives
+            .safeAlternatives
             .map(alt => alt -> qual.tpe.memberType(alt))
         case o: ClassSymbol =>
           o.info
             .member(compiler.termNames.CONSTRUCTOR)
-            .alternatives
+            .safeAlternatives
             .map(alt => alt -> alt.tpe)
         case m: MethodSymbol if !m.isLocalToBlock =>
           val recieverTpe = qual match {
@@ -174,10 +174,10 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
           }
           recieverTpe
             .member(symbol.name)
-            .alternatives
+            .safeAlternatives
             .map(alt => alt -> recieverTpe.memberType(alt))
         case _ =>
-          symbol.alternatives.map(alt => alt -> alt.tpe)
+          symbol.safeAlternatives.map(alt => alt -> alt.tpe)
       }
 
     def nonOverload: Symbol =
