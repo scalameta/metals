@@ -321,7 +321,10 @@ class CompletionProvider(
       item
     }
 
-    val result = new CompletionList(items.toSeq.asJava)
+    // we need to force the list to be fully evaluated instead of an iterator, or else
+    // we risk having race conditions when infoString and type completers are invoked
+    // on the LSP request thread
+    val result = new CompletionList(items.toList.asJava)
     result.setIsIncomplete(i.isIncomplete)
     result
   }
