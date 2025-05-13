@@ -641,7 +641,7 @@ class MetalsGlobal(
                 case Descriptor.Method(value, _) =>
                   owner.info
                     .decl(TermName(value).encode)
-                    .alternatives
+                    .safeAlternatives
                     .iterator
                     .filter(sym => semanticdbSymbol(sym) == s)
                     .toList
@@ -897,6 +897,18 @@ class MetalsGlobal(
   }
 
   implicit class XtensionSymbolMetals(sym: Symbol) {
+
+    def safeAlternatives: List[Symbol] = {
+      if (sym == NoSymbol) Nil
+      else {
+        sym.info match {
+          case overloadedType: OverloadedType => overloadedType.alternatives
+          case _ if sym.isOverloaded => Nil
+          case _ => sym.alternatives
+        }
+      }
+    }
+
     def isLocallyDefined: Boolean =
       sym.ownersIterator
         .drop(1)
