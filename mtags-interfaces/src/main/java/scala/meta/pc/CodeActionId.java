@@ -13,4 +13,5 @@ public class CodeActionId {
   public static final String InsertInferredType = "InsertInferredType";
   public static final String InsertInferredMethod = "InsertInferredMethod";
   public static final String ConvertToNamedLambdaParameters = "ConvertToNamedLambdaParameters";
+  public static final String ConvertToEnum = "ConvertToEnum";
 }

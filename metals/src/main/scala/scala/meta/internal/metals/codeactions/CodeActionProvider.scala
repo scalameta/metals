@@ -50,6 +50,7 @@ final class CodeActionProvider(
     new RemoveInvalidImportQuickFix(trees, buildTargets),
     new SourceRemoveInvalidImports(trees, buildTargets, diagnostics),
     new ConvertToNamedLambdaParameters(trees, compilers),
+    new ConvertToEnumCodeAction(trees, compilers),
   )
 
   def actionsForParams(params: l.CodeActionParams): List[CodeAction] = {
