@@ -592,6 +592,12 @@ final case class TestingServer(
         .toMap
         .asJava
 
+    params.setClientInfo(
+      new l.ClientInfo(
+        "Visual Studio Code",
+        m.internal.metals.BuildInfo.metalsVersion,
+      )
+    )
     params.setInitializationOptions(existingInitOptions.toJson)
     params.setCapabilities(
       new ClientCapabilities(

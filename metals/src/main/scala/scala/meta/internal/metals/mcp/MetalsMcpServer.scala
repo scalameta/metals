@@ -22,9 +22,12 @@ import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
+import scala.meta.internal.metals.ScalaVersionSelector
+import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.mcp.McpPrinter._
 import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.internal.metals.mcp.SymbolType
+import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.io.AbsolutePath
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -61,6 +64,7 @@ class MetalsMcpServer(
     projectName: String,
     languageClient: LanguageClient,
     connectionProvider: ConnectionProvider,
+    scalaVersionSelector: ScalaVersionSelector,
 )(implicit
     ec: ExecutionContext
 ) extends Cancelable {
@@ -138,6 +142,7 @@ class MetalsMcpServer(
     asyncServer.addTool(createGetDocsTool()).subscribe()
     asyncServer.addTool(createGetUsagesTool()).subscribe()
     asyncServer.addTool(importBuildTool()).subscribe()
+    asyncServer.addTool(createFindDepTool()).subscribe()
 
     // Log server initialization
     asyncServer.loggingNotification(
@@ -232,6 +237,11 @@ class MetalsMcpServer(
             case BuildChange.Failed =>
               new CallToolResult(
                 createContent("Failed to reimport build."),
+                false,
+              )
+            case BuildChange.Cancelled =>
+              new CallToolResult(
+                createContent("Reimport cancelled by the user."),
                 false,
               )
           }
@@ -555,6 +565,79 @@ class MetalsMcpServer(
     )
   }
 
+  private def createFindDepTool(): AsyncToolSpecification = {
+    val schema =
+      """{
+        |  "type": "object",
+        |  "properties": {
+        |    "organization": {
+        |      "type": "string",
+        |      "description": "Organization to search for or its prefix when name and version are not specified. for example 'org.scalamet'"
+        |    },
+        |    "name": {
+        |      "type": "string",
+        |      "description": "Dependency name to search for or its prefix when version is not specified, for example 'scalameta_2.13' or 'scalam'. Needs organization to be specified."
+        |    },
+        |    "version": {
+        |      "type": "string",
+        |      "description": "Version to search for or its prefix, for example '0.1.0' or '0.1'. Needs name and organization to be specified."
+        |    },
+        |    "fileInFocus": {
+        |      "type": "string",
+        |      "description": "The current file in focus for context, if empty we will try to detect it"
+        |    }
+        |  },
+        |  "required": ["organization"]
+        |}
+        |""".stripMargin
+    new AsyncToolSpecification(
+      new Tool(
+        "find-dep",
+        """|Find a dependency using coursier, optionally specify organization, name, and version.
+           |It will try to return completions for the dependency string.
+           |At a minimum you should specify the dependency organization. When only organization is 
+           |specified, it will return all organizations with the specified prefix. If name is additionally
+           |specified, it will return all names with the specified prefix in the organization. If version is additionally
+           |specified, it will return all versions with the specified prefix in the organization and name.
+           |""".stripMargin,
+        schema,
+      ),
+      withErrorHandling { (exchange, arguments) =>
+        val org = arguments.getOptNoEmptyString("organization")
+        val name = arguments.getOptNoEmptyString("name")
+        val version = arguments.getOptNoEmptyString("version")
+        val scalaVersion = arguments.getFileInFocusOpt match {
+          case Some(path) => scalaVersionSelector.scalaVersionForPath(path)
+          case None => scalaVersionSelector.fallbackScalaVersion()
+        }
+        val coursierComplete = new CoursierComplete(scalaVersion)
+        val scalaBinaryVersion =
+          ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
+        val potentialDepStrings = (org, name, version) match {
+          case (Some(org), Some(name), Some(version)) =>
+            List(
+              s"$org:$name:$version",
+              s"$org:${name}_$scalaBinaryVersion:$version",
+            )
+          case (Some(org), Some(name), None) =>
+            List(s"$org:$name", s"$org:${name}_$scalaBinaryVersion")
+          case (Some(org), None, _) => List(s"$org")
+          case _ => List()
+        }
+        val completions = potentialDepStrings.iterator
+          .map(depString => coursierComplete.complete(depString))
+          .filter(_.nonEmpty)
+          .headOption
+          .getOrElse(List(s"No completions found"))
+        Future
+          .successful(
+            new CallToolResult(createContent(completions.mkString("\n")), false)
+          )
+          .toMono
+      },
+    )
+  }
+
   private def withErrorHandling(
       f: (McpAsyncServerExchange, JMap[String, Object]) => Mono[CallToolResult]
   ): BiFunction[
@@ -615,11 +698,20 @@ class MetalsMcpServer(
           )
       }
 
-    def getFileInFocus: AbsolutePath =
+    /**
+     * Like getOptAs, but returns None if the value is an empty string (after trimming).
+     */
+    def getOptNoEmptyString(key: String): Option[String] =
+      getOptAs[String](key).map(_.trim).filter(_.nonEmpty)
+
+    def getFileInFocusOpt: Option[AbsolutePath] =
       getOptAs[String]("fileInFocus")
         .filter(_.nonEmpty)
         .map(path => AbsolutePath(Path.of(path))(projectPath))
         .orElse { focusedDocument() }
+
+    def getFileInFocus: AbsolutePath =
+      getFileInFocusOpt
         .getOrElse(throw MissingFileInFocusException)
   }
 }

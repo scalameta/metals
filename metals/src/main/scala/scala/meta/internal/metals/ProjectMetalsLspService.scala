@@ -270,6 +270,7 @@ class ProjectMetalsLspService(
             getVisibleName,
             languageClient,
             connectionProvider,
+            scalaVersionSelector,
           )
         ).run()
     }.recover { case e: Exception =>
