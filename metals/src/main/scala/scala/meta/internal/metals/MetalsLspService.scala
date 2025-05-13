@@ -924,6 +924,7 @@ abstract class MetalsLspService(
 
   protected def didCompileTarget(report: CompileReport): Unit = {
     compilers.didCompile(report)
+    focusedDocument.foreach(doc => didFocus(doc.toURI.toString))
   }
 
   def didChangeWatchedFiles(
