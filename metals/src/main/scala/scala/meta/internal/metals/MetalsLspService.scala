@@ -1413,6 +1413,7 @@ abstract class MetalsLspService(
       },
       bspErrorHandler,
       workDoneProgress,
+      moduleStatus,
     )
 
   protected val debugDiscovery: DebugDiscovery = new DebugDiscovery(

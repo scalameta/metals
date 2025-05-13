@@ -206,11 +206,11 @@ class WorkspaceLspService(
 
   def setFocusedDocument(newFocusedDocument: Option[AbsolutePath]): Unit = {
     focusedDocument.get().foreach(focused => recentlyFocusedFiles.add(focused))
-    focusedDocument.set(newFocusedDocument)
+    val prev = focusedDocument.getAndSet(newFocusedDocument)
+    if(prev != newFocusedDocument) moduleStatus.refresh()
     newFocusedDocument
       .flatMap(getServiceForOpt)
       .foreach(service => bspStatus.focus(service.path))
-    moduleStatus.refresh()
   }
 
   lazy val fallbackService: FallbackMetalsLspService = {

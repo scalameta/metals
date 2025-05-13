@@ -29,6 +29,16 @@ class ModuleStatus(
 
   private val reports = new ConcurrentHashMap[BuildTargetIdentifier, List[Report]]()
 
+  def onFinishCompileBuildTarget(compiled: BuildTargetIdentifier): Option[Unit] = {
+    for {
+      path <- focusedPath()
+      handler = serviceForPath(path)
+      buildTarget <- handler.buildTargets.inverseSources(path)
+      info <- handler.buildTargets.info(buildTarget)
+      if info.getDependencies().contains(compiled)
+    } yield refresh()
+  }
+
   def refresh(): Unit = {
     focusedPath() match {
       case None => client.metalsStatus(ModuleStatus.clear())
@@ -161,7 +171,7 @@ object ModuleStatus {
       s"$buildTargetName ($buildTargetWithErrorName ${icons.error})",
       "error",
       show = true,
-      tooltip = s"Upstream module $buildTargetWithErrorName has compiler errors.",
+      tooltip = s"Upstream module `$buildTargetWithErrorName` has compiler errors.",
     ).withStatusType(StatusType.module)
 
   def noBuildTarget(

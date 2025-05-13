@@ -223,6 +223,12 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   def pollStatusBar(tpe: StatusType.StatusType): String =
     getStatusParams(tpe).poll().text
 
+  def latestStatusBar(tpe: StatusType.StatusType): String = {
+    val result = getStatusParams(tpe).asScala.toList.last.text
+    getStatusParams(tpe).clear()
+    result
+  }
+
   def statusBarHistory(tpe: StatusType.StatusType): String = {
     getStatusParams(tpe).asScala
       .map { params =>
