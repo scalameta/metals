@@ -84,6 +84,12 @@ final class Diagnostics(
     keys.foreach { key => publishDiagnostics(key) }
   }
 
+  def resetAllExceptSbt(): Unit = {
+    val keys = diagnostics.keys.filterNot(_.isSbt)
+    diagnostics.filterInPlace((path, _) => path.isSbt)
+    keys.foreach { key => publishDiagnostics(key) }
+  }
+
   def reset(paths: Seq[AbsolutePath]): Unit =
     for (path <- paths if diagnostics.contains(path)) {
       diagnostics.remove(path)
@@ -187,6 +193,7 @@ final class Diagnostics(
       path: AbsolutePath,
       diagnostics: Seq[Diagnostic],
       isReset: Boolean,
+      useFreshDiagnostics: Boolean = true,
   ): Unit = {
     val isSamePathAsLastDiagnostic = path == lastPublished.get()
     lastPublished.set(path)
@@ -212,7 +219,7 @@ final class Diagnostics(
     // Notification N: [1, ..., N]
     if (isReset || !isSamePathAsLastDiagnostic) {
       publishDiagnosticsBuffer()
-      publishDiagnostics(path, queue)
+      publishDiagnostics(path, queue, useFreshDiagnostics)
     } else {
       diagnosticsBuffer.add(path)
     }
@@ -276,13 +283,16 @@ final class Diagnostics(
   private def publishDiagnostics(
       path: AbsolutePath,
       queue: ju.Queue[Diagnostic],
+      useFreshDiagnostics: Boolean = true,
   ): Unit = {
     if (!path.isFile) return didDelete(path)
     val uri = path.toURI.toString
     val all = new ju.ArrayList[Diagnostic](queue.size() + 1)
     for {
       diagnostic <- queue.asScala
-      freshDiagnostic <- toFreshDiagnostic(path, diagnostic)
+      freshDiagnostic <-
+        if (useFreshDiagnostics) toFreshDiagnostic(path, diagnostic)
+        else Some(diagnostic)
     } {
       all.add(freshDiagnostic)
     }

@@ -114,6 +114,7 @@ class ConnectionProvider(
     tables,
     shellRunner,
     () => userConfig,
+    diagnostics,
   )
 
   val cancelables = new MutableCancelable
@@ -351,7 +352,7 @@ class ConnectionProvider(
         info
       }
 
-    private def pollAndConnect(): Unit = {
+    private def pollAndConnect(previousBuildFailed: Boolean = false): Unit = {
       val optRequest = synchronized {
         if (currentRequest.isEmpty) {
           currentRequest = Option(queue.poll())
@@ -367,7 +368,10 @@ class ConnectionProvider(
           else
             request.request match {
               case Disconnect(shutdownBuildServer) =>
-                disconnect(shutdownBuildServer)
+                disconnect(
+                  shutdownBuildServer,
+                  leaveSbtDiagnostics = previousBuildFailed,
+                )
               case Index(check) => index(check)
               case ImportBuildAndIndex(session) =>
                 importBuildAndIndex(session)
@@ -400,13 +404,14 @@ class ConnectionProvider(
             case _ => request.promise.tryComplete(res)
           }
           currentRequest = None
-          pollAndConnect()
+          pollAndConnect(previousBuildFailed = res.toOption.exists(_.isFailed))
         }
       }
     }
 
     private def disconnect(
-        shutdownBuildServer: Boolean
+        shutdownBuildServer: Boolean,
+        leaveSbtDiagnostics: Boolean = false,
     )(implicit cancelSwitch: CancelSwitch): Interruptable[BuildChange] = {
       def shutdownBsp(optMainBsp: Option[String]): Interruptable[Boolean] = {
         optMainBsp match {
@@ -426,7 +431,12 @@ class ConnectionProvider(
 
       compilations.cancel()
       buildTargetClasses.cancel()
-      diagnostics.reset()
+      // if the last build failed, preserve diagnostics for sbt files
+      if (leaveSbtDiagnostics) {
+        diagnostics.reset()
+      } else {
+        diagnostics.resetAllExceptSbt()
+      }
       bspSession.foreach(connection =>
         scribe.info(s"Disconnecting from ${connection.main.name} session...")
       )
@@ -594,7 +604,7 @@ class ConnectionProvider(
         _ = initTreeView()
       } yield result)
         .recover { case NonFatal(e) =>
-          disconnect(false)
+          disconnect(shutdownBuildServer = false)
           val message =
             "Failed to connect with build server, no functionality will work."
           val details = " See logs for more details."

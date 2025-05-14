@@ -46,6 +46,7 @@ import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.Diagnostic
+import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InlayHint
@@ -234,7 +235,7 @@ class Compilers(
     }
 
   def didClose(path: AbsolutePath): Unit = {
-    loadCompiler(path).foreach(_.didClose(path.toNIO.toUri()))
+    loadCompiler(path).foreach(_.didClose(path.toNIO.toUri))
   }
 
   def didChange(path: AbsolutePath): Future[List[Diagnostic]] = {
@@ -266,9 +267,71 @@ class Compilers(
           ds <-
             pc
               .didChange(
-                CompilerVirtualFileParams(path.toNIO.toUri(), input.value)
+                CompilerVirtualFileParams(path.toNIO.toUri, input.value)
               )
               .asScala
+        } yield {
+          ds.asScala.map(adjust.adjustDiagnostic).toList
+
+        }
+      }
+      .getOrElse(Future.successful(Nil))
+  }
+
+  def didSave(path: AbsolutePath): Future[List[Diagnostic]] = {
+    def originInput =
+      path
+        .toInputFromBuffers(buffers)
+
+    loadCompiler(path)
+      .map { pc =>
+        val inputAndAdjust =
+          if (
+            path.isWorksheet && ScalaVersions.isScala3Version(
+              pc.scalaVersion()
+            )
+          ) {
+            WorksheetProvider.worksheetScala3AdjustmentsForPC(originInput)
+          } else {
+            None
+          }
+
+        val (input, adjust) = inputAndAdjust.getOrElse(
+          originInput,
+          AdjustedLspData.default,
+        )
+
+        val (prependedLinesSize, modifiedText) = Option
+          .when(path.isSbt)(
+            buildTargets
+              .sbtAutoImports(path)
+          )
+          .flatten
+          .fold((0, input.value))(imports =>
+            (
+              imports.size,
+              SbtBuildTool.prependAutoImports(input.value, imports),
+            )
+          )
+
+        for {
+          ds <-
+            pc
+              .didSave(
+                CompilerVirtualFileParams(path.toNIO.toUri, modifiedText)
+              )
+              .asScala
+              .map(diagnosticsList => {
+                diagnosticsList.forEach(diagnostic => {
+                  val range = diagnostic.getRange
+                  val start = range.getStart
+                  val end = range.getEnd
+                  start.setLine(start.getLine - prependedLinesSize)
+                  end.setLine(end.getLine - prependedLinesSize)
+                  diagnostic.setSeverity(DiagnosticSeverity.Error)
+                })
+                diagnosticsList
+              })
         } yield {
           ds.asScala.map(adjust.adjustDiagnostic).toList
 

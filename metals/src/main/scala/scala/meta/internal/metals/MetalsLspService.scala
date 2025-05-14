@@ -842,6 +842,21 @@ abstract class MetalsLspService(
     Future
       .sequence(
         List(
+          {
+            val didChangeDiagnostics = compilers.didSave(path)
+            if (path.isSbt) {
+              didChangeDiagnostics
+                .map(diagnosticsList =>
+                  diagnostics.onPublishDiagnostics(
+                    path,
+                    diagnosticsList,
+                    isReset = true,
+                  )
+                )
+            } else {
+              Future.successful(())
+            }
+          },
           renameProvider.runSave(),
           parseTrees(path),
           onChange(List(path)),
