@@ -107,7 +107,7 @@ final class Doctor(
     scribe.info(s"running doctor check")
     val scalaTargets = buildTargets.allScala.toList
     val javaTargets = buildTargets.allJava.toList
-    scribe.info(
+    scribe.debug(
       s"java targets: ${javaTargets.map(_.info.getDisplayName()).mkString(", ")}"
     )
     val summary = problemResolver.problemMessage(scalaTargets, javaTargets)

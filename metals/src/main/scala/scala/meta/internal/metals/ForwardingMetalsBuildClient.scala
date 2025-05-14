@@ -170,17 +170,14 @@ final class ForwardingMetalsBuildClient(
         for {
           task <- params.asCompileTask
           target = task.getTarget
-          info <- buildTargets.info(target)
         } {
           diagnostics.onStartCompileBuildTarget(target)
           // cancel ongoing compilation for the current target, if any.
           compilations.remove(target).foreach(_.end())
 
-          val name = info.getDisplayName
           val (_, token) =
             workDoneProgress.startProgress(
-              s"Compiling $name",
-              withProgress = true,
+              s"Compiling"
             )
           val compilation = new Compilation(new Timer(time), token)
           compilations(task.getTarget) = compilation
