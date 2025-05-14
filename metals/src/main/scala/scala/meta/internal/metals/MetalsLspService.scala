@@ -621,6 +621,8 @@ abstract class MetalsLspService(
       languageClient,
       workDoneProgress,
       compilations,
+      () => focusedDocument,
+      buildTargets,
     )
 
   def parseTreesAndPublishDiags(paths: Seq[AbsolutePath]): Future[Unit] = {
@@ -740,21 +742,6 @@ abstract class MetalsLspService(
     Future.unit
   }
 
-  private def maybePromptForImport(path: AbsolutePath): Unit = {
-    buildServerPromise.future.andThen { _ =>
-      if (
-        focusedDocument
-          .contains(path)
-        && path.isScala
-        && buildTargets
-          .inverseSources(path)
-          .isEmpty
-      ) {
-        incrementalImporter.promptForImport(path)
-      }
-    }
-  }
-
   override def didOpen(
       params: DidOpenTextDocumentParams
   ): CompletableFuture[Unit] = {
@@ -837,7 +824,7 @@ abstract class MetalsLspService(
     compilers
       .didFocus(path)
       .map(diagnostics.publishDiagnosticsNotAdjusted(path, _))
-    maybePromptForImport(path)
+    incrementalImporter.maybePromptForImport(path)
 
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.

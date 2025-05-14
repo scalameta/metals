@@ -56,6 +56,7 @@ class ConnectionProvider(
     bspStatus: bsp.ConnectionBspStatus,
     mainBuildTargetsData: TargetData,
     indexProviders: IndexProviders,
+    incrementalImporter: IncrementalImporter,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Indexer(indexProviders)
     with Cancelable {
@@ -385,10 +386,11 @@ class ConnectionProvider(
     private def importBuildAndIndex(
         session: BspSession
     ): Future[BuildChange] = {
+      incrementalImporter.signalImportBuildStarted()
       val importedBuilds0 = timerProvider.timed("Imported build") {
         session.importBuilds()
       }
-      for {
+      val buildChangeFut = for {
         bspBuilds <- workDoneProgress.trackFuture(
           Messages.importingBuild,
           importedBuilds0,
@@ -405,6 +407,9 @@ class ConnectionProvider(
         _ = compilers.cancel()
         buildChange <- index(check)
       } yield buildChange
+      buildChangeFut.andThen { case _ =>
+        incrementalImporter.signalImportBuildFinished()
+      }
     }
 
     private def saveProjectReferencesInfo(
