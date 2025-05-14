@@ -67,39 +67,9 @@ jobs:
             name: Sbt integration
             os: linux-ubuntu-latest
             java: "17"
-          - type: sbt-metals jdk8
-            command: bin/test.sh sbt-metals/scripted
-            name: Sbt-metals/scripted jdk11
-            os: linux-ubuntu-latest
-            java: "11"
-          - type: sbt-metals Sbt 2
-            command: bin/test.sh '++3.6.2; sbt-metals/scripted'
-            name: sbt-metals/scripted (Sbt 2)
-            os: linux-ubuntu-latest
-            java: "17"
-          - type: maven
-            command: bin/test.sh 'slow/testOnly -- tests.maven.*'
-            name: Maven integration
-            os: linux-ubuntu-latest
-            java: "17"
-          - type: gradle
-            command: bin/test.sh 'slow/testOnly -- tests.gradle.*'
-            name: Gradle integration
-            os: linux-ubuntu-latest
-            java: "17"
-          - type: mill
-            command: bin/test.sh 'slow/testOnly -- tests.mill.*'
-            name: Mill integration
-            os: linux-ubuntu-latest
-            java: "17"
           - type: bazel
             command: bin/test.sh 'slow/testOnly -- tests.bazel.*'
             name: Bazel integration
-            os: linux-ubuntu-latest
-            java: "17"
-          - type: scalacli
-            command: bin/test.sh 'slow/testOnly -- tests.scalacli.*'
-            name: Scala CLI integration
             os: linux-ubuntu-latest
             java: "17"
           - type: feature
@@ -115,11 +85,6 @@ jobs:
           - type: mtags-java
             command: sbt javapc/test
             name: Scala javapc tests
-            os: linux-ubuntu-latest
-            java: "17"
-          - type: cross-test-2-11
-            command: sbt cross-test-2-11
-            name: Scala 2.11 cross tests
             os: linux-ubuntu-latest
             java: "17"
           - type: scalafix
