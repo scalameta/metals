@@ -91,7 +91,10 @@ class ProjectMetalsLspService(
   override def indexer: Indexer = connectionProvider
   def buildServerPromise = connectionProvider.buildServerPromise
   def connect[T](config: ConnectRequest): Future[BuildChange] =
-    connectionProvider.Connect.connect(config)
+    workDoneProgress.trackFuture(
+      "Expanding working set",
+      connectionProvider.Connect.connect(config),
+    )
 
   override val fileWatcher: ProjectFileWatcher = register(
     new ProjectFileWatcher(

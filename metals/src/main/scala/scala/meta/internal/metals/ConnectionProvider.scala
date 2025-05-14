@@ -126,12 +126,15 @@ class ConnectionProvider(
 
   def fullConnect(): Future[Unit] = {
     buildTools.initialize()
-    for {
-      _ <-
-        if (buildTools.isAutoConnectable(buildToolProvider.optProjectRoot))
-          connect(CreateSession())
-        else slowConnectToBuildServer(forceImport = false)
-    } yield buildServerPromise.trySuccess(())
+    workDoneProgress.trackFuture(
+      "Initializing build server",
+      for {
+        _ <-
+          if (buildTools.isAutoConnectable(buildToolProvider.optProjectRoot))
+            connect(CreateSession())
+          else slowConnectToBuildServer(forceImport = false)
+      } yield buildServerPromise.trySuccess(()),
+    )
   }
 
   def slowConnectToBuildServer(
