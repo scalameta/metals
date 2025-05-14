@@ -65,6 +65,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.{Position => LspPosition}
 import org.eclipse.lsp4j.{Range => LspRange}
 import org.eclipse.lsp4j.{debug => d}
+import org.eclipse.lsp4j.DiagnosticSeverity
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -260,15 +261,39 @@ class Compilers(
           AdjustedLspData.default,
         )
 
+        val (prependedLinesSize, modifiedText) = Option
+          .when(path.isSbt)(
+            buildTargets
+              .sbtAutoImports(path)
+          )
+          .flatten
+          .fold((0, input.value))(imports =>
+            (
+              imports.size,
+              SbtBuildTool.prependAutoImports(input.value, imports),
+            )
+          )
+
         outlineFilesProvider.didChange(pc.buildTargetId(), path)
 
         for {
           ds <-
             pc
               .didChange(
-                CompilerVirtualFileParams(path.toNIO.toUri(), input.value)
+                CompilerVirtualFileParams(path.toNIO.toUri, modifiedText)
               )
               .asScala
+              .map(diagnosticsList => {
+                diagnosticsList.forEach(diagnostic => {
+                  val range = diagnostic.getRange
+                  val start = range.getStart
+                  val end = range.getEnd
+                  start.setLine(start.getLine - prependedLinesSize)
+                  end.setLine(end.getLine - prependedLinesSize)
+                  diagnostic.setSeverity(DiagnosticSeverity.Error)
+                })
+                diagnosticsList
+              })
         } yield {
           ds.asScala.map(adjust.adjustDiagnostic).toList
 
