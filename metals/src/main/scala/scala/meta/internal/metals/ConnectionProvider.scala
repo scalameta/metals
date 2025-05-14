@@ -469,11 +469,16 @@ class ConnectionProvider(
         case change if !change.isFailed =>
           Future
             .sequence(
-              compilations
-                .compileFiles(buffers.open.toSeq, None)
-                .ignoreValue ::
-                compilers.load(buffers.open.toSeq) ::
-                Nil
+              List(
+                if (userConfig.buildOnFocus) {
+                  compilations
+                    .compileFiles(buffers.open.toSeq, None)
+                    .ignoreValue
+                } else {
+                  Future.successful(())
+                },
+                compilers.load(buffers.open.toSeq),
+              )
             )
             .map(_ => change)
         case other => Future.successful(other)
