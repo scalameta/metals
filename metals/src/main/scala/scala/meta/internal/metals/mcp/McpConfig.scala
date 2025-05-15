@@ -144,7 +144,7 @@ object VSCodeEditor
 object CursorEditor
     extends Editor(
       name = "Cursor",
-      settingsPath = SettingsPath.UserHomeRelative(".cursor/"),
+      settingsPath = SettingsPath.ProjectRelative(".cursor/"),
       configFileName = "mcp.json",
       serverField = "mcpServers",
       urlField = "url",
