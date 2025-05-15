@@ -49,7 +49,7 @@ object McpConfig {
 
     // Add or update the server config
     val serverConfig = new JsonObject()
-    serverConfig.addProperty("url", s"http://localhost:$port/sse")
+    serverConfig.addProperty(editor.urlField, s"http://localhost:$port/sse")
     editor.additionalProperties.foreach { case (key, value) =>
       serverConfig.addProperty(key, value)
     }
@@ -79,18 +79,27 @@ object McpConfig {
       ).toOption
       mcpServers <- config.getObjectOption(editor.serverField)
       serverConfig <- mcpServers.getObjectOption(s"$projectName-metals")
-      url <- serverConfig.getStringOption("url")
+      url <- serverConfig.getStringOption(editor.urlField)
       port <- Try(url.stripSuffix("/sse").split(":").last.toInt).toOption
     } yield port
   }
 
 }
 
+/**
+ * @param name the name of the editor
+ * @param settingsPath the path to the settings file
+ * @param configFileName the name of the config file
+ * @param serverField the name of the field that contains the server configuration
+ * @param urlField the name of the property that contains the URL to the server
+ * @param additionalProperties additional properties to add to the server configuration
+ */
 case class Editor(
     name: String,
     settingsPath: SettingsPath,
     configFileName: String,
     serverField: String,
+    urlField: String,
     additionalProperties: List[(String, String)],
 ) {
   def configFilePath(projectPath: AbsolutePath): AbsolutePath =
@@ -125,6 +134,7 @@ object VSCodeEditor
       settingsPath = SettingsPath.ProjectRelative(".vscode/"),
       configFileName = "mcp.json",
       serverField = "servers",
+      urlField = "url",
       additionalProperties = List(
         "type" -> "sse"
       ),
@@ -137,6 +147,7 @@ object CursorEditor
       settingsPath = SettingsPath.UserHomeRelative(".cursor/"),
       configFileName = "mcp.json",
       serverField = "mcpServers",
+      urlField = "url",
       additionalProperties = Nil,
     )
 
@@ -147,6 +158,7 @@ object WindsurfEditor
       settingsPath = SettingsPath.UserHomeRelative(".codeium/windsurf/"),
       configFileName = "mcp_config.json",
       serverField = "mcpServers",
+      urlField = "serverUrl",
       additionalProperties = Nil,
     )
 
