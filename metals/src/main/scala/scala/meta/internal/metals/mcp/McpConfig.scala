@@ -87,7 +87,7 @@ object McpConfig {
 }
 
 case class Editor(
-    name: String,
+    names: List[String],
     settingsPath: String,
     serverField: String,
     additionalProperties: List[(String, String)],
@@ -95,7 +95,12 @@ case class Editor(
 
 object VSCodeEditor
     extends Editor(
-      name = "Visual Studio Code",
+      names = List(
+        "Visual Studio Code",
+        "Visual Studio Code - Insiders",
+        "VSCodium",
+        "VSCodium - Insiders",
+      ),
       settingsPath = ".vscode/",
       serverField = "servers",
       additionalProperties = List(
@@ -105,7 +110,7 @@ object VSCodeEditor
 
 object CursorEditor
     extends Editor(
-      name = "Cursor",
+      names = List("Cursor"),
       settingsPath = ".cursor/",
       serverField = "mcpServers",
       additionalProperties = Nil,
