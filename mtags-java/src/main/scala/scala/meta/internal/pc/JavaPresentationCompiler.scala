@@ -80,11 +80,6 @@ case class JavaPresentationCompiler(
       )
     )
 
-  def fullyQualifiedName(
-      params: OffsetParams
-  ): CompletableFuture[Optional[String]] =
-    CompletableFuture.completedFuture(Optional.empty())
-
   override def rename(
       params: OffsetParams,
       name: String

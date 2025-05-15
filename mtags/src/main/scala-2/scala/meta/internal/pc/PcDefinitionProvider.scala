@@ -39,30 +39,6 @@ class PcDefinitionProvider(val cp: MetalsGlobal, params: OffsetParams) {
       }
   }
 
-  val pcCollector: WithSymbolSearchCollector[(Tree, Position)] =
-    new WithSymbolSearchCollector[(Tree, Position)](cp, params) {
-      def collect(parent: Option[compiler.Tree])(
-          tree: compiler.Tree,
-          pos: Position,
-          sym: Option[compiler.Symbol]
-      ): (Tree, Position) = (tree.asInstanceOf[Tree], pos)
-    }
-
-  def fullyQualifiedName(): Option[String] = {
-    if (params.offset() == 0) {
-      None
-    } else {
-      val unit = addCompilationUnit(
-        params.text(),
-        params.uri().toString(),
-        None
-      )
-      typeCheck(unit)
-      val pos = unit.position(params.offset())
-      Some(definitionTypedTreeAt(pos).symbol.fullName)
-    }
-  }
-
   /**
    * Handle named parameters, which are lost in typed trees.
    */

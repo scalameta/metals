@@ -59,6 +59,7 @@ import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.search.SymbolHierarchyOps
+import scala.meta.internal.semanticdb.MethodSignature
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.TextDocumentService
@@ -1394,19 +1395,31 @@ abstract class MetalsLspService(
       val path = params.getTextDocument.getUri.toAbsolutePath
       val dialect = scalaVersionSelector.getDialect(path)
       val pos = params.getPosition
-      Mtags
-        .index(path, dialect)
-        .occurrences
-        .filter(_.range.exists(_.encloses(pos)))
-        .map(_.symbol.symbolToFullQualifiedName)
-        .headOption
+      for {
+        doc <- semanticdbs().textDocument(path).documentIncludingStale
+        sym <- definitionProvider
+          .symbolOccurrence(path, pos)
+          .map { case (occ, _) =>
+            occ.symbol
+          }
+          .orElse {
+            Mtags
+              .index(path, dialect)
+              .occurrences
+              .filter(_.range.exists(_.encloses(pos)))
+              .map(_.symbol)
+              .headOption
+          }
+        symbolInfo <- doc.symbols.find(_.symbol == sym)
+        sig = symbolInfo.signature
+      } yield {
+        sig match {
+          case MethodSignature(typeParameters, parameterLists, returnType) =>
+            sym.symbolToFullyQualifiedName
+          case _ => sym.symbolToFullyQualifiedName
+        }
+      }
     }.asJavaObject
-    // TODO(kπ) for methods with overloads, we need types of arguments, so need to call pc
-    // CancelTokens.future { token =>
-    //   compilers
-    //     .fqn(params, token)
-    //     .map(_.orNull)
-    // }
   }
 
   def analyzeStackTrace(content: String): Option[ExecuteCommandParams] =
