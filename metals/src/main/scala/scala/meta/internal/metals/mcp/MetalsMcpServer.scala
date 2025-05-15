@@ -333,7 +333,9 @@ class MetalsMcpServer(
         val optPath = arguments
           .getOptAs[String]("testFile")
           .map(path => AbsolutePath(Path.of(path))(projectPath))
-        val printOnlyErrorsAndSummary = arguments.getAs[Boolean]("verbose")
+        val printOnlyErrorsAndSummary = arguments
+          .getOptAs[Boolean]("verbose")
+          .getOrElse(false)
         val result = mcpTestRunner.runTests(
           testClass,
           optPath,
