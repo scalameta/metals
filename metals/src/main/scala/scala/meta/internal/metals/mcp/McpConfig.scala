@@ -22,7 +22,7 @@ object McpConfig {
       projectPath: AbsolutePath,
       editor: Editor = CursorEditor,
   ): Unit = {
-    val configFile = projectPath.resolve(s"${editor.settingsPath}mcp.json")
+    val configFile = editor.configFilePath(projectPath)
 
     // Read existing config if it exists
     val config = if (configFile.exists) configFile.readText else "{ }"
@@ -62,7 +62,7 @@ object McpConfig {
       projectName: String,
       editor: Editor,
   ): Option[Int] = {
-    val configFile = projectPath.resolve(s"${editor.settingsPath}mcp.json")
+    val configFile = editor.configFilePath(projectPath)
     if (configFile.exists)
       getPort(configFile.readText, projectName, editor)
     else None
@@ -88,29 +88,69 @@ object McpConfig {
 
 case class Editor(
     name: String,
-    settingsPath: String,
+    settingsPath: SettingsPath,
+    configFileName: String,
     serverField: String,
     additionalProperties: List[(String, String)],
-)
+) {
+  def configFilePath(projectPath: AbsolutePath): AbsolutePath =
+    settingsPath.resolve(projectPath, path = configFileName)
+}
+
+sealed trait SettingsPath {
+
+  /** Resolves the path to the settings file. */
+  def resolve(projectPath: AbsolutePath, path: String): AbsolutePath =
+    this match {
+      case SettingsPath.ProjectRelative(settingsPath) =>
+        projectPath.resolve(settingsPath).resolve(path)
+
+      case SettingsPath.UserHomeRelative(settingsPath) =>
+        val home = AbsolutePath(System.getProperty("user.home"))
+        home.resolve(settingsPath).resolve(path)
+    }
+}
+object SettingsPath {
+
+  /** Relative to the project root */
+  case class ProjectRelative(path: String) extends SettingsPath
+
+  /** Relative to the user home */
+  case class UserHomeRelative(path: String) extends SettingsPath
+}
 
 object VSCodeEditor
     extends Editor(
       name = "Visual Studio Code",
-      settingsPath = ".vscode/",
+      settingsPath = SettingsPath.ProjectRelative(".vscode/"),
+      configFileName = "mcp.json",
       serverField = "servers",
       additionalProperties = List(
         "type" -> "sse"
       ),
     )
 
+/** https://www.cursor.com/ */
 object CursorEditor
     extends Editor(
       name = "Cursor",
-      settingsPath = ".cursor/",
+      settingsPath = SettingsPath.UserHomeRelative(".cursor/"),
+      configFileName = "mcp.json",
+      serverField = "mcpServers",
+      additionalProperties = Nil,
+    )
+
+/** https://windsurf.com/ */
+object WindsurfEditor
+    extends Editor(
+      name = "Windsurf",
+      settingsPath = SettingsPath.UserHomeRelative(".codeium/windsurf/"),
+      configFileName = "mcp_config.json",
       serverField = "mcpServers",
       additionalProperties = Nil,
     )
 
 object Editor {
-  val allEditors: List[Editor] = List(VSCodeEditor, CursorEditor)
+  val allEditors: List[Editor] =
+    List(VSCodeEditor, CursorEditor, WindsurfEditor)
 }
