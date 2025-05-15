@@ -838,7 +838,10 @@ class MetalsGlobal(
           qualifier.pos
         case _ =>
           val start = sel.pos.point
-          val end = start + sel.name.getterName.decoded.trim.length()
+          val decoded = sel.name.getterName.decoded.trim
+          val hasBackticks = sel.pos.source.content.lift(start).contains('`')
+          val backtickLen = if (hasBackticks) 2 else 0
+          val end = start + decoded.length() + backtickLen
           Position.range(sel.pos.source, start, start, end)
       }
     }
