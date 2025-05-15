@@ -176,7 +176,7 @@ class MetalsMcpServer(
     val deployment = manager.addDeployment(servletDeployment)
     deployment.deploy()
 
-    val editor = Editor.allEditors.find(_.name == editorName)
+    val editor = Editor.allEditors.find(_.names.contains(editorName))
     val configPort =
       editor.flatMap(e => McpConfig.readPort(projectPath, projectName, e))
     val undertowServer = Undertow
