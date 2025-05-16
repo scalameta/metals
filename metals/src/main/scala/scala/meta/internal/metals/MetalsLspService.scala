@@ -818,10 +818,18 @@ abstract class MetalsLspService(
       case Some(change) =>
         val path = params.getTextDocument.getUri.toAbsolutePath
         buffers.put(path, change.getText)
-        diagnostics.didChange(path)
-        compilers.didChange(path)
+        val didChangeDiagnostics = compilers.didChange(path)
+        val result = didChangeDiagnostics.map(r =>
+          diagnostics.onPublishDiagnostics(
+            path,
+            r,
+            isReset = true,
+            useFreshDiagnostics = false,
+          )
+        )
         referencesProvider.didChange(path, change.getText)
         parseTrees(path).asJava
+        result.asJavaUnit
     }
   }
 

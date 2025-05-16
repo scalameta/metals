@@ -8,6 +8,7 @@ import scala.tools.nsc.reporters.StoreReporter
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.OutlineFiles
 import scala.meta.pc.VirtualFileParams
+import scala.tools.nsc.Settings
 
 trait Compat { this: MetalsGlobal =>
   def metalsFunctionArgTypes(tpe: Type): List[Type] =
@@ -20,6 +21,8 @@ trait Compat { this: MetalsGlobal =>
       case s: StoreReporter => Some(s)
       case _ => None
     }
+  def storeReporterConstructor(settings: Settings): StoreReporter =
+    new StoreReporter(settings)
 
   def isAliasCompletion(m: Member): Boolean = m match {
     case tm: TypeMember => tm.aliasInfo.nonEmpty

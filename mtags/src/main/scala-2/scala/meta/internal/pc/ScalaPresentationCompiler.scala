@@ -45,15 +45,20 @@ import scala.meta.pc.reports.EmptyReportContext
 import scala.meta.pc.reports.ReportContext
 import scala.meta.pc.{PcSymbolInformation => IPcSymbolInformation}
 
-import org.eclipse.lsp4j.CompletionItem
-import org.eclipse.lsp4j.CompletionList
-import org.eclipse.lsp4j.Diagnostic
-import org.eclipse.lsp4j.DocumentHighlight
-import org.eclipse.lsp4j.InlayHint
-import org.eclipse.lsp4j.Range
-import org.eclipse.lsp4j.SelectionRange
-import org.eclipse.lsp4j.SignatureHelp
-import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.{
+  CompletionItem,
+  CompletionList,
+  Diagnostic,
+  DocumentHighlight,
+  InlayHint,
+  Position,
+  Range,
+  SelectionRange,
+  SignatureHelp,
+  TextEdit
+}
+
+import scala.reflect.internal.util.RangePosition
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -168,10 +173,51 @@ case class ScalaPresentationCompiler(
     )
   }
 
+  private def collectDiagnosticsPC(
+      pc: CompilerWrapper[StoreReporter, MetalsGlobal],
+      params: VirtualFileParams
+  ): ju.List[Diagnostic] = {
+    val unit = new TypeCheckCompilationUnit(pc.compiler(params), params)
+    val infos = unit.getInfos
+    infos
+      .flatMap(info =>
+        info.pos match {
+          case range: RangePosition =>
+            val source = range.source
+
+            val lineStart = source.offsetToLine(range.start)
+            val characterStart = range.start - source.lineToOffset(lineStart)
+
+            val lineEnd = source.offsetToLine(range.end)
+            val characterEnd = range.end - source.lineToOffset(lineEnd)
+
+            Some(
+              new Diagnostic(
+                new Range(
+                  new Position(lineStart, characterStart),
+                  new Position(lineEnd, characterEnd)
+                ),
+                info.msg
+              )
+            )
+          case _ => None
+        }
+      )
+      .toList
+      .asJava
+  }
+
   override def didChange(
       params: VirtualFileParams
   ): CompletableFuture[ju.List[Diagnostic]] = {
-    CompletableFuture.completedFuture(Nil.asJava)
+    if (params.uri().toAbsolutePath.isSbt) {
+      compilerAccess.withNonInterruptableCompiler(
+        List.empty[Diagnostic].asJava,
+        params.token
+      )(collectDiagnosticsPC(_, params))(params.toQueryContext)
+    } else {
+      CompletableFuture.completedFuture(List.empty.asJava)
+    }
   }
 
   def didClose(uri: URI): Unit = {
