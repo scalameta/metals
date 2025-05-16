@@ -177,6 +177,9 @@ class MetalsMcpServer(
     deployment.deploy()
 
     val editor = Editor.allEditors.find(_.names.contains(editorName))
+    scribe.info(
+      s"Metals MCP server detected editor: ${editor.map(_.displayName)}."
+    )
     val configPort =
       editor.flatMap(e => McpConfig.readPort(projectPath, projectName, e))
     val undertowServer = Undertow
