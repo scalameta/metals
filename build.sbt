@@ -269,7 +269,7 @@ lazy val mtagsShared = project
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "4.30.2",
+      "com.google.protobuf" % "protobuf-java" % "4.31.0",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
@@ -461,7 +461,7 @@ lazy val metals = project
       // For test frameworks
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       // For MCP
-      "io.modelcontextprotocol.sdk" % "mcp" % "0.9.0",
+      "io.modelcontextprotocol.sdk" % "mcp" % "0.10.0",
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.19.0",
       "io.undertow" % "undertow-servlet" % "2.3.12.Final",
     ),
