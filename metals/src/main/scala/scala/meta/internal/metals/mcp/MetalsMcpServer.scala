@@ -259,13 +259,10 @@ class MetalsMcpServer(
         compilations
           .cascadeCompile(buildTargets.allBuildTargetIds)
           .map { _ =>
-            val content = diagnostics.allDiagnostics
-              .map { case (path, diag) =>
-                val startLine = diag.getRange().getStart().getLine()
-                val endLine = diag.getRange().getEnd().getLine()
-                s"${path.toRelative(projectPath)} ($startLine-$endLine): ${diag.getMessage()}"
-              }
-              .mkString("\n")
+            val errors = diagnostics.allDiagnostics.show(projectPath)
+            val content =
+              if (errors.isEmpty) "Compilation successful."
+              else s"Compilation failed with errors:\n$errors"
             new CallToolResult(createContent(content), false)
           }
           .toMono
@@ -292,15 +289,46 @@ class MetalsMcpServer(
           .compileFile(path)
           .map {
             case Some(_) =>
-              val result = diagnostics
-                .forFile(path)
-                .map { d =>
-                  val startLine = d.getRange().getStart().getLine()
-                  val endLine = d.getRange().getEnd().getLine()
-                  s"($startLine-$endLine):\n${d.getMessage()}"
+              lazy val buildTarget = buildTargets.inverseSources(path)
+
+              def inFileErrors = {
+                val errors = diagnostics.forFile(path).show()
+                if (errors.isEmpty) None else Some(s"Errors in file:\n$errors")
+              }
+
+              def inModuleErrors =
+                for {
+                  bt <- buildTarget
+                  if diagnostics.hasCompilationErrors(bt)
+                } yield {
+                  val errors =
+                    diagnostics.allDiagnostics.filter { case (path, _) =>
+                      buildTargets.inverseSources(path).contains(bt)
+                    }
+                  s"Compile errors in the module:\n${errors.show(projectPath)}"
                 }
-                .mkString("\n")
-              new CallToolResult(createContent(result), false)
+
+              def inUpstreamModulesErrors =
+                for {
+                  bt <- buildTarget
+                  upstreamModules = diagnostics
+                    .upstreamTargetsWithCompilationErrors(bt)
+                  if upstreamModules.nonEmpty
+                } yield {
+                  val modules = upstreamModules
+                    .flatMap(buildTargets.jvmTarget)
+                    .map(_.displayName)
+                    .mkString("\n", "\n", "")
+                  s"Compile errors in upstream modules: $modules"
+                }
+
+              val content = inFileErrors
+                .orElse(inModuleErrors)
+                .orElse(inUpstreamModulesErrors)
+                .getOrElse("Compilation successful.")
+
+              new CallToolResult(createContent(content), false)
+
             case None =>
               new CallToolResult(
                 createContent(
