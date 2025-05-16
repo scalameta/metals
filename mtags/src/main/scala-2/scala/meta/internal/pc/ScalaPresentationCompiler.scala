@@ -26,6 +26,7 @@ import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.AutoImportsResult
+import scala.meta.pc.CancelToken
 import scala.meta.pc.CodeActionId
 import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.DefinitionResult
@@ -403,13 +404,18 @@ case class ScalaPresentationCompiler(
   // which can close open `*-sources.jar` files containing Scaladoc/Javadoc strings.
   override def completionItemResolve(
       item: CompletionItem,
+      symbol: String,
+      token: CancelToken
+  ): CompletableFuture[CompletionItem] =
+    compilerAccess.withInterruptableCompiler(item, token) { pc =>
+      new CompletionItemResolver(pc.compiler()).resolve(item, symbol)
+    }(emptyQueryContext)
+
+  override def completionItemResolve(
+      item: CompletionItem,
       symbol: String
   ): CompletableFuture[CompletionItem] =
-    CompletableFuture.completedFuture {
-      compilerAccess.withSharedCompiler(item) { pc =>
-        new CompletionItemResolver(pc.compiler()).resolve(item, symbol)
-      }(emptyQueryContext)
-    }
+    completionItemResolve(item, symbol, EmptyCancelToken)
 
   override def signatureHelp(
       params: OffsetParams
@@ -558,19 +564,18 @@ case class ScalaPresentationCompiler(
   override def selectionRange(
       params: ju.List[OffsetParams]
   ): CompletableFuture[ju.List[SelectionRange]] = {
-    CompletableFuture.completedFuture {
-      compilerAccess.withSharedCompiler(
-        List.empty[SelectionRange].asJava
-      ) { pc =>
-        new SelectionRangeProvider(pc.compiler(), params)
-          .selectionRange()
-          .asJava
-      }(
-        params.asScala.headOption
-          .map(_.toQueryContext)
-          .getOrElse(emptyQueryContext)
-      )
-    }
+    compilerAccess.withInterruptableCompiler(
+      List.empty[SelectionRange].asJava,
+      params.asScala.headOption.map(_.token).getOrElse(EmptyCancelToken)
+    ) { pc =>
+      new SelectionRangeProvider(pc.compiler(), params)
+        .selectionRange()
+        .asJava
+    }(
+      params.asScala.headOption
+        .map(_.toQueryContext)
+        .getOrElse(emptyQueryContext)
+    )
   }
 
   override def buildTargetId(): String = buildTargetIdentifier

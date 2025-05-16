@@ -14,6 +14,7 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.jdk.CollectionConverters._
 
 import scala.meta.pc.AutoImportsResult
+import scala.meta.pc.CancelToken
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.InlayHintsParams
@@ -62,6 +63,12 @@ case class JavaPresentationCompiler(
   override def completionItemResolve(
       item: CompletionItem,
       symbol: String
+  ): CompletableFuture[CompletionItem] = CompletableFuture.completedFuture(item)
+
+  override def completionItemResolve(
+      item: CompletionItem,
+      symbol: String,
+      token: CancelToken
   ): CompletableFuture[CompletionItem] = CompletableFuture.completedFuture(item)
 
   override def signatureHelp(

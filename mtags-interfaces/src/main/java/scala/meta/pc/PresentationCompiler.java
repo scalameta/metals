@@ -65,6 +65,17 @@ public abstract class PresentationCompiler {
 	 */
 	public abstract CompletableFuture<CompletionItem> completionItemResolve(CompletionItem item, String symbol);
 
+
+	/**
+	 * Returns a fully resolved completion item with defined fields such as
+	 * `documentation` and `details` populated.
+	 *
+	 * @implNote does not support cancellation.
+	 */
+	public CompletableFuture<CompletionItem> completionItemResolve(CompletionItem item, String symbol, CancelToken token) {
+		return completionItemResolve(item, symbol);
+	}
+
 	/**
 	 * Returns the parameter hints at the given source position.
 	 *

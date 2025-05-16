@@ -312,12 +312,13 @@ class Compilers(
   }
 
   def completionItemResolve(
-      item: CompletionItem
+      item: CompletionItem,
+      token: CancelToken,
   ): Future[CompletionItem] = {
     for {
       data <- item.data
       compiler <- buildTargetPCFromCache(new BuildTargetIdentifier(data.target))
-    } yield compiler.completionItemResolve(item, data.symbol).asScala
+    } yield compiler.completionItemResolve(item, data.symbol, token).asScala
   }.getOrElse(Future.successful(item))
 
   /**

@@ -139,7 +139,7 @@ abstract class CompilerAccess[Reporter, Compiler](
    *
    * May potentially run in parallel with other requests, use carefully.
    */
-  def withSharedCompiler[T](
+  private def withSharedCompiler[T](
       default: T
   )(
       thunk: CompilerWrapper[Reporter, Compiler] => T

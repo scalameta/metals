@@ -1131,9 +1131,9 @@ abstract class MetalsLspService(
   override def completionItemResolve(
       item: CompletionItem
   ): CompletableFuture[CompletionItem] =
-    CancelTokens.future { _ =>
+    CancelTokens.future { token =>
       if (clientConfig.isCompletionItemResolve) {
-        compilers.completionItemResolve(item)
+        compilers.completionItemResolve(item, token)
       } else {
         Future.successful(item)
       }
