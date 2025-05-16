@@ -293,4 +293,16 @@ class SelectionRangeSuite extends BaseSelectionRangeSuite {
       """object >>region>>`Foo Bar Baz`<<region<< extends SomeTrait"""
     )
   )
+
+  check(
+    "select - backticked",
+    """
+    object Main extends App { def foo = Other.`foo ba@@r` }
+    """.stripMargin,
+    List(
+      """object Main extends App { def foo = Other.>>region>>`foo bar`<<region<< }""",
+      """object Main extends App { def foo = >>region>>Other.`foo bar`<<region<< }""",
+      """object Main extends App { >>region>>def foo = Other.`foo bar`<<region<< }"""
+    )
+  )
 }
