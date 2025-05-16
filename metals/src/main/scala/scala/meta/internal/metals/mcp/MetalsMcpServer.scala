@@ -176,8 +176,10 @@ class MetalsMcpServer(
     val deployment = manager.addDeployment(servletDeployment)
     deployment.deploy()
 
-    val editor = Editor.allEditors.find(_.name == editorName)
-    scribe.info(s"Metals MCP server detected editor: ${editor.map(_.name)}.")
+    val editor = Editor.allEditors.find(_.names.contains(editorName))
+    scribe.info(
+      s"Metals MCP server detected editor: ${editor.map(_.displayName)}."
+    )
     val configPort =
       editor.flatMap(e => McpConfig.readPort(projectPath, projectName, e))
     val undertowServer = Undertow
@@ -334,7 +336,9 @@ class MetalsMcpServer(
         val optPath = arguments
           .getOptAs[String]("testFile")
           .map(path => AbsolutePath(Path.of(path))(projectPath))
-        val printOnlyErrorsAndSummary = arguments.getAs[Boolean]("verbose")
+        val printOnlyErrorsAndSummary = arguments
+          .getOptAs[Boolean]("verbose")
+          .getOrElse(false)
         val result = mcpTestRunner.runTests(
           testClass,
           optPath,

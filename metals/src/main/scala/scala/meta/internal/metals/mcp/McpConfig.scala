@@ -87,7 +87,8 @@ object McpConfig {
 }
 
 /**
- * @param name the name of the editor
+ * @param displayName the name of the editor to display in logs
+ * @param names the names of the editor
  * @param settingsPath the path to the settings file
  * @param configFileName the name of the config file
  * @param serverField the name of the field that contains the server configuration
@@ -95,7 +96,8 @@ object McpConfig {
  * @param additionalProperties additional properties to add to the server configuration
  */
 case class Editor(
-    name: String,
+    displayName: String,
+    names: List[String],
     settingsPath: SettingsPath,
     configFileName: String,
     serverField: String,
@@ -130,7 +132,13 @@ object SettingsPath {
 
 object VSCodeEditor
     extends Editor(
-      name = "Visual Studio Code",
+      displayName = "Visual Studio Code",
+      names = List(
+        "Visual Studio Code",
+        "Visual Studio Code - Insiders",
+        "VSCodium",
+        "VSCodium - Insiders",
+      ),
       settingsPath = SettingsPath.ProjectRelative(".vscode/"),
       configFileName = "mcp.json",
       serverField = "servers",
@@ -143,7 +151,8 @@ object VSCodeEditor
 /** https://www.cursor.com/ */
 object CursorEditor
     extends Editor(
-      name = "Cursor",
+      displayName = "Cursor",
+      names = List("Cursor"),
       settingsPath = SettingsPath.ProjectRelative(".cursor/"),
       configFileName = "mcp.json",
       serverField = "mcpServers",
@@ -154,7 +163,8 @@ object CursorEditor
 /** https://windsurf.com/ */
 object WindsurfEditor
     extends Editor(
-      name = "Windsurf",
+      displayName = "Windsurf",
+      names = List("Windsurf"),
       settingsPath = SettingsPath.UserHomeRelative(".codeium/windsurf/"),
       configFileName = "mcp_config.json",
       serverField = "mcpServers",
