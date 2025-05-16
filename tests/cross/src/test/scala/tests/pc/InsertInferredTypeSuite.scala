@@ -635,6 +635,39 @@ class InsertInferredTypeSuite extends BaseCodeActionSuite {
   )
 
   checkEdit(
+    "backticks-4",
+    """|object O{
+       |  def <<`bar baz`>> = 42
+       |}""".stripMargin,
+    """|object O{
+       |  def `bar baz`: Int = 42
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "backticks-5",
+    """|object O{
+       |  val <<`bar baz`>> = 42
+       |}""".stripMargin,
+    """|object O{
+       |  val `bar baz`: Int = 42
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "backticks-6",
+    """|object O{
+       |  List(1, 2).map(<<`foo bar`>> => `foo bar` + 1)
+       |}""".stripMargin,
+    """|object O{
+       |  List(1, 2).map((`foo bar`: Int) => `foo bar` + 1)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
     "literal-types1".tag(IgnoreScalaVersion.forLessThan("2.13.0")),
     """|object O {
        |  val a: Some[1] = Some(1)

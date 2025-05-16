@@ -73,13 +73,6 @@ final class InferredTypeProvider(
     def prettyType(tpe: Type) =
       metalsToLongString(tpe.widen.finalResultType, history)
 
-    def findNameEnd(start: Int, name: Name): Int = {
-      // dropLocal will remove a space that might appear at the of a name in some places
-      val identLength = name.dropLocal.length
-      val backtickInc = if (params.text().charAt(start) == '`') 2 else 0
-      start + identLength + backtickInc
-    }
-
     def removeType(nameEnd: Int, tptEnd: Int) = {
       sourceText.substring(0, nameEnd) +
         sourceText.substring(tptEnd + 1, sourceText.length())
@@ -113,8 +106,7 @@ final class InferredTypeProvider(
        */
       case vl @ ValDef(_, name, tpt, rhs)
           if !vl.symbol.isParameter && tpt.pos.isDefined =>
-        val nameEnd = findNameEnd(tpt.pos.start, name)
-        val nameEndPos = tpt.pos.withEnd(nameEnd).withStart(nameEnd).toLsp
+        val nameEndPos = vl.namePosition.focusEnd.toLsp
         adjustOpt.foreach(adjust => nameEndPos.setEnd(adjust.adjustedEndPos))
         lazy val typeNameEdit =
           new TextEdit(nameEndPos, ": " + prettyType(tpt.tpe))
@@ -129,10 +121,9 @@ final class InferredTypeProvider(
        */
       case vl @ ValDef(_, name, tpt, _)
           if vl.symbol.isParameter && tpt.pos.isDefined =>
-        val nameEnd = findNameEnd(vl.pos.start, name)
-        val namePos = tpt.pos.withEnd(nameEnd).withStart(nameEnd).toLsp
+        val namePos = vl.namePosition.focusEnd.toLsp
 
-        def leftParenStart = vl.pos.withEnd(vl.pos.start).toLsp
+        def leftParenStart = vl.pos.focusStart.toLsp
         def leftParenEdit = new TextEdit(leftParenStart, "(")
 
         def needsParens = lastVisitedParentTrees match {
@@ -172,7 +163,7 @@ final class InferredTypeProvider(
        * `def a[T](param : Int): Int = param`
        */
       case df @ DefDef(_, name, _, _, tpt, rhs) =>
-        val nameEnd = findNameEnd(df.namePosition.start, name)
+        val nameEnd = df.namePosition.end
 
         // search for `)` or `]` or defaut to name's end to insert type
         val lastParamOffset =
@@ -207,8 +198,7 @@ final class InferredTypeProvider(
         def openingParenPos = body.pos.withEnd(body.pos.start)
         def openingParen = new TextEdit(openingParenPos.toLsp, "(")
 
-        val insertStart = findNameEnd(bind.pos.start, name)
-        val insertPos = bind.pos.withEnd(insertStart).withStart(insertStart)
+        val insertPos = bind.namePosition.focusEnd
 
         /* In case it's an infix pattern match
          * we need to add () for example in:
