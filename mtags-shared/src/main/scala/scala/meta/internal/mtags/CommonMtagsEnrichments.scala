@@ -436,7 +436,7 @@ trait CommonMtagsEnrichments {
     def fqcn: String =
       symbol
         .stripPrefix("_empty_/")
-        .replaceAll("[#/$]|(`<init>`)?\\((\\+[0-9]+)?\\)\\.", ".")
+        .replaceAll("\\/package\\.|[#/$]|(`<init>`)?\\((\\+[0-9]+)?\\)\\.", ".")
         .stripSuffix(".")
   }
 
