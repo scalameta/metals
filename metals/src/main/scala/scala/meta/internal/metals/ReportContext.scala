@@ -9,7 +9,6 @@ import java.util.Optional
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Supplier
-import java.util.logging.Logger
 
 import scala.util.Try
 import scala.util.control.NonFatal
@@ -46,6 +45,7 @@ class StdReportContext(
     workspace: Path,
     resolveBuildTarget: Option[URI] => Option[String],
     level: ReportLevel = ReportLevel.Info,
+    reportTrackers: List[ReportTracker] = Nil,
 ) extends ReportContext {
   val reportsDir: Path = workspace.resolve(StdReportContext.reportsDir)
 
@@ -56,6 +56,7 @@ class StdReportContext(
       resolveBuildTarget,
       level,
       "metals-full",
+      reportTrackers,
     )
   val incognito: StdReporter =
     new StdReporter(
@@ -64,6 +65,7 @@ class StdReportContext(
       resolveBuildTarget,
       level,
       "metals",
+      reportTrackers,
     )
   val bloop: StdReporter =
     new StdReporter(
@@ -72,6 +74,7 @@ class StdReportContext(
       resolveBuildTarget,
       level,
       "bloop",
+      reportTrackers,
     )
 
   override def cleanUpOldReports(
@@ -93,9 +96,8 @@ class StdReporter(
     resolveBuildTarget: Option[URI] => Option[String],
     level: ReportLevel,
     override val name: String,
+    reportTrackers: List[ReportTracker],
 ) extends Reporter {
-
-  private val logger = Logger.getLogger(classOf[ReportContext].getName)
 
   val maybeReportsDir: Path =
     workspace.resolve(pathToReports).resolve(name)
@@ -160,13 +162,14 @@ class StdReporter(
           path.writeText(
             sanitize(report.fullText( /* withIdAndSummary = */ true))
           )
+          scribe.info(s"Created report: ${report.path()}")
+          reportTrackers.foreach(_.reportCreated(report))
           path
         }
-        if (!ifVerbose) {
-          logger.warning(
-            s"${report.shortSummary()} (full report at: $pathToReport)"
+        if (!ifVerbose)
+          scribe.info(
+            s"${report.shortSummary()} (full report at: \"$pathToReport\")"
           )
-        }
         pathToReport
       }.toOption.asJava
 
@@ -239,6 +242,10 @@ object EmptyReportContext extends ReportContext {
   override def incognito: Reporter = EmptyReporter
 
   override def bloop: Reporter = EmptyReporter
+}
+
+trait ReportTracker {
+  def reportCreated(report: jreports.Report): Unit
 }
 
 object ReportFileName {

@@ -13,6 +13,7 @@ abstract class Icons {
   def github: String
   def error: String
   def link: String
+  def zombies: String
   final def all: List[String] =
     List(
       rocket,
@@ -25,6 +26,7 @@ abstract class Icons {
       github,
       error,
       link,
+      zombies,
     )
 }
 object Icons {
@@ -56,6 +58,7 @@ object Icons {
     override def rightArrow: String = "⇒"
     override def ellipsis: String = "…"
     override def link: String = "🔗"
+    override def zombies: String = "🧟"
   }
   case object none extends Icons {
     override def rocket: String = ""
@@ -70,6 +73,7 @@ object Icons {
     override def rightArrow: String = "=>"
     override def ellipsis: String = "..."
     override def link: String = ""
+    override def zombies: String = ""
   }
   // icons for vscode can be found here("Icons in Labels"):
   // https://code.visualstudio.com/api/references/icons-in-labels
@@ -86,6 +90,7 @@ object Icons {
     override def rightArrow: String = "⇒"
     override def ellipsis: String = "…"
     override def link: String = "$(link)"
+    override def zombies: String = "$(organization)"
   }
   case object atom extends Icons {
     private def span(id: String) = s"<span class='icon icon-$id'></span> "
@@ -101,5 +106,7 @@ object Icons {
     override def rightArrow: String = "⇒"
     override def ellipsis: String = "…"
     override def link: String = span("link")
+
+    override def zombies: String = error
   }
 }

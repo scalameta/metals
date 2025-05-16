@@ -9,6 +9,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.StatusBarConfig
+import scala.meta.internal.metals.clients.language.StatusType
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
@@ -229,7 +230,7 @@ class MillServerSuite
 
   test("call pc before initial compilation") {
     cleanWorkspace()
-    client.statusParams.clear()
+    client.getStatusParams(StatusType.metals).clear()
     val compileTaskFinished = Promise[Unit]()
     client.onMetalsStatus = { params =>
       if (params.text.contains("Compiled")) compileTaskFinished.success(())

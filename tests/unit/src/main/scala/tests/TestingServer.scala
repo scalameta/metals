@@ -60,6 +60,7 @@ import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.clients.language.StatusType
 import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.findfiles._
@@ -192,7 +193,7 @@ final case class TestingServer(
     // collect both published items in the client and pending items from the server.
     val all = List(
       fullServer.statusBar.pendingItems,
-      client.statusParams.asScala.map(_.text),
+      client.getStatusParams(StatusType.metals).asScala.map(_.text),
     ).flatten
     all.distinct.mkString("\n")
   }

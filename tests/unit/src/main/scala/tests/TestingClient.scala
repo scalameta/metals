@@ -30,6 +30,7 @@ import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.clients.language.RawMetalsInputBoxResult
 import scala.meta.internal.metals.clients.language.RawMetalsQuickPickResult
+import scala.meta.internal.metals.clients.language.StatusType
 import scala.meta.internal.tvp.TreeViewDidChangeParams
 import scala.meta.io.AbsolutePath
 
@@ -102,7 +103,20 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     TrieMap.empty[AbsolutePath, AtomicInteger]
   val messageRequests = new ConcurrentLinkedDeque[String]()
   val showMessages = new ConcurrentLinkedQueue[MessageParams]()
-  val statusParams = new ConcurrentLinkedQueue[MetalsStatusParams]()
+  private val metalsStatusParams =
+    new ConcurrentLinkedQueue[MetalsStatusParams]()
+  private val bspStatusParams = new ConcurrentLinkedQueue[MetalsStatusParams]()
+  private val moduleStatusParams =
+    new ConcurrentLinkedQueue[MetalsStatusParams]()
+  def getStatusParams(
+      tpe: StatusType.StatusType
+  ): ConcurrentLinkedQueue[MetalsStatusParams] = {
+    tpe match {
+      case StatusType.metals => metalsStatusParams
+      case StatusType.bsp => bspStatusParams
+      case StatusType.module => moduleStatusParams
+    }
+  }
   val workDoneProgressCreateParams =
     new ConcurrentLinkedQueue[WorkDoneProgressCreateParams]()
   val progressParams = new ConcurrentLinkedQueue[ProgressParams]()
@@ -206,10 +220,17 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     clientCommands.asScala.toList.map(_.getCommand)
   }
 
-  def pollStatusBar(): String = statusParams.poll().text
+  def pollStatusBar(tpe: StatusType.StatusType): String =
+    getStatusParams(tpe).poll().text
 
-  def statusBarHistory: String = {
-    statusParams.asScala
+  def latestStatusBar(tpe: StatusType.StatusType): String = {
+    val result = getStatusParams(tpe).asScala.toList.last.text
+    getStatusParams(tpe).clear()
+    result
+  }
+
+  def statusBarHistory(tpe: StatusType.StatusType): String = {
+    getStatusParams(tpe).asScala
       .map { params =>
         if (params.show) {
           s"<show> - ${params.text}".trim
@@ -427,7 +448,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   }
 
   override def metalsStatus(params: MetalsStatusParams): Unit = {
-    statusParams.add(params)
+    getStatusParams(params.getStatusType).add(params)
     onMetalsStatus(params)
   }
 
