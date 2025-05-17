@@ -11,6 +11,8 @@ object SaveExpect {
       new MtagsScala3Suite,
       new ToplevelsScala2Suite,
       new ToplevelsScala3Suite,
+      new ToplevelWithInnerScala2Suite,
+      new ToplevelWithInnerScala3Suite,
       new DocumentSymbolScala2Suite,
       new DocumentSymbolScala3Suite,
       new FoldingRangeScala2Suite,

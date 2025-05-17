@@ -46,6 +46,8 @@ example/ToplevelImplicit.scala -> example/ToplevelImplicit$package.Xtension#
 example/ToplevelImplicit.scala -> example/ToplevelImplicit$package.XtensionAnyVal#
 example/TryCatch.scala -> example/TryCatch#
 example/TypeEnum.scala -> example/TypeEnum#
+example/TypeMembers.scala -> example/AfterTrait.
+example/TypeMembers.scala -> example/TypeMembers#
 example/TypeParameters.scala -> example/TypeParameters#
 example/VarArgs.scala -> example/VarArgs#
 example/Vars.scala -> example/Vars.

@@ -803,7 +803,7 @@ class ScalaToplevelMtags(
             isAfterEq: Boolean = false
         ): Option[String] = {
           curr.token match {
-            case SEMI => name
+            case SEMI | RBRACE => name
             case _ if isNewline | isDone => name
             case EQUALS =>
               scanner.mtagsNextToken()
