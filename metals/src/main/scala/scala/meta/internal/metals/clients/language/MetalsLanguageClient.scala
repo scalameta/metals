@@ -29,6 +29,9 @@ trait MetalsLanguageClient extends LanguageClient with TreeViewClient {
   @JsonNotification("metals/status")
   def metalsStatus(params: MetalsStatusParams): Unit
 
+  @JsonNotification("metals/syncStatus")
+  def metalsSyncStatus(params: MetalsSyncStatusParams): Unit
+
   @JsonNotification("metals/executeClientCommand")
   def metalsExecuteClientCommand(params: ExecuteCommandParams): Unit
 
@@ -113,6 +116,63 @@ case class RawMetalsQuickPickResult(
     @Nullable itemId: String = null,
     @Nullable cancelled: java.lang.Boolean = null,
 )
+
+class MetalsSyncStatusParams private (
+    val document: String,
+    val status: String,
+    @Nullable val kind: String,
+    @Nullable val text: String,
+    @Nullable val tooltip: String,
+    @Nullable val command: String,
+)
+
+object MetalsSyncStatusParams {
+  sealed trait Status {
+    def name: String
+    def kind: String = null
+    def text: String = null
+    def tooltip: String = null
+    def command: String = null
+  }
+  case object Synced extends Status {
+    def name = "synced"
+    override def text = "$(check) Synced"
+    override def kind = "info"
+    override def tooltip = "Document is synced with build server"
+  }
+  case object Syncing extends Status {
+    def name = "syncing"
+    override def text = "$(sync) Syncing"
+    override def kind = "warning"
+    override def tooltip = "Syncing document with build server ..."
+  }
+  case object Busy extends Status {
+    def name = "busy"
+    override def text = "$(sync) Busy"
+    override def kind = "warning"
+    override def tooltip = "The build server is busy importing the build, please wait."
+  }
+  case object Untracked extends Status {
+    def name = "untracked"
+    override def text = "$(alert) Untracked"
+    override def kind = "warning"
+    override def tooltip = "Document is not synced with build server. Click to sync."
+    override def command = "metals.sync-file"
+  }
+  case object Unknown extends Status {
+    def name = "unknown"
+    override def text = "$(circle-slash) Unknown"
+    override def kind = "error"
+    override def tooltip = "File is not part of any build target. Click to try again."
+    override def command = "metals.sync-file"
+  }
+  case object Hidden extends Status {
+    def name = "hidden"
+  }
+
+  def apply(document: String, status: Status): MetalsSyncStatusParams =
+    new MetalsSyncStatusParams(document, status.name, status.kind, status.text, status.tooltip, status.command)
+}
 
 /**
  * Arguments for the metals/status notification.

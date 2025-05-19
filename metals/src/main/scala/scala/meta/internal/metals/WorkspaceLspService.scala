@@ -722,6 +722,28 @@ class WorkspaceLspService(
     }
   }
 
+  override def sync(
+      params: AnyRef
+  ): CompletableFuture[Unit] = {
+    val uriOpt: Option[String] = params match {
+      case string: String =>
+        Option(string)
+      case (h: String) :: Nil =>
+        Option(h)
+      case _ =>
+        scribe.warn(
+          s"Unexpected notification params received for didFocusTextDocument: $params"
+        )
+        None
+    }
+    uriOpt match {
+      case Some(uri) =>
+        getServiceFor(uri).sync(uri).asJava
+      case None =>
+        CompletableFuture.completedFuture(())
+    }
+  }
+
   private def failedRequest(
       message: String
   ): Future[Object] = {

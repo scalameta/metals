@@ -41,6 +41,10 @@ class DelegatingScalaService(
       params: AnyRef
   ): CompletableFuture[DidFocusResult.Value] = underlying.didFocus(params)
 
+  override def sync(
+      params: AnyRef
+  ): CompletableFuture[Unit] = underlying.sync(params)
+
   override def didChange(
       params: DidChangeTextDocumentParams
   ): CompletableFuture[Unit] = underlying.didChange(params)

@@ -63,4 +63,9 @@ trait MetalsService {
       params: AnyRef
   ): CompletableFuture[DidFocusResult.Value]
 
+  @JsonNotification("metals/sync")
+  def sync(
+      params: AnyRef
+  ): CompletableFuture[Unit]
+
 }

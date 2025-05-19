@@ -25,6 +25,10 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
     underlying.shutdown()
   }
 
+  override def metalsSyncStatus(params: MetalsSyncStatusParams): Unit = {
+    underlying.metalsSyncStatus(params)
+  }
+
   override def registerCapability(
       params: RegistrationParams
   ): CompletableFuture[Void] = {

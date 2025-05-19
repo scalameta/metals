@@ -20,6 +20,8 @@ import org.eclipse.lsp4j.WorkDoneProgressCreateParams
  */
 abstract class NoopLanguageClient extends MetalsLanguageClient {
   override def metalsStatus(params: MetalsStatusParams): Unit = ()
+
+  override def metalsSyncStatus(params: MetalsSyncStatusParams): Unit = ()
   override def telemetryEvent(`object`: Any): Unit = ()
   override def publishDiagnostics(diagnostics: PublishDiagnosticsParams): Unit =
     ()

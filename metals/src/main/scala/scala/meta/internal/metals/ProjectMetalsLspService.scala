@@ -173,7 +173,7 @@ class ProjectMetalsLspService(
     connectionBspStatus,
     mainBuildTargetsData,
     this,
-    incrementalImporter,
+    syncStatusReporter,
   )
 
   protected val onBuildChanged: BatchedFunction[AbsolutePath, Unit] =

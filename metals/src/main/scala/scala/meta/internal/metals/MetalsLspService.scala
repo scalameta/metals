@@ -616,14 +616,8 @@ abstract class MetalsLspService(
       saveJarFileToDisk = !clientConfig.isVirtualDocumentSupported(),
     )
 
-  protected val incrementalImporter: IncrementalImporter =
-    new IncrementalImporter(
-      languageClient,
-      workDoneProgress,
-      compilations,
-      () => focusedDocument,
-      buildTargets,
-    )
+  protected val syncStatusReporter: SyncStatusReporter =
+    new SyncStatusReporter(languageClient, buildTargets)
 
   def parseTreesAndPublishDiags(paths: Seq[AbsolutePath]): Future[Unit] = {
     Future
@@ -824,7 +818,8 @@ abstract class MetalsLspService(
     compilers
       .didFocus(path)
       .map(diagnostics.publishDiagnosticsNotAdjusted(path, _))
-    incrementalImporter.maybePromptForImport(path)
+
+    syncStatusReporter.didFocus(uri)
 
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
@@ -835,6 +830,18 @@ abstract class MetalsLspService(
     } else {
       maybeCompileOnDidFocus(path, prevBuildTarget).asJava
     }
+  }
+
+  def sync(
+      uri: String
+  ): Future[Unit] =  {
+    syncStatusReporter.onSync(uri)
+    compilations.expand(Seq(uri.toAbsolutePath))
+      .andThen {
+        case Success(targets) => syncStatusReporter.expanded(uri, Some(targets))
+        case Failure(_) =>  syncStatusReporter.expanded(uri, None)
+      }
+      .ignoreValue
   }
 
   protected def maybeCompileOnDidFocus(
