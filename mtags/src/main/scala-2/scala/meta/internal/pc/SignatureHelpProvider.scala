@@ -677,7 +677,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
       )
     }
     signatureInformation.setParameters(
-      paramLabels.iterator.flatten.toSeq.asJava
+      paramLabels.flatten.asJava
     )
     signatureInformation
   }
