@@ -258,10 +258,8 @@ final class Diagnostics(
       buildTarget: BuildTargetIdentifier
   ): List[BuildTargetIdentifier] = {
     buildTargets
-      .info(buildTarget)
-      .map(_.getDependencies().asScala)
-      .getOrElse(Nil)
-      .filter(hasCompilationErrors)
+      .buildTargetTransitiveDependencies(buildTarget)
+      .filter(id => id != buildTarget && hasCompilationErrors(id))
       .toList
   }
 

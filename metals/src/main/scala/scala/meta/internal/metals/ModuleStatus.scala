@@ -17,13 +17,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 class ModuleStatus(
     client: MetalsLanguageClient,
     focusedPath: () => Option[AbsolutePath],
-    serviceForPath: AbsolutePath => {
-      def buildTargets: BuildTargets
-      def folder: AbsolutePath
-      def buildServerPromise: Promise[Unit]
-      def compilers: Compilers
-      def diagnostics: Diagnostics
-    },
+    serviceForPath: AbsolutePath => ModulesService,
     icons: Icons,
 ) extends ReportTracker {
 
@@ -189,4 +183,12 @@ object ModuleStatus {
       command = ServerCommands.RunDoctor.id,
       commandTooltip = "Open doctor.",
     ).withStatusType(StatusType.module)
+}
+
+trait ModulesService {
+  def buildTargets: BuildTargets
+  def folder: AbsolutePath
+  def buildServerPromise: Promise[Unit]
+  def compilers: Compilers
+  def diagnostics: Diagnostics
 }

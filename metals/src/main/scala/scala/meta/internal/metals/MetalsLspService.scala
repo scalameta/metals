@@ -113,7 +113,8 @@ abstract class MetalsLspService(
 ) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
     with Cancelable
     with TextDocumentService
-    with IndexProviders {
+    with IndexProviders
+    with ModulesService {
   import serverInputs._
 
   def focusedDocument: Option[AbsolutePath] = getFocusedDocument()
@@ -262,7 +263,7 @@ abstract class MetalsLspService(
     clientConfig.initialConfig.foldingRageMinimumSpan,
   )
 
-  protected val diagnostics: Diagnostics = new Diagnostics(
+  val diagnostics: Diagnostics = new Diagnostics(
     buffers,
     languageClient,
     clientConfig.initialConfig.statistics,
