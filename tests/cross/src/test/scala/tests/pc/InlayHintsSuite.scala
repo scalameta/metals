@@ -17,6 +17,302 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   }
 
   check(
+    "single-chain-same-line",
+    """object Main{
+      |  trait Bar {
+      |   def bar: Bar
+      |  }
+      |
+      |  trait Foo {
+      |    def foo(): Foo
+      |  }
+      |
+      |val bar: Bar = ???
+      |val foo: Foo = ???
+      |
+      |val thing1: Bar = bar.bar
+      |val thing2: Foo = foo.foo()
+      |}
+      |""".stripMargin,
+    """object Main{
+      |  trait Bar {
+      |   def bar: Bar
+      |  }
+      |
+      |  trait Foo {
+      |    def foo(): Foo
+      |  }
+      |
+      |val bar: Bar = ???
+      |val foo: Foo = ???
+      |
+      |val thing1: Bar = bar.bar
+      |val thing2: Foo = foo.foo()
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "multi-chain-same-line",
+    """object Main{
+      |  trait Bar {
+      |   def bar: Bar
+      |  }
+      |
+      |  trait Foo {
+      |    def foo(): Foo
+      |  }
+      |
+      |val bar: Bar = ???
+      |val foo: Foo = ???
+      |
+      |val thing1: Bar = bar.bar.bar
+      |val thing2: Foo = foo.foo().foo()
+      |}
+      |""".stripMargin,
+    """object Main{
+      |  trait Bar {
+      |   def bar: Bar
+      |  }
+      |
+      |  trait Foo {
+      |    def foo(): Foo
+      |  }
+      |
+      |val bar: Bar = ???
+      |val foo: Foo = ???
+      |
+      |val thing1: Bar = bar.bar.bar
+      |val thing2: Foo = foo.foo().foo()
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "single-chain-new-line",
+    """object Main{
+      |  trait Bar {
+      |   def bar: Bar
+      |  }
+      |
+      |  trait Foo {
+      |    def foo(): Foo
+      |  }
+      |
+      |val bar: Bar = ???
+      |val foo: Foo = ???
+      |
+      |val thing1: Bar = bar
+      |  .bar
+      |val thing2: Foo = foo
+      |  .foo()
+      |}
+      |""".stripMargin,
+    """object Main{
+      |  trait Bar {
+      |   def bar: Bar
+      |  }
+      |
+      |  trait Foo {
+      |    def foo(): Foo
+      |  }
+      |
+      |val bar: Bar = ???
+      |val foo: Foo = ???
+      |
+      |val thing1: Bar = bar
+      |  .bar/*: Bar<<(2:8)>>*/
+      |val thing2: Foo = foo
+      |  .foo()/*: Foo<<(6:8)>>*/
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "simple-chain",
+    """object Main{
+      |  trait Foo {
+      |   def bar: Bar
+      |  }
+      |
+      |  trait Bar {
+      |    def foo(): Foo
+      |  }
+      |
+      |val foo: Foo = ???
+      |
+      |val thingy: Bar = foo
+      |  .bar
+      |  .foo()
+      |  .bar
+      |}
+      |""".stripMargin,
+    """object Main{
+      |  trait Foo {
+      |   def bar: Bar
+      |  }
+      |
+      |  trait Bar {
+      |    def foo(): Foo
+      |  }
+      |
+      |val foo: Foo = ???
+      |
+      |val thingy: Bar = foo
+      |  .bar/*  : Bar<<(6:8)>>*/
+      |  .foo()/*: Foo<<(2:8)>>*/
+      |  .bar/*  : Bar<<(6:8)>>*/
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "long-chain",
+    """object Main{
+      |  trait Foo[F] {
+      |   def intify: Foo[Int]
+      |   def stringListify(s: String*): Foo[String]
+      |  }
+      |
+      |val foo: Foo[String] = ???
+      |
+      |val thingy: Foo[Int] = foo
+      |  .intify
+      |  .stringListify(
+      |    "Hello",
+      |    "World"
+      |  )
+      |  .stringListify(
+      |    "Hello",
+      |    "World"
+      |  )
+      |  .intify
+      |  .intify
+      |}
+      |""".stripMargin,
+    """object Main{
+      |  trait Foo[F] {
+      |   def intify: Foo[Int]
+      |   def stringListify(s: String*): Foo[String]
+      |  }
+      |
+      |val foo: Foo[String] = ???
+      |
+      |val thingy: Foo[Int] = foo
+      |  .intify/*: Foo<<(2:8)>>[Int<<scala/Int#>>]*/
+      |  .stringListify(
+      |    "Hello",
+      |    "World"
+      |  )/*      : Foo<<(2:8)>>[String<<java/lang/String#>>]*/
+      |  .stringListify(
+      |    "Hello",
+      |    "World"
+      |  )/*      : Foo<<(2:8)>>[String<<java/lang/String#>>]*/
+      |  .intify/*: Foo<<(2:8)>>[Int<<scala/Int#>>]*/
+      |  .intify/*: Foo<<(2:8)>>[Int<<scala/Int#>>]*/
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "long-chain-same-line",
+    """object Main{
+      |  trait Foo[F] {
+      |   def intify: Foo[Int]
+      |   def stringListify(s: String*): Foo[String]
+      |  }
+      |
+      |val foo: Foo[String] = ???
+      |
+      |val thingy: Foo[Int] = foo
+      |  .intify
+      |  .stringListify(
+      |    "Hello",
+      |    "World"
+      |  )
+      |  .stringListify(
+      |    "Hello",
+      |    "World"
+      |  )
+      |  .intify.intify
+      |}
+      |""".stripMargin,
+    """object Main{
+      |  trait Foo[F] {
+      |   def intify: Foo[Int]
+      |   def stringListify(s: String*): Foo[String]
+      |  }
+      |
+      |val foo: Foo[String] = ???
+      |
+      |val thingy: Foo[Int] = foo
+      |  .intify/*       : Foo<<(2:8)>>[Int<<scala/Int#>>]*/
+      |  .stringListify(
+      |    "Hello",
+      |    "World"
+      |  )/*             : Foo<<(2:8)>>[String<<java/lang/String#>>]*/
+      |  .stringListify(
+      |    "Hello",
+      |    "World"
+      |  )/*             : Foo<<(2:8)>>[String<<java/lang/String#>>]*/
+      |  .intify.intify/*: Foo<<(2:8)>>[Int<<scala/Int#>>]*/
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "tikka masala (curried)",
+    """object Main{
+      |  trait Foo[F] {
+      |   def intify: Foo[Int]
+      |   def stringListify(s: String)(s2: String): Foo[String]
+      |  }
+      |
+      |val foo: Foo[String] = ???
+      |
+      |val thingy: Foo[Int] = foo
+      |  .intify
+      |  .stringListify(
+      |    "Hello"
+      |  )(
+      |    "World"
+      |  )
+      |  .stringListify(
+      |    "Hello"
+      |  )(
+      |    "World"
+      |  )
+      |  .intify
+      |  .intify
+      |}
+      |""".stripMargin,
+    """object Main{
+      |  trait Foo[F] {
+      |   def intify: Foo[Int]
+      |   def stringListify(s: String)(s2: String): Foo[String]
+      |  }
+      |
+      |val foo: Foo[String] = ???
+      |
+      |val thingy: Foo[Int] = foo
+      |  .intify/*: Foo<<(2:8)>>[Int<<scala/Int#>>]*/
+      |  .stringListify(
+      |    "Hello"
+      |  )(
+      |    "World"
+      |  )/*      : Foo<<(2:8)>>[String<<scala/Predef.String#>>]*/
+      |  .stringListify(
+      |    "Hello"
+      |  )(
+      |    "World"
+      |  )/*      : Foo<<(2:8)>>[String<<scala/Predef.String#>>]*/
+      |  .intify/*: Foo<<(2:8)>>[Int<<scala/Int#>>]*/
+      |  .intify/*: Foo<<(2:8)>>[Int<<scala/Int#>>]*/
+      |}
+      |""".stripMargin
+  )
+
+  check(
     "local",
     """|object Main {
        |  def foo() = {
