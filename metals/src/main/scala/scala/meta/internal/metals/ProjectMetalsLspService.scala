@@ -264,7 +264,6 @@ class ProjectMetalsLspService(
             getVisibleName,
             languageClient,
             connectionProvider,
-            tables.mcpPort,
           )
         ).run()
     }.recover { case e: Exception =>

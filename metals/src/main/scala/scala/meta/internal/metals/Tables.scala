@@ -31,8 +31,6 @@ final class Tables(
     new ChosenBuildTool(() => connection)
   val fingerprints =
     new Fingerprints(() => connection)
-  val mcpPort =
-    new ChosenMcpPort(() => connection)
 
   override protected def tryNoAutoServer(): Connection = {
     try {

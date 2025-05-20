@@ -16,7 +16,6 @@ import scala.util.control.NonFatal
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
-import scala.meta.internal.metals.ChosenMcpPort
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.ConnectionProvider
 import scala.meta.internal.metals.Diagnostics
@@ -62,7 +61,6 @@ class MetalsMcpServer(
     projectName: String,
     languageClient: LanguageClient,
     connectionProvider: ConnectionProvider,
-    mcpPort: ChosenMcpPort,
 )(implicit
     ec: ExecutionContext
 ) extends Cancelable {
@@ -181,10 +179,9 @@ class MetalsMcpServer(
     val editor = Editor.allEditors.find(_.names.contains(editorName))
     val configPort =
       editor.flatMap(e => McpConfig.readPort(projectPath, projectName, e))
-    val savedPort = mcpPort.readPort()
     val undertowServer = Undertow
       .builder()
-      .addHttpListener(configPort.orElse(savedPort).getOrElse(0), "localhost")
+      .addHttpListener(configPort.getOrElse(0), "localhost")
       .setHandler(deployment.start())
       .build()
     undertowServer.start()
@@ -195,9 +192,6 @@ class MetalsMcpServer(
 
     if (editor.isDefined && !configPort.isDefined) {
       McpConfig.writeConfig(port, projectName, projectPath, editor.get)
-    }
-    if (!savedPort.contains(port)) {
-      mcpPort.setPort(port)
     }
 
     languageClient.showMessage(
