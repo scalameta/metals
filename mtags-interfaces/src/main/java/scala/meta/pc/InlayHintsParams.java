@@ -44,6 +44,11 @@ public interface InlayHintsParams extends RangeParams {
   }
 
   /**
+   * Response should contain intermediate types on transformation chains
+   */
+  boolean transformationIntermediateTypes();
+
+  /**
    * Response should contain decorations in pattern matches.
    */
   default boolean hintsInPatternMatch() {
