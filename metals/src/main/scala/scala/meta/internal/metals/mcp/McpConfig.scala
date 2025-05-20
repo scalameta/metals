@@ -116,6 +116,14 @@ object CursorEditor
       additionalProperties = Nil,
     )
 
+object NoEditor
+    extends Editor(
+      names = Nil,
+      settingsPath = ".metals/",
+      serverField = "servers",
+      additionalProperties = Nil,
+    )
+
 object Editor {
   val allEditors: List[Editor] = List(VSCodeEditor, CursorEditor)
 }
