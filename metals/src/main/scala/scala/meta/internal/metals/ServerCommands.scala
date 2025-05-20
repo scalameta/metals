@@ -727,6 +727,14 @@ object ServerCommands {
     "Stop Scala CLI server",
   )
 
+  val ShowReportsForBuildTarget = new ParametrizedCommand[String](
+    "show-reports-for-build-target",
+    "Show error reports for a specific build target.",
+    """|Show error reports for a specific build target.
+       |""".stripMargin,
+    "[string], the build target for which to show the error reports.",
+  )
+
   def all: List[BaseCommand] =
     List(
       AnalyzeStacktrace,
@@ -775,6 +783,7 @@ object ServerCommands {
       OpenFeatureRequest,
       ZipReports,
       ResetWorkspace,
+      ShowReportsForBuildTarget,
     )
 
   val allIds: Set[String] = all.map(_.id).toSet

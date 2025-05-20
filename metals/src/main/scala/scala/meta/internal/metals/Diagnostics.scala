@@ -254,6 +254,15 @@ final class Diagnostics(
       .getOrElse(false)
   }
 
+  def upstreamTargetsWithCompilationErrors(
+      buildTarget: BuildTargetIdentifier
+  ): List[BuildTargetIdentifier] = {
+    buildTargets
+      .buildTargetTransitiveDependencies(buildTarget)
+      .filter(id => id != buildTarget && hasCompilationErrors(id))
+      .toList
+  }
+
   def hasSyntaxError(path: AbsolutePath): Boolean =
     syntaxError.contains(path)
 

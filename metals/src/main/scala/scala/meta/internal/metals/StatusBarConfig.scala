@@ -20,4 +20,8 @@ object StatusBarConfig {
     new StatusBarConfig(
       System.getProperty("metals.bsp-status-bar", "log-message")
     )
+  def moduleDefault =
+    new StatusBarConfig(
+      System.getProperty("metals.module-status-bar", "off")
+    )
 }

@@ -55,6 +55,13 @@ final class ClientConfiguration(
       StatusBarState.LogMessage,
     )
 
+  def moduleStatusBarState(): StatusBarState.StatusBarState =
+    extract(
+      initializationOptions.moduleStatusBarState,
+      StatusBarState.fromString(initialConfig.moduleStatusBar.value),
+      StatusBarState.Off,
+    )
+
   def globSyntax(): GlobSyntaxConfig =
     initializationOptions.globSyntax
       .flatMap(GlobSyntaxConfig.fromString)
