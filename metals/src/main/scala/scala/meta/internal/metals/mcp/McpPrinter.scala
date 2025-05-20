@@ -2,6 +2,9 @@ package scala.meta.internal.metals.mcp
 
 import scala.meta.io.AbsolutePath
 
+import org.eclipse.lsp4j.Diagnostic
+import org.eclipse.lsp4j.DiagnosticSeverity
+
 object McpPrinter {
   implicit class XtensionSearchResult(result: SymbolSearchResult) {
     def show: String = s"${result.symbolType.name} ${result.path}"
@@ -63,5 +66,35 @@ object McpPrinter {
   implicit class XtensionSymbolUsageList(result: List[SymbolUsage]) {
     def show(projectRoot: AbsolutePath): String =
       result.map(_.show(projectRoot)).sorted.mkString("\n")
+  }
+
+  implicit class XtensionDiagnosticsWithPath(
+      diagnostics: Seq[(AbsolutePath, Diagnostic)]
+  ) {
+    def show(projectRoot: AbsolutePath): String =
+      diagnostics
+        .collect {
+          case (path, diag) if diag.getSeverity() == DiagnosticSeverity.Error =>
+            s"${path.toRelative(projectRoot)} ${showDiagnostic(diag)}"
+        }
+        .mkString("\n")
+  }
+
+  implicit class XtensionDiagnostics(
+      diagnostics: Seq[Diagnostic]
+  ) {
+    def show(): String =
+      diagnostics
+        .collect {
+          case diag if diag.getSeverity() == DiagnosticSeverity.Error =>
+            showDiagnostic(diag)
+        }
+        .mkString("\n")
+  }
+
+  private def showDiagnostic(diagnostic: Diagnostic): String = {
+    val startLine = diagnostic.getRange().getStart().getLine()
+    val endLine = diagnostic.getRange().getEnd().getLine()
+    s"L$startLine-L$endLine:\n${diagnostic.getMessage()}"
   }
 }
