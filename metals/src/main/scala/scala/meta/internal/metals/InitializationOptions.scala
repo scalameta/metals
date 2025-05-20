@@ -79,6 +79,7 @@ final case class InitializationOptions(
     disableColorOutput: Option[Boolean],
     doctorVisibilityProvider: Option[Boolean],
     bspStatusBarProvider: Option[String],
+    moduleStatusBarProvider: Option[String],
 ) {
   def doctorFormat: Option[DoctorFormat.DoctorFormat] =
     doctorProvider.flatMap(DoctorFormat.fromString)
@@ -88,6 +89,9 @@ final case class InitializationOptions(
 
   def bspStatusBarState: Option[StatusBarState.StatusBarState] =
     bspStatusBarProvider.flatMap(StatusBarState.fromString)
+
+  def moduleStatusBarState: Option[StatusBarState.StatusBarState] =
+    moduleStatusBarProvider.flatMap(StatusBarState.fromString)
 }
 
 object InitializationOptions {
@@ -95,6 +99,7 @@ object InitializationOptions {
 
   val Default: InitializationOptions = InitializationOptions(
     CompilerInitializationOptions.default,
+    None,
     None,
     None,
     None,
@@ -177,6 +182,8 @@ object InitializationOptions {
       doctorVisibilityProvider =
         jsonObj.getBooleanOption("doctorVisibilityProvider"),
       bspStatusBarProvider = jsonObj.getStringOption("bspStatusBarProvider"),
+      moduleStatusBarProvider =
+        jsonObj.getStringOption("moduleStatusBarProvider"),
     )
   }
 

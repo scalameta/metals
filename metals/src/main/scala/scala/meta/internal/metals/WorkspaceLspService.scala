@@ -52,6 +52,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.MetalsSyncParams
 import scala.meta.metals.lsp.ScalaLspService
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.DebugSessionParams
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.Gson
@@ -212,9 +213,18 @@ class WorkspaceLspService(
     isBspStatusProvider = clientConfig.bspStatusBarState() == StatusBarState.On,
   )
 
+  val moduleStatus: ModuleStatus =
+    new ModuleStatus(
+      client,
+      () => focusedDocument.get(),
+      (path) => getServiceFor(path),
+      clientConfig.icons(),
+    )
+
   def setFocusedDocument(newFocusedDocument: Option[AbsolutePath]): Unit = {
     focusedDocument.get().foreach(focused => recentlyFocusedFiles.add(focused))
-    focusedDocument.set(newFocusedDocument)
+    val prev = focusedDocument.getAndSet(newFocusedDocument)
+    if (prev != newFocusedDocument) moduleStatus.refresh()
     newFocusedDocument
       .flatMap(getServiceForOpt)
       .foreach(service => bspStatus.focus(service.path))
@@ -240,6 +250,7 @@ class WorkspaceLspService(
       bspStatus,
       featureFlags,
       metrics,
+      moduleStatus,
     )
   }
 
@@ -265,6 +276,7 @@ class WorkspaceLspService(
           maxScalaCliServers = 3,
           featureFlags,
           metrics,
+          moduleStatus,
         )
     }
 
@@ -1430,6 +1442,21 @@ class WorkspaceLspService(
       case ServerCommands.MetalsPaste(params) =>
         val path = params.originDocument.getUri().toAbsolutePath
         getServiceFor(path).didPaste(params).asJavaObject
+      case ServerCommands.ShowReportsForBuildTarget(target) =>
+        Future {
+          folderServices.iterator
+            .flatMap(
+              _.buildTargets.jvmTarget(new BuildTargetIdentifier(target))
+            )
+            .headOption
+            .map { target =>
+              moduleStatus.clearReports(target.id)
+              doctor.showErrorsForBuildTarget(target.displayName)
+            }
+            .getOrElse {
+              doctor.executeRunDoctor()
+            }
+        }.asJavaObject
       case actionCommand
           if currentOrHeadOrFallback.allActionCommandsIds(
             actionCommand.getCommand()

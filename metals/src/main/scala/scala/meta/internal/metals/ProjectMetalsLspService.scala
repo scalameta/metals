@@ -66,6 +66,7 @@ class ProjectMetalsLspService(
     maxScalaCliServers: Int,
     featureFlags: FeatureFlagProvider,
     metrics: MonitoringClient,
+    moduleStatus: ModuleStatus,
 ) extends MetalsLspService(
       ec,
       sh,
@@ -84,6 +85,7 @@ class ProjectMetalsLspService(
       maxScalaCliServers,
       featureFlags,
       metrics,
+      moduleStatus,
     ) {
 
   scribe.debug(clientConfig.toString())
@@ -191,7 +193,8 @@ class ProjectMetalsLspService(
     sh,
   )
 
-  val connectionProvider: ConnectionProvider = new ConnectionProvider(
+  val connectionProvider: ConnectionProvider = {
+    val provider = new ConnectionProvider(
     buildToolProvider,
     compilations,
     buildTools,
@@ -213,7 +216,10 @@ class ProjectMetalsLspService(
     this,
     syncStatusReporter,
     () => mbtBuild,
-  )
+    )
+    provider.buildServerPromise.future.onComplete(_ => moduleStatus.refresh())
+    provider
+  }
 
   override protected def reconnectAfterMbtJsonChange(): Future[Unit] =
     if (bspSession.exists(s => MbtBuildServer.isMbtServer(s.main.name)))
