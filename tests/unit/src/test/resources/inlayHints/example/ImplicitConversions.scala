@@ -11,7 +11,7 @@ class ImplicitConversions {
 
   // extension methods
   /*augmentString<<scala/Predef.augmentString().>>(*/message/*)*/
-    .stripSuffix(/*suffix = */"h")
+    .stripSuffix(/*suffix = */"h")/*: String<<java/lang/String#>>*/
   /*any2stringadd<<scala/Predef.any2stringadd().>>(*/tuple/*)*/ + "Hello"
 
   // implicit conversions
@@ -21,7 +21,7 @@ class ImplicitConversions {
   s"Hello $message $number"
   /*augmentString<<scala/Predef.augmentString().>>(*/s"""Hello
      |$message
-     |$number"""/*)*/.stripMargin
+     |$number"""/*)*/.stripMargin/*: String<<scala/Predef.String#>>*/
 
   val a: Int = char
   val b: Long = char

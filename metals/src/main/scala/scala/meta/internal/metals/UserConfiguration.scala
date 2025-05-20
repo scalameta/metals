@@ -391,6 +391,15 @@ object UserConfiguration {
            |""".stripMargin,
       ),
       UserConfigurationOption(
+        "inlay-hints.transformation-intermediate-types.enable",
+        "false",
+        "false",
+        "Should display type annotations for intermediate types of multi-line expressions",
+        """|When this option is enabled, each method/attribute call in a multi-line chain will get
+           | its own type annotation.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
         "enable-semantic-highlighting",
         "true",
         "false",

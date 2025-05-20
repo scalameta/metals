@@ -674,6 +674,8 @@ class Compilers(
         typeParameters = options.typeParameters,
         byNameParameters = options.byNameParameters,
         hintsInPatternMatch = options.hintsInPatternMatch,
+        transformationIntermediateTypes =
+          options.transformationIntermediateTypes,
         namedParameters = options.namedParameters,
       )
 
