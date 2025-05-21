@@ -1,9 +1,11 @@
-package tests
+package tests.mcp
 
 import java.nio.file.Path
 
 import scala.meta.internal.metals.mcp.McpPrinter._
 import scala.meta.internal.metals.mcp.SymbolType
+
+import tests.BaseLspSuite
 
 class McpQueryLspSuite extends BaseLspSuite("query") {
 

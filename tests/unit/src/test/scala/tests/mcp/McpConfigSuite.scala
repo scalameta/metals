@@ -1,4 +1,4 @@
-package tests
+package tests.mcp
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -11,6 +11,7 @@ import scala.meta.internal.metals.mcp.VSCodeEditor
 import scala.meta.io.AbsolutePath
 
 import munit.TestOptions
+import tests.BaseSuite
 
 class McpConfigSuite extends BaseSuite {
   def check(
