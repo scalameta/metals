@@ -1,4 +1,6 @@
-package tests
+package tests.mcp
+
+import tests.BaseLspSuite
 
 class McpRunTestSuite extends BaseLspSuite("mcp-test") {
   test("basic") {
