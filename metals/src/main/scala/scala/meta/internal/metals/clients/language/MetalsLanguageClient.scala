@@ -150,20 +150,23 @@ object MetalsSyncStatusParams {
     def name = "busy"
     override def text = "$(sync) Busy"
     override def kind = "warning"
-    override def tooltip = "The build server is busy importing the build, please wait."
+    override def tooltip =
+      "The build server is busy importing the build, please wait."
   }
   case object Untracked extends Status {
     def name = "untracked"
     override def text = "$(alert) Untracked"
     override def kind = "warning"
-    override def tooltip = "Document is not synced with build server. Click to sync."
+    override def tooltip =
+      "Document is not synced with build server. Click to sync."
     override def command = "metals.sync-file"
   }
   case object Unknown extends Status {
     def name = "unknown"
     override def text = "$(circle-slash) Unknown"
     override def kind = "error"
-    override def tooltip = "File is not part of any build target. Click to try again."
+    override def tooltip =
+      "File is not part of any build target. Click to try again."
     override def command = "metals.sync-file"
   }
   case object Hidden extends Status {
@@ -171,7 +174,14 @@ object MetalsSyncStatusParams {
   }
 
   def apply(document: String, status: Status): MetalsSyncStatusParams =
-    new MetalsSyncStatusParams(document, status.name, status.kind, status.text, status.tooltip, status.command)
+    new MetalsSyncStatusParams(
+      document,
+      status.name,
+      status.kind,
+      status.text,
+      status.tooltip,
+      status.command,
+    )
 }
 
 /**

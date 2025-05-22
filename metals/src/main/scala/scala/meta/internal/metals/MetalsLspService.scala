@@ -834,12 +834,13 @@ abstract class MetalsLspService(
 
   def sync(
       uri: String
-  ): Future[Unit] =  {
+  ): Future[Unit] = {
     syncStatusReporter.onSync(uri)
-    compilations.expand(Seq(uri.toAbsolutePath))
+    compilations
+      .expand(Seq(uri.toAbsolutePath))
       .andThen {
         case Success(targets) => syncStatusReporter.expanded(uri, Some(targets))
-        case Failure(_) =>  syncStatusReporter.expanded(uri, None)
+        case Failure(_) => syncStatusReporter.expanded(uri, None)
       }
       .ignoreValue
   }

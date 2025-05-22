@@ -5,7 +5,7 @@ function bloop_version {
 }
 
 export COURSIER_REPOSITORIES="central|sonatype:snapshots"
-export BLOOP_JAVA_OPTS="-Xss4m -XX:MaxInlineLevel=20 -XX:+UseZGC -XX:ZUncommitDelay=30 -XX:ZCollectionInterval=5 -XX:+IgnoreUnrecognizedVMOptions -Dbloop.ignore-sig-int=true -Xmx1G"
+export BLOOP_JAVA_OPTS="-Xss4m -Xmx1G -XX:MaxInlineLevel=20 -XX:+UseZGC -XX:ZUncommitDelay=30 -XX:ZCollectionInterval=5 -XX:+IgnoreUnrecognizedVMOptions -Dbloop.ignore-sig-int=true"
 
 mkdir -p ~/.bloop
 curl -Lo coursier https://git.io/coursier-cli && chmod +x coursier

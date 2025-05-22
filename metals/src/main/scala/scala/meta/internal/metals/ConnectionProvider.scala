@@ -406,10 +406,10 @@ class ConnectionProvider(
         }
         _ = compilers.cancel()
         buildChange <- index(check)
-        } yield {
-          syncStatusReporter.importFinished(focusedDocument.map(_.toURI.toString))
-          buildChange
-        }
+      } yield {
+        syncStatusReporter.importFinished(focusedDocument.map(_.toURI.toString))
+        buildChange
+      }
     }
 
     private def saveProjectReferencesInfo(

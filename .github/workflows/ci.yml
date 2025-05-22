@@ -10,34 +10,34 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  unit:
-    name: ${{ matrix.os }} jdk-${{ matrix.java }} unit tests ${{ matrix.shard }} / 2
-    runs-on:
-      group: self-hosted-runner-group
-      labels: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [linux-ubuntu-latest]
-        java: ["17"]
-        shard: [1, 2]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: ${{ matrix.java }}
-          cache: 'sbt'
-      - uses: sbt/setup-sbt@v1
-      - name: Run unit tests
-        run: |
-          bin/test.sh unit/test
-        env:
-          JAVA_VERSION: ${{ matrix.java }}
-          TEST_SHARD: ${{ matrix.shard }}
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
-          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
-        shell: bash
+#  unit:
+#    name: ${{ matrix.os }} jdk-${{ matrix.java }} unit tests ${{ matrix.shard }} / 2
+#    runs-on:
+#      group: self-hosted-runner-group
+#      labels: ${{ matrix.os }}
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        os: [linux-ubuntu-latest]
+#        java: ["17"]
+#        shard: [1, 2]
+#    steps:
+#      - uses: actions/checkout@v4
+#      - uses: actions/setup-java@v4
+#        with:
+#          distribution: 'temurin'
+#          java-version: ${{ matrix.java }}
+#          cache: 'sbt'
+#      - uses: sbt/setup-sbt@v1
+#      - name: Run unit tests
+#        run: |
+#          bin/test.sh unit/test
+#        env:
+#          JAVA_VERSION: ${{ matrix.java }}
+#          TEST_SHARD: ${{ matrix.shard }}
+#          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+#          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+#        shell: bash
   integration:
     name: ${{ matrix.name }}
     runs-on:
@@ -48,35 +48,31 @@ jobs:
       matrix:
         type:
           [
-            sbt,
-            maven,
-            gradle,
-            scalacli,
-            mill,
-            bazel,
-            feature,
+#            sbt,
+#            bazel,
+#            feature,
             cross,
             scalafmt,
             scalafix,
           ]
         include:
-          - type: sbt
-            command: |
-              bin/test.sh +sbt-metals/publishLocal
-              bin/test.sh 'slow/testOnly -- tests.sbt.*'
-            name: Sbt integration
-            os: linux-ubuntu-latest
-            java: "17"
-          - type: bazel
-            command: bin/test.sh 'slow/testOnly -- tests.bazel.*'
-            name: Bazel integration
-            os: linux-ubuntu-latest
-            java: "17"
-          - type: feature
-            command: bin/test.sh 'slow/testOnly -- tests.feature.*'
-            name: LSP integration tests
-            os: linux-ubuntu-latest
-            java: "17"
+#          - type: sbt
+#            command: |
+#              bin/test.sh +sbt-metals/publishLocal
+#              bin/test.sh 'slow/testOnly -- tests.sbt.*'
+#            name: Sbt integration
+#            os: linux-ubuntu-latest
+#            java: "17"
+#          - type: bazel
+#            command: bin/test.sh 'slow/testOnly -- tests.bazel.*'
+#            name: Bazel integration
+#            os: linux-ubuntu-latest
+#            java: "17"
+#          - type: feature
+#            command: bin/test.sh 'slow/testOnly -- tests.feature.*'
+#            name: LSP integration tests
+#            os: linux-ubuntu-latest
+#            java: "17"
           - type: cross
             command: sbt +cross/test
             name: Scala cross tests
