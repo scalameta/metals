@@ -28,7 +28,8 @@ class JavaEditDistanceSuite extends BaseSuite {
          |""".stripMargin,
     )
 
-    val distance = TokenEditDistance(original, revised, trees = null)
+    val distance =
+      TokenEditDistance(original, revised, scalaVersionSelector = null)
 
     val diffString =
       if (isWindows) "Diff(22 tokens)"
@@ -60,7 +61,8 @@ class JavaEditDistanceSuite extends BaseSuite {
          |""".stripMargin,
     )
 
-    val distance = TokenEditDistance(original, revised, trees = null)
+    val distance =
+      TokenEditDistance(original, revised, scalaVersionSelector = null)
 
     assertNoDiff(
       distance.map(_.toString()).getOrElse("TokenizationError"),

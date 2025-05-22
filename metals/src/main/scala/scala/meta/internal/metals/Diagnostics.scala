@@ -13,7 +13,6 @@ import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.parsing.TokenEditDistance
-import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j
@@ -46,7 +45,7 @@ final class Diagnostics(
     languageClient: LanguageClient,
     statistics: StatisticsConfig,
     workspace: Option[AbsolutePath],
-    trees: Trees,
+    scalaVersionSelector: ScalaVersionSelector,
     buildTargets: BuildTargets,
     downstreamTargets: PreviouslyCompiledDownsteamTargets,
     config: MetalsServerConfig,
@@ -326,15 +325,11 @@ final class Diagnostics(
       path: AbsolutePath,
       d: Diagnostic,
   ): Option[Diagnostic] = {
-    val current = path.toInputFromBuffers(buffers)
-    val snapshot = snapshots.getOrElse(path, current)
-    val edit = TokenEditDistance(
-      snapshot,
-      current,
-      trees,
-    )
-    edit match {
-      case Right(edit) =>
+    val snapshot = snapshots.get(path)
+    snapshot match {
+      case Some(snapshot) =>
+        val edit =
+          buffers.tokenEditDistance(path, snapshot.value, scalaVersionSelector)
         val result = edit
           .toRevised(
             range = d.getRange,
@@ -358,7 +353,8 @@ final class Diagnostics(
             ld.setTags(d.getTags())
             ld.setRelatedInformation(d.getRelatedInformation)
             ld.setCodeDescription(d.getCodeDescription())
-            adjustedDiagnosticData(d, edit).map(newData => ld.setData(newData))
+            adjustedDiagnosticData(d, edit)
+              .map(newData => ld.setData(newData))
             ld
           }
         if (result.isEmpty) {
@@ -372,9 +368,8 @@ final class Diagnostics(
         }
         result
 
-      case Left(_) =>
-        // tokenization error will be shown from scalameta tokenizer
-        None
+      case None =>
+        Some(d)
     }
   }
 
