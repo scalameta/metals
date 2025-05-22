@@ -11,6 +11,7 @@ import scala.util.Success
 import scala.meta.Input
 import scala.meta.Position
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.parsing.TokenOps.syntax._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.tokenizers.Tokenized
@@ -469,7 +470,7 @@ object TokenEditDistance {
   def apply(
       originalInput: Input.VirtualFile,
       revisedInput: Input.VirtualFile,
-      trees: Trees,
+      scalaVersionSelector: ScalaVersionSelector,
   ): Either[String, TokenEditDistance] = {
     val isScala =
       originalInput.path.isScalaFilename &&
@@ -502,8 +503,10 @@ object TokenEditDistance {
         case (_, err: Failure[_]) => Left(err.exception.getMessage())
       }
     } else {
-      val tokenizedRevised = trees.tokenized(revisedInput)
-      val tokenizedOriginal = trees.tokenized(originalInput)
+      val path = revisedInput.path.toAbsolutePath
+      val dialect = scalaVersionSelector.getDialect(path)
+      val tokenizedRevised = revisedInput.value.safeTokenize(dialect)
+      val tokenizedOriginal = originalInput.value.safeTokenize(dialect)
       val result = (tokenizedRevised, tokenizedOriginal) match {
         case (Tokenized.Success(revised), Tokenized.Success(original)) =>
           Right(
