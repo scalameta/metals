@@ -52,6 +52,10 @@ class FuzzySuite extends BaseSuite {
   checkOK("m.Pos.", "scala/meta/Position.Range#")
   checkNO("m.Posi.", "scala/meta/Position.")
 
+  // backticked identifiers
+  checkOK("fluent", "a/B.`fluent name`().")
+  checkOK("fluent na", "a/B.`fluent name`().")
+
   def checkWords(in: String, expected: String): Unit = {
     val name = in.replaceAll("[^a-zA-Z0-9]", " ").trim
     val start = name.lastIndexOf(' ') + 1

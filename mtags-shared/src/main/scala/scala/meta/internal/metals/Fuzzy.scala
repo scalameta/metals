@@ -280,7 +280,9 @@ class Fuzzy {
         }
       }
     }
-    loop(queryStartIdx, -1, symbolStartIdx, -1)
+
+    val backtickAdjust = if (symbol.charAt(symbolStartIdx) == '`') 1 else 0
+    loop(queryStartIdx, -1, symbolStartIdx + backtickAdjust, -1)
   }
 
   def bloomFilterSymbolStrings(
