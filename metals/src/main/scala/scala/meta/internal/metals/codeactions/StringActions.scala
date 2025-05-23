@@ -4,7 +4,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.XtensionClassifiable
-import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder
@@ -14,7 +13,7 @@ import scala.meta.tokens.Token
 
 import org.eclipse.{lsp4j => l}
 
-class StringActions(buffers: Buffers) extends CodeAction {
+class StringActions(trees: Trees) extends CodeAction {
 
   override def kind: String = l.CodeActionKind.Refactor
 
@@ -28,12 +27,7 @@ class StringActions(buffers: Buffers) extends CodeAction {
     val range = params.getRange
     Future
       .successful {
-        val tokenized = buffers
-          .get(path)
-          .flatMap(source =>
-            source.safeTokenize(Trees.defaultTokenizerDialect).toOption
-          )
-        tokenized match {
+        trees.tokenized(path) match {
           case Some(tokens) => {
             val stripMarginActions = tokens
               .filter(t =>

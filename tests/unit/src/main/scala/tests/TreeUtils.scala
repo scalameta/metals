@@ -13,14 +13,20 @@ object TreeUtils {
   def getTrees(scalaVersion: String): (Buffers, Trees) = getTrees(
     Some(scalaVersion)
   )
+
+  def getScalaVersionSelector(
+      scalaVersion: Option[String]
+  ): ScalaVersionSelector = {
+    val buildTargets = BuildTargets.empty
+    new ScalaVersionSelector(
+      () => UserConfiguration(fallbackScalaVersion = scalaVersion),
+      buildTargets,
+    )
+  }
+
   def getTrees(scalaVersion: Option[String]): (Buffers, Trees) = {
     val buffers = Buffers()
-    val buildTargets = BuildTargets.empty
-    val selector =
-      new ScalaVersionSelector(
-        () => UserConfiguration(fallbackScalaVersion = scalaVersion),
-        buildTargets,
-      )
+    val selector = getScalaVersionSelector(scalaVersion)
     implicit val reports =
       new StdReportContext(Paths.get(".").toAbsolutePath, _ => None)
     val trees =

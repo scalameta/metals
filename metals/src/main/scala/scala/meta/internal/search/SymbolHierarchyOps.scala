@@ -13,7 +13,6 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.mtags.{Symbol => MSymbol}
-import scala.meta.internal.parsing.Trees
 import scala.meta.internal.search.SymbolHierarchyOps._
 import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.Scala._
@@ -34,7 +33,6 @@ class SymbolHierarchyOps(
     index: GlobalSymbolIndex,
     scalaVersionSelector: ScalaVersionSelector,
     buffer: Buffers,
-    trees: Trees,
 ) {
   private val globalTable = new GlobalClassTable(buildTargets)
   def defaultSymbolSearch(
@@ -179,7 +177,7 @@ class SymbolHierarchyOps(
       distance = buffer.tokenEditDistance(
         source,
         parentDoc.text,
-        trees,
+        scalaVersionSelector,
       )
       revised <- distance.toRevised(range.toLsp)
     } yield new Location(source.toNIO.toUri().toString(), revised)

@@ -437,9 +437,9 @@ final case class TestingServer(
     }
     for {
       source <- workspaceSources()
-      input = source.toInputFromBuffers(buffers)
+      content <- buffers.get(source)
       identifier = source.toTextDocumentIdentifier
-      token <- trees.tokenized(input).get
+      token <- content.safeTokenize.get
       if token.isIdentifier
       params = token.toPositionParams(identifier)
       definition = server
@@ -1830,7 +1830,7 @@ final case class TestingServer(
     val identifier = path.toTextDocumentIdentifier
     val occurrences = ListBuffer.empty[s.SymbolOccurrence]
     var last = List[String]()
-    trees.tokenized(input).get.foreach {
+    input.value.safeTokenize.get.foreach {
       case token: m.tokens.Token.Ident =>
         val params = token.toPositionParams(identifier)
         // Scala 3 doesn't count ` as part of the word which is the same as most editors
