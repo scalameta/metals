@@ -5,6 +5,7 @@ import javax.annotation.Nullable
 
 import scala.util.Try
 
+import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.tvp._
 
@@ -144,14 +145,17 @@ object MetalsSyncStatusParams {
     def name = "syncing"
     override def text = "$(sync) Syncing"
     override def kind = "warning"
-    override def tooltip = "Syncing document with build server ..."
+    override def tooltip =
+      "Syncing document with build server. Click to see logs."
+    override def command = ClientCommands.ToggleLogs.id
   }
   case object Busy extends Status {
     def name = "busy"
     override def text = "$(sync) Busy"
     override def kind = "warning"
     override def tooltip =
-      "The build server is busy importing the build, please wait."
+      "The build server is busy importing the build. Click to see logs."
+    override def command = ClientCommands.ToggleLogs.id
   }
   case object Untracked extends Status {
     def name = "untracked"
@@ -159,7 +163,7 @@ object MetalsSyncStatusParams {
     override def kind = "warning"
     override def tooltip =
       "Document is not synced with build server. Click to sync."
-    override def command = "metals.sync-file"
+    override def command = ClientCommands.SyncFile.id
   }
   case object Unknown extends Status {
     def name = "unknown"
@@ -167,7 +171,7 @@ object MetalsSyncStatusParams {
     override def kind = "error"
     override def tooltip =
       "File is not part of any build target. Click to try again."
-    override def command = "metals.sync-file"
+    override def command = ClientCommands.SyncFile.id
   }
   case object Hidden extends Status {
     def name = "hidden"

@@ -368,6 +368,12 @@ object ClientCommands {
     ServerCommands.ConnectBuildServer.description,
   )
 
+  val SyncFile = new Command(
+    "metals.sync-file",
+    "Sync file",
+    "Sync the file with the build server.",
+  )
+
   def all: List[BaseCommand] =
     List(
       OpenFolder,
