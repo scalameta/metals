@@ -233,6 +233,10 @@ class Compilers(
       }
     }
 
+  def didFocus(path: AbsolutePath): Unit = {
+    loadCompiler(path).foreach(_.didFocus(path.toNIO.toUri()))
+  }
+
   def didClose(path: AbsolutePath): Unit = {
     loadCompiler(path).foreach(_.didClose(path.toNIO.toUri()))
   }
