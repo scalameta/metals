@@ -13,7 +13,6 @@ case class TreeViewNode(
     @Nullable command: MetalsCommand = null,
     @Nullable icon: String = null,
     @Nullable tooltip: String = null,
-    @Nullable description: String = null,
     // One of "collapsed", "expanded" or "none"
     @Nullable collapseState: String = null,
 ) {

@@ -36,7 +36,6 @@ class MetalsTreeViewProvider(
       TreeViewDidChangeParams(
         Array(
           TreeViewNode.empty(Project),
-          TreeViewNode.empty(Documents),
           TreeViewNode.empty(Build),
         )
       )
@@ -83,11 +82,6 @@ class MetalsTreeViewProvider(
         folderTreeViewProviders
           .map(_.getProjectRoot(Option(params.nodeUri), showFolderName))
           .flatten
-          .toArray
-      case Documents =>
-        val collapse = folderTreeViewProviders.length > 1
-        folderTreeViewProviders
-          .flatMap(_.getDocumentsRoot(Option(params.nodeUri), collapse))
           .toArray
       case Build =>
         Option(params.nodeUri) match {
@@ -177,31 +171,6 @@ class MetalsTreeViewProvider(
     }
   }
 
-  private def updateDocuments(
-      params: String,
-      fn: DocumentsStore => AbsolutePath => Boolean,
-  ): Unit = {
-    val uri = params.stripPrefix("documents:")
-    val providers = getFolderTreeViewProviders()
-    val toUpdate = getFolderTreeViewProviders().flatMap { p =>
-      if (fn(p.documentsStore)(uri.toAbsolutePath)) {
-        p.getDocumentsRoot(None, providers.length > 1)
-      } else {
-        Array.empty[TreeViewNode]
-      }
-    }.toArray
-    if (toUpdate.nonEmpty) {
-      languageClient.metalsTreeViewDidChange(TreeViewDidChangeParams(toUpdate))
-    }
-  }
-
-  override def addDocument(params: String): Unit = {
-    updateDocuments(params, _.put)
-  }
-  override def removeDocument(params: String): Unit = {
-    updateDocuments(params, _.remove)
-  }
-
   override def onCollapseDidChange(
       params: TreeViewNodeCollapseDidChangeParams
   ): Unit = getFolderTreeViewProviders().foreach(_.onCollapseDidChange(params))
@@ -257,7 +226,6 @@ class FolderTreeViewProvider(
     clientConfig: ClientConfiguration,
     trees: Trees,
     buffers: Buffers,
-    val documentsStore: DocumentsStore,
 )(implicit context: ReportContext) {
   val classpath = new IndexedSymbols(
     isStatisticsEnabled = clientConfig.initialConfig.statistics.isTreeView,
@@ -412,43 +380,6 @@ class FolderTreeViewProvider(
         }
       case _ => Array.empty
     }
-
-  def getDocumentsRoot(
-      nodeUri: Option[String],
-      collapse: Boolean,
-  ): Array[TreeViewNode] = {
-    nodeUri match {
-      case None =>
-        Array(
-          TreeViewNode(
-            viewId = TreeViewProvider.Documents,
-            nodeUri = s"documents-root:${folder.path.toURI}/",
-            label = folder.path.filename,
-            collapseState =
-              if (collapse) MetalsTreeItemCollapseState.collapsed
-              else MetalsTreeItemCollapseState.expanded,
-            tooltip = folder.path.toString,
-          )
-        )
-      case Some(uri) if uri == s"documents-root:${folder.path.toURI}/" =>
-        documentsStore
-          .all()
-          .collect { rel =>
-            val uri = folder.path.resolve(rel).toURI
-            TreeViewNode(
-              viewId = TreeViewProvider.Documents,
-              nodeUri = s"documents:${uri}",
-              label = uri.toAbsolutePath.filename,
-              command = null,
-              icon = "",
-              description = rel,
-              collapseState = MetalsTreeItemCollapseState.none,
-            )
-          }
-          .toArray
-      case _ => Array.empty
-    }
-  }
 
   def revealResult(
       path: AbsolutePath,

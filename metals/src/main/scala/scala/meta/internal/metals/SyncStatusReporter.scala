@@ -9,18 +9,16 @@ import scala.meta.internal.metals.clients.language.MetalsSyncStatusParams
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
 class SyncStatusReporter(
-    syncedDocuments: DocumentsStore,
     languageClient: MetalsLanguageClient,
     buildTargets: BuildTargets,
-    sync: String => Unit,
 ) {
   private val importing = new AtomicReference[Option[Option[String]]](None)
+
   def onSync(uri: String): Unit = {
     scribe.trace(
       s"SyncStatusReporter: didSync: $uri: ${MetalsSyncStatusParams.Synced}"
     )
     importing.set(Some(Some(uri)))
-    syncedDocuments.put(uri.toAbsolutePath)
     languageClient.metalsSyncStatus(
       MetalsSyncStatusParams(uri, MetalsSyncStatusParams.Syncing)
     )
@@ -98,10 +96,6 @@ class SyncStatusReporter(
           languageClient.metalsSyncStatus(
             MetalsSyncStatusParams(uri, MetalsSyncStatusParams.Untracked)
           )
-          if (syncedDocuments.has(path)) {
-            scribe.trace(s"SyncStatusReporter: didFocus: $uri: known file}")
-            sync(uri)
-          }
       }
     } else {
       scribe.trace(
@@ -123,4 +117,5 @@ class SyncStatusReporter(
     importing.set(None)
     uri.foreach(didFocus)
   }
+
 }

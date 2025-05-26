@@ -616,11 +616,8 @@ abstract class MetalsLspService(
       saveJarFileToDisk = !clientConfig.isVirtualDocumentSupported(),
     )
 
-  protected val syncedDocuments: DocumentsStore =
-    new DocumentsStore(folder)
-
   protected val syncStatusReporter: SyncStatusReporter =
-    new SyncStatusReporter(syncedDocuments, languageClient, buildTargets, sync)
+    new SyncStatusReporter(languageClient, buildTargets)
 
   def parseTreesAndPublishDiags(paths: Seq[AbsolutePath]): Future[Unit] = {
     Future

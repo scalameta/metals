@@ -65,11 +65,7 @@ trait MetalsService {
 
   @JsonNotification("metals/sync")
   def sync(
-      params: String
+      params: AnyRef
   ): CompletableFuture[Unit]
 
-  @JsonNotification("metals/syncRemove")
-  def syncRemove(
-      params: String
-  ): CompletableFuture[Unit]
 }
