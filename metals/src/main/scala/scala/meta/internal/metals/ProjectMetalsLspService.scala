@@ -572,6 +572,7 @@ class ProjectMetalsLspService(
       clientConfig,
       trees,
       buffers,
+      syncedDocuments,
     )
 
   protected def onBuildTargetChanges(

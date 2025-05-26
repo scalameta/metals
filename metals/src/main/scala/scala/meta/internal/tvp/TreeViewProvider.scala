@@ -6,6 +6,7 @@ import org.eclipse.{lsp4j => l}
 
 trait TreeViewProvider {
   val Project = TreeViewProvider.Project
+  val Documents = TreeViewProvider.Documents
   val Build = TreeViewProvider.Build
   val Help = TreeViewProvider.Help
   def init(): Unit = ()
@@ -17,6 +18,12 @@ trait TreeViewProvider {
       path: AbsolutePath,
       pos: l.Position,
   ): Option[TreeViewNodeRevealResult] = None
+  def removeDocument(
+      params: String
+  ): Unit = ()
+  def addDocument(
+      params: String
+  ): Unit = ()
   def onCollapseDidChange(
       params: TreeViewNodeCollapseDidChangeParams
   ): Unit = ()
@@ -30,6 +37,7 @@ trait TreeViewProvider {
 
 object TreeViewProvider {
   val Project = "metalsPackages"
+  val Documents = "metalsDocuments"
   val Build = "metalsBuild"
   val Help = "metalsHelp"
 }
