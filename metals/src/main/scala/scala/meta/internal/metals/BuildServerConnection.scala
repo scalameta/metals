@@ -139,7 +139,7 @@ class BuildServerConnection private (
 
   // Scala CLI breaks when we try to use the `buildTarget/dependencyModules` request
   def isDependencyModulesSupported: Boolean =
-    capabilities.getDependencyModulesProvider() && !isScalaCLI
+    capabilities.getDependencyModulesProvider() && !isScalaCLI || isBazel
 
   /* Currently only Bloop and sbt support running single test cases
    * and ScalaCLI uses Bloop underneath.
