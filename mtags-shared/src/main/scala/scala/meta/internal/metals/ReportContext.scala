@@ -17,6 +17,7 @@ import scala.util.matching.Regex
 import scala.meta.internal.metals.utils.LimitedFilesManager
 import scala.meta.internal.metals.utils.TimestampedFile
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
+import scala.meta.internal.mtags.EncoderDecoder
 import scala.meta.pc.{reports => jreports}
 
 trait ReportContext extends jreports.ReportContext {
@@ -185,6 +186,7 @@ class StdReporter(
     val time = TimeFormatter.getTime()
     val buildTargetPart =
       resolveBuildTarget(report.path().asScala)
+        .map(FileNameEncoderDecoder.encode)
         .map("_(" ++ _ ++ ")")
         .getOrElse("")
     val filename = s"r_${report.name()}${buildTargetPart}_${time}.md"
@@ -260,7 +262,17 @@ object ReportFileName {
     pattern.findPrefixMatchOf(file.name) match {
       case None => (file.name, None)
       case Some(foundMatch) =>
-        (foundMatch.group("name"), Option(foundMatch.group("buildTarget")))
+        (
+          foundMatch.group("name"),
+          Option(foundMatch.group("buildTarget"))
+            .map(FileNameEncoderDecoder.decode),
+        )
     }
 
 }
+
+object FileNameEncoderDecoder
+    extends EncoderDecoder(
+      '_',
+      Set('/', '\\', ':', '*', '?', '"', '<', '>', '|', '_', '@'),
+    )
