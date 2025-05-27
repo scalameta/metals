@@ -27,6 +27,7 @@ import tests.SbtBuildLayout
 import tests.SbtServerInitializer
 import tests.ScriptsAssertions
 import tests.TestSemanticTokens
+import org.eclipse.lsp4j.MessageActionItem
 
 /**
  * Basic suite to ensure that a connection to sbt server can be made.
@@ -52,6 +53,32 @@ class SbtServerSuite
   override def currentDigest(
       workspace: AbsolutePath
   ): Option[String] = SbtDigest.current(workspace)
+
+  test("ignore-bloop") {
+    cleanWorkspace()
+    val hangPromise = Promise[MessageActionItem]()
+    client.futureShowMessageRequestHandler = { message =>
+      if (message.getMessage == importBuildMessage) {
+        Some(hangPromise.future)
+      } else None
+    }
+
+    for {
+      _ <- initialize(
+        SbtBuildLayout(
+          """|a/src/main/scala/A.scala
+             |
+             |object A {
+             |  val foo: Int = "aaa"
+             |}
+             |/.metals/a.txt
+             |
+             |""".stripMargin,
+          V.scala213,
+        )
+      )
+    } yield hangPromise.success(Messages.ImportBuild.notNow)
+  }
 
   test("too-old") {
     cleanWorkspace()
