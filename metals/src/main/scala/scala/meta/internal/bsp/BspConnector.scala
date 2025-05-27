@@ -85,6 +85,7 @@ class BspConnector(
       workspace: AbsolutePath,
       userConfiguration: () => UserConfiguration,
       shellRunner: ShellRunner,
+      createSession: () => Unit
   )(implicit ec: ExecutionContext): Future[Option[BspSession]] = {
     val projectRoot = buildTool
       .map(_.projectRoot)
@@ -207,13 +208,9 @@ class BspConnector(
               )
             _ = tables.buildServers.chooseServer(item.getName())
             _ = optSetBuildTool(item.getName())
-            conn <- bspServers.newServer(
-              projectRoot,
-              bspTraceRoot,
-              item,
-              bspStatusOpt,
-            )
-          } yield Some(conn)
+          } yield createSession()
+
+          Future.successful(None)
       }
     }
 

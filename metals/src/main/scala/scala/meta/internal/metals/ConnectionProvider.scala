@@ -161,14 +161,17 @@ class ConnectionProvider(
             chosenBuildServer.isEmpty && !useBuildToolBsp(
               buildTool
             ) && buildTool.isBloopInstallProvider =>
-        connect(
-          new BloopInstallAndConnect(
-            buildTool,
-            digest,
-            forceImport,
-            shutdownServer = false,
+        def runInstall() =
+          connect(
+            new BloopInstallAndConnect(
+              buildTool,
+              shutdownServer = false,
+            )
           )
-        )
+        if (forceImport) runInstall()
+        else {
+          bloopInstall.runIfApproved(buildTool, digest, runInstall)
+        }
       case Some(found)
           if isSelected(found.buildTool) &&
             found.buildTool.isBspGenerated(folder) =>
@@ -385,14 +388,10 @@ class ConnectionProvider(
                 )
               case BloopInstallAndConnect(
                     buildTool,
-                    checksum,
-                    forceImport,
                     shutdownServer,
                   ) =>
                 bloopInstallAndConnect(
                   buildTool,
-                  checksum,
-                  forceImport,
                   shutdownServer,
                 )
             }
@@ -573,6 +572,7 @@ class ConnectionProvider(
               folder,
               () => userConfig,
               shellRunner,
+              () => createSession(shutdownServer),
             )
           }
           .withInterrupt
@@ -671,22 +671,10 @@ class ConnectionProvider(
 
     private def bloopInstallAndConnect(
         buildTool: BloopInstallProvider,
-        checksum: String,
-        forceImport: Boolean,
         shutdownServer: Boolean,
     )(implicit cancelSwitch: CancelSwitch): Interruptable[BuildChange] = {
       for {
-        result <- {
-          if (forceImport)
-            bloopInstall.runUnconditionally(
-              buildTool
-            )
-          else
-            bloopInstall.runIfApproved(
-              buildTool,
-              checksum,
-            )
-        }.withInterrupt
+        result <- bloopInstall.run(buildTool).withInterrupt
         change <- {
           if (result.isInstalled) createSession(shutdownServer)
           else if (result.isFailed) {
@@ -713,12 +701,12 @@ class ConnectionProvider(
                           Messages.ImportProjectFailedSuggestBspSwitch.params()
                         )
                         .asScala
-                        .withInterrupt
-                        .flatMap {
+                        .foreach {
                           case Messages.ImportProjectFailedSuggestBspSwitch.switchBsp =>
-                            switchBspServer().withInterrupt
+                            switchBspServer()
                           case _ => Interruptable.successful(BuildChange.Failed)
                         }
+                      Interruptable.successful(BuildChange.Failed)
                     case _ =>
                       languageClient.showMessage(Messages.ImportProjectFailed)
                       Interruptable.successful(BuildChange.Failed)
@@ -809,14 +797,12 @@ case class GenerateBspConfigAndConnect(
 ) extends ConnectRequest {
   def cancelCompare(other: ConnectRequest): ConflictBehaviour =
     other match {
-      case BloopInstallAndConnect(_, _, _, true) if !shutdownServer => Queue
+      case BloopInstallAndConnect(_, true) if !shutdownServer => Queue
       case _ => TakeOver
     }
 }
 case class BloopInstallAndConnect(
     buildTool: BloopInstallProvider,
-    checksum: String,
-    forceImport: Boolean,
     shutdownServer: Boolean,
 ) extends ConnectRequest {
   def cancelCompare(other: ConnectRequest): ConflictBehaviour =
