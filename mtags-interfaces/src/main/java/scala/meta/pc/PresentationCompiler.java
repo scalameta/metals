@@ -194,10 +194,6 @@ public abstract class PresentationCompiler {
 	 */
 	public abstract CompletableFuture<List<Diagnostic>> didChange(VirtualFileParams params);
 
-    /**
-	 * The given file was focused.
-	 */
-	public void didFocus(URI uri) { }
 	/**
 	 * Returns decorations for missing type adnotations, inferred type parameters,
 	 * implicit parameters and conversions.

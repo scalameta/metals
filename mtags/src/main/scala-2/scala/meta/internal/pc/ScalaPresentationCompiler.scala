@@ -69,15 +69,12 @@ case class ScalaPresentationCompiler(
     completionItemPriority: CompletionItemPriority = (_: String) => 0,
     optReportContext: Option[ReportContext] = None
 ) extends PresentationCompiler {
-
   implicit val reportContext: ReportContext =
     optReportContext.getOrElse(new EmptyReportContext())
 
   implicit val executionContext: ExecutionContextExecutor = ec
 
   val scalaVersion = BuildInfo.scalaCompilerVersion
-
-  private val compileUnitsCache = new CompileUnitsCache(5)
 
   val logger: Logger =
     Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
@@ -150,12 +147,10 @@ case class ScalaPresentationCompiler(
     )(ec)
 
   override def shutdown(): Unit = {
-    compileUnitsCache.restart()
     compilerAccess.shutdown()
   }
 
   def restart(): Unit = {
-    compileUnitsCache.restart()
     compilerAccess.shutdownCurrentCompiler()
   }
 
@@ -176,17 +171,13 @@ case class ScalaPresentationCompiler(
   override def didChange(
       params: VirtualFileParams
   ): CompletableFuture[ju.List[Diagnostic]] = {
-    CompletableFuture.completedFuture(Nil.asJava)
-  }
-
-  override def didFocus(uri: URI): Unit = {
+    val empty: ju.List[Diagnostic] = new ju.ArrayList[Diagnostic]()
     compilerAccess.withNonInterruptableCompiler(
-      (),
+      empty,
       EmptyCancelToken
     ) { pc =>
-      compileUnitsCache.didFocus(uri).foreach { removeUri =>
-        pc.compiler().remove(removeUri)
-      }
+      pc.compiler().didChange(params.uri())
+      empty
     }(emptyQueryContext)
   }
 
@@ -196,7 +187,6 @@ case class ScalaPresentationCompiler(
       EmptyCancelToken
     ) { pc =>
       pc.compiler().richCompilationCache.remove(uri.toString())
-      pc.compiler().fullyCompiled.remove(uri.toString())
     }(emptyQueryContext)
   }
 
