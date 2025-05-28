@@ -11,6 +11,8 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.attribute.PosixFilePermissions
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 
 import scala.annotation.tailrec
@@ -255,6 +257,12 @@ final class BloopServers(
     } match {
       case None => Future.unit
       case Some(value) =>
+        def killOldBloop(): Unit =
+          ShellRunner.runSync(
+            List("kill", "-9", value.toString()),
+            bloopWorkingDir,
+            redirectErrorOutput = false,
+          )
         languageClient
           .showMessageRequest(
             OldBloopVersionRunning.params()
@@ -263,13 +271,16 @@ final class BloopServers(
           .map { res =>
             Option(res) match {
               case Some(item) if item == OldBloopVersionRunning.yes =>
-                ShellRunner.runSync(
-                  List("kill", "-9", value.toString()),
-                  bloopWorkingDir,
-                  redirectErrorOutput = false,
-                )
+                killOldBloop()
               case _ =>
             }
+          }
+          .withTimeout(15, TimeUnit.SECONDS)
+          .recover { case _: TimeoutException =>
+            languageClient.showMessage(
+              OldBloopVersionRunning.killingBloopParams()
+            )
+            killOldBloop()
           }
     }
   } catch {
