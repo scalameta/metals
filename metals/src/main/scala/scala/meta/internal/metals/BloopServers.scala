@@ -29,9 +29,10 @@ import scala.util.control.NonFatal
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.Interruptable.MetalsCancelException
 import scala.meta.internal.metals.Messages.OldBloopVersionRunning
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.io.AbsolutePath
 
 import bloop.rifle.BloopRifle
@@ -54,7 +55,7 @@ import bloop.rifle.BspConnectionAddress
  */
 final class BloopServers(
     client: MetalsBuildClient,
-    languageClient: MetalsLanguageClient,
+    languageClient: ConfiguredLanguageClient,
     tables: Tables,
     serverConfig: MetalsServerConfig,
     workDoneProgress: WorkDoneProgress,
@@ -265,13 +266,13 @@ final class BloopServers(
           )
         languageClient
           .showMessageRequest(
-            OldBloopVersionRunning.params()
+            OldBloopVersionRunning.params(),
+            ConnectionProvider.ConnectRequestCancelationGroup,
+            throw MetalsCancelException
           )
-          .asScala
           .map { res =>
             Option(res) match {
-              case Some(item) if item == OldBloopVersionRunning.yes =>
-                killOldBloop()
+              case Some(item) if item == OldBloopVersionRunning.yes => killOldBloop()
               case _ =>
             }
           }
