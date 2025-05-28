@@ -4,6 +4,9 @@ import java.net.URI
 
 import scala.collection.mutable
 import scala.reflect.io.AbstractFile
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
 
 class CompileUnitsCache(keepLastCount: Short) {
   private val lastCompiled = new LastNElementsSet[AbstractFile](keepLastCount)
@@ -12,8 +15,13 @@ class CompileUnitsCache(keepLastCount: Short) {
   def didGetUnit(file: AbstractFile): Option[AbstractFile] = {
     lastCompiled
       .add(file)
-      .filterNot(f => lastModified.contains(f.toURL.toURI()))
-
+      .filterNot { f =>
+        Try(f.toURL.toURI()) match {
+          case Success(uri) => lastModified.contains(uri)
+          // we may create abstract files that are not valid URIs
+          case Failure(_) => false
+        }
+      }
   }
 
   def didChange(uri: URI): Unit = {
