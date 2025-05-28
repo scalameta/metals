@@ -151,7 +151,7 @@ class BuildServerConnection private (
 
   // Scala CLI breaks when we try to use the `buildTarget/dependencyModules` request
   def isDependencyModulesSupported: Boolean =
-    capabilities.getDependencyModulesProvider() && !isScalaCLI
+    capabilities.getDependencyModulesProvider() && !isScalaCLI || isBazel
 
   def supportsSyncMethod: Boolean =
     initialConnection.syncModes.isDefined
