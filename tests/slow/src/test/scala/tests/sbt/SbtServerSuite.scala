@@ -16,6 +16,7 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
+import org.eclipse.lsp4j.MessageActionItem
 import scribe.LogRecord
 import scribe.Logger
 import scribe.output.LogOutput
@@ -27,7 +28,6 @@ import tests.SbtBuildLayout
 import tests.SbtServerInitializer
 import tests.ScriptsAssertions
 import tests.TestSemanticTokens
-import org.eclipse.lsp4j.MessageActionItem
 
 /**
  * Basic suite to ensure that a connection to sbt server can be made.

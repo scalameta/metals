@@ -24,19 +24,19 @@ import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
+import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 import com.google.common.collect.ImmutableList
-import org.eclipse.lsp4j.services.LanguageClient
 
 class BspConnector(
     bloopServers: BloopServers,
     bspServers: BspServers,
     buildTools: BuildTools,
-    client: LanguageClient,
+    client: ConfiguredLanguageClient,
     tables: Tables,
     userConfig: () => UserConfiguration,
     statusBar: StatusBar,

@@ -1,9 +1,12 @@
 package scala.meta.internal.metals.clients.language
 
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.concurrent.Promise
 
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
@@ -37,6 +40,8 @@ final class ConfiguredLanguageClient(
 )(implicit ec: ExecutionContext)
     extends DelegatingLanguageClient(initial) {
 
+  private val requestMap: ConcurrentHashMap[String, Set[Promise[Unit]]] =
+    new ConcurrentHashMap()
   override def shutdown(): Unit = {
     underlying = NoopLanguageClient
   }
@@ -100,6 +105,46 @@ final class ConfiguredLanguageClient(
     val result = underlying.showMessageRequest(params)
     result.asScala.onComplete(_ => pendingShowMessage.set(false))
     result
+  }
+
+  def showMessageRequest(
+      params: ShowMessageRequestParams,
+      cancelationGroup: String,
+      cancelValue: => MessageActionItem = new MessageActionItem("Missed by user"),
+  ): Future[MessageActionItem] = {
+    val promise = Promise[Unit]()
+    // put promise into cancellation map
+    requestMap.compute(
+      cancelationGroup,
+      (_, promises) => {
+        if (promises == null) Set(promise)
+        else promises + promise
+      },
+    )
+
+    // call client
+    val result = showMessageRequest(params)
+    val future = 
+      Future.firstCompletedOf(
+        List(
+          result.asScala,
+          promise.future.map { _ =>
+            result.cancel(false)
+            cancelValue
+          },
+        )
+      )
+
+    future.onComplete{ _ =>
+      // remove promise from cancellation map
+      requestMap.computeIfPresent(cancelationGroup, (_, promises) => promises - promise)
+    }
+
+    future
+  }
+
+  def cancelRequest(cancelationGroup: String): Unit = {
+    requestMap.remove(cancelationGroup).foreach(_.trySuccess(()))
   }
 
   override def logMessage(message: MessageParams): Unit = {

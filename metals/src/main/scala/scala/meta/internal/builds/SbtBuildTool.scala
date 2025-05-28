@@ -16,12 +16,12 @@ import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BspConfigGenerationStatus.BspConfigGenerationStatus
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
+import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.semver.SemVer.isCompatibleVersion
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.services.LanguageClient
 
 case class SbtBuildTool(
     workspaceVersion: Option[String],
@@ -258,7 +258,7 @@ case class SbtBuildTool(
   def ensureCorrectJavaVersion(
       shellRunner: ShellRunner,
       workspace: AbsolutePath,
-      languageClient: LanguageClient,
+      languageClient: ConfiguredLanguageClient,
       restartSbtBuildServer: () => Future[Unit],
   )(implicit ex: ExecutionContext): Future[Unit] =
     if (checkCorrectJavaVersion(workspace, userConfig().javaHome)) {
@@ -267,8 +267,10 @@ case class SbtBuildTool(
       val promise = Promise[Unit]()
       val future: Future[Unit] =
         languageClient
-          .showMessageRequest(Messages.SbtServerJavaHomeUpdate.params())
-          .asScala
+          .showMessageRequest(
+            Messages.SbtServerJavaHomeUpdate.params(),
+            ConnectionProvider.ConnectRequestCancelationGroup,
+          )
           .flatMap {
             case Messages.SbtServerJavaHomeUpdate.restart =>
               if (promise.isCompleted) {
