@@ -16,7 +16,6 @@ import scala.reflect.internal.util.ScriptSourceFile
 import scala.reflect.internal.util.SourceFile
 import scala.reflect.internal.{Flags => gf}
 import scala.reflect.io.AbstractFile
-import scala.reflect.io.VirtualFile
 import scala.tools.nsc.Mode
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
@@ -82,19 +81,13 @@ class MetalsGlobal(
   val richCompilationCache: TrieMap[String, RichCompilationUnit] =
     TrieMap.empty[String, RichCompilationUnit]
 
-  private def toAbstractFile(uri: URI): AbstractFile = new VirtualFile(
-    uri.toString()
-  )
-
   // for those paths units were fully compiled (not just outlined)
   val fullyCompiled: mutable.Set[String] = mutable.Set.empty[String]
 
-  def remove(uri: URI): Unit = {
-    // if not outlined, remove from cache
-    if (!richCompilationCache.contains(uri.toString())) {
-      fullyCompiled.remove(uri.toString())
-      toBeRemoved.add(toAbstractFile(uri))
-    }
+  val compileUnitsCache = new CompileUnitsCache(5)
+
+  def didChange(uri: URI): Unit = {
+    compileUnitsCache.didChange(uri)
   }
 
   class MetalsInteractiveAnalyzer(val global: compiler.type)
@@ -704,6 +697,15 @@ class MetalsGlobal(
 
   def CURSOR = "_CURSOR_"
 
+  private def remove(file: AbstractFile): Unit = {
+    val uri = file.toURL.toURI()
+    // if not outlined, remove from cache
+    if (!richCompilationCache.contains(uri.toString())) {
+      fullyCompiled.remove(uri.toString())
+      toBeRemoved.add(file)
+    }
+  }
+
   def addCompilationUnit(
       code: String,
       filename: String,
@@ -724,6 +726,9 @@ class MetalsGlobal(
         ScriptSourceFile(unit.source.file, unit.source.content)
       else unit.source
     val richUnit = new RichCompilationUnit(source)
+    if (!isOutline) {
+      compileUnitsCache.didGetUnit(richUnit.source.file).foreach(remove)
+    }
     toBeRemoved.remove(richUnit.source.file)
     unitOfFile.get(richUnit.source.file) match {
       case Some(value)
