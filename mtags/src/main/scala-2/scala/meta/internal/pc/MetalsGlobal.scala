@@ -698,10 +698,8 @@ class MetalsGlobal(
   def CURSOR = "_CURSOR_"
 
   private def remove(file: AbstractFile): Unit = {
-    val uri = file.toURL.toURI()
-    // if not outlined, remove from cache
-    if (!richCompilationCache.contains(uri.toString())) {
-      fullyCompiled.remove(uri.toString())
+    if (!richCompilationCache.contains(file.name)) {
+      fullyCompiled.remove(file.name)
       toBeRemoved.add(file)
     }
   }
