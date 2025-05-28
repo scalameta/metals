@@ -1,7 +1,6 @@
 package scala.meta.internal.metals
 
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
-import scala.meta.internal.pc.CompilerThrowable
 import scala.meta.pc.VirtualFileParams
 import scala.meta.pc.reports
 
