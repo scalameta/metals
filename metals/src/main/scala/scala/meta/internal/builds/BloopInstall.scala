@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.CancelableFuture
@@ -16,7 +17,6 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
-import scala.meta.internal.bsp.BuildChange
 
 /**
  * Runs `sbt/gradle/mill/mvn bloopInstall` processes.

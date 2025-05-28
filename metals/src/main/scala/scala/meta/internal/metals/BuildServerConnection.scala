@@ -20,6 +20,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.FiniteDuration
 import scala.reflect.ClassTag
+import scala.util.Failure
 import scala.util.Success
 
 import scala.meta.internal.bsp.ConnectionBspStatus
@@ -471,6 +472,11 @@ class BuildServerConnection private (
             connection
           case _ =>
             connection
+        }
+        .withTimeout(10, TimeUnit.SECONDS)
+        .transformWith {
+          case Failure(_: TimeoutException) => connection
+          case t => Future.fromTry(t)
         }
       } else {
         connection
