@@ -268,11 +268,12 @@ final class BloopServers(
           .showMessageRequest(
             OldBloopVersionRunning.params(),
             ConnectionProvider.ConnectRequestCancelationGroup,
-            throw MetalsCancelException
+            throw MetalsCancelException,
           )
           .map { res =>
             Option(res) match {
-              case Some(item) if item == OldBloopVersionRunning.yes => killOldBloop()
+              case Some(item) if item == OldBloopVersionRunning.yes =>
+                killOldBloop()
               case _ =>
             }
           }
