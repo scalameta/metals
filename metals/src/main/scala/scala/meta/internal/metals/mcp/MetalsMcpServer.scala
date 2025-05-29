@@ -616,22 +616,32 @@ class MetalsMcpServer(
         val potentialDepStrings = (org, name, version) match {
           case (Some(org), Some(name), Some(version)) =>
             List(
-              s"$org:$name:$version",
-              s"$org:${name}_$scalaBinaryVersion:$version",
+              "version" -> s"$org:${name}_$scalaBinaryVersion:$version",
+              "version" -> s"$org:$name:$version",
             )
           case (Some(org), Some(name), None) =>
-            List(s"$org:$name", s"$org:${name}_$scalaBinaryVersion")
-          case (Some(org), None, _) => List(s"$org")
+            List(
+              "version" -> s"$org:${name}_$scalaBinaryVersion:",
+              "name" -> s"$org:$name",
+            )
+          case (Some(org), None, _) =>
+            List("name" -> s"$org:", "organization" -> s"$org")
           case _ => List()
         }
-        val completions = potentialDepStrings.iterator
-          .map(depString => coursierComplete.complete(depString))
-          .filter(_.nonEmpty)
-          .headOption
-          .getOrElse(List(s"No completions found"))
+        val completions = {
+          for {
+            (key, depString) <- potentialDepStrings.iterator
+            completed = coursierComplete.complete(depString)
+            if completed.nonEmpty
+          } yield {
+            s"Tool managed to complete $key and got potential matches: ${completed.mkString(", ")}"
+          }
+        }.headOption
+          .getOrElse(s"No completions found")
+
         Future
           .successful(
-            new CallToolResult(createContent(completions.mkString("\n")), false)
+            new CallToolResult(createContent(completions), false)
           )
           .toMono
       },
