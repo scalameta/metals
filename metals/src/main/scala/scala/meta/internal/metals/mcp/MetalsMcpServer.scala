@@ -277,7 +277,7 @@ class MetalsMcpServer(
          |  "properties": {
          |    "fileInFocus": {
          |      "type": "string",
-         |      "description": "The file to compile, if empty we will try to detect file in focus"
+         |      "description": "The file to compile, if empty we will try to detect file in focus. Will return errors in the file focused file, if any. If no errors in the file, it will return errors in the module the file belongs to, if any."
          |    }
          |  }
          |}""".stripMargin
@@ -293,7 +293,7 @@ class MetalsMcpServer(
 
               def inFileErrors = {
                 val errors = diagnostics.forFile(path).show()
-                if (errors.isEmpty) None else Some(s"Errors in file:\n$errors")
+                if (errors.isEmpty) None else Some(s"Found errors in $path:\n$errors")
               }
 
               def inModuleErrors =
@@ -305,7 +305,7 @@ class MetalsMcpServer(
                     diagnostics.allDiagnostics.filter { case (path, _) =>
                       buildTargets.inverseSources(path).contains(bt)
                     }
-                  s"Compile errors in the module:\n${errors.show(projectPath)}"
+                  s"No errors in the file, but found compile errors in the module:\n${errors.show(projectPath)}"
                 }
 
               def inUpstreamModulesErrors =
@@ -319,7 +319,7 @@ class MetalsMcpServer(
                     .flatMap(buildTargets.jvmTarget)
                     .map(_.displayName)
                     .mkString("\n", "\n", "")
-                  s"Compile errors in upstream modules: $modules"
+                  s"Failed to compile the file, since there compile errors in upstream modules: $modules"
                 }
 
               val content = inFileErrors
