@@ -1098,6 +1098,8 @@ object Messages {
     }
   }
 
+  val missedByUser = new MessageActionItem("Missed by user")
+
 }
 
 object FileOutOfScalaCliBspScope {

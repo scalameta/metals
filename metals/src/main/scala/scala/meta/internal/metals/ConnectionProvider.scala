@@ -570,7 +570,6 @@ class ConnectionProvider(
               folder,
               () => userConfig,
               shellRunner,
-              () => createSession(shutdownServer),
             )
           }
           .withInterrupt
