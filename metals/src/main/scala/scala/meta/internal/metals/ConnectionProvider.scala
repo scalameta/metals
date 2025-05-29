@@ -160,7 +160,7 @@ class ConnectionProvider(
           if chosenBuildServer.contains(BloopServers.name) ||
             chosenBuildServer.isEmpty && !useBuildToolBsp(buildTool) =>
         def runInstall() = connect(new BloopInstallAndConnect(buildTool))
-        if(forceImport) runInstall()
+        if (forceImport) runInstall()
         else {
           bloopInstall.runIfApproved(buildTool, digest, runInstall)
         }
@@ -345,7 +345,9 @@ class ConnectionProvider(
         currentRequest.foreach(ongoing =>
           if (request.cancelCompare(ongoing.request) == TakeOver) {
             ongoing.cancel()
-            languageClient.cancelRequest(ConnectionProvider.ConnectRequestCancelationGroup)
+            languageClient.cancelRequest(
+              ConnectionProvider.ConnectRequestCancelationGroup
+            )
           }
         )
         info
@@ -560,7 +562,7 @@ class ConnectionProvider(
               folder,
               () => userConfig,
               shellRunner,
-              () => createSession(shutdownServer)
+              () => createSession(shutdownServer),
             )
           }
           .withInterrupt
@@ -658,7 +660,7 @@ class ConnectionProvider(
     }
 
     private def bloopInstallAndConnect(
-        buildTool: BloopInstallProvider,
+        buildTool: BloopInstallProvider
     )(implicit cancelSwitch: CancelSwitch): Interruptable[BuildChange] = {
       for {
         result <- bloopInstall.run(buildTool).withInterrupt
@@ -785,7 +787,7 @@ case class GenerateBspConfigAndConnect(
   def cancelCompare(other: ConnectRequest): ConflictBehaviour = TakeOver
 }
 case class BloopInstallAndConnect(
-    buildTool: BloopInstallProvider,
+    buildTool: BloopInstallProvider
 ) extends ConnectRequest {
   def cancelCompare(other: ConnectRequest): ConflictBehaviour =
     other match {

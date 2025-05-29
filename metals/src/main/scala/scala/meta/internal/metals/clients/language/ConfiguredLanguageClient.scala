@@ -110,7 +110,9 @@ final class ConfiguredLanguageClient(
   def showMessageRequest(
       params: ShowMessageRequestParams,
       cancelationGroup: String,
-      cancelValue: => MessageActionItem = new MessageActionItem("Missed by user"),
+      cancelValue: => MessageActionItem = new MessageActionItem(
+        "Missed by user"
+      ),
   ): Future[MessageActionItem] = {
     val promise = Promise[Unit]()
     // put promise into cancellation map
@@ -124,7 +126,7 @@ final class ConfiguredLanguageClient(
 
     // call client
     val result = showMessageRequest(params)
-    val future = 
+    val future =
       Future.firstCompletedOf(
         List(
           result.asScala,
@@ -135,9 +137,12 @@ final class ConfiguredLanguageClient(
         )
       )
 
-    future.onComplete{ _ =>
+    future.onComplete { _ =>
       // remove promise from cancellation map
-      requestMap.computeIfPresent(cancelationGroup, (_, promises) => promises - promise)
+      requestMap.computeIfPresent(
+        cancelationGroup,
+        (_, promises) => promises - promise,
+      )
     }
 
     future

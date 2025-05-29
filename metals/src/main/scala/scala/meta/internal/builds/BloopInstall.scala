@@ -114,7 +114,7 @@ final class BloopInstall(
   def runIfApproved(
       buildTool: BloopInstallProvider,
       digest: String,
-      bloopInstall: () => Future[BuildChange]
+      bloopInstall: () => Future[BuildChange],
   ): Future[BuildChange] =
     synchronized {
       oldInstallResult(digest) match {
