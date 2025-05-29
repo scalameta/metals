@@ -3,8 +3,6 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
@@ -280,10 +278,6 @@ case class SbtBuildTool(
             case _ =>
               promise.trySuccess(())
               Future.successful(())
-          }
-          .withTimeout(15, TimeUnit.SECONDS)
-          .recover { case _: TimeoutException =>
-            Future.successful(())
           }
       future.onComplete(promise.tryComplete(_))
       promise.future

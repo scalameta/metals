@@ -14,8 +14,10 @@ import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.ConnectKind
+import scala.meta.internal.metals.ConnectionProvider
 import scala.meta.internal.metals.CreateSession
 import scala.meta.internal.metals.GenerateBspConfigAndConnect
+import scala.meta.internal.metals.Interruptable.MetalsCancelException
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.BspSwitch
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -85,7 +87,6 @@ class BspConnector(
       workspace: AbsolutePath,
       userConfiguration: () => UserConfiguration,
       shellRunner: ShellRunner,
-      createSession: () => Unit,
   )(implicit ec: ExecutionContext): Future[Option[BspSession]] = {
     val projectRoot = buildTool
       .map(_.projectRoot)
@@ -200,17 +201,24 @@ class BspConnector(
             )
           for {
             Some(item) <- client
-              .showMessageRequest(query.params)
-              .asScala
+              .showMessageRequest(
+                query.params,
+                ConnectionProvider.ConnectRequestCancelationGroup,
+                throw MetalsCancelException,
+              )
               .map(item =>
                 Option(item)
                   .map(item => distinctServers(query.mapping(item.getTitle)))
               )
             _ = tables.buildServers.chooseServer(item.getName())
             _ = optSetBuildTool(item.getName())
-          } yield createSession()
-
-          Future.successful(None)
+            conn <- bspServers.newServer(
+              projectRoot,
+              bspTraceRoot,
+              item,
+              bspStatusOpt,
+            )
+          } yield Some(conn)
       }
     }
 
