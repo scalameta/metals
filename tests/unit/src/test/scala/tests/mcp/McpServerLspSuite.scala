@@ -4,6 +4,7 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mcp.McpConfig
+import scala.meta.internal.metals.mcp.McpMessages
 import scala.meta.internal.metals.mcp.VSCodeEditor
 
 import tests.BaseLspSuite
@@ -35,19 +36,21 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") {
       _ = assert(port.isDefined, "MCP server port should be defined")
       client = new TestMcpClient(s"http://localhost:${port.get}/sse")
       _ <- client.initialize()
-      result <- client.findDep("org.scala-lang")
+      result <- client.findDep("org.scala-lan")
       _ = assertNoDiff(
         result.mkString("\n"),
-        """|org.scala-lang
-           |org.scala-lang-osgi
-           |""".stripMargin,
+        McpMessages.FindDep.dependencyReturnMessage(
+          "organization",
+          Seq("org.scala-lang", "org.scala-lang-osgi"),
+        ),
       )
-      resultName <- client.findDep("org.scala-lang", Some("scala-library"))
+      resultName <- client.findDep("org.scala-lang", Some("scala-librar"))
       _ = assertNoDiff(
         resultName.mkString("\n"),
-        """|scala-library
-           |scala-library-all
-           |""".stripMargin,
+        McpMessages.FindDep.dependencyReturnMessage(
+          "name",
+          Seq("scala-library", "scala-library-all"),
+        ),
       )
       resultNameVersion <- client.findDep(
         "org.scalameta",
@@ -56,10 +59,17 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") {
       )
       _ = assertNoDiff(
         resultNameVersion.mkString("\n"),
-        """|4.10.2
-           |4.10.1
-           |4.10.0
-           |""".stripMargin,
+        McpMessages.FindDep
+          .dependencyReturnMessage("version", Seq("4.10.2", "4.10.1", "4.10.0")),
+      )
+      resultNameVersion2 <- client.findDep(
+        "org.scalameta",
+        Some("parsers_2.13"),
+        None,
+      )
+      _ = assert(
+        resultNameVersion2.head.contains(", 4.13.0,"),
+        s"Expected to contain version 4.13.0, got ${resultNameVersion2.mkString("\n")}",
       )
       _ <- client.shutdown()
     } yield ()

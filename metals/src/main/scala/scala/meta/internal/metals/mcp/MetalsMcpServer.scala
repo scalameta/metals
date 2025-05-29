@@ -565,6 +565,12 @@ class MetalsMcpServer(
     )
   }
 
+  object FindDepKey {
+    val version = "version"
+    val name = "name"
+    val organization = "organization"
+  }
+
   private def createFindDepTool(): AsyncToolSpecification = {
     val schema =
       """{
@@ -603,9 +609,9 @@ class MetalsMcpServer(
         schema,
       ),
       withErrorHandling { (exchange, arguments) =>
-        val org = arguments.getOptNoEmptyString("organization")
-        val name = arguments.getOptNoEmptyString("name")
-        val version = arguments.getOptNoEmptyString("version")
+        val org = arguments.getOptNoEmptyString(FindDepKey.organization)
+        val name = arguments.getOptNoEmptyString(FindDepKey.name)
+        val version = arguments.getOptNoEmptyString(FindDepKey.version)
         val scalaVersion = arguments.getFileInFocusOpt match {
           case Some(path) => scalaVersionSelector.scalaVersionForPath(path)
           case None => scalaVersionSelector.fallbackScalaVersion()
@@ -613,25 +619,50 @@ class MetalsMcpServer(
         val coursierComplete = new CoursierComplete(scalaVersion)
         val scalaBinaryVersion =
           ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
+
+        /* Some logic to handle different possible agent queries
+         */
         val potentialDepStrings = (org, name, version) match {
           case (Some(org), Some(name), Some(version)) =>
+            val versionQuery = if (version.contains("latest")) "" else version
             List(
-              s"$org:$name:$version",
-              s"$org:${name}_$scalaBinaryVersion:$version",
+              FindDepKey.version -> s"$org:${name}_$scalaBinaryVersion:$versionQuery",
+              FindDepKey.version -> s"$org:$name:$versionQuery",
             )
           case (Some(org), Some(name), None) =>
-            List(s"$org:$name", s"$org:${name}_$scalaBinaryVersion")
-          case (Some(org), None, _) => List(s"$org")
+            List(
+              FindDepKey.version -> s"$org:${name}_$scalaBinaryVersion:",
+              FindDepKey.version -> s"$org:$name:",
+              FindDepKey.name -> s"$org:$name",
+            )
+          case (Some(org), None, _) =>
+            List(
+              FindDepKey.name -> s"$org:",
+              FindDepKey.organization -> s"$org",
+            )
           case _ => List()
         }
-        val completions = potentialDepStrings.iterator
-          .map(depString => coursierComplete.complete(depString))
-          .filter(_.nonEmpty)
-          .headOption
-          .getOrElse(List(s"No completions found"))
+        val completions = {
+          for {
+            (key, depString) <- potentialDepStrings.iterator
+            completed = coursierComplete.complete(depString)
+            if completed.nonEmpty
+          } yield {
+            val completedOrLast =
+              if (key == FindDepKey.version && version.contains("latest"))
+                completed.headOption.toSeq
+              else completed
+            McpMessages.FindDep.dependencyReturnMessage(
+              key,
+              completedOrLast.distinct,
+            )
+          }
+        }.headOption
+          .getOrElse(McpMessages.FindDep.noCompletionsFound)
+
         Future
           .successful(
-            new CallToolResult(createContent(completions.mkString("\n")), false)
+            new CallToolResult(createContent(completions), false)
           )
           .toMono
       },
@@ -716,6 +747,21 @@ class MetalsMcpServer(
   }
 }
 
+object McpMessages {
+
+  object FindDep {
+    def dependencyReturnMessage(
+        key: String,
+        completed: Seq[String],
+    ): String = {
+      s"""|Tool managed to complete `$key` field and got potential values to use for it: ${completed.mkString(", ")}
+          |""".stripMargin
+    }
+
+    def noCompletionsFound: String =
+      "No completions found"
+  }
+}
 sealed trait IncorrectArgumentException extends Exception
 class MissingArgumentException(key: String)
     extends Exception(s"Missing argument: $key")
