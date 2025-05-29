@@ -203,7 +203,7 @@ class ConnectionProvider(
     } else {
       scribe.debug("Awaiting user response...")
       languageClient
-        .showMessageRequest( // C
+        .showMessageRequest(
           Messages.GenerateBspAndConnect
             .params(buildTool.executableName, buildTool.buildServerName)
         )
@@ -323,9 +323,15 @@ class ConnectionProvider(
     def getOngoingRequest(): Option[RequestInfo] = currentRequest
 
     def connect[T](request: ConnectRequest): Future[BuildChange] = {
+      scribe.debug(s"new connect request: ${request.toString}")
       val info = addToQueue(request)
       pollAndConnect()
-      info.promise.future
+      info.promise.future.map { buildChange =>
+        scribe.debug(
+          s"connect request: ${request.show} finished with $buildChange"
+        )
+        buildChange
+      }
     }
 
     private def addToQueue(request: ConnectRequest): RequestInfo =
@@ -686,7 +692,7 @@ class ConnectionProvider(
                   buildTool match {
                     case _: BuildServerProvider =>
                       languageClient
-                        .showMessageRequest( // C
+                        .showMessageRequest(
                           Messages.ImportProjectFailedSuggestBspSwitch.params()
                         )
                         .asScala
@@ -743,6 +749,8 @@ sealed trait ConnectRequest extends ConnectKind {
    * Queue    -- queue
    */
   def cancelCompare(other: ConnectRequest): ConflictBehaviour
+
+  def show: String
 }
 
 case class Disconnect(shutdownBuildServer: Boolean) extends ConnectRequest {
@@ -751,9 +759,13 @@ case class Disconnect(shutdownBuildServer: Boolean) extends ConnectRequest {
       case _: Index => Queue
       case _ => Yield
     }
+
+  def show: String = s"disconnect with shutdown=$shutdownBuildServer"
 }
 case class Index(check: () => Unit) extends ConnectRequest {
   def cancelCompare(other: ConnectRequest): ConflictBehaviour = Yield
+
+  def show: String = s"index"
 }
 case class ImportBuildAndIndex(bspSession: BspSession) extends ConnectRequest {
   def cancelCompare(other: ConnectRequest): ConflictBehaviour =
@@ -761,6 +773,8 @@ case class ImportBuildAndIndex(bspSession: BspSession) extends ConnectRequest {
       case (_: Index) | (_: ImportBuildAndIndex) => TakeOver
       case _ => Yield
     }
+
+  def show: String = s"import build and index for ${bspSession.main.name}"
 }
 case class ConnectToSession(bspSession: BspSession) extends ConnectRequest {
   def cancelCompare(other: ConnectRequest): ConflictBehaviour =
@@ -768,6 +782,8 @@ case class ConnectToSession(bspSession: BspSession) extends ConnectRequest {
       case (_: Disconnect) | (_: Index) | (_: ConnectToSession) => TakeOver
       case _ => Yield
     }
+
+  def show: String = s"connect to session for ${bspSession.main.name}"
 }
 case class CreateSession(shutdownBuildServer: Boolean = false)
     extends ConnectRequest {
@@ -779,12 +795,17 @@ case class CreateSession(shutdownBuildServer: Boolean = false)
         TakeOver
       case _ => Yield
     }
+
+  def show: String = s"create session with shutdown=$shutdownBuildServer"
 }
 case class GenerateBspConfigAndConnect(
     buildTool: BuildServerProvider,
     shutdownServer: Boolean = false,
 ) extends ConnectRequest {
   def cancelCompare(other: ConnectRequest): ConflictBehaviour = TakeOver
+
+  def show: String =
+    s"generate bsp config and connect for ${buildTool.buildServerName} with shutdown=$shutdownServer"
 }
 case class BloopInstallAndConnect(
     buildTool: BloopInstallProvider
@@ -794,6 +815,9 @@ case class BloopInstallAndConnect(
       case GenerateBspConfigAndConnect(_, true) => Queue
       case _ => TakeOver
     }
+
+  def show: String =
+    s"bloop install and connect for ${buildTool.buildServerName}"
 }
 
 object ConnectionProvider {
