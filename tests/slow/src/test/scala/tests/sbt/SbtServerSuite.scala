@@ -54,29 +54,47 @@ class SbtServerSuite
       workspace: AbsolutePath
   ): Option[String] = SbtDigest.current(workspace)
 
-  test("ignore-bloop") {
+  test("switch to sbt when bloop import build request ignored") {
     cleanWorkspace()
     val hangPromise = Promise[MessageActionItem]()
+    val gotImportBuildMessage = Promise[Unit]()
     client.futureShowMessageRequestHandler = { message =>
       if (message.getMessage == importBuildMessage) {
+        gotImportBuildMessage.trySuccess(())
         Some(hangPromise.future)
       } else None
     }
 
+    writeLayout(
+      s"""|/project/build.properties
+          |sbt.version=${V.sbtVersion}
+          |/build.sbt
+          |${SbtBuildLayout.commonSbtSettings}
+          |ThisBuild / scalaVersion := "${V.scala213}"
+          |val a = project.in(file("a"))
+          |val b = project.in(file("b"))
+          |/a/src/main/scala/A.scala
+          |
+          |object A {
+          |  val foo: Int = "aaa"
+          |}
+          |""".stripMargin
+    )
+
     for {
-      _ <- initialize(
-        SbtBuildLayout(
-          """|a/src/main/scala/A.scala
-             |
-             |object A {
-             |  val foo: Int = "aaa"
-             |}
-             |/.metals/a.txt
-             |
-             |""".stripMargin,
-          V.scala213,
-        )
-      )
+      _ <- server.initialize()
+      _ = server.initialized()
+      _ <- gotImportBuildMessage.future
+      _ = client.selectBspServer = { items =>
+        items.find(_.getTitle().contains("sbt")).getOrElse {
+          throw new RuntimeException(
+            "sbt was expected in the test, but not found"
+          )
+        }
+      }
+      _ <- server.executeCommand(ServerCommands.BspSwitch).ignoreValue
+      _ <- server.headServer.buildServerPromise.future
+      _ = assert(server.headServer.connectionProvider.bspSession.get.main.isSbt)
     } yield hangPromise.success(Messages.ImportBuild.notNow)
   }
 
