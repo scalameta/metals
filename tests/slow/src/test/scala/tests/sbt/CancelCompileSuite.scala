@@ -64,7 +64,7 @@ class CancelCompileSuite
           server.executeCommand(ServerCommands.CancelCompile)
         }
       _ = assertNoDiff(client.workspaceDiagnostics, "")
-      _ = assertEquals(compileReport.get.getStatusCode(), StatusCode.CANCELLED)
+      _ = assertEquals(compileReport.getStatusCode(), StatusCode.CANCELLED)
       _ <- server.server.compilations.compileFile(
         workspace.resolve("c/src/main/scala/c/C.scala")
       )

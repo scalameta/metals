@@ -52,6 +52,8 @@ import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.services.LanguageClient
 import reactor.core.publisher.Mono
+import ch.epfl.scala.bsp4j.StatusCode
+import ch.epfl.scala.bsp4j.CompileResult
 
 class MetalsMcpServer(
     queryEngine: McpQueryEngine,
@@ -287,10 +289,12 @@ class MetalsMcpServer(
       new Tool("compile-file", "Compile a chosen Scala file", schema),
       withErrorHandling { (exchange, arguments) =>
         val path = arguments.getFileInFocus
+        if(path.exists) {
         compilations
-          .compileFile(path)
-          .map {
-            case Some(_) =>
+          .compileFile(path).map {
+            case c if c.getStatusCode == StatusCode.CANCELLED =>
+              new CallToolResult(createContent("Compilation cancelled or incorrect file path"), false)
+            case _ =>
               lazy val buildTarget = buildTargets.inverseSources(path)
 
               def inFileErrors = {
@@ -319,16 +323,10 @@ class MetalsMcpServer(
                 .getOrElse("Compilation successful.")
 
               new CallToolResult(createContent(content), false)
-
-            case None =>
-              new CallToolResult(
-                createContent(
-                  s"Error: Incorrect file path: ${path.toString()}"
-                ),
-                true,
-              )
-          }
-          .toMono
+          }.toMono
+        } else {
+          Future.successful(new CallToolResult(createContent(s"Error: File not found: $path"), true)).toMono
+        }
       },
     )
   }
