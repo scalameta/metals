@@ -99,11 +99,11 @@ class Compilers(
     userConfig,
     buildTargets,
     buffers,
+    scalaVersionSelector,
     embedded,
     sh,
     initializeParams,
     excludedPackages,
-    trees,
     mtagsResolver,
     sourceMapper,
   )

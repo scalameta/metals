@@ -54,7 +54,6 @@ import scala.meta.internal.metals.ParametrizedCommand
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.ReportContext
-import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.TextEdits
@@ -66,7 +65,6 @@ import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.mtags.Semanticdbs
-import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tvp.TreeViewChildrenParams
@@ -179,14 +177,6 @@ final case class TestingServer(
 
   implicit val reports: ReportContext =
     new StdReportContext(workspace.toNIO, _ => None)
-
-  private lazy val trees = new Trees(
-    buffers,
-    new ScalaVersionSelector(
-      () => initialUserConfig,
-      server.buildTargets,
-    ),
-  )
 
   private val virtualDocSources = TrieMap.empty[String, AbsolutePath]
   def statusBarHistory: String = {
@@ -437,9 +427,9 @@ final case class TestingServer(
     }
     for {
       source <- workspaceSources()
-      input = source.toInputFromBuffers(buffers)
+      content <- buffers.get(source).orElse(source.readTextOpt)
       identifier = source.toTextDocumentIdentifier
-      token <- trees.tokenized(input).get
+      token <- content.safeTokenize.get
       if token.isIdentifier
       params = token.toPositionParams(identifier)
       definition = server
@@ -1830,7 +1820,7 @@ final case class TestingServer(
     val identifier = path.toTextDocumentIdentifier
     val occurrences = ListBuffer.empty[s.SymbolOccurrence]
     var last = List[String]()
-    trees.tokenized(input).get.foreach {
+    input.value.safeTokenize.get.foreach {
       case token: m.tokens.Token.Ident =>
         val params = token.toPositionParams(identifier)
         // Scala 3 doesn't count ` as part of the word which is the same as most editors

@@ -37,7 +37,6 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.mtags.MD5
-import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.CompilerJobQueue
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.worksheets.MdocEnrichments._
@@ -65,7 +64,6 @@ import org.eclipse.lsp4j.jsonrpc.messages
 class WorksheetProvider(
     workspace: AbsolutePath,
     buffers: Buffers,
-    trees: Trees,
     buildTargets: BuildTargets,
     languageClient: MetalsLanguageClient,
     userConfig: () => UserConfiguration,
@@ -216,7 +214,8 @@ class WorksheetProvider(
     worksheet match {
       case None => Nil
       case Some(value) =>
-        val distance = buffers.tokenEditDistance(path, value.text, trees)
+        val distance =
+          buffers.tokenEditDistance(path, value.text, scalaVersionSelector)
         value.evaluatedWorksheet
           .statements()
           .map { stat =>

@@ -14,7 +14,6 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.JavaPresentationCompiler
 import scala.meta.internal.pc.ScalaPresentationCompiler
@@ -32,11 +31,11 @@ class CompilerConfiguration(
     userConfig: () => UserConfiguration,
     buildTargets: BuildTargets,
     buffers: Buffers,
+    scalaVersionSelector: ScalaVersionSelector,
     embedded: Embedded,
     sh: ScheduledExecutorService,
     initializeParams: InitializeParams,
     excludedPackages: () => ExcludedPackagesHandler,
-    trees: Trees,
     mtagsResolver: MtagsResolver,
     sourceMapper: SourceMapper,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext) {
@@ -345,8 +344,8 @@ class CompilerConfiguration(
       classpath.map(AbsolutePath(_)),
       sources.map(AbsolutePath(_)),
       buffers,
+      scalaVersionSelector,
       excludedPackages,
-      trees,
       buildTargets,
       saveSymbolFileToDisk = !config.isVirtualDocumentSupported(),
       sourceMapper,
