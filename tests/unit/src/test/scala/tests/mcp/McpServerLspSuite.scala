@@ -35,19 +35,15 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") {
       _ = assert(port.isDefined, "MCP server port should be defined")
       client = new TestMcpClient(s"http://localhost:${port.get}/sse")
       _ <- client.initialize()
-      result <- client.findDep("org.scala-lang")
+      result <- client.findDep("org.scala-lan")
       _ = assertNoDiff(
         result.mkString("\n"),
-        """|org.scala-lang
-           |org.scala-lang-osgi
-           |""".stripMargin,
+        "Tool managed to complete organization and got potential matches: org.scala-lang, org.scala-lang-osgi",
       )
       resultName <- client.findDep("org.scala-lang", Some("scala-library"))
       _ = assertNoDiff(
         resultName.mkString("\n"),
-        """|scala-library
-           |scala-library-all
-           |""".stripMargin,
+        "Tool managed to complete name and got potential matches: scala-library, scala-library-all",
       )
       resultNameVersion <- client.findDep(
         "org.scalameta",
@@ -56,10 +52,7 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") {
       )
       _ = assertNoDiff(
         resultNameVersion.mkString("\n"),
-        """|4.10.2
-           |4.10.1
-           |4.10.0
-           |""".stripMargin,
+        "Tool managed to complete version and got potential matches: 4.10.2, 4.10.1, 4.10.0",
       )
       _ <- client.shutdown()
     } yield ()
