@@ -38,7 +38,7 @@ import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.TargetData
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.scalacli.ScalaCli.ScalaCliCommand
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
@@ -56,7 +56,7 @@ class ScalaCli(
     diagnostics: () => Diagnostics,
     tables: Tables,
     buildClient: () => MetalsBuildClient,
-    languageClient: MetalsLanguageClient,
+    languageClient: ConfiguredLanguageClient,
     config: () => MetalsServerConfig,
     userConfig: () => UserConfiguration,
     cliCommand: ScalaCliCommand,
