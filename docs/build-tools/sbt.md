@@ -36,7 +36,8 @@ First, install the Bloop plugin globally or inside your `project` directory:
 // One of:
 //   ~/.sbt/0.13/plugins/plugins.sbt
 //   ~/.sbt/1.0/plugins/plugins.sbt
-resolvers += Resolver.sonatypeRepo("snapshots")
+resolvers += "central-snapshots" at "https://central.sonatype.com/repository/maven-snapshots/"
+
 addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "@BLOOP_VERSION@")
 ```
 

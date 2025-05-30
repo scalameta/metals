@@ -27,24 +27,21 @@ class GradleRepositoriesTest extends BaseSuite {
   check(
     Embedded.repositories,
     s"""|  repositories {
-        |    mavenCentral()
-        |    maven {
-        |      url "https://oss.sonatype.org/content/repositories/snapshots"
-        |    }
         |    ivy {
         |      url "${userHomeString + ".ivy2/local"}"
         |      patternLayout {
         |        artifact "[organisation]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]"
         |      }
         |    }
+        |    mavenCentral()
         |    maven {
-        |      url "${userHomeString + ".m2/repository"}"
+        |      url ${userHomeString + ".m2/repository"}"
         |    }
         |    maven {
         |      url "https://oss.sonatype.org/content/repositories/public/"
         |    }
         |    maven {
-        |      url "https://oss.sonatype.org/content/repositories/snapshots/"
+        |      url "https://central.sonatype.com/repository/maven-snapshots/"
         |    }
         |  }
         |""".stripMargin,
