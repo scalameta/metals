@@ -197,6 +197,13 @@ case class MillBuildTool(
   }
 
   override def buildServerName: String = MillBuildTool.bspName
+
+  override def isBloopInstallProvider: Boolean = {
+    val millVersion = getMillVersion(projectRoot)
+    // 0.14.0 was never released
+    !SemVer.isLaterVersion("0.14.0", millVersion)
+  }
+
 }
 
 object MillBuildTool {

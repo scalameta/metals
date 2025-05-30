@@ -158,7 +158,9 @@ class ConnectionProvider(
     buildToolProvider.supportedBuildTool().flatMap {
       case Some(BuildTool.Found(buildTool: BloopInstallProvider, digest))
           if chosenBuildServer.contains(BloopServers.name) ||
-            chosenBuildServer.isEmpty && !useBuildToolBsp(buildTool) =>
+            chosenBuildServer.isEmpty && !useBuildToolBsp(
+              buildTool
+            ) && buildTool.isBloopInstallProvider =>
         connect(
           new BloopInstallAndConnect(
             buildTool,
