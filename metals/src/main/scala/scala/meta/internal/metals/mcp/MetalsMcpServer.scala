@@ -181,9 +181,9 @@ class MetalsMcpServer(
     val deployment = manager.addDeployment(servletDeployment)
     deployment.deploy()
 
-    val editor = Editor.allEditors.find(_.names.contains(editorName))
-    val configPort =
-      editor.flatMap(e => McpConfig.readPort(projectPath, projectName, e))
+    val editor =
+      Editor.allEditors.find(_.names.contains(editorName)).getOrElse(NoEditor)
+    val configPort = McpConfig.readPort(projectPath, projectName, editor)
     val undertowServer = Undertow
       .builder()
       .addHttpListener(configPort.getOrElse(0), "localhost")
@@ -195,8 +195,8 @@ class MetalsMcpServer(
     val port =
       listenerInfo.get(0).getAddress().asInstanceOf[InetSocketAddress].getPort()
 
-    if (editor.isDefined && !configPort.isDefined) {
-      McpConfig.writeConfig(port, projectName, projectPath, editor.get)
+    if (!configPort.isDefined) {
+      McpConfig.writeConfig(port, projectName, projectPath, editor)
     }
 
     languageClient.showMessage(
@@ -237,11 +237,6 @@ class MetalsMcpServer(
             case BuildChange.Failed =>
               new CallToolResult(
                 createContent("Failed to reimport build."),
-                false,
-              )
-            case BuildChange.Cancelled =>
-              new CallToolResult(
-                createContent("Reimport cancelled by the user."),
                 false,
               )
           }
