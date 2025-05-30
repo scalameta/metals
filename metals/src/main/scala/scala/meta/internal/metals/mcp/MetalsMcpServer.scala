@@ -31,6 +31,7 @@ import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.bsp4j.StatusCode
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.modelcontextprotocol.server.McpAsyncServerExchange
 import io.modelcontextprotocol.server.McpServer
@@ -52,8 +53,6 @@ import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.services.LanguageClient
 import reactor.core.publisher.Mono
-import ch.epfl.scala.bsp4j.StatusCode
-import ch.epfl.scala.bsp4j.CompileResult
 
 class MetalsMcpServer(
     queryEngine: McpQueryEngine,
@@ -289,43 +288,55 @@ class MetalsMcpServer(
       new Tool("compile-file", "Compile a chosen Scala file", schema),
       withErrorHandling { (exchange, arguments) =>
         val path = arguments.getFileInFocus
-        if(path.exists) {
-        compilations
-          .compileFile(path).map {
-            case c if c.getStatusCode == StatusCode.CANCELLED =>
-              new CallToolResult(createContent("Compilation cancelled or incorrect file path"), false)
-            case _ =>
-              lazy val buildTarget = buildTargets.inverseSources(path)
+        if (path.exists) {
+          compilations
+            .compileFile(path)
+            .map {
+              case c if c.getStatusCode == StatusCode.CANCELLED =>
+                new CallToolResult(
+                  createContent("Compilation cancelled or incorrect file path"),
+                  false,
+                )
+              case _ =>
+                lazy val buildTarget = buildTargets.inverseSources(path)
 
-              def inFileErrors = {
-                val errors = diagnostics.forFile(path).show()
-                if (errors.isEmpty) None
-                else Some(s"Found errors in $path:\n$errors")
-              }
-
-              def inModuleErrors =
-                for {
-                  bt <- buildTarget
-                  errors <- this.inModuleErrors(bt)
-                } yield {
-                  s"No errors in the file, but found compile errors in the module:\n$errors"
+                def inFileErrors = {
+                  val errors = diagnostics.forFile(path).show()
+                  if (errors.isEmpty) None
+                  else Some(s"Found errors in $path:\n$errors")
                 }
 
-              def inUpstreamModulesErrors =
-                for {
-                  bt <- buildTarget
-                  errors <- upstreamModulesErros(bt, "file")
-                } yield errors
+                def inModuleErrors =
+                  for {
+                    bt <- buildTarget
+                    errors <- this.inModuleErrors(bt)
+                  } yield {
+                    s"No errors in the file, but found compile errors in the module:\n$errors"
+                  }
 
-              val content = inFileErrors
-                .orElse(inModuleErrors)
-                .orElse(inUpstreamModulesErrors)
-                .getOrElse("Compilation successful.")
+                def inUpstreamModulesErrors =
+                  for {
+                    bt <- buildTarget
+                    errors <- upstreamModulesErros(bt, "file")
+                  } yield errors
 
-              new CallToolResult(createContent(content), false)
-          }.toMono
+                val content = inFileErrors
+                  .orElse(inModuleErrors)
+                  .orElse(inUpstreamModulesErrors)
+                  .getOrElse("Compilation successful.")
+
+                new CallToolResult(createContent(content), false)
+            }
+            .toMono
         } else {
-          Future.successful(new CallToolResult(createContent(s"Error: File not found: $path"), true)).toMono
+          Future
+            .successful(
+              new CallToolResult(
+                createContent(s"Error: File not found: $path"),
+                true,
+              )
+            )
+            .toMono
         }
       },
     )

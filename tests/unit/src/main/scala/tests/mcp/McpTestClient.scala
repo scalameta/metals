@@ -58,7 +58,10 @@ class TestMcpClient(url: String)(implicit ec: ExecutionContext) {
     params.put("fileInFocus", filePath)
 
     val callToolRequest =
-      new CallToolRequest("compile-file", objectMapper.writeValueAsString(params))
+      new CallToolRequest(
+        "compile-file",
+        objectMapper.writeValueAsString(params),
+      )
     client
       .callTool(callToolRequest)
       .toFuture()
@@ -75,7 +78,10 @@ class TestMcpClient(url: String)(implicit ec: ExecutionContext) {
     params.put("module", module)
 
     val callToolRequest =
-      new CallToolRequest("compile-module", objectMapper.writeValueAsString(params))
+      new CallToolRequest(
+        "compile-module",
+        objectMapper.writeValueAsString(params),
+      )
     client
       .callTool(callToolRequest)
       .toFuture()

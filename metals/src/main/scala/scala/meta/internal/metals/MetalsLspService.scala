@@ -800,7 +800,7 @@ abstract class MetalsLspService(
     } else {
       compilations
         .compileFile(path, assumeDidNotChange = true)
-        .map( _ => DidFocusResult.Compiled)
+        .map(_ => DidFocusResult.Compiled)
         .asJava
     }
   }
