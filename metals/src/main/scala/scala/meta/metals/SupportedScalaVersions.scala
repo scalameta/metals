@@ -44,7 +44,7 @@ abstract class SupportedScalaVersions {
   ) = {
     val url =
       if (metalsVersion.contains("SNAPSHOT"))
-        "https://oss.sonatype.org/content/repositories/snapshots/org/scalameta/"
+        "https://central.sonatype.com/service/rest/repository/browse/maven-snapshots/org/scalameta/"
       else "https://repo1.maven.org/maven2/org/scalameta/"
     supportedInMetals(url, metalsVersion, timeout)
   }
