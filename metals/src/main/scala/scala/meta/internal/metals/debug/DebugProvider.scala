@@ -394,6 +394,9 @@ class DebugProvider(
       id: BuildTargetIdentifier,
       testClasses: b.ScalaTestSuites,
   ): Future[Map[Config.TestFramework, List[Discovered]]] = {
+    scribe.debug(
+      s"Discovering tests for build target: $id, test classes: ${testClasses.getSuites().asScala.map(_.getClassName()).mkString(", ")}"
+    )
     val symbolInfosList =
       for {
         selection <- testClasses.getSuites().asScala.toList
@@ -404,6 +407,9 @@ class DebugProvider(
       } yield compilers.info(id, sym).map(_.map(pcInfo => (info, pcInfo)))
 
     Future.sequence(symbolInfosList).map { infos =>
+      scribe.debug(
+        s"Found infos about: ${infos.flatten.map(_._2.symbol).mkString(", ")} test classes"
+      )
       val allInfo = infos.flatten
       if (allInfo.isEmpty) {
         val suitesString =
