@@ -82,10 +82,10 @@ final class DefinitionProvider(
     mtags,
     workspace,
     () => Some(semanticdbs()),
-    trees,
     buildTargets,
     saveDefFileToDisk,
     sourceMapper,
+    scalaVersionSelector,
   )
 
   val scaladocDefinitionProvider =
@@ -258,7 +258,8 @@ final class DefinitionProvider(
       dirtyPosition: Position,
       snapshot: TextDocument,
   ): (TokenEditDistance, Option[Position]) = {
-    val sourceDistance = buffers.tokenEditDistance(source, snapshot.text, trees)
+    val sourceDistance =
+      buffers.tokenEditDistance(source, snapshot.text, scalaVersionSelector)
     val snapshotPosition = sourceDistance.toOriginal(
       dirtyPosition.getLine,
       dirtyPosition.getCharacter,
@@ -426,10 +427,10 @@ class DestinationProvider(
     mtags: () => Mtags,
     workspace: AbsolutePath,
     semanticdbsFallback: () => Option[Semanticdbs],
-    trees: Trees,
     buildTargets: BuildTargets,
     saveSymbolFileToDisk: Boolean,
     sourceMapper: SourceMapper,
+    scalaVersionSelector: ScalaVersionSelector,
 ) {
 
   private def bestTextDocument(
@@ -536,7 +537,7 @@ class DestinationProvider(
             buffers.tokenEditDistance(
               destinationPath,
               destinationDoc.text,
-              trees,
+              scalaVersionSelector,
             )
           DefinitionDestination(
             destinationDoc,
