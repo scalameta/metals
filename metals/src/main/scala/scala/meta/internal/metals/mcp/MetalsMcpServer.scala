@@ -30,6 +30,7 @@ import scala.meta.internal.metals.mcp.SymbolType
 import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.modelcontextprotocol.server.McpAsyncServerExchange
 import io.modelcontextprotocol.server.McpServer
@@ -134,6 +135,7 @@ class MetalsMcpServer(
 
     // Register tools
     asyncServer.addTool(createFileCompileTool()).subscribe()
+    asyncServer.addTool(createCompileModuleTool()).subscribe()
     asyncServer.addTool(createCompileTool()).subscribe()
     asyncServer.addTool(createTestTool()).subscribe()
     asyncServer.addTool(createGlobSearchTool()).subscribe()
@@ -293,34 +295,23 @@ class MetalsMcpServer(
 
               def inFileErrors = {
                 val errors = diagnostics.forFile(path).show()
-                if (errors.isEmpty) None else Some(s"Found errors in $path:\n$errors")
+                if (errors.isEmpty) None
+                else Some(s"Found errors in $path:\n$errors")
               }
 
               def inModuleErrors =
                 for {
                   bt <- buildTarget
-                  if diagnostics.hasCompilationErrors(bt)
+                  errors <- this.inModuleErrors(bt)
                 } yield {
-                  val errors =
-                    diagnostics.allDiagnostics.filter { case (path, _) =>
-                      buildTargets.inverseSources(path).contains(bt)
-                    }
-                  s"No errors in the file, but found compile errors in the module:\n${errors.show(projectPath)}"
+                  s"No errors in the file, but found compile errors in the module:\n$errors"
                 }
 
               def inUpstreamModulesErrors =
                 for {
                   bt <- buildTarget
-                  upstreamModules = diagnostics
-                    .upstreamTargetsWithCompilationErrors(bt)
-                  if upstreamModules.nonEmpty
-                } yield {
-                  val modules = upstreamModules
-                    .flatMap(buildTargets.jvmTarget)
-                    .map(_.displayName)
-                    .mkString("\n", "\n", "")
-                  s"Failed to compile the file, since there compile errors in upstream modules: $modules"
-                }
+                  errors <- upstreamModulesErros(bt, "file")
+                } yield errors
 
               val content = inFileErrors
                 .orElse(inModuleErrors)
@@ -340,6 +331,69 @@ class MetalsMcpServer(
           .toMono
       },
     )
+  }
+
+  private def createCompileModuleTool(): AsyncToolSpecification = {
+    val schema =
+      """|{
+         |  "type": "object",
+         |  "properties": {
+         |    "module": {
+         |      "type": "string",
+         |      "description": "The module's (build target's) name to compile"
+         |    }
+         |  }
+         |}""".stripMargin
+    new AsyncToolSpecification(
+      new Tool("compile-module", "Compile a chosen Scala module", schema),
+      withErrorHandling { (exchange, arguments) =>
+        val module = arguments.getAs[String]("module")
+        Future {
+          (buildTargets.allScala ++ buildTargets.allJava).find(
+            _.displayName == module
+          ) match {
+            case Some(target) =>
+              val result = inModuleErrors(target.id)
+                .map(errors => s"Found errors in the module:\n$errors")
+                .orElse(upstreamModulesErros(target.id, "module"))
+                .getOrElse("Compilation successful.")
+              new CallToolResult(createContent(result), false)
+            case None =>
+              new CallToolResult(
+                createContent(s"Error: Module not found: $module"),
+                true,
+              )
+          }
+        }.toMono
+      },
+    )
+  }
+
+  private def inModuleErrors(buildTarget: BuildTargetIdentifier) = {
+    if (diagnostics.hasCompilationErrors(buildTarget)) {
+      val errors =
+        diagnostics.allDiagnostics.filter { case (path, _) =>
+          buildTargets.inverseSources(path).contains(buildTarget)
+        }
+      Some(errors.show(projectPath))
+    } else None
+  }
+
+  private def upstreamModulesErros(
+      buildTarget: BuildTargetIdentifier,
+      fileOrModule: String,
+  ) = {
+    val upstreamModules = diagnostics
+      .upstreamTargetsWithCompilationErrors(buildTarget)
+    if (upstreamModules.nonEmpty) {
+      val modules = upstreamModules
+        .flatMap(buildTargets.jvmTarget)
+        .map(_.displayName)
+        .mkString("\n", "\n", "")
+      Some(
+        s"Failed to compile the $fileOrModule, since there compile errors in upstream modules: $modules"
+      )
+    } else None
   }
 
   private def createTestTool(): AsyncToolSpecification = {
