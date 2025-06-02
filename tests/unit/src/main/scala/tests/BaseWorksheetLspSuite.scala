@@ -922,19 +922,20 @@ abstract class BaseWorksheetLspSuite(
       } yield ()
     }
 
-  private val ignoreForScala3Versions = Set("3.4.0", "3.4.1")
-  if (
-    ScalaVersions
-      .isScala3Version(scalaVersion) && !ignoreForScala3Versions(scalaVersion)
-  )
+  if (ScalaVersions.isScala3Version(scalaVersion))
     test("import-missing-symbol") {
       cleanWorkspace()
       val path = "a/src/main/scala/foo/Main.worksheet.sc"
       val expectedActions =
-        s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
-            |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
-            |${CreateNewSymbol.title("Future")}
-            |""".stripMargin
+        if (SemVer.isLaterVersion("3.7.0", scalaVersion))
+          s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
+              |${CreateNewSymbol.title("Future")}
+              |""".stripMargin
+        else
+          s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
+              |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
+              |${CreateNewSymbol.title("Future")}
+              |""".stripMargin
       for {
         _ <- initialize(
           s"""
