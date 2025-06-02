@@ -49,5 +49,5 @@ trait BloopInstallProvider extends BuildTool {
    */
   def bloopInstallArgs(workspace: AbsolutePath): List[String]
 
-  override val isBloopInstallProvider = true
+  override def isBloopInstallProvider: Boolean = true
 }
