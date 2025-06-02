@@ -239,6 +239,11 @@ class MetalsMcpServer(
                 createContent("Failed to reimport build."),
                 false,
               )
+            case BuildChange.Cancelled =>
+              new CallToolResult(
+                createContent("Reimport cancelled by the user."),
+                false,
+              )
           }
           .toMono
       },
