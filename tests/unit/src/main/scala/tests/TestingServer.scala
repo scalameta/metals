@@ -149,6 +149,7 @@ final case class TestingServer(
     time: Time,
     initializationOptions: InitializationOptions,
     mtagsResolver: MtagsResolver,
+    clientName: String,
     onStartCompilation: () => Unit = () => (),
 )(implicit ex: ExecutionContextExecutorService) {
   import scala.meta.internal.metals.JsonParser._
@@ -652,7 +653,7 @@ final case class TestingServer(
 
     params.setClientInfo(
       new l.ClientInfo(
-        "Visual Studio Code",
+        clientName,
         m.internal.metals.BuildInfo.metalsVersion,
       )
     )
