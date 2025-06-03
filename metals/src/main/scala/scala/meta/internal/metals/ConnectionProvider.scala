@@ -530,7 +530,7 @@ class ConnectionProvider(
             isChangedInSettings = userConfig.bloopVersion != None,
           )
           languageClient.showMessageRequest(messageParams).asScala.foreach {
-            case action if action == IncompatibleBloopVersion.shutdown => // C
+            case action if action == IncompatibleBloopVersion.shutdown =>
               connect(new CreateSession(true))
             case action if action == IncompatibleBloopVersion.dismissForever =>
               notification.dismissForever()
