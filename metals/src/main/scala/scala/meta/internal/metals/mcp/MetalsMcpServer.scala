@@ -218,7 +218,7 @@ class MetalsMcpServer(
     new AsyncToolSpecification(
       new Tool(
         "import-build",
-        "Import the build to IDE. Should be performed after any build changes, e.g. adding dependepcies or any changes in build.sbt.",
+        "Import the build to IDE. Should be performed after any build changes, e.g. adding dependencies or any changes in build.sbt.",
         schema,
       ),
       withErrorHandling { (exchange, _) =>
