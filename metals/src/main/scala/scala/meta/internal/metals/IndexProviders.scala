@@ -9,7 +9,7 @@ import scala.concurrent.Promise
 
 import scala.meta.infra.MonitoringClient
 import scala.meta.internal.implementation.ImplementationProvider
-import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
+import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.watcher.FileWatcher
@@ -21,7 +21,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
 trait IndexProviders {
   def metrics: MonitoringClient
-  def languageClient: DelegatingLanguageClient
+  def languageClient: ConfiguredLanguageClient
   def executionContext: ExecutionContextExecutorService
   def tables: Tables
   def statusBar: StatusBar
