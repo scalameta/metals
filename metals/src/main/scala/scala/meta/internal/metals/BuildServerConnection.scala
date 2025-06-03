@@ -27,7 +27,7 @@ import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.utils.RequestRegistry
 import scala.meta.internal.metals.utils.Timeout
@@ -41,7 +41,6 @@ import org.eclipse.lsp4j.jsonrpc.JsonRpcException
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.MessageIssueException
-import org.eclipse.lsp4j.services.LanguageClient
 
 /**
  * An actively running and initialized BSP connection
@@ -51,7 +50,7 @@ class BuildServerConnection private (
       BuildServerConnection.LauncherConnection
     ],
     initialConnection: BuildServerConnection.LauncherConnection,
-    languageClient: LanguageClient,
+    languageClient: ConfiguredLanguageClient,
     reconnectNotification: DismissedNotifications#Notification,
     requestTimeOutNotification: DismissedNotifications#Notification,
     config: MetalsServerConfig,
@@ -463,15 +462,21 @@ class BuildServerConnection private (
     if (config.askToReconnect) {
       if (!reconnectNotification.isDismissed) {
         val params = Messages.DisconnectedServer.params()
-        languageClient.showMessageRequest(params).asScala.flatMap {
-          case response if response == Messages.DisconnectedServer.reconnect =>
-            reestablishConnection(original)
-          case response if response == Messages.DisconnectedServer.notNow =>
-            reconnectNotification.dismiss(5, TimeUnit.MINUTES)
-            connection
-          case _ =>
-            connection
-        }
+        languageClient
+          .showMessageRequest(
+            params,
+            ConnectionProvider.ConnectRequestCancelationGroup,
+          )
+          .flatMap {
+            case response
+                if response == Messages.DisconnectedServer.reconnect =>
+              reestablishConnection(original)
+            case response if response == Messages.DisconnectedServer.notNow =>
+              reconnectNotification.dismiss(5, TimeUnit.MINUTES)
+              connection
+            case _ =>
+              connection
+          }
       } else {
         connection
       }
@@ -583,7 +588,7 @@ object BuildServerConnection {
       projectRoot: AbsolutePath,
       bspTraceRoot: AbsolutePath,
       localClient: MetalsBuildClient,
-      languageClient: MetalsLanguageClient,
+      languageClient: ConfiguredLanguageClient,
       connect: () => Future[SocketConnection],
       requestTimeOutNotification: DismissedNotifications#Notification,
       reconnectNotification: DismissedNotifications#Notification,

@@ -419,6 +419,13 @@ object Messages {
       )
       params
     }
+
+    def killingBloopParams(): MessageParams = {
+      val params = new MessageParams()
+      params.setMessage("No response, killing old Bloop server.")
+      params.setType(MessageType.Warning)
+      params
+    }
   }
 
   object BloopVersionChange {
@@ -1090,6 +1097,8 @@ object Messages {
       params
     }
   }
+
+  val missedByUser = new MessageActionItem("Missed by user")
 
 }
 
