@@ -361,7 +361,7 @@ object SbtBuildTool {
   private def sonatypeResolver(version: String): Option[String] =
     if (version.contains("SNAPSHOT"))
       Some(
-        """resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots""""
+        """resolvers += "Sonatype OSS Snapshots" at "https://central.sonatype.com/repository/maven-snapshots""""
       )
     else None
 
