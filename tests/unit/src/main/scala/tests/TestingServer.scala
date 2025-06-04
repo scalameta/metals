@@ -12,7 +12,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
-import java.{util => ju}
+import java.util.{List => juList}
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
@@ -915,7 +915,7 @@ final case class TestingServer(
   def retrieveRanges(
       filename: String,
       expected: String,
-  ): Future[ju.List[l.SelectionRange]] = {
+  ): Future[juList[l.SelectionRange]] = {
     val path = toPath(filename)
     val input = path.toInputFromBuffers(buffers)
     val offset = expected.indexOf("@@")
@@ -1034,7 +1034,7 @@ final case class TestingServer(
     ): Future[List[BuildTargetUpdate]] = {
       val arg = ServerCommands.DiscoverTestParams(uri.orNull)
       executeCommand(ServerCommands.DiscoverTestSuites, arg)
-        .asInstanceOf[Future[ju.List[BuildTargetUpdate]]]
+        .asInstanceOf[Future[juList[BuildTargetUpdate]]]
         .map(_.asScala.toList)
         .flatMap { r =>
           if (r.exists(_.events.asScala.nonEmpty)) {
