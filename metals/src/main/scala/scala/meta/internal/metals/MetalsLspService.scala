@@ -1423,25 +1423,33 @@ abstract class MetalsLspService(
   override def onTypeFormatting(
       params: DocumentOnTypeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
-    CancelTokens { _ =>
-      val path = params.getTextDocument.getUri.toAbsolutePath
-      if (path.isJava)
-        javaFormattingProvider.format()
-      else
-        onTypeFormattingProvider.format(params).asJava
+    CancelTokens.future { _ =>
+      parseTrees
+        .currentFuture()
+        .map { _ =>
+          val path = params.getTextDocument.getUri.toAbsolutePath
+          if (path.isJava)
+            javaFormattingProvider.format()
+          else
+            onTypeFormattingProvider.format(params).asJava
+        }
     }
 
   override def rangeFormatting(
       params: DocumentRangeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
-    CancelTokens { token =>
-      val path = params.getTextDocument.getUri.toAbsolutePath
-      if (path.isJava)
-        javaFormattingProvider.formatRange(params)
-      else {
-        val projectRoot = optProjectRoot.getOrElse(folder)
-        rangeFormattingProvider.format(params, projectRoot, token).asJava
-      }
+    CancelTokens.future { token =>
+      parseTrees
+        .currentFuture()
+        .map { _ =>
+          val path = params.getTextDocument.getUri.toAbsolutePath
+          if (path.isJava)
+            javaFormattingProvider.formatRange(params)
+          else {
+            val projectRoot = optProjectRoot.getOrElse(folder)
+            rangeFormattingProvider.format(params, projectRoot, token).asJava
+          }
+        }
     }
 
   override def prepareRename(

@@ -450,7 +450,8 @@ case class MultilineString(userConfig: () => UserConfiguration)
          *```
          */
         case Seq(token: Token.Constant.String, _, _)
-            if isUnfinishedDoubleQuote(token) =>
+            if isUnfinishedDoubleQuote(token) &&
+              (token.pos.endLine == position.getLine - 1) =>
           Some(fixStringNewline(position, splitLines))
 
         /*
