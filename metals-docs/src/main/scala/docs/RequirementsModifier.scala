@@ -38,7 +38,7 @@ class RequirementsModifier extends SupportedScalaVersions with StringModifier {
            |
            |""".stripMargin
     val scalaVersions: String = supportedVersionsString(
-      Snapshot.latest("releases", "2.13").version,
+      Snapshot.latest(useSnapshot = false, "2.13").version,
       5.minutes,
     ).getOrElse("No versions found")
     s"""

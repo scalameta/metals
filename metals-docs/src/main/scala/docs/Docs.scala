@@ -6,8 +6,8 @@ import java.nio.file.Paths
 import scala.meta.internal.metals.{BuildInfo => V}
 
 object Docs {
-  lazy val snapshot: Snapshot = Snapshot.latest("snapshots", "2.13")
-  lazy val release: Snapshot = Snapshot.latest("releases", "2.13")
+  lazy val snapshot: Snapshot = Snapshot.latest(useSnapshot = true, "2.13")
+  lazy val release: Snapshot = Snapshot.latest(useSnapshot = false, "2.13")
   def releasesResolverTable: String = {
     <table>
       <thead>
@@ -26,7 +26,7 @@ object Docs {
         <tr>
           <td>{snapshot.version}</td>
           <td>{snapshot.date}</td>
-          <td><code>-r sonatype:snapshots</code></td>
+          <td><code>-r "https://central.sonatype.com/repository/maven-snapshots/"</code></td>
         </tr>
       </tbody>
     </table>

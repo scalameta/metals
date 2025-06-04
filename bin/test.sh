@@ -37,7 +37,7 @@ function run_with_restart_loop {
   return 1
 }
 
-export COURSIER_REPOSITORIES="central|sonatype:snapshots"
+export COURSIER_REPOSITORIES="central|https://central.sonatype.com/repository/maven-snapshots/"
 export BLOOP_JAVA_OPTS="-Xss4m -Xmx2G -XX:MaxInlineLevel=20 -XX:+UseZGC -XX:ZUncommitDelay=30 -XX:ZCollectionInterval=5 -XX:+IgnoreUnrecognizedVMOptions -Dbloop.ignore-sig-int=true"
 
 mkdir -p ~/.bloop
