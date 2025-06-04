@@ -14,6 +14,7 @@ import java.{util => ju}
 import scala.collection.Seq
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
+import scala.reflect.internal.FatalError
 import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
@@ -575,7 +576,7 @@ case class ScalaPresentationCompiler(
 
   override def buildTargetId(): String = buildTargetIdentifier
 
-  def newCompiler(): MetalsGlobal = {
+  def newCompiler(withClearedCaches: Boolean = false): MetalsGlobal = {
     val classpath = this.classpath.mkString(File.pathSeparator)
     val vd = new VirtualDirectory("(memory)", None)
     val settings = new Settings
@@ -600,15 +601,31 @@ case class ScalaPresentationCompiler(
     if (unprocessed.nonEmpty || !isSuccess) {
       logger.warning(s"Unknown compiler options: ${unprocessed.mkString(", ")}")
     }
-    new MetalsGlobal(
-      settings,
-      new StoreReporter,
-      search,
-      buildTargetIdentifier,
-      config,
-      folderPath,
-      completionItemPriority
-    )
+    try {
+      new MetalsGlobal(
+        settings,
+        new StoreReporter,
+        search,
+        buildTargetIdentifier,
+        config,
+        folderPath,
+        completionItemPriority
+      )
+    } catch {
+      case e: FatalError
+          if scalaVersion.startsWith("2.13") && !withClearedCaches =>
+        val cleared = JrtClasspathCompat.clearJrtClassPathCaches(logger)
+        if (cleared) {
+          logger.warning(
+            s"Cleared JrtClassPath caches, to try and fix `${e.getMessage()}`"
+          )
+          newCompiler(withClearedCaches = true)
+        } else {
+          throw e
+        }
+      case e: FatalError =>
+        throw e
+    }
   }
 
   // ================
