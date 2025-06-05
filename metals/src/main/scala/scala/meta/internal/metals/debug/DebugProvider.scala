@@ -336,7 +336,11 @@ class DebugProvider(
           case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
             for {
               id <- buildTarget
-              projectInfo <- debugConfigCreator.create(id, cancelPromise)
+              projectInfo <- debugConfigCreator.create(
+                id,
+                cancelPromise,
+                isTests = false,
+              )
               scalaMainClass <- params.asScalaMainClass()
             } yield projectInfo.map(
               new MainClassDebugAdapter(
@@ -350,7 +354,11 @@ class DebugProvider(
               b.TestParamsDataKind.SCALA_TEST_SUITES) =>
             for {
               id <- buildTarget
-              projectInfo <- debugConfigCreator.create(id, cancelPromise)
+              projectInfo <- debugConfigCreator.create(
+                id,
+                cancelPromise,
+                isTests = true,
+              )
               testSuites <- params.asScalaTestSuites()
             } yield {
               for {

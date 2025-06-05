@@ -22,9 +22,19 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
     val ec: ExecutionContext
 ) {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
-  private val jvmRunEnvironments
-      : TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem] =
-    TrieMap.empty[b.BuildTargetIdentifier, b.JvmEnvironmentItem]
+
+  type JVMRunEnvironmentsMap =
+    TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem]
+
+  /** Cache for the 'buildTarget/jvmRunEnvironment' BSP requests */
+  private val jvmRunEnvironments: JVMRunEnvironmentsMap = TrieMap.empty
+
+  /** Cache for the 'buildTarget/jvmTestRunEnvironment' BSP requests */
+  private val jvmTestRunEnvironments: JVMRunEnvironmentsMap = TrieMap.empty
+
+  def jvmRunEnvironmentsFor(isTests: Boolean): JVMRunEnvironmentsMap =
+    if (isTests) jvmTestRunEnvironments else jvmRunEnvironments
+
   val rebuildIndex: BatchedFunction[b.BuildTargetIdentifier, Unit] =
     BatchedFunction.fromFuture(
       fetchClasses,
@@ -42,6 +52,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
 
   def clear(): Unit = {
     jvmRunEnvironments.clear()
+    jvmTestRunEnvironments.clear()
   }
 
   def findMainClassByName(
@@ -117,25 +128,42 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
   }
 
   def jvmRunEnvironmentSync(
-      buildTargetId: b.BuildTargetIdentifier
-  ): Option[b.JvmEnvironmentItem] = jvmRunEnvironments.get(buildTargetId)
+      buildTargetId: b.BuildTargetIdentifier,
+      isTests: Boolean,
+  ): Option[b.JvmEnvironmentItem] =
+    jvmRunEnvironmentsFor(isTests).get(buildTargetId)
 
   def jvmRunEnvironment(
-      buildTargetId: b.BuildTargetIdentifier
+      buildTargetId: b.BuildTargetIdentifier,
+      isTests: Boolean,
   ): Future[Option[b.JvmEnvironmentItem]] = {
-    jvmRunEnvironments.get(buildTargetId) match {
+    val environments = jvmRunEnvironmentsFor(isTests)
+
+    environments.get(buildTargetId) match {
       case None =>
         buildTargets.buildServerOf(buildTargetId) match {
           case None => Future.successful(None)
           case Some(connection) =>
-            connection
-              .jvmRunEnvironment(
-                new b.JvmRunEnvironmentParams(List(buildTargetId).asJava)
-              )
-              .map { env =>
-                cacheJvmRunEnvironment(env)
-                env.getItems().asScala.headOption
-              }
+            val buildTargets = List(buildTargetId)
+
+            def processResult(items: Iterable[b.JvmEnvironmentItem]) = {
+              cacheJvmRunEnvironment(items.iterator, environments)
+              items.headOption
+            }
+
+            if (isTests) {
+              connection
+                .jvmTestEnvironment(
+                  new b.JvmTestEnvironmentParams(buildTargets.asJava)
+                )
+                .map(env => processResult(env.getItems().asScala))
+            } else {
+              connection
+                .jvmRunEnvironment(
+                  new b.JvmRunEnvironmentParams(buildTargets.asJava)
+                )
+                .map(env => processResult(env.getItems().asScala))
+            }
 
         }
       case jvmRunEnv: Some[b.JvmEnvironmentItem] =>
@@ -144,13 +172,14 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
   }
 
   private def cacheJvmRunEnvironment(
-      result: b.JvmRunEnvironmentResult
+      items: Iterator[b.JvmEnvironmentItem],
+      environments: JVMRunEnvironmentsMap,
   ): Unit = {
     for {
-      item <- result.getItems().asScala
+      item <- items
       target = item.getTarget
     } {
-      jvmRunEnvironments.put(target, item)
+      environments.put(target, item)
     }
   }
 

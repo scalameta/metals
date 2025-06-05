@@ -358,7 +358,7 @@ class DebugDiscovery(
               )
               .orElse(userConfig().usedJavaBinary)
             buildTargetClasses
-              .jvmRunEnvironment(params.getTargets().get(0))
+              .jvmRunEnvironment(params.getTargets().get(0), isTests = false)
               .map { envItem =>
                 val updatedData = envItem.zip(javaBinary) match {
                   case None =>

@@ -24,9 +24,12 @@ import ch.epfl.scala.debugadapter.UnmanagedEntry
 
 class DebugeeParamsCreator(buildTargetClasses: BuildTargetClasses) {
   val buildTargets = buildTargetClasses.buildTargets
+
+  /** @param isTests whether the build target is a test target */
   def create(
       id: BuildTargetIdentifier,
       cancelPromise: Promise[Unit],
+      isTests: Boolean,
   )(implicit ec: ExecutionContext): Either[String, Future[DebugeeProject]] = {
     for {
       target <- buildTargets
@@ -56,7 +59,7 @@ class DebugeeParamsCreator(buildTargetClasses: BuildTargetClasses) {
         classpathString <- buildTargets
           .targetClasspath(id, cancelPromise)
           .getOrElse(Future.successful(Nil))
-        jvmRunEnv <- buildTargetClasses.jvmRunEnvironment(id)
+        jvmRunEnv <- buildTargetClasses.jvmRunEnvironment(id, isTests = isTests)
       } yield {
 
         val classpath = classpathString.map(_.toAbsolutePath)
@@ -78,6 +81,10 @@ class DebugeeParamsCreator(buildTargetClasses: BuildTargetClasses) {
           })
           .getOrElse(classpath)
 
+        val envVars = jvmRunEnv
+          .map(_.getEnvironmentVariables().asScala.toMap)
+          .getOrElse(Map.empty)
+
         new DebugeeProject(
           scalaVersion,
           target.displayName,
@@ -85,6 +92,7 @@ class DebugeeParamsCreator(buildTargetClasses: BuildTargetClasses) {
           debugLibs,
           filteredClassPath,
           runClasspath,
+          environmentVariables = envVars,
         )
       }
     }
@@ -148,4 +156,5 @@ case class DebugeeProject(
     libraries: Seq[Library],
     unmanagedEntries: Seq[UnmanagedEntry],
     runClassPath: List[AbsolutePath],
+    environmentVariables: Map[String, String],
 )

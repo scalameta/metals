@@ -124,7 +124,16 @@ class TestSuiteDebugAdapter(
     }
     val handler = new LoggingEventHandler(listener)
     val jvmOptions = testClasses.getJvmOptions.asScala.toList
-    val envOptions = testClasses.getEnvironmentVariables().asScala.toList
+    val testClassesEnvOptions =
+      testClasses.getEnvironmentVariables().asScala.toList
+    val buildServerEnvOptions = project.environmentVariables.iterator.map {
+      case (k, v) => s"$k=$v"
+    }.toList
+    val envOptions = testClassesEnvOptions ++ buildServerEnvOptions
+    scribe.info(
+      s"""|Environment variables for the test suite: 
+          |  ${envOptions.mkString("\n  ")}""".stripMargin
+    )
 
     scribe.debug("Starting forked test execution...")
     val resolvedSuites = suites(frameworks.toSeq)

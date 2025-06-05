@@ -18,6 +18,9 @@ import tests.BaseMillServerSuite
 import tests.JavaHomeChangeTest
 import tests.MillBuildLayout
 import tests.MillServerInitializer
+import ch.epfl.scala.bsp4j.TestParamsDataKind
+import scala.meta.internal.metals.ScalaTestSuites
+import scala.meta.internal.metals.ScalaTestSuiteSelection
 
 /**
  * Basic suite to ensure that a connection to a Mill server can be made.
@@ -314,6 +317,79 @@ class MillServerSuite
         .info(server.toPath("foo/src/bar/Main.scala"), "bar/Foo.")
       _ = assert(res2.isDefined)
     } yield ()
+  }
+
+  // https://github.com/com-lihaoyi/mill/issues/5039
+  test("passing-test-environment-variables") {
+    cleanWorkspace()
+    writeLayout(
+      """|/build.mill
+         |//| mill-version: 1.0.0-RC1
+         |package build
+         |import mill.*, scalalib.*
+         |
+         |object foo extends ScalaModule {
+         |  def scalaVersion = "3.7.0"
+         |
+         |  override def forkEnv = Map("DOGGIES" -> "main")
+         |
+         |  object test extends ScalaTests with TestModule.Munit {
+         |    def mvnDeps = Seq(
+         |      mvn"org.scalameta::munit::1.1.1"
+         |    )
+         |
+         |    def forkEnv = super.forkEnv() ++ Map("DOGGIES" -> "tests")
+         |  }
+         |}
+         |/foo/test/src/FooMUnitTests.scala
+         |package foo
+         |
+         |import munit.FunSuite
+         |
+         |class FooMUnitTests extends FunSuite {
+         |  test("env var") {
+         |    assertEquals(sys.env.get("DOGGIES"), Some("tests"))
+         |  }
+         |}
+         |""".stripMargin
+    )
+    def millBspConfig = workspace.resolve(".bsp/mill-bsp.json")
+    client.generateBspAndConnect = Messages.GenerateBspAndConnect.yes
+    for {
+      _ <- server.initialize()
+      _ <- server.initialized()
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        Messages.GenerateBspAndConnect
+          .params(
+            MillBuildTool.name,
+            MillBuildTool.bspName,
+          )
+          .getMessage,
+      )
+      _ <- server.headServer.buildServerPromise.future
+      _ = assert(millBspConfig.exists)
+      debugger <- server.startDebugging(
+        "foo.test",
+        TestParamsDataKind.SCALA_TEST_SUITES_SELECTION,
+        ScalaTestSuites(
+          List(
+            ScalaTestSuiteSelection("foo.FooMUnitTests", Nil.asJava)
+          ).asJava,
+          Nil.asJava,
+          Nil.asJava,
+        ),
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+      _ = server.server.cancel()
+    } yield assert(
+      output.contains("All tests in foo.FooMUnitTests passed"),
+      clue = output,
+    )
   }
 
 }
