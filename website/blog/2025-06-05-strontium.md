@@ -1,0 +1,288 @@
+---
+authors: kmarek
+title: Metals v1.6.0 - Strontium
+---
+
+We're happy to announce the release of Metals v1.6.0, which, among other things, fixes a regression from the previous release and adds fixes and improvements to the recently added MCP support.
+
+<table>
+<tbody>
+  <tr>
+    <td>Commits since last release</td>
+    <td align="center">51</td>
+  </tr>
+  <tr>
+    <td>Merged PRs</td>
+    <td align="center">50</td>
+  </tr>
+    <tr>
+    <td>Contributors</td>
+    <td align="center">8</td>
+  </tr>
+  <tr>
+    <td>Closed issues</td>
+    <td align="center">8</td>
+  </tr>
+  <tr>
+    <td>New features</td>
+    <td align="center">2</td>
+  </tr>
+</tbody>
+</table>
+
+For full details: [https://github.com/scalameta/metals/milestone/79?closed=1](https://github.com/scalameta/metals/milestone/79?closed=1)
+
+Metals is a language server for Scala that works with VS Code, Vim, Emacs, Zed,
+Helix and Sublime Text. Metals is developed at the
+[Scala Center](https://scala.epfl.ch/) and [VirtusLab](https://virtuslab.com)
+with the help from contributors from the community.
+
+## TL;DR
+
+Check out [https://scalameta.org/metals/](https://scalameta.org/metals/), and
+give Metals a try!
+
+- [MCP improvements and fixes](#mcp-improvements-and-fixes)
+- [Module status bar](#module-status-bar)
+- [Fixed blocking user requests](fixed-blocking-user-requests)
+- [Fixes for backticked identifiers](fixes-for-backticked-identifiers)
+- [Changes for plugin authors](changes-for-plugin-authors)
+
+## MCP improvements and fixes
+Based on user feedback since the previous release, we have fixed some issues related to MCP and added some new tools to further facilitate better agent interaction.
+
+New tools:
+ - `compile-module` - ompile a chosen build target, input is the module name, the same as visible in the Metals Doctor.
+ - `find-dep` - completion tool for finding dependencies using Coursier added by [tgodzik](https://github.com/tgodzik).
+
+Improvements:
+ - MCP port is now saved and reused for the workspace, so it doesn't have to be repeatedly adjusted in other configurations.
+ - Better responses in compile tool. Previously it would only return information about issues and an empty result otherwise; now we explicitly mark a successful compilation. Also for file compilation, if no error is found in the file, Metals will return errors from the whole module to provide possibly useful context.
+
+Fixes:
+ - `inspect` for Scala 3 would previously fail and return only the symbol name.
+ - `verbose` flag marked as optional was previously required. Thanks, [rtar](https://github.com/rtar) for the fix.
+ - Correctly handle package objects.
+ - Fix generating MCP configuration for VSCode alternative distributions (VSCodium and insider versions).
+
+## Module status bar
+This release includes a new status bar, which should make some information about the module state more visible.
+
+By default, the status shows the name of the module (build target) that the file in focus belongs to. If the file doesn't belong to any build target or due to an error the build target cannot be resolved, the status will show `no build target` error message. If the build target is found but there is a compile error in an upstream module, the status will show an error with the name of the upstream module. Finally, if the build target is found and there are no upstream errors, but there are new error reports created for the build target, the status will show a warning with the number of error reports.
+
+![module-status-bar-no-error](https://i.imgur.com/Xk76qJM.png)
+*Module status bar showing build target name.*
+
+![module-status-upstream-error](https://i.imgur.com/7rErfM9.png)
+*Module status bar showing a compile error in an upstream module*
+
+![module-status-erros-reports](https://i.imgur.com/ciNdDCl.png)
+*Module status bar indicating 4 new error reports*
+
+## Fixed blocking user requests
+In the previous release, a bug was introduced where Metals would sometimes block waiting for the response for user notification. As a result, `Import build`, `Switch build server` and similar requests would fail to work. This issue was fixed in this release with an added timeout.
+
+## Fixes for backticked identifiers
+This release brings a few fixes around handling backticked identifiers: selection range, location of insert-types code action, and symbol search. Thanks go to [harpocrates](https://github.com/harpocrates), who added the needed special handling where it was missed.
+
+## Changes for plugin authors
+This release adds a `module` `statusType` to `metals/status` request. Further, it modifies the `MetalsStatusParams` by adding a new `metalsCommand` field with the following scheme
+```json
+{
+  "title": "string",
+  "command": "string",
+  "tooltip": "string | undefined",
+  "arguments": "any[] | undefined"
+}
+```
+`metalsCommand` field should take precedence over the previously existing `command` field.
+
+Depending on if the client supports the `metals/status` extension, the field `moduleStatusBarProvider` in initialization options should be populated; it can contain one of the following values:
+ - `on` - if client supports `metals/status`
+ - `off` - if the client doesn't support `metals/status`
+ - `show-message` - if the client doesn't support `metals/status`, but would like the module status to be sent via show message request.
+ - `log-message` - if the client doesn't support `metals/status`, but would like the module status logged.
+If the field is empty, it defaults to `off`.
+
+## Contributors
+
+Big thanks to everybody who contributed to this release or reported an issue!
+
+```
+$ git shortlog -sn --no-merges v1.5.3..v1.6.0
+    18	Tomasz Godzik
+    11	scalameta-bot
+    14	Katarzyna Marek
+     4	Alec Theriault
+     2	dependabot[bot]
+     1	Adam Warski
+     1	Ruslans Tarasovs
+```
+
+## Miscellaneous
+  - fix: indexer bug around type members [harpocrates](https://github.com/harpocrates)
+  - chore: added support for mill `0.12.14` and `1.0.0` [tgodzik](https://github.com/tgodzik).
+  - fix: encode build target names to include in report file name [kasiaMarek](https://github.com/kasiaMarek)
+  - fix: use dependency modules for Bazel [kasiaMarek](https://github.com/kasiaMarek)
+  - improvement: Cache tokenization results when possible [tgodzik](https://github.com/tgodzik)
+  - feat: symbol search for backticked identifiers [harpocrates](https://github.com/harpocrates)
+  - bugfix: Calculate completion items eagerly for Scala 2 [tgodzik](https://github.com/tgodzik)
+
+## Merged PRs
+
+## [v1.6.0](https://github.com/scalameta/metals/tree/v1.6.0) (2025-06-05)
+
+[Full Changelog](https://github.com/scalameta/metals/compare/v1.5.3...v1.6.0)
+
+**Merged pull requests:**
+
+- bugfix: Fix on type formatting getting wrong tokens
+  [\#7540](https://github.com/scalameta/metals/pull/7540)
+  ([tgodzik](https://github.com/tgodzik))
+- bugfix: Fix functionality dependent on snapshots
+  [\#7524](https://github.com/scalameta/metals/pull/7524)
+  ([tgodzik](https://github.com/tgodzik))
+- improvement: better compile mcp tool responses
+  [\#7484](https://github.com/scalameta/metals/pull/7484)
+  ([kasiaMarek](https://github.com/kasiaMarek))
+- improvement: Return a better LLM compatible result from find-dep
+  [\#7518](https://github.com/scalameta/metals/pull/7518)
+  ([tgodzik](https://github.com/tgodzik))
+- Update MetalsMcpServer.scala - correct typo
+  [\#7536](https://github.com/scalameta/metals/pull/7536)
+  ([adamw](https://github.com/adamw))
+- fix: blocking user requests in connect
+  [\#7515](https://github.com/scalameta/metals/pull/7515)
+  ([kasiaMarek](https://github.com/kasiaMarek))
+- chore: Bump docusaurus to 3.8.0
+  [\#7534](https://github.com/scalameta/metals/pull/7534)
+  ([tgodzik](https://github.com/tgodzik))
+- bugfix: Fix worksheet tests for Scala 3.7.1
+  [\#7535](https://github.com/scalameta/metals/pull/7535)
+  ([tgodzik](https://github.com/tgodzik))
+- build(deps-dev): bump @types/node from 22.15.3 to 22.15.29 in /website
+  [\#7530](https://github.com/scalameta/metals/pull/7530)
+  ([dependabot[bot]](https://github.com/dependabot[bot]))
+- chore: Bump sbt-ci-release
+  [\#7533](https://github.com/scalameta/metals/pull/7533)
+  ([tgodzik](https://github.com/tgodzik))
+- improvement: save mcp port
+  [\#7485](https://github.com/scalameta/metals/pull/7485)
+  ([kasiaMarek](https://github.com/kasiaMarek))
+- fix: encode build target names to include in report file name
+  [\#7510](https://github.com/scalameta/metals/pull/7510)
+  ([kasiaMarek](https://github.com/kasiaMarek))
+- improvement: Support Mill 1.0.0
+  [\#7514](https://github.com/scalameta/metals/pull/7514)
+  ([tgodzik](https://github.com/tgodzik))
+- build(deps): Update scala-xml from 2.3.0 to 2.4.0
+  [\#7520](https://github.com/scalameta/metals/pull/7520)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- build(deps): Update protobuf-java from 4.31.0 to 4.31.1
+  [\#7519](https://github.com/scalameta/metals/pull/7519)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- improvement: Cache tokenization results when possible
+  [\#7499](https://github.com/scalameta/metals/pull/7499)
+  ([tgodzik](https://github.com/tgodzik))
+- bugfix: Publish correctly to snapshots
+  [\#7523](https://github.com/scalameta/metals/pull/7523)
+  ([tgodzik](https://github.com/tgodzik))
+- improvement: Update sbt-ci-release to fix releases
+  [\#7521](https://github.com/scalameta/metals/pull/7521)
+  ([tgodzik](https://github.com/tgodzik))
+- improvement: Fix null pointer exception in inlay hints
+  [\#7516](https://github.com/scalameta/metals/pull/7516)
+  ([tgodzik](https://github.com/tgodzik))
+- test: request timeout doesn't block on waiting for user response
+  [\#7513](https://github.com/scalameta/metals/pull/7513)
+  ([kasiaMarek](https://github.com/kasiaMarek))
+- bugfix: Don't trim error stack trace
+  [\#7498](https://github.com/scalameta/metals/pull/7498)
+  ([tgodzik](https://github.com/tgodzik))
+- fix: use dependency modules for Bazel
+  [\#7508](https://github.com/scalameta/metals/pull/7508)
+  ([kasiaMarek](https://github.com/kasiaMarek))
+- feat: symbol search for backticked identifiers
+  [\#7502](https://github.com/scalameta/metals/pull/7502)
+  ([harpocrates](https://github.com/harpocrates))
+- revert: Revert update of sbt-ci-release
+  [\#7511](https://github.com/scalameta/metals/pull/7511)
+  ([tgodzik](https://github.com/tgodzik))
+- build(deps): Update sbt-ci-release from 1.9.3 to 1.11.0
+  [\#7504](https://github.com/scalameta/metals/pull/7504)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- build(deps): Update sbt, scripted-plugin from 1.10.11 to 1.11.0
+  [\#7505](https://github.com/scalameta/metals/pull/7505)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- chore: Update mill to 0.12.14
+  [\#7495](https://github.com/scalameta/metals/pull/7495)
+  ([tgodzik](https://github.com/tgodzik))
+- feature: Add MCP tool to query for dependencies
+  [\#7494](https://github.com/scalameta/metals/pull/7494)
+  ([tgodzik](https://github.com/tgodzik))
+- fix: indexer bug around type members
+  [\#7489](https://github.com/scalameta/metals/pull/7489)
+  ([harpocrates](https://github.com/harpocrates))
+- feat: Show issues within current module
+  [\#7440](https://github.com/scalameta/metals/pull/7440)
+  ([kasiaMarek](https://github.com/kasiaMarek))
+- fix: support package objects in MCP correctly
+  [\#7481](https://github.com/scalameta/metals/pull/7481)
+  ([kasiaMarek](https://github.com/kasiaMarek))
+- build(deps): Update ujson from 4.1.0 to 4.2.1
+  [\#7493](https://github.com/scalameta/metals/pull/7493)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- bugfix: Calculate completion items eagerly
+  [\#7487](https://github.com/scalameta/metals/pull/7487)
+  ([tgodzik](https://github.com/tgodzik))
+- build(deps): Update jackson-databind from 2.15.4 to 2.19.0
+  [\#7477](https://github.com/scalameta/metals/pull/7477)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- fix: location of insert-types code action
+  [\#7483](https://github.com/scalameta/metals/pull/7483)
+  ([harpocrates](https://github.com/harpocrates))
+- bugfix: Fix versions to not include Right
+  [\#7482](https://github.com/scalameta/metals/pull/7482)
+  ([tgodzik](https://github.com/tgodzik))
+- feat: selection range around name in select
+  [\#7473](https://github.com/scalameta/metals/pull/7473)
+  ([harpocrates](https://github.com/harpocrates))
+- build(deps): bump undici from 6.21.1 to 6.21.3 in /website
+  [\#7474](https://github.com/scalameta/metals/pull/7474)
+  ([dependabot[bot]](https://github.com/dependabot[bot]))
+- build(deps): Update protobuf-java from 4.30.2 to 4.31.0
+  [\#7478](https://github.com/scalameta/metals/pull/7478)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- build(deps): Update mcp from 0.9.0 to 0.10.0
+  [\#7479](https://github.com/scalameta/metals/pull/7479)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- build(deps): Update scalameta, semanticdb-metap, ... from 4.13.5 to 4.13.6
+  [\#7480](https://github.com/scalameta/metals/pull/7480)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- fix: uri in mcp `inspect` for Scala 3
+  [\#7466](https://github.com/scalameta/metals/pull/7466)
+  ([kasiaMarek](https://github.com/kasiaMarek))
+- fix: add alternative vscode editor names
+  [\#7468](https://github.com/scalameta/metals/pull/7468)
+  ([kasiaMarek](https://github.com/kasiaMarek))
+- fix: MCP test tool runs properly if `verbose` argument is not provided
+  [\#7472](https://github.com/scalameta/metals/pull/7472)
+  ([rtar](https://github.com/rtar))
+- docs: fix setting `enableBestEffort` name in docs
+  [\#7471](https://github.com/scalameta/metals/pull/7471)
+  ([kasiaMarek](https://github.com/kasiaMarek))
+- build(deps): Update flyway-core from 11.8.0 to 11.8.1
+  [\#7450](https://github.com/scalameta/metals/pull/7450)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- docs: fix links to gifs in last release notes
+  [\#7461](https://github.com/scalameta/metals/pull/7461)
+  ([kasiaMarek](https://github.com/kasiaMarek))
+- build(deps): Update mcp from 0.8.1 to 0.9.0
+  [\#7456](https://github.com/scalameta/metals/pull/7456)
+  ([scalameta-bot](https://github.com/scalameta-bot))
+- bugfix: Don't use unsafe alternatives method which can throw
+  [\#7458](https://github.com/scalameta/metals/pull/7458)
+  ([tgodzik](https://github.com/tgodzik))
+- docs: Add release notes for Metals 1.5.3
+  [\#7459](https://github.com/scalameta/metals/pull/7459)
+  ([kasiaMarek](https://github.com/kasiaMarek))
