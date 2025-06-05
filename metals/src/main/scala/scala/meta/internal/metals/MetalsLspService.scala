@@ -602,6 +602,12 @@ abstract class MetalsLspService(
       saveJarFileToDisk = !clientConfig.isVirtualDocumentSupported(),
     )
 
+  private val metalsPasteProvider: MetalsPasteProvider =
+    new MetalsPasteProvider(
+      compilers,
+      buildTargets,
+    )
+
   def parseTreesAndPublishDiags(paths: Seq[AbsolutePath]): Future[Unit] = {
     Future
       .traverse(paths.distinct) { path =>
@@ -1264,6 +1270,16 @@ abstract class MetalsLspService(
     scalafixProvider
       .runRulesOrPrompt(uri.toAbsolutePath, rules)
       .flatMap(applyEdits(uri, _))
+
+  def didPaste(
+      params: MetalsPasteParams
+  ): Future[ApplyWorkspaceEditResponse] = {
+    metalsPasteProvider
+      .didPaste(params, EmptyCancelToken)
+      .flatMap(
+        applyEdits(params.textDocument.getUri(), _)
+      )
+  }
 
   protected def applyEdits(
       uri: String,

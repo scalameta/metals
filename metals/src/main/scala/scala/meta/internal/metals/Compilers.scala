@@ -1677,6 +1677,39 @@ class Compilers(
     else textDocument
   }
 
+  def diagnostics(
+      path: AbsolutePath,
+      cancelToken: CancelToken,
+  ): Future[List[Diagnostic]] = {
+    val fromPc = for {
+      pc <- loadCompiler(path)
+    } yield {
+      val (input, _, adjustResponse) =
+        sourceAdjustments(
+          path.toURI.toString(),
+          pc.scalaVersion(),
+        )
+      val params = CompilerOffsetParams(path.toURI, input.value, 0, cancelToken)
+      pc.diagnostics(params).asScala.map {
+        _.asScala
+          .map(
+            adjustResponse.adjustDiagnostic(_)
+          )
+          .toList
+      }
+    }
+    fromPc.getOrElse(Future.successful(Nil))
+  }
+
+  def symbolsAt(
+      params: TextDocumentPositionParams,
+      token: CancelToken,
+  ): Future[List[String]] =
+    withPCAndAdjustLsp(params) { (pc, position, _) =>
+      val params = CompilerOffsetParamsUtils.fromPos(position, token)
+      pc.getSymbolsAtPosition(params).asScala.map(_.asScala.toList)
+    }.getOrElse(Future.successful(Nil))
+
   private def cleanupAutoImports(
       document: s.TextDocument,
       originalText: String,
