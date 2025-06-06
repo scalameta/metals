@@ -32,6 +32,7 @@ metals.sbt
 metals/project/
 
 .vscode/
+.cursor/
 
 local.*
 
