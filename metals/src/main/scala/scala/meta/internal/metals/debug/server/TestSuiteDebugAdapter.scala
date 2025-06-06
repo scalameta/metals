@@ -129,8 +129,8 @@ class TestSuiteDebugAdapter(
     val buildServerEnvOptions = project.environmentVariables.iterator.map {
       case (k, v) => s"$k=$v"
     }.toList
-    val envOptions = testClassesEnvOptions ++ buildServerEnvOptions
-    scribe.info(
+    val envOptions = buildServerEnvOptions  ++ testClassesEnvOptions
+    scribe.debug(
       s"""|Environment variables for the test suite: 
           |  ${envOptions.mkString("\n  ")}""".stripMargin
     )

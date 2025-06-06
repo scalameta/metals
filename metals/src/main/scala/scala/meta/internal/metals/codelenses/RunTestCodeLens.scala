@@ -78,7 +78,7 @@ final class RunTestCodeLens(
     ): Future[Unit] = {
       if (isJvm)
         buildTargetClasses
-          .jvmRunEnvironment(buildTargetId, isTests = true)
+          .jvmRunEnvironment(buildTargetId, isTests = false)
           .map(_ => ())
       else
         Future.unit
@@ -337,7 +337,7 @@ final class RunTestCodeLens(
       if (!isJVM) (main.toJson, false)
       else
         buildTargetClasses
-          .jvmRunEnvironmentSync(target, isTests = true)
+          .jvmRunEnvironmentSync(target, isTests = false)
           .zip(javaBinary) match {
           case None =>
             (main.toJson, false)
