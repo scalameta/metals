@@ -1,16 +1,10 @@
 package tests.mcp
 
-import scala.concurrent.Future
-
-import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.mcp.McpConfig
 import scala.meta.internal.metals.mcp.McpMessages
-import scala.meta.internal.metals.mcp.VSCodeEditor
 
 import tests.BaseLspSuite
-import tests.mcp.TestMcpClient
 
-class McpServerLspSuite extends BaseLspSuite("mcp-server") {
+class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
 
   test("find-dep") {
     cleanWorkspace()
@@ -26,16 +20,7 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") {
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
-      _ = assertNoDiagnostics()
-      _ <- server.didChangeConfiguration(
-        UserConfiguration(startMcpServer = true).toString
-      )
-      port <- Future.successful(
-        McpConfig.readPort(server.workspace, "root", VSCodeEditor)
-      )
-      _ = assert(port.isDefined, "MCP server port should be defined")
-      client = new TestMcpClient(s"http://localhost:${port.get}/sse")
-      _ <- client.initialize()
+      client <- startMcpServer()
       result <- client.findDep("org.scala-lan")
       _ = assertNoDiff(
         result.mkString("\n"),
