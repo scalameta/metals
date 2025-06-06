@@ -141,9 +141,21 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
 
     environments.get(buildTargetId) match {
       case None =>
+        scribe.trace(
+          s"No cached JVM run environment for build target $buildTargetId (isTests = $isTests)."
+        )
+
         buildTargets.buildServerOf(buildTargetId) match {
-          case None => Future.successful(None)
+          case None =>
+            scribe.trace(
+              s"No build server connection found for build target $buildTargetId (isTests = $isTests)."
+            )
+            Future.successful(None)
+
           case Some(connection) =>
+            scribe.trace(
+              s"Found build server connection for build target $buildTargetId (isTests = $isTests)."
+            )
             val buildTargets = List(buildTargetId)
 
             def processResult(items: Iterable[b.JvmEnvironmentItem]) = {
@@ -166,7 +178,11 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
             }
 
         }
+
       case jvmRunEnv: Some[b.JvmEnvironmentItem] =>
+        scribe.trace(
+          s"Found cached JVM run environment for build target $buildTargetId (isTests = $isTests)."
+        )
         Future.successful(jvmRunEnv)
     }
   }
