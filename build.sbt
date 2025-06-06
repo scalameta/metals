@@ -12,7 +12,7 @@ Global / resolvers += "scala-integration" at
 
 // The OSS version of Metals that this Databricks-internal fork is based on.
 // Make sure to bump up this version when we merge with upstream.
-val forkBaseVersion = "1.6.0"
+val forkBaseVersion = "1.6.1"
 
 def localSnapshotVersion = sys.env.getOrElse(
   "METALS_VERSION",
