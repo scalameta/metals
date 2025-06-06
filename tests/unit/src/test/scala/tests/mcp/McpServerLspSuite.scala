@@ -60,4 +60,30 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
     } yield ()
   }
 
+  test("list-modules") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/example/Hello.scala
+           |package com.example
+           |
+           |object Hello { def main(args: Array[String]): Unit = println("Hello") }
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
+      client <- startMcpServer()
+      modules <- client.listModules()
+      _ = assertNoDiff(
+        modules,
+        """|Available modules (build targets):
+           |- a
+           |""".stripMargin,
+      )
+      _ <- client.shutdown()
+    } yield ()
+  }
+
 }
