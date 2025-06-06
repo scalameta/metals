@@ -119,6 +119,7 @@ class MetalsMcpServer(
     asyncServer.addTool(createGetUsagesTool()).subscribe()
     asyncServer.addTool(importBuildTool()).subscribe()
     asyncServer.addTool(createFindDepTool()).subscribe()
+    asyncServer.addTool(createListModulesTool()).subscribe()
 
     // Log server initialization
     asyncServer.loggingNotification(
@@ -732,6 +733,34 @@ class MetalsMcpServer(
             new CallToolResult(createContent(completions), false)
           )
           .toMono
+      },
+    )
+  }
+
+  private def createListModulesTool(): AsyncToolSpecification = {
+    val schema =
+      """{
+        |  "type": "object",
+        |  "properties": { }
+        |} 
+        |""".stripMargin
+    new AsyncToolSpecification(
+      new Tool(
+        "list-modules",
+        "Return the list of modules (build targets) available in the project.",
+        schema,
+      ),
+      withErrorHandling { (_, _) =>
+        Future {
+          val modules =
+            buildTargets.allBuildTargetIds.flatMap(
+              buildTargets.jvmTarget(_).map(_.displayName)
+            )
+          new CallToolResult(
+            s"Available modules (build targets):${modules.map(module => s"\n- $module").mkString}",
+            false,
+          )
+        }.toMono
       },
     )
   }
