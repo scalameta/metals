@@ -1,10 +1,15 @@
 package tests
 
 import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ServerCommands
 
 class BuildServerConnectionLspSuite
     extends BaseLspSuite("build-server-connection") {
+
+  override def serverConfig: MetalsServerConfig =
+    super.serverConfig.copy(askToRestartBloop = true)
+
   test("basic") {
     cleanWorkspace()
     for {
