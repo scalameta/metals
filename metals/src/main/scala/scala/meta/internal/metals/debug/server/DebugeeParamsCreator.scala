@@ -157,4 +157,7 @@ case class DebugeeProject(
     unmanagedEntries: Seq[UnmanagedEntry],
     runClassPath: List[AbsolutePath],
     environmentVariables: Map[String, String],
-)
+) {
+  def environmentVariablesAsStrings: Iterator[String] =
+    environmentVariables.iterator.map { case (k, v) => s"$k=$v" }
+}
