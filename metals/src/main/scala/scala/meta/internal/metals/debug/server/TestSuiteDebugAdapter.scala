@@ -129,7 +129,9 @@ class TestSuiteDebugAdapter(
     val buildServerEnvOptions = project.environmentVariables.iterator.map {
       case (k, v) => s"$k=$v"
     }.toList
-    val envOptions = buildServerEnvOptions  ++ testClassesEnvOptions
+    // `testClassesEnvOptions` come from the user settings in editor, so they should override the build server ones.
+    // (This is later turned into a map, so the latter will override the first ones).
+    val envOptions = buildServerEnvOptions ++ testClassesEnvOptions
     scribe.debug(
       s"""|Environment variables for the test suite: 
           |  ${envOptions.mkString("\n  ")}""".stripMargin
