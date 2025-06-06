@@ -1,7 +1,10 @@
 package scala.meta.internal.pc
 
+import java.io.Closeable
 import java.nio.file.Path
 import java.util
+import java.util.logging.Level
+import java.util.logging.Logger
 import java.{util => ju}
 
 import scala.annotation.nowarn
@@ -34,7 +37,6 @@ import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 
 import org.eclipse.{lsp4j => l}
-import org.slf4j.Logger
 
 class MetalsGlobal(
     settings: Settings,
@@ -68,13 +70,19 @@ class MetalsGlobal(
     with AutoImports
     with Keywords
     with PcDiagnostics
-    with WorkspaceSymbolSearch { compiler =>
+    with WorkspaceSymbolSearch 
+    with Closeable { compiler =>
   hijackPresentationCompilerThread(
     backgroundCompilation = !metalsConfig.emitDiagnostics()
   )
 
   lazy val logger: Logger =
-    org.slf4j.LoggerFactory.getLogger(classOf[MetalsGlobal])
+    Logger.getLogger(classOf[MetalsGlobal].getName)
+
+  override def close(): Unit = {
+    super.close()
+    logger.log(Level.FINE, "Restarting compiler and clearing caches.")
+  }
 
   val richCompilationCache: TrieMap[String, RichCompilationUnit] =
     TrieMap.empty[String, RichCompilationUnit]
@@ -133,7 +141,7 @@ class MetalsGlobal(
   override protected def computeInternalPhases(): Unit = {
     super.computeInternalPhases()
     if (metalsConfig.sourcePathMode().shouldPrune()) {
-      logger.debug(s"[$buildTargetIdentifier] using pruned search path")
+      logger.log(Level.FINE, s"[$buildTargetIdentifier] using pruned search path")
       phasesSet += PruneLateSourcesComponent
     }
   }
@@ -154,7 +162,7 @@ class MetalsGlobal(
   override def assertCorrectThread(): Unit = {
     val name = Thread.currentThread().getName
     if (!name.startsWith("Compiler Job Thread")) {
-      logger.debug(s"Wrong thread: $name")
+      logger.log(Level.FINE, s"Wrong thread: $name")
     }
   }
 
