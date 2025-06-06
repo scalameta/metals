@@ -4,10 +4,247 @@
         <title>Metals Blog</title>
         <link>http://scalameta.org/metals/blog</link>
         <description>Metals Blog</description>
-        <lastBuildDate>Tue, 13 May 2025 00:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Thu, 05 Jun 2025 00:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <language>en</language>
+        <item>
+            <title><![CDATA[Metals v1.6.0 - Osmium]]></title>
+            <link>http://scalameta.org/metals/blog/2025/06/05/osmium</link>
+            <guid>http://scalameta.org/metals/blog/2025/06/05/osmium</guid>
+            <pubDate>Thu, 05 Jun 2025 00:00:00 GMT</pubDate>
+            <description><![CDATA[We're happy to announce the release of Metals v1.6.0, which, among other things, fixes a regression from the previous release and adds fixes and improvements to the recently added MCP support.]]></description>
+            <content:encoded><![CDATA[<p>We're happy to announce the release of Metals v1.6.0, which, among other things, fixes a regression from the previous release and adds fixes and improvements to the recently added MCP support.</p>
+<table><tbody><tr><td>Commits since last release</td><td align="center">51</td></tr><tr><td>Merged PRs</td><td align="center">50</td></tr><tr><td>Contributors</td><td align="center">8</td></tr><tr><td>Closed issues</td><td align="center">8</td></tr><tr><td>New features</td><td align="center">2</td></tr></tbody></table>
+<p>For full details: <a href="https://github.com/scalameta/metals/milestone/79?closed=1" target="_blank" rel="noopener noreferrer">https://github.com/scalameta/metals/milestone/79?closed=1</a></p>
+<p>Metals is a language server for Scala that works with VS Code, Vim, Emacs, Zed,
+Helix and Sublime Text. Metals is developed at the
+<a href="https://scala.epfl.ch/" target="_blank" rel="noopener noreferrer">Scala Center</a> and <a href="https://virtuslab.com/" target="_blank" rel="noopener noreferrer">VirtusLab</a>
+with the help from contributors from the community.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="tldr">TL;DR<a href="http://scalameta.org/metals/blog/2025/06/05/osmium#tldr" class="hash-link" aria-label="Direct link to TL;DR" title="Direct link to TL;DR">​</a></h2>
+<p>Check out <a href="https://scalameta.org/metals/" target="_blank" rel="noopener noreferrer">https://scalameta.org/metals/</a>, and
+give Metals a try!</p>
+<ul>
+<li><a href="http://scalameta.org/metals/blog/2025/06/05/osmium#mcp-improvements-and-fixes">MCP improvements and fixes</a></li>
+<li><a href="http://scalameta.org/metals/blog/2025/06/05/osmium#module-status-bar">Module status bar</a></li>
+<li><a href="http://scalameta.org/metals/blog/2025/06/05/fixed-blocking-user-requests">Fixed blocking user requests</a></li>
+<li><a href="http://scalameta.org/metals/blog/2025/06/05/fixes-for-backticked-identifiers">Fixes for backticked identifiers</a></li>
+<li><a href="http://scalameta.org/metals/blog/2025/06/05/changes-for-plugin-authors">Changes for plugin authors</a></li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="mcp-improvements-and-fixes">MCP improvements and fixes<a href="http://scalameta.org/metals/blog/2025/06/05/osmium#mcp-improvements-and-fixes" class="hash-link" aria-label="Direct link to MCP improvements and fixes" title="Direct link to MCP improvements and fixes">​</a></h2>
+<p>Based on user feedback since the previous release, we have fixed some issues related to MCP and added some new tools to further facilitate better agent interaction.</p>
+<p>New tools:</p>
+<ul>
+<li><code>compile-module</code> - ompile a chosen build target, input is the module name, the same as visible in the Metals Doctor.</li>
+<li><code>find-dep</code> - completion tool for finding dependencies using Coursier added by <a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>.</li>
+</ul>
+<p>Improvements:</p>
+<ul>
+<li>MCP port is now saved and reused for the workspace, so it doesn't have to be repeatedly adjusted in other configurations.</li>
+<li>Better responses in compile tool. Previously it would only return information about issues and an empty result otherwise; now we explicitly mark a successful compilation. Also for file compilation, if no error is found in the file, Metals will return errors from the whole module to provide possibly useful context.</li>
+</ul>
+<p>Fixes:</p>
+<ul>
+<li><code>inspect</code> for Scala 3 would previously fail and return only the symbol name.</li>
+<li><code>verbose</code> flag marked as optional was previously required. Thanks, <a href="https://github.com/rtar" target="_blank" rel="noopener noreferrer">rtar</a> for the fix.</li>
+<li>Correctly handle package objects.</li>
+<li>Fix generating MCP configuration for VSCode alternative distributions (VSCodium and insider versions).</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="module-status-bar">Module status bar<a href="http://scalameta.org/metals/blog/2025/06/05/osmium#module-status-bar" class="hash-link" aria-label="Direct link to Module status bar" title="Direct link to Module status bar">​</a></h2>
+<p>This release includes a new status bar, which should make some information about the module state more visible.</p>
+<p>By default, the status shows the name of the module (build target) that the file in focus belongs to. If the file doesn't belong to any build target or due to an error the build target cannot be resolved, the status will show <code>no build target</code> error message. If the build target is found but there is a compile error in an upstream module, the status will show an error with the name of the upstream module. Finally, if the build target is found and there are no upstream errors, but there are new error reports created for the build target, the status will show a warning with the number of error reports.</p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/Xk76qJM.png" alt="module-status-bar-no-error" class="img_ev3q">
+<em>Module status bar showing build target name.</em></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/7rErfM9.png" alt="module-status-upstream-error" class="img_ev3q">
+<em>Module status bar showing a compile error in an upstream module</em></p>
+<p><img decoding="async" loading="lazy" src="https://i.imgur.com/ciNdDCl.png" alt="module-status-erros-reports" class="img_ev3q">
+<em>Module status bar indicating 4 new error reports</em></p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="fixed-blocking-user-requests">Fixed blocking user requests<a href="http://scalameta.org/metals/blog/2025/06/05/osmium#fixed-blocking-user-requests" class="hash-link" aria-label="Direct link to Fixed blocking user requests" title="Direct link to Fixed blocking user requests">​</a></h2>
+<p>In the previous release, a bug was introduced where Metals would sometimes block waiting for the response for user notification. As a result, <code>Import build</code>, <code>Switch build server</code> and similar requests would fail to work. This issue was fixed in this release with an added timeout.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="fixes-for-backticked-identifiers">Fixes for backticked identifiers<a href="http://scalameta.org/metals/blog/2025/06/05/osmium#fixes-for-backticked-identifiers" class="hash-link" aria-label="Direct link to Fixes for backticked identifiers" title="Direct link to Fixes for backticked identifiers">​</a></h2>
+<p>This release brings a few fixes around handling backticked identifiers: selection range, location of insert-types code action, and symbol search. Thanks go to <a href="https://github.com/harpocrates" target="_blank" rel="noopener noreferrer">harpocrates</a>, who added the needed special handling where it was missed.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="changes-for-plugin-authors">Changes for plugin authors<a href="http://scalameta.org/metals/blog/2025/06/05/osmium#changes-for-plugin-authors" class="hash-link" aria-label="Direct link to Changes for plugin authors" title="Direct link to Changes for plugin authors">​</a></h2>
+<p>This release adds a <code>module</code> <code>statusType</code> to <code>metals/status</code> request. Further, it modifies the <code>MetalsStatusParams</code> by adding a new <code>metalsCommand</code> field with the following scheme</p>
+<div class="language-json codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-json codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#bfc7d5"><span class="token plain">{</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">  "title": "string",</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">  "command": "string",</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">  "tooltip": "string | undefined",</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">  "arguments": "any[] | undefined"</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">}</span><br></span></code></pre></div></div>
+<p><code>metalsCommand</code> field should take precedence over the previously existing <code>command</code> field.</p>
+<p>Depending on if the client supports the <code>metals/status</code> extension, the field <code>moduleStatusBarProvider</code> in initialization options should be populated; it can contain one of the following values:</p>
+<ul>
+<li><code>on</code> - if client supports <code>metals/status</code></li>
+<li><code>off</code> - if the client doesn't support <code>metals/status</code></li>
+<li><code>show-message</code> - if the client doesn't support <code>metals/status</code>, but would like the module status to be sent via show message request.</li>
+<li><code>log-message</code> - if the client doesn't support <code>metals/status</code>, but would like the module status logged.
+If the field is empty, it defaults to <code>off</code>.</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="contributors">Contributors<a href="http://scalameta.org/metals/blog/2025/06/05/osmium#contributors" class="hash-link" aria-label="Direct link to Contributors" title="Direct link to Contributors">​</a></h2>
+<p>Big thanks to everybody who contributed to this release or reported an issue!</p>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#bfc7d5"><span class="token plain">$ git shortlog -sn --no-merges v1.5.3..v1.6.0</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    18	Tomasz Godzik</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    11	scalameta-bot</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    14	Katarzyna Marek</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     4	Alec Theriault</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     2	dependabot[bot]</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     1	Adam Warski</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">     1	Ruslans Tarasovs</span><br></span></code></pre></div></div>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="miscellaneous">Miscellaneous<a href="http://scalameta.org/metals/blog/2025/06/05/osmium#miscellaneous" class="hash-link" aria-label="Direct link to Miscellaneous" title="Direct link to Miscellaneous">​</a></h2>
+<ul>
+<li>fix: indexer bug around type members <a href="https://github.com/harpocrates" target="_blank" rel="noopener noreferrer">harpocrates</a></li>
+<li>chore: added support for mill <code>0.12.14</code> and <code>1.0.0</code> <a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>.</li>
+<li>fix: encode build target names to include in report file name <a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a></li>
+<li>fix: use dependency modules for Bazel <a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a></li>
+<li>improvement: Cache tokenization results when possible <a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a></li>
+<li>feat: symbol search for backticked identifiers <a href="https://github.com/harpocrates" target="_blank" rel="noopener noreferrer">harpocrates</a></li>
+<li>bugfix: Calculate completion items eagerly for Scala 2 <a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a></li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="merged-prs">Merged PRs<a href="http://scalameta.org/metals/blog/2025/06/05/osmium#merged-prs" class="hash-link" aria-label="Direct link to Merged PRs" title="Direct link to Merged PRs">​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="v160-2025-06-05"><a href="https://github.com/scalameta/metals/tree/v1.6.0" target="_blank" rel="noopener noreferrer">v1.6.0</a> (2025-06-05)<a href="http://scalameta.org/metals/blog/2025/06/05/osmium#v160-2025-06-05" class="hash-link" aria-label="Direct link to v160-2025-06-05" title="Direct link to v160-2025-06-05">​</a></h2>
+<p><a href="https://github.com/scalameta/metals/compare/v1.5.3...v1.6.0" target="_blank" rel="noopener noreferrer">Full Changelog</a></p>
+<p><strong>Merged pull requests:</strong></p>
+<ul>
+<li>bugfix: Fix on type formatting getting wrong tokens
+<a href="https://github.com/scalameta/metals/pull/7540" target="_blank" rel="noopener noreferrer">#7540</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix: Fix functionality dependent on snapshots
+<a href="https://github.com/scalameta/metals/pull/7524" target="_blank" rel="noopener noreferrer">#7524</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>improvement: better compile mcp tool responses
+<a href="https://github.com/scalameta/metals/pull/7484" target="_blank" rel="noopener noreferrer">#7484</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>improvement: Return a better LLM compatible result from find-dep
+<a href="https://github.com/scalameta/metals/pull/7518" target="_blank" rel="noopener noreferrer">#7518</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>Update MetalsMcpServer.scala - correct typo
+<a href="https://github.com/scalameta/metals/pull/7536" target="_blank" rel="noopener noreferrer">#7536</a>
+(<a href="https://github.com/adamw" target="_blank" rel="noopener noreferrer">adamw</a>)</li>
+<li>fix: blocking user requests in connect
+<a href="https://github.com/scalameta/metals/pull/7515" target="_blank" rel="noopener noreferrer">#7515</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>chore: Bump docusaurus to 3.8.0
+<a href="https://github.com/scalameta/metals/pull/7534" target="_blank" rel="noopener noreferrer">#7534</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix: Fix worksheet tests for Scala 3.7.1
+<a href="https://github.com/scalameta/metals/pull/7535" target="_blank" rel="noopener noreferrer">#7535</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>build(deps-dev): bump @types/node from 22.15.3 to 22.15.29 in /website
+<a href="https://github.com/scalameta/metals/pull/7530" target="_blank" rel="noopener noreferrer">#7530</a>
+(<a href="https://github.com/dependabot%5Bbot%5D" target="_blank" rel="noopener noreferrer">dependabot[bot]</a>)</li>
+<li>chore: Bump sbt-ci-release
+<a href="https://github.com/scalameta/metals/pull/7533" target="_blank" rel="noopener noreferrer">#7533</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>improvement: save mcp port
+<a href="https://github.com/scalameta/metals/pull/7485" target="_blank" rel="noopener noreferrer">#7485</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>fix: encode build target names to include in report file name
+<a href="https://github.com/scalameta/metals/pull/7510" target="_blank" rel="noopener noreferrer">#7510</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>improvement: Support Mill 1.0.0
+<a href="https://github.com/scalameta/metals/pull/7514" target="_blank" rel="noopener noreferrer">#7514</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>build(deps): Update scala-xml from 2.3.0 to 2.4.0
+<a href="https://github.com/scalameta/metals/pull/7520" target="_blank" rel="noopener noreferrer">#7520</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update protobuf-java from 4.31.0 to 4.31.1
+<a href="https://github.com/scalameta/metals/pull/7519" target="_blank" rel="noopener noreferrer">#7519</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>improvement: Cache tokenization results when possible
+<a href="https://github.com/scalameta/metals/pull/7499" target="_blank" rel="noopener noreferrer">#7499</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix: Publish correctly to snapshots
+<a href="https://github.com/scalameta/metals/pull/7523" target="_blank" rel="noopener noreferrer">#7523</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>improvement: Update sbt-ci-release to fix releases
+<a href="https://github.com/scalameta/metals/pull/7521" target="_blank" rel="noopener noreferrer">#7521</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>improvement: Fix null pointer exception in inlay hints
+<a href="https://github.com/scalameta/metals/pull/7516" target="_blank" rel="noopener noreferrer">#7516</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>test: request timeout doesn't block on waiting for user response
+<a href="https://github.com/scalameta/metals/pull/7513" target="_blank" rel="noopener noreferrer">#7513</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>bugfix: Don't trim error stack trace
+<a href="https://github.com/scalameta/metals/pull/7498" target="_blank" rel="noopener noreferrer">#7498</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>fix: use dependency modules for Bazel
+<a href="https://github.com/scalameta/metals/pull/7508" target="_blank" rel="noopener noreferrer">#7508</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>feat: symbol search for backticked identifiers
+<a href="https://github.com/scalameta/metals/pull/7502" target="_blank" rel="noopener noreferrer">#7502</a>
+(<a href="https://github.com/harpocrates" target="_blank" rel="noopener noreferrer">harpocrates</a>)</li>
+<li>revert: Revert update of sbt-ci-release
+<a href="https://github.com/scalameta/metals/pull/7511" target="_blank" rel="noopener noreferrer">#7511</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>build(deps): Update sbt-ci-release from 1.9.3 to 1.11.0
+<a href="https://github.com/scalameta/metals/pull/7504" target="_blank" rel="noopener noreferrer">#7504</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update sbt, scripted-plugin from 1.10.11 to 1.11.0
+<a href="https://github.com/scalameta/metals/pull/7505" target="_blank" rel="noopener noreferrer">#7505</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>chore: Update mill to 0.12.14
+<a href="https://github.com/scalameta/metals/pull/7495" target="_blank" rel="noopener noreferrer">#7495</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>feature: Add MCP tool to query for dependencies
+<a href="https://github.com/scalameta/metals/pull/7494" target="_blank" rel="noopener noreferrer">#7494</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>fix: indexer bug around type members
+<a href="https://github.com/scalameta/metals/pull/7489" target="_blank" rel="noopener noreferrer">#7489</a>
+(<a href="https://github.com/harpocrates" target="_blank" rel="noopener noreferrer">harpocrates</a>)</li>
+<li>feat: Show issues within current module
+<a href="https://github.com/scalameta/metals/pull/7440" target="_blank" rel="noopener noreferrer">#7440</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>fix: support package objects in MCP correctly
+<a href="https://github.com/scalameta/metals/pull/7481" target="_blank" rel="noopener noreferrer">#7481</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>build(deps): Update ujson from 4.1.0 to 4.2.1
+<a href="https://github.com/scalameta/metals/pull/7493" target="_blank" rel="noopener noreferrer">#7493</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>bugfix: Calculate completion items eagerly
+<a href="https://github.com/scalameta/metals/pull/7487" target="_blank" rel="noopener noreferrer">#7487</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>build(deps): Update jackson-databind from 2.15.4 to 2.19.0
+<a href="https://github.com/scalameta/metals/pull/7477" target="_blank" rel="noopener noreferrer">#7477</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>fix: location of insert-types code action
+<a href="https://github.com/scalameta/metals/pull/7483" target="_blank" rel="noopener noreferrer">#7483</a>
+(<a href="https://github.com/harpocrates" target="_blank" rel="noopener noreferrer">harpocrates</a>)</li>
+<li>bugfix: Fix versions to not include Right
+<a href="https://github.com/scalameta/metals/pull/7482" target="_blank" rel="noopener noreferrer">#7482</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>feat: selection range around name in select
+<a href="https://github.com/scalameta/metals/pull/7473" target="_blank" rel="noopener noreferrer">#7473</a>
+(<a href="https://github.com/harpocrates" target="_blank" rel="noopener noreferrer">harpocrates</a>)</li>
+<li>build(deps): bump undici from 6.21.1 to 6.21.3 in /website
+<a href="https://github.com/scalameta/metals/pull/7474" target="_blank" rel="noopener noreferrer">#7474</a>
+(<a href="https://github.com/dependabot%5Bbot%5D" target="_blank" rel="noopener noreferrer">dependabot[bot]</a>)</li>
+<li>build(deps): Update protobuf-java from 4.30.2 to 4.31.0
+<a href="https://github.com/scalameta/metals/pull/7478" target="_blank" rel="noopener noreferrer">#7478</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update mcp from 0.9.0 to 0.10.0
+<a href="https://github.com/scalameta/metals/pull/7479" target="_blank" rel="noopener noreferrer">#7479</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update scalameta, semanticdb-metap, ... from 4.13.5 to 4.13.6
+<a href="https://github.com/scalameta/metals/pull/7480" target="_blank" rel="noopener noreferrer">#7480</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>fix: uri in mcp <code>inspect</code> for Scala 3
+<a href="https://github.com/scalameta/metals/pull/7466" target="_blank" rel="noopener noreferrer">#7466</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>fix: add alternative vscode editor names
+<a href="https://github.com/scalameta/metals/pull/7468" target="_blank" rel="noopener noreferrer">#7468</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>fix: MCP test tool runs properly if <code>verbose</code> argument is not provided
+<a href="https://github.com/scalameta/metals/pull/7472" target="_blank" rel="noopener noreferrer">#7472</a>
+(<a href="https://github.com/rtar" target="_blank" rel="noopener noreferrer">rtar</a>)</li>
+<li>docs: fix setting <code>enableBestEffort</code> name in docs
+<a href="https://github.com/scalameta/metals/pull/7471" target="_blank" rel="noopener noreferrer">#7471</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>build(deps): Update flyway-core from 11.8.0 to 11.8.1
+<a href="https://github.com/scalameta/metals/pull/7450" target="_blank" rel="noopener noreferrer">#7450</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>docs: fix links to gifs in last release notes
+<a href="https://github.com/scalameta/metals/pull/7461" target="_blank" rel="noopener noreferrer">#7461</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>build(deps): Update mcp from 0.8.1 to 0.9.0
+<a href="https://github.com/scalameta/metals/pull/7456" target="_blank" rel="noopener noreferrer">#7456</a>
+(<a href="https://github.com/scalameta-bot" target="_blank" rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>bugfix: Don't use unsafe alternatives method which can throw
+<a href="https://github.com/scalameta/metals/pull/7458" target="_blank" rel="noopener noreferrer">#7458</a>
+(<a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>)</li>
+<li>docs: Add release notes for Metals 1.5.3
+<a href="https://github.com/scalameta/metals/pull/7459" target="_blank" rel="noopener noreferrer">#7459</a>
+(<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
+</ul>]]></content:encoded>
+        </item>
         <item>
             <title><![CDATA[Metals v1.5.3 - Strontium]]></title>
             <link>http://scalameta.org/metals/blog/2025/05/13/strontium</link>
@@ -6553,100 +6790,6 @@ objects <a href="https://github.com/scalameta/metals/pull/5259" target="_blank" 
 <a href="https://github.com/scalameta/metals/pull/5148" target="_blank" rel="noopener noreferrer">#5148</a>
 (<a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a>)</li>
 </ul>]]></content:encoded>
-        </item>
-        <item>
-            <title><![CDATA[Workspace folders]]></title>
-            <link>http://scalameta.org/metals/blog/2023/07/17/workspace-folders</link>
-            <guid>http://scalameta.org/metals/blog/2023/07/17/workspace-folders</guid>
-            <pubDate>Mon, 17 Jul 2023 00:00:00 GMT</pubDate>
-            <description><![CDATA[In the upcoming version of metals we will add support for]]></description>
-            <content:encoded><![CDATA[<p>In the upcoming version of metals we will add support for
-<a href="https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_workspaceFolders" target="_blank" rel="noopener noreferrer">LSP workspace folders</a>.
-This feature allows you to load multiple Scala projects/modules into the same
-workspace without the need to switch between multiple windows.</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="the-new-multi-root-approach">The new multi-root approach<a href="http://scalameta.org/metals/blog/2023/07/17/workspace-folders#the-new-multi-root-approach" class="hash-link" aria-label="Direct link to The new multi-root approach" title="Direct link to The new multi-root approach">​</a></h2>
-<p>Before this feature metals would only support a single project treating a
-workspace root folder as the root of the project. The workspace root was
-established based on the <code>rootUri</code> field of
-<a href="https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initializeParams" target="_blank" rel="noopener noreferrer"><code>InitializeParams</code></a>
-sent by the client upon initialization.</p>
-<p>Now a single metals instance can accommodate several projects (or multiple roots
-of a project) at the time. In <code>InitializeParams</code> metals first looks for
-projects' roots under <code>workspaceFolders</code> in <code>InitializeParams</code> and if empty we
-still fallback to the <code>rootUri</code>. Loaded projects can be changed dynamically
-though <code>didChangeWorkspaceFolders</code> notifications, which allow the client
-(editor) to inform metals about any added or removed projects.</p>
-<p>All workspace folders are handled in metals separately and are oblivious of each
-other. E.g. for the following multi project structure</p>
-<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#bfc7d5"><span class="token plain">project1</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">|- build.sbt</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">|- src</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">  |- Main.scala</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">project2</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">|- build.sbt</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">|- src</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">  |- Main.scala</span><br></span></code></pre></div></div>
-<p>we will keep two separate entities: one responsible for <code>project1</code>, and another
-one for <code>project2</code>. Upon receiving most requests metals will redirect them to
-the entity responsible for the project of interest. If there are no other clues
-the project is chosen based on the currently opened file. E.g. if the user wants
-to insert an inferred type in the file <code>../project1/src/Main</code>, the request
-received by Metals will be redirected to the entity responsible for <code>project1</code>.</p>
-<p>For some requests we collect information from all the projects and send a joint
-result, e.g. when searching for workspace symbols.</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="how-do-i-use-the-multi-root-feature">How do I use the multi-root feature?<a href="http://scalameta.org/metals/blog/2023/07/17/workspace-folders#how-do-i-use-the-multi-root-feature" class="hash-link" aria-label="Direct link to How do I use the multi-root feature?" title="Direct link to How do I use the multi-root feature?">​</a></h2>
-<h3 class="anchor anchorWithStickyNavbar_LWe7" id="vscode">VSCode<a href="http://scalameta.org/metals/blog/2023/07/17/workspace-folders#vscode" class="hash-link" aria-label="Direct link to VSCode" title="Direct link to VSCode">​</a></h3>
-<p>In VSCode workspace folder support is achieved by
-<a href="https://code.visualstudio.com/docs/editor/multi-root-workspaces" target="_blank" rel="noopener noreferrer">multi-root workspaces</a>.
-To load multiple projects into a single workspace you can simply open one of the
-projects and add the other one using <code>File &gt; Add Folder to Workspace</code> and then
-choosing the correct folder.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/LTYrx9V.gif" alt="add-workspace-folder" class="img_ev3q"></p>
-<p>Now you have two projects loaded side by side, so you can easily see both and
-switch between them. All of the current metals functionality accommodates
-multiple projects, so you can use metals the same way as you did before. The
-biggest changes will be visible in the places where information from the whole
-workspace is collected, like workspace symbol search, test explorer, or metals
-doctor.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/zWmmsC2.gif" alt="multi-root-tests" class="img_ev3q"></p>
-<p>The target project for a command is usually chosen based on the currently opened
-file. E.g. if you run <code>Switch build server</code> the command it will be executed for
-the project in focus. If no project is in focus the editor will explicitly ask
-for which project the command should be executed.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/tV7K822.gif" alt="target-folder" class="img_ev3q"></p>
-<p>Finally, logs can still be found in the <code>.metals/metals.log</code> in the root of each
-project. Note, that for the time being all information is logged to all opened
-workspace folders, so anything logged for <code>project1</code> will also be visible in
-logs for <code>project2</code>.</p>
-<h3 class="anchor anchorWithStickyNavbar_LWe7" id="nvim-metals-section-written-by-ckipp01">nvim-metals (<em>section written by <a href="https://github.com/ckipp01" target="_blank" rel="noopener noreferrer">ckipp01</a></em>)<a href="http://scalameta.org/metals/blog/2023/07/17/workspace-folders#nvim-metals-section-written-by-ckipp01" class="hash-link" aria-label="Direct link to nvim-metals-section-written-by-ckipp01" title="Direct link to nvim-metals-section-written-by-ckipp01">​</a></h3>
-<p>When using nvim-metals, you'll start just like you do with any other project.
-Since the idea of a workspace is a bit "artificial" with Neovim, you can really
-just add any new root to have a multi-root workspace. All you'll need to do is
-navigate to a file at the root level of the workspace you'd like to add, and use
-the
-<a href="https://neovim.io/doc/user/lsp.html#vim.lsp.buf.add_workspace_folder()" target="_blank" rel="noopener noreferrer"><code>vim.lsp.buf.add_workspace_folder()</code></a>
-function to add the folder containing the file you're in as another root.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/E8iriR9.gif" alt="add_workspace_folder" class="img_ev3q"></p>
-<p>To make this easier, you can also just create a mapping to use.</p>
-<div class="language-lua codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-lua codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#bfc7d5"><span class="token plain">vim.keymap.set("n", "&lt;leader&gt;awf", vim.lsp.buf.add_workspace_folder)</span><br></span></code></pre></div></div>
-<p>To verify that this has worked correctly you should be able to now see both
-workspaces reflected in your Metals Doctor.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/2u48wDK.gif" alt="nvim-metals doctor" class="img_ev3q"></p>
-<p>You should also see that some commands, like the
-<a href="https://neovim.io/doc/user/lsp.html#vim.lsp.buf.workspace_symbol()" target="_blank" rel="noopener noreferrer"><code>vim.lsp.buf.workspace_symbol()</code></a>
-now show results from all the added workspaces.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/RczJIcp.gif" alt="workspace_symbols" class="img_ev3q"></p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="changes-for-the-clients">Changes for the clients<a href="http://scalameta.org/metals/blog/2023/07/17/workspace-folders#changes-for-the-clients" class="hash-link" aria-label="Direct link to Changes for the clients" title="Direct link to Changes for the clients">​</a></h2>
-<p>Since workspace folders are a part of the LSP for any client implementing this
-capability the multi-root support should work out of the box, however, there
-will be a few minor changes to needed accommodate the new approach.</p>
-<ol>
-<li>The metals doctor result json format will change to contain a list of
-diagnostics for each workspace folder. Current format can be found in the
-description of <code>RunDoctor</code> command (visible in <code>ClientCommands.scala</code> in
-<code>metals</code> repo).</li>
-<li>For test explorer users <code>BuildTargetUpdate</code> will also now contain information
-about the target folder.</li>
-</ol>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id="quick-summary">Quick summary<a href="http://scalameta.org/metals/blog/2023/07/17/workspace-folders#quick-summary" class="hash-link" aria-label="Direct link to Quick summary" title="Direct link to Quick summary">​</a></h2>
-<p>Metals now supports the
-<a href="https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_workspaceFolders" target="_blank" rel="noopener noreferrer">LSP workspace folders</a>,
-which in VSCode are implemented by
-<a href="https://code.visualstudio.com/docs/editor/multi-root-workspaces" target="_blank" rel="noopener noreferrer">multi-root workspaces</a>.</p>
-<p>If you haven't yet make sure to try out our new multi-root support!</p>]]></content:encoded>
         </item>
     </channel>
 </rss>
