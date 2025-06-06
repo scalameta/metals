@@ -1,26 +1,12 @@
 package tests.mcp
 
-import scribe.Logger
-import scribe.modify.LogModifier
+import scala.meta.internal.metals.MetalsServerConfig
+
 import tests.BaseLspSuite
 
 class McpRunTestSuite extends BaseLspSuite("mcp-test") {
-  var modifiers: List[LogModifier] = Nil
-
-  override def beforeEach(context: BeforeEach): Unit = {
-    super.beforeEach(context)
-    modifiers = Logger.root.modifiers
-    Logger.root.clearModifiers()
-  }
-
-  override def afterEach(context: AfterEach): Unit = {
-    super.afterEach(context)
-    modifiers
-      .foldLeft(Logger.root) { (logger, modifier) =>
-        logger.withModifier(modifier)
-      }
-      .replace()
-  }
+  override def serverConfig: MetalsServerConfig =
+    super.serverConfig.copy(loglevel = "debug")
 
   test("basic") {
     cleanWorkspace()
