@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import java.io.Closeable
+import java.net.URI
 import java.nio.file.Path
 import java.util
 import java.util.logging.Level
@@ -14,6 +15,7 @@ import scala.reflect.internal.util.Position
 import scala.reflect.internal.util.ScriptSourceFile
 import scala.reflect.internal.util.SourceFile
 import scala.reflect.internal.{Flags => gf}
+import scala.reflect.io.AbstractFile
 import scala.tools.nsc.Mode
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
@@ -81,6 +83,12 @@ class MetalsGlobal(
 
   // for those paths units were fully compiled (not just outlined)
   val fullyCompiled: mutable.Set[String] = mutable.Set.empty[String]
+
+  val compileUnitsCache = new CompileUnitsCache(5)
+
+  def didChange(uri: URI): Unit = {
+    compileUnitsCache.didChange(uri)
+  }
 
   class MetalsInteractiveAnalyzer(val global: compiler.type)
       extends InteractiveAnalyzer {
@@ -689,6 +697,13 @@ class MetalsGlobal(
 
   def CURSOR = "_CURSOR_"
 
+  private def remove(file: AbstractFile): Unit = {
+    if (!richCompilationCache.contains(file.name)) {
+      fullyCompiled.remove(file.name)
+      toBeRemoved.add(file)
+    }
+  }
+
   def addCompilationUnit(
       code: String,
       filename: String,
@@ -709,6 +724,10 @@ class MetalsGlobal(
         ScriptSourceFile(unit.source.file, unit.source.content)
       else unit.source
     val richUnit = new RichCompilationUnit(source)
+    if (!isOutline) {
+      compileUnitsCache.didGetUnit(richUnit.source.file).foreach(remove)
+    }
+    toBeRemoved.remove(richUnit.source.file)
     unitOfFile.get(richUnit.source.file) match {
       case Some(value)
           if util.Arrays.equals(
