@@ -79,6 +79,7 @@ object Docs {
           "SNAPSHOT_VERSION" -> snapshot.version,
           "SNAPSHOT_DATE" -> snapshot.lastModified.toString,
           "LOCAL_VERSION" -> V.localSnapshotVersion,
+          "GRADLE_BSP_VERSION" -> V.gradleBspVersion,
           "BLOOP_VERSION" -> V.bloopVersion,
           "BLOOP_MAVEN_VERSION" -> V.mavenBloopVersion,
           "SBT_BLOOP_VERSION" -> V.sbtBloopVersion,
