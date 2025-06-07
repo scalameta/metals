@@ -34,7 +34,7 @@ give Metals a try!</p>
 <p>Based on user feedback since the previous release, we have fixed some issues related to MCP and added some new tools to further facilitate better agent interaction.</p>
 <p>New tools:</p>
 <ul>
-<li><code>compile-module</code> - ompile a chosen build target, input is the module name, the same as visible in the Metals Doctor.</li>
+<li><code>compile-module</code> - compile a chosen build target, input is the module name, the same as visible in the Metals Doctor.</li>
 <li><code>find-dep</code> - completion tool for finding dependencies using Coursier added by <a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>.</li>
 </ul>
 <p>Improvements:</p>
