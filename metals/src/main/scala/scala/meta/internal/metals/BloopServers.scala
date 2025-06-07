@@ -148,17 +148,21 @@ final class BloopServers(
     val versionRevertedToDefault = changedToNoVersion && !correctVersionRunning
 
     if (versionRevertedToDefault || versionChanged) {
-      languageClient
-        .showMessageRequest(
-          Messages.BloopVersionChange.params()
-        )
-        .asScala
-        .flatMap {
-          case item if item == Messages.BloopVersionChange.reconnect =>
-            restartAndConnect().ignoreValue
-          case _ =>
-            Future.unit
-        }
+      if (serverConfig.askToRestartBloop) {
+        languageClient
+          .showMessageRequest(
+            Messages.BloopVersionChange.params()
+          )
+          .asScala
+          .flatMap {
+            case item if item == Messages.BloopVersionChange.reconnect =>
+              restartAndConnect().ignoreValue
+            case _ =>
+              Future.unit
+          }
+      } else {
+        restartAndConnect().ignoreValue
+      }
     } else {
       Future.unit
     }
