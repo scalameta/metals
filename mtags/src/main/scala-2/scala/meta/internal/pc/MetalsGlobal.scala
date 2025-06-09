@@ -1,7 +1,9 @@
 package scala.meta.internal.pc
 
+import java.io.Closeable
 import java.nio.file.Path
 import java.util
+import java.util.logging.Level
 import java.util.logging.Logger
 import java.{util => ju}
 
@@ -63,8 +65,14 @@ class MetalsGlobal(
     with GlobalProxy
     with AutoImports
     with Keywords
-    with WorkspaceSymbolSearch { compiler =>
+    with WorkspaceSymbolSearch
+    with Closeable { compiler =>
   hijackPresentationCompilerThread()
+
+  override def close(): Unit = {
+    super.close()
+    logger.log(Level.FINE, "Restarting compiler and clearing caches.")
+  }
 
   val logger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)
 
