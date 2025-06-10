@@ -62,12 +62,14 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
       name: String,
       id: b.BuildTargetIdentifier,
   ): List[(String, TestSymbolInfo)] = {
-    index.get(id).toList.flatMap {
-      _.testClasses
-        .filter { case (_, info) =>
-          info.fullyQualifiedName == name
-        }
-        .toList
+    index.get(id).toList.flatMap { classes =>
+      scribe.debug(
+        s"""|Found test classes:
+            |${classes.testClasses.values.map(info => s"\t- ${info.fullyQualifiedName}").mkString("\n")}""".stripMargin
+      )
+      classes.testClasses.filter { case (_, info) =>
+        info.fullyQualifiedName == name
+      }.toList
     }
   }
 
