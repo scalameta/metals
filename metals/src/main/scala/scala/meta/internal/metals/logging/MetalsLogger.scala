@@ -27,8 +27,8 @@ import scribe.modify.LogModifier
 
 object MetalsLogger {
 
-  private val level =
-    MetalsServerConfig.default.loglevel match {
+  private def logLevel(level: String) =
+    level match {
       case "debug" => Level.Debug
       case "info" => Level.Info
       case "warn" => Level.Warn
@@ -37,6 +37,7 @@ object MetalsLogger {
       case "trace" => Level.Trace
       case _ => Level.Info
     }
+  private val level = logLevel(MetalsServerConfig.default.loglevel)
 
   private val workspaceLogPath: RelativePath =
     RelativePath(".metals").resolve("metals.log")
@@ -123,6 +124,16 @@ object MetalsLogger {
     scribe.info(s"logging to files ${newLogFiles.mkString(",")}")
     if (redirectSystemStreams) {
       redirectSystemOut(newLogFiles)
+    } else {
+      Logger.root
+        .clearModifiers()
+        .clearHandlers()
+        .withHandler(
+          formatter = defaultFormat,
+          minimumLevel = Some(logLevel(config.loglevel)),
+          modifiers = List(MetalsFilter()),
+        )
+        .replace()
     }
   }
 
