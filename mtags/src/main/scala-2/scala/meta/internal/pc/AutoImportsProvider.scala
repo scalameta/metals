@@ -61,6 +61,10 @@ final class AutoImportsProvider(
         def applyInClass = sym.info.members.exists(_.name == nme.apply)
         applyInClass || applyInObject
 
+      case (id: Ident) :: (df: ValOrDefDef) :: _ if df.tpt == id =>
+        !sym.isModuleOrModuleClass || sym.companionClass != NoSymbol
+      case (_: Ident) :: (_: TypTree) :: _ =>
+        !sym.isModuleOrModuleClass || sym.companionClass != NoSymbol
       case _ =>
         true
     }
