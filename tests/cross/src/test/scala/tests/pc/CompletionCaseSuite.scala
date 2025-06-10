@@ -285,10 +285,19 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |case Some(value) => scala
        |case (exhaustive) Option[A] (2 cases)
        |""".stripMargin,
-    compat = Map("3" -> """|case None => scala
-                           |case Some(value) => scala
-                           |case (exhaustive) Option[Int] (2 cases)
-                           |""".stripMargin)
+    compat = Map(
+      "2.12" ->
+        """|case None => scala
+           |case Some(value) => scala
+           |fallbackStringCanBuildFrom[T]: CanBuildFrom[String,T,IndexedSeq[T]]
+           |case (exhaustive) Option[A] (2 cases)
+           |""".stripMargin,
+      "3" ->
+        """|case None => scala
+           |case Some(value) => scala
+           |case (exhaustive) Option[Int] (2 cases)
+           |""".stripMargin
+    )
   )
 
   check(
@@ -302,7 +311,14 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.12" ->
+        """|case None => scala
+           |case Some(value) => scala
+           |fallbackStringCanBuildFrom[T]: CanBuildFrom[String,T,IndexedSeq[T]]
+           |""".stripMargin
+    )
   )
 
   check(
@@ -316,7 +332,14 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.12" ->
+        """|case None => scala
+           |case Some(value) => scala
+           |fallbackStringCanBuildFrom[T]: CanBuildFrom[String,T,IndexedSeq[T]]
+           |""".stripMargin
+    )
   )
 
   check(
@@ -331,10 +354,18 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |case Some(value) => scala
        |case (exhaustive) Option[A] (2 cases)
        |""".stripMargin,
-    compat = Map("3" -> """|case None => scala
-                           |case Some(value) => scala
-                           |case (exhaustive) Option[Int] (2 cases)
-                           |""".stripMargin)
+    compat = Map(
+      "2.12" ->
+        """|case None => scala
+           |case Some(value) => scala
+           |fallbackStringCanBuildFrom[T]: CanBuildFrom[String,T,IndexedSeq[T]]
+           |case (exhaustive) Option[A] (2 cases)
+           |""".stripMargin,
+      "3" -> """|case None => scala
+                |case Some(value) => scala
+                |case (exhaustive) Option[Int] (2 cases)
+                |""".stripMargin
+    )
   )
 
   check(
@@ -349,10 +380,18 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |case Some(value) => scala
        |case (exhaustive) Option[A] (2 cases)
        |""".stripMargin,
-    compat = Map("3" -> """|case None => scala
-                           |case Some(value) => scala
-                           |case (exhaustive) Option[Int] (2 cases)
-                           |""".stripMargin)
+    compat = Map(
+      "2.12" ->
+        """|case None => scala
+           |case Some(value) => scala
+           |fallbackStringCanBuildFrom[T]: CanBuildFrom[String,T,IndexedSeq[T]]
+           |case (exhaustive) Option[A] (2 cases)
+           |""".stripMargin,
+      "3" -> """|case None => scala
+                |case Some(value) => scala
+                |case (exhaustive) Option[Int] (2 cases)
+                |""".stripMargin
+    )
   )
 
   check(
@@ -366,7 +405,14 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.12" ->
+        """|case None => scala
+           |case Some(value) => scala
+           |fallbackStringCanBuildFrom[T]: CanBuildFrom[String,T,IndexedSeq[T]]
+           |""".stripMargin
+    )
   )
 
   check(
@@ -380,7 +426,14 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|case None => scala
        |case Some(value) => scala
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.12" ->
+        """|case None => scala
+           |case Some(value) => scala
+           |fallbackStringCanBuildFrom[T]: CanBuildFrom[String,T,IndexedSeq[T]]
+           |""".stripMargin
+    )
   )
 
   check(
@@ -782,7 +835,12 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |  }
       |}""".stripMargin,
     """|case
-       |""".stripMargin
+       |""".stripMargin,
+    compat = Map(
+      "2.12" ->
+        """|case
+           |fallbackStringCanBuildFrom[T]: CanBuildFrom[String,T,IndexedSeq[T]]""".stripMargin
+    )
   )
 
   check(
