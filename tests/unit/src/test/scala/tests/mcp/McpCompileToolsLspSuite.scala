@@ -44,7 +44,10 @@ class McpCompileToolsLspSuite extends BaseLspSuite("mcp-compile-tools") {
       result1 <- client.compileFile("a/src/main/scala/com/example/Hello.scala")
       _ = assert(result1.contains("Found errors in"), result1)
       _ = assert(
-        result1.contains("a/src/main/scala/com/example/Hello.scala"),
+        result1.contains {
+          if (isWindows) "a\\src\\main\\scala\\com\\example\\Hello.scala"
+          else "a/src/main/scala/com/example/Hello.scala"
+        },
         result1,
       )
       _ = assert(result1.contains("type mismatch"), result1)
