@@ -52,6 +52,14 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
     server.launch(arguments.asJava).asScala.ignoreValue
   }
 
+  def attach(port: Int): Future[Unit] = {
+    val arguments = Map[String, AnyRef](
+      "hostName" -> "localhost",
+      "port" -> Integer.valueOf(port),
+    )
+    server.attach(arguments.asJava).asScala.ignoreValue
+  }
+
   def configurationDone: Future[Unit] = {
     server
       .configurationDone(new ConfigurationDoneArguments)

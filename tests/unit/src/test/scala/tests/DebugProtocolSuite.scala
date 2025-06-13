@@ -1,17 +1,29 @@
 package tests
 
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Collections.emptyList
 import java.util.Collections.singletonList
 
+import scala.concurrent.Future
+import scala.concurrent.duration._
 import scala.util.Random
 
+import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.DebugDiscoveryParams
+import scala.meta.internal.metals.DebugSession
+import scala.meta.internal.metals.DebugUnresolvedAttachRemoteParams
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
+import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.ServerCommands.StartAttach
 import scala.meta.internal.metals.debug.DiscoveryFailures._
+import scala.meta.internal.metals.debug.Stoppage
+import scala.meta.internal.metals.debug.TestDebugger
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
@@ -64,6 +76,90 @@ class DebugProtocolSuite
       _ <- debugger.shutdown
       output <- debugger.allOutput
     } yield assertNoDiff(output, "FooBarFoo")
+  }
+
+  test("attach") {
+    val port = 5566
+    def runningMain() = Future {
+      val classpathJar = workspace.resolve(".metals/.tmp").list.head.toString()
+      ShellRunner.runSync(
+        List(
+          JdkSources.defaultJavaHome(None).head.resolve("bin/java").toString,
+          "-Dproperty=Foo",
+          s"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=$port",
+          "-cp",
+          classpathJar,
+          "a.AttachingMain",
+          "Bar",
+        ),
+        workspace,
+        true,
+        Map("HELLO" -> "Foo"),
+        propagateError = true,
+        timeout = 60.seconds,
+      )
+    }
+
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |object AttachingMain {
+           |  def main(args: Array[String]) = {
+           |    val foo = sys.props.getOrElse("property", "")
+           |    val bar = args(0)
+           |    val env = sys.env.get("HELLO")
+           |    print(foo + bar)
+           |    env.foreach(print)
+           |    System.exit(0)
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.headServer.buildServerPromise.future
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didSave("a/src/main/scala/a/Main.scala")
+      // creates a classpath jar that we can use
+      _ <- server
+        .executeCommand(
+          ServerCommands.DiscoverMainClasses,
+          new DebugDiscoveryParams(
+            null,
+            "run",
+            "a.AttachingMain",
+          ),
+        )
+      runMain = runningMain()
+      debugSession <- server.executeCommand(
+        StartAttach,
+        DebugUnresolvedAttachRemoteParams("localhost", port),
+      )
+      debugger = debugSession match {
+        case DebugSession(_, uri) =>
+          scribe.info(s"Starting debug session for $uri")
+          TestDebugger(
+            URI.create(uri),
+            Stoppage.Handler.Continue,
+            requestOtherThreadStackTrace = false,
+          )
+        case _ => throw new RuntimeException("Debug session not found")
+      }
+      _ <- debugger.initialize
+      _ <- debugger.attach(port)
+      _ <- debugger.configurationDone
+      output <- runMain
+      _ <- debugger.disconnect
+      _ <- debugger.shutdown
+      _ <- debugger.allOutput
+    } yield assertNoDiff(
+      output.getOrElse(""),
+      s"""|Listening for transport dt_socket at address: $port
+          |FooBarFoo""".stripMargin,
+    )
   }
 
   test("broken-workspace") {
