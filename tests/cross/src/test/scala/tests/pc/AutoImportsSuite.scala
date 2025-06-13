@@ -351,6 +351,27 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |}
        |
        |class Baz {
+       |  def x: <<Foo>>.type = x
+       |}
+       |
+       |""".stripMargin,
+    """|a.Thing2
+       |""".stripMargin
+  )
+
+  check(
+    "type-vs-object3",
+    """|package a
+       |
+       |object Thing1 {
+       |  class Foo
+       |}
+       |
+       |object Thing2 {
+       |  object Foo
+       |}
+       |
+       |class Baz {
        |  def x: List[Option[<<Foo>>]] = x
        |}
        |""".stripMargin,
