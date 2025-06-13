@@ -46,6 +46,7 @@ import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.Diagnostic
+import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InlayHint
@@ -260,15 +261,39 @@ class Compilers(
           AdjustedLspData.default,
         )
 
+        val (prependedLinesSize, modifiedText) = Option
+          .when(path.isSbt)(
+            buildTargets
+              .sbtAutoImports(path)
+          )
+          .flatten
+          .fold((0, input.value))(imports =>
+            (
+              imports.size,
+              SbtBuildTool.prependAutoImports(input.value, imports),
+            )
+          )
+
         outlineFilesProvider.didChange(pc.buildTargetId(), path)
 
         for {
           ds <-
             pc
               .didChange(
-                CompilerVirtualFileParams(path.toNIO.toUri(), input.value)
+                CompilerVirtualFileParams(path.toNIO.toUri, modifiedText)
               )
               .asScala
+              .map(diagnosticsList => {
+                diagnosticsList.forEach(diagnostic => {
+                  val range = diagnostic.getRange
+                  val start = range.getStart
+                  val end = range.getEnd
+                  start.setLine(start.getLine - prependedLinesSize)
+                  end.setLine(end.getLine - prependedLinesSize)
+                  diagnostic.setSeverity(DiagnosticSeverity.Error)
+                })
+                diagnosticsList
+              })
         } yield {
           ds.asScala.map(adjust.adjustDiagnostic).toList
 
