@@ -6,6 +6,8 @@ import scala.meta.internal.metals.newScalaFile.NewFileTypes
 
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 
@@ -449,6 +451,14 @@ object ServerCommands {
     "[string], where the string is a stacktrace.",
   )
 
+  val MetalsPaste = new ParametrizedCommand[MetalsPasteParams](
+    "metals-did-paste",
+    "Add needed import statements after paste",
+    """|
+       |""".stripMargin,
+    """|MetalsPasteParams""".stripMargin,
+  )
+
   final case class ChooseClassRequest(
       textDocument: TextDocumentIdentifier,
       kind: String,
@@ -843,4 +853,15 @@ case class DebugDiscoveryParams(
 case class RunScalafixRulesParams(
     textDocumentPositionParams: TextDocumentPositionParams,
     @Nullable rules: java.util.List[String] = null,
+)
+
+case class MetalsPasteParams(
+    // The text document, where text was pasted.
+    textDocument: TextDocumentIdentifier,
+    // The range in the text document, where text was pasted.
+    range: Range,
+    // The origin document, where text was copied from.
+    originDocument: TextDocumentIdentifier,
+    // The origin start offset, where text was copied from.
+    originOffset: Position,
 )

@@ -238,6 +238,14 @@ public abstract class PresentationCompiler {
 	 */
 	public abstract CompletableFuture<List<SelectionRange>> selectionRange(List<OffsetParams> params);
 
+	public CompletableFuture<List<Diagnostic>> diagnostics(VirtualFileParams params) {
+		return CompletableFuture.completedFuture(Collections.emptyList());
+	}
+
+	public CompletableFuture<List<String>> getSymbolsAtPosition(OffsetParams params) {
+		return CompletableFuture.completedFuture(Collections.emptyList());
+	}
+
 	// =================================
 	// Configuration and lifecycle APIs.
 	// =================================
