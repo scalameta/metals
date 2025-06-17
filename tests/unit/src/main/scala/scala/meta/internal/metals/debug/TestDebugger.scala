@@ -52,6 +52,11 @@ final class TestDebugger(
     ifNotFailed(debugger.launch(debug = true))
   }
 
+  def attach(port: Int): Future[Unit] = {
+    Debug.printEnclosing()
+    ifNotFailed(debugger.attach(port))
+  }
+
   def launch(debug: Boolean): Future[Unit] = {
     Debug.printEnclosing()
     ifNotFailed(debugger.launch(debug))

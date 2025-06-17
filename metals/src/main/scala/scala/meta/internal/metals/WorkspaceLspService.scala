@@ -1331,17 +1331,23 @@ class WorkspaceLspService(
             .map(target => languageFromTargets(List(target)))
             .getOrElse(Semanticdb.Language.UNKNOWN_LANGUAGE)
         recordRunDebugEvent(language, testName = None)
-        onFirstSatifying(service =>
+        onFirstSatifying { service =>
           Future.successful(
-            service.findBuildTargetByDisplayName(params.buildTarget)
+            params.buildTargetOpt match {
+              case None =>
+                Option(service.focusedDocumentBuildTarget.get)
+                  .flatMap(service.buildTargets.info(_))
+              case Some(buildTarget) =>
+                service.findBuildTargetByDisplayName(buildTarget)
+            }
           )
-        )(
+        }(
           _.isDefined,
           (service, someTarget) =>
             service.createDebugSession(someTarget.get.getId()),
           () =>
             failedRequest(
-              s"Could not find '${params.buildTarget}' build target"
+              s"Could not find '${Option(params.buildTarget).getOrElse("")}' build target"
             ),
         ).asJavaObject
       case ServerCommands.DiscoverAndRun(params) =>
