@@ -11,7 +11,9 @@ import scala.meta.internal.metals.Configs.DefinitionProviderConfig
 import scala.meta.internal.metals.Configs.ProtobufLspConfig
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
+import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.mtags.KeywordWrapper.Scala3SoftKeywords
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
@@ -29,6 +31,7 @@ import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+import scala.meta.tokens.Token
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Location
@@ -176,7 +179,9 @@ final class DefinitionProvider(
           }
       }
     } yield {
-      reportBuilder.build().foreach(r => rc.unsanitized().create(() => r))
+      reportBuilder
+        .build(scalaVersionSelector)
+        .foreach(r => rc.unsanitized().create(() => r))
       protobufDefinitions.enhanceWithProtobufDefinition(result)
     }
   }
@@ -611,19 +616,40 @@ class DefinitionProviderReportBuilder(
     foundScalaDocDef = true
     result
   }
-
+  
   private def symbolDefinitelyHasNoDefinition(symbol: String): Boolean = {
     symbol == "" ||
     symbol.contains("UNKNOWN_BECAUSE_WE_HAVENT_HANDLED_LOCALS_YET") ||
     symbol.endsWith("/") // Ignore packages
   }
+  def build(scalaVersionSelector: ScalaVersionSelector): Option[Report] = {
 
-  def build(): Option[Report] =
+    val text = buffers.get(path).getOrElse("")
+    val dialect = scalaVersionSelector.getDialect(path)
+    val tokens = text.safeTokenize(dialect)
+    def shouldOfferDefinition(token: Token) = token match {
+      case token: Token.Ident if !Scala3SoftKeywords.contains(token.text) =>
+        true
+      case _: Token.Interpolation.Id => true
+      case _ => false
+    }
+    val shouldProduceReport =
+      text.nonEmpty && tokens.toOption.toList.flatMap(_.tokens).exists {
+        case token
+            if token.pos.contains(
+              params.getPosition()
+            ) && shouldOfferDefinition(token) =>
+          true
+        case _ => false
+      }
+
     compilerDefn match {
       case Some(compilerDefn)
           if !foundScalaDocDef &&
             compilerDefn.isEmpty &&
-            !symbolDefinitelyHasNoDefinition(compilerDefn.querySymbol) =>
+            !symbolDefinitelyHasNoDefinition(compilerDefn.querySymbol) &&
+            !compilerDefn.querySymbol.endsWith("/") && shouldProduceReport =>
+
         Some(
           Report(
             "empty-definition",
@@ -654,7 +680,7 @@ class DefinitionProviderReportBuilder(
         )
       case _ => None
     }
-
+  }
   private def querySymbol: Option[String] =
     compilerDefn.map(_.querySymbol) match {
       case Some("") | None =>
