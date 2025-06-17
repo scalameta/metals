@@ -956,7 +956,14 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |override def overTop: Int
        |""".stripMargin,
     includeDetail = false,
-    topLines = Some(3)
+    topLines = Some(3),
+    compat = Map(
+      "2.11" ->
+        """|overTop: Int
+           |override def overTop: Int
+           |override def equals(obj: Any): Boolean
+           |""".stripMargin
+    )
   )
 
   checkEdit(
@@ -997,6 +1004,11 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     includeDetail = false,
     topLines = Some(3),
     compat = Map(
+      "2.11" ->
+        """|override def hello1: Int
+           |override val hello2: Int
+           |override def equals(obj: Any): Boolean
+           |""".stripMargin,
       "3" ->
         """|override def hello1: Int
            |override val hello2: Int

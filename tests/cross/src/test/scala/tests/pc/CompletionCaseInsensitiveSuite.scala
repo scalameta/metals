@@ -32,6 +32,14 @@ class CompletionCaseInsensitiveSuite extends BaseCompletionSuite {
       |wrapLongArray(xs: Array[Long]): ArraySeq.ofLong
       |""".stripMargin,
     compat = Map(
+      "2.11" ->
+        """|longNameYouWillNotRemember: Long
+           |long2Long(x: Long): lang.Long
+           |longArrayOps(xs: Array[Long]): ArrayOps[Long]
+           |longWrapper(x: Long): RichLong
+           |wrapLongArray(xs: Array[Long]): WrappedArray[Long]
+           |readLong(): Long
+           |""".stripMargin,
       "2.12" ->
         """longNameYouWillNotRemember: Long
           |long2Long(x: Long): lang.Long
