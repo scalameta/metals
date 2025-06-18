@@ -55,6 +55,13 @@ body:
     validations:
       required: true
 
+  - type: input
+    id: scala-version
+    attributes:
+      label: Scala version/s
+    validations:
+      required: true
+
   - type: textarea
     id: extra
     attributes:
