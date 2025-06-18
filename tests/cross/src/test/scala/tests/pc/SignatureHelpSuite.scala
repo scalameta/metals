@@ -1159,4 +1159,21 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |""".stripMargin
   )
 
+  check(
+    "implicit-conversions",
+    """
+      |class Foo
+      |class Bar
+      |object Baz {
+      |  implicit def foo2bar(foo: Foo): Bar = ???
+      |
+      |  def takesBar(bar: Bar) = ()
+      |  takesBar(new Fo@@o)
+      |}
+      |""".stripMargin,
+    """|takesBar(bar: Bar): Unit
+       |         ^^^^^^^^
+       |""".stripMargin
+  )
+
 }
