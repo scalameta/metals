@@ -47,7 +47,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
       last
     }
     def isValidQualifier(qual: Tree): Boolean =
-      !qual.pos.includes(pos) && (qual match {
+      !qual.pos.includes(pos) && qual.pos.isRange && (qual match {
         // Ignore synthetic TupleN constructors from tuple syntax.
         case Select(ident @ Ident(TermName("scala")), TermName(tuple))
             if tuple.startsWith("Tuple") && ident.pos == qual.pos =>
