@@ -1,8 +1,8 @@
 package scala.meta.internal.metals.mcp
 
+import java.io.PrintWriter
 import java.net.InetSocketAddress
 import java.nio.file.Path
-import java.util.ArrayList
 import java.util.Arrays
 import java.util.function.BiFunction
 import java.util.{List => JList}
@@ -24,6 +24,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
+import scala.meta.internal.metals.Trace
 import scala.meta.internal.metals.mcp.McpPrinter._
 import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.internal.metals.mcp.SymbolType
@@ -47,8 +48,6 @@ import io.modelcontextprotocol.spec.McpSchema.Tool
 import io.undertow.Undertow
 import io.undertow.servlet.Servlets
 import io.undertow.servlet.api.InstanceHandle
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.services.LanguageClient
@@ -71,53 +70,27 @@ class MetalsMcpServer(
     ec: ExecutionContext
 ) extends Cancelable {
 
+  val tracePrinter: Option[PrintWriter] =
+    Trace.setupTracePrinter("mcp", projectPath)
+
   private val objectMapper = new ObjectMapper()
 
   private def createContent(text: String): JList[Content] = {
     Arrays.asList(new TextContent(text))
   }
 
-  private def cancelable = new MutableCancelable()
+  private val cancelable = new MutableCancelable()
 
   private val sseEndpoint = "/sse"
 
   def run(): Unit = {
-    val servlet = new HttpServletSseServerTransportProvider(
-      objectMapper,
-      "/",
-      sseEndpoint,
-    ) {
-      override def doGet(
-          request: HttpServletRequest,
-          response: HttpServletResponse,
-      ): Unit = {
-        super.doGet(request, response)
-        val pathInfo = request.getPathInfo();
-        if (sseEndpoint.equals(pathInfo)) {
-          val scheduler =
-            java.util.concurrent.Executors.newSingleThreadScheduledExecutor()
-          // Scheduling a ping task to keep the connection alive,
-          // see: https://github.com/AltimateAI/vscode-dbt-power-user/pull/1631 or
-          // https://github.com/modelcontextprotocol/rust-sdk/pull/74
-          val pingTask = new Runnable {
-            override def run(): Unit = {
-              try {
-                response.getWriter().write(": ping\n\n")
-                response.getWriter().flush()
-              } catch {
-                case _: Exception => scheduler.shutdown()
-              }
-            }
-          }
-          scheduler.scheduleAtFixedRate(
-            pingTask,
-            30,
-            30,
-            java.util.concurrent.TimeUnit.SECONDS,
-          )
-        }
-      }
-    }
+    val servlet =
+      new LoggingServletTransportProvider(
+        objectMapper,
+        "/",
+        sseEndpoint,
+        tracePrinter,
+      )
 
     val capabilities = ServerCapabilities
       .builder()
@@ -525,8 +498,11 @@ class MetalsMcpServer(
       withErrorHandling { (exchange, arguments) =>
         val query = arguments.getAs[String]("query")
         val path = arguments.getFileInFocus
-        val symbolTypes = arguments
-          .getAs[ArrayList[String]]("symbolType")
+        val symbolTypes = scala.jdk.CollectionConverters
+          .ListHasAsScala(
+            arguments
+              .getAs[JList[String]]("symbolType")
+          )
           .asScala
           .flatMap(s => SymbolType.values.find(_.name == s))
           .toSet
