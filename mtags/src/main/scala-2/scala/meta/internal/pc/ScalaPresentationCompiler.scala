@@ -171,7 +171,14 @@ case class ScalaPresentationCompiler(
   override def didChange(
       params: VirtualFileParams
   ): CompletableFuture[ju.List[Diagnostic]] = {
-    CompletableFuture.completedFuture(Nil.asJava)
+    val empty: ju.List[Diagnostic] = new ju.ArrayList[Diagnostic]()
+    compilerAccess.withNonInterruptableCompiler(
+      empty,
+      EmptyCancelToken
+    ) { pc =>
+      pc.compiler().didChange(params.uri())
+      empty
+    }(emptyQueryContext)
   }
 
   def didClose(uri: URI): Unit = {
