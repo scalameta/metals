@@ -19,6 +19,23 @@ class TestMcpClient(url: String)(implicit ec: ExecutionContext) {
   private val transport = new HttpClientSseClientTransport(url)
   private val client = McpClient.async(transport).build()
 
+  private def callTool(
+      toolName: String,
+      params: com.fasterxml.jackson.databind.node.ObjectNode,
+  ): Future[List[String]] = {
+    val callToolRequest =
+      new CallToolRequest(toolName, objectMapper.writeValueAsString(params))
+    client
+      .callTool(callToolRequest)
+      .toFuture()
+      .toScala
+      .map(result =>
+        result.content.asScala.collect { case text: TextContent =>
+          text.text
+        }.toList
+      )
+  }
+
   def initialize(): Future[InitializeResult] = {
     client.initialize().toFuture().asScala
   }
@@ -32,64 +49,27 @@ class TestMcpClient(url: String)(implicit ec: ExecutionContext) {
       name: Option[String] = None,
       version: Option[String] = None,
   ): Future[List[String]] = {
-
     val params = objectMapper.createObjectNode()
     params.put("organization", organization)
     name.foreach(n => params.put("name", n))
     version.foreach(v => params.put("version", v))
-
-    val callToolRequest =
-      new CallToolRequest("find-dep", objectMapper.writeValueAsString(params))
-    client
-      .callTool(
-        callToolRequest
-      )
-      .toFuture()
-      .toScala
-      .map(result =>
-        result.content.asScala.collect { case text: TextContent =>
-          text.text
-        }.toList
-      )
+    callTool("find-dep", params)
   }
 
   def compileFile(filePath: String): Future[String] = {
     val params = objectMapper.createObjectNode()
     params.put("fileInFocus", filePath)
-
-    val callToolRequest =
-      new CallToolRequest(
-        "compile-file",
-        objectMapper.writeValueAsString(params),
-      )
-    client
-      .callTool(callToolRequest)
-      .toFuture()
-      .toScala
-      .map(result =>
-        result.content.asScala.collect { case text: TextContent =>
-          text.text
-        }.mkString
-      )
+    callTool("compile-file", params).map(_.mkString)
   }
 
   def compileModule(module: String): Future[String] = {
     val params = objectMapper.createObjectNode()
     params.put("module", module)
+    callTool("compile-module", params).map(_.mkString)
+  }
 
-    val callToolRequest =
-      new CallToolRequest(
-        "compile-module",
-        objectMapper.writeValueAsString(params),
-      )
-    client
-      .callTool(callToolRequest)
-      .toFuture()
-      .toScala
-      .map(result =>
-        result.content.asScala.collect { case text: TextContent =>
-          text.text
-        }.mkString
-      )
+  def listModules(): Future[String] = {
+    val params = objectMapper.createObjectNode()
+    callTool("list-modules", params).map(_.mkString)
   }
 }
