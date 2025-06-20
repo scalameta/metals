@@ -155,8 +155,6 @@ jobs:
           java-version: ${{ matrix.java }}
           cache: 'sbt'
       - uses: sbt/setup-sbt@v1
-        with:
-          sbt-runner-version: 1.10.3
       - name: ${{ matrix.command }}
         run: |
           ${{ matrix.command }}
