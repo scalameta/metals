@@ -61,12 +61,20 @@ class Fuzzy {
    * @param symbol the symbol to test the query against like "scala/meta/inputs/Position#"
    * @param skipNames the number of names in the symbol to jump over. For regular search,
    *                  use 0. Use 1 to let the query "m.Pos" match "scala/meta/Position#Range."
+   * @param forgivingFirstChar if set to true will match the first query character in a more forgiving way.
+   *                           For example query "lon" will match "someLongName"
    */
   def matches(
       query: CharSequence,
       symbol: CharSequence,
-      skipNames: Int = 0
-  ): Boolean = genericMatches(query, symbol, skipNames, matchesName)
+      skipNames: Int = 0,
+      forgivingFirstChar: Boolean = false
+  ): Boolean = {
+    val matcher =
+      if (forgivingFirstChar) forgivingFirstCharMatcher _
+      else matchesName _
+    genericMatches(query, symbol, skipNames, matcher)
+  }
 
   private def genericMatches(
       query: CharSequence,
@@ -277,6 +285,82 @@ class Fuzzy {
           }
         } else {
           loop(qa, ql, sa + 1, sl)
+        }
+      }
+    }
+
+    val backtickAdjust = if (symbol.charAt(symbolStartIdx) == '`') 1 else 0
+    loop(queryStartIdx, -1, symbolStartIdx + backtickAdjust, -1)
+  }
+
+  /**
+   * Compares two names like query "fiStr" and "inputFileStream"
+   *
+   * Similar in functionality to matchesName, but the first character of the query is given special treatment and
+   * matches also upper case characters. There are some exceptions to this. Symbols which themselves are starting
+   * with an upper case letter are not going to be matched in a forgiving way. We also don't want to match parts
+   * lower case parts of a symbol later in word only because of the forgiving rule. For example:
+   * - the query "inStr" would not match "InputFileStream" because the symbol starts with an uppercase
+   * - the query "leStr" would not match "inputFileStream" because we don't want to match lower case letters
+   *   which became accessible only because of the forgiving first letter
+   * - the query "fiStr" would match "inputFileStream" without any problems
+   */
+  protected def forgivingFirstCharMatcher(
+      query: CharSequence,
+      queryStartIdx: Int,
+      queryEndIdx: Int,
+      symbol: CharSequence,
+      symbolStartIdx: Int,
+      symbolEndIdx: Int
+  ): Boolean = {
+
+    val symbolStartCharIsLower = symbol.charAt(symbolStartIdx).isLower
+
+    @tailrec
+    def loop(
+        queryPos: Int,
+        queryBacktrackingPos: Int,
+        symbolPos: Int,
+        symbolBacktrackingPos: Int
+    ): Boolean = {
+      if (queryPos >= queryEndIdx) { // exhausted query string on symbol string
+        true
+      } else if (symbolPos >= symbolEndIdx) { // run out of symbol string to exhaust query
+        false
+      } else {
+        val qChar = query.charAt(queryPos)
+        val sChar = symbol.charAt(symbolPos)
+        if (
+          queryPos == queryStartIdx && // we are at the first letter of the query string
+          symbolStartCharIsLower && // the first letter of the symbol is lowercase. (we expect the user to remember classes)
+          qChar.toUpper == sChar // therefore we check if it matches the upper case character
+        ) {
+          loop(queryPos + 1, queryPos, symbolPos + 1, symbolPos)
+        } else if (
+          queryPos == queryStartIdx && // we are at the first letter of the query string
+          symbolPos != symbolStartIdx && // but in the middle of the symbol string, and we know it's not uppercase
+          qChar == sChar // so we skip on lowercase matches
+        ) {
+          loop(queryPos, queryBacktrackingPos, symbolPos + 1, symbolPos)
+        } else if (qChar == sChar) {
+          val newQueryBP =
+            if (qChar.isUpper) queryPos else queryBacktrackingPos
+          val newSymbolBP =
+            if (sChar.isUpper) symbolPos else symbolBacktrackingPos
+          loop(queryPos + 1, newQueryBP, symbolPos + 1, newSymbolBP)
+        } else if (qChar.isLower && queryPos != queryStartIdx) {
+          if (queryBacktrackingPos < 0 || symbolBacktrackingPos < 0)
+            false // no previous match so nowhere to backtrack
+          else {
+            loop(queryBacktrackingPos, -1, symbolPos + 1, -1)
+          }
+        } else { // no match, but we are at an upper case or first character of query string so we keep looking
+          loop(
+            queryPos,
+            queryBacktrackingPos,
+            symbolPos + 1,
+            symbolBacktrackingPos
+          )
         }
       }
     }
