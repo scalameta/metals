@@ -21,7 +21,7 @@ object Run {
       className: String,
       args: List[String],
       jvmOptions: List[String],
-      evnVariables: List[String],
+      envVariables: List[String],
       logger: Logger,
       debug: Boolean = true,
   )(implicit ec: ExecutionContext): CancelableFuture[Unit] = {
@@ -35,7 +35,7 @@ object Run {
                                 Nil) ::: classpathOption ::: (className :: args)
     val cmdLength = cmd.foldLeft(0)(_ + _.length)
     val envOptions =
-      evnVariables.flatMap { line =>
+      envVariables.flatMap { line =>
         val eqIdx = line.indexOf("=")
         if (eqIdx > 0 && eqIdx != line.length - 1) {
           val key = line.substring(0, eqIdx)
