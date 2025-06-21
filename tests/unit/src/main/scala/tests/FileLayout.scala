@@ -76,6 +76,10 @@ object FileLayout {
           StandardOpenOption.CREATE,
         )
       }
+
+      scribe.info(s"Layout written to $root")
+    } else {
+      scribe.info(s"Layout is empty, not writing anything to $root")
     }
     root
   }
