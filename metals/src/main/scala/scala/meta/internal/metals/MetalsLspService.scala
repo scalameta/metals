@@ -37,6 +37,7 @@ import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.metals.codelenses.WorksheetCodeLens
 import scala.meta.internal.metals.debug.BuildTargetClasses
+import scala.meta.internal.metals.debug.BuildTargetClassesFinder
 import scala.meta.internal.metals.debug.DebugDiscovery
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.doctor.Doctor
@@ -1420,6 +1421,13 @@ abstract class MetalsLspService(
       moduleStatus,
     )
 
+  protected val buildTargetClassesFinder: BuildTargetClassesFinder =
+    new BuildTargetClassesFinder(
+      buildTargets,
+      buildTargetClasses,
+      definitionIndex,
+    )
+
   protected val debugDiscovery: DebugDiscovery = new DebugDiscovery(
     buildTargetClasses,
     buildTargets,
@@ -1428,6 +1436,7 @@ abstract class MetalsLspService(
     semanticdbs,
     () => userConfig,
     folder,
+    buildTargetClassesFinder,
   )
 
   protected val debugProvider: DebugProvider = register(
@@ -1438,7 +1447,7 @@ abstract class MetalsLspService(
       compilations,
       languageClient,
       buildClient,
-      definitionIndex,
+      buildTargetClassesFinder,
       stacktraceAnalyzer,
       clientConfig,
       compilers,
