@@ -360,7 +360,7 @@ class MillServerSuite
     } yield assertNoDiff(output, "Some(MY_VALUE)")
   }
 
-  // https://github.com/com-lihaoyi/mill/issues/5039
+  // https://github.com/scalameta/metals/pull/7544
   test("passing-test-environment-variables") {
     cleanWorkspace()
     writeLayout(
