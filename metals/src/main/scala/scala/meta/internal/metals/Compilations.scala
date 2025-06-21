@@ -254,6 +254,8 @@ final class Compilations(
     params.setOriginId(originId)
     if (userConfiguration().verboseCompilation && addBestEffort) {
       params.setArguments(List("--verbose", "--best-effort").asJava)
+    } else if (userConfiguration().verboseCompilation) {
+      params.setArguments(List("--verbose").asJava)
     } else if (addBestEffort) {
       params.setArguments(List("--best-effort").asJava)
     } else params.setArguments(Nil.asJava)

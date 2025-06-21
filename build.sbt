@@ -415,7 +415,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.16.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "11.9.1",
+      "org.flywaydb" % "flyway-core" % "11.9.2",
       "com.h2database" % "h2" % "2.3.232",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
@@ -462,7 +462,7 @@ lazy val metals = project
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       // For MCP
       "io.modelcontextprotocol.sdk" % "mcp" % "0.10.0",
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.19.0",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.19.1",
       "io.undertow" % "undertow-servlet" % "2.3.12.Final",
     ),
     buildInfoPackage := "scala.meta.internal.metals",

@@ -33,6 +33,9 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  *                            if the `openFilesOnRenames` is enabled.
  * @param askToReconnect whether the user should be prompted to reconnect after a
  *                       BuildServer connection is lost.
+ * @param askToRestartBloop whether the user should be prompted to restart the Bloop
+ *                          server when version changes. If false, Bloop will be
+ *                          restarted automatically.
  * @param icons what icon set to use for messages.
  * @param statistics if all statistics in Metals should be enabled.
  * @param compilers configuration for the `PresentationCompilerConfig`.
@@ -77,6 +80,10 @@ final case class MetalsServerConfig(
     renameFileThreshold: Int = 300,
     askToReconnect: Boolean = MetalsServerConfig.binaryOption(
       "metals.ask-to-reconnect",
+      default = false,
+    ),
+    askToRestartBloop: Boolean = MetalsServerConfig.binaryOption(
+      "metals.ask-to-restart-bloop",
       default = false,
     ),
     icons: Icons = Icons.fromString(System.getProperty("metals.icons")),
@@ -140,6 +147,7 @@ final case class MetalsServerConfig(
       s"http=$isHttpEnabled",
       s"input-box=$isInputBoxEnabled",
       s"ask-to-reconnect=$askToReconnect",
+      s"ask-to-restart-bloop=$askToRestartBloop",
       s"icons=$icons",
       s"statistics=$statistics",
       s"macos-max-watch-roots=${macOsMaxWatchRoots}",

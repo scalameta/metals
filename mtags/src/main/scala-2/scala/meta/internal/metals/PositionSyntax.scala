@@ -38,6 +38,13 @@ object PositionSyntax {
       pos.end >= other.end
     }
 
+    def contains(other: org.eclipse.lsp4j.Position): Boolean = {
+      other.getCharacter() >= pos.startColumn &&
+      other.getCharacter() <= pos.endColumn &&
+      other.getLine() >= pos.startLine &&
+      other.getLine() <= pos.endLine
+    }
+
     def formatMessage(
         severity: String,
         message: String,
