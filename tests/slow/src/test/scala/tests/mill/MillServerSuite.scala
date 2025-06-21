@@ -7,20 +7,20 @@ import scala.meta.internal.builds.MillDigest
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.ScalaTestSuiteSelection
+import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.StatusBarConfig
 import scala.meta.internal.metals.clients.language.StatusType
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.TestParamsDataKind
 import tests.BaseImportSuite
 import tests.BaseMillServerSuite
 import tests.JavaHomeChangeTest
 import tests.MillBuildLayout
 import tests.MillServerInitializer
-import ch.epfl.scala.bsp4j.TestParamsDataKind
-import scala.meta.internal.metals.ScalaTestSuites
-import scala.meta.internal.metals.ScalaTestSuiteSelection
 
 /**
  * Basic suite to ensure that a connection to a Mill server can be made.
