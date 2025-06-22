@@ -59,6 +59,7 @@ case class UserConfiguration(
     enableBestEffort: Boolean = false,
     defaultShell: Option[String] = None,
     startMcpServer: Boolean = false,
+    mcpClient: Option[String] = None,
 ) {
 
   override def toString(): String = {
@@ -156,6 +157,7 @@ case class UserConfiguration(
           startMcpServer,
         )
       ),
+      optStringField("mcpClient", mcpClient),
     ).flatten.toMap.asJava
     val gson = new GsonBuilder().setPrettyPrinting().create()
     gson.toJson(fields).toString()
@@ -518,6 +520,19 @@ object UserConfiguration {
         """|If Metals should start the MCP (SSE) server, that an AI agent can connect to.
            |""".stripMargin,
       ),
+      UserConfigurationOption(
+        "mcp-client",
+        """empty string `""`.""",
+        "claude",
+        "MCP Client Name",
+        """|This is used in situations where the client you're using doesn't match the editor
+           |you're using or you also want an extra config generated, which is what Metals will
+           |default to. For example if you use claude code cli in your terminal while you have
+           |Metals running you would set this to "claude".
+           |NOTE: This will generate an extra config if Metals supports the client you are passing in
+           |and it will still generate the one matching your editor if it's also supported.
+           |""".stripMargin,
+      ),
     )
 
   def fromJson(
@@ -796,6 +811,9 @@ object UserConfiguration {
       getBooleanKey("enable-best-effort").getOrElse(false)
 
     val startMcpServer = getBooleanKey("start-mcp-server").getOrElse(false)
+
+    val mcpClient = getStringKey("mcp-client")
+
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -830,6 +848,7 @@ object UserConfiguration {
           enableBestEffort,
           defaultShell,
           startMcpServer,
+          mcpClient,
         )
       )
     } else {

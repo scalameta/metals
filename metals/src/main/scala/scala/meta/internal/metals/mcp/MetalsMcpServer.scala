@@ -61,7 +61,7 @@ class MetalsMcpServer(
     diagnostics: Diagnostics,
     buildTargets: BuildTargets,
     mcpTestRunner: McpTestRunner,
-    editorName: String,
+    clientName: String,
     projectName: String,
     languageClient: LanguageClient,
     connectionProvider: ConnectionProvider,
@@ -158,9 +158,10 @@ class MetalsMcpServer(
     val deployment = manager.addDeployment(servletDeployment)
     deployment.deploy()
 
-    val editor =
-      Editor.allEditors.find(_.names.contains(editorName)).getOrElse(NoEditor)
-    val configPort = McpConfig.readPort(projectPath, projectName, editor)
+    val client =
+      Client.allClients.find(_.names.contains(clientName)).getOrElse(NoClient)
+
+    val configPort = McpConfig.readPort(projectPath, projectName, client)
     val undertowServer = Undertow
       .builder()
       .addHttpListener(configPort.getOrElse(0), "localhost")
@@ -173,7 +174,7 @@ class MetalsMcpServer(
       listenerInfo.get(0).getAddress().asInstanceOf[InetSocketAddress].getPort()
 
     if (!configPort.isDefined) {
-      McpConfig.writeConfig(port, projectName, projectPath, editor)
+      McpConfig.writeConfig(port, projectName, projectPath, client)
     }
 
     languageClient.showMessage(
