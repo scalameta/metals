@@ -5,7 +5,7 @@ import scala.util.Random
 
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mcp.McpConfig
-import scala.meta.internal.metals.mcp.NoEditor
+import scala.meta.internal.metals.mcp.NoClient
 
 import org.eclipse.lsp4j.MessageParams
 import tests.BaseLspSuite
@@ -31,7 +31,7 @@ class McpPortConfigSuite extends BaseLspSuite("mcp-port-config") {
            |""".stripMargin
       )
     } yield {
-      val port = McpConfig.readPort(workspace, "root", NoEditor)
+      val port = McpConfig.readPort(workspace, "root", NoClient)
       assert(port.isDefined)
     }
   }
@@ -40,7 +40,7 @@ class McpPortConfigSuite extends BaseLspSuite("mcp-port-config") {
     cleanWorkspace()
 
     val port = Random.nextInt(55535) + 10000
-    McpConfig.writeConfig(port, "root", workspace, NoEditor)
+    McpConfig.writeConfig(port, "root", workspace, NoClient)
 
     val waitForMessage = Promise[Unit]
     client.showMessageHandler = {
