@@ -4,11 +4,13 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
+import scala.jdk.CollectionConverters.ListHasAsScala
 import scala.jdk.CollectionConverters.MapHasAsJava
 import scala.util.Random
 
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.MetalsEnrichments.XtensionDebugSessionParams
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.debug.DiscoveryFailures._
 import scala.meta.internal.metals.debug.DotEnvFileParser.InvalidEnvFileException
@@ -531,5 +533,40 @@ class DebugDiscoverySuite
       result.toString,
       SemanticDbNotFoundException.getMessage(),
     )
+  }
+
+  test("main-method-in-dependencies") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
+           |  },
+           |  "b": {}
+           |}
+           |""".stripMargin
+      )
+      discovery <- server.executeDiscoverMainClassesCommand(
+        new DebugDiscoveryParams(
+          path = null,
+          runType = "run",
+          mainClass = "org.scalatest.tools.Runner",
+        )
+      )
+    } yield {
+      assertEquals(
+        discovery.getTargets().asScala.map(_.getUri()).toList,
+        List(server.buildTarget("a")),
+      )
+      discovery.asScalaMainClass match {
+        case Left(err) => sys.error(s"Expected Main class ($err)")
+        case Right(scalaMainClass) =>
+          assertNoDiff(
+            scalaMainClass.getClassName(),
+            "org.scalatest.tools.Runner",
+          )
+      }
+    }
   }
 }

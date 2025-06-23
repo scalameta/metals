@@ -55,7 +55,6 @@ import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
 import scala.meta.internal.metals.debug.server.MetalsDebuggee
 import scala.meta.internal.metals.debug.server.TestSuiteDebugAdapter
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
-import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.io.AbsolutePath
 
 import bloop.config.Config
@@ -80,7 +79,7 @@ class DebugProvider(
     compilations: Compilations,
     languageClient: MetalsLanguageClient,
     buildClient: MetalsBuildClient,
-    index: OnDemandSymbolIndex,
+    buildTargetClassesFinder: BuildTargetClassesFinder,
     stacktraceAnalyzer: StacktraceAnalyzer,
     clientConfig: ClientConfiguration,
     compilers: Compilers,
@@ -119,12 +118,6 @@ class DebugProvider(
     if (runner != null) runner.cancel()
     debugSessions.cancel()
   }
-
-  lazy val buildTargetClassesFinder = new BuildTargetClassesFinder(
-    buildTargets,
-    buildTargetClasses,
-    index,
-  )
 
   def start(
       parameters: b.DebugSessionParams
