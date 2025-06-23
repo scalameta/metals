@@ -21,13 +21,13 @@ object DiscoveryFailures {
       className: String,
       buildTarget: String,
   ) extends Exception(
-        s"Main class '$className' not found in build target '${buildTarget}' (not considering dependencies)"
+        s"Main class '$className' not found in build target '${buildTarget}'"
       )
 
   case class NoMainClassFoundException(
       className: String
   ) extends Exception(
-        s"Main class '$className' not found in any build target (not considering dependencies)"
+        s"Main class '$className' not found in any build target"
       )
 
   case class BuildTargetNotFoundForPathException(path: AbsolutePath)
