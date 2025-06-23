@@ -104,6 +104,25 @@ class BspConnector(
         regeneratedConfig: Boolean = false,
     ): Future[Option[BuildServerConnection]] = {
       def bspStatusOpt = Option.when(addLivenessMonitor)(bspStatus)
+
+      def regenerateConfig(bsp: BuildServerProvider) = {
+        bsp
+          .generateBspConfig(
+            workspace,
+            args => bspConfigGenerator.runUnconditionally(bsp, args),
+            statusBar,
+          )
+          .future
+          .flatMap { _ =>
+            connect(
+              projectRoot,
+              bspTraceRoot,
+              addLivenessMonitor,
+              regeneratedConfig = true,
+            )
+          }
+      }
+
       scribe.info("Attempting to connect to the build server...")
       resolve(buildTool) match {
         case ResolvedNone =>
@@ -160,21 +179,7 @@ class BspConnector(
               scribe.info(
                 s"Regenerating ${details.getName()} json config to latest."
               )
-              bsp
-                .generateBspConfig(
-                  workspace,
-                  args => bspConfigGenerator.runUnconditionally(bsp, args),
-                  statusBar,
-                )
-                .future
-                .flatMap { _ =>
-                  connect(
-                    projectRoot,
-                    bspTraceRoot,
-                    addLivenessMonitor,
-                    regeneratedConfig = true,
-                  )
-                }
+              regenerateConfig(bsp)
             case _ =>
               bspServers
                 .newServer(projectRoot, bspTraceRoot, details, bspStatusOpt)
@@ -225,25 +230,16 @@ class BspConnector(
           } yield Some(conn)
         case RegenerateBspConfig =>
           buildTool match {
-            case Some(bsp: BuildServerProvider) =>
+            case Some(bsp: BuildServerProvider) if !regeneratedConfig =>
               scribe.info(
                 s"Regenerating ${bsp.buildServerName} json config since it was missing."
               )
-              bsp
-                .generateBspConfig(
-                  workspace,
-                  args => bspConfigGenerator.runUnconditionally(bsp, args),
-                  statusBar,
-                )
-                .future
-                .flatMap { _ =>
-                  connect(
-                    projectRoot,
-                    bspTraceRoot,
-                    addLivenessMonitor,
-                    regeneratedConfig = true,
-                  )
-                }
+              regenerateConfig(bsp)
+            case Some(_: BuildServerProvider) if regeneratedConfig =>
+              scribe.error(
+                s"Tried regenerating json config for build tool but failed."
+              )
+              Future.successful(None)
             case _ =>
               scribe.error(
                 s"Cannot regenerate json config for build tool since no build server capable tool is available."
