@@ -6,6 +6,7 @@ import scala.concurrent.Promise
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.metals.CreateSession
+import scala.meta.internal.metals.Disconnect
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.ImportBuildChanges
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -650,6 +651,50 @@ class SbtServerSuite
             "build.sbt" -> buildSbtBase,
           ),
         )
+
+    } yield ()
+  }
+
+  test("no-fallback-to-bloop") {
+    cleanWorkspace()
+    val sbtBspConfig = workspace.resolve(".bsp/sbt.json")
+
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=${V.sbtVersion}
+            |/build.sbt
+            |${SbtBuildLayout.commonSbtSettings}
+            |scalaVersion := "${V.scala213}"
+            |val a = project.in(file("a"))
+            |/a/src/main/scala/a/A.scala
+            |package a
+            |object A {
+            | val a = 1
+            |}
+            |""".stripMargin
+      )
+      _ = assert(
+        sbtBspConfig.exists,
+        "sbt.json should exist after initialization",
+      )
+      _ = assert(
+        server.server.bspSession.get.main.isSbt,
+        "Should be connected to sbt",
+      )
+      _ <- server.headServer.connect(Disconnect(shutdownBuildServer = true))
+      _ = assert(server.server.bspSession.isEmpty, "Should be disconnected")
+      _ = {
+        assert(sbtBspConfig.exists, "sbt.json should exist before removal")
+        sbtBspConfig.delete()
+        assert(!sbtBspConfig.exists, "sbt.json should be deleted")
+      }
+      _ <- server.headServer.connect(CreateSession(shutdownBuildServer = false))
+      _ = server.server.bspSession match {
+        case Some(session) if session.main.isSbt =>
+        case otherwise =>
+          fail(s"Should be connected to sbt, but got $otherwise")
+      }
 
     } yield ()
   }
