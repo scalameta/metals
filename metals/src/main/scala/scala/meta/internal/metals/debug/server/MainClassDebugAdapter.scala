@@ -43,7 +43,8 @@ class MainClassDebugAdapter(
     val mainClassEnvVariables =
       mainClass.getEnvironmentVariables().asScala.toList
     val buildServerEnvVariables = project.environmentVariablesAsStrings.toList
-    // No particular logic here why we are using this ordering.
+    // `mainClassEnvVariables` are the variables from IDE (launch.json for VSCode) which should take
+    // preference over `buildServerEnvVariables`.
     val envVariables = buildServerEnvVariables ++ mainClassEnvVariables
 
     scribe.debug(s"""|Running main with debugger with environment variables: 
