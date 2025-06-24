@@ -171,7 +171,21 @@ case class ScalaPresentationCompiler(
   override def didChange(
       params: VirtualFileParams
   ): CompletableFuture[ju.List[Diagnostic]] = {
-    CompletableFuture.completedFuture(Nil.asJava)
+    val returnDiagnostics =
+      params.data() match {
+        case Some(value: Boolean) => value
+        case _ => false
+      }
+
+    if (returnDiagnostics) {
+      compilerAccess.withInterruptableCompiler(
+        List.empty[Diagnostic].asJava,
+        params.token()
+      ) { pc =>
+        val compiler = pc.compiler(params)
+        DiagnosticsProvider.getDiagnostics(compiler, params).asJava
+      }(params.toQueryContext)
+    } else CompletableFuture.completedFuture(Nil.asJava)
   }
 
   def didClose(uri: URI): Unit = {
@@ -574,17 +588,6 @@ case class ScalaPresentationCompiler(
   }
 
   override def buildTargetId(): String = buildTargetIdentifier
-
-  override def diagnostics(
-      params: VirtualFileParams
-  ): CompletableFuture[util.List[Diagnostic]] =
-    compilerAccess.withInterruptableCompiler(
-      List.empty[Diagnostic].asJava,
-      params.token()
-    ) { pc =>
-      val compiler = pc.compiler(params)
-      DiagnosticsProvider.getDiagnostics(compiler, params).asJava
-    }(params.toQueryContext)
 
   def newCompiler(): MetalsGlobal = {
     val classpath = this.classpath.mkString(File.pathSeparator)

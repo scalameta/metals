@@ -860,6 +860,8 @@ case class MetalsPasteParams(
     textDocument: TextDocumentIdentifier,
     // The range in the text document, where text was pasted.
     range: Range,
+    // Content of the file after paste.
+    text: String,
     // The origin document, where text was copied from.
     originDocument: TextDocumentIdentifier,
     // The origin start offset, where text was copied from.

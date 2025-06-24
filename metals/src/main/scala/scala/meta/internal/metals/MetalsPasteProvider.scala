@@ -7,9 +7,12 @@ import scala.meta.Import
 import scala.meta.Pkg
 import scala.meta.Source
 import scala.meta.Stat
+import scala.meta.inputs.Input.VirtualFile
+import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.MissingSymbolDiagnostic
 import scala.meta.internal.parsing.Trees
+import scala.meta.internal.pc.ScriptFirstImportPosition
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -35,63 +38,69 @@ class MetalsPasteProvider(
       buildTargets.scalaVersion(path).exists(ScalaVersions.isScala3Version)
     val MissingSymbol = new MissingSymbolDiagnostic(isScala3)
 
-    compilers.diagnostics(path, cancelToken).flatMap { diagnostics =>
-      val imports = diagnostics.collect {
-        case d @ MissingSymbol(name, _)
-            if params.range.overlapsWith(d.getRange()) =>
+    compilers
+      .didChange(
+        path,
+        shouldReturnDiagnostics = true,
+        content = Some(params.text),
+      )
+      .flatMap { diagnostics =>
+        val imports = diagnostics.collect {
+          case d @ MissingSymbol(name, _)
+              if params.range.overlapsWith(d.getRange()) =>
 
-          val offset =
-            if (isScala3) d.getRange().getEnd()
-            else d.getRange().getStart()
+            val offset =
+              if (isScala3) d.getRange().getEnd()
+              else d.getRange().getStart()
 
-          val symbolsPositionParams =
-            new TextDocumentPositionParams(
-              params.originDocument,
-              adjustPositionToOrigin(params, offset),
-            )
-          for {
-            defnResult <- definitions.definition(
-              orginalPath,
-              symbolsPositionParams,
-              cancelToken,
-            )
-          } yield {
-            if (defnResult.isEmpty) None
-            else {
-              val symbolDesc = defnResult.symbol.desc
-              val symbolName = symbolDesc.name.value
-              lazy val owner = defnResult.symbol.owner
-              lazy val ownerName = owner.desc.name.value
-              pprint.log(defnResult.symbol)
-              val importText =
-                if (name != symbolName) {
-                  if (
-                    symbolDesc.isMethod &&
-                    (symbolName == "apply" || symbolName == "unapply" || symbolName == "<init>")
-                  )
-                    if (ownerName == name) s"import ${owner.fqcn}"
-                    else s"import ${owner.owner.fqcn}.{${ownerName} => $name}"
-                  else s"import ${owner.fqcn}.{$symbolName => $name}"
-                } else s"import ${defnResult.symbol.fqcn}"
+            val symbolsPositionParams =
+              new TextDocumentPositionParams(
+                params.originDocument,
+                adjustPositionToOrigin(params, offset),
+              )
+            for {
+              defnResult <- definitions.definition(
+                orginalPath,
+                symbolsPositionParams,
+                cancelToken,
+              )
+            } yield {
+              if (defnResult.isEmpty) None
+              else {
+                val symbolDesc = defnResult.symbol.desc
+                val symbolName = symbolDesc.name.value
+                lazy val owner = defnResult.symbol.owner
+                lazy val ownerName = owner.desc.name.value
 
-              Some(importText)
+                val importText =
+                  if (name != symbolName) {
+                    if (
+                      symbolDesc.isMethod &&
+                      (symbolName == "apply" || symbolName == "unapply" || symbolName == "<init>")
+                    )
+                      if (ownerName == name) s"import ${owner.fqcn}"
+                      else s"import ${owner.owner.fqcn}.{${ownerName} => $name}"
+                    else s"import ${owner.fqcn}.{$symbolName => $name}"
+                  } else s"import ${defnResult.symbol.fqcn}"
+
+                Some(importText)
+              }
+            }
+        }
+        Future
+          .sequence(imports)
+          .map(_.flatten.distinct)
+          .map { imports =>
+            Option.when(imports.nonEmpty) {
+              val (prefix, suffix, pos) =
+                autoImportPosition(path, params.text, params.range.getStart())
+              new lsp4j.TextEdit(
+                new lsp4j.Range(pos, pos),
+                imports.mkString(prefix, "\n", suffix),
+              )
             }
           }
       }
-      Future
-        .sequence(imports)
-        .map(_.flatten.distinct)
-        .map { imports =>
-          Option.when(imports.nonEmpty) {
-            val (prefix, suffix, pos) =
-              autoImportPosition(path, params.range.getStart())
-            new lsp4j.TextEdit(
-              new lsp4j.Range(pos, pos),
-              imports.mkString(prefix, "\n", suffix),
-            )
-          }
-        }
-    }
   }
 
   private def adjustPositionToOrigin(
@@ -114,9 +123,17 @@ class MetalsPasteProvider(
 
   private def autoImportPosition(
       path: AbsolutePath,
+      text: String,
       pos: lsp4j.Position,
   ): (String, String, lsp4j.Position) = {
-    lazy val fallback = ("", "\n\n", new lsp4j.Position(0, 0))
+
+    lazy val fallback = {
+      val inputFromText = new VirtualFile(path.toURI.toString, text)
+      val point = ScriptFirstImportPosition.infer(text)
+      val pos = Position.Range(inputFromText, point, point).toLsp.getStart()
+      ("", "\n\n", pos)
+    }
+
     def afterImportsPositon(stats: List[Stat]) =
       stats
         .takeWhile {

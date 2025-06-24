@@ -3,8 +3,9 @@ package tests.pc
 import java.net.URI
 
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.pc.CancelToken
+import scala.meta.pc.VirtualFileParams
 
 import tests.BasePCSuite
 
@@ -30,14 +31,20 @@ class DiagnosticsSuite extends BasePCSuite {
       expected: String
   ): Unit =
     test(name) {
-      val params = CompilerVirtualFileParams(
-        URI.create("file:/Highlight.scala"),
-        code,
-        EmptyCancelToken
-      )
+      val params = new VirtualFileParams {
+
+        override def uri(): URI = URI.create("file:/Highlight.scala")
+
+        override def text(): String = code
+
+        override def token(): CancelToken = EmptyCancelToken
+
+        // if should return diagnostics
+        override def data(): Object = Some(true)
+      }
 
       val diags = presentationCompiler
-        .diagnostics(params)
+        .didChange(params)
         .get
         .asScala
         .map { diag =>

@@ -150,6 +150,7 @@ class MetalsPasteSuite
           MetalsPasteParams(
             new TextDocumentIdentifier(copyToUri),
             copiedRange,
+            copyToContent,
             new TextDocumentIdentifier(originUri),
             originPosition,
           ),

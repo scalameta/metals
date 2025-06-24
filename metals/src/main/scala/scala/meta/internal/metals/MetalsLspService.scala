@@ -388,7 +388,7 @@ abstract class MetalsLspService(
 
   protected def onCreate(path: AbsolutePath): Unit = {
     buildTargets.onCreate(path)
-    compilers.didChange(path)
+    compilers.didChange(path, false)
   }
 
   protected val interactiveSemanticdbs: InteractiveSemanticdbs = {
@@ -829,7 +829,7 @@ abstract class MetalsLspService(
         val path = params.getTextDocument.getUri.toAbsolutePath
         buffers.put(path, change.getText)
         diagnostics.didChange(path)
-        compilers.didChange(path)
+        compilers.didChange(path, false)
         referencesProvider.didChange(path, change.getText)
         parseTrees(path).asJava
     }
