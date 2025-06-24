@@ -242,10 +242,6 @@ public abstract class PresentationCompiler {
 		return CompletableFuture.completedFuture(Collections.emptyList());
 	}
 
-	public CompletableFuture<List<String>> getSymbolsAtPosition(OffsetParams params) {
-		return CompletableFuture.completedFuture(Collections.emptyList());
-	}
-
 	// =================================
 	// Configuration and lifecycle APIs.
 	// =================================

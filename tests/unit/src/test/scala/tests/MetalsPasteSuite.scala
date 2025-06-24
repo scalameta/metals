@@ -47,6 +47,43 @@ class MetalsPasteSuite
        |""".stripMargin,
   )
 
+  checkCopyEdit(
+    "with-rename",
+    s"""|/metals.json
+        |{ "a" : { "scalaVersion": "${BuildInfo.scalaVersion}"}}
+        |/a/src/main/scala/utils/Utils.scala
+        |package example.utils
+        |
+        |case class Bar(i: Int)
+        |object Bar {
+        | def k = 2
+        |}
+        |""".stripMargin,
+    """|package example.from
+       |
+       |import example.utils.{Bar => Baz}
+       |
+       |object Foo {
+       |  val j = 3
+       |}
+       |
+       |object Main {
+       |  <<val set: Set[Int] = Set(Foo.j, Baz.k, Baz(3).i)>>
+       |}
+       |""".stripMargin,
+    """|package example
+       |
+       |import scala.util.Try
+       |<<import example.from.Foo>>
+       |<<import example.utils.{Bar => Baz}>>
+       |
+       |object Copy {
+       |  def t = Try(true)
+       |  val set: Set[Int] = Set(Foo.j, Baz.k, Baz(3).i)
+       |}
+       |""".stripMargin,
+  )
+
   def checkCopyEdit(
       name: TestOptions,
       layout: String,

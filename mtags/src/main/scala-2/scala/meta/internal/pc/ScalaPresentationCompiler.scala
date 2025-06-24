@@ -586,28 +586,6 @@ case class ScalaPresentationCompiler(
       DiagnosticsProvider.getDiagnostics(compiler, params).asJava
     }(params.toQueryContext)
 
-  override def getSymbolsAtPosition(
-      params: OffsetParams
-  ): CompletableFuture[util.List[String]] =
-    compilerAccess.withInterruptableCompiler(
-      List.empty[String].asJava,
-      params.token()
-    ) { pc =>
-      val compiler = pc.compiler(params)
-      val pcSymbolSearch = new WithCompilationUnit(compiler, params)
-        with PcSymbolSearch
-      pcSymbolSearch.soughtSymbols
-        .map(
-          _._1
-            .map { sym =>
-              compiler.semanticdbSymbol(sym.asInstanceOf[compiler.Symbol])
-            }
-            .toList
-        )
-        .getOrElse(Nil)
-        .asJava
-    }(params.toQueryContext)
-
   def newCompiler(): MetalsGlobal = {
     val classpath = this.classpath.mkString(File.pathSeparator)
     val vd = new VirtualDirectory("(memory)", None)

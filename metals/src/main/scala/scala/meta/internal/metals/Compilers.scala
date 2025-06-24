@@ -1701,15 +1701,6 @@ class Compilers(
     fromPc.getOrElse(Future.successful(Nil))
   }
 
-  def symbolsAt(
-      params: TextDocumentPositionParams,
-      token: CancelToken,
-  ): Future[List[String]] =
-    withPCAndAdjustLsp(params) { (pc, position, _) =>
-      val params = CompilerOffsetParamsUtils.fromPos(position, token)
-      pc.getSymbolsAtPosition(params).asScala.map(_.asScala.toList)
-    }.getOrElse(Future.successful(Nil))
-
   private def cleanupAutoImports(
       document: s.TextDocument,
       originalText: String,

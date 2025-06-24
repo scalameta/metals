@@ -606,6 +606,8 @@ abstract class MetalsLspService(
     new MetalsPasteProvider(
       compilers,
       buildTargets,
+      definitionProvider,
+      trees,
     )
 
   def parseTreesAndPublishDiags(paths: Seq[AbsolutePath]): Future[Unit] = {
@@ -1276,8 +1278,8 @@ abstract class MetalsLspService(
   ): Future[ApplyWorkspaceEditResponse] = {
     metalsPasteProvider
       .didPaste(params, EmptyCancelToken)
-      .flatMap(
-        applyEdits(params.textDocument.getUri(), _)
+      .flatMap(optEdit =>
+        applyEdits(params.textDocument.getUri(), optEdit.toList)
       )
   }
 
