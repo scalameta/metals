@@ -36,6 +36,7 @@ import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Command
 import scala.meta.internal.metals.Debug
+import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.DebugSession
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DecoderResponse
@@ -327,6 +328,13 @@ final case class TestingServer(
   ): Future[DecoderResponse] = {
     executeCommand(ServerCommands.DecodeFile, uri)
       .asInstanceOf[Future[DecoderResponse]]
+  }
+
+  def executeDiscoverMainClassesCommand(
+      params: DebugDiscoveryParams
+  ): Future[b.DebugSessionParams] = {
+    executeCommand(ServerCommands.DiscoverMainClasses, params)
+      .asInstanceOf[Future[b.DebugSessionParams]]
   }
 
   def assertSuperMethodHierarchy(
