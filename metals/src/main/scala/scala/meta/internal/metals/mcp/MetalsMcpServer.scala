@@ -70,6 +70,9 @@ class MetalsMcpServer(
     ec: ExecutionContext
 ) extends Cancelable {
 
+  private val editor =
+    Editor.allEditors.find(_.names.contains(editorName)).getOrElse(NoEditor)
+
   val tracePrinter: Option[PrintWriter] =
     Trace.setupTracePrinter("mcp", projectPath)
 
@@ -158,12 +161,11 @@ class MetalsMcpServer(
     val deployment = manager.addDeployment(servletDeployment)
     deployment.deploy()
 
-    val editor =
-      Editor.allEditors.find(_.names.contains(editorName)).getOrElse(NoEditor)
-    val configPort = McpConfig.readPort(projectPath, projectName, editor)
+    // Read port from the default config file in .metals/ directory
+    val savedConfigPort = McpConfig.readPort(projectPath, projectName, NoEditor)
     val undertowServer = Undertow
       .builder()
-      .addHttpListener(configPort.getOrElse(0), "localhost")
+      .addHttpListener(savedConfigPort.getOrElse(0), "localhost")
       .setHandler(deployment.start())
       .build()
     undertowServer.start()
@@ -172,7 +174,11 @@ class MetalsMcpServer(
     val port =
       listenerInfo.get(0).getAddress().asInstanceOf[InetSocketAddress].getPort()
 
-    if (!configPort.isDefined) {
+    if (!savedConfigPort.isDefined) {
+      McpConfig.writeConfig(port, projectName, projectPath, NoEditor)
+    }
+
+    if (editor != NoEditor) {
       McpConfig.writeConfig(port, projectName, projectPath, editor)
     }
 
@@ -188,7 +194,13 @@ class MetalsMcpServer(
     cancelable.add(() => undertowServer.stop())
   }
 
-  override def cancel(): Unit = cancelable.cancel()
+  override def cancel(): Unit = {
+    // Remove the config so that next time the editor will only connect after mcp server is started
+    if (editor != NoEditor) {
+      McpConfig.deleteConfig(projectPath, editor)
+    }
+    cancelable.cancel()
+  }
 
   private def importBuildTool(): AsyncToolSpecification = {
     val schema = """{"type": "object", "properties": { }}"""
