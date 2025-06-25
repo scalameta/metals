@@ -95,7 +95,7 @@ class MetalsPasteSuite
       val copyToPath = "a/src/main/scala/to/CopyTo.scala"
       val originPath = "a/src/main/scala/from/CopyFrom.scala"
 
-      val copyToContent = copyToFile.replaceAll("<<.*>>\\n*", "")
+      val copyToContent = copyToFile.replaceAll("<<.*>>[\\n\\r]*", "")
       val copyToExpected = copyToFile.replaceAll("<<|>>", "")
       val originContent = originFile.replaceAll("<<|>>", "")
 
