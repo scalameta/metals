@@ -1,5 +1,6 @@
 package tests.mill
 
+import scala.concurrent.Future
 import scala.concurrent.Promise
 
 import scala.meta.internal.builds.MillBuildTool
@@ -7,12 +8,18 @@ import scala.meta.internal.builds.MillDigest
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.ScalaTestSuiteSelection
+import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.StatusBarConfig
 import scala.meta.internal.metals.clients.language.StatusType
+import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
+import ch.epfl.scala.bsp4j.ScalaMainClass
+import ch.epfl.scala.bsp4j.TestParamsDataKind
 import tests.BaseImportSuite
 import tests.BaseMillServerSuite
 import tests.JavaHomeChangeTest
@@ -316,4 +323,127 @@ class MillServerSuite
     } yield ()
   }
 
+  // https://github.com/scalameta/metals/pull/7544
+  test("debug-passes-environment-variables") {
+    cleanWorkspace()
+    writeLayout(
+      s"""
+         |/build.mill
+         |//| mill-version: 1.0.0-RC1
+         |package build
+         |import mill.*, scalalib.*
+         |
+         |object foo extends ScalaModule {
+         |  def scalaVersion = "${V.scala213}"
+         |
+         |  def forkEnv = Map("MY_ENV" -> "MY_VALUE")
+         |}
+         |/foo/src/app/Main.scala
+         |package app
+         |object Main {
+         |  def main(args: Array[String]): Unit = {
+         |    println(sys.env.get("MY_ENV"))
+         |    System.exit(0)
+         |  }
+         |}
+         |""".stripMargin
+    )
+    for {
+      _ <- initMillBsp()
+      output <- runMillDebugger(
+        server.startDebugging(
+          "foo",
+          DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
+          new ScalaMainClass("app.Main", Nil.asJava, Nil.asJava),
+        )
+      )
+    } yield assertNoDiff(output, "Some(MY_VALUE)")
+  }
+
+  // https://github.com/scalameta/metals/pull/7544
+  test("passing-test-environment-variables") {
+    cleanWorkspace()
+    writeLayout(
+      """|/build.mill
+         |//| mill-version: 1.0.0-RC1
+         |package build
+         |import mill.*, scalalib.*
+         |
+         |object foo extends ScalaModule {
+         |  def scalaVersion = "3.7.0"
+         |
+         |  override def forkEnv = Map("DOGGIES" -> "main")
+         |
+         |  object test extends ScalaTests with TestModule.Munit {
+         |    def mvnDeps = Seq(
+         |      mvn"org.scalameta::munit::1.1.1"
+         |    )
+         |
+         |    def forkEnv = super.forkEnv() ++ Map("DOGGIES" -> "tests")
+         |  }
+         |}
+         |/foo/test/src/FooMUnitTests.scala
+         |package foo
+         |
+         |import munit.FunSuite
+         |
+         |class FooMUnitTests extends FunSuite {
+         |  test("env var") {
+         |    assertEquals(sys.env.get("DOGGIES"), Some("tests"))
+         |  }
+         |}
+         |""".stripMargin
+    )
+    for {
+      _ <- initMillBsp()
+      output <- runMillDebugger(
+        server.startDebugging(
+          "foo.test",
+          TestParamsDataKind.SCALA_TEST_SUITES_SELECTION,
+          ScalaTestSuites(
+            List(
+              ScalaTestSuiteSelection("foo.FooMUnitTests", Nil.asJava)
+            ).asJava,
+            Nil.asJava,
+            Nil.asJava,
+          ),
+        )
+      )
+    } yield assert(
+      output.contains("All tests in foo.FooMUnitTests passed"),
+      clue = output,
+    )
+  }
+
+  private def initMillBsp(): Future[Unit] = {
+    def millBspConfig = workspace.resolve(".bsp/mill-bsp.json")
+    client.generateBspAndConnect = Messages.GenerateBspAndConnect.yes
+    for {
+      _ <- server.initialize()
+      _ <- server.initialized()
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        Messages.GenerateBspAndConnect
+          .params(
+            MillBuildTool.name,
+            MillBuildTool.bspName,
+          )
+          .getMessage,
+      )
+      _ <- server.headServer.buildServerPromise.future
+      _ = assert(millBspConfig.exists)
+    } yield ()
+  }
+
+  private def runMillDebugger(f: => Future[TestDebugger]): Future[String] = {
+    for {
+      debugger <- f
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+      _ = server.server.cancel()
+    } yield output
+  }
 }
