@@ -696,6 +696,11 @@ final case class TestingServer(
 
   def waitFor(millis: Long): Future[Unit] = Future { Thread.sleep(millis) }
 
+  /**
+   * @param target the build target to debug, like "myproject.test"
+   * @param kind one of the constants in [[ch.epfl.scala.bsp4j.TestParamsDataKind]] or [[ch.epfl.scala.bsp4j.DebugSessionParamsDataKind]].
+   * @param parameter the parameter to pass to the debug adapter, for example an instance of [[scala.meta.internal.metals.ScalaTestSuites]].
+   */
   def startDebugging(
       target: String,
       kind: String,
@@ -766,6 +771,7 @@ final case class TestingServer(
     fullServer.didFocus(toPath(filename).toURI.toString).asScala
   }
 
+  /** Saves the file to disk and sends `didSave` notification to the server. */
   def didSave(filename: String): Future[Unit] = {
     Debug.printEnclosing(filename)
     val abspath = toPath(filename)

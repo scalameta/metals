@@ -38,8 +38,18 @@ class MainClassDebugAdapter(
 
   def name: String =
     s"${getClass.getSimpleName}(${project.name}, ${mainClass.getClassName()})"
+
   def run(listener: DebuggeeListener): CancelableFuture[Unit] = {
-    scribe.debug(s"""|Running main with debugger with compile classpath:
+    val mainClassEnvVariables =
+      mainClass.getEnvironmentVariables().asScala.toList
+    val buildServerEnvVariables = project.environmentVariablesAsStrings.toList
+    // `mainClassEnvVariables` are the variables from IDE (launch.json for VSCode) which should take
+    // preference over `buildServerEnvVariables`.
+    val envVariables = buildServerEnvVariables ++ mainClassEnvVariables
+
+    scribe.debug(s"""|Running main with debugger with environment variables: 
+                     |\t${envVariables.mkString("\n\t")}
+                     |and compile classpath:
                      |\t${classPath.mkString("\n\t")}
                      |and run classpath:
                      |\t${project.runClassPath.mkString("\n\t")}""".stripMargin)
@@ -50,7 +60,7 @@ class MainClassDebugAdapter(
       className = mainClass.getClassName,
       args = mainClass.getArguments().asScala.toList,
       jvmOptions = mainClass.getJvmOptions.asScala.toList,
-      evnVariables = mainClass.getEnvironmentVariables().asScala.toList,
+      envVariables = envVariables,
       logger = new Logger(listener),
     )
   }
