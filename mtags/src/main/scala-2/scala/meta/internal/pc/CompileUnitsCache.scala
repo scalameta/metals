@@ -3,34 +3,24 @@ package scala.meta.internal.pc
 import java.net.URI
 
 import scala.collection.mutable
-import scala.reflect.io.AbstractFile
-import scala.util.Failure
-import scala.util.Success
-import scala.util.Try
 
 class CompileUnitsCache(keepLastCount: Short) {
-  private val lastCompiled = new LastNElementsSet[AbstractFile](keepLastCount)
-  private val lastModified = mutable.Set[URI]()
+  private val lastCompiled = new LastNElementsSet[String](keepLastCount)
+  private val lastModified = mutable.Set[String]()
 
-  def didGetUnit(file: AbstractFile): Option[AbstractFile] = {
+  def didGetUnit(file: String): Option[String] = {
     lastCompiled
       .add(file)
-      .filterNot(wasModified)
+      .filterNot(lastModified(_))
   }
 
   def didChange(uri: URI): Unit = {
-    lastModified.add(uri)
+    lastModified.add(uri.toString())
   }
 
-  def canBeRemoved(file: AbstractFile): Boolean =
-    !lastCompiled.contains(file) && !wasModified(file)
+  def canBeRemoved(file: String): Boolean =
+    !lastCompiled.contains(file) && !lastModified(file)
 
-  private def wasModified(file: AbstractFile) =
-    Try(file.toURL.toURI()) match {
-      case Success(uri) => lastModified.contains(uri)
-      // we may create abstract files that are not valid URIs
-      case Failure(_) => false
-    }
 }
 
 /**

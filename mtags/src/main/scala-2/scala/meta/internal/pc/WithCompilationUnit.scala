@@ -93,6 +93,6 @@ class WithCompilationUnit(
 
   def cleanUp(): Unit =
     if (shouldRemoveCompilationUnitAfterUse)
-      removeAfterUsing(unit.source.file)
+      removeAfterUsing(params.uri().toString())
 
 }

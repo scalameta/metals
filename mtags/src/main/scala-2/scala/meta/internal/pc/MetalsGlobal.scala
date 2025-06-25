@@ -15,7 +15,7 @@ import scala.reflect.internal.util.Position
 import scala.reflect.internal.util.ScriptSourceFile
 import scala.reflect.internal.util.SourceFile
 import scala.reflect.internal.{Flags => gf}
-import scala.reflect.io.AbstractFile
+import scala.reflect.io.VirtualFile
 import scala.tools.nsc.Mode
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
@@ -702,14 +702,14 @@ class MetalsGlobal(
    * If used, `willBeRemovedAfterUsing` should be set to `true` in [[addCompilationUnit]].
    * @param file file that should be removed.
    */
-  def removeAfterUsing(file: AbstractFile): Unit = {
-    if (compileUnitsCache.canBeRemoved(file)) remove(file)
+  def removeAfterUsing(filename: String): Unit = {
+    if (compileUnitsCache.canBeRemoved(filename)) remove(filename)
   }
 
-  private def remove(file: AbstractFile): Unit = {
-    if (!richCompilationCache.contains(file.name)) {
-      fullyCompiled.remove(file.name)
-      toBeRemoved.add(file)
+  private def remove(filename: String): Unit = {
+    if (!richCompilationCache.contains(filename)) {
+      fullyCompiled.remove(filename)
+      toBeRemoved.add(new VirtualFile(filename))
     }
   }
 
@@ -740,7 +740,7 @@ class MetalsGlobal(
       else unit.source
     val richUnit = new RichCompilationUnit(source)
     if (!isOutline && !willBeRemovedAfterUsing) {
-      compileUnitsCache.didGetUnit(richUnit.source.file).foreach(remove)
+      compileUnitsCache.didGetUnit(filename).foreach(remove)
     }
     toBeRemoved.remove(richUnit.source.file)
     unitOfFile.get(richUnit.source.file) match {
