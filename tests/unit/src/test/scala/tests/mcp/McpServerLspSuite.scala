@@ -1,10 +1,21 @@
 package tests.mcp
 
+import scala.meta.internal.metals.mcp.McpConfig
 import scala.meta.internal.metals.mcp.McpMessages
+import scala.meta.internal.metals.mcp.NoEditor
+import scala.meta.internal.metals.mcp.VSCodeEditor
 
 import tests.BaseLspSuite
 
 class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
+
+  // get a new random port that is not in use
+  val portToUse = {
+    val socket = new java.net.ServerSocket(0)
+    val port = socket.getLocalPort()
+    socket.close()
+    port
+  }
 
   test("find-dep") {
     cleanWorkspace()
@@ -13,6 +24,14 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
         s"""
            |/metals.json
            |{"a": {}}
+           |/.metals/mcp.json
+           |{
+           |  "servers": {
+           |    "root-metals": {
+           |      "url": "http://localhost:${portToUse}/sse"
+           |    }
+           |  }
+           |}
            |/a/src/main/scala/com/example/Hello.scala
            |package com.example
            |
@@ -21,6 +40,7 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
       )
       _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
       client <- startMcpServer()
+      _ = assertEquals(client.port, portToUse)
       result <- client.findDep("org.scala-lan")
       _ = assertNoDiff(
         result.mkString("\n"),
@@ -84,6 +104,18 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
       )
       _ <- client.shutdown()
     } yield ()
+  }
+
+  override def afterEach(context: AfterEach): Unit = {
+    super.afterEach(context)
+    assertEquals(
+      McpConfig.readPort(server.workspace, "root", VSCodeEditor),
+      None,
+    )
+    assert(
+      McpConfig.readPort(server.workspace, "root", NoEditor).isDefined,
+      "MCP server port should be defined in the default location",
+    )
   }
 
 }

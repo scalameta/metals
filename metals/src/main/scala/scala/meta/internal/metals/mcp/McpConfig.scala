@@ -32,6 +32,14 @@ object McpConfig {
     configFile.writeText(newConfig)
   }
 
+  def deleteConfig(
+      projectPath: AbsolutePath,
+      editor: Editor,
+  ): Unit = {
+    val configFile = projectPath.resolve(s"${editor.settingsPath}mcp.json")
+    if (configFile.exists) configFile.delete()
+  }
+
   def createConfig(
       inputConfig: String,
       port: Int,
