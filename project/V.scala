@@ -25,6 +25,7 @@ object V {
   val genyVersion = "1.0.0"
   val gitter8Version = "0.17.0"
   val gradleBloop = "1.6.3"
+  val gradleBsp = "0.16.0"
   val java8Compat = "1.0.2"
   val javaSemanticdb = "0.10.4"
   val jsoup = "1.20.1"
