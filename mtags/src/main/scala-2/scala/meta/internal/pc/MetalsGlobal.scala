@@ -697,6 +697,15 @@ class MetalsGlobal(
 
   def CURSOR = "_CURSOR_"
 
+  /**
+   * Removes compilation unit from cache using [[scala.tools.nsc.intreactive.Global#toBeRemoved]].
+   * If used, `willBeRemovedAfterUsing` should be set to `true` in [[addCompilationUnit]].
+   * @param file file that should be removed.
+   */
+  def removeAfterUsing(file: AbstractFile): Unit = {
+    if (compileUnitsCache.canBeRemoved(file)) remove(file)
+  }
+
   private def remove(file: AbstractFile): Unit = {
     if (!richCompilationCache.contains(file.name)) {
       fullyCompiled.remove(file.name)
@@ -704,13 +713,19 @@ class MetalsGlobal(
     }
   }
 
+  /**
+   * @param `willBeRemovedAfterUsing`
+   *    - if set to true the file won't be added to last compiled units
+   *      and should be removed after the compilation unit is not used anymore
+   */
   def addCompilationUnit(
       code: String,
       filename: String,
       cursor: Option[Int],
       cursorName: String = CURSOR,
       isOutline: Boolean = false,
-      forceNew: Boolean = false
+      forceNew: Boolean = false,
+      willBeRemovedAfterUsing: Boolean = false
   ): RichCompilationUnit = {
     val codeWithCursor = cursor match {
       case Some(offset) =>
@@ -724,7 +739,7 @@ class MetalsGlobal(
         ScriptSourceFile(unit.source.file, unit.source.content)
       else unit.source
     val richUnit = new RichCompilationUnit(source)
-    if (!isOutline) {
+    if (!isOutline && !willBeRemovedAfterUsing) {
       compileUnitsCache.didGetUnit(richUnit.source.file).foreach(remove)
     }
     toBeRemoved.remove(richUnit.source.file)

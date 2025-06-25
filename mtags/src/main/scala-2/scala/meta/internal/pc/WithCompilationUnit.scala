@@ -5,15 +5,17 @@ import scala.meta.pc.VirtualFileParams
 
 class WithCompilationUnit(
     val compiler: MetalsGlobal,
-    val params: VirtualFileParams
+    val params: VirtualFileParams,
+    val shouldRemoveCompilationUnitAfterUse: Boolean = false
 ) {
   import compiler._
-  val unit: RichCompilationUnit = addCompilationUnit(
+  protected val unit: RichCompilationUnit = addCompilationUnit(
     code = params.text(),
     filename = params.uri().toString(),
-    cursor = None
+    cursor = None,
+    willBeRemovedAfterUsing = shouldRemoveCompilationUnitAfterUse
   )
-  val offset: Int = params match {
+  protected val offset: Int = params match {
     case p: OffsetParams => p.offset()
     case _: VirtualFileParams => 0
   }
@@ -35,7 +37,7 @@ class WithCompilationUnit(
    * @param sym symbol to find the alternative candidates for
    * @return set of possible symbols
    */
-  def symbolAlternatives(sym: Symbol): Set[Symbol] = {
+  protected def symbolAlternatives(sym: Symbol): Set[Symbol] = {
     val all =
       if (sym.isClass) {
         if (sym.owner.isMethod) Set(sym) ++ sym.localCompanion(pos)
@@ -80,7 +82,7 @@ class WithCompilationUnit(
     }
   }
 
-  def fallbackSymbol(name: Name, pos: Position): Option[Symbol] = {
+  protected def fallbackSymbol(name: Name, pos: Position): Option[Symbol] = {
     val context = doLocateImportContext(pos)
     context.lookupSymbol(name, sym => sym.isType) match {
       case LookupSucceeded(_, symbol) =>
@@ -88,4 +90,9 @@ class WithCompilationUnit(
       case _ => None
     }
   }
+
+  def cleanUp(): Unit =
+    if (shouldRemoveCompilationUnitAfterUse)
+      removeAfterUsing(unit.source.file)
+
 }

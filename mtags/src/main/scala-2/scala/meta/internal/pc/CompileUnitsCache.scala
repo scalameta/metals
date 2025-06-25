@@ -15,18 +15,22 @@ class CompileUnitsCache(keepLastCount: Short) {
   def didGetUnit(file: AbstractFile): Option[AbstractFile] = {
     lastCompiled
       .add(file)
-      .filterNot { f =>
-        Try(f.toURL.toURI()) match {
-          case Success(uri) => lastModified.contains(uri)
-          // we may create abstract files that are not valid URIs
-          case Failure(_) => false
-        }
-      }
+      .filterNot(wasModified)
   }
 
   def didChange(uri: URI): Unit = {
     lastModified.add(uri)
   }
+
+  def canBeRemoved(file: AbstractFile): Boolean =
+    !lastCompiled.contains(file) && !wasModified(file)
+
+  private def wasModified(file: AbstractFile) =
+    Try(file.toURL.toURI()) match {
+      case Success(uri) => lastModified.contains(uri)
+      // we may create abstract files that are not valid URIs
+      case Failure(_) => false
+    }
 }
 
 /**
@@ -65,4 +69,6 @@ class LastNElementsSet[T](keepLastCount: Short) {
       }
     }
   }
+
+  def contains(element: T): Boolean = cache.contains(element)
 }
