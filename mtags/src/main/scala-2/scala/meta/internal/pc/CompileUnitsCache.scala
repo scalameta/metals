@@ -35,7 +35,6 @@ class CompileUnitsCache(keepLastCount: Short) {
  */
 class LastNElementsSet[T](keepLastCount: Short) {
   private val cache = new mutable.LinkedHashSet[T]()
-  private val lock = new Object()
   private var last: Option[T] = None
 
   /**
@@ -44,7 +43,7 @@ class LastNElementsSet[T](keepLastCount: Short) {
    * @return the optional oldest element, that was removed from the set
    */
   def add(element: T): Option[T] = {
-    lock.synchronized {
+    this.synchronized {
       // this may be a very often scenario, so we want to optimize it
       if (last.contains(element)) None
       else {

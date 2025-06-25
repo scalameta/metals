@@ -784,7 +784,7 @@ abstract class MetalsLspService(
   ): Future[Unit]
 
   /**
-   * Correspands to LSP `didFocus` event.
+   * Corresponds to LSP `didFocus` event.
    */
   def didFocus(
       uri: String
