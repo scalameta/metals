@@ -215,10 +215,17 @@ class MetalsGlobal(
     lazy val isInStringInterpolation = {
       lastVisitedParentTrees match {
         case Apply(
-              Select(Apply(Ident(TermName("StringContext")), _), _),
+              Select(Apply(Ident(TermName("StringContext")), list), _),
               _
-            ) :: _ =>
-          true
+            ) :: _ if list.length > 0 =>
+
+          val inRange =
+            list.head.pos.start <= pos.start && pos.start <= list.last.pos.end
+
+          val inAnyPart =
+            list.exists(tree => tree.pos.includes(pos) || tree.pos.equals(pos))
+
+          inAnyPart || inRange
         case _ => false
       }
     }
