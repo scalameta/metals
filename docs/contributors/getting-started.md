@@ -19,15 +19,16 @@ You will need the following applications installed:
 
 ## Project structure
 
-### Main Metals project
-Main Metals module is in the `metals` directory.
+### Main Metals Project
+The main Metals module is located in the `metals` directory.
 
-First `initialize` LSP query is handled by `MetalsLanguageServer`, which then creates `WorkspaceLspService` and passes all next LSP queries there. `WorkspaceLspService` works as a distributor. Since a single workspace may contain multiple projects (workspace folders), `WorkspaceLspService` creates a service (`ProjectMetalsLspService`) for each of them and passes each LSP query to the correct one. Additionally to the project services, there is also a fallback one, which handles single files (`FallbackMetalsLspService`). Common parts of `ProjectMetalsLspService` and `FallbackMetalsLspService` are extracted in `MetalsLspService` class.
+#### Entrypoint to the Metals Server
+The first LSP request (`initialize`) is handled by `MetalsLanguageServer`, which then instantiates `WorkspaceLspService` to manage all subsequent LSP requests. Acting as a dispatcher, `WorkspaceLspService` handles multiple projects within a single workspace by creating a separate `ProjectMetalsLspService` for each one and routing LSP queries accordingly. In addition to these project-specific services, there's a fallback service — `FallbackMetalsLspService` — responsible for handling standalone files. Shared logic between `ProjectMetalsLspService` and `FallbackMetalsLspService` is encapsulated in the `MetalsLspService` class.
 
 ### Presentation Compiler
-Many of Metals features (e.g., go to references) work primarily using Semantic DB -- semantic information produced during compilation. However, for actions, that require very up-to-date information, Metals uses presentation compiler (pc). Presentation compiler uses Scala (interactive) compiler, so it is published for a specific Scala version. For Scala 2 presentation compiler it is the cross-published `mtags` module in Metals, for Scala 3 it is the `presentation-compiler` module in the compiler repository. 
+Many of Metals features (e.g., go to references) work primarily using [Semantic DB](https://scalameta.org/docs/semanticdb/guide.html) -- semantic information produced during compilation. However, for actions, that require very up-to-date information, Metals uses presentation compiler (pc). Presentation compiler uses Scala (interactive) compiler, so it is published for a specific Scala version. Presentation compiler for Scala 2 is in the the cross-published `mtags` module in Metals, for Scala 3 in the `scala3-presentation-compiler` module in the `scala/scala3` repository. 
 
-Metals loads a presentation compiler for a module (build target) for the required Scala version. The interfaces for communication with the presentation compiler are in `mtags-interfaces`, where `PresentationCompiler.java` is the interface of the presentation compiler.
+Metals loads a presentation compiler instance for a module (build target) using the required Scala version. The interfaces communcation with presentation compiler are in `mtags-interfaces`, where `PresentationCompiler.java` is the presentation compiler API.
 
 Additionally, Metals has a limited implementation of a presentation compiler for Java in `mtags-java`.
 
