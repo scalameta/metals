@@ -784,6 +784,9 @@ abstract class MetalsLspService(
       load: () => Future[Unit],
   ): Future[Unit]
 
+  /**
+   * Corresponds to LSP `didFocus` event.
+   */
   def didFocus(
       uri: String
   ): CompletableFuture[DidFocusResult.Value] = {
