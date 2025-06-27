@@ -47,6 +47,7 @@ import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.config.RunType
 import scala.meta.internal.metals.debug.DiscoveryFailures._
+import scala.meta.internal.metals.debug.server.AttachRemoteDebugAdapter
 import scala.meta.internal.metals.debug.server.DebugLogger
 import scala.meta.internal.metals.debug.server.DebugeeParamsCreator
 import scala.meta.internal.metals.debug.server.Discovered
@@ -365,6 +366,13 @@ class DebugProvider(
                 discovered,
               )
             }
+          case b.DebugSessionParamsDataKind.SCALA_ATTACH_REMOTE =>
+            for {
+              id <- buildTarget
+              projectInfo <- debugConfigCreator.create(id, cancelPromise)
+            } yield projectInfo.map(project =>
+              new AttachRemoteDebugAdapter(project, userConfig().javaHome)
+            )
           case kind =>
             Left(s"Starting debug session for $kind in not supported.")
         }
