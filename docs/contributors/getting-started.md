@@ -28,7 +28,7 @@ The first LSP request (`initialize`) is handled by `MetalsLanguageServer`, which
 ### Presentation Compiler
 Many of Metals features (e.g., go to references) work primarily using [Semantic DB](https://scalameta.org/docs/semanticdb/guide.html) -- semantic information produced during compilation. However, for actions, that require very up-to-date information, Metals uses presentation compiler (pc). Presentation compiler uses Scala (interactive) compiler, so it is published for a specific Scala version. Presentation compiler for Scala 2 is in the the cross-published `mtags` module in Metals, for Scala 3 in the `scala3-presentation-compiler` module in the `scala/scala3` repository. 
 
-Metals loads a presentation compiler instance for a module (build target) using the required Scala version. The interfaces communcation with presentation compiler are in `mtags-interfaces`, where `PresentationCompiler.java` is the presentation compiler API.
+Metals loads a presentation compiler instance for a module (build target) using the required Scala version. The interfaces communication with presentation compiler are in `mtags-interfaces`, where `PresentationCompiler.java` is the presentation compiler API.
 
 Additionally, Metals has a limited implementation of a presentation compiler for Java in `mtags-java`.
 
