@@ -212,12 +212,9 @@ class MetalsGlobal(
             ) :: _ if list.length > 0 =>
 
           val inRange =
-            list.head.pos.start <= pos.start && pos.start <= list.last.pos.end
+            list.head.pos.start <= pos.start && pos.end <= list.last.pos.end
 
-          val inAnyPart =
-            list.exists(tree => tree.pos.includes(pos) || tree.pos.equals(pos))
-
-          inAnyPart || inRange
+          inRange
         case _ => false
       }
     }
