@@ -734,7 +734,9 @@ final case class TestingServer(
       val workspaceFiles =
         nonTarget.flatMap(_.listRecursive.filter(_.isScalaOrJava).toList)
       val usesSystemExit =
-        workspaceFiles.exists(_.text.contains("System.exit(0)"))
+        workspaceFiles.exists(
+          _.readTextOpt.exists(_.contains("System.exit(0)"))
+        )
       if (!usesSystemExit)
         throw new RuntimeException(
           "All debug test for main classes should have `System.exit(0)`"
