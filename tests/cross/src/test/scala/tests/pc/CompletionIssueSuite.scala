@@ -248,6 +248,20 @@ class CompletionIssueSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
+    "complete-before-string",
+    """|object Main {
+       |  new File@@"/my/file/path"
+       |}
+       |""".stripMargin,
+    """|import java.io.File
+       |object Main {
+       |  new File"/my/file/path"
+       |}
+       |""".stripMargin,
+    filter = _ == "File - java.io"
+  )
+
+  checkEdit(
     "issue-1281-import-parens",
     """object obj {
       |  def method(arg: String): Unit = ()
