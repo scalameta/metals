@@ -20,21 +20,23 @@ object McpConfig {
       port: Int,
       projectName: String,
       projectPath: AbsolutePath,
-      editor: Editor = CursorEditor,
+      client: Client = CursorEditor,
   ): Unit = {
-    val configFile = projectPath.resolve(s"${editor.settingsPath}mcp.json")
+    val filename = client.fileName.getOrElse("mcp.json")
+    val configFile = projectPath.resolve(s"${client.settingsPath}$filename")
+    val serverName = client.serverEntry.getOrElse(s"$projectName-metals")
 
     // Read existing config if it exists
     val config = if (configFile.exists) configFile.readText else "{ }"
-    val newConfig = createConfig(config, port, projectName, editor)
+    val newConfig = createConfig(config, port, serverName, client)
     configFile.writeText(newConfig)
   }
 
   def createConfig(
       inputConfig: String,
       port: Int,
-      projectName: String,
-      editor: Editor = CursorEditor,
+      serverEntry: String,
+      editor: Client = CursorEditor,
   ): String = {
     val config = JsonParser.parseString(inputConfig).getAsJsonObject
 
@@ -53,16 +55,17 @@ object McpConfig {
     editor.additionalProperties.foreach { case (key, value) =>
       serverConfig.addProperty(key, value)
     }
-    mcpServers.add(s"$projectName-metals", serverConfig)
+    mcpServers.add(serverEntry, serverConfig)
     gson.toJson(config)
   }
 
   def readPort(
       projectPath: AbsolutePath,
       projectName: String,
-      editor: Editor,
+      editor: Client,
   ): Option[Int] = {
-    val configFile = projectPath.resolve(s"${editor.settingsPath}mcp.json")
+    val filename = editor.fileName.getOrElse("mcp.json")
+    val configFile = projectPath.resolve(s"${editor.settingsPath}$filename")
     if (configFile.exists)
       getPort(configFile.readText, projectName, editor)
     else None
@@ -71,7 +74,7 @@ object McpConfig {
   def getPort(
       configInput: String,
       projectName: String,
-      editor: Editor = CursorEditor,
+      editor: Client = CursorEditor,
   ): Option[Int] = {
     for {
       config <- Try(
@@ -86,15 +89,17 @@ object McpConfig {
 
 }
 
-case class Editor(
+case class Client(
     names: List[String],
     settingsPath: String,
     serverField: String,
     additionalProperties: List[(String, String)],
+    serverEntry: Option[String] = None,
+    fileName: Option[String] = None,
 )
 
 object VSCodeEditor
-    extends Editor(
+    extends Client(
       names = List(
         "Visual Studio Code",
         "Visual Studio Code - Insiders",
@@ -109,21 +114,33 @@ object VSCodeEditor
     )
 
 object CursorEditor
-    extends Editor(
+    extends Client(
       names = List("Cursor"),
       settingsPath = ".cursor/",
       serverField = "mcpServers",
       additionalProperties = Nil,
     )
 
-object NoEditor
-    extends Editor(
+object Claude
+    extends Client(
+      names = List("claude", "Claude Code", "claude-code"),
+      settingsPath = "./",
+      serverField = "mcpServers",
+      additionalProperties = List(
+        "type" -> "sse"
+      ),
+      serverEntry = Some("metals"),
+      fileName = Some(".mcp.json"),
+    )
+
+object NoClient
+    extends Client(
       names = Nil,
       settingsPath = ".metals/",
       serverField = "servers",
       additionalProperties = Nil,
     )
 
-object Editor {
-  val allEditors: List[Editor] = List(VSCodeEditor, CursorEditor)
+object Client {
+  val allClients: List[Client] = List(VSCodeEditor, CursorEditor, Claude)
 }

@@ -4,8 +4,9 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.mcp.Claude
+import scala.meta.internal.metals.mcp.Client
 import scala.meta.internal.metals.mcp.CursorEditor
-import scala.meta.internal.metals.mcp.Editor
 import scala.meta.internal.metals.mcp.McpConfig
 import scala.meta.internal.metals.mcp.VSCodeEditor
 import scala.meta.io.AbsolutePath
@@ -20,11 +21,16 @@ class McpConfigSuite extends BaseSuite {
       port: Int,
       projectName: String,
       expected: String,
-      editor: Editor = CursorEditor,
+      client: Client = CursorEditor,
   ): Unit = {
     test(name) {
       val obtained =
-        McpConfig.createConfig(inputConfig, port, projectName, editor)
+        McpConfig.createConfig(
+          inputConfig,
+          port,
+          client.serverEntry.getOrElse(projectName + "-metals"),
+          client,
+        )
       assertNoDiff(obtained, expected)
     }
   }
@@ -56,7 +62,7 @@ class McpConfigSuite extends BaseSuite {
       |    }
       |  }
       |}""".stripMargin,
-    editor = VSCodeEditor,
+    client = VSCodeEditor,
   )
 
   check(
@@ -71,6 +77,22 @@ class McpConfigSuite extends BaseSuite {
       |    }
       |  }
       |}""".stripMargin,
+  )
+
+  check(
+    "new-config-claude",
+    "{ }",
+    1234,
+    "test-project",
+    """{
+      |  "mcpServers": {
+      |    "metals": {
+      |      "url": "http://localhost:1234/sse",
+      |      "type": "sse"
+      |    }
+      |  }
+      |}""".stripMargin,
+    client = Claude,
   )
 
   check(
