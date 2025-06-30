@@ -421,37 +421,16 @@ class CompilerConfiguration(
         } yield jvmVersion.major
 
       releaseVersion match {
-        // https://github.com/scala/bug/issues/13045
-        case Some(version)
-            if version < 17 && scalaTarget.scalaBinaryVersion == "2.13" =>
+        case Some(version) =>
           /* Filter out -target: and -Xtarget: options, since they are not relevant and
            * might interfere with -release option */
           val filterOutTarget = scalacOptions.filterNot(opt =>
             opt.startsWith("-target:") || opt.startsWith("-Xtarget:")
           )
           filterOutTarget ++ List("-release", version.toString())
-        case _ if scalaTarget.scalaBinaryVersion == "2.13" =>
-          removeReleaseOptions(scalacOptions)
         case _ =>
           scalacOptions
       }
-    }
-  }
-
-  private def isHigherThan17(version: String) =
-    Try(version.toInt).toOption.exists(_ >= 17)
-
-  private def removeReleaseOptions(options: Seq[String]): Seq[String] = {
-    options match {
-      case "-release" :: version :: tail if isHigherThan17(version) =>
-        removeReleaseOptions(tail)
-      case opt :: tail
-          if opt.startsWith("-release") && isHigherThan17(
-            opt.stripPrefix("-release:")
-          ) =>
-        removeReleaseOptions(tail)
-      case head :: tail => head +: removeReleaseOptions(tail)
-      case Nil => options
     }
   }
 

@@ -36,6 +36,7 @@ import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Command
 import scala.meta.internal.metals.Debug
+import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.DebugSession
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DecoderResponse
@@ -327,6 +328,13 @@ final case class TestingServer(
   ): Future[DecoderResponse] = {
     executeCommand(ServerCommands.DecodeFile, uri)
       .asInstanceOf[Future[DecoderResponse]]
+  }
+
+  def executeDiscoverMainClassesCommand(
+      params: DebugDiscoveryParams
+  ): Future[b.DebugSessionParams] = {
+    executeCommand(ServerCommands.DiscoverMainClasses, params)
+      .asInstanceOf[Future[b.DebugSessionParams]]
   }
 
   def assertSuperMethodHierarchy(
@@ -688,6 +696,11 @@ final case class TestingServer(
 
   def waitFor(millis: Long): Future[Unit] = Future { Thread.sleep(millis) }
 
+  /**
+   * @param target the build target to debug, like "myproject.test"
+   * @param kind one of the constants in [[ch.epfl.scala.bsp4j.TestParamsDataKind]] or [[ch.epfl.scala.bsp4j.DebugSessionParamsDataKind]].
+   * @param parameter the parameter to pass to the debug adapter, for example an instance of [[scala.meta.internal.metals.ScalaTestSuites]].
+   */
   def startDebugging(
       target: String,
       kind: String,
@@ -721,7 +734,9 @@ final case class TestingServer(
       val workspaceFiles =
         nonTarget.flatMap(_.listRecursive.filter(_.isScalaOrJava).toList)
       val usesSystemExit =
-        workspaceFiles.exists(_.text.contains("System.exit(0)"))
+        workspaceFiles.exists(
+          _.readTextOpt.exists(_.contains("System.exit(0)"))
+        )
       if (!usesSystemExit)
         throw new RuntimeException(
           "All debug test for main classes should have `System.exit(0)`"
@@ -758,6 +773,7 @@ final case class TestingServer(
     fullServer.didFocus(toPath(filename).toURI.toString).asScala
   }
 
+  /** Saves the file to disk and sends `didSave` notification to the server. */
   def didSave(filename: String): Future[Unit] = {
     Debug.printEnclosing(filename)
     val abspath = toPath(filename)

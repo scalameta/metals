@@ -55,7 +55,6 @@ import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
 import scala.meta.internal.metals.debug.server.MetalsDebuggee
 import scala.meta.internal.metals.debug.server.TestSuiteDebugAdapter
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
-import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.io.AbsolutePath
 
 import bloop.config.Config
@@ -80,7 +79,7 @@ class DebugProvider(
     compilations: Compilations,
     languageClient: MetalsLanguageClient,
     buildClient: MetalsBuildClient,
-    index: OnDemandSymbolIndex,
+    buildTargetClassesFinder: BuildTargetClassesFinder,
     stacktraceAnalyzer: StacktraceAnalyzer,
     clientConfig: ClientConfiguration,
     compilers: Compilers,
@@ -119,12 +118,6 @@ class DebugProvider(
     if (runner != null) runner.cancel()
     debugSessions.cancel()
   }
-
-  lazy val buildTargetClassesFinder = new BuildTargetClassesFinder(
-    buildTargets,
-    buildTargetClasses,
-    index,
-  )
 
   def start(
       parameters: b.DebugSessionParams
@@ -336,7 +329,11 @@ class DebugProvider(
           case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
             for {
               id <- buildTarget
-              projectInfo <- debugConfigCreator.create(id, cancelPromise)
+              projectInfo <- debugConfigCreator.create(
+                id,
+                cancelPromise,
+                isTests = false,
+              )
               scalaMainClass <- params.asScalaMainClass()
             } yield projectInfo.map(
               new MainClassDebugAdapter(
@@ -350,7 +347,11 @@ class DebugProvider(
               b.TestParamsDataKind.SCALA_TEST_SUITES) =>
             for {
               id <- buildTarget
-              projectInfo <- debugConfigCreator.create(id, cancelPromise)
+              projectInfo <- debugConfigCreator.create(
+                id,
+                cancelPromise,
+                isTests = true,
+              )
               testSuites <- params.asScalaTestSuites()
             } yield {
               for {
@@ -394,6 +395,9 @@ class DebugProvider(
       id: BuildTargetIdentifier,
       testClasses: b.ScalaTestSuites,
   ): Future[Map[Config.TestFramework, List[Discovered]]] = {
+    scribe.debug(
+      s"Discovering tests for build target: $id, test classes: ${testClasses.getSuites().asScala.map(_.getClassName()).mkString(", ")}"
+    )
     val symbolInfosList =
       for {
         selection <- testClasses.getSuites().asScala.toList
@@ -404,6 +408,9 @@ class DebugProvider(
       } yield compilers.info(id, sym).map(_.map(pcInfo => (info, pcInfo)))
 
     Future.sequence(symbolInfosList).map { infos =>
+      scribe.debug(
+        s"Found infos about: ${infos.flatten.map(_._2.symbol).mkString(", ")} test classes"
+      )
       val allInfo = infos.flatten
       if (allInfo.isEmpty) {
         val suitesString =

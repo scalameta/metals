@@ -177,15 +177,16 @@ case class ScalaPresentationCompiler(
         case _ => false
       }
 
-    if (returnDiagnostics) {
-      compilerAccess.withInterruptableCompiler(
-        List.empty[Diagnostic].asJava,
-        params.token()
-      ) { pc =>
-        val compiler = pc.compiler(params)
+    compilerAccess.withInterruptableCompiler(
+      List.empty[Diagnostic].asJava,
+      params.token()
+    ) { pc =>
+      val compiler = pc.compiler(params)
+      compiler.didChange(params.uri())
+      if (returnDiagnostics) {
         DiagnosticsProvider.getDiagnostics(compiler, params).asJava
-      }(params.toQueryContext)
-    } else CompletableFuture.completedFuture(Nil.asJava)
+      } else List.empty[Diagnostic].asJava
+    }(params.toQueryContext)
   }
 
   def didClose(uri: URI): Unit = {

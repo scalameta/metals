@@ -122,6 +122,7 @@ abstract class BaseLspSuite(
   ): Future[InitializeResult] = {
     Debug.printEnclosing()
     writeLayout(layout)
+    scribe.info(s"Initializing with $initializer")
     initializer.initialize(workspace, server, client, expectError, userConfig)
   }
 
@@ -133,6 +134,7 @@ abstract class BaseLspSuite(
     layout.foreach { case (folderName, layout) =>
       writeLayout(layout, folderName)
     }
+    scribe.info(s"Initializing with $initializer")
     initializer.initialize(
       workspace,
       server,

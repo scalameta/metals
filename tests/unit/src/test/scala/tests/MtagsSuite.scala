@@ -75,10 +75,8 @@ class MtagsScala2Suite
       (file: InputFile) => {
         // don't assert fidelity where semanticdb-scalac has known bugs and mtags is correct.
         List(
-          "ImplicitClasses",
-          "PatternMatching",
-          "ImplicitConversions",
-          "MacroAnnotation",
+          "ImplicitClasses", "PatternMatching", "ImplicitConversions",
+          "MacroAnnotation", "SQLQueries",
         ).exists { name => file.file.toNIO.endsWith(s"$name.scala") }
       },
     )

@@ -1,15 +1,10 @@
 package tests.mcp
 
-import scala.concurrent.Future
-
-import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.mcp.McpConfig
-import scala.meta.internal.metals.mcp.VSCodeEditor
-
 import tests.BaseLspSuite
-import tests.mcp.TestMcpClient
 
-class McpCompileToolsLspSuite extends BaseLspSuite("mcp-compile-tools") {
+class McpCompileToolsLspSuite
+    extends BaseLspSuite("mcp-compile-tools")
+    with McpTestUtils {
 
   test("compile-file") {
     cleanWorkspace()
@@ -30,21 +25,15 @@ class McpCompileToolsLspSuite extends BaseLspSuite("mcp-compile-tools") {
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
-      _ <- server.didChangeConfiguration(
-        UserConfiguration(startMcpServer = true).toString
-      )
-      port <- Future.successful(
-        McpConfig.readPort(server.workspace, "root", VSCodeEditor)
-      )
-      _ = assert(port.isDefined, "MCP server port should be defined")
-      client = new TestMcpClient(s"http://localhost:${port.get}/sse")
-      _ <- client.initialize()
-
+      client <- startMcpServer()
       // Test compiling file with errors
       result1 <- client.compileFile("a/src/main/scala/com/example/Hello.scala")
       _ = assert(result1.contains("Found errors in"), result1)
       _ = assert(
-        result1.contains("a/src/main/scala/com/example/Hello.scala"),
+        result1.contains {
+          if (isWindows) "a\\src\\main\\scala\\com\\example\\Hello.scala"
+          else "a/src/main/scala/com/example/Hello.scala"
+        },
         result1,
       )
       _ = assert(result1.contains("type mismatch"), result1)
@@ -86,16 +75,7 @@ class McpCompileToolsLspSuite extends BaseLspSuite("mcp-compile-tools") {
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
-      _ <- server.didChangeConfiguration(
-        UserConfiguration(startMcpServer = true).toString
-      )
-      port <- Future.successful(
-        McpConfig.readPort(server.workspace, "root", VSCodeEditor)
-      )
-      _ = assert(port.isDefined, "MCP server port should be defined")
-      client = new TestMcpClient(s"http://localhost:${port.get}/sse")
-      _ <- client.initialize()
-
+      client <- startMcpServer()
       // Test compiling module with errors
       result1 <- client.compileModule("a")
       _ = assert(result1.contains("Found errors in the module"), result1)

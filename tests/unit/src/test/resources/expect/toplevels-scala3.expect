@@ -38,6 +38,7 @@ example/NamedArguments.scala -> example/User#
 example/Ord.scala -> example/Ord#
 example/Ord.scala -> example/Ord$package.
 example/PatternMatching.scala -> example/PatternMatching#
+example/SQLQueries.scala -> example/SQLQueries#
 example/Scalalib.scala -> example/Scalalib#
 example/StructuralTypes.scala -> example/StructuralTypes.
 example/ToplevelDefVal.scala -> example/ToplevelDefVal$package.
