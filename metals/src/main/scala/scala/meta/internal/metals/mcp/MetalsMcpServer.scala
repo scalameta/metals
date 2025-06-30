@@ -325,7 +325,8 @@ class MetalsMcpServer(
          |      "type": "string",
          |      "description": "The module's (build target's) name to compile"
          |    }
-         |  }
+         |  },
+         |  "required": ["module"]
          |}""".stripMargin
     new AsyncToolSpecification(
       new Tool("compile-module", "Compile a chosen Scala module", schema),
@@ -383,23 +384,22 @@ class MetalsMcpServer(
     val schema =
       """|{
          |  "type": "object",
-         |    "properties": {
-         |      "testFile": {
-         |        "type": "string",
-         |        "description": "The file containing the test suite, if empty we will try to detect it"
-         |      },
-         |      "testClass": {
-         |        "type": "string",
-         |        "description": "Fully qualified name of the test class to run"
-         |      },
-         |      "verbose": {
-         |        "type": "boolean",
-         |        "description": "Print all output from the test suite, otherwise prints only errors and summary",
-         |        "default": false
-         |      }
+         |  "properties": {
+         |    "testFile": {
+         |      "type": "string",
+         |      "description": "The file containing the test suite, if empty we will try to detect it"
          |    },
-         |    "required": ["testClass"]
-         |  }
+         |    "testClass": {
+         |      "type": "string",
+         |      "description": "Fully qualified name of the test class to run"
+         |    },
+         |    "verbose": {
+         |      "type": "boolean",
+         |      "description": "Print all output from the test suite, otherwise prints only errors and summary",
+         |      "default": false
+         |    }
+         |  },
+         |  "required": ["testClass"]
          |}""".stripMargin
     new AsyncToolSpecification(
       new Tool("test", "Run Scala test suite", schema),
