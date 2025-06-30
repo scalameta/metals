@@ -369,7 +369,11 @@ class DebugProvider(
           case b.DebugSessionParamsDataKind.SCALA_ATTACH_REMOTE =>
             for {
               id <- buildTarget
-              projectInfo <- debugConfigCreator.create(id, cancelPromise)
+              projectInfo <- debugConfigCreator.create(
+                id,
+                cancelPromise,
+                isTests = false,
+              )
             } yield projectInfo.map(project =>
               new AttachRemoteDebugAdapter(project, userConfig().javaHome)
             )

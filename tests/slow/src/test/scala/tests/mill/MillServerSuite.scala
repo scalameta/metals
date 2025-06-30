@@ -1,10 +1,18 @@
 package tests.mill
 
+import java.net.URI
+
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.concurrent.duration._
 
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.MillDigest
+import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.DebugDiscoveryParams
+import scala.meta.internal.metals.DebugSession
+import scala.meta.internal.metals.DebugUnresolvedAttachRemoteParams
+import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
@@ -13,6 +21,7 @@ import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.StatusBarConfig
 import scala.meta.internal.metals.clients.language.StatusType
+import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
@@ -412,6 +421,89 @@ class MillServerSuite
     } yield assert(
       output.contains("All tests in foo.FooMUnitTests passed"),
       clue = output,
+    )
+  }
+
+  test("attach") {
+    val port = 5566
+    def runningMain() = Future {
+      val classpathJar = workspace.resolve(".metals/.tmp").list.head.toString()
+      ShellRunner.runSync(
+        List(
+          JdkSources.defaultJavaHome(None).head.resolve("bin/java").toString,
+          "-Dproperty=Foo",
+          s"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=$port",
+          "-cp",
+          classpathJar,
+          "bar.Main",
+          "Bar",
+        ),
+        workspace,
+        true,
+        Map("HELLO" -> "Foo"),
+        propagateError = true,
+        timeout = 60.seconds,
+      )
+    }
+
+    for {
+      _ <- initialize(
+        s"""|/build.sc
+            |import mill._, scalalib._
+            |object foo extends ScalaModule {
+            |  def scalaVersion = "${V.scala213}"
+            |}
+            |/foo/src/bar/Main.scala
+            |package bar
+            |object Main {
+            |  def main(args: Array[String]) = {
+            |    val foo = sys.props.getOrElse("property", "")
+            |    val bar = args(0)
+            |    val env = sys.env.get("HELLO")
+            |    print(foo + bar)
+            |    env.foreach(print)
+            |    System.exit(0)
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ <- server.headServer.buildServerPromise.future
+      _ <- server.didOpen("foo/src/bar/Main.scala")
+      _ <- server.didSave("foo/src/bar/Main.scala")
+      // creates a classpath jar that we can use
+      _ <- server.executeDiscoverMainClassesCommand(
+        new DebugDiscoveryParams(
+          null,
+          "run",
+          "bar.Main",
+        )
+      )
+      runMain = runningMain()
+      debugSession <- server.executeCommand(
+        ServerCommands.StartAttach,
+        DebugUnresolvedAttachRemoteParams("localhost", port),
+      )
+      debugger = debugSession match {
+        case DebugSession(_, uri) =>
+          scribe.info(s"Starting debug session for $uri")
+          TestDebugger(
+            URI.create(uri),
+            Stoppage.Handler.Continue,
+            requestOtherThreadStackTrace = false,
+          )
+        case _ => throw new RuntimeException("Debug session not found")
+      }
+      _ <- debugger.initialize
+      _ <- debugger.attach(port)
+      _ <- debugger.configurationDone
+      output <- runMain
+      _ <- debugger.disconnect
+      _ <- debugger.shutdown
+      _ <- debugger.allOutput
+    } yield assertNoDiff(
+      output.getOrElse(""),
+      s"""|Listening for transport dt_socket at address: $port
+          |FooBarFoo""".stripMargin,
     )
   }
 
