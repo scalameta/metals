@@ -348,7 +348,7 @@ class ScalatestFinderSuite extends FunSuite {
     "any-async-feature-spec",
     """|import org.scalatest.featurespec.AsyncFeatureSpecLike
        |
-       |class FeatureSpec extends AsyncFeatureSpecLike {
+       |class AsyncFeatureSpec extends AsyncFeatureSpecLike {
        |  Feature("A test feature") {
        |    Scenario("A test scenario") {
        |      assert(1 + 1 == 2)
@@ -359,7 +359,7 @@ class ScalatestFinderSuite extends FunSuite {
        |  }
        |}
        |""".stripMargin,
-    FullyQualifiedName("FeatureSpec"),
+    FullyQualifiedName("AsyncFeatureSpec"),
     Set(
       ("A test feature A test scenario", QuickRange(4, 4, 4, 31)),
       ("A test feature Another test scenario", QuickRange(7, 4, 7, 37)),
