@@ -14,7 +14,7 @@
     "@docusaurus/core": "3.8.0",
     "@docusaurus/faster": "3.8.0",
     "@docusaurus/plugin-client-redirects": "3.8.0",
-    "@docusaurus/preset-classic": "3.8.0",
+    "@docusaurus/preset-classic": "3.8.1",
     "@easyops-cn/docusaurus-search-local": "0.49.2",
     "clsx": "^2.1.1",
     "react": "^19.1.0",
