@@ -294,6 +294,7 @@ object ScalatestStyle {
       AnyFunSpec,
       AnyWordSpec,
       AnyFreeSpec,
+      AnyFeatureSpec,
     )
 
   val baseSymbols: Set[String] = styles.flatMap(_.symbols).toSet
@@ -358,16 +359,16 @@ object ScalatestStyle {
 
   case object AnyFeatureSpec extends ScalatestStyle {
     val symbols: Set[String] = Set(
-      "org/scalatest/freespec/AnyFeatureSpec#",
-      "org/scalatest/freespec/AnyFeatureSpecLike#",
-      "org/scalatest/freespec/AsyncFeatureSpec#",
-      "org/scalatest/freespec/AsyncFeatureSpecLike#",
-      "org/scalatest/freespec/FixtureAnyFeatureSpec#",
-      "org/scalatest/freespec/FixtureAnyFeatureSpecLike#",
-      "org/scalatest/freespec/FixtureAsyncFeatureSpec#",
-      "org/scalatest/freespec/FixtureAsyncFeatureSpecLike#",
+      "org/scalatest/featurespec/AnyFeatureSpec#",
+      "org/scalatest/featurespec/AnyFeatureSpecLike#",
+      "org/scalatest/featurespec/AsyncFeatureSpec#",
+      "org/scalatest/featurespec/AsyncFeatureSpecLike#",
+      "org/scalatest/featurespec/FixtureAnyFeatureSpec#",
+      "org/scalatest/featurespec/FixtureAnyFeatureSpecLike#",
+      "org/scalatest/featurespec/FixtureAsyncFeatureSpec#",
+      "org/scalatest/featurespec/FixtureAsyncFeatureSpecLike#",
     )
-    override val intermediateMethods: Set[String] = Set("Feature", "feature")
-    override val leafMethods: Set[String] = Set("Scenario", "scenario")
+    override val intermediateMethods: Set[String] = Set("Feature")
+    override val leafMethods: Set[String] = Set("Scenario")
   }
 }
