@@ -11,6 +11,7 @@ object V {
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
   val sbtScala = "2.12.18"
+  val sbtMill = "2.13.15"
   // Rules need to be manually updated to support
   val bazelScalaVersion = "2.13.12"
   val betterMonadicFor = "0.3.1"
@@ -168,5 +169,6 @@ object V {
     sbtScala,
     scala212,
     scala213,
+    sbtMill,
   ).toList
 }
