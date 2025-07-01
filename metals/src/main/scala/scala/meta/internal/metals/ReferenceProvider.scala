@@ -574,7 +574,7 @@ final class ReferenceProvider(
       semanticdbDistance = buffers.tokenEditDistance(
         sourcePath,
         semanticdb.text,
-        trees,
+        scalaVersionSelector,
       )
       uri = sourcePath.toURI.toString
       reference <-

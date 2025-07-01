@@ -444,17 +444,75 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     } yield ()
   }
 
-  object A {
-    val path = "a/src/main/scala/a/A.scala"
-    def content(tpe: String, value: String): String =
-      s"""|package a
-          |
-          |object A {
-          |  val a: $tpe = $value
-          |}
-          |""".stripMargin
+  test("errors-in-dependency-2") {
+    cleanWorkspace()
+    val C = new Basic("c")
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {},
+           |  "b": { "dependsOn": [ "a" ] },
+           |  "c": { "dependsOn": [ "a" ] }
+           |}
+           |/${A.path}
+           |${A.content("Int", "1")}
+           |/${B.path}
+           |${B.content("Int", "1")}
+           |/${C.path}
+           |${C.content("Int", "1")}
+        """.stripMargin
+      )
+
+      _ <- server.didOpen(B.path)
+      _ = assertNoDiagnostics()
+      _ <- server.didChange(B.path) { _ => B.content("Int", "\"aa\"") }
+      _ <- server.didSave(B.path)
+
+      _ <- server.didOpen(A.path)
+      _ <- server.didChange(A.path) { _ => A.content("Int", "\"aa\"") }
+      _ <- server.didSave(A.path)
+      _ <- server.didChange(A.path) { _ => A.content("Int", "1") }
+      _ <- server.didSave(A.path)
+
+      _ <- server.didOpen(B.path)
+      _ <- server.didChange(B.path) { _ => B.content("Int", "1") }
+      _ <- server.didSave(B.path)
+
+      _ <- server.didOpen(C.path)
+      _ <- server.didChange(C.path) { _ => C.content("Int", "\"aa\"") }
+      _ <- server.didSave(C.path)
+
+      _ <- server.didOpen(A.path)
+      _ <- server.didChange(A.path) { _ => A.content("Int", "\"aa\"") }
+      _ <- server.didSave(A.path)
+      _ <- server.didChange(A.path) { _ => A.content("Int", "1") }
+      _ <- server.didSave(A.path)
+
+      _ <- server.didOpen(C.path)
+      _ <- server.didChange(C.path) { _ => C.content("Int", "1") }
+      _ <- server.didSave(C.path)
+
+      _ = assertNoDiagnostics()
+
+      _ <- server.didOpen(B.path)
+      _ <- server.didChange(B.path) { _ => B.content("Int", "\"aa\"") }
+      _ <- server.didSave(B.path)
+
+      _ = assertNoDiff(
+        client.pathDiagnostics(B.path),
+        """|b/src/main/scala/b/B.scala:4:16: error: type mismatch;
+           | found   : String("aa")
+           | required: Int
+           |  val b: Int = "aa"
+           |               ^^^^
+           |""".stripMargin,
+      )
+    } yield ()
   }
 
+  object A extends Basic("a")
   object B {
     val path = "b/src/main/scala/b/B.scala"
     def content(tpe: String, value: String): String =
@@ -463,6 +521,17 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
           |object B {
           |  val b: $tpe = $value
           |  val a1: $tpe = a.A.a
+          |}
+          |""".stripMargin
+  }
+
+  class Basic(name: String) {
+    val path: String = s"$name/src/main/scala/$name/${name.toUpperCase()}.scala"
+    def content(tpe: String, value: String): String =
+      s"""|package $name
+          |
+          |object ${name.toUpperCase()} {
+          |  val $name: $tpe = $value
           |}
           |""".stripMargin
   }

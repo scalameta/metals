@@ -38,13 +38,16 @@ class GradleRepositoriesTest extends BaseSuite {
         |      }
         |    }
         |    maven {
+        |      url "https://central.sonatype.com/repository/maven-snapshots"
+        |    }
+        |    maven {
         |      url "${userHomeString + ".m2/repository"}"
         |    }
         |    maven {
         |      url "https://oss.sonatype.org/content/repositories/public/"
         |    }
         |    maven {
-        |      url "https://oss.sonatype.org/content/repositories/snapshots/"
+        |      url "https://central.sonatype.com/repository/maven-snapshots/"
         |    }
         |  }
         |""".stripMargin,

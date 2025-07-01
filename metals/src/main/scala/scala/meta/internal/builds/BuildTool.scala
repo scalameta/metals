@@ -45,7 +45,7 @@ trait BuildTool {
 
   val forcesBuildServer = false
 
-  val isBloopInstallProvider = false
+  def isBloopInstallProvider: Boolean = false
 
   /**
    * Name of the build server if different than the actual build-tool that is

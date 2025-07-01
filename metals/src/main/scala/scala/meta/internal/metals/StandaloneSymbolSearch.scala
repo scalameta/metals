@@ -9,7 +9,6 @@ import scala.collection.concurrent.TrieMap
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
-import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.ContentType
 import scala.meta.pc.ParentSymbols
@@ -25,8 +24,8 @@ class StandaloneSymbolSearch(
     classpath: Seq[AbsolutePath],
     sources: Seq[AbsolutePath],
     buffers: Buffers,
+    scalaVersionSelector: ScalaVersionSelector,
     excludedPackages: () => ExcludedPackagesHandler,
-    trees: Trees,
     buildTargets: BuildTargets,
     saveSymbolFileToDisk: Boolean,
     sourceMapper: SourceMapper,
@@ -59,10 +58,10 @@ class StandaloneSymbolSearch(
       mtags,
       workspace,
       semanticdbsFallback = () => None,
-      trees,
       buildTargets,
       saveSymbolFileToDisk,
       sourceMapper,
+      scalaVersionSelector,
     )
 
   def documentation(
@@ -137,11 +136,11 @@ object StandaloneSymbolSearch {
       scalaVersion: String,
       workspace: AbsolutePath,
       buffers: Buffers,
+      scalaVersionSelector: ScalaVersionSelector,
       sources: Seq[Path],
       classpath: Seq[Path],
       excludedPackages: () => ExcludedPackagesHandler,
       userConfig: () => UserConfiguration,
-      trees: Trees,
       buildTargets: BuildTargets,
       saveSymbolFileToDisk: Boolean,
       sourceMapper: SourceMapper,
@@ -160,8 +159,8 @@ object StandaloneSymbolSearch {
       classpathWithExtras,
       sourcesWithExtras,
       buffers,
+      scalaVersionSelector,
       excludedPackages,
-      trees,
       buildTargets,
       saveSymbolFileToDisk,
       sourceMapper,

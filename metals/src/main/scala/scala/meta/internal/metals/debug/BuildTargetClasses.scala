@@ -22,9 +22,19 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
     val ec: ExecutionContext
 ) {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
-  private val jvmRunEnvironments
-      : TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem] =
-    TrieMap.empty[b.BuildTargetIdentifier, b.JvmEnvironmentItem]
+
+  type JVMRunEnvironmentsMap =
+    TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem]
+
+  /** Cache for the 'buildTarget/jvmRunEnvironment' BSP requests */
+  private val jvmRunEnvironments: JVMRunEnvironmentsMap = TrieMap.empty
+
+  /** Cache for the 'buildTarget/jvmTestRunEnvironment' BSP requests */
+  private val jvmTestRunEnvironments: JVMRunEnvironmentsMap = TrieMap.empty
+
+  def jvmRunEnvironmentsFor(isTests: Boolean): JVMRunEnvironmentsMap =
+    if (isTests) jvmTestRunEnvironments else jvmRunEnvironments
+
   val rebuildIndex: BatchedFunction[b.BuildTargetIdentifier, Unit] =
     BatchedFunction.fromFuture(
       fetchClasses,
@@ -42,6 +52,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
 
   def clear(): Unit = {
     jvmRunEnvironments.clear()
+    jvmTestRunEnvironments.clear()
   }
 
   def findMainClassByName(
@@ -62,12 +73,14 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
       name: String,
       id: b.BuildTargetIdentifier,
   ): List[(String, TestSymbolInfo)] = {
-    index.get(id).toList.flatMap {
-      _.testClasses
-        .filter { case (_, info) =>
-          info.fullyQualifiedName == name
-        }
-        .toList
+    index.get(id).toList.flatMap { classes =>
+      scribe.debug(
+        s"""|Found test classes:
+            |${classes.testClasses.values.map(info => s"\t- ${info.fullyQualifiedName}").mkString("\n")}""".stripMargin
+      )
+      classes.testClasses.filter { case (_, info) =>
+        info.fullyQualifiedName == name
+      }.toList
     }
   }
 
@@ -117,40 +130,74 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
   }
 
   def jvmRunEnvironmentSync(
-      buildTargetId: b.BuildTargetIdentifier
-  ): Option[b.JvmEnvironmentItem] = jvmRunEnvironments.get(buildTargetId)
+      buildTargetId: b.BuildTargetIdentifier,
+      isTests: Boolean,
+  ): Option[b.JvmEnvironmentItem] =
+    jvmRunEnvironmentsFor(isTests).get(buildTargetId)
 
   def jvmRunEnvironment(
-      buildTargetId: b.BuildTargetIdentifier
+      buildTargetId: b.BuildTargetIdentifier,
+      isTests: Boolean,
   ): Future[Option[b.JvmEnvironmentItem]] = {
-    jvmRunEnvironments.get(buildTargetId) match {
+    val environments = jvmRunEnvironmentsFor(isTests)
+
+    environments.get(buildTargetId) match {
       case None =>
+        scribe.trace(
+          s"No cached JVM run environment for build target $buildTargetId (isTests = $isTests)."
+        )
+
         buildTargets.buildServerOf(buildTargetId) match {
-          case None => Future.successful(None)
+          case None =>
+            scribe.trace(
+              s"No build server connection found for build target $buildTargetId (isTests = $isTests)."
+            )
+            Future.successful(None)
+
           case Some(connection) =>
-            connection
-              .jvmRunEnvironment(
-                new b.JvmRunEnvironmentParams(List(buildTargetId).asJava)
-              )
-              .map { env =>
-                cacheJvmRunEnvironment(env)
-                env.getItems().asScala.headOption
-              }
+            scribe.trace(
+              s"Found build server connection for build target $buildTargetId (isTests = $isTests)."
+            )
+            val buildTargets = List(buildTargetId)
+
+            def processResult(items: Iterable[b.JvmEnvironmentItem]) = {
+              cacheJvmRunEnvironment(items.iterator, environments)
+              items.headOption
+            }
+
+            if (isTests) {
+              connection
+                .jvmTestEnvironment(
+                  new b.JvmTestEnvironmentParams(buildTargets.asJava)
+                )
+                .map(env => processResult(env.getItems().asScala))
+            } else {
+              connection
+                .jvmRunEnvironment(
+                  new b.JvmRunEnvironmentParams(buildTargets.asJava)
+                )
+                .map(env => processResult(env.getItems().asScala))
+            }
 
         }
+
       case jvmRunEnv: Some[b.JvmEnvironmentItem] =>
+        scribe.trace(
+          s"Found cached JVM run environment for build target $buildTargetId (isTests = $isTests)."
+        )
         Future.successful(jvmRunEnv)
     }
   }
 
   private def cacheJvmRunEnvironment(
-      result: b.JvmRunEnvironmentResult
+      items: Iterator[b.JvmEnvironmentItem],
+      environments: JVMRunEnvironmentsMap,
   ): Unit = {
     for {
-      item <- result.getItems().asScala
+      item <- items
       target = item.getTarget
     } {
-      jvmRunEnvironments.put(target, item)
+      environments.put(target, item)
     }
   }
 

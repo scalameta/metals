@@ -8,6 +8,7 @@ import scala.meta.io.AbsolutePath
 
 import tests.BaseImportSuite
 
+/** Tests that Mill can be used with bloop */
 class MillLspSuite extends BaseImportSuite("mill-import") {
 
   def buildTool: MillBuildTool = MillBuildTool(() => userConfig, workspace)

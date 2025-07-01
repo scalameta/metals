@@ -128,6 +128,10 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   var showMessageHandler: MessageParams => Unit = { (_: MessageParams) =>
     ()
   }
+  var futureShowMessageRequestHandler
+      : ShowMessageRequestParams => Option[Future[MessageActionItem]] = {
+    (_: ShowMessageRequestParams) => None
+  }
   var showMessageRequestHandler
       : ShowMessageRequestParams => Option[MessageActionItem] = {
     (_: ShowMessageRequestParams) => None
@@ -373,72 +377,74 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       )
       .getMessage()
 
-    CompletableFuture.completedFuture {
-      messageRequests.addLast(params.getMessage)
-      showMessageRequestHandler(params).getOrElse {
-        if (isSameMessage(ImportBuildChanges.params)) {
-          importBuildChanges
-        } else if (isSameGenerateBspAndConnectMessage) {
-          generateBspAndConnect
-        } else if (isSameMessage(ImportBuild.params)) {
-          importBuild
-        } else if (BloopVersionChange.params() == params) {
-          restartBloop
-        } else if (CheckDoctor.isDoctor(params)) {
-          getDoctorInformation
-        } else if (BspSwitch.isSelectBspServer(params)) {
-          selectBspServer(params.getActions.asScala.toSeq)
-        } else if (params.getMessage == ChooseBuildTool.message) {
-          chooseBuildTool(params.getActions.asScala.toSeq)
-        } else if (MissingScalafmtConf.isCreateScalafmtConf(params)) {
-          createScalaFmtConf
-        } else if (params.getMessage() == MainClass.message) {
-          chooseMainClass(params.getActions.asScala.toSeq)
-        } else if (isNewBuildToolDetectedMessage()) {
-          switchBuildTool
-        } else if (ImportScalaScript.params() == params) {
-          importScalaCliScript
-        } else if (ResetWorkspace.params() == params) {
-          resetWorkspace
-        } else if (OldBloopVersionRunning.params() == params) {
-          OldBloopVersionRunning.notNow
-        } else if (
-          params
-            .getMessage()
-            .endsWith(
-              FileOutOfScalaCliBspScope
-                .askToRegenerateConfigAndRestartBspMsg("")
-            )
-        ) {
-          regenerateAndRestartScalaCliBuildSever
-        } else if (params.getMessage() == choicesMessage) {
-          params.getActions().asScala.head
-        } else if (
-          params.getMessage() == ConnectionBspStatus
-            .noResponseParams("Bill", Icons.default)
-            .logMessage(Icons.default)
-        ) {
-          new MessageActionItem("ok")
-        } else if (
-          params.getMessage().startsWith("For which folder would you like to")
-        ) {
-          chooseWorkspaceFolder(params.getActions().asScala.toSeq)
-        } else if (
-          params.getMessage() == ImportProjectFailedSuggestBspSwitch
-            .params()
-            .getMessage()
-        ) {
-          new MessageActionItem("Ignore")
-        } else if (
-          List(true, false)
-            .map(isRestart =>
-              ProjectJavaHomeUpdate.params(isRestart).getMessage()
-            )
-            .contains(params.getMessage())
-        ) {
-          shouldReloadAfterJavaHomeUpdate
-        } else {
-          throw new IllegalArgumentException(params.toString)
+    futureShowMessageRequestHandler(params).map(_.asJava).getOrElse {
+      CompletableFuture.completedFuture {
+        messageRequests.addLast(params.getMessage)
+        showMessageRequestHandler(params).getOrElse {
+          if (isSameMessage(ImportBuildChanges.params)) {
+            importBuildChanges
+          } else if (isSameGenerateBspAndConnectMessage) {
+            generateBspAndConnect
+          } else if (isSameMessage(ImportBuild.params)) {
+            importBuild
+          } else if (BloopVersionChange.params() == params) {
+            restartBloop
+          } else if (CheckDoctor.isDoctor(params)) {
+            getDoctorInformation
+          } else if (BspSwitch.isSelectBspServer(params)) {
+            selectBspServer(params.getActions.asScala.toSeq)
+          } else if (params.getMessage == ChooseBuildTool.message) {
+            chooseBuildTool(params.getActions.asScala.toSeq)
+          } else if (MissingScalafmtConf.isCreateScalafmtConf(params)) {
+            createScalaFmtConf
+          } else if (params.getMessage() == MainClass.message) {
+            chooseMainClass(params.getActions.asScala.toSeq)
+          } else if (isNewBuildToolDetectedMessage()) {
+            switchBuildTool
+          } else if (ImportScalaScript.params() == params) {
+            importScalaCliScript
+          } else if (ResetWorkspace.params() == params) {
+            resetWorkspace
+          } else if (OldBloopVersionRunning.params() == params) {
+            OldBloopVersionRunning.notNow
+          } else if (
+            params
+              .getMessage()
+              .endsWith(
+                FileOutOfScalaCliBspScope
+                  .askToRegenerateConfigAndRestartBspMsg("")
+              )
+          ) {
+            regenerateAndRestartScalaCliBuildSever
+          } else if (params.getMessage() == choicesMessage) {
+            params.getActions().asScala.head
+          } else if (
+            params.getMessage() == ConnectionBspStatus
+              .noResponseParams("Bill", Icons.default)
+              .logMessage(Icons.default)
+          ) {
+            new MessageActionItem("ok")
+          } else if (
+            params.getMessage().startsWith("For which folder would you like to")
+          ) {
+            chooseWorkspaceFolder(params.getActions().asScala.toSeq)
+          } else if (
+            params.getMessage() == ImportProjectFailedSuggestBspSwitch
+              .params()
+              .getMessage()
+          ) {
+            new MessageActionItem("Ignore")
+          } else if (
+            List(true, false)
+              .map(isRestart =>
+                ProjectJavaHomeUpdate.params(isRestart).getMessage()
+              )
+              .contains(params.getMessage())
+          ) {
+            shouldReloadAfterJavaHomeUpdate
+          } else {
+            throw new IllegalArgumentException(params.toString)
+          }
         }
       }
     }

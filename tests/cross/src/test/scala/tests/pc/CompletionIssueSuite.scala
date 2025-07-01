@@ -65,6 +65,14 @@ class CompletionIssueSuite extends BaseCompletionSuite {
   )
 
   check(
+    "start",
+    "@@//> using scala 2.13.16".stripMargin,
+    "DelayedInit scala",
+    enablePackageWrap = false,
+    filter = (str) => str.contains("DelayedInit")
+  )
+
+  check(
     "issue-749".tag(IgnoreScala3),
     """package a
       |trait Observable[+A] {
@@ -277,7 +285,8 @@ class CompletionIssueSuite extends BaseCompletionSuite {
        |      ???
        |    }
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    assertSingleItem = false
   )
 
   // We shouldn't get exhaustive completions for AbsolutePath

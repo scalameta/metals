@@ -9,7 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
-def localSnapshotVersion = "1.5.4-SNAPSHOT"
+def localSnapshotVersion = "1.6.1-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 
@@ -269,7 +269,7 @@ lazy val mtagsShared = project
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "4.31.0",
+      "com.google.protobuf" % "protobuf-java" % "4.31.1",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
@@ -415,7 +415,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.16.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "11.8.2",
+      "org.flywaydb" % "flyway-core" % "11.10.0",
       "com.h2database" % "h2" % "2.3.232",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
@@ -455,14 +455,14 @@ lazy val metals = project
         scalaVersion.value
       ) cross CrossVersion.full,
       "org.scalameta" %% "semanticdb-shared" % V.semanticdb(scalaVersion.value),
-      "org.scala-lang.modules" %% "scala-xml" % "2.3.0",
+      "org.scala-lang.modules" %% "scala-xml" % "2.4.0",
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
         .exclude("ch.epfl.scala", "bsp4j"),
       // For test frameworks
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       // For MCP
       "io.modelcontextprotocol.sdk" % "mcp" % "0.10.0",
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.19.0",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.19.1",
       "io.undertow" % "undertow-servlet" % "2.3.12.Final",
     ),
     buildInfoPackage := "scala.meta.internal.metals",

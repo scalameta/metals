@@ -27,9 +27,10 @@ import scala.util.control.NonFatal
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.Interruptable.MetalsCancelException
 import scala.meta.internal.metals.Messages.OldBloopVersionRunning
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.io.AbsolutePath
 
 import bloop.rifle.BloopRifle
@@ -52,7 +53,7 @@ import bloop.rifle.BspConnectionAddress
  */
 final class BloopServers(
     client: MetalsBuildClient,
-    languageClient: MetalsLanguageClient,
+    languageClient: ConfiguredLanguageClient,
     tables: Tables,
     serverConfig: MetalsServerConfig,
     workDoneProgress: WorkDoneProgress,
@@ -147,17 +148,21 @@ final class BloopServers(
     val versionRevertedToDefault = changedToNoVersion && !correctVersionRunning
 
     if (versionRevertedToDefault || versionChanged) {
-      languageClient
-        .showMessageRequest(
-          Messages.BloopVersionChange.params()
-        )
-        .asScala
-        .flatMap {
-          case item if item == Messages.BloopVersionChange.reconnect =>
-            restartAndConnect().ignoreValue
-          case _ =>
-            Future.unit
-        }
+      if (serverConfig.askToRestartBloop) {
+        languageClient
+          .showMessageRequest(
+            Messages.BloopVersionChange.params()
+          )
+          .asScala
+          .flatMap {
+            case item if item == Messages.BloopVersionChange.reconnect =>
+              restartAndConnect().ignoreValue
+            case _ =>
+              Future.unit
+          }
+      } else {
+        restartAndConnect().ignoreValue
+      }
     } else {
       Future.unit
     }
@@ -255,19 +260,27 @@ final class BloopServers(
     } match {
       case None => Future.unit
       case Some(value) =>
+        def killOldBloop(): Unit =
+          ShellRunner.runSync(
+            List("kill", "-9", value.toString()),
+            bloopWorkingDir,
+            redirectErrorOutput = false,
+          )
         languageClient
           .showMessageRequest(
-            OldBloopVersionRunning.params()
+            OldBloopVersionRunning.params(),
+            ConnectionProvider.ConnectRequestCancelationGroup,
+            throw MetalsCancelException,
           )
-          .asScala
           .map { res =>
             Option(res) match {
               case Some(item) if item == OldBloopVersionRunning.yes =>
-                ShellRunner.runSync(
-                  List("kill", "-9", value.toString()),
-                  bloopWorkingDir,
-                  redirectErrorOutput = false,
+                killOldBloop()
+              case Some(Messages.missedByUser) =>
+                languageClient.showMessage(
+                  OldBloopVersionRunning.killingBloopParams()
                 )
+                killOldBloop()
               case _ =>
             }
           }

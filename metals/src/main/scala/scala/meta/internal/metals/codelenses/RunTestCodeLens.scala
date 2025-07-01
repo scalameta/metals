@@ -16,13 +16,13 @@ import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.DebugDiscovery
 import scala.meta.internal.metals.debug.ExtendedScalaMainClass
 import scala.meta.internal.parsing.TokenEditDistance
-import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.MethodSignature
 import scala.meta.internal.semanticdb.Scope
 import scala.meta.internal.semanticdb.Signature
@@ -50,10 +50,10 @@ import org.eclipse.{lsp4j => l}
 final class RunTestCodeLens(
     buildTargetClasses: BuildTargetClasses,
     buffers: Buffers,
+    scalaVersionSelector: ScalaVersionSelector,
     buildTargets: BuildTargets,
     clientConfig: ClientConfiguration,
     userConfig: () => UserConfiguration,
-    trees: Trees,
     workspace: AbsolutePath,
     diagnostics: Diagnostics,
 )(implicit val ec: ExecutionContext)
@@ -77,13 +77,16 @@ final class RunTestCodeLens(
         isJvm: Boolean,
     ): Future[Unit] = {
       if (isJvm)
-        buildTargetClasses.jvmRunEnvironment(buildTargetId).map(_ => ())
+        buildTargetClasses
+          .jvmRunEnvironment(buildTargetId, isTests = false)
+          .map(_ => ())
       else
         Future.unit
     }
     val textDocument = textDocumentWithPath.textDocument
     val path = textDocumentWithPath.filePath
-    val distance = buffers.tokenEditDistance(path, textDocument.text, trees)
+    val distance =
+      buffers.tokenEditDistance(path, textDocument.text, scalaVersionSelector)
     val lenses = for {
       buildTargetId <- buildTargets.inverseSources(path)
       if canActuallyCompile(buildTargetId, diagnostics)
@@ -334,7 +337,7 @@ final class RunTestCodeLens(
       if (!isJVM) (main.toJson, false)
       else
         buildTargetClasses
-          .jvmRunEnvironmentSync(target)
+          .jvmRunEnvironmentSync(target, isTests = false)
           .zip(javaBinary) match {
           case None =>
             (main.toJson, false)

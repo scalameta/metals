@@ -1159,4 +1159,66 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |""".stripMargin
   )
 
+  check(
+    "implicit-conversions",
+    """
+      |class Foo
+      |class Bar
+      |object Baz {
+      |  implicit def foo2bar(foo: Foo): Bar = ???
+      |
+      |  def takesBar(bar: Bar) = ()
+      |  takesBar(new Fo@@o)
+      |}
+      |""".stripMargin,
+    """|takesBar(bar: Bar): Unit
+       |         ^^^^^^^^
+       |""".stripMargin
+  )
+
+  check(
+    "class-annotation-constructor",
+    """
+      |class AnAnnotation(i: Int, j: Int) extends annotation.StaticAnnotation
+      |
+      |@AnAnnotation(123, 4@@56)
+      |class Bar
+      |""".stripMargin,
+    """<init>(i: Int, j: Int): AnAnnotation
+      |               ^^^^^^
+      |""".stripMargin
+  )
+
+  check(
+    "field-annotation-constructor",
+    """
+      |class AnAnnotation(i: Int, j: Int) extends annotation.StaticAnnotation
+      |
+      |class Bar {
+      |  @AnAnnotation(123@@, 456)
+      |  def bar = "foo"
+      |}
+      |""".stripMargin,
+    """<init>(i: Int, j: Int): AnAnnotation
+      |               ^^^^^^
+      |""".stripMargin
+  )
+
+  check(
+    "annotation-subtree",
+    """
+      |object Helper {
+      |  def func(i: Int, b: Boolean): Int = ???
+      |}
+      |
+      |class AnAnnotation(i: Int, j: Int) extends annotation.StaticAnnotation
+      |
+      |@AnAnnotation(Helper.func(1, @@true), 3)
+      |class Bar
+      |""".stripMargin,
+    """func(i: Int, b: Boolean): Int
+      |             ^^^^^^^^^^
+      |""".stripMargin
+  )
+
 }

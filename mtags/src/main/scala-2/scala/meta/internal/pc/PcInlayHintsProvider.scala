@@ -492,7 +492,7 @@ final class PcInlayHintsProvider(
                 sel
               ) || sel.symbol.name == nme.unapply =>
             None
-          case Apply(fun, args) =>
+          case Apply(fun, args) if fun.tpe != null =>
             val params = fun.tpe.params
 
             /* Special handling for a single block argument:

@@ -205,7 +205,7 @@ object Embedded {
           "https://oss.sonatype.org/content/repositories/public/"
         ),
         MavenRepository.of(
-          "https://oss.sonatype.org/content/repositories/snapshots/"
+          "https://central.sonatype.com/repository/maven-snapshots/"
         ),
       ))
       .distinctBy {

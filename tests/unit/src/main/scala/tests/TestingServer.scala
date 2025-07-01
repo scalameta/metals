@@ -12,7 +12,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
-import java.{util => ju}
+import java.util.{List => juList}
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
@@ -36,6 +36,7 @@ import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Command
 import scala.meta.internal.metals.Debug
+import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.DebugSession
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DecoderResponse
@@ -54,7 +55,6 @@ import scala.meta.internal.metals.ParametrizedCommand
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.ReportContext
-import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.TextEdits
@@ -66,7 +66,6 @@ import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.mtags.Semanticdbs
-import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tvp.TreeViewChildrenParams
@@ -150,6 +149,7 @@ final case class TestingServer(
     time: Time,
     initializationOptions: InitializationOptions,
     mtagsResolver: MtagsResolver,
+    clientName: String,
     onStartCompilation: () => Unit = () => (),
 )(implicit ex: ExecutionContextExecutorService) {
   import scala.meta.internal.metals.JsonParser._
@@ -179,14 +179,6 @@ final case class TestingServer(
 
   implicit val reports: ReportContext =
     new StdReportContext(workspace.toNIO, _ => None)
-
-  private lazy val trees = new Trees(
-    buffers,
-    new ScalaVersionSelector(
-      () => initialUserConfig,
-      server.buildTargets,
-    ),
-  )
 
   private val virtualDocSources = TrieMap.empty[String, AbsolutePath]
   def statusBarHistory: String = {
@@ -338,6 +330,13 @@ final case class TestingServer(
       .asInstanceOf[Future[DecoderResponse]]
   }
 
+  def executeDiscoverMainClassesCommand(
+      params: DebugDiscoveryParams
+  ): Future[b.DebugSessionParams] = {
+    executeCommand(ServerCommands.DiscoverMainClasses, params)
+      .asInstanceOf[Future[b.DebugSessionParams]]
+  }
+
   def assertSuperMethodHierarchy(
       uri: String,
       expectations: List[(Int, List[String])],
@@ -437,9 +436,9 @@ final case class TestingServer(
     }
     for {
       source <- workspaceSources()
-      input = source.toInputFromBuffers(buffers)
+      content <- buffers.get(source).orElse(source.readTextOpt)
       identifier = source.toTextDocumentIdentifier
-      token <- trees.tokenized(input).get
+      token <- content.safeTokenize.get
       if token.isIdentifier
       params = token.toPositionParams(identifier)
       definition = server
@@ -594,7 +593,7 @@ final case class TestingServer(
 
     params.setClientInfo(
       new l.ClientInfo(
-        "Visual Studio Code",
+        clientName,
         m.internal.metals.BuildInfo.metalsVersion,
       )
     )
@@ -697,6 +696,11 @@ final case class TestingServer(
 
   def waitFor(millis: Long): Future[Unit] = Future { Thread.sleep(millis) }
 
+  /**
+   * @param target the build target to debug, like "myproject.test"
+   * @param kind one of the constants in [[ch.epfl.scala.bsp4j.TestParamsDataKind]] or [[ch.epfl.scala.bsp4j.DebugSessionParamsDataKind]].
+   * @param parameter the parameter to pass to the debug adapter, for example an instance of [[scala.meta.internal.metals.ScalaTestSuites]].
+   */
   def startDebugging(
       target: String,
       kind: String,
@@ -730,7 +734,9 @@ final case class TestingServer(
       val workspaceFiles =
         nonTarget.flatMap(_.listRecursive.filter(_.isScalaOrJava).toList)
       val usesSystemExit =
-        workspaceFiles.exists(_.text.contains("System.exit(0)"))
+        workspaceFiles.exists(
+          _.readTextOpt.exists(_.contains("System.exit(0)"))
+        )
       if (!usesSystemExit)
         throw new RuntimeException(
           "All debug test for main classes should have `System.exit(0)`"
@@ -767,6 +773,7 @@ final case class TestingServer(
     fullServer.didFocus(toPath(filename).toURI.toString).asScala
   }
 
+  /** Saves the file to disk and sends `didSave` notification to the server. */
   def didSave(filename: String): Future[Unit] = {
     Debug.printEnclosing(filename)
     val abspath = toPath(filename)
@@ -924,7 +931,7 @@ final case class TestingServer(
   def retrieveRanges(
       filename: String,
       expected: String,
-  ): Future[ju.List[l.SelectionRange]] = {
+  ): Future[juList[l.SelectionRange]] = {
     val path = toPath(filename)
     val input = path.toInputFromBuffers(buffers)
     val offset = expected.indexOf("@@")
@@ -1043,7 +1050,7 @@ final case class TestingServer(
     ): Future[List[BuildTargetUpdate]] = {
       val arg = ServerCommands.DiscoverTestParams(uri.orNull)
       executeCommand(ServerCommands.DiscoverTestSuites, arg)
-        .asInstanceOf[Future[ju.List[BuildTargetUpdate]]]
+        .asInstanceOf[Future[juList[BuildTargetUpdate]]]
         .map(_.asScala.toList)
         .flatMap { r =>
           if (r.exists(_.events.asScala.nonEmpty)) {
@@ -1830,7 +1837,7 @@ final case class TestingServer(
     val identifier = path.toTextDocumentIdentifier
     val occurrences = ListBuffer.empty[s.SymbolOccurrence]
     var last = List[String]()
-    trees.tokenized(input).get.foreach {
+    input.value.safeTokenize.get.foreach {
       case token: m.tokens.Token.Ident =>
         val params = token.toPositionParams(identifier)
         // Scala 3 doesn't count ` as part of the word which is the same as most editors

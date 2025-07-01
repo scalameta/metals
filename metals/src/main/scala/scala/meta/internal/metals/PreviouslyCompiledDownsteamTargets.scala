@@ -23,7 +23,11 @@ class PreviouslyCompiledDownsteamTargets {
       val finalSet = mutable.Set[BuildTargetIdentifier]()
       for (key <- targets)
         map.get(key) match {
-          case Some(set) if set.nonEmpty => finalSet ++= set
+          case Some(set) if set.nonEmpty =>
+            finalSet ++= set
+            // set should be enough, since this are upstream targets
+            // but adding the same build target makes it fail proof
+            finalSet += key
           case _ => finalSet += key
         }
       finalSet.toSeq
@@ -43,7 +47,7 @@ class PreviouslyCompiledDownsteamTargets {
       for {
         oldSet <- map.get(key)
         if (oldSet.contains(id))
-      } map.put(id, oldSet - id)
+      } map.put(key, oldSet - id)
     }
   }
 }

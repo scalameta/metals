@@ -1,15 +1,10 @@
 package tests.mcp
 
-import scala.concurrent.Future
-
-import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.mcp.McpConfig
-import scala.meta.internal.metals.mcp.VSCodeEditor
+import scala.meta.internal.metals.mcp.McpMessages
 
 import tests.BaseLspSuite
-import tests.mcp.TestMcpClient
 
-class McpServerLspSuite extends BaseLspSuite("mcp-server") {
+class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
 
   test("find-dep") {
     cleanWorkspace()
@@ -25,29 +20,22 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") {
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
-      _ = assertNoDiagnostics()
-      _ <- server.didChangeConfiguration(
-        UserConfiguration(startMcpServer = true).toString
-      )
-      port <- Future.successful(
-        McpConfig.readPort(server.workspace, "root", VSCodeEditor)
-      )
-      _ = assert(port.isDefined, "MCP server port should be defined")
-      client = new TestMcpClient(s"http://localhost:${port.get}/sse")
-      _ <- client.initialize()
-      result <- client.findDep("org.scala-lang")
+      client <- startMcpServer()
+      result <- client.findDep("org.scala-lan")
       _ = assertNoDiff(
         result.mkString("\n"),
-        """|org.scala-lang
-           |org.scala-lang-osgi
-           |""".stripMargin,
+        McpMessages.FindDep.dependencyReturnMessage(
+          "organization",
+          Seq("org.scala-lang", "org.scala-lang-osgi"),
+        ),
       )
-      resultName <- client.findDep("org.scala-lang", Some("scala-library"))
+      resultName <- client.findDep("org.scala-lang", Some("scala-librar"))
       _ = assertNoDiff(
         resultName.mkString("\n"),
-        """|scala-library
-           |scala-library-all
-           |""".stripMargin,
+        McpMessages.FindDep.dependencyReturnMessage(
+          "name",
+          Seq("scala-library", "scala-library-all"),
+        ),
       )
       resultNameVersion <- client.findDep(
         "org.scalameta",
@@ -56,9 +44,42 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") {
       )
       _ = assertNoDiff(
         resultNameVersion.mkString("\n"),
-        """|4.10.2
-           |4.10.1
-           |4.10.0
+        McpMessages.FindDep
+          .dependencyReturnMessage("version", Seq("4.10.2", "4.10.1", "4.10.0")),
+      )
+      resultNameVersion2 <- client.findDep(
+        "org.scalameta",
+        Some("parsers_2.13"),
+        None,
+      )
+      _ = assert(
+        resultNameVersion2.head.contains(", 4.13.0,"),
+        s"Expected to contain version 4.13.0, got ${resultNameVersion2.mkString("\n")}",
+      )
+      _ <- client.shutdown()
+    } yield ()
+  }
+
+  test("list-modules") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/example/Hello.scala
+           |package com.example
+           |
+           |object Hello { def main(args: Array[String]): Unit = println("Hello") }
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
+      client <- startMcpServer()
+      modules <- client.listModules()
+      _ = assertNoDiff(
+        modules,
+        """|Available modules (build targets):
+           |- a
            |""".stripMargin,
       )
       _ <- client.shutdown()
