@@ -252,6 +252,13 @@ final class BuildTargets private (
   def inverseSources(
       source: AbsolutePath
   ): Option[BuildTargetIdentifier] = {
+
+    if (source.toNIO.toString.isTwirlTemplate) {
+      return inverseSources(
+        source.parent.resolveSibling(_ => "scala").resolve("main.scala")
+      )
+    }
+
     val buildTargets = sourceBuildTargets(source)
     val orSbtBuildTarget =
       buildTargets.getOrElse(sbtBuildScalaTarget(source).toIterable).toSeq
