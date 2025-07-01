@@ -1,14 +1,16 @@
 package scala.meta.internal.metals
 
+import java.io.File
+
+import scala.io.Source
+
 import scala.meta.inputs.Input
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
-import scala.io.Source
 
 import org.eclipse.{lsp4j => l}
-import java.io.File
 
 final case class SourceMapper(
     buildTargets: BuildTargets,
