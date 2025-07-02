@@ -309,7 +309,7 @@ class BazelLspSuite
         .runJava(
           Dependency.of(
             BazelBuildTool.dependency.getModule(),
-            "3.2.0-20240508-f3a81e7-NIGHTLY",
+            BazelBuildTool.version,
           ),
           BazelBuildTool.mainClass,
           workspace,
@@ -317,7 +317,7 @@ class BazelLspSuite
           None,
         )
         .future
-      _ = assertContains(jsonFile, "3.2.0-20240508-f3a81e7-NIGHTLY")
+      _ = assertContains(jsonFile, BazelBuildTool.version)
       _ <- initialize(
         BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
       )
