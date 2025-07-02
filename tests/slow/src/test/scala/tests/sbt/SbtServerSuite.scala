@@ -492,8 +492,8 @@ class SbtServerSuite
       _ <- server.didOpen("build.sbt")
       _ <- server.assertHover(
         "src/main/twirl/example.scala.html",
-        """|@(name: String)
-           |<h1>Hello @na@@me!</h1>
+        """|@\@@(name: String)
+           |<h1>Hello @name!</h1>
            |""".stripMargin,
         """|```scala
            |val name: String

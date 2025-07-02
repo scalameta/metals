@@ -1,9 +1,5 @@
 package scala.meta.internal.metals
 
-import java.io.File
-
-import scala.io.Source
-
 import scala.meta.inputs.Input
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -25,72 +21,6 @@ final case class SourceMapper(
     buildTargets.mappedLineForServer(path, line).getOrElse(line)
   def mappedLineForClient(path: AbsolutePath, line: Int): Int =
     buildTargets.mappedLineForClient(path, line).getOrElse(line)
-
-  def twirlMapper(
-      twirlPath: Input.VirtualFile
-  ): (Input.VirtualFile, l.Position => l.Position, AdjustLspData) = {
-
-    val compiledTwirl =
-      Source
-        .fromFile(
-          new File(
-            "/home/ajafri/scala/play-test/target/scala-3.7.1/twirl/main/html/example.template.scala"
-          )
-        )
-        .mkString
-
-    val newVirtualFile = twirlPath.copy(value = compiledTwirl)
-
-    val pattern = """(\d+)->(\d+)""".r
-    val number_matching =
-      pattern.findAllIn(compiledTwirl).toList
-
-    val chars = number_matching.take(number_matching.length / 2)
-    val lines = number_matching.drop(number_matching.length / 2)
-
-    // Map[Int, Int](1 -> 15, 2 -> 20, 3 -> 21)  SourceFile -> CompiledFile
-    val lineMap: Map[Int, Int] = lines.map { s =>
-      val parts = s.split("->")
-      val a = parts(0).toInt
-      val b = parts(1).toInt
-      b - 1 -> a
-    }.toMap
-
-    val charMap: Map[Int, Int] = chars.map { s =>
-      val parts = s.split("->")
-      val a = parts(0).toInt
-      val b = parts(1).toInt
-      b -> a
-    }.toMap
-
-    def findCharPosition(char_pos: Int): Int = {
-      var index = 0
-      var pos = 0
-      while (index < char_pos) {
-        if (compiledTwirl(index) == '\n') {
-          pos = 0
-        }
-        index += 1
-        pos += 1
-      }
-      pos
-    }
-
-    (
-      newVirtualFile,
-      pos =>
-        new l.Position(
-          lineMap(pos.getLine()) - 1,
-          findCharPosition(charMap(pos.getCharacter())),
-        ),
-      AdjustedLspData.create(pos =>
-        new l.Position(
-          lineMap(pos.getLine()) - 1,
-          findCharPosition(charMap(pos.getCharacter())),
-        )
-      ),
-    )
-  }
 
   def pcMapping(
       path: AbsolutePath,
@@ -118,7 +48,7 @@ final case class SourceMapper(
       ) {
         WorksheetProvider.worksheetScala3Adjustments(input)
       } else if (path.isTwirlTemplate) {
-        Some(twirlMapper(input))
+        Some(TwirlAdjustments.twirlMapper(input, scalaVersion))
       } else None
 
     forScripts.getOrElse(default)
