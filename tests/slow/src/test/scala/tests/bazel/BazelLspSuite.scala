@@ -183,7 +183,7 @@ class BazelLspSuite
            |  scala
            |
            |Capabilities
-           |  Debug
+           |  Debug <- NOT SUPPORTED
            |  Run
            |  Test <- NOT SUPPORTED
            |  Compile""".stripMargin
