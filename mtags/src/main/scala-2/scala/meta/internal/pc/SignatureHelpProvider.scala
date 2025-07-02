@@ -171,7 +171,11 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
           o.info
             .member(compiler.nme.apply)
             .safeAlternatives
-            .map(alt => alt -> qual.tpe.memberType(alt))
+            .flatMap { alt =>
+              val tpe = qual.tpe
+              if (tpe == null) None
+              else Some(alt -> tpe.memberType(alt))
+            }
         case o: ClassSymbol =>
           o.info
             .member(compiler.termNames.CONSTRUCTOR)
