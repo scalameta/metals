@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import java.io.Closeable
+import java.net.URI
 import java.nio.file.Path
 import java.util
 import java.util.logging.Level
@@ -14,6 +15,7 @@ import scala.reflect.internal.util.Position
 import scala.reflect.internal.util.ScriptSourceFile
 import scala.reflect.internal.util.SourceFile
 import scala.reflect.internal.{Flags => gf}
+import scala.reflect.io.VirtualFile
 import scala.tools.nsc.Mode
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
@@ -81,6 +83,12 @@ class MetalsGlobal(
 
   // for those paths units were fully compiled (not just outlined)
   val fullyCompiled: mutable.Set[String] = mutable.Set.empty[String]
+
+  val compileUnitsCache = new CompileUnitsCache(5)
+
+  def didChange(uri: URI): Unit = {
+    compileUnitsCache.didChange(uri)
+  }
 
   class MetalsInteractiveAnalyzer(val global: compiler.type)
       extends InteractiveAnalyzer {
@@ -693,13 +701,35 @@ class MetalsGlobal(
 
   def CURSOR = "_CURSOR_"
 
+  /**
+   * Removes compilation unit from cache using [[scala.tools.nsc.intreactive.Global#toBeRemoved]].
+   * If used, `willBeRemovedAfterUsing` should be set to `true` in [[addCompilationUnit]].
+   * @param file file that should be removed.
+   */
+  def removeAfterUsing(filename: String): Unit = {
+    if (compileUnitsCache.canBeRemoved(filename)) remove(filename)
+  }
+
+  private def remove(filename: String): Unit = {
+    if (!richCompilationCache.contains(filename)) {
+      fullyCompiled.remove(filename)
+      toBeRemoved.add(new VirtualFile(filename))
+    }
+  }
+
+  /**
+   * @param `willBeRemovedAfterUsing`
+   *    - if set to true the file won't be added to last compiled units
+   *      and should be removed after the compilation unit is not used anymore
+   */
   def addCompilationUnit(
       code: String,
       filename: String,
       cursor: Option[Int],
       cursorName: String = CURSOR,
       isOutline: Boolean = false,
-      forceNew: Boolean = false
+      forceNew: Boolean = false,
+      willBeRemovedAfterUsing: Boolean = false
   ): RichCompilationUnit = {
     val codeWithCursor = cursor match {
       case Some(offset) =>
@@ -713,6 +743,10 @@ class MetalsGlobal(
         ScriptSourceFile(unit.source.file, unit.source.content)
       else unit.source
     val richUnit = new RichCompilationUnit(source)
+    if (!isOutline && !willBeRemovedAfterUsing) {
+      compileUnitsCache.didGetUnit(filename).foreach(remove)
+    }
+    toBeRemoved.remove(richUnit.source.file)
     unitOfFile.get(richUnit.source.file) match {
       case Some(value)
           if util.Arrays.equals(

@@ -734,7 +734,9 @@ final case class TestingServer(
       val workspaceFiles =
         nonTarget.flatMap(_.listRecursive.filter(_.isScalaOrJava).toList)
       val usesSystemExit =
-        workspaceFiles.exists(_.text.contains("System.exit(0)"))
+        workspaceFiles.exists(
+          _.readTextOpt.exists(_.contains("System.exit(0)"))
+        )
       if (!usesSystemExit)
         throw new RuntimeException(
           "All debug test for main classes should have `System.exit(0)`"
@@ -787,6 +789,21 @@ final case class TestingServer(
         )
       )
       .asScala
+  }
+
+  def info(
+      filename: String,
+      symbol: String,
+      retry: Int = 3,
+  ): Future[Option[m.internal.pc.PcSymbolInformation]] = {
+    val abspath = toPath(filename)
+    headServer.compilers.info(abspath, symbol).recoverWith {
+      case _ if retry > 0 =>
+        scribe.info(s"Retrying info($filename, $symbol) $retry times")
+        info(filename, symbol, retry - 1)
+      case e =>
+        Future.failed(e)
+    }
   }
 
   def didChange(filename: String)(fn: String => String): Future[Unit] = {

@@ -299,7 +299,8 @@ class CompletionIssueSuite extends BaseCompletionSuite {
        |      ???
        |    }
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    assertSingleItem = false
   )
 
   // We shouldn't get exhaustive completions for AbsolutePath

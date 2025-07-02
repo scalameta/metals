@@ -61,7 +61,7 @@ class MetalsMcpServer(
     diagnostics: Diagnostics,
     buildTargets: BuildTargets,
     mcpTestRunner: McpTestRunner,
-    editorName: String,
+    clientName: String,
     projectName: String,
     languageClient: LanguageClient,
     connectionProvider: ConnectionProvider,
@@ -158,9 +158,10 @@ class MetalsMcpServer(
     val deployment = manager.addDeployment(servletDeployment)
     deployment.deploy()
 
-    val editor =
-      Editor.allEditors.find(_.names.contains(editorName)).getOrElse(NoEditor)
-    val configPort = McpConfig.readPort(projectPath, projectName, editor)
+    val client =
+      Client.allClients.find(_.names.contains(clientName)).getOrElse(NoClient)
+
+    val configPort = McpConfig.readPort(projectPath, projectName, client)
     val undertowServer = Undertow
       .builder()
       .addHttpListener(configPort.getOrElse(0), "localhost")
@@ -173,7 +174,7 @@ class MetalsMcpServer(
       listenerInfo.get(0).getAddress().asInstanceOf[InetSocketAddress].getPort()
 
     if (!configPort.isDefined) {
-      McpConfig.writeConfig(port, projectName, projectPath, editor)
+      McpConfig.writeConfig(port, projectName, projectPath, client)
     }
 
     languageClient.showMessage(
@@ -325,7 +326,8 @@ class MetalsMcpServer(
          |      "type": "string",
          |      "description": "The module's (build target's) name to compile"
          |    }
-         |  }
+         |  },
+         |  "required": ["module"]
          |}""".stripMargin
     new AsyncToolSpecification(
       new Tool("compile-module", "Compile a chosen Scala module", schema),
@@ -383,23 +385,22 @@ class MetalsMcpServer(
     val schema =
       """|{
          |  "type": "object",
-         |    "properties": {
-         |      "testFile": {
-         |        "type": "string",
-         |        "description": "The file containing the test suite, if empty we will try to detect it"
-         |      },
-         |      "testClass": {
-         |        "type": "string",
-         |        "description": "Fully qualified name of the test class to run"
-         |      },
-         |      "verbose": {
-         |        "type": "boolean",
-         |        "description": "Print all output from the test suite, otherwise prints only errors and summary",
-         |        "default": false
-         |      }
+         |  "properties": {
+         |    "testFile": {
+         |      "type": "string",
+         |      "description": "The file containing the test suite, if empty we will try to detect it"
          |    },
-         |    "required": ["testClass"]
-         |  }
+         |    "testClass": {
+         |      "type": "string",
+         |      "description": "Fully qualified name of the test class to run"
+         |    },
+         |    "verbose": {
+         |      "type": "boolean",
+         |      "description": "Print all output from the test suite, otherwise prints only errors and summary",
+         |      "default": false
+         |    }
+         |  },
+         |  "required": ["testClass"]
          |}""".stripMargin
     new AsyncToolSpecification(
       new Tool("test", "Run Scala test suite", schema),

@@ -4,8 +4,7 @@ title: Contributing to Metals
 ---
 
 Whenever you are stuck or unsure, please open an issue or [ask us on
-Discord](https://discord.gg/DwTc8xbNDd) or [on our Matrix
-bridge](https://matrix.to/#/#scalameta:metals-contributors). This project
+Discord](https://discord.gg/DwTc8xbNDd). This project
 follows [Scalameta's contribution
 guidelines](https://github.com/scalameta/scalameta/blob/master/CONTRIBUTING.md)
 and the [Scala CoC](https://scala-lang.org/conduct/).
@@ -14,32 +13,40 @@ and the [Scala CoC](https://scala-lang.org/conduct/).
 
 You will need the following applications installed:
 
-- Java 17, 11 or 8 - Make sure `JAVA_HOME` points to a Java 17, 11 or 8 installation.
-  Metals will need to build and run on _all of them_, with support for 8
-  probably being dropped in the near future.
+- Java 17
 - `git`
 - `sbt` (for building a local version of the server)
 
 ## Project structure
 
-- `metals` the main project with sources of the Metals language server.
-- `mtags` Scala version specific module used to interact with the Scala
-  presentation compiler. It's a dependency of the `metals` project and can
-  additionally be used by via `mtags-interfaces` to support multiple Scala
-  versions inside the Metals server. It's also used by other projects like
-  [Metabrowse](https://github.com/scalameta/metabrowse).
-- `mtags-interfaces` - java interfaces for the presentation compiler.
-- `tests/unit` moderately fast-running unit tests.
-- `tests/cross` - tests targeting cross builds for common features such as
-  hover, completions, signatures etc.
-- `tests/input` example Scala code that is used as testing data for unit tests.
-- `tests/slow` slow integration tests.
-- `sbt-metals` the sbt plugin used when users are using the BSP support from
+### Main Metals Project
+The main Metals module is located in the `metals` directory.
+
+#### Entrypoint to the Metals Server
+The first LSP request (`initialize`) is handled by `MetalsLanguageServer`, which then instantiates `WorkspaceLspService` to manage all subsequent LSP requests. Acting as a dispatcher, `WorkspaceLspService` handles multiple projects within a single workspace by creating a separate `ProjectMetalsLspService` for each one and routing LSP queries accordingly. In addition to these project-specific services, there's a fallback service — `FallbackMetalsLspService` — responsible for handling standalone files. Shared logic between `ProjectMetalsLspService` and `FallbackMetalsLspService` is encapsulated in the `MetalsLspService` class.
+
+### Presentation Compiler
+Many of Metals features (e.g., go to references) work primarily using [Semantic DB](https://scalameta.org/docs/semanticdb/guide.html) -- semantic information produced during compilation. However, for actions, that require very up-to-date information, Metals uses presentation compiler (pc). Presentation compiler uses Scala (interactive) compiler, so it is published for a specific Scala version. Presentation compiler for Scala 2 is in the the cross-published `mtags` module in Metals, for Scala 3 in the `scala3-presentation-compiler` module in the `scala/scala3` repository. 
+
+Metals loads a presentation compiler instance for a module (build target) using the required Scala version. The interfaces for communication with presentation compiler are in `mtags-interfaces`, where `PresentationCompiler.java` is the presentation compiler API.
+
+Additionally, Metals has a limited implementation of a presentation compiler for Java in `mtags-java`.
+
+To avoid repetition, common utilities of presentation compilers are in `mtags-shared`. Since Scala 3 compiler cannot have dependencies on Scala projects, `mtags-shared` sources are currently automatically copied to the compiler repository.
+
+### Tests
+- `tests/unit` - moderately fast-running unit tests. Mostly contain LSP test, that use Bloop with a quick setup.
+- `tests/cross` - tests targeting cross builds for Scala 2 presentation compiler. Analogical tests for Scala 3 are in the compiler repository.
+- `tests/slow` - slow integration tests. Contain tests for different build tools and build servers. Mtags are cross published for slow tests, so LSP test for testing non-default Scala 2 versions should also go here.
+- `tests/input` - example Scala code that is used as testing data for unit tests.
+
+### Other modules
+- `sbt-metals` - the sbt plugin used when users are using the BSP support from
   sbt to ensure semanticDB is being produced by sbt.
-- `docs` documentation markdown for the Metals website.
-- `metals-docs` methods used for generating documentation across multiple pages
+- `docs` - documentation markdown for the Metals website.
+- `metals-docs` - methods used for generating documentation across multiple pages
   in `docs`.
-- `website` holds the static site configuration, style and blogs posts for the
+- `website` - holds the static site configuration, style and blogs posts for the
   Metals website.
 
 Below diagram shows project structure and dependencies among modules. Note that
@@ -56,15 +63,15 @@ repository:
   Visual Studio Code extension for Metals.
 - [scalameta/nvim-metals](https://github.com/scalameta/nvim-metals/): the Neovim
   extension for Metals using the built-in LSP support of Neovim.
-- [scalameta/scalameta](https://github.com/scalameta/scalameta/): SemanticDB,
+- [scalameta/scalameta](https://github.com/scalameta/scalameta/): SemanticDB for Scala 2,
   parsing, tokenization.
 - [scalameta/munit](https://github.com/scalameta/munit/): Test framework used in
   the main Metals repository
 - [scalacenter/bloop](https://github.com/scalacenter/bloop/): build server for
   compilation.
-- [scala/scala](https://github.com/scala/scala/): Scala 2 presentation compiler.
-- [lampepfl/dotty](https://github.com/lampepfl/dotty): Scala 3 presentation
-  compiler.
+- [scala/scala](https://github.com/scala/scala/): Scala 2 interactive compiler.
+- [scala/scala3](https://github.com/lampepfl/dotty): Scala 3 presentation
+  compiler, SemanticDB for Scala 3.
 - [scalameta/scalafmt](https://github.com/scalameta/scalafmt/): code formatting.
 - [scalacenter/scalafix](https://github.com/scalacenter/scalafix/): code
   refactoring and linting.
@@ -217,8 +224,7 @@ possible to investigate why test is failing manually.
 
 ## Cross tests
 
-These tests check common features such as hover, completions or signatures for
-different Scala version.
+Tests for Scala 2 presenatation compiler, check common features such as hover, completions or signatures.
 
 ```sh
 sbt
@@ -226,7 +232,7 @@ sbt
 # run presentation compiler tests, these are the quickest tests to run.
 > cross/test
 
- run presentation compiler tests for all Scala versions.
+# run presentation compiler tests for all Scala versions.
 > +cross/test
 ```
 
@@ -243,8 +249,12 @@ working on a generic feature that isn't using the presentation compiler
 (anything in mtags),  if not then you need to publish the specific version of
 mtags that you're trying to test
 
-```
-`publishLocal; ++3.1.1 mtags/publishLocal`
+```sh
+sbt
+
+> publishLocal
+
+> ++2.12.20 mtags/publishLocal
 ```
 
 You can also do a full cross publish with `sbt +publishLocal`, however this will
