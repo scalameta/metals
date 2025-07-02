@@ -248,9 +248,7 @@ class CompletionIssueSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "issue-7497-complete-before-string".withTags(
-      Set(IgnoreScala212, IgnoreScala211)
-    ),
+    "issue-7497-complete-before-string".tag(IgnoreScala211.and(IgnoreScala212)),
     """|object Main {
        |  new File@@"/my/file/path"
        |}
