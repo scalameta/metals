@@ -23,9 +23,9 @@ case class BazelBuildTool(
     Option.when(workspaceSupportsBsp)(composeArgs())
 
   def workspaceSupportsBsp: Boolean = {
-    projectRoot.list.exists {
-      case file if file.filename == "WORKSPACE" => true
-      case _ => false
+    val bzlProjectRootFiles = Set("WORKSPACE", "MODULE.bazel")
+    projectRoot.list.exists { file =>
+      bzlProjectRootFiles.contains(file.filename)
     }
   }
 
@@ -77,12 +77,12 @@ case class BazelBuildTool(
 object BazelBuildTool {
   val name: String = "bazel"
   val bspName: String = "bazelbsp"
-  val version: String = "3.2.0-20240629-e3d8bdf-NIGHTLY"
+  val version: String = "4.0.0-M3"
 
   val mainClass = "org.jetbrains.bsp.bazel.install.Install"
 
   val dependency: Dependency = Dependency.of(
-    "org.jetbrains.bsp",
+    "org.virtuslab",
     "bazel-bsp",
     version,
   )
