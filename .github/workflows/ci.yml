@@ -44,6 +44,15 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
         shell: bash
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: "**/.reports/**/*"
+          if-no-files-found: ignore
+          retention-days: 7
+          compression-level: 9
   integration:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -164,6 +173,15 @@ jobs:
           METALS_TEST: true
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: "**/.reports/**/*"
+          if-no-files-found: ignore
+          retention-days: 7
+          compression-level: 9
       - name: "test download dependencies"
         run: sbt downloadDependencies
         if: matrix.type == 'cross'
