@@ -1,5 +1,9 @@
 package scala.meta.internal.pc
 
+import java.util.logging.Level
+
+import scala.util.control.NonFatal
+
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
 
@@ -47,46 +51,51 @@ class CompletionItemResolver(
     }
   }
 
-  def fullDocstring(gsym: Symbol): String = {
-    def docs(gsym: Symbol): String =
-      symbolDocumentation(gsym).fold("")(_.docstring())
-    val gsymDoc = docs(gsym)
-    def keyword(gsym: Symbol): String =
-      if (gsym.isClass) "class"
-      else if (gsym.isTrait) "trait"
-      else if (gsym.isJavaInterface) "interface"
-      else if (gsym.isModule) "object"
-      else ""
-    val companion = gsym.companion
-    if (companion == NoSymbol || isJavaSymbol(gsym)) {
-      if (gsymDoc.isEmpty) {
-        if (gsym.isAliasType) {
-          fullDocstring(gsym.info.dealias.typeSymbol)
-        } else if (gsym.isMethod) {
-          gsym.info.finalResultType match {
-            case SingleType(_, sym) =>
-              fullDocstring(sym)
-            case _ =>
-              ""
-          }
-        } else ""
+  def fullDocstring(gsym: Symbol): String =
+    try {
+      def docs(gsym: Symbol): String =
+        symbolDocumentation(gsym).fold("")(_.docstring())
+      val gsymDoc = docs(gsym)
+      def keyword(gsym: Symbol): String =
+        if (gsym.isClass) "class"
+        else if (gsym.isTrait) "trait"
+        else if (gsym.isJavaInterface) "interface"
+        else if (gsym.isModule) "object"
+        else ""
+      val companion = gsym.companion
+      if (companion == NoSymbol || isJavaSymbol(gsym)) {
+        if (gsymDoc.isEmpty) {
+          if (gsym.isAliasType) {
+            fullDocstring(gsym.info.dealias.typeSymbol)
+          } else if (gsym.isMethod) {
+            gsym.info.finalResultType match {
+              case SingleType(_, sym) =>
+                fullDocstring(sym)
+              case _ =>
+                ""
+            }
+          } else ""
+        } else {
+          gsymDoc
+        }
       } else {
-        gsymDoc
+        val companionDoc = docs(companion)
+        if (companionDoc.isEmpty || companionDoc == gsymDoc) gsymDoc
+        else if (gsymDoc.isEmpty) companionDoc
+        else {
+          List(
+            s"""|### ${keyword(companion)} ${companion.name}
+                |$companionDoc
+                |""".stripMargin,
+            s"""|### ${keyword(gsym)} ${gsym.name}
+                |${gsymDoc}
+                |""".stripMargin
+          ).sorted.mkString("\n")
+        }
       }
-    } else {
-      val companionDoc = docs(companion)
-      if (companionDoc.isEmpty || companionDoc == gsymDoc) gsymDoc
-      else if (gsymDoc.isEmpty) companionDoc
-      else {
-        List(
-          s"""|### ${keyword(companion)} ${companion.name}
-              |$companionDoc
-              |""".stripMargin,
-          s"""|### ${keyword(gsym)} ${gsym.name}
-              |${gsymDoc}
-              |""".stripMargin
-        ).sorted.mkString("\n")
-      }
+    } catch {
+      case NonFatal(e) =>
+        logger.log(Level.WARNING, s"Error getting docstring for $gsym", e)
+        ""
     }
-  }
 }
