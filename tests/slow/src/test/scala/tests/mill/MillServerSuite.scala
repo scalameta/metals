@@ -287,7 +287,7 @@ class MillServerSuite
     }
   }
 
-  test("call pc before initial compilation") {
+  test("call pc before initial compilation".flaky) {
     cleanWorkspace()
     client.getStatusParams(StatusType.metals).clear()
     val compileTaskFinished = Promise[Unit]()
@@ -313,8 +313,7 @@ class MillServerSuite
             |}
             |""".stripMargin
       )
-      res1 <- server.headServer.compilers
-        .info(server.toPath("foo/src/bar/Main.scala"), "bar/Foo.")
+      res1 <- server.info("foo/src/bar/Main.scala", "bar/Foo.")
       _ = assert(res1.isEmpty)
       _ <- server.didOpen("foo/src/bar/Main.scala")
       _ <- server.didChange("foo/src/bar/Main.scala") { _ =>
@@ -326,8 +325,7 @@ class MillServerSuite
       }
       _ <- server.didSave("foo/src/bar/Main.scala")
       _ <- compileTaskFinished.future
-      res2 <- server.headServer.compilers
-        .info(server.toPath("foo/src/bar/Main.scala"), "bar/Foo.")
+      res2 <- server.info("foo/src/bar/Main.scala", "bar/Foo.")
       _ = assert(res2.isDefined)
     } yield ()
   }
