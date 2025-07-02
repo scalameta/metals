@@ -791,6 +791,21 @@ final case class TestingServer(
       .asScala
   }
 
+  def info(
+      filename: String,
+      symbol: String,
+      retry: Int = 3,
+  ): Future[Option[m.internal.pc.PcSymbolInformation]] = {
+    val abspath = toPath(filename)
+    headServer.compilers.info(abspath, symbol).recoverWith {
+      case _ if retry > 0 =>
+        scribe.info(s"Retrying info($filename, $symbol) $retry times")
+        info(filename, symbol, retry - 1)
+      case e =>
+        Future.failed(e)
+    }
+  }
+
   def didChange(filename: String)(fn: String => String): Future[Unit] = {
     val abspath = toPath(filename)
     val oldText = abspath.toInputFromBuffers(buffers).text
