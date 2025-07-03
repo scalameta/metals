@@ -8,6 +8,7 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.Cancelable
 
 final class DebugServer(
+    val id: String,
     val sessionName: String,
     val uri: URI,
     connect: () => Future[DebugProxy],

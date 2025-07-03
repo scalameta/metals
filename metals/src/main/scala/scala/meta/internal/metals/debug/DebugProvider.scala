@@ -57,17 +57,17 @@ import scala.meta.internal.metals.debug.server.MetalsDebuggee
 import scala.meta.internal.metals.debug.server.TestSuiteDebugAdapter
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.io.AbsolutePath
-
 import bloop.config.Config
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.DebugSessionParams
 import ch.epfl.scala.bsp4j.ScalaMainClass
-import ch.epfl.scala.{bsp4j => b}
-import ch.epfl.scala.{debugadapter => dap}
+import ch.epfl.scala.bsp4j as b
+import ch.epfl.scala.debugadapter as dap
 import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.jsonrpc.messages.Message
 
 /**
  * @param supportsTestSelection test selection hasn't been defined in BSP spec yet.
@@ -101,6 +101,61 @@ class DebugProvider(
 
   private val debugSessions = new MutableCancelable()
 
+  // Track all debug servers and their MCP adapters (if connected)
+  // Key is the session ID (readable identifier)
+  private val allDebugServers =
+    new ju.concurrent.ConcurrentHashMap[String, DebugServer]()
+  private val mcpAdapters =
+    new ju.concurrent.ConcurrentHashMap[String, McpDebugSession]()
+
+  // Counter for generating unique session IDs
+  private val sessionCounter = new ju.concurrent.atomic.AtomicInteger(0)
+
+  /**
+   * Generate a readable session ID from a session name.
+   * Converts "com.example.MyClass" to "com-example-myclass-1"
+   */
+  private def generateSessionId(sessionName: String): String = {
+    val normalized = sessionName
+      .toLowerCase()
+      .replaceAll("[^a-z0-9]", "-")
+      .replaceAll("-+", "-")
+      .stripPrefix("-")
+      .stripSuffix("-")
+    val counter = sessionCounter.incrementAndGet()
+    s"$normalized-$counter"
+  }
+
+  // MCP server callback for debug message handling
+  @volatile private var mcpCallback: Option[Message => Unit] = None
+
+  /**
+   * Thread-local flag to indicate if the current debug session is MCP-initiated.
+   * This is used to determine whether to create an MCP-only endpoint or a standard socket endpoint.
+   */
+  private val isMcpInitiatedSession = new ThreadLocal[Boolean] {
+    override def initialValue(): Boolean = false
+  }
+
+  /**
+   * Register MCP server and its callback for debug message handling.
+   * Called when MCP server starts.
+   */
+  def registerMcpServer(callback: Message => Unit): Unit = {
+    scribe.info(s"[DebugProvider] Registering MCP server with callback")
+    mcpCallback = Some(callback)
+    scribe.info(
+      s"[DebugProvider] MCP server registration complete. mcpCallback.isDefined = ${mcpCallback.isDefined}"
+    )
+  }
+
+  /**
+   * Unregister MCP server when it stops.
+   */
+  def unregisterMcpServer(): Unit = {
+    mcpCallback = None
+  }
+
   private val currentRunner =
     new ju.concurrent.atomic.AtomicReference[DebugRunner](null)
 
@@ -128,9 +183,9 @@ class DebugProvider(
       sessionName <- Future.fromTry(parseSessionName(parameters))
       jvmOptionsTranslatedParams = translateJvmParams(parameters)
       buildServer <- buildServerConnect(parameters)
-        .fold[Future[BuildServerConnection]](BuildServerUnavailableError)(
-          Future.successful
-        )
+        .fold[Future[BuildServerConnection]](
+          Future.failed(new IllegalStateException("Build server unavailable"))
+        )(Future.successful)
       isJvm = parameters
         .getTargets()
         .asScala
@@ -210,11 +265,14 @@ class DebugProvider(
           }
         }
 
+      val sessionId = generateSessionId(sessionName)
       val server = new DebugServer(
+        sessionId,
         sessionName,
         uri,
         () => Future.failed(new RuntimeException("No server connected")),
       )
+      allDebugServers.put(sessionId, server)
       Future.successful(server)
     } else {
       Future.failed(
@@ -231,11 +289,15 @@ class DebugProvider(
       buildServer: BuildServerConnection,
       cancelPromise: Promise[Unit],
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
+    scribe.info(
+      s"[DebugProvider.start] Starting debug session: $sessionName, mcpCallback.isDefined = ${mcpCallback.isDefined}, isMcpInitiatedSession = ${isMcpInitiatedSession.get()}"
+    )
     val proxyServer = new ServerSocket(0, 50, localAddress)
     val host = InetAddresses.toUriString(proxyServer.getInetAddress)
     val port = proxyServer.getLocalPort
     proxyServer.setSoTimeout(10 * 1000)
     val uri = URI.create(s"tcp://$host:$port")
+    val sessionId = generateSessionId(sessionName)
     val connectedToServer = Promise[Unit]()
 
     val awaitClient =
@@ -286,27 +348,79 @@ class DebugProvider(
             s"${buildServer.name} ${buildServer.version} does not support scala-debug-adapter 2.x"
           )
         }
-      DebugProxy.open(
-        sessionName,
-        awaitClient,
-        connectToServer,
-        debugAdapter,
-        stacktraceAnalyzer,
-        compilers,
-        workspace,
-        clientConfig.disableColorOutput(),
-        workDoneProgress,
-        sourceMapper,
-        compilations,
-        targets,
-      )
+
+      // Check if this is an MCP-initiated session
+      if (isMcpInitiatedSession.get() && mcpCallback.isDefined) {
+        scribe.info(
+          s"[DebugProvider.start] Creating MCP-only endpoint for session: $sessionName"
+        )
+        val mcpAdapter = new McpEndpoint(mcpCallback.get)
+        val mcpSession = new McpDebugSession(sessionId, mcpAdapter)
+        mcpAdapters.put(sessionId, mcpSession)
+        scribe.info(
+          s"[DebugProvider.start] MCP adapter and session created for: $sessionName"
+        )
+
+        // For MCP attach scenarios, use MCP-only mode (no socket client waiting)
+        DebugProxy.openMcpOnly(
+          sessionName,
+          connectToServer,
+          debugAdapter,
+          stacktraceAnalyzer,
+          compilers,
+          workspace,
+          clientConfig.disableColorOutput(),
+          workDoneProgress,
+          sourceMapper,
+          compilations,
+          targets,
+          mcpAdapter,
+        )
+      } else {
+        scribe.info(
+          s"[DebugProvider.start] Creating standard socket endpoint for session: $sessionName"
+        )
+        DebugProxy.open(
+          sessionName,
+          awaitClient,
+          connectToServer,
+          debugAdapter,
+          stacktraceAnalyzer,
+          compilers,
+          workspace,
+          clientConfig.disableColorOutput(),
+          workDoneProgress,
+          sourceMapper,
+          compilations,
+          targets,
+        )
+      }
     }
-    val server = new DebugServer(sessionName, uri, proxyFactory)
+    val server = new DebugServer(sessionId, sessionName, uri, proxyFactory)
 
     debugSessions.add(server)
-    server.listen.andThen { case _ =>
-      proxyServer.close()
-      debugSessions.remove(server)
+    allDebugServers.put(sessionId, server)
+    scribe.info(
+      s"[DebugProvider.start] Starting server.listen for session: $sessionName"
+    )
+    server.listen.andThen {
+      case scala.util.Success(_) =>
+        scribe.info(
+          s"[DebugProvider.start] server.listen completed successfully for session: $sessionName"
+        )
+        proxyServer.close()
+        debugSessions.remove(server)
+        allDebugServers.remove(server.id)
+        mcpAdapters.remove(server.id)
+      case scala.util.Failure(ex) =>
+        scribe.error(
+          s"[DebugProvider.start] server.listen failed for session: $sessionName",
+          ex,
+        )
+        proxyServer.close()
+        debugSessions.remove(server)
+        allDebugServers.remove(server.id)
+        mcpAdapters.remove(server.id)
     }
 
     connectedToServer.future.map(_ => server)
@@ -484,7 +598,7 @@ class DebugProvider(
       server <- start(debugParams)
     } yield {
       statusBar.addMessage("Started debug server!")
-      DebugSession(server.sessionName, server.uri.toString)
+      DebugSession(server.id, server.sessionName, server.uri.toString)
     }
   }
 
@@ -667,26 +781,67 @@ class DebugProvider(
   private def parseSessionName(
       parameters: b.DebugSessionParams
   ): Try[String] = {
+    scribe.info(
+      s"[DebugProvider.parseSessionName] Parsing session name for dataKind: ${parameters.getDataKind}"
+    )
     parameters.getData match {
       case json: JsonElement =>
+        scribe.info(
+          s"[DebugProvider.parseSessionName] JSON data: ${json.toString}"
+        )
         parameters.getDataKind match {
           case b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
-            json.as[b.ScalaMainClass].map(_.getClassName)
+            scribe.info(
+              s"[DebugProvider.parseSessionName] Parsing SCALA_MAIN_CLASS"
+            )
+            val result = json.as[b.ScalaMainClass].map(_.getClassName)
+            scribe.info(
+              s"[DebugProvider.parseSessionName] Main class result: $result"
+            )
+            result
           case b.TestParamsDataKind.SCALA_TEST_SUITES =>
-            json.as[ju.List[String]].map(_.asScala.sorted.mkString(";"))
+            scribe.info(
+              s"[DebugProvider.parseSessionName] Parsing SCALA_TEST_SUITES"
+            )
+            val result = json.as[ju.List[String]].map { testSuites =>
+              val suites = testSuites.asScala.sorted
+              if (suites.size == 1) suites.head else suites.mkString(";")
+            }
+            scribe.info(
+              s"[DebugProvider.parseSessionName] Test suites result: $result"
+            )
+            result
           case b.DebugSessionParamsDataKind.SCALA_ATTACH_REMOTE =>
+            scribe.info(
+              s"[DebugProvider.parseSessionName] Using attach session name"
+            )
             Success("attach-remote-debug-session")
           case b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION =>
-            json.as[ScalaTestSuites].map { params =>
+            scribe.info(
+              s"[DebugProvider.parseSessionName] Parsing SCALA_TEST_SUITES_SELECTION"
+            )
+            val result = json.as[ScalaTestSuites].map { params =>
               params.suites.asScala
                 .map(suite =>
                   s"${suite.className}(${suite.tests.asScala.mkString(", ")})"
                 )
                 .mkString(";")
             }
+            scribe.info(
+              s"[DebugProvider.parseSessionName] Test suites selection result: $result"
+            )
+            result
+          case other =>
+            scribe.warn(
+              s"[DebugProvider.parseSessionName] Unknown dataKind: $other"
+            )
+            Failure(new IllegalStateException(s"Unknown dataKind: $other"))
         }
       case data =>
         val dataType = data.getClass.getSimpleName
+        scribe.error(
+          s"[DebugProvider.parseSessionName] Data is $dataType. Expecting json"
+        )
         Failure(new IllegalStateException(s"Data is $dataType. Expecting json"))
     }
   }
@@ -786,8 +941,114 @@ class DebugProvider(
     )
   }
 
-  private lazy val BuildServerUnavailableError =
-    Future.failed(new IllegalStateException("Build server unavailable"))
+  /**
+   * Start a debug session with MCP callback-based communication.
+   */
+  def startForMcp(
+      parameters: b.DebugSessionParams,
+      mcpCallback: Message => Unit,
+  )(implicit ec: ExecutionContext): Future[DebugSession] = {
+    scribe.info(
+      s"[DebugProvider.startForMcp] Starting debug session for MCP with parameters: ${parameters.getTargets}"
+    )
+    
+    // Set thread-local flag to indicate this is an MCP-initiated session
+    isMcpInitiatedSession.set(true)
+    
+    // Temporarily register the MCP callback for this session
+    val previousCallback = this.mcpCallback
+
+    scribe.info(
+      s"[DebugProvider.startForMcp] Setting temporary MCP callback, previous was: ${previousCallback.isDefined}"
+    )
+    this.mcpCallback = Some(mcpCallback)
+
+    // Use the regular start method which will now create an MCP-only endpoint
+    scribe.info(
+      s"[DebugProvider.startForMcp] Calling start method with MCP-only endpoint"
+    )
+    start(parameters)
+      .map { server =>
+        scribe.info(
+          s"[DebugProvider.startForMcp] Debug session created successfully: ${server.sessionName}"
+        )
+        // Restore previous state after session is created
+        this.mcpCallback = previousCallback
+        isMcpInitiatedSession.set(false)
+
+        statusBar.addMessage("Started debug server!")
+        val debugSession =
+          DebugSession(server.id, server.sessionName, server.uri.toString)
+        scribe.info(
+          s"[DebugProvider.startForMcp] Returning debug session: ${debugSession.name}, URI: ${debugSession.uri}"
+        )
+        debugSession
+      }
+      .recover { case e =>
+        // Restore state on error
+        scribe.error(
+          s"[DebugProvider.startForMcp] Error starting debug session",
+          e,
+        )
+        this.mcpCallback = previousCallback
+        isMcpInitiatedSession.set(false)
+        throw e
+      }
+  }
+
+  /**
+   * Get an MCP adapter for a debug session (if connected).
+   */
+  def mcpSession(sessionId: String): Option[McpDebugSession] = {
+    Option(mcpAdapters.get(sessionId))
+  }
+
+  /**
+   * Get all active debug sessions.
+   */
+  def allDebugSessions(): List[(DebugSession, Boolean)] = {
+    import scala.jdk.CollectionConverters._
+    allDebugServers.asScala.map { case (sessionId, server) =>
+      val session =
+        DebugSession(server.id, server.sessionName, server.uri.toString)
+      val hasMcp = mcpAdapters.containsKey(sessionId)
+      (session, hasMcp)
+    }.toList
+  }
+
+  /**
+   * Connect MCP to an existing debug session (e.g., one started from VS Code).
+   * Returns true if successfully connected, false otherwise.
+   */
+  def connectMcpToSession(
+      sessionId: String,
+      mcpCallback: Message => Unit,
+  )(implicit ec: ExecutionContext): Future[Boolean] = {
+    Option(allDebugServers.get(sessionId)) match {
+      case Some(server) if !mcpAdapters.containsKey(sessionId) =>
+        // Create MCP bridge to existing session
+        McpDebugBridge
+          .connectToExistingSession(
+            sessionId,
+            server.uri,
+            mcpCallback,
+          )
+          .map { mcpSession =>
+            mcpAdapters.put(sessionId, mcpSession)
+            true
+          }
+          .recover { case e =>
+            scribe.error(s"Failed to connect MCP to session $sessionId", e)
+            false
+          }
+      case Some(_) =>
+        // Already connected via MCP
+        Future.successful(true)
+      case None =>
+        // Session doesn't exist
+        Future.successful(false)
+    }
+  }
 
 }
 

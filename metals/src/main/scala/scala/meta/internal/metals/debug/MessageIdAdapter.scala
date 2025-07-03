@@ -18,8 +18,13 @@ import org.eclipse.lsp4j.jsonrpc.messages.Message
  * Additionally, adapts the request id for responses being produced
  * to keep the whole procedure transparent for the caller.
  */
-final class MessageIdAdapter(next: RemoteEndpoint) extends RemoteEndpoint {
-  private val messageCounter = new AtomicInteger(FirstMessageId)
+final class MessageIdAdapter(
+    next: RemoteEndpoint,
+    private val messageCounter: AtomicInteger = new AtomicInteger(
+      FirstMessageId
+    ),
+) extends RemoteEndpoint {
+
   private val originalRequestIds = mutable.Map.empty[String, String]
 
   def nextId: Int = messageCounter.getAndIncrement()

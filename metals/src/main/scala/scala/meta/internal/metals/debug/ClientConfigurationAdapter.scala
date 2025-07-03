@@ -82,22 +82,62 @@ private[debug] final case class ClientConfigurationAdapter(
   }
 
   def toMetalsPath(path: String, mappedFrom: Boolean = false): AbsolutePath = {
+    scribe.info(
+      s"[ClientConfigurationAdapter] Converting path: '$path', pathFormat: $pathFormat, mappedFrom: $mappedFrom"
+    )
+    
     pathFormat match {
       // VS Code normally sends in path, which doesn't encode files from jars properly
       // so URIs are actually sent in this case instead
       case InitializeRequestArgumentsPathFormat.PATH
           if !path.startsWith("file:") && !path.startsWith("jar:") =>
-        val uriPath = Paths.get(path).toUri.toString.toAbsolutePath
-        val mappedPath =
-          if (mappedFrom) sourceMapper.mappedFrom(uriPath)
-          else sourceMapper.mappedTo(uriPath)
-        mappedPath.getOrElse(uriPath)
+        scribe.info(
+          s"[ClientConfigurationAdapter] Using PATH format for regular file path"
+        )
+        try {
+          val uriPath = Paths.get(path).toUri.toString.toAbsolutePath
+          scribe.info(
+            s"[ClientConfigurationAdapter] Converted to URI path: $uriPath"
+          )
+          val mappedPath =
+            if (mappedFrom) sourceMapper.mappedFrom(uriPath)
+            else sourceMapper.mappedTo(uriPath)
+          val result = mappedPath.getOrElse(uriPath)
+          scribe.info(
+            s"[ClientConfigurationAdapter] Final mapped path: $result"
+          )
+          result
+        } catch {
+          case ex: Exception =>
+            scribe.error(
+              s"[ClientConfigurationAdapter] Failed to convert PATH format: ${ex.getClass.getSimpleName}: ${ex.getMessage}"
+            )
+            throw ex
+        }
       case _ =>
-        val absolutePath = path.toAbsolutePath
-        val mappedPath =
-          if (mappedFrom) sourceMapper.mappedFrom(absolutePath)
-          else sourceMapper.mappedTo(absolutePath)
-        mappedPath.getOrElse(absolutePath)
+        scribe.info(
+          s"[ClientConfigurationAdapter] Using URI/other format"
+        )
+        try {
+          val absolutePath = path.toAbsolutePath
+          scribe.info(
+            s"[ClientConfigurationAdapter] Converted to absolute path: $absolutePath"
+          )
+          val mappedPath =
+            if (mappedFrom) sourceMapper.mappedFrom(absolutePath)
+            else sourceMapper.mappedTo(absolutePath)
+          val result = mappedPath.getOrElse(absolutePath)
+          scribe.info(
+            s"[ClientConfigurationAdapter] Final mapped path: $result"
+          )
+          result
+        } catch {
+          case ex: Exception =>
+            scribe.error(
+              s"[ClientConfigurationAdapter] Failed to convert URI format: ${ex.getClass.getSimpleName}: ${ex.getMessage}"
+            )
+            throw ex
+        }
     }
   }
 
