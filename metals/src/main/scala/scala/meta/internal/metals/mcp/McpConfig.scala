@@ -1,5 +1,7 @@
 package scala.meta.internal.metals.mcp
 
+import scala.util.Failure
+import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.metals.JsonParser.XtensionSerializedAsOption
@@ -34,10 +36,61 @@ object McpConfig {
 
   def deleteConfig(
       projectPath: AbsolutePath,
-      editor: Editor,
+      projectName: String,
+      client: Client,
   ): Unit = {
-    val configFile = projectPath.resolve(s"${editor.settingsPath}mcp.json")
-    if (configFile.exists) configFile.delete()
+    val configFile = projectPath.resolve(s"${client.settingsPath}mcp.json")
+    if (configFile.exists) {
+      val configContent = configFile.readText
+      val updatedConfig = removeMetalsEntry(configContent, projectName, client)
+
+      updatedConfig match {
+        case Failure(exception) =>
+          scribe.error(s"Error removing metals entry: $exception")
+        case Success(value) =>
+          if (isConfigEmpty(value, client)) {
+            configFile.delete()
+          } else {
+            configFile.writeText(gson.toJson(value))
+          }
+      }
+
+    }
+  }
+
+  private def removeMetalsEntry(
+      configInput: String,
+      projectName: String,
+      client: Client,
+  ): Try[JsonObject] = {
+    Try {
+      val config = JsonParser.parseString(configInput).getAsJsonObject
+
+      if (config.has(client.serverField)) {
+        val mcpServers = config.getAsJsonObject(client.serverField)
+        val metalsKey = s"$projectName-metals"
+
+        if (mcpServers.has(metalsKey)) {
+          mcpServers.remove(metalsKey)
+        }
+
+        if (mcpServers.size() == 0) {
+          config.remove(client.serverField)
+        }
+      }
+
+      config
+    }
+  }
+
+  private def isConfigEmpty(config: JsonObject, client: Client): Boolean = {
+    Try {
+      config.size() == 0 ||
+      (!config.has(client.serverField) && config.size() == 0) ||
+      (config.has(client.serverField) && config
+        .getAsJsonObject(client.serverField)
+        .size() == 0 && config.size() == 1)
+    }.getOrElse(false)
   }
 
   def createConfig(

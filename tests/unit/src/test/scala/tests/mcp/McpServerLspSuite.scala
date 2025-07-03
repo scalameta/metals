@@ -2,7 +2,7 @@ package tests.mcp
 
 import scala.meta.internal.metals.mcp.McpConfig
 import scala.meta.internal.metals.mcp.McpMessages
-import scala.meta.internal.metals.mcp.NoEditor
+import scala.meta.internal.metals.mcp.NoClient
 import scala.meta.internal.metals.mcp.VSCodeEditor
 
 import tests.BaseLspSuite
@@ -10,7 +10,7 @@ import tests.BaseLspSuite
 class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
 
   // get a new random port that is not in use
-  val portToUse = {
+  val portToUse: Int = {
     val socket = new java.net.ServerSocket(0)
     val port = socket.getLocalPort()
     socket.close()
@@ -113,7 +113,7 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
       None,
     )
     assert(
-      McpConfig.readPort(server.workspace, "root", NoEditor).isDefined,
+      McpConfig.readPort(server.workspace, "root", NoClient).isDefined,
       "MCP server port should be defined in the default location",
     )
   }

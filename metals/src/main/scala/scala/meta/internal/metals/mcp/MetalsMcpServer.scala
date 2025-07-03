@@ -197,7 +197,7 @@ class MetalsMcpServer(
   override def cancel(): Unit = {
     // Remove the config so that next time the editor will only connect after mcp server is started
     if (client != NoClient) {
-      McpConfig.deleteConfig(projectPath, client)
+      McpConfig.deleteConfig(projectPath, projectName, client)
     }
     cancelable.cancel()
   }
