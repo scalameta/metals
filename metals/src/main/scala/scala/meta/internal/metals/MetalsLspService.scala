@@ -684,6 +684,14 @@ abstract class MetalsLspService(
   protected val syncStatusReporter: SyncStatusReporter =
     new SyncStatusReporter(languageClient, buildTargets)
 
+  private val metalsPasteProvider: MetalsPasteProvider =
+    new MetalsPasteProvider(
+      compilers,
+      buildTargets,
+      definitionProvider,
+      trees,
+    )
+
   def parseTreesAndPublishDiags(paths: Seq[AbsolutePath]): Future[Unit] = {
     Future
       .traverse(paths.distinct) { path =>
@@ -1498,6 +1506,16 @@ abstract class MetalsLspService(
     scalafixProvider
       .runRulesOrPrompt(uri.toAbsolutePath, rules)
       .flatMap(applyEdits(uri, _))
+
+  def didPaste(
+      params: MetalsPasteParams
+  ): Future[ApplyWorkspaceEditResponse] = {
+    metalsPasteProvider
+      .didPaste(params, EmptyCancelToken)
+      .flatMap(optEdit =>
+        applyEdits(params.textDocument.getUri(), optEdit.toList)
+      )
+  }
 
   protected def applyEdits(
       uri: String,
