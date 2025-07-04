@@ -3,6 +3,7 @@ package scala.meta.internal.metals.debug
 import java.net.Socket
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
@@ -26,6 +27,7 @@ import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.debug.DebugProtocol.CompletionRequest
 import scala.meta.internal.metals.debug.DebugProtocol.DisconnectRequest
 import scala.meta.internal.metals.debug.DebugProtocol.ErrorOutputNotification
+import scala.meta.internal.metals.debug.DebugProtocol.FirstMessageId
 import scala.meta.internal.metals.debug.DebugProtocol.HotCodeReplace
 import scala.meta.internal.metals.debug.DebugProtocol.InitializeRequest
 import scala.meta.internal.metals.debug.DebugProtocol.LaunchRequest
@@ -77,7 +79,8 @@ private[debug] final class DebugProxy(
   private val frameIdToFrame: TrieMap[Int, StackFrame] = TrieMap.empty
 
   lazy val listen: Future[ExitStatus] = {
-    scribe.info(s"Starting debug proxy for [$sessionName]")
+    scribe.info(s"[DebugProxy] Starting debug proxy for [$sessionName]")
+    scribe.info(s"[DebugProxy] Client type: ${client.getClass.getSimpleName}")
     listenToServer()
     listenToClient()
 
@@ -85,12 +88,38 @@ private[debug] final class DebugProxy(
   }
 
   private def listenToClient(): Unit = {
-    Future(client.listen(handleClientMessage)).andThen { case _ => cancel() }
+    scribe.info(s"[DebugProxy] Starting client listener for [$sessionName]")
+    Future(client.listen(handleClientMessage)).andThen {
+      case scala.util.Success(_) =>
+        scribe.info(
+          s"[DebugProxy] Client listener completed successfully for [$sessionName], cancelling"
+        )
+        cancel()
+      case scala.util.Failure(ex) =>
+        scribe.error(
+          s"[DebugProxy] Client listener failed for [$sessionName]",
+          ex,
+        )
+        cancel()
+    }
   }
 
   private def listenToServer(): Unit = {
+    scribe.info(s"[DebugProxy] Starting server listener for [$sessionName]")
     Future(server.onReceived(handleServerMessage))
-      .andThen { case _ => cancel() }
+      .andThen {
+        case scala.util.Success(_) =>
+          scribe.info(
+            s"[DebugProxy] Server listener completed for [$sessionName], cancelling"
+          )
+          cancel()
+        case scala.util.Failure(ex) =>
+          scribe.error(
+            s"[DebugProxy] Server listener failed for [$sessionName]",
+            ex,
+          )
+          cancel()
+      }
   }
 
   private val initialized = Promise[Unit]()
@@ -123,9 +152,19 @@ private[debug] final class DebugProxy(
       client.consume(DebugProtocol.syntheticResponse(request, response))
     case request @ SetBreakpointRequest(args) =>
       val originalSource = DebugProtocol.copy(args.getSource)
+      
+      scribe.info(
+        s"[DebugProxy] SetBreakpointRequest received for path: ${originalSource.getPath}"
+      )
+      scribe.info(
+        s"[DebugProxy] ClientAdapter: pathFormat=${clientAdapter.pathFormat}, linesStartAt1=${clientAdapter.linesStartAt1}"
+      )
 
       Try(clientAdapter.toMetalsPath(originalSource.getPath)) match {
         case Success(metalsSourcePath) =>
+          scribe.info(
+            s"[DebugProxy] Successfully converted path to: $metalsSourcePath"
+          )
           args.getBreakpoints.foreach { breakpoint =>
             val line = clientAdapter.normalizeLineForServer(
               metalsSourcePath,
@@ -135,6 +174,9 @@ private[debug] final class DebugProxy(
           }
           val requests =
             debugAdapter.adaptSetBreakpointsRequest(metalsSourcePath, args)
+          scribe.info(
+            s"[DebugProxy] Debug adapter returned ${requests.size} adapted requests"
+          )
           server
             .sendPartitioned(requests.map(DebugProtocol.syntheticRequest))
             .map(_.map(DebugProtocol.parseResponse[SetBreakpointsResponse]))
@@ -142,9 +184,12 @@ private[debug] final class DebugProxy(
             .map(assembleResponse(_, originalSource, metalsSourcePath))
             .map(DebugProtocol.syntheticResponse(request, _))
             .foreach(client.consume)
-        case Failure(_) =>
+        case Failure(exception) =>
           scribe.warn(
-            s"Cannot adapt SetBreakpointRequest because of invalid path: ${originalSource.getPath}"
+            s"[DebugProxy] Cannot adapt SetBreakpointRequest because of invalid path: ${originalSource.getPath}"
+          )
+          scribe.warn(
+            s"[DebugProxy] Exception details: ${exception.getClass.getSimpleName}: ${exception.getMessage}"
           )
           val breakpoints = args.getBreakpoints.map { sourceBreakpoint =>
             val breakpoint = new Breakpoint
@@ -347,9 +392,17 @@ private[debug] final class DebugProxy(
   def cancel(): Unit = {
     if (cancelled.compareAndSet(false, true)) {
       initialized.trySuccess(())
-      scribe.info(s"Canceling debug proxy for [$sessionName]")
+      scribe.info(s"[DebugProxy] Canceling debug proxy for [$sessionName]")
       exitStatus.trySuccess(Terminated)
+      scribe.info(
+        s"[DebugProxy] Cancelling client and server for [$sessionName]"
+      )
       Cancelable.cancelAll(List(client, server))
+      scribe.info(s"[DebugProxy] Cancel completed for [$sessionName]")
+    } else {
+      scribe.info(
+        s"[DebugProxy] Cancel called but already cancelled for [$sessionName]"
+      )
     }
   }
 
@@ -407,6 +460,170 @@ private[debug] object DebugProxy {
       compilations,
       targets,
     )
+  }
+
+  def openWithComposite(
+      name: String,
+      awaitClient: () => Future[Socket],
+      connectToServer: () => Future[Socket],
+      debugAdapter: MetalsDebugAdapter,
+      stackTraceAnalyzer: StacktraceAnalyzer,
+      compilers: Compilers,
+      workspace: AbsolutePath,
+      stripColor: Boolean,
+      workDoneProgress: WorkDoneProgress,
+      sourceMapper: SourceMapper,
+      compilations: Compilations,
+      targets: Seq[BuildTargetIdentifier],
+      mcpAdapter: Option[McpEndpoint],
+  )(implicit ec: ExecutionContext): Future[DebugProxy] = {
+    scribe.info(
+      s"[DebugProxy.openWithComposite] Starting composite debug proxy: $name with MCP adapter: ${mcpAdapter.isDefined}"
+    )
+    val messageCounter = new AtomicInteger(FirstMessageId)
+    scribe.info(
+      s"[DebugProxy.openWithComposite] Connecting to debug server for: $name"
+    )
+    for {
+      server <- connectToServer()
+        .andThen {
+          case Success(_) =>
+            scribe.info(
+              s"[DebugProxy.openWithComposite] Successfully connected to debug server for: $name"
+            )
+          case Failure(ex) =>
+            scribe.info(
+              s"[DebugProxy.openWithComposite] Failed to connect to debug server for $name: ${ex.getMessage}"
+            )
+        }
+        .map(new SocketEndpoint(_))
+        .map(endpoint =>
+          withLogger(workspace, endpoint, DebugProtocol.serverName)
+        )
+        .map(new MessageIdAdapter(_))
+        .map(new ServerAdapter(_))
+      socketClient <- awaitClient()
+        .andThen {
+          case Success(_) =>
+            scribe.info(
+              s"[DebugProxy.openWithComposite] Successfully accepted client connection for: $name"
+            )
+          case Failure(ex) =>
+            scribe.info(
+              s"[DebugProxy.openWithComposite] Failed to accept client connection for $name: ${ex.getMessage}"
+            )
+        }
+        .map(new SocketEndpoint(_))
+        .map(endpoint =>
+          withLogger(workspace, endpoint, DebugProtocol.clientName)
+        )
+        .map(new MessageIdAdapter(_, messageCounter))
+    } yield {
+      val client = mcpAdapter match {
+        case Some(mcp) =>
+          // Create composite endpoint with both socket and MCP
+          scribe.info(
+            s"[DebugProxy.openWithComposite] Creating CompositeDebugEndpoint with socket and MCP for: $name"
+          )
+          val mcpEndpoint = withLogger(
+            workspace,
+            new MessageIdAdapter(mcp, messageCounter),
+            DebugProtocol.clientName + "-mcp",
+          )
+          new CompositeDebugEndpoint(Seq(socketClient, mcpEndpoint))
+        case None =>
+          // Just use socket endpoint
+          scribe.info(
+            s"[DebugProxy.openWithComposite] Using socket endpoint only for: $name"
+          )
+          socketClient
+      }
+
+      new DebugProxy(
+        name,
+        client,
+        server,
+        debugAdapter,
+        stackTraceAnalyzer,
+        compilers,
+        stripColor,
+        workDoneProgress,
+        sourceMapper,
+        compilations,
+        targets,
+      )
+    }
+  }
+
+  def openMcpOnly(
+      name: String,
+      connectToServer: () => Future[Socket],
+      debugAdapter: MetalsDebugAdapter,
+      stackTraceAnalyzer: StacktraceAnalyzer,
+      compilers: Compilers,
+      workspace: AbsolutePath,
+      stripColor: Boolean,
+      workDoneProgress: WorkDoneProgress,
+      sourceMapper: SourceMapper,
+      compilations: Compilations,
+      targets: Seq[BuildTargetIdentifier],
+      mcpAdapter: McpEndpoint,
+  )(implicit ec: ExecutionContext): Future[DebugProxy] = {
+    scribe.info(
+      s"[DebugProxy.openMcpOnly] Starting MCP-only debug proxy: $name"
+    )
+    val messageCounter = new AtomicInteger(FirstMessageId)
+    for {
+      server <- connectToServer()
+        .andThen {
+          case Success(socket) =>
+            scribe.info(
+              s"[DebugProxy.openMcpOnly] Successfully connected to debug server for: $name"
+            )
+            scribe.info(
+              s"[DebugProxy.openMcpOnly] Socket info: ${socket.getRemoteSocketAddress}"
+            )
+          case Failure(ex) =>
+            scribe.error(
+              s"[DebugProxy.openMcpOnly] Failed to connect to debug server for $name",
+              ex
+            )
+        }
+        .map(new SocketEndpoint(_))
+        .map(endpoint =>
+          withLogger(workspace, endpoint, DebugProtocol.serverName)
+        )
+        .map(new MessageIdAdapter(_))
+        .map(new ServerAdapter(_))
+    } yield {
+      // Use only MCP adapter as the client
+      scribe.info(
+        s"[DebugProxy.openMcpOnly] Using MCP adapter as client for: $name"
+      )
+      val client = withLogger(
+        workspace,
+        new MessageIdAdapter(mcpAdapter, messageCounter),
+        DebugProtocol.clientName + "-mcp",
+      )
+
+      val proxy = new DebugProxy(
+        name,
+        client,
+        server,
+        debugAdapter,
+        stackTraceAnalyzer,
+        compilers,
+        stripColor,
+        workDoneProgress,
+        sourceMapper,
+        compilations,
+        targets,
+      )
+      scribe.info(
+        s"[DebugProxy.openMcpOnly] DebugProxy created, starting listen"
+      )
+      proxy
+    }
   }
 
   private def withLogger(

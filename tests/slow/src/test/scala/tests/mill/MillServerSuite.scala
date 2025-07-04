@@ -481,8 +481,8 @@ class MillServerSuite
         ServerCommands.StartAttach,
         DebugUnresolvedAttachRemoteParams("localhost", port),
       )
-      debugger = debugSession match {
-        case DebugSession(_, uri) =>
+      debugger: TestDebugger = debugSession match {
+        case DebugSession(_, _, uri) =>
           scribe.info(s"Starting debug session for $uri")
           TestDebugger(
             URI.create(uri),

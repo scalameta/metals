@@ -4,6 +4,7 @@ import java.io.PrintWriter
 import java.net.InetSocketAddress
 import java.nio.file.Path
 import java.util.Arrays
+import java.util.Collections.singletonList
 import java.util.function.BiFunction
 import java.util.{List => JList}
 import java.util.{Map => JMap}
@@ -18,6 +19,7 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.ConnectionProvider
+import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -25,6 +27,8 @@ import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.Trace
+import scala.meta.internal.metals.debug.DebugDiscovery
+import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.mcp.McpPrinter._
 import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.internal.metals.mcp.SymbolType
@@ -32,6 +36,7 @@ import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.bsp4j.DebugSessionParams
 import ch.epfl.scala.bsp4j.StatusCode
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.modelcontextprotocol.server.McpAsyncServerExchange
@@ -52,6 +57,16 @@ import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.services.LanguageClient
 import reactor.core.publisher.Mono
+import org.eclipse.lsp4j.debug.SetBreakpointsArguments
+import org.eclipse.lsp4j.debug.ContinueArguments
+import org.eclipse.lsp4j.debug.StepInArguments
+import org.eclipse.lsp4j.debug.StepOutArguments
+import org.eclipse.lsp4j.debug.NextArguments
+import org.eclipse.lsp4j.debug.DisconnectArguments
+import org.eclipse.lsp4j.debug.StackTraceArguments
+import org.eclipse.lsp4j.debug.ScopesArguments
+import org.eclipse.lsp4j.debug.VariablesArguments
+import org.eclipse.lsp4j.debug.EvaluateArguments
 
 class MetalsMcpServer(
     queryEngine: McpQueryEngine,
@@ -66,6 +81,8 @@ class MetalsMcpServer(
     languageClient: LanguageClient,
     connectionProvider: ConnectionProvider,
     scalaVersionSelector: ScalaVersionSelector,
+    debugProvider: DebugProvider,
+    debugDiscovery: DebugDiscovery,
 )(implicit
     ec: ExecutionContext
 ) extends Cancelable {
@@ -105,7 +122,17 @@ class MetalsMcpServer(
       .capabilities(capabilities)
       .build()
 
-    cancelable.add(() => asyncServer.close())
+    cancelable.add(() => {
+      asyncServer.close()
+      // Unregister from debug provider when MCP server stops
+      debugProvider.unregisterMcpServer()
+    })
+
+    // Register with debug provider to enable composite endpoints
+    debugProvider.registerMcpServer(message => {
+      // This callback is used when debug sessions need to send messages to MCP
+      scribe.debug(s"Debug message to MCP: ${message.toString}")
+    })
 
     // Register tools
     asyncServer.addTool(createFileCompileTool()).subscribe()
@@ -120,6 +147,20 @@ class MetalsMcpServer(
     asyncServer.addTool(importBuildTool()).subscribe()
     asyncServer.addTool(createFindDepTool()).subscribe()
     asyncServer.addTool(createListModulesTool()).subscribe()
+    asyncServer.addTool(createDebugMainTool()).subscribe()
+    asyncServer.addTool(createDebugTestTool()).subscribe()
+    asyncServer.addTool(createDebugAttachTool()).subscribe()
+    asyncServer.addTool(createDebugSessionsTool()).subscribe()
+    asyncServer.addTool(createDebugPauseTool()).subscribe()
+    asyncServer.addTool(createDebugContinueTool()).subscribe()
+    asyncServer.addTool(createDebugStepTool()).subscribe()
+    asyncServer.addTool(createDebugEvaluateTool()).subscribe()
+    asyncServer.addTool(createDebugVariablesTool()).subscribe()
+    asyncServer.addTool(createDebugBreakpointsTool()).subscribe()
+    asyncServer.addTool(createDebugTerminateTool()).subscribe()
+    asyncServer.addTool(createDebugThreadsTool()).subscribe()
+    asyncServer.addTool(createDebugStackTraceTool()).subscribe()
+    asyncServer.addTool(createDebugConnectTool()).subscribe()
 
     // Log server initialization
     asyncServer.loggingNotification(
@@ -189,7 +230,10 @@ class MetalsMcpServer(
     cancelable.add(() => undertowServer.stop())
   }
 
-  override def cancel(): Unit = cancelable.cancel()
+  override def cancel(): Unit = {
+    cancelable.cancel()
+    debugProvider.unregisterMcpServer()
+  }
 
   private def importBuildTool(): AsyncToolSpecification = {
     val schema = """{"type": "object", "properties": { }}"""
@@ -605,7 +649,7 @@ class MetalsMcpServer(
       {
         "type": "object",
         "properties": {
-          "fqcn": { 
+          "fqcn": {
             "type": "string",
             "description": "Fully qualified name of the symbol to get usages for"
           },
@@ -670,7 +714,7 @@ class MetalsMcpServer(
         "find-dep",
         """|Find a dependency using coursier, optionally specify organization, name, and version.
            |It will try to return completions for the dependency string.
-           |At a minimum you should specify the dependency organization. When only organization is 
+           |At a minimum you should specify the dependency organization. When only organization is
            |specified, it will return all organizations with the specified prefix. If name is additionally
            |specified, it will return all names with the specified prefix in the organization. If version is additionally
            |specified, it will return all versions with the specified prefix in the organization and name.
@@ -743,7 +787,7 @@ class MetalsMcpServer(
       """{
         |  "type": "object",
         |  "properties": { }
-        |} 
+        |}
         |""".stripMargin
     new AsyncToolSpecification(
       new Tool(
@@ -762,6 +806,951 @@ class MetalsMcpServer(
             false,
           )
         }.toMono
+      },
+    )
+  }
+
+  private def createDebugMainTool(): AsyncToolSpecification = {
+    val schema =
+      """|{
+         |  "type": "object",
+         |  "properties": {
+         |    "mainClass": {
+         |      "type": "string",
+         |      "description": "Fully qualified name of the main class to debug"
+         |    },
+         |    "module": {
+         |      "type": "string",
+         |      "description": "The module (build target) containing the main class"
+         |    },
+         |    "args": {
+         |      "type": "array",
+         |      "items": { "type": "string" },
+         |      "description": "Command line arguments to pass to the main class"
+         |    },
+         |    "env": {
+         |      "type": "object",
+         |      "description": "Environment variables to set for the debug session"
+         |    }
+         |  },
+         |  "required": ["mainClass"]
+         |}""".stripMargin
+
+    new AsyncToolSpecification(
+      new Tool("debug-main", "Start a debug session for a main class", schema),
+      withErrorHandling { (exchange, arguments) =>
+        val mainClass = arguments.getAs[String]("mainClass")
+        val module = arguments.getOptAs[String]("module")
+        val args = arguments
+          .getOptAs[JList[String]]("args")
+          .map(_.asScala.toList)
+          .getOrElse(Nil)
+        val env = arguments
+          .getOptAs[JMap[String, String]]("env")
+          .map(_.asScala.toMap)
+          .getOrElse(Map.empty)
+
+        val params = DebugDiscoveryParams(
+          runType = "run",
+          path = null,
+          mainClass = mainClass,
+          buildTarget = module.orNull,
+          args = args.asJava,
+          jvmOptions = null,
+          env = env.asJava,
+          envFile = null,
+        )
+
+        debugDiscovery
+          .debugDiscovery(params)
+          .flatMap { debugParams =>
+            debugProvider.startForMcp(
+              debugParams,
+              message => {
+                // Handle debug messages from server
+                scribe.debug(s"Debug message: ${message.toString}")
+              },
+            )
+          }
+          .map { session =>
+            val content = s"""|Debug session started successfully
+                              |Session Name: ${session.name}
+                              |Session ID: ${session.id}
+                              |Debug URI: ${session.uri}""".stripMargin
+            new CallToolResult(createContent(content), false)
+          }
+          .recover { case e: Exception =>
+            new CallToolResult(
+              createContent(s"Failed to start debug session: ${e.getMessage}"),
+              true,
+            )
+          }
+          .toMono
+      },
+    )
+  }
+
+  private def createDebugTestTool(): AsyncToolSpecification = {
+    val schema =
+      """|{
+         |  "type": "object",
+         |  "properties": {
+         |    "testClass": {
+         |      "type": "string",
+         |      "description": "Fully qualified name of the test class to debug"
+         |    },
+         |    "testMethod": {
+         |      "type": "string",
+         |      "description": "Specific test method to debug (optional)"
+         |    },
+         |    "module": {
+         |      "type": "string",
+         |      "description": "The module (build target) containing the test class"
+         |    }
+         |  },
+         |  "required": ["testClass"]
+         |}""".stripMargin
+
+    new AsyncToolSpecification(
+      new Tool("debug-test", "Start a debug session for a test suite", schema),
+      withErrorHandling { (exchange, arguments) =>
+        val testClass = arguments.getAs[String]("testClass")
+        val testMethod = arguments.getOptAs[String]("testMethod")
+        val module = arguments.getOptAs[String]("module")
+
+        val params = DebugDiscoveryParams(
+          runType = "testTarget",
+          path = null,
+          mainClass = testClass,
+          buildTarget = module.orNull,
+          args = testMethod.map(m => List(s"*$m*").asJava).orNull,
+          jvmOptions = null,
+          env = null,
+          envFile = null,
+        )
+
+        debugDiscovery
+          .debugDiscovery(params)
+          .flatMap { debugParams =>
+            debugProvider.startForMcp(
+              debugParams,
+              message => {
+                // Handle debug messages from server
+                scribe.debug(s"Debug message: ${message.toString}")
+              },
+            )
+          }
+          .map { session =>
+            val content = s"""|Debug session started successfully
+                              |Session Name: ${session.name}
+                              |Session ID: ${session.id}
+                              |Debug URI: ${session.uri}""".stripMargin
+            new CallToolResult(createContent(content), false)
+          }
+          .recover { case e: Exception =>
+            new CallToolResult(
+              createContent(s"Failed to start debug session: ${e.getMessage}"),
+              true,
+            )
+          }
+          .toMono
+      },
+    )
+  }
+
+  private def createDebugAttachTool(): AsyncToolSpecification = {
+    val schema =
+      """|{
+         |  "type": "object",
+         |  "properties": {
+         |    "port": {
+         |      "type": "integer",
+         |      "description": "The debug port to attach to",
+         |      "default": 5005
+         |    },
+         |    "hostName": {
+         |      "type": "string",
+         |      "description": "The hostname of the remote JVM (defaults to localhost)"
+         |    },
+         |    "module": {
+         |      "type": "string",
+         |      "description": "The module (build target) for source mapping"
+         |    }
+         |  },
+         |  "required": ["port"]
+         |}""".stripMargin
+
+    new AsyncToolSpecification(
+      new Tool("debug-attach", "Attach to a remote JVM debug port", schema),
+      withErrorHandling { (exchange, arguments) =>
+        val port = arguments.getAs[java.lang.Integer]("port").intValue()
+        val hostName =
+          arguments.getOptAs[String]("hostName").getOrElse("localhost")
+        val module = arguments.getOptAs[String]("module")
+
+        // Find build target if module is specified, or use first available target
+        val buildTargetOpt = module
+          .flatMap { m =>
+            val found = buildTargets.findByDisplayName(m)
+            scribe.info(
+              s"Looking for module '$m', found: ${found.map(_.getDisplayName())}"
+            )
+            found
+          }
+          .map(_.getId())
+          .orElse {
+            val first = buildTargets.allBuildTargetIds.headOption
+            scribe.info(
+              s"No module specified or not found, using first available: $first"
+            )
+            first
+          }
+
+        buildTargetOpt match {
+          case Some(buildTarget) =>
+            val debugParams = new DebugSessionParams(
+              singletonList(buildTarget)
+            )
+            debugParams.setDataKind("scala-attach-remote")
+
+            // Create the attach params similar to how ServerCommands.StartAttach works
+            val attachData = Map(
+              "hostName" -> hostName,
+              "port" -> port,
+            )
+            debugParams.setData(attachData.asJava.toJson)
+
+            scribe.info(
+              s"Attempting to attach to debug session at $hostName:$port with build target: $buildTarget"
+            )
+            debugProvider
+              .startForMcp(
+                debugParams,
+                message => {
+                  // Handle debug messages from server
+                  scribe.debug(s"Debug message: ${message.toString}")
+                },
+              )
+              .map { session =>
+                scribe.info(
+                  s"Successfully attached to debug session: ${session.name}"
+                )
+                val content = s"""|Attached to remote debugger successfully
+                                  |Host: $hostName:$port
+                                  |Session Name: ${session.name}
+                                  |Session ID: ${session.id}
+                                  |Debug URI: ${session.uri}""".stripMargin
+                new CallToolResult(createContent(content), false)
+              }
+              .recover { case e: Exception =>
+                scribe.error(s"Failed to attach to remote debugger", e)
+                new CallToolResult(
+                  createContent(
+                    s"Failed to attach to remote debugger: ${e.getMessage}"
+                  ),
+                  true,
+                )
+              }
+              .toMono
+          case None =>
+            scribe.error(
+              s"No build target found for module: ${module.getOrElse("<none>")}"
+            )
+            Future
+              .successful(
+                new CallToolResult(
+                  createContent(
+                    s"Error: Module not found: ${module.getOrElse("<no module specified>")}. Please specify a valid module for source mapping."
+                  ),
+                  true,
+                )
+              )
+              .toMono
+        }
+      },
+    )
+  }
+
+  private def createDebugSessionsTool(): AsyncToolSpecification = {
+    val schema = """{"type": "object", "properties": {}}"""
+    new AsyncToolSpecification(
+      new Tool("debug-sessions", "List active debug sessions", schema),
+      withErrorHandling { (exchange, arguments) =>
+        Future {
+          val sessions = debugProvider.allDebugSessions()
+
+          val content = if (sessions.isEmpty) {
+            "No active debug sessions"
+          } else {
+            sessions
+              .map { case (session, hasMcp) =>
+                val mcpStatus = if (hasMcp) " (MCP connected)" else ""
+                s"""|Session Name: ${session.name}$mcpStatus
+                    |URI: ${session.uri}
+                    |Session ID: ${session.id}
+                    |""".stripMargin
+              }
+              .mkString("\n")
+          }
+          new CallToolResult(createContent(content), false)
+        }.toMono
+      },
+    )
+  }
+
+  private def createDebugConnectTool(): AsyncToolSpecification = {
+    val schema =
+      """|{
+         |  "type": "object",
+         |  "properties": {
+         |    "sessionId": {
+         |      "type": "string",
+         |      "description": "The ID of the existing debug session to connect to"
+         |    }
+         |  },
+         |  "required": ["sessionId"]
+         |}""".stripMargin
+
+    new AsyncToolSpecification(
+      new Tool(
+        "debug-connect",
+        "Connect MCP to an existing debug session (e.g., one started from VS Code)",
+        schema,
+      ),
+      withErrorHandling { (exchange, arguments) =>
+        val sessionId = arguments.getAs[String]("sessionId")
+
+        debugProvider
+          .connectMcpToSession(
+            sessionId,
+            message => {
+              // Handle debug messages from server
+              scribe.debug(s"Debug message: ${message.toString}")
+            },
+          )
+          .map { connected =>
+            if (connected) {
+              new CallToolResult(
+                createContent(
+                  s"Successfully connected to debug session: $sessionId"
+                ),
+                false,
+              )
+            } else {
+              new CallToolResult(
+                createContent(
+                  s"Failed to connect to session: $sessionId (not found or already connected)"
+                ),
+                true,
+              )
+            }
+          }
+          .recover { case e: Exception =>
+            new CallToolResult(
+              createContent(s"Error connecting to session: ${e.getMessage}"),
+              true,
+            )
+          }
+          .toMono
+      },
+    )
+  }
+
+  private def createDebugPauseTool(): AsyncToolSpecification = {
+    val schema =
+      """|{
+         |  "type": "object",
+         |  "properties": {
+         |    "sessionId": {
+         |      "type": "string",
+         |      "description": "The ID of the debug session"
+         |    },
+         |    "threadId": {
+         |      "type": "integer",
+         |      "description": "Optional thread ID to pause. If not specified, all threads are paused"
+         |    }
+         |  },
+         |  "required": ["sessionId"]
+         |}""".stripMargin
+
+    new AsyncToolSpecification(
+      new Tool("debug-pause", "Pause execution in a debug session", schema),
+      withErrorHandling { (exchange, arguments) =>
+        val sessionId = arguments.getAs[String]("sessionId")
+        val threadId =
+          arguments.getOptAs[java.lang.Integer]("threadId").map(_.intValue())
+
+        debugProvider.mcpSession(sessionId) match {
+          case Some(mcpSession) =>
+            val args = new org.eclipse.lsp4j.debug.PauseArguments()
+            threadId.foreach(args.setThreadId)
+
+            mcpSession
+              .pause(args)
+              .map { _ =>
+                new CallToolResult(createContent("Execution paused"), false)
+              }
+              .recover { case e: Exception =>
+                new CallToolResult(
+                  createContent(s"Failed to pause: ${e.getMessage}"),
+                  true,
+                )
+              }
+              .toMono
+          case None =>
+            Future
+              .successful(
+                new CallToolResult(createContent("Session not found"), true)
+              )
+              .toMono
+        }
+      },
+    )
+  }
+
+  private def createDebugContinueTool(): AsyncToolSpecification = {
+    val schema =
+      """|{
+         |  "type": "object",
+         |  "properties": {
+         |    "sessionId": {
+         |      "type": "string",
+         |      "description": "The ID of the debug session"
+         |    },
+         |    "threadId": {
+         |      "type": "integer",
+         |      "description": "Optional thread ID to continue. If not specified, all threads continue"
+         |    }
+         |  },
+         |  "required": ["sessionId"]
+         |}""".stripMargin
+
+    new AsyncToolSpecification(
+      new Tool(
+        "debug-continue",
+        "Continue execution in a debug session",
+        schema,
+      ),
+      withErrorHandling { (exchange, arguments) =>
+        val sessionId = arguments.getAs[String]("sessionId")
+        val threadId =
+          arguments.getOptAs[java.lang.Integer]("threadId").map(_.intValue())
+
+        debugProvider.mcpSession(sessionId) match {
+          case Some(mcpSession) =>
+            val args = new ContinueArguments()
+            threadId.foreach(args.setThreadId)
+
+            mcpSession
+              .continue(args)
+              .map { _ =>
+                new CallToolResult(createContent("Execution continued"), false)
+              }
+              .recover { case e: Exception =>
+                new CallToolResult(
+                  createContent(s"Failed to continue: ${e.getMessage}"),
+                  true,
+                )
+              }
+              .toMono
+          case None =>
+            Future
+              .successful(
+                new CallToolResult(createContent("Session not found"), true)
+              )
+              .toMono
+        }
+      },
+    )
+  }
+
+  private def createDebugStepTool(): AsyncToolSpecification = {
+    val schema =
+      """|{
+         |  "type": "object",
+         |  "properties": {
+         |    "sessionId": {
+         |      "type": "string",
+         |      "description": "The ID of the debug session"
+         |    },
+         |    "threadId": {
+         |      "type": "integer",
+         |      "description": "The thread ID to step"
+         |    },
+         |    "stepType": {
+         |      "type": "string",
+         |      "enum": ["in", "out", "over"],
+         |      "description": "The type of step operation"
+         |    }
+         |  },
+         |  "required": ["sessionId", "threadId", "stepType"]
+         |}""".stripMargin
+
+    new AsyncToolSpecification(
+      new Tool("debug-step", "Step execution in a debug session", schema),
+      withErrorHandling { (exchange, arguments) =>
+        val sessionId = arguments.getAs[String]("sessionId")
+        val threadId = arguments.getAs[java.lang.Integer]("threadId").intValue()
+        val stepType = arguments.getAs[String]("stepType")
+
+        debugProvider.mcpSession(sessionId) match {
+          case Some(mcpSession) =>
+            val stepFuture = stepType match {
+              case "in" =>
+                val args = new StepInArguments()
+                args.setThreadId(threadId)
+                mcpSession.stepIn(args)
+              case "out" =>
+                val args = new StepOutArguments()
+                args.setThreadId(threadId)
+                mcpSession.stepOut(args)
+              case "over" =>
+                val args = new NextArguments()
+                args.setThreadId(threadId)
+                mcpSession.stepOver(args)
+              case _ =>
+                Future.failed(
+                  new IllegalArgumentException(s"Invalid step type: $stepType")
+                )
+            }
+
+            stepFuture
+              .map { _ =>
+                new CallToolResult(
+                  createContent(s"Step $stepType completed"),
+                  false,
+                )
+              }
+              .recover { case e: Exception =>
+                new CallToolResult(
+                  createContent(s"Failed to step: ${e.getMessage}"),
+                  true,
+                )
+              }
+              .toMono
+          case None =>
+            Future
+              .successful(
+                new CallToolResult(createContent("Session not found"), true)
+              )
+              .toMono
+        }
+      },
+    )
+  }
+
+  private def createDebugEvaluateTool(): AsyncToolSpecification = {
+    val schema =
+      """|{
+         |  "type": "object",
+         |  "properties": {
+         |    "sessionId": {
+         |      "type": "string",
+         |      "description": "The ID of the debug session"
+         |    },
+         |    "expression": {
+         |      "type": "string",
+         |      "description": "The expression to evaluate"
+         |    },
+         |    "frameId": {
+         |      "type": "integer",
+         |      "description": "Stack frame ID for evaluation context"
+         |    }
+         |  },
+         |  "required": ["sessionId", "expression", "frameId"]
+         |}""".stripMargin
+
+    new AsyncToolSpecification(
+      new Tool(
+        "debug-evaluate",
+        "Evaluate an expression in the debug context",
+        schema,
+      ),
+      withErrorHandling { (exchange, arguments) =>
+        val sessionId = arguments.getAs[String]("sessionId")
+        val expression = arguments.getAs[String]("expression")
+        val frameId = arguments.getAs[java.lang.Integer]("frameId").intValue()
+
+        debugProvider.mcpSession(sessionId) match {
+          case Some(mcpSession) =>
+            val args = new EvaluateArguments()
+            args.setExpression(expression)
+            args.setFrameId(frameId)
+            mcpSession
+              .evaluate(args)
+              .map { result =>
+                val content =
+                  s"""|Result: ${result.getResult}
+                      |Type: ${Option(result.getType).getOrElse("unknown")}
+                      |Variables Reference: ${result.getVariablesReference}""".stripMargin
+                new CallToolResult(createContent(content), false)
+              }
+              .recover { case e: Exception =>
+                new CallToolResult(
+                  createContent(s"Failed to evaluate: ${e.getMessage}"),
+                  true,
+                )
+              }
+              .toMono
+          case None =>
+            Future
+              .successful(
+                new CallToolResult(createContent("Session not found"), true)
+              )
+              .toMono
+        }
+      },
+    )
+  }
+
+  private def createDebugVariablesTool(): AsyncToolSpecification = {
+    val schema =
+      """|{
+         |  "type": "object",
+         |  "properties": {
+         |    "sessionId": {
+         |      "type": "string",
+         |      "description": "The ID of the debug session"
+         |    },
+         |    "threadId": {
+         |      "type": "integer",
+         |      "description": "The thread ID to get variables for"
+         |    },
+         |    "frameId": {
+         |      "type": "integer",
+         |      "description": "Optional frame ID. If not specified, uses the top frame"
+         |    }
+         |  },
+         |  "required": ["sessionId", "threadId"]
+         |}""".stripMargin
+
+    new AsyncToolSpecification(
+      new Tool(
+        "debug-variables",
+        "Get variables in the current debug context",
+        schema,
+      ),
+      withErrorHandling { (exchange, arguments) =>
+        val sessionId = arguments.getAs[String]("sessionId")
+        val threadId = arguments.getAs[java.lang.Integer]("threadId").intValue()
+        val frameId = arguments
+          .getOptAs[java.lang.Integer]("frameId")
+          .map(_.intValue())
+          .getOrElse(0)
+
+        debugProvider.mcpSession(sessionId) match {
+          case Some(mcpSession) =>
+            // First get the stack trace to find the requested frame
+            val stackTraceArgs = new StackTraceArguments()
+            stackTraceArgs.setThreadId(threadId)
+            stackTraceArgs.setStartFrame(frameId)
+            stackTraceArgs.setLevels(1)
+            mcpSession
+              .getStackTrace(stackTraceArgs)
+              .flatMap { stackTrace =>
+                if (stackTrace.getStackFrames.isEmpty) {
+                  Future.failed(new Exception("No stack frames available"))
+                } else {
+                  // Get scopes for the frame
+                  val scopesArgs = new ScopesArguments()
+                  scopesArgs.setFrameId(stackTrace.getStackFrames.head.getId)
+                  mcpSession
+                    .getScopes(scopesArgs)
+                    .flatMap { scopes =>
+                      // Get variables for all scopes
+                      Future
+                        .sequence(scopes.getScopes.toSeq.map { scope =>
+                          val variablesArgs = new VariablesArguments()
+                          variablesArgs
+                            .setVariablesReference(scope.getVariablesReference)
+                          mcpSession
+                            .getVariables(variablesArgs)
+                            .map(vars => (scope.getName, vars))
+                        })
+                        .map { variablesByScope =>
+                          val content = variablesByScope
+                            .map { case (scopeName, vars) =>
+                              s"""|$scopeName:
+                                  |${vars.getVariables
+                                   .map { v =>
+                                     s"  ${v.getName}: ${v.getValue} (${Option(v.getType).getOrElse("?")})"
+                                   }
+                                   .mkString("\n")}""".stripMargin
+                            }
+                            .mkString("\n\n")
+                          new CallToolResult(createContent(content), false)
+                        }
+                    }
+                }
+              }
+              .recover { case e: Exception =>
+                new CallToolResult(
+                  createContent(s"Failed to get variables: ${e.getMessage}"),
+                  true,
+                )
+              }
+              .toMono
+          case None =>
+            Future
+              .successful(
+                new CallToolResult(createContent("Session not found"), true)
+              )
+              .toMono
+        }
+      },
+    )
+  }
+
+  private def createDebugBreakpointsTool(): AsyncToolSpecification = {
+    val schema =
+      """|{
+         |  "type": "object",
+         |  "properties": {
+         |    "sessionId": {
+         |      "type": "string",
+         |      "description": "The ID of the debug session"
+         |    },
+         |    "source": {
+         |      "type": "string",
+         |      "description": "The source file URI, either absolute (`file:///path/to/file.scala`) or JAR URI (`jar:file://path/to/file.jar!/path/to/class.scala`)"
+         |    },
+         |    "breakpoints": {
+         |      "type": "array",
+         |      "items": {
+         |        "type": "object",
+         |        "properties": {
+         |          "line": { "type": "integer", "description": "Line number" },
+         |          "condition": { "type": "string", "description": "Optional condition" },
+         |          "logMessage": { "type": "string", "description": "Optional log message" }
+         |        },
+         |        "required": ["line"]
+         |      },
+         |      "description": "List of breakpoints to set. Empty array clears all breakpoints"
+         |    }
+         |  },
+         |  "required": ["sessionId", "source", "breakpoints"]
+         |}""".stripMargin
+
+    new AsyncToolSpecification(
+      new Tool(
+        "debug-breakpoints",
+        "Set breakpoints in a debug session",
+        schema,
+      ),
+      withErrorHandling { (exchange, arguments) =>
+        val sessionId = arguments.getAs[String]("sessionId")
+        val source = arguments.getAs[String]("source")
+        val breakpointsJson = arguments
+          .getAs[java.util.List[java.util.Map[String, Object]]]("breakpoints")
+
+        debugProvider.mcpSession(sessionId) match {
+          case Some(mcpSession) =>
+            val breakpoints = breakpointsJson.asScala.map { bp =>
+              val b = new org.eclipse.lsp4j.debug.SourceBreakpoint()
+              b.setLine(
+                bp.get("line").asInstanceOf[java.lang.Number].intValue()
+              )
+              b.setCondition(Option(bp.get("condition")).map(_.toString).orNull)
+              b.setLogMessage(
+                Option(bp.get("logMessage")).map(_.toString).orNull
+              )
+              b
+            }.toList
+            val args = new SetBreakpointsArguments()
+            val dapSource = new org.eclipse.lsp4j.debug.Source()
+            dapSource.setPath(source)
+            args.setSource(dapSource)
+            args.setBreakpoints(breakpoints.toArray)
+
+            mcpSession
+              .setBreakpoints(args)
+              .map { response =>
+                val verifiedBreakpoints = response.getBreakpoints
+                val content = if (verifiedBreakpoints.isEmpty) {
+                  "All breakpoints cleared"
+                } else {
+                  verifiedBreakpoints
+                    .map { bp =>
+                      s"""|Line ${bp.getLine}: ${if (bp.isVerified) "verified" else "not verified"}
+                          |${Option(bp.getMessage).map(msg => s"  Message: $msg").getOrElse("")}""".stripMargin
+                    }
+                    .mkString("\n")
+                }
+                new CallToolResult(createContent(content), false)
+              }
+              .recover { case e: Exception =>
+                new CallToolResult(
+                  createContent(s"Failed to set breakpoints: ${e.getMessage}"),
+                  true,
+                )
+              }
+              .toMono
+          case None =>
+            Future
+              .successful(
+                new CallToolResult(createContent("Session not found"), true)
+              )
+              .toMono
+        }
+      },
+    )
+  }
+
+  private def createDebugTerminateTool(): AsyncToolSpecification = {
+    val schema =
+      """|{
+         |  "type": "object",
+         |  "properties": {
+         |    "sessionId": {
+         |      "type": "string",
+         |      "description": "The ID of the debug session to terminate"
+         |    }
+         |  },
+         |  "required": ["sessionId"]
+         |}""".stripMargin
+
+    new AsyncToolSpecification(
+      new Tool("debug-terminate", "Terminate a debug session", schema),
+      withErrorHandling { (exchange, arguments) =>
+        val sessionId = arguments.getAs[String]("sessionId")
+
+        debugProvider.mcpSession(sessionId) match {
+          case Some(mcpSession) =>
+            val args = new DisconnectArguments()
+            args.setTerminateDebuggee(false) // Don't terminate the debuggee process
+            mcpSession
+              .disconnect(args)
+              .map { _ =>
+                new CallToolResult(
+                  createContent("Debug session disconnected"),
+                  false,
+                )
+              }
+              .recover { case e: Exception =>
+                new CallToolResult(
+                  createContent(s"Failed to terminate: ${e.getMessage}"),
+                  true,
+                )
+              }
+              .toMono
+          case None =>
+            Future
+              .successful(
+                new CallToolResult(createContent("Session not found"), true)
+              )
+              .toMono
+        }
+      },
+    )
+  }
+
+  private def createDebugThreadsTool(): AsyncToolSpecification = {
+    val schema =
+      """|{
+         |  "type": "object",
+         |  "properties": {
+         |    "sessionId": {
+         |      "type": "string",
+         |      "description": "The ID of the debug session"
+         |    }
+         |  },
+         |  "required": ["sessionId"]
+         |}""".stripMargin
+
+    new AsyncToolSpecification(
+      new Tool("debug-threads", "List all threads in a debug session", schema),
+      withErrorHandling { (exchange, arguments) =>
+        val sessionId = arguments.getAs[String]("sessionId")
+
+        debugProvider.mcpSession(sessionId) match {
+          case Some(mcpSession) =>
+            mcpSession
+              .getThreads()
+              .map { threadsResponse =>
+                val threads = threadsResponse.getThreads
+                  .map { thread =>
+                    s"Thread ${thread.getId}: ${thread.getName}"
+                  }
+                  .mkString("\n")
+                new CallToolResult(createContent(threads), false)
+              }
+              .recover { case e: Exception =>
+                new CallToolResult(
+                  createContent(s"Failed to get threads: ${e.getMessage}"),
+                  true,
+                )
+              }
+              .toMono
+          case None =>
+            Future
+              .successful(
+                new CallToolResult(createContent("Session not found"), true)
+              )
+              .toMono
+        }
+      },
+    )
+  }
+
+  private def createDebugStackTraceTool(): AsyncToolSpecification = {
+    val schema =
+      """|{
+         |  "type": "object",
+         |  "properties": {
+         |    "sessionId": {
+         |      "type": "string",
+         |      "description": "The ID of the debug session"
+         |    },
+         |    "threadId": {
+         |      "type": "integer",
+         |      "description": "The thread ID to get stack trace for"
+         |    }
+         |  },
+         |  "required": ["sessionId", "threadId"]
+         |}""".stripMargin
+
+    new AsyncToolSpecification(
+      new Tool("debug-stack-trace", "Get stack trace for a thread", schema),
+      withErrorHandling { (exchange, arguments) =>
+        val sessionId = arguments.getAs[String]("sessionId")
+        val threadId = arguments.getAs[Integer]("threadId").intValue()
+
+        debugProvider.mcpSession(sessionId) match {
+          case Some(mcpSession) =>
+            val args = new StackTraceArguments()
+            args.setThreadId(threadId)
+            mcpSession
+              .getStackTrace(args)
+              .map { stackTraceResponse =>
+                val stackTrace = stackTraceResponse.getStackFrames
+                  .map { frame =>
+                    val location = Option(frame.getSource)
+                      .map(source => s"${source.getPath}:${frame.getLine}")
+                      .getOrElse("<unknown>")
+                    s"  #${frame.getId} ${frame.getName} at $location"
+                  }
+                  .mkString("\n")
+                new CallToolResult(
+                  createContent(
+                    s"Stack trace for thread $threadId:\n$stackTrace"
+                  ),
+                  false,
+                )
+              }
+              .recover { case e: Exception =>
+                new CallToolResult(
+                  createContent(s"Failed to get stack trace: ${e.getMessage}"),
+                  true,
+                )
+              }
+              .toMono
+          case None =>
+            Future
+              .successful(
+                new CallToolResult(createContent("Session not found"), true)
+              )
+              .toMono
+        }
       },
     )
   }
