@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.Collections
@@ -38,6 +39,7 @@ import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SyntheticDecorationsParams
+import scala.meta.pc.VirtualFileParams
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
@@ -237,10 +239,15 @@ class Compilers(
     loadCompiler(path).foreach(_.didClose(path.toNIO.toUri()))
   }
 
-  def didChange(path: AbsolutePath): Future[List[Diagnostic]] = {
+  def didChange(
+      path: AbsolutePath,
+      shouldReturnDiagnostics: Boolean,
+      content: Option[String] = None,
+  ): Future[List[Diagnostic]] = {
     def originInput =
-      path
-        .toInputFromBuffers(buffers)
+      content.map(Input.VirtualFile(path.toURI.toString(), _)).getOrElse {
+        path.toInputFromBuffers(buffers)
+      }
 
     loadCompiler(path)
       .map { pc =>
@@ -266,7 +273,11 @@ class Compilers(
           ds <-
             pc
               .didChange(
-                CompilerVirtualFileParams(path.toNIO.toUri(), input.value)
+                Compilers.DidChangeCompilerFileParams(
+                  path.toNIO.toUri(),
+                  input.value,
+                  shouldReturnDiagnostics,
+                )
               )
               .asScala
         } yield {
@@ -1741,6 +1752,18 @@ object Compilers {
         extends PresentationCompilerKey
     case object DefaultScala extends PresentationCompilerKey
     case object DefaultJava extends PresentationCompilerKey
+  }
+
+  // To be removed in the future after:
+  // - https://github.com/scalameta/metals/pull/7430
+  // - https://github.com/scala/scala3/pull/22259
+  case class DidChangeCompilerFileParams(
+      uri: URI,
+      text: String,
+      returnDiagnostics: Boolean,
+      token: CancelToken = EmptyCancelToken,
+  ) extends VirtualFileParams {
+    override def data(): Object = Some(returnDiagnostics)
   }
 
 }
