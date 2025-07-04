@@ -86,7 +86,6 @@ object McpConfig {
   private def isConfigEmpty(config: JsonObject, client: Client): Boolean = {
     Try {
       config.size() == 0 ||
-      (!config.has(client.serverField) && config.size() == 0) ||
       (config.has(client.serverField) && config
         .getAsJsonObject(client.serverField)
         .size() == 0 && config.size() == 1)
