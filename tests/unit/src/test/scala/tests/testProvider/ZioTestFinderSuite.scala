@@ -15,7 +15,7 @@ import tests.TreeUtils
 class ZioTestFinderSuite extends FunSuite {
 
   check(
-    "basic-spec",
+    "aaaabasic-spec",
     """|import zio.test._
        |import zio.test.Assertion._
        |
@@ -29,10 +29,28 @@ class ZioTestFinderSuite extends FunSuite {
        |""".stripMargin,
     FullyQualifiedName("HelloWorldSpec"),
     Set(
-      (
-        "HelloWorldSpec sayHello correctly displays output",
-        QuickRange(5, 4, 7, 5),
-      )
+      Tuple2(
+        _1 = "HelloWorldSpec",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 4,
+            _2 = 13,
+            _3 = 8,
+            _4 = 3,
+          )
+        ),
+      ),
+      Tuple2(
+        _1 = "sayHello correctly displays output",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 5,
+            _2 = 4,
+            _3 = 7,
+            _4 = 5,
+          )
+        ),
+      ),
     ),
   )
   check(
@@ -52,10 +70,28 @@ class ZioTestFinderSuite extends FunSuite {
        |""".stripMargin,
     FullyQualifiedName("HelloWorldSpec"),
     Set(
-      (
-        "HelloWorldSpec sayHello correctly displays output",
-        QuickRange(5, 4, 9, 5),
-      )
+      Tuple2(
+        _1 = "HelloWorldSpec",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 4,
+            _2 = 13,
+            _3 = 10,
+            _4 = 3,
+          )
+        ),
+      ),
+      Tuple2(
+        _1 = "sayHello correctly displays output",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 5,
+            _2 = 4,
+            _3 = 9,
+            _4 = 5,
+          )
+        ),
+      ),
     ),
   )
   check(
@@ -73,7 +109,28 @@ class ZioTestFinderSuite extends FunSuite {
        |""".stripMargin,
     FullyQualifiedName("HelloWorldSpec"),
     Set(
-      ("sayHello correctly displays output", QuickRange(5, 4, 7, 5))
+      Tuple2(
+        _1 = "HelloWorldSpec",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 4,
+            _2 = 13,
+            _3 = 8,
+            _4 = 3,
+          )
+        ),
+      ),
+      Tuple2(
+        _1 = "sayHello correctly displays output",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 5,
+            _2 = 4,
+            _3 = 7,
+            _4 = 5,
+          )
+        ),
+      ),
     ),
   )
   check(
@@ -93,7 +150,145 @@ class ZioTestFinderSuite extends FunSuite {
        |""".stripMargin,
     FullyQualifiedName("NestedSpec"),
     Set(
-      ("NestedSpec nested suite nested test", QuickRange(6, 6, 8, 7))
+      Tuple2(
+        _1 = "NestedSpec",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 4,
+            _2 = 13,
+            _3 = 10,
+            _4 = 3,
+          )
+        ),
+      ),
+      Tuple2(
+        _1 = "nested suite",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 5,
+            _2 = 4,
+            _3 = 9,
+            _4 = 5,
+          )
+        ),
+      ),
+      Tuple2(
+        _1 = "nested test",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 6,
+            _2 = 6,
+            _3 = 8,
+            _4 = 7,
+          )
+        ),
+      ),
+    ),
+  )
+
+  check(
+    "nested-suiteAll",
+    """|import zio.test._
+       |import zio.test.Assertion._
+       |
+       |object NestedSuiteAll extends ZIOSpecDefault {
+       |  def spec = suite("Outer")(
+       |    suiteAll("Inner") {
+       |      test("inner test") {
+       |        assertTrue(true)
+       |      }
+       |    }
+       |  )
+       |}
+       |""".stripMargin,
+    FullyQualifiedName("NestedSuiteAll"),
+    Set(
+      Tuple2(
+        _1 = "Outer",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 4,
+            _2 = 13,
+            _3 = 10,
+            _4 = 3,
+          )
+        ),
+      ),
+      Tuple2(
+        _1 = "Inner",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 5,
+            _2 = 4,
+            _3 = 9,
+            _4 = 5,
+          )
+        ),
+      ),
+      Tuple2(
+        _1 = "inner test",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 6,
+            _2 = 6,
+            _3 = 8,
+            _4 = 7,
+          )
+        ),
+      ),
+    ),
+  )
+
+  check(
+    "nested-suiteAll-2",
+    """|import zio.test._
+       |import zio.test.Assertion._
+       |
+       |object NestedSuiteAll extends ZIOSpecDefault {
+       |  def spec = suiteAll("Outer")(
+       |    suiteAll("Inner") {
+       |      test("inner test") {
+       |        assertTrue(true)
+       |      }
+       |    }
+       |  )
+       |}
+       |""".stripMargin,
+    FullyQualifiedName("NestedSuiteAll"),
+    Set(
+      Tuple2(
+        _1 = "Outer",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 4,
+            _2 = 13,
+            _3 = 10,
+            _4 = 3,
+          )
+        ),
+      ),
+      Tuple2(
+        _1 = "Inner",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 5,
+            _2 = 4,
+            _3 = 9,
+            _4 = 5,
+          )
+        ),
+      ),
+      Tuple2(
+        _1 = "inner test",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 6,
+            _2 = 6,
+            _3 = 8,
+            _4 = 7,
+          )
+        ),
+      ),
     ),
   )
 
@@ -112,15 +307,56 @@ class ZioTestFinderSuite extends FunSuite {
        |    },
        |    test("test3") {
        |      assertTrue(true)
-       |    }
+       |    } 
        |  )
        |}
        |""".stripMargin,
     FullyQualifiedName("MultipleTestsSpec"),
     Set(
-      ("test1", QuickRange(5, 4, 7, 5)),
-      ("test2", QuickRange(8, 4, 10, 5)),
-      ("test3", QuickRange(11, 4, 13, 5)),
+      Tuple2(
+        _1 = "MultipleTestsSpec",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 4,
+            _2 = 13,
+            _3 = 14,
+            _4 = 3,
+          )
+        ),
+      ),
+      Tuple2(
+        _1 = "test1",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 5,
+            _2 = 4,
+            _3 = 7,
+            _4 = 5,
+          )
+        ),
+      ),
+      Tuple2(
+        _1 = "test2",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 8,
+            _2 = 4,
+            _3 = 10,
+            _4 = 5,
+          )
+        ),
+      ),
+      Tuple2(
+        _1 = "test3",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 11,
+            _2 = 4,
+            _3 = 13,
+            _4 = 5,
+          )
+        ),
+      ),
     ),
   )
 
@@ -145,10 +381,61 @@ class ZioTestFinderSuite extends FunSuite {
        |""".stripMargin,
     FullyQualifiedName("DeeplyNestedSpec"),
     Set(
-      (
-        "DeeplyNestedSpec level1 level2 level3 deeply nested test",
-        QuickRange(8, 10, 10, 11),
-      )
+      Tuple2(
+        _1 = "level1",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 5,
+            _2 = 4,
+            _3 = 13,
+            _4 = 5,
+          )
+        ),
+      ),
+      Tuple2(
+        _1 = "DeeplyNestedSpec",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 4,
+            _2 = 13,
+            _3 = 14,
+            _4 = 3,
+          )
+        ),
+      ),
+      Tuple2(
+        _1 = "level2",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 6,
+            _2 = 6,
+            _3 = 12,
+            _4 = 7,
+          )
+        ),
+      ),
+      Tuple2(
+        _1 = "level3",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 7,
+            _2 = 8,
+            _3 = 11,
+            _4 = 9,
+          )
+        ),
+      ),
+      Tuple2(
+        _1 = "deeply nested test",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 8,
+            _2 = 10,
+            _3 = 10,
+            _4 = 11,
+          )
+        ),
+      ),
     ),
   )
 
@@ -170,8 +457,39 @@ class ZioTestFinderSuite extends FunSuite {
        |""".stripMargin,
     FullyQualifiedName("IgnoredTestSpec"),
     Set(
-      ("active test", QuickRange(5, 4, 7, 5)),
-      ("ignored test", QuickRange(8, 4, 10, 5)),
+      Tuple2(
+        _1 = "IgnoredTestSpec",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 4,
+            _2 = 13,
+            _3 = 11,
+            _4 = 3,
+          )
+        ),
+      ),
+      Tuple2(
+        _1 = "active test",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 5,
+            _2 = 4,
+            _3 = 7,
+            _4 = 5,
+          )
+        ),
+      ),
+      Tuple2(
+        _1 = "ignored test",
+        _2 = QuickRange(
+          range = Tuple4(
+            _1 = 8,
+            _2 = 4,
+            _3 = 10,
+            _4 = 5,
+          )
+        ),
+      ),
     ),
   )
 
