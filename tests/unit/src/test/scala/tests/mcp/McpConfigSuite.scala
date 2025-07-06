@@ -241,4 +241,150 @@ class McpConfigSuite extends BaseSuite {
       None,
     )
   }
+
+  test("deleteConfig - preserves other entries") {
+    val workspace = Files.createTempDirectory("metals-mcp-test")
+    val projectPath = AbsolutePath(workspace)
+    val configFile = projectPath.resolve(".cursor/mcp.json")
+
+    // Create config with multiple entries
+    val initialConfig = """{
+                          |  "mcpServers": {
+                          |    "test-project-metals": {
+                          |      "url": "http://localhost:1234/sse"
+                          |    },
+                          |    "other-project-metals": {
+                          |      "url": "http://localhost:5678/sse"
+                          |    }
+                          |  }
+                          |}""".stripMargin
+
+    Files.createDirectories(configFile.parent.toNIO)
+    Files.write(
+      configFile.toNIO,
+      initialConfig.getBytes(StandardCharsets.UTF_8),
+    )
+
+    // Delete only the test-project entry
+    McpConfig.deleteConfig(projectPath, "test-project", CursorEditor)
+
+    // Config should still exist with other entry
+    assert(configFile.exists)
+    val remainingContent = new String(
+      Files.readAllBytes(configFile.toNIO),
+      StandardCharsets.UTF_8,
+    )
+    assertNoDiff(
+      remainingContent,
+      """{
+        |  "mcpServers": {
+        |    "other-project-metals": {
+        |      "url": "http://localhost:5678/sse"
+        |    }
+        |  }
+        |}""".stripMargin,
+    )
+  }
+
+  test("deleteConfig - deletes file when only entry") {
+    val workspace = Files.createTempDirectory("metals-mcp-test")
+    val projectPath = AbsolutePath(workspace)
+    val configFile = projectPath.resolve(".cursor/mcp.json")
+
+    // Create config with only one entry
+    val initialConfig = """{
+                          |  "mcpServers": {
+                          |    "test-project-metals": {
+                          |      "url": "http://localhost:1234/sse"
+                          |    }
+                          |  }
+                          |}""".stripMargin
+
+    Files.createDirectories(configFile.parent.toNIO)
+    Files.write(
+      configFile.toNIO,
+      initialConfig.getBytes(StandardCharsets.UTF_8),
+    )
+
+    // Delete the only entry
+    McpConfig.deleteConfig(projectPath, "test-project", CursorEditor)
+
+    // Config file should be deleted
+    assert(!configFile.exists)
+  }
+
+  test("deleteConfig - handles missing entry") {
+    val workspace = Files.createTempDirectory("metals-mcp-test")
+    val projectPath = AbsolutePath(workspace)
+    val configFile = projectPath.resolve(".cursor/mcp.json")
+
+    // Create config without the target entry
+    val initialConfig = """{
+                          |  "mcpServers": {
+                          |    "other-project-metals": {
+                          |      "url": "http://localhost:5678/sse"
+                          |    }
+                          |  }
+                          |}""".stripMargin
+
+    Files.createDirectories(configFile.parent.toNIO)
+    Files.write(
+      configFile.toNIO,
+      initialConfig.getBytes(StandardCharsets.UTF_8),
+    )
+
+    // Try to delete non-existent entry
+    McpConfig.deleteConfig(projectPath, "test-project", CursorEditor)
+
+    // Config should remain unchanged
+    assert(configFile.exists)
+    val remainingContent = new String(
+      Files.readAllBytes(configFile.toNIO),
+      StandardCharsets.UTF_8,
+    )
+    assertNoDiff(
+      remainingContent,
+      initialConfig,
+    )
+  }
+
+  test("deleteConfig - handles missing file") {
+    val workspace = Files.createTempDirectory("metals-mcp-test")
+    val projectPath = AbsolutePath(workspace)
+    val configFile = projectPath.resolve(".cursor/mcp.json")
+
+    // Ensure file doesn't exist
+    assert(!configFile.exists)
+
+    // Try to delete from non-existent file (should not error)
+    McpConfig.deleteConfig(projectPath, "test-project", CursorEditor)
+
+    // File should still not exist
+    assert(!configFile.exists)
+  }
+
+  test("deleteConfig - handles invalid JSON") {
+    val workspace = Files.createTempDirectory("metals-mcp-test")
+    val projectPath = AbsolutePath(workspace)
+    val configFile = projectPath.resolve(".cursor/mcp.json")
+
+    // Create config with invalid JSON
+    val invalidConfig = "{ invalid json"
+    Files.createDirectories(configFile.parent.toNIO)
+    Files.write(
+      configFile.toNIO,
+      invalidConfig.getBytes(StandardCharsets.UTF_8),
+    )
+
+    // Try to delete from invalid JSON (should not error)
+    McpConfig.deleteConfig(projectPath, "test-project", CursorEditor)
+
+    // Config should remain unchanged
+    assert(configFile.exists)
+    val remainingContent = new String(
+      Files.readAllBytes(configFile.toNIO),
+      StandardCharsets.UTF_8,
+    )
+    assertEquals(remainingContent, invalidConfig)
+  }
 }

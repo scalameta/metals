@@ -14,7 +14,7 @@ import io.modelcontextprotocol.spec.McpSchema.CallToolRequest
 import io.modelcontextprotocol.spec.McpSchema.InitializeResult
 import io.modelcontextprotocol.spec.McpSchema.TextContent
 
-class TestMcpClient(url: String)(implicit ec: ExecutionContext) {
+class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext) {
   private val objectMapper = new ObjectMapper()
   private val transport = new HttpClientSseClientTransport(url)
   private val client = McpClient.async(transport).build()
