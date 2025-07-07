@@ -85,6 +85,8 @@ private[debug] final class RemoteServer(
     sendRequest("variables", args)
   }
 
+  override def pause(args: PauseArguments): CompletableFuture[Void] = sendRequest("pause", args)
+
   override def continue_(
       args: ContinueArguments
   ): CompletableFuture[ContinueResponse] = {

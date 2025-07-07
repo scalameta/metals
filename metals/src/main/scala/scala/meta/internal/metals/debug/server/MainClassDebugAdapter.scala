@@ -27,7 +27,7 @@ class MainClassDebugAdapter(
     // preference over `buildServerEnvVariables`.
     val envVariables = buildServerEnvVariables ++ mainClassEnvVariables
 
-    scribe.debug(s"""|Running main with debugger with environment variables: 
+    scribe.debug(s"""|Running main with debugger with environment variables:
                      |\t${envVariables.mkString("\n\t")}
                      |and compile classpath:
                      |\t${classPath.mkString("\n\t")}

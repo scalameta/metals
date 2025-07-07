@@ -44,7 +44,7 @@ final class TestDebugger(
 
   def initialize: Future[Capabilities] = {
     Debug.printEnclosing()
-    ifNotFailed(debugger.initialize)
+    ifNotFailed(debugger.initialize("test-adapter"))
   }
 
   def launch: Future[Unit] = {
@@ -310,7 +310,7 @@ object TestDebugger {
       val socket = new Socket()
       socket.connect(new InetSocketAddress(uri.getHost, uri.getPort), timeout)
       val server = RemoteServer(socket, listener)
-      new Debugger(server)
+      new Debugger(server, () => Seq.empty, () => Seq.empty)
     }
 
     new TestDebugger(connect, stoppageHandler, requestOtherThreadStackTrace)
