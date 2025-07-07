@@ -716,7 +716,7 @@ final case class TestingServer(
     params.setDataKind(kind)
     params.setData(parameter.toJson)
     executeCommandUnsafe(ServerCommands.StartDebugAdapter.id, Seq(params))
-      .collect { case DebugSession(_, uri) =>
+      .collect { case DebugSession(_, _, uri) =>
         scribe.info(s"Starting debug session for $uri")
         TestDebugger(
           URI.create(uri),
@@ -764,7 +764,7 @@ final case class TestingServer(
   ): Future[TestDebugger] = {
     assertSystemExit(params)
     executeCommandUnsafe(ServerCommands.StartDebugAdapter.id, Seq(params))
-      .collect { case DebugSession(_, uri) =>
+      .collect { case DebugSession(_, _, uri) =>
         TestDebugger(URI.create(uri), stoppageHandler)
       }
   }

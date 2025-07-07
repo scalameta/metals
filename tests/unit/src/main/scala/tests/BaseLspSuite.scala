@@ -237,12 +237,12 @@ abstract class BaseLspSuite(
     val pathToSuite = PathIO.workingDirectory
       .resolve("target")
       .resolve("e2e")
-      .resolve(suiteName)
-
+      .resolve(suiteName.replaceAll("[^a-zA-Z0-9 ]+", "-"))
+    val cleanName = name.replaceAll("[^a-zA-Z0-9 ]+", "-")
     val path =
       if (changeSpacesToDash)
-        pathToSuite.resolve(name.replace(' ', '-'))
-      else pathToSuite.resolve(name)
+        pathToSuite.resolve(cleanName.replace(' ', '-'))
+      else pathToSuite.resolve(cleanName)
 
     Files.createDirectories(path.toNIO)
     path

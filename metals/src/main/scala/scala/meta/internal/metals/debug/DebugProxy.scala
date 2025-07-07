@@ -1,9 +1,8 @@
 package scala.meta.internal.metals.debug
 
-import java.net.Socket
+import java.net.{Socket, URI}
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -12,13 +11,12 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
-
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.EmptyCancelToken
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.JsonParser.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.SourceMapper
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.Trace
@@ -32,9 +30,8 @@ import scala.meta.internal.metals.debug.DebugProtocol.LaunchRequest
 import scala.meta.internal.metals.debug.DebugProtocol.OutputNotification
 import scala.meta.internal.metals.debug.DebugProtocol.SetBreakpointRequest
 import scala.meta.internal.metals.debug.DebugProtocol.TestResults
-import scala.meta.internal.metals.debug.DebugProxy._
+import scala.meta.internal.metals.debug.DebugProxy.*
 import scala.meta.io.AbsolutePath
-
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.debugadapter.TestResultEvent
 import ch.epfl.scala.debugadapter.testing.SingleTestResult.Failed

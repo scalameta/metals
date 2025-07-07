@@ -4,6 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.metals.MetalsEnrichments._
 
@@ -16,6 +17,7 @@ import org.eclipse.lsp4j.debug.EvaluateArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArgumentsPathFormat
 import org.eclipse.lsp4j.debug.NextArguments
+import org.eclipse.lsp4j.debug.PauseArguments
 import org.eclipse.lsp4j.debug.ScopesArguments
 import org.eclipse.lsp4j.debug.ScopesResponse
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments
@@ -29,17 +31,22 @@ import org.eclipse.lsp4j.debug.StepOutArguments
 import org.eclipse.lsp4j.debug.ThreadsResponse
 import org.eclipse.lsp4j.debug.VariablesArguments
 import org.eclipse.lsp4j.debug.VariablesResponse
+import org.eclipse.lsp4j.debug.OutputEventArguments
+import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage
 
 /**
  * Provides simple facade over the Debug Adapter Protocol
  * by hiding the implementation details of how to build the
  * request arguments
  */
-final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
+final class Debugger(
+    server: RemoteServer,
+    sessionId: String,
+)(implicit ec: ExecutionContext) {
 
-  def initialize: Future[Capabilities] = {
+  def initialize(adapterId: String): Future[Capabilities] = {
     val arguments = new InitializeRequestArguments
-    arguments.setAdapterID("test-adapter")
+    arguments.setAdapterID(adapterId)
     arguments.setLinesStartAt1(true)
     arguments.setPathFormat(InitializeRequestArgumentsPathFormat.PATH)
     server.initialize(arguments).asScala
@@ -184,6 +191,12 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
 
   def threads(): Future[ThreadsResponse] = {
     server.threads().asScala
+  }
+
+  def pause(threadId: Option[Int]): Future[Unit] = {
+    val args = new PauseArguments()
+    threadId.foreach(args.setThreadId)
+    server.pause(args).asScala.ignoreValue
   }
 
   def shutdown(timeout: Int = 20): Future[Unit] = {

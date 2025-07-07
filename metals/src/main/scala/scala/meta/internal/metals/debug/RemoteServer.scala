@@ -85,6 +85,9 @@ private[debug] final class RemoteServer(
     sendRequest("variables", args)
   }
 
+  override def pause(args: PauseArguments): CompletableFuture[Void] =
+    sendRequest("pause", args)
+
   override def continue_(
       args: ContinueArguments
   ): CompletableFuture[ContinueResponse] = {
@@ -152,6 +155,8 @@ private[debug] final class RemoteServer(
             notify(notification, listener.onOutput)
           case "stopped" =>
             notify(notification, listener.onStopped)
+          case "continued" =>
+            notify(notification, listener.onContinued)
           case "testResult" =>
             listener.onEvent(notification)
           case "terminated" =>
@@ -188,26 +193,25 @@ private[debug] final class RemoteServer(
 
     val promise = Promise[Response]()
     ongoing.put(request.getId, response => promise.success(response))
-    remote.consume(request)
-
-    val expectedType = classTag[B].runtimeClass.asInstanceOf[Class[B]]
-    val response = promise.future.flatMap { response =>
-      response.getResult match {
+    for {
+      _ <- Future(remote.consume(request))
+      expectedType = classTag[B].runtimeClass.asInstanceOf[Class[B]]
+      response <- promise.future
+      converted = response.getResult match {
         case null if expectedType == classOf[Void] =>
           Future[Void](null).asInstanceOf[Future[B]]
-        case json: JsonElement =>
-          Future.fromTry(json.as[B])
-        case b: B =>
-          Future.successful(b)
+        case json: JsonElement => Future.fromTry(json.as[B])
+        case b: B => Future.successful(b)
         case _ if response.getError != null =>
           Future.failed(new IllegalStateException(response.getError.getMessage))
         case result =>
           Future.failed(new IllegalStateException(s"not a json: $result"))
       }
-    }
-
-    response.onTimeout(90, TimeUnit.SECONDS)(logTimeout(endpoint)).asJava
-  }
+      withTimeout <- converted.onTimeout(90, TimeUnit.SECONDS)(
+        logTimeout(endpoint)
+      )
+    } yield withTimeout
+  }.asJava
 
   private def logTimeout(endpoint: String): Unit = {
     scribe.error(s"Timeout when waiting for a response to $endpoint request")
@@ -222,6 +226,7 @@ object RemoteServer {
   trait Listener {
     def onOutput(event: OutputEventArguments): Unit
     def onStopped(event: StoppedEventArguments): Unit
+    def onContinued(event: ContinuedEventArguments): Unit
     def onEvent(event: NotificationMessage): Unit
     def onTerminated(): Unit
   }

@@ -124,7 +124,7 @@ object TestGroups {
       "tests.ServerLivenessMonitorSuite", "tests.ResetWorkspaceLspSuite",
       "tests.ToplevelWithInnerScala3Suite", "tests.OutlineLspSuite",
       "tests.FallbackDownloadSuite", "tests.mcp.McpConfigSuite",
-      "tests.mcp.McpQueryLspSuite", "tests.mcp.McpRunTestSuite",
-      "tests.mcp.McpServerLspSuite"),
+      "tests.mcp.McpDebugSuite", "tests.mcp.McpQueryLspSuite",
+      "tests.mcp.McpRunTestSuite", "tests.mcp.McpServerLspSuite"),
   )
 }

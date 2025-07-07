@@ -161,7 +161,8 @@ class DebugDiscovery(
       case ValidRunType.TestFile(target, path) =>
         testFile(path, target)
       case ValidRunType.TestTarget(target) =>
-        testTarget(target)
+        // Use the specific test class if provided in mainClass parameter
+        testTarget(target, Option(params.mainClass))
     }
   }
 
@@ -207,20 +208,32 @@ class DebugDiscovery(
       }
 
   private def testTarget(
-      target: b.BuildTargetIdentifier
+      target: b.BuildTargetIdentifier,
+      specificTestClass: Option[String],
   ): Future[b.DebugSessionParams] = {
     Future {
       val params = new b.DebugSessionParams(
         singletonList(target)
       )
       params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES)
-      params.setData(
-        testClasses(target).values
-          .map(_.fullyQualifiedName)
-          .toList
-          .asJava
-          .toJson
-      )
+
+      val testSuites = specificTestClass match {
+        case Some(testClass) =>
+          // Filter to only the specific test class
+          testClasses(target).values
+            .filter(_.fullyQualifiedName == testClass)
+            .map(_.fullyQualifiedName)
+            .toList
+            .distinct
+        case None =>
+          // Return all test classes in the target
+          testClasses(target).values
+            .map(_.fullyQualifiedName)
+            .toList
+            .distinct
+      }
+
+      params.setData(testSuites.asJava.toJson)
       params
     }
   }
