@@ -70,6 +70,9 @@ class MetalsMcpServer(
     ec: ExecutionContext
 ) extends Cancelable {
 
+  private val client =
+    Client.allClients.find(_.names.contains(clientName)).getOrElse(NoClient)
+
   val tracePrinter: Option[PrintWriter] =
     Trace.setupTracePrinter("mcp", projectPath)
 
@@ -158,13 +161,14 @@ class MetalsMcpServer(
     val deployment = manager.addDeployment(servletDeployment)
     deployment.deploy()
 
-    val client =
-      Client.allClients.find(_.names.contains(clientName)).getOrElse(NoClient)
-
-    val configPort = McpConfig.readPort(projectPath, projectName, client)
+    // Read port from the default config file in .metals/ directory
+    def readPort(client: Client) =
+      McpConfig.readPort(projectPath, projectName, client)
+    val savedClientConfigPort = readPort(client)
+    val savedConfigPort = savedClientConfigPort.orElse(readPort(NoClient))
     val undertowServer = Undertow
       .builder()
-      .addHttpListener(configPort.getOrElse(0), "localhost")
+      .addHttpListener(savedConfigPort.getOrElse(0), "localhost")
       .setHandler(deployment.start())
       .build()
     undertowServer.start()
@@ -173,7 +177,11 @@ class MetalsMcpServer(
     val port =
       listenerInfo.get(0).getAddress().asInstanceOf[InetSocketAddress].getPort()
 
-    if (!configPort.isDefined) {
+    if (savedConfigPort.isEmpty) {
+      McpConfig.writeConfig(port, projectName, projectPath, NoClient)
+    }
+
+    if (savedClientConfigPort.isEmpty) {
       McpConfig.writeConfig(port, projectName, projectPath, client)
     }
 
@@ -189,7 +197,13 @@ class MetalsMcpServer(
     cancelable.add(() => undertowServer.stop())
   }
 
-  override def cancel(): Unit = cancelable.cancel()
+  override def cancel(): Unit = {
+    // Remove the config so that next time the editor will only connect after mcp server is started
+    if (client != NoClient && client.shouldCleanUpServerEntry) {
+      McpConfig.deleteConfig(projectPath, projectName, client)
+    }
+    cancelable.cancel()
+  }
 
   private def importBuildTool(): AsyncToolSpecification = {
     val schema = """{"type": "object", "properties": { }}"""

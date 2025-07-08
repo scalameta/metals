@@ -389,7 +389,7 @@ abstract class MetalsLspService(
 
   protected def onCreate(path: AbsolutePath): Unit = {
     buildTargets.onCreate(path)
-    compilers.didChange(path)
+    compilers.didChange(path, false)
   }
 
   protected val interactiveSemanticdbs: InteractiveSemanticdbs = {
@@ -601,6 +601,14 @@ abstract class MetalsLspService(
       () => folder,
       languageClient,
       saveJarFileToDisk = !clientConfig.isVirtualDocumentSupported(),
+    )
+
+  private val metalsPasteProvider: MetalsPasteProvider =
+    new MetalsPasteProvider(
+      compilers,
+      buildTargets,
+      definitionProvider,
+      trees,
     )
 
   def parseTreesAndPublishDiags(paths: Seq[AbsolutePath]): Future[Unit] = {
@@ -825,7 +833,7 @@ abstract class MetalsLspService(
         val path = params.getTextDocument.getUri.toAbsolutePath
         buffers.put(path, change.getText)
         diagnostics.didChange(path)
-        compilers.didChange(path)
+        compilers.didChange(path, false)
         referencesProvider.didChange(path, change.getText)
         parseTrees(path).asJava
     }
@@ -1268,6 +1276,16 @@ abstract class MetalsLspService(
     scalafixProvider
       .runRulesOrPrompt(uri.toAbsolutePath, rules)
       .flatMap(applyEdits(uri, _))
+
+  def didPaste(
+      params: MetalsPasteParams
+  ): Future[ApplyWorkspaceEditResponse] = {
+    metalsPasteProvider
+      .didPaste(params, EmptyCancelToken)
+      .flatMap(optEdit =>
+        applyEdits(params.textDocument.getUri(), optEdit.toList)
+      )
+  }
 
   protected def applyEdits(
       uri: String,

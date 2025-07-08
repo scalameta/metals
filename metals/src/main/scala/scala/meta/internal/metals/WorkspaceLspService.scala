@@ -1214,6 +1214,9 @@ class WorkspaceLspService(
               doctor.executeRunDoctor()
             }
         }.asJavaObject
+      case ServerCommands.MetalsPaste(params) =>
+        val path = params.originDocument.getUri().toAbsolutePath
+        getServiceFor(path).didPaste(params).asJavaObject
       case actionCommand
           if currentOrHeadOrFallback.allActionCommandsIds(
             actionCommand.getCommand()

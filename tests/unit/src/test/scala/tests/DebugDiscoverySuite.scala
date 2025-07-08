@@ -4,13 +4,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
-import scala.jdk.CollectionConverters.ListHasAsScala
-import scala.jdk.CollectionConverters.MapHasAsJava
 import scala.util.Random
 
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments.XtensionDebugSessionParams
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.debug.DiscoveryFailures._
 import scala.meta.internal.metals.debug.DotEnvFileParser.InvalidEnvFileException
@@ -79,7 +77,8 @@ class DebugDiscoverySuite
            |package a
            |object Main {
            |  def main(args: Array[String]) = {
-           |    print("oranges are nice")
+           |    val argsString = args.mkString
+           |    print("oranges are nice " + argsString)
            |    System.exit(0)
            |  }
            |}
@@ -94,6 +93,7 @@ class DebugDiscoverySuite
             null,
             "run",
             "a.Main",
+            args = List("Hello", " Wo$rld").asJava,
           ),
         )
         .map(_.asInstanceOf[DebugSessionParams])
@@ -103,10 +103,18 @@ class DebugDiscoverySuite
         mainClass.isSuccess,
         "Server should return ExtendedScalaMainClass object",
       )
-    } yield assert(
-      mainClass.get.shellCommand.nonEmpty,
-      "Shell command should be available in response for discovery",
-    )
+      _ = assert(
+        mainClass.get.shellCommand.nonEmpty,
+        "Shell command should be available in response for discovery",
+      )
+    } yield {
+      import scala.sys.process._
+      val output = mainClass.get.shellCommand.!!
+      val expected =
+        if (isWindows) "oranges are nice Hello Wo$rld"
+        else "oranges are nice Hello Wo\\$rld"
+      assertEquals(output.trim(), expected)
+    }
   }
 
   test("run-file-main") {

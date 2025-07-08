@@ -415,7 +415,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.16.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "11.10.0",
+      "org.flywaydb" % "flyway-core" % "11.10.1",
       "com.h2database" % "h2" % "2.3.232",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
@@ -427,8 +427,8 @@ lazy val metals = project
       V.dap4j,
       "ch.epfl.scala" %% "scala-debug-adapter" % V.debugAdapter,
       // for finding paths of global log/cache directories
-      "io.get-coursier.util" % "directories" % "0.1.3",
-      "io.get-coursier.util" % "directories-jni" % "0.1.3",
+      "io.get-coursier.util" % "directories" % "0.1.4",
+      "io.get-coursier.util" % "directories-jni" % "0.1.4",
       // ==================
       // Scala dependencies
       // ==================
