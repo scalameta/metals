@@ -163,7 +163,10 @@ class MetalsMcpServer(
     deployment.deploy()
 
     // Read port from the default config file in .metals/ directory
-    val savedConfigPort = McpConfig.readPort(projectPath, projectName, NoClient)
+    def readPort(client: Client) =
+      McpConfig.readPort(projectPath, projectName, client)
+    val savedClientConfigPort = readPort(client)
+    val savedConfigPort = savedClientConfigPort.orElse(readPort(NoClient))
     val undertowServer = Undertow
       .builder()
       .addHttpListener(savedConfigPort.getOrElse(0), "localhost")
@@ -175,11 +178,11 @@ class MetalsMcpServer(
     val port =
       listenerInfo.get(0).getAddress().asInstanceOf[InetSocketAddress].getPort()
 
-    if (!savedConfigPort.isDefined) {
+    if (savedConfigPort.isEmpty) {
       McpConfig.writeConfig(port, projectName, projectPath, NoClient)
     }
 
-    if (client != NoClient) {
+    if (savedClientConfigPort.isEmpty) {
       McpConfig.writeConfig(port, projectName, projectPath, client)
     }
 
@@ -197,7 +200,7 @@ class MetalsMcpServer(
 
   override def cancel(): Unit = {
     // Remove the config so that next time the editor will only connect after mcp server is started
-    if (client != NoClient) {
+    if (client != NoClient && client.shouldCleanUpServerEntry) {
       McpConfig.deleteConfig(projectPath, projectName, client)
     }
     cancelable.cancel()

@@ -156,6 +156,7 @@ case class Client(
     additionalProperties: List[(String, String)],
     serverEntry: Option[String] = None,
     fileName: Option[String] = None,
+    shouldCleanUpServerEntry: Boolean = false,
 )
 
 object VSCodeEditor
@@ -179,6 +180,7 @@ object CursorEditor
       settingsPath = ".cursor/",
       serverField = "mcpServers",
       additionalProperties = Nil,
+      shouldCleanUpServerEntry = true,
     )
 
 object Claude
