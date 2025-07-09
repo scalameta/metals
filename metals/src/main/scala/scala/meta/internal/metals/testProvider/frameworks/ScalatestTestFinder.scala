@@ -119,12 +119,14 @@ object ScalatestTestFinder {
         namePrefix: String,
     ): List[TestCaseEntry] =
       stats.flatMap {
-        // format: off
-        //
-        case Term.Apply(appl @ Term.Apply(Term.Name(opName), Lit.String(scenarioName) :: _), _)
-          if AnyFeatureSpec.leafMethods.contains(opName) =>
-        // format: on
-          val testname = s"$namePrefix $scenarioName"
+        case Term.Apply(
+              appl @ Term.Apply(
+                Term.Name(opName),
+                Lit.String(scenarioName) :: _,
+              ),
+              _,
+            ) if AnyFeatureSpec.leafMethods.contains(opName) =>
+          val testname = s"Feature: $namePrefix Scenario: $scenarioName"
           TestCaseEntry(testname, appl.pos.toLsp.toLocation(path.toURI)) :: Nil
 
         case _ =>
