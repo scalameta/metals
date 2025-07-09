@@ -12,10 +12,8 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.debug.server.TestSuiteDebugAdapter
-import scala.meta.internal.metals.debug.server.Discovered
 import scala.meta.io.AbsolutePath
 
-import bloop.config.Config
 import ch.epfl.scala.debugadapter.DebuggeeListener
 import ch.epfl.scala.debugadapter.testing.SingleTestResult
 import ch.epfl.scala.debugadapter.testing.TestSuiteSummary
@@ -33,10 +31,9 @@ class McpTestRunner(
       optPath: Option[AbsolutePath],
       verbose: Boolean,
   ): Either[String, Future[String]] = {
-    val className = testClass.trim
     val testSuites = new b.ScalaTestSuites(
       List(
-        new b.ScalaTestSuiteSelection(className, Nil.asJava)
+        new b.ScalaTestSuiteSelection(testClass, Nil.asJava)
       ).asJava,
       Nil.asJava,
       Nil.asJava,
@@ -44,7 +41,7 @@ class McpTestRunner(
     val cancelPromise = Promise[Unit]()
     for {
       path <- optPath
-        .orElse(resolvePath(className))
+        .orElse(resolvePath(testClass))
         .toRight(s"Missing path to test suite and failed to resolve it.")
       id <- buildTargets
         .inverseSources(path)
