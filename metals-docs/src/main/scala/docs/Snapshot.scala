@@ -32,7 +32,12 @@ object Snapshot {
   ): Snapshot = {
     if (System.getenv("CI") != null) {
       try {
-        fetchLatest(useSnapshot, binaryVersion)
+        // There is no way to query for snapshots currently
+        if (useSnapshot) {
+          Snapshot(BuildInfo.metalsVersion, LocalDateTime.now())
+        } else {
+          fetchLatest(useSnapshot, binaryVersion)
+        }
       } catch {
         case NonFatal(e) if retry > 0 =>
           scribe.error(
