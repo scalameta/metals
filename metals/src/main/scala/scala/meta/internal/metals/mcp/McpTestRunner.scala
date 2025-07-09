@@ -75,13 +75,6 @@ class McpTestRunner(
   private def resolvePath(fqcn: String): Option[AbsolutePath] = {
     mcpSearch.exactSearch(fqcn, None).flatMap(_.definitionPath).headOption
   }
-
-  private def handleEmptyResult(
-      testClass: String,
-      discovered: Map[Config.TestFramework, List[Discovered]],
-  ): String = {
-    s"No test results returned for $testClass. Check logs for execution details."
-  }
 }
 
 class McpDebuggeeListener(verbose: Boolean) extends DebuggeeListener {
@@ -91,8 +84,7 @@ class McpDebuggeeListener(verbose: Boolean) extends DebuggeeListener {
   override def out(line: String): Unit =
     if (verbose) buffer.append(line).append("\n")
 
-  override def err(line: String): Unit =
-    buffer.append(line).append("\n")
+  override def err(line: String): Unit = buffer.append(line).append("\n")
 
   override def testResult(data: TestSuiteSummary): Unit =
     if (!verbose) {
@@ -125,6 +117,5 @@ class McpDebuggeeListener(verbose: Boolean) extends DebuggeeListener {
             |""".stripMargin
       )
     }
-
   def result: String = AnsiFilter()(buffer.toString())
 }
