@@ -68,14 +68,7 @@ class McpTestRunner(
         )
         listener = new McpDebuggeeListener(verbose)
         _ <- adapter.run(listener).future
-        result = listener.result
-        finalResult =
-          if (result.trim.isEmpty) {
-            handleEmptyResult(testClass, discovered)
-          } else {
-            result
-          }
-      } yield finalResult
+      } yield listener.result
     }
   }
 
@@ -95,15 +88,13 @@ class McpDebuggeeListener(verbose: Boolean) extends DebuggeeListener {
   private val buffer = new StringBuffer()
   override def onListening(address: InetSocketAddress): Unit = {}
 
-  override def out(line: String): Unit = {
+  override def out(line: String): Unit =
     if (verbose) buffer.append(line).append("\n")
-  }
 
-  override def err(line: String): Unit = {
+  override def err(line: String): Unit =
     buffer.append(line).append("\n")
-  }
 
-  override def testResult(data: TestSuiteSummary): Unit = {
+  override def testResult(data: TestSuiteSummary): Unit =
     if (!verbose) {
       val testCases = data.tests.asScala
       val grouped = testCases
@@ -134,6 +125,6 @@ class McpDebuggeeListener(verbose: Boolean) extends DebuggeeListener {
             |""".stripMargin
       )
     }
-  }
+
   def result: String = AnsiFilter()(buffer.toString())
 }
