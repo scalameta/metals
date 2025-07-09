@@ -338,8 +338,14 @@ class ScalatestFinderSuite extends FunSuite {
        |""".stripMargin,
     FullyQualifiedName("FeatureSpec"),
     Set(
-      ("A test feature A test scenario", QuickRange(4, 4, 4, 31)),
-      ("A test feature Another test scenario", QuickRange(7, 4, 7, 37)),
+      (
+        "Feature: A test feature Scenario: A test scenario",
+        QuickRange(4, 4, 4, 31),
+      ),
+      (
+        "Feature: A test feature Scenario: Another test scenario",
+        QuickRange(7, 4, 7, 37),
+      ),
     ),
     ScalatestStyle.AnyFeatureSpec,
   )
@@ -361,8 +367,14 @@ class ScalatestFinderSuite extends FunSuite {
        |""".stripMargin,
     FullyQualifiedName("AsyncFeatureSpec"),
     Set(
-      ("A test feature A test scenario", QuickRange(4, 4, 4, 31)),
-      ("A test feature Another test scenario", QuickRange(7, 4, 7, 37)),
+      (
+        "Feature: A test feature Scenario: A test scenario",
+        QuickRange(4, 4, 4, 31),
+      ),
+      (
+        "Feature: A test feature Scenario: Another test scenario",
+        QuickRange(7, 4, 7, 37),
+      ),
     ),
     ScalatestStyle.AnyFeatureSpec,
   )
