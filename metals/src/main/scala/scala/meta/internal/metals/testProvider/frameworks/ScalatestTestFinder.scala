@@ -133,14 +133,16 @@ object ScalatestTestFinder {
           List.empty
       }
 
-    template.stats.flatMap {
-        // format: off
-        //
-        case Term.Apply(Term.Apply(Term.Name(opName), Lit.String(featureName) :: _), Term.Block(stats) :: Nil)
-          if AnyFeatureSpec.intermediateMethods.contains(opName) =>
-        // format: on
-        findScenarios(stats, featureName)
-    }.toVector
+    template.body.stats
+      .collect {
+        case Term.Apply(
+              Term.Apply(Term.Name(opName), Lit.String(featureName) :: _),
+              Term.Block(stats) :: Nil,
+            ) if AnyFeatureSpec.intermediateMethods.contains(opName) =>
+          findScenarios(stats, featureName)
+      }
+      .flatten
+      .toVector
 
   }
 
@@ -150,7 +152,7 @@ object ScalatestTestFinder {
       style: ScalatestStyle,
   ): Vector[TestCaseEntry] = {
     // collect all entries like test("testname") { ... }
-    template.stats.collect {
+    template.body.stats.collect {
           // format: off
           case Term.Apply(appl @ Term.Apply(Term.Name(funName), Lit.String(testname) :: _), _)
               if style.leafMethods.contains(funName) =>
