@@ -113,12 +113,24 @@ case class QuickBuild(
     }
     val extraSources =
       additionalSources.map(relpath => workspace.resolve(relpath).toNIO).toList
-    val sources = extraSources ::: List(
+    val mainSources = List(
       "src/main/java",
       "src/main/scala",
       s"src/main/scala-$binaryVersion",
       s"src/main/scala-$binaryVersion",
-    ).map(relpath => baseDirectory.resolve(relpath))
+    )
+    val testSources =
+      if (isTest)
+        List(
+          "src/test/java",
+          "src/test/scala",
+          s"src/test/scala-$binaryVersion",
+          s"src/test/scala-$binaryVersion",
+        )
+      else Nil
+    val sources = extraSources ::: (mainSources ++ testSources).map(relpath =>
+      baseDirectory.resolve(relpath)
+    )
     val scalaDependencies =
       if (ScalaVersions.isScala3Version(scalaVersion)) {
         Array(
@@ -292,6 +304,9 @@ object QuickBuild {
     ),
     "com.lihaoyi:mill-contrib-testng" -> Config.TestFramework(
       List("mill.testng.TestNGFramework")
+    ),
+    "dev.zio::zio-test-sbt" -> Config.TestFramework(
+      List("zio.test.sbt.ZTestFramework")
     ),
   )
 

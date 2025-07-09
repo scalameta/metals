@@ -441,7 +441,7 @@ class DebugProvider(
                 testInfo.fullyQualifiedName,
                 pcInfo.recursiveParents.map(_.symbolToFullQualifiedName).toSet,
                 (pcInfo.annotations ++ pcInfo.memberDefsAnnotations).toSet,
-                isModule = false,
+                isModule = pcInfo.symbol.endsWith("."),
               )
             },
           )

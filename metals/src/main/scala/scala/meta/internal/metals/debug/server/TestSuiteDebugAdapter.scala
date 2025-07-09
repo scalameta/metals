@@ -114,32 +114,22 @@ class TestSuiteDebugAdapter(
     // `testClassesEnvVariables` come from the user settings in editor, so they should override the build server ones.
     // (This is later turned into a map, so the latter will override the first ones).
     val envVariables = buildServerEnvVariables ++ testClassesEnvVariables
-    scribe.debug(
-      s"""|Environment variables for the test suite: 
-          |  ${envVariables.mkString("\n  ")}""".stripMargin
-    )
 
-    scribe.debug("Starting forked test execution...")
     val resolvedSuites = suites(frameworks.toSeq)
+    scribe.debug(
+      s"Resolved ${resolvedSuites.size} test suites: ${resolvedSuites.keys.map(_.name()).mkString(", ")}"
+    )
 
     val server =
       new TestServer(handler, loader, resolvedSuites)
     val forkMain = classOf[sbt.ForkMain].getCanonicalName
     val arguments = List(server.port.toString)
-    val testAgentJars =
-      TestInternals.testAgentFiles.filter(_.toString.endsWith(".jar"))
-    scribe.debug("Test agent JARs: " + testAgentJars.mkString(", "))
 
     server.listenToTests
 
-    scribe.debug(s"""|Running test with debugger with compile classpath:
-                     |\t${classPath.mkString("\n\t")}
-                     |and run classpath:
-                     |\t${project.runClassPath.mkString("\n\t")}""".stripMargin)
-
     Run.runMain(
       root,
-      project.runClassPath.map(_.toNIO) ++ testAgentJars,
+      project.runClassPath.map(_.toNIO) ++ TestInternals.testAgentFiles,
       userJavaHome,
       forkMain,
       arguments,

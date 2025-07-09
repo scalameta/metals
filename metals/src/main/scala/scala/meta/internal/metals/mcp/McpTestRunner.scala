@@ -12,8 +12,10 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.debug.server.TestSuiteDebugAdapter
+import scala.meta.internal.metals.debug.server.Discovered
 import scala.meta.io.AbsolutePath
 
+import bloop.config.Config
 import ch.epfl.scala.debugadapter.DebuggeeListener
 import ch.epfl.scala.debugadapter.testing.SingleTestResult
 import ch.epfl.scala.debugadapter.testing.TestSuiteSummary
@@ -31,9 +33,10 @@ class McpTestRunner(
       optPath: Option[AbsolutePath],
       verbose: Boolean,
   ): Either[String, Future[String]] = {
+    val className = testClass.trim
     val testSuites = new b.ScalaTestSuites(
       List(
-        new b.ScalaTestSuiteSelection(testClass, Nil.asJava)
+        new b.ScalaTestSuiteSelection(className, Nil.asJava)
       ).asJava,
       Nil.asJava,
       Nil.asJava,
@@ -41,7 +44,7 @@ class McpTestRunner(
     val cancelPromise = Promise[Unit]()
     for {
       path <- optPath
-        .orElse(resolvePath(testClass))
+        .orElse(resolvePath(className))
         .toRight(s"Missing path to test suite and failed to resolve it.")
       id <- buildTargets
         .inverseSources(path)
@@ -65,12 +68,26 @@ class McpTestRunner(
         )
         listener = new McpDebuggeeListener(verbose)
         _ <- adapter.run(listener).future
-      } yield listener.result
+        result = listener.result
+        finalResult =
+          if (result.trim.isEmpty) {
+            handleEmptyResult(testClass, discovered)
+          } else {
+            result
+          }
+      } yield finalResult
     }
   }
 
   private def resolvePath(fqcn: String): Option[AbsolutePath] = {
     mcpSearch.exactSearch(fqcn, None).flatMap(_.definitionPath).headOption
+  }
+
+  private def handleEmptyResult(
+      testClass: String,
+      discovered: Map[Config.TestFramework, List[Discovered]],
+  ): String = {
+    s"No test results returned for $testClass. Check logs for execution details."
   }
 }
 
@@ -78,12 +95,15 @@ class McpDebuggeeListener(verbose: Boolean) extends DebuggeeListener {
   private val buffer = new StringBuffer()
   override def onListening(address: InetSocketAddress): Unit = {}
 
-  override def out(line: String): Unit =
+  override def out(line: String): Unit = {
     if (verbose) buffer.append(line).append("\n")
+  }
 
-  override def err(line: String): Unit = buffer.append(line).append("\n")
+  override def err(line: String): Unit = {
+    buffer.append(line).append("\n")
+  }
 
-  override def testResult(data: TestSuiteSummary): Unit =
+  override def testResult(data: TestSuiteSummary): Unit = {
     if (!verbose) {
       val testCases = data.tests.asScala
       val grouped = testCases
@@ -114,5 +134,6 @@ class McpDebuggeeListener(verbose: Boolean) extends DebuggeeListener {
             |""".stripMargin
       )
     }
+  }
   def result: String = AnsiFilter()(buffer.toString())
 }
