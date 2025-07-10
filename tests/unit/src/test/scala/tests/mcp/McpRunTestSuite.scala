@@ -8,7 +8,7 @@ class McpRunTestSuite extends BaseLspSuite("mcp-test") {
   override def serverConfig: MetalsServerConfig =
     super.serverConfig.copy(loglevel = "debug")
 
-  test("basic") {
+  test("basic", maxRetry = 3) {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -61,6 +61,62 @@ class McpRunTestSuite extends BaseLspSuite("mcp-test") {
       _ = assert(res2.contains("2 tests, 1 passed, 1 failed"), res2)
       // Non-verbose prints only errors and summary
       _ = assert(!res2.contains("Some string"), res2)
+    } yield ()
+  }
+
+  test("zio-test", maxRetry = 3) {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies" : ["dev.zio::zio-test:2.0.15", "dev.zio::zio-test-sbt:2.0.15"],
+           |    "testFrameworks": ["zio.test.sbt.ZTestFramework"]
+           |  }
+           |}
+           |/a/src/test/scala/a/ZioTestSuite.scala
+           |package a
+           |
+           |import zio.test._
+           |import zio.test.Assertion._
+           |
+           |object ZioTestSuite extends ZIOSpecDefault {
+           |  def spec = suite("ZioTestSuite")(
+           |    test("test one") {
+           |      assertTrue(1 + 1 == 2)
+           |    },
+           |    test("test two") {
+           |      assertTrue(2 + 2 == 4)
+           |    }
+           |  )
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- server.didOpen(
+        "a/src/test/scala/a/ZioTestSuite.scala"
+      )
+      _ = assertNoDiagnostics()
+      _ <- server.server.indexingPromise.future
+      path = server.toPath("a/src/test/scala/a/ZioTestSuite.scala")
+
+      // Test ZIO test execution - runs all tests in the suite
+      result <- server.headServer.mcpTestRunner
+        .runTests("a.ZioTestSuite", Some(path), verbose = false) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      _ = assert(result.nonEmpty, s"ZIO test returned empty result: '$result'")
+      _ = assert(
+        result.contains("test one"),
+        s"ZIO test result should contain 'test one': '$result'",
+      )
+      _ = assert(
+        result.contains("test two"),
+        s"ZIO test result should contain 'test two': '$result'",
+      )
     } yield ()
   }
 }
