@@ -279,7 +279,7 @@ object TestFrameworkUtils {
   )
 
   val ZioTestFramework: TestFramework = TestFramework(
-    List("zio.test.ZIOSuite")
+    List("zio.test.sbt.ZTestFramework")
   )
 
   private lazy val supportedFrameworks = Set(
