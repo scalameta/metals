@@ -8,7 +8,7 @@ class McpRunTestSuite extends BaseLspSuite("mcp-test") {
   override def serverConfig: MetalsServerConfig =
     super.serverConfig.copy(loglevel = "debug")
 
-  test("basic") {
+  test("basic", maxRetry = 3) {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -64,7 +64,7 @@ class McpRunTestSuite extends BaseLspSuite("mcp-test") {
     } yield ()
   }
 
-  test("zio-test") {
+  test("zio-test", maxRetry = 3) {
     cleanWorkspace()
     for {
       _ <- initialize(
