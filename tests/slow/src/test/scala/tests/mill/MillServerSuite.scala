@@ -239,17 +239,17 @@ class MillServerSuite
          |package build
          |import mill.scalalib.bsp.BspBuildTarget
          |import mill.scalalib.bsp.BspModule
-         |  
+         |
          |import mill._
          |import scalalib._
-         |  
+         |
          |object foo extends ScalaModule {
          |  def scalaVersion = "2.13.13"
          |}
-         |  
+         |
          |object bar extends ScalaModule with BspModule  {
          |  def scalaVersion = "2.13.13"
-         |  
+         |
          |  override def bspBuildTarget: BspBuildTarget = {
          |    val original = super.bspBuildTarget
          |    original.copy(tags = original.tags :+ BspModule.Tag.NoIDE)
@@ -482,7 +482,7 @@ class MillServerSuite
         DebugUnresolvedAttachRemoteParams("localhost", port),
       )
       debugger = debugSession match {
-        case DebugSession(_, uri) =>
+        case DebugSession(_, _, uri) =>
           scribe.info(s"Starting debug session for $uri")
           TestDebugger(
             URI.create(uri),

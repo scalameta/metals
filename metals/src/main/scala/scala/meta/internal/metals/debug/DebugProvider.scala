@@ -9,6 +9,7 @@ import java.util.Collections.singletonList
 import java.util.concurrent.TimeUnit
 import java.{util => ju}
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -33,7 +34,6 @@ import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.UnresolvedDebugSessionParams
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.ScalaTestSuitesDebugRequest
 import scala.meta.internal.metals.ServerCommands
@@ -68,6 +68,11 @@ import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.debug.OutputEventArguments
+import org.eclipse.lsp4j.debug.StoppedEventArguments
+import scala.collection.mutable.ListBuffer
+import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage
+import scala.concurrent.Await
 
 /**
  * @param supportsTestSelection test selection hasn't been defined in BSP spec yet.
@@ -89,6 +94,7 @@ class DebugProvider(
     sourceMapper: SourceMapper,
     userConfig: () => UserConfiguration,
     testProvider: TestSuitesProvider,
+    debugOutputManager: DebugOutputManager,
 )(implicit ec: ExecutionContext)
     extends Cancelable
     with LogForwarder {
@@ -99,7 +105,73 @@ class DebugProvider(
 
   private val runningLocal = new ju.concurrent.atomic.AtomicBoolean(false)
 
-  private val debugSessions = new MutableCancelable()
+  private val debugSessions = new ju.concurrent.ConcurrentHashMap[String, DebugServer]()
+  private val debuggers = new ju.concurrent.ConcurrentHashMap[String, Debugger]()
+  def debugSession(sessionId: String): Option[DebugServer] = {
+    Option(debugSessions.get(sessionId))
+  }
+  def debugProxy(sessionId: String): Option[DebugProxy] = {
+    debugSession(sessionId).flatMap(_.getProxy)
+  }
+  def debugger(sessionId: String): Option[Debugger] =
+    debugSession(sessionId).map { session =>
+      debuggers.computeIfAbsent(sessionId, { _ =>
+      val socket = connect(session.uri)
+      
+      // Create mutable buffers to store events
+      val notificationBuffer = ListBuffer[NotificationMessage]()
+      
+      val listener = new RemoteServer.Listener {
+        def onOutput(event: OutputEventArguments): Unit = {
+          debugOutputManager.addOutput(sessionId, event)
+        }
+        def onStopped(event: StoppedEventArguments): Unit = ()
+        def onEvent(event: NotificationMessage): Unit = {
+          notificationBuffer.synchronized {
+            notificationBuffer += event
+          }
+        }
+        def onTerminated(): Unit = {
+          debugOutputManager.completeSession(sessionId)
+        }
+      }
+      
+      // Create retrieval functions
+      val retrieveOutputs = () => debugOutputManager.getOutputs(sessionId)
+      val retrieveNotifications = () => notificationBuffer.synchronized { notificationBuffer.toSeq }
+      
+      val remoteServer = RemoteServer(socket, listener)
+      new Debugger(remoteServer, retrieveOutputs, retrieveNotifications)
+      })
+    }
+
+  def terminate(sessionId: String): Future[Unit] = {
+    // First, get the existing debugger if it exists (without creating a new one)
+    val existingDebugger = Option(debuggers.get(sessionId))
+    
+    // Also get the debug session to ensure we can clean it up
+    val existingSession = Option(debugSessions.get(sessionId))
+    
+    val disconnectFuture = existingDebugger match {
+      case Some(debugger) => debugger.disconnect
+      case None => Future.successful(())
+    }
+    
+    disconnectFuture.andThen { case _ =>
+      // Clean up the session first (this should close any server sockets)
+      existingSession.foreach(_.cancel())
+      
+      // Then remove from maps
+      debugSessions.remove(sessionId)
+      debuggers.remove(sessionId)
+    }
+  }
+
+
+  def allDebugSessions(): List[DebugServer] = {
+    import scala.jdk.CollectionConverters._
+    debugSessions.asScala.values.toList
+  }
 
   private val currentRunner =
     new ju.concurrent.atomic.AtomicReference[DebugRunner](null)
@@ -117,7 +189,10 @@ class DebugProvider(
   override def cancel(): Unit = {
     val runner = currentRunner.get()
     if (runner != null) runner.cancel()
-    debugSessions.cancel()
+    debugSessions.values().forEach(_.cancel())
+    Await.result(Future.sequence(debuggers.values().asScala.toList.map(_.disconnect)), Duration.Inf)
+    debugSessions.clear()
+    debuggers.clear()
   }
 
   def start(
@@ -210,7 +285,9 @@ class DebugProvider(
           }
         }
 
+      val id = sessionIdForName(sessionName)
       val server = new DebugServer(
+        id,
         sessionName,
         uri,
         () => Future.failed(new RuntimeException("No server connected")),
@@ -231,26 +308,31 @@ class DebugProvider(
       buildServer: BuildServerConnection,
       cancelPromise: Promise[Unit],
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
+    scribe.info(s"[DebugProvider] start() called for sessionName=$sessionName")
     val proxyServer = new ServerSocket(0, 50, localAddress)
     val host = InetAddresses.toUriString(proxyServer.getInetAddress)
     val port = proxyServer.getLocalPort
     proxyServer.setSoTimeout(10 * 1000)
     val uri = URI.create(s"tcp://$host:$port")
     val connectedToServer = Promise[Unit]()
+    scribe.info(s"[DebugProvider] Created proxy server at $uri")
 
     val awaitClient =
       () => Future(proxyServer.accept())
 
     // long timeout, since server might take a while to compile the project
     val connectToServer = () => {
+      scribe.info(s"[DebugProvider] connectToServer() called for session $sessionName")
       val targets = parameters.getTargets().asScala.toSeq
 
       compilations
         .compilationFinished(targets, compileInverseDependencies = false)
         .flatMap { _ =>
+          scribe.info(s"[DebugProvider] Compilation finished for session $sessionName, starting debug session")
           val conn =
             startDebugSession(buildServer, parameters, cancelPromise)
               .map { uri =>
+                scribe.info(s"[DebugProvider] Got debug URI from build server: $uri")
                 val socket = connect(uri)
                 connectedToServer.trySuccess(())
                 socket
@@ -270,12 +352,14 @@ class DebugProvider(
     }
 
     val proxyFactory = { () =>
+      scribe.info(s"[DebugProvider] proxyFactory called for session $sessionName")
       val targets = parameters.getTargets.asScala.toSeq
         .map(_.getUri)
         .map(new BuildTargetIdentifier(_))
 
       val debugAdapter =
         if (buildServer.usesScalaDebugAdapter2x) {
+          scribe.info(s"[DebugProvider] Using MetalsDebugAdapter for session $sessionName")
           MetalsDebugAdapter(
             buildTargets,
             targets,
@@ -286,6 +370,9 @@ class DebugProvider(
             s"${buildServer.name} ${buildServer.version} does not support scala-debug-adapter 2.x"
           )
         }
+
+      // Always use the regular open method
+      // Initial breakpoints are handled separately via RemoteServer in MetalsMcpServer
       DebugProxy.open(
         sessionName,
         awaitClient,
@@ -301,23 +388,43 @@ class DebugProvider(
         targets,
       )
     }
-    val server = new DebugServer(sessionName, uri, proxyFactory)
+    val id = sessionIdForName(sessionName)
+    
+    // Check if there's an existing session with the same ID
+    val existingSession = Option(debugSessions.get(id))
+    existingSession.foreach { existing =>
+      scribe.warn(s"[DebugProvider] Found existing session with id=$id, cancelling it first")
+      existing.cancel()
+      debugSessions.remove(id)
+      // Also remove any associated debugger
+      debuggers.remove(id)
+    }
+    
+    scribe.info(s"[DebugProvider] Creating DebugServer with id=$id, sessionName=$sessionName")
+    val server = new DebugServer(id, sessionName, uri, proxyFactory)
 
-    debugSessions.add(server)
-    server.listen.andThen { case _ =>
+    debugSessions.put(id, server)
+    scribe.info(s"[DebugProvider] Calling server.listen for session $sessionName")
+    server.listen.andThen { case result =>
+      scribe.info(s"[DebugProvider] server.listen completed for session $sessionName with result: $result")
       proxyServer.close()
-      debugSessions.remove(server)
+      debugSessions.remove(id)
     }
 
-    connectedToServer.future.map(_ => server)
+    connectedToServer.future.map { _ =>
+      scribe.info(s"[DebugProvider] connectedToServer promise completed for session $sessionName")
+      server
+    }
   }
 
   private def startDebugSession(
       buildServer: BuildServerConnection,
       params: DebugSessionParams,
       cancelPromise: Promise[Unit],
-  )(implicit ec: ExecutionContext) =
+  )(implicit ec: ExecutionContext) = {
+    scribe.info(s"[DebugProvider] startDebugSession called, isDebuggingProvider=${buildServer.isDebuggingProvider}, isSbt=${buildServer.isSbt}")
     if (buildServer.isDebuggingProvider || buildServer.isSbt) {
+      scribe.info(s"[DebugProvider] Using buildServer.startDebugSession")
       buildServer.startDebugSession(params, cancelPromise)
     } else {
       def getDebugee: Either[String, Future[MetalsDebuggee]] = {
@@ -402,6 +509,7 @@ class DebugProvider(
         handler.uri
       }
     }
+  }
 
   def discoverTests(
       id: BuildTargetIdentifier,
@@ -484,7 +592,7 @@ class DebugProvider(
       server <- start(debugParams)
     } yield {
       statusBar.addMessage("Started debug server!")
-      DebugSession(server.sessionName, server.uri.toString)
+      DebugSession(server.id, server.sessionName, server.uri.toString)
     }
   }
 
@@ -735,9 +843,18 @@ class DebugProvider(
           scribe.warn(
             s"Retrying with ${alternateAddress.getHostName()}:${alternateAddress.getPort()}"
           )
-          socket.connect(alternateAddress, timeout)
-          socket
+          try {
+            socket.connect(alternateAddress, timeout)
+            socket
+          } catch {
+            case NonFatal(retryError) =>
+              // Close socket on retry failure
+              Try(socket.close())
+              throw retryError
+          }
         } else {
+          // Close socket on initial failure
+          Try(socket.close())
           throw e
         }
     }
@@ -940,4 +1057,5 @@ object DebugProvider {
           .getOrElse(Future.failed(mostRelevantError()))
       }
   }
+  def sessionIdForName(sessionName: String) = sessionName.replaceAll("[^a-zA-Z0-9]", "-").replaceAll("""(?<=[a-z])(?=[A-Z])""", "-").toLowerCase
 }
