@@ -1220,6 +1220,7 @@ class WorkspaceLspService(
       case ServerCommands.CopyFQNOfSymbol(params) =>
         getServiceFor(params.getTextDocument.getUri())
           .copyFQNOfSymbol(params)
+          .asJavaObject
       case actionCommand
           if currentOrHeadOrFallback.allActionCommandsIds(
             actionCommand.getCommand()

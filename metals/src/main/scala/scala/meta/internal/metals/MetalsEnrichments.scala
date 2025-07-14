@@ -836,6 +836,7 @@ object MetalsEnrichments
       value
         .replace("/", ".")
         .stripSuffix("#")
+        .replaceAll(raw"package\.", "")
         .replaceAll(raw"([^)])\." + "$", "$1\\$")
         .stripSuffix(".")
         .replaceAll(raw"(\+\d+)", "")

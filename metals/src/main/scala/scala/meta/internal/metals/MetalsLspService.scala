@@ -1390,7 +1390,7 @@ abstract class MetalsLspService(
 
   def copyFQNOfSymbol(
       params: l.TextDocumentPositionParams
-  ): CompletableFuture[Object] = {
+  ): Future[Option[String]] = {
     Future.successful {
       val path = params.getTextDocument.getUri.toAbsolutePath
       val dialect = scalaVersionSelector.getDialect(path)
@@ -1419,7 +1419,7 @@ abstract class MetalsLspService(
           case _ => sym.symbolToFullyQualifiedName
         }
       }
-    }.asJavaObject
+    }
   }
 
   def analyzeStackTrace(content: String): Option[ExecuteCommandParams] =
