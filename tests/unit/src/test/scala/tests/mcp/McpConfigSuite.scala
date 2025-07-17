@@ -242,6 +242,21 @@ class McpConfigSuite extends BaseSuite {
     )
   }
 
+  test("getPort - Claude client uses serverEntry") {
+    val config = """{
+      "mcpServers": {
+        "metals": {
+          "url": "http://localhost:8080/sse"
+        }
+      }
+    }"""
+
+    assertEquals(
+      McpConfig.getPort(config, "test-project", Claude),
+      Some(8080),
+    )
+  }
+
   test("deleteConfig - preserves other entries") {
     val workspace = Files.createTempDirectory("metals-mcp-test")
     val projectPath = AbsolutePath(workspace)

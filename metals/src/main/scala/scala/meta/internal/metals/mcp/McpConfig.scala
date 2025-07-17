@@ -54,7 +54,6 @@ object McpConfig {
             configFile.writeText(gson.toJson(value))
           }
       }
-
     }
   }
 
@@ -141,7 +140,9 @@ object McpConfig {
         JsonParser.parseString(configInput).getAsJsonObject()
       ).toOption
       mcpServers <- config.getObjectOption(editor.serverField)
-      serverConfig <- mcpServers.getObjectOption(s"$projectName-metals")
+      serverConfig <- mcpServers.getObjectOption(
+        editor.serverEntry.getOrElse(s"$projectName-metals")
+      )
       url <- serverConfig.getStringOption("url")
       port <- Try(url.stripSuffix("/sse").split(":").last.toInt).toOption
     } yield port
