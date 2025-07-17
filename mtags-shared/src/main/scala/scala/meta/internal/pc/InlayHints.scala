@@ -33,17 +33,22 @@ case class InlayHints(
       addInlayHint(makeInlayHint(pos.getStart(), labelParts, kind))
     )
 
+  /*
+   * Collects inlay hints in a single expression together and aligns their type labels.
+   * Note: Designed for use somewhat specifically for transformation intermediate types (i.e. Xray mode),
+   * so it includes some filtering logic specific to that use case.
+   */
   def addLineSpecific(
       pos: l.Range,
       labelParts: List[LabelPart],
       kind: InlayHintKind
   ): InlayHints = {
+    // The start pos of each element in a single expression will be the beginning of the expression.
+    // We can use this to associate related hints in a map
     val expressionStart = pos.getStart.getLine
 
     lineSpecificInlayHints
-      .get(
-        expressionStart
-      ) // check if there is a block inlay hint in the line above
+      .get(expressionStart)
       .fold(
         copy(lineSpecificInlayHints =
           lineSpecificInlayHints + (
@@ -76,7 +81,7 @@ case class InlayHints(
           )
 
         copy(lineSpecificInlayHints =
-          lineSpecificInlayHints + (pos.getStart.getLine -> newBlock)
+          lineSpecificInlayHints + (expressionStart -> newBlock)
         )
       }
   }

@@ -590,9 +590,8 @@ final class PcInlayHintsProvider(
               if !isInfix(
                 inner,
                 textStr
-              ) && inner.pos.isRange && !isParentOnSameLine && !isParentApply && endsInSelect(
-                a
-              ) && tree.pos.source.isEndOfLine(tree.pos.end) =>
+              ) && inner.pos.isRange && !isParentOnSameLine && !isParentApply &&
+                endsInSelect(a) && tree.pos.source.isEndOfLine(tree.pos.end) =>
             Some((a.tpe.finalResultType, tree.pos))
 
           /*
