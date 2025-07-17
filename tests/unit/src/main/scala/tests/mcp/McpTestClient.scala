@@ -1,19 +1,20 @@
 package tests.mcp
 
-import scala.compat.java8.FutureConverters._
+import scala.compat.java8.FutureConverters.*
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.jdk.CollectionConverters._
-
+import scala.jdk.CollectionConverters.*
 import scala.meta.internal.metals.MetalsEnrichments.XtensionJavaFuture
-
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.modelcontextprotocol.client.McpClient
 import io.modelcontextprotocol.client.transport.HttpClientSseClientTransport
 import io.modelcontextprotocol.spec.McpSchema.CallToolRequest
 import io.modelcontextprotocol.spec.McpSchema.InitializeResult
 import io.modelcontextprotocol.spec.McpSchema.TextContent
+
 import scala.meta.internal.metals.DebugSession
+import scala.meta.internal.metals.mcp.MetalsMcpServer.BreakpointsInFile
+import scala.meta.internal.metals.mcp.MetalsMcpServer.Breakpoint
 
 class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext) {
   private val objectMapper = new ObjectMapper()
@@ -94,7 +95,7 @@ class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext) {
       module: Option[String] = None,
       args: List[String] = Nil,
       env: Map[String, String] = Map.empty,
-      initialBreakpoints: List[Map[String, Any]] = List.empty,
+      initialBreakpoints: List[BreakpointsInFile] = List.empty,
   ): Future[String] = {
     val params = objectMapper.createObjectNode()
     params.put("mainClass", mainClass)
@@ -109,17 +110,23 @@ class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext) {
       env.foreach { case (k, v) => envNode.put(k, v) }
       params.set("env", envNode)
     }
-    val bArray = objectMapper.createArrayNode()
-    initialBreakpoints.foreach { breakpoint =>
-      val bNode = objectMapper.createObjectNode()
-      breakpoint.foreach {
-        case (key, value: String) => bNode.put(key, value)
-        case (key, value: Int) => bNode.put(key, value)
-        case (key, value: Any) => bNode.put(key, value.toString)
+    val bpfArray = objectMapper.createArrayNode()
+    initialBreakpoints.foreach { bpf =>
+      val bpfNode = objectMapper.createObjectNode()
+      bpfNode.put("source", bpf.source)
+      val bArray = objectMapper.createArrayNode()
+      bpf.breakpoints.foreach { bp =>
+        val bNode = objectMapper.createObjectNode()
+        bNode.put("source", bpf.source)
+        bNode.put("line", Integer.valueOf(bp.line))
+        bp.condition.foreach(c => bNode.put("condition", c))
+        bp.logMessage.foreach(m => bNode.put("logMessage", m))
+        bArray.add(bNode)
       }
-      bArray.add(bNode)
+      bpfNode.set("breakpoints", bArray)
+      bpfArray.add(bpfNode)
     }
-    params.set("initialBreakpoints", bArray)
+    params.set("initialBreakpoints", bpfArray)
     callTool("debug-main", params).map(_.mkString)
   }
 

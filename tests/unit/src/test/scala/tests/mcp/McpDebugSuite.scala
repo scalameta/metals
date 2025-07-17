@@ -5,6 +5,10 @@ import scala.meta.internal.metals.MetalsServerConfig
 import tests.BaseLspSuite
 import McpDebugSuite.*
 
+import scala.meta.internal.metals.mcp.MetalsMcpServer.{
+  Breakpoint,
+  BreakpointsInFile,
+}
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -193,19 +197,19 @@ class McpDebugSuite extends BaseLspSuite("mcp-debug") with McpTestUtils {
       sessionId <- client.startAndVerify(
         mainClass = "BreakpointTypes",
         module = Some("a"),
-        initialBreakpoints =
-          breakpoints.map { case (line, condition, logMessage) =>
-            val baseMap = Map(
-              "source" -> resolvePath(codePath),
-              "line" -> line,
-            )
-            val withCondition = condition
-              .map(c => baseMap + ("condition" -> c))
-              .getOrElse(baseMap)
-            logMessage
-              .map(msg => withCondition + ("logMessage" -> msg))
-              .getOrElse(withCondition)
-          },
+        initialBreakpoints = List(
+          BreakpointsInFile(
+            source = resolvePath(codePath),
+            breakpoints =
+              breakpoints.map { case (line, condition, logMessage) =>
+                Breakpoint(
+                  line = line,
+                  condition = condition,
+                  logMessage = logMessage,
+                )
+              },
+          )
+        ),
       )
 
       _ = scribe.info(s"Debug session started with ID: $sessionId")
@@ -417,14 +421,16 @@ class McpDebugSuite extends BaseLspSuite("mcp-debug") with McpTestUtils {
       sessionId <- client.startAndVerify(
         mainClass = "ConditionalTest",
         module = Some("a"),
-        initialBreakpoints = breakpoints.map { case (line, condition, _) =>
-          Map(
-            "source" -> server.workspace
+        initialBreakpoints = List(
+          BreakpointsInFile(
+            source = server.workspace
               .resolve(codePath)
               .toString,
-            "line" -> line,
-          ) ++ condition.map("condition" -> _).toMap
-        },
+            breakpoints = breakpoints.map { case (line, condition, _) =>
+              Breakpoint(line = line, condition = condition, logMessage = None)
+            },
+          )
+        ),
       )
 
       _ <- waitForDebugger(2000)
@@ -1167,7 +1173,7 @@ object McpDebugSuite {
     def startAndVerify(
         mainClass: String,
         module: Option[String] = None,
-        initialBreakpoints: List[Map[String, Any]] = List.empty,
+        initialBreakpoints: List[BreakpointsInFile] = List.empty,
     )(implicit executionContext: ExecutionContext): Future[String] = for {
       result <- mcpClient.debugMain(
         mainClass = mainClass,
