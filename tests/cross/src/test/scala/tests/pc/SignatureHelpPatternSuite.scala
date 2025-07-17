@@ -34,8 +34,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |  }
       |}
       |""".stripMargin,
-    """|(Int)
-       | ^^^
+    """|(value: A)
+       | ^^^^^^^^
        |""".stripMargin
   )
 
@@ -49,8 +49,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |  }
       |}
       |""".stripMargin,
-    """|(Any, Any)
-       | ^^^
+    """|(a: T, b: T)
+       | ^^^^
        |""".stripMargin,
     compat = Map(
       "3" ->
@@ -70,8 +70,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |  }
       |}
       |""".stripMargin,
-    """|(Any)
-       | ^^^
+    """|(a: C[T])
+       | ^^^^^^^
        |""".stripMargin,
     compat = Map(
       "3" ->
@@ -93,8 +93,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |    }
       |  }
       |""".stripMargin,
-    """|(Int, String)
-       | ^^^
+    """|(a: A, b: B)
+       | ^^^^
        |""".stripMargin,
     compat = Map(
       "3" ->
@@ -177,8 +177,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |    case Person(@@)
       |}
     """.stripMargin,
-    """|(String, Int)
-       | ^^^^^^
+    """|(name: String, age: Int)
+       | ^^^^^^^^^^^^
        | """.stripMargin,
     compat = Map(
       "3" ->
@@ -341,6 +341,29 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
     """|unapply[A](a: A): Some[(A, A)]
        |           ^^^^
        | """.stripMargin
+  )
+
+  check(
+    "identical-param-types".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1")
+    ),
+    """
+      |case class Baz(arg1: Int, arg2: Int, arg3: Int)
+      |object Test {
+      |  (null: Baz) match {
+      |    case Baz(123, 4@@56, 789) => ()
+      |  }
+      |}
+    """.stripMargin,
+    """|(arg1: Int, arg2: Int, arg3: Int)
+       |            ^^^^^^^^^
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|(arg1: Int, arg2: Int, arg3: Int)
+           |            ^^^^^^^^^
+           |""".stripMargin
+    )
   )
 
 }

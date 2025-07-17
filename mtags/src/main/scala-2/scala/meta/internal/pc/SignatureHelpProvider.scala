@@ -487,12 +487,30 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
           if (isActiveSignature) t.call.qualTpe
           else alternativeTpe
 
+        // Check if this is a case class constructor pattern by verifying that the unapply method
+        // belongs to the companion object of the case class result type
+        val isCaseClassConstructor =
+          t.call.isUnapplyMethod && tpe.resultType.typeSymbol.isCaseClass &&
+            method.owner.isModuleClass && method.owner.companionClass == tpe.resultType.typeSymbol
+
         val paramss: List[List[Symbol]] =
           if (!isActiveSignature) {
-            mparamss(tpe, t.call.isUnapplyMethod)
+            if (isCaseClassConstructor) {
+              val constructorParamss =
+                tpe.resultType.typeSymbol.primaryConstructor.paramLists
+              constructorParamss
+            } else {
+              mparamss(tpe, t.call.isUnapplyMethod)
+            }
           } else {
             activeSignature = i
-            val paramss = this.mparamss(tpe, t.call.isUnapplyMethod)
+            val paramss = if (isCaseClassConstructor) {
+              val constructorParamss =
+                tpe.resultType.typeSymbol.primaryConstructor.paramLists
+              constructorParamss
+            } else {
+              this.mparamss(tpe, t.call.isUnapplyMethod)
+            }
             val gparamss = for {
               (params, i) <- paramss.zipWithIndex
               (param, j) <- params.zipWithIndex
@@ -509,14 +527,28 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
             }
             paramss
           }
-        toSignatureInformation(
+
+        val methodType = if (!t.call.isUnapplyMethod) {
+          // It is not unapply.
+          tpe
+        } else if (isCaseClassConstructor) {
+          // It is unapply and case class.
+          tpe.resultType.typeSymbol.primaryConstructor.info
+        } else {
+          // It is unapply and not case class.
+          method.info
+        }
+
+        val finalres: SignatureInformation = toSignatureInformation(
           t,
           method,
-          if (!t.call.isUnapplyMethod) tpe else method.info,
+          methodType,
           paramss,
           isActiveSignature,
-          shortenedNames
+          shortenedNames,
+          isCaseClassConstructor
         )
+        finalres
     }
     if (activeSignature == null) {
       activeSignature = 0
@@ -571,13 +603,15 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
       methodType: Type,
       mparamss: List[List[Symbol]],
       isActiveSignature: Boolean,
-      shortenedNames: ShortenedNames
+      shortenedNames: ShortenedNames,
+      isCaseClassConstructor: Boolean = false
   ): SignatureInformation = {
     def arg(i: Int, j: Int): Option[Tree] =
       t.call.all.lift(i).flatMap(_.lift(j))
     var k = 0
-    val printer = new SignaturePrinter(
-      method,
+    val printerMethod = method
+    val printer: SignaturePrinter = new SignaturePrinter(
+      printerMethod,
       shortenedNames,
       methodType,
       includeDocs = true
@@ -676,15 +710,21 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
       if (labels.isEmpty && sortedByName.nonEmpty) Nil
       else labels :: Nil
     }
-    val signatureInformation = new SignatureInformation(
+
+    val extractParamLabel: PartialFunction[ParameterInformation, String] = {
+      case i if i.getLabel() != null && i.getLabel().isLeft() =>
+        i.getLabel().getLeft()
+    }
+    val signatureLabel = if (isCaseClassConstructor) {
+      paramLabels.flatten.collect(extractParamLabel).mkString("(", ", ", ")")
+    } else {
       printer.methodSignature(
-        paramLabels.iterator.map(_.iterator.collect {
-          case i if i.getLabel() != null && i.getLabel().isLeft() =>
-            i.getLabel().getLeft()
-        }),
-        printUnapply = !t.call.isUnapplyMethod
+        paramLabels.iterator.map(_.iterator.collect(extractParamLabel)),
+        printUnapply = !t.call.isUnapplyMethod || isCaseClassConstructor
       )
-    )
+    }
+
+    val signatureInformation = new SignatureInformation(signatureLabel)
     if (metalsConfig.isSignatureHelpDocumentationEnabled) {
       signatureInformation.setDocumentation(
         printer.methodDocstring.toMarkupContent()
