@@ -1,3 +1,3 @@
 package scala.meta.internal.metals
 
-final case class DebugSession(name: String, uri: String)
+final case class DebugSession(id: String, name: String, uri: String)

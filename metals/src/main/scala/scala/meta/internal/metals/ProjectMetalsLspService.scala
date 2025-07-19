@@ -273,6 +273,9 @@ class ProjectMetalsLspService(
             languageClient,
             connectionProvider,
             scalaVersionSelector,
+            debugProvider,
+            debugDiscovery,
+            debugOutputManager,
           )
         ).run()
     }.recover { case e: Exception =>
