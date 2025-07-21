@@ -27,6 +27,8 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
            |object foo extends ScalaModule {
            |  def scalaVersion = "${V.scala213}"
            |}
+           |/.mill-version
+           |0.12.11
         """.stripMargin
       )
       _ = assertNoDiff(
@@ -75,6 +77,8 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
            |object Main extends App {
            |  println("sourcecode.Line(42)")
            |}
+           |/.mill-version
+           |0.12.11
            |""".stripMargin
       )
       _ <- server.didOpen("foo/src/reload/Main.scala")
@@ -104,6 +108,8 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
       _ <- initialize(
         """|/build.sc
            |, syntax error
+           |/.mill-version
+           |0.12.11
            |""".stripMargin,
         expectError = true,
       )
@@ -149,6 +155,8 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
            |object A{
            |  object B
            |}
+           |/.mill-version
+           |0.12.11
            |""".stripMargin
       )
       _ = assertStatus(_.isInstalled)
