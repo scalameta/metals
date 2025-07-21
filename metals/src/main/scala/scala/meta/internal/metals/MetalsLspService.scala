@@ -160,21 +160,6 @@ abstract class MetalsLspService(
 
   val tables: Tables = register(new Tables(folder, time))
 
-  def javaHome = userConfig.javaHome
-
-  protected val fingerprints = new MutableMd5Fingerprints
-  val focusedDocumentBuildTarget =
-    new AtomicReference[b.BuildTargetIdentifier]()
-  val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
-
-  def bspSession: Option[BspSession] = indexer.bspSession
-  protected val savedFiles = new ActiveFiles(time)
-  protected val recentlyOpenedFiles = new ActiveFiles(time)
-
-  @volatile
-  var excludedPackageHandler: ExcludedPackagesHandler =
-    ExcludedPackagesHandler.default
-
   protected val mainBuildTargetsData = new TargetData
 
   val buildTargets: BuildTargets =
@@ -192,6 +177,21 @@ abstract class MetalsLspService(
     ReportLevel.fromString(MetalsServerConfig.default.loglevel),
     reportTrackers = List(moduleStatus),
   )
+
+  def javaHome = userConfig.javaHome
+
+  protected val fingerprints = new MutableMd5Fingerprints
+  val focusedDocumentBuildTarget =
+    new AtomicReference[b.BuildTargetIdentifier]()
+  val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
+
+  def bspSession: Option[BspSession] = indexer.bspSession
+  protected val savedFiles = new ActiveFiles(time)
+  protected val recentlyOpenedFiles = new ActiveFiles(time)
+
+  @volatile
+  var excludedPackageHandler: ExcludedPackagesHandler =
+    ExcludedPackagesHandler.default
 
   protected val mtags = new Mtags
 
