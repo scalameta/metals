@@ -75,7 +75,7 @@ class MillServerSuite
            |""".stripMargin,
         V.latestScala3Next,
         testDep = None,
-        "1.0.0-RC1",
+        V.millVersion,
       )
     )
     def millBspConfig = workspace.resolve(".bsp/mill-bsp.json")
@@ -336,7 +336,7 @@ class MillServerSuite
     writeLayout(
       s"""
          |/build.mill
-         |//| mill-version: 1.0.0-RC1
+         |//| mill-version: ${V.millVersion}
          |package build
          |import mill.*, scalalib.*
          |
@@ -371,35 +371,35 @@ class MillServerSuite
   test("passing-test-environment-variables") {
     cleanWorkspace()
     writeLayout(
-      """|/build.mill
-         |//| mill-version: 1.0.0-RC1
-         |package build
-         |import mill.*, scalalib.*
-         |
-         |object foo extends ScalaModule {
-         |  def scalaVersion = "3.7.0"
-         |
-         |  override def forkEnv = Map("DOGGIES" -> "main")
-         |
-         |  object test extends ScalaTests with TestModule.Munit {
-         |    def mvnDeps = Seq(
-         |      mvn"org.scalameta::munit::1.1.1"
-         |    )
-         |
-         |    def forkEnv = super.forkEnv() ++ Map("DOGGIES" -> "tests")
-         |  }
-         |}
-         |/foo/test/src/FooMUnitTests.scala
-         |package foo
-         |
-         |import munit.FunSuite
-         |
-         |class FooMUnitTests extends FunSuite {
-         |  test("env var") {
-         |    assertEquals(sys.env.get("DOGGIES"), Some("tests"))
-         |  }
-         |}
-         |""".stripMargin
+      s"""|/build.mill
+          |//| mill-version: ${V.millVersion}
+          |package build
+          |import mill.*, scalalib.*
+          |
+          |object foo extends ScalaModule {
+          |  def scalaVersion = "3.7.0"
+          |
+          |  override def forkEnv = Map("DOGGIES" -> "main")
+          |
+          |  object test extends ScalaTests with TestModule.Munit {
+          |    def mvnDeps = Seq(
+          |      mvn"org.scalameta::munit::1.1.1"
+          |    )
+          |
+          |    def forkEnv = super.forkEnv() ++ Map("DOGGIES" -> "tests")
+          |  }
+          |}
+          |/foo/test/src/FooMUnitTests.scala
+          |package foo
+          |
+          |import munit.FunSuite
+          |
+          |class FooMUnitTests extends FunSuite {
+          |  test("env var") {
+          |    assertEquals(sys.env.get("DOGGIES"), Some("tests"))
+          |  }
+          |}
+          |""".stripMargin
     )
     for {
       _ <- initMillBsp()
