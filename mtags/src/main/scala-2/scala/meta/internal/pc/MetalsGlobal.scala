@@ -30,6 +30,7 @@ import scala.{meta => m}
 
 import scala.meta.XtensionSyntax
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.Chars
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
 import scala.meta.pc.CompletionItemPriority
@@ -105,7 +106,6 @@ class MetalsGlobal(
   } with m.internal.pc.classpath.MetalsBrowsingLoaders
 
   val compileUnitsCache = new CompileUnitsCache(5)
-
   def didChange(uri: URI): Unit = {
     compileUnitsCache.didChange(uri)
   }
@@ -780,8 +780,18 @@ class MetalsGlobal(
             richUnit.source.content
           ) && (isOutline || fullyCompiled(filename)) && !forceNew =>
         value
-      case _ =>
+      case maybeOldUnit =>
         unitOfFile(richUnit.source.file) = richUnit
+
+        maybeOldUnit.foreach { _ =>
+          currentRun.symSource.foreach { case (sym, _) =>
+            // otherwise we seem to be getting stale symbol completions for toplevels
+            if (sym.owner.hasPackageFlag && sym.isStale) {
+              sym.owner.info.decls unlink sym
+            }
+          }
+        }
+
         if (!isOutline) {
           fullyCompiled += filename
         } else {
@@ -990,6 +1000,11 @@ class MetalsGlobal(
       sym.pos.isRange &&
         unitOfFile.get(sym.pos.source.file).exists { unit =>
           if (unit.source ne sym.pos.source) {
+            def continuesIdentifier = {
+              val next =
+                unit.source.content(sym.pos.point + sym.decodedName.length())
+              Chars.isIdentifierPart(next)
+            }
             // HACK(olafur) Check if the position of the symbol in the old
             // source points to the symbol's name in the new source file. There
             // are cases where the same class definition has two different
@@ -997,7 +1012,8 @@ class MetalsGlobal(
             // `knownDirectSubClasses` returns the version of the class symbol
             // while `Context.lookupSymbol` returns the new version of the class
             // symbol.
-            !unit.source.content.startsWith(sym.decodedName, sym.pos.point)
+            !unit.source.content
+              .startsWith(sym.decodedName, sym.pos.point) || continuesIdentifier
           } else {
             false
           }
