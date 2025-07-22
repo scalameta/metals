@@ -59,7 +59,8 @@ class MillifyDependencyCodeAction(buffers: Buffers) extends CodeAction {
                 changes = List(path -> List(new l.TextEdit(pos, text))),
               )
               List(
-                if (path.isMill) action(s"ivy\"$replacementText\"")
+                if (path.isMillBuild) action(s"mvn\"$replacementText\"")
+                else if (path.isMill) action(s"ivy\"$replacementText\"")
                 else action(s"`$replacementText`")
               )
           }

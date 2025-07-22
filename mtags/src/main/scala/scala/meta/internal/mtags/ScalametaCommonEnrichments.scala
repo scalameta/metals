@@ -436,9 +436,10 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     def isSourcesJar: Boolean = {
       filename.endsWith("-sources.jar") || filename == "src.zip"
     }
+    def isMillBuild: Boolean =
+      filename.endsWith(".mill") || filename.endsWith(".mill.scala")
     def isMill: Boolean =
-      filename.endsWith(".mill") ||
-        filename.endsWith(".mill.scala") || filename == "build.sc"
+      isMillBuild || filename == "build.sc"
     def isWorksheet: Boolean = {
       filename.endsWith(".worksheet.sc")
     }

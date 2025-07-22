@@ -43,6 +43,14 @@ class MillServerSuite
     with JavaHomeChangeTest
     with BaseMillServerSuite {
 
+  override def importBuildMessage: String =
+    Messages.GenerateBspAndConnect
+      .params(
+        MillBuildTool.name,
+        MillBuildTool.bspName,
+      )
+      .getMessage
+
   val preBspVersion = "0.9.10"
   val supportedBspVersion = V.millVersion
   val scalaVersion = V.scala213
@@ -115,7 +123,7 @@ class MillServerSuite
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          importBuildMessage
+          super.importBuildMessage
         ).mkString("\n"),
       )
       _ = client.messageRequests.clear()
@@ -129,7 +137,7 @@ class MillServerSuite
   }
 
   val versionsToTest: List[String] =
-    List("0.11.13", supportedBspVersion)
+    List(supportedBspVersion)
 
   versionsToTest.foreach(testGenerationAndConnection)
 
@@ -235,25 +243,24 @@ class MillServerSuite
       s"""
          |/.mill-version
          |$supportedBspVersion
-         |/build.sc
+         |/build.mill
          |package build
-         |import mill.scalalib.bsp.BspBuildTarget
-         |import mill.scalalib.bsp.BspModule
+         |import mill.*
+         |import scalalib.*
          |  
-         |import mill._
-         |import scalalib._
+         |import mill.api.daemon.internal.bsp.BspBuildTarget
+         |import mill.api.daemon.internal.bsp.BspModuleApi
          |  
          |object foo extends ScalaModule {
          |  def scalaVersion = "2.13.13"
          |}
          |  
-         |object bar extends ScalaModule with BspModule  {
+         |object bar extends ScalaModule   {
          |  def scalaVersion = "2.13.13"
-         |  
-         |  override def bspBuildTarget: BspBuildTarget = {
-         |    val original = super.bspBuildTarget
-         |    original.copy(tags = original.tags :+ BspModule.Tag.NoIDE)
-         |  }
+         |
+         |   override def bspBuildTarget: BspBuildTarget = super.bspBuildTarget.copy(
+         |     tags = super.bspBuildTarget.tags ++ Seq(BspModuleApi.Tag.NoIDE),
+         |   )
          |}
          |/foo/src/Main.scala
          |package foo
