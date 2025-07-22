@@ -316,6 +316,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
   class MethodCallTraverser(unit: RichCompilationUnit, pos: Position)
       extends Traverser {
     private var activeCallsite: Option[(MethodCall, Arg)] = None
+    private var enclosingTemplate: Option[Template] = None
     def fromTree(body: Tree): Option[EnclosingMethodCall] = {
       traverse(body)
       for {
@@ -348,7 +349,14 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
     override def traverse(tree: compiler.Tree): Unit = {
       toVisit(tree) match {
         case Some(value) =>
+          val oldTemplate = enclosingTemplate
+          value match {
+            case t: Template =>
+              enclosingTemplate = Some(t)
+            case _ =>
+          }
           visit(value)
+          enclosingTemplate = oldTemplate
         case None =>
       }
     }
@@ -356,6 +364,14 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
       tree match {
         case MethodCall(call) if call.qual.pos.isRange =>
           var start = call.qual.pos.end
+          val realQualPos = enclosingTemplate.flatMap { template =>
+            template.parents
+              .find(p => p.pos.overlaps(call.qual.pos))
+              .map(_.pos)
+          }
+          realQualPos.foreach { pos =>
+            if (pos.end < start) start = pos.end
+          }
           val lastArgument = call.margss.iterator.flatten
             .filter(_.pos.isRange)
             .lastOption
@@ -386,7 +402,12 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
             }
             traverse(arg)
           }
-          super.traverse(call.qual)
+          val qualToTraverse = realQualPos match {
+            case Some(pos) if pos.includes(call.qual.pos) =>
+              EmptyTree
+            case _ => call.qual
+          }
+          super.traverse(qualToTraverse)
         case _ =>
           super.traverse(tree)
       }
