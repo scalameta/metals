@@ -175,21 +175,6 @@ abstract class MetalsLspService(
 
   val tables: Tables = register(new Tables(folder, time))
 
-  def javaHome = userConfig.javaHome
-
-  protected val fingerprints = new MutableMd5Fingerprints
-  val focusedDocumentBuildTarget =
-    new AtomicReference[b.BuildTargetIdentifier]()
-  val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
-
-  def bspSession: Option[BspSession] = indexer.bspSession
-  protected val savedFiles = new ActiveFiles(time)
-  protected val recentlyOpenedFiles = new ActiveFiles(time)
-
-  @volatile
-  var excludedPackageHandler: ExcludedPackagesHandler =
-    ExcludedPackagesHandler.default
-
   protected val mainBuildTargetsData = new TargetData
 
   val buildTargets: BuildTargets =
@@ -210,6 +195,20 @@ abstract class MetalsLspService(
 
   @volatile var mtags: Mtags = new Mtags()
   val symbolDocs = new Docstrings(definitionIndex, () => mtags)
+  def javaHome = userConfig.javaHome
+
+  protected val fingerprints = new MutableMd5Fingerprints
+  val focusedDocumentBuildTarget =
+    new AtomicReference[b.BuildTargetIdentifier]()
+  val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
+
+  def bspSession: Option[BspSession] = indexer.bspSession
+  protected val savedFiles = new ActiveFiles(time)
+  protected val recentlyOpenedFiles = new ActiveFiles(time)
+
+  @volatile
+  var excludedPackageHandler: ExcludedPackagesHandler =
+    ExcludedPackagesHandler.default
 
   def containsJar(path: AbsolutePath): Boolean = {
     buildTargets.inverseSources(path).nonEmpty ||
