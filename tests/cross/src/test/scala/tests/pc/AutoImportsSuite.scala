@@ -298,6 +298,86 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |}
        |""".stripMargin
   )
+  check(
+    "type-vs-object",
+    """|package a
+       |
+       |object Thing1 {
+       |  class Foo
+       |}
+       |
+       |object Thing2 {
+       |  object Foo
+       |}
+       |
+       |class Baz {
+       |  def x: <<Foo>> = x
+       |}
+       |""".stripMargin,
+    """|a.Thing1
+       |""".stripMargin
+  )
+
+  check(
+    "type-vs-object2",
+    """|package a
+       |
+       |object Thing1 {
+       |  class Foo
+       |}
+       |
+       |object Thing2 {
+       |  object Foo
+       |}
+       |
+       |class Baz {
+       |  def x: List[<<Foo>>] = x
+       |}
+       |""".stripMargin,
+    """|a.Thing1
+       |""".stripMargin
+  )
+
+  check(
+    "type-vs-object3",
+    """|package a
+       |
+       |object Thing1 {
+       |  class Foo
+       |}
+       |
+       |object Thing2 {
+       |  object Foo
+       |}
+       |
+       |class Baz {
+       |  def x: <<Foo>>.type = x
+       |}
+       |
+       |""".stripMargin,
+    """|a.Thing2
+       |""".stripMargin
+  )
+
+  check(
+    "type-vs-object3",
+    """|package a
+       |
+       |object Thing1 {
+       |  class Foo
+       |}
+       |
+       |object Thing2 {
+       |  object Foo
+       |}
+       |
+       |class Baz {
+       |  def x: List[Option[<<Foo>>]] = x
+       |}
+       |""".stripMargin,
+    """|a.Thing1
+       |""".stripMargin
+  )
 
   checkEdit(
     "multiple-packages",

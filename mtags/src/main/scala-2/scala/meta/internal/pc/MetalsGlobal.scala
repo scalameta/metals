@@ -1,7 +1,10 @@
 package scala.meta.internal.pc
 
+import java.io.Closeable
+import java.net.URI
 import java.nio.file.Path
 import java.util
+import java.util.logging.Level
 import java.util.logging.Logger
 import java.{util => ju}
 
@@ -12,6 +15,7 @@ import scala.reflect.internal.util.Position
 import scala.reflect.internal.util.ScriptSourceFile
 import scala.reflect.internal.util.SourceFile
 import scala.reflect.internal.{Flags => gf}
+import scala.reflect.io.VirtualFile
 import scala.tools.nsc.Mode
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
@@ -23,6 +27,7 @@ import scala.{meta => m}
 
 import scala.meta.XtensionSyntax
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.mtags.Chars
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.scalac.SemanticdbOps
 import scala.meta.pc.CompletionItemPriority
@@ -63,8 +68,14 @@ class MetalsGlobal(
     with GlobalProxy
     with AutoImports
     with Keywords
-    with WorkspaceSymbolSearch { compiler =>
+    with WorkspaceSymbolSearch
+    with Closeable { compiler =>
   hijackPresentationCompilerThread()
+
+  override def close(): Unit = {
+    super.close()
+    logger.log(Level.FINE, "Restarting compiler and clearing caches.")
+  }
 
   val logger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)
 
@@ -73,6 +84,11 @@ class MetalsGlobal(
 
   // for those paths units were fully compiled (not just outlined)
   val fullyCompiled: mutable.Set[String] = mutable.Set.empty[String]
+
+  val compileUnitsCache = new CompileUnitsCache(5)
+  def didChange(uri: URI): Unit = {
+    compileUnitsCache.didChange(uri)
+  }
 
   class MetalsInteractiveAnalyzer(val global: compiler.type)
       extends InteractiveAnalyzer {
@@ -199,10 +215,14 @@ class MetalsGlobal(
     lazy val isInStringInterpolation = {
       lastVisitedParentTrees match {
         case Apply(
-              Select(Apply(Ident(TermName("StringContext")), _), _),
+              Select(Apply(Ident(TermName("StringContext")), list), _),
               _
-            ) :: _ =>
-          true
+            ) :: _ if list.length > 0 =>
+
+          val inRange =
+            list.head.pos.start <= pos.start && pos.end <= list.last.pos.end
+
+          inRange
         case _ => false
       }
     }
@@ -681,13 +701,35 @@ class MetalsGlobal(
 
   def CURSOR = "_CURSOR_"
 
+  /**
+   * Removes compilation unit from cache using [[scala.tools.nsc.intreactive.Global#toBeRemoved]].
+   * If used, `willBeRemovedAfterUsing` should be set to `true` in [[addCompilationUnit]].
+   * @param file file that should be removed.
+   */
+  def removeAfterUsing(filename: String): Unit = {
+    if (compileUnitsCache.canBeRemoved(filename)) remove(filename)
+  }
+
+  private def remove(filename: String): Unit = {
+    if (!richCompilationCache.contains(filename)) {
+      fullyCompiled.remove(filename)
+      toBeRemoved.add(new VirtualFile(filename))
+    }
+  }
+
+  /**
+   * @param `willBeRemovedAfterUsing`
+   *    - if set to true the file won't be added to last compiled units
+   *      and should be removed after the compilation unit is not used anymore
+   */
   def addCompilationUnit(
       code: String,
       filename: String,
       cursor: Option[Int],
       cursorName: String = CURSOR,
       isOutline: Boolean = false,
-      forceNew: Boolean = false
+      forceNew: Boolean = false,
+      willBeRemovedAfterUsing: Boolean = false
   ): RichCompilationUnit = {
     val codeWithCursor = cursor match {
       case Some(offset) =>
@@ -701,6 +743,10 @@ class MetalsGlobal(
         ScriptSourceFile(unit.source.file, unit.source.content)
       else unit.source
     val richUnit = new RichCompilationUnit(source)
+    if (!isOutline && !willBeRemovedAfterUsing) {
+      compileUnitsCache.didGetUnit(filename).foreach(remove)
+    }
+    toBeRemoved.remove(richUnit.source.file)
     unitOfFile.get(richUnit.source.file) match {
       case Some(value)
           if util.Arrays.equals(
@@ -708,8 +754,18 @@ class MetalsGlobal(
             richUnit.source.content
           ) && (isOutline || fullyCompiled(filename)) && !forceNew =>
         value
-      case _ =>
+      case maybeOldUnit =>
         unitOfFile(richUnit.source.file) = richUnit
+
+        maybeOldUnit.foreach { _ =>
+          currentRun.symSource.foreach { case (sym, _) =>
+            // otherwise we seem to be getting stale symbol completions for toplevels
+            if (sym.owner.hasPackageFlag && sym.isStale) {
+              sym.owner.info.decls unlink sym
+            }
+          }
+        }
+
         if (!isOutline) {
           fullyCompiled += filename
         } else {
@@ -838,7 +894,10 @@ class MetalsGlobal(
           qualifier.pos
         case _ =>
           val start = sel.pos.point
-          val end = start + sel.name.getterName.decoded.trim.length()
+          val decoded = sel.name.getterName.decoded.trim
+          val hasBackticks = sel.pos.source.content.lift(start).contains('`')
+          val backtickLen = if (hasBackticks) 2 else 0
+          val end = start + decoded.length() + backtickLen
           Position.range(sel.pos.source, start, start, end)
       }
     }
@@ -912,6 +971,11 @@ class MetalsGlobal(
       sym.pos.isRange &&
         unitOfFile.get(sym.pos.source.file).exists { unit =>
           if (unit.source ne sym.pos.source) {
+            def continuesIdentifier = {
+              val next =
+                unit.source.content(sym.pos.point + sym.decodedName.length())
+              Chars.isIdentifierPart(next)
+            }
             // HACK(olafur) Check if the position of the symbol in the old
             // source points to the symbol's name in the new source file. There
             // are cases where the same class definition has two different
@@ -919,7 +983,8 @@ class MetalsGlobal(
             // `knownDirectSubClasses` returns the version of the class symbol
             // while `Context.lookupSymbol` returns the new version of the class
             // symbol.
-            !unit.source.content.startsWith(sym.decodedName, sym.pos.point)
+            !unit.source.content
+              .startsWith(sym.decodedName, sym.pos.point) || continuesIdentifier
           } else {
             false
           }

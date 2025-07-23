@@ -1,17 +1,34 @@
 package tests.mill
 
+import java.net.URI
+
+import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.concurrent.duration._
 
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.MillDigest
+import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.DebugDiscoveryParams
+import scala.meta.internal.metals.DebugSession
+import scala.meta.internal.metals.DebugUnresolvedAttachRemoteParams
+import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.ScalaTestSuiteSelection
+import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.StatusBarConfig
+import scala.meta.internal.metals.clients.language.StatusType
+import scala.meta.internal.metals.debug.Stoppage
+import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
+import ch.epfl.scala.bsp4j.ScalaMainClass
+import ch.epfl.scala.bsp4j.TestParamsDataKind
 import tests.BaseImportSuite
 import tests.BaseMillServerSuite
 import tests.JavaHomeChangeTest
@@ -45,6 +62,49 @@ class MillServerSuite
     super.beforeEach(context)
     cleanWorkspace()
     bspTrace.touch()
+  }
+
+  test("basic-1.0.0") {
+    cleanWorkspace()
+    writeLayout(
+      MillBuildLayout(
+        """|/a/src/main.scala
+           |object Failure {
+           |  def scalaVersion: String = 3
+           |}
+           |""".stripMargin,
+        V.latestScala3Next,
+        testDep = None,
+        "1.0.0-RC1",
+      )
+    )
+    def millBspConfig = workspace.resolve(".bsp/mill-bsp.json")
+    client.generateBspAndConnect = Messages.GenerateBspAndConnect.yes
+    for {
+      _ <- server.initialize()
+      _ <- server.initialized()
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        Messages.GenerateBspAndConnect
+          .params(
+            MillBuildTool.name,
+            MillBuildTool.bspName,
+          )
+          .getMessage,
+      )
+      _ <- server.headServer.buildServerPromise.future
+      _ = assert(millBspConfig.exists)
+      _ <- server.didSave("a/src/main.scala")
+    } yield {
+      assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main.scala:2:30: error: Found:    (3 : Int)
+           |Required: String
+           |  def scalaVersion: String = 3
+           |                             ^
+           |""".stripMargin,
+      )
+    }
   }
 
   test("too-old") {
@@ -227,9 +287,9 @@ class MillServerSuite
     }
   }
 
-  test("call pc before initial compilation") {
+  test("call pc before initial compilation".flaky) {
     cleanWorkspace()
-    client.statusParams.clear()
+    client.getStatusParams(StatusType.metals).clear()
     val compileTaskFinished = Promise[Unit]()
     client.onMetalsStatus = { params =>
       if (params.text.contains("Compiled")) compileTaskFinished.success(())
@@ -253,8 +313,7 @@ class MillServerSuite
             |}
             |""".stripMargin
       )
-      res1 <- server.headServer.compilers
-        .info(server.toPath("foo/src/bar/Main.scala"), "bar/Foo.")
+      res1 <- server.info("foo/src/bar/Main.scala", "bar/Foo.")
       _ = assert(res1.isEmpty)
       _ <- server.didOpen("foo/src/bar/Main.scala")
       _ <- server.didChange("foo/src/bar/Main.scala") { _ =>
@@ -266,10 +325,215 @@ class MillServerSuite
       }
       _ <- server.didSave("foo/src/bar/Main.scala")
       _ <- compileTaskFinished.future
-      res2 <- server.headServer.compilers
-        .info(server.toPath("foo/src/bar/Main.scala"), "bar/Foo.")
+      res2 <- server.info("foo/src/bar/Main.scala", "bar/Foo.")
       _ = assert(res2.isDefined)
     } yield ()
   }
 
+  // https://github.com/scalameta/metals/pull/7544
+  test("debug-passes-environment-variables") {
+    cleanWorkspace()
+    writeLayout(
+      s"""
+         |/build.mill
+         |//| mill-version: 1.0.0-RC1
+         |package build
+         |import mill.*, scalalib.*
+         |
+         |object foo extends ScalaModule {
+         |  def scalaVersion = "${V.scala213}"
+         |
+         |  def forkEnv = Map("MY_ENV" -> "MY_VALUE")
+         |}
+         |/foo/src/app/Main.scala
+         |package app
+         |object Main {
+         |  def main(args: Array[String]): Unit = {
+         |    println(sys.env.get("MY_ENV"))
+         |    System.exit(0)
+         |  }
+         |}
+         |""".stripMargin
+    )
+    for {
+      _ <- initMillBsp()
+      output <- runMillDebugger(
+        server.startDebugging(
+          "foo",
+          DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
+          new ScalaMainClass("app.Main", Nil.asJava, Nil.asJava),
+        )
+      )
+    } yield assertNoDiff(output, "Some(MY_VALUE)")
+  }
+
+  // https://github.com/scalameta/metals/pull/7544
+  test("passing-test-environment-variables") {
+    cleanWorkspace()
+    writeLayout(
+      """|/build.mill
+         |//| mill-version: 1.0.0-RC1
+         |package build
+         |import mill.*, scalalib.*
+         |
+         |object foo extends ScalaModule {
+         |  def scalaVersion = "3.7.0"
+         |
+         |  override def forkEnv = Map("DOGGIES" -> "main")
+         |
+         |  object test extends ScalaTests with TestModule.Munit {
+         |    def mvnDeps = Seq(
+         |      mvn"org.scalameta::munit::1.1.1"
+         |    )
+         |
+         |    def forkEnv = super.forkEnv() ++ Map("DOGGIES" -> "tests")
+         |  }
+         |}
+         |/foo/test/src/FooMUnitTests.scala
+         |package foo
+         |
+         |import munit.FunSuite
+         |
+         |class FooMUnitTests extends FunSuite {
+         |  test("env var") {
+         |    assertEquals(sys.env.get("DOGGIES"), Some("tests"))
+         |  }
+         |}
+         |""".stripMargin
+    )
+    for {
+      _ <- initMillBsp()
+      output <- runMillDebugger(
+        server.startDebugging(
+          "foo.test",
+          TestParamsDataKind.SCALA_TEST_SUITES_SELECTION,
+          ScalaTestSuites(
+            List(
+              ScalaTestSuiteSelection("foo.FooMUnitTests", Nil.asJava)
+            ).asJava,
+            Nil.asJava,
+            Nil.asJava,
+          ),
+        )
+      )
+    } yield assert(
+      output.contains("All tests in foo.FooMUnitTests passed"),
+      clue = output,
+    )
+  }
+
+  test("attach") {
+    val port = 5566
+    def runningMain() = Future {
+      val classpathJar = workspace.resolve(".metals/.tmp").list.head.toString()
+      ShellRunner.runSync(
+        List(
+          JdkSources.defaultJavaHome(None).head.resolve("bin/java").toString,
+          "-Dproperty=Foo",
+          s"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=$port",
+          "-cp",
+          classpathJar,
+          "bar.Main",
+          "Bar",
+        ),
+        workspace,
+        true,
+        Map("HELLO" -> "Foo"),
+        propagateError = true,
+        timeout = 60.seconds,
+      )
+    }
+
+    for {
+      _ <- initialize(
+        s"""|/build.sc
+            |import mill._, scalalib._
+            |object foo extends ScalaModule {
+            |  def scalaVersion = "${V.scala213}"
+            |}
+            |/foo/src/bar/Main.scala
+            |package bar
+            |object Main {
+            |  def main(args: Array[String]) = {
+            |    val foo = sys.props.getOrElse("property", "")
+            |    val bar = args(0)
+            |    val env = sys.env.get("HELLO")
+            |    print(foo + bar)
+            |    env.foreach(print)
+            |    System.exit(0)
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ <- server.headServer.buildServerPromise.future
+      _ <- server.didOpen("foo/src/bar/Main.scala")
+      _ <- server.didSave("foo/src/bar/Main.scala")
+      // creates a classpath jar that we can use
+      _ <- server.executeDiscoverMainClassesCommand(
+        new DebugDiscoveryParams(
+          null,
+          "run",
+          "bar.Main",
+        )
+      )
+      runMain = runningMain()
+      debugSession <- server.executeCommand(
+        ServerCommands.StartAttach,
+        DebugUnresolvedAttachRemoteParams("localhost", port),
+      )
+      debugger = debugSession match {
+        case DebugSession(_, uri) =>
+          scribe.info(s"Starting debug session for $uri")
+          TestDebugger(
+            URI.create(uri),
+            Stoppage.Handler.Continue,
+            requestOtherThreadStackTrace = false,
+          )
+        case _ => throw new RuntimeException("Debug session not found")
+      }
+      _ <- debugger.initialize
+      _ <- debugger.attach(port)
+      _ <- debugger.configurationDone
+      output <- runMain
+      _ <- debugger.disconnect
+      _ <- debugger.shutdown
+      _ <- debugger.allOutput
+    } yield assertNoDiff(
+      output.getOrElse(""),
+      s"""|Listening for transport dt_socket at address: $port
+          |FooBarFoo""".stripMargin,
+    )
+  }
+
+  private def initMillBsp(): Future[Unit] = {
+    def millBspConfig = workspace.resolve(".bsp/mill-bsp.json")
+    client.generateBspAndConnect = Messages.GenerateBspAndConnect.yes
+    for {
+      _ <- server.initialize()
+      _ <- server.initialized()
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        Messages.GenerateBspAndConnect
+          .params(
+            MillBuildTool.name,
+            MillBuildTool.bspName,
+          )
+          .getMessage,
+      )
+      _ <- server.headServer.buildServerPromise.future
+      _ = assert(millBspConfig.exists)
+    } yield ()
+  }
+
+  private def runMillDebugger(f: => Future[TestDebugger]): Future[String] = {
+    for {
+      debugger <- f
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+      _ = server.server.cancel()
+    } yield output
+  }
 }

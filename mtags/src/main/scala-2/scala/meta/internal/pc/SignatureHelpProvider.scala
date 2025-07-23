@@ -47,7 +47,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
       last
     }
     def isValidQualifier(qual: Tree): Boolean =
-      !qual.pos.includes(pos) && (qual match {
+      !qual.pos.includes(pos) && qual.pos.isRange && (qual match {
         // Ignore synthetic TupleN constructors from tuple syntax.
         case Select(ident @ Ident(TermName("scala")), TermName(tuple))
             if tuple.startsWith("Tuple") && ident.pos == qual.pos =>
@@ -56,17 +56,27 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
           true
       })
     override def traverse(tree: Tree): Unit = {
-      if (tree.pos.includes(pos)) {
-        tree match {
-          case Apply(qual, _) if isValidQualifier(qual) =>
-            last = tree
-          case TypeApply(qual, _) if isValidQualifier(qual) =>
-            last = tree
-          case AppliedTypeTree(qual, _) if isValidQualifier(qual) =>
-            last = tree
-          case _ =>
-        }
-        super.traverse(tree)
+
+      // Position of annotation tree is outside of `tree.pos` so must be checked separately
+      val annotationTrees = tree match {
+        case annotatable: MemberDef => annotatable.mods.annotations
+        case _ => Nil
+      }
+
+      (tree :: annotationTrees).find(_.pos.includes(pos)) match {
+        case Some(found) =>
+          found match {
+            case Apply(qual, _) if isValidQualifier(qual) =>
+              last = found
+            case TypeApply(qual, _) if isValidQualifier(qual) =>
+              last = found
+            case AppliedTypeTree(qual, _) if isValidQualifier(qual) =>
+              last = found
+            case _ =>
+          }
+          super.traverse(found)
+
+        case None =>
       }
     }
   }
@@ -161,7 +171,11 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
           o.info
             .member(compiler.nme.apply)
             .safeAlternatives
-            .map(alt => alt -> qual.tpe.memberType(alt))
+            .flatMap { alt =>
+              val tpe = qual.tpe
+              if (tpe == null) None
+              else Some(alt -> tpe.memberType(alt))
+            }
         case o: ClassSymbol =>
           o.info
             .member(compiler.termNames.CONSTRUCTOR)
@@ -677,7 +691,7 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
       )
     }
     signatureInformation.setParameters(
-      paramLabels.iterator.flatten.toSeq.asJava
+      paramLabels.flatten.asJava
     )
     signatureInformation
   }

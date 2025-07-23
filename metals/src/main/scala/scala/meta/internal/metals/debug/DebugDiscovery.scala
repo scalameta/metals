@@ -41,6 +41,7 @@ class DebugDiscovery(
     semanticdbs: () => Semanticdbs,
     userConfig: () => UserConfiguration,
     workspace: AbsolutePath,
+    buildTargetClassesFinder: BuildTargetClassesFinder,
 )(implicit ec: ExecutionContext) {
 
   private def mainClasses(bti: b.BuildTargetIdentifier) =
@@ -62,17 +63,6 @@ class DebugDiscovery(
   }
 
   import DebugDiscovery._
-
-  private def findMainClass(
-      targetId: b.BuildTargetIdentifier,
-      mains: Set[String],
-  ): List[b.ScalaMainClass] = {
-    mainClasses(targetId).values.toList.filter(cls =>
-      mains.contains(
-        cls.getClassName()
-      )
-    )
-  }
 
   private def validate(
       params: DebugDiscoveryParams
@@ -114,39 +104,33 @@ class DebugDiscovery(
           case Some(value) => List(value)
         }
         Option(params.mainClass) match {
-          case Some(main)
-              if targetIds
-                .exists(id => findMainClass(id, Set(main)).nonEmpty) =>
-            Success(ValidRunType.Run(targetIds, Set(main)))
           case Some(main) =>
-            target match {
-              case None => Failure(NoMainClassFoundException(main))
-              case Some(targetId) =>
-                Failure(
-                  ClassNotFoundInBuildTargetException(
-                    main,
-                    displayName(targetId),
-                  )
-                )
-            }
-          case None if targetIds.exists(id => mainClasses(id).nonEmpty) =>
-            Success(
-              ValidRunType.Run(
-                targetIds,
-                targetIds
-                  .map(mainClasses(_).values.map(_.getClassName()))
-                  .flatten
-                  .toSet,
+            buildTargetClassesFinder
+              .findMainClassAndItsBuildTarget(
+                main,
+                buildTarget.map(displayName),
               )
-            )
+              .map(found =>
+                ValidRunType.Run(found.map { case (mainClass, target) =>
+                  target.getId() -> mainClass
+                })
+              )
+
           case None =>
-            target match {
-              case None =>
-                Failure(NothingToRun)
-              case Some(targetId) =>
-                Failure(
-                  BuildTargetContainsNoMainException(displayName(targetId))
-                )
+            val classes = targetIds
+              .flatMap(id => mainClasses(id).values.map(id -> _))
+              .toList
+            if (classes.isEmpty) {
+              target match {
+                case None =>
+                  Failure(NothingToRun)
+                case Some(targetId) =>
+                  Failure(
+                    BuildTargetContainsNoMainException(displayName(targetId))
+                  )
+              }
+            } else {
+              Success(ValidRunType.Run(classes))
             }
         }
       case (Some(RunOrTestFile), Some(target), Some(path)) =>
@@ -170,8 +154,8 @@ class DebugDiscovery(
     val validated = Future.fromTry(validate(params))
 
     validated.flatMap {
-      case ValidRunType.Run(targetIds, mains) =>
-        run(params, targetIds, mains)
+      case ValidRunType.Run(classes) =>
+        run(params, classes)
       case ValidRunType.RunOrTestFile(target, path) =>
         runOrTestFile(target, params, path)
       case ValidRunType.TestFile(target, path) =>
@@ -183,13 +167,10 @@ class DebugDiscovery(
 
   private def run(
       params: DebugDiscoveryParams,
-      targetIds: Seq[b.BuildTargetIdentifier],
-      mains: Set[String],
+      classes: List[(b.BuildTargetIdentifier, b.ScalaMainClass)],
   ): Future[b.DebugSessionParams] = {
-    val targetToMainClasses = targetIds
-      .map(target => target -> findMainClass(target, mains))
-      .filter { case (_, mains) => mains.nonEmpty }
-      .toMap
+    val targetToMainClasses =
+      classes.groupBy(_._1).view.mapValues(_.map(_._2)).toMap
     findMainToRun(
       targetToMainClasses,
       params,
@@ -358,7 +339,7 @@ class DebugDiscovery(
               )
               .orElse(userConfig().usedJavaBinary)
             buildTargetClasses
-              .jvmRunEnvironment(params.getTargets().get(0))
+              .jvmRunEnvironment(params.getTargets().get(0), isTests = false)
               .map { envItem =>
                 val updatedData = envItem.zip(javaBinary) match {
                   case None =>
@@ -447,7 +428,7 @@ object DebugDiscovery {
 
     sealed trait Value
 
-    case class Run(targets: Seq[b.BuildTargetIdentifier], mains: Set[String])
+    case class Run(classes: List[(b.BuildTargetIdentifier, b.ScalaMainClass)])
         extends Value
     case class RunOrTestFile(
         target: b.BuildTargetIdentifier,

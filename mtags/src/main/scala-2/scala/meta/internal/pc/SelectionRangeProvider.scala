@@ -149,6 +149,9 @@ class SelectionRangeProvider(
           case _ => ()
         }
 
+      case refTree: RefTree =>
+        maybeContributeRange(refTree.namePosition)
+
       case apply: GenericApply =>
         maybeContributeSeqRange(apply.args)
 

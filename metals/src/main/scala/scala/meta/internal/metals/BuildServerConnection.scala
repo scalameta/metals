@@ -27,7 +27,7 @@ import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.utils.RequestRegistry
 import scala.meta.internal.metals.utils.Timeout
@@ -41,7 +41,6 @@ import org.eclipse.lsp4j.jsonrpc.JsonRpcException
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.MessageIssueException
-import org.eclipse.lsp4j.services.LanguageClient
 
 /**
  * An actively running and initialized BSP connection
@@ -51,7 +50,7 @@ class BuildServerConnection private (
       BuildServerConnection.LauncherConnection
     ],
     initialConnection: BuildServerConnection.LauncherConnection,
-    languageClient: LanguageClient,
+    languageClient: ConfiguredLanguageClient,
     reconnectNotification: DismissedNotifications#Notification,
     requestTimeOutNotification: DismissedNotifications#Notification,
     config: MetalsServerConfig,
@@ -139,7 +138,7 @@ class BuildServerConnection private (
 
   // Scala CLI breaks when we try to use the `buildTarget/dependencyModules` request
   def isDependencyModulesSupported: Boolean =
-    capabilities.getDependencyModulesProvider() && !isScalaCLI
+    capabilities.getDependencyModulesProvider() && !isScalaCLI || isBazel
 
   /* Currently only Bloop and sbt support running single test cases
    * and ScalaCLI uses Bloop underneath.
@@ -280,28 +279,52 @@ class BuildServerConnection private (
     completableFuture.asScala.map(address => URI.create(address.getUri))
   }
 
-  def jvmRunEnvironment(
-      params: JvmRunEnvironmentParams
-  ): Future[JvmRunEnvironmentResult] = {
-    def empty = new JvmRunEnvironmentResult(Collections.emptyList)
+  private def jvmRunEnvironment[Env: ClassTag](
+      isProvider: BuildServerConnection.LauncherConnection => Boolean,
+      getEnv: MetalsBuildServer => CompletableFuture[Env],
+      bspTargetName: String,
+      empty: => Env,
+  ): Future[Env] = {
     connection.flatMap { conn =>
-      if (conn.capabilities.getJvmRunEnvironmentProvider()) {
+      if (isProvider(conn)) {
         register(
-          server => server.buildTargetJvmRunEnvironment(params),
+          server => getEnv(server),
           onFail = Some(
             (
               empty,
-              s"${name} should support `buildTarget/jvmRunEnvironment`, but it fails.",
+              s"${name} should support `$bspTargetName`, but it fails.",
             )
           ),
         ).asScala
       } else {
         scribe.warn(
-          s"${conn.displayName} does not support `buildTarget/jvmRunEnvironment`, unable to fetch run environment."
+          s"${conn.displayName} does not support `$bspTargetName`, unable to fetch run environment."
         )
         Future.successful(empty)
       }
     }
+  }
+
+  def jvmRunEnvironment(
+      params: JvmRunEnvironmentParams
+  ): Future[JvmRunEnvironmentResult] = {
+    jvmRunEnvironment(
+      isProvider = _.capabilities.getJvmRunEnvironmentProvider,
+      getEnv = _.buildTargetJvmRunEnvironment(params),
+      bspTargetName = "buildTarget/jvmRunEnvironment",
+      empty = new JvmRunEnvironmentResult(Collections.emptyList),
+    )
+  }
+
+  def jvmTestEnvironment(
+      params: JvmTestEnvironmentParams
+  ): Future[JvmTestEnvironmentResult] = {
+    jvmRunEnvironment(
+      isProvider = _.capabilities.getJvmTestEnvironmentProvider,
+      getEnv = _.buildTargetJvmTestEnvironment(params),
+      bspTargetName = "buildTarget/jvmTestEnvironment",
+      empty = new JvmTestEnvironmentResult(Collections.emptyList),
+    )
   }
 
   def workspaceBuildTargets(): Future[WorkspaceBuildTargetsResult] = {
@@ -463,15 +486,21 @@ class BuildServerConnection private (
     if (config.askToReconnect) {
       if (!reconnectNotification.isDismissed) {
         val params = Messages.DisconnectedServer.params()
-        languageClient.showMessageRequest(params).asScala.flatMap {
-          case response if response == Messages.DisconnectedServer.reconnect =>
-            reestablishConnection(original)
-          case response if response == Messages.DisconnectedServer.notNow =>
-            reconnectNotification.dismiss(5, TimeUnit.MINUTES)
-            connection
-          case _ =>
-            connection
-        }
+        languageClient
+          .showMessageRequest(
+            params,
+            ConnectionProvider.ConnectRequestCancelationGroup,
+          )
+          .flatMap {
+            case response
+                if response == Messages.DisconnectedServer.reconnect =>
+              reestablishConnection(original)
+            case response if response == Messages.DisconnectedServer.notNow =>
+              reconnectNotification.dismiss(5, TimeUnit.MINUTES)
+              connection
+            case _ =>
+              connection
+          }
       } else {
         connection
       }
@@ -583,7 +612,7 @@ object BuildServerConnection {
       projectRoot: AbsolutePath,
       bspTraceRoot: AbsolutePath,
       localClient: MetalsBuildClient,
-      languageClient: MetalsLanguageClient,
+      languageClient: ConfiguredLanguageClient,
       connect: () => Future[SocketConnection],
       requestTimeOutNotification: DismissedNotifications#Notification,
       reconnectNotification: DismissedNotifications#Notification,

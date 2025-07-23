@@ -118,6 +118,7 @@ class ConnectionProvider(
   )
 
   val cancelables = new MutableCancelable
+  // Can be set only in tests
   var buildServerPromise: Promise[Unit] = Promise[Unit]()
   val isConnecting = new AtomicBoolean(false)
 
@@ -158,15 +159,14 @@ class ConnectionProvider(
     buildToolProvider.supportedBuildTool().flatMap {
       case Some(BuildTool.Found(buildTool: BloopInstallProvider, digest))
           if chosenBuildServer.contains(BloopServers.name) ||
-            chosenBuildServer.isEmpty && !useBuildToolBsp(buildTool) =>
-        connect(
-          new BloopInstallAndConnect(
-            buildTool,
-            digest,
-            forceImport,
-            shutdownServer = false,
-          )
-        )
+            chosenBuildServer.isEmpty && !useBuildToolBsp(
+              buildTool
+            ) && buildTool.isBloopInstallProvider =>
+        def runInstall() = connect(new BloopInstallAndConnect(buildTool))
+        if (forceImport) runInstall()
+        else {
+          bloopInstall.runIfApproved(buildTool, digest, runInstall)
+        }
       case Some(found)
           if isSelected(found.buildTool) &&
             found.buildTool.isBspGenerated(folder) =>
@@ -326,9 +326,15 @@ class ConnectionProvider(
     def getOngoingRequest(): Option[RequestInfo] = currentRequest
 
     def connect[T](request: ConnectRequest): Future[BuildChange] = {
+      scribe.debug(s"new connect request: ${request.toString}")
       val info = addToQueue(request)
       pollAndConnect()
-      info.promise.future
+      info.promise.future.map { buildChange =>
+        scribe.debug(
+          s"connect request: ${request.show} finished with $buildChange"
+        )
+        buildChange
+      }
     }
 
     private def addToQueue(request: ConnectRequest): RequestInfo =
@@ -346,8 +352,12 @@ class ConnectionProvider(
         queue.add(info)
         // maybe cancel ongoing
         currentRequest.foreach(ongoing =>
-          if (request.cancelCompare(ongoing.request) == TakeOver)
+          if (request.cancelCompare(ongoing.request) == TakeOver) {
             ongoing.cancel()
+            languageClient.cancelRequest(
+              ConnectionProvider.ConnectRequestCancelationGroup
+            )
+          }
         )
         info
       }
@@ -384,18 +394,8 @@ class ConnectionProvider(
                   buildTool,
                   shutdownServer,
                 )
-              case BloopInstallAndConnect(
-                    buildTool,
-                    checksum,
-                    forceImport,
-                    shutdownServer,
-                  ) =>
-                bloopInstallAndConnect(
-                  buildTool,
-                  checksum,
-                  forceImport,
-                  shutdownServer,
-                )
+              case BloopInstallAndConnect(buildTool) =>
+                bloopInstallAndConnect(buildTool)
             }
         result.future.onComplete { res =>
           res match {
@@ -677,25 +677,12 @@ class ConnectionProvider(
     }
 
     private def bloopInstallAndConnect(
-        buildTool: BloopInstallProvider,
-        checksum: String,
-        forceImport: Boolean,
-        shutdownServer: Boolean,
+        buildTool: BloopInstallProvider
     )(implicit cancelSwitch: CancelSwitch): Interruptable[BuildChange] = {
       for {
-        result <- {
-          if (forceImport)
-            bloopInstall.runUnconditionally(
-              buildTool
-            )
-          else
-            bloopInstall.runIfApproved(
-              buildTool,
-              checksum,
-            )
-        }.withInterrupt
+        result <- bloopInstall.run(buildTool).withInterrupt
         change <- {
-          if (result.isInstalled) createSession(shutdownServer)
+          if (result.isInstalled) createSession(shutdownServer = false)
           else if (result.isFailed) {
             for {
               change <-
@@ -711,7 +698,7 @@ class ConnectionProvider(
                   // Connect nevertheless, many build import failures are caused
                   // by resolution errors in one weird module while other modules
                   // exported successfully.
-                  createSession(shutdownServer)
+                  createSession(shutdownServer = false)
                 } else {
                   buildTool match {
                     case _: BuildServerProvider =>
@@ -720,12 +707,12 @@ class ConnectionProvider(
                           Messages.ImportProjectFailedSuggestBspSwitch.params()
                         )
                         .asScala
-                        .withInterrupt
-                        .flatMap {
+                        .foreach {
                           case Messages.ImportProjectFailedSuggestBspSwitch.switchBsp =>
-                            switchBspServer().withInterrupt
+                            switchBspServer()
                           case _ => Interruptable.successful(BuildChange.Failed)
                         }
+                      Interruptable.successful(BuildChange.Failed)
                     case _ =>
                       languageClient.showMessage(Messages.ImportProjectFailed)
                       Interruptable.successful(BuildChange.Failed)
@@ -773,6 +760,8 @@ sealed trait ConnectRequest extends ConnectKind {
    * Queue    -- queue
    */
   def cancelCompare(other: ConnectRequest): ConflictBehaviour
+
+  def show: String
 }
 
 case class Disconnect(shutdownBuildServer: Boolean) extends ConnectRequest {
@@ -781,9 +770,13 @@ case class Disconnect(shutdownBuildServer: Boolean) extends ConnectRequest {
       case _: Index => Queue
       case _ => Yield
     }
+
+  def show: String = s"disconnect with shutdown=$shutdownBuildServer"
 }
 case class Index(check: () => Unit) extends ConnectRequest {
   def cancelCompare(other: ConnectRequest): ConflictBehaviour = Yield
+
+  def show: String = s"index"
 }
 case class ImportBuildAndIndex(bspSession: BspSession) extends ConnectRequest {
   def cancelCompare(other: ConnectRequest): ConflictBehaviour =
@@ -791,6 +784,8 @@ case class ImportBuildAndIndex(bspSession: BspSession) extends ConnectRequest {
       case (_: Index) | (_: ImportBuildAndIndex) => TakeOver
       case _ => Yield
     }
+
+  def show: String = s"import build and index for ${bspSession.main.name}"
 }
 case class ConnectToSession(bspSession: BspSession) extends ConnectRequest {
   def cancelCompare(other: ConnectRequest): ConflictBehaviour =
@@ -798,6 +793,8 @@ case class ConnectToSession(bspSession: BspSession) extends ConnectRequest {
       case (_: Disconnect) | (_: Index) | (_: ConnectToSession) => TakeOver
       case _ => Yield
     }
+
+  def show: String = s"connect to session for ${bspSession.main.name}"
 }
 case class CreateSession(shutdownBuildServer: Boolean = false)
     extends ConnectRequest {
@@ -809,26 +806,33 @@ case class CreateSession(shutdownBuildServer: Boolean = false)
         TakeOver
       case _ => Yield
     }
+
+  def show: String = s"create session with shutdown=$shutdownBuildServer"
 }
 case class GenerateBspConfigAndConnect(
     buildTool: BuildServerProvider,
     shutdownServer: Boolean = false,
 ) extends ConnectRequest {
-  def cancelCompare(other: ConnectRequest): ConflictBehaviour =
-    other match {
-      case BloopInstallAndConnect(_, _, _, true) if !shutdownServer => Queue
-      case _ => TakeOver
-    }
+  def cancelCompare(other: ConnectRequest): ConflictBehaviour = TakeOver
+
+  def show: String =
+    s"generate bsp config and connect for ${buildTool.buildServerName} with shutdown=$shutdownServer"
 }
 case class BloopInstallAndConnect(
-    buildTool: BloopInstallProvider,
-    checksum: String,
-    forceImport: Boolean,
-    shutdownServer: Boolean,
+    buildTool: BloopInstallProvider
 ) extends ConnectRequest {
   def cancelCompare(other: ConnectRequest): ConflictBehaviour =
     other match {
-      case GenerateBspConfigAndConnect(_, true) if !shutdownServer => Queue
+      case GenerateBspConfigAndConnect(_, true) => Queue
       case _ => TakeOver
     }
+
+  def show: String =
+    s"bloop install and connect for ${buildTool.buildServerName}"
+}
+
+object ConnectionProvider {
+  // message requests called inside of `connect`,
+  // since it's queued, they block `connect`
+  val ConnectRequestCancelationGroup = "connect-request"
 }

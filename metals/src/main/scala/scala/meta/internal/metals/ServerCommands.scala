@@ -6,6 +6,8 @@ import scala.meta.internal.metals.newScalaFile.NewFileTypes
 
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 
@@ -449,6 +451,14 @@ object ServerCommands {
     "[string], where the string is a stacktrace.",
   )
 
+  val MetalsPaste = new ParametrizedCommand[MetalsPasteParams](
+    "metals-did-paste",
+    "Add needed import statements after paste",
+    """|
+       |""".stripMargin,
+    """|MetalsPasteParams""".stripMargin,
+  )
+
   final case class ChooseClassRequest(
       textDocument: TextDocumentIdentifier,
       kind: String,
@@ -727,6 +737,14 @@ object ServerCommands {
     "Stop Scala CLI server",
   )
 
+  val ShowReportsForBuildTarget = new ParametrizedCommand[String](
+    "show-reports-for-build-target",
+    "Show error reports for a specific build target.",
+    """|Show error reports for a specific build target.
+       |""".stripMargin,
+    "[string], the build target for which to show the error reports.",
+  )
+
   def all: List[BaseCommand] =
     List(
       AnalyzeStacktrace,
@@ -775,6 +793,7 @@ object ServerCommands {
       OpenFeatureRequest,
       ZipReports,
       ResetWorkspace,
+      ShowReportsForBuildTarget,
     )
 
   val allIds: Set[String] = all.map(_.id).toSet
@@ -817,8 +836,10 @@ case class DebugUnresolvedTestClassParams(
 case class DebugUnresolvedAttachRemoteParams(
     hostName: String,
     port: Int,
-    buildTarget: String,
-)
+    @Nullable buildTarget: String = null,
+) {
+  def buildTargetOpt: Option[String] = Option(buildTarget)
+}
 
 case class DebugDiscoveryParams(
     @Nullable path: String,
@@ -834,4 +855,17 @@ case class DebugDiscoveryParams(
 case class RunScalafixRulesParams(
     textDocumentPositionParams: TextDocumentPositionParams,
     @Nullable rules: java.util.List[String] = null,
+)
+
+case class MetalsPasteParams(
+    // The text document, where text was pasted.
+    textDocument: TextDocumentIdentifier,
+    // The range in the text document, where text was pasted.
+    range: Range,
+    // Content of the file after paste.
+    text: String,
+    // The origin document, where text was copied from.
+    originDocument: TextDocumentIdentifier,
+    // The origin start offset, where text was copied from.
+    originOffset: Position,
 )

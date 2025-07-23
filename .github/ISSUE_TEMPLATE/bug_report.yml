@@ -51,7 +51,14 @@ body:
     id: version
     attributes:
       label: Version of Metals
-      placeholder: v1.5.3
+      placeholder: v1.6.0
+    validations:
+      required: true
+
+  - type: input
+    id: scala-version
+    attributes:
+      label: Scala version/s
     validations:
       required: true
 

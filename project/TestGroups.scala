@@ -123,6 +123,8 @@ object TestGroups {
       "tests.codeactions.ConvertSingleLineCommentLspSuite",
       "tests.ServerLivenessMonitorSuite", "tests.ResetWorkspaceLspSuite",
       "tests.ToplevelWithInnerScala3Suite", "tests.OutlineLspSuite",
-      "tests.FallbackDownloadSuite"),
+      "tests.FallbackDownloadSuite", "tests.mcp.McpConfigSuite",
+      "tests.mcp.McpQueryLspSuite", "tests.mcp.McpRunTestSuite",
+      "tests.mcp.McpServerLspSuite"),
   )
 }

@@ -53,6 +53,7 @@ abstract class BaseLspSuite(
   var client: TestingClient = _
   var workspace: AbsolutePath = _
   var onStartCompilation: () => Unit = () => ()
+  def clientName: String = "Visual Studio Code"
 
   protected def metalsDotDir: AbsolutePath = workspace.resolve(".metals")
   protected def dapClient: AbsolutePath =
@@ -121,6 +122,7 @@ abstract class BaseLspSuite(
   ): Future[InitializeResult] = {
     Debug.printEnclosing()
     writeLayout(layout)
+    scribe.info(s"Initializing with $initializer")
     initializer.initialize(workspace, server, client, expectError, userConfig)
   }
 
@@ -132,6 +134,7 @@ abstract class BaseLspSuite(
     layout.foreach { case (folderName, layout) =>
       writeLayout(layout, folderName)
     }
+    scribe.info(s"Initializing with $initializer")
     initializer.initialize(
       workspace,
       server,
@@ -207,6 +210,7 @@ abstract class BaseLspSuite(
       time = time,
       initializationOptions = initOptions,
       mtagsResolver = mtagsResolver,
+      clientName = clientName,
       onStartCompilation = onStartCompilation,
     )(
       ex

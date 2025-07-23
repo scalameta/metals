@@ -11,6 +11,7 @@ import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
@@ -28,6 +29,9 @@ class SbtBloopLspSuite
     extends BaseImportSuite("sbt-bloop-import")
     with ScriptsAssertions
     with JavaHomeChangeTest {
+
+  override def serverConfig: MetalsServerConfig =
+    super.serverConfig.copy(askToRestartBloop = true)
 
   val sbtVersion = V.sbtVersion
   val scalaVersion = V.scala213

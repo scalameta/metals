@@ -9,7 +9,6 @@ import java.util.Optional
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Supplier
-import java.util.logging.Logger
 
 import scala.util.Try
 import scala.util.control.NonFatal
@@ -18,6 +17,7 @@ import scala.util.matching.Regex
 import scala.meta.internal.metals.utils.LimitedFilesManager
 import scala.meta.internal.metals.utils.TimestampedFile
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
+import scala.meta.internal.mtags.EncoderDecoder
 import scala.meta.pc.{reports => jreports}
 
 trait ReportContext extends jreports.ReportContext {
@@ -46,6 +46,7 @@ class StdReportContext(
     workspace: Path,
     resolveBuildTarget: Option[URI] => Option[String],
     level: ReportLevel = ReportLevel.Info,
+    reportTrackers: List[ReportTracker] = Nil,
 ) extends ReportContext {
   val reportsDir: Path = workspace.resolve(StdReportContext.reportsDir)
 
@@ -56,6 +57,7 @@ class StdReportContext(
       resolveBuildTarget,
       level,
       "metals-full",
+      reportTrackers,
     )
   val incognito: StdReporter =
     new StdReporter(
@@ -64,6 +66,7 @@ class StdReportContext(
       resolveBuildTarget,
       level,
       "metals",
+      reportTrackers,
     )
   val bloop: StdReporter =
     new StdReporter(
@@ -72,6 +75,7 @@ class StdReportContext(
       resolveBuildTarget,
       level,
       "bloop",
+      reportTrackers,
     )
 
   override def cleanUpOldReports(
@@ -93,9 +97,8 @@ class StdReporter(
     resolveBuildTarget: Option[URI] => Option[String],
     level: ReportLevel,
     override val name: String,
+    reportTrackers: List[ReportTracker],
 ) extends Reporter {
-
-  private val logger = Logger.getLogger(classOf[ReportContext].getName)
 
   val maybeReportsDir: Path =
     workspace.resolve(pathToReports).resolve(name)
@@ -160,13 +163,14 @@ class StdReporter(
           path.writeText(
             sanitize(report.fullText( /* withIdAndSummary = */ true))
           )
+          scribe.info(s"Created report: ${report.path()}")
+          reportTrackers.foreach(_.reportCreated(report))
           path
         }
-        if (!ifVerbose) {
-          logger.warning(
-            s"${report.shortSummary()} (full report at: $pathToReport)"
+        if (!ifVerbose)
+          scribe.info(
+            s"${report.shortSummary()} (full report at: \"$pathToReport\")"
           )
-        }
         pathToReport
       }.toOption.asJava
 
@@ -183,6 +187,7 @@ class StdReporter(
     val time = TimeFormatter.getTime()
     val buildTargetPart =
       resolveBuildTarget(report.path().asScala)
+        .map(FileNameEncoderDecoder.encode)
         .map("_(" ++ _ ++ ")")
         .getOrElse("")
     val filename = s"r_${report.name()}${buildTargetPart}_${time}.md"
@@ -241,6 +246,10 @@ object EmptyReportContext extends ReportContext {
   override def bloop: Reporter = EmptyReporter
 }
 
+trait ReportTracker {
+  def reportCreated(report: jreports.Report): Unit
+}
+
 object ReportFileName {
   val pattern: Regex = "r_(?<name>[^()]*)(_\\((?<buildTarget>.*)\\))?_".r
 
@@ -250,7 +259,17 @@ object ReportFileName {
     pattern.findPrefixMatchOf(file.name) match {
       case None => (file.name, None)
       case Some(foundMatch) =>
-        (foundMatch.group("name"), Option(foundMatch.group("buildTarget")))
+        (
+          foundMatch.group("name"),
+          Option(foundMatch.group("buildTarget"))
+            .map(FileNameEncoderDecoder.decode),
+        )
     }
 
 }
+
+object FileNameEncoderDecoder
+    extends EncoderDecoder(
+      '_',
+      Set('/', '\\', ':', '*', '?', '"', '<', '>', '|', '_', '@'),
+    )

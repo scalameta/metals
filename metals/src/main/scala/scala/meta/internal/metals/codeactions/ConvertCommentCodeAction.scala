@@ -15,7 +15,8 @@ import scala.meta.tokens.Tokens
 
 import org.eclipse.{lsp4j => l}
 
-class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
+class ConvertCommentCodeAction(buffers: Buffers, trees: Trees)
+    extends CodeAction {
 
   override def kind: String = l.CodeActionKind.RefactorRewrite
 
@@ -28,7 +29,7 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
 
     (for {
       content <- buffers.get(path)
-      tokens <- tokenizeIfNotRangeSelection(range, content)
+      tokens <- tokenizeIfNotRangeSelection(range, path)
       contentLines = content.split("\\r?(\\n|\\r)").toVector
       codeAction <- createActionIfPossible(
         path,
@@ -40,12 +41,15 @@ class ConvertCommentCodeAction(buffers: Buffers) extends CodeAction {
     } yield codeAction).toList
   }
 
-  private def tokenizeIfNotRangeSelection(range: l.Range, content: String) = {
+  private def tokenizeIfNotRangeSelection(
+      range: l.Range,
+      path: AbsolutePath,
+  ) = {
     Option
       .when(range.getStart == range.getEnd)(
-        content.safeTokenize(Trees.defaultTokenizerDialect)
+        trees.tokenized(path)
       )
-      .flatMap(_.toOption)
+      .flatten
   }
   private def isLikelyScalaCliDirective(
       contentLines: Vector[String],

@@ -3,8 +3,8 @@ package scala.meta.internal.builds
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Promise
+import scala.concurrent.duration.Duration
 import scala.concurrent.duration.DurationInt
-import scala.language.postfixOps
 import scala.util.Properties
 
 import scala.meta.internal.metals.Cancelable
@@ -145,6 +145,7 @@ object ShellRunner {
       processErr: String => Unit = scribe.error(_),
       propagateError: Boolean = false,
       maybeJavaHome: Option[String] = None,
+      timeout: Duration = 10.seconds,
   )(implicit ec: ExecutionContext): Option[String] = {
 
     val sbOut = new StringBuilder()
@@ -162,7 +163,7 @@ object ShellRunner {
       propagateError,
     )
 
-    val exit = Await.result(ps.complete, 10 second)
+    val exit = Await.result(ps.complete, timeout)
 
     if (exit == 0) {
       Some(sbOut.toString())

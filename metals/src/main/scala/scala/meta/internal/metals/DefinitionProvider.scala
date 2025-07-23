@@ -8,7 +8,9 @@ import scala.concurrent.Future
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position.Range
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.mtags.KeywordWrapper.Scala3SoftKeywords
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
@@ -26,6 +28,7 @@ import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+import scala.meta.tokens.Token
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Location
@@ -69,10 +72,10 @@ final class DefinitionProvider(
     mtags,
     workspace,
     () => Some(semanticdbs()),
-    trees,
     buildTargets,
     saveDefFileToDisk,
     sourceMapper,
+    scalaVersionSelector,
   )
 
   val scaladocDefinitionProvider =
@@ -152,7 +155,9 @@ final class DefinitionProvider(
           }
       }
     } yield {
-      reportBuilder.build().foreach(r => rc.unsanitized().create(() => r))
+      reportBuilder
+        .build(scalaVersionSelector)
+        .foreach(r => rc.unsanitized().create(() => r))
       result
     }
   }
@@ -235,7 +240,8 @@ final class DefinitionProvider(
       dirtyPosition: Position,
       snapshot: TextDocument,
   ): (TokenEditDistance, Option[Position]) = {
-    val sourceDistance = buffers.tokenEditDistance(source, snapshot.text, trees)
+    val sourceDistance =
+      buffers.tokenEditDistance(source, snapshot.text, scalaVersionSelector)
     val snapshotPosition = sourceDistance.toOriginal(
       dirtyPosition.getLine,
       dirtyPosition.getCharacter,
@@ -400,10 +406,10 @@ class DestinationProvider(
     mtags: Mtags,
     workspace: AbsolutePath,
     semanticdbsFallback: () => Option[Semanticdbs],
-    trees: Trees,
     buildTargets: BuildTargets,
     saveSymbolFileToDisk: Boolean,
     sourceMapper: SourceMapper,
+    scalaVersionSelector: ScalaVersionSelector,
 ) {
 
   def findDefinitionFile(symbol: String): List[AbsolutePath] = {
@@ -515,7 +521,7 @@ class DestinationProvider(
             buffers.tokenEditDistance(
               destinationPath,
               destinationDoc.text,
-              trees,
+              scalaVersionSelector,
             )
           DefinitionDestination(
             destinationDoc,
@@ -590,11 +596,32 @@ class DefinitionProviderReportBuilder(
     result
   }
 
-  def build(): Option[Report] =
+  def build(scalaVersionSelector: ScalaVersionSelector): Option[Report] = {
+
+    val text = buffers.get(path).getOrElse("")
+    val dialect = scalaVersionSelector.getDialect(path)
+    val tokens = text.safeTokenize(dialect)
+    def shouldOfferDefinition(token: Token) = token match {
+      case token: Token.Ident if !Scala3SoftKeywords.contains(token.text) =>
+        true
+      case _: Token.Interpolation.Id => true
+      case _ => false
+    }
+    val shouldProduceReport =
+      text.nonEmpty && tokens.toOption.toList.flatMap(_.tokens).exists {
+        case token
+            if token.pos.contains(
+              params.getPosition()
+            ) && shouldOfferDefinition(token) =>
+          true
+        case _ => false
+      }
+
     compilerDefn match {
       case Some(compilerDefn)
-          if !foundScalaDocDef && compilerDefn.isEmpty && !compilerDefn.querySymbol
-            .endsWith("/") =>
+          if !foundScalaDocDef && compilerDefn.isEmpty &&
+            !compilerDefn.querySymbol.endsWith("/") && shouldProduceReport =>
+
         Some(
           Report(
             "empty-definition",
@@ -625,7 +652,7 @@ class DefinitionProviderReportBuilder(
         )
       case _ => None
     }
-
+  }
   private def querySymbol: Option[String] =
     compilerDefn.map(_.querySymbol) match {
       case Some("") | None =>

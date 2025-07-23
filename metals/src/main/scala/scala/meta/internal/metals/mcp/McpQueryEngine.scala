@@ -30,6 +30,7 @@ class McpQueryEngine(
     referenceProvider: ReferenceProvider,
     scalaVersionSelector: ScalaVersionSelector,
     mcpSearch: McpSymbolSearch,
+    workspace: AbsolutePath,
 )(implicit ec: ExecutionContext) {
   private val mcpDefinitionProvider =
     new McpSymbolProvider(scalaVersionSelector, mcpSearch)
@@ -76,7 +77,12 @@ class McpQueryEngine(
       symbol <- mcpDefinitionProvider
         .symbols(fqcn, Some(path))
         .distinctBy(_.symbolType)
-    } yield McpInspectProvider.inspect(compilers, symbol, buildTarget)
+    } yield McpInspectProvider.inspect(
+      compilers,
+      workspace,
+      symbol,
+      buildTarget,
+    )
 
     Future.sequence(results).map(_.flatten)
   }

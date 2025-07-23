@@ -15,6 +15,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * @param globSyntax pattern used for `DidChangeWatchedFilesRegistrationOptions`.
  * @param statusBar how to handle metals/status notifications with {"statusType": "metals"}.
  * @param bspStatusBar how to handle metals/status notifications with {"statusType": "bsp"}.
+ * @param moduleStatusBar how to handle metals/status notifications with {"statusType": "module"}.
  * @param executeClientCommand whether client provides the ability to support the
  *                             `metals/executeClientCommand` command.
  * @param snippetAutoIndent if the client defaults to adding the identation of
@@ -32,6 +33,9 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  *                            if the `openFilesOnRenames` is enabled.
  * @param askToReconnect whether the user should be prompted to reconnect after a
  *                       BuildServer connection is lost.
+ * @param askToRestartBloop whether the user should be prompted to restart the Bloop
+ *                          server when version changes. If false, Bloop will be
+ *                          restarted automatically.
  * @param icons what icon set to use for messages.
  * @param statistics if all statistics in Metals should be enabled.
  * @param compilers configuration for the `PresentationCompilerConfig`.
@@ -49,6 +53,7 @@ final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
     statusBar: StatusBarConfig = StatusBarConfig.default,
     bspStatusBar: StatusBarConfig = StatusBarConfig.bspDefault,
+    moduleStatusBar: StatusBarConfig = StatusBarConfig.moduleDefault,
     executeClientCommand: ExecuteClientCommandConfig =
       ExecuteClientCommandConfig.default,
     snippetAutoIndent: Boolean = MetalsServerConfig.binaryOption(
@@ -75,6 +80,10 @@ final case class MetalsServerConfig(
     renameFileThreshold: Int = 300,
     askToReconnect: Boolean = MetalsServerConfig.binaryOption(
       "metals.ask-to-reconnect",
+      default = false,
+    ),
+    askToRestartBloop: Boolean = MetalsServerConfig.binaryOption(
+      "metals.ask-to-restart-bloop",
       default = false,
     ),
     icons: Icons = Icons.fromString(System.getProperty("metals.icons")),
@@ -138,6 +147,7 @@ final case class MetalsServerConfig(
       s"http=$isHttpEnabled",
       s"input-box=$isInputBoxEnabled",
       s"ask-to-reconnect=$askToReconnect",
+      s"ask-to-restart-bloop=$askToRestartBloop",
       s"icons=$icons",
       s"statistics=$statistics",
       s"macos-max-watch-roots=${macOsMaxWatchRoots}",

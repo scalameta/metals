@@ -6,17 +6,27 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.Optional
 
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.DefinitionProviderReportBuilder
+import scala.meta.internal.metals.DefinitionResult
 import scala.meta.internal.metals.FolderReportsZippper
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportFileName
+import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.TimeFormatter
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.ZipReportsProvider
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.doctor.TargetsInfoProvider
 import scala.meta.io.AbsolutePath
+
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.TextDocumentIdentifier
+import org.eclipse.lsp4j.TextDocumentPositionParams
 
 class ReportsSuite extends BaseSuite {
   val workspace: AbsolutePath = AbsolutePath(Paths.get("."))
@@ -181,5 +191,90 @@ class ReportsSuite extends BaseSuite {
     assert(Files.exists(zipPath))
     assert(Files.exists(pathToReadMe.toNIO))
     Files.delete(pathToReadMe.toNIO)
+  }
+
+  test("definition-report-non-keyword") {
+    val buffers = new Buffers()
+    val path = workspace.resolve("Test.scala")
+    val content =
+      """|object Test {
+         |  val myValue = 42
+         |}""".stripMargin
+    buffers.put(path, content)
+
+    def fromContent(content: String): TextDocumentPositionParams = {
+      val offset = content.indexOf("@@")
+      val code = content.replace("@@", "")
+      val column = offset - code.take(offset).lastIndexOf('\n') - 1
+      val line = code.take(offset).count(_ == '\n')
+      new TextDocumentPositionParams(
+        new TextDocumentIdentifier(path.toURI.toString()),
+        new Position(line, column),
+      )
+    }
+
+    def buildReport(docParams: TextDocumentPositionParams): Option[Report] = {
+      val reportBuilder =
+        new DefinitionProviderReportBuilder(path, docParams, buffers)
+      val emptyResult = DefinitionResult.empty("test/symbol")
+      reportBuilder.setCompilerResult(emptyResult)
+      reportBuilder.setSemanticDBResult(emptyResult)
+      reportBuilder.setNonLocalGuesses(List("test/symbol"))
+      reportBuilder.build(
+        new ScalaVersionSelector(() => UserConfiguration(), BuildTargets.empty)
+      )
+    }
+
+    def checkQuery(
+        query: String
+    )(reportAssertion: Option[Report] => Unit): Unit = {
+      val docParams = fromContent(query)
+      val report = buildReport(docParams)
+      reportAssertion(report)
+    }
+
+    checkQuery(
+      """|object Test {
+         |  val myVa@@lue = 42
+         |}""".stripMargin
+    ) { report =>
+      assertEquals(report.map(_.name), Some("empty-definition"))
+    }
+    checkQuery(
+      """|obje@@ct Test {
+         |  val myValue = 42
+         |}""".stripMargin
+    ) { report =>
+      assertEquals(report.map(_.name), None)
+    }
+    checkQuery(
+      """|object Test {@@
+         |  val myValue = 42
+         |}""".stripMargin
+    ) { report =>
+      assertEquals(report.map(_.name), None)
+    }
+    checkQuery(
+      """|object Test {
+         |@@  val myValue = 42
+         |}""".stripMargin
+    ) { report =>
+      assertEquals(report.map(_.name), None)
+    }
+    checkQuery(
+      """|object Test {
+         |  v@@al myValue = 42
+         |}""".stripMargin
+    ) { report =>
+      assertEquals(report.map(_.name), None)
+    }
+    checkQuery(
+      """|object Test {
+         |  v@@al myValue = 4@@2
+         |}""".stripMargin
+    ) { report =>
+      assertEquals(report.map(_.name), None)
+    }
+
   }
 }

@@ -85,7 +85,7 @@ sealed abstract class ImportMissingSymbol(
     def importMissingSymbol(
         diagnostic: l.Diagnostic,
         name: String,
-        findExtensionMethods: Boolean = false,
+        findExtensionMethods: Boolean,
     ): Future[Seq[l.CodeAction]] = {
       val offset =
         if (isScala3) diagnostic.getRange().getEnd()
@@ -145,25 +145,17 @@ sealed abstract class ImportMissingSymbol(
       }
     }
 
+    val MissingSymbol = new MissingSymbolDiagnostic(isScala3)
+
     Future
       .sequence(
         getDiagnostics(params)
           .collect {
-            case diag @ ScalacDiagnostic.SymbolNotFound(name)
+            case d @ MissingSymbol(name, findExtensionMethods)
                 if this.isImportAllSourceAction || params
                   .getRange()
-                  .overlapsWith(
-                    diag.getRange()
-                  ) =>
-              importMissingSymbol(diag, name)
-            // `foo.xxx` where `xxx` is not a member of `foo`
-            // we search for `xxx` only when the target is Scala3
-            // considering there might be an extension method.
-            case d @ ScalacDiagnostic.NotAMember(name)
-                if isScala3 && (this.isImportAllSourceAction || params
-                  .getRange()
-                  .overlapsWith(d.getRange())) =>
-              importMissingSymbol(d, name, findExtensionMethods = true)
+                  .overlapsWith(d.getRange()) =>
+              importMissingSymbol(d, name, findExtensionMethods)
           }
       )
       .map { actions =>
@@ -301,4 +293,18 @@ object SourceAddMissingImports {
   final val kind: String = l.CodeActionKind.Source + ".addMissingImports"
   final val title: String =
     "Add all missing imports that are unambiguous for the entire file"
+}
+
+class MissingSymbolDiagnostic(isScala3: Boolean) {
+  def unapply(d: l.Diagnostic): Option[(String, Boolean)] =
+    d match {
+      case ScalacDiagnostic.SymbolNotFound(name) =>
+        Some(name, false)
+      // `foo.xxx` where `xxx` is not a member of `foo`
+      // we search for `xxx` only when the target is Scala3
+      // considering there might be an extension method.
+      case ScalacDiagnostic.NotAMember(name) if isScala3 =>
+        Some(name, true)
+      case _ => None
+    }
 }

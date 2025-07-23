@@ -80,7 +80,7 @@ To enable Metals MCP support, set `metals.startMcpServer` to `true`. For common 
 This feature is still experimental, and we'd love to get your feedback and improvement suggestions.
 
 ## Best effort compilation
-Best effort compilation was first introduced to Metals `v1.3.4` (see [here](https://scalameta.org/metals/blog/2024/07/24/thallium#scala-3-best-effort-compilation)); however, due to multiple issues with it, it was disabled. Since then, a lot was fixed and improved in the area, so this release reintroduces best effort compilation behind a setting; simply set `metals.enable-best-effort` to `true` and give it a try.
+Best effort compilation was first introduced to Metals `v1.3.4` (see [here](https://scalameta.org/metals/blog/2024/07/24/thallium#scala-3-best-effort-compilation)); however, due to multiple issues with it, it was disabled. Since then, a lot was fixed and improved in the area, so this release reintroduces best effort compilation behind a setting; simply set `metals.enableBestEffort` to `true` and give it a try.
 
 ## New inlay hints
 

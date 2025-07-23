@@ -206,7 +206,22 @@ case class ScalaPresentationCompiler(
   override def didChange(
       params: VirtualFileParams
   ): CompletableFuture[ju.List[Diagnostic]] = {
-    CompletableFuture.completedFuture(Nil.asJava)
+    val returnDiagnostics =
+      params.data() match {
+        case Some(value: Boolean) => value
+        case _ => false
+      }
+
+    compilerAccess.withInterruptableCompiler(
+      List.empty[Diagnostic].asJava,
+      params.token()
+    ) { pc =>
+      val compiler = pc.compiler(params)
+      compiler.didChange(params.uri())
+      if (returnDiagnostics) {
+        DiagnosticsProvider.getDiagnostics(compiler, params).asJava
+      } else List.empty[Diagnostic].asJava
+    }(params.toQueryContext)
   }
 
   override def didSave(

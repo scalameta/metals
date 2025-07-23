@@ -27,7 +27,6 @@ import scala.meta.internal.mtags.OverriddenSymbol
 import scala.meta.internal.mtags.ResolvedOverriddenSymbol
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
-import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.search.SymbolHierarchyOps._
 import scala.meta.internal.semanticdb.ClassSignature
@@ -58,7 +57,6 @@ final class ImplementationProvider(
     workspace: AbsolutePath,
     buffer: Buffers,
     definitionProvider: DefinitionProvider,
-    trees: Trees,
     scalaVersionSelector: ScalaVersionSelector,
     compilers: Compilers,
     buildTargets: BuildTargets,
@@ -349,7 +347,7 @@ final class ImplementationProvider(
                 val distance = buffer.tokenEditDistance(
                   implPath,
                   implDocument.text,
-                  trees,
+                  scalaVersionSelector,
                 )
                 distance.toRevised(range.toLsp)
               }

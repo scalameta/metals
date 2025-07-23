@@ -3,6 +3,7 @@ package scala.meta.internal.worksheets
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.security.MessageDigest
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -37,7 +38,6 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.mtags.MD5
-import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.CompilerJobQueue
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.worksheets.MdocEnrichments._
@@ -65,7 +65,6 @@ import org.eclipse.lsp4j.jsonrpc.messages
 class WorksheetProvider(
     workspace: AbsolutePath,
     buffers: Buffers,
-    trees: Trees,
     buildTargets: BuildTargets,
     languageClient: MetalsLanguageClient,
     userConfig: () => UserConfiguration,
@@ -216,7 +215,8 @@ class WorksheetProvider(
     worksheet match {
       case None => Nil
       case Some(value) =>
-        val distance = buffers.tokenEditDistance(path, value.text, trees)
+        val distance =
+          buffers.tokenEditDistance(path, value.text, scalaVersionSelector)
         value.evaluatedWorksheet
           .statements()
           .map { stat =>
@@ -446,6 +446,7 @@ class WorksheetProvider(
       promise: Promise[EvaluatedWorksheetSnapshot],
   ): EvaluatedWorksheetSnapshot = {
     val mdoc = getMdoc(path)
+    val originId = "METALS-$" + UUID.randomUUID().toString
     val input = path.toInputFromBuffers(buffers)
     val relativePath = path.toRelative(workspace)
     val evaluatedWorksheet =
@@ -478,6 +479,7 @@ class WorksheetProvider(
       path,
       toPublish,
       isReset = true,
+      originId = originId,
     )
     worksheetSnapshot
   }

@@ -27,21 +27,25 @@ class CompletionProvider(
 
   private def cursorName: String = {
     val i = params.offset() - 1
-    params.text().charAt(i) match {
-      case '$' =>
-        // Don't use `_` to avoid tokenization error in string interpolator.
-        "CURSOR"
-      case '{' if params.text().charAt(i - 1) == '$' =>
-        // Insert potentially missing `}` to avoid "unclosed literal" error in String interpolator..
-        CURSOR + "}"
-      case '*'
-          if params.text().charAt(i - 1) == '*' &&
-            params.text().charAt(i - 2) == '/' =>
-        // Insert potentially missing `*/` to avoid comment out all codes after the "/**".
-        CURSOR + "*/"
-      case _ =>
-        // Default _CURSOR_ instrumentation.
-        CURSOR
+    if (i < 0) {
+      CURSOR
+    } else {
+      params.text().charAt(i) match {
+        case '$' =>
+          // Don't use `_` to avoid tokenization error in string interpolator.
+          "CURSOR"
+        case '{' if params.text().charAt(i - 1) == '$' =>
+          // Insert potentially missing `}` to avoid "unclosed literal" error in String interpolator..
+          CURSOR + "}"
+        case '*'
+            if params.text().charAt(i - 1) == '*' &&
+              params.text().charAt(i - 2) == '/' =>
+          // Insert potentially missing `*/` to avoid comment out all codes after the "/**".
+          CURSOR + "*/"
+        case _ =>
+          // Default _CURSOR_ instrumentation.
+          CURSOR
+      }
     }
   }
 
@@ -100,7 +104,7 @@ class CompletionProvider(
       }
     }
 
-    val items = sorted.iterator.zipWithIndex.map { case (member, idx) =>
+    val items = sorted.zipWithIndex.map { case (member, idx) =>
       params.checkCanceled()
       val definitionSiteHasBackticks = {
         val defnNameStart = member.sym.pos.focus
@@ -344,7 +348,7 @@ class CompletionProvider(
       item
     }
 
-    val result = new CompletionList(items.toSeq.asJava)
+    val result = new CompletionList(items.asJava)
     result.setIsIncomplete(i.isIncomplete)
     result
   }
@@ -557,8 +561,13 @@ class CompletionProvider(
       }
       val isTypeMember = kind == CompletionListKind.Type
       params.checkCanceled()
+
+      val query = completions.name.toString
+      val queryStartsWithLowercase = query.headOption.forall(_.isLower)
       val matchingResults = completions.matchingResults { entered => name =>
         if (isTypeMember) CompletionFuzzy.matchesSubCharacters(entered, name)
+        else if (queryStartsWithLowercase)
+          CompletionFuzzy.matches(entered, name, forgivingFirstChar = true)
         else CompletionFuzzy.matches(entered, name)
       }
 
@@ -571,7 +580,6 @@ class CompletionProvider(
         completions,
         latestParentTrees
       )
-      val query = completions.name.toString
       val items = filterInteresting(
         matchingResults,
         kind,

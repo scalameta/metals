@@ -14,7 +14,6 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.JavaPresentationCompiler
 import scala.meta.internal.pc.ScalaPresentationCompiler
@@ -32,11 +31,11 @@ class CompilerConfiguration(
     userConfig: () => UserConfiguration,
     buildTargets: BuildTargets,
     buffers: Buffers,
+    scalaVersionSelector: ScalaVersionSelector,
     embedded: Embedded,
     sh: ScheduledExecutorService,
     initializeParams: InitializeParams,
     excludedPackages: () => ExcludedPackagesHandler,
-    trees: Trees,
     mtagsResolver: MtagsResolver,
     sourceMapper: SourceMapper,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext) {
@@ -345,8 +344,8 @@ class CompilerConfiguration(
       classpath.map(AbsolutePath(_)),
       sources.map(AbsolutePath(_)),
       buffers,
+      scalaVersionSelector,
       excludedPackages,
-      trees,
       buildTargets,
       saveSymbolFileToDisk = !config.isVirtualDocumentSupported(),
       sourceMapper,
@@ -422,37 +421,16 @@ class CompilerConfiguration(
         } yield jvmVersion.major
 
       releaseVersion match {
-        // https://github.com/scala/bug/issues/13045
-        case Some(version)
-            if version < 17 && scalaTarget.scalaBinaryVersion == "2.13" =>
+        case Some(version) =>
           /* Filter out -target: and -Xtarget: options, since they are not relevant and
            * might interfere with -release option */
           val filterOutTarget = scalacOptions.filterNot(opt =>
             opt.startsWith("-target:") || opt.startsWith("-Xtarget:")
           )
           filterOutTarget ++ List("-release", version.toString())
-        case _ if scalaTarget.scalaBinaryVersion == "2.13" =>
-          removeReleaseOptions(scalacOptions)
         case _ =>
           scalacOptions
       }
-    }
-  }
-
-  private def isHigherThan17(version: String) =
-    Try(version.toInt).toOption.exists(_ >= 17)
-
-  private def removeReleaseOptions(options: Seq[String]): Seq[String] = {
-    options match {
-      case "-release" :: version :: tail if isHigherThan17(version) =>
-        removeReleaseOptions(tail)
-      case opt :: tail
-          if opt.startsWith("-release") && isHigherThan17(
-            opt.stripPrefix("-release:")
-          ) =>
-        removeReleaseOptions(tail)
-      case head :: tail => head +: removeReleaseOptions(tail)
-      case Nil => options
     }
   }
 

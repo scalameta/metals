@@ -29,7 +29,10 @@ class RequestRegistrySuite extends FunSuite {
   def createRegistry(
       onTimeout: () => MessageActionItem = () => Messages.RequestTimeout.cancel
   ) =
-    new RequestRegistry(List(), new RequestRegistrySuite.Client(onTimeout))
+    new RequestRegistry(
+      List(),
+      new RequestRegistrySuite.Client(() => Future.successful(onTimeout())),
+    )
   val defaultTimeout: Some[Timeout] = Some(Timeout.default(duration))
   val askIfCancelTimeout: Some[Timeout] = Some(Timeout("ask", duration))
 
@@ -133,13 +136,42 @@ class RequestRegistrySuite extends FunSuite {
     } yield ()
   }
 
+  test("no-user-response") {
+    val promise1 = Promise[Unit]()
+
+    val askedUser = Promise[Unit]()
+    val userAnswerPromise = Promise[Unit]()
+    val requestRegistry =
+      new RequestRegistry(
+        List(),
+        new RequestRegistrySuite.Client(() => {
+          askedUser.success(())
+          userAnswerPromise.future.map(_ => Messages.RequestTimeout.cancel)
+        }),
+      )
+
+    val computation = requestRegistry
+      .register(
+        ExampleFutures.infinite(promise1),
+        askIfCancelTimeout,
+      )
+    for {
+      // await for timeout, so the client is asked
+      _ <- askedUser.future
+      // make computation finish
+      _ = promise1.success(())
+      _ <- computation.future
+      _ = userAnswerPromise.success(())
+    } yield ()
+  }
+
 }
 
 object RequestRegistrySuite {
-  class Client(onTimeout: () => MessageActionItem) extends NoopLanguageClient {
+  class Client(onTimeout: () => Future[MessageActionItem])
+      extends NoopLanguageClient {
     override def showMessageRequest(
         requestParams: ShowMessageRequestParams
-    ): CompletableFuture[MessageActionItem] =
-      Future.successful(onTimeout()).asJava
+    ): CompletableFuture[MessageActionItem] = onTimeout().asJava
   }
 }

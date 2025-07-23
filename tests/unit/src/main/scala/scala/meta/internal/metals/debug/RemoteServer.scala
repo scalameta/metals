@@ -115,6 +115,12 @@ private[debug] final class RemoteServer(
     sendRequest("evaluate", args)
   }
 
+  override def attach(
+      args: java.util.Map[String, AnyRef]
+  ): CompletableFuture[Void] = {
+    sendRequest("attach", args)
+  }
+
   override def completions(
       args: CompletionsArguments
   ): CompletableFuture[CompletionsResponse] = {

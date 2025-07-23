@@ -14,8 +14,10 @@ import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.ConnectKind
+import scala.meta.internal.metals.ConnectionProvider
 import scala.meta.internal.metals.CreateSession
 import scala.meta.internal.metals.GenerateBspConfigAndConnect
+import scala.meta.internal.metals.Interruptable.MetalsCancelException
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.BspSwitch
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -24,19 +26,19 @@ import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
+import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 import com.google.common.collect.ImmutableList
-import org.eclipse.lsp4j.services.LanguageClient
 
 class BspConnector(
     bloopServers: BloopServers,
     bspServers: BspServers,
     buildTools: BuildTools,
-    client: LanguageClient,
+    client: ConfiguredLanguageClient,
     tables: Tables,
     userConfig: () => UserConfiguration,
     statusBar: StatusBar,
@@ -52,25 +54,29 @@ class BspConnector(
    * workspace can support Bloop, it will also resolve Bloop.
    */
   def resolve(buildTool: Option[BuildTool]): BspResolvedResult = {
-    resolveExplicit().getOrElse {
-      if (buildTool.exists(_.isBloopInstallProvider) || buildTools.isBloop)
+    tables.buildServers.selectedServer() match {
+      case None
+          if buildTool.exists(_.isBloopInstallProvider) || buildTools.isBloop =>
         ResolvedBloop
-      else bspServers.resolve()
+      case None => bspServers.resolve()
+      case Some(selected) if selected == BloopServers.name =>
+        ResolvedBloop
+      case Some(selected) =>
+        resolveExplicit(selected).getOrElse(RegenerateBspConfig)
     }
   }
 
-  private def resolveExplicit(): Option[BspResolvedResult] = {
-    tables.buildServers.selectedServer().flatMap { sel =>
-      if (sel == BloopServers.name) Some(ResolvedBloop)
-      else
-        bspServers
-          .findAvailableServers()
-          .find(buildServer =>
-            (ScalaCli.names(buildServer.getName()) && ScalaCli.names(sel)) ||
-              buildServer.getName == sel
-          )
-          .map(ResolvedBspOne.apply)
-    }
+  private def resolveExplicit(
+      selectedServer: String
+  ): Option[BspResolvedResult] = {
+    bspServers
+      .findAvailableServers()
+      .find(buildServer =>
+        (ScalaCli.names(buildServer.getName()) &&
+          ScalaCli.names(selectedServer)) ||
+          buildServer.getName == selectedServer
+      )
+      .map(ResolvedBspOne.apply)
   }
 
   /**
@@ -98,6 +104,25 @@ class BspConnector(
         regeneratedConfig: Boolean = false,
     ): Future[Option[BuildServerConnection]] = {
       def bspStatusOpt = Option.when(addLivenessMonitor)(bspStatus)
+
+      def regenerateConfig(bsp: BuildServerProvider) = {
+        bsp
+          .generateBspConfig(
+            workspace,
+            args => bspConfigGenerator.runUnconditionally(bsp, args),
+            statusBar,
+          )
+          .future
+          .flatMap { _ =>
+            connect(
+              projectRoot,
+              bspTraceRoot,
+              addLivenessMonitor,
+              regeneratedConfig = true,
+            )
+          }
+      }
+
       scribe.info("Attempting to connect to the build server...")
       resolve(buildTool) match {
         case ResolvedNone =>
@@ -154,21 +179,7 @@ class BspConnector(
               scribe.info(
                 s"Regenerating ${details.getName()} json config to latest."
               )
-              bsp
-                .generateBspConfig(
-                  workspace,
-                  args => bspConfigGenerator.runUnconditionally(bsp, args),
-                  statusBar,
-                )
-                .future
-                .flatMap { _ =>
-                  connect(
-                    projectRoot,
-                    bspTraceRoot,
-                    addLivenessMonitor,
-                    regeneratedConfig = true,
-                  )
-                }
+              regenerateConfig(bsp)
             case _ =>
               bspServers
                 .newServer(projectRoot, bspTraceRoot, details, bspStatusOpt)
@@ -199,8 +210,11 @@ class BspConnector(
             )
           for {
             Some(item) <- client
-              .showMessageRequest(query.params)
-              .asScala
+              .showMessageRequest(
+                query.params,
+                ConnectionProvider.ConnectRequestCancelationGroup,
+                throw MetalsCancelException,
+              )
               .map(item =>
                 Option(item)
                   .map(item => distinctServers(query.mapping(item.getTitle)))
@@ -214,6 +228,24 @@ class BspConnector(
               bspStatusOpt,
             )
           } yield Some(conn)
+        case RegenerateBspConfig =>
+          buildTool match {
+            case Some(bsp: BuildServerProvider) if !regeneratedConfig =>
+              scribe.info(
+                s"Regenerating ${bsp.buildServerName} json config since it was missing."
+              )
+              regenerateConfig(bsp)
+            case Some(_: BuildServerProvider) if regeneratedConfig =>
+              scribe.error(
+                s"Tried regenerating json config for build tool but failed."
+              )
+              Future.successful(None)
+            case _ =>
+              scribe.error(
+                s"Cannot regenerate json config for build tool since no build server capable tool is available."
+              )
+              Future.successful(None)
+          }
       }
     }
 

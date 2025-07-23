@@ -65,6 +65,14 @@ class CompletionIssueSuite extends BaseCompletionSuite {
   )
 
   check(
+    "start",
+    "@@//> using scala 2.13.16".stripMargin,
+    "DelayedInit scala",
+    enablePackageWrap = false,
+    filter = (str) => str.contains("DelayedInit")
+  )
+
+  check(
     "issue-749".tag(IgnoreScala3),
     """package a
       |trait Observable[+A] {
@@ -240,6 +248,20 @@ class CompletionIssueSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
+    "issue-7497-complete-before-string".tag(IgnoreScala211.and(IgnoreScala212)),
+    """|object Main {
+       |  new File@@"/my/file/path"
+       |}
+       |""".stripMargin,
+    """|import java.io.File
+       |object Main {
+       |  new File"/my/file/path"
+       |}
+       |""".stripMargin,
+    filter = _ == "File - java.io"
+  )
+
+  checkEdit(
     "issue-1281-import-parens",
     """object obj {
       |  def method(arg: String): Unit = ()
@@ -277,7 +299,8 @@ class CompletionIssueSuite extends BaseCompletionSuite {
        |      ???
        |    }
        |}
-       |""".stripMargin
+       |""".stripMargin,
+    assertSingleItem = false
   )
 
   // We shouldn't get exhaustive completions for AbsolutePath

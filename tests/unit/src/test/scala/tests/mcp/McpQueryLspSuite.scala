@@ -1,9 +1,11 @@
-package tests
+package tests.mcp
 
 import java.nio.file.Path
 
 import scala.meta.internal.metals.mcp.McpPrinter._
 import scala.meta.internal.metals.mcp.SymbolType
+
+import tests.BaseLspSuite
 
 class McpQueryLspSuite extends BaseLspSuite("query") {
 
@@ -414,6 +416,44 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |	 - someMethod: Int
            |	Given synthetic values for path-dependent types:
            |	 - mcp0: com.test.nested.package2.Bar
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("inspect-package-object") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/Main.scala
+           |package foo
+           |
+           |package object o {
+           |  def someFunction(x: Int): Int = x * 2
+           |}
+           |/a/src/main/scala/Bar.scala
+           |package foo.o
+           |
+           |object Bar {
+           |  def barFunction(x: Int): Int = x * 3
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(
+        "a/src/main/scala/Main.scala"
+      )
+      resPkgObject <- server.headServer.queryEngine.inspect(
+        "foo.o",
+        server.toPath("a/src/main/scala/Main.scala"),
+      )
+      _ = assertNoDiff(
+        resPkgObject.show,
+        """|package foo.o
+           |	 - Bar foo.o
+           |	 - someFunction(x: Int): Int
            |""".stripMargin,
       )
     } yield ()

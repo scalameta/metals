@@ -35,8 +35,8 @@ trait PcReferencesProvider {
     }
   }
 
-  def references(): List[PcReferencesResult] =
-    result()
+  def references(): List[PcReferencesResult] = {
+    val res = result()
       .groupBy(_._1)
       .map { case (symbol, locs) =>
         PcReferencesResult(
@@ -47,6 +47,9 @@ trait PcReferencesProvider {
         )
       }
       .toList
+    cleanUp()
+    res
+  }
 }
 
 class LocalPcReferencesProvider(
@@ -61,7 +64,11 @@ class BySymbolPCReferencesProvider(
     params: VirtualFileParams,
     override val includeDefinition: Boolean,
     semanticDbSymbols: Set[String]
-) extends WithCompilationUnit(compiler, params)
+) extends WithCompilationUnit(
+      compiler,
+      params,
+      shouldRemoveCompilationUnitAfterUse = true
+    )
     with PcCollector[(String, Option[l.Range])]
     with PcReferencesProvider {
   def result(): List[(String, Option[l.Range])] = {

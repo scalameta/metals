@@ -38,6 +38,7 @@ example/NamedArguments.scala -> example/User#
 example/Ord.scala -> example/Ord#
 example/Ord.scala -> example/Ord$package.
 example/PatternMatching.scala -> example/PatternMatching#
+example/SQLQueries.scala -> example/SQLQueries#
 example/Scalalib.scala -> example/Scalalib#
 example/StructuralTypes.scala -> example/StructuralTypes.
 example/ToplevelDefVal.scala -> example/ToplevelDefVal$package.
@@ -46,6 +47,8 @@ example/ToplevelImplicit.scala -> example/ToplevelImplicit$package.Xtension#
 example/ToplevelImplicit.scala -> example/ToplevelImplicit$package.XtensionAnyVal#
 example/TryCatch.scala -> example/TryCatch#
 example/TypeEnum.scala -> example/TypeEnum#
+example/TypeMembers.scala -> example/AfterTrait.
+example/TypeMembers.scala -> example/TypeMembers#
 example/TypeParameters.scala -> example/TypeParameters#
 example/VarArgs.scala -> example/VarArgs#
 example/Vars.scala -> example/Vars.

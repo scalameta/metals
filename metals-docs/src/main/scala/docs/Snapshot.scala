@@ -25,17 +25,26 @@ object Snapshot {
   private implicit val localDateTimeOrdering: Ordering[LocalDateTime] =
     Ordering.fromLessThan[LocalDateTime]((a, b) => a.compareTo(b) < 0)
 
-  def latest(repo: String, binaryVersion: String, retry: Int = 5): Snapshot = {
+  def latest(
+      useSnapshot: Boolean,
+      binaryVersion: String,
+      retry: Int = 5,
+  ): Snapshot = {
     if (System.getenv("CI") != null) {
       try {
-        fetchLatest(repo, binaryVersion)
+        // There is no way to query for snapshots currently
+        if (useSnapshot) {
+          Snapshot(BuildInfo.metalsVersion, LocalDateTime.now())
+        } else {
+          fetchLatest(useSnapshot, binaryVersion)
+        }
       } catch {
         case NonFatal(e) if retry > 0 =>
           scribe.error(
             "unexpected error fetching SNAPSHOT version, retrying...",
             e,
           )
-          latest(repo, binaryVersion, retry - 1)
+          latest(useSnapshot, binaryVersion, retry - 1)
         case NonFatal(e) =>
           scribe.error("unexpected error fetching SNAPSHOT version", e)
           current
@@ -48,12 +57,49 @@ object Snapshot {
   private def current: Snapshot =
     Snapshot(BuildInfo.metalsVersion, LocalDateTime.now())
 
+  private def findModifiedFromDirectory(
+      url: String,
+      version: String,
+  ): List[Snapshot] = {
+    val modified = Jsoup
+      .connect(url + version)
+      .get
+      .select("tr")
+      .asScala
+      .flatMap { tr =>
+        val lastModified =
+          tr.select("td:nth-child(2)").text()
+        if (lastModified.nonEmpty)
+          Some(lastModified)
+        else
+          None
+      }
+      .headOption
+    if (modified.nonEmpty)
+      List(
+        Snapshot(
+          version,
+          ZonedDateTime
+            .parse(modified.get, zdtFormatter)
+            .toLocalDateTime,
+        )
+      )
+    else
+      Nil
+  }
+
   /**
    * Returns the latest published snapshot release, or the current release if.
    */
-  private def fetchLatest(repo: String, binaryVersion: String): Snapshot = {
+  private def fetchLatest(
+      useSnapshot: Boolean,
+      binaryVersion: String,
+  ): Snapshot = {
     val url =
-      s"https://oss.sonatype.org/content/repositories/$repo/org/scalameta/metals_$binaryVersion/"
+      if (useSnapshot)
+        s"https://central.sonatype.com/service/rest/repository/browse/maven-snapshots/org/scalameta/metals_$binaryVersion/"
+      else
+        s"https://repo1.maven.org/maven2/org/scalameta/metals_$binaryVersion/"
     // maven-metadata.xml is consistently outdated so we scrape the "Last modified" column
     // of the HTML page that lists all snapshot releases instead.
     val doc = Jsoup.connect(url).get
@@ -69,8 +115,12 @@ object Snapshot {
           val date: ZonedDateTime =
             ZonedDateTime.parse(lastModified, zdtFormatter)
           List(Snapshot(version, date.toLocalDateTime))
+        } else if (version.nonEmpty && !version.contains("Parent")) {
+          /* snapshots don't have modified dates in the main directory
+          so we need to scrape the exact version directory */
+          findModifiedFromDirectory(url, version)
         } else {
-          List()
+          Nil
         }
       }
       .toSeq

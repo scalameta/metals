@@ -16,6 +16,7 @@ import scala.meta.internal.metals.ConcurrentHashSet
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ModuleStatus
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.Time
@@ -56,6 +57,7 @@ final class ForwardingMetalsBuildClient(
     onBuildTargetDidChangeFunc: b.DidChangeBuildTarget => Unit,
     bspErrorHandler: BspErrorHandler,
     workDoneProgress: WorkDoneProgress,
+    moduleStatus: ModuleStatus,
 ) extends MetalsBuildClient
     with Cancelable {
 
@@ -197,7 +199,12 @@ final class ForwardingMetalsBuildClient(
           report <- params.asCompileReport
           compilation <- compilations.remove(report.getTarget)
         } {
-          diagnostics.onFinishCompileBuildTarget(report, params.getStatus())
+          diagnostics.onFinishCompileBuildTarget(
+            report,
+            params.getStatus(),
+            params.getOriginId(),
+          )
+          moduleStatus.onFinishCompileBuildTarget(report.getTarget)
           try {
             didCompile(report)
           } catch {

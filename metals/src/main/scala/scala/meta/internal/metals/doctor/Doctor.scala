@@ -323,6 +323,7 @@ final class Doctor(
   def buildTargetsTable(
       html: HtmlBuilder,
       includeWorkspaceFolderName: Boolean,
+      focusOnBuildTarget: Option[String],
   ): Unit = {
     if (includeWorkspaceFolderName) {
       html.element("h2")(_.text(folderName))
@@ -429,13 +430,14 @@ final class Doctor(
       DoctorExplanation.Debugging.toHtml(html, allTargetsInfo)
       DoctorExplanation.JavaSupport.toHtml(html, allTargetsInfo)
 
-      addErrorReportsInfo(html, errorReports)
+      addErrorReportsInfo(html, errorReports, focusOnBuildTarget)
     }
   }
 
   private def addErrorReportsInfo(
       html: HtmlBuilder,
       errorReports: Map[ErrorReportsGroup, List[ErrorReportInfo]],
+      focusOnBuildTarget: Option[String],
   ) = {
     html.element("h2")(_.text("Error reports:"))
     errorReports.toVector
@@ -444,7 +446,8 @@ final class Doctor(
         case (v1 -> _, v2 -> _) => v1.orderingNumber < v2.orderingNumber
       }
       .foreach { case (group, reports) =>
-        html.element("details")(details =>
+        val shouldOpen = focusOnBuildTarget.exists(group.id == _)
+        html.element("details", if (shouldOpen) "open" else "")(details =>
           details
             .element("summary", s"id=reports-${group.id}")(
               _.element("b")(

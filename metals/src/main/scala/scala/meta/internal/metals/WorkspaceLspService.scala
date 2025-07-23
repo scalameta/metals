@@ -44,6 +44,7 @@ import scala.meta.internal.tvp.TreeViewVisibilityDidChangeParams
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.ScalaLspService
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.DebugSessionParams
 import com.google.gson.Gson
 import com.google.gson.JsonPrimitive
@@ -195,9 +196,18 @@ class WorkspaceLspService(
     isBspStatusProvider = clientConfig.bspStatusBarState() == StatusBarState.On,
   )
 
+  val moduleStatus: ModuleStatus =
+    new ModuleStatus(
+      client,
+      () => focusedDocument.get(),
+      (path) => getServiceFor(path),
+      clientConfig.icons(),
+    )
+
   def setFocusedDocument(newFocusedDocument: Option[AbsolutePath]): Unit = {
     focusedDocument.get().foreach(focused => recentlyFocusedFiles.add(focused))
-    focusedDocument.set(newFocusedDocument)
+    val prev = focusedDocument.getAndSet(newFocusedDocument)
+    if (prev != newFocusedDocument) moduleStatus.refresh()
     newFocusedDocument
       .flatMap(getServiceForOpt)
       .foreach(service => bspStatus.focus(service.path))
@@ -221,6 +231,7 @@ class WorkspaceLspService(
       doctor,
       workDoneProgress,
       bspStatus,
+      moduleStatus,
     )
   }
 
@@ -244,6 +255,7 @@ class WorkspaceLspService(
           bspStatus,
           workDoneProgress,
           maxScalaCliServers = 3,
+          moduleStatus,
         )
     }
 
@@ -1082,17 +1094,23 @@ class WorkspaceLspService(
           .liftToLspError
           .asJavaObject
       case ServerCommands.StartAttach(params) if params.hostName != null =>
-        onFirstSatifying(service =>
+        onFirstSatifying { service =>
           Future.successful(
-            service.findBuildTargetByDisplayName(params.buildTarget)
+            params.buildTargetOpt match {
+              case None =>
+                Option(service.focusedDocumentBuildTarget.get)
+                  .flatMap(service.buildTargets.info(_))
+              case Some(buildTarget) =>
+                service.findBuildTargetByDisplayName(buildTarget)
+            }
           )
-        )(
+        }(
           _.isDefined,
           (service, someTarget) =>
             service.createDebugSession(someTarget.get.getId()),
           () =>
             failedRequest(
-              s"Could not find '${params.buildTarget}' build target"
+              s"Could not find '${Option(params.buildTarget).getOrElse("")}' build target"
             ),
         ).asJavaObject
       case ServerCommands.DiscoverAndRun(params) =>
@@ -1181,6 +1199,24 @@ class WorkspaceLspService(
           .asJavaObject
       case ServerCommands.CopyWorksheetOutput(path) =>
         getServiceFor(path).copyWorksheetOutput(path.toAbsolutePath)
+      case ServerCommands.ShowReportsForBuildTarget(target) =>
+        Future {
+          folderServices.iterator
+            .flatMap(
+              _.buildTargets.jvmTarget(new BuildTargetIdentifier(target))
+            )
+            .headOption
+            .map { target =>
+              moduleStatus.clearReports(target.id)
+              doctor.showErrorsForBuildTarget(target.displayName)
+            }
+            .getOrElse {
+              doctor.executeRunDoctor()
+            }
+        }.asJavaObject
+      case ServerCommands.MetalsPaste(params) =>
+        val path = params.originDocument.getUri().toAbsolutePath
+        getServiceFor(path).didPaste(params).asJavaObject
       case actionCommand
           if currentOrHeadOrFallback.allActionCommandsIds(
             actionCommand.getCommand()

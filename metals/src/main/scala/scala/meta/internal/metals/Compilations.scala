@@ -114,7 +114,7 @@ final class Compilations(
       path: AbsolutePath,
       fingerprint: Option[Fingerprint] = None,
       assumeDidNotChange: Boolean = false,
-  ): Future[Option[b.CompileResult]] = {
+  ): Future[b.CompileResult] = {
     def empty = new b.CompileResult(b.StatusCode.CANCELLED)
     for {
       targetOpt <- fileChanges.buildTargetToCompile(
@@ -129,7 +129,7 @@ final class Compilations(
             .map(res => res.getOrElse(target, empty))
       }
       _ <- compileWorksheets(Seq(path))
-    } yield Some(result)
+    } yield result
   }
 
   def compileFiles(paths: Seq[(AbsolutePath, Fingerprint)]): Future[Unit] = {
@@ -254,6 +254,8 @@ final class Compilations(
     params.setOriginId(originId)
     if (userConfiguration().verboseCompilation && addBestEffort) {
       params.setArguments(List("--verbose", "--best-effort").asJava)
+    } else if (userConfiguration().verboseCompilation) {
+      params.setArguments(List("--verbose").asJava)
     } else if (addBestEffort) {
       params.setArguments(List("--best-effort").asJava)
     } else params.setArguments(Nil.asJava)

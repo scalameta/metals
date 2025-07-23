@@ -1,12 +1,17 @@
 package scala.meta.internal.metals.clients.language
 
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.concurrent.Promise
 
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.WorkspaceLspService
@@ -22,6 +27,7 @@ import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ProgressParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.WorkDoneProgressCreateParams
+import requests.TimeoutException
 
 /**
  * Delegates requests/notifications to the underlying language client according to the user configuration.
@@ -37,6 +43,8 @@ final class ConfiguredLanguageClient(
 )(implicit ec: ExecutionContext)
     extends DelegatingLanguageClient(initial) {
 
+  private val requestMap: ConcurrentHashMap[String, Set[Promise[Unit]]] =
+    new ConcurrentHashMap()
   override def shutdown(): Unit = {
     underlying = NoopLanguageClient
   }
@@ -51,6 +59,7 @@ final class ConfiguredLanguageClient(
     val statusBarState =
       params.getStatusType match {
         case StatusType.bsp => clientConfig.bspStatusBarState()
+        case StatusType.module => clientConfig.moduleStatusBarState()
         case _ => clientConfig.statusBarState()
       }
 
@@ -99,6 +108,56 @@ final class ConfiguredLanguageClient(
     val result = underlying.showMessageRequest(params)
     result.asScala.onComplete(_ => pendingShowMessage.set(false))
     result
+  }
+
+  def showMessageRequest(
+      params: ShowMessageRequestParams,
+      cancelationGroup: String,
+      cancelValue: => MessageActionItem = Messages.missedByUser,
+  ): Future[MessageActionItem] = {
+    val promise = Promise[Unit]()
+    // put promise into cancellation map
+    requestMap.compute(
+      cancelationGroup,
+      (_, promises) => {
+        if (promises == null) Set(promise)
+        else promises + promise
+      },
+    )
+
+    // call client
+    val result = showMessageRequest(params)
+    val future =
+      Future
+        .firstCompletedOf(
+          List(
+            result.asScala,
+            promise.future.map { _ =>
+              result.cancel(false)
+              cancelValue
+            },
+          )
+        )
+        .withTimeout(15, TimeUnit.SECONDS)
+        .recover { case _: TimeoutException =>
+          result.cancel(false)
+          Messages.missedByUser
+        }
+
+    future.onComplete { _ =>
+      // remove promise from cancellation map
+      requestMap.computeIfPresent(
+        cancelationGroup,
+        (_, promises) => promises - promise,
+      )
+    }
+
+    future
+  }
+
+  def cancelRequest(cancelationGroup: String): Unit = {
+    Option(requestMap.remove(cancelationGroup))
+      .foreach(_.foreach(_.trySuccess(())))
   }
 
   override def logMessage(message: MessageParams): Unit = {

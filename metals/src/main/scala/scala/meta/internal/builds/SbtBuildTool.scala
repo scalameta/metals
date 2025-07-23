@@ -3,8 +3,6 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
@@ -16,12 +14,12 @@ import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BspConfigGenerationStatus.BspConfigGenerationStatus
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
+import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.semver.SemVer.isCompatibleVersion
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.services.LanguageClient
 
 case class SbtBuildTool(
     workspaceVersion: Option[String],
@@ -258,7 +256,7 @@ case class SbtBuildTool(
   def ensureCorrectJavaVersion(
       shellRunner: ShellRunner,
       workspace: AbsolutePath,
-      languageClient: LanguageClient,
+      languageClient: ConfiguredLanguageClient,
       restartSbtBuildServer: () => Future[Unit],
   )(implicit ex: ExecutionContext): Future[Unit] =
     if (checkCorrectJavaVersion(workspace, userConfig().javaHome)) {
@@ -267,8 +265,10 @@ case class SbtBuildTool(
       val promise = Promise[Unit]()
       val future: Future[Unit] =
         languageClient
-          .showMessageRequest(Messages.SbtServerJavaHomeUpdate.params())
-          .asScala
+          .showMessageRequest(
+            Messages.SbtServerJavaHomeUpdate.params(),
+            ConnectionProvider.ConnectRequestCancelationGroup,
+          )
           .flatMap {
             case Messages.SbtServerJavaHomeUpdate.restart =>
               if (promise.isCompleted) {
@@ -278,10 +278,6 @@ case class SbtBuildTool(
             case _ =>
               promise.trySuccess(())
               Future.successful(())
-          }
-          .withTimeout(15, TimeUnit.SECONDS)
-          .recover { case _: TimeoutException =>
-            Future.successful(())
           }
       future.onComplete(promise.tryComplete(_))
       promise.future
@@ -365,7 +361,7 @@ object SbtBuildTool {
   private def sonatypeResolver(version: String): Option[String] =
     if (version.contains("SNAPSHOT"))
       Some(
-        """resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots""""
+        """resolvers += "Sonatype OSS Snapshots" at "https://central.sonatype.com/repository/maven-snapshots""""
       )
     else None
 

@@ -24,9 +24,12 @@ example/NamedArguments.scala -> example/NamedArguments.
 example/NamedArguments.scala -> example/User#
 example/PatternMatching.scala -> example/PatternMatching#
 example/ReflectiveInvocation.scala -> example/ReflectiveInvocation#
+example/SQLQueries.scala -> example/SQLQueries#
 example/Scalalib.scala -> example/Scalalib#
 example/StructuralTypes.scala -> example/StructuralTypes.
 example/TryCatch.scala -> example/TryCatch#
+example/TypeMembers.scala -> example/AfterTrait.
+example/TypeMembers.scala -> example/TypeMembers#
 example/TypeParameters.scala -> example/TypeParameters#
 example/VarArgs.scala -> example/VarArgs#
 example/Vars.scala -> example/Vars.

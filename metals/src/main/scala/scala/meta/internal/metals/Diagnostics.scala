@@ -13,7 +13,6 @@ import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.parsing.TokenEditDistance
-import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j
@@ -27,6 +26,8 @@ private final case class CompilationStatus(
     code: bsp4j.StatusCode,
     errors: Int,
 )
+
+case class DiagnosticWithOrigin(diagnostic: Diagnostic, originId: String)
 
 /**
  * Converts diagnostics from the build server and Scalameta parser into LSP diagnostics.
@@ -46,13 +47,13 @@ final class Diagnostics(
     languageClient: LanguageClient,
     statistics: StatisticsConfig,
     workspace: Option[AbsolutePath],
-    trees: Trees,
+    scalaVersionSelector: ScalaVersionSelector,
     buildTargets: BuildTargets,
     downstreamTargets: PreviouslyCompiledDownsteamTargets,
     config: MetalsServerConfig,
 ) {
   private val diagnostics =
-    TrieMap.empty[AbsolutePath, ju.Queue[Diagnostic]]
+    TrieMap.empty[AbsolutePath, ju.Queue[DiagnosticWithOrigin]]
   private val syntaxError =
     TrieMap.empty[AbsolutePath, Diagnostic]
   private val snapshots =
@@ -68,14 +69,15 @@ final class Diagnostics(
 
   def forFile(path: AbsolutePath): Seq[Diagnostic] = {
     diagnostics
-      .getOrElse(path, new ConcurrentLinkedQueue[Diagnostic]())
+      .getOrElse(path, new ConcurrentLinkedQueue[DiagnosticWithOrigin]())
       .asScala
+      .map(_.diagnostic)
       .toList
   }
 
   def allDiagnostics: Seq[(AbsolutePath, Diagnostic)] =
     diagnostics.toList.flatMap { case (path, queue) =>
-      queue.asScala.map(diag => (path, diag))
+      queue.asScala.map(diag => (path, diag.diagnostic))
     }
 
   def reset(): Unit = {
@@ -105,6 +107,7 @@ final class Diagnostics(
   def onFinishCompileBuildTarget(
       report: bsp4j.CompileReport,
       statusCode: bsp4j.StatusCode,
+      originId: String,
   ): Unit = {
     val target = report.getTarget()
 
@@ -120,6 +123,26 @@ final class Diagnostics(
       downstreamTargets.remove(target)
     }
 
+    // Bazel doesn't clean diagnostics for paths with no errors, so instead we remove everything
+    // from previous compilations.
+    val isBazel = buildTargets.buildServerOf(target).exists(_.isBazel)
+    if (isBazel) {
+      diagnostics
+        .filter { case (path, _) =>
+          buildTargets.inverseSources(path).exists(target => target == target)
+        }
+        .foreach { case (path, queue) =>
+          val updatedQueue = queue.asScala.filter {
+            case DiagnosticWithOrigin(_, diagOriginId) =>
+              diagOriginId == originId
+          }
+          if (updatedQueue.isEmpty) {
+            reset(Seq(path))
+          }
+          diagnostics.remove(path)
+
+        }
+    }
     publishDiagnosticsBuffer()
 
     compileTimer.remove(target)
@@ -177,6 +200,7 @@ final class Diagnostics(
         path,
         diagnostics,
         params.getReset(),
+        params.getOriginId(),
       )
 
     publish.getOrElse {
@@ -193,13 +217,14 @@ final class Diagnostics(
       path: AbsolutePath,
       diagnostics: Seq[Diagnostic],
       isReset: Boolean,
+      originId: String,
       useFreshDiagnostics: Boolean = true,
   ): Unit = {
     val isSamePathAsLastDiagnostic = path == lastPublished.get()
     lastPublished.set(path)
     val queue = this.diagnostics.getOrElseUpdate(
       path,
-      new ConcurrentLinkedQueue[Diagnostic](),
+      new ConcurrentLinkedQueue[DiagnosticWithOrigin](),
     )
     if (isReset) {
       queue.clear()
@@ -208,7 +233,9 @@ final class Diagnostics(
     if (queue.isEmpty && !diagnostics.isEmpty) {
       snapshots(path) = path.toInput
     }
-    diagnostics.foreach { diagnostic => queue.add(diagnostic) }
+    diagnostics.foreach { diagnostic =>
+      queue.add(DiagnosticWithOrigin(diagnostic, originId))
+    }
 
     // NOTE(olafur): we buffer up several diagnostics for the same path before forwarding
     // them to the editor client. Without buffering, we risk publishing an exponential number
@@ -250,7 +277,7 @@ final class Diagnostics(
   private def publishDiagnostics(path: AbsolutePath): Unit = {
     publishDiagnostics(
       path,
-      diagnostics.getOrElse(path, new ju.LinkedList[Diagnostic]()),
+      diagnostics.getOrElse(path, new ju.LinkedList[DiagnosticWithOrigin]()),
     )
   }
 
@@ -259,6 +286,15 @@ final class Diagnostics(
       .get(buildTarget)
       .map(status => status.code.isError || status.errors > 0)
       .getOrElse(false)
+  }
+
+  def upstreamTargetsWithCompilationErrors(
+      buildTarget: BuildTargetIdentifier
+  ): List[BuildTargetIdentifier] = {
+    buildTargets
+      .buildTargetTransitiveDependencies(buildTarget)
+      .filter(id => id != buildTarget && hasCompilationErrors(id))
+      .toList
   }
 
   def hasSyntaxError(path: AbsolutePath): Boolean =
@@ -271,28 +307,25 @@ final class Diagnostics(
     fileDiagnostics match {
       case Some(diagnostics) =>
         diagnostics.asScala.exists(
-          _.getSeverity() == l.DiagnosticSeverity.Error
+          _.diagnostic.getSeverity() == l.DiagnosticSeverity.Error
         )
       case None => false
     }
   }
 
   def getFileDiagnostics(path: AbsolutePath): List[Diagnostic] =
-    diagnostics.get(path).map(_.asScala.toList).getOrElse(Nil)
+    diagnostics.get(path).map(_.asScala.map(_.diagnostic).toList).getOrElse(Nil)
 
   private def publishDiagnostics(
       path: AbsolutePath,
-      queue: ju.Queue[Diagnostic],
-      useFreshDiagnostics: Boolean = true,
+      queue: ju.Queue[DiagnosticWithOrigin],
   ): Unit = {
     if (!path.isFile) return didDelete(path)
     val uri = path.toURI.toString
     val all = new ju.ArrayList[Diagnostic](queue.size() + 1)
     for {
       diagnostic <- queue.asScala
-      freshDiagnostic <-
-        if (useFreshDiagnostics) toFreshDiagnostic(path, diagnostic)
-        else Some(diagnostic)
+      freshDiagnostic <- toFreshDiagnostic(path, diagnostic.diagnostic)
     } {
       all.add(freshDiagnostic)
     }
@@ -327,15 +360,11 @@ final class Diagnostics(
       path: AbsolutePath,
       d: Diagnostic,
   ): Option[Diagnostic] = {
-    val current = path.toInputFromBuffers(buffers)
-    val snapshot = snapshots.getOrElse(path, current)
-    val edit = TokenEditDistance(
-      snapshot,
-      current,
-      trees,
-    )
-    edit match {
-      case Right(edit) =>
+    val snapshot = snapshots.get(path)
+    snapshot match {
+      case Some(snapshot) =>
+        val edit =
+          buffers.tokenEditDistance(path, snapshot.value, scalaVersionSelector)
         val result = edit
           .toRevised(
             range = d.getRange,
@@ -359,7 +388,8 @@ final class Diagnostics(
             ld.setTags(d.getTags())
             ld.setRelatedInformation(d.getRelatedInformation)
             ld.setCodeDescription(d.getCodeDescription())
-            adjustedDiagnosticData(d, edit).map(newData => ld.setData(newData))
+            adjustedDiagnosticData(d, edit)
+              .map(newData => ld.setData(newData))
             ld
           }
         if (result.isEmpty) {
@@ -373,9 +403,8 @@ final class Diagnostics(
         }
         result
 
-      case Left(_) =>
-        // tokenization error will be shown from scalameta tokenizer
-        None
+      case None =>
+        Some(d)
     }
   }
 

@@ -32,10 +32,11 @@ import org.eclipse.{lsp4j => l}
  */
 final class Trees(
     buffers: Buffers,
-    scalaVersionSelector: ScalaVersionSelector,
+    val scalaVersionSelector: ScalaVersionSelector,
 )(implicit reports: ReportContext) {
 
   private val trees = TrieMap.empty[AbsolutePath, Tree]
+  private val tokenized = TrieMap.empty[AbsolutePath, Tokens]
 
   def get(path: AbsolutePath): Option[Tree] =
     trees.get(path).orElse {
@@ -190,23 +191,27 @@ final class Trees(
   }
 
   def tokenized(path: AbsolutePath): Option[Tokens] = {
-    for {
-      sourceText <- buffers.get(path)
-      virtualFile = Input.VirtualFile(path.toURI.toString(), sourceText)
-      tokens <- tokenized(virtualFile).toOption
-    } yield tokens
+    tokenized
+      .get(path)
+      .orElse {
+        trees.get(path).map(_.tokens)
+      }
+      .orElse(tokenize(path))
   }
 
-  def tokenized(input: inputs.Input.VirtualFile): Tokenized = {
-    val dialect = scalaVersionSelector.getDialect(input.path.toAbsolutePath)
-    input.value.safeTokenize(dialect)
+  private def tokenize(path: AbsolutePath): Option[Tokens] = {
+    for {
+      sourceText <- buffers.get(path)
+      dialect = scalaVersionSelector.getDialect(path)
+      tokens <- sourceText.safeTokenize(dialect).toOption
+    } yield tokens
   }
 
   private def parse(
       path: AbsolutePath,
       dialect: Dialect,
-  ): Option[Parsed[Tree]] =
-    for {
+  ): Option[Parsed[Tree]] = {
+    val possiblyParsed = for {
       text <- buffers.get(path).orElse(path.readTextOpt)
     } yield try {
       val skipFistShebang =
@@ -240,6 +245,17 @@ final class Trees(
           new ParseException(Position.None, message),
         )
     }
+    /* If the parse failed, try tokenizing the file to allow tokenization based
+     * functionality to work.
+     */
+    possiblyParsed.collect {
+      case _: Parsed.Error =>
+        tokenize(path).foreach(tokens => tokenized(path) = tokens)
+      case _: Parsed.Success[_] =>
+        tokenized.remove(path)
+    }
+    possiblyParsed
+  }
 
 }
 
