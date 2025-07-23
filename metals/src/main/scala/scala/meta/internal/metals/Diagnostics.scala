@@ -218,7 +218,6 @@ final class Diagnostics(
       diagnostics: Seq[Diagnostic],
       isReset: Boolean,
       originId: String,
-      useFreshDiagnostics: Boolean = true,
   ): Unit = {
     val isSamePathAsLastDiagnostic = path == lastPublished.get()
     lastPublished.set(path)
@@ -246,7 +245,7 @@ final class Diagnostics(
     // Notification N: [1, ..., N]
     if (isReset || !isSamePathAsLastDiagnostic) {
       publishDiagnosticsBuffer()
-      publishDiagnostics(path, queue, useFreshDiagnostics)
+      publishDiagnostics(path, queue)
     } else {
       diagnosticsBuffer.add(path)
     }
@@ -356,9 +355,10 @@ final class Diagnostics(
 
   // Adjust positions for type errors for changes in the open buffer.
   // Only needed when merging syntax errors with type errors.
-  private def toFreshDiagnostic(
+  def toFreshDiagnostic(
       path: AbsolutePath,
       d: Diagnostic,
+      fallbackToNearest: Boolean = true,
   ): Option[Diagnostic] = {
     val snapshot = snapshots.get(path)
     snapshot match {
@@ -369,6 +369,7 @@ final class Diagnostics(
           .toRevised(
             range = d.getRange,
             adjustWithinToken = shouldAdjustWithinToken(d),
+            fallbackToNearest = fallbackToNearest,
           )
           .map { range =>
             val ld = new l.Diagnostic(

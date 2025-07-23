@@ -377,7 +377,7 @@ class SbtBloopLspSuite
            |                ^
            |""".stripMargin,
       )
-      _ = server.didChange("build.sbt", "")
+      _ = server.didChange("build.sbt", s"""scalaVersion := "${V.scala213}" """)
       _ = server.didSave("build.sbt")
       _ <- server.executeCommand(ServerCommands.ImportBuild)
       _ = assertStatus(_.isInstalled)
