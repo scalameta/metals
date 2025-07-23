@@ -39,6 +39,7 @@ import scala.meta.internal.metals.codelenses.WorksheetCodeLens
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.BuildTargetClassesFinder
 import scala.meta.internal.metals.debug.DebugDiscovery
+import scala.meta.internal.metals.debug.DebugOutputManager
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.doctor.HeadDoctor
@@ -1460,6 +1461,10 @@ abstract class MetalsLspService(
     buildTargetClassesFinder,
   )
 
+  protected val debugOutputManager: DebugOutputManager = new DebugOutputManager(
+    folder
+  )
+
   protected val debugProvider: DebugProvider = register(
     new DebugProvider(
       folder,
@@ -1477,6 +1482,7 @@ abstract class MetalsLspService(
       sourceMapper,
       () => userConfig,
       testProvider,
+      debugOutputManager,
     )
   )
   buildClient.registerLogForwarder(debugProvider)

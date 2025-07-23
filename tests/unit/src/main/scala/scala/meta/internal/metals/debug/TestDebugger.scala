@@ -25,6 +25,7 @@ import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.SourceBreakpoint
 import org.eclipse.lsp4j.debug.StackTraceResponse
 import org.eclipse.lsp4j.debug.StoppedEventArguments
+import org.eclipse.lsp4j.debug.ContinuedEventArguments
 import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage
 
 final class TestDebugger(
@@ -44,7 +45,7 @@ final class TestDebugger(
 
   def initialize: Future[Capabilities] = {
     Debug.printEnclosing()
-    ifNotFailed(debugger.initialize)
+    ifNotFailed(debugger.initialize("test-adapter"))
   }
 
   def launch: Future[Unit] = {
@@ -207,6 +208,10 @@ final class TestDebugger(
     terminated.trySuccess(()) // might already be completed in [[fail]]
   }
 
+  override def onContinued(event: ContinuedEventArguments): Unit = {
+    // No-op for tests
+  }
+
   override def onStopped(event: StoppedEventArguments): Unit = {
     Debug.printEnclosing()
     val nextStep = for {
@@ -310,7 +315,7 @@ object TestDebugger {
       val socket = new Socket()
       socket.connect(new InetSocketAddress(uri.getHost, uri.getPort), timeout)
       val server = RemoteServer(socket, listener)
-      new Debugger(server)
+      new Debugger(server, "test-debugger")
     }
 
     new TestDebugger(connect, stoppageHandler, requestOtherThreadStackTrace)

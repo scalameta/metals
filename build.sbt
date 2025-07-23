@@ -447,6 +447,8 @@ lazy val metals = project
       "com.outr" %% "scribe-slf4j2" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
       "com.lihaoyi" %% "ujson" % "4.2.1",
+      // For MCP communication
+      "com.github.andyglow" %% "scala-jsonschema-circe-json" % "0.7.11",
       // For fetching projects' templates
       "com.lihaoyi" %% "requests" % "0.9.0",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
