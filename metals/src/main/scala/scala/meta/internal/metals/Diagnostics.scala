@@ -218,7 +218,6 @@ final class Diagnostics(
       diagnostics: Seq[Diagnostic],
       isReset: Boolean,
       originId: String,
-      useFreshDiagnostics: Boolean = true,
   ): Unit = {
     val isSamePathAsLastDiagnostic = path == lastPublished.get()
     lastPublished.set(path)
@@ -246,7 +245,7 @@ final class Diagnostics(
     // Notification N: [1, ..., N]
     if (isReset || !isSamePathAsLastDiagnostic) {
       publishDiagnosticsBuffer()
-      publishDiagnostics(path, queue, useFreshDiagnostics)
+      publishDiagnostics(path, queue)
     } else {
       diagnosticsBuffer.add(path)
     }

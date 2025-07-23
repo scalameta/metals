@@ -1,5 +1,6 @@
 package scala.meta.internal.builds
 
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import scala.concurrent.ExecutionContext
@@ -101,6 +102,7 @@ final class BloopInstall(
               diagnostic.getUri.toAbsolutePath,
               diagnostic.getDiagnostics.asScala.toSeq,
               isReset = true,
+              originId = "METALS-$" + UUID.randomUUID().toString,
             )
           )
         value
