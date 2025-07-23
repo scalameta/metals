@@ -66,17 +66,11 @@ case class InlayHints(
           )
         )
       ) { (ihb: InlayHintBlock) =>
-        val newLevel = pos.getEnd.getCharacter
-
-        val indentLevel = if (newLevel > ihb.indentLevel) {
-          newLevel
-        } else {
-          ihb.indentLevel
-        }
+        val newLevel = math.max(pos.getEnd.getCharacter, ihb.indentLevel)
 
         val newBlock =
           InlayHintBlock(
-            indentLevel = indentLevel,
+            indentLevel = newLevel,
             ihb.hints :+ BlockInlayHint(pos, labelParts, kind)
           )
 
@@ -201,11 +195,7 @@ final case class InlayHintBlock(
         val labels =
           if (naiveIndent <= 0) hint.labels
           else LabelPart(" ".repeat(naiveIndent)) :: hint.labels
-        BlockInlayHint(
-          hint.pos,
-          labels,
-          hint.kind
-        )
+        hint.copy(labels = labels)
       }
   }
 }
