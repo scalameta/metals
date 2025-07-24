@@ -9,7 +9,7 @@ class CompletionMillIvySuite extends BaseCompletionSuite {
 
   check(
     "source",
-    """|val dependency = ivy"io.cir@@"
+    """|val dependency = mvn"io.cir@@"
        |""".stripMargin,
     """|io.circe
        |io.circul
@@ -19,7 +19,7 @@ class CompletionMillIvySuite extends BaseCompletionSuite {
 
   check(
     "source",
-    """|val dependency = ivy"io.cir@@"
+    """|val dependency = mvn"io.cir@@"
        |""".stripMargin,
     """|io.circe
        |io.circul

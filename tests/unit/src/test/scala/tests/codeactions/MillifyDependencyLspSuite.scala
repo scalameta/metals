@@ -54,6 +54,32 @@ class MillifyDependencyLspSuite
     selectedActionIndex = 5,
   )
 
+  check(
+    "mill-ivy-build",
+    """|import mill.*, scalalib.*
+       |
+       |object MyModule extends ScalaModule {
+       |  def mvnDeps = Seq(
+       |    "org.scalameta" %% "metals" % "1.0"<<>>
+       |  )
+       |}""".stripMargin,
+    s"""|${StringActions.multilineTitle}
+        |${StringActions.interpolationTitle}
+        |${RewriteBracesParensCodeAction.toBraces("Seq")}
+        |${ExtractValueCodeAction.title("\"org.scala` ...")}
+        |${ConvertToNamedArguments.title("Seq(...)")}
+        |${MillifyDependencyCodeAction.title("mvn\"org.scalameta::metals:1.0\"")}""".stripMargin,
+    """|import mill.*, scalalib.*
+       |
+       |object MyModule extends ScalaModule {
+       |  def mvnDeps = Seq(
+       |    mvn"org.scalameta::metals:1.0"
+       |  )
+       |}""".stripMargin,
+    fileName = "build.mill",
+    selectedActionIndex = 5,
+  )
+
   checkNoAction(
     "sbt-no-action",
     """|object Main {

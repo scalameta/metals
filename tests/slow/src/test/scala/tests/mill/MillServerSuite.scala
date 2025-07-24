@@ -43,6 +43,14 @@ class MillServerSuite
     with JavaHomeChangeTest
     with BaseMillServerSuite {
 
+  override def importBuildMessage: String =
+    Messages.GenerateBspAndConnect
+      .params(
+        MillBuildTool.name,
+        MillBuildTool.bspName,
+      )
+      .getMessage
+
   val preBspVersion = "0.9.10"
   val supportedBspVersion = V.millVersion
   val scalaVersion = V.scala213
@@ -75,7 +83,7 @@ class MillServerSuite
            |""".stripMargin,
         V.latestScala3Next,
         testDep = None,
-        "1.0.0-RC1",
+        V.millVersion,
       )
     )
     def millBspConfig = workspace.resolve(".bsp/mill-bsp.json")
@@ -115,7 +123,7 @@ class MillServerSuite
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          importBuildMessage
+          super.importBuildMessage
         ).mkString("\n"),
       )
       _ = client.messageRequests.clear()
@@ -129,7 +137,7 @@ class MillServerSuite
   }
 
   val versionsToTest: List[String] =
-    List("0.11.13", supportedBspVersion)
+    List(supportedBspVersion)
 
   versionsToTest.foreach(testGenerationAndConnection)
 
@@ -235,25 +243,24 @@ class MillServerSuite
       s"""
          |/.mill-version
          |$supportedBspVersion
-         |/build.sc
+         |/build.mill
          |package build
-         |import mill.scalalib.bsp.BspBuildTarget
-         |import mill.scalalib.bsp.BspModule
+         |import mill.*
+         |import scalalib.*
          |  
-         |import mill._
-         |import scalalib._
+         |import mill.api.daemon.internal.bsp.BspBuildTarget
+         |import mill.api.daemon.internal.bsp.BspModuleApi
          |  
          |object foo extends ScalaModule {
          |  def scalaVersion = "2.13.13"
          |}
          |  
-         |object bar extends ScalaModule with BspModule  {
+         |object bar extends ScalaModule   {
          |  def scalaVersion = "2.13.13"
-         |  
-         |  override def bspBuildTarget: BspBuildTarget = {
-         |    val original = super.bspBuildTarget
-         |    original.copy(tags = original.tags :+ BspModule.Tag.NoIDE)
-         |  }
+         |
+         |   override def bspBuildTarget: BspBuildTarget = super.bspBuildTarget.copy(
+         |     tags = super.bspBuildTarget.tags ++ Seq(BspModuleApi.Tag.NoIDE),
+         |   )
          |}
          |/foo/src/Main.scala
          |package foo
@@ -336,7 +343,7 @@ class MillServerSuite
     writeLayout(
       s"""
          |/build.mill
-         |//| mill-version: 1.0.0-RC1
+         |//| mill-version: ${V.millVersion}
          |package build
          |import mill.*, scalalib.*
          |
@@ -371,35 +378,35 @@ class MillServerSuite
   test("passing-test-environment-variables") {
     cleanWorkspace()
     writeLayout(
-      """|/build.mill
-         |//| mill-version: 1.0.0-RC1
-         |package build
-         |import mill.*, scalalib.*
-         |
-         |object foo extends ScalaModule {
-         |  def scalaVersion = "3.7.0"
-         |
-         |  override def forkEnv = Map("DOGGIES" -> "main")
-         |
-         |  object test extends ScalaTests with TestModule.Munit {
-         |    def mvnDeps = Seq(
-         |      mvn"org.scalameta::munit::1.1.1"
-         |    )
-         |
-         |    def forkEnv = super.forkEnv() ++ Map("DOGGIES" -> "tests")
-         |  }
-         |}
-         |/foo/test/src/FooMUnitTests.scala
-         |package foo
-         |
-         |import munit.FunSuite
-         |
-         |class FooMUnitTests extends FunSuite {
-         |  test("env var") {
-         |    assertEquals(sys.env.get("DOGGIES"), Some("tests"))
-         |  }
-         |}
-         |""".stripMargin
+      s"""|/build.mill
+          |//| mill-version: ${V.millVersion}
+          |package build
+          |import mill.*, scalalib.*
+          |
+          |object foo extends ScalaModule {
+          |  def scalaVersion = "3.7.0"
+          |
+          |  override def forkEnv = Map("DOGGIES" -> "main")
+          |
+          |  object test extends ScalaTests with TestModule.Munit {
+          |    def mvnDeps = Seq(
+          |      mvn"org.scalameta::munit::1.1.1"
+          |    )
+          |
+          |    def forkEnv = super.forkEnv() ++ Map("DOGGIES" -> "tests")
+          |  }
+          |}
+          |/foo/test/src/FooMUnitTests.scala
+          |package foo
+          |
+          |import munit.FunSuite
+          |
+          |class FooMUnitTests extends FunSuite {
+          |  test("env var") {
+          |    assertEquals(sys.env.get("DOGGIES"), Some("tests"))
+          |  }
+          |}
+          |""".stripMargin
     )
     for {
       _ <- initMillBsp()
