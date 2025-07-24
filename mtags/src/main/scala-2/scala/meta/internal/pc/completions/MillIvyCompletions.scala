@@ -13,10 +13,11 @@ trait MillIvyCompletions {
             Apply(
               Select(
                 Apply(Ident(TermName("StringContext")), _),
-                TermName("ivy")
+                TermName(name)
               ),
               _
-            ) :: _ if lt.pos.source.path.isMill =>
+            ) :: _
+            if lt.pos.source.path.isMill && (name == "ivy" || name == "mvn") =>
           Some(dependency)
         case _ => None
       }
