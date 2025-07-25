@@ -4,6 +4,7 @@ import java.nio.file.Paths
 import java.util.Properties
 
 import scala.meta.internal.metals.AutoImportBuildKind
+import scala.meta.internal.metals.BloopJvmProperties
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.InlayHintsOption
 import scala.meta.internal.metals.InlayHintsOptions
@@ -254,7 +255,8 @@ class UserConfigurationSuite extends BaseSuite {
       worksheetCancelTimeout = 10,
       bloopSbtAlreadyInstalled = true,
       bloopVersion = Some("1.2.3"),
-      bloopJvmProperties = Some(List("a", "b", "c")),
+      bloopJvmProperties =
+        BloopJvmProperties.WithProperties(List("a", "b", "c")),
       superMethodLensesEnabled = true,
       inlayHintsOptions = InlayHintsOptions(
         Map(
@@ -352,5 +354,43 @@ class UserConfigurationSuite extends BaseSuite {
       // maps have a different order
       .copy(inlayHintsOptions = nonDefault.inlayHintsOptions)
     assertEquals(roundtrip, nonDefault)
+  }
+
+  checkOK(
+    "bloop-jvm-properties-uninitialized",
+    """
+      |{
+      |}
+    """.stripMargin,
+  ) { obtained =>
+    assert(obtained.bloopJvmProperties == BloopJvmProperties.Empty)
+  }
+
+  checkOK(
+    "bloop-jvm-properties-empty",
+    """
+      |{
+      | "bloop-jvm-properties": []
+      |}
+    """.stripMargin,
+  ) { obtained =>
+    assert(
+      obtained.bloopJvmProperties == BloopJvmProperties.WithProperties(Nil)
+    )
+  }
+
+  checkOK(
+    "bloop-jvm-properties-with-values",
+    """
+      |{
+      | "bloop-jvm-properties": ["-Xmx1G", "-Xms512M"]
+      |}
+    """.stripMargin,
+  ) { obtained =>
+    assert(
+      obtained.bloopJvmProperties == BloopJvmProperties.WithProperties(
+        List("-Xmx1G", "-Xms512M")
+      )
+    )
   }
 }
