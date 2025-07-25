@@ -40,7 +40,7 @@ case class UserConfiguration(
     worksheetCancelTimeout: Int = 4,
     bloopSbtAlreadyInstalled: Boolean = false,
     bloopVersion: Option[String] = None,
-    bloopJvmProperties: Option[List[String]] = None,
+    bloopJvmProperties: BloopJvmProperties = BloopJvmProperties.Uninitialized,
     superMethodLensesEnabled: Boolean = false,
     inlayHintsOptions: InlayHintsOptions = InlayHintsOptions(Map.empty),
     enableStripMarginOnTypeFormatting: Boolean = true,
@@ -103,7 +103,7 @@ case class UserConfiguration(
       Some(("worksheetCancelTimeout", worksheetCancelTimeout)),
       Some(("bloopSbtAlreadyInstalled", bloopSbtAlreadyInstalled)),
       optStringField("bloopVersion", bloopVersion),
-      listField("bloopJvmProperties", bloopJvmProperties),
+      listField("bloopJvmProperties", bloopJvmProperties.properties),
       Some(("superMethodLensesEnabled", superMethodLensesEnabled)),
       mapField("inlayHintsOptions", inlayHintsOptions.options),
       Some(
@@ -726,7 +726,10 @@ object UserConfiguration {
       getStringKey("bloop-version")
     val defaultShell =
       getStringKey("default-shell")
-    val bloopJvmProperties = getStringListKey("bloop-jvm-properties")
+    val bloopJvmProperties = getStringListKey("bloop-jvm-properties") match {
+      case None => BloopJvmProperties.Empty
+      case Some(props) => BloopJvmProperties.WithProperties(props)
+    }
     val superMethodLensesEnabled =
       getBooleanKey("super-method-lenses-enabled").getOrElse(false)
 
@@ -870,6 +873,21 @@ object TestUserInterfaceKind {
   }
   object TestExplorer extends TestUserInterfaceKind {
     override def toString: String = "test explorer"
+  }
+}
+
+sealed trait BloopJvmProperties {
+  def properties: Option[List[String]]
+}
+object BloopJvmProperties {
+  case object Uninitialized extends BloopJvmProperties {
+    def properties: Option[List[String]] = None
+  }
+  case object Empty extends BloopJvmProperties {
+    def properties: Option[List[String]] = None
+  }
+  case class WithProperties(props: List[String]) extends BloopJvmProperties {
+    def properties: Option[List[String]] = Some(props)
   }
 }
 
