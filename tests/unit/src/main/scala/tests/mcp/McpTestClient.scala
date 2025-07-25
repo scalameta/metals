@@ -72,4 +72,10 @@ class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext) {
     val params = objectMapper.createObjectNode()
     callTool("list-modules", params).map(_.mkString)
   }
+
+  def format(filePath: String): Future[String] = {
+    val params = objectMapper.createObjectNode()
+    params.put("fileInFocus", filePath)
+    callTool("format-file", params).map(_.mkString)
+  }
 }
