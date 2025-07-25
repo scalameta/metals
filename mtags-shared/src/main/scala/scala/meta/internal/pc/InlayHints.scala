@@ -16,7 +16,7 @@ import org.eclipse.{lsp4j => l}
 case class InlayHints(
     uri: URI,
     inlayHints: List[InlayHint],
-    lineSpecificInlayHints: Map[Int, InlayHintBlock],
+    blockInlayHints: Map[Int, InlayHintBlock],
     definitions: Set[Int]
 ) {
   def containsDef(offset: Int): Boolean = definitions(offset)
@@ -35,10 +35,10 @@ case class InlayHints(
 
   /*
    * Collects inlay hints in a single expression together and aligns their type labels.
-   * Note: Designed for use somewhat specifically for transformation intermediate types (i.e. Xray mode),
+   * Note: Designed for use somewhat specifically for Xray Mode,
    * so it includes some filtering logic specific to that use case.
    */
-  def addLineSpecific(
+  def addToBlock(
       pos: l.Range,
       labelParts: List[LabelPart],
       kind: InlayHintKind
@@ -47,11 +47,11 @@ case class InlayHints(
     // We can use this to associate related hints in a map
     val expressionStart = pos.getStart.getLine
 
-    lineSpecificInlayHints
+    blockInlayHints
       .get(expressionStart)
       .fold(
-        copy(lineSpecificInlayHints =
-          lineSpecificInlayHints + (
+        copy(blockInlayHints =
+          blockInlayHints + (
             pos.getStart.getLine ->
               InlayHintBlock(
                 indentLevel = pos.getEnd.getCharacter,
@@ -74,9 +74,7 @@ case class InlayHints(
             ihb.hints :+ BlockInlayHint(pos, labelParts, kind)
           )
 
-        copy(lineSpecificInlayHints =
-          lineSpecificInlayHints + (expressionStart -> newBlock)
-        )
+        copy(blockInlayHints = blockInlayHints + (expressionStart -> newBlock))
       }
   }
 
@@ -107,7 +105,7 @@ case class InlayHints(
     (atSamePos :+ inlayHint) ++ inlayHints.drop(atSamePos.size)
   }
   def result(): List[InlayHint] =
-    inlayHints.reverse ++ lineSpecificInlayHints.values.toList
+    inlayHints.reverse ++ blockInlayHints.values.toList
       .flatMap(_.build)
       .map(makeInlayHint)
 

@@ -297,14 +297,14 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
       |val thingy: Foo[Int] = foo
       |  .intify/*: Foo<<(2:8)>>[Int<<scala/Int#>>]*/
       |  .stringListify(
-      |    "Hello"
+      |    /*s = */"Hello"
       |  )(
-      |    "World"
+      |    /*s2 = */"World"
       |  )/*      : Foo<<(2:8)>>[String<<scala/Predef.String#>>]*/
       |  .stringListify(
-      |    "Hello"
+      |    /*s = */"Hello"
       |  )(
-      |    "World"
+      |    /*s2 = */"World"
       |  )/*      : Foo<<(2:8)>>[String<<scala/Predef.String#>>]*/
       |  .intify/*: Foo<<(2:8)>>[Int<<scala/Int#>>]*/
       |  .intify/*: Foo<<(2:8)>>[Int<<scala/Int#>>]*/

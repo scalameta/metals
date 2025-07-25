@@ -391,7 +391,7 @@ object UserConfiguration {
            |""".stripMargin,
       ),
       UserConfigurationOption(
-        "inlay-hints.transformation-intermediate-types.enable",
+        "inlay-hints.hints-x-ray-mode.enable",
         "false",
         "false",
         "Should display type annotations for intermediate types of multi-line expressions",

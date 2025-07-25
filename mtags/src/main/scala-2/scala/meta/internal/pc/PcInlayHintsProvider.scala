@@ -103,8 +103,8 @@ final class PcInlayHintsProvider(
               InlayHintKind.Type
             )
             .addDefinition(adjustedPos.start)
-      case TransformationIntermediateType(tpe, pos) if tpe != null =>
-        inlayHints.addLineSpecific(
+      case XRayModeHint(tpe, pos) if tpe != null =>
+        inlayHints.addToBlock(
           adjustPos(pos).toLsp,
           LabelPart(": ") :: toLabelParts(tpe, pos),
           InlayHintKind.Type
@@ -561,9 +561,9 @@ final class PcInlayHintsProvider(
     }
   }
 
-  object TransformationIntermediateType {
+  object XRayModeHint {
     def unapply(trees: (Tree, Option[Tree])): Option[(Type, Position)] = {
-      if (params.transformationIntermediateTypes()) {
+      if (params.hintsXRayMode()) {
         val (tree, parent) = trees
         val isParentApply = parent match {
           case Some(_: Apply) => true
@@ -573,14 +573,6 @@ final class PcInlayHintsProvider(
           case Some(par) if par.pos.line == tree.pos.line => true
           case _ => false
         }
-        @tailrec
-        def endsInSelect(ap: Apply): Boolean =
-          ap match {
-            case Apply(Select(_, _), _) => true
-            case Apply(innerTree @ Apply(_, _), _) =>
-              endsInSelect(innerTree)
-            case _ => false
-          }
         tree match {
           /*
           anotherTree
@@ -593,9 +585,8 @@ final class PcInlayHintsProvider(
               ) && inner.pos.isRange && !isParentOnSameLine && !isParentApply &&
                 endsInSelect(a) && tree.pos.source.isEndOfLine(tree.pos.end) =>
             Some((a.tpe.finalResultType, tree.pos))
-
           /*
-          anotherTree
+          innerTree
            .select
            */
           case select @ Select(innerTree, _)
@@ -606,6 +597,16 @@ final class PcInlayHintsProvider(
         }
       } else None
     }
+
+    @tailrec
+    private def endsInSelect(ap: Tree): Boolean =
+      ap match {
+        case Apply(Select(_, _), _) => true
+        case Apply(TypeApply(Select(_, _), _), _) => true
+        case Apply(innerTree @ Apply(_, _), _) =>
+          endsInSelect(innerTree)
+        case _ => false
+      }
 
   }
 
