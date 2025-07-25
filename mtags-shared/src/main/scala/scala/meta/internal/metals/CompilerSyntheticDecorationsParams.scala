@@ -11,7 +11,7 @@ case class CompilerSyntheticDecorationsParams(
     inferredTypes: Boolean,
     typeParameters: Boolean,
     implicitParameters: Boolean,
-    transformationIntermediateTypes: Boolean,
+    hintsXRayMode: Boolean,
     byNameParameters: Boolean,
     implicitConversions: Boolean
 ) extends SyntheticDecorationsParams {
