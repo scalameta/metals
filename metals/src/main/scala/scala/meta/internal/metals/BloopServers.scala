@@ -174,6 +174,9 @@ final class BloopServers(
       restartAndConnect: () => Future[BuildChange],
   ): Future[Unit] = {
     if (old.bloopJvmProperties != newConfig.bloopJvmProperties) {
+      scribe.debug(
+        s"Bloop JVM properties changed from ${old.bloopJvmProperties} to ${newConfig.bloopJvmProperties}"
+      )
       languageClient
         .showMessageRequest(
           Messages.BloopJvmPropertiesChange.params()
