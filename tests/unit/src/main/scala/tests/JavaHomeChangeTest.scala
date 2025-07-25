@@ -2,6 +2,7 @@ package tests
 
 import scala.util.control.NonFatal
 
+import scala.meta.internal.metals.BloopJvmProperties
 import scala.meta.internal.metals.Messages
 
 import coursierapi.JvmManager
@@ -61,7 +62,10 @@ trait JavaHomeChangeTest { self: BaseLspSuite =>
         _ <- server.didSave("a/src/main/scala/a/A.scala")
         _ = assertNoDiagnostics()
         _ <- server.server.onUserConfigUpdate(
-          userConfig.copy(javaHome = Some(pathToJava11))
+          userConfig.copy(
+            javaHome = Some(pathToJava11),
+            bloopJvmProperties = BloopJvmProperties.Empty,
+          )
         )
         _ <- server.didChange("a/src/main/scala/a/A.scala")(_ => java17Code)
         _ <- server.didSave("a/src/main/scala/a/A.scala")
