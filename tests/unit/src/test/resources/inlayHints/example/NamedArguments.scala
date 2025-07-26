@@ -12,13 +12,13 @@ object NamedArguments {
     User
       .apply(
         name = "John"
-      )/*: User<<(2:11)>>*/
+      )
   val user2: User =
     User(
       name = susan
     ).copy(
       name = susan
-    )/*: User<<(2:11)>>*/
+    )
 
   // anonymous classes
   @deprecated(

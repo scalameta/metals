@@ -121,9 +121,9 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
       |val foo: Foo = ???
       |
       |val thing1: Bar = bar
-      |  .bar/*: Bar<<(2:8)>>*/
+      |  .bar
       |val thing2: Foo = foo
-      |  .foo()/*: Foo<<(6:8)>>*/
+      |  .foo()
       |}
       |""".stripMargin
   )
@@ -201,11 +201,11 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
       |val thingy: Foo[Int] = foo
       |  .intify/*: Foo<<(2:8)>>[Int<<scala/Int#>>]*/
       |  .stringListify(
-      |    "Hello",
+      |    /*s = */"Hello",
       |    "World"
       |  )/*      : Foo<<(2:8)>>[String<<java/lang/String#>>]*/
       |  .stringListify(
-      |    "Hello",
+      |    /*s = */"Hello",
       |    "World"
       |  )/*      : Foo<<(2:8)>>[String<<java/lang/String#>>]*/
       |  .intify/*: Foo<<(2:8)>>[Int<<scala/Int#>>]*/
@@ -248,11 +248,11 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
       |val thingy: Foo[Int] = foo
       |  .intify/*       : Foo<<(2:8)>>[Int<<scala/Int#>>]*/
       |  .stringListify(
-      |    "Hello",
+      |    /*s = */"Hello",
       |    "World"
       |  )/*             : Foo<<(2:8)>>[String<<java/lang/String#>>]*/
       |  .stringListify(
-      |    "Hello",
+      |    /*s = */"Hello",
       |    "World"
       |  )/*             : Foo<<(2:8)>>[String<<java/lang/String#>>]*/
       |  .intify.intify/*: Foo<<(2:8)>>[Int<<scala/Int#>>]*/
@@ -308,6 +308,32 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
       |  )/*      : Foo<<(2:8)>>[String<<scala/Predef.String#>>]*/
       |  .intify/*: Foo<<(2:8)>>[Int<<scala/Int#>>]*/
       |  .intify/*: Foo<<(2:8)>>[Int<<scala/Int#>>]*/
+      |}
+      |""".stripMargin
+  )
+
+  check(
+    "for comprehension",
+    """object Main{
+      |val l: List[Int] = List(1, 2, 3)
+      |for {
+      | item <- l
+      | stringList <- List(item)
+      |   .map(_.toString)
+      |   .map[String](_.toString)
+      |   .map[String](_.toString)
+      |} yield stringList
+      |}
+      |""".stripMargin,
+    """object Main{
+      |val l: List[Int] = List/*[Int<<scala/Int#>>]*/(/*elems = */1, 2, 3)
+      |for {
+      | item <- l
+      | stringList <- List/*[Int<<scala/Int#>>]*/(/*elems = */item)
+      |   .map/*[String<<java/lang/String#>>]*/(/*f = */_.toString)/*        : List<<scala/collection/immutable/List#>>[String<<java/lang/String#>>]*/
+      |   .map[String](/*f = */_.toString)/*: List<<scala/collection/immutable/List#>>[String<<scala/Predef.String#>>]*/
+      |   .map[String](/*f = */_.toString)/*: List<<scala/collection/immutable/List#>>[String<<scala/Predef.String#>>]*/
+      |} yield stringList
       |}
       |""".stripMargin
   )

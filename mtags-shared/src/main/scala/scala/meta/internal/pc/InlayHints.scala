@@ -183,11 +183,8 @@ final case class InlayHintBlock(
     hints: List[BlockInlayHint]
 ) {
   def build: List[BlockInlayHint] = {
-    if (hints.length == 1) {
-      val head = hints.head
-      if (head.pos.getStart.getLine == head.pos.getEnd.getLine) Nil
-      else hints
-    } else
+    if (hints.length == 1) Nil
+    else
       hints.map { hint =>
         val naiveIndent = indentLevel - hint.pos.getEnd.getCharacter
         val labels =
