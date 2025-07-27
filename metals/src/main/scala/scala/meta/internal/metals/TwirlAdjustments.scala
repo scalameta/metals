@@ -1,130 +1,118 @@
 package scala.meta.internal.metals
 
 import java.io.File
+
+import scala.io.Codec
+
 import scala.meta.inputs.Input.VirtualFile
-import scala.io.Source
+
 import org.eclipse.lsp4j.Position
-import scala.collection.immutable.ListMap
+import play.twirl.compiler.TwirlCompiler
 
 object TwirlAdjustments {
+
+  private def resolveVersion(scalaVersion: String): String = {
+    val base = scalaVersion.split('-')(0)
+    base match {
+      case v if v.startsWith("2") => v.split('.').take(2).mkString(".")
+      case v => v
+    }
+  }
+
+  private def getCompiledString(file: VirtualFile, scalaVersion: String) =
+    TwirlCompiler
+      .compileVirtual(
+        content = file.value,
+        source = new File(
+          "foo/bar/example.scala.html"
+        ), // I don't think source etc is needed
+        sourceDirectory = new File("foo/bar"),
+        resultType = "play.twirl.api.Html",
+        formatterType = "play.twirl.api.HtmlFormat.Appendable",
+        additionalImports = TwirlCompiler.defaultImports(scalaVersion),
+        constructorAnnotations = Nil,
+        codec = Codec(scala.util.Properties.sourceEncoding),
+        scalaVersion = Some(scalaVersion),
+        inclusiveDot = false,
+      )
+
+  private def getPositionFromIndex(text: String, index: Int): Position = {
+    var row = 0
+    var lastNewline = -1
+    for (i <- 0 until index) {
+      if (text.charAt(i) == '\n') {
+        row += 1
+        lastNewline = i
+      }
+    }
+    new Position(row, index - (lastNewline + 1))
+  }
+
+  private def getIndexFromPosition(text: String, pos: Position): Int = {
+    var row = 0
+    var i = 0
+    while (row < pos.getLine && i < text.length) {
+      if (text.charAt(i) == '\n') row += 1
+      i += 1
+    }
+    i + pos.getCharacter
+  }
 
   def twirlMapper(
       twirlFile: VirtualFile,
       rawScalaVersion: String,
   ): (VirtualFile, Position => Position, AdjustLspData) = {
 
-    val base = rawScalaVersion.split('-')(0)
-
-    type AnchorLength = Int
-
     val originalTwirl = twirlFile.value
-
-    val scalaVersion = base match {
-      case v if v.startsWith("2") => v.split('.').take(2).mkString(".")
-      case v => v
-    }
-
-    val compiledTwirlPath = twirlFile.path
-      .stripPrefix("file://")
-      .replace(
-        "src/main/twirl",
-        s"target/scala-${scalaVersion}/twirl/main/html",
-      )
-      .replace(".scala.html", ".template.scala")
-
-    val compiledTwirl = Source.fromFile(new File(compiledTwirlPath)).mkString
-
+    val scalaVersion = resolveVersion(rawScalaVersion)
+    val compiledSource = getCompiledString(twirlFile, scalaVersion)
+    val compiledTwirl = compiledSource.content
+    println(compiledTwirl)
     val newVirtualFile = twirlFile.copy(value = compiledTwirl)
 
-    val anchorRegex = raw"/\*\d+\.\d+\*/".r
     val pattern = """(\d+)->(\d+)""".r
     val number_matching =
-      pattern.findAllIn(compiledTwirl).toList
-
-    val lengthOfAnchors: Iterator[Int] =
-      anchorRegex.findAllIn(compiledTwirl).map(_.length)
+      pattern.findAllIn(compiledTwirl).toVector
 
     val chars = number_matching.take(number_matching.length / 2)
-    val lines = number_matching.drop(number_matching.length / 2)
 
-    def getCharAtPosition(pos: Position): Char = {
-      val lines = compiledTwirl.split("\n", -1) // preserve trailing empty lines
-      val line = pos.getLine()
-      val char = pos.getCharacter()
-
-      lines(line).charAt(char)
+    val matrix = chars.map { char =>
+      val parts = char.split("->")
+      val a = parts(0).toInt
+      val b = parts(1).toInt
+      (a, b)
     }
 
-    def findCharPosition(char_pos: Int, sourceFile: String): Int = {
-      var index = 0
-      var pos = 0
-      while (index < char_pos) {
-        index += 1
-        pos += 1
-        if (sourceFile(index) == '\n') {
-          pos = 0
-        }
+    val reverseMatrix = matrix.map(n => (n._2, n._1))
+
+    def mapPosition(originalPos: Position): Position = {
+      val originalIndex = getIndexFromPosition(originalTwirl, originalPos)
+      val mappedIndex = reverseMatrix.indexWhere { case (orig, _) =>
+        orig > originalIndex
+      } match {
+        case 0 => 0
+        case idx if idx > 0 =>
+          val (origBase, genBase) = reverseMatrix(idx - 1)
+          genBase + (originalIndex - origBase)
+        case _ =>
+          val (origBase, genBase) = reverseMatrix.last
+          genBase + (originalIndex - origBase)
       }
-      pos
+      getPositionFromIndex(compiledTwirl, mappedIndex)
     }
 
-    // Map[Int, Int](1 -> 15, 2 -> 20, 3 -> 21)  SourceFile -> CompiledFile
-    val lineMap: ListMap[Int, Int] = ListMap.from {
-      lines.map { s =>
-        val parts = s.split("->")
-        val a = parts(0).toInt
-        val b = parts(1).toInt
-        (b - 1) -> (a - 1)
-      }
-    }
+    def reverseMapPosition(compiledPos: Position): Position = {
+      val compiledIndex = getIndexFromPosition(compiledTwirl, compiledPos)
 
-    val charMap: ListMap[Int, (Int, AnchorLength)] = ListMap.from {
-      chars.map { s =>
-        val parts = s.split("->")
-        val a = findCharPosition(parts(0).toInt, compiledTwirl)
-        val b = findCharPosition(parts(1).toInt, originalTwirl)
-        b -> (a - 1, lengthOfAnchors.next)
-      }
-    }
+      val pos_tuple = compiledSource.mapPosition(compiledIndex)
 
-    println(charMap)
-
-    def positionMapping(pos: Position): Position = {
-      val charPos = pos.getCharacter()
-      val linePos = pos.getLine()
-
-      val newPosition =
-        new Position(
-          lineMap(linePos),
-          charMap(charPos)._1,
-        )
-
-      pprint.log("Old Position => " + pos + "\n New Position => " + newPosition)
-
-      pprint.log(getCharAtPosition(newPosition))
-
-      println(compiledTwirl(charMap(charPos)._1))
-
-      newPosition
-    }
-
-    def adjustLSPMapping(pos: Position): Position = {
-      val charPos = pos.getCharacter()
-      val linePos = pos.getLine()
-
-      val adjustedPosition =
-        // TODO - This needs to be changed from here
-        new Position(
-          lineMap(linePos),
-          charMap(charPos)._1,
-        )
-      adjustedPosition
+      getPositionFromIndex(originalTwirl, pos_tuple)
     }
 
     (
       newVirtualFile,
-      positionMapping,
-      AdjustedLspData.create(adjustLSPMapping),
+      mapPosition,
+      AdjustedLspData.create(reverseMapPosition),
     )
   }
 }
