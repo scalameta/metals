@@ -10,6 +10,8 @@ import java.util.{Map => JMap}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.Failure
+import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -66,6 +68,7 @@ class MetalsMcpServer(
     languageClient: LanguageClient,
     connectionProvider: ConnectionProvider,
     scalaVersionSelector: ScalaVersionSelector,
+    scalafixLlmRuleProvider: ScalafixLlmRuleProvider,
 )(implicit
     ec: ExecutionContext
 ) extends Cancelable {
@@ -123,6 +126,7 @@ class MetalsMcpServer(
     asyncServer.addTool(importBuildTool()).subscribe()
     asyncServer.addTool(createFindDepTool()).subscribe()
     asyncServer.addTool(createListModulesTool()).subscribe()
+    asyncServer.addTool(createRunScalafixRuleTool()).subscribe()
 
     // Log server initialization
     asyncServer.loggingNotification(
@@ -776,6 +780,75 @@ class MetalsMcpServer(
             false,
           )
         }.toMono
+      },
+    )
+  }
+
+  private def createRunScalafixRuleTool(): AsyncToolSpecification = {
+    val schema =
+      """{
+        |  "type": "object",
+        |  "properties": {
+        |    "ruleName": {
+        |      "type": "string",
+        |      "description": "The name of the scalafix rule to run, should be a valid scalafix rule name and not include any special characters or whitespaces"
+        |    },
+        |    "ruleImplementation": {
+        |      "type": "string",
+        |      "description": "The implementation of the scalafix rule to run, this should contain the actual scalafix rule implementation."
+        |    },
+        |    "fileInFocus": {
+        |      "type": "string",
+        |      "description": "The current file in focus for context, if empty we will try to detect it"
+        |    }
+        |  },
+        |  "required": ["ruleName", "ruleImplementation"]
+        |} 
+        |""".stripMargin
+    new AsyncToolSpecification(
+      new Tool(
+        "run-scalafix-rule",
+        "Create and run a scalafix rule on the current project.",
+        schema,
+      ),
+      withErrorHandling { (_, arguments) =>
+        val ruleName = arguments.getAs[String]("ruleName")
+        val ruleImplementation = arguments.getAs[String]("ruleImplementation")
+        // TODO go through all targets
+        val scalaVersion = arguments.getFileInFocusOpt match {
+          case Some(path) => scalaVersionSelector.scalaVersionForPath(path)
+          case None => scalaVersionSelector.fallbackScalaVersion()
+        }
+        val resultingFuture = Try {
+          scalafixLlmRuleProvider.runScalafixRule(
+            ruleName,
+            scalaVersion,
+            ruleImplementation,
+          )
+        } match {
+          case Failure(exception) =>
+            Future.successful(
+              new CallToolResult(
+                createContent(s"Error: ${exception.getMessage}"),
+                true,
+              )
+            )
+          case Success(Right(future)) =>
+            future.map { _ =>
+              new CallToolResult(
+                createContent(s"Scalafix rule $ruleName run successfully"),
+                false,
+              )
+            }
+          case Success(Left(error)) =>
+            Future.successful(
+              new CallToolResult(
+                createContent(s"Error: $error"),
+                true,
+              )
+            )
+        }
+        resultingFuture.toMono
       },
     )
   }
