@@ -106,6 +106,61 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
     } yield ()
   }
 
+  test("run-scalafix-rule") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/example/Hello.scala
+           |package com.example
+           |
+           |object Hello { 
+           |  val str = "John"
+           |  def main(args: Array[String]): Unit = println(str)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
+      client <- startMcpServer()
+      result <- client.runScalafixRule(
+        "ReplaceJohnWithJohnatan",
+        """|
+           |package fix
+           |
+           |import scalafix.v1._
+           |import scala.meta._
+           |
+           |class ReplaceJohnWithJohnatan extends SemanticRule("ReplaceJohnWithJohnatan") {
+           |  override def fix(implicit doc: SemanticDocument): Patch = {
+           |    doc.tree.collect {
+           |      case lit @ Lit.String(value) if value.contains("John") =>
+           |        val newValue = value.replace("John", "\"Johnatan\"")
+           |        Patch.replaceTree(lit, newValue)
+           |    }.asPatch
+           |  }
+           |}
+           |
+           |""".stripMargin,
+      )
+      _ = println(result)
+      _ = assertNoDiff(
+        server.buffers
+          .get(workspace.resolve("a/src/main/scala/com/example/Hello.scala"))
+          .get,
+        """|package com.example
+           |
+           |object Hello { 
+           |  val str = "Johnatan"
+           |  def main(args: Array[String]): Unit = println(str)
+           |}
+           |""".stripMargin,
+      )
+      _ <- client.shutdown()
+    } yield ()
+  }
+
   override def afterEach(context: AfterEach): Unit = {
     super.afterEach(context)
     assertEquals(

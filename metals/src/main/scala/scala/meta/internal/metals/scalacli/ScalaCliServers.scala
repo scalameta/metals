@@ -1,6 +1,5 @@
 package scala.meta.internal.metals.scalacli
 
-import java.io.File
 import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicReference
 
@@ -25,11 +24,8 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.scalacli.ScalaCli.ScalaCliCommand
-import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
-
-import coursier.core.Version
 
 class ScalaCliServers(
     compilers: () => Compilers,
@@ -94,19 +90,8 @@ class ScalaCliServers(
       scribe.warn(
         s"scala-cli >= ${ScalaCli.minVersion} not found in PATH, fetching and starting a JVM-based Scala CLI"
       )
-      jvmBased()
+      ScalaCli.jvmBased()
     }
-  }
-
-  def jvmBased(): ScalaCliCommand = {
-    val cp = ScalaCli.scalaCliClassPath()
-    val command = Seq(
-      ScalaCli.javaCommand,
-      "-cp",
-      cp.mkString(File.pathSeparator),
-      ScalaCli.scalaCliMainClass,
-    )
-    ScalaCliCommand(command, Version(V.scalaCliVersion))
   }
 
   def lastImportedBuilds: List[(ImportedBuild, TargetData)] =

@@ -83,4 +83,14 @@ class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext) {
     params.put("fileInFocus", filePath)
     callTool("format-file", params).map(_.mkString)
   }
+
+  def runScalafixRule(
+      ruleName: String,
+      ruleImplementation: String,
+  ): Future[String] = {
+    val params = objectMapper.createObjectNode()
+    params.put("ruleName", ruleName)
+    params.put("ruleImplementation", ruleImplementation)
+    callTool("run-scalafix-rule", params).map(_.mkString)
+  }
 }
