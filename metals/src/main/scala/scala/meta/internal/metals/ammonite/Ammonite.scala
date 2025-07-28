@@ -107,7 +107,7 @@ final class Ammonite(
             val workspace0 = workspace()
             val targets = build0.workspaceBuildTargets.getTargets.asScala
             val connections =
-              targets.iterator.map(_.getId).map((_, conn)).toList
+              targets.iterator.map(_.getId).map((_, conn.name)).toList
             for {
               target <- targets
               classDirUriOpt = build0.scalacOptions.getItems.asScala
@@ -128,7 +128,7 @@ final class Ammonite(
                 new Ammonite.AmmoniteMappedSource(AbsolutePath(scalaPath))
               buildTargetsData.addMappedSource(scPath, mapped)
             }
-            buildTargetsData.resetConnections(connections)
+            buildTargetsData.resetConnections(List(conn), connections)
           }
           _ <- indexWorkspace()
           toCompile = buffers.open.toSeq.filter(_.isAmmoniteScript)

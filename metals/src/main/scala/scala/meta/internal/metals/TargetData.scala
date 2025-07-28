@@ -69,8 +69,10 @@ final class TargetData(val isAmmonite: Boolean = false) {
   val sourceItemFiles: util.Set[AbsolutePath] =
     ConcurrentHashSet.empty[AbsolutePath]
 
-  val targetToConnection: MMap[BuildTargetIdentifier, BuildServerConnection] =
-    new mutable.HashMap[BuildTargetIdentifier, BuildServerConnection]
+  val targetToConnectionId: MMap[BuildTargetIdentifier, String] =
+    new mutable.HashMap[BuildTargetIdentifier, String]
+  val idToConnection: MMap[String, BuildServerConnection] =
+    new mutable.HashMap[String, BuildServerConnection]
   def sourceBuildTargets(
       sourceItem: AbsolutePath
   ): Option[Iterable[BuildTargetIdentifier]] = {
@@ -174,8 +176,11 @@ final class TargetData(val isAmmonite: Boolean = false) {
       id: BuildTargetIdentifier,
       cancelPromise: Promise[Unit],
   )(implicit ec: ExecutionContext): Option[Future[List[String]]] = {
-    targetToConnection.get(id).zip(jvmTarget(id)).map {
-      case (bspConnection, jvmTarget) =>
+    targetToConnectionId
+      .get(id)
+      .flatMap(idToConnection.get)
+      .zip(jvmTarget(id))
+      .map { case (bspConnection, jvmTarget) =>
         val classpath =
           jvmTarget.classpath.orElse(buildTargetClasspath.get(id)) match {
             case None =>
@@ -203,7 +208,7 @@ final class TargetData(val isAmmonite: Boolean = false) {
           else outputClasses :: classes
         }
 
-    }
+      }
   }
 
   def findConnectedArtifact(
@@ -400,10 +405,13 @@ final class TargetData(val isAmmonite: Boolean = false) {
   }
 
   def resetConnections(
-      idToConn: List[(BuildTargetIdentifier, BuildServerConnection)]
+      connections: List[BuildServerConnection],
+      idToConn: List[(BuildTargetIdentifier, String)],
   ): Unit = {
-    targetToConnection.clear()
-    idToConn.foreach { case (id, conn) => targetToConnection.put(id, conn) }
+    targetToConnectionId.clear()
+    idToConnection.clear()
+    idToConn.foreach { case (id, conn) => targetToConnectionId.put(id, conn) }
+    connections.foreach { conn => idToConnection.put(conn.name, conn) }
   }
 
   def onCreate(source: AbsolutePath): Unit = {

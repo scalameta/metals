@@ -371,7 +371,7 @@ class ConnectionProvider(
           case None => Future.successful(None)
           case Some(session) =>
             bspSession = None
-            mainBuildTargetsData.resetConnections(List.empty)
+            mainBuildTargetsData.resetConnections(List.empty, List.empty)
             session.shutdown().map(_ => Some(session.main.name))
         }
         _ <-
@@ -396,12 +396,13 @@ class ConnectionProvider(
           importedBuilds0,
         )
         _ = {
+          val connections = bspBuilds.map(_.connection)
           val idToConnection = bspBuilds.flatMap { bspBuild =>
             val targets =
               bspBuild.build.workspaceBuildTargets.getTargets().asScala
-            targets.map(t => (t.getId(), bspBuild.connection))
+            targets.map(t => (t.getId(), bspBuild.connection.name))
           }
-          mainBuildTargetsData.resetConnections(idToConnection)
+          mainBuildTargetsData.resetConnections(connections, idToConnection)
           saveProjectReferencesInfo(bspBuilds)
         }
         _ = compilers.cancel()
