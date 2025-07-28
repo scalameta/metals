@@ -46,7 +46,9 @@ public interface InlayHintsParams extends RangeParams {
   /**
    * Response should contain intermediate types on transformation chains
    */
-  boolean hintsXRayMode();
+  default boolean hintsXRayMode(){
+    return false;
+  }
 
   /**
    * Response should contain decorations in pattern matches.

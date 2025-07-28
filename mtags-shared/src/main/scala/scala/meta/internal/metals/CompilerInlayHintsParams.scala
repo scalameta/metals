@@ -12,7 +12,7 @@ case class CompilerInlayHintsParams(
     inferredTypes: Boolean,
     typeParameters: Boolean,
     implicitParameters: Boolean,
-    hintsXRayMode: Boolean,
+    override val hintsXRayMode: Boolean,
     override val byNameParameters: Boolean,
     implicitConversions: Boolean,
     override val namedParameters: Boolean,
