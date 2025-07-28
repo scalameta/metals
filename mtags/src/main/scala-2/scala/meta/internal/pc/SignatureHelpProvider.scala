@@ -376,8 +376,30 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
                   // parenthesis.
                   1
               }
+
+              /*
+               * Workaround for issue #7621: Missing signature help in superclass constructor
+               * 
+               * Problem: For superclass constructors like `object Bar extends Foo(@@)`, the qualifier
+               * position overlaps with argument positions, causing start > realPos.start and breaking
+               * the enclosure check: start <= cursor <= end.
+               * 
+               * Solution: When argument position overlaps with qualifier position in constructor calls,
+               * use the argument's start position instead of the problematic qualifier end position.
+               */
+              val adjustedStart =
+                if (
+                  realPos.overlaps(
+                    call.qual.pos
+                  ) && call.symbol.isConstructor && start > realPos.start
+                ) {
+                  realPos.start
+                } else {
+                  start
+                }
+
               val isEnclosed =
-                start <= pos.start &&
+                adjustedStart <= pos.start &&
                   pos.end < (end + extraEndOffset)
               if (isEnclosed) {
                 activeCallsite = Some(call -> Arg(arg, i, j))
