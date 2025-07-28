@@ -18,6 +18,7 @@ import org.eclipse.lsp4j.MessageActionItem
 final class BuildToolSelector(
     languageClient: MetalsLanguageClient,
     tables: Tables,
+    preferredBuildServer: Future[Option[String]],
 )(implicit ec: ExecutionContext) {
   def checkForChosenBuildTool(
       buildTools: List[BuildTool]
@@ -30,7 +31,15 @@ final class BuildToolSelector(
           case buildTool :: Nil =>
             tables.buildTool.chooseBuildTool(buildTool.executableName)
             Future.successful(Some(buildTool))
-          case _ => requestBuildToolChoice(buildTools)
+          case _ =>
+            preferredBuildServer
+              .map(p =>
+                p.flatMap(name => buildTools.find(_.buildServerName == name))
+              )
+              .flatMap {
+                case Some(bt) => Future.successful(Some(bt))
+                case None => requestBuildToolChoice(buildTools)
+              }
         }
     }
 

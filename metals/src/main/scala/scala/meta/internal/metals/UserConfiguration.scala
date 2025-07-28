@@ -60,6 +60,7 @@ case class UserConfiguration(
     presentationCompilerDiagnostics: Boolean = true,
     buildOnChange: Boolean = true,
     buildOnFocus: Boolean = true,
+    preferredBuildServer: Option[String] = None,
 ) {
 
   override def toString(): String = {
@@ -158,6 +159,10 @@ case class UserConfiguration(
           "buildOnFocus",
           buildOnFocus,
         )
+      ),
+      optStringField(
+        "preferredBuildServer",
+        preferredBuildServer,
       ),
     ).flatten.toMap.asJava
     val gson = new GsonBuilder().setPrettyPrinting().create()
@@ -508,6 +513,15 @@ object UserConfiguration {
         """|If enabled, Metals will not automatically build the project when a file is focused (opened).
            |""".stripMargin,
       ),
+      UserConfigurationOption(
+        "preferred-build-server",
+        """empty string `""`.""",
+        """"bazelbsp"""",
+        "Preferred build server",
+        """|If set, metals will prefer the specified build server when available instead
+           |of prompting the user.
+           |""".stripMargin,
+      ),
     )
 
   def fromJson(
@@ -785,6 +799,7 @@ object UserConfiguration {
       getBooleanKey("presentation-compiler-diagnostics").getOrElse(true)
     val buildOnChange = getBooleanKey("build-on-change").getOrElse(true)
     val buildOnFocus = getBooleanKey("build-on-focus").getOrElse(true)
+    val preferredBuildServer = getStringKey("preferred-build-server")
 
     if (errors.isEmpty) {
       Right(
@@ -821,6 +836,7 @@ object UserConfiguration {
           presentationCompilerDiagnostics,
           buildOnChange,
           buildOnFocus,
+          preferredBuildServer,
         )
       )
     } else {
