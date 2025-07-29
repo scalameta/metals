@@ -479,8 +479,7 @@ class ProjectMetalsLspService(
     } else if (
       isScalaOrJava &&
       !path.isDirectory &&
-      !savedFiles.isRecentlyActive(path) &&
-      !buffers.contains(path)
+      !savedFiles.isRecentlyActive(path)
     ) {
       event.eventType match {
         case EventType.CreateOrModify => onCreate(path)

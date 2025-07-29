@@ -19,16 +19,16 @@ final class ActiveFiles(time: Time) {
       timer.elapsedSeconds > 2
   }
   private val paths = new ConcurrentLinkedQueue[Event]()
-  def add(path: AbsolutePath): Unit = {
+  def add(path: AbsolutePath): Unit = synchronized {
     paths.removeIf(_.isStale)
     paths.add(Event(new Timer(time), path))
   }
 
-  def isRecentlyActive(path: AbsolutePath): Boolean = {
+  def isRecentlyActive(path: AbsolutePath): Boolean = synchronized {
     paths.asScala.exists(p => p.isActive && p.path == path)
   }
 
-  def pollRecent(): Option[AbsolutePath] = {
+  def pollRecent(): Option[AbsolutePath] = synchronized {
     paths.removeIf(_.isStale)
     Option(paths.poll()).map(_.path)
   }
