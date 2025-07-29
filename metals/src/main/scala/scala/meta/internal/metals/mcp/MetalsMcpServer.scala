@@ -411,6 +411,10 @@ class MetalsMcpServer(
          |      "type": "string",
          |      "description": "Fully qualified name of the test class to run"
          |    },
+         |    "testName": {
+         |      "type": "string",
+         |      "description": "Name of the specific test to run within the test class, if empty runs all tests in the class"
+         |    },
          |    "verbose": {
          |      "type": "boolean",
          |      "description": "Print all output from the test suite, otherwise prints only errors and summary",
@@ -426,12 +430,14 @@ class MetalsMcpServer(
         val optPath = arguments
           .getOptAs[String]("testFile")
           .map(path => AbsolutePath(Path.of(path))(projectPath))
+        val testName = arguments.getOptAs[String]("testName")
         val printOnlyErrorsAndSummary = arguments
           .getOptAs[Boolean]("verbose")
           .getOrElse(false)
         val result = mcpTestRunner.runTests(
           testClass,
           optPath,
+          testName,
           printOnlyErrorsAndSummary,
         )
         (result match {
