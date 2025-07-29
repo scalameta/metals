@@ -29,12 +29,17 @@ class McpTestRunner(
   def runTests(
       testClass: String,
       optPath: Option[AbsolutePath],
+      testName: Option[String],
       verbose: Boolean,
   ): Either[String, Future[String]] = {
-    val testSuites = new b.ScalaTestSuites(
-      List(
+    val testSelection = testName match {
+      case Some(name) =>
+        new b.ScalaTestSuiteSelection(testClass, List(name).asJava)
+      case None =>
         new b.ScalaTestSuiteSelection(testClass, Nil.asJava)
-      ).asJava,
+    }
+    val testSuites = new b.ScalaTestSuites(
+      List(testSelection).asJava,
       Nil.asJava,
       Nil.asJava,
     )
