@@ -19,6 +19,7 @@ import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.ConnectionProvider
 import scala.meta.internal.metals.Diagnostics
+import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
@@ -67,6 +68,7 @@ class MetalsMcpServer(
     languageClient: LanguageClient,
     connectionProvider: ConnectionProvider,
     scalaVersionSelector: ScalaVersionSelector,
+    formattingProvider: FormattingProvider,
 )(implicit
     ec: ExecutionContext
 ) extends Cancelable {
@@ -124,6 +126,7 @@ class MetalsMcpServer(
     asyncServer.addTool(importBuildTool()).subscribe()
     asyncServer.addTool(createFindDepTool()).subscribe()
     asyncServer.addTool(createListModulesTool()).subscribe()
+    asyncServer.addTool(createFormatTool()).subscribe()
 
     // Log server initialization
     asyncServer.loggingNotification(
@@ -777,6 +780,67 @@ class MetalsMcpServer(
             false,
           )
         }.toMono
+      },
+    )
+  }
+
+  private def createFormatTool(): AsyncToolSpecification = {
+    val schema =
+      """|{
+         |  "type": "object",
+         |  "properties": {
+         |    "fileInFocus": {
+         |      "type": "string",
+         |      "description": "The file to format, if empty we will try to detect file in focus"
+         |    }
+         |  }
+         |}""".stripMargin
+    new AsyncToolSpecification(
+      new Tool(
+        "format-file",
+        "Format a Scala file and return the formatted text",
+        schema,
+      ),
+      withErrorHandling { (_, arguments) =>
+        val path = arguments.getFileInFocus
+        if (path.exists && path.isScalaFilename) {
+          val cancelChecker = new org.eclipse.lsp4j.jsonrpc.CancelChecker {
+            override def isCanceled(): Boolean = false
+            override def checkCanceled(): Unit = ()
+          }
+
+          formattingProvider
+            .formatForMcp(path, projectPath, cancelChecker)
+            .map {
+              case Left(errorMessage) =>
+                new CallToolResult(
+                  createContent(errorMessage),
+                  true,
+                )
+              case Right(None) =>
+                new CallToolResult(
+                  createContent("File is already properly formatted."),
+                  false,
+                )
+              case Right(Some(formattedText)) =>
+                new CallToolResult(
+                  createContent(formattedText),
+                  false,
+                )
+            }
+            .toMono
+        } else {
+          Future
+            .successful(
+              new CallToolResult(
+                createContent(
+                  s"Error: File not found or not a Scala file: $path"
+                ),
+                true,
+              )
+            )
+            .toMono
+        }
       },
     )
   }
