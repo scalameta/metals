@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.net.URI
 import java.nio.file._
 import java.util
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -856,6 +857,22 @@ abstract class MetalsLspService(
     Future
       .sequence(
         List(
+          {
+            val didSaveDiagnostics = compilers.didSave(path)
+            if (path.isSbt) {
+              didSaveDiagnostics
+                .map(diagnosticsList =>
+                  diagnostics.onPublishDiagnostics(
+                    path,
+                    diagnosticsList,
+                    isReset = true,
+                    originId = "METALS-$" + UUID.randomUUID().toString,
+                  )
+                )
+            } else {
+              Future.successful(())
+            }
+          },
           renameProvider.runSave(),
           parseTrees(path),
           onChange(List(path)),
