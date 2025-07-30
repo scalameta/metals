@@ -315,25 +315,37 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   check(
     "for comprehension",
     """object Main{
-      |val l: List[Int] = List(1, 2, 3)
-      |for {
-      | item <- l
-      | stringList <- List(item)
-      |   .map(_.toString)
-      |   .map[String](_.toString)
-      |   .map[String](_.toString)
-      |} yield stringList
+      |trait Foo[A]{
+      |  def flatMap[B](f: A => Foo[B]): Foo[B]
+      |  def map[B](f: A => B): Foo[B]
+      |  def bar(s: String): Foo[A]
+      |}
+      |val foo1: Foo[String] = ???
+      |val foo2: Foo[Int] = ???
+      |val result = for {
+      | foo <- foo1
+      | bar <- foo2
+      |   .bar(s = foo)
+      |   .bar(s = foo)
+      |   .bar(s = foo)
+      |} yield bar
       |}
       |""".stripMargin,
     """object Main{
-      |val l: List[Int] = List/*[Int<<scala/Int#>>]*/(/*elems = */1, 2, 3)
-      |for {
-      | item <- l
-      | stringList <- List/*[Int<<scala/Int#>>]*/(/*elems = */item)
-      |   .map/*[String<<java/lang/String#>>]*/(/*f = */_.toString)/*        : List<<scala/collection/immutable/List#>>[String<<java/lang/String#>>]*/
-      |   .map[String](/*f = */_.toString)/*: List<<scala/collection/immutable/List#>>[String<<scala/Predef.String#>>]*/
-      |   .map[String](/*f = */_.toString)/*: List<<scala/collection/immutable/List#>>[String<<scala/Predef.String#>>]*/
-      |} yield stringList
+      |trait Foo[A]{
+      |  def flatMap[B](f: A => Foo[B]): Foo[B]
+      |  def map[B](f: A => B): Foo[B]
+      |  def bar(s: String): Foo[A]
+      |}
+      |val foo1: Foo[String] = ???
+      |val foo2: Foo[Int] = ???
+      |val result/*: Foo<<(2:6)>>[Int<<scala/Int#>>]*/ = for {
+      | foo <- foo1
+      | bar <- foo2
+      |   .bar(s = foo)/*: Foo<<(2:6)>>[Int<<scala/Int#>>]*/
+      |   .bar(s = foo)/*: Foo<<(2:6)>>[Int<<scala/Int#>>]*/
+      |   .bar(s = foo)/*: Foo<<(2:6)>>[Int<<scala/Int#>>]*/
+      |} yield bar
       |}
       |""".stripMargin
   )
