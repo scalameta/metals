@@ -16,6 +16,7 @@ import org.eclipse.{lsp4j => l}
 case class InlayHints(
     uri: URI,
     inlayHints: List[InlayHint],
+    blockInlayHints: Map[Int, InlayHintBlock],
     definitions: Set[Int]
 ) {
   def containsDef(offset: Int): Boolean = definitions(offset)
@@ -32,6 +33,51 @@ case class InlayHints(
       addInlayHint(makeInlayHint(pos.getStart(), labelParts, kind))
     )
 
+  /*
+   * Collects inlay hints in a single expression together and aligns their type labels.
+   * Note: Designed for use somewhat specifically for Xray Mode,
+   * so it includes some filtering logic specific to that use case.
+   */
+  def addToBlock(
+      pos: l.Range,
+      labelParts: List[LabelPart],
+      kind: InlayHintKind
+  ): InlayHints = {
+    // The start pos of each element in a single expression will be the beginning of the expression.
+    // We can use this to associate related hints in a map
+    val expressionStart = pos.getStart.getLine
+
+    blockInlayHints
+      .get(expressionStart)
+      .fold(
+        copy(blockInlayHints =
+          blockInlayHints + (
+            pos.getStart.getLine ->
+              InlayHintBlock(
+                indentLevel = pos.getEnd.getCharacter,
+                List(
+                  BlockInlayHint(
+                    pos,
+                    labelParts,
+                    kind
+                  )
+                )
+              )
+          )
+        )
+      ) { (ihb: InlayHintBlock) =>
+        val newLevel = math.max(pos.getEnd.getCharacter, ihb.indentLevel)
+
+        val newBlock =
+          InlayHintBlock(
+            indentLevel = newLevel,
+            ihb.hints :+ BlockInlayHint(pos, labelParts, kind)
+          )
+
+        copy(blockInlayHints = blockInlayHints + (expressionStart -> newBlock))
+      }
+  }
+
   private def makeInlayHint(
       pos: l.Position,
       labelParts: List[LabelPart],
@@ -46,6 +92,11 @@ case class InlayHints(
     hint
   }
 
+  private def makeInlayHint(
+      bih: BlockInlayHint
+  ): InlayHint =
+    makeInlayHint(bih.pos.getEnd, bih.labels, bih.kind)
+
   // If method has both type parameter and implicit parameter, we want the type parameter decoration to be displayed first,
   // but it's added second. This method adds the decoration to the right position in the list.
   private def addInlayHint(inlayHint: InlayHint): List[InlayHint] = {
@@ -53,13 +104,17 @@ case class InlayHints(
       inlayHints.takeWhile(_.getPosition() == inlayHint.getPosition())
     (atSamePos :+ inlayHint) ++ inlayHints.drop(atSamePos.size)
   }
-  def result(): List[InlayHint] = inlayHints.reverse
+  def result(): List[InlayHint] =
+    inlayHints.reverse ++ blockInlayHints.values.toList
+      .flatMap(_.build)
+      .map(makeInlayHint)
 
 }
 
 object InlayHints {
   private val gson = new Gson()
-  def empty(uri: URI): InlayHints = InlayHints(uri, Nil, Set.empty)
+  def empty(uri: URI): InlayHints =
+    InlayHints(uri, Nil, Map.empty[Int, InlayHintBlock], Set.empty)
 
   /**
    * Creates a label for inlay hint by inserting `parts` on correct positions in `tpeStr`.
@@ -122,6 +177,29 @@ object InlayHints {
     )
   }
 }
+
+final case class InlayHintBlock(
+    indentLevel: Int,
+    hints: List[BlockInlayHint]
+) {
+  def build: List[BlockInlayHint] = {
+    if (hints.length == 1) Nil
+    else
+      hints.map { hint =>
+        val naiveIndent = indentLevel - hint.pos.getEnd.getCharacter
+        val labels =
+          if (naiveIndent <= 0) hint.labels
+          else LabelPart(" ".repeat(naiveIndent)) :: hint.labels
+        hint.copy(labels = labels)
+      }
+  }
+}
+
+final case class BlockInlayHint(
+    pos: l.Range,
+    labels: List[LabelPart],
+    kind: InlayHintKind
+)
 
 final case class InlineHintData(
     uri: String,
