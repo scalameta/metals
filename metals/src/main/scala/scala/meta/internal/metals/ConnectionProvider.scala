@@ -138,6 +138,11 @@ class ConnectionProvider(
     )
   }
 
+  private def isBspAvailable(buildTool: BuildTool) =
+    buildTool.isBspGenerated(folder) || bspGlobalDirectories.exists(
+      _.resolve(s"${buildTool.buildServerName}.json").isFile
+    )
+
   def slowConnectToBuildServer(
       forceImport: Boolean
   ): Future[BuildChange] = {
@@ -169,7 +174,7 @@ class ConnectionProvider(
         )
       case Some(found)
           if isSelected(found.buildTool) &&
-            found.buildTool.isBspGenerated(folder) =>
+            isBspAvailable(found.buildTool) =>
         reloadWorkspaceAndIndex(
           forceImport,
           found.buildTool,
@@ -178,8 +183,7 @@ class ConnectionProvider(
       case Some(BuildTool.Found(buildTool: BuildServerProvider, _)) =>
         slowConnectToBuildToolBsp(buildTool, forceImport, isSelected(buildTool))
       // Used when there are multiple `.bsp/<name>.json` configs and a known build tool (e.g. sbt)
-      case Some(BuildTool.Found(buildTool, _))
-          if buildTool.isBspGenerated(folder) =>
+      case Some(BuildTool.Found(buildTool, _)) if isBspAvailable(buildTool) =>
         maybeChooseServer(buildTool.buildServerName, isSelected(buildTool))
         connect(CreateSession())
       // Used in tests, `.bloop` folder exists but no build tool is detected
@@ -193,7 +197,7 @@ class ConnectionProvider(
       isSelected: Boolean,
   ): Future[BuildChange] = {
     val notification = tables.dismissedNotifications.ImportChanges
-    if (buildTool.isBspGenerated(folder)) {
+    if (isBspAvailable(buildTool)) {
       maybeChooseServer(buildTool.buildServerName, isSelected)
       connect(CreateSession())
     } else if (
