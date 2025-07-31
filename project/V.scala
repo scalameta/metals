@@ -15,14 +15,14 @@ object V {
   // Rules need to be manually updated to support
   val bazelScalaVersion = "2.13.12"
   val betterMonadicFor = "0.3.1"
-  val bloop = "2.0.10"
+  val bloop = "2.0.12"
   val bloopConfig = "2.3.2"
   val bsp = "2.2.0-M2"
   val coursier = "2.1.24"
   // changing coursier interfaces version may be not binary compatible.
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
   val coursierInterfaces = "1.0.28"
-  val debugAdapter = "4.2.5"
+  val debugAdapter = "4.2.7"
   val genyVersion = "1.0.0"
   val gitter8Version = "0.17.0"
   val gradleBloop = "1.6.3"
