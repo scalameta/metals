@@ -965,12 +965,24 @@ abstract class MetalsLspService(
       .sequence(
         List(
           Future(indexer.reindexWorkspaceSources(paths)),
-          userConfigPromise.future.flatMap { _ =>
-            if (userConfig.buildOnChange)
-              compilations
-                .compileFiles(paths, Option(focusedDocumentBuildTarget.get()))
-            else Future.successful(())
-          },
+
+          // under testing, this future is never completed. instead of hanging,
+          // proceed by compiling on save, as is the default in the upstream OSS project
+          if (Testing.isEnabled && !userConfigPromise.isCompleted)
+            compilations
+              .compileFiles(paths, Option(focusedDocumentBuildTarget.get()))
+          else
+            userConfigPromise.future
+              .flatMap { _ =>
+                if (userConfig.buildOnChange)
+                  compilations
+                    .compileFiles(
+                      paths,
+                      Option(focusedDocumentBuildTarget.get()),
+                    )
+                else Future.successful(())
+              }
+              .map(_ => println("buildOnChange completed")),
         ) ++ paths.map(f => Future(interactiveSemanticdbs.textDocument(f)))
       )
       .ignoreValue
