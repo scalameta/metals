@@ -34,7 +34,7 @@ class SbtServerSuite
     with JavaHomeChangeTest {
 
   val preBspVersion = "1.3.13"
-  val supportedMetaBuildVersion = "1.8.0"
+  val supportedMetaBuildVersion = "1.9.0"
   val supportedBspVersion = V.sbtVersion
   val scalaVersion = V.scala213
   val buildTool: SbtBuildTool = SbtBuildTool(None, workspace, () => userConfig)
