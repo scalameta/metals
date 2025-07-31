@@ -32,30 +32,22 @@ object TwirlAdjustments {
         additionalImports = TwirlCompiler.defaultImports(scalaVersion),
         constructorAnnotations = Nil,
         codec = Codec(scala.util.Properties.sourceEncoding),
-        scalaVersion = Some(scalaVersion),
+        scalaVersion = Some(resolveVersion(scalaVersion)),
         inclusiveDot = false,
       )
 
   private def getPositionFromIndex(text: String, index: Int): Position = {
-    var row = 0
-    var lastNewline = -1
-    for (i <- 0 until index) {
-      if (text.charAt(i) == '\n') {
-        row += 1
-        lastNewline = i
-      }
-    }
-    new Position(row, index - (lastNewline + 1))
+    val lines = text.substring(0, index).split('\n')
+    new Position(lines.length - 1, lines.last.length)
   }
 
   private def getIndexFromPosition(text: String, pos: Position): Int = {
-    var row = 0
-    var i = 0
-    while (row < pos.getLine && i < text.length) {
-      if (text.charAt(i) == '\n') row += 1
-      i += 1
-    }
-    i + pos.getCharacter
+    val lines = text.split('\n')
+
+    lines
+      .take(pos.getLine)
+      .map(_.length + 1)
+      .sum + pos.getCharacter
   }
 
   def twirlMapper(
@@ -64,8 +56,7 @@ object TwirlAdjustments {
   ): (VirtualFile, Position => Position, AdjustLspData) = {
 
     val originalTwirl = twirlFile.value
-    val scalaVersion = resolveVersion(rawScalaVersion)
-    val compiledSource = getCompiledString(twirlFile, scalaVersion)
+    val compiledSource = getCompiledString(twirlFile, rawScalaVersion)
     val compiledTwirl = compiledSource.content
     println(compiledTwirl)
     val newVirtualFile = twirlFile.copy(value = compiledTwirl)
@@ -80,22 +71,20 @@ object TwirlAdjustments {
       val parts = char.split("->")
       val a = parts(0).toInt
       val b = parts(1).toInt
-      (a, b)
+      (b, a)
     }
-
-    val reverseMatrix = matrix.map(n => (n._2, n._1))
 
     def mapPosition(originalPos: Position): Position = {
       val originalIndex = getIndexFromPosition(originalTwirl, originalPos)
-      val mappedIndex = reverseMatrix.indexWhere { case (orig, _) =>
+      val mappedIndex = matrix.indexWhere { case (orig, _) =>
         orig > originalIndex
       } match {
         case 0 => 0
         case idx if idx > 0 =>
-          val (origBase, genBase) = reverseMatrix(idx - 1)
+          val (origBase, genBase) = matrix(idx - 1)
           genBase + (originalIndex - origBase)
         case _ =>
-          val (origBase, genBase) = reverseMatrix.last
+          val (origBase, genBase) = matrix.last
           genBase + (originalIndex - origBase)
       }
       getPositionFromIndex(compiledTwirl, mappedIndex)
@@ -103,9 +92,7 @@ object TwirlAdjustments {
 
     def reverseMapPosition(compiledPos: Position): Position = {
       val compiledIndex = getIndexFromPosition(compiledTwirl, compiledPos)
-
       val pos_tuple = compiledSource.mapPosition(compiledIndex)
-
       getPositionFromIndex(originalTwirl, pos_tuple)
     }
 
