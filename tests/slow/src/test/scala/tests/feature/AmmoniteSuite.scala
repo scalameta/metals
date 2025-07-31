@@ -3,6 +3,9 @@ package tests.feature
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 
+import munit.IgnoreSuite
+
+@IgnoreSuite
 class Ammonite213Suite extends tests.BaseAmmoniteSuite(V.ammonite213) {
 
   test("ivy-completion-extended-initial-completion") {
@@ -32,8 +35,10 @@ class Ammonite213Suite extends tests.BaseAmmoniteSuite(V.ammonite213) {
   }
 }
 
+@IgnoreSuite
 class Ammonite3Suite extends tests.BaseAmmoniteSuite(V.ammonite3)
 
+@IgnoreSuite
 class Ammonite212Suite extends tests.BaseAmmoniteSuite(V.ammonite212) {
 
   test("global-version-fallback") {

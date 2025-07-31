@@ -757,7 +757,11 @@ lazy val unit = project
       Tests.Filter(name => isInTestShard(name, sLog.value))
     ),
     sharedSettings,
-    Test / javaOptions += "-Xmx2G",
+    Test / javaOptions ++= Seq(
+      "-Xmx3G",
+      "-XX:+HeapDumpOnOutOfMemoryError",
+      "-XX:+ExitOnOutOfMemoryError",
+    ),
     libraryDependencies ++= List(
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,

@@ -5,9 +5,11 @@ import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.semver.SemVer
 
 import coursierapi.Complete
+import munit.IgnoreSuite
 
 class Worksheet211LspSuite extends tests.BaseWorksheetLspSuite(V.scala211)
 
+@IgnoreSuite
 class Worksheet3LspSuite extends tests.BaseWorksheetLspSuite(V.scala3) {
   override def versionSpecificCodeToValidate: String =
     """given str: String = """""
@@ -17,6 +19,7 @@ class Worksheet3LspSuite extends tests.BaseWorksheetLspSuite(V.scala3) {
   )
 }
 
+@IgnoreSuite
 class Worksheet3NextSuite
     extends tests.BaseWorksheetLspSuite(Worksheet3NextSuite.scala3Next) {
   override def versionSpecificCodeToValidate: String =

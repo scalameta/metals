@@ -302,12 +302,14 @@ final class Diagnostics(
       path: AbsolutePath,
       ds: List[Diagnostic],
   ): Unit = {
-    languageClient.publishDiagnostics(
-      new PublishDiagnosticsParams(
-        path.toURI.toString,
-        ds.asJava,
+    if (config.compilers.emitDiagnostics) {
+      languageClient.publishDiagnostics(
+        new PublishDiagnosticsParams(
+          path.toURI.toString,
+          ds.asJava,
+        )
       )
-    )
+    }
   }
 
   private def publishDiagnosticsBuffer(): Unit = {

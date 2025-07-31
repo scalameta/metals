@@ -982,8 +982,7 @@ abstract class MetalsLspService(
                       Option(focusedDocumentBuildTarget.get()),
                     )
                 else Future.successful(())
-              }
-              .map(_ => println("buildOnChange completed")),
+              },
         ) ++ paths.map(f => Future(interactiveSemanticdbs.textDocument(f)))
       )
       .ignoreValue

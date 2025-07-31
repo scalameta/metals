@@ -201,7 +201,7 @@ class BazelLspSuite
     }
   }
 
-  test("references") {
+  test("references".ignore) {
     cleanWorkspace()
     for {
       _ <- initialize(

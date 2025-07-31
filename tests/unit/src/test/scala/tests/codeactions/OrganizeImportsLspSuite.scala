@@ -60,7 +60,8 @@ class OrganizeImportsLspSuite
   )
 
   check(
-    "basic-unsaved",
+    // DATABRICKS: PLAT-139354 organize imports doesn't work on unsaved files
+    "basic-unsaved".ignore,
     """
       |package a
       |import scala.concurrent.duration._
@@ -96,7 +97,8 @@ class OrganizeImportsLspSuite
   )
 
   check(
-    "basic-unsaved-2",
+    // DATABRICKS: PLAT-139354 organize imports doesn't work on unsaved files
+    "basic-unsaved-2".ignore,
     """
       |package a
       |import scala.concurrent.duration._

@@ -5,7 +5,7 @@ function bloop_version {
 }
 
 export COURSIER_REPOSITORIES="central|sonatype:snapshots"
-export BLOOP_JAVA_OPTS="-Xss4m -Xmx1G -XX:MaxInlineLevel=20 -XX:+UseZGC -XX:ZUncommitDelay=30 -XX:ZCollectionInterval=5 -XX:+IgnoreUnrecognizedVMOptions -Dbloop.ignore-sig-int=true"
+export BLOOP_JAVA_OPTS="-Xss4m -Xmx2G -XX:MaxInlineLevel=20 -XX:+UseZGC -XX:ZUncommitDelay=30 -XX:ZCollectionInterval=5 -XX:+IgnoreUnrecognizedVMOptions -Dbloop.ignore-sig-int=true"
 
 mkdir -p ~/.bloop
 curl -Lo coursier https://git.io/coursier-cli && chmod +x coursier
@@ -16,10 +16,14 @@ cat ~/.local/share/scalacli/bloop/daemon/output
 rm .jvmopts
 touch .jvmopts
 echo "-Xss4m" >> .jvmopts
-echo "-Xmx2G"  >> .jvmopts
+echo "-Xmx4G"  >> .jvmopts
 echo "-XX:ReservedCodeCacheSize=1024m" >> .jvmopts
 echo "-XX:+TieredCompilation" >> .jvmopts
 echo "-Dfile.encoding=UTF-8" >> .jvmopts
+echo "-XX:+HeapDumpOnOutOfMemoryError" >> .jvmopts
+echo "-XX:+ExitOnOutOfMemoryError" >> .jvmopts
+
+echo $PWD
 
 sbt "$1"
 

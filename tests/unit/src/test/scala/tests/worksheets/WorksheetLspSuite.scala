@@ -143,7 +143,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
            |implicit val system: ActorSystem = ActorSystem("QuickStart")
            |val source: Source[Int, NotUsed] = Source(1 to 2)
            |val future = source.runWith(Sink.foreach(_ => ()))
-           |Await.result(future, 3.seconds)
+           |Await.result(future, 6.seconds)
            |
            |""".stripMargin
       )

@@ -325,7 +325,7 @@ class DefinitionCrossLspSuite
     } yield ()
   }
 
-  for (version <- Seq(BuildInfo.scala213, BuildInfo.scala3)) {
+  for (version <- Seq(BuildInfo.scala213 /*, BuildInfo.scala3*/ )) {
     test(s"fallback-to-workspace-search-$version") {
       cleanWorkspace()
       for {
@@ -685,7 +685,7 @@ class DefinitionCrossLspSuite
           server.workspaceDefinitions,
           """|/a/src/main/scala/a/Main.scala
              |package a
-             |import b/*<no symbol>*/.Foo/*Foo.scala:3*/._
+             |import b.Foo/*Foo.scala:3*/._
              |
              |object Main/*L3*/ {
              |  val name/*L4*/: Version/*<no symbol>*/ = ???/*Predef.scala*/

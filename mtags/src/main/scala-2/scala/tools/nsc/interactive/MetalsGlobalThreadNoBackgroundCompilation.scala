@@ -19,6 +19,7 @@ final class MetalsGlobalThreadNoBackgroundCompilation(
    */
   override def run(): Unit = {
     compiler.debugLog("starting new runner thread")
+    System.err.println(s"Starting up PC for $name")
     while (compiler ne null) try {
       compiler.checkNoResponsesOutstanding()
       compiler.log.logreplay(
@@ -35,6 +36,7 @@ final class MetalsGlobalThreadNoBackgroundCompilation(
         compiler.debugLog("exiting presentation compiler")
         compiler.log.close()
 
+        System.err.println(s"Shutting down PC for $name")
         // make sure we don't keep around stale instances
         compiler = null
       case ex: Throwable =>

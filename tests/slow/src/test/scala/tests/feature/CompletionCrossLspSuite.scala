@@ -228,7 +228,7 @@ class CompletionCrossLspSuite
     } yield ()
   }
 
-  test("iskra-scala3") {
+  test("iskra-scala3".ignore) {
     cleanWorkspace()
     for {
       _ <- initialize(

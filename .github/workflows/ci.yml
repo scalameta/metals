@@ -10,38 +10,47 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-#  unit:
-#    name: ${{ matrix.os }} jdk-${{ matrix.java }} unit tests ${{ matrix.shard }} / 2
-#    runs-on:
-#      group: self-hosted-runner-group
-#      labels: ${{ matrix.os }}
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        os: [linux-ubuntu-latest]
-#        java: ["17"]
-#        shard: [1, 2]
-#    steps:
-#      - uses: actions/checkout@v4
-#      - uses: actions/setup-java@v4
-#        with:
-#          distribution: 'temurin'
-#          java-version: ${{ matrix.java }}
-#          cache: 'sbt'
-#      - uses: sbt/setup-sbt@v1
-#      - name: Run unit tests
-#        run: |
-#          bin/test.sh unit/test
-#        env:
-#          JAVA_VERSION: ${{ matrix.java }}
-#          TEST_SHARD: ${{ matrix.shard }}
-#          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
-#          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
-#        shell: bash
+  unit:
+    name: ${{ matrix.os }} jdk-${{ matrix.java }} unit tests ${{ matrix.shard }} / 2
+    runs-on:
+      group: metals-protected-runner-group
+      labels: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [metals-ubuntu-latest]
+        java: ["17"]
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java }}
+          cache: 'sbt'
+      - uses: sbt/setup-sbt@v1
+      - name: Run unit tests
+        run: |
+          bin/test.sh unit/test
+        env:
+          JAVA_VERSION: ${{ matrix.java }}
+          TEST_SHARD: ${{ matrix.shard }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+        shell: bash
+      - name: Upload heap dump if exists
+        uses: actions/upload-artifact@v4
+        if: always()  # This ensures the step runs even if previous steps fail
+        with:
+          name: heap-dumps
+          path: |
+            ./**/*.hprof
+          retention-days: 5  # Adjust as needed
+
   integration:
     name: ${{ matrix.name }}
     runs-on:
-      group: self-hosted-runner-group
+      group: metals-protected-runner-group
       labels: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -49,7 +58,7 @@ jobs:
         type:
           [
 #            sbt,
-#            bazel,
+            bazel,
 #            feature,
             cross,
             scalafmt,
@@ -61,42 +70,42 @@ jobs:
 #              bin/test.sh +sbt-metals/publishLocal
 #              bin/test.sh 'slow/testOnly -- tests.sbt.*'
 #            name: Sbt integration
-#            os: linux-ubuntu-latest
+#            os: metals-ubuntu-latest
 #            java: "17"
-#          - type: bazel
-#            command: bin/test.sh 'slow/testOnly -- tests.bazel.*'
-#            name: Bazel integration
-#            os: linux-ubuntu-latest
-#            java: "17"
+          - type: bazel
+            command: bin/test.sh 'slow/testOnly -- tests.bazel.*'
+            name: Bazel integration
+            os: metals-ubuntu-latest
+            java: "17"
 #          - type: feature
 #            command: bin/test.sh 'slow/testOnly -- tests.feature.*'
 #            name: LSP integration tests
-#            os: linux-ubuntu-latest
+#            os: metals-ubuntu-latest
 #            java: "17"
           - type: cross
             command: sbt +cross/test
             name: Scala cross tests
-            os: linux-ubuntu-latest
+            os: metals-ubuntu-latest
             java: "17"
           - type: mtags-java
             command: sbt javapc/test
             name: Scala javapc tests
-            os: linux-ubuntu-latest
+            os: metals-ubuntu-latest
             java: "17"
           - type: scalafix
             command: sbt scalafixCheck docs/docusaurusCreateSite
             name: Scalafix and docs
-            os: linux-ubuntu-latest
+            os: metals-ubuntu-latest
             java: "17"
           - type: scalafmt
             command: ./bin/scalafmt --test
             name: Formatting
-            os: linux-ubuntu-latest
+            os: metals-ubuntu-latest
             java: "17"
           - type: MiMa
             command: sbt interfaces/mimaReportBinaryIssues
             name: MiMa
-            os: linux-ubuntu-latest
+            os: metals-ubuntu-latest
             java: "17"
     steps:
       - uses: actions/checkout@v4

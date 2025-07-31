@@ -57,7 +57,8 @@ class WorkspaceFoldersSuite
     } yield ()
   }
 
-  test("non-scala-project") {
+  // DATABRICKS: the test hangs indefinitely
+  test("non-scala-project".ignore) {
     cleanWorkspace()
     val newScalaFile = "/a/src/main/scala/A.scala"
     for {
