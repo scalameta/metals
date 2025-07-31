@@ -1323,7 +1323,12 @@ class Compilers(
       val pc = jcache
         .computeIfAbsent(key, { _ => newCompiler = true; getCompiler() })
         .await
-      Option(loadInitialFiles(pc))
+      Option(
+        if (newCompiler) {
+          loadInitialFiles(pc)
+        } else
+          pc
+      )
     }
 
   private def withKeyAndDefault[T](

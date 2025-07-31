@@ -581,7 +581,7 @@ abstract class MetalsLspService(
       compilers,
     )
 
-  protected val diagnosticsDebouncer =
+  protected val diagnosticsDebouncer: DiagnosticsDebouncer = register(
     new DiagnosticsDebouncer(
       buffers,
       diagnostics,
@@ -589,6 +589,7 @@ abstract class MetalsLspService(
       sh,
       sys.Prop[Int]("metals.errors-delay").option.getOrElse(500).millis,
     )
+  )
 
   def optFileSystemSemanticdbs(): Option[FileSystemSemanticdbs] = None
 

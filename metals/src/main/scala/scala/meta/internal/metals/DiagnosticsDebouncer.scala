@@ -23,11 +23,14 @@ class DiagnosticsDebouncer(
     compilers: Compilers,
     sh: ScheduledExecutorService,
     delay: FiniteDuration,
-) {
+) extends Cancelable {
 
   @volatile
   private var processFut: ScheduledFuture[Unit] =
     sh.schedule(processChanges _, delay.toMillis, TimeUnit.MILLISECONDS)
+
+  @volatile
+  private var cancelled = false
 
   private val processing = new AtomicBoolean(false)
 
@@ -49,7 +52,7 @@ class DiagnosticsDebouncer(
   }
 
   def processChanges(): Unit = {
-    if (processing.compareAndSet(false, true)) {
+    if (!cancelled && processing.compareAndSet(false, true)) {
       try {
         while (!queue.isEmpty()) {
           val ChangedFile(_, path) = queue.poll()
@@ -73,6 +76,11 @@ class DiagnosticsDebouncer(
         assert(processing.compareAndSet(true, false))
       }
     }
+  }
+
+  override def cancel(): Unit = {
+    cancelled = true
+    processFut.cancel( /* mayInterruptIfRunning = */ false)
   }
 
   case class ChangedFile(documentVersion: Int, path: AbsolutePath)
