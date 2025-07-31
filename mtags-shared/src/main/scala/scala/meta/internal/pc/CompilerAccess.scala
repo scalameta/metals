@@ -36,13 +36,14 @@ abstract class CompilerAccess[Reporter, Compiler](
   private var _compiler: CompilerWrapper[Reporter, Compiler] = _
   private def isEmpty: Boolean = _compiler == null
   private def isDefined: Boolean = !isEmpty
-  private def loadCompiler(): CompilerWrapper[Reporter, Compiler] = {
-    if (_compiler == null) {
-      _compiler = newCompiler()
+  private def loadCompiler(): CompilerWrapper[Reporter, Compiler] =
+    synchronized {
+      if (_compiler == null) {
+        _compiler = newCompiler()
+      }
+      _compiler.resetReporter()
+      _compiler
     }
-    _compiler.resetReporter()
-    _compiler
-  }
 
   protected def newReporter: Reporter
 

@@ -184,7 +184,7 @@ object V {
     bazelScalaVersion,
 //    scala211,
     sbtScala,
-//    scala212,
+    scala212,
 //    ammonite212Version,
     scala213,
 //    ammonite213Version,

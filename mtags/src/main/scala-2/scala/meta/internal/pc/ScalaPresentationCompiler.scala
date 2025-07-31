@@ -8,6 +8,7 @@ import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import java.util.logging.Logger
 import java.{util => ju}
 
@@ -419,9 +420,11 @@ case class ScalaPresentationCompiler(
       symbol: String
   ): CompletableFuture[CompletionItem] =
     CompletableFuture.completedFuture {
-      compilerAccess.withSharedCompiler(item) { pc =>
-        new CompletionItemResolver(pc.compiler()).resolve(item, symbol)
-      }(emptyQueryContext)
+      compilerAccess
+        .withNonInterruptableCompiler(item, EmptyCancelToken) { pc =>
+          new CompletionItemResolver(pc.compiler()).resolve(item, symbol)
+        }(emptyQueryContext)
+        .get(1, TimeUnit.SECONDS)
     }
 
   override def signatureHelp(
