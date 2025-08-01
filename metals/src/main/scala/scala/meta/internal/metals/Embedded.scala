@@ -202,9 +202,6 @@ object Embedded {
       List(
         mavenLocal,
         MavenRepository.of(
-          "https://oss.sonatype.org/content/repositories/public/"
-        ),
-        MavenRepository.of(
           "https://central.sonatype.com/repository/maven-snapshots/"
         ),
       ))
