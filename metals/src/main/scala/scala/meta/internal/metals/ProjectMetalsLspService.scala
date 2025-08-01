@@ -480,7 +480,7 @@ class ProjectMetalsLspService(
       isScalaOrJava &&
       !path.isDirectory &&
       !savedFiles.isRecentlyActive(path) &&
-      !buffers.contains(path)
+      !buffers.contains(path) // ci/cd test
     ) {
       event.eventType match {
         case EventType.CreateOrModify => onCreate(path)
