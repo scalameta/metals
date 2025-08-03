@@ -4,7 +4,7 @@ function bloop_version {
   grep "val bloop =" project/V.scala | sed -n 's/.*"\(.*\)".*/\1/p'
 }
 
-export COURSIER_REPOSITORIES="central|sonatype:snapshots|ivy2local|https://central.sonatype.com/repository/maven-snapshots/"
+export COURSIER_REPOSITORIES="central|ivy2local|https://central.sonatype.com/repository/maven-snapshots/"
 export BLOOP_JAVA_OPTS="-Xss4m -XX:MaxInlineLevel=20 -XX:+UseZGC -XX:ZUncommitDelay=30 -XX:ZCollectionInterval=5 -XX:+IgnoreUnrecognizedVMOptions -Dbloop.ignore-sig-int=true -Xmx1G"
 
 mkdir -p ~/.bloop
