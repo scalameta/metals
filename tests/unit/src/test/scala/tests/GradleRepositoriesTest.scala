@@ -28,9 +28,6 @@ class GradleRepositoriesTest extends BaseSuite {
     Embedded.repositories,
     s"""|  repositories {
         |    mavenCentral()
-        |    maven {
-        |      url "https://oss.sonatype.org/content/repositories/snapshots"
-        |    }
         |    ivy {
         |      url "${userHomeString + ".ivy2/local"}"
         |      patternLayout {
@@ -42,9 +39,6 @@ class GradleRepositoriesTest extends BaseSuite {
         |    }
         |    maven {
         |      url "${userHomeString + ".m2/repository"}"
-        |    }
-        |    maven {
-        |      url "https://oss.sonatype.org/content/repositories/public/"
         |    }
         |    maven {
         |      url "https://central.sonatype.com/repository/maven-snapshots/"

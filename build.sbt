@@ -54,8 +54,6 @@ inThisBuild(
     homepage := Some(url("https://github.com/scalameta/metals")),
     developers := metalsDevs,
     testFrameworks := List(),
-    resolvers ++= Resolver.sonatypeOssRepos("public"),
-    resolvers ++= Resolver.sonatypeOssRepos("snapshot"),
     dependencyOverrides += V.guava,
     // faster publishLocal:
     packageDoc / publishArtifact := sys.env.contains("CI"),
