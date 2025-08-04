@@ -38,24 +38,18 @@ case class ScalaTarget(
     def scalaFuture = options.exists(
       _.matches("-language:experimental.(captureChecking|modularity|into)")
     )
-    val dialectforVersion =
-      ScalaVersions.dialectForScalaVersion(
-        scalaVersion,
-        includeSource3 = false,
-      )
-
-    val dialect = dialectforVersion match {
-      case Scala3 if scalaFuture => Scala3Future
-      case other => other
-    }
+    val dialect =
+      ScalaVersions.dialectForScalaVersion(scalaVersion, includeSource3 = false)
 
     dialect match {
       case Scala213 if containsSource3 =>
         Scala213Source3
       case Scala212 if containsSource3 =>
         Scala212Source3
-      case (Scala3 | Scala3Future) =>
-        dialect.withAllowStarAsTypePlaceholder(kindProjector)
+      case Scala3 if scalaFuture =>
+        Scala3Future.withAllowStarAsTypePlaceholder(kindProjector)
+      case Scala3 =>
+        Scala3.withAllowStarAsTypePlaceholder(kindProjector)
       case other => other
     }
   }
