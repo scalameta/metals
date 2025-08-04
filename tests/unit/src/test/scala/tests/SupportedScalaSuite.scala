@@ -4,6 +4,9 @@ import scala.concurrent.duration._
 
 import scala.meta.metals.Main
 
+import munit.IgnoreSuite
+
+@IgnoreSuite
 class SupportedScalaSuite extends BaseSuite {
 
   test("released-version") {

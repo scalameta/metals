@@ -264,6 +264,7 @@ abstract class MetalsLspService(
     buildTargets,
     downstreamTargets,
     initialServerConfig,
+    () => userConfig,
   )
 
   protected def semanticdbs(): Semanticdbs

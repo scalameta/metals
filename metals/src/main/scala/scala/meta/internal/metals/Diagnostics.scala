@@ -50,6 +50,7 @@ final class Diagnostics(
     buildTargets: BuildTargets,
     downstreamTargets: PreviouslyCompiledDownsteamTargets,
     config: MetalsServerConfig,
+    userConfig: () => UserConfiguration,
 ) {
   private val diagnostics =
     TrieMap.empty[AbsolutePath, ju.Queue[Diagnostic]]
@@ -302,7 +303,7 @@ final class Diagnostics(
       path: AbsolutePath,
       ds: List[Diagnostic],
   ): Unit = {
-    if (config.compilers.emitDiagnostics) {
+    if (userConfig().presentationCompilerDiagnostics) {
       languageClient.publishDiagnostics(
         new PublishDiagnosticsParams(
           path.toURI.toString,

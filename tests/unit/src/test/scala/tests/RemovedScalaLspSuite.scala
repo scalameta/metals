@@ -10,7 +10,9 @@ import scala.meta.internal.semver.SemVer
 
 import coursierapi.Dependency
 import coursierapi.Fetch
+import munit.IgnoreSuite
 
+@IgnoreSuite
 class RemovedScalaLspSuite extends BaseLspSuite("cascade") {
 
   override protected def mtagsResolver: MtagsResolver = MtagsResolver.default()

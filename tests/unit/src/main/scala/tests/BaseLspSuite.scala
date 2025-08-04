@@ -42,7 +42,10 @@ abstract class BaseLspSuite(
   MetalsLogger.updateDefaultFormat()
   def icons: Icons = Icons.default
   def userConfig: UserConfiguration =
-    UserConfiguration(fallbackScalaVersion = Some(BuildInfo.scalaVersion))
+    UserConfiguration(
+      fallbackScalaVersion = Some(BuildInfo.scalaVersion),
+      presentationCompilerDiagnostics = false,
+    )
   def serverConfig: MetalsServerConfig = MetalsServerConfig.default
   def time: Time = Time.system
   implicit val ex: ExecutionContextExecutorService =

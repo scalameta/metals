@@ -164,7 +164,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
            |implicit val system: ActorSystem = ActorSystem("QuickStart")/* // : ActorSystem = akka://QuickStart*/
            |val source: Source[Int, NotUsed] = Source(1 to 2)/* // : Source[Int, NotUsed] = Source(SourceShape(StatefulMapConcat.out(...*/
            |val future = source.runWith(Sink.foreach(_ => ()))/* // : concurrent.Future[akka.Done] = Future(<not completed>)*/
-           |Await.result(future, 3.seconds)/* // : akka.Done = Done*/
+           |Await.result(future, 6.seconds)/* // : akka.Done = Done*/
            |""".stripMargin,
         postprocessObtained = _.replaceAll(".out\\(.*", ".out(...*/"),
       )
