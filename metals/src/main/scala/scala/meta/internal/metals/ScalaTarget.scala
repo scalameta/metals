@@ -29,28 +29,34 @@ case class ScalaTarget(
 
   def isSbt = sbtVersion.isDefined
 
-  def dialect(path: AbsolutePath): Dialect = {
-    scalaVersion match {
-      case _ if info.isSbtBuild && path.isSbt => Sbt
-      case other =>
-        val dialect =
-          ScalaVersions.dialectForScalaVersion(other, includeSource3 = false)
-        dialect match {
-          case Scala213 if containsSource3 =>
-            Scala213Source3
-          case Scala212 if containsSource3 =>
-            Scala212Source3
-          case Scala3
-              if scalac
-                .getOptions()
-                .asScala
-                .exists(_.startsWith("-Ykind-projector")) =>
-            dialect.withAllowStarAsTypePlaceholder(true)
-          case Scala3 =>
-            // set to false since this needs an additional compiler option
-            Scala3.withAllowStarAsTypePlaceholder(false)
-          case other => other
-        }
+  def dialect(path: AbsolutePath): Dialect =
+    if (info.isSbtBuild && path.isSbt) Sbt
+    else scalaDialect
+
+  private def scalaDialect: Dialect = {
+    def kindProjector = options.exists(_.matches("-[XY]kind-projector.*"))
+    def scalaFuture = options.exists(
+      _.matches("-language:experimental.(captureChecking|modularity|into)")
+    )
+    val dialectforVersion =
+      ScalaVersions.dialectForScalaVersion(
+        scalaVersion,
+        includeSource3 = false,
+      )
+
+    val dialect = dialectforVersion match {
+      case Scala3 if scalaFuture => Scala3Future
+      case other => other
+    }
+
+    dialect match {
+      case Scala213 if containsSource3 =>
+        Scala213Source3
+      case Scala212 if containsSource3 =>
+        Scala212Source3
+      case (Scala3 | Scala3Future) =>
+        dialect.withAllowStarAsTypePlaceholder(kindProjector)
+      case other => other
     }
   }
 
@@ -60,7 +66,7 @@ case class ScalaTarget(
 
   def baseDirectory: String = info.baseDirectory
 
-  def options: List[String] = scalac.getOptions().asScala.toList
+  lazy val options: List[String] = scalac.getOptions().asScala.toList
 
   def fmtDialect: ScalafmtDialect =
     ScalaVersions.fmtDialectForScalaVersion(scalaVersion, containsSource3)
