@@ -1,5 +1,6 @@
 package scala.meta.internal.builds
 
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import scala.concurrent.ExecutionContext
@@ -10,11 +11,13 @@ import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.Confirmation
+import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.parsing.BloopDiagnosticsParser
 import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
 
@@ -33,6 +36,7 @@ final class BloopInstall(
     tables: Tables,
     shellRunner: ShellRunner,
     userConfig: () => UserConfiguration,
+    diagnostics: Diagnostics,
 )(implicit ec: ExecutionContext) {
 
   override def toString: String = s"BloopInstall($workspace)"
@@ -63,6 +67,12 @@ final class BloopInstall(
       javaHome: Option[String],
   ): CancelableFuture[WorkspaceLoadedStatus] = {
     persistChecksumStatus(Status.Started, buildTool)
+    val buffer = scala.collection.mutable.ArrayBuffer.empty[String]
+    val errorHandler = (x: String) => {
+      buffer.append(x)
+      scribe.error(x)
+    }
+
     val processFuture = shellRunner
       .run(
         s"${buildTool.executableName} bloopInstall",
@@ -77,11 +87,25 @@ final class BloopInstall(
           "METALS_ENABLED" -> "true",
           "SCALAMETA_VERSION" -> BuildInfo.semanticdbVersion,
         ) ++ sys.env,
+        processErr = errorHandler,
       )
       .map {
         case ExitCodes.Success => WorkspaceLoadedStatus.Installed
         case ExitCodes.Cancel => WorkspaceLoadedStatus.Cancelled
         case result => WorkspaceLoadedStatus.Failed(result)
+      }
+      .map { value =>
+        BloopDiagnosticsParser
+          .getDiagnosticsFromErrors(buffer.toArray)
+          .foreach(diagnostic =>
+            diagnostics.onPublishDiagnostics(
+              diagnostic.getUri.toAbsolutePath,
+              diagnostic.getDiagnostics.asScala.toSeq,
+              isReset = true,
+              originId = "METALS-$" + UUID.randomUUID().toString,
+            )
+          )
+        value
       }
     processFuture.future.foreach { result =>
       try result.toChecksumStatus.foreach(persistChecksumStatus(_, buildTool))
