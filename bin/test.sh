@@ -9,7 +9,7 @@ export BLOOP_JAVA_OPTS="-Xss4m -XX:MaxInlineLevel=20 -XX:+UseZGC -XX:ZUncommitDe
 
 mkdir -p ~/.bloop
 curl -Lo coursier https://git.io/coursier-cli && chmod +x coursier
-./coursier launch -M bloop.cli.Bloop -r https://central.sonatype.com/repository/maven-snapshots/ ch.epfl.scala:bloop-cli_2.13:$(bloop_version) -- about
+timeout 60 ./coursier launch -M bloop.cli.Bloop -r https://central.sonatype.com/repository/maven-snapshots/ ch.epfl.scala:bloop-cli_2.13:$(bloop_version) -- about || echo "Coursier launch timed out or failed, continuing..."
 
 cat ~/.local/share/scalacli/bloop/daemon/output
 
