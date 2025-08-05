@@ -51,18 +51,12 @@ class SupportedScalaSuite extends BaseSuite {
           "Expected any versions if failed to fetch from sonatype",
         )
       case Right(supported) =>
+        /*  from SONATYPE:  Due to a bug with the underlying service we rely on to provide SNAPSHOT hosting, we've had to temporarily
+        remove browse access for SNAPSHOT releases. You should still be able to publish and consume
+        SNAPSHOT releases as usual, but you cannot browse them via the UI. */
         assertNoDiff(
           supported,
-          """|- Scala 2.11:
-             |   2.11.12
-             |
-             | - Scala 2.12:
-             |   2.12.17, 2.12.18, 2.12.19, 2.12.20
-             |
-             | - Scala 2.13:
-             |   2.13.13, 2.13.14, 2.13.15, 2.13.16
-             |
-             |
+          """|
              |Scala 3 versions from 3.3.4 are automatically supported by Metals.
              |
              |Any older Scala versions will no longer get bugfixes, but should still
