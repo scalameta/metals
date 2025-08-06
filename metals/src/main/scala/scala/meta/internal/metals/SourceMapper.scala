@@ -48,7 +48,7 @@ final case class SourceMapper(
       ) {
         WorksheetProvider.worksheetScala3Adjustments(input)
       } else if (path.isTwirlTemplate) {
-        Some(TwirlAdjustments.twirlMapper(input, scalaVersion))
+        Some(TwirlAdjustments(input, scalaVersion))
       } else None
 
     forScripts.getOrElse(default)
