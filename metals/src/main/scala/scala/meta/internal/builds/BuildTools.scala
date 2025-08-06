@@ -205,6 +205,7 @@ final class BuildTools(
     List(
       SbtBuildTool(workspaceVersion = None, workspace, userConfig),
       GradleBuildTool(userConfig, workspace),
+      GradleExperimentalBuildTool(userConfig, workspace),
       MavenBuildTool(userConfig, workspace),
       MillBuildTool(userConfig, workspace),
       ScalaCliBuildTool(workspace, workspace, userConfig),
@@ -231,7 +232,10 @@ final class BuildTools(
     val buf = List.newBuilder[BuildTool]
 
     sbtProject.foreach(buf += SbtBuildTool(_, userConfig))
-    gradleProject.foreach(buf += GradleBuildTool(userConfig, _))
+    gradleProject.foreach(project => {
+      buf += GradleBuildTool(userConfig, project)
+      buf += GradleExperimentalBuildTool(userConfig, project)
+    })
     mavenProject.foreach(buf += MavenBuildTool(userConfig, _))
     millProject.foreach(buf += MillBuildTool(userConfig, _))
     scalaCliProject.foreach(buf += ScalaCliBuildTool(workspace, _, userConfig))
@@ -249,22 +253,22 @@ final class BuildTools(
 
   def isBuildRelated(
       path: AbsolutePath
-  ): Option[String] = {
+  ): List[String] = {
     if (sbtProject.exists(SbtBuildTool.isSbtRelatedPath(_, path)))
-      Some(SbtBuildTool.name)
+      List(SbtBuildTool.name)
     else if (gradleProject.exists(GradleBuildTool.isGradleRelatedPath(_, path)))
-      Some(GradleBuildTool.name)
+      List(GradleBuildTool.name, GradleExperimentalBuildTool.name)
     else if (mavenProject.exists(MavenBuildTool.isMavenRelatedPath(_, path)))
-      Some(MavenBuildTool.name)
+      List(MavenBuildTool.name)
     else if (isMill && MillBuildTool.isMillRelatedPath(path))
-      Some(MillBuildTool.name)
+      List(MillBuildTool.name)
     else if (bazelProject.exists(BazelBuildTool.isBazelRelatedPath(_, path)))
-      Some(BazelBuildTool.name)
+      List(BazelBuildTool.name)
     else if (isInBsp(path)) {
       val name = path.filename.stripSuffix(".json")
-      if (knownBsps(name) && !ScalaCli.names(name)) None
-      else Some(name)
-    } else None
+      if (knownBsps(name) && !ScalaCli.names(name)) List.empty
+      else List(name)
+    } else List.empty
   }
 
   def initialize(): Set[BuildTool] = {

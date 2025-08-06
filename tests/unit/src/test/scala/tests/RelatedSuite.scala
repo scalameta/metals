@@ -1,6 +1,7 @@
 package tests
 
 import scala.meta.internal.builds.GradleBuildTool
+import scala.meta.internal.builds.GradleExperimentalBuildTool
 import scala.meta.internal.builds.MavenBuildTool
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
@@ -61,6 +62,11 @@ class RelatedSuite extends BaseSuite {
   ): Unit = {
     test(s"is${addNot(isTrue)}GradleRelated - $relpath") {
       checkRelated(relpath, GradleBuildTool.isGradleRelatedPath, isTrue)
+      checkRelated(
+        relpath,
+        GradleExperimentalBuildTool.isGradleRelatedPath,
+        isTrue,
+      )
     }
   }
   checkIsGradleRelated("build.gradle")

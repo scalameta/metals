@@ -476,6 +476,7 @@ lazy val metals = project
       "sbtBloopVersion" -> V.sbtBloop,
       "gitter8Version" -> V.gitter8Version,
       "gradleBloopVersion" -> V.gradleBloop,
+      "gradleBspVersion" -> V.gradleBsp,
       "mavenBloopVersion" -> V.mavenBloop,
       "scalametaVersion" -> V.scalameta,
       "semanticdbVersion" -> V.semanticdb(scalaVersion.value),

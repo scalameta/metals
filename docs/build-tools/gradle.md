@@ -43,3 +43,14 @@ Now we can run `gradle bloopInstall`, which will create all of the Bloop
 configuration files.
 
 This will enable us to work with Metals and all features should work.
+
+# Experimental Method
+
+Gradle's Tooling API can be used to extract the Bloop files without needing any
+change to the build files.  It works with the configuration cache unlike the
+method above.
+
+At the command line run:
+```bash
+coursier launch io.github.arthurm1.gradle.bsp:server:@GRADLE_BSP_VERSION@ -r https://repo.gradle.org/gradle/libs-releases -M com.microsoft.java.bs.core.BloopExporter
+```

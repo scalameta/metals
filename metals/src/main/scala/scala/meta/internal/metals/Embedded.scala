@@ -397,8 +397,10 @@ object Embedded {
       scalaVersion: Option[String] = None,
       classfiers: Seq[String] = Seq.empty,
       resolution: Option[ResolutionParams] = None,
+      repositories: Seq[Repository] = Seq.empty,
   ): List[Path] = try {
     fetchSettings(dep, scalaVersion, resolution)
+      .addRepositories(repositories: _*)
       .addClassifiers(classfiers: _*)
       .fetch()
       .asScala
