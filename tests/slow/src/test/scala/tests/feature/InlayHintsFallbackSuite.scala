@@ -8,28 +8,32 @@ class InlayHintsFallbackSuite
       "3.4.0",
     ) {
 
+  /**
+   * This should not include positions since, we are testing fallback method of
+   * providing inlay hints. 3.4.0 doesn't have it built in the presentation compiler.
+   */
   check(
     "all-synthetics",
     """|import scala.concurrent.Future
        |case class Location(city: String)
        |object Main{
-       |  def hello()(implicit name: String, from: Location)/*: Unit<<scala/Unit#>>*/ = {
+       |  def hello()(implicit name: String, from: Location)/*: Unit*/ = {
        |    println(s"Hello $$name from $${from.city}")
        |  }
        |  implicit val andy : String = "Andy"
        |
-       |  def greeting()/*: Unit<<scala/Unit#>>*/ = {
-       |    implicit val boston/*: Location<<(1:11)>>*/ = Location("Boston")
-       |    hello()/*(andy<<(6:15)>>, boston<<(9:17)>>)*/
-       |    hello()/*(andy<<(6:15)>>, boston<<(9:17)>>)*/;    hello()/*(andy<<(6:15)>>, boston<<(9:17)>>)*/
+       |  def greeting()/*: Unit*/ = {
+       |    implicit val boston/*: Location*/ = Location("Boston")
+       |    hello()/*(andy, boston)*/
+       |    hello()/*(andy, boston)*/;    hello()/*(andy, boston)*/
        |  }
        |  
-       |  val ordered/*: String<<scala/Predef.String#>>*/ = /*augmentString<<scala/Predef.augmentString().>>(*/"acb"/*)*/.sorted/*(Char<<scala/math/Ordering.Char.>>)*/
-       |  /*augmentString<<scala/Predef.augmentString().>>(*/"foo"/*)*/.map(c/*: Char<<scala/Char#>>*/ => c.toInt)
+       |  val ordered/*: String*/ = /*augmentString(*/"acb"/*)*/.sorted/*(Char)*/
+       |  /*augmentString(*/"foo"/*)*/.map(c/*: Char*/ => c.toInt)
        |  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
        |  Future{
        |    println("")
-       |  }/*(ec<<(16:15)>>)*/
+       |  }/*(ec)*/
        |}
        |""".stripMargin,
     config = Some(

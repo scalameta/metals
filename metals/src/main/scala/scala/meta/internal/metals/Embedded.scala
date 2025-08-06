@@ -398,12 +398,25 @@ object Embedded {
       classfiers: Seq[String] = Seq.empty,
       resolution: Option[ResolutionParams] = None,
   ): List[Path] = try {
-    fetchSettings(dep, scalaVersion, resolution)
+    val settings = fetchSettings(dep, scalaVersion, resolution)
       .addClassifiers(classfiers: _*)
+    val withPossibleSnapshotRepo =
+      // Scala 3.4.x series depends on mtags snapshot versions
+      if (scalaVersion.exists(_.startsWith("3.4"))) {
+        settings
+          .addRepositories(
+            MavenRepository.of(
+              "https://oss.sonatype.org/content/repositories/snapshots/"
+            )
+          )
+      } else settings
+
+    withPossibleSnapshotRepo
       .fetch()
       .asScala
       .toList
       .map(_.toPath())
+
   } catch {
     case NonFatal(e) =>
       scribe.error(s"Error downloading $dep", e)
