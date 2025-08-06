@@ -17,6 +17,11 @@ import ch.epfl.scala.bsp4j.JvmBuildTarget
 import ch.epfl.scala.bsp4j.ScalaBuildTarget
 import ch.epfl.scala.bsp4j.ScalaPlatform
 import ch.epfl.scala.bsp4j.ScalacOptionsItem
+import scala.util.matching.Regex
+import scala.meta.internal.metals.ScalaTarget.{
+  KindProjectorRegex,
+  ExperimentalSyntaxRegex,
+}
 
 case class ScalaTarget(
     info: BuildTarget,
@@ -34,10 +39,8 @@ case class ScalaTarget(
     else scalaDialect
 
   private def scalaDialect: Dialect = {
-    def kindProjector = options.exists(_.matches("-[XY]kind-projector.*"))
-    def scalaFuture = options.exists(
-      _.matches("-language:experimental.(captureChecking|modularity|into)")
-    )
+    def kindProjector = options.exists(KindProjectorRegex.matches)
+    def scalaFuture = options.exists(ExperimentalSyntaxRegex.matches)
     val dialect =
       ScalaVersions.dialectForScalaVersion(scalaVersion, includeSource3 = false)
 
@@ -150,4 +153,10 @@ case class ScalaTarget(
 
   def jvmHome: Option[String] =
     jvmBuildTarget.flatMap(f => Option(f.getJavaHome()))
+}
+
+object ScalaTarget {
+  private[ScalaTarget] val KindProjectorRegex: Regex = "-[XY]kind-projector.*".r
+  private[ScalaTarget] val ExperimentalSyntaxRegex: Regex =
+    "-language:experimental.(captureChecking|modularity|into)".r
 }
