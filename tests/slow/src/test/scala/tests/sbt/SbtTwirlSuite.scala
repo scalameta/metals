@@ -140,7 +140,7 @@ class SbtTwirlSuite extends SbtServerSuite {
       _ <- server.assertHover(
         "src/main/twirl/example.scala.html",
         """|@(x: String, y: Int)
-           |<p>@(x.length @y</p>
+           |<p>@(@@x.length) @y</p>
            |""".stripMargin,
         """|```scala
            |x: String

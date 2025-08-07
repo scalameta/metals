@@ -8,6 +8,7 @@ import scala.meta.inputs.Input.VirtualFile
 
 import org.eclipse.lsp4j.Position
 import play.twirl.compiler.TwirlCompiler
+import play.twirl.compiler.GeneratedSourceVirtual
 
 /**
  * A utility object for adjusting and mapping positions between Twirl templates and their compiled Scala output.
@@ -37,7 +38,7 @@ object TwirlAdjustments {
   }
 
   /**
-   * Probably not the best solution, as ideally one should be able to take configuration from
+   * Probably not the best solution, as ideally one should also be able to take configuration from
    * the client's build.sbt files as TwirlKeys.templateImports. But this works nonetheless.
    */
   private def playImports(
@@ -63,7 +64,7 @@ object TwirlAdjustments {
   def getCompiledString(implicit
       file: VirtualFile,
       scalaVersion: String,
-  ) =
+  ): GeneratedSourceVirtual =
     TwirlCompiler
       .compileVirtual(
         content = file.value,
@@ -111,15 +112,11 @@ object TwirlAdjustments {
   /**
    * Extracts a positional mapping matrix from the compiled Twirl template.
    *
-   * The Twirl compiler embeds mappings of the form `A->B` in comments, where:
-   *   - `A` is a position in the original Twirl template
-   *   - `B` is the corresponding position in the generated Scala output
-   *
-   * This method parses those mappings and builds a matrix of (generated, original) index pairs.
+   * This method parses those mappings and builds a matrix of (original, generated) index pairs.
    * The mapping is later used for position translation between source and compiled files.
    *
    * @param The compiled Twirl template content as a string
-   * @return An array of tuples representing (generatedIndex, originalIndex) pairs
+   * @return An array of tuples representing (originalIndex, generatedIndex) pairs
    */
   private def getMatrix(compiledTwirl: String): Array[(Int, Int)] = {
     val pattern = """(\d+)->(\d+)""".r
