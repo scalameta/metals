@@ -25,7 +25,7 @@ object TwirlAdjustments {
    * (e.g., "2.13.12" becomes "2.13"). For Scala 3.x and others, it returns the full base version
    * without any suffixes (e.g., "3.3.1" remains "3.3.1").
    *
-   * @param scalaVersion the full Scala version string (e.g., "2.13.12", "3.3.1-bin")
+   * @param the full Scala version string (e.g., "2.13.12", "3.3.1-bin")
    * @return a normalized Scala version string compatible with Twirl
    */
   private def resolveVersion(scalaVersion: String): String = {
@@ -37,18 +37,32 @@ object TwirlAdjustments {
   }
 
   /**
+   * Probably not the best solution, as ideally one should be able to take configuration from
+   * the client's build.sbt files as TwirlKeys.templateImports. But this works nonetheless.
+   */
+  private def playImports(
+      originalImports: Seq[String]
+  )(implicit file: VirtualFile): Seq[String] =
+    if (file.path.contains("views/"))
+      originalImports ++ Seq(
+        "import models._", "import controllers._", "import play.api.i18n._",
+        "import views.html._", "import play.api.templates.PlayMagic._",
+        "import play.api.mvc._", "import play.api.data._",
+      )
+    else originalImports
+
+  /**
    * Compiles an in-memory Twirl template into a compiled representation using the Twirl compiler.
    *
    * This method uses a virtual file and a resolved Scala version to invoke `TwirlCompiler.compileVirtual`.
    *
-   * @param file the virtual file representing the template content
-   * @param scalaVersion the full Scala version string (used to resolve compatibility with Twirl)
+   * @param the virtual file representing the template content
+   * @param the full Scala version string (used to resolve compatibility with Twirl)
    * @return the result of compiling the Twirl template
    */
-  def getCompiledString(
+  def getCompiledString(implicit
       file: VirtualFile,
       scalaVersion: String,
-      additionalImports: Seq[String] = Seq.empty,
   ) =
     TwirlCompiler
       .compileVirtual(
@@ -58,7 +72,7 @@ object TwirlAdjustments {
         resultType = "play.twirl.api.Html",
         formatterType = "play.twirl.api.HtmlFormat.Appendable",
         additionalImports =
-          TwirlCompiler.defaultImports(scalaVersion) ++ additionalImports,
+          playImports(TwirlCompiler.defaultImports(scalaVersion)),
         constructorAnnotations = Nil,
         codec = Codec(
           scala.util.Properties.sourceEncoding
@@ -70,8 +84,8 @@ object TwirlAdjustments {
   /**
    * Converts a character offset (index) in a string to an LSP `Position` (0 based - line number and character offset).
    *
-   * @param text The full text content. Can be either the Twirl Source or the Compiled Twirl File
-   * @param index The character offset within the text (0-based).
+   * @param The full text content. Can be either the Twirl Source or the Compiled Twirl File
+   * @param The character offset within the text (0-based).
    * @return A `Position` object representing the line and column corresponding to the given index.
    */
   private def getPositionFromIndex(text: String, index: Int): Position = {
@@ -82,8 +96,8 @@ object TwirlAdjustments {
   /**
    * Converts an LSP `Position` (0 based - line number and character offset) into a character index.
    *
-   * @param text The full text content. Can be either the Twirl Source or the Compiled Twirl File
-   * @param pos The LSP `Position` to convert (line and character).
+   * @param The full text content. Can be either the Twirl Source or the Compiled Twirl File
+   * @param The LSP `Position` to convert (line and character).
    * @return The absolute character index in the string corresponding to the position.
    */
   private def getIndexFromPosition(text: String, pos: Position): Int = {
@@ -104,7 +118,7 @@ object TwirlAdjustments {
    * This method parses those mappings and builds a matrix of (generated, original) index pairs.
    * The mapping is later used for position translation between source and compiled files.
    *
-   * @param compiledTwirl The compiled Twirl template content as a string
+   * @param The compiled Twirl template content as a string
    * @return An array of tuples representing (generatedIndex, originalIndex) pairs
    */
   private def getMatrix(compiledTwirl: String): Array[(Int, Int)] = {

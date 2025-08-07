@@ -253,7 +253,6 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
            |  (baseDirectory.value / "src" / "main" / "twirl")
            |)
            |""".stripMargin,
-        expectError = true,
       )
       _ <- assertCompletion(
         "name.len@@",
