@@ -29,6 +29,9 @@ sealed abstract class OrganizeImports(
       file: AbsolutePath,
       params: CodeActionParams,
   ): Boolean
+
+  def dontShowErrorToUser: Boolean = false
+
   override def contribute(params: CodeActionParams, token: CancelToken)(implicit
       ec: ExecutionContext
   ): Future[Seq[l.CodeAction]] = {
@@ -66,7 +69,7 @@ sealed abstract class OrganizeImports(
       scalaVersion: ScalaTarget,
   ): Future[Seq[l.CodeAction]] = {
     scalafixProvider
-      .organizeImports(path, scalaVersion)
+      .organizeImports(path, scalaVersion, dontShowErrorToUser)
       .map {
         case Nil => Seq.empty
         case edits =>
@@ -142,6 +145,8 @@ class OrganizeImportsQuickFix(
       .asScala
       .collect { case ScalacDiagnostic.UnusedImport(name) => name }
       .nonEmpty
+
+  override def dontShowErrorToUser: Boolean = true
 }
 
 object OrganizeImportsQuickFix {
