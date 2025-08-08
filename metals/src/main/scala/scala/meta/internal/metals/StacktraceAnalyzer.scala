@@ -26,6 +26,12 @@ class StacktraceAnalyzer(
     analyzeStackTrace(stacktrace)
   }
 
+  def resolveStacktraceLocationCommand(
+      stacktraceLine: String
+  ): Option[l.Location] = {
+    workspaceFileLocationFromLine(stacktraceLine)
+  }
+
   def isStackTraceFile(path: AbsolutePath): Boolean =
     path == workspace.resolve(Directories.stacktrace)
 

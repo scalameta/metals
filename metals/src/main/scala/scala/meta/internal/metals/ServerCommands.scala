@@ -451,6 +451,18 @@ object ServerCommands {
     "[string], where the string is a stacktrace.",
   )
 
+  val ResolveStacktraceLocation = new ParametrizedCommand[String](
+    "resolve-stacktrace-location",
+    "Resolve stacktrace location",
+    """|Resolves a single line of a stacktrace to its source location.
+       |
+       |Returns a Location object containing the URI and line number of the 
+       |source file where the stacktrace line originated, if it can be resolved
+       |to a location in the workspace.
+       |""".stripMargin,
+    "[string], where the string is a single line from a stacktrace.",
+  )
+
   val MetalsPaste = new ParametrizedCommand[MetalsPasteParams](
     "metals-did-paste",
     "Add needed import statements after paste",
@@ -748,6 +760,7 @@ object ServerCommands {
   def all: List[BaseCommand] =
     List(
       AnalyzeStacktrace,
+      ResolveStacktraceLocation,
       BspSwitch,
       ConnectBuildServer,
       CancelCompile,
