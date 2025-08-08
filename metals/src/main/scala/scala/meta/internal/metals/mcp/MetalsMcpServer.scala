@@ -254,10 +254,16 @@ class MetalsMcpServer(
         compilations
           .cascadeCompile(buildTargets.allBuildTargetIds)
           .map { _ =>
-            val errors = diagnostics.allDiagnostics.show(projectPath)
+            val allDiagnostics = diagnostics.allDiagnostics
+            val diagnosticsOutput = allDiagnostics.show(projectPath)
             val content =
-              if (errors.isEmpty) "Compilation successful."
-              else s"Compilation failed with errors:\n$errors"
+              if (diagnosticsOutput.isEmpty) {
+                "Compilation successful."
+              } else if (allDiagnostics.hasErrors) {
+                s"Compilation failed with errors:\n$diagnosticsOutput"
+              } else {
+                s"Compilation successful with warnings:\n$diagnosticsOutput"
+              }
             new CallToolResult(createContent(content), false)
           }
           .toMono
@@ -293,17 +299,34 @@ class MetalsMcpServer(
                 lazy val buildTarget = buildTargets.inverseSources(path)
 
                 def inFileErrors = {
-                  val errors = diagnostics.forFile(path).show()
-                  if (errors.isEmpty) None
-                  else Some(s"Found errors in $path:\n$errors")
+                  val fileDiagnostics = diagnostics.forFile(path)
+                  val diagnosticsOutput = fileDiagnostics.show()
+                  if (diagnosticsOutput.isEmpty) None
+                  else {
+                    val prefix = if (fileDiagnostics.hasErrors) {
+                      "Found errors in"
+                    } else {
+                      "Found warnings in"
+                    }
+                    Some(s"$prefix $path:\n$diagnosticsOutput")
+                  }
                 }
 
                 def inModuleErrors =
                   for {
                     bt <- buildTarget
-                    errors <- this.inModuleErrors(bt)
+                    diagnosticsOutput <- this.inModuleErrors(bt)
                   } yield {
-                    s"No errors in the file, but found compile errors in the module:\n$errors"
+                    val moduleDiagnostics =
+                      diagnostics.allDiagnostics.filter { case (path, _) =>
+                        buildTargets.inverseSources(path).contains(bt)
+                      }
+                    val issuesType = if (moduleDiagnostics.hasErrors) {
+                      "errors"
+                    } else {
+                      "warnings"
+                    }
+                    s"No issues in the file, but found compile $issuesType in the module:\n$diagnosticsOutput"
                   }
 
                 def inUpstreamModulesErrors =
@@ -356,7 +379,18 @@ class MetalsMcpServer(
           ) match {
             case Some(target) =>
               val result = inModuleErrors(target.id)
-                .map(errors => s"Found errors in the module:\n$errors")
+                .map { diagnosticsOutput =>
+                  val moduleDiagnostics =
+                    diagnostics.allDiagnostics.filter { case (path, _) =>
+                      buildTargets.inverseSources(path).contains(target.id)
+                    }
+                  val prefix = if (moduleDiagnostics.hasErrors) {
+                    "Found errors in the module"
+                  } else {
+                    "Found warnings in the module"
+                  }
+                  s"$prefix:\n$diagnosticsOutput"
+                }
                 .orElse(upstreamModulesErros(target.id, "module"))
                 .getOrElse("Compilation successful.")
               new CallToolResult(createContent(result), false)
@@ -372,12 +406,15 @@ class MetalsMcpServer(
   }
 
   private def inModuleErrors(buildTarget: BuildTargetIdentifier) = {
-    if (diagnostics.hasCompilationErrors(buildTarget)) {
-      val errors =
-        diagnostics.allDiagnostics.filter { case (path, _) =>
-          buildTargets.inverseSources(path).contains(buildTarget)
-        }
-      Some(errors.show(projectPath))
+    val moduleDiagnostics =
+      diagnostics.allDiagnostics.filter { case (path, _) =>
+        buildTargets.inverseSources(path).contains(buildTarget)
+      }
+
+    if (
+      moduleDiagnostics.nonEmpty && (moduleDiagnostics.hasErrors || moduleDiagnostics.hasWarnings)
+    ) {
+      Some(moduleDiagnostics.show(projectPath))
     } else None
   }
 

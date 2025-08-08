@@ -98,4 +98,74 @@ class McpCompileToolsLspSuite
       _ <- client.shutdown()
     } yield ()
   }
+
+  test("compile-file-with-warnings") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {"scalacOptions": ["-Wunused"]}}
+           |/a/src/main/scala/com/example/Hello.scala
+           |package com.example
+           |
+           |object Hello {
+           |  import scala.collection.mutable.Map // Unused import - will generate warning
+           |  
+           |  def main(args: Array[String]): Unit = {
+           |    println("Hello, World!")
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
+      client <- startMcpServer()
+      // Test compiling file with warnings
+      result1 <- client.compileFile("a/src/main/scala/com/example/Hello.scala")
+      _ = assertNoDiff(
+        result1,
+        s"""|Found warnings in ${workspace}/a/src/main/scala/com/example/Hello.scala:
+            |L3:C34-L3:C37: [Warning]
+            |Unused import
+            |""".stripMargin,
+      )
+
+      _ <- client.shutdown()
+    } yield ()
+  }
+
+  test("compile-full-with-warnings") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {"scalacOptions": ["-Wunused"]}}
+           |/a/src/main/scala/com/example/Hello.scala
+           |package com.example
+           |
+           |object Hello {
+           |  import scala.collection.mutable.Map // Unused import - will generate warning
+           |  
+           |  def main(args: Array[String]): Unit = {
+           |    println("Hello, World!")
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
+      client <- startMcpServer()
+      // Test full project compile with warnings
+      result1 <- client.compileFull()
+      _ = assertNoDiff(
+        result1,
+        """|Compilation successful with warnings:
+           |a/src/main/scala/com/example/Hello.scala L3:C34-L3:C37: [Warning]
+           |Unused import
+           |""".stripMargin,
+      )
+
+      _ <- client.shutdown()
+    } yield ()
+  }
 }

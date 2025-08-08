@@ -74,10 +74,20 @@ object McpPrinter {
     def show(projectRoot: AbsolutePath): String =
       diagnostics
         .collect {
-          case (path, diag) if diag.getSeverity() == DiagnosticSeverity.Error =>
+          case (path, diag)
+              if diag.getSeverity() == DiagnosticSeverity.Error ||
+                diag.getSeverity() == DiagnosticSeverity.Warning =>
             s"${path.toRelative(projectRoot)} ${showDiagnostic(diag)}"
         }
         .mkString("\n")
+
+    def hasErrors: Boolean = diagnostics.exists { case (_, diag) =>
+      diag.getSeverity() == DiagnosticSeverity.Error
+    }
+
+    def hasWarnings: Boolean = diagnostics.exists { case (_, diag) =>
+      diag.getSeverity() == DiagnosticSeverity.Warning
+    }
   }
 
   implicit class XtensionDiagnostics(
@@ -86,15 +96,34 @@ object McpPrinter {
     def show(): String =
       diagnostics
         .collect {
-          case diag if diag.getSeverity() == DiagnosticSeverity.Error =>
+          case diag
+              if diag.getSeverity() == DiagnosticSeverity.Error ||
+                diag.getSeverity() == DiagnosticSeverity.Warning =>
             showDiagnostic(diag)
         }
         .mkString("\n")
+
+    def hasErrors: Boolean = diagnostics.exists(
+      _.getSeverity() == DiagnosticSeverity.Error
+    )
+
+    def hasWarnings: Boolean = diagnostics.exists(
+      _.getSeverity() == DiagnosticSeverity.Warning
+    )
   }
 
   private def showDiagnostic(diagnostic: Diagnostic): String = {
     val startLine = diagnostic.getRange().getStart().getLine()
+    val startColumn = diagnostic.getRange().getStart().getCharacter()
     val endLine = diagnostic.getRange().getEnd().getLine()
-    s"L$startLine-L$endLine:\n${diagnostic.getMessage()}"
+    val endColumn = diagnostic.getRange().getEnd().getCharacter()
+    val severityText = diagnostic.getSeverity() match {
+      case DiagnosticSeverity.Error => "Error"
+      case DiagnosticSeverity.Warning => "Warning"
+      case DiagnosticSeverity.Information => "Info"
+      case DiagnosticSeverity.Hint => "Hint"
+      case _ => "Unknown"
+    }
+    s"L$startLine:C$startColumn-L$endLine:C$endColumn: [$severityText]\n${diagnostic.getMessage()}"
   }
 }
