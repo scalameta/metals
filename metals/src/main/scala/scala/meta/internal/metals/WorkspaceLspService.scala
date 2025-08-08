@@ -1217,6 +1217,10 @@ class WorkspaceLspService(
       case ServerCommands.MetalsPaste(params) =>
         val path = params.originDocument.getUri().toAbsolutePath
         getServiceFor(path).didPaste(params).asJavaObject
+      case ServerCommands.CopyFQNOfSymbol(params) =>
+        getServiceFor(params.getTextDocument.getUri())
+          .copyFQNOfSymbol(params)
+          .asJavaObject
       case actionCommand
           if currentOrHeadOrFallback.allActionCommandsIds(
             actionCommand.getCommand()
