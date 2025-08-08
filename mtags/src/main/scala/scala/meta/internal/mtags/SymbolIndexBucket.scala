@@ -62,9 +62,10 @@ class SymbolIndexBucket(
   }
 
   def addSourceJar(
-      jar: AbsolutePath
+      jar: AbsolutePath,
+      reindex: Boolean = false
   ): List[IndexingResult] = {
-    if (sourceJars.addEntry(jar.toNIO)) {
+    if (reindex || sourceJars.addEntry(jar.toNIO)) {
       FileIO.withJarFileSystem(jar, create = false) { root =>
         try {
           root.listRecursive.toList.flatMap {
@@ -104,7 +105,7 @@ class SymbolIndexBucket(
       sourceDirectory: Option[AbsolutePath],
       isJava: Boolean
   ): Option[IndexingResult] = try {
-    val IndexingResult(path, topLevels, overrides) =
+    val IndexingResult(path, topLevels, overrides, toplevelMembers) =
       indexSource(source, dialect, sourceDirectory, isJava)
     topLevels.foreach { symbol =>
       toplevels.updateWith(symbol) {
@@ -112,7 +113,7 @@ class SymbolIndexBucket(
         case None => Some(Set(source))
       }
     }
-    Some(IndexingResult(path, topLevels, overrides))
+    Some(IndexingResult(path, topLevels, overrides, toplevelMembers))
   } catch {
     case NonFatal(e) =>
       onError(e)
@@ -126,7 +127,8 @@ class SymbolIndexBucket(
       isJava: Boolean
   ): IndexingResult = {
     val uri = source.toIdeallyRelativeURI(sourceDirectory)
-    val (doc, overrides) = mtags.indexWithOverrides(source, dialect)
+    val (doc, overrides, toplevelMembers) =
+      mtags.extendedIndexing(source, dialect)
     val sourceTopLevels =
       doc.occurrences.iterator
         .filterNot(_.symbol.isPackage)
@@ -142,7 +144,7 @@ class SymbolIndexBucket(
           .filter(sym => !isTrivialToplevelSymbol(uri, sym, "scala"))
           .toList
       }
-    IndexingResult(source, topLevels, overrides)
+    IndexingResult(source, topLevels, overrides, toplevelMembers)
   }
 
   // Returns true if symbol is com/foo/Bar# and path is /com/foo/Bar.scala

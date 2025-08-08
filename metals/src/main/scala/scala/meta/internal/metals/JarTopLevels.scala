@@ -16,7 +16,9 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.OverriddenSymbol
 import scala.meta.internal.mtags.ResolvedOverriddenSymbol
+import scala.meta.internal.mtags.ToplevelMember
 import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
+import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.io.AbsolutePath
 
 import org.h2.jdbc.JdbcBatchUpdateException
@@ -27,8 +29,7 @@ import org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException
  *
  * Wrapper around the indexed_jar and toplevel_symbol sql tables.
  */
-final class JarTopLevels(conn: () => Connection)
-    extends JarTypeHierarchy(conn) {
+final class JarTopLevels(conn: () => Connection) extends JarIndexingInfo(conn) {
 
   /**
    * Retrieves top level Scala symbols of a jar from H2
@@ -75,17 +76,20 @@ final class JarTopLevels(conn: () => Connection)
       path: AbsolutePath,
       toplevels: List[(String, AbsolutePath)],
       type_hierarchy: List[(AbsolutePath, String, OverriddenSymbol)],
+      toplevelMembers: Map[AbsolutePath, List[ToplevelMember]] = Map.empty,
   ): Int = {
-    if (toplevels.isEmpty && type_hierarchy.isEmpty) 0
+    if (toplevels.isEmpty && type_hierarchy.isEmpty && toplevelMembers.isEmpty)
+      0
     else {
       // Add jar to H2
-      val jar = addJar(path)
+      addOrUpdateJar(path, "type_hierarchy_indexed")
+      val jar = addOrUpdateJar(path, "toplevel_members_indexed")
       jar
         .map(jar =>
           putToplevels(jar, toplevels) + putTypeHierarchyInfo(
             jar,
             type_hierarchy,
-          )
+          ) + putToplevelMembersInfo(jar, toplevelMembers)
         )
         .getOrElse(0)
     }
@@ -171,7 +175,7 @@ final class JarTopLevels(conn: () => Connection)
 
 }
 
-class JarTypeHierarchy(conn: () => Connection) {
+class JarIndexingInfo(conn: () => Connection) {
 
   def getTypeHierarchy(
       jar: AbsolutePath
@@ -213,30 +217,61 @@ class JarTypeHierarchy(conn: () => Connection) {
       path: AbsolutePath,
       type_hierarchy: List[(AbsolutePath, String, OverriddenSymbol)],
   ): Int = {
-    val jar = addJar(path)
+    val jar = addOrUpdateJar(path, "type_hierarchy_indexed")
     jar.map(putTypeHierarchyInfo(_, type_hierarchy)).getOrElse(0)
   }
 
-  protected def addJar(path: AbsolutePath): Option[Int] = {
-    var jarStmt: PreparedStatement = null
-    try {
-      jarStmt = conn().prepareStatement(
-        s"insert into indexed_jar (md5, type_hierarchy_indexed) values (?, ?)",
-        Statement.RETURN_GENERATED_KEYS,
-      )
-      jarStmt.setString(1, getMD5Digest(path))
-      jarStmt.setBoolean(2, true)
-      jarStmt.executeUpdate()
-      val rs = jarStmt.getGeneratedKeys
-      rs.next()
-      Some(rs.getInt("id"))
-    } catch {
-      case e: JdbcSQLIntegrityConstraintViolationException =>
-        // since we don't synchronize we might end up adding the same jar twice
-        scribe.warn(e)
-        None
-    } finally {
-      if (jarStmt != null) jarStmt.close()
+  protected def addOrUpdateJar(
+      path: AbsolutePath,
+      indexedField: String,
+  ): Option[Int] = {
+    val digest = getMD5Digest(path)
+
+    // First, try to get existing jar
+    val existingJar = conn()
+      .query("select id from indexed_jar where md5=?") { stmt =>
+        stmt.setString(1, digest)
+      } { rs =>
+        rs.getInt(1)
+      }
+      .headOption
+
+    existingJar match {
+      case Some(jarId) =>
+        // Update existing jar
+        var updateStmt: PreparedStatement = null
+        try {
+          updateStmt = conn().prepareStatement(
+            s"update indexed_jar set $indexedField = true where id = ?"
+          )
+          updateStmt.setInt(1, jarId)
+          updateStmt.executeUpdate()
+          Some(jarId)
+        } finally {
+          if (updateStmt != null) updateStmt.close()
+        }
+      case None =>
+        // Insert new jar
+        var insertStmt: PreparedStatement = null
+        try {
+          insertStmt = conn().prepareStatement(
+            s"insert into indexed_jar (md5, $indexedField) values (?, ?)",
+            Statement.RETURN_GENERATED_KEYS,
+          )
+          insertStmt.setString(1, digest)
+          insertStmt.setBoolean(2, true)
+          insertStmt.executeUpdate()
+          val rs = insertStmt.getGeneratedKeys
+          rs.next()
+          Some(rs.getInt("id"))
+        } catch {
+          case e: JdbcSQLIntegrityConstraintViolationException =>
+            // Handle race condition where jar was inserted between check and insert
+            scribe.warn(e)
+            None
+        } finally {
+          if (insertStmt != null) insertStmt.close()
+        }
     }
   }
 
@@ -274,6 +309,96 @@ class JarTypeHierarchy(conn: () => Connection) {
           0
       } finally {
         if (symbolStmt != null) symbolStmt.close()
+      }
+    } else 0
+
+  def getToplevelMembers(
+      jar: AbsolutePath
+  ): Option[Map[AbsolutePath, List[ToplevelMember]]] =
+    try {
+      val fs = getFileSystem(jar)
+      val toplevelMembers = List.newBuilder[(AbsolutePath, ToplevelMember)]
+      conn()
+        .query(
+          """select tm.symbol, tm.start_line, tm.start_character, tm.end_line, tm.end_character, tm.path, tm.kind
+            |from indexed_jar ij
+            |left join toplevel_members tm
+            |on ij.id=tm.jar
+            |where ij.toplevel_members_indexed=true and ij.md5=?""".stripMargin
+        ) { _.setString(1, getMD5Digest(jar)) } { rs =>
+          if (rs.getString(1) != null) {
+            val symbol = rs.getString(1)
+            val startLine = rs.getInt(2)
+            val startChar = rs.getInt(3)
+            val endLine = rs.getInt(4)
+            val endChar = rs.getInt(5)
+            val path = AbsolutePath(fs.getPath(rs.getString(6)))
+            val kind = SymbolInformation.Kind.fromValue(rs.getInt(7))
+            import scala.meta.internal.semanticdb.Range
+            val range = Range(startLine, startChar, endLine, endChar)
+            toplevelMembers += (path -> ToplevelMember(symbol, range, kind))
+          }
+        }
+        .headOption
+        .map(_ =>
+          toplevelMembers.result().groupBy(_._1).map {
+            case (path, toplevelMembers) =>
+              (path, toplevelMembers.map(_._2))
+          }
+        )
+    } catch {
+      case error @ (_: ZipError | _: ZipException) =>
+        scribe.warn(s"corrupted jar $jar: $error")
+        None
+    }
+
+  def addToplevelMembersInfo(
+      path: AbsolutePath,
+      toplevelMembers: Map[AbsolutePath, List[ToplevelMember]],
+  ): Int = {
+    val jar = addOrUpdateJar(path, "toplevel_members_indexed")
+    jar.map(putToplevelMembersInfo(_, toplevelMembers)).getOrElse(0)
+  }
+
+  protected def putToplevelMembersInfo(
+      jar: Int,
+      toplevelMemberMap: Map[AbsolutePath, List[ToplevelMember]],
+  ): Int =
+    if (toplevelMemberMap.nonEmpty) {
+      // Add type members for jar to H2
+      var toplevelMemberStmt: PreparedStatement = null
+      try {
+        toplevelMemberStmt = conn().prepareStatement(
+          s"insert into toplevel_members (symbol, start_line, start_character, end_line, end_character, path, kind, jar) values (?, ?, ?, ?, ?, ?, ?, ?)"
+        )
+
+        toplevelMemberMap.foreach { case (path, toplevelMembers) =>
+          toplevelMembers.foreach { toplevelMember =>
+            toplevelMemberStmt.setString(1, toplevelMember.symbol)
+            toplevelMemberStmt.setInt(2, toplevelMember.range.startLine)
+            toplevelMemberStmt.setInt(3, toplevelMember.range.startCharacter)
+            toplevelMemberStmt.setInt(4, toplevelMember.range.endLine)
+            toplevelMemberStmt.setInt(5, toplevelMember.range.endCharacter)
+            toplevelMemberStmt.setString(
+              6,
+              path.toString,
+            )
+            toplevelMemberStmt.setInt(7, toplevelMember.kind.value)
+            toplevelMemberStmt.setInt(8, jar)
+            toplevelMemberStmt.addBatch()
+          }
+        }
+        // Return number of rows inserted
+        toplevelMemberStmt.executeBatch().sum
+      } catch {
+        case e: JdbcBatchUpdateException =>
+          scribe.error(s"failed to insert toplevel members", e)
+          0
+        case e: JdbcSQLIntegrityConstraintViolationException =>
+          scribe.error(s"failed to insert toplevel members", e)
+          0
+      } finally {
+        if (toplevelMemberStmt != null) toplevelMemberStmt.close()
       }
     } else 0
 

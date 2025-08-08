@@ -17,6 +17,7 @@ trait MtagsIndexer {
   def input: Input.VirtualFile
   // should only be called after `index`/`indexRoot`
   def overrides(): MtagsIndexer.AllOverrides = Nil
+  def toplevelMembers(): MtagsIndexer.AllToplevelMembers = Nil
   def index(): s.TextDocument = {
     indexRoot()
     s.TextDocument(
@@ -177,4 +178,5 @@ trait MtagsIndexer {
 
 object MtagsIndexer {
   type AllOverrides = List[(String, List[OverriddenSymbol])]
+  type AllToplevelMembers = List[ToplevelMember]
 }

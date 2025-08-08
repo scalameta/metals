@@ -7,7 +7,9 @@ import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
 
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.mtags.ToplevelMember
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -44,11 +46,20 @@ final class WorkspaceSymbolProvider(
   var inDependencies: ClasspathSearch =
     ClasspathSearch.empty
 
+  val topLevelMembers: TrieMap[AbsolutePath, Seq[ToplevelMember]] =
+    TrieMap.empty[AbsolutePath, Seq[ToplevelMember]]
+
   def search(
       query: String,
       fileInFocus: Option[AbsolutePath],
   ): Seq[l.SymbolInformation] = {
     search(query, () => (), fileInFocus)
+  }
+
+  def addToplevelMembers(
+      toplevelMembers: Map[AbsolutePath, Seq[ToplevelMember]]
+  ): Unit = {
+    topLevelMembers ++= toplevelMembers
   }
 
   def search(
@@ -92,8 +103,9 @@ final class WorkspaceSymbolProvider(
       target: Option[BuildTargetIdentifier],
   ): (SymbolSearch.Result, Int) = {
     val workspaceCount = workspaceSearch(query, visitor, target)
+    val typeCount = workspaceTopelevelSearch(query, visitor)
     val (res, inDepsCount) = inDependencies.search(query, visitor)
-    (res, workspaceCount + inDepsCount)
+    (res, workspaceCount + inDepsCount + typeCount)
   }
 
   def searchMethods(
@@ -276,6 +288,25 @@ final class WorkspaceSymbolProvider(
         symbol.kind,
         symbol.range,
       )
+  }
+
+  private def workspaceTopelevelSearch(
+      query: WorkspaceSymbolQuery,
+      visitor: SymbolSearchVisitor,
+  ): Int = {
+    val all = for {
+      (path, symbols) <- topLevelMembers.iterator
+      symbol <- symbols
+      if query.matches(symbol.symbol)
+    } yield {
+      visitor.visitWorkspaceSymbol(
+        path.toNIO,
+        symbol.symbol,
+        symbol.kind.toLsp,
+        symbol.range.toLsp,
+      )
+    }
+    all.length
   }
 
   private def workspaceSearch(
