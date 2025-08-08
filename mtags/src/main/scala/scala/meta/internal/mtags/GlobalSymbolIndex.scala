@@ -87,7 +87,8 @@ trait GlobalSymbolIndex {
    */
   def addSourceJar(
       jar: AbsolutePath,
-      dialect: Dialect
+      dialect: Dialect,
+      reindex: Boolean = false
   ): List[IndexingResult]
 
   /**
@@ -126,5 +127,6 @@ case class SymbolDefinition(
 case class IndexingResult(
     path: AbsolutePath,
     topLevels: List[String],
-    overrides: List[(String, List[OverriddenSymbol])]
+    overrides: List[(String, List[OverriddenSymbol])],
+    toplevelMembers: List[ToplevelMember]
 )

@@ -31,9 +31,10 @@ class DelegatingGlobalSymbolIndex(
   }
   def addSourceJar(
       jar: AbsolutePath,
-      dialect: Dialect
+      dialect: Dialect,
+      reindex: Boolean = false
   ): List[mtags.IndexingResult] = {
-    underlying.addSourceJar(jar, dialect)
+    underlying.addSourceJar(jar, dialect, reindex)
   }
 
   def addSourceDirectory(
