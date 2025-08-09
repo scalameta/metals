@@ -6,6 +6,7 @@ import scala.concurrent.Future
 
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.ScalafixProvider
@@ -25,7 +26,7 @@ class ScalafixLlmRuleProvider(
     metalsClient: MetalsLanguageClient,
     buildTargets: BuildTargets,
 )(implicit ec: ExecutionContext) {
-  private val rulesDirectory = workspace.resolve(".metals/rules")
+  private val rulesDirectory = workspace.resolve(Directories.rules)
 
   private def layout(
       ruleName: String,
@@ -68,7 +69,6 @@ class ScalafixLlmRuleProvider(
     scribe.debug(s"Wrote the rule to $rulesFile")
     rulesFile.writeText(ruleContents)
 
-    // TODO does semantic rule need a different file?
     val metadataFile =
       ruleDir.resolve(s"resources/META-INF/services/scalafix.v1.Rule")
     metadataFile.writeText(s"$ruleNameToUse")
@@ -183,4 +183,17 @@ class ScalafixLlmRuleProvider(
     Future.sequence(all.toList).map(_ => ())
   }
 
+}
+
+object ScalafixLlmRuleProvider {
+  // Curated list of rules that LLMs can use
+  def curatedRules : Map[String, String] = {
+    Map(
+      "ExplicitResultTypes" -> "Inserts type annotations for inferred public members.",
+      "OrganizeImports" -> "Organize import statements, used for source.organizeImports code action",
+      "RemoveUnused" -> "Removes unused imports and terms that reported by the compiler under -Wunused",
+      "ProcedureSyntax" -> "Replaces deprecated Scala 2.x procedure syntax with explicit ': Unit ='",
+      "RedundantSyntax" -> "Removes redundant syntax such as `final` modifiers on an object",
+    )
+  }
 }

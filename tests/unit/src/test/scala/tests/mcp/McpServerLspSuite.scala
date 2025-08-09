@@ -157,6 +157,37 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
            |}
            |""".stripMargin,
       )
+      // Test listing scalafix rules after creating one
+      rules <- client.listScalafixRules()
+      _ = assert(
+        rules.contains("ReplaceJohnWithJohnatan"),
+        s"Expected rules to contain ReplaceJohnWithJohnatan, got: $rules",
+      )
+      _ <- client.shutdown()
+    } yield ()
+  }
+
+  test("list-scalafix-rules") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/example/Hello.scala
+           |package com.example
+           |
+           |object Hello { def main(args: Array[String]): Unit = println("Hello") }
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
+      client <- startMcpServer()
+      // Test with no rules present
+      noRulesResult <- client.listScalafixRules()
+      _ = assertNoDiff(
+        noRulesResult,
+        McpMessages.ListScalafixRules.noRulesFound,
+      )
       _ <- client.shutdown()
     } yield ()
   }
