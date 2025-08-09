@@ -93,4 +93,9 @@ class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext) {
     params.put("ruleImplementation", ruleImplementation)
     callTool("run-scalafix-rule", params).map(_.mkString)
   }
+
+  def listScalafixRules(): Future[String] = {
+    val params = objectMapper.createObjectNode()
+    callTool("list-scalafix-rules", params).map(_.mkString)
+  }
 }

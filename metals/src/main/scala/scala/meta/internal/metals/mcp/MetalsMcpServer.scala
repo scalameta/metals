@@ -21,6 +21,7 @@ import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.ConnectionProvider
 import scala.meta.internal.metals.Diagnostics
+import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -130,6 +131,7 @@ class MetalsMcpServer(
     asyncServer.addTool(createListModulesTool()).subscribe()
     asyncServer.addTool(createFormatTool()).subscribe()
     asyncServer.addTool(createRunScalafixRuleTool()).subscribe()
+    asyncServer.addTool(createListScalafixRulesTool()).subscribe()
 
     // Log server initialization
     asyncServer.loggingNotification(
@@ -907,11 +909,11 @@ class MetalsMcpServer(
             )
             .toMono
         }
-      }
+      },
     )
   }
 
-  /// TODO discover old rules
+  // TODO add test for scalafix rules, return stdout
   private def createRunScalafixRuleTool(): AsyncToolSpecification = {
     val schema =
       """{
@@ -978,6 +980,50 @@ class MetalsMcpServer(
             )
         }
         resultingFuture.toMono
+      },
+    )
+  }
+
+  // ToDO add too to run scalafix rule
+  private def createListScalafixRulesTool(): AsyncToolSpecification = {
+    val schema =
+      """{
+        |  "type": "object",
+        |  "properties": { }
+        |} 
+        |""".stripMargin
+    new AsyncToolSpecification(
+      new Tool(
+        "list-scalafix-rules",
+        "List currently available scalafix rules from .metals/rules directory. They were previously created by the `run-scalafix-rule` tool.",
+        schema,
+      ),
+      withErrorHandling { (_, _) =>
+        Future {
+          val rulesDir = projectPath.resolve(Directories.rules)
+          val defaultRules = ScalafixLlmRuleProvider.curatedRules
+          val rules = if (rulesDir.exists && rulesDir.isDirectory) {
+            rulesDir.list
+              .filter(_.isDirectory)
+              .map { ruleDir =>
+                val ruleName = ruleDir.filename
+                val readmeFile = ruleDir.resolve("README.md")
+                val description = if (readmeFile.exists) {
+                  Try(readmeFile.readText.trim).getOrElse(ruleName)
+                } else {
+                  ruleName
+                }
+                ruleName -> description
+              }
+              .toSeq
+              .toMap
+          } else Nil
+          val allRules = defaultRules ++ rules
+          val content = allRules.map { case (ruleName, description) =>
+            s"- $ruleName: $description"
+          }
+          new CallToolResult(createContent( s"Available scalafix rules:\n${content.mkString("\n")}"), false)
+        }.toMono
       },
     )
   }
