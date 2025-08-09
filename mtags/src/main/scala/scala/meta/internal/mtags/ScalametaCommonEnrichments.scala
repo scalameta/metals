@@ -352,7 +352,19 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     }
 
     def listRecursive: Generator[AbsolutePath] = {
-      if (path.isDirectory) Files.walk(path.toNIO).asScala.map(AbsolutePath(_))
+      def loop(path: AbsolutePath): Generator[AbsolutePath] = {
+        Files.list(path.toNIO).asScala.flatMap { file =>
+          try {
+            // isDirectory might throw if the file was removed after listing
+            if (Files.isDirectory(file)) loop(AbsolutePath(file))
+            else Generator(AbsolutePath(file))
+          } catch {
+            case NonFatal(_) =>
+              Generator()
+          }
+        }
+      }
+      if (path.isDirectory) loop(path)
       else if (path.isFile) Generator(path)
       else Generator()
     }
