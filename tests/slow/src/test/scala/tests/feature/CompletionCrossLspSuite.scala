@@ -44,7 +44,7 @@ class CompletionCrossLspSuite
         """|DefaultSerializable - scala.collection.generic
            |NotSerializableException - java.io
            |Serializable  a
-           |Serializable - java.io
+           |Serializable - scala.package = Serializable
            |SerializablePermission - java.io
            |""".stripMargin,
       )

@@ -76,13 +76,14 @@ final class OnDemandSymbolIndex(
   // all non-trivial toplevel Scala symbols.
   override def addSourceJar(
       jar: AbsolutePath,
-      dialect: Dialect
+      dialect: Dialect,
+      reindex: Boolean = false
   ): List[IndexingResult] =
     tryRun(
       jar,
       List.empty, {
         try {
-          getOrCreateBucket(dialect).addSourceJar(jar)
+          getOrCreateBucket(dialect).addSourceJar(jar, reindex)
         } catch {
           case e: ZipError =>
             onError(new IndexingExceptions.InvalidJarException(jar, e))

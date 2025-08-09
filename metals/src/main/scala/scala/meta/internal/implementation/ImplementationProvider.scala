@@ -85,7 +85,7 @@ final class ImplementationProvider(
   }
 
   def addTypeHierarchy(results: List[IndexingResult]): Unit = for {
-    IndexingResult(path, _, overrides) <- results
+    IndexingResult(path, _, overrides, _) <- results
     (overridesSymbol, overriddenSymbols) <- overrides
     overridden <- overriddenSymbols
   } addTypeHierarchyElement(path, overridesSymbol, overridden)

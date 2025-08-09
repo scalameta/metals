@@ -49,11 +49,15 @@ final class Mtags(implicit rc: ReportContext) {
     }
   }
 
-  def indexWithOverrides(
+  def extendedIndexing(
       path: AbsolutePath,
       dialect: Dialect = dialects.Scala213,
       includeMembers: Boolean = false
-  ): (TextDocument, MtagsIndexer.AllOverrides) = {
+  ): (
+      TextDocument,
+      MtagsIndexer.AllOverrides,
+      MtagsIndexer.AllToplevelMembers
+  ) = {
     val input = path.toInput
     val language = input.toLanguage
     if (language.isJava || language.isScala) {
@@ -74,8 +78,9 @@ final class Mtags(implicit rc: ReportContext) {
           mtags.index()
         )
       val overrides = mtags.overrides()
-      (doc, overrides)
-    } else (TextDocument(), Nil)
+      val toplevelMembers = mtags.toplevelMembers()
+      (doc, overrides, toplevelMembers)
+    } else (TextDocument(), Nil, Nil)
   }
 
   def topLevelSymbols(
@@ -163,14 +168,18 @@ object Mtags {
     new Mtags().toplevels(path, dialect)
   }
 
-  def indexWithOverrides(
+  def extendedIndexing(
       path: AbsolutePath,
       dialect: Dialect = dialects.Scala213,
       includeMembers: Boolean = false
   )(implicit
       rc: ReportContext = new EmptyReportContext()
-  ): (TextDocument, MtagsIndexer.AllOverrides) = {
-    new Mtags().indexWithOverrides(path, dialect, includeMembers)
+  ): (
+      TextDocument,
+      MtagsIndexer.AllOverrides,
+      MtagsIndexer.AllToplevelMembers
+  ) = {
+    new Mtags().extendedIndexing(path, dialect, includeMembers)
   }
 
   def topLevelSymbols(
