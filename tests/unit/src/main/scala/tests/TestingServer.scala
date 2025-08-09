@@ -833,6 +833,10 @@ final case class TestingServer(
     )
   }
 
+  def resolveStacktraceLocation(stacktraceLine: String): Option[l.Location] = {
+    server.stacktraceAnalyzer.resolveStacktraceLocationCommand(stacktraceLine)
+  }
+
   def exportEvaluation(filename: String): Option[String] = {
     val path = toPath(filename)
     Await.result(server.worksheetProvider.copyWorksheetOutput(path), 5.minutes)
