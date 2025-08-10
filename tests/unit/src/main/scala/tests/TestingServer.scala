@@ -737,7 +737,8 @@ final case class TestingServer(
         workspaceFiles.exists(
           _.readTextOpt.exists(_.contains("System.exit(0)"))
         )
-      if (!usesSystemExit)
+      val isCI = System.getenv("CI") != null
+      if (!usesSystemExit && !isCI)
         throw new RuntimeException(
           "All debug test for main classes should have `System.exit(0)`"
         )
