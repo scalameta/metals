@@ -22,7 +22,9 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
       filename = params.uri().toString(),
       cursor = cursor(params.offset(), params.text())
     )
+
     val pos = unit.position(params.offset())
+
     (for {
       _ <- safeTypedTreeAt(pos)
       enclosingApply = new EnclosingApply(pos).find(unit.body)
@@ -46,17 +48,24 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
       traverse(tree)
       last
     }
-    def isValidQualifier(qual: Tree): Boolean =
-      !qual.pos.includes(pos) && qual.pos.isRange && (qual match {
-        // Ignore synthetic TupleN constructors from tuple syntax.
+    def isValidQualifier(qual: Tree): Boolean = {
+      val includesPos = qual.pos.includes(pos)
+      val isRange = qual.pos.isRange
+      val isTuple = qual match {
         case Select(ident @ Ident(TermName("scala")), TermName(tuple))
             if tuple.startsWith("Tuple") && ident.pos == qual.pos =>
-          false
-        case _ =>
           true
-      })
+        case _ =>
+          false
+      }
+      val isSuperConstructorCall = qual match {
+        case Select(_: Super, termNames.CONSTRUCTOR) =>
+          true
+        case _ => false
+      }
+      ((!includesPos && isRange) || (includesPos && isSuperConstructorCall)) && !isTuple
+    }
     override def traverse(tree: Tree): Unit = {
-
       // Position of annotation tree is outside of `tree.pos` so must be checked separately
       val annotationTrees = tree match {
         case annotatable: MemberDef => annotatable.mods.annotations
