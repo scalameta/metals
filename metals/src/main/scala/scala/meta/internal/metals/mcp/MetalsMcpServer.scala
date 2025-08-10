@@ -21,7 +21,6 @@ import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.ConnectionProvider
 import scala.meta.internal.metals.Diagnostics
-import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -130,6 +129,7 @@ class MetalsMcpServer(
     asyncServer.addTool(createFindDepTool()).subscribe()
     asyncServer.addTool(createListModulesTool()).subscribe()
     asyncServer.addTool(createFormatTool()).subscribe()
+    asyncServer.addTool(createGenerateScalafixRuleTool()).subscribe()
     asyncServer.addTool(createRunScalafixRuleTool()).subscribe()
     asyncServer.addTool(createListScalafixRulesTool()).subscribe()
 
@@ -913,8 +913,7 @@ class MetalsMcpServer(
     )
   }
 
-  // TODO add test for scalafix rules, return stdout
-  private def createRunScalafixRuleTool(): AsyncToolSpecification = {
+  private def createGenerateScalafixRuleTool(): AsyncToolSpecification = {
     val schema =
       """{
         |  "type": "object",
@@ -941,7 +940,7 @@ class MetalsMcpServer(
         |""".stripMargin
     new AsyncToolSpecification(
       new Tool(
-        "run-scalafix-rule",
+        "generate-scalafix-rule",
         "Create and run a scalafix rule on the current project.",
         schema,
       ),
@@ -967,7 +966,9 @@ class MetalsMcpServer(
           case Success(Right(future)) =>
             future.map { _ =>
               new CallToolResult(
-                createContent(s"Scalafix rule $ruleName run successfully"),
+                createContent(
+                  s"Created and ran Scalafix rule $ruleName successfully"
+                ),
                 false,
               )
             }
@@ -984,7 +985,53 @@ class MetalsMcpServer(
     )
   }
 
-  // ToDO add too to run scalafix rule
+  private def createRunScalafixRuleTool(): AsyncToolSpecification = {
+    val schema =
+      """{
+        |  "type": "object",
+        |  "properties": {
+        |    "ruleName": {
+        |      "type": "string",
+        |      "description": "The name of the scalafix rule to run. Should be one of the rules from the list-scalafix-rules tool output."
+        |    },
+        |    "fileToRunOn": {
+        |      "type": "string",
+        |      "description": "File to run it all, if empty will run on all files"
+        |    }
+        |  },
+        |  "required": ["ruleName"]
+        |} 
+        |""".stripMargin
+    new AsyncToolSpecification(
+      new Tool(
+        "run-scalafix-rule",
+        "Run a specific previously existing Scalafix rule (from curated rules or previously created rules) on the focused file or all files",
+        schema,
+      ),
+      withErrorHandling { (_, arguments) =>
+        val ruleName = arguments.getAs[String]("ruleName")
+        val path = arguments.getPathOpt("fileToRunOn")
+        val runResult = path match {
+          case Some(path) =>
+            scalafixLlmRuleProvider.runScalafixRule(ruleName, path)
+          case None =>
+            scalafixLlmRuleProvider.runScalafixRuleForAllTargets(ruleName)
+        }
+        runResult
+          .map { _ =>
+            new CallToolResult(
+              createContent("Scalafix rule run successfully"),
+              true,
+            )
+          }
+          .recover { case error =>
+            new CallToolResult(createContent(error.getMessage), true)
+          }
+          .toMono
+      },
+    )
+  }
+
   private def createListScalafixRulesTool(): AsyncToolSpecification = {
     val schema =
       """{
@@ -1000,29 +1047,17 @@ class MetalsMcpServer(
       ),
       withErrorHandling { (_, _) =>
         Future {
-          val rulesDir = projectPath.resolve(Directories.rules)
-          val defaultRules = ScalafixLlmRuleProvider.curatedRules
-          val rules = if (rulesDir.exists && rulesDir.isDirectory) {
-            rulesDir.list
-              .filter(_.isDirectory)
-              .map { ruleDir =>
-                val ruleName = ruleDir.filename
-                val readmeFile = ruleDir.resolve("README.md")
-                val description = if (readmeFile.exists) {
-                  Try(readmeFile.readText.trim).getOrElse(ruleName)
-                } else {
-                  ruleName
-                }
-                ruleName -> description
-              }
-              .toSeq
-              .toMap
-          } else Nil
-          val allRules = defaultRules ++ rules
-          val content = allRules.map { case (ruleName, description) =>
-            s"- $ruleName: $description"
-          }
-          new CallToolResult(createContent( s"Available scalafix rules:\n${content.mkString("\n")}"), false)
+          val allRules = scalafixLlmRuleProvider.allRules
+          val content =
+            allRules.toList.sortBy(_._1).map { case (ruleName, description) =>
+              s"- $ruleName: $description"
+            }
+          new CallToolResult(
+            createContent(
+              s"Available scalafix rules:\n${content.mkString("\n")}"
+            ),
+            false,
+          )
         }.toMono
       },
     )
@@ -1094,10 +1129,13 @@ class MetalsMcpServer(
     def getOptNoEmptyString(key: String): Option[String] =
       getOptAs[String](key).map(_.trim).filter(_.nonEmpty)
 
-    def getFileInFocusOpt: Option[AbsolutePath] =
-      getOptAs[String]("fileInFocus")
+    def getPathOpt(key: String): Option[AbsolutePath] =
+      getOptAs[String](key)
         .filter(_.nonEmpty)
         .map(path => AbsolutePath(Path.of(path))(projectPath))
+
+    def getFileInFocusOpt: Option[AbsolutePath] =
+      getPathOpt("fileInFocus")
         .orElse { focusedDocument() }
 
     def getFileInFocus: AbsolutePath =

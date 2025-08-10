@@ -261,6 +261,7 @@ class ProjectMetalsLspService(
     () => userConfig,
     languageClient,
     buildTargets,
+    scalaVersionSelector,
   )
 
   def startMcpServer(): Future[Unit] =

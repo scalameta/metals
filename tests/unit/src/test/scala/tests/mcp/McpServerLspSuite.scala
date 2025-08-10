@@ -108,23 +108,34 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
 
   test("run-scalafix-rule") {
     cleanWorkspace()
+    val initial =
+      """|package com.example
+         |
+         |object Hello { 
+         |  val str = "John"
+         |  def main(args: Array[String]): Unit = println(str)
+         |}
+         |""".stripMargin
+    val expectedResult =
+      """|package com.example
+         |
+         |object Hello { 
+         |  val str = "Johnatan"
+         |  def main(args: Array[String]): Unit = println(str)
+         |}
+         |""".stripMargin
     for {
       _ <- initialize(
         s"""
            |/metals.json
            |{"a": {}}
            |/a/src/main/scala/com/example/Hello.scala
-           |package com.example
-           |
-           |object Hello { 
-           |  val str = "John"
-           |  def main(args: Array[String]): Unit = println(str)
-           |}
+           |$initial
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
       client <- startMcpServer()
-      result <- client.runScalafixRule(
+      result <- client.generateScalafixRule(
         "ReplaceJohnWithJohnatan",
         """|
            |package fix
@@ -143,25 +154,48 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
            |}
            |
            |""".stripMargin,
+        "Replaces John with Johnatan",
       )
-      _ = println(result)
+      _ = assertNoDiff(
+        result,
+        """|Created and ran Scalafix rule ReplaceJohnWithJohnatan successfully
+           |""".stripMargin,
+      )
       _ = assertNoDiff(
         server.buffers
           .get(workspace.resolve("a/src/main/scala/com/example/Hello.scala"))
           .get,
-        """|package com.example
-           |
-           |object Hello { 
-           |  val str = "Johnatan"
-           |  def main(args: Array[String]): Unit = println(str)
-           |}
-           |""".stripMargin,
+        expectedResult,
       )
       // Test listing scalafix rules after creating one
       rules <- client.listScalafixRules()
-      _ = assert(
-        rules.contains("ReplaceJohnWithJohnatan"),
-        s"Expected rules to contain ReplaceJohnWithJohnatan, got: $rules",
+      _ = assertNoDiff(
+        rules,
+        """|Available scalafix rules:
+           |- ExplicitResultTypes: Inserts type annotations for inferred public members.
+           |- OrganizeImports: Organize import statements, used for source.organizeImports code action
+           |- ProcedureSyntax: Replaces deprecated Scala 2.x procedure syntax with explicit ': Unit ='
+           |- RedundantSyntax: Removes redundant syntax such as `final` modifiers on an object
+           |- RemoveUnused: Removes unused imports and terms that reported by the compiler under -Wunused
+           |- ReplaceJohnWithJohnatan: Replaces John with Johnatan
+           |""".stripMargin,
+      )
+      _ <- server.didChange("a/src/main/scala/com/example/Hello.scala") {
+        _.replace("Johnatan", "John")
+      }
+      _ <- server.didSave("a/src/main/scala/com/example/Hello.scala")
+      _ = assertNoDiff(
+        server.buffers
+          .get(workspace.resolve("a/src/main/scala/com/example/Hello.scala"))
+          .get,
+        initial,
+      )
+      _ <- client.runScalafixRule("ReplaceJohnWithJohnatan")
+      _ = assertNoDiff(
+        server.buffers
+          .get(workspace.resolve("a/src/main/scala/com/example/Hello.scala"))
+          .get,
+        expectedResult,
       )
       _ <- client.shutdown()
     } yield ()
@@ -186,7 +220,13 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
       noRulesResult <- client.listScalafixRules()
       _ = assertNoDiff(
         noRulesResult,
-        McpMessages.ListScalafixRules.noRulesFound,
+        """|Available scalafix rules:
+           |- ExplicitResultTypes: Inserts type annotations for inferred public members.
+           |- OrganizeImports: Organize import statements, used for source.organizeImports code action
+           |- ProcedureSyntax: Replaces deprecated Scala 2.x procedure syntax with explicit ': Unit ='
+           |- RedundantSyntax: Removes redundant syntax such as `final` modifiers on an object
+           |- RemoveUnused: Removes unused imports and terms that reported by the compiler under -Wunused
+           |""".stripMargin,
       )
       _ <- client.shutdown()
     } yield ()
