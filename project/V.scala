@@ -6,7 +6,7 @@ object V {
   val scala212 = "2.12.20"
   val scala213 = "2.13.16"
   val scala3 = "3.3.6"
-  val scala3ForSBT2 = "3.6.4"
+  val scala3ForSBT2 = "3.7.2"
   val latestScala3Next = "3.7.2"
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
@@ -44,7 +44,7 @@ object V {
   val scalameta = "4.13.9"
   val scribe = "3.17.0"
   val qdox = "2.2.0"
-
+  val sbt2Version = "2.0.0-RC4"
   val guava = "com.google.guava" % "guava" % "33.4.8-jre"
   val lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
   val dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV

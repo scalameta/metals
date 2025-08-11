@@ -223,7 +223,7 @@ class SbtServerSuite
     for {
       _ <- initialize(
         s"""|/project/build.properties
-            |sbt.version=2.0.0-M4
+            |sbt.version=${V.sbt2Version}
             |/build.sbt
             |
             |scalaVersion := "$scalaVersion"
