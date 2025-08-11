@@ -1,5 +1,6 @@
 import scala.meta.internal.sbtmetals.BuildInfo
 
+@transient
 val checkSemanticdb =
   taskKey[Unit]("Checks that semanticdb is correctly configured")
 
