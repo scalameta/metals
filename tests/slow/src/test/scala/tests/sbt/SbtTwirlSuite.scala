@@ -1,8 +1,10 @@
 package tests.sbt
 
+import tests.CompletionsAssertions
+
 import scala.meta.internal.metals.{BuildInfo => V}
 
-class SbtTwirlSuite extends SbtServerSuite {
+class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
 
   test("twirl-hover") {
     cleanWorkspace()
@@ -112,6 +114,36 @@ class SbtTwirlSuite extends SbtServerSuite {
     } yield ()
   }
 
+  test("twirl-completion") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|src/main/twirl/example.scala.html
+           |@(name: String)
+           |<h1>Hello @name.len</h1>
+           |/project/plugins.sbt
+           |addSbtPlugin("org.playframework.twirl" % "sbt-twirl" % "2.0.9")
+           |/build.sbt
+           |enablePlugins(SbtTwirl)
+           |Compile / unmanagedSourceDirectories := Seq(
+           |  (baseDirectory.value / "src" / "main" / "scala"),
+           |  (baseDirectory.value / "src" / "main" / "scala-3"),
+           |  (baseDirectory.value / "src" / "main" / "java"),
+           |  (baseDirectory.value / "src" / "main" / "twirl")
+           |)
+           |""".stripMargin
+      )
+      _ <- assertCompletion(
+        "name.len@@",
+        // Assert both JDK and scala-library are indexed.
+        """|Properties - java.util
+           |Properties - scala.util
+           |""".stripMargin,
+        filter = _.startsWith("Properties -"),
+      )
+    } yield ()
+  }
+
   // Fails now
   test("single-variable-hover") {
     cleanWorkspace()
@@ -140,7 +172,7 @@ class SbtTwirlSuite extends SbtServerSuite {
       _ <- server.assertHover(
         "src/main/twirl/example.scala.html",
         """|@(x: String, y: Int)
-           |<p>@(@@x.length) @y</p>
+           |<p>@(x.length) @y</p>
            |""".stripMargin,
         """|```scala
            |x: String

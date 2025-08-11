@@ -253,11 +253,7 @@ final class BuildTargets private (
       source: AbsolutePath
   ): Option[BuildTargetIdentifier] = {
 
-    if (source.toNIO.toString.isTwirlTemplate) {
-      return inverseSources(
-        source.parent.resolveSibling(_ => "scala").resolve("main.scala")
-      )
-    }
+    if (source.toNIO.toString.isTwirlTemplate) {}
 
     val buildTargets = sourceBuildTargets(source)
     val orSbtBuildTarget =

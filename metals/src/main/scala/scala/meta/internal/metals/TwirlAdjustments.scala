@@ -7,8 +7,8 @@ import scala.io.Codec
 import scala.meta.inputs.Input.VirtualFile
 
 import org.eclipse.lsp4j.Position
-import play.twirl.compiler.TwirlCompiler
 import play.twirl.compiler.GeneratedSourceVirtual
+import play.twirl.compiler.TwirlCompiler
 
 /**
  * A utility object for adjusting and mapping positions between Twirl templates and their compiled Scala output.
@@ -37,20 +37,28 @@ object TwirlAdjustments {
     }
   }
 
+  private def isPlayProject(implicit file: VirtualFile) =
+    file.path.contains("views/")
+
   /**
    * Probably not the best solution, as ideally one should also be able to take configuration from
    * the client's build.sbt files as TwirlKeys.templateImports. But this works nonetheless.
    */
   private def playImports(
       originalImports: Seq[String]
-  )(implicit file: VirtualFile): Seq[String] =
-    if (file.path.contains("views/"))
+  )(implicit file: VirtualFile): Seq[String] = {
+    if (isPlayProject)
       originalImports ++ Seq(
-        "import models._", "import controllers._", "import play.api.i18n._",
-        "import views.html._", "import play.api.templates.PlayMagic._",
-        "import play.api.mvc._", "import play.api.data._",
+        "models._", "controllers._", "play.api.i18n._", "views.html._",
+        "play.api.templates.PlayMagic._", "play.api.mvc._", "play.api.data._",
       )
     else originalImports
+  }
+
+  private def playDI(implicit file: VirtualFile): Seq[String] = {
+    if (isPlayProject) Seq("@javax.inject.Inject()")
+    else Nil
+  }
 
   /**
    * Compiles an in-memory Twirl template into a compiled representation using the Twirl compiler.
@@ -74,7 +82,7 @@ object TwirlAdjustments {
         formatterType = "play.twirl.api.HtmlFormat.Appendable",
         additionalImports =
           playImports(TwirlCompiler.defaultImports(scalaVersion)),
-        constructorAnnotations = Nil,
+        constructorAnnotations = playDI,
         codec = Codec(
           scala.util.Properties.sourceEncoding
         ),
