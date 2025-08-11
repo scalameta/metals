@@ -14,8 +14,8 @@ import java.{util => ju}
 import scala.collection.Seq
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
-import scala.reflect.internal.util.RangePosition
 import scala.reflect.internal.FatalError
+import scala.reflect.internal.util.RangePosition
 import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
@@ -50,6 +50,7 @@ import scala.meta.pc.{PcSymbolInformation => IPcSymbolInformation}
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
+import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.Position
@@ -188,15 +189,15 @@ case class ScalaPresentationCompiler(
             val lineEnd = source.offsetToLine(range.end)
             val characterEnd = range.end - source.lineToOffset(lineEnd)
 
-            Some(
-              new Diagnostic(
-                new Range(
-                  new Position(lineStart, characterStart),
-                  new Position(lineEnd, characterEnd)
-                ),
-                info.msg
-              )
+            val diagnostic = new Diagnostic(
+              new Range(
+                new Position(lineStart, characterStart),
+                new Position(lineEnd, characterEnd)
+              ),
+              info.msg
             )
+            diagnostic.setSeverity(DiagnosticSeverity.Error)
+            Some(diagnostic)
           case _ => None
         }
       )
