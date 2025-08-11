@@ -9,7 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
-def localSnapshotVersion = "1.6.1-SNAPSHOT"
+def localSnapshotVersion = "1.6.3-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 
@@ -54,8 +54,6 @@ inThisBuild(
     homepage := Some(url("https://github.com/scalameta/metals")),
     developers := metalsDevs,
     testFrameworks := List(),
-    resolvers ++= Resolver.sonatypeOssRepos("public"),
-    resolvers ++= Resolver.sonatypeOssRepos("snapshot"),
     dependencyOverrides += V.guava,
     // faster publishLocal:
     packageDoc / publishArtifact := sys.env.contains("CI"),
@@ -415,7 +413,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.16.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "11.10.3",
+      "org.flywaydb" % "flyway-core" % "11.11.0",
       "com.h2database" % "h2" % "2.3.232",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
@@ -461,7 +459,7 @@ lazy val metals = project
       // For test frameworks
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       // For MCP
-      "io.modelcontextprotocol.sdk" % "mcp" % "0.10.0",
+      "io.modelcontextprotocol.sdk" % "mcp" % "0.11.1",
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.19.2",
       "io.undertow" % "undertow-servlet" % "2.3.12.Final",
     ),

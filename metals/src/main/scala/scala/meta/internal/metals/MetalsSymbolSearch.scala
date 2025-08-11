@@ -67,31 +67,36 @@ class MetalsSymbolSearch(
     defn
       .definitionPathInputFromSymbol(symbol, sourcePath)
       .map(input => {
-        val path = AbsolutePath(input.path)
-        if (path.isWorkspaceSource(wsp.workspace)) {
-          // If the source file is a workspace source, retrieve its symbols from
-          // WorkspaceSymbolProvider so that metals server can reuse its cache.
-          wsp.inWorkspace
-            .get(path.toNIO)
-            .map(symInfo => {
-              symInfo.symbols
-                .sortBy(sym =>
-                  (
-                    sym.range.getStart().getLine(),
-                    sym.range.getStart().getCharacter(),
-                  )
+        val pathOpt = input.path.toAbsolutePathSafe
+        pathOpt match {
+          case None =>
+            ju.Collections.emptyList[String]()
+          case Some(path) =>
+            if (path.isWorkspaceSource(wsp.workspace)) {
+              // If the source file is a workspace source, retrieve its symbols from
+              // WorkspaceSymbolProvider so that metals server can reuse its cache.
+              wsp.inWorkspace
+                .get(path.toNIO)
+                .map(symInfo => {
+                  symInfo.symbols
+                    .sortBy(sym =>
+                      (
+                        sym.range.getStart().getLine(),
+                        sym.range.getStart().getCharacter(),
+                      )
+                    )
+                    .map(_.symbol)
+                    .asJava
+                })
+                .getOrElse(
+                  ju.Collections.emptyList[String]()
                 )
-                .map(_.symbol)
-                .asJava
-            })
-            .getOrElse(
-              ju.Collections.emptyList[String]()
-            )
-        } else {
-          dependencySourceCache.getOrElseUpdate(
-            path,
-            Mtags.topLevelSymbols(path).asJava,
-          )
+            } else {
+              dependencySourceCache.getOrElseUpdate(
+                path,
+                Mtags.topLevelSymbols(path).asJava,
+              )
+            }
         }
       })
       .getOrElse(ju.Collections.emptyList())

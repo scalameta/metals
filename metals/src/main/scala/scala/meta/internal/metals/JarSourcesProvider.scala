@@ -136,15 +136,12 @@ object JarSourcesProvider {
   }
 
   private val sbtMaven = SbtMavenRepository(Repositories.central)
-  private val metalsPluginSnapshots = SbtMavenRepository(
-    Repositories.sonatype("public")
-  )
 
   def fetchDependencySources(
       dependency: Dependency
   )(implicit ec: ExecutionContext): Future[List[Path]] = {
     val repositories =
-      List(Repositories.central, sbtMaven, metalsPluginSnapshots)
+      List(Repositories.central, sbtMaven)
     Fetch()
       .addRepositories(repositories*)
       .withDependencies(Seq(dependency))

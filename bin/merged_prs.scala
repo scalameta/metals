@@ -1,7 +1,7 @@
 //> using jvm 17
 //> using scala 3
-//> using dep org.kohsuke:github-api:1.327
-//> using dep com.lihaoyi::os-lib:0.11.4
+//> using dep org.kohsuke:github-api:1.329
+//> using dep com.lihaoyi::os-lib:0.11.5
 //> using options -Wunused:all -deprecation
 
 import scala.collection.mutable.ListBuffer
@@ -14,7 +14,7 @@ import org.kohsuke.github.GHIssueState
 import java.text.SimpleDateFormat
 import java.util.Date
 
-val codename = "Strontium"
+val codename = "Osmium"
 
 @main
 def main(

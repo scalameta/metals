@@ -77,8 +77,8 @@ object MillBuildLayout extends BuildToolLayout {
       optDepModule match {
         case Some((module, dep)) =>
           s"""|object test extends ScalaTests with TestModule.$module {
-              |    def ivyDeps = Agg(
-              |      ivy"$dep"
+              |    def mvnDeps = Seq(
+              |      mvn"$dep"
               |    )
               |  }  
               |""".stripMargin
@@ -87,8 +87,9 @@ object MillBuildLayout extends BuildToolLayout {
 
     s"""|/.mill-version
         |$millVersion
-        |/build.sc
-        |import mill._, scalalib._
+        |/build.mill
+        |package build
+        |import mill.*, scalalib.*
         |
         |object a extends ScalaModule {
         |  def scalaVersion = "${scalaVersion}"

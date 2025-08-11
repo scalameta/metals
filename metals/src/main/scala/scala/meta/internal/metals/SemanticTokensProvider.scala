@@ -142,6 +142,8 @@ object SemanticTokensProvider {
     }
   }
 
+  private val acceptedSQLInterpolations = Set("sql", "fr", "SQL")
+
   private def handleTokenWithSQLSupport(
       tk: scala.meta.tokens.Token,
       nodesIterator: List[Node],
@@ -150,7 +152,7 @@ object SemanticTokensProvider {
       isSQLInterpolator: Boolean,
       lastSQLToken: Option[SQLToken],
   ): ((List[Integer], List[Node], Line), Boolean, Option[SQLToken]) = tk match {
-    case Token.Interpolation.Id("sql") | Token.Interpolation.Id("fr") =>
+    case Token.Interpolation.Id(id) if acceptedSQLInterpolations(id) =>
       (handleToken(tk, nodesIterator, isScala3, delta), true, None)
     case Token.Interpolation.Part(value) if isSQLInterpolator =>
       val buffer = ListBuffer.empty[Integer]

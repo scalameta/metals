@@ -142,6 +142,85 @@ final class FormattingProvider(
     }
   }
 
+  /**
+   * Format a file for MCP tools, returning either the formatted text or an error message.
+   * Unlike the regular format method, this doesn't log errors but returns them.
+   *
+   * @return Either(errorMessage, formattedText) where Left indicates an error and Right indicates success.
+   *         If Right(None), the file was already properly formatted.
+   *         If Right(Some(text)), the file was formatted and this is the new text.
+   */
+  def formatForMcp(
+      path: AbsolutePath,
+      projectRoot: AbsolutePath,
+      token: CancelChecker,
+  ): Future[Either[String, Option[String]]] = {
+    reset(token)
+    val input = path.toInputFromBuffers(buffers)
+
+    def formatWithConfig(
+        config: AbsolutePath
+    ): Either[String, Option[String]] = {
+      val cleanScalafmt = scalafmt.withReporter(EmptyScalafmtReporter)
+
+      try {
+        val session = cleanScalafmt.createSession(config.toNIO)
+        val result = session.formatOrError(path.toNIO, input.text)
+
+        if (result.exception != null) {
+          result.exception match {
+            case p: PositionException =>
+              Left(
+                s"Scalafmt parsing error at line ${p.startLine() + 1}: ${p.shortMessage()}"
+              )
+            case e =>
+              Left(s"Formatting error: ${e.getMessage}")
+          }
+        } else {
+          val formatted = result.value
+          if (formatted != input.text) {
+            Right(Some(formatted))
+          } else {
+            Right(None)
+          }
+        }
+      } catch {
+        case e: ScalafmtDynamicError =>
+          Left(s"Scalafmt configuration error: ${e.getMessage}")
+        case e: PositionException =>
+          Left(
+            s"Scalafmt parsing error at line ${e.startLine() + 1}: ${e.shortMessage()}"
+          )
+        case e: Exception =>
+          Left(s"Formatting error: ${e.getMessage}")
+      }
+    }
+
+    scalafmtConf(projectRoot) match {
+      case Some(config) =>
+        Future.successful(formatWithConfig(config))
+      case None =>
+        // No config found, use default config
+        val defaultConfig = projectRoot.resolve(Directories.hiddenScalafmt)
+        if (!defaultConfig.exists) {
+          try {
+            Files.write(
+              defaultConfig.toNIO,
+              initialConfig().getBytes(StandardCharsets.UTF_8),
+            )
+          } catch {
+            case e: Exception =>
+              return Future.successful(
+                Left(
+                  s"Failed to create default scalafmt config: ${e.getMessage}"
+                )
+              )
+          }
+        }
+        Future.successful(formatWithConfig(defaultConfig))
+    }
+  }
+
   private def runFormat(
       path: AbsolutePath,
       scalafmtConf: AbsolutePath,

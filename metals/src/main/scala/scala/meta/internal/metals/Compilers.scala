@@ -737,6 +737,7 @@ class Compilers(
         typeParameters = options.typeParameters,
         byNameParameters = options.byNameParameters,
         hintsInPatternMatch = options.hintsInPatternMatch,
+        hintsXRayMode = options.hintsXRayMode,
         namedParameters = options.namedParameters,
       )
 
