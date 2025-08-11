@@ -68,6 +68,11 @@ class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext) {
     callTool("compile-module", params).map(_.mkString)
   }
 
+  def compileFull(): Future[String] = {
+    val params = objectMapper.createObjectNode()
+    callTool("compile-full", params).map(_.mkString)
+  }
+
   def listModules(): Future[String] = {
     val params = objectMapper.createObjectNode()
     callTool("list-modules", params).map(_.mkString)
