@@ -709,7 +709,10 @@ final case class TestingServer(
       requestOtherThreadStackTrace: Boolean = false,
   ): Future[TestDebugger] = {
 
-    assertSystemExit(parameter)
+    /// this might break on CI and causes tests to be flaky
+    if (System.getenv("CI") == null) {
+      assertSystemExit(parameter)
+    }
     val targets = List(new b.BuildTargetIdentifier(buildTarget(target)))
     val params =
       new b.DebugSessionParams(targets.asJava)
@@ -737,8 +740,7 @@ final case class TestingServer(
         workspaceFiles.exists(
           _.readTextOpt.exists(_.contains("System.exit(0)"))
         )
-      val isCI = System.getenv("CI") != null
-      if (!usesSystemExit && !isCI)
+      if (!usesSystemExit)
         throw new RuntimeException(
           "All debug test for main classes should have `System.exit(0)`"
         )
