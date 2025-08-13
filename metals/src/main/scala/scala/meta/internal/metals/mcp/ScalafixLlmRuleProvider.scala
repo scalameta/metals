@@ -57,74 +57,79 @@ class ScalafixLlmRuleProvider(
     val ruleContents = layout(ruleName, scalaVersion, ruleImplementation)
     import scala.meta._
     val checkPackage = ruleContents.parse[Source] match {
-      case Parsed.Success(source) => source
+      case Parsed.Success(source) => Right(source)
       case Parsed.Error(pos, message, details) =>
-        throw details
+        Left(s"Error parsing rule: $message")
     }
-    val ruleNameToUse = checkPackage match {
-      case Source(List(Pkg(name, _))) => name.syntax + "." + ruleName
-      case otherwise =>
-        scribe.debug(s"No package found in rule: ${otherwise.syntax}")
-        ruleName
+    val result = for {
+      packageName <- checkPackage
+    } yield {
+      val ruleDir = rulesDirectory.resolve(ruleName)
+      val rulesFile = ruleDir.resolve(s"$ruleName.scala")
+      rulesFile.writeText(ruleContents)
+      scribe.debug(s"Wrote the rule to $rulesFile")
+
+      val ruleNameToUse = packageName match {
+        case Source(List(Pkg(name, _))) => name.syntax + "." + ruleName
+        case _ =>
+          ruleName
+      }
+      val metadataFile =
+        ruleDir.resolve(s"resources/META-INF/services/scalafix.v1.Rule")
+      metadataFile.writeText(s"${ruleNameToUse}")
+      scribe.debug(s"Wrote the rule definition to $metadataFile")
+
+      val readmeFile = ruleDir.resolve("README.md")
+      val binaryVersion =
+        ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
+      val scalaCli =
+        ScalaCli.localScalaCli(userConfig()).getOrElse(ScalaCli.jvmBased())
+
+      val publishCommand = scalaCli.command.toList ++ List(
+        "--power",
+        "publish",
+        "local",
+        ruleDir.toString(),
+      )
+      scribe.info(
+        s"Publishing rule with command: $publishCommand"
+      )
+      val errorReporting = new StringBuilder()
+      val result = ShellRunner.runSync(
+        publishCommand,
+        workspace,
+        redirectErrorOutput = false,
+        processErr = { err =>
+          scribe.error(err)
+          errorReporting.append(err + "\n")
+        },
+        timeout = 1.minute,
+      )
+      result match {
+        case Some(_) =>
+          readmeFile.writeText(description)
+          Right(createDependency(ruleName, binaryVersion))
+        case None =>
+          readmeFile.deleteIfExists()
+          Left(s"Error publishing rule: ${errorReporting.toString()}")
+
+      }
     }
-    val ruleDir = rulesDirectory.resolve(ruleName)
-    val rulesFile = ruleDir.resolve(s"$ruleName.scala")
-    scribe.debug(s"Wrote the rule to $rulesFile")
-    rulesFile.writeText(ruleContents)
-
-    val metadataFile =
-      ruleDir.resolve(s"resources/META-INF/services/scalafix.v1.Rule")
-    metadataFile.writeText(s"$ruleNameToUse")
-    scribe.debug(s"Wrote the rule definition to $metadataFile")
-    val readmeFile = ruleDir.resolve("README.md")
-    val binaryVersion =
-      ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
-    val scalaCli =
-      ScalaCli.localScalaCli(userConfig()).getOrElse(ScalaCli.jvmBased())
-
-    val publishCommand = scalaCli.command.toList ++ List(
-      "--power",
-      "publish",
-      "local",
-      ruleDir.toString(),
-    )
-    scribe.info(
-      s"Publishing rule with command: $publishCommand"
-    )
-    val errorReporting = new StringBuilder()
-    val result = ShellRunner.runSync(
-      publishCommand,
-      workspace,
-      redirectErrorOutput = false,
-      processErr = { err =>
-        scribe.error(err)
-        errorReporting.append(err + "\n")
-      },
-      timeout = 1.minute,
-    )
-    result match {
-      case Some(_) =>
-        readmeFile.writeText(description)
-        Right(createDependency(ruleName, binaryVersion))
-      case None =>
-        readmeFile.deleteIfExists()
-        Left(s"Error publishing rule: ${errorReporting.toString()}")
-
-    }
+    result.flatten
   }
 
   def runOnAllTargets(
       ruleName: String,
       ruleImplementation: String,
       description: String,
-  ): Either[String, Future[Unit]] = {
+  ): Future[Either[String, Boolean]] = {
     val publishedBuffer = TrieMap.empty[String, Dependency]
     val allTargets =
       buildTargets.allBuildTargetIds.map(buildTargets.scalaTarget).collect {
         case Some(scalaTarget) if !scalaTarget.isSbt => scalaTarget
       }
     val allScalaVersions = allTargets.map(_.scalaVersion).toSet
-    def loop(scalaVersions: List[String]): Either[String, Future[Unit]] =
+    def loop(scalaVersions: List[String]): Either[String, Unit] =
       scalaVersions match {
         case scalaVersion :: next =>
           publishRule(
@@ -138,11 +143,22 @@ class ScalafixLlmRuleProvider(
               publishedBuffer.put(scalaVersion, value)
               loop(next)
           }
-        case Nil => Right(Future.unit)
+        case Nil => Right(())
       }
     loop(allScalaVersions.toList) match {
-      case Left(value) => Left(value)
-      case Right(value) => Right(runScalafixRuleForAllTargets(ruleName))
+      case Left(error) => Future.successful(Left(error))
+      case Right(_) =>
+        runScalafixRuleForAllTargets(ruleName)
+          .map { changeWasApplied =>
+            if (changeWasApplied) {
+              Right(true)
+            } else {
+              Left("No changes were made for rule " + ruleName)
+            }
+          }
+          .recover { case error =>
+            Left(error.getMessage)
+          }
     }
   }
 
@@ -169,7 +185,7 @@ class ScalafixLlmRuleProvider(
 
   def runScalafixRuleForAllTargets(
       ruleName: String
-  ): Future[Unit] = {
+  ): Future[Boolean] = {
     val allTargets =
       buildTargets.allBuildTargetIds.map(buildTargets.scalaTarget).collect {
         case Some(scalaTarget) if !scalaTarget.isSbt => scalaTarget
@@ -184,7 +200,7 @@ class ScalafixLlmRuleProvider(
         dependency,
       )
     }
-    Future.sequence(allFutures.toList).map(_ => ())
+    Future.sequence(allFutures.toList).map(results => results.exists(identity))
   }
 
   def runScalafixRule(
@@ -228,7 +244,7 @@ class ScalafixLlmRuleProvider(
       ruleName: String,
       sources: List[AbsolutePath],
       publishedRule: Option[Dependency],
-  ): Future[Unit] = {
+  ): Future[Boolean] = {
     val all =
       sources.filter(file => file.filename.isScala).map { file =>
         val ruleRun = publishedRule match {
@@ -242,14 +258,17 @@ class ScalafixLlmRuleProvider(
             Map(file.toURI.toString -> edits.asJava)
           }
       }
-    Future.sequence(all.toList).map { edits =>
+    Future.sequence(all.toList).flatMap { edits =>
       val allEdits = edits.flatten.toMap
-      if (allEdits.nonEmpty) {
-        metalsClient.applyEdit(
-          new ApplyWorkspaceEditParams(new WorkspaceEdit(allEdits.asJava))
-        )
+      if (allEdits.exists(!_._2.isEmpty())) {
+        metalsClient
+          .applyEdit(
+            new ApplyWorkspaceEditParams(new WorkspaceEdit(allEdits.asJava))
+          )
+          .asScala
+          .map(_ => true)
       } else {
-        throw new RuntimeException(s"No changes were made for rule $ruleName")
+        Future.successful(false)
       }
     }
   }

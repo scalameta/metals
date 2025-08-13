@@ -10,8 +10,6 @@ import java.util.{Map => JMap}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.util.Failure
-import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -933,6 +931,10 @@ class MetalsMcpServer(
         |    "fileInFocus": {
         |      "type": "string",
         |      "description": "The current file in focus for context, if empty we will try to detect it"
+        |    },
+        |    "sampleCode": {
+        |      "type": "string",
+        |      "description": "Sample code that we are trying to match in the rule, if nothing was matched an error will be returned with the structure of this sample."
         |    }
         |  },
         |  "required": ["ruleName", "ruleImplementation"]
@@ -941,46 +943,57 @@ class MetalsMcpServer(
     new AsyncToolSpecification(
       new Tool(
         "generate-scalafix-rule",
-        "Create and run a scalafix rule on the current project.",
+        """|Generate a scalafix rule and run it on the current project.
+           |
+           |Use this tool whenever you want to migrate a particular code pattern inside the entire codebase. 
+           |This might include fixing code smells, refactorings or migrating between versions of Scala or a particular library. 
+           |The generated rule will be created in .metals/rules directory and can be later invoked using the `run-scalafix-rule` tool.
+           |When a rule with the same name already exists, it will be overwritten. This is useful if you want to update 
+           |the rule implementation.
+           |""".stripMargin,
         schema,
       ),
       withErrorHandling { (_, arguments) =>
+        import scala.meta._
         val ruleName = arguments.getAs[String]("ruleName")
         val ruleImplementation = arguments.getAs[String]("ruleImplementation")
         val description =
           arguments.getOptAs[String]("description").getOrElse(ruleName)
-        val resultingFuture = Try {
+        val sampleCode = arguments.getOptAs[String]("sampleCode")
+        def helper = {
+          sampleCode match {
+            case Some(value) =>
+              value.parse[Stat] match {
+                case Parsed.Success(value) => value.structure
+                case Parsed.Error(_, _, _) =>
+                  "Provide a valid sample code to get a better error message"
+              }
+            case None => "Provide a sample code to get a better error message"
+          }
+        }
+        def errorMessage(exception: String) = {
+          s"Error: ${exception}\nSample code structure: ${helper}"
+        }
+        val resultingFuture =
           scalafixLlmRuleProvider.runOnAllTargets(
             ruleName,
             ruleImplementation,
             description,
           )
-        } match {
-          case Failure(exception) =>
-            Future.successful(
-              new CallToolResult(
-                createContent(s"Error: ${exception.getMessage}"),
-                true,
-              )
+        resultingFuture.map {
+          case Right(_) =>
+            new CallToolResult(
+              createContent(
+                s"Created and ran Scalafix rule $ruleName successfully"
+              ),
+              false,
             )
-          case Success(Right(future)) =>
-            future.map { _ =>
-              new CallToolResult(
-                createContent(
-                  s"Created and ran Scalafix rule $ruleName successfully"
-                ),
-                false,
-              )
-            }
-          case Success(Left(error)) =>
-            Future.successful(
-              new CallToolResult(
-                createContent(s"Error: $error"),
-                true,
-              )
+          case Left(error) =>
+            new CallToolResult(
+              createContent(errorMessage(error)),
+              true,
             )
-        }
-        resultingFuture.toMono
+        }.toMono
       },
     )
   }

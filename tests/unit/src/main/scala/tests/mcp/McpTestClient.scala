@@ -88,11 +88,13 @@ class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext) {
       ruleName: String,
       ruleImplementation: String,
       ruleDescription: String,
+      sampleCode: Option[String] = None,
   ): Future[String] = {
     val params = objectMapper.createObjectNode()
     params.put("ruleName", ruleName)
     params.put("ruleImplementation", ruleImplementation)
     params.put("description", ruleDescription)
+    sampleCode.foreach(code => params.put("sampleCode", code))
     callTool("generate-scalafix-rule", params).map(_.mkString)
   }
 
