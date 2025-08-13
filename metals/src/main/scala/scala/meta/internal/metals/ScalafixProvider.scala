@@ -117,7 +117,7 @@ case class ScalafixProvider(
     val inBuffers = file.toInputFromBuffers(buffers)
 
     additionalDeps.foreach { case (ruleName, dep) =>
-      scribe.info(s"Running rule $ruleName with dep $dep")
+      scribe.debug(s"Running rule $ruleName with dep $dep")
     }
 
     compilations

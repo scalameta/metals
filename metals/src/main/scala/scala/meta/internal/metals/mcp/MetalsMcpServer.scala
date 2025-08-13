@@ -932,6 +932,10 @@ class MetalsMcpServer(
         |      "type": "string",
         |      "description": "The current file in focus for context, if empty we will try to detect it"
         |    },
+        |    "targets": {
+        |      "type": "array",
+        |      "description": "The targets to run the rule on, if empty will run on the last focused target"
+        |    },
         |    "sampleCode": {
         |      "type": "string",
         |      "description": "Sample code that we are trying to match in the rule, if nothing was matched an error will be returned with the structure of this sample."
@@ -974,11 +978,23 @@ class MetalsMcpServer(
         def errorMessage(exception: String) = {
           s"Error: ${exception}\nSample code structure: ${helper}"
         }
+        val modules =
+          arguments.getOptAs[JList[String]]("targets").map(_.asScala.toList).getOrElse(Nil) match {
+            case Nil =>
+              focusedDocument().flatMap(
+                buildTargets
+                  .inverseSources(_)
+                  .flatMap(buildTargets.scalaTarget(_))
+                  .map(_.displayName)
+              ).toList
+            case targets => targets
+          }
         val resultingFuture =
           scalafixLlmRuleProvider.runOnAllTargets(
             ruleName,
             ruleImplementation,
             description,
+            modules,
           )
         resultingFuture.map {
           case Right(_) =>

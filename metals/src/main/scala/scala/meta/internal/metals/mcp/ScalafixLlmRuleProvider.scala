@@ -35,10 +35,13 @@ class ScalafixLlmRuleProvider(
       ruleName: String,
       scalaVersion: String,
       ruleImplementation: String,
-  ): String =
+  ): String = {
+    val scalaBinaryVersion =
+      ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
+    val versionToUse = if (scalaBinaryVersion == "3") "2.13" else scalaBinaryVersion
     s"""|
         |//> using scala $scalaVersion
-        |//> using dep "ch.epfl.scala:scalafix-core_2.13:0.14.3"
+        |//> using dep "ch.epfl.scala:scalafix-core_$versionToUse:0.14.3"
         |//> using publish.organization "com.github.metals"
         |//> using publish.name "$ruleName"
         |//> using publish.version "0.1.0-SNAPSHOT"
@@ -47,7 +50,7 @@ class ScalafixLlmRuleProvider(
         |$ruleImplementation
         |
         |""".stripMargin
-
+  }
   private def publishRule(
       ruleName: String,
       scalaVersion: String,
@@ -105,6 +108,7 @@ class ScalafixLlmRuleProvider(
         },
         timeout = 1.minute,
       )
+      pprint.log(binaryVersion)
       result match {
         case Some(_) =>
           readmeFile.writeText(description)
@@ -122,12 +126,15 @@ class ScalafixLlmRuleProvider(
       ruleName: String,
       ruleImplementation: String,
       description: String,
+      targets: List[String]
   ): Future[Either[String, Boolean]] = {
     val publishedBuffer = TrieMap.empty[String, Dependency]
-    val allTargets =
-      buildTargets.allBuildTargetIds.map(buildTargets.scalaTarget).collect {
-        case Some(scalaTarget) if !scalaTarget.isSbt => scalaTarget
-      }
+    val allTargets = targets.flatMap{
+      targetName =>
+        buildTargets.findByDisplayName(targetName).flatMap(bd => buildTargets.scalaTarget(bd.getId())).collect {
+          case scalaTarget if !scalaTarget.isSbt => scalaTarget
+        }
+    }
     val allScalaVersions = allTargets.map(_.scalaVersion).toSet
     def loop(scalaVersions: List[String]): Either[String, Unit] =
       scalaVersions match {
@@ -192,8 +199,9 @@ class ScalafixLlmRuleProvider(
       }
     val allFutures = allTargets.iterator.map { scalaTarget =>
       val sources = buildTargets.buildTargetSources(scalaTarget.id).toList
+      val scalaBinaryVersion = ScalaVersions.scalaBinaryVersionFromFullVersion(scalaTarget.scalaVersion)
       val dependency =
-        ruleDependencyIfNeeded(ruleName, scalaTarget.scalaBinaryVersion)
+        ruleDependencyIfNeeded(ruleName, scalaBinaryVersion)
       runScalafixRule(
         ruleName,
         sources,
