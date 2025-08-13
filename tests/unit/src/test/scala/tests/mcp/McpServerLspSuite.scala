@@ -232,6 +232,56 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
     } yield ()
   }
 
+  test("generate-scalafix-rule-error") {
+    import scala.meta._
+    cleanWorkspace()
+    val sampleCode = "a.filter(x => x > 10).map(x => x + 1)"
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/example/Hello.scala
+           |package com.example
+           |
+           |object Hello { def main(args: Array[String]): Unit = println("Hello") }
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
+      client <- startMcpServer()
+      // Test with no rules present
+      result <- client.generateScalafixRule(
+        "ReplaceJohnWithJohnatan",
+        """|
+           |package fix
+           |
+           |import scalafix.v1._
+           |import scala.meta._
+           |
+           |class ReplaceJohnWithJohnatan extends SemanticRule("ReplaceJohnWithJohnatan") {
+           |  override def fix(implicit doc: SemanticDocument): Patch = {
+           |    doc.tree.collect {
+           |      case lit @ Lit.String(value) if value.contains("Doesn't exist") =>
+           |        val newValue = value.replace("John", "\"Johnatan\"")
+           |        Patch.replaceTree(lit, newValue)
+           |    }.asPatch
+           |  }
+           |}
+           |
+           |""".stripMargin,
+        "Converts John to Johnatan",
+        Some(sampleCode),
+      )
+      _ = assertNoDiff(
+        result,
+        s"""|Error: No changes were made for rule ReplaceJohnWithJohnatan
+            |Sample code structure: ${sampleCode.parse[Stat].get.structure}
+            |""".stripMargin,
+      )
+      _ <- client.shutdown()
+    } yield ()
+  }
+
   override def afterEach(context: AfterEach): Unit = {
     super.afterEach(context)
     assertEquals(
