@@ -577,4 +577,591 @@ class DebugDiscoverySuite
       }
     }
   }
+
+  test("run-closest-test") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
+           |  }
+           |}
+           |/${fooPath}
+           |package a
+           |
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
+           |  test("first") {
+           |    print("first test")
+           |  }
+           |  test("second") {
+           |    print("second test") // <- Cursor in this line
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(fooPath)
+      _ <- server.didSave(fooPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(fooPath).toURI.toString,
+          "runClosest",
+          position = new org.eclipse.lsp4j.Position(7, 5),
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assert(
+      output.contains("second test") &&
+        !output.contains("first test") &&
+        output.contains("1 tests, 1 passed")
+    )
+  }
+
+  test("run-closest-suite") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
+           |  }
+           |}
+           |/${fooPath}
+           |package a
+           |
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite { // <- Cursor in this line
+           |  test("first") {
+           |    print("first test")
+           |  }
+           |  test("second") {
+           |    print("second test")
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(fooPath)
+      _ <- server.didSave(fooPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(fooPath).toURI.toString,
+          "runClosest",
+          position = new org.eclipse.lsp4j.Position(2, 4),
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assert(
+      output.contains("first test") &&
+        output.contains("second test") &&
+        output.contains("2 tests, 2 passed")
+    )
+  }
+
+  test("run-closest-multiple-suites") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
+           |  }
+           |}
+           |/${fooPath}
+           |package a
+           |
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
+           |  test("Foo-first") {
+           |    print("Foo-first")
+           |  }
+           |  test("Foo-second") {
+           |    print("Foo-second")
+           |  }
+           |} // <- Cursor in this line
+           |class Bar extends org.scalatest.funsuite.AnyFunSuite {
+           |  test("Bar-first") {
+           |    print("Bar-first")
+           |  }
+           |  test("Bar-second") {
+           |    print("Bar-second")
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(fooPath)
+      _ <- server.didSave(fooPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(fooPath).toURI.toString,
+          "runClosest",
+          position = new org.eclipse.lsp4j.Position(9, 10),
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assert(
+      output.contains("Bar-first") &&
+        output.contains("Bar-second") &&
+        output.contains("2 tests, 2 passed")
+    )
+  }
+
+  test("run-closest-tie-breaker") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
+           |  }
+           |}
+           |/${fooPath}
+           |package a
+           |
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
+           |  // <- Cursor in this line
+           |test("first") {
+           |  print("first test")
+           |}
+           |  test("second") {
+           |    print("second test")
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(fooPath)
+      _ <- server.didSave(fooPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(fooPath).toURI.toString,
+          "runClosest",
+          position = new org.eclipse.lsp4j.Position(3, 0),
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assert(
+      (output.contains("first test") &&
+        !output.contains("second test") &&
+        output.contains("1 tests, 1 passed"))
+    )
+  }
+
+  test("run-closest-munit") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":["org.scalameta::munit:1.0.0-M11"]
+           |  }
+           |}
+           |/${fooPath}
+           |package a
+           |
+           |class FooMUnitTest extends munit.FunSuite {
+           |  test("munit first test") {
+           |    print("first print")
+           |  }
+           |  test("munit second test") {
+           |    print("second print") // <- Cursor in this line
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(fooPath)
+      _ <- server.didSave(fooPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(fooPath).toURI.toString,
+          "runClosest",
+          position = new org.eclipse.lsp4j.Position(7, 5),
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assert(
+      output.contains("second print") &&
+        !output.contains("first print") &&
+        output.contains("2 tests, 1 passed, 1 ignored")
+    )
+  }
+
+  test("run-closest-munit-suite") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":["org.scalameta::munit:1.0.0-M11"]
+           |  }
+           |}
+           |/${fooPath}
+           |package a
+           |
+           |class FooMUnitTest extends munit.FunSuite { // <- Cursor in this line
+           |  test("munit first test") {
+           |    print("munit first")
+           |  }
+           |  test("munit second test") {
+           |    print("munit second")
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(fooPath)
+      _ <- server.didSave(fooPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(fooPath).toURI.toString,
+          "runClosest",
+          position = new org.eclipse.lsp4j.Position(2, 4),
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assert(
+      output.contains("munit first") &&
+        output.contains("munit second") &&
+        output.contains("2 passed")
+    )
+  }
+
+  test("run-closest-junit") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":["junit:junit:4.13.2", "com.github.sbt:junit-interface:0.13.3"]
+           |  }
+           |}
+           |/${fooPath}
+           |package a
+           |
+           |import org.junit.Test
+           |import org.junit.Assert._
+           |
+           |class FooJUnitTest {
+           |  @Test
+           |  def junitFirstTest(): Unit = {
+           |    print("junit first")
+           |  }
+           |  
+           |  @Test
+           |  def junitSecondTest(): Unit = { 
+           |    print("junit second")
+           |  } // <- Cursor in this line
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(fooPath)
+      _ <- server.didSave(fooPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(fooPath).toURI.toString,
+          "runClosest",
+          position = new org.eclipse.lsp4j.Position(14, 5),
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assert(
+      output.contains("junit second") &&
+        !output.contains("junit first")
+    )
+  }
+
+  test("run-closest-mixed-frameworks") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":[
+           |      "org.scalatest::scalatest:3.2.16",
+           |      "org.scalameta::munit:1.0.0-M11"
+           |    ]
+           |  }
+           |}
+           |/${fooPath}
+           |package a
+           |
+           |class ScalaTestSuite extends org.scalatest.funsuite.AnyFunSuite {
+           |  test("scalatest test") {
+           |    print("scalatest first")
+           |  }
+           |}
+           |
+           |class MUnitSuite extends munit.FunSuite {
+           |  test("munit test") {
+           |    print("munit first") // <- Cursor in this line
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(fooPath)
+      _ <- server.didSave(fooPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(fooPath).toURI.toString,
+          "runClosest",
+          position = new org.eclipse.lsp4j.Position(10, 5),
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assert(
+      output.contains("munit first") &&
+        !output.contains("scalatest first")
+    )
+  }
+
+  test("run-closest-empty-test-file") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
+           |  }
+           |}
+           |/${fooPath}
+           |package a
+           |
+           |class EmptyTestSuite extends org.scalatest.funsuite.AnyFunSuite {
+           |  // No tests defined
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(fooPath)
+      _ <- server.didSave(fooPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      result <- server
+        .startDebuggingUnresolved(
+          new DebugDiscoveryParams(
+            server.toPath(fooPath).toURI.toString,
+            "runClosest",
+            position = new org.eclipse.lsp4j.Position(4, 5),
+          ).toJson
+        )
+        .recover { case e: ResponseErrorException => e.getMessage }
+    } yield assertNoDiff(
+      result.toString(),
+      NoRunOptionException.getMessage(),
+    )
+  }
+
+  test("run-closest-main") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/${fooPath}
+           |package a
+           |
+           |object Main {
+           |  def main(args: Array[String]): Unit = {
+           |    print("main executed") // <- Cursor in this line
+           |  }
+           |}
+           |
+           |object OtherMain {
+           |  def main(args: Array[String]): Unit = {
+           |    print("other main executed")
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(fooPath)
+      _ <- server.didSave(fooPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(fooPath).toURI.toString,
+          "runClosest",
+          position = new org.eclipse.lsp4j.Position(4, 5),
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assert(
+      output.contains("main executed") &&
+        !output.contains("other main executed")
+    )
+  }
+
+  test("run-closest-mixed-main-and-test") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
+           |  }
+           |}
+           |/${fooPath}
+           |package a
+           |
+           |object Main {
+           |  def main(args: Array[String]): Unit = {
+           |    print("main executed")
+           |  }
+           |}
+           |
+           |class TestSuite extends org.scalatest.funsuite.AnyFunSuite {
+           |  test("test case") { // <- Cursor in this line
+           |    print("test executed")
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(fooPath)
+      _ <- server.didSave(fooPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(fooPath).toURI.toString,
+          "runClosest",
+          position = new org.eclipse.lsp4j.Position(9, 5),
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assert(
+      output.contains("test executed") &&
+        !output.contains("main executed")
+    )
+  }
+
+  test("run-closest-scala3-main-annotation") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "scalaVersion": "3.3.0"
+           |  }
+           |}
+           |/${fooPath}
+           |package a
+           |
+           |@main def runApp(): Unit = {
+           |  println("Scala 3 main executed") // <- Cursor in this line
+           |}
+           |
+           |@main def runOtherApp(): Unit = {
+           |  println("Other Scala 3 main executed")
+           |}
+           |
+           |class SomeClass {
+           |  def regularMethod(): Unit = {
+           |    println("not a main")
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(fooPath)
+      _ <- server.didSave(fooPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(fooPath).toURI.toString,
+          "runClosest",
+          position = new org.eclipse.lsp4j.Position(3, 5),
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assert(
+      output.contains("Scala 3 main executed") &&
+        !output.contains("Other Scala 3 main executed") &&
+        !output.contains("not a main")
+    )
+  }
+
+  test("run-closest-app-trait-fallback") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/${fooPath}
+           |package a
+           |
+           |object MyApp extends App {
+           |  println("App trait main executed") // <- Cursor in this line
+           |}
+           |
+           |class SomeClass {
+           |  def someMethod(): Unit = {
+           |    println("not main")
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(fooPath)
+      _ <- server.didSave(fooPath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(fooPath).toURI.toString,
+          "runClosest",
+          position = new org.eclipse.lsp4j.Position(3, 5),
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assert(
+      output.contains("App trait main executed") &&
+        !output.contains("not main")
+    )
+  }
 }

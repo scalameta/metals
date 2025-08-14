@@ -23,6 +23,8 @@ import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.config.RunType
 import scala.meta.internal.metals.config.RunType._
 import scala.meta.internal.metals.debug.DiscoveryFailures._
+import scala.meta.internal.metals.testProvider.TestSuitesProvider
+import scala.meta.internal.metals.testProvider.TestCaseEntry
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
@@ -32,6 +34,7 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
+import org.eclipse.lsp4j.Position
 
 class DebugDiscovery(
     buildTargetClasses: BuildTargetClasses,
@@ -42,6 +45,7 @@ class DebugDiscovery(
     userConfig: () => UserConfiguration,
     workspace: AbsolutePath,
     buildTargetClassesFinder: BuildTargetClassesFinder,
+    testProvider: TestSuitesProvider,
 )(implicit ec: ExecutionContext) {
 
   private def mainClasses(bti: b.BuildTargetIdentifier) =
@@ -94,9 +98,9 @@ class DebugDiscovery(
         Failure(
           NoTestsFoundException("build target", displayName(target))
         )
-      case (Some(TestTarget), None, _) =>
+      case (Some(TestTarget | RunClosest), None, _) =>
         Failure(NoBuildTargetSpecified)
-      case (Some(tpe @ (TestFile | RunOrTestFile)), _, None) =>
+      case (Some(tpe @ (TestFile | RunOrTestFile | RunClosest)), _, None) =>
         Failure(UndefinedPathException(tpe))
       case (Some(Run), target, _) =>
         val targetIds = target match {
@@ -139,6 +143,12 @@ class DebugDiscovery(
         Success(ValidRunType.TestFile(target, path))
       case (Some(TestTarget), Some(target), _) =>
         Success(ValidRunType.TestTarget(target))
+      case (Some(RunClosest), Some(target), Some(path)) =>
+        if (params.position == null) {
+          Failure(UndefinedPositionException(RunClosest))
+        } else {
+          Success(ValidRunType.RunClosest(target, path, params.position))
+        }
     }
   }
 
@@ -162,7 +172,224 @@ class DebugDiscovery(
         testFile(path, target)
       case ValidRunType.TestTarget(target) =>
         testTarget(target)
+      case ValidRunType.RunClosest(target, path, position) =>
+        runClosest(target, path, position)
     }
+  }
+
+  /**
+   * Finds and runs the closest runnable target (main method, test case, or test suite)
+   * to the given cursor position. Uses distance-based selection with priority:
+   * main methods > test cases > test suites.
+   */
+  def runClosest(
+      buildTarget: b.BuildTargetIdentifier,
+      path: AbsolutePath,
+      position: Position,
+  ): Future[b.DebugSessionParams] = {
+    val semanticDocOpt =
+      semanticdbs()
+        .textDocument(path)
+        .documentIncludingStale
+
+    semanticDocOpt match {
+      case Some(textDocument) =>
+        findClosestRunnableTarget(textDocument, buildTarget, path, position)
+      case None =>
+        Future.failed(SemanticDbNotFoundException)
+    }
+  }
+
+  private def findClosestRunnableTarget(
+      textDocument: TextDocument,
+      buildTarget: b.BuildTargetIdentifier,
+      path: AbsolutePath,
+      position: Position,
+  ): Future[b.DebugSessionParams] = {
+    val classes = buildTargetClasses.classesOf(buildTarget)
+    val mains = findMainClasses(textDocument, classes)
+    val allTestCases = discoverTestCases(path)
+
+    val allDistances =
+      calculateMainDistances(textDocument, mains, classes, position) ++
+        calculateTestCaseDistances(allTestCases, position) ++
+        calculateTestSuiteDistances(textDocument, allTestCases, position)
+
+    findClosestTarget(allDistances) match {
+      case Some((_, _, "main", _, mainClass: b.ScalaMainClass)) =>
+        findMainToRun(
+          Map(buildTarget -> List(mainClass)),
+          DebugDiscoveryParams(path.toURI.toString, "run"),
+        )
+      case Some((_, _, "testSuite", _, suiteFqn: String)) =>
+        createTestSuiteParams(buildTarget, suiteFqn)
+      case Some((_, _, "testCase", testName: String, suiteFqn: String)) =>
+        createTestCaseParams(buildTarget, suiteFqn, testName)
+      case _ =>
+        Future.failed(NoRunOptionException)
+    }
+  }
+
+  private def findMainClasses(
+      textDocument: TextDocument,
+      classes: BuildTargetClasses.Classes,
+  ): Seq[b.ScalaMainClass] = {
+    val mains = for {
+      occurrence <- textDocument.occurrences
+      if occurrence.role.isDefinition || occurrence.symbol == "scala/main#"
+      symbol = occurrence.symbol
+      mainClass <- {
+        val normal = classes.mainClasses.get(symbol)
+        val fromAnnot = DebugDiscovery
+          .mainFromAnnotation(occurrence, textDocument)
+          .flatMap(classes.mainClasses.get(_))
+        List(normal, fromAnnot).flatten
+      }
+    } yield mainClass
+
+    if (mains.nonEmpty) mains
+    else DebugDiscovery.syntheticMains(textDocument, classes)
+  }
+
+  private def discoverTestCases(
+      path: AbsolutePath
+  ): List[(String, List[TestCaseEntry])] = {
+    import scala.jdk.CollectionConverters._
+    import scala.meta.internal.metals.testProvider.TestExplorerEvent.AddTestCases
+
+    val testUpdates = testProvider.discoverTests(Some(path))
+    testUpdates
+      .flatMap(_.events.asScala)
+      .collect { case AddTestCases(fqn, _, testCases) =>
+        (fqn, testCases.asScala.toList)
+      }
+      .toList
+  }
+
+  private def calculateMainDistances(
+      textDocument: TextDocument,
+      mains: Seq[b.ScalaMainClass],
+      classes: BuildTargetClasses.Classes,
+      position: Position,
+  ): Seq[(Int, Int, String, String, Any)] = {
+    mains.flatMap { mainClass =>
+      val occOpt = textDocument.occurrences.find { occ =>
+        occ.role.isDefinition && (
+          classes.mainClasses.get(occ.symbol).contains(mainClass) ||
+            DebugDiscovery
+              .mainFromAnnotation(occ, textDocument)
+              .flatMap(classes.mainClasses.get(_))
+              .contains(mainClass)
+        )
+      }
+
+      val syntheticOccOpt = if (occOpt.isEmpty) {
+        textDocument.symbols
+          .find(_.symbol.contains(mainClass.getClassName.split('.').last))
+          .flatMap(symbolInfo =>
+            textDocument.occurrences.find(_.symbol == symbolInfo.symbol)
+          )
+      } else None
+
+      (occOpt.orElse(syntheticOccOpt)).flatMap(_.range).map { range =>
+        val lineDiff = math.abs(range.startLine - position.getLine)
+        val charDiff = math.abs(range.startCharacter - position.getCharacter)
+        (lineDiff, charDiff, "main", mainClass.getClassName, mainClass)
+      }
+    }
+  }
+
+  private def calculateTestCaseDistances(
+      allTestCases: List[(String, List[TestCaseEntry])],
+      position: Position,
+  ): Seq[(Int, Int, String, String, String)] = {
+    allTestCases.flatMap { case (suiteFqn, cases) =>
+      cases.map { entry =>
+        val range = entry.location.getRange()
+        val start = range.getStart()
+        val lineDiff = math.abs(start.getLine() - position.getLine)
+        val charDiff = math.abs(start.getCharacter() - position.getCharacter)
+        (lineDiff, charDiff, "testCase", entry.name, suiteFqn)
+      }
+    }
+  }
+
+  private def calculateTestSuiteDistances(
+      textDocument: TextDocument,
+      allTestCases: List[(String, List[TestCaseEntry])],
+      position: Position,
+  ): Seq[(Int, Int, String, String, String)] = {
+    val testClassOccurrences = textDocument.occurrences.filter { occ =>
+      occ.role.isDefinition && (
+        allTestCases.exists { case (suiteFqn, _) =>
+          occ.symbol.contains(suiteFqn.split('.').last)
+        }
+      )
+    }
+
+    testClassOccurrences.flatMap { occ =>
+      occ.range.flatMap { range =>
+        val lineDiff = math.abs(range.startLine - position.getLine)
+        val charDiff = math.abs(range.startCharacter - position.getCharacter)
+
+        allTestCases.headOption
+          .map(_._1)
+          .map { suiteFqn =>
+            (lineDiff, charDiff, "testSuite", "", suiteFqn)
+          }
+      }
+    }
+  }
+
+  private def findClosestTarget(
+      allDistances: Seq[(Int, Int, String, String, Any)]
+  ): Option[(Int, Int, String, String, Any)] = {
+    allDistances.sortBy { case (lineDiff, charDiff, targetType, _, _) =>
+      val typePriority = targetType match {
+        case "main" => 0
+        case "testCase" => 1
+        case "testSuite" => 2
+        case _ => 3
+      }
+      (lineDiff, charDiff, typePriority)
+    }.headOption
+  }
+
+  private def createTestSuiteParams(
+      buildTarget: b.BuildTargetIdentifier,
+      suiteFqn: String,
+  ): Future[b.DebugSessionParams] = {
+    import scala.jdk.CollectionConverters._
+    val params = new b.DebugSessionParams(singletonList(buildTarget))
+    params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION)
+    val suiteSelection =
+      new b.ScalaTestSuiteSelection(suiteFqn, List.empty[String].asJava)
+    val suites = new b.ScalaTestSuites(
+      List(suiteSelection).asJava,
+      Nil.asJava,
+      Nil.asJava,
+    )
+    params.setData(suites.toJson)
+    Future.successful(params)
+  }
+
+  private def createTestCaseParams(
+      buildTarget: b.BuildTargetIdentifier,
+      suiteFqn: String,
+      testName: String,
+  ): Future[b.DebugSessionParams] = {
+    import scala.jdk.CollectionConverters._
+    val params = new b.DebugSessionParams(singletonList(buildTarget))
+    params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION)
+    val suiteSelection =
+      new b.ScalaTestSuiteSelection(suiteFqn, List(testName).asJava)
+    val suites = new b.ScalaTestSuites(
+      List(suiteSelection).asJava,
+      Nil.asJava,
+      Nil.asJava,
+    )
+    params.setData(suites.toJson)
+    Future.successful(params)
   }
 
   private def run(
@@ -437,6 +664,11 @@ object DebugDiscovery {
     case class TestFile(target: b.BuildTargetIdentifier, path: AbsolutePath)
         extends Value
     case class TestTarget(target: b.BuildTargetIdentifier) extends Value
+    case class RunClosest(
+        target: b.BuildTargetIdentifier,
+        path: AbsolutePath,
+        position: Position,
+    ) extends Value
   }
 
   /**
