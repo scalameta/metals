@@ -23,8 +23,8 @@ import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.config.RunType
 import scala.meta.internal.metals.config.RunType._
 import scala.meta.internal.metals.debug.DiscoveryFailures._
-import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.metals.testProvider.TestCaseEntry
+import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
