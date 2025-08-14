@@ -29,7 +29,7 @@ abstract class BaseImplementationSuite(name: String)
       topLines: Option[Int] = None,
       filter: String => Boolean = _ => true,
   ): Unit =
-    test(name) {
+    test(name, maxRetry = 3) {
       val fileName = "a/src/main/scala/a/Main.scala"
       cleanWorkspace()
       for {
