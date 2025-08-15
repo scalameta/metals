@@ -1118,6 +1118,11 @@ class WorkspaceLspService(
           .debugDiscovery(params)
           .liftToLspError
           .asJavaObject
+      case ServerCommands.RunClosest(params) =>
+        getServiceFor(params.path)
+          .debugDiscovery(params)
+          .liftToLspError
+          .asJavaObject
       case ServerCommands.AnalyzeStacktrace(content) =>
         Future {
           // Getting the service for focused document and first one otherwise
