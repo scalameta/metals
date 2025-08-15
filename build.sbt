@@ -459,7 +459,7 @@ lazy val metals = project
       // For test frameworks
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       // For MCP
-      "io.modelcontextprotocol.sdk" % "mcp" % "0.11.1",
+      "io.modelcontextprotocol.sdk" % "mcp" % "0.11.2",
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.19.2",
       "io.undertow" % "undertow-servlet" % "2.3.12.Final",
     ),
