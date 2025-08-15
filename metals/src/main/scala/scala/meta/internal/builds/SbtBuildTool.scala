@@ -238,6 +238,8 @@ case class SbtBuildTool(
           "1.4.6"
         else if (SemVer.isLaterVersion(version, "1.5.0"))
           "2.0.2"
+        else if (SemVer.isLaterVersion(version, "1.9.0"))
+          "2.0.10"
         else userConfig().currentBloopVersion
 
       val plugin = bloopPluginDetails(pluginVersion)
