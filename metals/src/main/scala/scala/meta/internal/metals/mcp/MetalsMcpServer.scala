@@ -461,7 +461,13 @@ class MetalsMcpServer(
          |  "required": ["testClass"]
          |}""".stripMargin
     new AsyncToolSpecification(
-      new Tool("test", "Run Scala test suite", schema),
+      new Tool(
+        "test",
+        """|Run Scala test suite. Execute specific test classes and individual test methods. 
+           |Supports verbose output and can run tests from any testing 
+           |framework (ScalaTest, MUnit, etc.)""".stripMargin,
+        schema,
+      ),
       withErrorHandling { (exchange, arguments) =>
         val testClass = arguments.getAs[String]("testClass")
         val optPath = arguments
@@ -509,7 +515,14 @@ class MetalsMcpServer(
       }
     """
     new AsyncToolSpecification(
-      new Tool("glob-search", "Search for symbols using glob pattern", schema),
+      new Tool(
+        "glob-search",
+        """|Search for symbols using glob pattern. Find packages, classes, objects, methods, traits, 
+           |and other Scala symbols by partial name matching. Returns symbol locations 
+           |and signatures from the entire project workspace.
+           |Use this if you encounter unknown API, for example proprietary libraries.""".stripMargin,
+        schema,
+      ),
       withErrorHandling { (exchange, arguments) =>
         val query = arguments.getAs[String]("query")
         val path = arguments.getFileInFocus
@@ -554,7 +567,10 @@ class MetalsMcpServer(
     new AsyncToolSpecification(
       new Tool(
         "typed-glob-search",
-        "Search for symbols by type using glob pattern",
+        """|Search for symbols by type using glob pattern. Filter symbol search results 
+           |by specific symbol types (package, class, object, function, method, trait). 
+           |More precise than glob-search when you know the symbol type you're looking for.
+           |Use this if you encounter unknown API, for example proprietary libraries.""".stripMargin,
         schema,
       ),
       withErrorHandling { (exchange, arguments) =>
@@ -640,7 +656,9 @@ class MetalsMcpServer(
     new AsyncToolSpecification(
       new Tool(
         "get-docs",
-        "Get documentation for a chosen Scala symbol",
+        """|Get documentation for a chosen Scala symbol. Retrieves ScalaDoc comments, 
+           |parameter descriptions, return types, and usage examples for classes, methods, 
+           |functions, and other symbols using their fully qualified name.""".stripMargin,
         schema,
       ),
       withErrorHandling { (exchange, arguments) =>
@@ -680,7 +698,9 @@ class MetalsMcpServer(
     new AsyncToolSpecification(
       new Tool(
         "get-usages",
-        "Get usages for a chosen Scala symbol. Returns list of files with line numbers.",
+        """|Get usages for a chosen Scala symbol. Find all references and usages of classes, 
+           |methods, variables, and other symbols across the entire project. Returns precise 
+           |locations with file paths and line numbers for refactoring and code analysis.""".stripMargin,
         schema,
       ),
       withErrorHandling { (exchange, arguments) =>
