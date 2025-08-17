@@ -30,8 +30,10 @@ object TestInternals {
   private final val testAgentId = "test-agent"
   private final val testAgentVersion = BuildInfo.sbtVersion
 
+  val dependency: Dependency =
+    Dependency.of(sbtOrg, testAgentId, testAgentVersion)
+
   lazy val testAgentFiles: List[Path] = {
-    val dependency = Dependency.of(sbtOrg, testAgentId, testAgentVersion)
     try {
       Embedded.downloadDependency(dependency, None)
     } catch {
