@@ -716,7 +716,8 @@ class DebugDiscoverySuite
          |class BarFoo extends org.scalatest.funsuite.AnyFunSuite {
          |  test("BarFoo-first") {}
          |  test("BarFoo-second") {}
-         |}                                      @@
+         |
+         |}                           @@
          |class Bar extends org.scalatest.funsuite.AnyFunSuite {
          |  test("Bar-first") {}
          |  test("Bar-second") {}

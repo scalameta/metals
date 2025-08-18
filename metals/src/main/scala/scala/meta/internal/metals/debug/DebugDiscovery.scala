@@ -200,6 +200,13 @@ class DebugDiscovery(
     }
   }
 
+  sealed trait Distance
+  case class MainDistance(distance: Int, mainClass: b.ScalaMainClass)
+      extends Distance
+  case class TestSuiteDistance(distance: Int, suiteFqn: String) extends Distance
+  case class TestCaseDistance(distance: Int, testName: String, suiteFqn: String)
+      extends Distance
+
   private def findClosestRunnableTarget(
       textDocument: TextDocument,
       buildTarget: b.BuildTargetIdentifier,
@@ -210,22 +217,23 @@ class DebugDiscovery(
     val mains = findMainClasses(textDocument, classes)
     val allTestCases = discoverTestCases(path)
 
-    val allDistances =
+    val allDistances: Seq[Distance] =
       calculateMainDistances(textDocument, mains, classes, position) ++
         calculateTestCaseDistances(allTestCases, position) ++
         calculateTestSuiteDistances(textDocument, allTestCases, position)
 
     findClosestTarget(allDistances) match {
-      case Some((_, _, "main", _, mainClass: b.ScalaMainClass)) =>
-        findMainToRun(
-          Map(buildTarget -> List(mainClass)),
+      case Some(MainDistance(_, mainClass)) =>
+        createMainParams(
           DebugDiscoveryParams(path.toURI.toString, "run"),
+          mainClass,
+          buildTarget,
         )
-      case Some((_, _, "testSuite", _, suiteFqn: String)) =>
+      case Some(TestSuiteDistance(_, suiteFqn)) =>
         createTestSuiteParams(buildTarget, suiteFqn)
-      case Some((_, _, "testCase", testName: String, suiteFqn: String)) =>
+      case Some(TestCaseDistance(_, testName, suiteFqn)) =>
         createTestCaseParams(buildTarget, suiteFqn, testName)
-      case _ =>
+      case None =>
         Future.failed(NoRunOptionException)
     }
   }
@@ -271,7 +279,7 @@ class DebugDiscovery(
       mains: Seq[b.ScalaMainClass],
       classes: BuildTargetClasses.Classes,
       position: Position,
-  ): Seq[(Int, Int, String, String, Any)] = {
+  ): Seq[Distance] = {
     mains.flatMap { mainClass =>
       val occOpt = textDocument.occurrences.find { occ =>
         occ.role.isDefinition && (
@@ -293,8 +301,7 @@ class DebugDiscovery(
 
       (occOpt.orElse(syntheticOccOpt)).flatMap(_.range).map { range =>
         val lineDiff = math.abs(range.startLine - position.getLine)
-        val charDiff = math.abs(range.startCharacter - position.getCharacter)
-        (lineDiff, charDiff, "main", mainClass.getClassName, mainClass)
+        MainDistance(lineDiff, mainClass)
       }
     }
   }
@@ -302,14 +309,13 @@ class DebugDiscovery(
   private def calculateTestCaseDistances(
       allTestCases: List[(String, List[TestCaseEntry])],
       position: Position,
-  ): Seq[(Int, Int, String, String, String)] = {
+  ): Seq[Distance] = {
     allTestCases.flatMap { case (suiteFqn, cases) =>
       cases.map { entry =>
         val range = entry.location.getRange()
         val start = range.getStart()
         val lineDiff = math.abs(start.getLine() - position.getLine)
-        val charDiff = math.abs(start.getCharacter() - position.getCharacter)
-        (lineDiff, charDiff, "testCase", entry.name, suiteFqn)
+        TestCaseDistance(lineDiff, entry.name, suiteFqn)
       }
     }
   }
@@ -318,7 +324,7 @@ class DebugDiscovery(
       textDocument: TextDocument,
       allTestCases: List[(String, List[TestCaseEntry])],
       position: Position,
-  ): Seq[(Int, Int, String, String, String)] = {
+  ): Seq[Distance] = {
     val testClassOccurrences = textDocument.occurrences.filter { occ =>
       occ.role.isDefinition && (
         allTestCases.exists { case (suiteFqn, _) =>
@@ -330,29 +336,28 @@ class DebugDiscovery(
     testClassOccurrences.flatMap { occ =>
       occ.range.flatMap { range =>
         val lineDiff = math.abs(range.startLine - position.getLine)
-        val charDiff = math.abs(range.startCharacter - position.getCharacter)
 
         allTestCases.headOption
           .map(_._1)
           .map { suiteFqn =>
-            (lineDiff, charDiff, "testSuite", "", suiteFqn)
+            TestSuiteDistance(lineDiff, suiteFqn)
           }
       }
     }
   }
 
   private def findClosestTarget(
-      allDistances: Seq[(Int, Int, String, String, Any)]
-  ): Option[(Int, Int, String, String, Any)] = {
-    allDistances.sortBy { case (lineDiff, charDiff, targetType, _, _) =>
-      val typePriority = targetType match {
-        case "main" => 0
-        case "testCase" => 1
-        case "testSuite" => 2
-        case _ => 3
-      }
-      (lineDiff, charDiff, typePriority)
-    }.headOption
+      allDistances: Seq[Distance]
+  ): Option[Distance] = {
+    allDistances match {
+      case Nil => None
+      case _ =>
+        allDistances.sortBy {
+          case MainDistance(distance, _) => (distance, 0)
+          case TestCaseDistance(distance, _, _) => (distance, 1)
+          case TestSuiteDistance(distance, _) => (distance, 2)
+        }.headOption
+    }
   }
 
   private def createTestSuiteParams(
@@ -468,22 +473,7 @@ class DebugDiscovery(
           symbol = symbolInfo.symbol
           testSymbolInfo <- classes.testClasses.get(symbol)
         } yield testSymbolInfo.fullyQualifiedName
-
-        val mains = for {
-          occurrence <- textDocument.occurrences
-          if occurrence.role.isDefinition || occurrence.symbol == "scala/main#"
-          symbol = occurrence.symbol
-          mainClass <- {
-            val normal = classes.mainClasses.get(symbol)
-            val fromAnnot = DebugDiscovery
-              .mainFromAnnotation(occurrence, textDocument)
-              .flatMap(classes.mainClasses.get(_))
-            List(normal, fromAnnot).flatten
-          }
-        } yield mainClass
-        val mainWithFallback =
-          if (mains.nonEmpty) mains
-          else DebugDiscovery.syntheticMains(textDocument, classes)
+        val mainWithFallback = findMainClasses(textDocument, classes)
         if (mainWithFallback.nonEmpty) {
           findMainToRun(Map(buildTarget -> mainWithFallback.toList), params)
         } else if (tests.nonEmpty) {
