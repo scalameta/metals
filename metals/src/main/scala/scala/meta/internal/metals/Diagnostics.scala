@@ -240,10 +240,12 @@ final class Diagnostics(
   }
 
   private def publishDiagnostics(path: AbsolutePath): Unit = {
-    publishDiagnostics(
-      path,
-      diagnostics.getOrElse(path, new ju.LinkedList[Diagnostic]()),
-    )
+    if (!path.isTwirlTemplate) {
+      publishDiagnostics(
+        path,
+        diagnostics.getOrElse(path, new ju.LinkedList[Diagnostic]()),
+      )
+    }
   }
 
   def hasCompilationErrors(buildTarget: BuildTargetIdentifier): Boolean = {
