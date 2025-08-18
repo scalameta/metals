@@ -390,22 +390,48 @@ class DebugDiscovery(
     }
   }
 
+  private def createScalaTestSuites(
+      buildTarget: b.BuildTargetIdentifier,
+      suiteSelections: List[b.ScalaTestSuiteSelection],
+      params: DebugDiscoveryParams = null,
+  ): Future[b.DebugSessionParams] = {
+    DebugProvider
+      .envFromFile(workspace, Option(params).flatMap(p => Option(p.envFile)))
+      .map { envFromFile =>
+        val env = Option(params)
+          .flatMap(p => Option(p.env))
+          .toList
+          .flatMap(DebugProvider.createEnvList)
+        val jvmOpts =
+          JvmOpts.fromWorkspaceOrEnvForTest(workspace).getOrElse(Nil)
+
+        val finalJvmOpts = Option(params)
+          .flatMap(p => Option(p.jvmOptions))
+          .map(jvmOpts ++ _.asScala)
+          .getOrElse(jvmOpts)
+
+        val scalaTestSuite = new b.ScalaTestSuites(
+          suiteSelections.asJava,
+          finalJvmOpts.asJava,
+          (envFromFile ::: env).asJava,
+        )
+
+        val debugParams = new b.DebugSessionParams(singletonList(buildTarget))
+        debugParams.setDataKind(
+          b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION
+        )
+        debugParams.setData(scalaTestSuite.toJson)
+        debugParams
+      }
+  }
+
   private def createTestSuiteParams(
       buildTarget: b.BuildTargetIdentifier,
       suiteFqn: String,
   ): Future[b.DebugSessionParams] = {
-    import scala.jdk.CollectionConverters._
-    val params = new b.DebugSessionParams(singletonList(buildTarget))
-    params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION)
     val suiteSelection =
       new b.ScalaTestSuiteSelection(suiteFqn, List.empty[String].asJava)
-    val suites = new b.ScalaTestSuites(
-      List(suiteSelection).asJava,
-      Nil.asJava,
-      Nil.asJava,
-    )
-    params.setData(suites.toJson)
-    Future.successful(params)
+    createScalaTestSuites(buildTarget, List(suiteSelection))
   }
 
   private def createTestCaseParams(
@@ -413,18 +439,9 @@ class DebugDiscovery(
       suiteFqn: String,
       testName: String,
   ): Future[b.DebugSessionParams] = {
-    import scala.jdk.CollectionConverters._
-    val params = new b.DebugSessionParams(singletonList(buildTarget))
-    params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION)
     val suiteSelection =
       new b.ScalaTestSuiteSelection(suiteFqn, List(testName).asJava)
-    val suites = new b.ScalaTestSuites(
-      List(suiteSelection).asJava,
-      Nil.asJava,
-      Nil.asJava,
-    )
-    params.setData(suites.toJson)
-    Future.successful(params)
+    createScalaTestSuites(buildTarget, List(suiteSelection))
   }
 
   private def run(
@@ -507,37 +524,9 @@ class DebugDiscovery(
         if (mainWithFallback.nonEmpty) {
           findMainToRun(Map(buildTarget -> mainWithFallback.toList), params)
         } else if (tests.nonEmpty) {
-          DebugProvider.envFromFile(workspace, Option(params.envFile)).map {
-            envFromFile =>
-              val env =
-                Option(params.env).toList.flatMap(DebugProvider.createEnvList)
-
-              val jvmOpts =
-                JvmOpts.fromWorkspaceOrEnvForTest(workspace).getOrElse(Nil)
-              val scalaTestSuite = new b.ScalaTestSuites(
-                tests
-                  .map(
-                    new b.ScalaTestSuiteSelection(
-                      _,
-                      Nil.asJava,
-                    )
-                  )
-                  .asJava,
-                Option(params.jvmOptions)
-                  .map(jvmOpts ++ _.asScala)
-                  .getOrElse(jvmOpts)
-                  .asJava,
-                (envFromFile ::: env).asJava,
-              )
-              val debugParams = new b.DebugSessionParams(
-                singletonList(buildTarget)
-              )
-              debugParams.setDataKind(
-                b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION
-              )
-              debugParams.setData(scalaTestSuite.toJson)
-              debugParams
-          }
+          val suiteSelections =
+            tests.map(new b.ScalaTestSuiteSelection(_, Nil.asJava)).toList
+          createScalaTestSuites(buildTarget, suiteSelections, params)
         } else {
           Future.failed(NoRunOptionException)
         }
