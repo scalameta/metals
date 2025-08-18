@@ -38,7 +38,8 @@ class ScalafixLlmRuleProvider(
   ): String = {
     val scalaBinaryVersion =
       ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
-    val versionToUse = if (scalaBinaryVersion == "3") "2.13" else scalaBinaryVersion
+    val versionToUse =
+      if (scalaBinaryVersion == "3") "2.13" else scalaBinaryVersion
     s"""|
         |//> using scala $scalaVersion
         |//> using dep "ch.epfl.scala:scalafix-core_$versionToUse:0.14.3"
@@ -108,7 +109,6 @@ class ScalafixLlmRuleProvider(
         },
         timeout = 1.minute,
       )
-      pprint.log(binaryVersion)
       result match {
         case Some(_) =>
           readmeFile.writeText(description)
@@ -126,12 +126,15 @@ class ScalafixLlmRuleProvider(
       ruleName: String,
       ruleImplementation: String,
       description: String,
-      targets: List[String]
+      targets: List[String],
+      files: List[AbsolutePath],
   ): Future[Either[String, Boolean]] = {
     val publishedBuffer = TrieMap.empty[String, Dependency]
-    val allTargets = targets.flatMap{
-      targetName =>
-        buildTargets.findByDisplayName(targetName).flatMap(bd => buildTargets.scalaTarget(bd.getId())).collect {
+    val allTargets = targets.flatMap { targetName =>
+      buildTargets
+        .findByDisplayName(targetName)
+        .flatMap(bd => buildTargets.scalaTarget(bd.getId()))
+        .collect {
           case scalaTarget if !scalaTarget.isSbt => scalaTarget
         }
     }
@@ -155,7 +158,7 @@ class ScalafixLlmRuleProvider(
     loop(allScalaVersions.toList) match {
       case Left(error) => Future.successful(Left(error))
       case Right(_) =>
-        runScalafixRuleForAllTargets(ruleName)
+        runScalafixRuleForAllTargets(ruleName, files)
           .map { changeWasApplied =>
             if (changeWasApplied) {
               Right(true)
@@ -191,15 +194,23 @@ class ScalafixLlmRuleProvider(
   }
 
   def runScalafixRuleForAllTargets(
-      ruleName: String
+      ruleName: String,
+      runOnSources: List[AbsolutePath] = Nil,
   ): Future[Boolean] = {
     val allTargets =
       buildTargets.allBuildTargetIds.map(buildTargets.scalaTarget).collect {
         case Some(scalaTarget) if !scalaTarget.isSbt => scalaTarget
       }
     val allFutures = allTargets.iterator.map { scalaTarget =>
-      val sources = buildTargets.buildTargetSources(scalaTarget.id).toList
-      val scalaBinaryVersion = ScalaVersions.scalaBinaryVersionFromFullVersion(scalaTarget.scalaVersion)
+      val sources =
+        if (runOnSources.isEmpty) {
+          buildTargets.buildTargetSources(scalaTarget.id).toList
+        } else {
+          runOnSources
+        }
+      val scalaBinaryVersion = ScalaVersions.scalaBinaryVersionFromFullVersion(
+        scalaTarget.scalaVersion
+      )
       val dependency =
         ruleDependencyIfNeeded(ruleName, scalaBinaryVersion)
       runScalafixRule(

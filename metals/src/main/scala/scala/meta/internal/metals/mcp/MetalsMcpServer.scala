@@ -928,10 +928,6 @@ class MetalsMcpServer(
         |      "type": "string",
         |      "description": "The description of the scalafix rule to run for later MCP invocations."
         |    },
-        |    "fileInFocus": {
-        |      "type": "string",
-        |      "description": "The current file in focus for context, if empty we will try to detect it"
-        |    },
         |    "targets": {
         |      "type": "array",
         |      "description": "The targets to run the rule on, if empty will run on the last focused target"
@@ -939,6 +935,10 @@ class MetalsMcpServer(
         |    "sampleCode": {
         |      "type": "string",
         |      "description": "Sample code that we are trying to match in the rule, if nothing was matched an error will be returned with the structure of this sample."
+        |    },
+        |    "fileToRunOn": {
+        |      "type": "string",
+        |      "description": "File to run it all, if empty will run on all files in given targets"
         |    }
         |  },
         |  "required": ["ruleName", "ruleImplementation"]
@@ -978,15 +978,22 @@ class MetalsMcpServer(
         def errorMessage(exception: String) = {
           s"Error: ${exception}\nSample code structure: ${helper}"
         }
+        val runOn = arguments.getPathOpt("fileToRunOn")
         val modules =
-          arguments.getOptAs[JList[String]]("targets").map(_.asScala.toList).getOrElse(Nil) match {
+          arguments
+            .getOptAs[JList[String]]("targets")
+            .map(_.asScala.toList)
+            .getOrElse(Nil) match {
             case Nil =>
-              focusedDocument().flatMap(
-                buildTargets
-                  .inverseSources(_)
-                  .flatMap(buildTargets.scalaTarget(_))
-                  .map(_.displayName)
-              ).toList
+              val targetFile = runOn.orElse(focusedDocument())
+              targetFile
+                .flatMap(
+                  buildTargets
+                    .inverseSources(_)
+                    .flatMap(buildTargets.scalaTarget(_))
+                    .map(_.displayName)
+                )
+                .toList
             case targets => targets
           }
         val resultingFuture =
@@ -995,6 +1002,7 @@ class MetalsMcpServer(
             ruleImplementation,
             description,
             modules,
+            runOn.toList,
           )
         resultingFuture.map {
           case Right(_) =>
