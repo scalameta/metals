@@ -32,6 +32,22 @@ class DebugDiscoverySuite
   private val barPath = "a/src/main/scala/a/Bar.scala"
   private val altTargetPath = "b/src/main/scala/b/Main.scala"
 
+  /**
+   * Normalizes test output by removing ANSI color codes, execution times,
+   * test framework dots, and trailing whitespace to make output comparison stable.
+   */
+  def normalizeOutput(output: String): String =
+    output
+      .replaceAll("\u001B\\[[;\\d]*m", "")
+      .replaceAll("Execution took \\d+ms", "")
+      .replaceAll("Total duration: \\d+ms", "")
+      .replaceAll("\\s*\\d+\\.\\d+s", "")
+      .replaceAll("\\s*\\d+s", "")
+      .replaceAll("[∙·]", "")
+      .replaceAll("(?m)[ \t]+$", "")
+      .replaceAll("(?m)^\\s*$[\n\r]{1,}", "")
+      .trim
+
   test("run") {
     for {
       _ <- initialize(
@@ -579,6 +595,16 @@ class DebugDiscoverySuite
   }
 
   test("run-closest-test") {
+    val fileContent =
+      """|package a
+         |
+         |class Foo extends org.scalatest.funsuite.AnyFunSuite {
+         |  test("first") {}
+         |  test("second") {@@}
+         |}
+      """.stripMargin
+    val filePath = fooPath
+    val fileName = filePath.split("/").last
     for {
       _ <- initialize(
         s"""/metals.json
@@ -587,27 +613,24 @@ class DebugDiscoverySuite
            |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
            |  }
            |}
-           |/${fooPath}
-           |package a
-           |
-           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
-           |  test("first") {
-           |    print("first test")
-           |  }
-           |  test("second") {
-           |    print("second test") // <- Cursor in this line
-           |  }
-           |}
+           |/${filePath}
+           |${fileContent}
            |""".stripMargin
       )
-      _ <- server.didOpen(fooPath)
-      _ <- server.didSave(fooPath)
+      _ <- server.didOpen(filePath)
+      (text, params) <- server.offsetParams(
+        fileName,
+        fileContent,
+        workspace,
+      )
+      _ <- server.didChange(filePath, text)
+      _ <- server.didSave(filePath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
-          server.toPath(fooPath).toURI.toString,
+          server.toPath(filePath).toURI.toString,
           "runClosest",
-          position = new org.eclipse.lsp4j.Position(7, 5),
+          position = params.getPosition,
         ).toJson
       )
       _ <- debugger.initialize
@@ -615,14 +638,30 @@ class DebugDiscoverySuite
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assert(
-      output.contains("second test") &&
-        !output.contains("first test") &&
-        output.contains("1 tests, 1 passed")
+    } yield assertNoDiff(
+      normalizeOutput(output),
+      """|Foo:
+         |- second
+         |1 tests, 1 passed
+         |All tests in a.Foo passed
+         |================================================================================
+         |All 1 test suites passed.
+         |================================================================================
+        """.stripMargin,
     )
   }
 
   test("run-closest-suite") {
+    val fileContent =
+      """|package a
+         |
+         |class Foo extends org.scalatest.funsuite.@@AnyFunSuite {
+         |  test("first") {}
+         |  test("second") {}
+         |}
+         |""".stripMargin
+    val filePath = fooPath
+    val fileName = filePath.split("/").last
     for {
       _ <- initialize(
         s"""/metals.json
@@ -631,27 +670,24 @@ class DebugDiscoverySuite
            |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
            |  }
            |}
-           |/${fooPath}
-           |package a
-           |
-           |class Foo extends org.scalatest.funsuite.AnyFunSuite { // <- Cursor in this line
-           |  test("first") {
-           |    print("first test")
-           |  }
-           |  test("second") {
-           |    print("second test")
-           |  }
-           |}
+           |/${filePath}
+           |${fileContent}
            |""".stripMargin
       )
-      _ <- server.didOpen(fooPath)
-      _ <- server.didSave(fooPath)
+      _ <- server.didOpen(filePath)
+      (text, params) <- server.offsetParams(
+        fileName,
+        fileContent,
+        workspace,
+      )
+      _ <- server.didChange(filePath, text)
+      _ <- server.didSave(filePath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
-          server.toPath(fooPath).toURI.toString,
+          server.toPath(filePath).toURI.toString,
           "runClosest",
-          position = new org.eclipse.lsp4j.Position(2, 4),
+          position = params.getPosition(),
         ).toJson
       )
       _ <- debugger.initialize
@@ -659,14 +695,35 @@ class DebugDiscoverySuite
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assert(
-      output.contains("first test") &&
-        output.contains("second test") &&
-        output.contains("2 tests, 2 passed")
+    } yield assertNoDiff(
+      normalizeOutput(output),
+      """|Foo:
+         |- first
+         |- second
+         |2 tests, 2 passed
+         |All tests in a.Foo passed
+         |================================================================================
+         |All 1 test suites passed.
+         |================================================================================
+      """.stripMargin,
     )
   }
 
   test("run-closest-multiple-suites") {
+    val fileContent =
+      """|package a
+         |
+         |class BarFoo extends org.scalatest.funsuite.AnyFunSuite {
+         |  test("BarFoo-first") {}
+         |  test("BarFoo-second") {}
+         |}                                      @@
+         |class Bar extends org.scalatest.funsuite.AnyFunSuite {
+         |  test("Bar-first") {}
+         |  test("Bar-second") {}
+         |}
+         |""".stripMargin
+    val filePath = fooPath
+    val fileName = filePath.split("/").last
     for {
       _ <- initialize(
         s"""/metals.json
@@ -675,35 +732,24 @@ class DebugDiscoverySuite
            |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
            |  }
            |}
-           |/${fooPath}
-           |package a
-           |
-           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
-           |  test("Foo-first") {
-           |    print("Foo-first")
-           |  }
-           |  test("Foo-second") {
-           |    print("Foo-second")
-           |  }
-           |} // <- Cursor in this line
-           |class Bar extends org.scalatest.funsuite.AnyFunSuite {
-           |  test("Bar-first") {
-           |    print("Bar-first")
-           |  }
-           |  test("Bar-second") {
-           |    print("Bar-second")
-           |  }
-           |}
+           |/${filePath}
+           |${fileContent}
            |""".stripMargin
       )
-      _ <- server.didOpen(fooPath)
-      _ <- server.didSave(fooPath)
+      _ <- server.didOpen(filePath)
+      (text, params) <- server.offsetParams(
+        fileName,
+        fileContent,
+        workspace,
+      )
+      _ <- server.didChange(filePath, text)
+      _ <- server.didSave(filePath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
-          server.toPath(fooPath).toURI.toString,
+          server.toPath(filePath).toURI.toString,
           "runClosest",
-          position = new org.eclipse.lsp4j.Position(9, 10),
+          position = params.getPosition(),
         ).toJson
       )
       _ <- debugger.initialize
@@ -711,14 +757,32 @@ class DebugDiscoverySuite
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assert(
-      output.contains("Bar-first") &&
-        output.contains("Bar-second") &&
-        output.contains("2 tests, 2 passed")
+    } yield assertNoDiff(
+      normalizeOutput(output),
+      """|Bar:
+         |- Bar-first
+         |- Bar-second
+         |2 tests, 2 passed
+         |All tests in a.Bar passed
+         |================================================================================
+         |All 1 test suites passed.
+         |================================================================================
+      """.stripMargin,
     )
   }
 
   test("run-closest-tie-breaker") {
+    val fileContent =
+      """|package a
+         |
+         |class Foo extends org.scalatest.funsuite.AnyFunSuite {
+         |@@
+         |test("first") {}
+         |test("second") {}
+         |}
+         |""".stripMargin
+    val filePath = fooPath
+    val fileName = filePath.split("/").last
     for {
       _ <- initialize(
         s"""/metals.json
@@ -727,28 +791,24 @@ class DebugDiscoverySuite
            |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
            |  }
            |}
-           |/${fooPath}
-           |package a
-           |
-           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
-           |  // <- Cursor in this line
-           |test("first") {
-           |  print("first test")
-           |}
-           |  test("second") {
-           |    print("second test")
-           |  }
-           |}
+           |/${filePath}
+           |${fileContent}
            |""".stripMargin
       )
-      _ <- server.didOpen(fooPath)
-      _ <- server.didSave(fooPath)
+      _ <- server.didOpen(filePath)
+      (text, params) <- server.offsetParams(
+        fileName,
+        fileContent,
+        workspace,
+      )
+      _ <- server.didChange(filePath, text)
+      _ <- server.didSave(filePath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
-          server.toPath(fooPath).toURI.toString,
+          server.toPath(filePath).toURI.toString,
           "runClosest",
-          position = new org.eclipse.lsp4j.Position(3, 0),
+          position = params.getPosition(),
         ).toJson
       )
       _ <- debugger.initialize
@@ -756,14 +816,30 @@ class DebugDiscoverySuite
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assert(
-      (output.contains("first test") &&
-        !output.contains("second test") &&
-        output.contains("1 tests, 1 passed"))
+    } yield assertNoDiff(
+      normalizeOutput(output),
+      """|Foo:
+         |- first
+         |1 tests, 1 passed
+         |All tests in a.Foo passed
+         |================================================================================
+         |All 1 test suites passed.
+         |================================================================================
+      """.stripMargin,
     )
   }
 
   test("run-closest-munit") {
+    val fileContent =
+      """|package a
+         |
+         |class FooMUnitTest extends munit.FunSuite {
+         |  test("munit first test") {}
+         |  test("munit second te@@st") {}
+         |}
+         |""".stripMargin
+    val filePath = fooPath
+    val fileName = filePath.split("/").last
     for {
       _ <- initialize(
         s"""/metals.json
@@ -772,27 +848,24 @@ class DebugDiscoverySuite
            |    "libraryDependencies":["org.scalameta::munit:1.0.0-M11"]
            |  }
            |}
-           |/${fooPath}
-           |package a
-           |
-           |class FooMUnitTest extends munit.FunSuite {
-           |  test("munit first test") {
-           |    print("first print")
-           |  }
-           |  test("munit second test") {
-           |    print("second print") // <- Cursor in this line
-           |  }
-           |}
+           |/${filePath}
+           |${fileContent}
            |""".stripMargin
       )
-      _ <- server.didOpen(fooPath)
-      _ <- server.didSave(fooPath)
+      _ <- server.didOpen(filePath)
+      (text, params) <- server.offsetParams(
+        fileName,
+        fileContent,
+        workspace,
+      )
+      _ <- server.didChange(filePath, text)
+      _ <- server.didSave(filePath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
-          server.toPath(fooPath).toURI.toString,
+          server.toPath(filePath).toURI.toString,
           "runClosest",
-          position = new org.eclipse.lsp4j.Position(7, 5),
+          position = params.getPosition(),
         ).toJson
       )
       _ <- debugger.initialize
@@ -800,14 +873,31 @@ class DebugDiscoverySuite
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assert(
-      output.contains("second print") &&
-        !output.contains("first print") &&
-        output.contains("2 tests, 1 passed, 1 ignored")
+    } yield assertNoDiff(
+      normalizeOutput(output),
+      """|==> i a.FooMUnitTest.munit first test ignored
+         |a.FooMUnitTest:
+         |  + munit second test
+         |2 tests, 1 passed, 1 ignored
+         |All tests in a.FooMUnitTest passed
+         |================================================================================
+         |All 1 test suites passed.
+         |================================================================================
+      """.stripMargin,
     )
   }
 
   test("run-closest-munit-suite") {
+    val fileContent =
+      """|package a
+         |@@
+         |class FooMUnitTest extends munit.FunSuite {
+         |  test("munit first test") {}
+         |  test("munit second test") {}
+         |}
+         |""".stripMargin
+    val filePath = fooPath
+    val fileName = filePath.split("/").last
     for {
       _ <- initialize(
         s"""/metals.json
@@ -816,27 +906,24 @@ class DebugDiscoverySuite
            |    "libraryDependencies":["org.scalameta::munit:1.0.0-M11"]
            |  }
            |}
-           |/${fooPath}
-           |package a
-           |
-           |class FooMUnitTest extends munit.FunSuite { // <- Cursor in this line
-           |  test("munit first test") {
-           |    print("munit first")
-           |  }
-           |  test("munit second test") {
-           |    print("munit second")
-           |  }
-           |}
+           |/${filePath}
+           |${fileContent}
            |""".stripMargin
       )
-      _ <- server.didOpen(fooPath)
-      _ <- server.didSave(fooPath)
+      _ <- server.didOpen(filePath)
+      (text, params) <- server.offsetParams(
+        fileName,
+        fileContent,
+        workspace,
+      )
+      _ <- server.didChange(filePath, text)
+      _ <- server.didSave(filePath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
-          server.toPath(fooPath).toURI.toString,
+          server.toPath(filePath).toURI.toString,
           "runClosest",
-          position = new org.eclipse.lsp4j.Position(2, 4),
+          position = params.getPosition(),
         ).toJson
       )
       _ <- debugger.initialize
@@ -844,14 +931,37 @@ class DebugDiscoverySuite
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assert(
-      output.contains("munit first") &&
-        output.contains("munit second") &&
-        output.contains("2 passed")
+    } yield assertNoDiff(
+      normalizeOutput(output),
+      """|a.FooMUnitTest:
+         |  + munit first test
+         |  + munit second test
+         |2 tests, 2 passed
+         |All tests in a.FooMUnitTest passed
+         |================================================================================
+         |All 1 test suites passed.
+         |================================================================================
+      """.stripMargin,
     )
   }
 
   test("run-closest-junit") {
+    val fileContent =
+      """|package a
+         |
+         |import org.junit.Test
+         |import org.junit.Assert._
+         |
+         |class FooJUnitTest {
+         |  @Test
+         |  def junitFirstTest(): Unit = {}
+         |  
+         |  @Test
+         |  def junitSecondTest():@@ Unit = {}
+         |}
+         |""".stripMargin
+    val filePath = fooPath
+    val fileName = filePath.split("/").last
     for {
       _ <- initialize(
         s"""/metals.json
@@ -860,33 +970,24 @@ class DebugDiscoverySuite
            |    "libraryDependencies":["junit:junit:4.13.2", "com.github.sbt:junit-interface:0.13.3"]
            |  }
            |}
-           |/${fooPath}
-           |package a
-           |
-           |import org.junit.Test
-           |import org.junit.Assert._
-           |
-           |class FooJUnitTest {
-           |  @Test
-           |  def junitFirstTest(): Unit = {
-           |    print("junit first")
-           |  }
-           |  
-           |  @Test
-           |  def junitSecondTest(): Unit = { 
-           |    print("junit second")
-           |  } // <- Cursor in this line
-           |}
+           |/${filePath}
+           |${fileContent}
            |""".stripMargin
       )
-      _ <- server.didOpen(fooPath)
-      _ <- server.didSave(fooPath)
+      _ <- server.didOpen(filePath)
+      (text, params) <- server.offsetParams(
+        fileName,
+        fileContent,
+        workspace,
+      )
+      _ <- server.didChange(filePath, text)
+      _ <- server.didSave(filePath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
-          server.toPath(fooPath).toURI.toString,
+          server.toPath(filePath).toURI.toString,
           "runClosest",
-          position = new org.eclipse.lsp4j.Position(14, 5),
+          position = params.getPosition(),
         ).toJson
       )
       _ <- debugger.initialize
@@ -894,13 +995,32 @@ class DebugDiscoverySuite
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assert(
-      output.contains("junit second") &&
-        !output.contains("junit first")
+    } yield assertNoDiff(
+      normalizeOutput(output),
+      """|Test a.FooJUnitTest.junitFirstTest ignored
+         |2 tests, 1 passed, 1 ignored
+         |All tests in a.FooJUnitTest passed
+         |================================================================================
+         |All 1 test suites passed.
+         |================================================================================
+      """.stripMargin,
     )
   }
 
   test("run-closest-mixed-frameworks") {
+    val fileContent =
+      """|package a
+         |
+         |class ScalaTestSuite extends org.scalatest.funsuite.AnyFunSuite {
+         |  test("scalatest test") {}
+         |}
+         |       @@
+         |class MUnitSuite extends munit.FunSuite {
+         |  test("munit test") {}
+         |}
+         |""".stripMargin
+    val filePath = fooPath
+    val fileName = filePath.split("/").last
     for {
       _ <- initialize(
         s"""/metals.json
@@ -912,30 +1032,24 @@ class DebugDiscoverySuite
            |    ]
            |  }
            |}
-           |/${fooPath}
-           |package a
-           |
-           |class ScalaTestSuite extends org.scalatest.funsuite.AnyFunSuite {
-           |  test("scalatest test") {
-           |    print("scalatest first")
-           |  }
-           |}
-           |
-           |class MUnitSuite extends munit.FunSuite {
-           |  test("munit test") {
-           |    print("munit first") // <- Cursor in this line
-           |  }
-           |}
+           |/${filePath}
+           |${fileContent}
            |""".stripMargin
       )
-      _ <- server.didOpen(fooPath)
-      _ <- server.didSave(fooPath)
+      _ <- server.didOpen(filePath)
+      (text, params) <- server.offsetParams(
+        fileName,
+        fileContent,
+        workspace,
+      )
+      _ <- server.didChange(filePath, text)
+      _ <- server.didSave(filePath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
-          server.toPath(fooPath).toURI.toString,
+          server.toPath(filePath).toURI.toString,
           "runClosest",
-          position = new org.eclipse.lsp4j.Position(10, 5),
+          position = params.getPosition(),
         ).toJson
       )
       _ <- debugger.initialize
@@ -943,13 +1057,29 @@ class DebugDiscoverySuite
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assert(
-      output.contains("munit first") &&
-        !output.contains("scalatest first")
+    } yield assertNoDiff(
+      normalizeOutput(output),
+      """|a.MUnitSuite:
+         |  + munit test
+         |1 tests, 1 passed
+         |All tests in a.MUnitSuite passed
+         |================================================================================
+         |All 1 test suites passed.
+         |================================================================================
+      """.stripMargin,
     )
   }
 
   test("run-closest-empty-test-file") {
+    val fileContent =
+      """|package a
+         |
+         |class EmptyTestSuite extends org.sca@@latest.funsuite.AnyFunSuite {
+         |  // No tests defined
+         |}
+         |""".stripMargin
+    val filePath = fooPath
+    val fileName = filePath.split("/").last
     for {
       _ <- initialize(
         s"""/metals.json
@@ -958,23 +1088,25 @@ class DebugDiscoverySuite
            |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
            |  }
            |}
-           |/${fooPath}
-           |package a
-           |
-           |class EmptyTestSuite extends org.scalatest.funsuite.AnyFunSuite {
-           |  // No tests defined
-           |}
+           |/${filePath}
+           |${fileContent}
            |""".stripMargin
       )
-      _ <- server.didOpen(fooPath)
-      _ <- server.didSave(fooPath)
+      _ <- server.didOpen(filePath)
+      (text, params) <- server.offsetParams(
+        fileName,
+        fileContent,
+        workspace,
+      )
+      _ <- server.didChange(filePath, text)
+      _ <- server.didSave(filePath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       result <- server
         .startDebuggingUnresolved(
           new DebugDiscoveryParams(
-            server.toPath(fooPath).toURI.toString,
+            server.toPath(filePath).toURI.toString,
             "runClosest",
-            position = new org.eclipse.lsp4j.Position(4, 5),
+            position = params.getPosition(),
           ).toJson
         )
         .recover { case e: ResponseErrorException => e.getMessage }
@@ -985,36 +1117,47 @@ class DebugDiscoverySuite
   }
 
   test("run-closest-main") {
+    val fileContent =
+      """|package a
+         |
+         |object Main {
+         |  def main(args: Array[String]): Unit = {
+         |    pri@@ntln("main executed")
+         |  }
+         |}
+         |
+         |object OtherMain {
+         |  def main(args: Array[String]): Unit = {
+         |    println("other main executed")
+         |  }
+         |}
+         |""".stripMargin
+    val filePath = fooPath
+    val fileName = filePath.split("/").last
     for {
       _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
            |}
-           |/${fooPath}
-           |package a
-           |
-           |object Main {
-           |  def main(args: Array[String]): Unit = {
-           |    print("main executed") // <- Cursor in this line
-           |  }
-           |}
-           |
-           |object OtherMain {
-           |  def main(args: Array[String]): Unit = {
-           |    print("other main executed")
-           |  }
-           |}
+           |/${filePath}
+           |${fileContent}
            |""".stripMargin
       )
-      _ <- server.didOpen(fooPath)
-      _ <- server.didSave(fooPath)
+      _ <- server.didOpen(filePath)
+      (text, params) <- server.offsetParams(
+        fileName,
+        fileContent,
+        workspace,
+      )
+      _ <- server.didChange(filePath, text)
+      _ <- server.didSave(filePath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
-          server.toPath(fooPath).toURI.toString,
+          server.toPath(filePath).toURI.toString,
           "runClosest",
-          position = new org.eclipse.lsp4j.Position(4, 5),
+          position = params.getPosition(),
         ).toJson
       )
       _ <- debugger.initialize
@@ -1022,13 +1165,28 @@ class DebugDiscoverySuite
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assert(
-      output.contains("main executed") &&
-        !output.contains("other main executed")
+    } yield assertNoDiff(
+      output,
+      "main executed",
     )
   }
 
   test("run-closest-mixed-main-and-test") {
+    val fileContent =
+      """|package a
+         |
+         |object Main {
+         |  def main(args: Array[String]): Unit = {
+         |    println("main executed")
+         |  }
+         |}
+         |
+         |class TestSuite extends org.scalatest.funsuite.AnyFunSuite {
+         |  test("test cas@@e") {}
+         |}
+         |""".stripMargin
+    val filePath = fooPath
+    val fileName = filePath.split("/").last
     for {
       _ <- initialize(
         s"""/metals.json
@@ -1037,30 +1195,24 @@ class DebugDiscoverySuite
            |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
            |  }
            |}
-           |/${fooPath}
-           |package a
-           |
-           |object Main {
-           |  def main(args: Array[String]): Unit = {
-           |    print("main executed")
-           |  }
-           |}
-           |
-           |class TestSuite extends org.scalatest.funsuite.AnyFunSuite {
-           |  test("test case") { // <- Cursor in this line
-           |    print("test executed")
-           |  }
-           |}
+           |/${filePath}
+           |${fileContent}
            |""".stripMargin
       )
-      _ <- server.didOpen(fooPath)
-      _ <- server.didSave(fooPath)
+      _ <- server.didOpen(filePath)
+      (text, params) <- server.offsetParams(
+        fileName,
+        fileContent,
+        workspace,
+      )
+      _ <- server.didChange(filePath, text)
+      _ <- server.didSave(filePath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
-          server.toPath(fooPath).toURI.toString,
+          server.toPath(filePath).toURI.toString,
           "runClosest",
-          position = new org.eclipse.lsp4j.Position(9, 5),
+          position = params.getPosition(),
         ).toJson
       )
       _ <- debugger.initialize
@@ -1068,13 +1220,39 @@ class DebugDiscoverySuite
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assert(
-      output.contains("test executed") &&
-        !output.contains("main executed")
+    } yield assertNoDiff(
+      normalizeOutput(output),
+      """|TestSuite:
+         |- test case
+         |1 tests, 1 passed
+         |All tests in a.TestSuite passed
+         |================================================================================
+         |All 1 test suites passed.
+         |================================================================================
+      """.stripMargin,
     )
   }
 
   test("run-closest-scala3-main-annotation") {
+    val fileContent =
+      """|package a
+         |
+         |@main def runApp(): Unit = {
+         |  println("Scala @@3 main executed")
+         |}
+         |
+         |@main def runOtherApp(): Unit = {
+         |  println("Other Scala 3 main executed")
+         |}
+         |
+         |class SomeClass {
+         |  def regularMethod(): Unit = {
+         |    println("not a main")
+         |  }
+         |}
+         |""".stripMargin
+    val filePath = fooPath
+    val fileName = filePath.split("/").last
     for {
       _ <- initialize(
         s"""/metals.json
@@ -1083,32 +1261,24 @@ class DebugDiscoverySuite
            |    "scalaVersion": "3.3.0"
            |  }
            |}
-           |/${fooPath}
-           |package a
-           |
-           |@main def runApp(): Unit = {
-           |  println("Scala 3 main executed") // <- Cursor in this line
-           |}
-           |
-           |@main def runOtherApp(): Unit = {
-           |  println("Other Scala 3 main executed")
-           |}
-           |
-           |class SomeClass {
-           |  def regularMethod(): Unit = {
-           |    println("not a main")
-           |  }
-           |}
+           |/${filePath}
+           |${fileContent}
            |""".stripMargin
       )
-      _ <- server.didOpen(fooPath)
-      _ <- server.didSave(fooPath)
+      _ <- server.didOpen(filePath)
+      (text, params) <- server.offsetParams(
+        fileName,
+        fileContent,
+        workspace,
+      )
+      _ <- server.didChange(filePath, text)
+      _ <- server.didSave(filePath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
-          server.toPath(fooPath).toURI.toString,
+          server.toPath(filePath).toURI.toString,
           "runClosest",
-          position = new org.eclipse.lsp4j.Position(3, 5),
+          position = params.getPosition(),
         ).toJson
       )
       _ <- debugger.initialize
@@ -1116,42 +1286,52 @@ class DebugDiscoverySuite
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assert(
-      output.contains("Scala 3 main executed") &&
-        !output.contains("Other Scala 3 main executed") &&
-        !output.contains("not a main")
+    } yield assertNoDiff(
+      output,
+      "Scala 3 main executed",
     )
   }
 
   test("run-closest-app-trait-fallback") {
+    val fileContent =
+      """|package a
+         |                 @@
+         |object MyApp extends App {
+         |  println("App trait main executed")
+         |}
+         |
+         |class SomeClass {
+         |  def someMethod(): Unit = {
+         |    println("not main")
+         |  }
+         |}
+         |""".stripMargin
+    val filePath = fooPath
+    val fileName = filePath.split("/").last
     for {
       _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {}
            |}
-           |/${fooPath}
-           |package a
-           |
-           |object MyApp extends App {
-           |  println("App trait main executed") // <- Cursor in this line
-           |}
-           |
-           |class SomeClass {
-           |  def someMethod(): Unit = {
-           |    println("not main")
-           |  }
-           |}
+           |/${filePath}
+           |${fileContent}
            |""".stripMargin
       )
-      _ <- server.didOpen(fooPath)
-      _ <- server.didSave(fooPath)
+      _ <- server.didOpen(filePath)
+      (text, params) <- server.offsetParams(
+        fileName,
+        fileContent,
+        workspace,
+      )
+      _ <- server.didChange(filePath, text)
+      _ <- server.didSave(filePath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       debugger <- server.startDebuggingUnresolved(
         new DebugDiscoveryParams(
-          server.toPath(fooPath).toURI.toString,
+          server.toPath(filePath).toURI.toString,
           "runClosest",
-          position = new org.eclipse.lsp4j.Position(3, 5),
+          position = params.getPosition(),
         ).toJson
       )
       _ <- debugger.initialize
@@ -1159,9 +1339,9 @@ class DebugDiscoverySuite
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assert(
-      output.contains("App trait main executed") &&
-        !output.contains("not main")
+    } yield assertNoDiff(
+      output,
+      "App trait main executed",
     )
   }
 }
