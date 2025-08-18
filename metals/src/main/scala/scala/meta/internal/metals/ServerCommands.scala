@@ -425,24 +425,6 @@ object ServerCommands {
         |""".stripMargin,
   )
 
-  val RunClosest = new ParametrizedCommand[DebugDiscoveryParams](
-    "run-closest",
-    "Run closest test or main.",
-    """|Run the test or main class closest to the cursor position in the file.
-       |""".stripMargin,
-    """|DebugDiscoveryParams object
-       |Example:
-       |```json
-       |{
-       |  "path": "path/to/file.scala",
-       |  "runType": "runClosest",
-       |  "position": { "line": 42, "character": 10 }
-       |}
-       |```
-       |
-       |""".stripMargin,
-  )
-
   val PresentationCompilerRestart = new Command(
     "presentation-compiler-restart",
     "Restart presentation compiler",
@@ -815,7 +797,6 @@ object ServerCommands {
       StartMainClass,
       StartTestSuite,
       ResolveAndStartTestSuite,
-      RunClosest,
       StartAttach,
       DiscoverAndRun,
       SuperMethodHierarchy,
