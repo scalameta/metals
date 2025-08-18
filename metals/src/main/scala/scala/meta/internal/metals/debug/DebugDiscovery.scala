@@ -292,11 +292,35 @@ class DebugDiscovery(
       }
 
       val syntheticOccOpt = if (occOpt.isEmpty) {
-        textDocument.symbols
-          .find(_.symbol.contains(mainClass.getClassName.split('.').last))
+        val mainMethodName = mainClass.getClassName.split('.').last
+
+        val scala3MainOpt = textDocument.symbols
+          .find { symbolInfo =>
+            symbolInfo.symbol.contains(s".$mainMethodName().") &&
+            symbolInfo.annotations.exists { annotation =>
+              annotation.tpe match {
+                case tpe: scala.meta.internal.semanticdb.TypeRef =>
+                  tpe.symbol == "scala/main#"
+                case _ => false
+              }
+            }
+          }
           .flatMap(symbolInfo =>
             textDocument.occurrences.find(_.symbol == symbolInfo.symbol)
           )
+
+        scala3MainOpt.orElse {
+          val expectedSymbol = mainClass.getClassName.replace(".", "/")
+          textDocument.symbols
+            .find { symbolInfo =>
+              symbolInfo.symbol.startsWith(expectedSymbol) &&
+              (symbolInfo.symbol
+                .endsWith("#") || symbolInfo.symbol.endsWith("."))
+            }
+            .flatMap(symbolInfo =>
+              textDocument.occurrences.find(_.symbol == symbolInfo.symbol)
+            )
+        }
       } else None
 
       (occOpt.orElse(syntheticOccOpt)).flatMap(_.range).map { range =>
@@ -328,7 +352,9 @@ class DebugDiscovery(
     val testClassOccurrences = textDocument.occurrences.filter { occ =>
       occ.role.isDefinition && (
         allTestCases.exists { case (suiteFqn, _) =>
-          occ.symbol.contains(suiteFqn.split('.').last)
+          val expectedSymbol = suiteFqn.replace(".", "/")
+          occ.symbol.startsWith(expectedSymbol) &&
+          (occ.symbol.endsWith("#") || occ.symbol.endsWith("."))
         }
       )
     }
@@ -337,9 +363,13 @@ class DebugDiscovery(
       occ.range.flatMap { range =>
         val lineDiff = math.abs(range.startLine - position.getLine)
 
-        allTestCases.headOption
-          .map(_._1)
-          .map { suiteFqn =>
+        allTestCases
+          .find { case (suiteFqn, _) =>
+            val expectedSymbol = suiteFqn.replace(".", "/")
+            occ.symbol.startsWith(expectedSymbol) &&
+            (occ.symbol.endsWith("#") || occ.symbol.endsWith("."))
+          }
+          .map { case (suiteFqn, _) =>
             TestSuiteDistance(lineDiff, suiteFqn)
           }
       }
