@@ -317,6 +317,17 @@ object ScalaCli {
     ) extends ConnectionState
   }
 
+  def jvmBased(): ScalaCliCommand = {
+    val cp = ScalaCli.scalaCliClassPath()
+    val command = Seq(
+      ScalaCli.javaCommand,
+      "-cp",
+      cp.mkString(File.pathSeparator),
+      ScalaCli.scalaCliMainClass,
+    )
+    ScalaCliCommand(command, Version(BuildInfo.scalaCliVersion))
+  }
+
   def localScalaCli(userConfig: UserConfiguration): Option[ScalaCliCommand] = {
 
     def readFully(is: InputStream): Array[Byte] = {
