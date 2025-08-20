@@ -2,6 +2,7 @@ package scala.meta.internal.parsing
 
 import java.util.Optional
 
+import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.reflect.ClassTag
@@ -17,6 +18,7 @@ import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.ParseException
 import scala.meta.parsers.Parsed
+import scala.meta.tokens.Token
 import scala.meta.tokens.Tokens
 
 import org.eclipse.lsp4j.Diagnostic
@@ -207,21 +209,94 @@ final class Trees(
     } yield tokens
   }
 
+  private def withFallbackDialect(
+      dialect: Dialect,
+      input: Input,
+      tokens: Option[Tokens],
+  ): Option[Parsed[Tree]] = {
+    // Check if first lines contain experimental import
+    if (
+      dialect.allowOpaqueTypes && !dialect.allowCaptureChecking &&
+      tokens.exists(hasExperimentalImport(_))
+    ) {
+      Some(input.safeParse[Source](scala.meta.dialects.Scala3Future))
+    } else {
+      None
+    }
+
+  }
+
+  @tailrec
+  private def hasExperimentalImport(
+      tokens: Tokens,
+      startingAt: Int = 0,
+  ): Boolean = {
+    val firstImportOrDefn = tokens.indexWhere(
+      {
+        case Token.KwImport() => true
+        case Token.KwVar() | Token.KwVal() | Token.KwDef() | Token.KwObject() |
+            Token.KwClass() | Token.KwTrait() | Token.KwEnum() =>
+          true
+        case _ => false
+      },
+      startingAt,
+    )
+    val isImport =
+      firstImportOrDefn > -1 && tokens(firstImportOrDefn).is[Token.KwImport]
+    if (isImport) {
+      val importLine = tokens
+        .drop(firstImportOrDefn)
+        .takeWhile {
+          case _: Token.EOL => false
+          case _ => true
+        }
+        .map(_.syntax)
+        .mkString
+
+      if (importLine.contains("language.experimental.")) {
+        true
+      } else {
+        hasExperimentalImport(tokens, firstImportOrDefn + 1)
+      }
+    } else {
+      false
+    }
+  }
+
   private def parse(
       path: AbsolutePath,
       dialect: Dialect,
   ): Option[Parsed[Tree]] = {
-    val possiblyParsed = for {
+    for {
       text <- buffers.get(path).orElse(path.readTextOpt)
     } yield try {
       val skipFistShebang =
         if (text.startsWith("#!")) text.replaceFirst("#!", "//") else text
       val input = Input.VirtualFile(path.toURI.toString(), skipFistShebang)
-      if (path.isMill) {
+      val possiblyParsed = if (path.isMill) {
         val ammoniteInput = Input.Ammonite(input)
         ammoniteInput.safeParse[MultiSource](dialect)
       } else {
         input.safeParse[Source](dialect)
+      }
+
+      /* If the parse failed, try tokenizing the file to allow tokenization based
+       * functionality to work.
+       */
+      possiblyParsed match {
+        case err: Parsed.Error =>
+          val tokens = tokenize(path)
+          withFallbackDialect(dialect, input, tokens) match {
+            case Some(Parsed.Success(tree)) =>
+              tokenized.remove(path)
+              Parsed.Success(tree)
+            case _ =>
+              tokens.foreach(tokens => tokenized(path) = tokens)
+              err
+          }
+        case succes: Parsed.Success[_] =>
+          tokenized.remove(path)
+          succes
       }
     } catch {
       // if the parsers breaks we should not throw the exception further
@@ -245,16 +320,6 @@ final class Trees(
           new ParseException(Position.None, message),
         )
     }
-    /* If the parse failed, try tokenizing the file to allow tokenization based
-     * functionality to work.
-     */
-    possiblyParsed.collect {
-      case _: Parsed.Error =>
-        tokenize(path).foreach(tokens => tokenized(path) = tokens)
-      case _: Parsed.Success[_] =>
-        tokenized.remove(path)
-    }
-    possiblyParsed
   }
 
 }
