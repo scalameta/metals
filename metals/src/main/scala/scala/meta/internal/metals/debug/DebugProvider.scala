@@ -7,6 +7,7 @@ import java.net.Socket
 import java.net.URI
 import java.util.Collections.singletonList
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.{util => ju}
 
 import scala.concurrent.ExecutionContext
@@ -27,6 +28,7 @@ import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DebugSession
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
+import scala.meta.internal.metals.DismissedNotifications
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.JvmOpts
 import scala.meta.internal.metals.Messages
@@ -89,6 +91,7 @@ class DebugProvider(
     sourceMapper: SourceMapper,
     userConfig: () => UserConfiguration,
     testProvider: TestSuitesProvider,
+    dismissedNotifications: DismissedNotifications,
 )(implicit ec: ExecutionContext)
     extends Cancelable
     with LogForwarder {
@@ -384,23 +387,69 @@ class DebugProvider(
 
       for {
         _ <- compilations.compileTargets(params.getTargets().asScala.toSeq)
-        debuggee <- getDebugee match {
-          case Right(debuggee) => debuggee
-          case Left(errorMessage) =>
-            Future.failed(new RuntimeException(errorMessage))
+        uri <- {
+          def createDebuggee(): Future[MetalsDebuggee] = getDebugee match {
+            case Right(debuggeeF) => debuggeeF
+            case Left(errorMessage) =>
+              Future.failed(new RuntimeException(errorMessage))
+          }
+
+          val dapLogger = new DebugLogger()
+          val resolver = new MetalsDebugToolsResolver()
+
+          def runWith(grace: Duration): Future[URI] =
+            createDebuggee().map { debuggee =>
+              val handler =
+                dap.DebugServer.run(
+                  debuggee,
+                  resolver,
+                  dapLogger,
+                  gracePeriod = grace,
+                )
+              handler.uri
+            }
+
+          val initialGraceSeconds = 30
+          val extendedGraceSeconds = 7200
+
+          def runWithExtendedGracePeriod(): Future[URI] =
+            runWith(
+              Duration(
+                extendedGraceSeconds.toLong,
+                TimeUnit.SECONDS,
+              )
+            )
+
+          if (dismissedNotifications.DebuggeeStartTimeout.isDismissed) {
+            runWithExtendedGracePeriod()
+          } else {
+            runWith(Duration(initialGraceSeconds.toLong, TimeUnit.SECONDS))
+              .recoverWith { case e: TimeoutException =>
+                languageClient
+                  .showMessageRequest(
+                    Messages.DebuggeeStartTimeout.params(initialGraceSeconds)
+                  )
+                  .asScala
+                  .flatMap {
+                    case Messages.DebuggeeStartTimeout.cancel =>
+                      cancelPromise.trySuccess(())
+                      Future.failed(e)
+                    case Messages.DebuggeeStartTimeout.waitAlways =>
+                      dismissedNotifications.DebuggeeStartTimeout
+                        .dismissForever()
+                      runWithExtendedGracePeriod()
+                    case Messages.DebuggeeStartTimeout.waitAction =>
+                      runWithExtendedGracePeriod()
+                    case null =>
+                      cancelPromise.trySuccess(())
+                      Future.failed(e)
+                    case _ =>
+                      runWithExtendedGracePeriod()
+                  }
+              }
+          }
         }
-      } yield {
-        val dapLogger = new DebugLogger()
-        val resolver = new MetalsDebugToolsResolver()
-        val handler =
-          dap.DebugServer.run(
-            debuggee,
-            resolver,
-            dapLogger,
-            gracePeriod = Duration(5, TimeUnit.SECONDS),
-          )
-        handler.uri
-      }
+      } yield uri
     }
 
   def discoverTests(
