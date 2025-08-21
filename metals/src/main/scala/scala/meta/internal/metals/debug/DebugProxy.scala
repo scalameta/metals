@@ -5,24 +5,28 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.concurrent.duration.Duration
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.DismissedNotifications
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SourceMapper
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.Trace
 import scala.meta.internal.metals.WorkDoneProgress
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.debug.DebugProtocol.CompletionRequest
 import scala.meta.internal.metals.debug.DebugProtocol.DisconnectRequest
 import scala.meta.internal.metals.debug.DebugProtocol.ErrorOutputNotification
@@ -47,7 +51,9 @@ import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.StackFrame
+import org.eclipse.lsp4j.debug.TerminatedEventArguments
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
+import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugNotificationMessage
 import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugResponseMessage
 import org.eclipse.lsp4j.jsonrpc.messages.Message
 import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage
@@ -66,6 +72,9 @@ private[debug] final class DebugProxy(
     sourceMapper: SourceMapper,
     compilations: Compilations,
     targets: Seq[BuildTargetIdentifier],
+    languageClient: MetalsLanguageClient,
+    dismissedNotifications: DismissedNotifications,
+    debuggeeStartTimeout: Int,
 )(implicit ec: ExecutionContext) {
   private val exitStatus = Promise[ExitStatus]()
   @volatile private var outputTerminated = false
@@ -280,6 +289,60 @@ private[debug] final class DebugProxy(
       client.consume(addStackTraceFileLocation(message, output))
     case message @ OutputNotification(output) =>
       client.consume(addStackTraceFileLocation(message, output))
+    case response: DebugResponseMessage =>
+      if (
+        response.getMethod == "launch" &&
+        Option(response.getError).exists(
+          _.getMessage.contains("Operation timed out")
+        )
+      ) {
+        try {
+          val restart = Await.result(
+            languageClient
+              .showMessageRequest(
+                Messages.DebuggeeStartTimeout.params(debuggeeStartTimeout)
+              )
+              .asScala
+              .map {
+                case Messages.DebuggeeStartTimeout.cancel =>
+                  false
+                case Messages.DebuggeeStartTimeout.waitAlways =>
+                  dismissedNotifications.DebuggeeStartTimeout.dismissForever()
+                  true
+                case Messages.DebuggeeStartTimeout.waitAction =>
+                  dismissedNotifications.DebuggeeStartTimeout
+                    .dismiss(120, TimeUnit.SECONDS)
+                  true
+                case _ =>
+                  false
+              },
+            Duration.Inf,
+          )
+          if (restart) {
+            exitStatus.trySuccess(Restarted)
+            // Send synthetic success response for launch so client can process restart
+            val successResponse = new DebugResponseMessage
+            successResponse.setId(response.getId)
+            successResponse.setMethod(response.getMethod)
+            successResponse.setResult(new java.util.HashMap[String, Object]())
+            client.consume(successResponse)
+          } else {
+            initialized.trySuccess(())
+          }
+          val args = new TerminatedEventArguments
+          args.setRestart(restart)
+          val notification = new DebugNotificationMessage
+          notification.setMethod("terminated")
+          notification.setParams(args)
+          client.consume(notification)
+        } catch {
+          case NonFatal(e) =>
+            scribe.error(s"Error handling timeout: $e")
+            client.consume(response)
+        }
+      } else {
+        client.consume(response)
+      }
     case message @ TestResults(testResult) =>
       message.setParams(modifyLocationInTests(testResult).toJson)
       client.consume(message)
@@ -348,8 +411,16 @@ private[debug] final class DebugProxy(
     if (cancelled.compareAndSet(false, true)) {
       initialized.trySuccess(())
       scribe.info(s"Canceling debug proxy for [$sessionName]")
-      exitStatus.trySuccess(Terminated)
-      Cancelable.cancelAll(List(client, server))
+      if (!outputTerminated) {
+        outputTerminated = true
+        // Try to set exit status if not already set (e.g., by restart handler)
+        exitStatus.trySuccess(Terminated)
+      }
+      // Keep client connection alive when restarting
+      if (!exitStatus.future.value.contains(Restarted)) {
+        client.cancel()
+      }
+      server.cancel()
     }
   }
 
@@ -379,6 +450,9 @@ private[debug] object DebugProxy {
       sourceMapper: SourceMapper,
       compilations: Compilations,
       targets: Seq[BuildTargetIdentifier],
+      languageClient: MetalsLanguageClient,
+      dismissedNotifications: DismissedNotifications,
+      debuggeeStartTimeout: Int,
   )(implicit ec: ExecutionContext): Future[DebugProxy] = {
     for {
       server <- connectToServer()
@@ -406,6 +480,9 @@ private[debug] object DebugProxy {
       sourceMapper,
       compilations,
       targets,
+      languageClient,
+      dismissedNotifications,
+      debuggeeStartTimeout,
     )
   }
 

@@ -80,6 +80,7 @@ final case class InitializationOptions(
     doctorVisibilityProvider: Option[Boolean],
     bspStatusBarProvider: Option[String],
     moduleStatusBarProvider: Option[String],
+    debuggeeStartTimeout: Option[Int],
 ) {
   def doctorFormat: Option[DoctorFormat.DoctorFormat] =
     doctorProvider.flatMap(DoctorFormat.fromString)
@@ -99,6 +100,7 @@ object InitializationOptions {
 
   val Default: InitializationOptions = InitializationOptions(
     CompilerInitializationOptions.default,
+    None,
     None,
     None,
     None,
@@ -184,6 +186,7 @@ object InitializationOptions {
       bspStatusBarProvider = jsonObj.getStringOption("bspStatusBarProvider"),
       moduleStatusBarProvider =
         jsonObj.getStringOption("moduleStatusBarProvider"),
+      debuggeeStartTimeout = jsonObj.getIntOption("debuggeeStartTimeout"),
     )
   }
 

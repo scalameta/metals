@@ -126,6 +126,11 @@ final case class MetalsServerConfig(
         .filter(_.forall(Character.isDigit(_)))
         .map(_.toInt)
         .getOrElse(60),
+    debuggeeStartTimeout: Int =
+      Option(System.getProperty("metals.debuggee-start-timeout"))
+        .filter(_.forall(Character.isDigit(_)))
+        .map(_.toInt)
+        .getOrElse(30),
     enableBestEffort: Boolean = MetalsServerConfig.binaryOption(
       "metals.enable-best-effort",
       default = false,
@@ -158,6 +163,7 @@ final case class MetalsServerConfig(
       s"build-server-ping-interval=${pingInterval}",
       s"worksheet-timeout=$worksheetTimeout",
       s"debug-server-start-timeout=$debugServerStartTimeout",
+      s"debuggee-start-timeout=$debuggeeStartTimeout",
       s"enable-best-effort=$enableBestEffort",
       s"folding-range-minimum-span=$foldingRageMinimumSpan",
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")

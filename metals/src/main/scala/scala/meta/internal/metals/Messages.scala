@@ -1076,6 +1076,22 @@ object Messages {
     }
   }
 
+  object DebuggeeStartTimeout {
+    val cancel = new MessageActionItem("Cancel")
+    val waitAction = new MessageActionItem("Wait")
+    val waitAlways = new MessageActionItem("Always wait")
+
+    def params(seconds: Int): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        s"Debuggee start is taking longer than expected (over $seconds seconds). Do you want to wait more for it to start?"
+      )
+      params.setType(MessageType.Info)
+      params.setActions(List(cancel, waitAction, waitAlways).asJava)
+      params
+    }
+  }
+
   def worksheetTimeout: String =
     """|Failed to evaluate worksheet, timeout reached, if needed modify add `metals.worksheet-timeout` property.
        |See: https://scalameta.org/metals/docs/troubleshooting/faq#i-see-spurious-errors-or-worksheet-fails-to-evaluate

@@ -209,6 +209,11 @@ final class ClientConfiguration(
   def isDoctorVisibilityProvider(): Boolean =
     initializationOptions.doctorVisibilityProvider.getOrElse(false)
 
+  def debuggeeStartTimeout(): Int =
+    initializationOptions.debuggeeStartTimeout.getOrElse(
+      initialConfig.debuggeeStartTimeout
+    )
+
   def codeLenseRefreshSupport(): Boolean = {
     val codeLenseRefreshSupport: Option[Boolean] = for {
       capabilities <- clientCapabilities
