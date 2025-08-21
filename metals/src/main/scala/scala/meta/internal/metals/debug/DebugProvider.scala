@@ -392,12 +392,13 @@ class DebugProvider(
       } yield {
         val dapLogger = new DebugLogger()
         val resolver = new MetalsDebugToolsResolver()
+        val startTimeout = clientConfig.initialConfig.debuggeeStartTimeout
         val handler =
           dap.DebugServer.run(
             debuggee,
             resolver,
             dapLogger,
-            gracePeriod = Duration(5, TimeUnit.SECONDS),
+            gracePeriod = Duration(startTimeout, TimeUnit.SECONDS),
           )
         handler.uri
       }
