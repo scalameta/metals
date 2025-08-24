@@ -157,10 +157,30 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
       |  }
       |}
       |""".stripMargin,
-    """|cleanStack()
-       |clone()
-       |""".stripMargin,
+    "",
     // let's make sure we don't get any <clinit> method
     filterText = Some("cl"),
+  )
+
+  check(
+    "only-static-members-select",
+    """
+      |class TestStaticMethods {
+      |  public static String hello(){
+      |        return "hello";
+      |    }
+      |
+      |    public String nonStaticHello(){
+      |        return "nonStatic";
+      |    }
+      |
+      |    public static void main(String[] args) {
+      |        TestStaticMethods.@@
+      |    }
+      |}
+      |""".stripMargin,
+    """|hello()
+       |main(java.lang.String[] args)
+       |""".stripMargin,
   )
 }
