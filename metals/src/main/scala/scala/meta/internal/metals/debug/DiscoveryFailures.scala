@@ -50,6 +50,10 @@ object DiscoveryFailures {
         s"No build target was specified."
       )
 
+  case class UndefinedPositionException(runType: RunType)
+      extends Exception(
+        s"Cannot run since the $runType required a position to be defined."
+      )
   case object WorkspaceErrorsException
       extends Exception(
         s"Cannot run class, since the workspace has errors."
