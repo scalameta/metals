@@ -24,7 +24,9 @@ class HoverProvider(
   def hover(): Option[HoverSignature] = params match {
     case range: RangeParams =>
       range.trimWhitespaceInRange.flatMap(hoverOffset)
-    case _ if params.isWhitespace && params.prevIsWhitespaceOrDelimeter => None
+    case _
+        if params.isWhitespace && params.prevIsWhitespaceOrDelimeter && !params.isWithinBackticks =>
+      None
     case _ => hoverOffset(params)
   }
 

@@ -64,6 +64,25 @@ trait MtagsEnrichments extends ScalametaCommonEnrichments {
         case _ => false
       })
     }
+
+    def isWithinBackticks: Boolean = {
+      val text = params.text()
+      val offset = params.offset()
+
+      if (offset < 0 || offset >= text.length) return false
+      if (!text.charAt(offset).isWhitespace) return false
+
+      val lineStart = text.lastIndexOf('\n', offset) + 1
+      val lineEnd = text.indexOf('\n', offset) match {
+        case -1 => text.length
+        case end => end
+      }
+
+      val beforeBacktick = text.lastIndexBetween('`', lineStart, offset - 1)
+      val afterBacktick = text.indexBetween('`', offset + 1, lineEnd)
+
+      beforeBacktick >= lineStart && afterBacktick >= 0
+    }
   }
   implicit class XtensionIterableOps[T](lst: Iterable[T]) {
     def distinctBy[B](fn: T => B): List[T] = {
@@ -201,6 +220,16 @@ trait MtagsEnrichments extends ScalametaCommonEnrichments {
         index -= 1
       }
       if (index < safeLowerBound) -1 else index
+    }
+    def indexBetween(
+        char: Char,
+        lowerBound: Int,
+        upperBound: Int
+    ): Int = {
+      val safeUpperBound = Math.min(value.length, upperBound)
+      var i = lowerBound
+      while (i < safeUpperBound && value(i) != char) i += 1
+      if (i < safeUpperBound) i else -1
     }
   }
 
