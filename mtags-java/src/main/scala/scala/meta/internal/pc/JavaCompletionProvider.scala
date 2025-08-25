@@ -6,6 +6,7 @@ import javax.lang.model.`type`.TypeVariable
 import javax.lang.model.element.Element
 import javax.lang.model.element.ElementKind
 import javax.lang.model.element.ExecutableElement
+import javax.lang.model.element.Modifier
 import javax.lang.model.element.TypeElement
 import javax.lang.model.element.VariableElement
 
@@ -89,8 +90,19 @@ class JavaCompletionProvider(
     val newPath = new TreePath(path, select.getExpression)
     val memberType = typeAnalyzer.typeMirror(newPath)
 
+    val trees = Trees.instance(task)
+    val exprElem = trees.getElement(newPath)
+
+    val isStaticContext =
+      exprElem != null && (exprElem.getKind match {
+        case ElementKind.CLASS | ElementKind.INTERFACE | ElementKind.ENUM |
+            ElementKind.ANNOTATION_TYPE | ElementKind.TYPE_PARAMETER =>
+          true
+        case _ => false
+      })
+
     memberType match {
-      case dt: DeclaredType => completeDeclaredType(task, dt)
+      case dt: DeclaredType => completeDeclaredType(task, dt, isStaticContext)
       case _: ArrayType => completeArrayType()
       case tv: TypeVariable => completeTypeVariable(task, tv)
       case _ => Nil
@@ -121,7 +133,8 @@ class JavaCompletionProvider(
 
   private def completeDeclaredType(
       task: JavacTask,
-      declaredType: DeclaredType
+      declaredType: DeclaredType,
+      isStaticContext: Boolean = false
   ): List[CompletionItem] = {
     // constructors cannot be invoked as members
     val bannedKinds = Set(
@@ -138,17 +151,20 @@ class JavaCompletionProvider(
     val identifier = extractIdentifier
 
     val completionItems = members
-      .filter(member =>
-        CompletionFuzzy.matches(
+      .filter { member =>
+        val isMatches = CompletionFuzzy.matches(
           identifier,
           member.getSimpleName.toString
-        ) && !bannedKinds(member.getKind())
-      )
+        )
+        val isAllowedKind = !bannedKinds(member.getKind())
+        val isStaticMember = member.getModifiers.contains(Modifier.STATIC)
+
+        isMatches && isAllowedKind && (isStaticMember || !isStaticContext)
+      }
       .sortBy { element =>
         memberScore(element, declaredElement)
       }
       .map(completionItem)
-
     completionItems
   }
 
