@@ -3,6 +3,7 @@ package tests.mcp
 import scala.meta.internal.metals.mcp.McpConfig
 import scala.meta.internal.metals.mcp.McpMessages
 import scala.meta.internal.metals.mcp.NoClient
+import scala.meta.internal.metals.mcp.SymbolType
 import scala.meta.internal.metals.mcp.VSCodeEditor
 
 import tests.BaseLspSuite
@@ -277,6 +278,106 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
         s"""|Error: No changes were made for rule ReplaceJohnWithJohnatan
             |Sample code structure: ${sampleCode.parse[Stat].get.structure}
             |""".stripMargin,
+      )
+      _ <- client.shutdown()
+    } yield ()
+  }
+
+  test("typed-glob-search-valid") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/example/Hello.scala
+           |package com.example
+           |
+           |object Hello { def main(args: Array[String]): Unit = println("Hello") }
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
+      client <- startMcpServer()
+      result <- client.typedGlobSearch("Hello", List("class", "object"))
+      _ = assert(
+        result.contains("com.example.Hello"),
+        s"Expected to find Hello object, got: $result",
+      )
+      _ <- client.shutdown()
+    } yield ()
+  }
+
+  test("typed-glob-search-invalid-symbol-types") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/example/Hello.scala
+           |package com.example
+           |
+           |object Hello { def main(args: Array[String]): Unit = println("Hello") }
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
+      client <- startMcpServer()
+      result <- client.typedGlobSearch(
+        "Hello",
+        List("invalid_type", "another_invalid"),
+      )
+      validTypes = SymbolType.values.map(_.name).mkString(", ")
+      expectedError = s"Error: Invalid symbol types: invalid_type, another_invalid. Valid types are: $validTypes, arguments: " +
+        """{"query":"Hello","symbolType":["invalid_type","another_invalid"]}"""
+      _ = assertNoDiff(result, expectedError)
+      _ <- client.shutdown()
+    } yield ()
+  }
+
+  test("typed-glob-search-string-array-format") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/example/Hello.scala
+           |package com.example
+           |
+           |object Hello { def main(args: Array[String]): Unit = println("Hello") }
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
+      client <- startMcpServer()
+      result <- client.typedGlobSearch("Hello", """["class", "object"]""")
+      _ = assert(
+        result.contains("com.example.Hello"),
+        s"Expected to find Hello object, got: $result",
+      )
+      _ <- client.shutdown()
+    } yield ()
+  }
+
+  test("typed-glob-search-invalid-string-array") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/example/Hello.scala
+           |package com.example
+           |
+           |object Hello { def main(args: Array[String]): Unit = println("Hello") }
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
+      client <- startMcpServer()
+      result <- client.typedGlobSearch("Hello", """invalid_json""")
+      _ = assertNoDiff(
+        result,
+        """|Error: Incorrect argument type for symbolType, expected: Array[String], arguments: {"query":"Hello","symbolType":"invalid_json"}
+           |""".stripMargin,
       )
       _ <- client.shutdown()
     } yield ()
