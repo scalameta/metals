@@ -34,9 +34,14 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |  }
       |}
       |""".stripMargin,
-    """|(value: A)
-       | ^^^^^^^^
-       |""".stripMargin
+    """|(value: Int)
+       | ^^^^^^^^^^
+       |""".stripMargin,
+    compat = Map(
+      "2.11" -> """|(x: Int)
+                   | ^^^^^^
+                   |""".stripMargin
+    )
   )
 
   check(
@@ -93,8 +98,8 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       |    }
       |  }
       |""".stripMargin,
-    """|(a: A, b: B)
-       | ^^^^
+    """|(a: Int, b: String)
+       | ^^^^^^
        |""".stripMargin,
     compat = Map(
       "3" ->
@@ -362,6 +367,30 @@ class SignatureHelpPatternSuite extends BaseSignatureHelpSuite {
       "3" ->
         """|(arg1: Int, arg2: Int, arg3: Int)
            |            ^^^^^^^^^
+           |""".stripMargin
+    )
+  )
+
+  check(
+    "inheritance".tag(
+      IgnoreScalaVersion.for3LessThan("3.2.0-RC1")
+    ),
+    """
+      |abstract class Base(val x: Int)
+      |case class Child(override val x: Int, y: String) extends Base(x)
+      |object Test {
+      |  (null: Child) match {
+      |    case Child(@@) =>
+      |  }
+      |}
+    """.stripMargin,
+    """|(x: Int, y: String)
+       | ^^^^^^
+       |""".stripMargin,
+    compat = Map(
+      "3" ->
+        """|(x: Int, y: String)
+           | ^^^^^^
            |""".stripMargin
     )
   )
