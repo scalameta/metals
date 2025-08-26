@@ -129,7 +129,8 @@ abstract class BaseStepDapSuite(
       main = "a.Main",
       instrument = steps => {
         val (javaLibFile, javaLibLine) =
-          if (isJava21) ("java.base/java/io/PrintStream.java", 1167)
+          if (isJava24) ("java.base/java/io/PrintStream.java", 1003)
+          else if (isJava21) ("java.base/java/io/PrintStream.java", 1167)
           else if (isJava17) ("java.base/java/io/PrintStream.java", 1027)
           else ("java.base/java/io/PrintStream.java", 881)
         steps
