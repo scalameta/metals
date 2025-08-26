@@ -518,12 +518,24 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
           if (isActiveSignature) t.call.qualTpe
           else alternativeTpe
 
+        val isUnapplyMethod = t.call.isUnapplyMethod
+
         val paramss: List[List[Symbol]] =
           if (!isActiveSignature) {
-            mparamss(tpe, t.call.isUnapplyMethod)
+            enhanceWithParameterNames(
+              mparamss(tpe, isUnapplyMethod),
+              tpe,
+              isUnapplyMethod,
+              method
+            )
           } else {
             activeSignature = i
-            val paramss = this.mparamss(tpe, t.call.isUnapplyMethod)
+            val paramss = enhanceWithParameterNames(
+              mparamss(tpe, isUnapplyMethod),
+              tpe,
+              isUnapplyMethod,
+              method
+            )
             val gparamss = for {
               (params, i) <- paramss.zipWithIndex
               (param, j) <- params.zipWithIndex
@@ -540,10 +552,11 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
             }
             paramss
           }
+
         toSignatureInformation(
           t,
           method,
-          if (!t.call.isUnapplyMethod) tpe else method.info,
+          if (!isUnapplyMethod) tpe else method.info,
           paramss,
           isActiveSignature,
           shortenedNames
@@ -566,6 +579,36 @@ class SignatureHelpProvider(val compiler: MetalsGlobal)(implicit
         0,
         activeParameter
       )
+    }
+  }
+
+  def enhanceWithParameterNames(
+      paramss: List[List[Symbol]],
+      tpe: Type,
+      isUnapplyMethod: Boolean,
+      method: Symbol
+  ): List[List[Symbol]] = {
+    // if method is a case class unapply, we want to add the parameter names
+    if (
+      isUnapplyMethod && tpe.resultType.typeSymbol.isCaseClass &&
+      method.owner.isModuleClass && method.owner.companionClass == tpe.resultType.typeSymbol
+    ) {
+      val constructorParamss =
+        tpe.resultType.typeSymbol.primaryConstructor.paramLists
+      (constructorParamss zip paramss).map {
+        case (constructorParams, instantiatedParams) =>
+          (constructorParams zip instantiatedParams).map {
+            case (constructorParam, instantiatedParam) =>
+              constructorParam.cloneSymbol.setInfo(
+                if (instantiatedParam.tpe.typeSymbol == definitions.AnyClass)
+                  constructorParam.tpe
+                else
+                  instantiatedParam.tpe
+              )
+          }
+      }
+    } else {
+      paramss
     }
   }
 
