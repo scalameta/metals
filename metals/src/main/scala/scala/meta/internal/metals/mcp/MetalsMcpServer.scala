@@ -10,6 +10,7 @@ import java.util.{Map => JMap}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.reflect.ClassTag
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -580,17 +581,20 @@ class MetalsMcpServer(
       withErrorHandling { (exchange, arguments) =>
         val query = arguments.getAs[String]("query")
         val path = arguments.getFileInFocus
-        val symbolTypes = scala.jdk.CollectionConverters
-          .ListHasAsScala(
-            arguments
-              .getAs[JList[String]]("symbolType")
-          )
-          .asScala
-          .flatMap(s => SymbolType.values.find(_.name == s))
-          .toSet
+        val symbolTypes = arguments.getAsList[String]("symbolType")
+
+        val invalidSymbols =
+          symbolTypes.filterNot(s => SymbolType.values.exists(_.name == s))
+        if (invalidSymbols.nonEmpty) {
+          val validTypes = SymbolType.values.map(_.name).mkString(", ")
+          throw new InvalidSymbolTypeException(invalidSymbols.toSeq, validTypes)
+        }
+
+        val symbolTypesSet =
+          symbolTypes.flatMap(s => SymbolType.values.find(_.name == s)).toSet
 
         queryEngine
-          .globSearch(query, symbolTypes, path)
+          .globSearch(query, symbolTypesSet, path)
           .map(result =>
             new CallToolResult(
               createContent(result.map(_.show).mkString("\n")),
@@ -1160,6 +1164,28 @@ class MetalsMcpServer(
           )
       }
 
+    def getAsList[T](key: String)(implicit ct: ClassTag[T]): List[T] =
+      try {
+        arguments.get(key) match {
+          case null => throw new MissingArgumentException(key)
+          case value: String =>
+            objectMapper
+              .readValue(value, classOf[JList[T]])
+              .asScala
+              .toList
+          case value: JList[_] =>
+            value.asScala.collect { case value: T => value }.toList
+        }
+      } catch {
+        case _: MissingArgumentException =>
+          throw new MissingArgumentException(key)
+        case _: Exception =>
+          throw new IncorrectArgumentTypeException(
+            key,
+            s"Array[${ct.runtimeClass.getSimpleName}]",
+          )
+      }
+
     /**
      * Like getOptAs, but returns None if the value is an empty string (after trimming).
      */
@@ -1203,6 +1229,12 @@ class MissingArgumentException(key: String)
 
 class IncorrectArgumentTypeException(key: String, expected: String)
     extends Exception(s"Incorrect argument type for $key, expected: $expected")
+    with IncorrectArgumentException
+
+class InvalidSymbolTypeException(invalid: Seq[String], validTypes: String)
+    extends Exception(
+      s"Invalid symbol types: ${invalid.mkString(", ")}. Valid types are: $validTypes"
+    )
     with IncorrectArgumentException
 
 object MissingFileInFocusException

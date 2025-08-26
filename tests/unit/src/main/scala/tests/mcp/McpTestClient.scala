@@ -112,4 +112,26 @@ class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext) {
     filePath.foreach(path => params.put("fileToRunOn", path))
     callTool("run-scalafix-rule", params).map(_.mkString)
   }
+
+  def typedGlobSearch(
+      query: String,
+      symbolTypes: List[String],
+  ): Future[String] = {
+    val params = objectMapper.createObjectNode()
+    params.put("query", query)
+    val symbolTypeArray = objectMapper.createArrayNode()
+    symbolTypes.foreach(symbolTypeArray.add)
+    params.set("symbolType", symbolTypeArray)
+    callTool("typed-glob-search", params).map(_.mkString)
+  }
+
+  def typedGlobSearch(
+      query: String,
+      symbolTypes: String,
+  ): Future[String] = {
+    val params = objectMapper.createObjectNode()
+    params.put("query", query)
+    params.put("symbolType", symbolTypes)
+    callTool("typed-glob-search", params).map(_.mkString)
+  }
 }
