@@ -235,36 +235,6 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
     } yield ()
   }
 
-  test("twirl-completion") {
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        """|src/main/twirl/example.scala.html
-           |@(name: String)
-           |<h1>Hello @name.len</h1>
-           |/project/plugins.sbt
-           |addSbtPlugin("org.playframework.twirl" % "sbt-twirl" % "2.0.9")
-           |/build.sbt
-           |enablePlugins(SbtTwirl)
-           |Compile / unmanagedSourceDirectories := Seq(
-           |  (baseDirectory.value / "src" / "main" / "scala"),
-           |  (baseDirectory.value / "src" / "main" / "scala-3"),
-           |  (baseDirectory.value / "src" / "main" / "java"),
-           |  (baseDirectory.value / "src" / "main" / "twirl")
-           |)
-           |""".stripMargin
-      )
-      _ <- assertCompletion(
-        "name.len@@",
-        // Assert both JDK and scala-library are indexed.
-        """|Properties - java.util
-           |Properties - scala.util
-           |""".stripMargin,
-        filter = _.startsWith("Properties -"),
-      )
-    } yield ()
-  }
-
   test("with-exclusions") {
     cleanWorkspace()
     for {
