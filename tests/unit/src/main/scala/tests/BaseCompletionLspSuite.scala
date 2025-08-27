@@ -9,8 +9,8 @@ import munit.Location
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 
-abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
-
+trait CompletionsAssertions {
+  this: BaseLspSuite =>
   def withCompletion(
       query: String,
       project: Char = 'a',
@@ -143,6 +143,12 @@ abstract class BaseCompletionLspSuite(name: String) extends BaseLspSuite(name) {
       }
     }
   }
+
+}
+
+abstract class BaseCompletionLspSuite(name: String)
+    extends BaseLspSuite(name)
+    with CompletionsAssertions {
 
   def basicTest(scalaVersion: String): Future[Unit] = {
     cleanWorkspace()
