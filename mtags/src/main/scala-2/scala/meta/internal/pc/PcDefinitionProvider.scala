@@ -10,8 +10,8 @@ import scala.meta.pc.OffsetParams
 
 import org.eclipse.lsp4j.Location
 
-class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
-  import compiler._
+class PcDefinitionProvider(val cp: MetalsGlobal, params: OffsetParams) {
+  import cp._
 
   def definition(): DefinitionResult =
     definition(findTypeDef = false)
@@ -37,7 +37,6 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         case _: Literal => expanded.tpe.widen.typeSymbol
         case _ => tree.symbol
       }
-
   }
 
   /**
