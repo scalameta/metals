@@ -37,7 +37,7 @@ object TwirlAdjustments {
     }
   }
 
-  def isPlayProject(implicit file: VirtualFile) =
+  def isPlayProject(implicit file: VirtualFile): Boolean =
     file.path.contains("views/")
 
   /**

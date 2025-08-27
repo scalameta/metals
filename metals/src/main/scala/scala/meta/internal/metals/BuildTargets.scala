@@ -22,7 +22,6 @@ import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.InverseSourcesParams
 import ch.epfl.scala.bsp4j.TextDocumentIdentifier
-import scala.meta.inputs.Input.VirtualFile
 
 /**
  * In-memory cache for looking up build server metadata.
@@ -254,20 +253,18 @@ final class BuildTargets private (
       source: AbsolutePath
   ): Option[BuildTargetIdentifier] = {
 
-    // if (
-    //   source.toNIO.toString.isTwirlTemplate && !TwirlAdjustments.isPlayProject(
-    //     VirtualFile(source.toNIO.toString, "")
-    //   )
-    // ) {
-    //   return inverseSources(
-    //     source.parent.resolveSibling(_ => "scala").resolve("build.sbt")
-    //   )
-    // }
-
     val buildTargets = sourceBuildTargets(source)
     val orSbtBuildTarget =
       buildTargets.getOrElse(sbtBuildScalaTarget(source).toIterable).toSeq
     if (orSbtBuildTarget.isEmpty) {
+
+      // A bit suspicious o_O
+      if (source.toNIO.toString.isTwirlTemplate) {
+        return inverseSources(
+          source.parent.resolveSibling(_ => "scala").resolve("foo.scala")
+        )
+      }
+
       tables
         .flatMap(_.dependencySources.getBuildTarget(source))
         .orElse(inferBuildTarget(source))
