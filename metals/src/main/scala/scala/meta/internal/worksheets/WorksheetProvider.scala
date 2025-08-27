@@ -3,6 +3,7 @@ package scala.meta.internal.worksheets
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.security.MessageDigest
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -445,6 +446,7 @@ class WorksheetProvider(
       promise: Promise[EvaluatedWorksheetSnapshot],
   ): EvaluatedWorksheetSnapshot = {
     val mdoc = getMdoc(path)
+    val originId = "METALS-$" + UUID.randomUUID().toString
     val input = path.toInputFromBuffers(buffers)
     val relativePath = path.toRelative(workspace)
     val evaluatedWorksheet =
@@ -477,6 +479,7 @@ class WorksheetProvider(
       path,
       toPublish,
       isReset = true,
+      originId = originId,
     )
     worksheetSnapshot
   }
@@ -512,6 +515,8 @@ class WorksheetProvider(
         // worksheet not to be evaluated.
         val scalacOptions = info.scalac.getOptions.asScala
           .filterNot(_.contains("semanticdb"))
+          .filterNot(_.contains("-Ybest-effort"))
+          .filterNot(_.contains("-Ywith-best-effort-tasty"))
           .filterNot(_.contains("-Wconf"))
           // seems to break worksheet support
           .filterNot(_.contains("Ycheck-reentrant"))

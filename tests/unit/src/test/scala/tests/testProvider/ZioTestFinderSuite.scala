@@ -30,9 +30,13 @@ class ZioTestFinderSuite extends FunSuite {
     FullyQualifiedName("HelloWorldSpec"),
     Set(
       (
-        "HelloWorldSpec sayHello correctly displays output",
+        "HelloWorldSpec",
+        QuickRange(4, 13, 8, 3),
+      ),
+      (
+        "sayHello correctly displays output",
         QuickRange(5, 4, 7, 5),
-      )
+      ),
     ),
   )
   check(
@@ -53,9 +57,13 @@ class ZioTestFinderSuite extends FunSuite {
     FullyQualifiedName("HelloWorldSpec"),
     Set(
       (
-        "HelloWorldSpec sayHello correctly displays output",
+        "HelloWorldSpec",
+        QuickRange(4, 13, 10, 3),
+      ),
+      (
+        "sayHello correctly displays output",
         QuickRange(5, 4, 9, 5),
-      )
+      ),
     ),
   )
   check(
@@ -73,7 +81,14 @@ class ZioTestFinderSuite extends FunSuite {
        |""".stripMargin,
     FullyQualifiedName("HelloWorldSpec"),
     Set(
-      ("sayHello correctly displays output", QuickRange(5, 4, 7, 5))
+      (
+        "HelloWorldSpec",
+        QuickRange(4, 13, 8, 3),
+      ),
+      (
+        "sayHello correctly displays output",
+        QuickRange(5, 4, 7, 5),
+      ),
     ),
   )
   check(
@@ -93,7 +108,82 @@ class ZioTestFinderSuite extends FunSuite {
        |""".stripMargin,
     FullyQualifiedName("NestedSpec"),
     Set(
-      ("NestedSpec nested suite nested test", QuickRange(6, 6, 8, 7))
+      (
+        "NestedSpec",
+        QuickRange(4, 13, 10, 3),
+      ),
+      (
+        "nested suite",
+        QuickRange(5, 4, 9, 5),
+      ),
+      (
+        "nested test",
+        QuickRange(6, 6, 8, 7),
+      ),
+    ),
+  )
+
+  check(
+    "nested-suiteAll",
+    """|import zio.test._
+       |import zio.test.Assertion._
+       |
+       |object NestedSuiteAll extends ZIOSpecDefault {
+       |  def spec = suite("Outer")(
+       |    suiteAll("Inner") {
+       |      test("inner test") {
+       |        assertTrue(true)
+       |      }
+       |    }
+       |  )
+       |}
+       |""".stripMargin,
+    FullyQualifiedName("NestedSuiteAll"),
+    Set(
+      (
+        "Outer",
+        QuickRange(4, 13, 10, 3),
+      ),
+      (
+        "Inner",
+        QuickRange(5, 4, 9, 5),
+      ),
+      (
+        "inner test",
+        QuickRange(6, 6, 8, 7),
+      ),
+    ),
+  )
+
+  check(
+    "nested-suiteAll-2",
+    """|import zio.test._
+       |import zio.test.Assertion._
+       |
+       |object NestedSuiteAll extends ZIOSpecDefault {
+       |  def spec = suiteAll("Outer")(
+       |    suiteAll("Inner") {
+       |      test("inner test") {
+       |        assertTrue(true)
+       |      }
+       |    }
+       |  )
+       |}
+       |""".stripMargin,
+    FullyQualifiedName("NestedSuiteAll"),
+    Set(
+      (
+        "Outer",
+        QuickRange(4, 13, 10, 3),
+      ),
+      (
+        "Inner",
+        QuickRange(5, 4, 9, 5),
+      ),
+      (
+        "inner test",
+        QuickRange(6, 6, 8, 7),
+      ),
     ),
   )
 
@@ -112,15 +202,28 @@ class ZioTestFinderSuite extends FunSuite {
        |    },
        |    test("test3") {
        |      assertTrue(true)
-       |    }
+       |    } 
        |  )
        |}
        |""".stripMargin,
     FullyQualifiedName("MultipleTestsSpec"),
     Set(
-      ("test1", QuickRange(5, 4, 7, 5)),
-      ("test2", QuickRange(8, 4, 10, 5)),
-      ("test3", QuickRange(11, 4, 13, 5)),
+      (
+        "MultipleTestsSpec",
+        QuickRange(4, 13, 14, 3),
+      ),
+      (
+        "test1",
+        QuickRange(5, 4, 7, 5),
+      ),
+      (
+        "test2",
+        QuickRange(8, 4, 10, 5),
+      ),
+      (
+        "test3",
+        QuickRange(11, 4, 13, 5),
+      ),
     ),
   )
 
@@ -146,9 +249,25 @@ class ZioTestFinderSuite extends FunSuite {
     FullyQualifiedName("DeeplyNestedSpec"),
     Set(
       (
-        "DeeplyNestedSpec level1 level2 level3 deeply nested test",
+        "level1",
+        QuickRange(5, 4, 13, 5),
+      ),
+      (
+        "DeeplyNestedSpec",
+        QuickRange(4, 13, 14, 3),
+      ),
+      (
+        "level2",
+        QuickRange(6, 6, 12, 7),
+      ),
+      (
+        "level3",
+        QuickRange(7, 8, 11, 9),
+      ),
+      (
+        "deeply nested test",
         QuickRange(8, 10, 10, 11),
-      )
+      ),
     ),
   )
 
@@ -170,8 +289,18 @@ class ZioTestFinderSuite extends FunSuite {
        |""".stripMargin,
     FullyQualifiedName("IgnoredTestSpec"),
     Set(
-      ("active test", QuickRange(5, 4, 7, 5)),
-      ("ignored test", QuickRange(8, 4, 10, 5)),
+      (
+        "IgnoredTestSpec",
+        QuickRange(4, 13, 11, 3),
+      ),
+      (
+        "active test",
+        QuickRange(5, 4, 7, 5),
+      ),
+      (
+        "ignored test",
+        QuickRange(8, 4, 10, 5),
+      ),
     ),
   )
 

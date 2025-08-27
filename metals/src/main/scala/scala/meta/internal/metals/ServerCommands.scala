@@ -6,6 +6,8 @@ import scala.meta.internal.metals.newScalaFile.NewFileTypes
 
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 
@@ -449,6 +451,26 @@ object ServerCommands {
     "[string], where the string is a stacktrace.",
   )
 
+  val ResolveStacktraceLocation = new ParametrizedCommand[String](
+    "resolve-stacktrace-location",
+    "Resolve stacktrace location",
+    """|Resolves a single line of a stacktrace to its source location.
+       |
+       |Returns a Location object containing the URI and line number of the 
+       |source file where the stacktrace line originated, if it can be resolved
+       |to a location in the workspace.
+       |""".stripMargin,
+    "[string], where the string is a single line from a stacktrace.",
+  )
+
+  val MetalsPaste = new ParametrizedCommand[MetalsPasteParams](
+    "metals-did-paste",
+    "Add needed import statements after paste",
+    """|
+       |""".stripMargin,
+    """|MetalsPasteParams""".stripMargin,
+  )
+
   final case class ChooseClassRequest(
       textDocument: TextDocumentIdentifier,
       kind: String,
@@ -738,6 +760,7 @@ object ServerCommands {
   def all: List[BaseCommand] =
     List(
       AnalyzeStacktrace,
+      ResolveStacktraceLocation,
       BspSwitch,
       ConnectBuildServer,
       CancelCompile,
@@ -845,4 +868,17 @@ case class DebugDiscoveryParams(
 case class RunScalafixRulesParams(
     textDocumentPositionParams: TextDocumentPositionParams,
     @Nullable rules: java.util.List[String] = null,
+)
+
+case class MetalsPasteParams(
+    // The text document, where text was pasted.
+    textDocument: TextDocumentIdentifier,
+    // The range in the text document, where text was pasted.
+    range: Range,
+    // Content of the file after paste.
+    text: String,
+    // The origin document, where text was copied from.
+    originDocument: TextDocumentIdentifier,
+    // The origin start offset, where text was copied from.
+    originOffset: Position,
 )

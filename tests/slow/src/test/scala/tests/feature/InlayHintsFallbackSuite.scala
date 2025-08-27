@@ -8,6 +8,10 @@ class InlayHintsFallbackSuite
       "3.4.0",
     ) {
 
+  /**
+   * This should not include positions since, we are testing fallback method of
+   * providing inlay hints. 3.4.0 doesn't have it built in the presentation compiler.
+   */
   check(
     "all-synthetics",
     """|import scala.concurrent.Future

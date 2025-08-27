@@ -75,16 +75,10 @@ class GithubNewIssueUrlCreator(
       foldersInfo: List[GitHubIssueFolderInfo]
   ): String = {
     val buildTools =
-      foldersInfo.map(_.selectedBuildTool()).zipWithIndex.collect {
-        case (Some(buildTool), ind) => (buildTool, ind)
-      }
+      foldersInfo.map(_.selectedBuildTool().getOrElse(""))
 
     if (buildTools.nonEmpty) {
-      val value = buildTools
-        .map { case (buildTool, indx) =>
-          s"$indx. $buildTool"
-        }
-        .mkString("\n    ")
+      val value = buildTools.mkString("; ")
       s"""|
           | - **Build tools:** ${value}""".stripMargin
     } else ""
@@ -94,7 +88,7 @@ class GithubNewIssueUrlCreator(
       foldersInfo: List[GitHubIssueFolderInfo]
   ): String = {
     val buildServers =
-      foldersInfo.zipWithIndex.map { case (info, indx) =>
+      foldersInfo.map { info =>
         import info._
         val buildServer = currentBuildServer()
           .map(s => s"${s.main.name} v${s.main.version}")
@@ -108,11 +102,10 @@ class GithubNewIssueUrlCreator(
               case ResolvedNone => s"Disconnected: None Found"
             }
           }
-        s"$indx. $buildServer"
+        buildServer
       }
     s"""|
-        | - **Build servers:**
-        |    ${buildServers.mkString("\n    ")}""".stripMargin
+        | - **Build servers:** ${buildServers.mkString("; ")}""".stripMargin
   }
 }
 

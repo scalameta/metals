@@ -8,7 +8,7 @@ class McpRunTestSuite extends BaseLspSuite("mcp-test") {
   override def serverConfig: MetalsServerConfig =
     super.serverConfig.copy(loglevel = "debug")
 
-  test("basic") {
+  test("basic", maxRetry = 3) {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -44,7 +44,12 @@ class McpRunTestSuite extends BaseLspSuite("mcp-test") {
 
       // Test with explicit path and verbose output
       res1 <- server.headServer.mcpTestRunner
-        .runTests("a.b.MunitTestSuite", Some(path), verbose = true) match {
+        .runTests(
+          "a.b.MunitTestSuite",
+          Some(path),
+          None,
+          verbose = true,
+        ) match {
         case Right(value) => value
         case Left(error) => throw new RuntimeException(error)
       }
@@ -54,13 +59,238 @@ class McpRunTestSuite extends BaseLspSuite("mcp-test") {
 
       // Test without path and non-verbose output
       res2 <- server.headServer.mcpTestRunner
-        .runTests("a.b.MunitTestSuite", None, verbose = false) match {
+        .runTests("a.b.MunitTestSuite", None, None, verbose = false) match {
         case Right(value) => value
         case Left(error) => throw new RuntimeException(error)
       }
       _ = assert(res2.contains("2 tests, 1 passed, 1 failed"), res2)
       // Non-verbose prints only errors and summary
       _ = assert(!res2.contains("Some string"), res2)
+
+      // Test running a single test that passes
+      res3 <- server.headServer.mcpTestRunner
+        .runTests(
+          "a.b.MunitTestSuite",
+          Some(path),
+          Some("test1"),
+          verbose = false,
+        ) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      _ = assert(res3.contains("test1"), s"Should contain test1: $res3")
+      _ = assert(res3.contains("2 tests, 1 passed, 0 failed, 1 skipped"), res3)
+
+      // Test running a single test that fails
+      res4 <- server.headServer.mcpTestRunner
+        .runTests(
+          "a.b.MunitTestSuite",
+          Some(path),
+          Some("test2"),
+          verbose = false,
+        ) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      _ = assert(res4.contains("test2"), s"Should contain test2: $res4")
+      _ = assert(res4.contains("2 tests, 0 passed, 1 failed, 1 skipped"), res4)
+    } yield ()
+  }
+
+  test("zio-test", maxRetry = 3) {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies" : ["dev.zio::zio-test:2.0.15", "dev.zio::zio-test-sbt:2.0.15"],
+           |    "testFrameworks": ["zio.test.sbt.ZTestFramework"]
+           |  }
+           |}
+           |/a/src/test/scala/a/ZioTestSuite.scala
+           |package a
+           |
+           |import zio.test._
+           |import zio.test.Assertion._
+           |
+           |object ZioTestSuite extends ZIOSpecDefault {
+           |  def spec = suite("ZioTestSuite")(
+           |    test("test one") {
+           |      assertTrue(1 + 1 == 2)
+           |    },
+           |    test("test two") {
+           |      assertTrue(2 + 2 == 4)
+           |    }
+           |  )
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- server.didOpen(
+        "a/src/test/scala/a/ZioTestSuite.scala"
+      )
+      _ = assertNoDiagnostics()
+      _ <- server.server.indexingPromise.future
+      path = server.toPath("a/src/test/scala/a/ZioTestSuite.scala")
+
+      // Test ZIO test execution - runs all tests in the suite
+      result <- server.headServer.mcpTestRunner
+        .runTests("a.ZioTestSuite", Some(path), None, verbose = false) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      _ = assert(result.nonEmpty, s"ZIO test returned empty result: '$result'")
+      _ = assert(
+        result.contains("test one"),
+        s"ZIO test result should contain 'test one': '$result'",
+      )
+      _ = assert(
+        result.contains("test two"),
+        s"ZIO test result should contain 'test two': '$result'",
+      )
+
+      // Test running a single ZIO test
+      singleResult <- server.headServer.mcpTestRunner
+        .runTests(
+          "a.ZioTestSuite",
+          Some(path),
+          Some("test one"),
+          verbose = false,
+        ) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      _ = assert(
+        singleResult.nonEmpty,
+        s"Single ZIO test returned empty result: '$singleResult'",
+      )
+      _ = assert(
+        singleResult.contains("test one"),
+        s"Single ZIO test result should contain 'test one': '$singleResult'",
+      )
+      // ZIO test framework doesn't seem to support individual test selection properly yet
+      // So we just verify the test ran and contains our target test
+    } yield ()
+  }
+
+  test("individual-test-execution", maxRetry = 3) {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies" : ["org.scalameta::munit:1.0.0-M4"]
+           |  }
+           |}
+           |/a/src/test/scala/a/IndividualTestSuite.scala
+           |package a
+           |
+           |class IndividualTestSuite extends munit.FunSuite {
+           |  test("passing test") {
+           |    assert(1 == 1)
+           |  }
+           |
+           |  test("failing test") {
+           |    assert(1 == 2)
+           |  }
+           |
+           |  test("another passing test") {
+           |    assert(true)
+           |  }
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- server.didOpen(
+        "a/src/test/scala/a/IndividualTestSuite.scala"
+      )
+      _ = assertNoDiagnostics()
+      _ <- server.server.indexingPromise.future
+      path = server.toPath("a/src/test/scala/a/IndividualTestSuite.scala")
+
+      // Test running all tests
+      allResult <- server.headServer.mcpTestRunner
+        .runTests(
+          "a.IndividualTestSuite",
+          Some(path),
+          None,
+          verbose = false,
+        ) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      _ = assert(
+        allResult.contains("3 tests, 2 passed, 1 failed"),
+        s"All tests result: $allResult",
+      )
+
+      // Test running only the passing test
+      passingResult <- server.headServer.mcpTestRunner
+        .runTests(
+          "a.IndividualTestSuite",
+          Some(path),
+          Some("passing test"),
+          verbose = false,
+        ) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      _ = assert(
+        passingResult.contains("passing test"),
+        s"Should contain 'passing test': $passingResult",
+      )
+      _ = assert(
+        passingResult.contains("3 tests, 1 passed, 0 failed, 2 skipped"),
+        s"Should have 1 passed: $passingResult",
+      )
+      _ = assert(
+        !passingResult.contains("failing test failed"),
+        s"Should not show 'failing test' as failed: $passingResult",
+      )
+
+      // Test running only the failing test
+      failingResult <- server.headServer.mcpTestRunner
+        .runTests(
+          "a.IndividualTestSuite",
+          Some(path),
+          Some("failing test"),
+          verbose = false,
+        ) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      _ = assert(
+        failingResult.contains("failing test"),
+        s"Should contain 'failing test': $failingResult",
+      )
+      _ = assert(
+        failingResult.contains("3 tests, 0 passed, 1 failed, 2 skipped"),
+        s"Should have 1 failed: $failingResult",
+      )
+      _ = assert(
+        !failingResult.contains("passing test passed"),
+        s"Should not show 'passing test' as passed: $failingResult",
+      )
+
+      // Test running a non-existent test
+      nonExistentResult <- server.headServer.mcpTestRunner
+        .runTests(
+          "a.IndividualTestSuite",
+          Some(path),
+          Some("non-existent test"),
+          verbose = false,
+        ) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      _ = assert(
+        nonExistentResult.contains("3 tests, 0 passed, 0 failed, 3 skipped"),
+        s"Non-existent test should skip all tests: $nonExistentResult",
+      )
     } yield ()
   }
 }

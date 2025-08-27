@@ -160,21 +160,6 @@ abstract class MetalsLspService(
 
   val tables: Tables = register(new Tables(folder, time))
 
-  def javaHome = userConfig.javaHome
-
-  protected val fingerprints = new MutableMd5Fingerprints
-  val focusedDocumentBuildTarget =
-    new AtomicReference[b.BuildTargetIdentifier]()
-  val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
-
-  def bspSession: Option[BspSession] = indexer.bspSession
-  protected val savedFiles = new ActiveFiles(time)
-  protected val recentlyOpenedFiles = new ActiveFiles(time)
-
-  @volatile
-  var excludedPackageHandler: ExcludedPackagesHandler =
-    ExcludedPackagesHandler.default
-
   protected val mainBuildTargetsData = new TargetData
 
   val buildTargets: BuildTargets =
@@ -192,6 +177,21 @@ abstract class MetalsLspService(
     ReportLevel.fromString(MetalsServerConfig.default.loglevel),
     reportTrackers = List(moduleStatus),
   )
+
+  def javaHome = userConfig.javaHome
+
+  protected val fingerprints = new MutableMd5Fingerprints
+  val focusedDocumentBuildTarget =
+    new AtomicReference[b.BuildTargetIdentifier]()
+  val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
+
+  def bspSession: Option[BspSession] = indexer.bspSession
+  protected val savedFiles = new ActiveFiles(time)
+  protected val recentlyOpenedFiles = new ActiveFiles(time)
+
+  @volatile
+  var excludedPackageHandler: ExcludedPackagesHandler =
+    ExcludedPackagesHandler.default
 
   protected val mtags = new Mtags
 
@@ -389,7 +389,7 @@ abstract class MetalsLspService(
 
   protected def onCreate(path: AbsolutePath): Unit = {
     buildTargets.onCreate(path)
-    compilers.didChange(path)
+    compilers.didChange(path, false)
   }
 
   protected val interactiveSemanticdbs: InteractiveSemanticdbs = {
@@ -601,6 +601,14 @@ abstract class MetalsLspService(
       () => folder,
       languageClient,
       saveJarFileToDisk = !clientConfig.isVirtualDocumentSupported(),
+    )
+
+  private val metalsPasteProvider: MetalsPasteProvider =
+    new MetalsPasteProvider(
+      compilers,
+      buildTargets,
+      definitionProvider,
+      trees,
     )
 
   def parseTreesAndPublishDiags(paths: Seq[AbsolutePath]): Future[Unit] = {
@@ -825,7 +833,7 @@ abstract class MetalsLspService(
         val path = params.getTextDocument.getUri.toAbsolutePath
         buffers.put(path, change.getText)
         diagnostics.didChange(path)
-        compilers.didChange(path)
+        compilers.didChange(path, false)
         referencesProvider.didChange(path, change.getText)
         parseTrees(path).asJava
     }
@@ -1269,6 +1277,16 @@ abstract class MetalsLspService(
       .runRulesOrPrompt(uri.toAbsolutePath, rules)
       .flatMap(applyEdits(uri, _))
 
+  def didPaste(
+      params: MetalsPasteParams
+  ): Future[ApplyWorkspaceEditResponse] = {
+    metalsPasteProvider
+      .didPaste(params, EmptyCancelToken)
+      .flatMap(optEdit =>
+        applyEdits(params.textDocument.getUri(), optEdit.toList)
+      )
+  }
+
   protected def applyEdits(
       uri: String,
       edits: List[TextEdit],
@@ -1371,6 +1389,9 @@ abstract class MetalsLspService(
 
   def analyzeStackTrace(content: String): Option[ExecuteCommandParams] =
     stacktraceAnalyzer.analyzeCommand(content)
+
+  def resolveStacktraceLocation(stacktraceLine: String): Option[Location] =
+    stacktraceAnalyzer.resolveStacktraceLocationCommand(stacktraceLine)
 
   def findBuildTargetByDisplayName(target: String): Option[b.BuildTarget] =
     buildTargets.findByDisplayName(target)

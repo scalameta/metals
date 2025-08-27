@@ -20,14 +20,7 @@ case class BazelBuildTool(
   }
 
   def createBspFileArgs(workspace: AbsolutePath): Option[List[String]] =
-    Option.when(workspaceSupportsBsp)(composeArgs())
-
-  def workspaceSupportsBsp: Boolean = {
-    projectRoot.list.exists {
-      case file if file.filename == "WORKSPACE" => true
-      case _ => false
-    }
-  }
+    Option.when(BazelBuildTool.workspaceSupportsBsp(projectRoot))(composeArgs())
 
   private def composeArgs(): List[String] = {
     val classpathSeparator = java.io.File.pathSeparator
@@ -77,12 +70,12 @@ case class BazelBuildTool(
 object BazelBuildTool {
   val name: String = "bazel"
   val bspName: String = "bazelbsp"
-  val version: String = "3.2.0-20240629-e3d8bdf-NIGHTLY"
+  val version: String = "4.0.1"
 
   val mainClass = "org.jetbrains.bsp.bazel.install.Install"
 
   val dependency: Dependency = Dependency.of(
-    "org.jetbrains.bsp",
+    "org.virtuslab",
     "bazel-bsp",
     version,
   )
@@ -129,6 +122,13 @@ object BazelBuildTool {
           "-t", "//...", "-enabled-rules", "io_bazel_rules_scala", "rules_java",
           "rules_jvm",
         )
+    }
+  }
+
+  def workspaceSupportsBsp(projectRoot: AbsolutePath): Boolean = {
+    val bzlProjectRootFiles = Set("WORKSPACE", "MODULE.bazel")
+    projectRoot.list.exists { file =>
+      bzlProjectRootFiles.contains(file.filename)
     }
   }
 

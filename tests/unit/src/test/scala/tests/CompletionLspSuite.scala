@@ -642,4 +642,101 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       )
     } yield ()
   }
+
+  test("zio-type-members") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": { 
+           |    "scalaVersion": "${V.scala213}",
+           |    "libraryDependencies": ["dev.zio::zio:2.1.20"]
+           |  }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |object Main {
+           |  // @@
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ = assertNoDiagnostics()
+      _ <- assertCompletion(
+        "  def test: UIO@@",
+        """|UIO - zio.package [+A] = UIO
+           |URIO - zio.package [-R, +A] = URIO
+           |UncheckedIOException - java.io
+           |UnlessZIO - zio.ZIO
+           |UnlessZIODiscard - zio.ZIO
+           |""".stripMargin,
+        filename = Some("a/src/main/scala/a/Main.scala"),
+      )
+    } yield ()
+  }
+
+  test("non-reachable-type-members") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": { 
+           |    "scalaVersion": "${V.scala213}",
+           |    "libraryDependencies": ["dev.zio::zio:2.1.20"]
+           |  },
+           |  "b": { 
+           |    "scalaVersion": "${V.scala213}"
+           |  }
+           |}
+           |/b/src/main/scala/b/Main.scala
+           |package b
+           |object Main {
+           |  // @@
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("b/src/main/scala/b/Main.scala")
+      _ = assertNoDiagnostics()
+      _ <- assertCompletion(
+        "  def test: UIO@@",
+        """|UncheckedIOException - java.io
+           |""".stripMargin,
+        filename = Some("b/src/main/scala/b/Main.scala"),
+      )
+    } yield ()
+  }
+
+  test("local-type-members") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": { 
+           |    "scalaVersion": "${V.scala213}"
+           |  }
+           |}
+           |/a/src/main/scala/a/b/package.scala
+           |package object b {
+           |  type MyList[A] = List[A]
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |object Main {
+           |  // @@
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ = assertNoDiagnostics()
+      _ <- assertCompletion(
+        "  def test: My@@",
+        """|MyList - b.package [A] = MyList
+           |""".stripMargin,
+        filename = Some("a/src/main/scala/a/Main.scala"),
+      )
+    } yield ()
+  }
 }

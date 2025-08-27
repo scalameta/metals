@@ -9,7 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
-def localSnapshotVersion = "1.6.1-SNAPSHOT"
+def localSnapshotVersion = "1.6.3-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 
@@ -54,8 +54,6 @@ inThisBuild(
     homepage := Some(url("https://github.com/scalameta/metals")),
     developers := metalsDevs,
     testFrameworks := List(),
-    resolvers ++= Resolver.sonatypeOssRepos("public"),
-    resolvers ++= Resolver.sonatypeOssRepos("snapshot"),
     dependencyOverrides += V.guava,
     // faster publishLocal:
     packageDoc / publishArtifact := sys.env.contains("CI"),
@@ -269,7 +267,7 @@ lazy val mtagsShared = project
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "4.31.1",
+      "com.google.protobuf" % "protobuf-java" % "4.32.0",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
@@ -415,7 +413,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.16.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "11.10.0",
+      "org.flywaydb" % "flyway-core" % "11.11.2",
       "com.h2database" % "h2" % "2.3.232",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
@@ -427,8 +425,8 @@ lazy val metals = project
       V.dap4j,
       "ch.epfl.scala" %% "scala-debug-adapter" % V.debugAdapter,
       // for finding paths of global log/cache directories
-      "io.get-coursier.util" % "directories" % "0.1.3",
-      "io.get-coursier.util" % "directories-jni" % "0.1.3",
+      "io.get-coursier.util" % "directories" % "0.1.4",
+      "io.get-coursier.util" % "directories-jni" % "0.1.4",
       // ==================
       // Scala dependencies
       // ==================
@@ -461,8 +459,8 @@ lazy val metals = project
       // For test frameworks
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       // For MCP
-      "io.modelcontextprotocol.sdk" % "mcp" % "0.10.0",
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.19.1",
+      "io.modelcontextprotocol.sdk" % "mcp" % "0.11.2",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.19.2",
       "io.undertow" % "undertow-servlet" % "2.3.12.Final",
       // For Twirl
       "org.playframework.twirl" %% "twirl-compiler" % "2.0.9",
@@ -722,10 +720,13 @@ lazy val metalsDependencies = project
       // not available for Scala 2.13.13
       // "org.typelevel" % "kind-projector" % V.kindProjector cross CrossVersion.full,
       "com.olegpy" %% "better-monadic-for" % V.betterMonadicFor,
-      "com.lihaoyi" % "mill-contrib-testng" % V.mill,
+      ("com.lihaoyi" % "mill-contrib-testng" % V.mill)
+        .exclude("com.lihaoyi", "unroll-annotation_3"),
       "org.virtuslab.scala-cli" % "cli_3" % V.scalaCli intransitive (),
-      "ch.epfl.scala" % "bloop-maven-plugin" % V.mavenBloop,
-      "ch.epfl.scala" %% "gradle-bloop" % V.gradleBloop,
+      ("ch.epfl.scala" % "bloop-maven-plugin" % V.mavenBloop)
+        .exclude("com.lihaoyi", "unroll-annotation_2.13"),
+      ("ch.epfl.scala" %% "gradle-bloop" % V.gradleBloop)
+        .exclude("com.lihaoyi", "unroll-annotation_2.13"),
       "com.sourcegraph" % "semanticdb-java" % V.javaSemanticdb,
       "org.foundweekends.giter8" %% "giter8" % V.gitter8Version intransitive (),
     ),

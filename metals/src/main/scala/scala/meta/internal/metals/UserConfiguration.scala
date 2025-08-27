@@ -40,7 +40,7 @@ case class UserConfiguration(
     worksheetCancelTimeout: Int = 4,
     bloopSbtAlreadyInstalled: Boolean = false,
     bloopVersion: Option[String] = None,
-    bloopJvmProperties: Option[List[String]] = None,
+    bloopJvmProperties: BloopJvmProperties = BloopJvmProperties.Uninitialized,
     superMethodLensesEnabled: Boolean = false,
     inlayHintsOptions: InlayHintsOptions = InlayHintsOptions(Map.empty),
     enableStripMarginOnTypeFormatting: Boolean = true,
@@ -59,6 +59,7 @@ case class UserConfiguration(
     enableBestEffort: Boolean = false,
     defaultShell: Option[String] = None,
     startMcpServer: Boolean = false,
+    mcpClient: Option[String] = None,
 ) {
 
   override def toString(): String = {
@@ -102,7 +103,7 @@ case class UserConfiguration(
       Some(("worksheetCancelTimeout", worksheetCancelTimeout)),
       Some(("bloopSbtAlreadyInstalled", bloopSbtAlreadyInstalled)),
       optStringField("bloopVersion", bloopVersion),
-      listField("bloopJvmProperties", bloopJvmProperties),
+      listField("bloopJvmProperties", bloopJvmProperties.properties),
       Some(("superMethodLensesEnabled", superMethodLensesEnabled)),
       mapField("inlayHintsOptions", inlayHintsOptions.options),
       Some(
@@ -156,6 +157,7 @@ case class UserConfiguration(
           startMcpServer,
         )
       ),
+      optStringField("mcpClient", mcpClient),
     ).flatten.toMap.asJava
     val gson = new GsonBuilder().setPrettyPrinting().create()
     gson.toJson(fields).toString()
@@ -389,6 +391,15 @@ object UserConfiguration {
            |""".stripMargin,
       ),
       UserConfigurationOption(
+        "inlay-hints.hints-x-ray-mode.enable",
+        "false",
+        "false",
+        "Should display type annotations for intermediate types of multi-line expressions",
+        """|When this option is enabled, each method/attribute call in a multi-line chain will get
+           | its own type annotation.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
         "enable-semantic-highlighting",
         "true",
         "false",
@@ -516,6 +527,19 @@ object UserConfiguration {
         "true",
         "Start MCP server",
         """|If Metals should start the MCP (SSE) server, that an AI agent can connect to.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "mcp-client",
+        """empty string `""`.""",
+        "claude",
+        "MCP Client Name",
+        """|This is used in situations where the client you're using doesn't match the editor
+           |you're using or you also want an extra config generated, which is what Metals will
+           |default to. For example if you use claude code cli in your terminal while you have
+           |Metals running you would set this to "claude".
+           |NOTE: This will generate an extra config if Metals supports the client you are passing in
+           |and it will still generate the one matching your editor if it's also supported.
            |""".stripMargin,
       ),
     )
@@ -711,7 +735,10 @@ object UserConfiguration {
       getStringKey("bloop-version")
     val defaultShell =
       getStringKey("default-shell")
-    val bloopJvmProperties = getStringListKey("bloop-jvm-properties")
+    val bloopJvmProperties = getStringListKey("bloop-jvm-properties") match {
+      case None => BloopJvmProperties.Empty
+      case Some(props) => BloopJvmProperties.WithProperties(props)
+    }
     val superMethodLensesEnabled =
       getBooleanKey("super-method-lenses-enabled").getOrElse(false)
 
@@ -796,6 +823,9 @@ object UserConfiguration {
       getBooleanKey("enable-best-effort").getOrElse(false)
 
     val startMcpServer = getBooleanKey("start-mcp-server").getOrElse(false)
+
+    val mcpClient = getStringKey("mcp-client")
+
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -830,6 +860,7 @@ object UserConfiguration {
           enableBestEffort,
           defaultShell,
           startMcpServer,
+          mcpClient,
         )
       )
     } else {
@@ -851,6 +882,21 @@ object TestUserInterfaceKind {
   }
   object TestExplorer extends TestUserInterfaceKind {
     override def toString: String = "test explorer"
+  }
+}
+
+sealed trait BloopJvmProperties {
+  def properties: Option[List[String]]
+}
+object BloopJvmProperties {
+  case object Uninitialized extends BloopJvmProperties {
+    def properties: Option[List[String]] = None
+  }
+  case object Empty extends BloopJvmProperties {
+    def properties: Option[List[String]] = None
+  }
+  case class WithProperties(props: List[String]) extends BloopJvmProperties {
+    def properties: Option[List[String]] = Some(props)
   }
 }
 

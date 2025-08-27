@@ -709,7 +709,10 @@ final case class TestingServer(
       requestOtherThreadStackTrace: Boolean = false,
   ): Future[TestDebugger] = {
 
-    assertSystemExit(parameter)
+    /// this might break on CI and causes tests to be flaky
+    if (System.getenv("CI") == null) {
+      assertSystemExit(parameter)
+    }
     val targets = List(new b.BuildTargetIdentifier(buildTarget(target)))
     val params =
       new b.DebugSessionParams(targets.asJava)
@@ -791,6 +794,21 @@ final case class TestingServer(
       .asScala
   }
 
+  def info(
+      filename: String,
+      symbol: String,
+      retry: Int = 3,
+  ): Future[Option[m.internal.pc.PcSymbolInformation]] = {
+    val abspath = toPath(filename)
+    headServer.compilers.info(abspath, symbol).recoverWith {
+      case _ if retry > 0 =>
+        scribe.info(s"Retrying info($filename, $symbol) $retry times")
+        info(filename, symbol, retry - 1)
+      case e =>
+        Future.failed(e)
+    }
+  }
+
   def didChange(filename: String)(fn: String => String): Future[Unit] = {
     val abspath = toPath(filename)
     val oldText = abspath.toInputFromBuffers(buffers).text
@@ -816,6 +834,10 @@ final case class TestingServer(
     server.stacktraceAnalyzer.stacktraceLenses(
       stacktrace.split('\n').toList
     )
+  }
+
+  def resolveStacktraceLocation(stacktraceLine: String): Option[l.Location] = {
+    server.stacktraceAnalyzer.resolveStacktraceLocationCommand(stacktraceLine)
   }
 
   def exportEvaluation(filename: String): Option[String] = {

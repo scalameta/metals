@@ -5,7 +5,6 @@ import java.net.URLClassLoader
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
-import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.server.testing.FingerprintInfo
 import scala.meta.internal.metals.debug.server.testing.LoggingEventHandler
@@ -17,10 +16,6 @@ import bloop.config.Config
 import ch.epfl.scala.bsp4j.ScalaTestSuites
 import ch.epfl.scala.debugadapter.CancelableFuture
 import ch.epfl.scala.debugadapter.DebuggeeListener
-import ch.epfl.scala.debugadapter.JavaRuntime
-import ch.epfl.scala.debugadapter.Library
-import ch.epfl.scala.debugadapter.Module
-import ch.epfl.scala.debugadapter.UnmanagedEntry
 import sbt.testing.Framework
 import sbt.testing.SuiteSelector
 import sbt.testing.TaskDef
@@ -34,7 +29,7 @@ class TestSuiteDebugAdapter(
     discoveredTests: Map[Config.TestFramework, List[Discovered]],
     isDebug: Boolean = true,
 )(implicit ec: ExecutionContext)
-    extends MetalsDebuggee() {
+    extends MetalsDebuggee(project, userJavaHome) {
 
   override def name: String = {
     val selectedTests = testClasses
@@ -47,17 +42,6 @@ class TestSuiteDebugAdapter(
       .mkString("[", ", ", "]")
     s"${getClass.getSimpleName}($selectedTests)"
   }
-
-  override def modules: Seq[Module] = project.modules
-  override def libraries: Seq[Library] = project.libraries
-  override def unmanagedEntries: Seq[UnmanagedEntry] = project.unmanagedEntries
-  override protected def scalaVersionOpt: Option[String] = project.scalaVersion
-
-  override val javaRuntime: Option[JavaRuntime] =
-    JdkSources
-      .defaultJavaHome(userJavaHome)
-      .flatMap(path => JavaRuntime(path.toNIO))
-      .headOption
 
   def newClassLoader(parent: Option[ClassLoader]): ClassLoader = {
     val classpathEntries = classPath.map(_.toUri.toURL).toArray

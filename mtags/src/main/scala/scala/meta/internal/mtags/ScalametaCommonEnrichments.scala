@@ -1,17 +1,22 @@
 package scala.meta.internal.mtags
 
+import java.io.IOException
 import java.net.URI
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
+import java.nio.file.FileVisitResult
+import java.nio.file.FileVisitor
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
+import java.nio.file.attribute.BasicFileAttributes
 import java.util.logging.Level
 import java.util.logging.Logger
 
 import scala.annotation.tailrec
+import scala.collection.mutable.ListBuffer
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -351,9 +356,47 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
       else Generator()
     }
 
+    private class MetalsVisitor extends FileVisitor[Path] {
+
+      private val buffer = ListBuffer.empty[AbsolutePath]
+      def toList: List[AbsolutePath] = buffer.toList
+
+      override def preVisitDirectory(
+          dir: Path,
+          attrs: BasicFileAttributes
+      ): FileVisitResult = FileVisitResult.CONTINUE
+
+      override def visitFileFailed(
+          file: Path,
+          exc: IOException
+      ): FileVisitResult = {
+        logger.log(Level.SEVERE, s"Failed to visit file $file", exc)
+        FileVisitResult.CONTINUE
+      }
+      override def postVisitDirectory(
+          dir: Path,
+          exc: IOException
+      ): FileVisitResult = FileVisitResult.CONTINUE
+
+      override def visitFile(
+          file: Path,
+          attrs: BasicFileAttributes
+      ): FileVisitResult = {
+        buffer += AbsolutePath(file)
+        FileVisitResult.CONTINUE
+
+      }
+    }
+
     def listRecursive: Generator[AbsolutePath] = {
-      if (path.isDirectory) Files.walk(path.toNIO).asScala.map(AbsolutePath(_))
-      else if (path.isFile) Generator(path)
+      if (path.isDirectory) {
+        val visitor = new MetalsVisitor
+        Files.walkFileTree(
+          path.toNIO,
+          visitor
+        )
+        visitor.toList
+      } else if (path.isFile) Generator(path)
       else Generator()
     }
 
@@ -436,9 +479,10 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     def isSourcesJar: Boolean = {
       filename.endsWith("-sources.jar") || filename == "src.zip"
     }
+    def isMillBuild: Boolean =
+      filename.endsWith(".mill") || filename.endsWith(".mill.scala")
     def isMill: Boolean =
-      filename.endsWith(".mill") ||
-        filename.endsWith(".mill.scala") || filename == "build.sc"
+      isMillBuild || filename == "build.sc"
     def isWorksheet: Boolean = {
       filename.endsWith(".worksheet.sc")
     }

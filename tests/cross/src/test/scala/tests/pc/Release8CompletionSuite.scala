@@ -2,6 +2,9 @@ package tests.pc
 
 import java.nio.file.Path
 
+import scala.meta.internal.pc.JrtClasspathCompat
+import scala.meta.internal.pc.ScalaPresentationCompiler
+
 import tests.BaseCompletionSuite
 
 class Release8CompletionSuite extends BaseCompletionSuite {
@@ -65,4 +68,15 @@ class Release8CompletionSuite extends BaseCompletionSuite {
     )
   )
 
+  test("clear-jrt-class-path-caches") {
+    presentationCompiler match {
+      case pc: ScalaPresentationCompiler =>
+        assert(
+          JrtClasspathCompat.clearJrtClassPathCaches(pc.logger),
+          "Failed to clear JrtClassPath caches"
+        )
+      case _ =>
+        fail("presentationCompiler is not a ScalaPresentationCompiler")
+    }
+  }
 }

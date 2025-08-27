@@ -20,7 +20,7 @@ trait McpTestUtils {
         McpConfig.readPort(server.workspace, "root", VSCodeEditor)
       )
       _ = assert(port.isDefined, "MCP server port should be defined")
-      client = new TestMcpClient(s"http://localhost:${port.get}/sse")
+      client = new TestMcpClient(s"http://localhost:${port.get}/sse", port.get)
       _ <- client.initialize()
     } yield client
 }

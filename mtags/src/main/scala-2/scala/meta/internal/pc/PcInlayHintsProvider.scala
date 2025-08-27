@@ -38,7 +38,7 @@ final class PcInlayHintsProvider(
   def provide(): List[InlayHint] =
     treesInRange()
       .flatMap(tpdTree =>
-        traverse(InlayHints.empty(params.uri()), tpdTree).result()
+        traverse(InlayHints.empty(params.uri()), tpdTree, None).result()
       )
 
   private def adjustPos(pos: Position): Position =
@@ -46,11 +46,22 @@ final class PcInlayHintsProvider(
 
   def collectDecorations(
       tree: Tree,
+      parent: Option[Tree],
       inlayHints: InlayHints
   ): InlayHints = {
+    val firstPassHints = (tree, parent) match {
+      // XRay hints are not mutually exclusive with other hints, so they must be matched separately
+      case XRayModeHint(tpe, pos) if tpe != null =>
+        inlayHints.addToBlock(
+          adjustPos(pos).toLsp,
+          LabelPart(": ") :: toLabelParts(tpe, pos),
+          InlayHintKind.Type
+        )
+      case _ => inlayHints
+    }
     tree match {
       case NamedParameters(params) =>
-        params.foldLeft(inlayHints) { case (acc, (prefix, name, pos)) =>
+        params.foldLeft(firstPassHints) { case (acc, (prefix, name, pos)) =>
           acc.add(
             adjustPos(pos).focusStart.toLsp,
             LabelPart(name.toString() + " = " + prefix) :: Nil,
@@ -59,7 +70,7 @@ final class PcInlayHintsProvider(
         }
       case ImplicitConversion(symbol, range) =>
         val adjusted = adjustPos(range)
-        inlayHints
+        firstPassHints
           .add(
             adjusted.focusStart.toLsp,
             labelPart(symbol, symbol.decodedName) :: LabelPart("(") :: Nil,
@@ -71,20 +82,20 @@ final class PcInlayHintsProvider(
             InlayHintKind.Parameter
           )
       case ImplicitParameters(trees, pos) =>
-        inlayHints.add(
+        firstPassHints.add(
           adjustPos(pos).focusEnd.toLsp,
           ImplicitParameters.partsFromImplicitArgs(trees),
           InlayHintKind.Parameter
         )
       case TypeParameters(tpes, pos) if tpes.forall(_ != null) =>
         val label = tpes.map(toLabelParts(_, pos)).separated("[", ", ", "]")
-        inlayHints.add(
+        firstPassHints.add(
           adjustPos(pos).focusEnd.toLsp,
           label,
           InlayHintKind.Type
         )
       case ByNameParameters(byNameArgs) =>
-        byNameArgs.foldLeft(inlayHints) { case (ih, pos) =>
+        byNameArgs.foldLeft(firstPassHints) { case (ih, pos) =>
           ih.add(
             adjustPos(pos.focusStart).toLsp,
             List(LabelPart("=> ")),
@@ -93,25 +104,26 @@ final class PcInlayHintsProvider(
         }
       case InferredType(tpe, pos) if tpe != null && !tpe.isError =>
         val adjustedPos = adjustPos(pos).focusEnd
-        if (inlayHints.containsDef(adjustedPos.start)) inlayHints
+        if (firstPassHints.containsDef(adjustedPos.start)) firstPassHints
         else
-          inlayHints
+          firstPassHints
             .add(
               adjustedPos.toLsp,
               LabelPart(": ") :: toLabelParts(tpe.finalResultType, pos),
               InlayHintKind.Type
             )
             .addDefinition(adjustedPos.start)
-      case _ => inlayHints
+      case _ => firstPassHints
     }
   }
 
   def traverse(
       acc: InlayHints,
-      tree: Tree
+      tree: Tree,
+      parent: Option[Tree]
   ): InlayHints = {
-    val inlayHints = collectDecorations(tree, acc)
-    tree.children.foldLeft(inlayHints)(traverse(_, _))
+    val inlayHints = collectDecorations(tree, parent, acc)
+    tree.children.foldLeft(inlayHints)(traverse(_, _, Some(tree)))
   }
 
   private def partsFromType(
@@ -161,7 +173,9 @@ final class PcInlayHintsProvider(
     }
 
   object NamedParameters {
-    def unapply(tree: Tree): Option[List[(String, Name, Position)]] =
+    def unapply(
+        tree: Tree
+    ): Option[List[(String, Name, Position)]] = {
       if (params.namedParameters()) {
         tree match {
           case Apply(fun: Select, args) if isNotInterestingApply(fun) =>
@@ -188,6 +202,7 @@ final class PcInlayHintsProvider(
           case _ => None
         }
       } else None
+    }
 
     private def isDefaultArgument(arg: Tree) = {
       arg.symbol != null && arg.symbol.isDefaultGetter
@@ -222,7 +237,7 @@ final class PcInlayHintsProvider(
   }
 
   object ImplicitConversion {
-    def unapply(tree: Tree): Option[(Symbol, Position)] =
+    def unapply(tree: Tree): Option[(Symbol, Position)] = {
       if (params.implicitConversions())
         tree match {
           case Apply(fun, args)
@@ -232,11 +247,12 @@ final class PcInlayHintsProvider(
           case _ => None
         }
       else None
+    }
     private def isImplicitConversion(fun: Tree) =
       fun.pos.isOffset && fun.symbol != null && fun.symbol.isImplicit
   }
   object ImplicitParameters {
-    def unapply(tree: Tree): Option[(List[Tree], Position)] =
+    def unapply(tree: Tree): Option[(List[Tree], Position)] = {
       if (params.implicitParameters())
         tree match {
           case implicitApply: ApplyToImplicitArgs if !tree.pos.isOffset =>
@@ -244,6 +260,7 @@ final class PcInlayHintsProvider(
           case _ => None
         }
       else None
+    }
 
     private def reversedLabelPartsFromParams(
         vparams: List[ValDef]
@@ -381,7 +398,7 @@ final class PcInlayHintsProvider(
   }
 
   object TypeParameters {
-    def unapply(tree: Tree): Option[(List[Type], Position)] =
+    def unapply(tree: Tree): Option[(List[Type], Position)] = {
       if (params.typeParameters())
         tree match {
           case TypeApply(sel: Select, _)
@@ -413,10 +430,11 @@ final class PcInlayHintsProvider(
           case _ => None
         }
       else None
+    }
   }
 
   object InferredType {
-    def unapply(tree: Tree): Option[(Type, Position)] =
+    def unapply(tree: Tree): Option[(Type, Position)] = {
       if (params.inferredTypes())
         tree match {
           case vd @ ValDef(_, _, tpt, _)
@@ -438,6 +456,7 @@ final class PcInlayHintsProvider(
           case _ => None
         }
       else None
+    }
     private def hasMissingTypeAnnot(tree: MemberDef, tpt: Tree) =
       tree.pos.isRange && tree.namePosition.isRange && tpt.pos.isOffset && tpt.pos.start != 0
 
@@ -484,7 +503,7 @@ final class PcInlayHintsProvider(
 
   object ByNameParameters {
     // Extract the positions at which `=>` hints should be inserted
-    def unapply(tree: Tree): Option[List[Position]] =
+    def unapply(tree: Tree): Option[List[Position]] = {
       if (params.byNameParameters())
         tree match {
           case Apply(sel: Select, _)
@@ -526,6 +545,7 @@ final class PcInlayHintsProvider(
           case _ => None
         }
       else None
+    }
 
     // If the position passed in wraps a brace-delimited expression, return the position after the opening brace
     private def byNamePosForBlockLike(pos: Position): Option[Position] = {
@@ -537,6 +557,57 @@ final class PcInlayHintsProvider(
         None
       }
     }
+  }
+
+  object XRayModeHint {
+    def unapply(trees: (Tree, Option[Tree])): Option[(Type, Position)] = {
+      if (params.hintsXRayMode()) {
+        val (tree, parent) = trees
+        val isParentApply = parent match {
+          case Some(_: Apply) => true
+          case _ => false
+        }
+        val isParentOnSameLine = parent match {
+          case Some(sel: Select) if isForComprehensionMethod(sel) => false
+          case Some(par) if par.pos.line == tree.pos.line => true
+          case _ => false
+        }
+        tree match {
+          /*
+          anotherTree
+           .innerSelect()
+           */
+          case a @ Apply(inner, _)
+              if inner.pos.isRange && !isParentOnSameLine && !isParentApply &&
+                endsInSimpleSelect(a) && tree.pos.source.isEndOfLine(
+                  tree.pos.end
+                ) =>
+            Some((a.tpe.finalResultType, tree.pos))
+          /*
+          innerTree
+           .select
+           */
+          case select @ Select(innerTree, _)
+              if innerTree.pos.isRange && !isParentOnSameLine && !isParentApply && tree.pos.source
+                .isEndOfLine(tree.pos.end) =>
+            Some((select.tpe.finalResultType, tree.pos))
+          case _ => None
+        }
+      } else None
+    }
+
+    @tailrec
+    private def endsInSimpleSelect(ap: Tree): Boolean =
+      ap match {
+        case Apply(sel: Select, _) =>
+          sel.name != nme.apply && !isInfix(sel, textStr)
+        case Apply(TypeApply(sel: Select, _), _) =>
+          sel.name != nme.apply && !isInfix(sel, textStr)
+        case Apply(innerTree @ Apply(_, _), _) =>
+          endsInSimpleSelect(innerTree)
+        case _ => false
+      }
+
   }
 
   private def syntheticTupleApply(sel: Select): Boolean = {

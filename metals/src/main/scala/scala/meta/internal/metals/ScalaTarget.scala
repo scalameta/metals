@@ -2,12 +2,15 @@ package scala.meta.internal.metals
 
 import scala.util.Success
 import scala.util.Try
+import scala.util.matching.Regex
 
 import scala.meta.Dialect
 import scala.meta.dialects._
 import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaTarget.ExperimentalSyntaxRegex
+import scala.meta.internal.metals.ScalaTarget.KindProjectorRegex
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
@@ -29,28 +32,26 @@ case class ScalaTarget(
 
   def isSbt = sbtVersion.isDefined
 
-  def dialect(path: AbsolutePath): Dialect = {
-    scalaVersion match {
-      case _ if info.isSbtBuild && path.isSbt => Sbt
-      case other =>
-        val dialect =
-          ScalaVersions.dialectForScalaVersion(other, includeSource3 = false)
-        dialect match {
-          case Scala213 if containsSource3 =>
-            Scala213Source3
-          case Scala212 if containsSource3 =>
-            Scala212Source3
-          case Scala3
-              if scalac
-                .getOptions()
-                .asScala
-                .exists(_.startsWith("-Ykind-projector")) =>
-            dialect.withAllowStarAsTypePlaceholder(true)
-          case Scala3 =>
-            // set to false since this needs an additional compiler option
-            Scala3.withAllowStarAsTypePlaceholder(false)
-          case other => other
-        }
+  def dialect(path: AbsolutePath): Dialect =
+    if (info.isSbtBuild && path.isSbt) Sbt
+    else scalaDialect
+
+  private def scalaDialect: Dialect = {
+    def kindProjector = options.exists(KindProjectorRegex.matches)
+    def scalaFuture = options.exists(ExperimentalSyntaxRegex.matches)
+    val dialect =
+      ScalaVersions.dialectForScalaVersion(scalaVersion, includeSource3 = false)
+
+    dialect match {
+      case Scala213 if containsSource3 =>
+        Scala213Source3
+      case Scala212 if containsSource3 =>
+        Scala212Source3
+      case Scala3 if scalaFuture =>
+        Scala3Future.withAllowStarAsTypePlaceholder(kindProjector)
+      case Scala3 =>
+        Scala3.withAllowStarAsTypePlaceholder(kindProjector)
+      case other => other
     }
   }
 
@@ -60,7 +61,7 @@ case class ScalaTarget(
 
   def baseDirectory: String = info.baseDirectory
 
-  def options: List[String] = scalac.getOptions().asScala.toList
+  lazy val options: List[String] = scalac.getOptions().asScala.toList
 
   def fmtDialect: ScalafmtDialect =
     ScalaVersions.fmtDialectForScalaVersion(scalaVersion, containsSource3)
@@ -150,4 +151,10 @@ case class ScalaTarget(
 
   def jvmHome: Option[String] =
     jvmBuildTarget.flatMap(f => Option(f.getJavaHome()))
+}
+
+object ScalaTarget {
+  private[ScalaTarget] val KindProjectorRegex: Regex = "-[XY]kind-projector.*".r
+  private[ScalaTarget] val ExperimentalSyntaxRegex: Regex =
+    "-language:experimental.(captureChecking|modularity|into)".r
 }

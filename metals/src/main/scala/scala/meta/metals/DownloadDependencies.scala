@@ -13,6 +13,7 @@ import scala.meta.internal.metals.FileDecoderProvider
 import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
+import scala.meta.internal.metals.debug.server.testing.TestInternals
 import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.io.AbsolutePath
@@ -32,6 +33,10 @@ object DownloadDependencies {
   private lazy val allSupportedScala3Versions = complete
     .complete("org.scala-lang:scala3-presentation-compiler_3:")
     .filterNot(_.contains("RC"))
+    .filter { version =>
+      // dependency on snapshot mtags version from an old snapshot repository
+      !Set("3.5.0", "3.4.3", "3.4.2", "3.4.1", "3.4.0")(version)
+    }
 
   /**
    * A main class that populates the Coursier download cache with Metals dependencies.
@@ -67,7 +72,8 @@ object DownloadDependencies {
       downloadCfr() ++
       downloadScala3PresentationCompiler(filterVersions) ++
       downloadAllScalafixVersions(filterVersions) ++
-      downloadAllScalaDebugToolVersions(filterVersions)
+      downloadAllScalaDebugToolVersions(filterVersions) ++
+      downloadTestAgent()
 
     val distinctFiles = allPaths.distinct
     val copyToDest = args.indexOf("--copy-to") match {
@@ -277,5 +283,10 @@ object DownloadDependencies {
           else Seq.empty
         expressionCompilerJars ++ debugDecoderJars
       }
+  }
+
+  def downloadTestAgent(): Seq[Path] = {
+    scribe.info(s"Downloading test-agent")
+    Embedded.downloadDependency(TestInternals.dependency)
   }
 }
