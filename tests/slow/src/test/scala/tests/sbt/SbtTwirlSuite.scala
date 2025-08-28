@@ -3,12 +3,8 @@ package tests.sbt
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import tests.CompletionsAssertions
-import tests.ScriptsAssertions
 
-class SbtTwirlSuite
-    extends SbtServerSuite
-    with CompletionsAssertions
-    with ScriptsAssertions {
+class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
 
   val twirlVersion = "2.0.9"
 
@@ -35,7 +31,6 @@ class SbtTwirlSuite
             |""".stripMargin
       )
       _ <- server.didOpen("src/main/twirl/example.scala.html")
-      _ <- server.didOpen("build.sbt")
       _ <- server.assertHover(
         "src/main/twirl/example.scala.html",
         """|@(name: String)
@@ -48,7 +43,7 @@ class SbtTwirlSuite
     } yield ()
   }
 
-  test("hover-method") {
+  test("twirl-hover-method") {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -71,7 +66,6 @@ class SbtTwirlSuite
             |""".stripMargin
       )
       _ <- server.didOpen("src/main/twirl/example.scala.html")
-      _ <- server.didOpen("build.sbt")
       _ <- server.assertHover(
         "src/main/twirl/example.scala.html",
         """|@(x: String, y: Int)
@@ -80,6 +74,46 @@ class SbtTwirlSuite
         """|```scala
            |def length(): Int
            |```""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("twirl-rename") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=${V.sbtVersion}
+            |/src/main/twirl/example.scala.html
+            |@(name: String)
+            |<h1>Hello @name!</h1>
+            |/project/plugins.sbt
+            |addSbtPlugin("org.playframework.twirl" % "sbt-twirl" % "${twirlVersion}")
+            |/build.sbt
+            |enablePlugins(SbtTwirl)
+            |Compile / unmanagedSourceDirectories := Seq(
+            |  (baseDirectory.value / "src" / "main" / "scala"),
+            |  (baseDirectory.value / "src" / "main" / "scala-3"),
+            |  (baseDirectory.value / "src" / "main" / "java"),
+            |  (baseDirectory.value / "src" / "main" / "twirl")
+            |)
+            |scalaVersion := "${V.scala213}"
+            |""".stripMargin
+      )
+      _ <- server.didOpen("src/main/twirl/example.scala.html")
+      _ <- server.assertRename(
+        "src/main/twirl/example.scala.html",
+        """|@(name: String)
+           |<h1>Hello @na@@me!</h1>
+         """.stripMargin,
+        Map(
+          "src/main/twirl/example.scala.html" ->
+            s"""|@(address: String)
+                |<h1>Hello @address!</h1>
+          """.stripMargin
+        ),
+        Set("src/main/twirl/example.scala.html"),
+        "address",
       )
     } yield ()
   }
@@ -110,6 +144,39 @@ class SbtTwirlSuite
         "toInt: Int\ntoIntOption: Option[Int]\n",
         filename = Some("src/main/twirl/example.scala.html"),
         filter = _.contains("toInt"),
+      )
+    } yield ()
+  }
+
+  test("twirl-import") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|src/main/twirl/example.scala.html
+            |@(name: String)
+            |<h1>Hello @name @// @@</h1>
+            |/project/plugins.sbt
+            |addSbtPlugin("org.playframework.twirl" % "sbt-twirl" % "${twirlVersion}")
+            |/build.sbt
+            |enablePlugins(SbtTwirl)
+            |Compile / unmanagedSourceDirectories := Seq(
+            |  (baseDirectory.value / "src" / "main" / "scala"),
+            |  (baseDirectory.value / "src" / "main" / "scala-3"),
+            |  (baseDirectory.value / "src" / "main" / "java"),
+            |  (baseDirectory.value / "src" / "main" / "twirl")
+            |)
+            |""".stripMargin
+      )
+      _ <- server.didOpen("src/main/twirl/example.scala.html")
+      _ = assertNoDiagnostics()
+      _ <- assertCompletionEdit(
+        "File@@",
+        """
+          |@import java.io.File
+          |@(name: String)
+          |<h1>Hello @name @File</h1>
+        """.stripMargin,
+        filenameOpt = Some("src/main/twirl/example.scala.html"),
       )
     } yield ()
   }
