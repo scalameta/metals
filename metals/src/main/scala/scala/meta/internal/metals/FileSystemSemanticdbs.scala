@@ -70,8 +70,10 @@ final class FileSystemSemanticdbs(
             )
           } catch {
             case e: java.nio.file.NoSuchFileException =>
-              scribe.warn(s"semantic db not found: $file")
-              scribe.debug(e)
+              scribe.debug(
+                s"semantic db not found: $file"
+              )
+              scribe.trace(e)
               TextDocumentLookup.NotFound(file)
           }
         case None =>

@@ -97,7 +97,7 @@ class CompilerConfiguration(
     protected def fallback: PresentationCompiler
     protected def newCompiler(
         classpath: Seq[Path],
-        srcFiles: Seq[AbsolutePath] = Seq(),
+        srcFiles: Seq[Path] = Seq(),
     ): PresentationCompiler
 
     protected val presentationCompilerRef =
@@ -110,11 +110,14 @@ class CompilerConfiguration(
           .targetClasspath(buildTargetId, cancelCompilerPromise)
           .getOrElse(Future.successful(Nil))
       } yield {
-        val srcFiles = buildTargets.buildTargetSources(buildTargetId)
+        val sourceItems = buildTargets.sourceItemsToBuildTargets
+          .filter(_._2.iterator().asScala.toList.contains(buildTargetId))
+          .map(_._1.toNIO)
+          .toList
 
         // set wasResolved to avoid races on timeout below
         val classpathSeq = classpath.toAbsoluteClasspath.map(_.toNIO).toSeq
-        val result = newCompiler(classpathSeq, srcFiles.toSeq)
+        val result = newCompiler(classpathSeq, sourceItems)
         // Request finished, we can remove and shut down the fallback
         Option(presentationCompilerRef.getAndSet(result))
           .foreach(_.shutdown())
@@ -174,7 +177,7 @@ class CompilerConfiguration(
 
     protected def newCompiler(
         classpath: Seq[Path],
-        srcFiles: Seq[AbsolutePath] = Seq(),
+        srcFiles: Seq[Path] = Seq(),
     ): PresentationCompiler = {
       val name = scalaTarget.scalac.getTarget().getUri
       val options = enrichWithReleaseOption(scalaTarget)
@@ -202,6 +205,9 @@ class CompilerConfiguration(
         if (scalaTarget.isBestEffort) Seq(scalaTarget.bestEffortPath)
         else Seq.empty
 
+      val sourcePath = srcFiles
+      scribe.debug(s"Source path: ${sourcePath.mkString(":")}")
+
       fromMtags(
         mtags,
         nonBestEffortOptions,
@@ -209,6 +215,7 @@ class CompilerConfiguration(
         name,
         search,
         referenceCounter,
+        sourcePath,
       )
         .withBuildTargetName(scalaTarget.displayName)
     }
@@ -258,7 +265,7 @@ class CompilerConfiguration(
 
     protected def newCompiler(
         classpath: Seq[Path],
-        srcFiles: Seq[AbsolutePath] = Seq(),
+        srcFiles: Seq[Path] = Seq(),
     ): PresentationCompiler = {
       val pc = JavaPresentationCompiler()
       configure(pc, search, completionItemPriority)
@@ -266,6 +273,7 @@ class CompilerConfiguration(
           targetId.getUri(),
           classpath.asJava,
           log.asJava,
+          srcFiles.asJava,
         )
     }
 
@@ -307,6 +315,7 @@ class CompilerConfiguration(
       name: String,
       symbolSearch: SymbolSearch,
       referenceCounter: CompletionItemPriority,
+      sourcePath: Seq[Path] = Seq.empty,
   ): PresentationCompiler = {
     val pc = mtags match {
       case MtagsBinaries.BuildIn => new ScalaPresentationCompiler()
@@ -320,6 +329,7 @@ class CompilerConfiguration(
         name,
         classpathSeq.asJava,
         (log ++ filteredOptions).asJava,
+        sourcePath.asJava,
       )
   }
 

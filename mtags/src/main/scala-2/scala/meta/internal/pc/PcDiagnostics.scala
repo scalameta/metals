@@ -71,31 +71,19 @@ trait PcDiagnostics {
     // remove any files in first that are no longer maintained by presentation compiler (i.e. closed)
     allSources = allSources filter (s => unitOfFile contains (s.file))
 
-    // ensure all loaded units are parsed
-    for (s <- allSources; unit <- getUnit(s)) {
-      // checkForMoreWork(NoPosition)  // disabled, as any work done here would be in an inconsistent state
-      ensureUpToDate(unit)
-      parseAndEnter(unit)
-    }
-
-    // sleep window
-    // - removed check for lastWasReload
-    val afterTypeDelay = settings.YpresentationDelay.value
-    if (afterTypeDelay > 0) {
-      val limit = System.currentTimeMillis() + afterTypeDelay
-      while (System.currentTimeMillis() < limit) {
-        Thread.sleep(10)
-        checkForMoreWork(NoPosition)
-      }
-    }
-
     // ensure all loaded units are typechecked
     for (s <- allSources; unit <- getUnit(s)) {
       try {
+        ensureUpToDate(unit)
         if (!unit.isUpToDate)
-          if (unit.problems.isEmpty || !settings.YpresentationStrict.value)
-            typeCheck(unit)
-          else
+          if (unit.problems.isEmpty || !settings.YpresentationStrict.value) {
+            debugLog("type checking: " + unit)
+            parseAndEnter(unit)
+            unit.status = PartiallyChecked
+            currentTyperRun.typeCheck(unit)
+            unit.lastBody = unit.body
+            unit.status = currentRunId
+          } else
             debugLog("%s has syntax errors. Skipped typechecking".format(unit))
         else debugLog("already up to date: " + unit)
         for (r <- waitLoadedTypeResponses(unit.source))
@@ -118,8 +106,6 @@ trait PcDiagnostics {
           //          serviceParsedEntered()
 
           //          lastException = Some(ex)
-//          ignoredFiles += unit.source.file
-//          println("[%s] marking unit as crashed (crashedFiles: %s)".format(unit, ignoredFiles))
 
           reporter.error(
             unit.body.pos,

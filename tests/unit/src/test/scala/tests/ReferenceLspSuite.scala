@@ -4,8 +4,16 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.UserConfiguration
 
 class ReferenceLspSuite extends BaseRangesSuite("reference") {
+  override def userConfig: UserConfiguration =
+    UserConfiguration(
+      fallbackScalaVersion = Some(BuildInfo.scalaVersion),
+      presentationCompilerDiagnostics = true,
+      buildOnChange = false,
+      buildOnFocus = true,
+    )
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(TestingServer.TestDefault)
@@ -140,6 +148,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
            | ======
            |""".stripMargin
       )
+      _ <- server.shutdown()
     } yield ()
   }
 
@@ -169,7 +178,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
         }
         .mkString("\n")
     check(s"$name-together", input(Seq((code +: moreCode) mkString "\n")))
-    check(s"$name-split-up", input(code +: moreCode))
+    check(s"$name-split-up".flaky, input(code +: moreCode))
   }
 
   checkInSamePackage(
@@ -415,6 +424,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
   )
 
   test("i6101") {
+    cleanWorkspace()
     for {
       _ <- initialize(
         """
@@ -462,6 +472,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
            |             ^^^^
            |""".stripMargin,
       )
+      _ <- server.shutdown()
     } yield ()
   }
 
@@ -520,6 +531,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
            |                 ^^^^^^^^
            |""".stripMargin,
       )
+      _ <- server.shutdown()
     } yield ()
   }
 

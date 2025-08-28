@@ -858,7 +858,15 @@ class Compilers(
         }
           .getOrElse(Nil)
 
-    Future.sequence(results).map(_.flatten)
+    Future
+      .sequence(results)
+      .map(_.flatten)
+      .map { res =>
+        scribe.debug(
+          s"PC references found: ${res.size}: ${res.mkString("\n")}"
+        )
+        res
+      }
   }
 
   def extractMethod(

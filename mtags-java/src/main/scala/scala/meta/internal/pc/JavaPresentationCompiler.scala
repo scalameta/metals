@@ -197,6 +197,14 @@ case class JavaPresentationCompiler(
       options = options.asScala.toList
     )
 
+  override def newInstance(
+      buildTargetIdentifier: String,
+      classpath: util.List[Path],
+      options: util.List[String],
+      sourcePath: util.List[Path]
+  ): PresentationCompiler =
+    newInstance(buildTargetIdentifier, classpath, options)
+
   override def diagnosticsForDebuggingPurposes(): util.List[String] = Nil.asJava
 
   override def isLoaded: Boolean = true

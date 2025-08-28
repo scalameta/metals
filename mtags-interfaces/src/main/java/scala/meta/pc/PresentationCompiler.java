@@ -324,6 +324,26 @@ public abstract class PresentationCompiler {
 	public abstract PresentationCompiler newInstance(String buildTargetIdentifier, List<Path> classpath,
 			List<String> options);
 
+	/**
+	 * Construct a new presentation compiler with the given parameters.
+	 *
+	 * @param buildTargetIdentifier the build target containing this source file.
+	 *                              This is needed for
+	 *                              {@link #completionItemResolve(CompletionItem, String)}.
+	 * @param classpath             the classpath of this build target.
+	 * @param options               the compiler flags for the new compiler.
+	 *                              Important, it is recommended to disable all
+	 *                              compiler plugins excluding
+	 *                              org.scalamacros:paradise, kind-projector and
+	 *                              better-monadic-for.
+	 * @param sourcePath			The source path for this build target, used by the PC to locate types
+	 *                              that have not been built yet.
+	 */
+	public PresentationCompiler newInstance(String buildTargetIdentifier, List<Path> classpath,
+                                            List<String> options, List<Path> sourcePath) {
+		return newInstance(buildTargetIdentifier, classpath, options);
+	}
+
 	// =============================
 	// Intentionally missing methods
 	// =============================

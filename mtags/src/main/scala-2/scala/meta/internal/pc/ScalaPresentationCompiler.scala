@@ -67,7 +67,8 @@ case class ScalaPresentationCompiler(
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     folderPath: Option[Path] = None,
     reportsLevel: ReportLevel = ReportLevel.Info,
-    completionItemPriority: CompletionItemPriority = (_: String) => 0
+    completionItemPriority: CompletionItemPriority = (_: String) => 0,
+    sourcePath: Seq[Path] = Nil
 ) extends PresentationCompiler {
 
   implicit val executionContext: ExecutionContextExecutor = ec
@@ -159,11 +160,25 @@ case class ScalaPresentationCompiler(
       buildTargetIdentifier: String,
       classpath: util.List[Path],
       options: util.List[String]
+  ): PresentationCompiler =
+    newInstance(
+      buildTargetIdentifier,
+      classpath,
+      options,
+      util.Collections.emptyList()
+    )
+
+  override def newInstance(
+      buildTargetIdentifier: String,
+      classpath: util.List[Path],
+      options: util.List[String],
+      sourcePath: util.List[Path]
   ): PresentationCompiler = {
     copy(
       buildTargetIdentifier = buildTargetIdentifier,
       classpath = classpath.asScala,
-      options = options.asScala.toList
+      options = options.asScala.toList,
+      sourcePath = sourcePath.asScala
     )
   }
 
@@ -596,9 +611,12 @@ case class ScalaPresentationCompiler(
     val vd = new VirtualDirectory("(memory)", None)
     val settings = new Settings
     settings.Ymacroexpand.value = "discard"
-//    settings.YpresentationDebug.value = true
     settings.outputDirs.setSingleOutput(vd)
     settings.classpath.value = classpath
+    logger.info(
+      s"[$buildTargetIdentifier]: sourcepath: ${sourcePath.mkString(File.pathSeparator)}"
+    )
+    settings.sourcepath.value = sourcePath.mkString(File.pathSeparator)
     settings.YpresentationAnyThread.value = true
     if (
       !BuildInfo.scalaCompilerVersion.startsWith("2.11") &&
