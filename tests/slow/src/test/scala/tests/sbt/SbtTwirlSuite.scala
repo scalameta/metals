@@ -51,7 +51,7 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
             |sbt.version=${V.sbtVersion}
             |/src/main/twirl/example.scala.html
             |@(name: String)
-            |<h1>Hello @name!</h1>
+            |<h1>Hello @name.length!</h1>
             |/project/plugins.sbt
             |addSbtPlugin("org.playframework.twirl" % "sbt-twirl" % "${twirlVersion}")
             |/build.sbt
@@ -68,8 +68,8 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
       _ <- server.didOpen("src/main/twirl/example.scala.html")
       _ <- server.assertHover(
         "src/main/twirl/example.scala.html",
-        """|@(x: String, y: Int)
-           |<p>@x.len@@gth @y</p>
+        """|@(name: String)
+           |<h1>Hello @name.len@@gth!</h1>
            |""".stripMargin,
         """|```scala
            |def length(): Int
