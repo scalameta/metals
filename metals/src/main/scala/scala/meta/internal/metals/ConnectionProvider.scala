@@ -682,43 +682,33 @@ class ConnectionProvider(
                     buildToolProvider.optProjectRoot
                   )
                 ) {
-                  buildToolProvider.optProjectRoot match {
-                    case None =>
-                      languageClient.showMessage(
-                        Messages.ImportProjectPartiallyFailed
-                          .params(canShowLogs = false)
-                      )
-                    case Some(projectRoot) =>
-                      languageClient
-                        .showMessageRequest(
-                          Messages.ImportProjectPartiallyFailed
-                            .params(canShowLogs = true)
+                  languageClient
+                    .showMessageRequest(
+                      Messages.ImportProjectPartiallyFailed.params()
+                    )
+                    .asScala
+                    .foreach {
+                      case Messages.ImportProjectPartiallyFailed.showLogs =>
+                        val logsFile =
+                          buildToolProvider.folder.resolve(Directories.log)
+                        val logsPath = logsFile.toURI.toString
+                        val linesCount = logsFile.readText.linesIterator.size
+                        val cursorRange = new lsp4j.Range(
+                          new lsp4j.Position(linesCount, 0),
+                          new lsp4j.Position(linesCount, 0),
                         )
-                        .asScala
-                        .foreach {
-                          case Messages.ImportProjectPartiallyFailed.showLogs =>
-                            val logsFile = projectRoot.resolve(Directories.log)
-                            val logsPath = logsFile.toURI.toString
-                            val linesCount =
-                              logsFile.readText.linesIterator.size
-                            val cursorRange = new lsp4j.Range(
-                              new lsp4j.Position(linesCount, 0),
-                              new lsp4j.Position(linesCount, 0),
+                        val location = new lsp4j.Location(logsPath, cursorRange)
+                        languageClient.metalsExecuteClientCommand(
+                          ClientCommands.GotoLocation
+                            .toExecuteCommandParams(
+                              ClientCommands.WindowLocation(
+                                location.getUri(),
+                                location.getRange(),
+                              )
                             )
-                            val location =
-                              new lsp4j.Location(logsPath, cursorRange)
-                            languageClient.metalsExecuteClientCommand(
-                              ClientCommands.GotoLocation
-                                .toExecuteCommandParams(
-                                  ClientCommands.WindowLocation(
-                                    location.getUri(),
-                                    location.getRange(),
-                                  )
-                                )
-                            )
-                          case _ => Interruptable.successful(BuildChange.Failed)
-                        }
-                  }
+                        )
+                      case _ => Interruptable.successful(BuildChange.Failed)
+                    }
 
                   // Connect nevertheless, many build import failures are caused
                   // by resolution errors in one weird module while other modules

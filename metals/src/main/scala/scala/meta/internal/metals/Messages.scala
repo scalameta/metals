@@ -128,14 +128,14 @@ object Messages {
   object ImportProjectPartiallyFailed {
     val showLogs = new MessageActionItem("Show logs")
 
-    def params(canShowLogs: Boolean): ShowMessageRequestParams = {
+    def params(): ShowMessageRequestParams = {
       val request = new ShowMessageRequestParams()
       request.setMessage(
         "Import project partially failed, limited functionality may work in some parts of the workspace. " +
           "See the logs for more details. "
       )
       request.setType(MessageType.Warning)
-      if (canShowLogs) request.setActions(List(showLogs).asJava)
+      request.setActions(List(showLogs).asJava)
       request
     }
   }
