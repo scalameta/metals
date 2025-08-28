@@ -670,6 +670,9 @@ class ConnectionProvider(
     private def bloopInstallAndConnect(
         buildTool: BloopInstallProvider
     )(implicit cancelSwitch: CancelSwitch): Interruptable[BuildChange] = {
+      val logsFile = buildToolProvider.folder.resolve(Directories.log)
+      val logsPath = logsFile.toURI.toString
+      val logsLinesCountBefore = logsFile.readText.linesIterator.size
       for {
         result <- bloopInstall.run(buildTool).withInterrupt
         change <- {
@@ -689,13 +692,9 @@ class ConnectionProvider(
                     .asScala
                     .foreach {
                       case Messages.ImportProjectPartiallyFailed.showLogs =>
-                        val logsFile =
-                          buildToolProvider.folder.resolve(Directories.log)
-                        val logsPath = logsFile.toURI.toString
-                        val linesCount = logsFile.readText.linesIterator.size
                         val cursorRange = new lsp4j.Range(
-                          new lsp4j.Position(linesCount, 0),
-                          new lsp4j.Position(linesCount, 0),
+                          new lsp4j.Position(logsLinesCountBefore, 0),
+                          new lsp4j.Position(logsLinesCountBefore, 0),
                         )
                         val location = new lsp4j.Location(logsPath, cursorRange)
                         languageClient.metalsExecuteClientCommand(
