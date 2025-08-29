@@ -306,19 +306,18 @@ class DebugDiscovery(
             }
           }
           .flatMap(symbolInfo =>
-            textDocument.occurrences.find(_.symbol == symbolInfo.symbol)
+            findOccurrenceForSymbol(textDocument, symbolInfo.symbol)
           )
 
         scala3MainOpt.orElse {
           val expectedSymbol = mainClass.getClassName.replace(".", "/")
           textDocument.symbols
             .find { symbolInfo =>
-              symbolInfo.symbol.startsWith(expectedSymbol) &&
-              (symbolInfo.symbol
-                .endsWith("#") || symbolInfo.symbol.endsWith("."))
+              symbolInfo.symbol == expectedSymbol + "#" ||
+              symbolInfo.symbol == expectedSymbol + "."
             }
             .flatMap(symbolInfo =>
-              textDocument.occurrences.find(_.symbol == symbolInfo.symbol)
+              findOccurrenceForSymbol(textDocument, symbolInfo.symbol)
             )
         }
       } else None
@@ -329,6 +328,12 @@ class DebugDiscovery(
       }
     }
   }
+
+  private def findOccurrenceForSymbol(
+      textDocument: TextDocument,
+      symbol: String,
+  ): Option[SymbolOccurrence] =
+    textDocument.occurrences.find(_.symbol == symbol)
 
   private def calculateTestCaseDistances(
       allTestCases: List[(String, List[TestCaseEntry])],
@@ -349,30 +354,21 @@ class DebugDiscovery(
       allTestCases: List[(String, List[TestCaseEntry])],
       position: Position,
   ): Seq[Distance] = {
-    val testClassOccurrences = textDocument.occurrences.filter { occ =>
-      occ.role.isDefinition && (
-        allTestCases.exists { case (suiteFqn, _) =>
+    textDocument.occurrences.flatMap { occ =>
+      if (occ.role.isDefinition) {
+        allTestCases.collectFirst { case (suiteFqn, _) =>
           val expectedSymbol = suiteFqn.replace(".", "/")
-          occ.symbol.startsWith(expectedSymbol) &&
-          (occ.symbol.endsWith("#") || occ.symbol.endsWith("."))
-        }
-      )
-    }
-
-    testClassOccurrences.flatMap { occ =>
-      occ.range.flatMap { range =>
-        val lineDiff = math.abs(range.startLine - position.getLine)
-
-        allTestCases
-          .find { case (suiteFqn, _) =>
-            val expectedSymbol = suiteFqn.replace(".", "/")
-            occ.symbol.startsWith(expectedSymbol) &&
-            (occ.symbol.endsWith("#") || occ.symbol.endsWith("."))
-          }
-          .map { case (suiteFqn, _) =>
-            TestSuiteDistance(lineDiff, suiteFqn)
-          }
-      }
+          if (
+            occ.symbol == expectedSymbol + "#" ||
+            occ.symbol == expectedSymbol + "."
+          ) {
+            occ.range.map { range =>
+              val lineDiff = math.abs(range.startLine - position.getLine)
+              TestSuiteDistance(lineDiff, suiteFqn)
+            }
+          } else None
+        }.flatten
+      } else None
     }
   }
 

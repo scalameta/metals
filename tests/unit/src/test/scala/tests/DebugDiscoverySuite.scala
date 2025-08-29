@@ -4,6 +4,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
+import scala.concurrent.Future
 import scala.util.Random
 
 import scala.meta.internal.metals.DebugDiscoveryParams
@@ -47,6 +48,86 @@ class DebugDiscoverySuite
       .replaceAll("(?m)[ \t]+$", "")
       .replaceAll("(?m)^\\s*$[\n\r]{1,}", "")
       .trim
+
+  def checkRunClosestSuccess(
+      metalsConfig: String,
+      fileContent: String,
+      filePath: String,
+      expectedOutput: String,
+  ): Future[Unit] = {
+    val fileName = filePath.split("/").last
+    for {
+      _ <- initialize(
+        s"""|${metalsConfig}
+            |/${filePath}
+            |${fileContent}
+            |""".stripMargin
+      )
+      _ <- server.didOpen(filePath)
+      (text, params) <- server.offsetParams(
+        fileName,
+        fileContent,
+        workspace,
+      )
+      _ <- server.didChange(filePath, text)
+      _ <- server.didSave(filePath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(filePath).toURI.toString,
+          "runClosest",
+          position = params.getPosition(),
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertNoDiff(
+      normalizeOutput(output),
+      expectedOutput,
+    )
+  }
+
+  def checkRunClosestError(
+      metalsConfig: String,
+      fileContent: String,
+      filePath: String,
+      expectedOutput: String,
+  ): Future[Unit] = {
+    val fileName = filePath.split("/").last
+    for {
+      _ <- initialize(
+        s"""|${metalsConfig}
+            |/${filePath}
+            |${fileContent}
+            |""".stripMargin
+      )
+      _ <- server.didOpen(filePath)
+      (text, params) <- server.offsetParams(
+        fileName,
+        fileContent,
+        workspace,
+      )
+      _ <- server.didChange(filePath, text)
+      _ <- server.didSave(filePath)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+      result <- server
+        .startDebuggingUnresolved(
+          new DebugDiscoveryParams(
+            server.toPath(filePath).toURI.toString,
+            "runClosest",
+            position = params.getPosition(),
+          ).toJson
+        )
+        .recover { case e: ResponseErrorException => e.getMessage }
+
+    } yield assertNoDiff(
+      result.toString(),
+      expectedOutput,
+    )
+  }
 
   test("run") {
     for {
@@ -595,6 +676,14 @@ class DebugDiscoverySuite
   }
 
   test("run-closest-test") {
+    val metalsConfig =
+      """/metals.json
+        |{
+        |  "a": {
+        |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
+        |  }
+        |}
+        |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -603,43 +692,7 @@ class DebugDiscoverySuite
          |  test("second") {@@}
          |}
       """.stripMargin
-    val filePath = fooPath
-    val fileName = filePath.split("/").last
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{
-           |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
-           |  }
-           |}
-           |/${filePath}
-           |${fileContent}
-           |""".stripMargin
-      )
-      _ <- server.didOpen(filePath)
-      (text, params) <- server.offsetParams(
-        fileName,
-        fileContent,
-        workspace,
-      )
-      _ <- server.didChange(filePath, text)
-      _ <- server.didSave(filePath)
-      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
-      debugger <- server.startDebuggingUnresolved(
-        new DebugDiscoveryParams(
-          server.toPath(filePath).toURI.toString,
-          "runClosest",
-          position = params.getPosition,
-        ).toJson
-      )
-      _ <- debugger.initialize
-      _ <- debugger.launch
-      _ <- debugger.configurationDone
-      _ <- debugger.shutdown
-      output <- debugger.allOutput
-    } yield assertNoDiff(
-      normalizeOutput(output),
+    val expectedOutput =
       """|Foo:
          |- second
          |1 tests, 1 passed
@@ -647,11 +700,24 @@ class DebugDiscoverySuite
          |================================================================================
          |All 1 test suites passed.
          |================================================================================
-        """.stripMargin,
+         |""".stripMargin
+    checkRunClosestSuccess(
+      metalsConfig,
+      fileContent,
+      fooPath,
+      expectedOutput,
     )
   }
 
   test("run-closest-suite") {
+    val metalsConfig =
+      """/metals.json
+        |{
+        |  "a": {
+        |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
+        |  }
+        |}
+        |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -660,43 +726,7 @@ class DebugDiscoverySuite
          |  test("second") {}
          |}
          |""".stripMargin
-    val filePath = fooPath
-    val fileName = filePath.split("/").last
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{
-           |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
-           |  }
-           |}
-           |/${filePath}
-           |${fileContent}
-           |""".stripMargin
-      )
-      _ <- server.didOpen(filePath)
-      (text, params) <- server.offsetParams(
-        fileName,
-        fileContent,
-        workspace,
-      )
-      _ <- server.didChange(filePath, text)
-      _ <- server.didSave(filePath)
-      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
-      debugger <- server.startDebuggingUnresolved(
-        new DebugDiscoveryParams(
-          server.toPath(filePath).toURI.toString,
-          "runClosest",
-          position = params.getPosition(),
-        ).toJson
-      )
-      _ <- debugger.initialize
-      _ <- debugger.launch
-      _ <- debugger.configurationDone
-      _ <- debugger.shutdown
-      output <- debugger.allOutput
-    } yield assertNoDiff(
-      normalizeOutput(output),
+    val expectedOutput =
       """|Foo:
          |- first
          |- second
@@ -705,11 +735,24 @@ class DebugDiscoverySuite
          |================================================================================
          |All 1 test suites passed.
          |================================================================================
-      """.stripMargin,
+      """.stripMargin
+    checkRunClosestSuccess(
+      metalsConfig,
+      fileContent,
+      fooPath,
+      expectedOutput,
     )
   }
 
   test("run-closest-multiple-suites") {
+    val metalsConfig =
+      """/metals.json
+        |{
+        |  "a": {
+        |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
+        |  }
+        |}
+        |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -723,43 +766,7 @@ class DebugDiscoverySuite
          |  test("Bar-second") {}
          |}
          |""".stripMargin
-    val filePath = fooPath
-    val fileName = filePath.split("/").last
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{
-           |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
-           |  }
-           |}
-           |/${filePath}
-           |${fileContent}
-           |""".stripMargin
-      )
-      _ <- server.didOpen(filePath)
-      (text, params) <- server.offsetParams(
-        fileName,
-        fileContent,
-        workspace,
-      )
-      _ <- server.didChange(filePath, text)
-      _ <- server.didSave(filePath)
-      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
-      debugger <- server.startDebuggingUnresolved(
-        new DebugDiscoveryParams(
-          server.toPath(filePath).toURI.toString,
-          "runClosest",
-          position = params.getPosition(),
-        ).toJson
-      )
-      _ <- debugger.initialize
-      _ <- debugger.launch
-      _ <- debugger.configurationDone
-      _ <- debugger.shutdown
-      output <- debugger.allOutput
-    } yield assertNoDiff(
-      normalizeOutput(output),
+    val expectedOutput =
       """|Bar:
          |- Bar-first
          |- Bar-second
@@ -768,11 +775,24 @@ class DebugDiscoverySuite
          |================================================================================
          |All 1 test suites passed.
          |================================================================================
-      """.stripMargin,
+      """.stripMargin
+    checkRunClosestSuccess(
+      metalsConfig,
+      fileContent,
+      fooPath,
+      expectedOutput,
     )
   }
 
   test("run-closest-tie-breaker") {
+    val metalsConfig =
+      """/metals.json
+        |{
+        |  "a": {
+        |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
+        |  }
+        |}
+        |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -782,43 +802,7 @@ class DebugDiscoverySuite
          |test("second") {}
          |}
          |""".stripMargin
-    val filePath = fooPath
-    val fileName = filePath.split("/").last
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{
-           |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
-           |  }
-           |}
-           |/${filePath}
-           |${fileContent}
-           |""".stripMargin
-      )
-      _ <- server.didOpen(filePath)
-      (text, params) <- server.offsetParams(
-        fileName,
-        fileContent,
-        workspace,
-      )
-      _ <- server.didChange(filePath, text)
-      _ <- server.didSave(filePath)
-      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
-      debugger <- server.startDebuggingUnresolved(
-        new DebugDiscoveryParams(
-          server.toPath(filePath).toURI.toString,
-          "runClosest",
-          position = params.getPosition(),
-        ).toJson
-      )
-      _ <- debugger.initialize
-      _ <- debugger.launch
-      _ <- debugger.configurationDone
-      _ <- debugger.shutdown
-      output <- debugger.allOutput
-    } yield assertNoDiff(
-      normalizeOutput(output),
+    val expectedOutput =
       """|Foo:
          |- first
          |1 tests, 1 passed
@@ -826,11 +810,24 @@ class DebugDiscoverySuite
          |================================================================================
          |All 1 test suites passed.
          |================================================================================
-      """.stripMargin,
+      """.stripMargin
+    checkRunClosestSuccess(
+      metalsConfig,
+      fileContent,
+      fooPath,
+      expectedOutput,
     )
   }
 
   test("run-closest-munit") {
+    val metalsConfig =
+      """/metals.json
+        |{
+        |  "a": {
+        |    "libraryDependencies":["org.scalameta::munit:1.0.0-M11"]
+        |  }
+        |}
+        |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -839,43 +836,7 @@ class DebugDiscoverySuite
          |  test("munit second te@@st") {}
          |}
          |""".stripMargin
-    val filePath = fooPath
-    val fileName = filePath.split("/").last
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{
-           |  "a": {
-           |    "libraryDependencies":["org.scalameta::munit:1.0.0-M11"]
-           |  }
-           |}
-           |/${filePath}
-           |${fileContent}
-           |""".stripMargin
-      )
-      _ <- server.didOpen(filePath)
-      (text, params) <- server.offsetParams(
-        fileName,
-        fileContent,
-        workspace,
-      )
-      _ <- server.didChange(filePath, text)
-      _ <- server.didSave(filePath)
-      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
-      debugger <- server.startDebuggingUnresolved(
-        new DebugDiscoveryParams(
-          server.toPath(filePath).toURI.toString,
-          "runClosest",
-          position = params.getPosition(),
-        ).toJson
-      )
-      _ <- debugger.initialize
-      _ <- debugger.launch
-      _ <- debugger.configurationDone
-      _ <- debugger.shutdown
-      output <- debugger.allOutput
-    } yield assertNoDiff(
-      normalizeOutput(output),
+    val expectedOutput =
       """|==> i a.FooMUnitTest.munit first test ignored
          |a.FooMUnitTest:
          |  + munit second test
@@ -884,11 +845,24 @@ class DebugDiscoverySuite
          |================================================================================
          |All 1 test suites passed.
          |================================================================================
-      """.stripMargin,
+      """.stripMargin
+    checkRunClosestSuccess(
+      metalsConfig,
+      fileContent,
+      fooPath,
+      expectedOutput,
     )
   }
 
   test("run-closest-munit-suite") {
+    val metalsConfig =
+      """/metals.json
+        |{
+        |  "a": {
+        |    "libraryDependencies":["org.scalameta::munit:1.0.0-M11"]
+        |  }
+        |}
+        |""".stripMargin
     val fileContent =
       """|package a
          |@@
@@ -897,43 +871,7 @@ class DebugDiscoverySuite
          |  test("munit second test") {}
          |}
          |""".stripMargin
-    val filePath = fooPath
-    val fileName = filePath.split("/").last
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{
-           |  "a": {
-           |    "libraryDependencies":["org.scalameta::munit:1.0.0-M11"]
-           |  }
-           |}
-           |/${filePath}
-           |${fileContent}
-           |""".stripMargin
-      )
-      _ <- server.didOpen(filePath)
-      (text, params) <- server.offsetParams(
-        fileName,
-        fileContent,
-        workspace,
-      )
-      _ <- server.didChange(filePath, text)
-      _ <- server.didSave(filePath)
-      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
-      debugger <- server.startDebuggingUnresolved(
-        new DebugDiscoveryParams(
-          server.toPath(filePath).toURI.toString,
-          "runClosest",
-          position = params.getPosition(),
-        ).toJson
-      )
-      _ <- debugger.initialize
-      _ <- debugger.launch
-      _ <- debugger.configurationDone
-      _ <- debugger.shutdown
-      output <- debugger.allOutput
-    } yield assertNoDiff(
-      normalizeOutput(output),
+    val expectedOutput =
       """|a.FooMUnitTest:
          |  + munit first test
          |  + munit second test
@@ -942,11 +880,24 @@ class DebugDiscoverySuite
          |================================================================================
          |All 1 test suites passed.
          |================================================================================
-      """.stripMargin,
+      """.stripMargin
+    checkRunClosestSuccess(
+      metalsConfig,
+      fileContent,
+      fooPath,
+      expectedOutput,
     )
   }
 
   test("run-closest-junit") {
+    val metalsConfig =
+      """/metals.json
+        |{
+        |  "a": {
+        |    "libraryDependencies":["junit:junit:4.13.2", "com.github.sbt:junit-interface:0.13.3"]
+        |  }
+        |}
+        |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -961,54 +912,34 @@ class DebugDiscoverySuite
          |  def junitSecondTest():@@ Unit = {}
          |}
          |""".stripMargin
-    val filePath = fooPath
-    val fileName = filePath.split("/").last
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{
-           |  "a": {
-           |    "libraryDependencies":["junit:junit:4.13.2", "com.github.sbt:junit-interface:0.13.3"]
-           |  }
-           |}
-           |/${filePath}
-           |${fileContent}
-           |""".stripMargin
-      )
-      _ <- server.didOpen(filePath)
-      (text, params) <- server.offsetParams(
-        fileName,
-        fileContent,
-        workspace,
-      )
-      _ <- server.didChange(filePath, text)
-      _ <- server.didSave(filePath)
-      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
-      debugger <- server.startDebuggingUnresolved(
-        new DebugDiscoveryParams(
-          server.toPath(filePath).toURI.toString,
-          "runClosest",
-          position = params.getPosition(),
-        ).toJson
-      )
-      _ <- debugger.initialize
-      _ <- debugger.launch
-      _ <- debugger.configurationDone
-      _ <- debugger.shutdown
-      output <- debugger.allOutput
-    } yield assertNoDiff(
-      normalizeOutput(output),
+    val expectedOutput =
       """|Test a.FooJUnitTest.junitFirstTest ignored
          |2 tests, 1 passed, 1 ignored
          |All tests in a.FooJUnitTest passed
          |================================================================================
          |All 1 test suites passed.
          |================================================================================
-      """.stripMargin,
+      """.stripMargin
+    checkRunClosestSuccess(
+      metalsConfig,
+      fileContent,
+      fooPath,
+      expectedOutput,
     )
   }
 
   test("run-closest-mixed-frameworks") {
+    val metalsConfig =
+      """/metals.json
+        |{
+        |  "a": {
+        |    "libraryDependencies":[
+        |      "org.scalatest::scalatest:3.2.16",
+        |      "org.scalameta::munit:1.0.0-M11"
+        |    ]
+        |  }
+        |}
+        |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -1020,46 +951,7 @@ class DebugDiscoverySuite
          |  test("munit test") {}
          |}
          |""".stripMargin
-    val filePath = fooPath
-    val fileName = filePath.split("/").last
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{
-           |  "a": {
-           |    "libraryDependencies":[
-           |      "org.scalatest::scalatest:3.2.16",
-           |      "org.scalameta::munit:1.0.0-M11"
-           |    ]
-           |  }
-           |}
-           |/${filePath}
-           |${fileContent}
-           |""".stripMargin
-      )
-      _ <- server.didOpen(filePath)
-      (text, params) <- server.offsetParams(
-        fileName,
-        fileContent,
-        workspace,
-      )
-      _ <- server.didChange(filePath, text)
-      _ <- server.didSave(filePath)
-      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
-      debugger <- server.startDebuggingUnresolved(
-        new DebugDiscoveryParams(
-          server.toPath(filePath).toURI.toString,
-          "runClosest",
-          position = params.getPosition(),
-        ).toJson
-      )
-      _ <- debugger.initialize
-      _ <- debugger.launch
-      _ <- debugger.configurationDone
-      _ <- debugger.shutdown
-      output <- debugger.allOutput
-    } yield assertNoDiff(
-      normalizeOutput(output),
+    val expectedOutput =
       """|a.MUnitSuite:
          |  + munit test
          |1 tests, 1 passed
@@ -1067,11 +959,24 @@ class DebugDiscoverySuite
          |================================================================================
          |All 1 test suites passed.
          |================================================================================
-      """.stripMargin,
+      """.stripMargin
+    checkRunClosestSuccess(
+      metalsConfig,
+      fileContent,
+      fooPath,
+      expectedOutput,
     )
   }
 
   test("run-closest-empty-test-file") {
+    val metalsConfig =
+      """|/metals.json
+         |{
+         |  "a": {
+         |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
+         |  }
+         |}
+         |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -1079,45 +984,17 @@ class DebugDiscoverySuite
          |  // No tests defined
          |}
          |""".stripMargin
-    val filePath = fooPath
-    val fileName = filePath.split("/").last
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{
-           |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
-           |  }
-           |}
-           |/${filePath}
-           |${fileContent}
-           |""".stripMargin
-      )
-      _ <- server.didOpen(filePath)
-      (text, params) <- server.offsetParams(
-        fileName,
-        fileContent,
-        workspace,
-      )
-      _ <- server.didChange(filePath, text)
-      _ <- server.didSave(filePath)
-      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
-      result <- server
-        .startDebuggingUnresolved(
-          new DebugDiscoveryParams(
-            server.toPath(filePath).toURI.toString,
-            "runClosest",
-            position = params.getPosition(),
-          ).toJson
-        )
-        .recover { case e: ResponseErrorException => e.getMessage }
-    } yield assertNoDiff(
-      result.toString(),
-      NoRunOptionException.getMessage(),
-    )
+    val expectedOutput = NoRunOptionException.getMessage()
+    checkRunClosestError(metalsConfig, fileContent, fooPath, expectedOutput)
   }
 
   test("run-closest-main") {
+    val metalsConfig =
+      """/metals.json
+        |{
+        |  "a": {}
+        |}
+        |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -1133,46 +1010,24 @@ class DebugDiscoverySuite
          |  }
          |}
          |""".stripMargin
-    val filePath = fooPath
-    val fileName = filePath.split("/").last
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{
-           |  "a": {}
-           |}
-           |/${filePath}
-           |${fileContent}
-           |""".stripMargin
-      )
-      _ <- server.didOpen(filePath)
-      (text, params) <- server.offsetParams(
-        fileName,
-        fileContent,
-        workspace,
-      )
-      _ <- server.didChange(filePath, text)
-      _ <- server.didSave(filePath)
-      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
-      debugger <- server.startDebuggingUnresolved(
-        new DebugDiscoveryParams(
-          server.toPath(filePath).toURI.toString,
-          "runClosest",
-          position = params.getPosition(),
-        ).toJson
-      )
-      _ <- debugger.initialize
-      _ <- debugger.launch
-      _ <- debugger.configurationDone
-      _ <- debugger.shutdown
-      output <- debugger.allOutput
-    } yield assertNoDiff(
-      output,
-      "main executed",
+    val expectedOutput = "main executed"
+    checkRunClosestSuccess(
+      metalsConfig,
+      fileContent,
+      fooPath,
+      expectedOutput,
     )
   }
 
   test("run-closest-mixed-main-and-test") {
+    val metalsConfig =
+      """|/metals.json
+         |{
+         |  "a": {
+         |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
+         |  }
+         |}
+         |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -1186,43 +1041,7 @@ class DebugDiscoverySuite
          |  test("test cas@@e") {}
          |}
          |""".stripMargin
-    val filePath = fooPath
-    val fileName = filePath.split("/").last
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{
-           |  "a": {
-           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
-           |  }
-           |}
-           |/${filePath}
-           |${fileContent}
-           |""".stripMargin
-      )
-      _ <- server.didOpen(filePath)
-      (text, params) <- server.offsetParams(
-        fileName,
-        fileContent,
-        workspace,
-      )
-      _ <- server.didChange(filePath, text)
-      _ <- server.didSave(filePath)
-      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
-      debugger <- server.startDebuggingUnresolved(
-        new DebugDiscoveryParams(
-          server.toPath(filePath).toURI.toString,
-          "runClosest",
-          position = params.getPosition(),
-        ).toJson
-      )
-      _ <- debugger.initialize
-      _ <- debugger.launch
-      _ <- debugger.configurationDone
-      _ <- debugger.shutdown
-      output <- debugger.allOutput
-    } yield assertNoDiff(
-      normalizeOutput(output),
+    val expectedOutput =
       """|TestSuite:
          |- test case
          |1 tests, 1 passed
@@ -1230,11 +1049,24 @@ class DebugDiscoverySuite
          |================================================================================
          |All 1 test suites passed.
          |================================================================================
-      """.stripMargin,
+         |""".stripMargin
+    checkRunClosestSuccess(
+      metalsConfig,
+      fileContent,
+      fooPath,
+      expectedOutput,
     )
   }
 
   test("run-closest-scala3-main-annotation") {
+    val metalsConfig =
+      """|/metals.json
+         |{
+         |  "a": {
+         |    "scalaVersion": "3.3.0"
+         |  }
+         |}
+         |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -1252,48 +1084,22 @@ class DebugDiscoverySuite
          |  }
          |}
          |""".stripMargin
-    val filePath = fooPath
-    val fileName = filePath.split("/").last
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{
-           |  "a": {
-           |    "scalaVersion": "3.3.0"
-           |  }
-           |}
-           |/${filePath}
-           |${fileContent}
-           |""".stripMargin
-      )
-      _ <- server.didOpen(filePath)
-      (text, params) <- server.offsetParams(
-        fileName,
-        fileContent,
-        workspace,
-      )
-      _ <- server.didChange(filePath, text)
-      _ <- server.didSave(filePath)
-      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
-      debugger <- server.startDebuggingUnresolved(
-        new DebugDiscoveryParams(
-          server.toPath(filePath).toURI.toString,
-          "runClosest",
-          position = params.getPosition(),
-        ).toJson
-      )
-      _ <- debugger.initialize
-      _ <- debugger.launch
-      _ <- debugger.configurationDone
-      _ <- debugger.shutdown
-      output <- debugger.allOutput
-    } yield assertNoDiff(
-      output,
-      "Scala 3 main executed",
+    val expectedOutput = "Scala 3 main executed"
+    checkRunClosestSuccess(
+      metalsConfig,
+      fileContent,
+      fooPath,
+      expectedOutput,
     )
   }
 
   test("run-closest-app-trait-fallback") {
+    val metalsConfig =
+      s"""|/metals.json
+          |{
+          |  "a": {}
+          |}
+          |""".stripMargin
     val fileContent =
       """|package a
          |                 @@
@@ -1307,42 +1113,12 @@ class DebugDiscoverySuite
          |  }
          |}
          |""".stripMargin
-    val filePath = fooPath
-    val fileName = filePath.split("/").last
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{
-           |  "a": {}
-           |}
-           |/${filePath}
-           |${fileContent}
-           |""".stripMargin
-      )
-      _ <- server.didOpen(filePath)
-      (text, params) <- server.offsetParams(
-        fileName,
-        fileContent,
-        workspace,
-      )
-      _ <- server.didChange(filePath, text)
-      _ <- server.didSave(filePath)
-      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
-      debugger <- server.startDebuggingUnresolved(
-        new DebugDiscoveryParams(
-          server.toPath(filePath).toURI.toString,
-          "runClosest",
-          position = params.getPosition(),
-        ).toJson
-      )
-      _ <- debugger.initialize
-      _ <- debugger.launch
-      _ <- debugger.configurationDone
-      _ <- debugger.shutdown
-      output <- debugger.allOutput
-    } yield assertNoDiff(
-      output,
-      "App trait main executed",
+    val expectedOutput = "App trait main executed"
+    checkRunClosestSuccess(
+      metalsConfig,
+      fileContent,
+      fooPath,
+      expectedOutput,
     )
   }
 }
