@@ -217,11 +217,12 @@ class SbtBloopLspSuite
           |}
           |""".stripMargin
       )
-      _ <- server.executeCommand(ServerCommands.ImportBuild)
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         BloopVersionChange.msg,
       )
+      _ = client.messageRequests.clear()
+      _ <- server.executeCommand(ServerCommands.ImportBuild)
       _ = assertStatus(_.isInstalled)
     } yield ()
   }
