@@ -672,7 +672,8 @@ class ConnectionProvider(
     )(implicit cancelSwitch: CancelSwitch): Interruptable[BuildChange] = {
       val logsFile = buildToolProvider.folder.resolve(Directories.log)
       val logsPath = logsFile.toURI.toString
-      val logsLinesCountBefore = logsFile.readText.linesIterator.size
+      val logsLinesCountBefore =
+        if (logsFile.exists) logsFile.readText.linesIterator.size else 0
       for {
         result <- bloopInstall.run(buildTool).withInterrupt
         change <- {
