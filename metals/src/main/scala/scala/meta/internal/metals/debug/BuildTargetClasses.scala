@@ -3,22 +3,22 @@ package scala.meta.internal.metals.debug
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-
 import scala.meta.internal.metals.BatchedFunction
 import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.debug.BuildTargetClasses.Classes
 import scala.meta.internal.metals.debug.BuildTargetClasses.TestSymbolInfo
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
-
 import bloop.config.Config.TestFramework
-import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j as b
+
+import scala.meta.internal.parsing.Trees
 
 /**
  * In-memory index of main class symbols grouped by their enclosing build target
  */
-final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
+final class BuildTargetClasses(val buildTargets: BuildTargets, val trees: Trees)(implicit
     val ec: ExecutionContext
 ) {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
@@ -112,9 +112,14 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
             .map(cacheMainClasses(classes, _))
 
           val updateTestClasses =
-            connection
-              .testClasses(new b.ScalaTestClassesParams(targetsList))
-              .map(cacheTestClasses(classes, _))
+            if (isBazelBuild(targets0)) {
+              // For Bazel, discover test classes from source files instead of BSP
+              Future.successful(cacheBazelTestClasses(classes, targets0))
+            } else {
+              connection
+                .testClasses(new b.ScalaTestClassesParams(targetsList))
+                .map(cacheTestClasses(classes, _))
+            }
 
           for {
             _ <- updateMainClasses
@@ -270,6 +275,109 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
 
   def cancel(): Unit = {
     rebuildIndex.cancelAll()
+  }
+
+  private def isBazelBuild(targets: Seq[b.BuildTargetIdentifier]): Boolean = {
+    targets.exists { target =>
+      val uri = target.getUri
+      uri.contains("bazel") || isBazelTestTarget(target)
+    }
+  }
+
+  private def isBazelTestTarget(target: b.BuildTargetIdentifier): Boolean = {
+    val uri = target.getUri
+    uri.contains("test")
+  }
+
+  private def cacheBazelTestClasses(
+      classes: Map[b.BuildTargetIdentifier, Classes],
+      targets: Seq[b.BuildTargetIdentifier],
+  ): Unit = {
+    targets.foreach { target =>
+      val testClasses = fetchTestClassNamesFromBuildTarget(target)
+      testClasses.foreach { case (symbol, testInfo) =>
+        classes(target).testClasses.put(symbol, testInfo)
+      }
+    }
+  }
+
+  private def fetchTestClassNamesFromBuildTarget(
+      target: b.BuildTargetIdentifier
+  ): Map[String, TestSymbolInfo] = {
+    import scala.jdk.CollectionConverters._
+
+    // Get all source files that belong to this specific build target
+    val sourceFiles = buildTargets.sourceItemsToBuildTargets
+      .filter { case (_, buildTargetIds) =>
+        buildTargetIds.asScala.toList.contains(target)
+      }
+      .map(_._1) // Get the AbsolutePath
+      .filter(_.isScalaFilename) // Only Scala files
+      .toList
+
+    // Extract class names from each source file
+    val classNames = sourceFiles.flatMap { sourcePath =>
+      trees.get(sourcePath) match {
+        case Some(tree) => extractClassNamesFromTree(tree)
+        case None => Nil
+      }
+    }
+
+    // Convert to the expected Map[Symbol, TestSymbolInfo] format
+    classNames.map { className =>
+      val symbol: String = (className.replace('.', '/') + "#")
+
+      // For bazel, we assume ScalaTest framework, but this could be made configurable
+      val framework = TestFrameworkUtils.from(Some("ScalaTest"))
+      symbol -> TestSymbolInfo(className, framework)
+    }.toMap
+  }
+
+  private def extractClassNamesFromTree(tree: scala.meta.Tree): List[String] = {
+    import scala.collection.mutable
+    import scala.meta.{Defn, Pkg}
+    
+    val classNames = mutable.ListBuffer[String]()
+
+    def traverse(t: scala.meta.Tree, packagePrefix: String = ""): Unit = {
+      t match {
+        case pkg: Pkg =>
+          val pkgName = pkg.ref.toString()
+          val newPrefix =
+            if (packagePrefix.isEmpty) pkgName
+            else s"$packagePrefix.$pkgName"
+          pkg.stats.foreach(traverse(_, newPrefix))
+
+        case cls: Defn.Class =>
+          val fullName =
+            if (packagePrefix.isEmpty) cls.name.value
+            else s"$packagePrefix.${cls.name.value}"
+          classNames += fullName
+          // Also traverse nested classes
+          cls.templ.stats.foreach(traverse(_, packagePrefix))
+
+        case obj: Defn.Object =>
+          val fullName =
+            if (packagePrefix.isEmpty) obj.name.value
+            else s"$packagePrefix.${obj.name.value}"
+          classNames += fullName
+          obj.templ.stats.foreach(traverse(_, packagePrefix))
+
+        case trt: Defn.Trait =>
+          val fullName =
+            if (packagePrefix.isEmpty) trt.name.value
+            else s"$packagePrefix.${trt.name.value}"
+          classNames += fullName
+          trt.templ.stats.foreach(traverse(_, packagePrefix))
+
+        case other =>
+          // Traverse children for nested definitions
+          other.children.foreach(traverse(_, packagePrefix))
+      }
+    }
+
+    traverse(tree)
+    classNames.toList
   }
 }
 

@@ -470,8 +470,8 @@ final class TestSuitesProvider(
       .map { buildTarget =>
         SymbolsPerTarget(
           buildTarget,
-//          buildTargetClasses.classesOf(buildTarget.getId).testClasses,
-          fetchClassNamesFromBuildTarget(buildTarget),
+          buildTargetClasses.classesOf(buildTarget.getId).testClasses,
+//          fetchClassNamesFromBuildTarget(buildTarget),
         )
       }
 
