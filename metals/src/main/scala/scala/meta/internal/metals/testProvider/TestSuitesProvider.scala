@@ -4,7 +4,6 @@ import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-
 import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.BaseCommand
 import scala.meta.internal.metals.BatchedFunction
@@ -12,8 +11,8 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.JsonParser.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalaTestSuiteSelection
 import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.SemanticdbFeatureProvider
@@ -23,7 +22,7 @@ import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codelenses.CodeLens
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.TestFrameworkUtils
-import scala.meta.internal.metals.testProvider.TestExplorerEvent._
+import scala.meta.internal.metals.testProvider.TestExplorerEvent.*
 import scala.meta.internal.metals.testProvider.frameworks.JunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.ScalatestTestFinder
@@ -38,12 +37,19 @@ import scala.meta.internal.semanticdb
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
-
 import bloop.config.Config
+import bloop.config.Config.TestFramework
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.ScalaPlatform
-import ch.epfl.scala.{bsp4j => b}
-import org.eclipse.{lsp4j => l}
+import ch.epfl.scala.bsp4j as b
+import org.eclipse.lsp4j as l
+
+import scala.collection.convert.ImplicitConversions.`collection asJava`
+import scala.meta.internal.metals.debug.BuildTargetClasses.{
+  FullyQualifiedClassName,
+  TestSymbolInfo,
+}
+import scala.meta.{Defn, Pkg, Tree, XtensionSyntax}
 
 final class TestSuitesProvider(
     buildTargets: BuildTargets,
@@ -363,11 +369,93 @@ final class TestSuitesProvider(
       }
       .getOrElse(Vector.empty)
   }
+  private def extractClassNamesFromTree(tree: Tree): List[String] = {
+    val classNames = mutable.ListBuffer[String]()
+
+    def traverse(t: Tree, packagePrefix: String = ""): Unit = {
+      t match {
+        case pkg: Pkg =>
+          val newPrefix =
+            if (packagePrefix.isEmpty) pkg.ref.syntax
+            else s"$packagePrefix.${pkg.ref.syntax}"
+          pkg.stats.foreach(traverse(_, newPrefix))
+
+        case cls: Defn.Class =>
+          val fullName =
+            if (packagePrefix.isEmpty) cls.name.value
+            else s"$packagePrefix.${cls.name.value}"
+          classNames += fullName
+          // Also traverse nested classes
+          cls.templ.stats.foreach(traverse(_, packagePrefix))
+
+        case obj: Defn.Object =>
+          val fullName =
+            if (packagePrefix.isEmpty) obj.name.value
+            else s"$packagePrefix.${obj.name.value}"
+          classNames += fullName
+          obj.templ.stats.foreach(traverse(_, packagePrefix))
+
+        case trt: Defn.Trait =>
+          val fullName =
+            if (packagePrefix.isEmpty) trt.name.value
+            else s"$packagePrefix.${trt.name.value}"
+          classNames += fullName
+          trt.templ.stats.foreach(traverse(_, packagePrefix))
+
+        case other =>
+          // Traverse children for nested definitions
+          other.children.foreach(traverse(_, packagePrefix))
+      }
+    }
+
+    traverse(tree)
+    classNames.toList
+  }
+
+  def fetchClassNamesFromBuildTarget(
+      buildTarget: BuildTarget
+  ): TrieMap[BuildTargetClasses.Symbol, TestSymbolInfo] = {
+    import scala.jdk.CollectionConverters._
+
+    // Get all source files that belong to this specific build target
+    val targetId = buildTarget.getId
+    val sourceFiles = buildTargets.sourceItemsToBuildTargets
+      .filter { case (_, buildTargetIds) =>
+        buildTargetIds.asScala.contains(targetId)
+      }
+      .map(_._1) // Get the AbsolutePath
+      .filter(_.isScalaFilename) // Only Scala files
+      .toList
+
+    // Extract class names from each source file
+    val classNames = sourceFiles.flatMap { sourcePath =>
+      trees.get(sourcePath) match {
+        case Some(tree) => extractClassNamesFromTree(tree)
+        case None => Nil
+      }
+    }
+
+    // Convert to the expected TrieMap[Symbol, TestSymbolInfo] format
+    val res = TrieMap.from(classNames.map { className =>
+      val symbol: BuildTargetClasses.Symbol = className.replace('.', '/') + "#"
+      symbol -> TestSymbolInfo(className, TestFramework.ScalaTest)
+    })
+    res
+
+  }
+
+  private def isBazelTestTarget(buildTarget: b.BuildTarget): Boolean = {
+    val uri = buildTarget.getId.getUri
+    uri.contains("test")
+  }
 
   /**
    * Find test suites for all build targets in current projects and update caches.
    */
   private def doRefreshTestSuites(): Future[Unit] = Future {
+    val tres = buildTargets.sourceItems.map { path =>
+      path -> trees.get(path).map(extractClassNamesFromTree)
+    }
     val symbolsPerTarget = buildTargets.allBuildTargetIds.toList
       // filter out JS and Native platforms
       .filter { id =>
@@ -378,10 +466,12 @@ final class TestSuitesProvider(
       .flatMap(buildTargets.info)
       // filter out sbt builds
       .filterNot(_.isSbtBuild)
+      .filter(isBazelTestTarget) //TODO: Perform this filtering only in case of bazel
       .map { buildTarget =>
         SymbolsPerTarget(
           buildTarget,
-          buildTargetClasses.classesOf(buildTarget.getId).testClasses,
+//          buildTargetClasses.classesOf(buildTarget.getId).testClasses,
+          fetchClassNamesFromBuildTarget(buildTarget),
         )
       }
 
