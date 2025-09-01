@@ -216,8 +216,6 @@ abstract class MetalsLspService(
   val buildTargetClasses =
     new BuildTargetClasses(buildTargets, trees)
 
-
-
   val compilations: Compilations = new Compilations(
     buildTargets,
     buildTargetClasses,
@@ -248,7 +246,6 @@ abstract class MetalsLspService(
       ),
     "trees",
   )
-
 
   protected val documentSymbolProvider = new DocumentSymbolProvider(
     trees,

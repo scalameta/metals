@@ -466,7 +466,9 @@ final class TestSuitesProvider(
       .flatMap(buildTargets.info)
       // filter out sbt builds
       .filterNot(_.isSbtBuild)
-      .filter(isBazelTestTarget) //TODO: Perform this filtering only in case of bazel
+      .filter(
+        isBazelTestTarget
+      ) // TODO: Perform this filtering only in case of bazel
       .map { buildTarget =>
         SymbolsPerTarget(
           buildTarget,

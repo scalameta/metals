@@ -18,7 +18,10 @@ import scala.meta.internal.parsing.Trees
 /**
  * In-memory index of main class symbols grouped by their enclosing build target
  */
-final class BuildTargetClasses(val buildTargets: BuildTargets, val trees: Trees)(implicit
+final class BuildTargetClasses(
+    val buildTargets: BuildTargets,
+    val trees: Trees,
+)(implicit
     val ec: ExecutionContext
 ) {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
@@ -336,7 +339,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets, val trees: Trees)
   private def extractClassNamesFromTree(tree: scala.meta.Tree): List[String] = {
     import scala.collection.mutable
     import scala.meta.{Defn, Pkg}
-    
+
     val classNames = mutable.ListBuffer[String]()
 
     def traverse(t: scala.meta.Tree, packagePrefix: String = ""): Unit = {
