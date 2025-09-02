@@ -34,7 +34,6 @@ final class BuildTargetClasses(
 ) extends SemanticdbFeatureProvider {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
 
-  /** Cache for semanticdb documents indexed by file path */
   private val semanticdbCache = TrieMap.empty[AbsolutePath, TextDocuments]
 
   type JVMRunEnvironmentsMap =
@@ -147,7 +146,6 @@ final class BuildTargetClasses(
 
           val updateTestClasses =
             if (isBazelBuild(targets0)) {
-              // For Bazel, discover test classes from cached semanticdb documents
               Future.successful(
                 cacheBazelTestClassesFromSemanticdb(classes, targets0)
               )
@@ -313,17 +311,12 @@ final class BuildTargetClasses(
     rebuildIndex.cancelAll()
   }
 
-  /**
-   * Process semanticdb data to detect test frameworks for classes
-   */
   private def processSemanticdbForTestFrameworkDetection(
       doc: TextDocument,
       targetId: b.BuildTargetIdentifier,
       classes: Classes,
   ): Unit = {
-    // Only process if this is a Bazel build target (where we do custom test discovery)
     if (isBazelTestTarget(targetId)) {
-      // Find class symbols in the document
       doc.symbols.foreach { symbolInfo =>
         symbolInfo.signature match {
           case classSig: ClassSignature =>
@@ -338,22 +331,18 @@ final class BuildTargetClasses(
                 s"Detected test class: $className with framework: ${framework.names.headOption.getOrElse("Unknown")}"
               )
             }
-          case _ => // Ignore non-class symbols
+          case _ =>
         }
       }
     }
   }
 
-  /**
-   * Detect test framework based on class inheritance using semanticdb data
-   */
   private def detectTestFramework(
       classSig: ClassSignature,
       doc: TextDocument,
   ): TestFramework = {
     val parentSymbols = extractParentSymbols(classSig)
 
-    // Use recursive search which handles both direct and indirect parent matching
     val framework = parentSymbols.collectFirst { case parentSymbol =>
       findFrameworkRecursively(parentSymbol, doc, visited = Set.empty)
     }.flatten
@@ -361,18 +350,12 @@ final class BuildTargetClasses(
     framework.getOrElse(TestFramework(Nil))
   }
 
-  /**
-   * Extract parent class symbols from ClassSignature
-   */
   private def extractParentSymbols(classSig: ClassSignature): List[String] = {
     classSig.parents.collect { case TypeRef(_, parentSymbol, _) =>
       parentSymbol
     }.toList
   }
 
-  /**
-   * Recursively search for test framework in parent hierarchy
-   */
   private def findFrameworkRecursively(
       parentSymbol: String,
       doc: TextDocument,
@@ -381,9 +364,7 @@ final class BuildTargetClasses(
     if (visited.contains(parentSymbol)) {
       None
     } else {
-      // Check if this parent symbol matches a known framework
       TestFrameworkDetector.fromParentSymbol(parentSymbol).orElse {
-        // Find parent class in current document and search its parents
         doc.symbols.find(_.symbol == parentSymbol).flatMap { parentInfo =>
           parentInfo.signature match {
             case parentClassSig: ClassSignature =>
@@ -393,16 +374,13 @@ final class BuildTargetClasses(
               grandParents.collectFirst { case grandParent =>
                 findFrameworkRecursively(grandParent, doc, newVisited)
               }.flatten
-            case _ => None // Not a class
+            case _ => None
           }
         }
       }
     }
   }
 
-  /**
-   * Check if a class is likely a test class based on naming conventions and structure
-   */
   private def isLikelyTestClass(
       classInfo: SymbolInformation,
       classSig: ClassSignature,
@@ -420,9 +398,6 @@ final class BuildTargetClasses(
     hasTestInName || hasTestFrameworkParent
   }
 
-  /**
-   * Convert symbol to class name
-   */
   private def symbolToClassName(symbol: String): String = {
     symbol
       .stripPrefix("_empty_/")
@@ -440,18 +415,6 @@ final class BuildTargetClasses(
   private def isBazelTestTarget(target: b.BuildTargetIdentifier): Boolean = {
     val uri = target.getUri
     uri.contains("test")
-  }
-
-  private def cacheBazelTestClasses(
-      classes: Map[b.BuildTargetIdentifier, Classes],
-      targets: Seq[b.BuildTargetIdentifier],
-  ): Unit = {
-    targets.foreach { target =>
-      val testClasses = fetchTestClassNamesFromBuildTarget(target)
-      testClasses.foreach { case (symbol, testInfo) =>
-        classes(target).testClasses.put(symbol, testInfo)
-      }
-    }
   }
 
   private def cacheBazelTestClassesFromSemanticdb(
@@ -488,41 +451,6 @@ final class BuildTargetClasses(
         }
       }
     }
-  }
-
-  private def fetchTestClassNamesFromBuildTarget(
-      target: b.BuildTargetIdentifier
-  ): Map[String, TestSymbolInfo] = {
-    import scala.jdk.CollectionConverters.*
-
-    // Get all source files that belong to this specific build target
-    val sourceFiles = buildTargets.sourceItemsToBuildTargets
-      .filter { case (_, buildTargetIds) =>
-        buildTargetIds.asScala.toList.contains(target)
-      }
-      .map(_._1) // Get the AbsolutePath
-      .filter(_.isScalaFilename) // Only Scala files
-      .toList
-
-    // Extract class names from each source file
-    val classNames = sourceFiles.flatMap { sourcePath =>
-      trees.get(sourcePath) match {
-        case Some(tree) => extractClassNamesFromTree(tree)
-        case None => Nil
-      }
-    }
-
-    // Convert to the expected Map[Symbol, TestSymbolInfo] format
-    // Note: This method is now complemented by the onChange method which provides
-    // more accurate framework detection using semanticdb data. This fallback
-    // maintains compatibility for cases where semanticdb data isn't available.
-    classNames.map { className =>
-      val symbol: String = (className.replace('.', '/') + "#")
-
-      // Fallback to ScalaTest if no semanticdb-based detection is available
-      val framework = TestFrameworkUtils.from(Some("ScalaTest"))
-      symbol -> TestSymbolInfo(className, framework)
-    }.toMap
   }
 
   private def extractClassNamesFromTree(tree: scala.meta.Tree): List[String] = {
@@ -573,27 +501,9 @@ final class BuildTargetClasses(
   }
 }
 
-/**
- * POC: Detects test frameworks based on parent class symbols from semanticdb
- *
- * This object maps semanticdb class symbols to their corresponding test frameworks.
- * The symbols follow semanticdb naming conventions where:
- * - Package separators are '/' instead of '.'
- * - Class symbols end with '#'
- *
- * Example mappings:
- * - "org/scalatest/funsuite/AnyFunSuite#" -> TestFramework.ScalaTest
- * - "munit/FunSuite#" -> TestFramework.munit
- * - "junit/framework/TestCase#" -> TestFramework.JUnit
- *
- * The detection works by analyzing ClassSignature.parents from semanticdb data
- * and matching them against these known framework base classes.
- */
 object TestFrameworkDetector {
 
-  // Mapping from parent class symbols to test frameworks
   private val frameworkSymbolMap: Map[String, TestFramework] = Map(
-    // ScalaTest frameworks
     "org/scalatest/flatspec/AnyFlatSpec#" -> TestFramework.ScalaTest,
     "org/scalatest/funspec/AnyFunSpec#" -> TestFramework.ScalaTest,
     "org/scalatest/funsuite/AnyFunSuite#" -> TestFramework.ScalaTest,
@@ -603,31 +513,20 @@ object TestFrameworkDetector {
     "org/scalatest/featurespec/AnyFeatureSpec#" -> TestFramework.ScalaTest,
     "org/scalatest/Suite#" -> TestFramework.ScalaTest,
     "org/scalatest/TestSuite#" -> TestFramework.ScalaTest,
-
-    // munit frameworks
     "munit/FunSuite#" -> TestFramework.munit,
     "munit/Suite#" -> TestFramework.munit,
     "munit/ScalaCheckSuite#" -> TestFramework.munit,
-
-    // JUnit frameworks
     "junit/framework/TestCase#" -> TestFramework.JUnit,
     "org/junit/Test#" -> TestFramework.JUnit,
-
-    // TestNG frameworks
     "org/testng/annotations/Test#" -> TestFramework.TestNG,
-
-    // Weaver frameworks
     "weaver/IOSuite#" -> TestFrameworkUtils.WeaverTestFramework,
     "weaver/SimpleIOSuite#" -> TestFrameworkUtils.WeaverTestFramework,
     "weaver/MutableIOSuite#" -> TestFrameworkUtils.WeaverTestFramework,
-
-    // ZIO Test frameworks
     "zio/test/DefaultRunnableSpec#" -> TestFrameworkUtils.ZioTestFramework,
     "zio/test/RunnableSpec#" -> TestFrameworkUtils.ZioTestFramework,
     "zio/test/ZIOSpecDefault#" -> TestFrameworkUtils.ZioTestFramework,
   )
 
-  // Common parent symbols that might indicate test classes
   private val knownTestSymbols: Set[String] = frameworkSymbolMap.keySet
 
   def fromParentSymbol(parentSymbol: String): Option[TestFramework] = {
