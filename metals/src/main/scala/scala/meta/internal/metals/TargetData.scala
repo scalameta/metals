@@ -77,12 +77,14 @@ final class TargetData() {
     val valueOrNull = sourceBuildTargetsCache.get(sourceItem)
     if (valueOrNull == null || valueOrNull.isEmpty) {
       val sourceItemNIO = sourceItem.toNIO
-      val value = sourceItemsToBuildTarget.map{case (path, buildTargets) => path.toNIO -> buildTargets}.collectFirst {
-        case (source, buildTargets)
-            if sourceItemNIO.getFileSystem == source.getFileSystem &&
-              sourceItemNIO.startsWith(source) =>
-          buildTargets.asScala
-      }
+      val value = sourceItemsToBuildTarget
+        .map { case (path, buildTargets) => path.toNIO -> buildTargets }
+        .collectFirst {
+          case (source, buildTargets)
+              if sourceItemNIO.getFileSystem == source.getFileSystem &&
+                sourceItemNIO.startsWith(source) =>
+            buildTargets.asScala
+        }
       val prevOrNull = sourceBuildTargetsCache.put(sourceItem, value)
       if (prevOrNull == null) value
       else prevOrNull
