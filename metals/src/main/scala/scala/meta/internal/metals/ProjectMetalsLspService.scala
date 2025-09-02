@@ -615,6 +615,8 @@ class ProjectMetalsLspService(
             focusedDocument().foreach(path => compilations.compileFile(path))
           }
       }
+    } else {
+      syncStatusReporter.importFinished(focusedDocument().map(_.toString))
     }
   }
 
