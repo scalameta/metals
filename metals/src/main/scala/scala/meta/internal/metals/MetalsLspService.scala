@@ -214,7 +214,7 @@ abstract class MetalsLspService(
   protected val trees = new Trees(buffers, scalaVersionSelector)
 
   val buildTargetClasses =
-    new BuildTargetClasses(buildTargets, trees, semanticdbs)
+    new BuildTargetClasses(buildTargets, trees)
 
   val compilations: Compilations = new Compilations(
     buildTargets,
