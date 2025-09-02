@@ -838,10 +838,11 @@ abstract class MetalsLspService(
       uri: String
   ): Future[Unit] = {
     syncStatusReporter.onSync(uri)
-    compilations
-      .expand(Seq(uri.toAbsolutePath))
+    buildTargets
+      .bspInverseSources(uri.toAbsolutePath)
       .andThen {
-        case Success(targets) => syncStatusReporter.expanded(uri, Some(targets))
+        case Success(targets) =>
+          syncStatusReporter.expanded(uri, Some(targets.toList))
         case Failure(_) => syncStatusReporter.expanded(uri, None)
       }
       .ignoreValue

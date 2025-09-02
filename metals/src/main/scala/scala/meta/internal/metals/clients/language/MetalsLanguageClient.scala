@@ -139,7 +139,9 @@ object MetalsSyncStatusParams {
     def name = "synced"
     override def text = "$(check) Synced"
     override def kind = "info"
-    override def tooltip = "Document is synced with build server"
+    override def tooltip =
+      "Document is synced with build server. Click to sync again."
+    override def command = ClientCommands.SyncFile.id
   }
   case object Syncing extends Status {
     def name = "syncing"

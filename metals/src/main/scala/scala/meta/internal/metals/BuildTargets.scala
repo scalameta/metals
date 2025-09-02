@@ -299,9 +299,9 @@ final class BuildTargets private (
     }
   }
 
-  private def bspInverseSources(
+  def bspInverseSources(
       source: AbsolutePath
-  )(implicit ec: ExecutionContext) = {
+  )(implicit ec: ExecutionContext): Future[Iterator[BuildTargetIdentifier]] = {
     val identifier = new TextDocumentIdentifier(
       source.toTextDocumentIdentifier.getUri()
     )
