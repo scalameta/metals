@@ -342,6 +342,7 @@ private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
               val symbol = symbolInfo.symbol
               val testInfo = TestSymbolInfo(className, framework)
               classes.testClasses.put(symbol, testInfo)
+              index.put(targetId, classes)
               
               scribe.debug(s"Detected test class: $className with framework: ${framework.names.headOption.getOrElse("Unknown")}")
             }
@@ -360,24 +361,13 @@ private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
   ): TestFramework = {
     val parentSymbols = extractParentSymbols(classSig)
     
-    // Check direct parents first
-    parentSymbols.foreach { parentSymbol =>
-      TestFrameworkDetector.fromParentSymbol(parentSymbol) match {
-        case Some(framework) => return framework
-        case None => // Continue searching
-      }
-    }
+    // Use recursive search which handles both direct and indirect parent matching
+    val framework = parentSymbols.collectFirst {
+      case parentSymbol =>
+        findFrameworkRecursively(parentSymbol, doc, visited = Set.empty)
+    }.flatten
     
-    // If no direct match, try recursive parent search
-    parentSymbols.foreach { parentSymbol =>
-      findFrameworkRecursively(parentSymbol, doc, visited = Set.empty) match {
-        case Some(framework) => return framework
-        case None => // Continue searching
-      }
-    }
-    
-    // Default fallback
-    TestFramework(Nil)
+    framework.getOrElse(TestFramework(Nil))
   }
 
   /**
@@ -397,34 +387,27 @@ private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
       doc: TextDocument,
       visited: Set[String]
   ): Option[TestFramework] = {
-    if (visited.contains(parentSymbol)) return None
-    
-    // Check if this parent symbol matches a known framework
-    TestFrameworkDetector.fromParentSymbol(parentSymbol) match {
-      case Some(framework) => return Some(framework)
-      case None => // Continue searching
-    }
-    
-    // Find parent class in current document
-    doc.symbols.find(_.symbol == parentSymbol) match {
-      case Some(parentInfo) =>
-        parentInfo.signature match {
-          case parentClassSig: ClassSignature =>
-            val grandParents = extractParentSymbols(parentClassSig)
-            val newVisited = visited + parentSymbol
-            
-            grandParents.foreach { grandParent =>
-              findFrameworkRecursively(grandParent, doc, newVisited) match {
-                case Some(framework) => return Some(framework)
-                case None => // Continue
-              }
-            }
-          case _ => // Not a class
+    if (visited.contains(parentSymbol)) {
+      None
+    } else {
+      // Check if this parent symbol matches a known framework
+      TestFrameworkDetector.fromParentSymbol(parentSymbol).orElse {
+        // Find parent class in current document and search its parents
+        doc.symbols.find(_.symbol == parentSymbol).flatMap { parentInfo =>
+          parentInfo.signature match {
+            case parentClassSig: ClassSignature =>
+              val grandParents = extractParentSymbols(parentClassSig)
+              val newVisited = visited + parentSymbol
+              
+              grandParents.collectFirst {
+                case grandParent =>
+                  findFrameworkRecursively(grandParent, doc, newVisited)
+              }.flatten
+            case _ => None // Not a class
+          }
         }
-      case None => // Parent not found in current document
+      }
     }
-    
-    None
   }
 
   /**

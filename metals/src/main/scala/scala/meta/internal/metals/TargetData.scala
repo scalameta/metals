@@ -75,14 +75,15 @@ final class TargetData() {
       sourceItem: AbsolutePath
   ): Option[Iterable[BuildTargetIdentifier]] = {
     val valueOrNull = sourceBuildTargetsCache.get(sourceItem)
-    if (valueOrNull == null) {
-      val value = sourceItemsToBuildTarget.collectFirst {
+    if (valueOrNull == null || valueOrNull.isEmpty) {
+      val sourceItemNIO = sourceItem.toNIO
+      val value = sourceItemsToBuildTarget.map{case (path, buildTargets) => path.toNIO -> buildTargets}.collectFirst {
         case (source, buildTargets)
-            if sourceItem.toNIO.getFileSystem == source.toNIO.getFileSystem &&
-              sourceItem.toNIO.startsWith(source.toNIO) =>
+            if sourceItemNIO.getFileSystem == source.getFileSystem &&
+              sourceItemNIO.startsWith(source) =>
           buildTargets.asScala
       }
-      val prevOrNull = sourceBuildTargetsCache.putIfAbsent(sourceItem, value)
+      val prevOrNull = sourceBuildTargetsCache.put(sourceItem, value)
       if (prevOrNull == null) value
       else prevOrNull
     } else valueOrNull
