@@ -4,6 +4,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta._
+import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.CodeAction
@@ -14,7 +15,8 @@ import scala.meta.pc.CancelToken
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.{lsp4j => l}
 
-class FilterMapToCollectCodeAction(trees: Trees) extends CodeAction {
+class FilterMapToCollectCodeAction(trees: Trees, compilers: Compilers)
+    extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorRewrite
 
   private case class FilterMapCollectParams(
@@ -25,27 +27,54 @@ class FilterMapToCollectCodeAction(trees: Trees) extends CodeAction {
   override def resolveCodeAction(codeAction: l.CodeAction, token: CancelToken)(
       implicit ec: ExecutionContext
   ): Option[Future[l.CodeAction]] = {
-    val edits = for {
+    val result = for {
       data <- parseData[FilterMapCollectParams](codeAction)
       params = data.param
       uri = params.getUri()
       path = uri.toAbsolutePath
-    } yield trees
-      .findLastEnclosingAt[Term.Apply](path, data.pos)
-      .flatMap(findFilterMapChain)
-      .map(toTextEdit(_))
-      .map(edit => List(uri -> List(edit)))
-      .getOrElse(Nil)
+      filterMap <- trees
+        .findLastEnclosingAt[Term.Apply](path, data.pos)
+        .flatMap(findFilterMapChain)
+      mapPos = filterMap.mapPos.toLsp.getStart()
+    } yield {
+      // Create position params for the map method call
+      val positionParams = new l.TextDocumentPositionParams(params, mapPos)
 
-    edits match {
-      case None | (Some(Nil)) => None
-      case Some(xs) => {
-        val workspaceEdit = new l.WorkspaceEdit(
-          xs.map { case (uri, edits) => uri -> edits.asJava }.toMap.asJava
-        )
-        codeAction.setEdit(workspaceEdit)
-        Some(Future.successful(codeAction))
+      // Get the definition of the map method and verify collect method exists
+      compilers.definition(positionParams, token).flatMap { defResult =>
+        if (
+          defResult.symbol.nonEmpty && !defResult.symbol.startsWith("local")
+        ) {
+          val newSymbol = defResult.symbol.replaceAll("map\\(", "collect(")
+
+          // Try each potential collect symbol
+          compilers
+            .info(path, newSymbol)
+            .map { result =>
+              if (result.isDefined) {
+                // At least one collect method exists, proceed with the code action
+                val edit = toTextEdit(filterMap)
+                val workspaceEdit = new l.WorkspaceEdit(
+                  Map(uri -> List(edit).asJava).asJava
+                )
+                codeAction.setEdit(workspaceEdit)
+                Some(codeAction)
+              } else {
+                // No collect method found, don't provide the code action
+                None
+              }
+            }
+        } else {
+          Future.successful {
+            None
+          }
+        }
       }
+    }
+
+    result match {
+      case None => None
+      case Some(future) => Some(future.map(_.getOrElse(codeAction)))
     }
   }
 
@@ -136,11 +165,15 @@ class FilterMapToCollectCodeAction(trees: Trees) extends CodeAction {
 
     def findChain(tree: Term.Apply): Option[FilterMapChain] =
       tree match {
-        case MapFunctionApply(FilterFunctionApply(base, filterArg), mapArg) =>
+        case MapFunctionApply(
+              FilterFunctionApply(base, filterArg, _),
+              mapArg,
+              mapPos,
+            ) =>
           for {
             filterFn <- extractFunction(filterArg)
             mapFn <- extractFunction(mapArg)
-          } yield FilterMapChain(tree.pos, base, filterFn, mapFn)
+          } yield FilterMapChain(tree.pos, base, filterFn, mapFn, mapPos)
         case _ => None
       }
 
@@ -169,9 +202,9 @@ class FilterMapToCollectCodeAction(trees: Trees) extends CodeAction {
   }
 
   private case class FunctionApply(val name: String) {
-    def unapply(tree: Tree): Option[(Term, Term)] = tree match {
-      case Term.Apply(Term.Select(base, Term.Name(`name`)), List(args)) =>
-        Some((base, args))
+    def unapply(tree: Tree): Option[(Term, Term, Position)] = tree match {
+      case Term.Apply(sel @ Term.Select(base, Term.Name(`name`)), List(args)) =>
+        Some((base, args, sel.name.pos))
       case _ => None
     }
   }
@@ -183,6 +216,7 @@ class FilterMapToCollectCodeAction(trees: Trees) extends CodeAction {
       qual: Term,
       filterFn: Term.Function,
       mapFn: Term.Function,
+      mapPos: Position,
   )
 }
 

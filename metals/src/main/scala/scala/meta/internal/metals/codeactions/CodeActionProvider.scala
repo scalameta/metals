@@ -44,7 +44,7 @@ final class CodeActionProvider(
     new InlineValueCodeAction(trees, compilers, languageClient),
     new ConvertToNamedArguments(trees, compilers),
     new FlatMapToForComprehensionCodeAction(trees, buffers),
-    new FilterMapToCollectCodeAction(trees),
+    new FilterMapToCollectCodeAction(trees, compilers),
     new MillifyDependencyCodeAction(buffers),
     new MillifyScalaCliDependencyCodeAction(buffers),
     new ConvertCommentCodeAction(buffers, trees),
