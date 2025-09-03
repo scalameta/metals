@@ -15,7 +15,6 @@ import scala.meta.internal.metals.{
   BuildTargets,
   SemanticdbFeatureProvider,
 }
-import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala.{Descriptor, Symbols}
 import scala.meta.internal.semanticdb.{
   ClassSignature,
@@ -25,10 +24,7 @@ import scala.meta.internal.semanticdb.{
 }
 import scala.meta.io.AbsolutePath
 
-final class BuildTargetClasses(
-    val buildTargets: BuildTargets,
-    val trees: Trees,
-)(implicit
+final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
     val ec: ExecutionContext
 ) extends SemanticdbFeatureProvider {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]

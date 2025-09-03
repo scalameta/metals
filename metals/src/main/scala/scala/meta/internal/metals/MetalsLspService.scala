@@ -199,6 +199,9 @@ abstract class MetalsLspService(
 
   val fileChanges: FileChanges = new FileChanges(buildTargets, () => folder)
 
+  val buildTargetClasses =
+    new BuildTargetClasses(buildTargets)
+
   val scalaVersionSelector = new ScalaVersionSelector(
     () => userConfig,
     buildTargets,
@@ -210,11 +213,6 @@ abstract class MetalsLspService(
     buildTargets,
     buffers,
   )
-
-  protected val trees = new Trees(buffers, scalaVersionSelector)
-
-  val buildTargetClasses =
-    new BuildTargetClasses(buildTargets, trees)
 
   val compilations: Compilations = new Compilations(
     buildTargets,
@@ -246,6 +244,8 @@ abstract class MetalsLspService(
       ),
     "trees",
   )
+
+  protected val trees = new Trees(buffers, scalaVersionSelector)
 
   protected val documentSymbolProvider = new DocumentSymbolProvider(
     trees,
