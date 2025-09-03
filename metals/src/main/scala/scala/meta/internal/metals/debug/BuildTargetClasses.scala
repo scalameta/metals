@@ -57,15 +57,6 @@ final class BuildTargetClasses(
 
   override def onChange(docs: TextDocuments, path: AbsolutePath): Unit = {
     semanticdbCache.put(path, docs)
-
-    buildTargets.inverseSources(path) match {
-      case Some(targetId) =>
-        val classes = index.getOrElseUpdate(targetId, new Classes)
-        docs.documents.foreach { doc =>
-          processSemanticdbForTestFrameworkDetection(doc, targetId, classes)
-        }
-      case None => // No build target found for this path
-    }
   }
 
   override def onDelete(path: AbsolutePath): Unit = {
@@ -145,7 +136,7 @@ final class BuildTargetClasses(
             .map(cacheMainClasses(classes, _))
 
           val updateTestClasses =
-            if (isBazelBuild(targets0)) {
+            if (isBazelBuildAmongTargets(targets0)) {
               Future.successful(
                 cacheBazelTestClassesFromSemanticdb(classes, targets0)
               )
@@ -313,26 +304,27 @@ final class BuildTargetClasses(
 
   private def processSemanticdbForTestFrameworkDetection(
       doc: TextDocument,
-      targetId: b.BuildTargetIdentifier,
       classes: Classes,
   ): Unit = {
-    if (isBazelTestTarget(targetId)) {
-      doc.symbols.foreach { symbolInfo =>
-        symbolInfo.signature match {
-          case classSig: ClassSignature =>
-            val className = symbolToClassName(symbolInfo.symbol)
-            if (className.nonEmpty && isLikelyTestClass(symbolInfo, classSig)) {
-              val framework = detectTestFramework(classSig, doc)
-              val symbol = symbolInfo.symbol
-              val testInfo = TestSymbolInfo(className, framework)
-              classes.testClasses.put(symbol, testInfo)
+    doc.symbols.foreach { symbolInfo =>
+      symbolInfo.signature match {
+        case classSig: ClassSignature =>
+          val symbol = symbolInfo.symbol
+          val className = symbolToClassName(symbol)
+          if (className.nonEmpty) {
+            detectTestFramework(classSig, doc) match {
+              case Some(framework) =>
+                val testInfo = TestSymbolInfo(className, framework)
+                classes.testClasses.put(symbol, testInfo)
 
-              scribe.debug(
-                s"Detected test class: $className with framework: ${framework.names.headOption.getOrElse("Unknown")}"
-              )
+                scribe.debug(
+                  s"Detected test class: $className with framework: ${framework.names.headOption.getOrElse("Unknown")}"
+                )
+              case None =>
+                scribe.debug("Cannot detect test framework")
             }
-          case _ =>
-        }
+          }
+        case _ =>
       }
     }
   }
@@ -340,14 +332,12 @@ final class BuildTargetClasses(
   private def detectTestFramework(
       classSig: ClassSignature,
       doc: TextDocument,
-  ): TestFramework = {
+  ): Option[TestFramework] = {
     val parentSymbols = extractParentSymbols(classSig)
 
-    val framework = parentSymbols.collectFirst { case parentSymbol =>
+    parentSymbols.collectFirst { case parentSymbol =>
       findFrameworkRecursively(parentSymbol, doc, visited = Set.empty)
     }.flatten
-
-    framework.getOrElse(TestFramework(Nil))
   }
 
   private def extractParentSymbols(classSig: ClassSignature): List[String] = {
@@ -381,22 +371,6 @@ final class BuildTargetClasses(
     }
   }
 
-  private def isLikelyTestClass(
-      classInfo: SymbolInformation,
-      classSig: ClassSignature,
-  ): Boolean = {
-    val className = symbolToClassName(classInfo.symbol)
-    val hasTestInName = className.toLowerCase.contains("test") ||
-      className.toLowerCase.contains("spec") ||
-      className.toLowerCase.contains("suite")
-
-    val hasTestFrameworkParent = extractParentSymbols(classSig).exists {
-      parent =>
-        TestFrameworkDetector.isKnownTestFrameworkSymbol(parent)
-    }
-
-    hasTestInName || hasTestFrameworkParent
-  }
 
   private def symbolToClassName(symbol: String): String = {
     symbol
@@ -405,16 +379,13 @@ final class BuildTargetClasses(
       .replace("/", ".")
   }
 
-  private def isBazelBuild(targets: Seq[b.BuildTargetIdentifier]): Boolean = {
+  private def isBazelBuildAmongTargets(
+      targets: Seq[b.BuildTargetIdentifier]
+  ): Boolean = {
     targets.exists { target =>
       val uri = target.getUri
-      uri.contains("bazel") || isBazelTestTarget(target)
+      uri.matches("@//.*?/[^/:]+:[^/:]+$")
     }
-  }
-
-  private def isBazelTestTarget(target: b.BuildTargetIdentifier): Boolean = {
-    val uri = target.getUri
-    uri.contains("test")
   }
 
   private def cacheBazelTestClassesFromSemanticdb(
@@ -424,26 +395,20 @@ final class BuildTargetClasses(
     import scala.jdk.CollectionConverters.*
 
     targets.foreach { target =>
-      // Clear existing test classes for this target to rebuild from scratch
-      classes(target).testClasses.clear()
-
-      // Get all source files that belong to this specific build target
       val sourceFiles = buildTargets.sourceItemsToBuildTargets
         .filter { case (_, buildTargetIds) =>
           buildTargetIds.asScala.toList.contains(target)
         }
-        .map(_._1) // Get the AbsolutePath
-        .filter(_.isScalaFilename) // Only Scala files
+        .map(_._1)
+        .filter(_.isScalaFilename)
         .toList
 
-      // Process each source file using cached semanticdb data
       sourceFiles.foreach { sourcePath =>
         semanticdbCache.get(sourcePath) match {
           case Some(docs) =>
             docs.documents.foreach { doc =>
               processSemanticdbForTestFrameworkDetection(
                 doc,
-                target,
                 classes(target),
               )
             }
@@ -453,52 +418,6 @@ final class BuildTargetClasses(
     }
   }
 
-  private def extractClassNamesFromTree(tree: scala.meta.Tree): List[String] = {
-    import scala.collection.mutable
-    import scala.meta.{Defn, Pkg}
-
-    val classNames = mutable.ListBuffer[String]()
-
-    def traverse(t: scala.meta.Tree, packagePrefix: String = ""): Unit = {
-      t match {
-        case pkg: Pkg =>
-          val pkgName = pkg.ref.toString()
-          val newPrefix =
-            if (packagePrefix.isEmpty) pkgName
-            else s"$packagePrefix.$pkgName"
-          pkg.stats.foreach(traverse(_, newPrefix))
-
-        case cls: Defn.Class =>
-          val fullName =
-            if (packagePrefix.isEmpty) cls.name.value
-            else s"$packagePrefix.${cls.name.value}"
-          classNames += fullName
-          // Also traverse nested classes
-          cls.templ.stats.foreach(traverse(_, packagePrefix))
-
-        case obj: Defn.Object =>
-          val fullName =
-            if (packagePrefix.isEmpty) obj.name.value
-            else s"$packagePrefix.${obj.name.value}"
-          classNames += fullName
-          obj.templ.stats.foreach(traverse(_, packagePrefix))
-
-        case trt: Defn.Trait =>
-          val fullName =
-            if (packagePrefix.isEmpty) trt.name.value
-            else s"$packagePrefix.${trt.name.value}"
-          classNames += fullName
-          trt.templ.stats.foreach(traverse(_, packagePrefix))
-
-        case other =>
-          // Traverse children for nested definitions
-          other.children.foreach(traverse(_, packagePrefix))
-      }
-    }
-
-    traverse(tree)
-    classNames.toList
-  }
 }
 
 object TestFrameworkDetector {
