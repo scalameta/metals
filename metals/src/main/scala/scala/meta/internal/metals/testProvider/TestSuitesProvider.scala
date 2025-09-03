@@ -1,27 +1,49 @@
 package scala.meta.internal.metals.testProvider
 
-import bloop.config.Config
-import ch.epfl.scala.bsp4j as b
-import ch.epfl.scala.bsp4j.{BuildTarget, ScalaPlatform}
-import org.eclipse.lsp4j as l
-
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+
 import scala.meta.internal.implementation.TextDocumentWithPath
-import scala.meta.internal.metals.JsonParser.*
-import scala.meta.internal.metals.MetalsEnrichments.*
-import scala.meta.internal.metals.*
+import scala.meta.internal.metals.BaseCommand
+import scala.meta.internal.metals.BatchedFunction
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaTestSuiteSelection
+import scala.meta.internal.metals.ScalaTestSuites
+import scala.meta.internal.metals.SemanticdbFeatureProvider
+import scala.meta.internal.metals.TestUserInterfaceKind
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codelenses.CodeLens
-import scala.meta.internal.metals.debug.{BuildTargetClasses, TestFrameworkUtils}
-import scala.meta.internal.metals.testProvider.TestExplorerEvent.*
-import scala.meta.internal.metals.testProvider.frameworks.*
-import scala.meta.internal.mtags.{GlobalSymbolIndex, Semanticdbs}
+import scala.meta.internal.metals.debug.BuildTargetClasses
+import scala.meta.internal.metals.debug.TestFrameworkUtils
+import scala.meta.internal.metals.testProvider.TestExplorerEvent._
+import scala.meta.internal.metals.testProvider.frameworks.JunitTestFinder
+import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
+import scala.meta.internal.metals.testProvider.frameworks.ScalatestTestFinder
+import scala.meta.internal.metals.testProvider.frameworks.TestNGTestFinder
+import scala.meta.internal.metals.testProvider.frameworks.WeaverCatsEffectTestFinder
+import scala.meta.internal.metals.testProvider.frameworks.ZioTestFinder
+import scala.meta.internal.mtags
+import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.Trees
-import scala.meta.internal.{mtags, semanticdb}
-import scala.meta.internal.semanticdb.{TextDocument, TextDocuments}
+import scala.meta.internal.semanticdb
+import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
+
+import bloop.config.Config
+import ch.epfl.scala.bsp4j.BuildTarget
+import ch.epfl.scala.bsp4j.ScalaPlatform
+import ch.epfl.scala.{bsp4j => b}
+import org.eclipse.{lsp4j => l}
 
 final class TestSuitesProvider(
     buildTargets: BuildTargets,
