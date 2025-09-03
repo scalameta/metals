@@ -393,4 +393,47 @@ class UserConfigurationSuite extends BaseSuite {
       )
     )
   }
+
+  checkOK(
+    "mcp-instructions-path",
+    """
+      |{
+      |  "mcp-instructions-path": "docs/mcp-instructions.md"
+      |}
+    """.stripMargin,
+  ) { obtained =>
+    assert(obtained.mcpInstructionsPath == Some("docs/mcp-instructions.md"))
+  }
+
+  checkOK(
+    "mcp-instructions-path-empty",
+    """
+      |{
+      |  "mcp-instructions-path": ""
+      |}
+    """.stripMargin,
+  ) { obtained =>
+    assert(obtained.mcpInstructionsPath == None)
+  }
+
+  checkOK(
+    "mcp-instructions-path-default",
+    """
+      |{
+      |}
+    """.stripMargin,
+  ) { obtained =>
+    assert(obtained.mcpInstructionsPath == None)
+  }
+
+  checkOK(
+    "mcp-instructions-path-sys-prop",
+    """
+      |{
+      |}
+    """.stripMargin,
+    Map("metals.mcp-instructions-path" -> "system/path.md"),
+  ) { obtained =>
+    assert(obtained.mcpInstructionsPath == Some("system/path.md"))
+  }
 }

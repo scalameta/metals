@@ -60,6 +60,7 @@ case class UserConfiguration(
     defaultShell: Option[String] = None,
     startMcpServer: Boolean = false,
     mcpClient: Option[String] = None,
+    mcpInstructionsPath: Option[String] = None,
 ) {
 
   override def toString(): String = {
@@ -542,6 +543,16 @@ object UserConfiguration {
            |and it will still generate the one matching your editor if it's also supported.
            |""".stripMargin,
       ),
+      UserConfigurationOption(
+        "mcp-instructions-path",
+        """empty string `""`.""",
+        """"docs/mcp-instructions.md"""",
+        "MCP Instructions Markdown file path",
+        """|Optional path to a Markdown file containing instructions for MCP clients.
+           |These instructions will be sent to AI agents during MCP server initialization.
+           |Should be a relative path from the workspace root.
+           |""".stripMargin,
+      ),
     )
 
   def fromJson(
@@ -826,6 +837,8 @@ object UserConfiguration {
 
     val mcpClient = getStringKey("mcp-client")
 
+    val mcpInstructionsPath = getStringKey("mcp-instructions-path")
+
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -861,6 +874,7 @@ object UserConfiguration {
           defaultShell,
           startMcpServer,
           mcpClient,
+          mcpInstructionsPath,
         )
       )
     } else {

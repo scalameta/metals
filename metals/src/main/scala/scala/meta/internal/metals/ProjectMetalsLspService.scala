@@ -285,6 +285,7 @@ class ProjectMetalsLspService(
             scalaVersionSelector,
             formattingProvider,
             scalafixLlmRuleProvider,
+            userConfig.mcpInstructionsPath,
           )
         ).run()
     }.recover { case e: Exception =>

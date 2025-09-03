@@ -70,6 +70,7 @@ class MetalsMcpServer(
     scalaVersionSelector: ScalaVersionSelector,
     formattingProvider: FormattingProvider,
     scalafixLlmRuleProvider: ScalafixLlmRuleProvider,
+    instructionsPath: Option[String],
 )(implicit
     ec: ExecutionContext
 ) extends Cancelable {
@@ -105,12 +106,29 @@ class MetalsMcpServer(
       .logging() // Enable logging support (enabled by default with logging level INFO)
       .build();
 
+    // Load instructions from file if specified
+    val instructions = instructionsPath.flatMap { path =>
+      val file = projectPath.resolve(path)
+      if (file.exists) {
+        Try(file.readText).toOption.orElse {
+          scribe.error(s"Failed to read MCP instructions file: $path")
+          None
+        }
+      } else {
+        scribe.warn(s"MCP instructions file not found: $path")
+        None
+      }
+    }
+
     // Create server with configuration
-    val asyncServer = McpServer
+    val serverBuilder = McpServer
       .async(servlet)
       .serverInfo("scala-mcp-server", "0.1.0")
       .capabilities(capabilities)
-      .build()
+
+    instructions.foreach(serverBuilder.instructions)
+
+    val asyncServer = serverBuilder.build()
 
     cancelable.add(() => asyncServer.close())
 
