@@ -19,7 +19,6 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala.{Descriptor, Symbols}
 import scala.meta.internal.semanticdb.{
   ClassSignature,
-  SymbolInformation,
   TextDocument,
   TextDocuments,
   TypeRef,
@@ -370,7 +369,6 @@ final class BuildTargetClasses(
       }
     }
   }
-
 
   private def symbolToClassName(symbol: String): String = {
     symbol
