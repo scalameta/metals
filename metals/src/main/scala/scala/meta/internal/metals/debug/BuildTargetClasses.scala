@@ -24,6 +24,9 @@ import scala.meta.internal.semanticdb.{
 }
 import scala.meta.io.AbsolutePath
 
+/**
+ * In-memory index of main class symbols grouped by their enclosing build target
+ */
 final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
     val ec: ExecutionContext
 ) extends SemanticdbFeatureProvider {
