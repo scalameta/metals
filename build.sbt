@@ -1,3 +1,5 @@
+import java.util.Date
+
 import scala.collection.mutable
 import scala.sys.process._
 import Developers._
@@ -39,11 +41,30 @@ usefulTasks := Welcome.tasks
 
 ThisBuild / semanticdbVersion := V.semanticdb(scalaVersion.value)
 
+def roundMinutesTo15(d: Date): Date = {
+  d.setMinutes(d.getMinutes - (d.getMinutes % 15))
+  d
+}
+
 inThisBuild(
   List(
     version ~= { dynVer =>
       if (isCI && !isTest) dynVer
       else localSnapshotVersion // only for local publishing
+    },
+    // cross-compiling and publishing may take longer than a minute, and that leads to broken releases
+    // that pushed some artifacts with one version, and others with a version number a few minutes later
+    dynverCurrentDate := roundMinutesTo15(new Date),
+    // semver does not like "+" in version numbers, especially if there are more than one
+    dynverSeparator := "-",
+    dynver := {
+      dynverInstance.value
+        .getGitDescribeOutput(dynverCurrentDate.value)
+        .getVersion(
+          dynverCurrentDate.value,
+          dynverSeparator.value,
+          dynverSonatypeSnapshots.value,
+        )
     },
     scalaVersion := V.scala213,
     crossScalaVersions := List(V.scala213),
@@ -60,6 +81,24 @@ inThisBuild(
     // faster publishLocal:
     packageDoc / publishArtifact := sys.env.contains("CI"),
     packageSrc / publishArtifact := sys.env.contains("CI"),
+    publishTo := Some(
+      "GitHub Package Registry (REDACTED_ORG/metals)".at(
+        "https://maven.pkg.github.com/REDACTED_ORG/metals"
+      )
+    ),
+    credentials ++= {
+      val githubToken = System.getenv("GITHUB_TOKEN")
+      if (githubToken == null) Seq.empty
+      else
+        Seq(
+          Credentials(
+            "GitHub Package Registry",
+            "maven.pkg.github.com",
+            "_",
+            githubToken,
+          )
+        )
+    },
   )
 )
 
@@ -133,7 +172,28 @@ commands ++= Seq(
       "mtags-java/publishLocal" ::
       publishMtags
   },
-//  Command.command("cross-test-2-11") { s =>
+  Command.command(
+    "quick-publish-gh-packages",
+    "Publish Databricks versions to Github Package registry",
+    """
+      |This command publishes Metals for Scala 2.12.18, 2.13.12 and 2.13.16 to
+      |Github Package Registry. To use them, add an additional repository to your
+      |Metals settings pointing to:
+      |  https://<user:token_with_read_packages@maven.pkg.github.com/REDACTED_ORG/metals
+      |
+      |The username should be your emu user and the token should have packages read access
+      |""".stripMargin,
+  ) { s =>
+    val publishMtags = V.quickPublishScalaVersions.foldLeft(s) { case (st, v) =>
+      runMtagsPublishGhPackages(st, v)
+    }
+    "interfaces/publish" ::
+      s"++${V.scala213} metals/publish" ::
+      "mtags-java/publish" ::
+      publishMtags
+  },
+
+  //  Command.command("cross-test-2-11") { s =>
 //    crossTestDyn(s, V.scala211)
 //  },
   Command.single("test-mtags-dyn") { (s, scalaV) =>
@@ -621,6 +681,30 @@ def runMtagsPublishLocal(
   val (s2, _) = Project
     .extract(s1)
     .runTask(mtags / publishLocal, s1)
+  s2
+}
+
+def runMtagsPublishGhPackages(
+    state: State,
+    scalaV: String,
+): State = {
+  val newState = Project
+    .extract(state)
+    .appendWithSession(
+      List(
+        mtagsShared / scalaVersion := scalaV,
+        mtags / scalaVersion := scalaV,
+        ThisBuild / useSuperShell := false,
+      ),
+      state,
+    )
+  val (s1, _) = Project
+    .extract(newState)
+    .runTask(mtagsShared / publish, newState)
+
+  val (s2, _) = Project
+    .extract(s1)
+    .runTask(mtags / publish, s1)
   s2
 }
 

@@ -1,4 +1,4 @@
-name: Release
+name: Release Databricks Metals
 on:
   push:
     branches: [main]
@@ -7,7 +7,7 @@ concurrency:
   group: release-${{ github.ref }}
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: metals-protected-runner-group
     steps:
       - uses: actions/checkout@v4
         with:
@@ -21,30 +21,8 @@ jobs:
       - uses: sbt/setup-sbt@v1
       - name: Publish
         run: |
-          COMMAND="ci-release"
-          UPDATE_DOCS=true
-          if [[ $GITHUB_REF == "refs/tags"* ]] && [[ $GITHUB_REF_NAME == "mtags_v"* ]]; then
-            METALS_VERSION=$(echo $GITHUB_REF_NAME | cut -d "_" -f2 | cut -c2-)
-            SCALA_VERSION=$(echo $GITHUB_REF_NAME | cut -d "_" -f3)
-            if [ ! -z $METALS_VERSION ] && [ ! -z $SCALA_VERSION ]; then
-              export CI_RELEASE="++$SCALA_VERSION! mtags/publishSigned; mtagsShared/publishSigned"
-              UPDATE_DOCS=false
-              COMMAND="; set ThisBuild/version :=\"$METALS_VERSION\"; $COMMAND"
-            else
-              echo 'Invalid tag name for mtags. Expected: mtags_v${existing-metals-release}_${scala-version}'
-              exit 1
-            fi
-          fi
+          COMMAND="quick-publish-gh-packages"
           sbt "$COMMAND"
-          if [ "$UPDATE_DOCS" = true ]; then
-            sbt docs/docusaurusPublishGhpages
-          fi
         env:
-          GIT_USER: scalameta@scalameta.org
-          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-          PGP_SECRET: ${{ secrets.PGP_SECRET }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          GIT_DEPLOY_KEY: ${{ secrets.GIT_DEPLOY_KEY }}
-          GITHUB_TOKEN: ${{ secrets.PUSH_TAG_GH_TOKEN }}
-          GH_TOKEN: ${{ secrets.PUSH_TAG_GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          METALS_VERSION: ${{ github.ref_name }}
