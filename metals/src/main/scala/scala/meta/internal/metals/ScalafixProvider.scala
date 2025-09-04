@@ -21,6 +21,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
+import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.semanticdb.TextDocuments
@@ -48,6 +49,7 @@ case class ScalafixProvider(
     interactive: InteractiveSemanticdbs,
     tables: Tables,
     buildHasErrors: AbsolutePath => Boolean,
+    statusBar: StatusBar,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
   import ScalafixProvider._
   private val scalafixCache = TrieMap.empty[ScalaVersion, Scalafix]
@@ -149,15 +151,22 @@ case class ScalafixProvider(
                   results
                 ) && buildHasErrors(file) =>
               if (!silent) {
-                val msg = "Attempt to organize your imports failed. " +
-                  "It looks like you have compilation issues causing your semanticdb to be stale. " +
+                val statusMsg = "Attempt to organize your imports failed"
+                val fullMsg = statusMsg +
+                  ". It looks like you have compilation issues causing your semanticdb to be stale. " +
                   "Ensure everything is compiling and try again."
-                scribe.warn(
-                  msg
+                val params = new MetalsStatusParams(
+                  text = statusMsg,
+                  level = "warn",
+                  show = true,
+                  tooltip = fullMsg,
+                  durationMs = 5000L,
                 )
-                languageClient.showMessage(
-                  MessageType.Warning,
-                  msg,
+                scribe.warn(
+                  fullMsg
+                )
+                statusBar.addMessage(
+                  params
                 )
               }
               Future.successful(Nil)
