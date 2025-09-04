@@ -205,7 +205,7 @@ class CompilerConfiguration(
         if (scalaTarget.isBestEffort) Seq(scalaTarget.bestEffortPath)
         else Seq.empty
 
-      val sourcePath = srcFiles
+      val sourcePath = if (userConfig().useSourcePath) srcFiles else Seq.empty
       scribe.debug(s"Source path: ${sourcePath.mkString(":")}")
 
       fromMtags(
@@ -228,7 +228,6 @@ class CompilerConfiguration(
         Some(search),
         referenceCounter,
       ).standalone
-
   }
 
   object ScalaLazyCompiler {

@@ -613,10 +613,12 @@ case class ScalaPresentationCompiler(
     settings.Ymacroexpand.value = "discard"
     settings.outputDirs.setSingleOutput(vd)
     settings.classpath.value = classpath
-    logger.info(
-      s"[$buildTargetIdentifier]: sourcepath: ${sourcePath.mkString(File.pathSeparator)}"
-    )
-    settings.sourcepath.value = sourcePath.mkString(File.pathSeparator)
+    if (sourcePath.nonEmpty) {
+      logger.info(
+        s"[$buildTargetIdentifier]: sourcepath: ${sourcePath.mkString(File.pathSeparator)}"
+      )
+      settings.sourcepath.value = sourcePath.mkString(File.pathSeparator)
+    }
     settings.YpresentationAnyThread.value = true
     if (
       !BuildInfo.scalaCompilerVersion.startsWith("2.11") &&

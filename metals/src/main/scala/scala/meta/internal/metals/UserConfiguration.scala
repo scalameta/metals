@@ -61,6 +61,7 @@ case class UserConfiguration(
     buildOnChange: Boolean = true,
     buildOnFocus: Boolean = true,
     preferredBuildServer: Option[String] = None,
+    useSourcePath: Boolean = true,
 ) {
 
   override def toString(): String = {
@@ -163,6 +164,12 @@ case class UserConfiguration(
       optStringField(
         "preferredBuildServer",
         preferredBuildServer,
+      ),
+      Some(
+        (
+          "useSourcePath",
+          useSourcePath,
+        )
       ),
     ).flatten.toMap.asJava
     val gson = new GsonBuilder().setPrettyPrinting().create()
@@ -522,6 +529,15 @@ object UserConfiguration {
            |of prompting the user.
            |""".stripMargin,
       ),
+      UserConfigurationOption(
+        "use-source-path",
+        "true",
+        "true",
+        "Use presentation compiler source path",
+        """|If enabled, Metals will set the presentation compiler source path. This will enable 
+           |the compiler to find types that have not been built yet.
+           |""".stripMargin,
+      ),
     )
 
   def fromJson(
@@ -800,6 +816,7 @@ object UserConfiguration {
     val buildOnChange = getBooleanKey("build-on-change").getOrElse(true)
     val buildOnFocus = getBooleanKey("build-on-focus").getOrElse(true)
     val preferredBuildServer = getStringKey("preferred-build-server")
+    val useSourcePath = getBooleanKey("use-source-path").getOrElse(true)
 
     if (errors.isEmpty) {
       Right(
@@ -837,6 +854,7 @@ object UserConfiguration {
           buildOnChange,
           buildOnFocus,
           preferredBuildServer,
+          useSourcePath,
         )
       )
     } else {

@@ -331,6 +331,7 @@ class UserConfigurationSuite extends BaseSuite {
           |  "testUserInterface": "test explorer",
           |  "bloopVersion": "1.2.3",
           |  "fallbackScalaVersion": "3.2.1",
+          |  "useSourcePath": true,
           |  "autoImportBuilds": "all",
           |  "enableSemanticHighlighting": false,
           |  "scalaCliLauncher": "scala-cli",
