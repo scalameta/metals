@@ -381,7 +381,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
   ): Boolean = {
     targets.exists { target =>
       val uri = target.getUri
-      uri.matches("@//.*?/[^/:]+:[^/:]+$")
+      uri.matches("^@//(?:.*?/)?[^/:]*:[^/:]+$")
     }
   }
 
