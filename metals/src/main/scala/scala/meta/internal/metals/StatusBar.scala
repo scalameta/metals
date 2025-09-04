@@ -92,11 +92,9 @@ final class StatusBar(
     def priority: Long = timer.elapsedNanos
     def isRecent: Boolean = timer.elapsedSeconds < 3
     def formattedMessage: String = params.text
-    def isOutdated: Boolean = {
-      val duration = Option(params.durationMs).map(_ / 1000).getOrElse(10L)
-      timer.elapsedSeconds > duration ||
-      firstShow.exists(_.elapsedSeconds > 5)
-    }
+    def isOutdated: Boolean =
+      timer.elapsedSeconds > 10 ||
+        firstShow.exists(_.elapsedSeconds > 5)
     def isStale: Boolean = (firstShow.isDefined && !isRecent) || isOutdated
   }
 

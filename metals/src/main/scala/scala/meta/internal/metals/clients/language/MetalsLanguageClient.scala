@@ -125,7 +125,6 @@ case class RawMetalsQuickPickResult(
  * @param command optional command that the client should trigger when the user clicks on
  *                the status bar item.
  * @param statusType is this a bsp or metals status.
- * @param durationMs optional duration in milliseconds for how long the status message should be displayed.
  */
 case class MetalsStatusParams(
     text: String,
@@ -137,7 +136,6 @@ case class MetalsStatusParams(
     @Nullable metalsCommand: MetalsCommand = null,
     @Nullable commandTooltip: String = null,
     @Nullable statusType: String = StatusType.metals.toString(),
-    @Nullable durationMs: java.lang.Long = null,
 ) {
 
   def logMessage(icons: Icons): String = {

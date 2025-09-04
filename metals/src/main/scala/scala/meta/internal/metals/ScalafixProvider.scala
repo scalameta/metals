@@ -160,7 +160,6 @@ case class ScalafixProvider(
                   level = "warn",
                   show = true,
                   tooltip = fullMsg,
-                  durationMs = 5000L,
                 )
                 scribe.warn(
                   fullMsg
