@@ -1,11 +1,15 @@
 package tests.bazel
 
-import tests.{BaseImportSuite, BazelModuleLayout, BazelServerInitializer}
+import scala.jdk.CollectionConverters._
 
-import scala.jdk.CollectionConverters.*
-import scala.meta.internal.builds.{BazelBuildTool, BazelDigest}
-import scala.meta.internal.metals.BuildInfo as V
+import scala.meta.internal.builds.BazelBuildTool
+import scala.meta.internal.builds.BazelDigest
+import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
+
+import tests.BaseImportSuite
+import tests.BazelModuleLayout
+import tests.BazelServerInitializer
 
 class BazelTestDiscoverySuite
     extends BaseImportSuite("bazel-test-discovery", BazelServerInitializer) {
