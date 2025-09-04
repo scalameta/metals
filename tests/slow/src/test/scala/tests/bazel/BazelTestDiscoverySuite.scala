@@ -1,15 +1,11 @@
 package tests.bazel
 
-import scala.jdk.CollectionConverters._
+import tests.{BaseImportSuite, BazelModuleLayout, BazelServerInitializer}
 
-import scala.meta.internal.builds.BazelBuildTool
-import scala.meta.internal.builds.BazelDigest
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.jdk.CollectionConverters.*
+import scala.meta.internal.builds.{BazelBuildTool, BazelDigest}
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.io.AbsolutePath
-
-import tests.BaseImportSuite
-import tests.BazelModuleLayout
-import tests.BazelServerInitializer
 
 class BazelTestDiscoverySuite
     extends BaseImportSuite("bazel-test-discovery", BazelServerInitializer) {
@@ -18,6 +14,27 @@ class BazelTestDiscoverySuite
 
   val buildTool: BazelBuildTool = BazelBuildTool(() => userConfig, workspace)
 
+  def buildFileWithToolchain(): String =
+    s"""|/BUILD
+        |load("@rules_scala//scala:scala_toolchain.bzl", "scala_toolchain")
+        |load("@rules_scala//scala:scala.bzl", "scala_test")
+        |
+        |scala_toolchain(
+        |    name = "semanticdb_toolchain_impl",
+        |    enable_semanticdb = True,
+        |    strict_deps_mode = "error",
+        |    unused_dependency_checker_mode = "warn",
+        |)
+        |
+        |toolchain(
+        |    name = "semanticdb_toolchain",
+        |    toolchain = ":semanticdb_toolchain_impl",
+        |    toolchain_type = "@rules_scala//scala:toolchain_type",
+        |    visibility = ["//visibility:public"],
+        |)
+        |
+        |""".stripMargin
+
   override def currentDigest(
       workspace: AbsolutePath
   ): Option[String] = BazelDigest.current(workspace)
@@ -25,24 +42,7 @@ class BazelTestDiscoverySuite
   test("simple-scalatest-discovery") {
     cleanWorkspace()
     val testLayout =
-      s"""|/BUILD
-          |load("@rules_scala//scala:scala_toolchain.bzl", "scala_toolchain")
-          |load("@rules_scala//scala:scala.bzl", "scala_test")
-          |
-          |scala_toolchain(
-          |    name = "semanticdb_toolchain_impl",
-          |    enable_semanticdb = True,
-          |    strict_deps_mode = "error",
-          |    unused_dependency_checker_mode = "warn",
-          |)
-          |
-          |toolchain(
-          |    name = "semanticdb_toolchain",
-          |    toolchain = ":semanticdb_toolchain_impl",
-          |    toolchain_type = "@rules_scala//scala:toolchain_type",
-          |    visibility = ["//visibility:public"],
-          |)
-          |
+      s"""|${buildFileWithToolchain()}
           |scala_test(
           |    name = "simple_test",
           |    srcs = ["SimpleTest.scala"],
@@ -70,21 +70,17 @@ class BazelTestDiscoverySuite
       _ <- server.didOpen("SimpleTest.scala")
       _ <- server.didSave("SimpleTest.scala")
 
-      // Wait for compilation and indexing to complete
       _ <- server.waitFor(java.util.concurrent.TimeUnit.SECONDS.toMillis(10))
 
-      // Discover test suites
       testSuites <- server.discoverTestSuites(List("SimpleTest.scala"))
 
     } yield {
-      // Verify that we found the test class
       val testEvents = testSuites.flatMap(_.events.asScala.toList)
       assert(
         testEvents.nonEmpty,
         s"Expected to find test events, but got empty list. TestSuites: $testSuites",
       )
 
-      // Check that SimpleTest was discovered
       val testClasses = testEvents.collect {
         case event if event.toString.contains("SimpleTest") => "SimpleTest"
       }
@@ -98,24 +94,7 @@ class BazelTestDiscoverySuite
   test("scalatest-with-multiple-tests") {
     cleanWorkspace()
     val testLayout =
-      s"""|/BUILD
-          |load("@rules_scala//scala:scala_toolchain.bzl", "scala_toolchain")
-          |load("@rules_scala//scala:scala.bzl", "scala_test")
-          |
-          |scala_toolchain(
-          |    name = "semanticdb_toolchain_impl",
-          |    enable_semanticdb = True,
-          |    strict_deps_mode = "error",
-          |    unused_dependency_checker_mode = "warn",
-          |)
-          |
-          |toolchain(
-          |    name = "semanticdb_toolchain",
-          |    toolchain = ":semanticdb_toolchain_impl",
-          |    toolchain_type = "@rules_scala//scala:toolchain_type",
-          |    visibility = ["//visibility:public"],
-          |)
-          |
+      s"""|${buildFileWithToolchain()}
           |scala_test(
           |    name = "multi_test",
           |    srcs = ["MultiTest.scala"],
@@ -151,21 +130,17 @@ class BazelTestDiscoverySuite
       _ <- server.didOpen("MultiTest.scala")
       _ <- server.didSave("MultiTest.scala")
 
-      // Wait for compilation and indexing to complete
       _ <- server.waitFor(java.util.concurrent.TimeUnit.SECONDS.toMillis(10))
 
-      // Discover test suites
       testSuites <- server.discoverTestSuites(List("MultiTest.scala"))
 
     } yield {
-      // Verify that we found the test class
       val testEvents = testSuites.flatMap(_.events.asScala.toList)
       assert(
         testEvents.nonEmpty,
         s"Expected to find test events, but got empty list",
       )
 
-      // Check that MultiTest was discovered
       val testClasses = testEvents.collect {
         case event if event.toString.contains("MultiTest") => "MultiTest"
       }
