@@ -211,6 +211,8 @@ object BazelModuleLayout extends BuildToolLayout {
         |bazel_dep(name = "rules_java", version = "8.15.1")
         |bazel_dep(name = "rules_python", version = "1.5.3")
         |
+        |register_toolchains("//:custom_scala_toolchain")
+        |
         |scala_version = "$scalaVersion"
         |
         |scala_config = use_extension(
@@ -227,5 +229,6 @@ object BazelModuleLayout extends BuildToolLayout {
         |    fetch_sources = True,
         |)
         |scala_deps.scala()
+        |scala_deps.scalatest()
         |""".stripMargin
 }
