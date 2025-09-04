@@ -211,7 +211,7 @@ object BazelModuleLayout extends BuildToolLayout {
         |bazel_dep(name = "rules_java", version = "8.15.1")
         |bazel_dep(name = "rules_python", version = "1.5.3")
         |
-        |register_toolchains("//:custom_scala_toolchain")
+        |register_toolchains("//:semanticdb_toolchain")
         |
         |scala_version = "$scalaVersion"
         |

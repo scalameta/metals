@@ -30,15 +30,15 @@ class BazelTestDiscoverySuite
           |load("@rules_scala//scala:scala.bzl", "scala_test")
           |
           |scala_toolchain(
-          |    name = "custom_scala_toolchain_impl",
+          |    name = "semanticdb_toolchain_impl",
           |    enable_semanticdb = True,
           |    strict_deps_mode = "error",
           |    unused_dependency_checker_mode = "warn",
           |)
           |
           |toolchain(
-          |    name = "custom_scala_toolchain",
-          |    toolchain = ":custom_scala_toolchain_impl",
+          |    name = "semanticdb_toolchain",
+          |    toolchain = ":semanticdb_toolchain_impl",
           |    toolchain_type = "@rules_scala//scala:toolchain_type",
           |    visibility = ["//visibility:public"],
           |)
@@ -103,15 +103,15 @@ class BazelTestDiscoverySuite
           |load("@rules_scala//scala:scala.bzl", "scala_test")
           |
           |scala_toolchain(
-          |    name = "custom_scala_toolchain_impl",
+          |    name = "semanticdb_toolchain_impl",
           |    enable_semanticdb = True,
           |    strict_deps_mode = "error",
           |    unused_dependency_checker_mode = "warn",
           |)
           |
           |toolchain(
-          |    name = "custom_scala_toolchain",
-          |    toolchain = ":custom_scala_toolchain_impl",
+          |    name = "semanticdb_toolchain",
+          |    toolchain = ":semanticdb_toolchain_impl",
           |    toolchain_type = "@rules_scala//scala:toolchain_type",
           |    visibility = ["//visibility:public"],
           |)
@@ -184,15 +184,15 @@ class BazelTestDiscoverySuite
           |load("@rules_scala//scala:scala.bzl", "scala_library")
           |
           |scala_toolchain(
-          |    name = "custom_scala_toolchain_impl",
+          |    name = "semanticdb_toolchain_impl",
           |    enable_semanticdb = True,
           |    strict_deps_mode = "error",
           |    unused_dependency_checker_mode = "warn",
           |)
           |
           |toolchain(
-          |    name = "custom_scala_toolchain",
-          |    toolchain = ":custom_scala_toolchain_impl",
+          |    name = "semanticdb_toolchain",
+          |    toolchain = ":semanticdb_toolchain_impl",
           |    toolchain_type = "@rules_scala//scala:toolchain_type",
           |    visibility = ["//visibility:public"],
           |)
