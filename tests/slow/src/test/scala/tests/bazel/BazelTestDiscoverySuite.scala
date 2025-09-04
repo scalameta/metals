@@ -69,7 +69,7 @@ class BazelTestDiscoverySuite
           testLayout,
           V.scala3,
           bazelVersion,
-          enableToolChainRegistration = true
+          enableToolChainRegistration = true,
         )
       )
       _ <- server.didOpen("SimpleTest.scala")
@@ -130,10 +130,10 @@ class BazelTestDiscoverySuite
           testLayout,
           V.scala3,
           bazelVersion,
-          enableToolChainRegistration = true
+          enableToolChainRegistration = true,
         )
       )
-      
+
       _ <- server.didOpen("MultiTest.scala")
       _ <- server.didSave("MultiTest.scala")
 

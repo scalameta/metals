@@ -188,7 +188,11 @@ object BazelBuildLayout extends BuildToolLayout {
 }
 
 object BazelModuleLayout extends BuildToolLayout {
-  private def baseLayout(sourceLayout: String, scalaVersion: String, enableToolChainRegistration: Boolean = false): String =
+  private def baseLayout(
+      sourceLayout: String,
+      scalaVersion: String,
+      enableToolChainRegistration: Boolean = false,
+  ): String =
     s"""|/MODULE.bazel
         |${moduleFileLayout(scalaVersion, enableToolChainRegistration)}
         |$sourceLayout
@@ -208,7 +212,10 @@ object BazelModuleLayout extends BuildToolLayout {
         |${baseLayout(sourceLayout, scalaVersion, enableToolChainRegistration)}
         |""".stripMargin
 
-  def moduleFileLayout(scalaVersion: String, enableToolChainRegistration: Boolean = false): String =
+  def moduleFileLayout(
+      scalaVersion: String,
+      enableToolChainRegistration: Boolean = false,
+  ): String =
     s"""|
         |bazel_dep(name = "bazel_skylib", version = "1.8.1")
         |bazel_dep(name = "rules_scala", version = "7.0.0")
