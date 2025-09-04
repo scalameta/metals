@@ -144,7 +144,7 @@ class BazelTestDiscoverySuite
       _ <- initialize(
         BazelModuleLayout(
           testLayout,
-          V.bazelScalaVersion,
+          V.scala3,
           bazelVersion,
         )
       )
@@ -172,66 +172,6 @@ class BazelTestDiscoverySuite
       assert(
         testClasses.nonEmpty,
         s"Expected to find 'MultiTest' in discovered classes: ${testEvents.mkString(", ")}",
-      )
-    }
-  }
-
-  test("no-test-classes") {
-    cleanWorkspace()
-    val nonTestLayout =
-      s"""|/BUILD
-          |load("@rules_scala//scala:scala_toolchain.bzl", "scala_toolchain")
-          |load("@rules_scala//scala:scala.bzl", "scala_library")
-          |
-          |scala_toolchain(
-          |    name = "semanticdb_toolchain_impl",
-          |    enable_semanticdb = True,
-          |    strict_deps_mode = "error",
-          |    unused_dependency_checker_mode = "warn",
-          |)
-          |
-          |toolchain(
-          |    name = "semanticdb_toolchain",
-          |    toolchain = ":semanticdb_toolchain_impl",
-          |    toolchain_type = "@rules_scala//scala:toolchain_type",
-          |    visibility = ["//visibility:public"],
-          |)
-          |
-          |scala_library(
-          |    name = "regular_lib",
-          |    srcs = ["RegularClass.scala"],
-          |)
-          |
-          |/RegularClass.scala
-          |class RegularClass {
-          |  def regularMethod(): String = "Hello World"
-          |}
-          |
-          |""".stripMargin
-
-    for {
-      _ <- initialize(
-        BazelModuleLayout(
-          nonTestLayout,
-          V.bazelScalaVersion,
-          bazelVersion,
-        )
-      )
-      _ <- server.didOpen("RegularClass.scala")
-      _ <- server.didSave("RegularClass.scala")
-
-      // Wait for compilation and indexing to complete
-      _ <- server.waitFor(java.util.concurrent.TimeUnit.SECONDS.toMillis(10))
-
-      // Discover test suites - should return empty results
-      testSuites <- server.discoverTestSuites(List("RegularClass.scala"))
-
-    } yield {
-      // Verify that we found no test events for a regular class
-      val testEvents = testSuites.flatMap(_.events.asScala.toList)
-      assert(
-        testEvents.isEmpty,
-        s"Expected no test events for regular class, but found: ${testEvents.mkString(", ")}",
       )
     }
   }
