@@ -315,7 +315,10 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
                     case -1 => classSymbol
                     case index => classSymbol.substring(0, index + 1)
                   }
-                classes.testClasses.put(classSymbolWithoutFunctionName, testInfo)
+                classes.testClasses.put(
+                  classSymbolWithoutFunctionName,
+                  testInfo,
+                )
 
                 scribe.debug(
                   s"Detected test class: $className with framework: ${framework.names.headOption.getOrElse("Unknown")}"
