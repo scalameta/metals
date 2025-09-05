@@ -305,7 +305,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
       symbolInfo.annotations.foreach { annotation =>
         annotation.tpe match {
           case TypeRef(_, annotationSymbol, _) =>
-            TestFrameworkDetector.fromParentSymbol(annotationSymbol) match {
+            TestFrameworkDetector.fromSymbol(annotationSymbol) match {
               case Some(framework) =>
                 val classSymbol = symbolInfo.symbol
                 val className = symbolToClassName(classSymbol)
@@ -375,7 +375,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
     if (visited.contains(parentSymbol)) {
       None
     } else {
-      TestFrameworkDetector.fromParentSymbol(parentSymbol).orElse {
+      TestFrameworkDetector.fromSymbol(parentSymbol).orElse {
         doc.symbols.find(_.symbol == parentSymbol).flatMap { parentInfo =>
           parentInfo.signature match {
             case parentClassSig: ClassSignature =>
@@ -468,8 +468,8 @@ object TestFrameworkDetector {
     "zio/test/ZIOSpecDefault#" -> TestFrameworkUtils.ZioTestFramework,
   )
 
-  def fromParentSymbol(parentSymbol: String): Option[TestFramework] = {
-    frameworkSymbolMap.get(parentSymbol)
+  def fromSymbol(symbol: String): Option[TestFramework] = {
+    frameworkSymbolMap.get(symbol)
   }
 }
 
