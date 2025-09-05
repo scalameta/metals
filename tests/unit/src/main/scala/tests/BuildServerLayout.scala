@@ -188,28 +188,41 @@ object BazelBuildLayout extends BuildToolLayout {
 }
 
 object BazelModuleLayout extends BuildToolLayout {
-  override def apply(sourceLayout: String, scalaVersion: String): String =
+  private def baseLayout(
+      sourceLayout: String,
+      scalaVersion: String,
+      enableToolChainRegistration: Boolean = false,
+  ): String =
     s"""|/MODULE.bazel
-        |${moduleFileLayout(scalaVersion)}
+        |${moduleFileLayout(scalaVersion, enableToolChainRegistration)}
         |$sourceLayout
         |""".stripMargin
+
+  override def apply(sourceLayout: String, scalaVersion: String): String =
+    baseLayout(scalaVersion, scalaVersion)
 
   def apply(
       sourceLayout: String,
       scalaVersion: String,
       bazelVersion: String,
+      enableToolChainRegistration: Boolean = false,
   ): String =
     s"""|/.bazelversion
         |$bazelVersion
-        |${apply(sourceLayout, scalaVersion)}
+        |${baseLayout(sourceLayout, scalaVersion, enableToolChainRegistration)}
         |""".stripMargin
 
-  def moduleFileLayout(scalaVersion: String): String =
+  def moduleFileLayout(
+      scalaVersion: String,
+      enableToolChainRegistration: Boolean = false,
+  ): String =
     s"""|
         |bazel_dep(name = "bazel_skylib", version = "1.8.1")
         |bazel_dep(name = "rules_scala", version = "7.0.0")
         |bazel_dep(name = "rules_java", version = "8.15.1")
         |bazel_dep(name = "rules_python", version = "1.5.3")
+        |
+        |${if (enableToolChainRegistration) "register_toolchains(\"//:semanticdb_toolchain\")" else ""}
         |
         |scala_version = "$scalaVersion"
         |
@@ -227,5 +240,17 @@ object BazelModuleLayout extends BuildToolLayout {
         |    fetch_sources = True,
         |)
         |scala_deps.scala()
+        |scala_deps.scalatest()
+        |scala_deps.junit()
+        |
+        |bazel_dep(name = "rules_jvm_external", version = "4.5")
+        |
+        |maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+        |maven.install(
+        |    artifacts = [
+        |        "junit:junit:4.13.2",
+        |    ],
+        |)
+        |use_repo(maven, "maven")
         |""".stripMargin
 }
