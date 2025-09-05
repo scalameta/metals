@@ -241,5 +241,16 @@ object BazelModuleLayout extends BuildToolLayout {
         |)
         |scala_deps.scala()
         |scala_deps.scalatest()
+        |scala_deps.junit()
+        |
+        |bazel_dep(name = "rules_jvm_external", version = "4.5")
+        |
+        |maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+        |maven.install(
+        |    artifacts = [
+        |        "junit:junit:4.13.2",
+        |    ],
+        |)
+        |use_repo(maven, "maven")
         |""".stripMargin
 }

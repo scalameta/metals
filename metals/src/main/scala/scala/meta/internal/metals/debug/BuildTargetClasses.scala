@@ -302,6 +302,29 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
       classes: Classes,
   ): Unit = {
     doc.symbols.foreach { symbolInfo =>
+      symbolInfo.annotations.foreach { annotation =>
+        annotation.tpe match {
+          case TypeRef(_, annotationSymbol, _) =>
+            TestFrameworkDetector.fromParentSymbol(annotationSymbol) match {
+              case Some(framework) =>
+                val classSymbol = symbolInfo.symbol
+                val className = symbolToClassName(classSymbol)
+                val testInfo = TestSymbolInfo(className, framework)
+                val classSymbolWithoutFunctionName =
+                  classSymbol.indexOf('#') match {
+                    case -1 => classSymbol
+                    case index => classSymbol.substring(0, index + 1)
+                  }
+                classes.testClasses.put(classSymbolWithoutFunctionName, testInfo)
+
+                scribe.debug(
+                  s"Detected test class: $className with framework: ${framework.names.headOption.getOrElse("Unknown")}"
+                )
+              case None =>
+            }
+          case _ =>
+        }
+      }
       symbolInfo.signature match {
         case classSig: ClassSignature =>
           val symbol = symbolInfo.symbol
@@ -367,10 +390,12 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
   }
 
   private def symbolToClassName(symbol: String): String = {
-    symbol
-      .stripPrefix("_empty_/")
-      .stripSuffix("#")
-      .replace("/", ".")
+    val withoutPrefix = symbol.stripPrefix("_empty_/")
+    val withoutHashAndAfter = withoutPrefix.indexOf('#') match {
+      case -1 => withoutPrefix
+      case index => withoutPrefix.substring(0, index)
+    }
+    withoutHashAndAfter.replace("/", ".")
   }
 
   private def isBazelBuildAmongTargets(
@@ -440,14 +465,8 @@ object TestFrameworkDetector {
     "zio/test/ZIOSpecDefault#" -> TestFrameworkUtils.ZioTestFramework,
   )
 
-  private val knownTestSymbols: Set[String] = frameworkSymbolMap.keySet
-
   def fromParentSymbol(parentSymbol: String): Option[TestFramework] = {
     frameworkSymbolMap.get(parentSymbol)
-  }
-
-  def isKnownTestFrameworkSymbol(symbol: String): Boolean = {
-    knownTestSymbols.contains(symbol)
   }
 }
 
