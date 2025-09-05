@@ -153,6 +153,7 @@ class ScalaToplevelSuite extends BaseToplevelSuite {
       "z/",
       "z/Test$package.",
       "z/Test$package.X#",
+      "type z/Test$package.X#",
     ),
     mode = All,
   )
@@ -622,7 +623,7 @@ class ScalaToplevelSuite extends BaseToplevelSuite {
     // than to change symbols emitted by `ScalaTopLevelMtags`,
     // since the object could be placed before type definition.
     List("s/", "s/Test$package.", "s/Test$package.Cow# -> Long", "s/Cow.",
-      "s/Cow.apply()."),
+      "s/Cow.apply().", "type s/Test$package.Cow#"),
     dialect = dialects.Scala3,
     mode = All,
   )
@@ -694,7 +695,8 @@ class ScalaToplevelSuite extends BaseToplevelSuite {
        |    a
        |class Bar
        |""".stripMargin,
-    List("a/", "a/Bar#", "a/Test$package."),
+    List("a/", "a/Bar#", "a/Test$package.", "type a/Test$package.A#",
+      "type a/Test$package.Elem#", "type a/Test$package.W#"),
     dialect = dialects.Scala3,
     mode = ToplevelWithInner,
   )
@@ -796,6 +798,38 @@ class ScalaToplevelSuite extends BaseToplevelSuite {
        |""".stripMargin,
     List("a/", "a/A# -> B", "a/B#"),
     mode = All,
+  )
+
+  check(
+    "package-members",
+    """|package a
+       |package object b{
+       |  type A = Int
+       |  type B = String
+       |}
+       |""".stripMargin,
+    List(
+      "a/",
+      "a/b/package.",
+      "type a/b/package.A#",
+      "type a/b/package.B#",
+    ),
+    mode = ToplevelWithInner,
+  )
+
+  check(
+    "package-members-scala3",
+    """|package a
+       |type A = Int
+       |opaque type B = String
+       |""".stripMargin,
+    List(
+      "a/",
+      "a/Test$package.",
+      "type a/Test$package.A#",
+      "type a/Test$package.B#",
+    ),
+    mode = ToplevelWithInner,
   )
 
   check(

@@ -427,7 +427,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
             definitionIndex.addIndexedSourceJar(zip, Nil, dialect)
             implementationProvider.addTypeHierarchyElements(overrides)
           case None =>
-            val (_, overrides) = indexJar(zip, dialect)
+            val (_, overrides, _) = indexJar(zip, dialect)
             sharedIndices.jvmTypeHierarchy.addTypeHierarchyInfo(
               zip,
               overrides,
@@ -551,29 +551,62 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
           case Some(overrides) =>
             definitionIndex.addIndexedSourceJar(path, toplevels, dialect)
             implementationProvider.addTypeHierarchyElements(overrides)
+            tables.jarSymbols.getToplevelMembers(path) match {
+              case Some(toplevelMembersMap) =>
+                workspaceSymbols.addToplevelMembers(toplevelMembersMap)
+              case None =>
+                val (_, _, toplevelMembers) =
+                  indexJar(path, dialect, reindex = true)
+                if (toplevelMembers.nonEmpty) {
+                  tables.jarSymbols.addToplevelMembersInfo(
+                    path,
+                    toplevelMembers,
+                  )
+                }
+            }
           case None =>
-            val (_, overrides) = indexJar(path, dialect)
+            val (_, overrides, toplevelMembers) =
+              indexJar(path, dialect, reindex = true)
             tables.jarSymbols.addTypeHierarchyInfo(path, overrides)
+            if (toplevelMembers.nonEmpty) {
+              tables.jarSymbols.addToplevelMembersInfo(path, toplevelMembers)
+            }
         }
       case None =>
-        val (toplevels, overrides) = indexJar(path, dialect)
-        tables.jarSymbols.putJarIndexingInfo(path, toplevels, overrides)
+        val (toplevels, overrides, toplevelMembers) = indexJar(path, dialect)
+        tables.jarSymbols.putJarIndexingInfo(
+          path,
+          toplevels,
+          overrides,
+          toplevelMembers,
+        )
     }
   }
 
-  private def indexJar(path: AbsolutePath, dialect: Dialect) = {
-    val indexResult = definitionIndex.addSourceJar(path, dialect)
+  private def indexJar(
+      path: AbsolutePath,
+      dialect: Dialect,
+      reindex: Boolean = false,
+  ) = {
+    val indexResult = definitionIndex.addSourceJar(path, dialect, reindex)
     val toplevels = indexResult.flatMap {
-      case IndexingResult(path, toplevels, _) =>
+      case IndexingResult(path, toplevels, _, _) =>
         toplevels.map((_, path))
     }
-    val overrides = indexResult.flatMap { case IndexingResult(path, _, list) =>
-      list.flatMap { case (symbol, overridden) =>
-        overridden.map((path, symbol, _))
-      }
+    val overrides = indexResult.flatMap {
+      case IndexingResult(path, _, list, _) =>
+        list.flatMap { case (symbol, overridden) =>
+          overridden.map((path, symbol, _))
+        }
     }
+    val toplevelMembersMap = indexResult.collect {
+      case IndexingResult(path, _, _, toplevelMembers)
+          if toplevelMembers.nonEmpty =>
+        path -> toplevelMembers
+    }.toMap
     implementationProvider.addTypeHierarchyElements(overrides)
-    (toplevels, overrides)
+    workspaceSymbols.addToplevelMembers(toplevelMembersMap)
+    (toplevels, overrides, toplevelMembersMap)
   }
 
   def reindexWorkspaceSources(

@@ -8,7 +8,10 @@ import java.sql.Statement
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PlatformFileIO
 import scala.meta.internal.metals.JarTopLevels
+import scala.meta.internal.mtags.ToplevelMember
 import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
+import scala.meta.internal.semanticdb.Range
+import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.io.AbsolutePath
 
 class JarTopLevelsSuite extends BaseTablesSuite {
@@ -108,5 +111,33 @@ class JarTopLevelsSuite extends BaseTablesSuite {
     val obtainedTypeHierarchy = jarSymbols.getTypeHierarchy(jar1)
     assert(obtainedTypeHierarchy.nonEmpty)
     assert(obtainedTypeHierarchy.get == overrides)
+  }
+
+  test("addToplevelMembers") {
+    val fs = PlatformFileIO.newJarFileSystem(jar1, create = false)
+    val filePath = AbsolutePath(fs.getPath("/foo.scala"))
+    val toplevels = List("foo" -> filePath)
+    val overrides =
+      List.empty[(AbsolutePath, String, UnresolvedOverriddenSymbol)]
+    val toplevelMembers = Map(
+      filePath -> List(
+        ToplevelMember(
+          "foo/package.Hello#",
+          Range(1, 0, 2, 1),
+          SymbolInformation.Kind.TYPE,
+        ),
+        ToplevelMember(
+          "foo/package.Bye#",
+          Range(1, 0, 2, 1),
+          SymbolInformation.Kind.TYPE,
+        ),
+      )
+    )
+
+    jarSymbols.putJarIndexingInfo(jar1, toplevels, overrides, toplevelMembers)
+
+    val obtainedToplevelMembers = jarSymbols.getToplevelMembers(jar1)
+    assert(obtainedToplevelMembers.nonEmpty)
+    assert(obtainedToplevelMembers.get == toplevelMembers)
   }
 }

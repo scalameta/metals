@@ -1253,4 +1253,16 @@ class SignatureHelpSuite extends BaseSignatureHelpSuite {
        |                                            ^^^^^^^^^^^^^^^^^^^^
        |""".stripMargin
   )
+
+  check(
+    "superclass-4",
+    """
+      |class Foo(val someField: Int)
+      |object Bar extends Foo(12@@34)
+      |""".stripMargin,
+    """|<init>(someField: Int): Foo
+       |       ^^^^^^^^^^^^^^
+       |""".stripMargin
+  )
+
 }

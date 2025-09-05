@@ -236,7 +236,14 @@ class CompletionDapSuite
     "java-member",
     expression = "name.s@@",
     expectedCompletions =
-      if (isJava17)
+      if (isJava24)
+        """|serialVersionUID
+           |serialPersistentFields
+           |scale(int arg0, float arg1)
+           |startsWith(java.lang.String arg0, int arg1)
+           |startsWith(java.lang.String arg0)
+           |""".stripMargin
+      else if (isJava17)
         """|serialVersionUID
            |serialPersistentFields
            |safeTrim(byte[] arg0, int arg1, boolean arg2)
