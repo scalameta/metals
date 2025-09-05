@@ -436,6 +436,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
               .getMessage()
           ) {
             new MessageActionItem("Ignore")
+          } else if (ImportProjectPartiallyFailed.params() == params) {
+            new MessageActionItem("Ignore")
           } else if (
             List(true, false)
               .map(isRestart =>
