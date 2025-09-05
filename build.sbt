@@ -438,6 +438,8 @@ lazy val mtags3 = project
     Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags" / "src" / "main" / "scala",
     Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala",
     Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala-3",
+    // Make mtags3 empty for now to speed up the build while we only support Scala 2.x
+    Compile / unmanagedSourceDirectories := Seq(),
     moduleName := "mtags3",
     scalaVersion := V.lastPublishedScala3,
     target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3",
