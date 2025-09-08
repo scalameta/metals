@@ -1,7 +1,7 @@
 name: Release Databricks Metals
 on:
   push:
-    branches: [main]
+    branches: [databricks]
     tags: ["*"]
 concurrency:
   group: release-${{ github.ref }}
