@@ -111,7 +111,7 @@ Global / onLoad ~= { old =>
       prePush,
       """#!/bin/sh
         |set -eux
-        |bin/scalafmt --diff --diff-branch main
+        |bin/scalafmt --diff --diff-branch databricks
         |git diff --exit-code
         |""".stripMargin.getBytes(),
     )
