@@ -283,11 +283,14 @@ class ProblemResolver(
         }
 
         val munit = raw".*org/scalameta/munit_.*/(\d).(\d+).(\d+).*".r
-        scalaTarget.classpath.toList.flatten.collectFirst {
-          case dep @ munit(major, minor, patch)
-              if isInvalid(major.toInt, minor.toInt, patch.toInt, dep) =>
-            OutdatedMunitInterfaceVersion
-        }
+        scalaTarget.classpath.toList.flatten
+          // pre-filter entries to avoid the expensive case where regex doesn't match
+          .filter(_.contains("org/scalameta/munit_"))
+          .collectFirst {
+            case dep @ munit(major, minor, patch)
+                if isInvalid(major.toInt, minor.toInt, patch.toInt, dep) =>
+              OutdatedMunitInterfaceVersion
+          }
       }
     }
 
@@ -296,12 +299,18 @@ class ProblemResolver(
       else {
         val novocode = ".*com/novocode/junit-interface.*".r
         val junit = raw".*com/github/sbt/junit-interface/(\d).(\d+).(\d+).*".r
-        scalaTarget.classpath.toList.flatten.collectFirst {
-          case novocode() => OutdatedJunitInterfaceVersion
-          case junit(major, minor, patch)
-              if (major.toInt == 0 && (minor.toInt <= 13 && patch.toInt <= 2)) =>
-            OutdatedJunitInterfaceVersion
-        }
+        scalaTarget.classpath.toList.flatten
+          .filter(entry =>
+            // pre-filter entries to avoid the expensive case where regex doesn't match
+            entry.contains("com/novocode/junit-interface")
+              || entry.contains("com/github/sbt/junit-interface")
+          )
+          .collectFirst {
+            case novocode() => OutdatedJunitInterfaceVersion
+            case junit(major, minor, patch)
+                if (major.toInt == 0 && (minor.toInt <= 13 && patch.toInt <= 2)) =>
+              OutdatedJunitInterfaceVersion
+          }
       }
 
     scalaVersionProblem
