@@ -737,7 +737,7 @@ class WorkspaceLspService(
         None
     }
     uriOpt match {
-      case Some(uri) =>
+      case Some(uri) if uri.startsWith("file://") =>
         getServiceFor(uri).sync(uri).asJava
       case None =>
         CompletableFuture.completedFuture(())
