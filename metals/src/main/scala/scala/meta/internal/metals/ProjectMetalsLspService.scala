@@ -23,9 +23,10 @@ import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
+import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.metals.watcher.FileWatcherEvent
 import scala.meta.internal.metals.watcher.FileWatcherEvent.EventType
-import scala.meta.internal.metals.watcher.ProjectFileWatcher
+import scala.meta.internal.metals.watcher.NoopFileWatcher
 import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.tvp.FolderTreeViewProvider
@@ -96,17 +97,19 @@ class ProjectMetalsLspService(
       connectionProvider.Connect.connect(config),
     )
 
-  override val fileWatcher: ProjectFileWatcher = register(
-    new ProjectFileWatcher(
-      initialServerConfig,
-      () => folder,
-      buildTargets,
-      fileWatchFilter,
-      params => {
-        didChangeWatchedFiles(params)
-      },
-    )
-  )
+  override val fileWatcher: FileWatcher = NoopFileWatcher
+  // Disable the project file watcher because we rely on LSP file watching events for **/*.{scala,java}
+  // register(
+  //   new ProjectFileWatcher(
+  //     initialServerConfig,
+  //     () => folder,
+  //     buildTargets,
+  //     fileWatchFilter,
+  //     params => {
+  //       didChangeWatchedFiles(params)
+  //     },
+  //   )
+  // )
 
   protected val bspConfigGenerator: BspConfigGenerator = new BspConfigGenerator(
     folder,

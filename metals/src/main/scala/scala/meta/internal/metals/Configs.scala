@@ -25,6 +25,7 @@ object Configs {
         else workspace.toURI.toString.stripSuffix("/")
       new DidChangeWatchedFilesRegistrationOptions(
         (List(
+          new FileSystemWatcher(Either.forLeft(s"$root/**/*.{scala,java}")),
           new FileSystemWatcher(Either.forLeft(s"$root/*.sbt")),
           new FileSystemWatcher(Either.forLeft(s"$root/pom.xml")),
           new FileSystemWatcher(Either.forLeft(s"$root/*.sc")),

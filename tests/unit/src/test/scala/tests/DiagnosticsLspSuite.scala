@@ -270,7 +270,9 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     } yield ()
   }
 
-  test("delete") {
+  // Ignored because we disabled the Metals file watcher https://github.com/REDACTED_ORG/metals/pull/59
+  // in favor of relying on LSP file watcher events, which are not sent in the test below.
+  test("delete".ignore) {
     cleanWorkspace()
     for {
       _ <- initialize(
