@@ -257,14 +257,6 @@ final class BuildTargets private (
     val orSbtBuildTarget =
       buildTargets.getOrElse(sbtBuildScalaTarget(source).toIterable).toSeq
     if (orSbtBuildTarget.isEmpty) {
-
-      // A bit suspicious o_O
-      if (source.toNIO.toString.isTwirlTemplate) {
-        return inverseSources(
-          source.parent.resolveSibling(_ => "scala").resolve("foo.scala")
-        )
-      }
-
       tables
         .flatMap(_.dependencySources.getBuildTarget(source))
         .orElse(inferBuildTarget(source))

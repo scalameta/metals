@@ -172,6 +172,7 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
       _ <- assertCompletionEdit(
         "File@@",
         """
+          |
           |@import java.io.File
           |@(name: String)
           |<h1>Hello @name @File</h1>
@@ -208,12 +209,28 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
            |<h1>Hello @name.toI@@nt</h1>
            |""".stripMargin,
       )
+
+      res1 <- definitionsAt(
+        "src/main/twirl/example.scala.html",
+        """|@(name: String)
+           |<h1>Hello @na@@me.toInt</h1>
+           |""".stripMargin,
+      )
+
       _ = assert(
         res.head
           .getUri()
           .toString
           .contains("StringLike.scala")
       )
+
+      _ = assert(
+        res1.head
+          .getUri()
+          .toString
+          .contains("example.scala.html")
+      )
+
     } yield ()
   }
 }

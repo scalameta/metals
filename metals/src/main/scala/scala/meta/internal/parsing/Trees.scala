@@ -172,7 +172,7 @@ final class Trees(
   def didChange(path: AbsolutePath): List[Diagnostic] = {
     val dialect = scalaVersionSelector.getDialect(path)
     parse(path, dialect) match {
-      case Some(parsed) =>
+      case Some(parsed) if !path.isTwirlTemplate =>
         parsed match {
           case Parsed.Error(pos, message, _) =>
             List(

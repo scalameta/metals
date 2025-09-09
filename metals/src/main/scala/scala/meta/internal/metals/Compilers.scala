@@ -1141,8 +1141,10 @@ class Compilers(
           val locations = c.locations()
           val originalUri = paramsWithOutline.uri
 
-          if (locations.asScala.forall(loc => originalUri.equals(loc.getUri())))
-            adjust.adjustLocations(locations)
+          val adjustable = locations.asScala.filter(loc =>
+            originalUri.toString == loc.getUri()
+          )
+          adjust.adjustLocations(adjustable.asJava)
 
           val definitionPaths = locations
             .map(_.getUri().toAbsolutePath)

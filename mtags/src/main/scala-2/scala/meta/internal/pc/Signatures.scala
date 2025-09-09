@@ -267,7 +267,7 @@ trait Signatures { compiler: MetalsGlobal =>
               if (isGroup) importNames.mkString("{", ", ", "}")
               else importNames.mkString
             val isTwirl =
-              if (pos.source.toString.endsWith("scala.html")) "@" else ""
+              if (pos.source.toString.endsWith("scala.html")) "\n@" else ""
 
             s"${indent}${isTwirl}import ${scope.fullname(owner)}.${name}"
           }

@@ -97,8 +97,6 @@ final class AutoImportsProvider(
               value
             )
 
-            println("This is edits -> " + edits)
-
             val nameEdit = new l.TextEdit(namePos, short)
             nameEdit :: edits
         }

@@ -117,6 +117,8 @@ object TwirlAdjustments {
       .sum + pos.getCharacter
   }
 
+  val pattern = """(\d+)->(\d+)""".r
+
   /**
    * Extracts a positional mapping matrix from the compiled Twirl template.
    *
@@ -127,7 +129,6 @@ object TwirlAdjustments {
    * @return An array of tuples representing (originalIndex, generatedIndex) pairs
    */
   private def getMatrix(compiledTwirl: String): Array[(Int, Int)] = {
-    val pattern = """(\d+)->(\d+)""".r
     val number_matching =
       pattern.findAllIn(compiledTwirl).toArray
     val chars = number_matching.take(number_matching.length / 2)
