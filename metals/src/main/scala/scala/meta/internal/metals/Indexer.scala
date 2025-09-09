@@ -2,28 +2,26 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.TimeUnit
-import java.{util => ju}
-
+import java.util as ju
 import scala.build.bsp.WrappedSourceItem
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import scala.collection.parallel.CollectionConverters._
+import scala.collection.parallel.CollectionConverters.*
 import scala.collection.parallel.ForkJoinTaskSupport
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.util.control.NonFatal
-
 import scala.meta.Dialect
-import scala.meta.dialects._
+import scala.meta.dialects.*
 import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.builds.WorkspaceReload
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags.IndexingResult
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.io.AbsolutePath
-
-import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j as b
+import com.google.gson.JsonObject
 import org.eclipse.lsp4j.Position
 
 // todo https://github.com/scalameta/metals/issues/4788
@@ -192,6 +190,10 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
         usedJars ++= indexJdkSources(
           buildTool.data,
           buildTool.importedBuild.dependencySources,
+        )
+        usedJars ++= indexDependencyModules(
+          buildTool.data,
+          buildTool.importedBuild.dependencyModules,
         )
         usedJars ++= indexDependencySources(
           buildTool.data,
@@ -362,6 +364,114 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
         )
       )
     } finally threadPool.shutdown()
+  }
+
+  private def indexDependencyModules(
+      data: TargetData,
+      dependencyModules: b.DependencyModulesResult,
+  ): Set[AbsolutePath] = {
+    val usedJars = mutable.HashSet.empty[AbsolutePath]
+    val isVisited = new ju.HashSet[String]()
+
+    for {
+      item <- dependencyModules.getItems.asScala
+      module <- item.getModules.asScala
+      if module.getData != null
+      uri <- module.getData
+        .asInstanceOf[JsonObject]
+        .get("artifacts")
+        .getAsJsonArray
+        .asScala
+        .filter(_.getAsJsonObject.has("classifier"))
+        .map(_.getAsJsonObject.get("uri").getAsString)
+        .toList
+    } {
+      val absolutePath = uri.toAbsolutePath
+      data.addDependencySource(absolutePath, item.getTarget)
+
+      if (!isVisited.contains(uri)) {
+        isVisited.add(uri)
+        try {
+          if (absolutePath.isJar && absolutePath.exists) {
+            usedJars += absolutePath
+            addSourceJarSymbols(absolutePath)
+          } else if (absolutePath.isDirectory) {
+            val dialect = buildTargets
+              .scalaTarget(item.getTarget)
+              .map(scalaTarget =>
+                ScalaVersions.dialectForScalaVersion(
+                  scalaTarget.scalaVersion,
+                  includeSource3 = true,
+                )
+              )
+              .getOrElse(Scala213)
+            definitionIndex.addSourceDirectory(absolutePath, dialect)
+          } else {
+            scribe.warn(
+              s"unexpected dependency with absolute path: $absolutePath"
+            )
+          }
+        } catch {
+          case NonFatal(e) =>
+            scribe.error(s"error processing $uri", e)
+        }
+      }
+    }
+
+//    dependencyModules.getItems.asScala
+//      .foreach(item => {
+//        val target = item.getTarget
+//        for {
+//          module <- item.getModules.asScala
+//        } {
+//          val goalName = module.getName
+//          val version = module.getVersion
+//          val source = module.getDataKind
+//
+//          if (module.getData == null) {}
+//          val moduleJson = module.getData.asInstanceOf[JsonObject]
+//          val organization = moduleJson.get("organization").getAsString
+//          val artifacts = moduleJson.get("artifacts").getAsJsonArray.asScala
+//
+//          artifacts
+//            .filter(_.getAsJsonObject.has("classifier"))
+//            .map(_.getAsJsonObject.get("uri").getAsString)
+//            .foreach(uri => {
+//              val absolutePath = uri.toAbsolutePath
+//              data.addDependencySource(absolutePath, target)
+//
+//              if (!isVisited.contains(uri)) {
+//                isVisited.add(uri)
+//                try {
+//                  if (absolutePath.isJar && absolutePath.exists) {
+//                    usedJars += absolutePath
+//                    addSourceJarSymbols(absolutePath)
+//                  } else if (absolutePath.isDirectory) {
+//                    val dialect = buildTargets
+//                      .scalaTarget(item.getTarget)
+//                      .map(scalaTarget =>
+//                        ScalaVersions.dialectForScalaVersion(
+//                          scalaTarget.scalaVersion,
+//                          includeSource3 = true,
+//                        )
+//                      )
+//                      .getOrElse(Scala213)
+//                    definitionIndex.addSourceDirectory(absolutePath, dialect)
+//                  } else {
+//                    scribe.warn(
+//                      s"unexpected dependency of $goalName:$version from $organization with absolute path: $absolutePath"
+//                    )
+//                  }
+//                } catch {
+//                  case NonFatal(e) =>
+//                    scribe.error(s"error processing $uri", e)
+//                }
+//              }
+//            })
+//        }
+//      })
+
+    usedJars.toSet
   }
 
   private def indexDependencySources(
