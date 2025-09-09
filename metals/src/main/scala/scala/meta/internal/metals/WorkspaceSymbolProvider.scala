@@ -147,12 +147,13 @@ final class WorkspaceSymbolProvider(
   }
 
   private def indexClasspathUnsafe(): Unit = {
-    val jars = buildTargets.allWorkspaceJars
+    val jars = buildTargets.allWorkspaceJars.map(_.toNIO).toSeq
     inDependencies = classpathSearchIndexer.index(
-      jars.map(_.toNIO).toSeq,
+      jars,
       excludedPackageHandler(),
       bucketSize,
     )
+    scribe.info(s"indexed ${jars.size} workspace jars")
   }
 
   private def workspaceMethodSearch(

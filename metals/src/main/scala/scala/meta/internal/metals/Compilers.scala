@@ -138,6 +138,8 @@ class Compilers(
 
   private val worksheetsCache = jworksheetsCache.asScala
 
+  private var lastPathWithFallbackCompiler: Option[AbsolutePath] = None
+
   // The "fallback" compiler is used for source files that don't belong to a build target.
   private def fallbackCompiler: PresentationCompiler = {
     jcache
@@ -1194,10 +1196,17 @@ class Compilers(
           val tmpDirectory = workspace.resolve(Directories.tmp)
           val scalaVersion =
             scalaVersionSelector.fallbackScalaVersion(isAmmonite = false)
-          if (!path.toNIO.startsWith(tmpDirectory.toNIO))
+          if (
+            !path.toNIO.startsWith(tmpDirectory.toNIO)
+            // don't spam the log with the same message about the same file
+            && !lastPathWithFallbackCompiler.contains(path)
+          ) {
             scribe.info(
-              s"no build target found for $path. Using presentation compiler with project's scala-library version: ${scalaVersion}"
+              s"no build target found for $path, try syncing the file for full IDE support." +
+                s" Using presentation compiler with project's scala-library version: ${scalaVersion}"
             )
+            lastPathWithFallbackCompiler = Some(path)
+          }
           Some(fallbackCompiler)
         case Some(value) =>
           if (path.isScalaFilename) loadCompiler(value)
