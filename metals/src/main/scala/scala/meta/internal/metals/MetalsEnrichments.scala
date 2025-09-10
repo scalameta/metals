@@ -769,7 +769,12 @@ object MetalsEnrichments
           None
       }
 
-    def toAbsolutePath: AbsolutePath = toAbsolutePath(followSymlink = true)
+    /**
+     * Use followSymlink judiciously. It is an expensive operation, involving several OS calls
+     * that can add up. For example, for a monorepo, converting all relevant files
+     * (sources, jar dependencies, source dependencies) can add up to tens of seconds on Linux.
+     */
+    def toAbsolutePath: AbsolutePath = toAbsolutePath(followSymlink = false)
 
     def toAbsolutePath(followSymlink: Boolean): AbsolutePath =
       MtagsEnrichments.XtensionStringMtags(value).toAbsolutePath(followSymlink)

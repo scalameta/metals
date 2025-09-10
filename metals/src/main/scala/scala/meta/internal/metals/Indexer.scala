@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import java.net.URI
+import java.nio.file.Paths
 import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.TimeUnit
 import java.{util => ju}
@@ -371,7 +373,11 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     for {
       item <- dependencySources.getItems.asScala
       sourceUri <- Option(item.getSources).toList.flatMap(_.asScala)
-      path = sourceUri.toAbsolutePath
+      path =
+        if (sourceUri.startsWith("file:///") || sourceUri.startsWith("/"))
+          AbsolutePath(Paths.get(new URI(sourceUri)))
+        else
+          sourceUri.toAbsolutePath
       _ = data.addDependencySource(path, item.getTarget)
       if !isVisited.contains(sourceUri)
     } {
@@ -549,10 +555,12 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
             definitionIndex.addIndexedSourceJar(path, toplevels, dialect)
             implementationProvider.addTypeHierarchyElements(overrides)
           case None =>
+            scribe.info(s"Indexing source jar $path")
             val (_, overrides) = indexJar(path, dialect)
             tables.jarSymbols.addTypeHierarchyInfo(path, overrides)
         }
       case None =>
+        scribe.info(s"Indexing source jar $path")
         val (toplevels, overrides) = indexJar(path, dialect)
         tables.jarSymbols.putJarIndexingInfo(path, toplevels, overrides)
     }
