@@ -179,7 +179,7 @@ abstract class BaseLspSuite(
       test(
         testOpts
           .withName(s"${testOpts.name}-virtualdoc")
-          .withTags(Set(TestingServer.virtualDocTag))
+          .tag(TestingServer.virtualDocTag)
       ) { functionRetry(maxRetry) }
     } else {
       test(testOpts)(functionRetry(maxRetry))
