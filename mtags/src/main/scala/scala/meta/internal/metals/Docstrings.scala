@@ -119,6 +119,12 @@ class Docstrings(index: GlobalSymbolIndex)(implicit rc: ReportContext) {
    * @param path the absolute path for the source file to update.
    */
   def expireSymbolDefinition(path: AbsolutePath, dialect: Dialect): Unit = {
+    // fast path for initial sync when the cache is empty. The slow path
+    // parses the source file to find out what top levels need to be removed
+    if (cache.isEmpty) {
+      return
+    }
+
     path.toLanguage match {
       case Language.SCALA =>
         new Deindexer(path.toInput, dialect).indexRoot()
