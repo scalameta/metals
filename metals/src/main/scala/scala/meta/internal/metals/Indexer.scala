@@ -418,59 +418,6 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       }
     }
 
-//    dependencyModules.getItems.asScala
-//      .foreach(item => {
-//        val target = item.getTarget
-//        for {
-//          module <- item.getModules.asScala
-//        } {
-//          val goalName = module.getName
-//          val version = module.getVersion
-//          val source = module.getDataKind
-//
-//          if (module.getData == null) {}
-//          val moduleJson = module.getData.asInstanceOf[JsonObject]
-//          val organization = moduleJson.get("organization").getAsString
-//          val artifacts = moduleJson.get("artifacts").getAsJsonArray.asScala
-//
-//          artifacts
-//            .filter(_.getAsJsonObject.has("classifier"))
-//            .map(_.getAsJsonObject.get("uri").getAsString)
-//            .foreach(uri => {
-//              val absolutePath = uri.toAbsolutePath
-//              data.addDependencySource(absolutePath, target)
-//
-//              if (!isVisited.contains(uri)) {
-//                isVisited.add(uri)
-//                try {
-//                  if (absolutePath.isJar && absolutePath.exists) {
-//                    usedJars += absolutePath
-//                    addSourceJarSymbols(absolutePath)
-//                  } else if (absolutePath.isDirectory) {
-//                    val dialect = buildTargets
-//                      .scalaTarget(item.getTarget)
-//                      .map(scalaTarget =>
-//                        ScalaVersions.dialectForScalaVersion(
-//                          scalaTarget.scalaVersion,
-//                          includeSource3 = true,
-//                        )
-//                      )
-//                      .getOrElse(Scala213)
-//                    definitionIndex.addSourceDirectory(absolutePath, dialect)
-//                  } else {
-//                    scribe.warn(
-//                      s"unexpected dependency of $goalName:$version from $organization with absolute path: $absolutePath"
-//                    )
-//                  }
-//                } catch {
-//                  case NonFatal(e) =>
-//                    scribe.error(s"error processing $uri", e)
-//                }
-//              }
-//            })
-//        }
-//      })
-
     usedJars.toSet
   }
 
