@@ -3,8 +3,8 @@ package scala.meta.internal.metals.codeactions
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.meta.*
-import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta._
+import scala.meta.internal.mtags.MtagsEnrichments._
 
 case class MetalsNames(tree: Tree, prefix: String) {
 

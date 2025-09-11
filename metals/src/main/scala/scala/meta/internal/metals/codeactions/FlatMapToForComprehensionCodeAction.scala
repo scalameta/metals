@@ -1,31 +1,30 @@
 package scala.meta.internal.metals.codeactions
 
-import org.eclipse.lsp4j as l
-import org.eclipse.lsp4j.CodeActionParams
-
 import scala.annotation.tailrec
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.util.Try
+
+import scala.meta.Case
+import scala.meta.Enumerator
+import scala.meta.Init
+import scala.meta.Lit
+import scala.meta.Name
+import scala.meta.Pat
+import scala.meta.Stat
+import scala.meta.Term
+import scala.meta.Tree
+import scala.meta.Type
+import scala.meta.XtensionClassifiable
+import scala.meta.XtensionSyntax
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
-import scala.meta.{
-  Case,
-  Enumerator,
-  Init,
-  Lit,
-  Name,
-  Pat,
-  Stat,
-  Term,
-  Tree,
-  Type,
-  XtensionClassifiable,
-  XtensionSyntax,
-}
-import scala.util.Try
+import org.eclipse.lsp4j.CodeActionParams
+import org.eclipse.{lsp4j => l}
 
 class FlatMapToForComprehensionCodeAction(
     trees: Trees,
