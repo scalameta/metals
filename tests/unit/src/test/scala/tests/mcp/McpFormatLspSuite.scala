@@ -6,7 +6,7 @@ import tests.BaseLspSuite
 
 class McpFormatLspSuite extends BaseLspSuite("mcp-format") with McpTestUtils {
 
-  test("format-file - with scalafmt config") {
+  test("with-scalafmt-config") {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -32,8 +32,14 @@ class McpFormatLspSuite extends BaseLspSuite("mcp-format") with McpTestUtils {
       )
       _ = assertNoDiff(
         formatted,
-        s"""
-           |package com.example
+        s"${server.workspace.resolve("a/src/main/scala/com/example/Formatting.scala")} was formatted",
+      )
+      fileContenxt = server.buffers
+        .get(workspace.resolve("a/src/main/scala/com/example/Formatting.scala"))
+        .mkString
+      _ = assertNoDiff(
+        fileContenxt,
+        """|package com.example
            |
            |object Formatting {
            |  def main(args: Array[String]): Unit =
@@ -45,7 +51,7 @@ class McpFormatLspSuite extends BaseLspSuite("mcp-format") with McpTestUtils {
     } yield ()
   }
 
-  test("format-file - without scalafmt config") {
+  test("without-scalafmt-config") {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -67,18 +73,25 @@ class McpFormatLspSuite extends BaseLspSuite("mcp-format") with McpTestUtils {
       )
       _ = assertNoDiff(
         result,
-        """package com.example
-          |
-          |object Formatting {
-          |  def main(args: Array[String]): Unit = println("needs formatting")
-          |}
-          |""".stripMargin,
+        s"${server.workspace.resolve("a/src/main/scala/com/example/Formatting.scala")} was formatted",
+      )
+      fileContenxt = server.buffers
+        .get(workspace.resolve("a/src/main/scala/com/example/Formatting.scala"))
+        .mkString
+      _ = assertNoDiff(
+        fileContenxt,
+        """|package com.example
+           |
+           |object Formatting {
+           |  def main(args: Array[String]): Unit = println("needs formatting")
+           |}
+           |""".stripMargin,
       )
       _ <- client.shutdown()
     } yield ()
   }
 
-  test("format-file - already properly formatted") {
+  test("already-properly-formatted") {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -111,7 +124,7 @@ class McpFormatLspSuite extends BaseLspSuite("mcp-format") with McpTestUtils {
     } yield ()
   }
 
-  test("format-file - non-existent file") {
+  test("non-existent-file") {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -134,7 +147,7 @@ class McpFormatLspSuite extends BaseLspSuite("mcp-format") with McpTestUtils {
     } yield ()
   }
 
-  test("format-file - non-Scala file") {
+  test("non-scala-file") {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -165,7 +178,7 @@ class McpFormatLspSuite extends BaseLspSuite("mcp-format") with McpTestUtils {
     } yield ()
   }
 
-  test("format-file - with custom scalafmt config location") {
+  test("with-custom-scalafmt-config-location") {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -191,8 +204,14 @@ class McpFormatLspSuite extends BaseLspSuite("mcp-format") with McpTestUtils {
       )
       _ = assertNoDiff(
         formatted,
-        s"""
-           |package com.example
+        s"${server.workspace.resolve("a/src/main/scala/com/example/Formatting.scala")} was formatted",
+      )
+      fileContenxt = server.buffers
+        .get(workspace.resolve("a/src/main/scala/com/example/Formatting.scala"))
+        .mkString
+      _ = assertNoDiff(
+        fileContenxt,
+        """|package com.example
            |
            |object Formatting {
            |  def main(args: Array[String]): Unit = println("needs formatting")
@@ -203,7 +222,7 @@ class McpFormatLspSuite extends BaseLspSuite("mcp-format") with McpTestUtils {
     } yield ()
   }
 
-  test("format-file - with syntax errors") {
+  test("with-syntax-errors") {
     cleanWorkspace()
     for {
       _ <- initialize(
