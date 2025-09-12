@@ -380,14 +380,17 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       item <- dependencyModules.getItems.asScala
       module <- item.getModules.asScala
       if module.getData != null
-      uri <- module.getData
-        .asInstanceOf[JsonObject]
-        .get("artifacts")
-        .getAsJsonArray
-        .asScala
-        .filter(_.getAsJsonObject.has("classifier"))
-        .map(_.getAsJsonObject.get("uri").getAsString)
-        .toList
+      uri <- module.getData match {
+        case jsonObject: JsonObject =>
+          jsonObject
+            .get("artifacts")
+            .getAsJsonArray
+            .asScala
+            .filter(_.getAsJsonObject.has("classifier"))
+            .map(_.getAsJsonObject.get("uri").getAsString)
+            .toList
+        case _ => Nil
+      }
     } {
       val absolutePath = uri.toAbsolutePath
       data.addDependencySource(absolutePath, item.getTarget)
