@@ -709,4 +709,37 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       )
     } yield ()
   }
+
+  test("dependency-implicit-class-methods") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": { 
+           |    "scalaVersion": "${V.scala3}",
+           |    "libraryDependencies": ["org.scalameta::scalameta:4.13.9"]
+           |  }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |import scala.meta.Dialect
+           |import scala.meta.Tree
+           |object Main {
+           |  val pair: (Dialect, Tree) = (???, ???)
+           |  // @@
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ = assertNoDiagnostics()
+      _ <- assertCompletion(
+        "  pair.sy@@",
+        """|synchronized[X0](x$0: X0): X0
+           |syntax: String (implicit)
+           |""".stripMargin,
+        filename = Some("a/src/main/scala/a/Main.scala"),
+      )
+    } yield ()
+  }
 }

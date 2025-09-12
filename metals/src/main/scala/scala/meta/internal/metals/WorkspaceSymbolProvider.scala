@@ -9,6 +9,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.mtags.ToplevelMember
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
@@ -48,6 +49,9 @@ final class WorkspaceSymbolProvider(
 
   val topLevelMembers: TrieMap[AbsolutePath, Seq[ToplevelMember]] =
     TrieMap.empty[AbsolutePath, Seq[ToplevelMember]]
+  val inDependencyMethods
+      : TrieMap[AbsolutePath, Seq[WorkspaceSymbolInformation]] =
+    TrieMap.empty[AbsolutePath, Seq[WorkspaceSymbolInformation]]
 
   def search(
       query: String,
@@ -59,6 +63,21 @@ final class WorkspaceSymbolProvider(
   def addToplevelMembers(
       toplevelMembers: Map[AbsolutePath, Seq[ToplevelMember]]
   ): Unit = {
+    for {
+      (path, members) <- toplevelMembers
+      member <- members
+      if member.kind == SymbolInformation.Kind.METHOD
+    } {
+      val symbolInfo = WorkspaceSymbolInformation(
+        member.symbol,
+        member.kind,
+        member.range.toLsp,
+      )
+      inDependencyMethods.updateWith(path) {
+        case Some(existing) => Some(symbolInfo +: existing)
+        case None => Some(Seq(symbolInfo))
+      }
+    }
     topLevelMembers ++= toplevelMembers
   }
 
@@ -114,6 +133,7 @@ final class WorkspaceSymbolProvider(
       target: Option[BuildTargetIdentifier],
   ): SymbolSearch.Result = {
     workspaceMethodSearch(query, visitor, target)
+    dependencyMethodSearch(query, visitor)
     SymbolSearch.Result.COMPLETE
   }
 
@@ -259,6 +279,23 @@ final class WorkspaceSymbolProvider(
       excludedPackageHandler(),
       bucketSize,
     )
+  }
+
+  private def dependencyMethodSearch(
+      query: String,
+      visitor: SymbolSearchVisitor,
+  ): Unit = {
+    for {
+      (path, symbols) <- inDependencyMethods.iterator
+      symbol <- symbols
+      if Fuzzy.matches(query, symbol.symbol)
+    }
+      visitor.visitWorkspaceSymbol(
+        path.toNIO,
+        symbol.symbol,
+        symbol.kind,
+        symbol.range,
+      )
   }
 
   private def workspaceMethodSearch(
