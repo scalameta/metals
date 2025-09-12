@@ -524,6 +524,7 @@ abstract class MetalsLspService(
       referencesProvider,
       implementationProvider,
       testProvider,
+      buildTargetClasses,
     ),
     buildTargets,
     folder,
