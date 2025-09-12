@@ -21,6 +21,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
+import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.semanticdb.TextDocuments
@@ -48,6 +49,7 @@ case class ScalafixProvider(
     interactive: InteractiveSemanticdbs,
     tables: Tables,
     buildHasErrors: AbsolutePath => Boolean,
+    statusBar: StatusBar,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
   import ScalafixProvider._
   private val scalafixCache = TrieMap.empty[ScalaVersion, Scalafix]
@@ -70,6 +72,28 @@ case class ScalafixProvider(
     rulesFut.flatMap(runRules(file, _))
   }
 
+  def runRuleFromDep(
+      file: AbsolutePath,
+      ruleName: String,
+      ruleDep: Dependency,
+  ): Future[List[l.TextEdit]] = {
+    val scalaTarget = buildTargets.inverseSources(file)
+    scalaTarget
+      .flatMap(buildId => buildTargets.scalaTarget(buildId))
+      .map { scalaTarget =>
+        val additionalDeps = Map(
+          ruleName -> Dependency.of(ruleDep)
+        )
+        runScalafixRules(
+          file,
+          scalaTarget,
+          List(ruleName),
+          additionalDeps,
+        )
+      }
+      .getOrElse(Future.successful(Nil))
+  }
+
   def organizeImports(
       file: AbsolutePath,
       scalaTarget: ScalaTarget,
@@ -87,11 +111,16 @@ case class ScalafixProvider(
       file: AbsolutePath,
       scalaTarget: ScalaTarget,
       rules: List[String],
+      additionalDeps: Map[String, Dependency] = Map.empty,
       retried: Boolean = false,
       silent: Boolean = false,
   ): Future[List[l.TextEdit]] = {
     val fromDisk = file.toInput
     val inBuffers = file.toInputFromBuffers(buffers)
+
+    additionalDeps.foreach { case (ruleName, dep) =>
+      scribe.debug(s"Running rule $ruleName with dep $dep")
+    }
 
     compilations
       .compilationFinished(file, compileInverseDependencies = false)
@@ -103,6 +132,7 @@ case class ScalafixProvider(
             inBuffers.value,
             retried || isUnsaved(inBuffers.text, fromDisk.text),
             rules,
+            additionalDeps = additionalDeps,
           )
 
         scalafixEvaluation
@@ -121,20 +151,28 @@ case class ScalafixProvider(
                   results
                 ) && buildHasErrors(file) =>
               if (!silent) {
-                val msg = "Attempt to organize your imports failed. " +
-                  "It looks like you have compilation issues causing your semanticdb to be stale. " +
+                val statusMsg = "Attempt to organize your imports failed"
+                val fullMsg = statusMsg +
+                  ". It looks like you have compilation issues causing your semanticdb to be stale. " +
                   "Ensure everything is compiling and try again."
-                scribe.warn(
-                  msg
+                val params = new MetalsStatusParams(
+                  text = statusMsg,
+                  level = "warn",
+                  show = true,
+                  tooltip = fullMsg,
                 )
-                languageClient.showMessage(
-                  MessageType.Warning,
-                  msg,
+                scribe.warn(
+                  fullMsg
+                )
+                statusBar.addMessage(
+                  params
                 )
               }
               Future.successful(Nil)
             case results if !scalafixSucceded(results) =>
               val scalafixError = getMessageErrorFromScalafix(results)
+              scribe.error(file.toString, scalafixError)
+              scribe.error(additionalDeps.toString)
               val exception = ScalafixRunException(scalafixError)
               if (!silent) {
                 if (
@@ -360,6 +398,7 @@ case class ScalafixProvider(
       rules: List[String],
       suggestConfigAmend: Boolean = true,
       shouldRetry: Boolean = true,
+      additionalDeps: Map[String, Dependency] = Map.empty,
   ): Future[ScalafixEvaluation] = {
     val isScala3 = ScalaVersions.isScala3Version(scalaTarget.scalaVersion)
     val isSource3 = scalaTarget.scalac.getOptions().contains("-Xsource:3")
@@ -396,6 +435,7 @@ case class ScalafixProvider(
         scalaVersion,
         userConfig(),
         rules,
+        additionalDeps,
       )
     // It seems that Scalafix ignores the targetroot parameter and searches the classpath
     // Prepend targetroot to make sure that it's picked up first always
@@ -727,9 +767,16 @@ object ScalafixProvider {
         scalaVersion: String,
         userConfig: UserConfiguration,
         rules: List[String],
+        additionalDeps: Map[String, Dependency],
     ): ScalafixRulesClasspathKey = {
       val rulesClasspath =
-        rulesDependencies(scalaVersion, scalaBinaryVersion, userConfig, rules)
+        rulesDependencies(
+          scalaVersion,
+          scalaBinaryVersion,
+          userConfig,
+          rules,
+          additionalDeps,
+        )
       ScalafixRulesClasspathKey(scalaBinaryVersion, rulesClasspath)
     }
   }
@@ -742,6 +789,7 @@ object ScalafixProvider {
       scalaBinaryVersion: String,
       userConfig: UserConfiguration,
       rules: List[String],
+      additionalDeps: Map[String, Dependency],
   ): Set[Dependency] = {
     val fromSettings =
       userConfig.scalafixRulesDependencies.flatMap { dependencyString =>
@@ -758,7 +806,7 @@ object ScalafixProvider {
             Some(dep)
         }
       }
-    val builtInRuleDeps = builtInRules(scalaBinaryVersion)
+    val builtInRuleDeps = builtInRules(scalaBinaryVersion) ++ additionalDeps
 
     val allDeps = fromSettings ++ rules.flatMap(builtInRuleDeps.get)
     // only get newest versions for each dependency

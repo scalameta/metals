@@ -570,6 +570,7 @@ abstract class MetalsLspService(
     interactiveSemanticdbs,
     tables,
     buildHasErrors,
+    statusBar,
   )
 
   protected val codeActionProvider: CodeActionProvider = new CodeActionProvider(

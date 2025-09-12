@@ -277,4 +277,13 @@ class HoverDefnSuite extends BaseHoverSuite {
        |""".stripMargin,
     "val foo: Int".hover
   )
+
+  check(
+    "backticked",
+    """|object A {
+       |  <<val `foo @@ bar` = 123>>
+       |}
+       |""".stripMargin,
+    "val `foo  bar`: Int".hover
+  )
 }

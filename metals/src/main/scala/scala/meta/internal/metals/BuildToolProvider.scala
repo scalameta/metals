@@ -14,7 +14,7 @@ import scala.meta.io.AbsolutePath
 class BuildToolProvider(
     buildTools: BuildTools,
     tables: Tables,
-    folder: AbsolutePath,
+    val folder: AbsolutePath,
     warnings: ProjectWarnings,
     languageClient: MetalsLanguageClient,
 )(implicit ec: ExecutionContext) {

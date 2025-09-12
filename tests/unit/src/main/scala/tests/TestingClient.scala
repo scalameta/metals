@@ -299,7 +299,9 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       .mkString("\n")
   }
   def workspaceDiagnostics: String = {
-    val paths = diagnostics.keys.toList.sortBy(_.toURI.toString)
+    val paths = diagnostics.keys.toList
+      .filter(f => f.isScalaOrJava || f.extension == "conf")
+      .sortBy(_.toURI.toString)
     paths.map(pathDiagnostics).mkString
   }
 
@@ -433,6 +435,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
               .params()
               .getMessage()
           ) {
+            new MessageActionItem("Ignore")
+          } else if (ImportProjectPartiallyFailed.params() == params) {
             new MessageActionItem("Ignore")
           } else if (
             List(true, false)
