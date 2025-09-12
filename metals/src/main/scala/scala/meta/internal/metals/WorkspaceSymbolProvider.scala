@@ -332,13 +332,32 @@ final class WorkspaceSymbolProvider(
       if query.matches(symbol.symbol)
     } yield (path, symbol)
 
+    val extensionSymbols = for {
+      (path, methods) <- id match {
+        case None =>
+          inWorkspaceMethods.iterator
+        case Some(target) =>
+          for {
+            source <- buildTargets.buildTargetTransitiveSources(target)
+            methods <- inWorkspaceMethods.get(source.toNIO)
+          } yield (source.toNIO, methods)
+      }
+      isDeleted = !Files.isRegularFile(path)
+      _ = if (isDeleted) inWorkspaceMethods.remove(path)
+      if !isDeleted
+      symbol <- methods
+      if query.matches(symbol.symbol)
+    } yield (path, symbol)
+
+    val allSymbols = symbols ++ extensionSymbols
+
     @tailrec
     def loopSearch(count: Int): Int =
       if (
-        !symbols.hasNext || (query.isShortQuery && count >= MaxWorkspaceMatchesForShortQuery)
+        !allSymbols.hasNext || (query.isShortQuery && count >= MaxWorkspaceMatchesForShortQuery)
       ) count
       else {
-        val (path, symbol) = symbols.next()
+        val (path, symbol) = allSymbols.next()
         val added = visitor.visitWorkspaceSymbol(
           path,
           symbol.symbol,
