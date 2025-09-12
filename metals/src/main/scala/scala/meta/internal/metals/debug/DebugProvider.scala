@@ -27,6 +27,7 @@ import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DebugSession
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
+import scala.meta.internal.metals.DismissedNotifications
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.JvmOpts
 import scala.meta.internal.metals.Messages
@@ -89,6 +90,7 @@ class DebugProvider(
     sourceMapper: SourceMapper,
     userConfig: () => UserConfiguration,
     testProvider: TestSuitesProvider,
+    dismissedNotifications: DismissedNotifications,
 )(implicit ec: ExecutionContext)
     extends Cancelable
     with LogForwarder {
@@ -389,19 +391,53 @@ class DebugProvider(
           case Left(errorMessage) =>
             Future.failed(new RuntimeException(errorMessage))
         }
-      } yield {
-        val dapLogger = new DebugLogger()
-        val resolver = new MetalsDebugToolsResolver()
-        val handler =
-          dap.DebugServer.run(
-            debuggee,
-            resolver,
-            dapLogger,
-            gracePeriod = Duration(5, TimeUnit.SECONDS),
-          )
-        handler.uri
+        uri <- runDebugServerWithUserInteraction(debuggee)
+      } yield uri
+    }
+
+  private def runDebugServerWithUserInteraction(
+      debuggee: MetalsDebuggee
+  )(implicit ec: ExecutionContext): Future[URI] = {
+    val dapLogger = new DebugLogger()
+    val resolver = new MetalsDebugToolsResolver()
+    val initialTimeout = clientConfig.initialConfig.debuggeeStartTimeout
+    val alwaysWait = dismissedNotifications.DebugeeTimeout.isDismissed
+    val timeout = if (alwaysWait) Int.MaxValue else initialTimeout
+
+    def attemptDebugServerRun(timeoutSeconds: Int): Future[URI] = {
+      val handler = dap.DebugServer.run(
+        debuggee,
+        resolver,
+        dapLogger,
+        gracePeriod = Duration(timeoutSeconds, TimeUnit.SECONDS),
+      )
+      Future.successful(handler.uri)
+    }
+
+    def handleTimeout(): Future[URI] = {
+      val params =
+        Messages.RequestTimeout.params("debuggee start", initialTimeout)
+      languageClient.showMessageRequest(params).asScala.flatMap { response =>
+        response match {
+          case Messages.RequestTimeout.waitAction =>
+            attemptDebugServerRun(timeout)
+          case Messages.RequestTimeout.waitAlways =>
+            dismissedNotifications.DebugeeTimeout.dismissForever()
+            attemptDebugServerRun(timeout)
+          case _ =>
+            Future.failed(
+              new RuntimeException(
+                s"Debug session start cancelled by user after ${initialTimeout}s timeout"
+              )
+            )
+        }
       }
     }
+
+    attemptDebugServerRun(timeout).recoverWith {
+      case _ if !alwaysWait => handleTimeout()
+    }
+  }
 
   def discoverTests(
       id: BuildTargetIdentifier,
