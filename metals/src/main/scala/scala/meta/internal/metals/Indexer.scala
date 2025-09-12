@@ -369,6 +369,36 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     } finally threadPool.shutdown()
   }
 
+  private def processDependencyPath(
+     path: AbsolutePath,
+     target: b.BuildTargetIdentifier,
+     usedJars: mutable.HashSet[AbsolutePath],
+   ): Unit = {
+      try {
+        if (path.isJar && path.exists) {
+          usedJars += path
+          addSourceJarSymbols(path)
+        } else if (path.isDirectory) {
+          val dialect = buildTargets
+            .scalaTarget(target)
+            .map(scalaTarget =>
+              ScalaVersions.dialectForScalaVersion(
+                scalaTarget.scalaVersion,
+                includeSource3 = true,
+              )
+            )
+            .getOrElse(Scala213)
+          definitionIndex.addSourceDirectory(path, dialect)
+        } else {
+          scribe.warn(s"unexpected dependency with absolute path: $path")
+        }
+      } catch {
+        case NonFatal(e) =>
+          scribe.error(s"Error processing $path", e)
+      }
+  }
+
+
   private def indexDependencyModules(
       data: TargetData,
       dependencyModules: b.DependencyModulesResult,
@@ -403,37 +433,12 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
           }
         case _ => Nil
       }
+      absolutePath = uri.toAbsolutePath
+      _ = data.addDependencySource(absolutePath, item.getTarget)
+      if !isVisited.contains(uri)
     } {
-      val absolutePath = uri.toAbsolutePath
-      data.addDependencySource(absolutePath, item.getTarget)
-
-      if (!isVisited.contains(uri)) {
         isVisited.add(uri)
-        try {
-          if (absolutePath.isJar && absolutePath.exists) {
-            usedJars += absolutePath
-            addSourceJarSymbols(absolutePath)
-          } else if (absolutePath.isDirectory) {
-            val dialect = buildTargets
-              .scalaTarget(item.getTarget)
-              .map(scalaTarget =>
-                ScalaVersions.dialectForScalaVersion(
-                  scalaTarget.scalaVersion,
-                  includeSource3 = true,
-                )
-              )
-              .getOrElse(Scala213)
-            definitionIndex.addSourceDirectory(absolutePath, dialect)
-          } else {
-            scribe.warn(
-              s"unexpected dependency with absolute path: $absolutePath"
-            )
-          }
-        } catch {
-          case NonFatal(e) =>
-            scribe.error(s"error processing $uri", e)
-        }
-      }
+        processDependencyPath(absolutePath, item.getTarget, usedJars)
     }
 
     usedJars.toSet
@@ -456,29 +461,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       if !isVisited.contains(sourceUri)
     } {
       isVisited.add(sourceUri)
-      try {
-        if (path.isJar && path.exists) {
-          usedJars += path
-          addSourceJarSymbols(path)
-        } else if (path.isDirectory) {
-          val dialect = buildTargets
-            .scalaTarget(item.getTarget)
-            .map(scalaTarget =>
-              ScalaVersions.dialectForScalaVersion(
-                scalaTarget.scalaVersion,
-                includeSource3 = true,
-              )
-            )
-            .getOrElse(Scala213)
-
-          definitionIndex.addSourceDirectory(path, dialect)
-        } else {
-          scribe.warn(s"unexpected dependency: $path")
-        }
-      } catch {
-        case NonFatal(e) =>
-          scribe.error(s"error processing $sourceUri", e)
-      }
+      processDependencyPath(path, item.getTarget, usedJars)
     }
     usedJars.toSet
   }
