@@ -382,13 +382,25 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       if module.getData != null
       uri <- module.getData match {
         case jsonObject: JsonObject =>
-          jsonObject
-            .get("artifacts")
-            .getAsJsonArray
-            .asScala
-            .filter(_.getAsJsonObject.has("classifier"))
-            .map(_.getAsJsonObject.get("uri").getAsString)
-            .toList
+          Option(jsonObject.get("artifacts")) match {
+            case Some(artifactsElement) if artifactsElement.isJsonArray =>
+              try {
+                artifactsElement
+                  .getAsJsonArray
+                  .asScala
+                  .filter(element =>
+                    element.isJsonObject &&
+                      element.getAsJsonObject.has("classifier")
+                  )
+                  .map(_.getAsJsonObject.get("uri").getAsString)
+                  .toList
+              } catch {
+                case NonFatal(e) =>
+                  scribe.warn(s"Error processing artifacts array: ${e.getMessage}")
+                  Nil
+              }
+            case _ => Nil
+          }
         case _ => Nil
       }
     } {
