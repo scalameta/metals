@@ -370,34 +370,33 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
   }
 
   private def processDependencyPath(
-     path: AbsolutePath,
-     target: b.BuildTargetIdentifier,
-     usedJars: mutable.HashSet[AbsolutePath],
-   ): Unit = {
-      try {
-        if (path.isJar && path.exists) {
-          usedJars += path
-          addSourceJarSymbols(path)
-        } else if (path.isDirectory) {
-          val dialect = buildTargets
-            .scalaTarget(target)
-            .map(scalaTarget =>
-              ScalaVersions.dialectForScalaVersion(
-                scalaTarget.scalaVersion,
-                includeSource3 = true,
-              )
+      path: AbsolutePath,
+      target: b.BuildTargetIdentifier,
+      usedJars: mutable.HashSet[AbsolutePath],
+  ): Unit = {
+    try {
+      if (path.isJar && path.exists) {
+        usedJars += path
+        addSourceJarSymbols(path)
+      } else if (path.isDirectory) {
+        val dialect = buildTargets
+          .scalaTarget(target)
+          .map(scalaTarget =>
+            ScalaVersions.dialectForScalaVersion(
+              scalaTarget.scalaVersion,
+              includeSource3 = true,
             )
-            .getOrElse(Scala213)
-          definitionIndex.addSourceDirectory(path, dialect)
-        } else {
-          scribe.warn(s"unexpected dependency with absolute path: $path")
-        }
-      } catch {
-        case NonFatal(e) =>
-          scribe.error(s"Error processing $path", e)
+          )
+          .getOrElse(Scala213)
+        definitionIndex.addSourceDirectory(path, dialect)
+      } else {
+        scribe.warn(s"unexpected dependency with absolute path: $path")
       }
+    } catch {
+      case NonFatal(e) =>
+        scribe.error(s"Error processing $path", e)
+    }
   }
-
 
   private def indexDependencyModules(
       data: TargetData,
@@ -415,9 +414,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
           Option(jsonObject.get("artifacts")) match {
             case Some(artifactsElement) if artifactsElement.isJsonArray =>
               try {
-                artifactsElement
-                  .getAsJsonArray
-                  .asScala
+                artifactsElement.getAsJsonArray.asScala
                   .filter(element =>
                     element.isJsonObject &&
                       element.getAsJsonObject.has("classifier")
@@ -426,7 +423,9 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
                   .toList
               } catch {
                 case NonFatal(e) =>
-                  scribe.warn(s"Error processing artifacts array: ${e.getMessage}")
+                  scribe.warn(
+                    s"Error processing artifacts array: ${e.getMessage}"
+                  )
                   Nil
               }
             case _ => Nil
@@ -437,8 +436,8 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       _ = data.addDependencySource(absolutePath, item.getTarget)
       if !isVisited.contains(uri)
     } {
-        isVisited.add(uri)
-        processDependencyPath(absolutePath, item.getTarget, usedJars)
+      isVisited.add(uri)
+      processDependencyPath(absolutePath, item.getTarget, usedJars)
     }
 
     usedJars.toSet
