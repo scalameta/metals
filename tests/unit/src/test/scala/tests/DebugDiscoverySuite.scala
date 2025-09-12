@@ -40,8 +40,8 @@ class DebugDiscoverySuite
   def normalizeOutput(output: String): String =
     output
       .replaceAll("\u001B\\[[;\\d]*m", "")
-      .replaceAll("Execution took \\d+ms", "")
-      .replaceAll("Total duration: \\d+ms", "")
+      .replaceAll("(?m)^Execution took.*$", "")
+      .replaceAll("(?m)^Total duration:.*$", "")
       .replaceAll("\\s*\\d+\\.\\d+s", "")
       .replaceAll("\\s*\\d+s", "")
       .replaceAll("[∙·]", "")
