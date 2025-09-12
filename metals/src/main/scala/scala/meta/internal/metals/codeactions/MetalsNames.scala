@@ -3,6 +3,7 @@ package scala.meta.internal.metals.codeactions
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+
 import scala.meta._
 import scala.meta.internal.mtags.MtagsEnrichments._
 
