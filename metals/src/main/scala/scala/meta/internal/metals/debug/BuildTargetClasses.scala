@@ -9,6 +9,7 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.metals.debug.BuildTargetClasses.Classes
+import scala.meta.internal.metals.debug.BuildTargetClasses.FileTestMetadata
 import scala.meta.internal.metals.debug.BuildTargetClasses.TestSymbolInfo
 import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.Scala.Descriptor
@@ -29,7 +30,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
 ) extends SemanticdbFeatureProvider {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
 
-  private val semanticdbCache = TrieMap.empty[AbsolutePath, TextDocuments]
+  private val fileTestMetadataCache = TrieMap.empty[AbsolutePath, FileTestMetadata]
 
   type JVMRunEnvironmentsMap =
     TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem]
@@ -51,14 +52,24 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
     )
 
   override def onChange(docs: TextDocuments, path: AbsolutePath): Unit = {
-    semanticdbCache.put(path, docs)
+    if (path.isScalaFilename) {
+      val testClasses = extractTestClassesFromDocuments(docs)
+      if (testClasses.nonEmpty) {
+        fileTestMetadataCache.put(path, FileTestMetadata(
+          path,
+          testClasses,
+          System.currentTimeMillis()
+        ))
+        scribe.debug(s"Cached test metadata for $path: ${testClasses.map(_._2.fullyQualifiedName).mkString(", ")}")
+      }
+    }
   }
 
   override def onDelete(path: AbsolutePath): Unit = {
-    semanticdbCache.remove(path)
+    fileTestMetadataCache.remove(path)
   }
   override def reset(): Unit = {
-    semanticdbCache.clear()
+    fileTestMetadataCache.clear()
   }
 
   def classesOf(target: b.BuildTargetIdentifier): Classes = {
@@ -297,58 +308,53 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
     rebuildIndex.cancelAll()
   }
 
-  private def processSemanticdbForTestFrameworkDetection(
-      doc: TextDocument,
-      classes: Classes,
-  ): Unit = {
-    doc.symbols.foreach { symbolInfo =>
-      symbolInfo.annotations.foreach { annotation =>
-        annotation.tpe match {
-          case TypeRef(_, annotationSymbol, _) =>
-            TestFrameworkDetector.fromSymbol(annotationSymbol) match {
-              case Some(framework) =>
-                val classSymbol = symbolInfo.symbol
-                val className = symbolToClassName(classSymbol)
-                val testInfo = TestSymbolInfo(className, framework)
-                val classSymbolWithoutFunctionName =
-                  classSymbol.indexOf('#') match {
-                    case -1 => classSymbol
-                    case index => classSymbol.substring(0, index + 1)
-                  }
-                classes.testClasses.put(
-                  classSymbolWithoutFunctionName,
-                  testInfo,
-                )
-
-                scribe.debug(
-                  s"Detected test class: $className with framework: ${framework.names.headOption.getOrElse("Unknown")}"
-                )
-              case None =>
+  private def extractTestClassesFromDocuments(docs: TextDocuments): List[(String, TestSymbolInfo)] = {
+    val testClasses = scala.collection.mutable.ListBuffer[(String, TestSymbolInfo)]()
+    
+    docs.documents.foreach { doc =>
+      doc.symbols.foreach { symbolInfo =>
+        // Process annotations
+        symbolInfo.annotations.foreach { annotation =>
+          annotation.tpe match {
+            case TypeRef(_, annotationSymbol, _) =>
+              TestFrameworkDetector.fromSymbol(annotationSymbol) match {
+                case Some(framework) =>
+                  val classSymbol = symbolInfo.symbol
+                  val className = symbolToClassName(classSymbol)
+                  val testInfo = TestSymbolInfo(className, framework)
+                  val classSymbolWithoutFunctionName =
+                    classSymbol.indexOf('#') match {
+                      case -1 => classSymbol
+                      case index => classSymbol.substring(0, index + 1)
+                    }
+                  testClasses += ((classSymbolWithoutFunctionName, testInfo))
+                case None =>
+              }
+            case _ =>
+          }
+        }
+        
+        // Process class signatures
+        symbolInfo.signature match {
+          case classSig: ClassSignature =>
+            val symbol = symbolInfo.symbol
+            val className = symbolToClassName(symbol)
+            if (className.nonEmpty) {
+              detectTestFramework(classSig, doc) match {
+                case Some(framework) =>
+                  val testInfo = TestSymbolInfo(className, framework)
+                  testClasses += ((symbol, testInfo))
+                case None =>
+              }
             }
           case _ =>
         }
       }
-      symbolInfo.signature match {
-        case classSig: ClassSignature =>
-          val symbol = symbolInfo.symbol
-          val className = symbolToClassName(symbol)
-          if (className.nonEmpty) {
-            detectTestFramework(classSig, doc) match {
-              case Some(framework) =>
-                val testInfo = TestSymbolInfo(className, framework)
-                classes.testClasses.put(symbol, testInfo)
-
-                scribe.debug(
-                  s"Detected test class: $className with framework: ${framework.names.headOption.getOrElse("Unknown")}"
-                )
-              case None =>
-                scribe.debug("Cannot detect test framework")
-            }
-          }
-        case _ =>
-      }
     }
+    
+    testClasses.toList
   }
+
 
   private def detectTestFramework(
       classSig: ClassSignature,
@@ -426,15 +432,14 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
         .toList
 
       sourceFiles.foreach { sourcePath =>
-        semanticdbCache.get(sourcePath) match {
-          case Some(docs) =>
-            docs.documents.foreach { doc =>
-              processSemanticdbForTestFrameworkDetection(
-                doc,
-                classes(target),
-              )
+        fileTestMetadataCache.get(sourcePath) match {
+          case Some(metadata) =>
+            metadata.testClasses.foreach { case (symbol, testInfo) =>
+              classes(target).testClasses.put(symbol, testInfo)
             }
-          case None => ()
+            scribe.debug(s"Used cached test metadata for $sourcePath in target $target: ${metadata.testClasses.map(_._2.fullyQualifiedName).mkString(", ")}")
+          case None =>
+            scribe.debug(s"No cached test metadata available for $sourcePath")
         }
       }
     }
@@ -515,6 +520,12 @@ object BuildTargetClasses {
   final case class TestSymbolInfo(
       fullyQualifiedName: FullyQualifiedClassName,
       framework: TestFramework,
+  )
+
+  final case class FileTestMetadata(
+      path: AbsolutePath,
+      testClasses: List[(Symbol, TestSymbolInfo)], // symbol -> TestSymbolInfo
+      lastProcessed: Long, // for invalidation
   )
   final class Classes {
     val mainClasses = new TrieMap[Symbol, b.ScalaMainClass]()
