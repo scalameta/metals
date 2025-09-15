@@ -9,7 +9,6 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.metals.debug.BuildTargetClasses.Classes
-import scala.meta.internal.metals.debug.BuildTargetClasses.FileTestMetadata
 import scala.meta.internal.metals.debug.BuildTargetClasses.TestSymbolInfo
 import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.Scala.Descriptor
@@ -30,7 +29,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
 ) extends SemanticdbFeatureProvider {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
 
-  private val fileTestMetadataCache = TrieMap.empty[AbsolutePath, FileTestMetadata]
+  private val fileTestMetadataCache = TrieMap.empty[AbsolutePath, List[(String, TestSymbolInfo)]]
 
   type JVMRunEnvironmentsMap =
     TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem]
@@ -55,12 +54,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
     if (path.isScalaFilename) {
       val testClasses = extractTestClassesFromDocuments(docs)
       if (testClasses.nonEmpty) {
-        fileTestMetadataCache.put(path, FileTestMetadata(
-          path,
-          testClasses,
-          System.currentTimeMillis()
-        ))
-        scribe.debug(s"Cached test metadata for $path: ${testClasses.map(_._2.fullyQualifiedName).mkString(", ")}")
+        fileTestMetadataCache.put(path, testClasses)
       }
     }
   }
@@ -144,7 +138,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
           val updateTestClasses =
             if (isBazelBuildAmongTargets(targets0)) {
               Future.successful(
-                cacheBazelTestClassesFromSemanticdb(classes, targets0)
+                populateBazelTestClasses(classes, targets0)
               )
             } else {
               connection
@@ -313,7 +307,6 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
     
     docs.documents.foreach { doc =>
       doc.symbols.foreach { symbolInfo =>
-        // Process annotations
         symbolInfo.annotations.foreach { annotation =>
           annotation.tpe match {
             case TypeRef(_, annotationSymbol, _) =>
@@ -334,7 +327,6 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
           }
         }
         
-        // Process class signatures
         symbolInfo.signature match {
           case classSig: ClassSignature =>
             val symbol = symbolInfo.symbol
@@ -416,7 +408,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
     }
   }
 
-  private def cacheBazelTestClassesFromSemanticdb(
+  private def populateBazelTestClasses(
       classes: Map[b.BuildTargetIdentifier, Classes],
       targets: Seq[b.BuildTargetIdentifier],
   ): Unit = {
@@ -433,11 +425,11 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
 
       sourceFiles.foreach { sourcePath =>
         fileTestMetadataCache.get(sourcePath) match {
-          case Some(metadata) =>
-            metadata.testClasses.foreach { case (symbol, testInfo) =>
+          case Some(testClasses) =>
+            testClasses.foreach { case (symbol, testInfo) =>
               classes(target).testClasses.put(symbol, testInfo)
             }
-            scribe.debug(s"Used cached test metadata for $sourcePath in target $target: ${metadata.testClasses.map(_._2.fullyQualifiedName).mkString(", ")}")
+            scribe.debug(s"Used cached test metadata for $sourcePath in target $target: ${testClasses.map(_._2.fullyQualifiedName).mkString(", ")}")
           case None =>
             scribe.debug(s"No cached test metadata available for $sourcePath")
         }
@@ -522,11 +514,6 @@ object BuildTargetClasses {
       framework: TestFramework,
   )
 
-  final case class FileTestMetadata(
-      path: AbsolutePath,
-      testClasses: List[(Symbol, TestSymbolInfo)], // symbol -> TestSymbolInfo
-      lastProcessed: Long, // for invalidation
-  )
   final class Classes {
     val mainClasses = new TrieMap[Symbol, b.ScalaMainClass]()
     val testClasses = new TrieMap[Symbol, TestSymbolInfo]()
