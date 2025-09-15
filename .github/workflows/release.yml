@@ -7,7 +7,9 @@ concurrency:
   group: release-${{ github.ref }}
 jobs:
   publish:
-    runs-on: metals-protected-runner-group
+    runs-on: 
+      group: metals-protected-runner-group
+      labels: metals-ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
