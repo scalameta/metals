@@ -243,6 +243,76 @@ class DefinitionLspSuite
     } yield ()
   }
 
+  test("goto-definition-into-dependency-sources-list") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {
+            |    "scalaVersion": "${V.latestScala3Next}",
+            |    "libraryDependencies": [
+            |      "org.scala-lang:scala3-library_3:${V.latestScala3Next}"
+            |    ]
+            |  }
+            |}
+            |/a/src/main/scala/Main.scala
+            |package example
+            |object Main {
+            |  val list = List(1, 2, 3)
+            |  list.map(identity)
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ = server.workspaceDefinitions
+
+      listDefinition <- server.definition(
+        "a/src/main/scala/Main.scala",
+        "Li@@st(1, 2, 3)",
+        workspace,
+      )
+
+      _ = assert(listDefinition.nonEmpty)
+      _ = assert(listDefinition.head.getUri.contains("scala-library"))
+    } yield ()
+  }
+
+  test("goto-definition-into-dependency-sources-list-map") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {
+            |    "scalaVersion": "${V.latestScala3Next}",
+            |    "libraryDependencies": [
+            |      "org.scala-lang:scala3-library_3:${V.latestScala3Next}"
+            |    ]
+            |  }
+            |}
+            |/a/src/main/scala/Main.scala
+            |package example
+            |object Main {
+            |  val list = List(1, 2, 3)
+            |  list.map(identity)
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ = server.workspaceDefinitions
+
+      listDefinition <- server.definition(
+        "a/src/main/scala/Main.scala",
+        "list.ma@@p(identity)",
+        workspace,
+      )
+
+      _ = assert(listDefinition.nonEmpty)
+      _ = assert(listDefinition.head.getUri.contains("scala-library"))
+    } yield ()
+  }
+
   test("stale") {
     for {
       _ <- initialize(
