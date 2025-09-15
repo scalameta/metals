@@ -29,7 +29,8 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
 ) extends SemanticdbFeatureProvider {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
 
-  private val fileTestMetadataCache = TrieMap.empty[AbsolutePath, List[(String, TestSymbolInfo)]]
+  private val fileTestMetadataCache =
+    TrieMap.empty[AbsolutePath, List[(String, TestSymbolInfo)]]
 
   type JVMRunEnvironmentsMap =
     TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem]
@@ -51,7 +52,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
     )
 
   override def onChange(docs: TextDocuments, path: AbsolutePath): Unit = {
-    if (path.isScalaFilename) {
+    if (path.isScalaFilename && hasBazelBuildServer && belongsToTestTarget(path)) {
       val testClasses = extractTestClassesFromDocuments(docs)
       if (testClasses.nonEmpty) {
         fileTestMetadataCache.put(path, testClasses)
@@ -136,7 +137,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
             .map(cacheMainClasses(classes, _))
 
           val updateTestClasses =
-            if (isBazelBuildAmongTargets(targets0)) {
+            if (hasBazelBuildServer) {
               Future.successful(
                 populateBazelTestClasses(classes, targets0)
               )
@@ -302,9 +303,26 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
     rebuildIndex.cancelAll()
   }
 
-  private def extractTestClassesFromDocuments(docs: TextDocuments): List[(String, TestSymbolInfo)] = {
-    val testClasses = scala.collection.mutable.ListBuffer[(String, TestSymbolInfo)]()
-    
+  private def hasBazelBuildServer: Boolean = {
+    buildTargets.allBuildTargetIds.exists { targetId =>
+      buildTargets.buildServerOf(targetId).exists(_.isBazel)
+    }
+  }
+
+  private def belongsToTestTarget(path: AbsolutePath): Boolean = {
+    buildTargets.inverseSources(path).exists { targetId =>
+      buildTargets.info(targetId).exists { buildTarget =>
+        buildTarget.getTags.asScala.contains("test")
+      }
+    }
+  }
+
+  private def extractTestClassesFromDocuments(
+      docs: TextDocuments
+  ): List[(String, TestSymbolInfo)] = {
+    val testClasses =
+      scala.collection.mutable.ListBuffer[(String, TestSymbolInfo)]()
+
     docs.documents.foreach { doc =>
       doc.symbols.foreach { symbolInfo =>
         symbolInfo.annotations.foreach { annotation =>
@@ -326,7 +344,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
             case _ =>
           }
         }
-        
+
         symbolInfo.signature match {
           case classSig: ClassSignature =>
             val symbol = symbolInfo.symbol
@@ -343,10 +361,9 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
         }
       }
     }
-    
+
     testClasses.toList
   }
-
 
   private def detectTestFramework(
       classSig: ClassSignature,
@@ -399,15 +416,6 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
     withoutHashAndAfter.replace("/", ".")
   }
 
-  private def isBazelBuildAmongTargets(
-      targets: Seq[b.BuildTargetIdentifier]
-  ): Boolean = {
-    targets.exists { target =>
-      val uri = target.getUri
-      uri.matches("^@//(?:.*?/)?[^/:]*:[^/:]+$")
-    }
-  }
-
   private def populateBazelTestClasses(
       classes: Map[b.BuildTargetIdentifier, Classes],
       targets: Seq[b.BuildTargetIdentifier],
@@ -424,14 +432,10 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
         .toList
 
       sourceFiles.foreach { sourcePath =>
-        fileTestMetadataCache.get(sourcePath) match {
-          case Some(testClasses) =>
-            testClasses.foreach { case (symbol, testInfo) =>
-              classes(target).testClasses.put(symbol, testInfo)
-            }
-            scribe.debug(s"Used cached test metadata for $sourcePath in target $target: ${testClasses.map(_._2.fullyQualifiedName).mkString(", ")}")
-          case None =>
-            scribe.debug(s"No cached test metadata available for $sourcePath")
+        fileTestMetadataCache.get(sourcePath).foreach { testClasses =>
+          testClasses.foreach { case (symbol, testInfo) =>
+            classes(target).testClasses.put(symbol, testInfo)
+          }
         }
       }
     }
