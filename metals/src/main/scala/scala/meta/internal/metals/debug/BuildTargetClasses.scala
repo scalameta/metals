@@ -29,7 +29,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
 ) extends SemanticdbFeatureProvider {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
 
-  private val fileTestMetadataCache =
+  private val bazelTestClassCache =
     TrieMap.empty[AbsolutePath, List[(String, TestSymbolInfo)]]
 
   type JVMRunEnvironmentsMap =
@@ -55,16 +55,16 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
     if (path.isScalaFilename && hasBazelBuildServer && belongsToTestTarget(path)) {
       val testClasses = extractTestClassesFromDocuments(docs)
       if (testClasses.nonEmpty) {
-        fileTestMetadataCache.put(path, testClasses)
+        bazelTestClassCache.put(path, testClasses)
       }
     }
   }
 
   override def onDelete(path: AbsolutePath): Unit = {
-    fileTestMetadataCache.remove(path)
+    bazelTestClassCache.remove(path)
   }
   override def reset(): Unit = {
-    fileTestMetadataCache.clear()
+    bazelTestClassCache.clear()
   }
 
   def classesOf(target: b.BuildTargetIdentifier): Classes = {
@@ -432,7 +432,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
         .toList
 
       sourceFiles.foreach { sourcePath =>
-        fileTestMetadataCache.get(sourcePath).foreach { testClasses =>
+        bazelTestClassCache.get(sourcePath).foreach { testClasses =>
           testClasses.foreach { case (symbol, testInfo) =>
             classes(target).testClasses.put(symbol, testInfo)
           }
