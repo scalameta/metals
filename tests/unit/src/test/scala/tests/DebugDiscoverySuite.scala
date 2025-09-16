@@ -1063,7 +1063,7 @@ class DebugDiscoverySuite
       """|/metals.json
          |{
          |  "a": {
-         |    "scalaVersion": "3.3.0"
+         |    "scalaVersion": "3.3.6"
          |  }
          |}
          |""".stripMargin
