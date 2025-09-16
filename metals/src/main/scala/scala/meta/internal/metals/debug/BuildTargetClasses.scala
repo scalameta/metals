@@ -52,7 +52,9 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
     )
 
   override def onChange(docs: TextDocuments, path: AbsolutePath): Unit = {
-    if (path.isScalaFilename && hasBazelBuildServer && belongsToTestTarget(path)) {
+    if (
+      path.isScalaFilename && hasBazelBuildServer && belongsToTestTarget(path)
+    ) {
       val testClasses = extractTestClassesFromDocuments(docs)
       if (testClasses.nonEmpty) {
         bazelTestClassCache.put(path, testClasses)
