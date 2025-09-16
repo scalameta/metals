@@ -1412,13 +1412,8 @@ abstract class MetalsLspService(
           }
         symbolInfo <- doc.symbols.find(_.symbol == sym)
         sig = symbolInfo.signature
-      } yield {
-        sig match {
-          case MethodSignature(typeParameters, parameterLists, returnType) =>
-            sym.symbolToFullyQualifiedName
-          case _ => sym.symbolToFullyQualifiedName
-        }
-      }
+      } yield
+        sym.symbolToFullyQualifiedName
     }
   }
 
