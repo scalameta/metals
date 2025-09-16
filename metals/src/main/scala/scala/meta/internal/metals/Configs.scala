@@ -61,9 +61,7 @@ object Configs {
     def uri = new GlobSyntaxConfig("uri")
     def vscode = new GlobSyntaxConfig("vscode")
     def default =
-      new GlobSyntaxConfig(
-        System.getProperty("metals.glob-syntax", uri.value)
-      )
+      new GlobSyntaxConfig(System.getProperty("metals.glob-syntax", uri.value))
     def fromString(value: String): Option[GlobSyntaxConfig] =
       value match {
         case "vscode" => Some(vscode)
@@ -117,4 +115,16 @@ object Configs {
     }
   }
 
+  object WorkspaceSymbolProviderConfig {
+    def default: WorkspaceSymbolProviderConfig =
+      new WorkspaceSymbolProviderConfig(
+        System.getProperty("metals.workspace-symbol-provider", "bsp")
+      )
+  }
+  final class WorkspaceSymbolProviderConfig(val value: String) {
+    def isMBT: Boolean =
+      value == "mbt" // New BSP-free workspace/symbol implementation
+    def isBSP: Boolean =
+      value != "mbt" // The classic BSP-based workspace/symbol implementation
+  }
 }

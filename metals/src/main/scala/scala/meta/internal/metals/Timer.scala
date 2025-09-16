@@ -6,7 +6,7 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 class Timer(time: Time) {
-  val startNanos: Long = time.nanos()
+  var startNanos: Long = time.nanos()
   def isLogWorthy: Boolean =
     elapsedMillis > 100
   def isHumanVisible: Boolean =

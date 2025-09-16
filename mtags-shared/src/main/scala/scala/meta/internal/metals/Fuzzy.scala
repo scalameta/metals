@@ -295,7 +295,7 @@ class Fuzzy {
         TrigramSubstrings.trigramCombinations(uppercases) -
         redundantSuffix
     }
-    val hasher = new StringBloomFilter(estimatedSize)
+    val hasher = StringBloomFilter.forEstimatedSize(estimatedSize)
     bloomFilterSymbolStrings(symbols, hasher)
     hasher
   }
@@ -354,6 +354,12 @@ class Fuzzy {
       i += 1
     }
     val lastName = new ZeroCopySubSequence(symbol, symbolicDelimiter, N)
+
+    // This exists so that workspace/symbol for a query like "InputStream" can
+    // display "InputStream" at the top instead of "InputStreamProvider", which
+    // also has a prefix match but is not an *exact* match.
+    hasher.putCharSequence(FingerprintedCharSequence.exactWord(lastName))
+
     if (
       !symbol.endsWith("/") &&
       !isAllNumeric(lastName)

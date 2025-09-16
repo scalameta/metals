@@ -241,6 +241,12 @@ val sharedJavacOptions = List(
   }
 )
 
+val sharedJavaOptions = Seq(
+  "-Djol.magicFieldOffset=true", "-Djol.tryWithSudo=true",
+  "-Djdk.attach.allowAttachSelf", "--add-opens=java.base/java.nio=ALL-UNNAMED",
+  "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
+)
+
 val sharedScalacOptions = List(
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
@@ -470,6 +476,7 @@ lazy val metals = project
   .settings(
     sharedSettings,
     Compile / run / fork := true,
+    Compile / run / javaOptions ++= sharedJavaOptions,
     Compile / mainClass := Some("scala.meta.metals.Main"),
     // for Java formatting
     libraryDependencies ++= V.eclipseJdt,
@@ -481,6 +488,8 @@ lazy val metals = project
       // for bloom filters
       V.guava,
       "org.scalameta" %% "metaconfig-core" % "0.14.0",
+      // For MBT persistent cache
+      "org.lmdbjava" % "lmdbjava" % "0.9.1",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching
@@ -843,7 +852,7 @@ lazy val unit = project
       Tests.Filter(name => isInTestShard(name, sLog.value))
     ),
     sharedSettings,
-    Test / javaOptions ++= Seq(
+    Test / javaOptions ++= sharedJavaOptions ++ Seq(
       "-Xmx3G",
       "-XX:+HeapDumpOnOutOfMemoryError",
       "-XX:+ExitOnOutOfMemoryError",

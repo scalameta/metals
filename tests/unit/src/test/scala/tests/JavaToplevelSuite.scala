@@ -3,7 +3,7 @@ package tests
 class JavaToplevelSuite extends BaseToplevelSuite {
 
   override def filename: String = "Test.java"
-  override def allowedModes: Set[Mode] = Set(Toplevel, ToplevelWithInner)
+  override def allowedModes: Set[Mode] = Set(Toplevel, ToplevelWithInner, All)
 
   check(
     "base",
@@ -191,6 +191,49 @@ class JavaToplevelSuite extends BaseToplevelSuite {
             |org/apache/BaseReader# -> Positionable
             |""".stripMargin),
     mode = ToplevelWithInner,
+  )
+
+  // The tests below are examples of where the Java toplevel indexer falls short.
+  check(
+    "qualified-extends".fail.pending(
+      "Better Java support"
+    ),
+    """|
+       |package org.apache;
+       |
+       |public interface Range extends java.util.Positionable<Integer> {
+       |}
+       |""".stripMargin,
+    List("""|org/
+            |org/apache/
+            |org/apache/Range# -> java.util.Positionable
+            |""".stripMargin),
+    mode = ToplevelWithInner,
+  )
+
+  check(
+    "fields-and-methods".fail.pending(
+      "Better Java support"
+    ),
+    """|
+       |package org.apache;
+       |
+       |public class Range {
+       |  public int start;
+       |  public int end;
+       |  public int length() {
+       |    return end - start;
+       |  }
+       |}
+       |""".stripMargin,
+    List("""|org/
+            |org/apache/
+            |org/apache/Range#
+            |org/apache/Range#start.
+            |org/apache/Range#end.
+            |org/apache/Range#length().
+            |""".stripMargin),
+    mode = All,
   )
 
 }

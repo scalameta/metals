@@ -45,6 +45,7 @@ import scala.meta.internal.metals.doctor.MetalsServiceInfo
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.scalacli.ScalaCliServers
@@ -287,6 +288,12 @@ abstract class MetalsLspService(
       saveClassFileToDisk = !clientConfig.isVirtualDocumentSupported(),
       () => excludedPackageHandler,
       classpathSearchIndexer = classpathSearchIndexer,
+    )
+  val mbtWorkspaceSymbolProvider: MbtWorkspaceSymbolProvider =
+    new MbtWorkspaceSymbolProvider(
+      folder,
+      initialServerConfig.workspaceSymbolProvider,
+      () => clientConfig.initialConfig.statistics,
     )
 
   protected def warnings: Warnings = NoopWarnings
@@ -689,6 +696,7 @@ abstract class MetalsLspService(
             .sequence(
               List[Future[Unit]](
                 onInitialized(),
+                Future(mbtWorkspaceSymbolProvider.onReindex()),
                 Future(workspaceSymbols.indexClasspath()),
                 Future(formattingProvider.load()),
               )
@@ -1304,18 +1312,24 @@ abstract class MetalsLspService(
       params: WorkspaceSymbolParams,
       token: CancelToken,
   ): Future[List[SymbolInformation]] =
-    indexingPromise.future.map { _ =>
-      val timer = new Timer(time)
-      val result =
-        workspaceSymbols
-          .search(params.getQuery, token, focusedDocument)
-          .toList
-      if (clientConfig.initialConfig.statistics.isWorkspaceSymbol) {
-        scribe.info(
-          s"time: found ${result.length} results for query '${params.getQuery}' in $timer"
-        )
+    if (initialServerConfig.workspaceSymbolProvider.isMBT) {
+      Future {
+        mbtWorkspaceSymbolProvider.queryWorkspaceSymbol(params, token)
       }
-      result
+    } else {
+      indexingPromise.future.map { _ =>
+        val timer = new Timer(time)
+        val result =
+          workspaceSymbols
+            .search(params.getQuery, token, focusedDocument)
+            .toList
+        if (clientConfig.initialConfig.statistics.isWorkspaceSymbol) {
+          scribe.info(
+            s"time: found ${result.length} results for query '${params.getQuery}' in $timer"
+          )
+        }
+        result
+      }
     }
 
   def workspaceSymbol(query: String): Seq[SymbolInformation] = {

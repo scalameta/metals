@@ -3,10 +3,11 @@ package scala.meta.internal.metals
 import java.nio.file.Path
 import java.util.PriorityQueue
 
+import scala.collection.JavaConverters._
+
 import scala.meta.internal.mtags.CommonMtagsEnrichments.XtensionJavaPriorityQueue
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
-
 class ClasspathSearch(
     val packages: Array[CompressedPackageIndex]
 ) {
@@ -101,7 +102,10 @@ object ClasspathSearch {
           excludePackages.isExcludedPackage
         )
         val map = CompressedPackageIndex.fromPackages(
-          packages,
+          () =>
+            packages.packages.asScala.iterator.map(pkg =>
+              (pkg._1, pkg._2.asScala)
+            ),
           excludePackages.isExcludedPackage,
           bucketSize
         )

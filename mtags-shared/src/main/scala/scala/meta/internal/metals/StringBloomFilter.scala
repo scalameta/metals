@@ -1,8 +1,32 @@
 package scala.meta.internal.metals
 
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+
 import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import net.jpountz.xxhash.XXHashFactory
+object StringBloomFilter {
+  val maxFalsePositiveRatio = 0.01
+  def forSymbols(symbols: Iterable[String]): StringBloomFilter = {
+    val bloom = StringBloomFilter.forEstimatedSize(symbols.size)
+    symbols.foreach(bloom.putCharSequence)
+    bloom
+  }
+  def forEstimatedSize(estimatedSize: Int): StringBloomFilter = {
+    val bloom = BloomFilter.create(
+      Funnels.longFunnel(),
+      Integer.valueOf(estimatedSize),
+      StringBloomFilter.maxFalsePositiveRatio
+    )
+    new StringBloomFilter(bloom)
+  }
+  def fromBytes(bytes: Array[Byte]): StringBloomFilter = {
+    val bais = new ByteArrayInputStream(bytes)
+    val bloom = BloomFilter.readFrom(bais, Funnels.longFunnel())
+    new StringBloomFilter(bloom)
+  }
+}
 
 /**
  * A wrapper around a bloom filter that is optimized for fast insertions of
@@ -32,14 +56,14 @@ import net.jpountz.xxhash.XXHashFactory
  * `mightContain` calls so should also help avoid a non-trivial amount of
  * unnecessary hashing.
  */
-class StringBloomFilter(estimatedSize: Int) {
-  val maxFalsePositiveRatio = 0.01
-  val bloom: BloomFilter[java.lang.Long] = BloomFilter.create(
-    Funnels.longFunnel(),
-    Integer.valueOf(estimatedSize),
-    maxFalsePositiveRatio
-  )
-  def isFull: Boolean = bloom.expectedFpp() > maxFalsePositiveRatio
+class StringBloomFilter(val bloom: BloomFilter[java.lang.Long]) {
+  def toBytes: Array[Byte] = {
+    val baos = new ByteArrayOutputStream()
+    bloom.writeTo(baos)
+    baos.toByteArray
+  }
+  def isFull: Boolean =
+    bloom.expectedFpp() > StringBloomFilter.maxFalsePositiveRatio
   // NOTE(olafur): we don't use the XXHashFactory.fastestInstance() instance
   // because the docstring warns about using the native hash instance in
   // applications where multiple isolated classloaders run on the same JVM,

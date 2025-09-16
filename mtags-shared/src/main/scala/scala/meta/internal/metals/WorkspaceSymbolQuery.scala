@@ -28,6 +28,15 @@ case class WorkspaceSymbolQuery(
 }
 
 object WorkspaceSymbolQuery {
+  def exactDescriptorPart(
+      query: String
+  ): WorkspaceSymbolQuery = {
+    WorkspaceSymbolQuery(
+      query,
+      Array(AlternativeQuery.exactDescriptorPart(query)),
+      isTrailingDot = false
+    )
+  }
   def exact(
       query: String,
       isShortQueryRetry: Boolean = false
@@ -38,7 +47,7 @@ object WorkspaceSymbolQuery {
       isTrailingDot = false
     )
   }
-  def fromTextQuery(query: String): WorkspaceSymbolQuery = {
+  def fuzzy(query: String): WorkspaceSymbolQuery = {
     val isTrailingDot = query.endsWith(".")
     val isClasspath = query.contains(";")
     val actualQuery = query.stripSuffix(".").replace(";", "")
@@ -62,11 +71,20 @@ object WorkspaceSymbolQuery {
   }
 
   object AlternativeQuery {
+    def exactDescriptorPart(query: String): AlternativeQuery = {
+      val hasher = StringBloomFilter.forEstimatedSize(0)
+      val fingerprint = FingerprintedCharSequence.exactWord(query)
+      AlternativeQuery(
+        query,
+        Array(fingerprint),
+        Array(hasher.computeHashCode(fingerprint))
+      )
+    }
     def apply(
         query: String,
         isShortQueryRetry: Boolean = false
     ): AlternativeQuery = {
-      val hasher = new StringBloomFilter(0)
+      val hasher = StringBloomFilter.forEstimatedSize(0)
       val queries = Fuzzy
         .bloomFilterQueryStrings(query, isShortQueryRetry = isShortQueryRetry)
         .toArray

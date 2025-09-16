@@ -77,7 +77,7 @@ object CompressedPackageIndex {
    *                   compressed package index.
    */
   def fromPackages(
-      packages: PackageIndex,
+      packages: () => Iterator[(String, Iterable[String])],
       isExcludedPackage: String => Boolean,
       bucketSize: Int = DefaultBucketSize
   ): Array[CompressedPackageIndex] = {
@@ -89,10 +89,11 @@ object CompressedPackageIndex {
     val bufPackages = Array.newBuilder[String]
     // The bloom filter representing the set of all the possible queries that match
     // a classfile in the current pending bucket.
-    var bucket = new StringBloomFilter(bucketSize)
+    var bucket = StringBloomFilter.forEstimatedSize(bucketSize)
 
     // Save the current bucket.
     def flushBucket(): Unit = {
+      if (members.isEmpty) return
       // Compress members because they make up the bulk of memory usage in the classpath index.
       // For a 140mb classpath with spark/linkerd/akka/.. the members take up 12mb uncompressed
       // and ~900kb compressed. We are accummulating a lot of different custom indexes in Metals
@@ -115,20 +116,20 @@ object CompressedPackageIndex {
     // Save the current bucket and start a new one.
     def newBucket(): Unit = {
       flushBucket()
-      bucket = new StringBloomFilter(bucketSize)
+      bucket = StringBloomFilter.forEstimatedSize(bucketSize)
       bufPackages.clear()
       members.clear()
     }
 
     for {
-      (pkg, packageMembers) <- packages.packages.asScala.iterator
+      (pkg, packageMembers) <- packages()
       if !isExcludedPackage(pkg)
     } {
       enterPackage(pkg)
 
       // Sort members for deterministic order for deterministic results.
-      val sortedMembers = new ju.ArrayList[String](packageMembers.size())
-      sortedMembers.addAll(packageMembers)
+      val sortedMembers = new ju.ArrayList[String](packageMembers.size)
+      packageMembers.foreach(sortedMembers.add)
       sortedMembers.sort(String.CASE_INSENSITIVE_ORDER)
 
       sortedMembers.forEach { member =>

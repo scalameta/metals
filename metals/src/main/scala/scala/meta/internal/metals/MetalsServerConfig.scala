@@ -44,6 +44,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * @param maxLogBackups The maximum number of backup log files.
  * @param metalsToIdleTime The time that needs to pass with no action to consider metals as idle.
  * @param pingInterval Interval in which we ping the build server.
+ * @param workspaceSymbolProvider What indexer to use for workspace/symbol.
  */
 final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
@@ -126,6 +127,8 @@ final case class MetalsServerConfig(
         .filter(_.forall(Character.isDigit(_)))
         .map(_.toInt)
         .getOrElse(3),
+    workspaceSymbolProvider: WorkspaceSymbolProviderConfig =
+      WorkspaceSymbolProviderConfig.default,
 ) {
   override def toString: String =
     List[String](
@@ -150,6 +153,7 @@ final case class MetalsServerConfig(
       s"debug-server-start-timeout=$debugServerStartTimeout",
       s"enable-best-effort=$enableBestEffort",
       s"folding-range-minimum-span=$foldingRageMinimumSpan",
+      s"workspace-symbol-provider=$workspaceSymbolProvider",
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {

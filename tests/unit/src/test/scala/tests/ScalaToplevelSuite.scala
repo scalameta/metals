@@ -784,4 +784,19 @@ class ScalaToplevelSuite extends BaseToplevelSuite {
     List("a/", "a/FormData.", "a/Strict#", "a/FormData.Strict#"),
     mode = ToplevelWithInner,
   )
+
+  check(
+    "private-constructor",
+    """"
+      |package a
+      |
+      |class TestFixture private[foo] (val i: Int) {
+      |  def foo() = i
+      |}
+      |
+      |""".stripMargin,
+    List("a/", "a/TestFixture#", "a/TestFixture#foo().", "a/TestFixture#i."),
+    mode = All,
+  )
+
 }

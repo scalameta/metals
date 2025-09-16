@@ -8,7 +8,7 @@ import munit.Location
 class FuzzySuite extends BaseSuite {
   def checkOK(query: String, symbol: String)(implicit loc: Location): Unit = {
     test(query) {
-      val obtained = WorkspaceSymbolQuery.fromTextQuery(query).matches(symbol)
+      val obtained = WorkspaceSymbolQuery.fuzzy(query).matches(symbol)
       Predef.assert(
         obtained,
         s"query '$query' is not substring of symbol '$symbol'",
@@ -18,7 +18,7 @@ class FuzzySuite extends BaseSuite {
 
   def checkNO(query: String, symbol: String)(implicit loc: Location): Unit = {
     test(query) {
-      val obtained = WorkspaceSymbolQuery.fromTextQuery(query).matches(symbol)
+      val obtained = WorkspaceSymbolQuery.fuzzy(query).matches(symbol)
       Predef.assert(
         !obtained,
         s"query '$query' was a substring of symbol '$symbol'",
@@ -139,4 +139,5 @@ class FuzzySuite extends BaseSuite {
     // reasonable despite pathological input.
     assert(bloom.bloom.expectedFpp() < 0.02)
   }
+
 }

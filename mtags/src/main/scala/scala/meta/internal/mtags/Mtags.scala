@@ -8,11 +8,13 @@ import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Schema
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 
 final class Mtags(implicit rc: ReportContext) {
   def totalLinesOfCode: Long = javaLines + scalaLines
+  def totalSymbols: Long = symbolsCount
   def totalLinesOfScala: Long = scalaLines
   def totalLinesOfJava: Long = javaLines
 
@@ -113,6 +115,35 @@ final class Mtags(implicit rc: ReportContext) {
       .withUri(input.path)
       .withText(input.text)
   }
+
+  def indexToplevelSymbols(
+      language: Language,
+      input: Input.VirtualFile,
+      dialect: Dialect
+  ): TextDocument = {
+    addLines(language, input.text)
+    val result =
+      if (language.isJava) {
+        new JavaToplevelMtags(input, includeInnerClasses = true)
+          .index()
+      } else if (language.isScala) {
+        new ScalaToplevelMtags(
+          input,
+          includeInnerClasses = true,
+          includeMembers = true,
+          dialect
+        ).index()
+      } else {
+        TextDocument()
+      }
+    symbolsCount += result.occurrences.length
+    result
+      .withUri(input.path)
+      .withText("")
+      .withSchema(Schema.SEMANTICDB4)
+      .withLanguage(language)
+  }
+  private var symbolsCount: Long = 0L
   private var javaLines: Long = 0L
   private var scalaLines: Long = 0L
   private def addLines(language: Language, text: String): Unit = {

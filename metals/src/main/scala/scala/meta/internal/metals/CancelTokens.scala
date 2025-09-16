@@ -20,6 +20,7 @@ import scala.meta.pc.CancelToken
  * `token.checkCancelled()`, which is not possible  inside the compiler.
  */
 object CancelTokens {
+  def empty: CancelToken = EmptyCancelToken
   def apply[T](
       fn: CancelToken => T
   )(implicit ec: ExecutionContextExecutorService): CompletableFuture[T] = {

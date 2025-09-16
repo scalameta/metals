@@ -232,7 +232,7 @@ final class WorkspaceSymbolProvider(
       token: CancelChecker,
       fileInFocus: Option[AbsolutePath],
   ): Seq[l.SymbolInformation] = {
-    val query = WorkspaceSymbolQuery.fromTextQuery(textQuery)
+    val query = WorkspaceSymbolQuery.fuzzy(textQuery)
     val visitor =
       new WorkspaceSearchVisitor(
         workspace,
