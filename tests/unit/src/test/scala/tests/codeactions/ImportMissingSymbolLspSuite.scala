@@ -458,6 +458,18 @@ class ImportMissingSymbolLspSuite
     kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
+  checkActionsOnly(
+    "i7777 (<empty> package)",
+    s"""|package a
+        |object Foo {
+        |  <<Bar>>
+        |}
+        |/a/src/main/scala/Bar.scala
+        |object Bar {}
+        |""".stripMargin,
+    s"${CreateNewSymbol.title("Bar")}",
+  )
+
   // ---------------------------------------------------------------------------
   // Tests for SourceAddMissingImports (source.addMissingImports)
   // These tests verify the auto-import behavior that only imports unambiguous symbols
