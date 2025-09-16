@@ -49,18 +49,36 @@ class DebugDiscoverySuite
       .replaceAll("(?m)^\\s*$[\n\r]{1,}", "")
       .trim
 
-  def checkRunClosestSuccess(
-      metalsConfig: String,
+  def checkRunClosest(
       fileContent: String,
       filePath: String,
-      expectedOutput: String,
-  ): Future[Unit] = {
+      libraryDependencies: List[String] = List.empty,
+      scalaVersion: Option[String] = None,
+  ): Future[DebugDiscoveryParams] = {
     val fileName = filePath.split("/").last
+
+    val depsJson = if (libraryDependencies.nonEmpty) {
+      s""""libraryDependencies":${libraryDependencies.map(dep => s""""$dep"""").mkString("[", ",", "]")},"""
+    } else ""
+
+    val scalaVersionJson = scalaVersion match {
+      case Some(version) => s""""scalaVersion": "$version","""
+      case None => ""
+    }
+
+    val metalsConfig = s"""/metals.json
+                          |{
+                          |  "a": {
+                          |    $depsJson
+                          |    $scalaVersionJson
+                          |  }
+                          |}""".stripMargin.replaceAll(",\\s*}", "}")
+
     for {
       _ <- initialize(
-        s"""|${metalsConfig}
-            |/${filePath}
-            |${fileContent}
+        s"""|$metalsConfig
+            |/$filePath
+            |$fileContent
             |""".stripMargin
       )
       _ <- server.didOpen(filePath)
@@ -72,13 +90,30 @@ class DebugDiscoverySuite
       _ <- server.didChange(filePath, text)
       _ <- server.didSave(filePath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
-      debugger <- server.startDebuggingUnresolved(
-        new DebugDiscoveryParams(
-          server.toPath(filePath).toURI.toString,
-          "runClosest",
-          position = params.getPosition(),
-        ).toJson
+    } yield (
+      new DebugDiscoveryParams(
+        server.toPath(filePath).toURI.toString,
+        "runClosest",
+        position = params.getPosition(),
       )
+    )
+  }
+
+  def checkRunClosestSuccess(
+      fileContent: String,
+      filePath: String,
+      expectedOutput: String,
+      libraryDependencies: List[String] = List.empty,
+      scalaVersion: Option[String] = None,
+  ): Future[Unit] = {
+    for {
+      debugParams <- checkRunClosest(
+        fileContent,
+        filePath,
+        libraryDependencies,
+        scalaVersion,
+      )
+      debugger <- server.startDebuggingUnresolved(debugParams.toJson)
       _ <- debugger.initialize
       _ <- debugger.launch
       _ <- debugger.configurationDone
@@ -91,38 +126,22 @@ class DebugDiscoverySuite
   }
 
   def checkRunClosestError(
-      metalsConfig: String,
       fileContent: String,
       filePath: String,
       expectedOutput: String,
+      libraryDependencies: List[String] = List.empty,
+      scalaVersion: Option[String] = None,
   ): Future[Unit] = {
-    val fileName = filePath.split("/").last
     for {
-      _ <- initialize(
-        s"""|${metalsConfig}
-            |/${filePath}
-            |${fileContent}
-            |""".stripMargin
-      )
-      _ <- server.didOpen(filePath)
-      (text, params) <- server.offsetParams(
-        fileName,
+      debugParams <- checkRunClosest(
         fileContent,
-        workspace,
+        filePath,
+        libraryDependencies,
+        scalaVersion,
       )
-      _ <- server.didChange(filePath, text)
-      _ <- server.didSave(filePath)
-      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       result <- server
-        .startDebuggingUnresolved(
-          new DebugDiscoveryParams(
-            server.toPath(filePath).toURI.toString,
-            "runClosest",
-            position = params.getPosition(),
-          ).toJson
-        )
+        .startDebuggingUnresolved(debugParams.toJson)
         .recover { case e: ResponseErrorException => e.getMessage }
-
     } yield assertNoDiff(
       result.toString(),
       expectedOutput,
@@ -676,14 +695,6 @@ class DebugDiscoverySuite
   }
 
   test("run-closest-test") {
-    val metalsConfig =
-      """/metals.json
-        |{
-        |  "a": {
-        |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
-        |  }
-        |}
-        |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -701,23 +712,17 @@ class DebugDiscoverySuite
          |All 1 test suites passed.
          |================================================================================
          |""".stripMargin
+    val libraryDependencies =
+      List("org.scalatest::scalatest:3.2.16")
     checkRunClosestSuccess(
-      metalsConfig,
       fileContent,
       fooPath,
       expectedOutput,
+      libraryDependencies,
     )
   }
 
   test("run-closest-suite") {
-    val metalsConfig =
-      """/metals.json
-        |{
-        |  "a": {
-        |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
-        |  }
-        |}
-        |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -736,23 +741,17 @@ class DebugDiscoverySuite
          |All 1 test suites passed.
          |================================================================================
       """.stripMargin
+    val libraryDependencies =
+      List("org.scalatest::scalatest:3.2.16")
     checkRunClosestSuccess(
-      metalsConfig,
       fileContent,
       fooPath,
       expectedOutput,
+      libraryDependencies,
     )
   }
 
   test("run-closest-multiple-suites") {
-    val metalsConfig =
-      """/metals.json
-        |{
-        |  "a": {
-        |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
-        |  }
-        |}
-        |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -776,23 +775,17 @@ class DebugDiscoverySuite
          |All 1 test suites passed.
          |================================================================================
       """.stripMargin
+    val libraryDependencies =
+      List("org.scalatest::scalatest:3.2.16")
     checkRunClosestSuccess(
-      metalsConfig,
       fileContent,
       fooPath,
       expectedOutput,
+      libraryDependencies,
     )
   }
 
   test("run-closest-tie-breaker") {
-    val metalsConfig =
-      """/metals.json
-        |{
-        |  "a": {
-        |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
-        |  }
-        |}
-        |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -811,23 +804,17 @@ class DebugDiscoverySuite
          |All 1 test suites passed.
          |================================================================================
       """.stripMargin
+    val libraryDependencies =
+      List("org.scalatest::scalatest:3.2.16")
     checkRunClosestSuccess(
-      metalsConfig,
       fileContent,
       fooPath,
       expectedOutput,
+      libraryDependencies,
     )
   }
 
   test("run-closest-munit") {
-    val metalsConfig =
-      """/metals.json
-        |{
-        |  "a": {
-        |    "libraryDependencies":["org.scalameta::munit:1.0.0-M11"]
-        |  }
-        |}
-        |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -846,23 +833,17 @@ class DebugDiscoverySuite
          |All 1 test suites passed.
          |================================================================================
       """.stripMargin
+    val libraryDependencies =
+      List("org.scalameta::munit:1.0.0-M11")
     checkRunClosestSuccess(
-      metalsConfig,
       fileContent,
       fooPath,
       expectedOutput,
+      libraryDependencies,
     )
   }
 
   test("run-closest-munit-suite") {
-    val metalsConfig =
-      """/metals.json
-        |{
-        |  "a": {
-        |    "libraryDependencies":["org.scalameta::munit:1.0.0-M11"]
-        |  }
-        |}
-        |""".stripMargin
     val fileContent =
       """|package a
          |@@
@@ -881,23 +862,17 @@ class DebugDiscoverySuite
          |All 1 test suites passed.
          |================================================================================
       """.stripMargin
+    val libraryDependencies =
+      List("org.scalameta::munit:1.0.0-M11")
     checkRunClosestSuccess(
-      metalsConfig,
       fileContent,
       fooPath,
       expectedOutput,
+      libraryDependencies,
     )
   }
 
   test("run-closest-junit") {
-    val metalsConfig =
-      """/metals.json
-        |{
-        |  "a": {
-        |    "libraryDependencies":["junit:junit:4.13.2", "com.github.sbt:junit-interface:0.13.3"]
-        |  }
-        |}
-        |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -920,26 +895,17 @@ class DebugDiscoverySuite
          |All 1 test suites passed.
          |================================================================================
       """.stripMargin
+    val libraryDependencies =
+      List("junit:junit:4.13.2", "com.github.sbt:junit-interface:0.13.3")
     checkRunClosestSuccess(
-      metalsConfig,
       fileContent,
       fooPath,
       expectedOutput,
+      libraryDependencies,
     )
   }
 
   test("run-closest-mixed-frameworks") {
-    val metalsConfig =
-      """/metals.json
-        |{
-        |  "a": {
-        |    "libraryDependencies":[
-        |      "org.scalatest::scalatest:3.2.16",
-        |      "org.scalameta::munit:1.0.0-M11"
-        |    ]
-        |  }
-        |}
-        |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -960,23 +926,20 @@ class DebugDiscoverySuite
          |All 1 test suites passed.
          |================================================================================
       """.stripMargin
+    val libraryDependencies =
+      List(
+        "org.scalatest::scalatest:3.2.16",
+        "org.scalameta::munit:1.0.0-M11",
+      )
     checkRunClosestSuccess(
-      metalsConfig,
       fileContent,
       fooPath,
       expectedOutput,
+      libraryDependencies,
     )
   }
 
   test("run-closest-empty-test-file") {
-    val metalsConfig =
-      """|/metals.json
-         |{
-         |  "a": {
-         |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
-         |  }
-         |}
-         |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -984,17 +947,18 @@ class DebugDiscoverySuite
          |  // No tests defined
          |}
          |""".stripMargin
+    val libraryDependencies =
+      List("org.scalatest::scalatest:3.2.16")
     val expectedOutput = NoRunOptionException.getMessage()
-    checkRunClosestError(metalsConfig, fileContent, fooPath, expectedOutput)
+    checkRunClosestError(
+      fileContent,
+      fooPath,
+      expectedOutput,
+      libraryDependencies,
+    )
   }
 
   test("run-closest-main") {
-    val metalsConfig =
-      """/metals.json
-        |{
-        |  "a": {}
-        |}
-        |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -1012,7 +976,6 @@ class DebugDiscoverySuite
          |""".stripMargin
     val expectedOutput = "main executed"
     checkRunClosestSuccess(
-      metalsConfig,
       fileContent,
       fooPath,
       expectedOutput,
@@ -1020,14 +983,6 @@ class DebugDiscoverySuite
   }
 
   test("run-closest-mixed-main-and-test") {
-    val metalsConfig =
-      """|/metals.json
-         |{
-         |  "a": {
-         |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
-         |  }
-         |}
-         |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -1050,23 +1005,17 @@ class DebugDiscoverySuite
          |All 1 test suites passed.
          |================================================================================
          |""".stripMargin
+    val libraryDependencies =
+      List("org.scalatest::scalatest:3.2.16")
     checkRunClosestSuccess(
-      metalsConfig,
       fileContent,
       fooPath,
       expectedOutput,
+      libraryDependencies,
     )
   }
 
   test("run-closest-scala3-main-annotation") {
-    val metalsConfig =
-      """|/metals.json
-         |{
-         |  "a": {
-         |    "scalaVersion": "3.3.6"
-         |  }
-         |}
-         |""".stripMargin
     val fileContent =
       """|package a
          |
@@ -1086,20 +1035,14 @@ class DebugDiscoverySuite
          |""".stripMargin
     val expectedOutput = "Scala 3 main executed"
     checkRunClosestSuccess(
-      metalsConfig,
       fileContent,
       fooPath,
       expectedOutput,
+      scalaVersion = Some("3.3.6"),
     )
   }
 
   test("run-closest-app-trait-fallback") {
-    val metalsConfig =
-      s"""|/metals.json
-          |{
-          |  "a": {}
-          |}
-          |""".stripMargin
     val fileContent =
       """|package a
          |                 @@
@@ -1115,7 +1058,6 @@ class DebugDiscoverySuite
          |""".stripMargin
     val expectedOutput = "App trait main executed"
     checkRunClosestSuccess(
-      metalsConfig,
       fileContent,
       fooPath,
       expectedOutput,
