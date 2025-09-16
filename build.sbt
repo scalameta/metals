@@ -267,7 +267,7 @@ lazy val mtagsShared = project
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "4.32.0",
+      "com.google.protobuf" % "protobuf-java" % "4.32.1",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
@@ -411,7 +411,7 @@ lazy val metals = project
       "com.swoval" % "file-tree-views" % "2.1.12",
       // for http client
       "io.undertow" % "undertow-core" % "2.2.20.Final",
-      "org.jboss.xnio" % "xnio-nio" % "3.8.16.Final",
+      "org.jboss.xnio" % "xnio-nio" % "3.8.17.Final",
       // for persistent data like "dismissed notification"
       "org.flywaydb" % "flyway-core" % "11.12.0",
       "com.h2database" % "h2" % "2.3.232",
@@ -444,7 +444,7 @@ lazy val metals = project
       "com.outr" %% "scribe-file" % V.scribe,
       "com.outr" %% "scribe-slf4j2" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "4.3.0",
+      "com.lihaoyi" %% "ujson" % "4.3.2",
       // For fetching projects' templates
       "com.lihaoyi" %% "requests" % "0.9.0",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
@@ -459,7 +459,7 @@ lazy val metals = project
       // For test frameworks
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       // For MCP
-      "io.modelcontextprotocol.sdk" % "mcp" % "0.12.0",
+      "io.modelcontextprotocol.sdk" % "mcp" % "0.12.1",
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.20.0",
       "io.undertow" % "undertow-servlet" % "2.3.12.Final",
     ),
