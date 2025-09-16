@@ -194,7 +194,8 @@ final class TestDebugger(
         // This might sometimes be printed in the JVM, but does not cause any actual issues
         if (
           !output.contains("Picked up JAVA_TOOL_OPTIONS") &&
-          !output.contains("transport error 202: send failed: Broken pipe")
+          !output.contains("transport error 202: send failed: Broken pipe") &&
+          !output.contains("WARNING: A terminally deprecated method in sun.misc.Unsafe has been called") &&
         )
           fail(new IllegalStateException(output))
       case _ =>

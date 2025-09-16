@@ -1,9 +1,13 @@
 package tests.bazel
 
+import java.util.concurrent.TimeUnit
+
 import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BazelDigest
+import scala.meta.internal.metals.DebugDiscoveryParams
+import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
@@ -215,7 +219,67 @@ class BazelTestDiscoverySuite
       assert(
         testClasses.nonEmpty,
         s"Expected to find 'JUnitTest' in discovered classes: ${testEvents.mkString(", ")}",
-      )
-    }
-  }
-}
+       )
+     }
+   }
+
+   test("scalatest-debug-mode") {
+     cleanWorkspace()
+     val testLayout =
+       s"""|${buildFileWithToolchain()}
+           |scala_test(
+           |    name = "debug_test",
+           |    srcs = ["DebugTest.scala"],
+           |)
+           |
+           |/DebugTest.scala
+           |import org.scalatest.funsuite.AnyFunSuite
+           |
+           |class DebugTest extends AnyFunSuite {
+           |  test("debug test case") {
+           |    val result = 2 + 2
+           |    assert(result == 4, s"Expected 4, got $$result")
+           |  }
+           |  
+           |  test("another debug test") {
+           |    val message = "Hello from Bazel debug test"
+           |    assert(message.nonEmpty)
+           |  }
+           |}
+           |
+           |""".stripMargin
+
+     for {
+       _ <- initialize(
+         BazelModuleLayout(
+           testLayout,
+           V.scala3,
+           bazelVersion,
+           enableToolChainRegistration = true,
+         )
+       )
+       _ <- server.didOpen("DebugTest.scala")
+       _ <- server.didSave("DebugTest.scala")
+
+       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(15))
+
+       debugger <- server.startDebuggingUnresolved(
+         new DebugDiscoveryParams(
+           server.toPath("DebugTest.scala").toURI.toString,
+           "testFile",
+         ).toJson
+       )
+       _ <- debugger.initialize
+       _ <- debugger.launch
+       _ <- debugger.configurationDone
+       _ <- debugger.shutdown
+       output <- debugger.allOutput
+
+     } yield {
+       assert(
+         output.contains("All tests in DebugTest passed") || output.contains("test completed"),
+         s"Expected test execution success message in debug output, but got: $output"
+       )
+     }
+   }
+ }
