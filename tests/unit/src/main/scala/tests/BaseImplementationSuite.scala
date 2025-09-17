@@ -28,8 +28,9 @@ abstract class BaseImplementationSuite(name: String)
       scalaVersion: String = BuildInfo.scalaVersion,
       topLines: Option[Int] = None,
       filter: String => Boolean = _ => true,
+      maxRetry: Int = 3,
   ): Unit =
-    test(name, maxRetry = 3) {
+    test(name, maxRetry = maxRetry) {
       val fileName = "a/src/main/scala/a/Main.scala"
       cleanWorkspace()
       for {
