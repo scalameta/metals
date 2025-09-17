@@ -37,6 +37,34 @@ class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
     } yield ()
   }
 
+  test("basic - Scala 3.5.0".tag(FlakyWindows)) {
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{"a":{"scalaVersion":"3.5.0"}}
+            """.stripMargin
+      )
+      _ <- server.assertHover(
+        "a/src/main/scala/a/Main.scala",
+        """
+          |object Main {
+          |  Option(1).he@@ad
+          |}""".stripMargin,
+        """|```scala
+           |def head: Int
+           |```
+           |Selects the first element of this iterable collection.
+           | Note: might return different results for different runs, unless the underlying collection type is ordered.
+           |
+           |**Returns:** the first element of this iterable collection.
+           |
+           |**Throws**
+           |- `NoSuchElementException`: if the iterable collection is empty.
+           |""".stripMargin.hover,
+      )
+    } yield ()
+  }
+
   test("dependency", withoutVirtualDocs = true) {
     cleanWorkspace()
     for {
