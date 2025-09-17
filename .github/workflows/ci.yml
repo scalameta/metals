@@ -30,7 +30,7 @@ jobs:
           cache: 'sbt'
       - uses: sbt/setup-sbt@v1
       - name: Configure git
-      - run: |
+        run: |
           # This is required for some tests that create a git repo
           git config --global user.email "ci@scalameta.org"
           git config --global user.name "CI Bot"
