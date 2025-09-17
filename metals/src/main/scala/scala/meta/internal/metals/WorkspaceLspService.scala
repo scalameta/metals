@@ -737,8 +737,15 @@ class WorkspaceLspService(
         None
     }
     uriOpt match {
-      case Some(uri) if uri.startsWith("file://") =>
-        getServiceFor(uri).sync(uri).asJava
+      case Some(uri) =>
+        if (uri.startsWith("file://")) {
+          getServiceFor(uri).sync(uri).asJava
+        } else {
+          scribe.warn(
+            s"Can only sync file:// URIs, got $uri"
+          )
+          CompletableFuture.completedFuture(())
+        }
       case None =>
         CompletableFuture.completedFuture(())
     }
@@ -1313,7 +1320,6 @@ class WorkspaceLspService(
         languageClient.underlying,
         () => server.reload(),
         clientConfig.icons(),
-        clientConfig,
       )
       render = () => newClient.renderHtml
       completeCommand = e => newClient.completeCommand(e)

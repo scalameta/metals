@@ -1,5 +1,3 @@
-import java.util.Date
-
 import scala.collection.mutable
 import scala.sys.process._
 import Developers._
@@ -41,20 +39,12 @@ usefulTasks := Welcome.tasks
 
 ThisBuild / semanticdbVersion := V.semanticdb(scalaVersion.value)
 
-def roundMinutesTo15(d: Date): Date = {
-  d.setMinutes(d.getMinutes - (d.getMinutes % 15))
-  d
-}
-
 inThisBuild(
   List(
     version ~= { dynVer =>
       if (isCI && !isTest) dynVer
       else localSnapshotVersion // only for local publishing
     },
-    // cross-compiling and publishing may take longer than a minute, and that leads to broken releases
-    // that pushed some artifacts with one version, and others with a version number a few minutes later
-    dynverCurrentDate := roundMinutesTo15(new Date),
     // semver does not like "+" in version numbers, especially if there are more than one
     dynverSeparator := "-",
     dynver := {

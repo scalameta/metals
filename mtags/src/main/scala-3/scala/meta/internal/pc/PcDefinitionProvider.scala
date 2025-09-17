@@ -2,7 +2,6 @@ package scala.meta.internal.pc
 
 import java.net.URI
 import java.nio.file.Paths
-import java.time.LocalDateTime
 import java.util.ArrayList
 
 import scala.annotation.tailrec
@@ -23,7 +22,6 @@ import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.Interactive.Include
 import dotty.tools.dotc.interactive.InteractiveDriver
-import dotty.tools.dotc.transform.SymUtils.isLocal
 import dotty.tools.dotc.util.SourceFile
 import dotty.tools.dotc.util.SourcePosition
 import org.eclipse.lsp4j.Location
