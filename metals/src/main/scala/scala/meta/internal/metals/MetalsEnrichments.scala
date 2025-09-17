@@ -88,6 +88,14 @@ object MetalsEnrichments
     with AsScalaExtensions
     with MtagsEnrichments {
 
+  @volatile
+  private var followSymlinkDefault = false
+  def onFeatureFlags(featureFlags: m.infra.FeatureFlagProvider): Unit = {
+    followSymlinkDefault = featureFlags
+      .readBoolean(m.infra.FeatureFlag.FOLLOW_SYMLINKS)
+      .orElse(false)
+  }
+
   implicit class XtensionScanner(scanner: LegacyScanner) {
 
     import scala.meta.internal.tokenizers.LegacyToken._
@@ -774,7 +782,8 @@ object MetalsEnrichments
      * that can add up. For example, for a monorepo, converting all relevant files
      * (sources, jar dependencies, source dependencies) can add up to tens of seconds on Linux.
      */
-    def toAbsolutePath: AbsolutePath = toAbsolutePath(followSymlink = false)
+    def toAbsolutePath: AbsolutePath =
+      toAbsolutePath(followSymlink = followSymlinkDefault)
 
     def toAbsolutePath(followSymlink: Boolean): AbsolutePath =
       MtagsEnrichments.XtensionStringMtags(value).toAbsolutePath(followSymlink)

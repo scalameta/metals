@@ -124,10 +124,9 @@ object TestGroups {
       "tests.ServerLivenessMonitorSuite", "tests.ResetWorkspaceLspSuite",
       "tests.ToplevelWithInnerScala3Suite", "tests.OutlineLspSuite"),
     Set(
-      "tests.mbt.MbtWorkspaceSymbolProviderSuite",
-      "tests.mbt.GitVSCSuite",
-      "tests.PCDiagnosticsSuite",
-      "tests.ClassloaderModulesSupport",
+      "tests.mbt.MbtWorkspaceSymbolProviderSuite", "tests.mbt.GitVSCSuite",
+      "tests.PCDiagnosticsSuite", "tests.ClassloaderModulesSupport",
+      "tests.InfraSuite",
     ),
   )
 }

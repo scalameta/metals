@@ -55,7 +55,11 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     val tracked = workDoneProgress.trackFuture(
       Messages.indexing,
       Future {
-        timerProvider.timedThunk("indexed workspace", onlyIf = true) {
+        timerProvider.timedThunk(
+          "indexed workspace",
+          onlyIf = true,
+          metricName = Some("index_workspace"),
+        ) {
           try indexWorkspace(check)
           finally {
             indexingPromise.trySuccess(())

@@ -13,6 +13,8 @@ import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 
+import scala.meta.infra.FeatureFlagProvider
+import scala.meta.infra.MonitoringClient
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.NewProjectProvider
 import scala.meta.internal.builds.ShellRunner
@@ -103,6 +105,8 @@ class WorkspaceLspService(
     initializeParams: lsp4j.InitializeParams,
     val folders: List[Folder],
     fallbackServicePath: => AbsolutePath,
+    metrics: MonitoringClient,
+    featureFlags: FeatureFlagProvider,
 ) extends ScalaLspService {
   import serverInputs._
   implicit val ex: ExecutionContextExecutorService = ec
@@ -149,7 +153,7 @@ class WorkspaceLspService(
     new AtomicReference(None)
   private val recentlyFocusedFiles = new ActiveFiles(time)
 
-  private val timerProvider: TimerProvider = new TimerProvider(time)
+  private val timerProvider: TimerProvider = new TimerProvider(time, metrics)
 
   val doctor: HeadDoctor =
     new HeadDoctor(
@@ -191,6 +195,7 @@ class WorkspaceLspService(
       doctor,
       workDoneProgress,
       bspStatus,
+      featureFlags,
     )
   }
 
@@ -215,6 +220,7 @@ class WorkspaceLspService(
           bspStatus,
           workDoneProgress,
           maxScalaCliServers = 3,
+          featureFlags,
         )
     }
 

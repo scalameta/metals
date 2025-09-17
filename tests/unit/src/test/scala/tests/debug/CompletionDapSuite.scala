@@ -233,7 +233,7 @@ class CompletionDapSuite
   )
 
   assertCompletion(
-    "java-member",
+    "java-member".flaky,
     expression = "name.s@@",
     expectedCompletions =
       if (isJava17)

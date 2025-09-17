@@ -476,6 +476,7 @@ lazy val metals = project
       // Java dependencies
       // =================
       // for bloom filters
+      "com.google.code.findbugs" % "jsr305" % "3.0.2", // for nullability annotations
       V.guava,
       "org.scalameta" %% "metaconfig-core" % "0.14.0",
       // For MBT persistent cache
@@ -501,12 +502,22 @@ lazy val metals = project
       "ch.epfl.scala" %% "scala-debug-adapter" % V.debugAdapter,
       // for finding paths of global log/cache directories
       "dev.dirs" % "directories" % "26",
+
+      // ==============================================
+      // Databricks dependencies for inlined telemetry.
+      // These should not get upstreamed.
+      // ==============================================
+      "com.lihaoyi" %% "os-lib" % "0.11.5",
+      "com.lihaoyi" %% "upickle" % "4.3.2",
+      "com.lihaoyi" %% "requests" % "0.9.0",
+
       // ==================
       // Scala dependencies
       // ==================
       "org.scalameta" % "mdoc-interfaces" % V.mdoc,
       "org.scalameta" %% "scalafmt-dynamic" % V.scalafmt,
       "ch.epfl.scala" % "scalafix-interfaces" % V.scalafix,
+
       // For reading classpaths.
       // for fetching ch.epfl.scala:bloop-frontend and other library dependencies
       "io.get-coursier" % "interface" % V.coursierInterfaces,

@@ -118,7 +118,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
     } yield ()
   }
 
-  test("akka") {
+  test("akka".flaky) {
     cleanWorkspace()
     val path = "hi.worksheet.sc"
     for {

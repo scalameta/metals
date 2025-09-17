@@ -25,6 +25,7 @@ object Main extends SupportedScalaVersions {
         |
         |""".stripMargin
   }
+
   def main(args: Array[String]): Unit = {
     if (args.exists(Set("-v", "--version", "-version"))) {
       println(

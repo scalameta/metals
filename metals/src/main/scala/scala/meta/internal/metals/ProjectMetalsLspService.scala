@@ -10,6 +10,7 @@ import scala.concurrent.Future
 import scala.util.Failure
 import scala.util.Success
 
+import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.bsp.BspConfigGenerator
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
@@ -56,6 +57,7 @@ class ProjectMetalsLspService(
     bspStatus: BspStatus,
     override val workDoneProgress: WorkDoneProgress,
     maxScalaCliServers: Int,
+    featureFlags: FeatureFlagProvider,
 ) extends MetalsLspService(
       ec,
       sh,
@@ -73,6 +75,7 @@ class ProjectMetalsLspService(
       bspStatus,
       workDoneProgress,
       maxScalaCliServers,
+      featureFlags,
     ) {
 
   scribe.debug(clientConfig.toString())

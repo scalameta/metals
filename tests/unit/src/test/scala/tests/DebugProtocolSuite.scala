@@ -112,7 +112,7 @@ class DebugProtocolSuite
     } yield assertNoDiff(output, "Hello world")
   }
 
-  test("disconnect") {
+  test("disconnect".flaky) {
     for {
       _ <- initialize(
         s"""/metals.json

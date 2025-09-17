@@ -9,6 +9,8 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
+import scala.meta.internal.infra.AggregateFeatureFlagProvider
+import scala.meta.internal.infra.AggregateMonitoringClient
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.FallbackMetalsLspService
@@ -60,13 +62,19 @@ class MetalsLanguageServer(
   private val languageClient =
     new AtomicReference[MetalsLanguageClient](NoopLanguageClient)
 
-  private val cancelables = new MutableCancelable()
+  private val cancelables =
+    new MutableCancelable().add(() => metrics.shutdown())
   private val isCancelled = new AtomicBoolean(false)
   private val isLanguageClientConnected = new AtomicBoolean(false)
 
   // it's fine to pass null to underlying service, it won't be used before initialize is called
   // and we set it to the correct value in initialize anyway
   private val metalsService = new DelegatingScalaService(null)
+
+  lazy val featureFlags: AggregateFeatureFlagProvider =
+    AggregateFeatureFlagProvider.fromServiceLoader()
+  lazy val metrics: AggregateMonitoringClient =
+    AggregateMonitoringClient.fromServiceLoader()
 
   /**
    * @param languageClientProxy don't be fool by type, this is proxy created by lsp4j and calling shutdown on it may throw
@@ -217,6 +225,8 @@ class MetalsLanguageServer(
     initializeParams,
     workspaceFolders,
     fallbackServicePath,
+    metrics,
+    featureFlags,
   )
 
   private val isInitialized = new AtomicBoolean(false)

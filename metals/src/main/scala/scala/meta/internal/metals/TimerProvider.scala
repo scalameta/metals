@@ -3,10 +3,14 @@ package scala.meta.internal.metals
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.infra
+
 /**
  * Helper class to provider functionality around timers.
  */
-final class TimerProvider(time: Time)(implicit ec: ExecutionContext) {
+final class TimerProvider(time: Time, metrics: infra.MonitoringClient)(implicit
+    ec: ExecutionContext
+) {
   def timed[T](
       didWhat: String,
       reportStatus: Boolean = false,
@@ -20,6 +24,7 @@ final class TimerProvider(time: Time)(implicit ec: ExecutionContext) {
       didWhat: String,
       onlyIf: Boolean = true,
       thresholdMillis: Long = 0,
+      metricName: Option[String] = None,
   )(thunk: => T): T = {
     val elapsed = new Timer(time)
     val result = thunk
@@ -28,6 +33,19 @@ final class TimerProvider(time: Time)(implicit ec: ExecutionContext) {
     ) {
       scribe.info(s"time: $didWhat in $elapsed")
     }
+
+    metricName match {
+      case Some(name) =>
+        val metric = new infra.Metric()
+        metric.name = name
+        metric.value = elapsed.elapsedMillis.toFloat
+        metric.unit = infra.Metric.UnitType.MILLISECONDS
+        metric.metricType = infra.Metric.MetricType.HISTOGRAM
+        metric.service = "metals"
+        metrics.recordUsage(metric)
+      case _ =>
+    }
+
     result
   }
 

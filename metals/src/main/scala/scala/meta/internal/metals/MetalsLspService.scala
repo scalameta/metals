@@ -20,6 +20,7 @@ import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 
+import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.builds.BspErrorHandler
@@ -112,6 +113,7 @@ abstract class MetalsLspService(
     bspStatus: BspStatus,
     val workDoneProgress: WorkDoneProgress,
     maxScalaCliServers: Int,
+    featureFlags: FeatureFlagProvider,
 ) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
     with Cancelable
     with TextDocumentService
@@ -699,6 +701,7 @@ abstract class MetalsLspService(
                 Future(mbtWorkspaceSymbolProvider.onReindex()),
                 Future(workspaceSymbols.indexClasspath()),
                 Future(formattingProvider.load()),
+                Future(MetalsEnrichments.onFeatureFlags(featureFlags)),
               )
             )
       } yield ()
