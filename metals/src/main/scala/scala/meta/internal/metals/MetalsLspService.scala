@@ -59,7 +59,6 @@ import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.search.SymbolHierarchyOps
-import scala.meta.internal.semanticdb.MethodSignature
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.TextDocumentService
@@ -1412,8 +1411,7 @@ abstract class MetalsLspService(
           }
         symbolInfo <- doc.symbols.find(_.symbol == sym)
         sig = symbolInfo.signature
-      } yield
-        sym.symbolToFullyQualifiedName
+      } yield sym.symbolToFullyQualifiedName
     }
   }
 
