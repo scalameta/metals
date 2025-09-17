@@ -7,18 +7,19 @@ concurrency:
   group: release-${{ github.ref }}
 jobs:
   publish:
-    runs-on: 
+    runs-on:
       group: metals-protected-runner-group
       labels: metals-ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
           fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: "temurin"
           # Do not change the version of Java, it is the minimal version Metals works with
           java-version: 17
-          cache: 'sbt'
+          cache: "sbt"
       - uses: sbt/setup-sbt@v1
       - run: git fetch origin --tags
       - name: Publish
