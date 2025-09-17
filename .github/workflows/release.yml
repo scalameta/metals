@@ -21,7 +21,6 @@ jobs:
           java-version: 17
           cache: "sbt"
       - uses: sbt/setup-sbt@v1
-      - run: git fetch --unshallow
       - name: Publish
         run: |
           COMMAND="quick-publish-gh-packages"
