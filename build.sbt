@@ -47,15 +47,6 @@ inThisBuild(
     },
     // semver does not like "+" in version numbers, especially if there are more than one
     dynverSeparator := "-",
-    dynver := {
-      dynverInstance.value
-        .getGitDescribeOutput(dynverCurrentDate.value)
-        .getVersion(
-          dynverCurrentDate.value,
-          dynverSeparator.value,
-          dynverSonatypeSnapshots.value,
-        )
-    },
     scalaVersion := V.scala213,
     crossScalaVersions := List(V.scala213),
     organization := "org.scalameta",
