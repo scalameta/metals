@@ -1395,7 +1395,6 @@ abstract class MetalsLspService(
       val dialect = scalaVersionSelector.getDialect(path)
       val pos = params.getPosition
       for {
-        doc <- semanticdbs().textDocument(path).documentIncludingStale
         sym <- definitionProvider
           .symbolOccurrence(path, pos)
           .map { case (occ, _) =>
@@ -1409,8 +1408,6 @@ abstract class MetalsLspService(
               .map(_.symbol)
               .headOption
           }
-        symbolInfo <- doc.symbols.find(_.symbol == sym)
-        sig = symbolInfo.signature
       } yield sym.symbolToFullyQualifiedName
     }
   }
