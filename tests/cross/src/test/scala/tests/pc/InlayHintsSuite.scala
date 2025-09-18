@@ -1353,6 +1353,59 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
   )
 
   check(
+    "closing-labels-1",
+    """|object Main{
+       |  def bestNumber: Int = {
+       |    234
+       |  }
+       |}
+       |""".stripMargin,
+    """|object Main{
+       |  def bestNumber: Int = {
+       |    234
+       |  }/*bestNumber*/
+       |}/*Main*/
+       |""".stripMargin,
+    closingLabels = true
+  )
+
+  check(
+    "closing-labels-weird-formatting",
+    """|object Main{
+       |  def bestNumber: Int = {
+       |    def greatNumber: Long = {
+       |      3
+       |    }234}
+       |}
+       |""".stripMargin,
+    """|object Main{
+       |  def bestNumber: Int = {
+       |    def greatNumber: Long = {
+       |      3
+       |    }/*greatNumber*/234}/*bestNumber*/
+       |}/*Main*/
+       |""".stripMargin,
+    closingLabels = true
+  )
+
+  check(
+    "closing-labels-weird-formatting",
+    """|object Main{
+       |  def bestNumber = {
+       |    234
+       |  }
+       |}
+       |""".stripMargin,
+    """|object Main{
+       |  def bestNumber/*: Int<<scala/Int#>>*/ = {
+       |    234
+       |  }/*bestNumber*/
+       |}/*Main*/
+       |""".stripMargin,
+    closingLabels = true
+  )
+
+  check(
     "by-name-block-named",
     """|object Main{
        |  def Future[A](arg: => A): A = arg
@@ -1667,4 +1720,5 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |}
        |""".stripMargin
   )
+
 }

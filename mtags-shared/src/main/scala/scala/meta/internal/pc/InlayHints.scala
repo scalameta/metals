@@ -24,13 +24,19 @@ case class InlayHints(
     copy(
       definitions = definitions + offset
     )
+
+  def add(
+      inlayHint: InlayHint
+  ) = copy(inlayHints = addInlayHint(inlayHint))
   def add(
       pos: l.Range,
       labelParts: List[LabelPart],
       kind: InlayHintKind
   ): InlayHints =
     copy(inlayHints =
-      addInlayHint(makeInlayHint(pos.getStart(), labelParts, kind))
+      addInlayHint(
+        InlayHints.makeInlayHint(pos.getStart(), labelParts, kind, uri)
+      )
     )
 
   /*
@@ -79,23 +85,9 @@ case class InlayHints(
   }
 
   private def makeInlayHint(
-      pos: l.Position,
-      labelParts: List[LabelPart],
-      kind: InlayHintKind
-  ) = {
-    val hint = new InlayHint()
-    hint.setPosition(pos)
-    val (label, dataInfo) = labelParts.map(lp => (lp.label, lp.data)).unzip
-    hint.setLabel(label.asJava)
-    hint.setData(InlayHints.toData(uri.toString(), dataInfo))
-    hint.setKind(kind)
-    hint
-  }
-
-  private def makeInlayHint(
       bih: BlockInlayHint
   ): InlayHint =
-    makeInlayHint(bih.pos.getEnd, bih.labels, bih.kind)
+    InlayHints.makeInlayHint(bih.pos.getEnd, bih.labels, bih.kind, uri)
 
   // If method has both type parameter and implicit parameter, we want the type parameter decoration to be displayed first,
   // but it's added second. This method adds the decoration to the right position in the list.
@@ -113,6 +105,30 @@ case class InlayHints(
 
 object InlayHints {
   private val gson = new Gson()
+
+  def makeInlayHint(
+      pos: l.Range,
+      labelParts: List[LabelPart],
+      kind: InlayHintKind,
+      uri: URI
+  ): InlayHint = {
+    makeInlayHint(pos.getStart(), labelParts, kind, uri)
+  }
+
+  def makeInlayHint(
+      pos: l.Position,
+      labelParts: List[LabelPart],
+      kind: InlayHintKind,
+      uri: URI
+  ): InlayHint = {
+    val hint = new InlayHint()
+    hint.setPosition(pos)
+    val (label, dataInfo) = labelParts.map(lp => (lp.label, lp.data)).unzip
+    hint.setLabel(label.asJava)
+    hint.setData(InlayHints.toData(uri.toString(), dataInfo))
+    hint.setKind(kind)
+    hint
+  }
   def empty(uri: URI): InlayHints =
     InlayHints(uri, Nil, Map.empty[Int, InlayHintBlock], Set.empty)
 

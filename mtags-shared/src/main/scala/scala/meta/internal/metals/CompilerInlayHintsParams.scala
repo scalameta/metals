@@ -16,7 +16,8 @@ case class CompilerInlayHintsParams(
     override val byNameParameters: Boolean,
     implicitConversions: Boolean,
     override val namedParameters: Boolean,
-    override val hintsInPatternMatch: Boolean
+    override val hintsInPatternMatch: Boolean,
+    override val closingLabels: Boolean
 ) extends InlayHintsParams {
   override def uri(): URI = rangeParams.uri
   override def text(): String = rangeParams.text
