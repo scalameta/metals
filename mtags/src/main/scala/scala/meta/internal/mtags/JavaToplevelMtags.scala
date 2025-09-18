@@ -61,8 +61,8 @@ class JavaToplevelMtags(
   }
 
   def readPackage: List[String] = {
-    fetchToken // start of file
-    fetchToken match {
+    fetchToken() // start of file
+    fetchToken() match {
       case Token.Package => readPaths.map(_.value)
       case _ => Nil
     }
@@ -70,15 +70,15 @@ class JavaToplevelMtags(
 
   @tailrec
   private def loop(region: Option[Region]): Unit = {
-    val token = fetchToken
+    val token = fetchToken()
     token match {
       case Token.EOF =>
       case Token.Package =>
         val paths = readPaths
         paths.foreach { path => pkg(path.value, path.pos) }
         loop(region)
-      case Token.Class | Token.Interface | _: Token.Enum | _: Token.Record =>
-        fetchToken match {
+      case Token.Class | Token.Interface | Token.Enum | Token.Record =>
+        fetchToken() match {
           case Token.Word(v, pos) =>
             val kind = token match {
               case Token.Interface => SymbolInformation.Kind.INTERFACE
@@ -118,7 +118,7 @@ class JavaToplevelMtags(
     val implementsOrExtends = List.newBuilder[String]
     @tailrec
     def skipUntilOptImplementsOrExtends: Token = {
-      fetchToken match {
+      fetchToken() match {
         case t @ (Token.Implements | Token.Extends) => t
         case Token.EOF => Token.EOF
         case Token.LBrace => Token.LBrace
@@ -128,7 +128,7 @@ class JavaToplevelMtags(
 
     @tailrec
     def collectHierarchy: Unit = {
-      fetchToken match {
+      fetchToken() match {
         case Token.Word(v, _) =>
           // emit here
           implementsOrExtends += v
@@ -164,7 +164,7 @@ class JavaToplevelMtags(
     } else skipMultilineComment(prevStar = reader.ch == '*')
   }
 
-  private def fetchToken: Token = {
+  private def fetchToken(inPath: Boolean = false): Token = {
 
     @tailrec
     def quotedLiteral(quote: Char): Token = {
@@ -193,18 +193,14 @@ class JavaToplevelMtags(
       } else {
 
         val pos = Position.Range(input, start, reader.endCharOffset)
-        builder.mkString match {
-          case "package" => Token.Package
-          case "class" => Token.Class
-          case "interface" => Token.Interface
-          case "record" => Token.Record(pos)
-          case "enum" => Token.Enum(pos)
-          case "extends" => Token.Extends
-          case "implements" => Token.Implements
-          case ident =>
-            Token.Word(ident, pos)
+        val name = builder.toString
+        Token.keywords.get(name) match {
+          case Some(Token.Record) if inPath => Token.Word(name, pos)
+          case Some(Token.Enum) if inPath => Token.Word(name, pos)
+          case Some(token) => token
+          case None =>
+            Token.Word(name, pos)
         }
-
       }
     }
 
@@ -268,7 +264,7 @@ class JavaToplevelMtags(
     val builder = List.newBuilder[Token.WithPos]
     @tailrec
     def loop(): List[Token.WithPos] = {
-      fetchToken match {
+      fetchToken(inPath = true) match {
         case t: Token.WithPos =>
           builder += t
           loop()
@@ -290,7 +286,7 @@ class JavaToplevelMtags(
   private def skipBody: Unit = {
     @tailrec
     def skipToFirstBrace: Unit =
-      fetchToken match {
+      fetchToken() match {
         case Token.LBrace | Token.EOF => ()
         case _ =>
           skipToFirstBrace
@@ -306,7 +302,7 @@ class JavaToplevelMtags(
       closingToken: Token,
       open: Int = 1
   ): Unit = {
-    fetchToken match {
+    fetchToken() match {
       case t if t == closingToken && open == 1 => ()
       case t if t == closingToken =>
         skipBalanced(openingToken, closingToken, open - 1)
@@ -370,12 +366,8 @@ object JavaToplevelMtags {
     case object Package extends Token
     case object Class extends Token
     case object Interface extends Token
-    case class Enum(pos: Position) extends WithPos {
-      val value: String = "enum"
-    }
-    case class Record(pos: Position) extends WithPos {
-      val value: String = "record"
-    }
+    case object Enum extends Token
+    case object Record extends Token
     case object Implements extends Token
     case object Extends extends Token
     case object RBrace extends Token
@@ -397,6 +389,15 @@ object JavaToplevelMtags {
         s"Word($value)"
     }
 
+    val keywords: Map[String, Token] = Map(
+      "package" -> Package,
+      "class" -> Class,
+      "interface" -> Interface,
+      "record" -> Record,
+      "enum" -> Enum,
+      "extends" -> Extends,
+      "implements" -> Implements
+    )
   }
 
   case class Region(
