@@ -204,25 +204,54 @@ class JavaToplevelMtags(
       }
     }
 
-    def parseToken: (Token, Boolean) = {
+    def parseToken: Token = {
       val first = reader.ch
       first match {
         case ',' | '&' | '|' | '!' | '=' | '+' | '-' | '*' | '@' | ':' | '?' |
             '%' | '^' | '~' =>
-          (Token.SpecialSym, false)
-        case Chars.SU => (Token.EOF, false)
-        case '.' => (Token.Dot, false)
-        case '{' => (Token.LBrace, false)
-        case '}' => (Token.RBrace, false)
-        case ';' => (Token.Semicolon, false)
-        case '(' => (Token.LParen, false)
-        case ')' => (Token.RParen, false)
-        case '[' => (Token.LBracket, false)
-        case ']' => (Token.RBracket, false)
-        case '<' => (Token.LessThan, false)
-        case '>' => (Token.GreaterThan, false)
-        case '"' => (quotedLiteral('"'), false)
-        case '\'' => (quotedLiteral('\''), false)
+          reader.nextChar()
+          Token.SpecialSym
+        case Chars.SU =>
+          reader.nextChar()
+          Token.EOF
+        case '.' =>
+          reader.nextChar()
+          Token.Dot
+        case '{' =>
+          reader.nextChar()
+          Token.LBrace
+        case '}' =>
+          reader.nextChar()
+          Token.RBrace
+        case ';' =>
+          reader.nextChar()
+          Token.Semicolon
+        case '(' =>
+          reader.nextChar()
+          Token.LParen
+        case ')' =>
+          reader.nextChar()
+          Token.RParen
+        case '[' =>
+          reader.nextChar()
+          Token.LBracket
+        case ']' =>
+          reader.nextChar()
+          Token.RBracket
+        case '<' =>
+          reader.nextChar()
+          Token.LessThan
+        case '>' =>
+          reader.nextChar()
+          Token.GreaterThan
+        case '"' =>
+          val t = quotedLiteral('"')
+          reader.nextChar()
+          t
+        case '\'' =>
+          val t = quotedLiteral('\'')
+          reader.nextChar()
+          t
         case '/' =>
           reader.nextChar()
           val next = reader.ch
@@ -240,24 +269,22 @@ class JavaToplevelMtags(
                 reader.begCharOffset,
                 new StringBuilder().append(first.toChar).append(next.toChar)
               )
-              (token, true)
+              token
           }
         case '#' =>
           reader.nextChar()
           kwOrIdent(reader.endCharOffset, new StringBuilder(first + 1)) match {
-            case Token.Word("include", _) => (Token.IncludeHeader, true)
+            case Token.Word("include", _) => Token.IncludeHeader
             case _ => unexpectedCharacter('#', first)
           }
         case _ =>
           val token = kwOrIdent(reader.endCharOffset, new StringBuilder(first))
-          (token, true)
+          token
       }
     }
 
     toNextNonWhiteSpace()
-    val (t, didNextChar) = parseToken
-    if (!didNextChar) reader.nextChar()
-    t
+    parseToken
   }
 
   private def readPaths: List[Token.WithPos] = {
