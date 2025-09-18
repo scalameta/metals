@@ -459,12 +459,12 @@ class ImportMissingSymbolLspSuite
   )
 
   checkActionsOnly(
-    "i7777 (<empty> package)",
+    "i7777 (empty package)",
     s"""|package a
         |object Foo {
         |  <<Bar>>
         |}
-        |/a/src/main/scala/Bar.scala
+        |/a/src/main/scala/a/Bar.scala
         |object Bar {}
         |""".stripMargin,
     s"${CreateNewSymbol.title("Bar")}",

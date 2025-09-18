@@ -241,11 +241,6 @@ class ImportMissingSymbolQuickFix(
   override protected val allSymbolsTitle: String =
     ImportMissingSymbol.allSymbolsTitle
   override protected def isImportAllSourceAction: Boolean = false
-  override protected def filterImportActions(
-      allActions: Seq[l.CodeAction]
-  ): Seq[l.CodeAction] = {
-    allActions.filter(!_.getTitle().endsWith("from package '<empty>'"))
-  }
 }
 
 object ImportMissingSymbolQuickFix {
