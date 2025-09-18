@@ -14,3 +14,6 @@ Please refer to the documentation for contributors
 - Maybe not Databricks-specific, but run the command "Switch Build Server" and
   pick "bloop". Run `sbt bloopInstall` manually when you tweak the build and
   trigger "Connect to Build Server".
+- Run `git config core.hookspath .git/hooks` to override the global pre-push
+  formatting hook on Arca. Without this setting, your PRs will fail on
+  formatting issues.
