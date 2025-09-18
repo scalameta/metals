@@ -1388,6 +1388,31 @@ abstract class MetalsLspService(
       .asJavaObject
   }
 
+  def copyFQNOfSymbol(
+      params: l.TextDocumentPositionParams
+  ): Future[Option[String]] = {
+    Future.successful {
+      val path = params.getTextDocument.getUri.toAbsolutePath
+      val dialect = scalaVersionSelector.getDialect(path)
+      val pos = params.getPosition
+      for {
+        sym <- definitionProvider
+          .symbolOccurrence(path, pos)
+          .map { case (occ, _) =>
+            occ.symbol
+          }
+          .orElse {
+            Mtags
+              .index(path, dialect)
+              .occurrences
+              .filter(_.range.exists(_.encloses(pos)))
+              .map(_.symbol)
+              .headOption
+          }
+      } yield sym.symbolToFullyQualifiedName
+    }
+  }
+
   def analyzeStackTrace(content: String): Option[ExecuteCommandParams] =
     stacktraceAnalyzer.analyzeCommand(content)
 
