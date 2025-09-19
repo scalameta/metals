@@ -8,7 +8,6 @@ import scala.util.control.NonFatal
 import scala.meta.infra.Event
 import scala.meta.infra.Metric
 import scala.meta.infra.MonitoringClient
-import scala.meta.infra.Telemetry
 import scala.meta.internal.jdk.CollectionConverters._
 
 import org.slf4j.Logger
@@ -23,7 +22,7 @@ class AggregateMonitoringClient(val underlying: List[MonitoringClient])
   @tailrec
   private def foreach(
       c: List[MonitoringClient],
-      fn: MonitoringClient => Unit
+      fn: MonitoringClient => Unit,
   ): Unit = {
     c match {
       case client :: tail =>
@@ -46,10 +45,8 @@ class AggregateMonitoringClient(val underlying: List[MonitoringClient])
 }
 
 object AggregateMonitoringClient {
-  def fromServiceLoader(): AggregateMonitoringClient =
+  def fromServiceLoader(): MonitoringClient =
     new AggregateMonitoringClient(
-      if (!Telemetry.isEnabled()) Nil
-      else
-        ServiceLoader.load(classOf[MonitoringClient]).iterator.asScala.toList
+      ServiceLoader.load(classOf[MonitoringClient]).iterator.asScala.toList
     )
 }

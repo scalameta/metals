@@ -9,8 +9,13 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
+import scala.meta.infra.FeatureFlagProvider
+import scala.meta.infra.MonitoringClient
 import scala.meta.internal.infra.AggregateFeatureFlagProvider
 import scala.meta.internal.infra.AggregateMonitoringClient
+import scala.meta.internal.infra.NonBlockingMonitoringClient
+import scala.meta.internal.infra.NoopFeatureFlagProvider
+import scala.meta.internal.infra.NoopMonitoringClient
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.FallbackMetalsLspService
@@ -71,10 +76,20 @@ class MetalsLanguageServer(
   // and we set it to the correct value in initialize anyway
   private val metalsService = new DelegatingScalaService(null)
 
-  lazy val featureFlags: AggregateFeatureFlagProvider =
-    AggregateFeatureFlagProvider.fromServiceLoader()
-  lazy val metrics: AggregateMonitoringClient =
-    AggregateMonitoringClient.fromServiceLoader()
+  lazy val featureFlags: FeatureFlagProvider =
+    if (serverInputs.initialServerConfig.telemetry.isFeatureFlagsEnabled)
+      AggregateFeatureFlagProvider.fromServiceLoader()
+    else NoopFeatureFlagProvider
+
+  lazy val metrics: MonitoringClient =
+    if (serverInputs.initialServerConfig.telemetry.isMetricsEnabled)
+      new NonBlockingMonitoringClient(
+        AggregateMonitoringClient.fromServiceLoader(),
+        ec,
+      )
+    else {
+      new NoopMonitoringClient()
+    }
 
   /**
    * @param languageClientProxy don't be fool by type, this is proxy created by lsp4j and calling shutdown on it may throw

@@ -11,6 +11,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.control.NonFatal
 
+import scala.meta.infra.MonitoringClient
 import scala.meta.internal.bsp
 import scala.meta.internal.bsp.BspConfigGenerationStatus.BspConfigGenerationStatus
 import scala.meta.internal.bsp.BspConnector
@@ -57,6 +58,7 @@ class ConnectionProvider(
     mainBuildTargetsData: TargetData,
     indexProviders: IndexProviders,
     syncStatusReporter: SyncStatusReporter,
+    metrics: MonitoringClient,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Indexer(indexProviders)
     with Cancelable {
@@ -128,13 +130,14 @@ class ConnectionProvider(
   def fullConnect(): Future[Unit] = {
     buildTools.initialize()
     workDoneProgress.trackFuture(
-      "Initializing build server",
+      "Syncing workspace",
       for {
         _ <-
           if (buildTools.isAutoConnectable(buildToolProvider.optProjectRoot))
             connect(CreateSession())
           else slowConnectToBuildServer(forceImport = false)
       } yield buildServerPromise.trySuccess(()),
+      metricName = Some("initialize_build_server" -> metrics),
     )
   }
 
@@ -690,21 +693,27 @@ class ConnectionProvider(
 sealed trait ConnectKind
 object SlowConnect extends ConnectKind
 
-sealed trait ConnectRequest extends ConnectKind
+sealed abstract class ConnectRequest(
+    val userMessage: String,
+    val metricName: Option[String] = None,
+) extends ConnectKind
 
-case class Disconnect(shutdownBuildServer: Boolean) extends ConnectRequest
-case class Index(check: () => Unit) extends ConnectRequest
-case class ImportBuildAndIndex(bspSession: BspSession) extends ConnectRequest
-case class ConnectToSession(bspSession: BspSession) extends ConnectRequest
+case class Disconnect(shutdownBuildServer: Boolean)
+    extends ConnectRequest("Disconnecting from build server")
+case class Index(check: () => Unit) extends ConnectRequest("Indexing workspace")
+case class ImportBuildAndIndex(bspSession: BspSession)
+    extends ConnectRequest("Importing build")
+case class ConnectToSession(bspSession: BspSession)
+    extends ConnectRequest("Connecting to build server")
 case class CreateSession(shutdownBuildServer: Boolean = false)
-    extends ConnectRequest
+    extends ConnectRequest("Establishing build server session")
 case class GenerateBspConfigAndConnect(
     buildTool: BuildServerProvider,
     shutdownServer: Boolean = false,
-) extends ConnectRequest
+) extends ConnectRequest("Generating bsp config")
 case class BloopInstallAndConnect(
     buildTool: BloopInstallProvider,
     checksum: String,
     forceImport: Boolean,
     shutdownServer: Boolean,
-) extends ConnectRequest
+) extends ConnectRequest("Bloop installing")

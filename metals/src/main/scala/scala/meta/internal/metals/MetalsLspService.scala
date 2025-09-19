@@ -21,6 +21,7 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.infra.FeatureFlagProvider
+import scala.meta.infra.MonitoringClient
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.builds.BspErrorHandler
@@ -114,6 +115,7 @@ abstract class MetalsLspService(
     val workDoneProgress: WorkDoneProgress,
     maxScalaCliServers: Int,
     featureFlags: FeatureFlagProvider,
+    metrics: MonitoringClient,
 ) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
     with Cancelable
     with TextDocumentService
@@ -296,6 +298,7 @@ abstract class MetalsLspService(
       folder,
       initialServerConfig.workspaceSymbolProvider,
       () => clientConfig.initialConfig.statistics,
+      metrics,
     )
 
   protected def warnings: Warnings = NoopWarnings

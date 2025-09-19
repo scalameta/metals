@@ -129,6 +129,7 @@ final case class MetalsServerConfig(
         .getOrElse(3),
     workspaceSymbolProvider: WorkspaceSymbolProviderConfig =
       WorkspaceSymbolProviderConfig.default,
+    telemetry: TelemetryConfig = TelemetryConfig.default,
 ) {
   override def toString: String =
     List[String](
@@ -154,6 +155,7 @@ final case class MetalsServerConfig(
       s"enable-best-effort=$enableBestEffort",
       s"folding-range-minimum-span=$foldingRageMinimumSpan",
       s"workspace-symbol-provider=$workspaceSymbolProvider",
+      s"telemetry=$telemetry",
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {

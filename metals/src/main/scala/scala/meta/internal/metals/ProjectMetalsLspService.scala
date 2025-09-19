@@ -11,6 +11,7 @@ import scala.util.Failure
 import scala.util.Success
 
 import scala.meta.infra.FeatureFlagProvider
+import scala.meta.infra.MonitoringClient
 import scala.meta.internal.bsp.BspConfigGenerator
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.BuildChange
@@ -58,6 +59,7 @@ class ProjectMetalsLspService(
     override val workDoneProgress: WorkDoneProgress,
     maxScalaCliServers: Int,
     featureFlags: FeatureFlagProvider,
+    metrics: MonitoringClient,
 ) extends MetalsLspService(
       ec,
       sh,
@@ -76,6 +78,7 @@ class ProjectMetalsLspService(
       workDoneProgress,
       maxScalaCliServers,
       featureFlags,
+      metrics,
     ) {
 
   scribe.debug(clientConfig.toString())
@@ -96,8 +99,9 @@ class ProjectMetalsLspService(
   def buildServerPromise = connectionProvider.buildServerPromise
   def connect[T](config: ConnectRequest): Future[BuildChange] =
     workDoneProgress.trackFuture(
-      "Expanding working set",
+      config.userMessage,
       connectionProvider.Connect.connect(config),
+      metricName = config.metricName.map(name => name -> metrics),
     )
 
   override val fileWatcher: FileWatcher = NoopFileWatcher
@@ -181,6 +185,7 @@ class ProjectMetalsLspService(
     mainBuildTargetsData,
     this,
     syncStatusReporter,
+    metrics,
   )
 
   protected val onBuildChanged: BatchedFunction[AbsolutePath, Unit] =

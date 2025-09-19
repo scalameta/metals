@@ -9,6 +9,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 
 import scala.meta.infra.FeatureFlagProvider
+import scala.meta.infra.MonitoringClient
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.Indexer.BuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -41,6 +42,7 @@ class FallbackMetalsLspService(
     override val workDoneProgress: WorkDoneProgress,
     bspStatus: BspStatus,
     featureFlags: FeatureFlagProvider,
+    metrics: MonitoringClient,
 ) extends MetalsLspService(
       ec,
       sh,
@@ -59,6 +61,7 @@ class FallbackMetalsLspService(
       workDoneProgress,
       maxScalaCliServers = 10,
       featureFlags,
+      metrics,
     ) {
 
   val buildServerPromise: Promise[Unit] = Promise.successful(())

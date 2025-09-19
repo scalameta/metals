@@ -5,7 +5,6 @@ import java.util.ServiceLoader
 
 import scala.meta.infra.FeatureFlag
 import scala.meta.infra.FeatureFlagProvider
-import scala.meta.infra.Telemetry
 import scala.meta.internal.jdk.CollectionConverters._
 
 class AggregateFeatureFlagProvider(val underlying: List[FeatureFlagProvider])
@@ -21,12 +20,10 @@ class AggregateFeatureFlagProvider(val underlying: List[FeatureFlagProvider])
 object AggregateFeatureFlagProvider {
   def fromServiceLoader(): AggregateFeatureFlagProvider =
     new AggregateFeatureFlagProvider(
-      if (!Telemetry.isEnabled()) Nil
-      else
-        ServiceLoader
-          .load(classOf[FeatureFlagProvider])
-          .iterator
-          .asScala
-          .toList
+      ServiceLoader
+        .load(classOf[FeatureFlagProvider])
+        .iterator
+        .asScala
+        .toList
     )
 }

@@ -11,6 +11,8 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
+import scala.meta.infra
+import scala.meta.infra.MonitoringClient
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.WorkDoneProgress.Token
 
@@ -173,12 +175,16 @@ class WorkDoneProgress(
       value: Future[T],
       onCancel: Option[() => Unit] = None,
       showTimer: Boolean = true,
+      metricName: Option[(String, MonitoringClient)] = None,
   )(implicit ec: ExecutionContext): Future[T] = {
     val (task, token) =
       startProgress(message, onCancel = onCancel, showTimer = showTimer)
     value.onComplete { _ =>
       task.wasFinished.set(true)
       endProgress(token)
+      metricName.foreach { case (name, metrics) =>
+        metrics.recordUsage(infra.Metric.duration(name, task.timer.elapsed))
+      }
     }
     value
   }

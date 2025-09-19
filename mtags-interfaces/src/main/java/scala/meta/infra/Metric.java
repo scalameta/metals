@@ -2,6 +2,7 @@ package scala.meta.infra;
 
 import java.util.Map;
 import java.util.HashMap;
+import java.time.Duration;
 
 public class Metric {
 	public enum RetentionType {
@@ -32,24 +33,91 @@ public class Metric {
 		COUNTER, GAUGE, SUMMARY, HISTOGRAM
 	}
 
-	public String name;
+	public final String name;
+	public final String description;
 	public MetricType metricType;
-	public String service;
 	public float value;
 	public UnitType unit;
 	public RetentionType retention;
 	public String buckets = "";
 	public String quantiles = "";
 	public Map<String, String> labels = new HashMap<>();
-	public String description = "A metric originated from Metric Proxy Scala client";
 	public String user = System.getProperty("user.name");
 	public String timestamp = String.valueOf(System.currentTimeMillis());
-	public int version = 5;
+	public final int version = 5;
+
+	public Metric(String name) {
+		this(name, "");
+	}
+
+	public Metric(String name, String description) {
+		this.name = name;
+		this.description = description;
+	}
+
+	public static Metric count(String name) {
+		return new Metric(name).setValue(1, UnitType.COUNT, MetricType.COUNTER);
+	}
+
+	public static Metric duration(String name, Duration value) {
+		return new Metric(name).setValue(value.toMillis(), UnitType.MILLISECONDS, MetricType.HISTOGRAM);
+	}
+
+	public static Metric durationMillis(String name, float value) {
+		return new Metric(name).setValue(value, UnitType.MILLISECONDS, MetricType.HISTOGRAM);
+	}
+
+	public Metric setMetricType(MetricType metricType) {
+		this.metricType = metricType;
+		return this;
+	}
+
+	public Metric setValue(float value) {
+		this.value = value;
+		return this;
+	}
+
+	public Metric setValue(float value, UnitType unit, MetricType metricType) {
+		this.value = value;
+		this.unit = unit;
+		this.metricType = metricType;
+		return this;
+	}
+
+	public Metric setUnit(UnitType unit) {
+		this.unit = unit;
+		return this;
+	}
+
+	public Metric setRetention(RetentionType retention) {
+		this.retention = retention;
+		return this;
+	}
+
+	public Metric setBuckets(String buckets) {
+		this.buckets = buckets;
+		return this;
+	}
+
+	public Metric setQuantiles(String quantiles) {
+		this.quantiles = quantiles;
+		return this;
+	}
+
+	public Metric addLabel(String key, String value) {
+		this.labels.put(key, value);
+		return this;
+	}
+
+	public Metric setLabels(Map<String, String> labels) {
+		this.labels = labels;
+		return this;
+	}
 
 	public String toString() {
-		return "Metric(name=" + name + ", metricType=" + metricType + ", service=" + service + ", value=" + value
-				+ ", unit=" + unit + ", retention=" + retention + ", buckets=" + buckets + ", quantiles=" + quantiles
-				+ ", labels=" + labels + ", description=" + description + ", user=" + user + ", timestamp=" + timestamp
-				+ ", version=" + version + ")";
+		return "Metric(name=" + name + ", metricType=" + metricType + ", value=" + value + ", unit=" + unit
+				+ ", retention=" + retention + ", buckets=" + buckets + ", quantiles=" + quantiles + ", labels="
+				+ labels + ", description=" + description + ", user=" + user + ", timestamp=" + timestamp + ", version="
+				+ version + ")";
 	}
 }

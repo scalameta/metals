@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
+import java.time.Duration
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
@@ -15,6 +16,7 @@ class Timer(time: Time) {
     val now = time.nanos()
     now - startNanos
   }
+  def elapsed: Duration = Duration.ofNanos(elapsedNanos)
   def elapsedMillis: Long = {
     TimeUnit.NANOSECONDS.toMillis(elapsedNanos)
   }

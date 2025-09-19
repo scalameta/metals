@@ -96,6 +96,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     timerProvider.timedThunk(
       "reset stuff",
       clientConfig.initialConfig.statistics.isIndex,
+      metricName = Some("index_workspace_reset_stuff"),
     ) {
       resetService()
     }
@@ -104,6 +105,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       timerProvider.timedThunk(
         s"updated ${buildTool.name} build targets",
         clientConfig.initialConfig.statistics.isIndex,
+        metricName = Some("index_workspace_update_build_targets"),
       ) {
         val data = buildTool.data
         val importedBuild = buildTool.importedBuild
@@ -146,12 +148,14 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     timerProvider.timedThunk(
       "post update build targets stuff",
       clientConfig.initialConfig.statistics.isIndex,
+      metricName = Some("index_workspace_post_update_build_targets"),
     ) {
       check()
     }
     timerProvider.timedThunk(
       "started file watcher",
       clientConfig.initialConfig.statistics.isIndex,
+      metricName = Some("index_workspace_file_watcher"),
     ) {
       try {
         fileWatcher.cancel()
@@ -167,12 +171,14 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     timerProvider.timedThunk(
       "indexed library classpath",
       clientConfig.initialConfig.statistics.isIndex,
+      metricName = Some("index_workspace_classpath"),
     ) {
       workspaceSymbols.indexClasspath()
     }
     timerProvider.timedThunk(
       "indexed workspace SemanticDBs",
       clientConfig.initialConfig.statistics.isIndex,
+      metricName = Some("index_workspace_semanticdb"),
     ) {
       semanticDBIndexer.onTargetRoots()
     }
@@ -180,6 +186,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       timerProvider.timedThunk(
         s"indexed workspace ${buildTool.name} sources",
         clientConfig.initialConfig.statistics.isIndex,
+        metricName = Some("index_workspace_sources"),
       ) {
         indexWorkspaceSources(buildTool.data)
       }
@@ -188,6 +195,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       timerProvider.timedThunk(
         "indexed library sources",
         clientConfig.initialConfig.statistics.isIndex,
+        metricName = Some("index_library_sources"),
       ) {
         usedJars ++= indexJdkSources(
           buildTool.data,

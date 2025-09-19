@@ -845,6 +845,7 @@ lazy val unit = project
     ),
     sharedSettings,
     Test / javaOptions ++= sharedJavaOptions ++ Seq(
+      "-Dmetals.env=testing",
       "-Xmx3G",
       "-XX:+HeapDumpOnOutOfMemoryError",
       "-XX:+ExitOnOutOfMemoryError",

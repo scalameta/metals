@@ -26,23 +26,17 @@ final class TimerProvider(time: Time, metrics: infra.MonitoringClient)(implicit
       thresholdMillis: Long = 0,
       metricName: Option[String] = None,
   )(thunk: => T): T = {
-    val elapsed = new Timer(time)
+    val timer = new Timer(time)
     val result = thunk
     if (
-      onlyIf && (thresholdMillis == 0 || elapsed.elapsedMillis > thresholdMillis)
+      onlyIf && (thresholdMillis == 0 || timer.elapsedMillis > thresholdMillis)
     ) {
-      scribe.info(s"time: $didWhat in $elapsed")
+      scribe.info(s"time: $didWhat in $timer")
     }
 
     metricName match {
       case Some(name) =>
-        val metric = new infra.Metric()
-        metric.name = name
-        metric.value = elapsed.elapsedMillis.toFloat
-        metric.unit = infra.Metric.UnitType.MILLISECONDS
-        metric.metricType = infra.Metric.MetricType.HISTOGRAM
-        metric.service = "metals"
-        metrics.recordUsage(metric)
+        metrics.recordUsage(infra.Metric.duration(name, timer.elapsed))
       case _ =>
     }
 

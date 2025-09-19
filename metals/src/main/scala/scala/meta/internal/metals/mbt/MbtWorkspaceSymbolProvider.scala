@@ -11,7 +11,9 @@ import scala.util.Try
 import scala.util.Using
 
 import scala.meta.dialects
+import scala.meta.infra
 import scala.meta.inputs.Input
+import scala.meta.internal.infra.NoopMonitoringClient
 import scala.meta.internal.metals.CancelTokens
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.EmptyReportContext
@@ -60,6 +62,7 @@ final class MbtWorkspaceSymbolProvider(
     val gitWorkspace: AbsolutePath,
     config: WorkspaceSymbolProviderConfig,
     statistics: () => StatisticsConfig,
+    metrics: infra.MonitoringClient = new NoopMonitoringClient(),
 ) {
 
   private val isStatisticsEnabled: Boolean = statistics().isWorkspaceSymbol
@@ -297,6 +300,10 @@ final class MbtWorkspaceSymbolProvider(
       )
     )
     files.clear()
+
+    metrics.recordUsage(
+      infra.Metric.duration("mbt_index_workspace_symbol", timer.elapsed)
+    )
 
     // Step 7: print logs
     if (statistics().isMemory) {

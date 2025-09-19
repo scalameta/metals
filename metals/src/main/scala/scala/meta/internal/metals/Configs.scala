@@ -127,4 +127,18 @@ object Configs {
     def isBSP: Boolean =
       value != "mbt" // The classic BSP-based workspace/symbol implementation
   }
+
+  object TelemetryConfig {
+    def default: TelemetryConfig =
+      new TelemetryConfig(System.getProperty("metals.telemetry", ""))
+  }
+
+  final class TelemetryConfig(val value: String) {
+    def isAllEnabled: Boolean =
+      value == "enabled"
+    def isMetricsEnabled: Boolean =
+      isAllEnabled || value.contains("metrics")
+    def isFeatureFlagsEnabled: Boolean =
+      isAllEnabled || value.contains("feature-flags")
+  }
 }

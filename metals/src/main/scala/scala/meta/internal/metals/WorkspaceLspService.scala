@@ -14,6 +14,7 @@ import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 
 import scala.meta.infra.FeatureFlagProvider
+import scala.meta.infra.Metric
 import scala.meta.infra.MonitoringClient
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.NewProjectProvider
@@ -196,6 +197,7 @@ class WorkspaceLspService(
       workDoneProgress,
       bspStatus,
       featureFlags,
+      metrics,
     )
   }
 
@@ -221,6 +223,7 @@ class WorkspaceLspService(
           workDoneProgress,
           maxScalaCliServers = 3,
           featureFlags,
+          metrics,
         )
     }
 
@@ -574,6 +577,7 @@ class WorkspaceLspService(
       params: WorkspaceSymbolParams
   ): CompletableFuture[ju.List[lsp4j.SymbolInformation]] =
     CancelTokens.future { token =>
+      metrics.recordUsage(Metric.count("workspace_symbol_query"))
       collectSeq(_.workspaceSymbol(params, token))(_.flatten.asJava)
     }
 
