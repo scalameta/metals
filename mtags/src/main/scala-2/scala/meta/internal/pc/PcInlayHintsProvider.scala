@@ -61,12 +61,12 @@ final class PcInlayHintsProvider(
       case _ => inlayHints
     }
     List(
+      ByNameParameters,
       NamedParameters,
       ImplicitConversion,
       ImplicitParameters,
       TypeParameters,
       InferredType,
-      ByNameParameters,
       ClosingLabel
     ).flatMap(
       _.getInlayHints(tree)
@@ -155,11 +155,7 @@ final class PcInlayHintsProvider(
               args.zip(applyParams).collect {
                 case (arg, param)
                     if !isNamedArg(arg) && !isDefaultArgument(arg) =>
-                  val prefix =
-                    if (param.isByNameParam && params.byNameParameters()) "=> "
-                    else ""
-
-                  (prefix, param.name, arg.pos)
+                  (param.name, arg.pos)
               }
             )
           case _ => Nil
@@ -167,11 +163,11 @@ final class PcInlayHintsProvider(
       } else Nil
     }
 
-    private def make(params: List[(String, Name, Position)]): List[InlayHint] =
-      params.map { case (prefix, name, pos) =>
+    private def make(params: List[(Name, Position)]): List[InlayHint] =
+      params.map { case (name, pos) =>
         InlayHints.makeInlayHint(
           adjustPos(pos).focusStart.toLsp,
-          LabelPart(name.toString() + " = " + prefix) :: Nil,
+          LabelPart(name.toString() + " = ") :: Nil,
           InlayHintKind.Parameter,
           uri
         )
@@ -483,7 +479,7 @@ final class PcInlayHintsProvider(
             LabelPart(": ") :: toLabelParts(tpe.finalResultType, pos),
             InlayHintKind.Type,
             uri
-          ) // .addDefinition(adjustedPos.start)
+          )
         )
       } else Nil
     }

@@ -1305,7 +1305,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |""".stripMargin,
     """|object Main{
        |  def foo(x: => Int, y: Int, z: => Int)(w: Int, v: => Int): Unit = ()
-       |  foo(/*x = => */1, /*y = */2, /*z = => */3)(/*w = */4, /*v = => */5)
+       |  foo(/*x = *//*=> */1, /*y = */2, /*z = *//*=> */3)(/*w = */4, /*v = *//*=> */5)
        |}
        |""".stripMargin
   )
@@ -1429,8 +1429,8 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |object Main{
        |  def Future[A](arg: => A): A = arg
        |
-       |  Future/*[Int<<scala/Int#>>]*/(/*arg = => */1 + 2)
-       |  Future/*[Int<<scala/Int#>>]*/ {
+       |  Future/*[Int<<scala/Int#>>]*/(/*arg = *//*=> */1 + 2)
+       |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
        |    /*arg = => */1 + 2
        |  }
        |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
@@ -1438,8 +1438,8 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |    val y/*: Int<<scala/Int#>>*/ = 2
        |    x + y
        |  }
-       |  Some/*[Any<<scala/Any#>>]*/(/*value = */Option/*[Int<<scala/Int#>>]*/(/*x = */2).getOrElse/*[Any<<scala/Any#>>]*/ {
-       |    /*default = => */List/*[Int<<scala/Int#>>]*/(/*xs = */1,2)
+       |  Some/*[Any<<scala/Any#>>]*/(/*value = */Option/*[Int<<scala/Int#>>]*/(/*x = */2).getOrElse/*[Any<<scala/Any#>>]*/ {/*=> */
+       |    /*default = */List/*[Int<<scala/Int#>>]*/(/*xs = */1,2)
        |      .headOption
        |  })
        |}
@@ -1450,17 +1450,17 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
            |object Main{
            |  def Future[A](arg: => A): A = arg
            |
-           |  Future/*[Int<<scala/Int#>>]*/(/*arg = => */1 + 2)
-           |  Future/*[Int<<scala/Int#>>]*/ {
-           |    /*arg = => */1 + 2
+           |  Future/*[Int<<scala/Int#>>]*/(/*arg = *//*=> */1 + 2)
+           |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
+           |    /*arg = */1 + 2
            |  }
            |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
            |    val x/*: Int<<scala/Int#>>*/ = 1
            |    val y/*: Int<<scala/Int#>>*/ = 2
            |    x + y
            |  }
-           |  Some/*[Any<<scala/Any#>>]*/(/*value = */Option/*[Int<<scala/Int#>>]*/(/*x = */2).getOrElse/*[Any<<scala/Any#>>]*/ {
-           |    /*default = => */List/*[Int<<scala/Int#>>]*/(/*elems = */1,2)
+           |  Some/*[Any<<scala/Any#>>]*/(/*value = */Option/*[Int<<scala/Int#>>]*/(/*x = */2).getOrElse/*[Any<<scala/Any#>>]*/ {/*=> */
+           |    /*default = */List/*[Int<<scala/Int#>>]*/(/*elems = */1,2)
            |      .headOption
            |  })
            |}
@@ -1470,8 +1470,8 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
            |object Main{
            |  def Future[A](arg: => A): A = arg
            |
-           |  Future/*[Int<<scala/Int#>>]*/(/*arg = => */1 + 2)
-           |  Future/*[Int<<scala/Int#>>]*/ {
+           |  Future/*[Int<<scala/Int#>>]*/(/*arg = *//*=> */1 + 2)
+           |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
            |    /*arg = => */1 + 2
            |  }
            |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
@@ -1479,8 +1479,8 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
            |    val y/*: Int<<scala/Int#>>*/ = 2
            |    x + y
            |  }
-           |  Some/*[Any<<scala/Any#>>]*/(/*x = */Option/*[Int<<scala/Int#>>]*/(/*x = */2).getOrElse/*[Any<<scala/Any#>>]*/ {
-           |    /*default = => */List/*[Int<<scala/Int#>>]*/(/*xs = */1,2)
+           |  Some/*[Any<<scala/Any#>>]*/(/*x = */Option/*[Int<<scala/Int#>>]*/(/*x = */2).getOrElse/*[Any<<scala/Any#>>]*/ {/*=> */
+           |    /*default = */List/*[Int<<scala/Int#>>]*/(/*xs = */1,2)
            |      .headOption
            |  })
            |}
@@ -1502,7 +1502,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |  def foo(a: => Int = 1 + 2)/*: Unit<<scala/Unit#>>*/ = ()
        |
        |  foo()
-       |  foo(/*a = => */4 + 2)
+       |  foo(/*a = *//*=> */4 + 2)
        |}
        |""".stripMargin
   )
