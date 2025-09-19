@@ -559,12 +559,12 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
             definitionIndex.addIndexedSourceJar(path, toplevels, dialect)
             implementationProvider.addTypeHierarchyElements(overrides)
           case None =>
-            scribe.info(s"Indexing source jar $path")
+            scribe.debug(s"Indexing source jar $path")
             val (_, overrides) = indexJar(path, dialect)
             tables.jarSymbols.addTypeHierarchyInfo(path, overrides)
         }
       case None =>
-        scribe.info(s"Indexing source jar $path")
+        scribe.debug(s"Indexing source jar $path")
         val (toplevels, overrides) = indexJar(path, dialect)
         tables.jarSymbols.putJarIndexingInfo(path, toplevels, overrides)
     }
