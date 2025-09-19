@@ -1,10 +1,10 @@
 package tests.mcp
 
+import scala.meta.internal.metals.mcp.CursorEditor
 import scala.meta.internal.metals.mcp.McpConfig
 import scala.meta.internal.metals.mcp.McpMessages
 import scala.meta.internal.metals.mcp.NoClient
 import scala.meta.internal.metals.mcp.SymbolType
-import scala.meta.internal.metals.mcp.VSCodeEditor
 
 import tests.BaseLspSuite
 
@@ -386,7 +386,7 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
   override def afterEach(context: AfterEach): Unit = {
     super.afterEach(context)
     assertEquals(
-      McpConfig.readPort(server.workspace, "root", VSCodeEditor),
+      McpConfig.readPort(server.workspace, "root", CursorEditor),
       None,
     )
     assert(
