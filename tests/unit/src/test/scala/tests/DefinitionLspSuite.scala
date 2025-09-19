@@ -686,7 +686,22 @@ class DefinitionLspSuite
     } yield ()
   }
 
-  test("go-to-reexported-symbol") {
+  // Marked as flaky from CI failure:
+  //   2025.09.17 18:12:25 INFO  tests.TestingClient#metalsExecuteClientCommand metals-model-refresh
+  //   Sep 17, 2025 6:12:25 PM scala.meta.internal.pc.ScalaPresentationCompiler newCompiler
+  //   INFO: [file:/home/runner/work/metals/metals/tests/unit/target/e2e/definition/go-to-reexported-symbol/a/?id=a]: sourcepath: /home/runner/work/metals/metals/tests/unit/target/e2e/definition/go-to-reexported-symbol/a/src/main/scala-3:/home/runner/work/metals/metals/tests/unit/target/e2e/definition/go-to-reexported-symbol/a/src/main/scala:/home/runner/work/metals/metals/tests/unit/target/e2e/definition/go-to-reexported-symbol/a/src/main/java
+  //   bad option: '-Xsemanticdb'
+  //   Sep 17, 2025 6:12:25 PM scala.meta.internal.pc.ScalaPresentationCompiler newCompiler
+  //   WARNING: Unknown compiler options: -Xsemanticdb, -sourceroot, /home/runner/work/metals/metals/tests/unit/target/e2e/definition/go-to-reexported-symbol
+  //   Sep 17, 2025 6:12:25 PM scala.meta.internal.metals.StdReporter $anonfun$create$1
+  //   SEVERE: empty definition using pc, found symbol in pc:  (full report at: /home/runner/work/metals/metals/tests/unit/target/e2e/definition/go-to-reexported-symbol/.metals/.reports/metals-full/2025-09-17/r_empty-definition_(a)_18-12-25-613.md)
+  //   2025.09.17 18:12:25 WARN  The test failed, printing the traces:
+  //   [error] ==> X tests.DefinitionLspSuite.go-to-reexported-symbol  32.803s munit.FailException: tests/unit/src/test/scala/tests/DefinitionLspSuite.scala:724 assertion failed
+  //   [error] 723:      _ = assert(locations.length == 1)
+  //   [error] 724:      _ = assert(locations.forall(_.getUri().endsWith("a/Other.scala")))
+  //   [error] 725:      _ = assertEquals(
+  //   [error]     at munit.Assertions.fail(Assertions.scala:256)
+  test("go-to-reexported-symbol".flaky) {
     val testCase =
       """|package a
          |class Test extends A {

@@ -3,6 +3,8 @@ package scala.meta.metals
 import java.nio.file.Files
 import java.nio.file.Path
 
+import scala.util.control.NonFatal
+
 import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildInfo
@@ -12,6 +14,7 @@ import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.logging.MetalsLogger
 
 import coursierapi.Dependency
+import coursierapi.error.SimpleResolutionError
 
 object DownloadDependencies {
 
@@ -86,9 +89,24 @@ object DownloadDependencies {
   }
 
   def downloadMtags(): Seq[Path] = {
-    scribe.info("Downloading mtags")
+    val version = BuildInfo.metalsVersion
+    scribe.info(s"Downloading mtags $version")
     BuildInfo.supportedScalaVersions.flatMap { scalaVersion =>
-      Embedded.downloadMtags(scalaVersion, BuildInfo.metalsVersion)
+      val artifact = s"mtags_${scalaVersion}:$version"
+      try {
+        val result = Embedded.downloadMtags(scalaVersion, version)
+        scribe.info(s"Downloaded $artifact")
+        result
+      } catch {
+        case _: SimpleResolutionError =>
+          scribe.error(
+            s"Not found $artifact"
+          )
+          Nil
+        case NonFatal(ex) =>
+          scribe.error(s"Unexpected error downloading $artifact", ex)
+          Nil
+      }
     }
   }
 

@@ -30,8 +30,8 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.CoursierHelpers
 import scala.meta.internal.metals.Directories
-import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.RecursivelyDelete
@@ -243,7 +243,7 @@ object Bill {
         val sources = Fetch
           .create()
           .withDependencies(scalaLib)
-          .addRepositories(Embedded.repositories: _*)
+          .addRepositories(CoursierHelpers.defaultRepositories: _*)
           .fetch()
           .map(_.toPath)
           .asScala

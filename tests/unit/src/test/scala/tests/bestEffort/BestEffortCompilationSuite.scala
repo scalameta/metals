@@ -6,7 +6,7 @@ import tests.BaseNonCompilingLspSuite
 
 class BestEffortCompilationSuite
     extends BaseNonCompilingLspSuite("best-effort-compilation") {
-  val scalaVersion = "3.5.0-RC7"
+  val scalaVersion = "3.7.3"
 
   override def serverConfig: MetalsServerConfig =
     super.serverConfig.copy(enableBestEffort = true)
@@ -177,8 +177,8 @@ class BestEffortCompilationSuite
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ <- assertCompletion(
         "BCustom@@",
-        """|BCustomCorrectObject <empty>
-           |BCustomForcedError <empty>
+        """|BCustomCorrectObject `<empty>`
+           |BCustomForcedError `<empty>`
            |""".stripMargin,
         includeDetail = false,
       )
@@ -194,8 +194,8 @@ class BestEffortCompilationSuite
       _ <- server.didSave("b/src/main/scala/b/B.scala")
       _ <- assertCompletion(
         "BCustom@@",
-        """|BCustomChangedObject <empty>
-           |BCustomForcedError <empty>
+        """|BCustomChangedObject `<empty>`
+           |BCustomForcedError `<empty>`
         """.stripMargin,
       )
     } yield ()

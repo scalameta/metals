@@ -15,8 +15,6 @@ import scala.meta.pc.PresentationCompiler
 
 import coursierapi.Dependency
 import coursierapi.Fetch
-import coursierapi.MavenRepository
-import coursierapi.Repository
 import coursierapi.ResolutionParams
 import mdoc.interfaces.Mdoc
 
@@ -172,19 +170,6 @@ final class Embedded(
 object Embedded {
   private val jdkVersion = JdkVersion.parse(Properties.javaVersion)
 
-  lazy val repositories: List[Repository] =
-    Repository.defaults().asScala.toList ++
-      List(
-        Repository.central(),
-        Repository.ivy2Local(),
-        MavenRepository.of(
-          "https://oss.sonatype.org/content/repositories/public/"
-        ),
-        MavenRepository.of(
-          "https://oss.sonatype.org/content/repositories/snapshots/"
-        ),
-      )
-
   private[Embedded] def scala3CompilerDependencies(version: String) = List(
     Dependency.of("org.scala-lang", "scala3-library_3", version),
     Dependency.of("org.scala-lang", "scala3-compiler_3", version),
@@ -195,6 +180,7 @@ object Embedded {
       dep: Dependency,
       scalaVersion: Option[String],
       resolution: Option[ResolutionParams] = None,
+      customRepositories: List[String] = Nil,
   ): Fetch = {
 
     val resolutionParams = resolution.getOrElse(ResolutionParams.create())
@@ -213,6 +199,8 @@ object Embedded {
           scala3CompilerDependencies(scalaVersion)
         )
     }
+    val repositories =
+      CoursierHelpers.parseCustomRepositories(customRepositories)
 
     Fetch
       .create()
@@ -296,8 +284,9 @@ object Embedded {
       scalaVersion: Option[String] = None,
       classfiers: Seq[String] = Seq.empty,
       resolution: Option[ResolutionParams] = None,
+      customRepositories: List[String] = Nil,
   ): List[Path] = {
-    fetchSettings(dep, scalaVersion, resolution)
+    fetchSettings(dep, scalaVersion, resolution, customRepositories)
       .addClassifiers(classfiers: _*)
       .fetch()
       .asScala
