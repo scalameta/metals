@@ -275,11 +275,18 @@ final class DefinitionProvider(
     val occurrence = for {
       queryPosition <- queryPositionOpt
       occurrence <-
-        snapshot.occurrences
-          .find(occ =>
+        snapshot.occurrences.iterator
+          .filter(occ =>
             // empty range is set for anon classes definition
             occ.range.exists(!_.isPoint) && occ.encloses(queryPosition, true)
           )
+          .foldLeft[Option[SymbolOccurrence]](None) { (prevOptOcc, occ) =>
+            // If one match encloses another (eg. with a synthetic anon class), prefer the smaller
+            // one (see `single-abstract-method-definition` test)
+            val prevOccEnclosesOcc =
+              prevOptOcc.forall(_.range.get.encloses(occ.range.get))
+            if (prevOccEnclosesOcc) Some(occ) else prevOptOcc
+          }
           // In case of macros we might need to get the postion from the presentation compiler
           .orElse(fromMtags(source, queryPosition))
     } yield occurrence

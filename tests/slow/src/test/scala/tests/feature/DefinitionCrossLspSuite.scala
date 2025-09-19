@@ -702,5 +702,54 @@ class DefinitionCrossLspSuite
         )
       } yield ()
     }
+
+    test(s"single-abstract-method-definition-$version") {
+      cleanWorkspace()
+      for {
+        _ <- initialize(
+          s"""
+             |/metals.json
+             |{
+             |  "a": { "scalaVersion" : "${version}" }
+             |}
+             |/a/src/main/scala/a/SingleAbstractMethod.scala
+             |trait Foo {
+             |  def bar: Double
+             |}
+             |
+             |trait ToDouble[-A] {
+             |  def apply(a: A): Double
+             |}
+             |
+             |object Test {
+             |  def hof(f: ToDouble[Foo]) = ()
+             |  hof(_.bar)
+             |}
+             |
+             |""".stripMargin
+        )
+        _ <- server.didOpen("a/src/main/scala/a/SingleAbstractMethod.scala")
+        _ = assertNoDiagnostics()
+        definition <- definitionsAt(
+          "a/src/main/scala/a/SingleAbstractMethod.scala",
+          "  hof(_.ba@@r)",
+        )
+        uri = workspace
+          .resolve("a/src/main/scala/a/SingleAbstractMethod.scala")
+          .toURI
+          .toString()
+
+        // Looking for exactly `def bar` as the definition
+        _ = assertEquals(
+          definition,
+          List(
+            new l.Location(
+              uri,
+              new l.Range(new l.Position(1, 6), new l.Position(1, 9)),
+            )
+          ),
+        )
+      } yield ()
+    }
   }
 }
