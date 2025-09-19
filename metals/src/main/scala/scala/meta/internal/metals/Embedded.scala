@@ -202,9 +202,14 @@ object Embedded {
     val repositories =
       CoursierHelpers.parseCustomRepositories(customRepositories)
 
-    Fetch
-      .create()
-      .addRepositories(repositories: _*)
+    val fetch = Fetch.create()
+    // Prioritize our custom repositories since they may have attached credentials.
+    // The repos Coursier picks up via `COURSIER_REPOSITORIES` don't have credentials.
+    // By placing our custom repos first, the credentials get picked up.
+    val finalRepositories = repositories ++ fetch.getRepositories.asScala
+    fetch
+      // Important: not `addRepositories`
+      .withRepositories(finalRepositories: _*)
       .withDependencies(dep)
       .withResolutionParams(resolutionParams)
       .withMainArtifacts()
