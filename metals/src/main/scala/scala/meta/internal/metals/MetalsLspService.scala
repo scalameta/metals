@@ -1487,6 +1487,7 @@ abstract class MetalsLspService(
     () => userConfig,
     folder,
     buildTargetClassesFinder,
+    testProvider,
   )
 
   protected val debugProvider: DebugProvider = register(
@@ -1511,6 +1512,11 @@ abstract class MetalsLspService(
   buildClient.registerLogForwarder(debugProvider)
 
   def debugDiscovery(params: DebugDiscoveryParams): Future[DebugSession] =
+    debugDiscovery
+      .debugDiscovery(params)
+      .flatMap(debugProvider.asSession)
+
+  def runClosest(params: DebugDiscoveryParams): Future[DebugSession] =
     debugDiscovery
       .debugDiscovery(params)
       .flatMap(debugProvider.asSession)
