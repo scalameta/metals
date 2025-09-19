@@ -47,6 +47,7 @@ import io.modelcontextprotocol.spec.McpSchema.LoggingMessageNotification
 import io.modelcontextprotocol.spec.McpSchema.ServerCapabilities
 import io.modelcontextprotocol.spec.McpSchema.TextContent
 import io.modelcontextprotocol.spec.McpSchema.Tool
+import io.modelcontextprotocol.json.jackson.JacksonMcpJsonMapper
 import io.undertow.Undertow
 import io.undertow.servlet.Servlets
 import io.undertow.servlet.api.InstanceHandle
@@ -85,6 +86,7 @@ class MetalsMcpServer(
   private def createContent(text: String): JList[Content] = {
     Arrays.asList(new TextContent(text))
   }
+  private val jsonMapper = new JacksonMcpJsonMapper(objectMapper)
 
   private val cancelable = new MutableCancelable()
 
@@ -93,7 +95,7 @@ class MetalsMcpServer(
   def run(): Unit = {
     val servlet =
       new LoggingServletTransportProvider(
-        objectMapper,
+        jsonMapper,
         "/",
         sseEndpoint,
         tracePrinter,
@@ -215,12 +217,17 @@ class MetalsMcpServer(
 
   private def importBuildTool(): AsyncToolSpecification = {
     val schema = """{"type": "object", "properties": { }}"""
+    val tool = Tool
+      .builder()
+      .name("import-build")
+      .description(
+        "Import the build to IDE. Should be performed after any build changes, e.g. adding dependencies or any changes in build.sbt."
+      )
+      .inputSchema(jsonMapper, schema)
+      .build()
+
     new AsyncToolSpecification(
-      new Tool(
-        "import-build",
-        "Import the build to IDE. Should be performed after any build changes, e.g. adding dependencies or any changes in build.sbt.",
-        schema,
-      ),
+      tool,
       withErrorHandling { (exchange, _) =>
         connectionProvider
           .slowConnectToBuildServer(forceImport = true)
@@ -253,8 +260,14 @@ class MetalsMcpServer(
 
   private def createCompileTool(): AsyncToolSpecification = {
     val schema = """{"type": "object", "properties": { }}"""
+    val tool = Tool
+      .builder()
+      .name("compile-full")
+      .description("Compile the whole Scala project")
+      .inputSchema(jsonMapper, schema)
+      .build()
     new AsyncToolSpecification(
-      new Tool("compile-full", "Compile the whole Scala project", schema),
+      tool,
       withErrorHandling { (exchange, _) =>
         compilations
           .cascadeCompile(buildTargets.allBuildTargetIds)
@@ -287,8 +300,14 @@ class MetalsMcpServer(
          |    }
          |  }
          |}""".stripMargin
+    val tool = Tool
+      .builder()
+      .name("compile-file")
+      .description("Compile a chosen Scala file")
+      .inputSchema(jsonMapper, schema)
+      .build()
     new AsyncToolSpecification(
-      new Tool("compile-file", "Compile a chosen Scala file", schema),
+      tool,
       withErrorHandling { (exchange, arguments) =>
         val path = arguments.getFileInFocus
         if (path.exists) {
@@ -374,8 +393,14 @@ class MetalsMcpServer(
          |  },
          |  "required": ["module"]
          |}""".stripMargin
+    val tool = Tool
+      .builder()
+      .name("compile-module")
+      .description("Compile a chosen Scala module")
+      .inputSchema(jsonMapper, schema)
+      .build()
     new AsyncToolSpecification(
-      new Tool("compile-module", "Compile a chosen Scala module", schema),
+      tool,
       withErrorHandling { (exchange, arguments) =>
         val module = arguments.getAs[String]("module")
         Future {
@@ -465,14 +490,18 @@ class MetalsMcpServer(
          |  },
          |  "required": ["testClass"]
          |}""".stripMargin
+    val tool = Tool
+      .builder()
+      .name("test")
+      .description(
+        """|Run Scala test suite. Execute specific test classes and individual test methods.
+           |Supports verbose output and can run tests from any testing
+           |framework (ScalaTest, MUnit, etc.)""".stripMargin
+      )
+      .inputSchema(jsonMapper, schema)
+      .build()
     new AsyncToolSpecification(
-      new Tool(
-        "test",
-        """|Run Scala test suite. Execute specific test classes and individual test methods. 
-           |Supports verbose output and can run tests from any testing 
-           |framework (ScalaTest, MUnit, etc.)""".stripMargin,
-        schema,
-      ),
+      tool,
       withErrorHandling { (exchange, arguments) =>
         val testClass = arguments.getAs[String]("testClass")
         val optPath = arguments
@@ -519,15 +548,19 @@ class MetalsMcpServer(
         "required": ["query"]
       }
     """
-    new AsyncToolSpecification(
-      new Tool(
-        "glob-search",
-        """|Search for symbols using glob pattern. Find packages, classes, objects, methods, traits, 
-           |and other Scala symbols by partial name matching. Returns symbol locations 
+    val tool = Tool
+      .builder()
+      .name("glob-search")
+      .description(
+        """|Search for symbols using glob pattern. Find packages, classes, objects, methods, traits,
+           |and other Scala symbols by partial name matching. Returns symbol locations
            |and signatures from the entire project workspace.
-           |Use this if you encounter unknown API, for example proprietary libraries.""".stripMargin,
-        schema,
-      ),
+           |Use this if you encounter unknown API, for example proprietary libraries.""".stripMargin
+      )
+      .inputSchema(jsonMapper, schema)
+      .build()
+    new AsyncToolSpecification(
+      tool,
       withErrorHandling { (exchange, arguments) =>
         val query = arguments.getAs[String]("query")
         val path = arguments.getFileInFocus
@@ -569,15 +602,19 @@ class MetalsMcpServer(
         "required": ["query", "symbolType"]
       }
     """
-    new AsyncToolSpecification(
-      new Tool(
-        "typed-glob-search",
-        """|Search for symbols by type using glob pattern. Filter symbol search results 
-           |by specific symbol types (package, class, object, function, method, trait). 
+    val tool = Tool
+      .builder()
+      .name("typed-glob-search")
+      .description(
+        """|Search for symbols by type using glob pattern. Filter symbol search results
+           |by specific symbol types (package, class, object, function, method, trait).
            |More precise than glob-search when you know the symbol type you're looking for.
-           |Use this if you encounter unknown API, for example proprietary libraries.""".stripMargin,
-        schema,
-      ),
+           |Use this if you encounter unknown API, for example proprietary libraries.""".stripMargin
+      )
+      .inputSchema(jsonMapper, schema)
+      .build()
+    new AsyncToolSpecification(
+      tool,
       withErrorHandling { (exchange, arguments) =>
         val query = arguments.getAs[String]("query")
         val path = arguments.getFileInFocus
@@ -623,15 +660,19 @@ class MetalsMcpServer(
         "required": ["fqcn"]
       }
     """
-    new AsyncToolSpecification(
-      new Tool(
-        "inspect",
+    val tool = Tool
+      .builder()
+      .name("inspect")
+      .description(
         """|Inspect a chosen Scala symbol.
            |For packages, objects and traits returns list of members.
            |For classes returns list of members and constructors.
-           |For methods returns signatures of all overloaded methods.""".stripMargin,
-        schema,
-      ),
+           |For methods returns signatures of all overloaded methods.""".stripMargin
+      )
+      .inputSchema(jsonMapper, schema)
+      .build()
+    new AsyncToolSpecification(
+      tool,
       withErrorHandling { (exchange, arguments) =>
         val fqcn = arguments.getFqcn
         val path = arguments.getFileInFocus
@@ -661,14 +702,18 @@ class MetalsMcpServer(
         "required": ["fqcn"]
       }
     """
+    val tool = Tool
+      .builder()
+      .name("get-docs")
+      .description(
+        """|Get documentation for a chosen Scala symbol. Retrieves ScalaDoc comments,
+           |parameter descriptions, return types, and usage examples for classes, methods,
+           |functions, and other symbols using their fully qualified name.""".stripMargin
+      )
+      .inputSchema(jsonMapper, schema)
+      .build()
     new AsyncToolSpecification(
-      new Tool(
-        "get-docs",
-        """|Get documentation for a chosen Scala symbol. Retrieves ScalaDoc comments, 
-           |parameter descriptions, return types, and usage examples for classes, methods, 
-           |functions, and other symbols using their fully qualified name.""".stripMargin,
-        schema,
-      ),
+      tool,
       withErrorHandling { (exchange, arguments) =>
         val fqcn = arguments.getFqcn
         Future {
@@ -703,14 +748,18 @@ class MetalsMcpServer(
         "required": ["fqcn"]
       }
     """
+    val tool = Tool
+      .builder()
+      .name("get-usages")
+      .description(
+        """|Get usages for a chosen Scala symbol. Find all references and usages of classes,
+           |methods, variables, and other symbols across the entire project. Returns precise
+           |locations with file paths and line numbers for refactoring and code analysis.""".stripMargin
+      )
+      .inputSchema(jsonMapper, schema)
+      .build()
     new AsyncToolSpecification(
-      new Tool(
-        "get-usages",
-        """|Get usages for a chosen Scala symbol. Find all references and usages of classes, 
-           |methods, variables, and other symbols across the entire project. Returns precise 
-           |locations with file paths and line numbers for refactoring and code analysis.""".stripMargin,
-        schema,
-      ),
+      tool,
       withErrorHandling { (exchange, arguments) =>
         val fqcn = arguments.getFqcn
         val path = arguments.getFileInFocus
@@ -753,18 +802,22 @@ class MetalsMcpServer(
         |  "required": ["organization"]
         |}
         |""".stripMargin
-    new AsyncToolSpecification(
-      new Tool(
-        "find-dep",
+    val tool = Tool
+      .builder()
+      .name("find-dep")
+      .description(
         """|Find a dependency using coursier, optionally specify organization, name, and version.
            |It will try to return completions for the dependency string.
-           |At a minimum you should specify the dependency organization. When only organization is 
+           |At a minimum you should specify the dependency organization. When only organization is
            |specified, it will return all organizations with the specified prefix. If name is additionally
            |specified, it will return all names with the specified prefix in the organization. If version is additionally
            |specified, it will return all versions with the specified prefix in the organization and name.
-           |""".stripMargin,
-        schema,
-      ),
+           |""".stripMargin
+      )
+      .inputSchema(jsonMapper, schema)
+      .build()
+    new AsyncToolSpecification(
+      tool,
       withErrorHandling { (exchange, arguments) =>
         val org = arguments.getOptNoEmptyString(FindDepKey.organization)
         val name = arguments.getOptNoEmptyString(FindDepKey.name)
@@ -833,12 +886,16 @@ class MetalsMcpServer(
         |  "properties": { }
         |} 
         |""".stripMargin
+    val tool = Tool
+      .builder()
+      .name("list-modules")
+      .description(
+        "Return the list of modules (build targets) available in the project."
+      )
+      .inputSchema(jsonMapper, schema)
+      .build()
     new AsyncToolSpecification(
-      new Tool(
-        "list-modules",
-        "Return the list of modules (build targets) available in the project.",
-        schema,
-      ),
+      tool,
       withErrorHandling { (_, _) =>
         Future {
           val modules =
@@ -865,12 +922,14 @@ class MetalsMcpServer(
          |    }
          |  }
          |}""".stripMargin
+    val tool = Tool
+      .builder()
+      .name("format-file")
+      .description("Format a Scala file and return the formatted text")
+      .inputSchema(jsonMapper, schema)
+      .build()
     new AsyncToolSpecification(
-      new Tool(
-        "format-file",
-        "Format a Scala file and return the formatted text",
-        schema,
-      ),
+      tool,
       withErrorHandling { (_, arguments) =>
         val path = arguments.getFileInFocus
         if (path.exists && path.isScalaFilename) {
@@ -948,19 +1007,23 @@ class MetalsMcpServer(
         |  "required": ["ruleName", "ruleImplementation"]
         |} 
         |""".stripMargin
-    new AsyncToolSpecification(
-      new Tool(
-        "generate-scalafix-rule",
+    val tool = Tool
+      .builder()
+      .name("generate-scalafix-rule")
+      .description(
         """|Generate a scalafix rule and run it on the current project.
            |
-           |Use this tool whenever you want to migrate a particular code pattern inside the entire codebase. 
-           |This might include fixing code smells, refactorings or migrating between versions of Scala or a particular library. 
+           |Use this tool whenever you want to migrate a particular code pattern inside the entire codebase.
+           |This might include fixing code smells, refactorings or migrating between versions of Scala or a particular library.
            |The generated rule will be created in .metals/rules directory and can be later invoked using the `run-scalafix-rule` tool.
-           |When a rule with the same name already exists, it will be overwritten. This is useful if you want to update 
+           |When a rule with the same name already exists, it will be overwritten. This is useful if you want to update
            |the rule implementation.
-           |""".stripMargin,
-        schema,
-      ),
+           |""".stripMargin
+      )
+      .inputSchema(jsonMapper, schema)
+      .build()
+    new AsyncToolSpecification(
+      tool,
       withErrorHandling { (_, arguments) =>
         import scala.meta._
         val ruleName = arguments.getAs[String]("ruleName")
@@ -1043,12 +1106,16 @@ class MetalsMcpServer(
         |  "required": ["ruleName"]
         |} 
         |""".stripMargin
+    val tool = Tool
+      .builder()
+      .name("run-scalafix-rule")
+      .description(
+        "Run a specific previously existing Scalafix rule (from curated rules or previously created rules) on the focused file or all files"
+      )
+      .inputSchema(jsonMapper, schema)
+      .build()
     new AsyncToolSpecification(
-      new Tool(
-        "run-scalafix-rule",
-        "Run a specific previously existing Scalafix rule (from curated rules or previously created rules) on the focused file or all files",
-        schema,
-      ),
+      tool,
       withErrorHandling { (_, arguments) =>
         val ruleName = arguments.getAs[String]("ruleName")
         val path = arguments.getPathOpt("fileToRunOn")
@@ -1080,12 +1147,16 @@ class MetalsMcpServer(
         |  "properties": { }
         |} 
         |""".stripMargin
+    val tool = Tool
+      .builder()
+      .name("list-scalafix-rules")
+      .description(
+        "List currently available scalafix rules from .metals/rules directory. They were previously created by the `run-scalafix-rule` tool."
+      )
+      .inputSchema(jsonMapper, schema)
+      .build()
     new AsyncToolSpecification(
-      new Tool(
-        "list-scalafix-rules",
-        "List currently available scalafix rules from .metals/rules directory. They were previously created by the `run-scalafix-rule` tool.",
-        schema,
-      ),
+      tool,
       withErrorHandling { (_, _) =>
         Future {
           val allRules = scalafixLlmRuleProvider.allRules
