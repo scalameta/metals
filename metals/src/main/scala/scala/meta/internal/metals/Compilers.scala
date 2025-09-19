@@ -236,7 +236,7 @@ class Compilers(
     }
 
   def didClose(path: AbsolutePath): Unit = {
-    loadCompiler(path).foreach(_.didClose(path.toNIO.toUri()))
+    loadCompiler(path).foreach(_.didClose(path.toNIO.toUri))
   }
 
   def didChange(
@@ -278,6 +278,51 @@ class Compilers(
                   input.value,
                   shouldReturnDiagnostics,
                 )
+              )
+              .asScala
+        } yield {
+          ds.asScala.map(adjust.adjustDiagnostic).toList
+
+        }
+      }
+      .getOrElse(Future.successful(Nil))
+  }
+
+  def didSave(path: AbsolutePath): Future[List[Diagnostic]] = {
+    def originInput =
+      path
+        .toInputFromBuffers(buffers)
+
+    loadCompiler(path)
+      .map { pc =>
+        val inputAndAdjust =
+          if (
+            path.isWorksheet && ScalaVersions.isScala3Version(
+              pc.scalaVersion()
+            )
+          ) {
+            WorksheetProvider.worksheetScala3AdjustmentsForPC(originInput)
+          } else if (path.isSbt) {
+            val autoImports = buildTargets.sbtAutoImports(path)
+            autoImports.map(imports => {
+              val (modifiedInput, _, adjustLspData) =
+                SbtBuildTool.sbtInputPosAdjustment(originInput, imports)
+              (modifiedInput, adjustLspData)
+            })
+          } else {
+            None
+          }
+
+        val (input, adjust) = inputAndAdjust.getOrElse(
+          originInput,
+          AdjustedLspData.default,
+        )
+
+        for {
+          ds <-
+            pc
+              .didSave(
+                CompilerVirtualFileParams(path.toNIO.toUri, input.value)
               )
               .asScala
         } yield {
