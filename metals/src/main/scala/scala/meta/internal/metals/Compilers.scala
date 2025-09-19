@@ -676,6 +676,7 @@ class Compilers(
         hintsInPatternMatch = options.hintsInPatternMatch,
         hintsXRayMode = options.hintsXRayMode,
         namedParameters = options.namedParameters,
+        closingLabels = options.closingLabels,
       )
 
       pc

@@ -18,6 +18,8 @@ case class InlayHintsOptions(options: Map[InlayHintsOption, Boolean])
     options.getOrElse(InlayHintsOption.HintsInPatternMatch, false)
   def hintsXRayMode: Boolean =
     options.getOrElse(InlayHintsOption.HintsXRayMode, false)
+  def closingLabels: Boolean =
+    options.getOrElse(InlayHintsOption.ClosingLabels, false)
   def areSyntheticsEnabled: Boolean = options.exists(_._2)
 }
 
@@ -31,6 +33,7 @@ object InlayHintsOptions {
       InlayHintsOption.ByNameParameters -> true,
       InlayHintsOption.HintsInPatternMatch -> true,
       InlayHintsOption.HintsXRayMode -> true,
+      InlayHintsOption.ClosingLabels -> true,
     )
   )
 }
@@ -45,6 +48,7 @@ object InlayHintsOption {
   case object NamedParameters extends InlayHintsOption
   case object HintsXRayMode extends InlayHintsOption
   case object HintsInPatternMatch extends InlayHintsOption
+  case object ClosingLabels extends InlayHintsOption
   def unapply(value: String): Option[InlayHintsOption] =
     StringCase.kebabToCamel(value) match {
       case "inferredTypes" => Some(InferredType)
@@ -54,8 +58,8 @@ object InlayHintsOption {
       case "byNameParameters" => Some(ByNameParameters)
       case "namedParameters" => Some(NamedParameters)
       case "hintsInPatternMatch" => Some(HintsInPatternMatch)
-      case "hintsXRayMode" =>
-        Some(HintsXRayMode)
+      case "hintsXRayMode" => Some(HintsXRayMode)
+      case "closingLabels" => Some(ClosingLabels)
       case _ => None
     }
 
