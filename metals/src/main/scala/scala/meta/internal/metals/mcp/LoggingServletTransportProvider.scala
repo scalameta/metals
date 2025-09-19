@@ -25,11 +25,7 @@ class LoggingServletTransportProvider(
     baseUrl: String,
     sseEndpoint: String,
     trace: Option[PrintWriter],
-) extends HttpServletSseServerTransportProvider(
-      objectMapper,
-      baseUrl,
-      sseEndpoint,
-    ) {
+) extends HttpServletSseServerTransportProvider {
 
   override def doPost(
       request: HttpServletRequest,
