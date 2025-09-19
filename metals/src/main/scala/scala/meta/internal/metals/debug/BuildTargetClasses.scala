@@ -373,9 +373,9 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
   ): Option[TestFramework] = {
     val parentSymbols = extractParentSymbols(classSig)
 
-    parentSymbols.collectFirst { case parentSymbol =>
-      findFrameworkRecursively(parentSymbol, doc, visited = Set.empty)
-    }.flatten
+    parentSymbols
+      .map(parentSymbol => findFrameworkRecursively(parentSymbol, doc, visited = Set.empty))
+      .collectFirst { case Some(framework) => framework }
   }
 
   private def extractParentSymbols(classSig: ClassSignature): List[String] = {
@@ -449,6 +449,7 @@ object TestFrameworkDetector {
 
   private val frameworkSymbolMap: Map[String, TestFramework] = Map(
     "org/scalatest/flatspec/AnyFlatSpec#" -> TestFramework.ScalaTest,
+    "org/scalatest/flatspec/AnyFlatSpecLike#" -> TestFramework.ScalaTest,
     "org/scalatest/funspec/AnyFunSpec#" -> TestFramework.ScalaTest,
     "org/scalatest/funsuite/AnyFunSuite#" -> TestFramework.ScalaTest,
     "org/scalatest/wordspec/AnyWordSpec#" -> TestFramework.ScalaTest,
