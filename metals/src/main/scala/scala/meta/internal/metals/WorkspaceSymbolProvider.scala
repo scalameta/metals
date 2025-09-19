@@ -9,9 +9,9 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
-import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.mtags.ToplevelMember
 import scala.meta.internal.pc.InterruptException
+import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 import scala.meta.pc.SymbolSearch
