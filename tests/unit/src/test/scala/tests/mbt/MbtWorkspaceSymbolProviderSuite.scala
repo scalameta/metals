@@ -70,7 +70,7 @@ message User {
     workspace.gitCommitAllChanges()
     assertEquals(
       provider.onReindex(),
-      IndexingStats(totalFiles = 2, updatedFiles = 2),
+      IndexingStats(totalFiles = 3, updatedFiles = 3),
     )
     assertNoDiff(
       formatSymbols(provider.queryWorkspaceSymbol("Hel")),
@@ -86,7 +86,9 @@ message User {
     )
     assertNoDiff(
       formatSymbols(provider.queryWorkspaceSymbol("User")),
-      "", // No Protobuf support (yet)
+      """
+        |Class User com.
+        |""".stripMargin,
     )
     FileLayout.fromString(
       """
@@ -113,7 +115,7 @@ object Hello2 {
     workspace.gitCommitAllChanges()
     assertEquals(
       provider.onReindex(),
-      IndexingStats(totalFiles = 3, updatedFiles = 2),
+      IndexingStats(totalFiles = 4, updatedFiles = 2),
     )
     assertNoDiff(
       formatSymbols(provider.queryWorkspaceSymbol("main")),
@@ -125,7 +127,7 @@ object Hello2 {
     )
     assertEquals(
       provider.onReindex(),
-      IndexingStats(totalFiles = 3, updatedFiles = 0),
+      IndexingStats(totalFiles = 4, updatedFiles = 0),
     )
 
     // Remove a file
@@ -133,7 +135,7 @@ object Hello2 {
     workspace.gitCommitAllChanges()
     assertEquals(
       provider.onReindex(),
-      IndexingStats(totalFiles = 2, updatedFiles = 0),
+      IndexingStats(totalFiles = 3, updatedFiles = 0),
     )
     // Nothing to re-index, we only removed a file
     assertNoDiff(

@@ -441,6 +441,7 @@ final class MbtWorkspaceSymbolProvider(
 
   private def isRelevantPath(file: GitBlob): Boolean = {
     file.path.endsWith(".java") ||
+    file.path.endsWith(".proto") ||
     file.path.endsWith(".scala")
   }
 

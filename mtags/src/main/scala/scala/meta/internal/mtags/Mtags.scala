@@ -6,6 +6,7 @@ import scala.meta.inputs.Input
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
+import scala.meta.internal.mtags.proto.ProtobufToplevelMtags
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.Schema
@@ -62,13 +63,16 @@ final class Mtags(implicit rc: ReportContext) {
       val mtags =
         if (language.isJava)
           new JavaToplevelMtags(input, includeInnerClasses = true)
-        else
+        else if (language.isScala)
           new ScalaToplevelMtags(
             input,
             includeInnerClasses = true,
             includeMembers,
             dialect
           )
+        else
+          new EmptyToplevelMtags(input)
+
       addLines(language, input.text)
       val doc =
         Mtags.stdLibPatches.patchDocument(
@@ -133,6 +137,8 @@ final class Mtags(implicit rc: ReportContext) {
           includeMembers = true,
           dialect
         ).index()
+      } else if (input.path.endsWith(".proto")) {
+        new ProtobufToplevelMtags(input, includeGeneratedSymbols = true).index()
       } else {
         TextDocument()
       }

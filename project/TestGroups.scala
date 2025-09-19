@@ -122,11 +122,12 @@ object TestGroups {
       "tests.decorations.SyntheticDecorationsExpectSuite",
       "tests.codeactions.ConvertSingleLineCommentLspSuite",
       "tests.ServerLivenessMonitorSuite", "tests.ResetWorkspaceLspSuite",
-      "tests.ToplevelWithInnerScala3Suite", "tests.OutlineLspSuite"),
-    Set(
+      "tests.ToplevelWithInnerScala3Suite", "tests.OutlineLspSuite",
       "tests.mbt.MbtWorkspaceSymbolProviderSuite", "tests.mbt.GitVSCSuite",
       "tests.PCDiagnosticsSuite", "tests.ClassloaderModulesSupport",
-      "tests.InfraSuite",
-    ),
+      "tests.proto.ProtobufBenchSuite", "tests.proto.Protobuf2ScannerSuite",
+      "tests.WorkspaceSymbolQuerySuite", "tests.proto.ProtobufScannerSuite",
+      "tests.proto.ProtobufToplevelSuite",
+      "tests.databricks.DatabricksInfraSuite"),
   )
 }
