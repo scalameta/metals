@@ -530,34 +530,63 @@ final class BuildTargetClasses(
 }
 
 object TestFrameworkDetector {
-
-  private val frameworkSymbolMap: Map[String, TestFramework] = Map(
-    "org/scalatest/flatspec/AnyFlatSpec#" -> TestFramework.ScalaTest,
-    "org/scalatest/flatspec/AnyFlatSpecLike#" -> TestFramework.ScalaTest,
-    "org/scalatest/funspec/AnyFunSpec#" -> TestFramework.ScalaTest,
-    "org/scalatest/funsuite/AnyFunSuite#" -> TestFramework.ScalaTest,
-    "org/scalatest/wordspec/AnyWordSpec#" -> TestFramework.ScalaTest,
-    "org/scalatest/freespec/AnyFreeSpec#" -> TestFramework.ScalaTest,
-    "org/scalatest/propspec/AnyPropSpec#" -> TestFramework.ScalaTest,
-    "org/scalatest/featurespec/AnyFeatureSpec#" -> TestFramework.ScalaTest,
-    "org/scalatest/Suite#" -> TestFramework.ScalaTest,
-    "org/scalatest/TestSuite#" -> TestFramework.ScalaTest,
-    "munit/FunSuite#" -> TestFramework.munit,
-    "munit/Suite#" -> TestFramework.munit,
-    "munit/ScalaCheckSuite#" -> TestFramework.munit,
-    "junit/framework/TestCase#" -> TestFramework.JUnit,
-    "org/junit/Test#" -> TestFramework.JUnit,
-    "org/testng/annotations/Test#" -> TestFramework.TestNG,
-    "weaver/IOSuite#" -> TestFrameworkUtils.WeaverTestFramework,
-    "weaver/SimpleIOSuite#" -> TestFrameworkUtils.WeaverTestFramework,
-    "weaver/MutableIOSuite#" -> TestFrameworkUtils.WeaverTestFramework,
-    "zio/test/DefaultRunnableSpec#" -> TestFrameworkUtils.ZioTestFramework,
-    "zio/test/RunnableSpec#" -> TestFrameworkUtils.ZioTestFramework,
-    "zio/test/ZIOSpecDefault#" -> TestFrameworkUtils.ZioTestFramework,
-  )
-
   def fromSymbol(symbol: String): Option[TestFramework] = {
-    frameworkSymbolMap.get(symbol)
+    TestFrameworkSymbolRegistry.frameworkForSymbol(symbol)
+  }
+}
+
+object TestFrameworkSymbolRegistry {
+  import scala.meta.internal.metals.testProvider.frameworks.ScalatestStyle
+  import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
+  import scala.meta.internal.metals.testProvider.frameworks.WeaverCatsEffectTestFinder
+  import scala.meta.internal.metals.testProvider.frameworks.JunitTestFinder
+  import scala.meta.internal.metals.testProvider.frameworks.TestNGTestFinder
+
+  private lazy val scalatestSymbols: Map[String, TestFramework] = {
+    val baseSymbols = ScalatestStyle.baseSymbols
+    val additionalSymbols = Set(
+      "org/scalatest/Suite#",
+      "org/scalatest/TestSuite#",
+    )
+    (baseSymbols ++ additionalSymbols).map(_ -> TestFramework.ScalaTest).toMap
+  }
+
+  private lazy val munitSymbols: Map[String, TestFramework] =
+    MunitTestFinder.baseParentClasses.map(_ -> TestFramework.munit).toMap
+
+  private lazy val weaverSymbols: Map[String, TestFramework] =
+    WeaverCatsEffectTestFinder.baseParentClasses
+      .map(_ -> TestFrameworkUtils.WeaverTestFramework)
+      .toMap
+
+  private lazy val zioTestSymbols: Map[String, TestFramework] = Set(
+    "zio/test/DefaultRunnableSpec#",
+    "zio/test/RunnableSpec#",
+    "zio/test/ZIOSpecDefault#",
+  ).map(_ -> TestFrameworkUtils.ZioTestFramework).toMap
+
+  private lazy val junitSymbols: Map[String, TestFramework] = Set(
+    "junit/framework/TestCase#",
+    JunitTestFinder.junitAnnotationSymbol,
+  ).map(_ -> TestFramework.JUnit).toMap
+
+  private lazy val testngSymbols: Map[String, TestFramework] = {
+    val testngFinder = new TestNGTestFinder()
+    Set(testngFinder.expectedAnnotationSymbol)
+      .map(_ -> TestFramework.TestNG)
+      .toMap
+  }
+
+  private lazy val allFrameworkSymbols: Map[String, TestFramework] =
+    scalatestSymbols ++
+      munitSymbols ++
+      weaverSymbols ++
+      zioTestSymbols ++
+      junitSymbols ++
+      testngSymbols
+
+  def frameworkForSymbol(symbol: String): Option[TestFramework] = {
+    allFrameworkSymbols.get(symbol)
   }
 }
 
