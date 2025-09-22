@@ -3,13 +3,11 @@ package scala.meta.internal.metals.debug
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-
-import scala.meta.internal.metals.BatchedFunction
-import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.SemanticdbFeatureProvider
+import scala.meta.internal.metals.{BatchedFunction, BuildTargets, Compilers, SemanticdbFeatureProvider}
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.debug.BuildTargetClasses.Classes
 import scala.meta.internal.metals.debug.BuildTargetClasses.TestSymbolInfo
+import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
@@ -17,20 +15,22 @@ import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.io.AbsolutePath
-
 import bloop.config.Config.TestFramework
-import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j as b
 
 /**
  * In-memory index of main class symbols grouped by their enclosing build target
  */
-final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
+final class BuildTargetClasses(val buildTargets: BuildTargets, val compilers: () => Compilers)(implicit
     val ec: ExecutionContext
 ) extends SemanticdbFeatureProvider {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
 
   private val bazelTestClassCache =
     TrieMap.empty[AbsolutePath, List[(String, TestSymbolInfo)]]
+
+  private val symbolInfoCache =
+    TrieMap.empty[(AbsolutePath, String), Option[PcSymbolInformation]]
 
   type JVMRunEnvironmentsMap =
     TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem]
@@ -55,9 +55,10 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
     if (
       path.isScalaFilename && hasBazelBuildServer && belongsToTestTarget(path)
     ) {
-      val testClasses = extractTestClassesFromDocuments(docs)
-      if (testClasses.nonEmpty) {
-        bazelTestClassCache.put(path, testClasses)
+      extractTestClassesFromDocuments(docs, path).foreach { testClasses =>
+        if (testClasses.nonEmpty) {
+          bazelTestClassCache.put(path, testClasses)
+        }
       }
     }
   }
@@ -67,6 +68,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
   }
   override def reset(): Unit = {
     bazelTestClassCache.clear()
+    symbolInfoCache.clear()
   }
 
   def classesOf(target: b.BuildTargetIdentifier): Classes = {
@@ -320,13 +322,15 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
   }
 
   private def extractTestClassesFromDocuments(
-      docs: TextDocuments
-  ): List[(String, TestSymbolInfo)] = {
+      docs: TextDocuments,
+      path: AbsolutePath,
+  ): Future[List[(String, TestSymbolInfo)]] = {
     val testClasses =
       scala.collection.mutable.ListBuffer[(String, TestSymbolInfo)]()
 
-    docs.documents.foreach { doc =>
-      doc.symbols.foreach { symbolInfo =>
+    val futures = docs.documents.flatMap { doc =>
+      doc.symbols.flatMap { symbolInfo =>
+        // Handle annotations synchronously
         symbolInfo.annotations.foreach { annotation =>
           annotation.tpe match {
             case TypeRef(_, annotationSymbol, _) =>
@@ -347,35 +351,63 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
           }
         }
 
+        // Handle class signatures asynchronously
         symbolInfo.signature match {
           case classSig: ClassSignature =>
             val symbol = symbolInfo.symbol
             val className = symbolToClassName(symbol)
             if (className.nonEmpty) {
-              detectTestFramework(classSig, doc) match {
-                case Some(framework) =>
+              Some(detectTestFramework(classSig, doc, path).map { frameworkOpt =>
+                frameworkOpt.foreach { framework =>
                   val testInfo = TestSymbolInfo(className, framework)
                   testClasses += ((symbol, testInfo))
-                case None =>
-              }
-            }
-          case _ =>
+                }
+              })
+            } else None
+          case _ => None
         }
       }
     }
 
-    testClasses.toList
+    Future.sequence(futures).map(_ => testClasses.toList)
   }
 
   private def detectTestFramework(
       classSig: ClassSignature,
       doc: TextDocument,
-  ): Option[TestFramework] = {
-    val parentSymbols = extractParentSymbols(classSig)
+      path: AbsolutePath,
+  ): Future[Option[TestFramework]] = {
+    val initialParents = extractParentSymbols(classSig)
+    findTestFrameworkInHierarchy(initialParents, doc, path, visited = Set.empty)
+  }
 
-    parentSymbols
-      .map(parentSymbol => findFrameworkRecursively(parentSymbol, doc, visited = Set.empty))
-      .collectFirst { case Some(framework) => framework }
+  private def findTestFrameworkInHierarchy(
+      symbols: List[String],
+      doc: TextDocument,
+      path: AbsolutePath,
+      visited: Set[String],
+      maxDepth: Int = 5, // Limit depth since test frameworks aren't deeply nested
+  ): Future[Option[TestFramework]] = {
+    if (symbols.isEmpty || maxDepth <= 0) {
+      Future.successful(None)
+    } else {
+      val directFramework = symbols
+        .map(TestFrameworkDetector.fromSymbol)
+        .collectFirst { case Some(framework) => framework }
+      
+      directFramework match {
+        case Some(framework) => Future.successful(Some(framework))
+        case None =>
+          val nextLevelFutures = symbols
+            .filterNot(visited.contains)
+            .map(symbol => collectParentsForSymbol(symbol, doc, path, visited))
+          
+          Future.sequence(nextLevelFutures).flatMap { parentLists =>
+            val allNextParents = parentLists.flatten.distinct
+            findTestFrameworkInHierarchy(allNextParents, doc, path, visited ++ symbols, maxDepth - 1)
+          }
+      }
+    }
   }
 
   private def extractParentSymbols(classSig: ClassSignature): List[String] = {
@@ -384,30 +416,46 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
     }.toList
   }
 
-  private def findFrameworkRecursively(
-      parentSymbol: String,
-      doc: TextDocument,
-      visited: Set[String],
-  ): Option[TestFramework] = {
-    if (visited.contains(parentSymbol)) {
-      None
-    } else {
-      TestFrameworkDetector.fromSymbol(parentSymbol).orElse {
-        doc.symbols.find(_.symbol == parentSymbol).flatMap { parentInfo =>
-          parentInfo.signature match {
-            case parentClassSig: ClassSignature =>
-              val grandParents = extractParentSymbols(parentClassSig)
-              val newVisited = visited + parentSymbol
-
-              grandParents.collectFirst { case grandParent =>
-                findFrameworkRecursively(grandParent, doc, newVisited)
-              }.flatten
-            case _ => None
-          }
+  private def getCachedSymbolInfo(
+      path: AbsolutePath,
+      symbol: String,
+  ): Future[Option[PcSymbolInformation]] = {
+    val key = (path, symbol)
+    symbolInfoCache.get(key) match {
+      case Some(cachedResult) => Future.successful(cachedResult)
+      case None =>
+        compilers().info(path, symbol).map { result =>
+          symbolInfoCache.put(key, result)
+          result
         }
+    }
+  }
+
+  private def collectParentsForSymbol(
+      symbol: String,
+      doc: TextDocument,
+      path: AbsolutePath,
+      visited: Set[String],
+  ): Future[List[String]] = {
+    if (visited.contains(symbol)) {
+      Future.successful(Nil)
+    } else {
+      doc.symbols.find(_.symbol == symbol) match {
+        case Some(symbolInfo) =>
+          symbolInfo.signature match {
+            case classSig: ClassSignature =>
+              Future.successful(extractParentSymbols(classSig))
+            case _ => Future.successful(Nil)
+          }
+        case None =>
+          getCachedSymbolInfo(path, symbol).map {
+            case Some(pcInfo) => pcInfo.recursiveParents
+            case None => Nil
+          }
       }
     }
   }
+
 
   private def symbolToClassName(symbol: String): String = {
     val withoutPrefix = symbol.stripPrefix("_empty_/")
