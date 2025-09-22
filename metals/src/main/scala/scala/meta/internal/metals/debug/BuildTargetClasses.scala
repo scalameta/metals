@@ -376,10 +376,10 @@ final class BuildTargetClasses(val buildTargets: BuildTargets, val compilers: ()
       path: AbsolutePath,
   ): Future[Option[TestFramework]] = {
     val initialParents = extractParentSymbols(classSig)
-    traverseClassHierarchyForTestFramework(initialParents, doc, path, visited = Set.empty)
+    searchClassHierarchyForTestFramework(initialParents, doc, path, visited = Set.empty)
   }
 
-  private def traverseClassHierarchyForTestFramework(
+  private def searchClassHierarchyForTestFramework(
       symbols: List[String],
       doc: TextDocument,
       path: AbsolutePath,
@@ -401,7 +401,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets, val compilers: ()
           
           Future.sequence(nextLevelFutures).flatMap { parentLists =>
             val allNextParents = parentLists.flatten.distinct
-            traverseClassHierarchyForTestFramework(allNextParents, doc, path, visited ++ symbols)
+            searchClassHierarchyForTestFramework(allNextParents, doc, path, visited ++ symbols)
           }
       }
     }
