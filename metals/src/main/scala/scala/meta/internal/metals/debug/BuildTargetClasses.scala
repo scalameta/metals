@@ -355,7 +355,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets, val compilers: ()
             val symbol = symbolInfo.symbol
             val className = symbolToClassName(symbol)
             if (className.nonEmpty) {
-              Some(detectTestFramework(classSig, doc, path).map { frameworkOpt =>
+              Some(detectTestFrameworkUsingClassHierarchy(classSig, doc, path).map { frameworkOpt =>
                 frameworkOpt.foreach { framework =>
                   val testInfo = TestSymbolInfo(className, framework)
                   testClasses += ((symbol, testInfo))
@@ -370,16 +370,16 @@ final class BuildTargetClasses(val buildTargets: BuildTargets, val compilers: ()
     Future.sequence(futures).map(_ => testClasses.toList)
   }
 
-  private def detectTestFramework(
+  private def detectTestFrameworkUsingClassHierarchy(
       classSig: ClassSignature,
       doc: TextDocument,
       path: AbsolutePath,
   ): Future[Option[TestFramework]] = {
     val initialParents = extractParentSymbols(classSig)
-    findTestFrameworkRecursively(initialParents, doc, path, visited = Set.empty)
+    traverseClassHierarchyForTestFramework(initialParents, doc, path, visited = Set.empty)
   }
 
-  private def findTestFrameworkRecursively(
+  private def traverseClassHierarchyForTestFramework(
       symbols: List[String],
       doc: TextDocument,
       path: AbsolutePath,
@@ -401,7 +401,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets, val compilers: ()
           
           Future.sequence(nextLevelFutures).flatMap { parentLists =>
             val allNextParents = parentLists.flatten.distinct
-            findTestFrameworkRecursively(allNextParents, doc, path, visited ++ symbols)
+            traverseClassHierarchyForTestFramework(allNextParents, doc, path, visited ++ symbols)
           }
       }
     }
