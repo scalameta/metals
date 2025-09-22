@@ -24,6 +24,7 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.{bsp4j => b}
+import com.google.gson.JsonObject
 import org.eclipse.lsp4j.Position
 
 // todo https://github.com/scalameta/metals/issues/4788
@@ -192,6 +193,10 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
         usedJars ++= indexJdkSources(
           buildTool.data,
           buildTool.importedBuild.dependencySources,
+        )
+        usedJars ++= indexDependencyModules(
+          buildTool.data,
+          buildTool.importedBuild.dependencyModules,
         )
         usedJars ++= indexDependencySources(
           buildTool.data,
@@ -364,6 +369,80 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     } finally threadPool.shutdown()
   }
 
+  private def processDependencyPath(
+      path: AbsolutePath,
+      target: b.BuildTargetIdentifier,
+      usedJars: mutable.HashSet[AbsolutePath],
+  ): Unit = {
+    try {
+      if (path.isJar && path.exists) {
+        usedJars += path
+        addSourceJarSymbols(path)
+      } else if (path.isDirectory) {
+        val dialect = buildTargets
+          .scalaTarget(target)
+          .map(scalaTarget =>
+            ScalaVersions.dialectForScalaVersion(
+              scalaTarget.scalaVersion,
+              includeSource3 = true,
+            )
+          )
+          .getOrElse(Scala213)
+        definitionIndex.addSourceDirectory(path, dialect)
+      } else {
+        scribe.warn(s"unexpected dependency with absolute path: $path")
+      }
+    } catch {
+      case NonFatal(e) =>
+        scribe.error(s"Error processing $path", e)
+    }
+  }
+
+  private def indexDependencyModules(
+      data: TargetData,
+      dependencyModules: b.DependencyModulesResult,
+  ): Set[AbsolutePath] = {
+    val usedJars = mutable.HashSet.empty[AbsolutePath]
+    val isVisited = new ju.HashSet[String]()
+
+    for {
+      item <- dependencyModules.getItems.asScala
+      module <- item.getModules.asScala
+      if module.getData != null
+      uri <- module.getData match {
+        case jsonObject: JsonObject =>
+          Option(jsonObject.get("artifacts")) match {
+            case Some(artifactsElement) if artifactsElement.isJsonArray =>
+              try {
+                artifactsElement.getAsJsonArray.asScala
+                  .filter(element =>
+                    element.isJsonObject &&
+                      element.getAsJsonObject.has("classifier")
+                  )
+                  .map(_.getAsJsonObject.get("uri").getAsString)
+                  .toList
+              } catch {
+                case NonFatal(e) =>
+                  scribe.warn(
+                    s"Error processing artifacts array: ${e.getMessage}"
+                  )
+                  Nil
+              }
+            case _ => Nil
+          }
+        case _ => Nil
+      }
+      absolutePath = uri.toAbsolutePath
+      _ = data.addDependencySource(absolutePath, item.getTarget)
+      if !isVisited.contains(uri)
+    } {
+      isVisited.add(uri)
+      processDependencyPath(absolutePath, item.getTarget, usedJars)
+    }
+
+    usedJars.toSet
+  }
+
   private def indexDependencySources(
       data: TargetData,
       dependencySources: b.DependencySourcesResult,
@@ -381,29 +460,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       if !isVisited.contains(sourceUri)
     } {
       isVisited.add(sourceUri)
-      try {
-        if (path.isJar && path.exists) {
-          usedJars += path
-          addSourceJarSymbols(path)
-        } else if (path.isDirectory) {
-          val dialect = buildTargets
-            .scalaTarget(item.getTarget)
-            .map(scalaTarget =>
-              ScalaVersions.dialectForScalaVersion(
-                scalaTarget.scalaVersion,
-                includeSource3 = true,
-              )
-            )
-            .getOrElse(Scala213)
-
-          definitionIndex.addSourceDirectory(path, dialect)
-        } else {
-          scribe.warn(s"unexpected dependency: $path")
-        }
-      } catch {
-        case NonFatal(e) =>
-          scribe.error(s"error processing $sourceUri", e)
-      }
+      processDependencyPath(path, item.getTarget, usedJars)
     }
     usedJars.toSet
   }
