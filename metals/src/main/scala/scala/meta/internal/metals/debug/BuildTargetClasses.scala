@@ -16,6 +16,7 @@ import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
+import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.semanticdb.TypeRef
@@ -338,47 +339,63 @@ final class BuildTargetClasses(
 
     val futures = docs.documents.flatMap { doc =>
       doc.symbols.flatMap { symbolInfo =>
-        symbolInfo.annotations.foreach { annotation =>
-          annotation.tpe match {
-            case TypeRef(_, annotationSymbol, _) =>
-              TestFrameworkDetector.fromSymbol(annotationSymbol) match {
-                case Some(framework) =>
-                  val classSymbol = symbolInfo.symbol
-                  val className = symbolToClassName(classSymbol)
-                  val testInfo = TestSymbolInfo(className, framework)
-                  val classSymbolWithoutFunctionName =
-                    classSymbol.indexOf('#') match {
-                      case -1 => classSymbol
-                      case index => classSymbol.substring(0, index + 1)
-                    }
-                  testClasses += ((classSymbolWithoutFunctionName, testInfo))
-                case None =>
-              }
-            case _ =>
-          }
-        }
+        processTestAnnotations(symbolInfo, testClasses)
 
-        symbolInfo.signature match {
-          case classSig: ClassSignature =>
-            val symbol = symbolInfo.symbol
-            val className = symbolToClassName(symbol)
-            if (className.nonEmpty) {
-              Some(
-                detectTestFrameworkUsingClassHierarchy(classSig, doc, path)
-                  .map { frameworkOpt =>
-                    frameworkOpt.foreach { framework =>
-                      val testInfo = TestSymbolInfo(className, framework)
-                      testClasses += ((symbol, testInfo))
-                    }
-                  }
-              )
-            } else None
-          case _ => None
-        }
+        processClassHierarchy(symbolInfo, doc, path, testClasses)
       }
     }
 
     Future.sequence(futures).map(_ => testClasses.toList)
+  }
+
+  private def processTestAnnotations(
+      symbolInfo: SymbolInformation,
+      testClasses: scala.collection.mutable.ListBuffer[(String, TestSymbolInfo)],
+  ): Unit = {
+    symbolInfo.annotations.foreach { annotation =>
+      annotation.tpe match {
+        case TypeRef(_, annotationSymbol, _) =>
+          TestFrameworkDetector.fromSymbol(annotationSymbol) match {
+            case Some(framework) =>
+              val classSymbol = symbolInfo.symbol
+              val className = symbolToClassName(classSymbol)
+              val testInfo = TestSymbolInfo(className, framework)
+              val classSymbolWithoutFunctionName =
+                classSymbol.indexOf('#') match {
+                  case -1 => classSymbol
+                  case index => classSymbol.substring(0, index + 1)
+                }
+              testClasses += ((classSymbolWithoutFunctionName, testInfo))
+            case None =>
+          }
+        case _ =>
+      }
+    }
+  }
+
+  private def processClassHierarchy(
+      symbolInfo: SymbolInformation,
+      doc: TextDocument,
+      path: AbsolutePath,
+      testClasses: scala.collection.mutable.ListBuffer[(String, TestSymbolInfo)],
+  ): Option[Future[Unit]] = {
+    symbolInfo.signature match {
+      case classSig: ClassSignature =>
+        val symbol = symbolInfo.symbol
+        val className = symbolToClassName(symbol)
+        if (className.nonEmpty) {
+          Some(
+            detectTestFrameworkUsingClassHierarchy(classSig, doc, path)
+              .map { frameworkOpt =>
+                frameworkOpt.foreach { framework =>
+                  val testInfo = TestSymbolInfo(className, framework)
+                  testClasses += ((symbol, testInfo))
+                }
+              }
+          )
+        } else None
+      case _ => None
+    }
   }
 
   private def detectTestFrameworkUsingClassHierarchy(
