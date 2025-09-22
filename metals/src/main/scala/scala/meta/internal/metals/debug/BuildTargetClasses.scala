@@ -3,7 +3,12 @@ package scala.meta.internal.metals.debug
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.meta.internal.metals.{BatchedFunction, BuildTargets, Compilers, SemanticdbFeatureProvider}
+import scala.meta.internal.metals.{
+  BatchedFunction,
+  BuildTargets,
+  Compilers,
+  SemanticdbFeatureProvider,
+}
 import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.debug.BuildTargetClasses.Classes
 import scala.meta.internal.metals.debug.BuildTargetClasses.TestSymbolInfo
@@ -21,7 +26,10 @@ import ch.epfl.scala.bsp4j as b
 /**
  * In-memory index of main class symbols grouped by their enclosing build target
  */
-final class BuildTargetClasses(val buildTargets: BuildTargets, val compilers: () => Compilers)(implicit
+final class BuildTargetClasses(
+    val buildTargets: BuildTargets,
+    val compilers: () => Compilers,
+)(implicit
     val ec: ExecutionContext
 ) extends SemanticdbFeatureProvider {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
@@ -355,12 +363,15 @@ final class BuildTargetClasses(val buildTargets: BuildTargets, val compilers: ()
             val symbol = symbolInfo.symbol
             val className = symbolToClassName(symbol)
             if (className.nonEmpty) {
-              Some(detectTestFrameworkUsingClassHierarchy(classSig, doc, path).map { frameworkOpt =>
-                frameworkOpt.foreach { framework =>
-                  val testInfo = TestSymbolInfo(className, framework)
-                  testClasses += ((symbol, testInfo))
-                }
-              })
+              Some(
+                detectTestFrameworkUsingClassHierarchy(classSig, doc, path)
+                  .map { frameworkOpt =>
+                    frameworkOpt.foreach { framework =>
+                      val testInfo = TestSymbolInfo(className, framework)
+                      testClasses += ((symbol, testInfo))
+                    }
+                  }
+              )
             } else None
           case _ => None
         }
@@ -376,7 +387,12 @@ final class BuildTargetClasses(val buildTargets: BuildTargets, val compilers: ()
       path: AbsolutePath,
   ): Future[Option[TestFramework]] = {
     val initialParents = extractParentSymbols(classSig)
-    searchClassHierarchyForTestFramework(initialParents, doc, path, visited = Set.empty)
+    searchClassHierarchyForTestFramework(
+      initialParents,
+      doc,
+      path,
+      visited = Set.empty,
+    )
   }
 
   private def searchClassHierarchyForTestFramework(
@@ -391,17 +407,22 @@ final class BuildTargetClasses(val buildTargets: BuildTargets, val compilers: ()
       val directFramework = symbols
         .map(TestFrameworkDetector.fromSymbol)
         .collectFirst { case Some(framework) => framework }
-      
+
       directFramework match {
         case Some(framework) => Future.successful(Some(framework))
         case None =>
           val nextLevelFutures = symbols
             .filterNot(visited.contains)
             .map(symbol => collectParentsForSymbol(symbol, doc, path, visited))
-          
+
           Future.sequence(nextLevelFutures).flatMap { parentLists =>
             val allNextParents = parentLists.flatten.distinct
-            searchClassHierarchyForTestFramework(allNextParents, doc, path, visited ++ symbols)
+            searchClassHierarchyForTestFramework(
+              allNextParents,
+              doc,
+              path,
+              visited ++ symbols,
+            )
           }
       }
     }
@@ -452,7 +473,6 @@ final class BuildTargetClasses(val buildTargets: BuildTargets, val compilers: ()
       }
     }
   }
-
 
   private def symbolToClassName(symbol: String): String = {
     val withoutPrefix = symbol.stripPrefix("_empty_/")
