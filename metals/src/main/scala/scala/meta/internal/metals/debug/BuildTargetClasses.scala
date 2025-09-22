@@ -3,13 +3,12 @@ package scala.meta.internal.metals.debug
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.meta.internal.metals.{
-  BatchedFunction,
-  BuildTargets,
-  Compilers,
-  SemanticdbFeatureProvider,
-}
-import scala.meta.internal.metals.MetalsEnrichments.*
+
+import scala.meta.internal.metals.BatchedFunction
+import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.metals.debug.BuildTargetClasses.Classes
 import scala.meta.internal.metals.debug.BuildTargetClasses.TestSymbolInfo
 import scala.meta.internal.pc.PcSymbolInformation
@@ -21,8 +20,9 @@ import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.io.AbsolutePath
+
 import bloop.config.Config.TestFramework
-import ch.epfl.scala.bsp4j as b
+import ch.epfl.scala.{bsp4j => b}
 
 /**
  * In-memory index of main class symbols grouped by their enclosing build target
