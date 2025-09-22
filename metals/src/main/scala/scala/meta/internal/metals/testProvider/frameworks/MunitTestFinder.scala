@@ -32,7 +32,12 @@ class MunitTestFinder(
 
   // depending on the munit version test method symbol varies.
   protected val baseParentClasses: Set[String] =
-    Set("munit/BaseFunSuite#", "munit/FunSuite#", "munit/Suite#", "munit/ScalaCheckSuite#")
+    Set(
+      "munit/BaseFunSuite#",
+      "munit/FunSuite#",
+      "munit/Suite#",
+      "munit/ScalaCheckSuite#",
+    )
   protected val testFunctionsNames: Set[String] = Set("test")
   private def testMethodSymbols = baseParentClasses.flatMap(base =>
     testFunctionsNames.map(func => base + func)
@@ -265,5 +270,10 @@ class MunitTestFinder(
 object MunitTestFinder {
   // Expose base parent classes for use in other parts of the codebase
   val baseParentClasses: Set[String] =
-    Set("munit/BaseFunSuite#", "munit/FunSuite#", "munit/Suite#", "munit/ScalaCheckSuite#")
+    Set(
+      "munit/BaseFunSuite#",
+      "munit/FunSuite#",
+      "munit/Suite#",
+      "munit/ScalaCheckSuite#",
+    )
 }
