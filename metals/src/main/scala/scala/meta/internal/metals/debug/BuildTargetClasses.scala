@@ -340,8 +340,7 @@ final class BuildTargetClasses(
     val futures = docs.documents.flatMap { doc =>
       doc.symbols.flatMap { symbolInfo =>
         processTestAnnotations(symbolInfo, testClasses)
-
-        processTestHierarchy(symbolInfo, doc, path, testClasses)
+        processTestClassHierarchy(symbolInfo, doc, path, testClasses)
       }
     }
 
@@ -373,7 +372,7 @@ final class BuildTargetClasses(
     }
   }
 
-  private def processTestHierarchy(
+  private def processTestClassHierarchy(
       symbolInfo: SymbolInformation,
       doc: TextDocument,
       path: AbsolutePath,
@@ -408,7 +407,6 @@ final class BuildTargetClasses(
       initialParents,
       doc,
       path,
-      visited = Set.empty,
     )
   }
 
@@ -416,7 +414,7 @@ final class BuildTargetClasses(
       symbols: List[String],
       doc: TextDocument,
       path: AbsolutePath,
-      visited: Set[String],
+      visited: Set[String] = Set.empty,
   ): Future[Option[TestFramework]] = {
     if (symbols.isEmpty) {
       Future.successful(None)
@@ -459,7 +457,7 @@ final class BuildTargetClasses(
       path: AbsolutePath,
       symbol: String,
   ): Future[Option[PcSymbolInformation]] = {
-    val key = (path, symbol)
+    val key = path -> symbol
     symbolInfoCache.get(key) match {
       case Some(cachedResult) => Future.successful(cachedResult)
       case None =>
