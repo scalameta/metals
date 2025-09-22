@@ -23,6 +23,7 @@ import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import tests.BaseImportSuite
 import tests.BazelBuildLayout
+import tests.BazelModuleLayout
 import tests.BazelServerInitializer
 
 class BazelLspSuite
@@ -309,7 +310,7 @@ class BazelLspSuite
         .runJava(
           Dependency.of(
             BazelBuildTool.dependency.getModule(),
-            BazelBuildTool.version,
+            BazelBuildTool.bspVersion,
           ),
           BazelBuildTool.mainClass,
           workspace,
@@ -317,7 +318,7 @@ class BazelLspSuite
           None,
         )
         .future
-      _ = assertContains(jsonFile, BazelBuildTool.version)
+      _ = assertContains(jsonFile, BazelBuildTool.bspVersion)
       _ <- initialize(
         BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
       )
@@ -337,7 +338,7 @@ class BazelLspSuite
            |                   ^
            |""".stripMargin,
       )
-      _ = assertContains(jsonFile, BazelBuildTool.version)
+      _ = assertContains(jsonFile, BazelBuildTool.bspVersion)
     } yield ()
   }
 
@@ -358,7 +359,7 @@ class BazelLspSuite
       _ <- server.didOpen("Hello.scala")
       _ = assertNoDiff(
         projectview.readText,
-        BazelBuildTool.fallbackProjectView,
+        BazelBuildTool.fallbackProjectView(workspace),
       )
       _ <- server.didChange("Hello.scala") { text =>
         text.replace("def hello: String", "def hello: Int")
@@ -391,7 +392,7 @@ class BazelLspSuite
       )
       _ = assertNoDiff(
         projectview.readText,
-        BazelBuildTool.fallbackProjectView,
+        BazelBuildTool.fallbackProjectView(workspace),
       )
     } yield ()
   }
@@ -425,6 +426,104 @@ class BazelLspSuite
     } yield ()
   }
 
+  test("bazel-8.2.1") {
+    cleanWorkspace()
+    val bazelVersion821 = "8.2.1"
+    for {
+      _ <- initialize(
+        BazelModuleLayout(moduleWorkspaceLayout, "3.3.6", bazelVersion821)
+      )
+      _ = assert(bazelBspConfig.exists)
+
+      // Check that the project view uses scala_rules for Bazel 8.2.1
+      projectViewFile = workspace.list.find(
+        _.filename.endsWith(".bazelproject")
+      )
+      _ = assert(projectViewFile.isDefined, "Project view file should exist")
+      projectViewContent = projectViewFile.get.readText
+      _ = assertNoDiff(
+        projectViewContent,
+        """|targets:
+           |    @//...:all
+           |
+           |allow_manual_targets_sync: false
+           |
+           |derive_targets_from_directories: false
+           |
+           |enabled_rules:
+           |    scala_rules
+           |    rules_java
+           |    rules_jvm
+           |
+           |""".stripMargin,
+      )
+
+      _ <- server.didOpen("Hello.scala")
+      _ <- server.didChange("Hello.scala") { text =>
+        text.replace("def hello: String", "def hello: Int")
+      }
+      _ <- server.didSave("Hello.scala")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|Hello.scala:4:19: error: Type Mismatch Error
+           |Found:    ("Hello" : String)
+           |Required: Int
+           |
+           |longer explanation available when compiling with `-explain`
+           |  def hello: Int = "Hello"
+           |                  ^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  private val commonCode =
+    """|scala_library(
+       |    name = "hello_lib",
+       |    srcs = ["Hello.scala", "Bar.scala"],
+       |)
+       |
+       |scala_binary(
+       |    name = "hello",
+       |    srcs = ["Main.scala", "Decode.scala"],
+       |    main_class = "main",
+       |    deps = [":hello_lib"],
+       |)
+       |
+       |/Hello.scala
+       |package examples.scala3
+       |
+       |class Hello {
+       |  def hello: String = "Hello"
+       |
+       |}
+       |
+       |/Bar.scala
+       |package examples.scala3
+       |
+       |class Bar {
+       |  def bar: String = "bar"
+       |  def hi = new Hello().hello
+       |}
+       |
+       |/Main.scala
+       |import examples.scala3.Hello
+       |
+       |object Main {
+       |def msg = new Hello().hello
+       |}
+       |
+       |/Decode.scala
+       |class Decode {
+       | def decoded = this
+       |}
+       |
+       |object Decode {
+       | def decode: String = "decode"
+       |}
+       |
+       |""".stripMargin
+
   private val workspaceLayout =
     s"""|/BUILD
         |load("@io_bazel_rules_scala//scala:scala_toolchain.bzl", "scala_toolchain")
@@ -444,50 +543,29 @@ class BazelLspSuite
         |    visibility = ["//visibility:public"],
         |)
         |
-        |scala_library(
-        |    name = "hello_lib",
-        |    srcs = ["Hello.scala", "Bar.scala"],
+        |$commonCode
+        |""".stripMargin
+
+  private val moduleWorkspaceLayout =
+    s"""|/BUILD
+        |load("@rules_scala//scala:scala.bzl", "scala_binary", "scala_library")
+        |load("@rules_scala//scala:scala_toolchain.bzl", "scala_toolchain")
+        |
+        |scala_toolchain(
+        |    name = "semanticdb_toolchain_impl",
+        |    enable_semanticdb = True,
+        |    semanticdb_bundle_in_jar = False,
+        |    visibility = ["//visibility:public"],
         |)
         |
-        |scala_binary(
-        |    name = "hello",
-        |    srcs = ["Main.scala", "Decode.scala"],
-        |    main_class = "main",
-        |    deps = [":hello_lib"],
+        |toolchain(
+        |    name = "semanticdb_toolchain",
+        |    toolchain = "semanticdb_toolchain_impl",
+        |    toolchain_type = "@scala_rules//scala:toolchain_type",
+        |    visibility = ["//visibility:public"],
         |)
         |
-        |/Hello.scala
-        |package examples.scala3
-        |
-        |class Hello {
-        |  def hello: String = "Hello"
-        |
-        |}
-        |
-        |/Bar.scala
-        |package examples.scala3
-        |
-        |class Bar {
-        |  def bar: String = "bar"
-        |  def hi = new Hello().hello
-        |}
-        |
-        |/Main.scala
-        |import examples.scala3.Hello
-        |
-        |object Main {
-        |def msg = new Hello().hello
-        |}
-        |
-        |/Decode.scala
-        |class Decode {
-        | def decoded = this
-        |}
-        |
-        |object Decode {
-        | def decode: String = "decode"
-        |}
-        |
+        |$commonCode
         |""".stripMargin
 
 }

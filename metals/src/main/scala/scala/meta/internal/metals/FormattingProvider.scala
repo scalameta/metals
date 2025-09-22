@@ -31,9 +31,12 @@ import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import coursierapi.error.DownloadingArtifactsError
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
+import org.scalafmt.dynamic.Dependency
 import org.scalafmt.dynamic.ScalafmtDynamicError
+import org.scalafmt.dynamic.ScalafmtVersion
 import org.scalafmt.interfaces.PositionException
 import org.scalafmt.interfaces.Scalafmt
 import org.scalafmt.interfaces.ScalafmtReporter
@@ -94,6 +97,12 @@ final class FormattingProvider(
             "object Main  {}",
           )
         } catch {
+          case e: DownloadingArtifactsError =>
+            downloadScalafmtDependencies(conf)
+            scribe.debug(
+              s"Scalafmt issue while warming up due to downloading artifacts error: ${e.getMessage()}"
+            )
+
           case e: ScalafmtDynamicError =>
             scribe.debug(
               s"Scalafmt issue while warming up due to config issue: ${e.getMessage()}"
@@ -101,6 +110,19 @@ final class FormattingProvider(
         }
       case _ =>
 
+    }
+  }
+
+  private def downloadScalafmtDependencies(conf: AbsolutePath): Unit = {
+    val scalafmtVersion = currentScalafmtVersion(conf)
+    val semVer = SemVer.Version.fromString(scalafmtVersion)
+    val dependencies = Dependency.dependencies(
+      ScalafmtVersion(semVer.major, semVer.minor, semVer.patch)
+    )
+    dependencies.foreach { dep =>
+      Embedded.downloadDependency(
+        coursierapi.Dependency.of(dep.group, dep.artifact, dep.version)
+      )
     }
   }
 
@@ -231,6 +253,12 @@ final class FormattingProvider(
       try {
         scalafmt.format(scalafmtConf.toNIO, path.toNIO, input.text)
       } catch {
+        case e: DownloadingArtifactsError =>
+          downloadScalafmtDependencies(scalafmtConf)
+          scribe.debug(
+            s"Scalafmt issue while formatting due to downloading artifacts error: ${e.getMessage()}"
+          )
+          scalafmt.format(scalafmtConf.toNIO, path.toNIO, input.text)
         case e: ScalafmtDynamicError =>
           scribe.debug(
             s"Skipping Scalafmt due to config issue: ${e.getMessage()}"
@@ -479,6 +507,14 @@ final class FormattingProvider(
         case None => Future.unit
       }
     }
+  }
+
+  def currentScalafmtVersion(conf: AbsolutePath): String = {
+    val localScalafmtVersion = ScalafmtConfig.parse(conf) match {
+      case Failure(_) => None
+      case Success(values) => values.version.map(_.toString)
+    }
+    localScalafmtVersion.getOrElse(BuildInfo.scalafmtVersion)
   }
 
   def validateWorkspace(projectRoot: AbsolutePath): Future[Unit] = {

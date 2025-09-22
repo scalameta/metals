@@ -186,3 +186,46 @@ object BazelBuildLayout extends BuildToolLayout {
         |scalatest_toolchain()
         |""".stripMargin
 }
+
+object BazelModuleLayout extends BuildToolLayout {
+  override def apply(sourceLayout: String, scalaVersion: String): String =
+    s"""|/MODULE.bazel
+        |${moduleFileLayout(scalaVersion)}
+        |$sourceLayout
+        |""".stripMargin
+
+  def apply(
+      sourceLayout: String,
+      scalaVersion: String,
+      bazelVersion: String,
+  ): String =
+    s"""|/.bazelversion
+        |$bazelVersion
+        |${apply(sourceLayout, scalaVersion)}
+        |""".stripMargin
+
+  def moduleFileLayout(scalaVersion: String): String =
+    s"""|
+        |bazel_dep(name = "bazel_skylib", version = "1.8.1")
+        |bazel_dep(name = "rules_scala", version = "7.0.0")
+        |bazel_dep(name = "rules_java", version = "8.15.1")
+        |bazel_dep(name = "rules_python", version = "1.5.3")
+        |
+        |scala_version = "$scalaVersion"
+        |
+        |scala_config = use_extension(
+        |    "@rules_scala//scala/extensions:config.bzl",
+        |    "scala_config",
+        |)
+        |scala_config.settings(scala_version = scala_version)
+        |
+        |scala_deps = use_extension(
+        |    "@rules_scala//scala/extensions:deps.bzl",
+        |    "scala_deps",
+        |)
+        |scala_deps.settings(
+        |    fetch_sources = True,
+        |)
+        |scala_deps.scala()
+        |""".stripMargin
+}

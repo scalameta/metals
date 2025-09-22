@@ -38,6 +38,29 @@ abstract class BaseCodeActionLspSuite(
     )
   }
 
+  def checkActionsOnly(
+      name: TestOptions,
+      input: String,
+      expectedActions: String,
+      scalafixConf: String = "",
+      scalacOptions: List[String] = Nil,
+      fileName: String = "A.scala",
+      filterAction: CodeAction => Boolean = _ => true,
+  )(implicit loc: Location): Unit = {
+    check(
+      name,
+      input,
+      expectedActions,
+      "",
+      scalafixConf = scalafixConf,
+      scalacOptions = scalacOptions,
+      fileName = fileName,
+      expectNoDiagnostics = false,
+      filterAction = filterAction,
+      applyCodeAction = false,
+    )
+  }
+
   protected def toPath(fileName: String): String =
     s"a/src/main/scala/a/$fileName"
   def check(
@@ -61,6 +84,7 @@ abstract class BaseCodeActionLspSuite(
       overrideLayout: Option[String] = None,
       retryAction: Int = 0,
       assume: () => Boolean = () => true,
+      applyCodeAction: Boolean = true,
   )(implicit loc: Location): Unit = {
     val scalacOptionsJson =
       if (scalacOptions.nonEmpty)
@@ -92,6 +116,7 @@ abstract class BaseCodeActionLspSuite(
       filterAction,
       retryAction,
       assume,
+      applyCodeAction,
     )
   }
 
@@ -111,6 +136,7 @@ abstract class BaseCodeActionLspSuite(
       filterAction: CodeAction => Boolean = _ => true,
       retryAction: Int = 0,
       assumeFunc: () => Boolean = () => true,
+      applyCodeAction: Boolean = true,
   )(implicit loc: Location): Unit = {
     val files = FileLayout.mapFromString(layout)
     val (path, input) = files
@@ -162,15 +188,29 @@ abstract class BaseCodeActionLspSuite(
           changeFile(input).replace("<<", "").replace(">>", ""),
         )
         codeActions <- assertCodeAction(retryAction)
-        _ <- client.applyCodeAction(selectedActionIndex, codeActions, server)
-        _ <- server.didChange(newPath) { _ =>
-          if (newPath != path)
-            server.toPath(newPath).readText
-          else
-            server.bufferContents(newPath)
-        }
-        _ <- server.didSave(newPath)
-        _ = assertNoDiff(server.bufferContents(newPath), actualExpectedCode)
+        _ <-
+          if (applyCodeAction) {
+            for {
+              _ <- client.applyCodeAction(
+                selectedActionIndex,
+                codeActions,
+                server,
+              )
+              _ <- server.didChange(newPath) { _ =>
+                if (newPath != path)
+                  server.toPath(newPath).readText
+                else
+                  server.bufferContents(newPath)
+              }
+              _ <- server.didSave(newPath)
+              _ = assertNoDiff(
+                server.bufferContents(newPath),
+                actualExpectedCode,
+              )
+            } yield ()
+          } else {
+            Future.unit
+          }
         _ = if (expectNoDiagnostics) assertNoDiagnostics() else ()
         _ = extraOperations
       } yield ()

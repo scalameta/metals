@@ -125,11 +125,20 @@ object Messages {
     s"Import already running. \nPlease cancel the current import to run a new one.",
   )
 
-  val ImportProjectPartiallyFailed = new MessageParams(
-    MessageType.Warning,
-    "Import project partially failed, limited functionality may work in some parts of the workspace. " +
-      "See the logs for more details. ",
-  )
+  object ImportProjectPartiallyFailed {
+    val showLogs = new MessageActionItem("Show logs")
+
+    def params(): ShowMessageRequestParams = {
+      val request = new ShowMessageRequestParams()
+      request.setMessage(
+        "Import project partially failed, limited functionality may work in some parts of the workspace. " +
+          "See the logs for more details. "
+      )
+      request.setType(MessageType.Warning)
+      request.setActions(List(showLogs).asJava)
+      request
+    }
+  }
 
   val InsertInferredTypeFailed = new MessageParams(
     MessageType.Error,
