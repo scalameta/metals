@@ -330,7 +330,6 @@ final class BuildTargetClasses(val buildTargets: BuildTargets, val compilers: ()
 
     val futures = docs.documents.flatMap { doc =>
       doc.symbols.flatMap { symbolInfo =>
-        // Handle annotations synchronously
         symbolInfo.annotations.foreach { annotation =>
           annotation.tpe match {
             case TypeRef(_, annotationSymbol, _) =>
@@ -351,7 +350,6 @@ final class BuildTargetClasses(val buildTargets: BuildTargets, val compilers: ()
           }
         }
 
-        // Handle class signatures asynchronously
         symbolInfo.signature match {
           case classSig: ClassSignature =>
             val symbol = symbolInfo.symbol
@@ -378,17 +376,16 @@ final class BuildTargetClasses(val buildTargets: BuildTargets, val compilers: ()
       path: AbsolutePath,
   ): Future[Option[TestFramework]] = {
     val initialParents = extractParentSymbols(classSig)
-    findTestFrameworkInHierarchy(initialParents, doc, path, visited = Set.empty)
+    findTestFrameworkRecursively(initialParents, doc, path, visited = Set.empty)
   }
 
-  private def findTestFrameworkInHierarchy(
+  private def findTestFrameworkRecursively(
       symbols: List[String],
       doc: TextDocument,
       path: AbsolutePath,
       visited: Set[String],
-      maxDepth: Int = 5, // Limit depth since test frameworks aren't deeply nested
   ): Future[Option[TestFramework]] = {
-    if (symbols.isEmpty || maxDepth <= 0) {
+    if (symbols.isEmpty) {
       Future.successful(None)
     } else {
       val directFramework = symbols
@@ -404,7 +401,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets, val compilers: ()
           
           Future.sequence(nextLevelFutures).flatMap { parentLists =>
             val allNextParents = parentLists.flatten.distinct
-            findTestFrameworkInHierarchy(allNextParents, doc, path, visited ++ symbols, maxDepth - 1)
+            findTestFrameworkRecursively(allNextParents, doc, path, visited ++ symbols)
           }
       }
     }
