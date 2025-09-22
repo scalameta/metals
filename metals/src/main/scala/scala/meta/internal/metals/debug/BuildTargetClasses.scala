@@ -41,6 +41,9 @@ final class BuildTargetClasses(
   private val symbolInfoCache =
     TrieMap.empty[(AbsolutePath, String), Option[PcSymbolInformation]]
 
+  private val hierarchySearchCache =
+    TrieMap.empty[String, Option[TestFramework]]
+
   type JVMRunEnvironmentsMap =
     TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem]
 
@@ -78,6 +81,7 @@ final class BuildTargetClasses(
   override def reset(): Unit = {
     bazelTestClassCache.clear()
     symbolInfoCache.clear()
+    hierarchySearchCache.clear()
   }
 
   def classesOf(target: b.BuildTargetIdentifier): Classes = {
@@ -341,7 +345,7 @@ final class BuildTargetClasses(
       doc.symbols.flatMap { symbolInfo =>
         processTestAnnotations(symbolInfo, testClasses)
 
-        processClassHierarchy(symbolInfo, doc, path, testClasses)
+        processTestHierarchy(symbolInfo, doc, path, testClasses)
       }
     }
 
@@ -373,7 +377,7 @@ final class BuildTargetClasses(
     }
   }
 
-  private def processClassHierarchy(
+  private def processTestHierarchy(
       symbolInfo: SymbolInformation,
       doc: TextDocument,
       path: AbsolutePath,
@@ -422,7 +426,10 @@ final class BuildTargetClasses(
       Future.successful(None)
     } else {
       val directFramework = symbols
-        .map(TestFrameworkDetector.fromSymbol)
+        .map(symbol =>
+          TestFrameworkDetector
+            .fromSymbol(symbol)
+        )
         .collectFirst { case Some(framework) => framework }
 
       directFramework match {
@@ -430,17 +437,25 @@ final class BuildTargetClasses(
         case None =>
           val nextLevelFutures = symbols
             .filterNot(visited.contains)
-            .map(symbol => collectParentsForSymbol(symbol, doc, path, visited))
-
-          Future.sequence(nextLevelFutures).flatMap { parentLists =>
-            val allNextParents = parentLists.flatten.distinct
-            searchClassHierarchyForTestFramework(
-              allNextParents,
-              doc,
-              path,
-              visited ++ symbols,
+            .map(symbol =>
+              collectParentsForSymbol(symbol, doc, path, visited)
+                .map(symbol -> _)
             )
+
+          val r = nextLevelFutures.map { fut =>
+            fut.flatMap { case (symbol, parentList) =>
+              searchClassHierarchyForTestFramework(
+                parentList,
+                doc,
+                path,
+                visited ++ symbols,
+              ).map { maybeTestFramework =>
+                cacheHierarchyResult(symbol, maybeTestFramework)
+                maybeTestFramework
+              }
+            }
           }
+          Future.sequence(r).map(_.collectFirst{ case Some(framework) => framework})
       }
     }
   }
@@ -464,6 +479,22 @@ final class BuildTargetClasses(
           result
         }
     }
+  }
+
+  private def getCachedHierarchyResult(
+      symbol: String
+  ): Either[Unit, Option[TestFramework]] = {
+    hierarchySearchCache.get(symbol) match {
+      case Some(value) => Right(value)
+      case None => Left(())
+    }
+  }
+
+  private def cacheHierarchyResult(
+      symbol: String,
+      result: Option[TestFramework],
+  ): Unit = {
+    hierarchySearchCache.put(symbol, result)
   }
 
   private def collectParentsForSymbol(
