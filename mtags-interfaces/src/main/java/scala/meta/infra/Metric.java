@@ -59,14 +59,6 @@ public class Metric {
 		return new Metric(name).setValue(1, UnitType.COUNT, MetricType.COUNTER);
 	}
 
-	public static Metric duration(String name, Duration value) {
-		return new Metric(name).setValue(value.toMillis(), UnitType.MILLISECONDS, MetricType.HISTOGRAM);
-	}
-
-	public static Metric durationMillis(String name, float value) {
-		return new Metric(name).setValue(value, UnitType.MILLISECONDS, MetricType.HISTOGRAM);
-	}
-
 	public Metric setMetricType(MetricType metricType) {
 		this.metricType = metricType;
 		return this;

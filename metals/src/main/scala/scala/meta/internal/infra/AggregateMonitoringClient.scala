@@ -10,14 +10,8 @@ import scala.meta.infra.Metric
 import scala.meta.infra.MonitoringClient
 import scala.meta.internal.jdk.CollectionConverters._
 
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-
 class AggregateMonitoringClient(val underlying: List[MonitoringClient])
     extends MonitoringClient {
-
-  val logger: Logger =
-    LoggerFactory.getLogger(classOf[AggregateMonitoringClient])
 
   @tailrec
   private def foreach(
@@ -29,7 +23,7 @@ class AggregateMonitoringClient(val underlying: List[MonitoringClient])
         try fn(client)
         catch {
           case ex if NonFatal(ex) =>
-            logger.error(s"Error while calling $fn on $client", ex)
+            scribe.error(s"Error while calling $fn on $client", ex)
         }
         foreach(tail, fn)
       case Nil => ()

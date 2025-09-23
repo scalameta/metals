@@ -60,8 +60,8 @@ class InfraSuite extends BaseLspSuite("infraSuite") {
       )
       _ = client.messageRequests.clear()
       _ <- server.didOpen("a/src/main/scala/Main.scala")
-      _ = assert(TestingInfra.events.isEmpty) // Not implemented yet
-      _ = assert(TestingInfra.metrics.nonEmpty)
+      _ = assert(TestingInfra.events.nonEmpty)
+      _ = assert(TestingInfra.metrics.isEmpty) // May get removed
       _ = assert(TestingInfra.testFlags.nonEmpty)
     } yield ()
   }

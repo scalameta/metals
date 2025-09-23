@@ -11,6 +11,7 @@ package scala.meta.infra;
  * completions/diagnostics.
  */
 public abstract class MonitoringClient {
+	// TODO: consider removing this method since it's unused
 	public abstract void recordUsage(Metric metric);
 
 	public abstract void recordEvent(Event event);

@@ -301,8 +301,8 @@ final class MbtWorkspaceSymbolProvider(
     )
     files.clear()
 
-    metrics.recordUsage(
-      infra.Metric.duration("mbt_index_workspace_symbol", timer.elapsed)
+    metrics.recordEvent(
+      infra.Event.duration("mbt_index_workspace_symbol", timer.elapsed)
     )
 
     // Step 7: print logs

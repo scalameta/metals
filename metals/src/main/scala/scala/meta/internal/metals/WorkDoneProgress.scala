@@ -183,7 +183,7 @@ class WorkDoneProgress(
       task.wasFinished.set(true)
       endProgress(token)
       metricName.foreach { case (name, metrics) =>
-        metrics.recordUsage(infra.Metric.duration(name, task.timer.elapsed))
+        metrics.recordEvent(infra.Event.duration(name, task.timer.elapsed))
       }
     }
     value

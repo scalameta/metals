@@ -14,8 +14,12 @@ final class TimerProvider(time: Time, metrics: infra.MonitoringClient)(implicit
   def timed[T](
       didWhat: String,
       reportStatus: Boolean = false,
+      metricName: Option[String] = None,
   )(thunk: => Future[T]): Future[T] = {
-    withTimer(didWhat, reportStatus)(thunk).map { case (_, value) =>
+    withTimer(didWhat, reportStatus)(thunk).map { case (timer, value) =>
+      metricName.foreach { name =>
+        metrics.recordEvent(infra.Event.duration(name, timer.elapsed))
+      }
       value
     }
   }
@@ -34,10 +38,8 @@ final class TimerProvider(time: Time, metrics: infra.MonitoringClient)(implicit
       scribe.info(s"time: $didWhat in $timer")
     }
 
-    metricName match {
-      case Some(name) =>
-        metrics.recordUsage(infra.Metric.duration(name, timer.elapsed))
-      case _ =>
+    metricName.foreach { name =>
+      metrics.recordEvent(infra.Event.duration(name, timer.elapsed))
     }
 
     result
