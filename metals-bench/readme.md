@@ -112,7 +112,17 @@ export FLAME_GRAPH_DIR=$(pwd)/FlameGraph
 export PATH=$PATH:$JFR_FLAME_GRAPH_DIR/build/install/jfr-flame-graph/bin
 ```
 
-Next, run JMH benchmark with the JFR profiler.
+To run with the async profiler, you can run the benchmark like so:
+
+```
+sbt
+> bench/jmh:run -i 2 -wi 1 -f1 -t1 bench.LargeIndexBench -prof "async:output=jfr;dir=/tmp/jmh-prof"
+```
+
+You can open the jfr profile in IDEA or another tool that understands jfr profiles.
+
+
+Or, run JMH benchmark with the JFR profiler.
 
 ```
 sbt

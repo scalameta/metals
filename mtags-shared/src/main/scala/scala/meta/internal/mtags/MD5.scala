@@ -2,7 +2,11 @@ package scala.meta.internal.mtags
 
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
+import java.nio.file.Path
 import java.security.MessageDigest
+
+import com.google.common.hash.Hashing
+import com.google.common.io
 
 object MD5 {
   def compute(string: String): String = {
@@ -24,5 +28,9 @@ object MD5 {
       j += 1
     }
     new String(hexChars)
+  }
+
+  def compute(path: Path): String = {
+    io.Files.asByteSource(path.toFile).hash(Hashing.md5()).toString()
   }
 }

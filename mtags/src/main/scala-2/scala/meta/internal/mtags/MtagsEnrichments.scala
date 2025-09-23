@@ -163,6 +163,16 @@ trait MtagsEnrichments extends ScalametaCommonEnrichments {
         }
       }
 
+      // fast path for file URIs which avoids expensive OS calls to realpath
+      // and URI parsing when path is a file
+      if (!Properties.isWin) {
+        // not percent-encoded, it's safe to skip uri decoding
+        if (value.startsWith("file:///") && !value.contains("%"))
+          return AbsolutePath(Paths.get(value.drop(7)))
+        else if (value.startsWith("/"))
+          return AbsolutePath(Paths.get(value))
+      }
+
       // jar schemes must have "jar:file:"" instead of "jar:file%3A" or jar file system won't recognise the URI.
       // but don't overdecode as URIs may not be recognised e.g. "com-microsoft-java-debug-core-0.32.0%2B1.jar" is correct
       if (value.toUpperCase.startsWith("JAR%3AFILE"))

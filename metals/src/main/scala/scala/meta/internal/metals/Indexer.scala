@@ -1,7 +1,5 @@
 package scala.meta.internal.metals
 
-import java.net.URI
-import java.nio.file.Paths
 import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.TimeUnit
 import java.{util => ju}
@@ -193,7 +191,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     var usedJars = Set.empty[AbsolutePath]
     for (buildTool <- allBuildTargetsData)
       timerProvider.timedThunk(
-        "indexed library sources",
+        s"indexed library sources for ${buildTool.name}",
         clientConfig.initialConfig.statistics.isIndex,
         metricName = Some("index_library_sources"),
       ) {
@@ -385,11 +383,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     for {
       item <- dependencySources.getItems.asScala
       sourceUri <- Option(item.getSources).toList.flatMap(_.asScala)
-      path =
-        if (sourceUri.startsWith("file:///") || sourceUri.startsWith("/"))
-          AbsolutePath(Paths.get(new URI(sourceUri)))
-        else
-          sourceUri.toAbsolutePath
+      path = sourceUri.toAbsolutePath
       _ = data.addDependencySource(path, item.getTarget)
       if !isVisited.contains(sourceUri)
     } {

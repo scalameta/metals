@@ -1201,7 +1201,7 @@ class Compilers(
             // don't spam the log with the same message about the same file
             && !lastPathWithFallbackCompiler.contains(path)
           ) {
-            scribe.info(
+            scribe.debug(
               s"no build target found for $path, try syncing the file for full IDE support." +
                 s" Using presentation compiler with project's scala-library version: ${scalaVersion}"
             )

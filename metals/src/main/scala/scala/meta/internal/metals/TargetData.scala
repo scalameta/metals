@@ -73,6 +73,7 @@ final class TargetData(val isAmmonite: Boolean = false) {
     new mutable.HashMap[BuildTargetIdentifier, String]
   val idToConnection: MMap[String, BuildServerConnection] =
     new mutable.HashMap[String, BuildServerConnection]
+
   def sourceBuildTargets(
       sourceItem: AbsolutePath
   ): Option[Iterable[BuildTargetIdentifier]] = {
@@ -382,8 +383,11 @@ final class TargetData(val isAmmonite: Boolean = false) {
       target: BuildTargetIdentifier,
   ): Unit = {
     sourceJarNameToJarFile(sourcesJar.filename) = sourcesJar
-    val acc = inverseDependencySources.getOrElse(sourcesJar, Set.empty)
-    inverseDependencySources(sourcesJar) = acc + target
+    val acc = inverseDependencySources.getOrElseUpdate(sourcesJar, Set(target))
+    // avoid relatively expensive TrieMap updates if the target is already in the set
+    if (!acc.contains(target)) {
+      inverseDependencySources(sourcesJar) = acc + target
+    }
   }
 
   def addMappedSource(

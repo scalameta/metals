@@ -118,10 +118,17 @@ object MetalsEnrichments
         case None => Future.successful(default)
       }
   }
+
+  // reuse the instance to save expensive reflective calls for type adapters
+  private val gsonMavenDeps = new Gson()
   implicit class XtensionDependencyModule(module: b.DependencyModule) {
     def asMavenDependencyModule: Option[b.MavenDependencyModule] = {
       if (module.getDataKind() == b.DependencyModuleDataKind.MAVEN)
-        decodeJson(module.getData, classOf[b.MavenDependencyModule])
+        decodeJson(
+          module.getData,
+          classOf[b.MavenDependencyModule],
+          Some(gsonMavenDeps),
+        )
       else
         None
     }
