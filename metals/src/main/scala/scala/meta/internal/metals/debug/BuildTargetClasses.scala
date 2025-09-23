@@ -539,17 +539,12 @@ object TestFrameworkSymbolRegistry {
   import scala.meta.internal.metals.testProvider.frameworks.ScalatestStyle
   import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
   import scala.meta.internal.metals.testProvider.frameworks.WeaverCatsEffectTestFinder
+  import scala.meta.internal.metals.testProvider.frameworks.ZioTestFinder
   import scala.meta.internal.metals.testProvider.frameworks.JunitTestFinder
   import scala.meta.internal.metals.testProvider.frameworks.TestNGTestFinder
 
-  private lazy val scalatestSymbols: Map[String, TestFramework] = {
-    val baseSymbols = ScalatestStyle.baseSymbols
-    val additionalSymbols = Set(
-      "org/scalatest/Suite#",
-      "org/scalatest/TestSuite#",
-    )
-    (baseSymbols ++ additionalSymbols).map(_ -> TestFramework.ScalaTest).toMap
-  }
+  private lazy val scalatestSymbols: Map[String, TestFramework] =
+    ScalatestStyle.baseSymbols.map(_ -> TestFramework.ScalaTest).toMap
 
   private lazy val munitSymbols: Map[String, TestFramework] =
     MunitTestFinder.baseParentClasses.map(_ -> TestFramework.munit).toMap
@@ -559,14 +554,13 @@ object TestFrameworkSymbolRegistry {
       .map(_ -> TestFrameworkUtils.WeaverTestFramework)
       .toMap
 
-  private lazy val zioTestSymbols: Map[String, TestFramework] = Set(
-    "zio/test/DefaultRunnableSpec#",
-    "zio/test/RunnableSpec#",
-    "zio/test/ZIOSpecDefault#",
-  ).map(_ -> TestFrameworkUtils.ZioTestFramework).toMap
+  private lazy val zioTestSymbols: Map[String, TestFramework] =
+    ZioTestFinder.baseParentClasses
+      .map(_ -> TestFrameworkUtils.ZioTestFramework)
+      .toMap
 
   private lazy val junitSymbols: Map[String, TestFramework] = Set(
-    "junit/framework/TestCase#",
+    JunitTestFinder.junitBaseClassSymbol,
     JunitTestFinder.junitAnnotationSymbol,
   ).map(_ -> TestFramework.JUnit).toMap
 
