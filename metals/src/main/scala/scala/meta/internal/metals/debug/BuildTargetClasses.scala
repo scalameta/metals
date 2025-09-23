@@ -39,7 +39,7 @@ final class BuildTargetClasses(
     TrieMap.empty[AbsolutePath, List[(String, TestSymbolInfo)]]
 
   private val symbolInfoCache =
-    TrieMap.empty[(AbsolutePath, String), Option[PcSymbolInformation]]
+    TrieMap.empty[String, (Option[PcSymbolInformation], AbsolutePath)]
 
   type JVMRunEnvironmentsMap =
     TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem]
@@ -453,18 +453,29 @@ final class BuildTargetClasses(
     }.toList
   }
 
+  private def fetchAndCacheSymbolInfo(
+      path: AbsolutePath,
+      symbol: String,
+  ): Future[Option[PcSymbolInformation]] = {
+    compilers().info(path, symbol).map { result =>
+      symbolInfoCache.put(symbol, (result, path))
+      result
+    }
+  }
+
   private def getCachedSymbolInfo(
       path: AbsolutePath,
       symbol: String,
   ): Future[Option[PcSymbolInformation]] = {
-    val key = path -> symbol
-    symbolInfoCache.get(key) match {
-      case Some(cachedResult) => Future.successful(cachedResult)
-      case None =>
-        compilers().info(path, symbol).map { result =>
-          symbolInfoCache.put(key, result)
-          result
+    symbolInfoCache.get(symbol) match {
+      case Some((cachedSymbolInfo, cachedPath)) =>
+        if (cachedPath == path) {
+          Future.successful(cachedSymbolInfo)
+        } else {
+          fetchAndCacheSymbolInfo(path, symbol)
         }
+      case None =>
+        fetchAndCacheSymbolInfo(path, symbol)
     }
   }
 
