@@ -1472,7 +1472,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
            |
            |  Future/*[Int<<scala/Int#>>]*/(/*arg = *//*=> */1 + 2)
            |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
-           |    /*arg = => */1 + 2
+           |    /*arg = */1 + 2
            |  }
            |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
            |    val x/*: Int<<scala/Int#>>*/ = 1

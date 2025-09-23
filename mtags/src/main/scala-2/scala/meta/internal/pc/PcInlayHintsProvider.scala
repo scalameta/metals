@@ -651,7 +651,7 @@ final class PcInlayHintsProvider(
     def getInlayHints(tree: Tree): List[InlayHint] = {
       if (params.closingLabels()) {
         tree match {
-          case tree: DefDef if !tree.symbol.isSynthetic =>
+          case tree: DefDef if !isIgnoredSymbol(tree.symbol) =>
             val lastChar = text(tree.pos.end - 1)
             if (lastChar == '}') {
               List(make(tree.name.toString, tree.pos))
@@ -673,6 +673,17 @@ final class PcInlayHintsProvider(
         InlayHintKind.Parameter,
         uri
       )
+    }
+
+    private def isIgnoredSymbol(sym: Symbol): Boolean = {
+      sym.isSynthetic ||
+      sym.isPrimaryConstructor ||
+      samePosAsOwner(sym)
+    }
+
+    private def samePosAsOwner(sym: Symbol) = {
+      val owner = sym.safeOwner
+      sym.pos == owner.pos
     }
   }
 
