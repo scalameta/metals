@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream
 import java.net.URI
+import java.nio.file.Files
 import javax.annotation.Nullable
 
 import scala.annotation.tailrec
@@ -383,6 +384,17 @@ final class FileDecoderProvider(
       )
     }
   }
+  private def jarPathFromSourceJar(
+      sourcePath: AbsolutePath,
+      buildTargetId: BuildTargetIdentifier,
+  ): Option[AbsolutePath] = {
+    if (sourcePath.isScalaOrJava && sourcePath.isJarFileSystem) {
+      for {
+        sourceJarPath <- sourcePath.jarPath
+        jarPath <- buildTargets.findJarFor(buildTargetId, sourceJarPath)
+      } yield jarPath
+    } else None
+  }
 
   private def findPathInfoFromJavaSource(
       sourceFile: AbsolutePath,
@@ -536,7 +548,10 @@ final class FileDecoderProvider(
     val metadata = for {
       targetId <- buildTargets.inverseSources(sourceFile)
       workspaceDirectory <- buildTargets.workspaceDirectory(targetId)
-      sourceRoot <- buildTargets.inverseSourceItem(sourceFile)
+      sourceRoot <- buildTargets.inverseSourceItem(sourceFile).orElse {
+        if (sourceFile.isJarFileSystem) sourceFile.root
+        else None
+      }
       (classDir, targetroot) <-
         if (sourceFile.isJava)
           // sbt doesn't provide separate javac info
@@ -547,7 +562,8 @@ final class FileDecoderProvider(
           findScalaBuildTargetMetadata(targetId)
     } yield BuildTargetMetadata(
       targetId,
-      classDir.toAbsolutePath,
+      jarPathFromSourceJar(sourceFile, targetId)
+        .getOrElse(classDir.toAbsolutePath),
       targetroot,
       workspaceDirectory,
       sourceRoot,
@@ -557,45 +573,60 @@ final class FileDecoderProvider(
     )
   }
 
+  private def withTemporaryFileForJar[T](
+      path: AbsolutePath
+  )(f: String => Future[T]): Future[T] = if (path.isJarFileSystem) {
+    val tempDir = Files.createTempDirectory("javap")
+    val tempFile = tempDir.resolve(path.filename)
+    Files.write(tempFile, path.readAllBytes)
+    f(tempFile.toString()).map { result =>
+      Files.delete(tempFile)
+      Files.delete(tempDir)
+      result
+    }
+  } else {
+    f(getClassNameFromPath(path))
+  }
+
   private def decodeJavapFromClassFile(
       verbose: Boolean
   )(path: AbsolutePath, jar: Option[AbsolutePath]): Future[DecoderResponse] = {
     try {
-      val defaultArgs = List("-private")
-      val args = if (verbose) "-verbose" :: defaultArgs else defaultArgs
-      val sbOut = new StringBuilder()
-      val sbErr = new StringBuilder()
-      val classArgs = jar
-        .map(jar =>
-          List("-classpath", jar.toString, getClassNameFromPath(path))
-        )
-        .getOrElse(List(path.filename))
-      shellRunner
-        .run(
-          "Decode using javap",
-          JavaBinary(userConfig().javaHome, "javap") :: args ::: classArgs,
-          jar.map(_ => workspace).getOrElse(path.parent),
-          redirectErrorOutput = false,
-          userConfig().javaHome,
-          Map.empty,
-          s => {
-            sbOut.append(s)
-            sbOut.append(Properties.lineSeparator)
-          },
-          s => {
-            sbErr.append(s)
-            sbErr.append(Properties.lineSeparator)
-          },
-          propagateError = true,
-          logInfo = false,
-        )
-        .future
-        .map(_ => {
-          if (sbErr.nonEmpty)
-            DecoderResponse.failed(path.toURI, sbErr.toString)
-          else
-            DecoderResponse.success(path.toURI, sbOut.toString)
-        })
+      withTemporaryFileForJar(path) { temporaryFile =>
+        val defaultArgs = List("-private")
+        val args = if (verbose) "-verbose" :: defaultArgs else defaultArgs
+        val sbOut = new StringBuilder()
+        val sbErr = new StringBuilder()
+        val classArgs = jar
+          .map(jar => List("-classpath", jar.toString, temporaryFile))
+          .getOrElse(List(path.filename))
+        shellRunner
+          .run(
+            "Decode using javap",
+            JavaBinary(userConfig().javaHome, "javap") :: args ::: classArgs,
+            jar.map(_ => workspace).getOrElse(path.parent),
+            redirectErrorOutput = false,
+            userConfig().javaHome,
+            Map.empty,
+            s => {
+              sbOut.append(s)
+              sbOut.append(Properties.lineSeparator)
+            },
+            s => {
+              sbErr.append(s)
+              sbErr.append(Properties.lineSeparator)
+            },
+            propagateError = true,
+            logInfo = false,
+          )
+          .future
+          .map(_ => {
+            if (sbErr.nonEmpty)
+              DecoderResponse.failed(path.toURI, sbErr.toString)
+            else
+              DecoderResponse.success(path.toURI, sbOut.toString)
+          })
+      }
     } catch {
       case NonFatal(e) =>
         scribe.error(e.toString())
