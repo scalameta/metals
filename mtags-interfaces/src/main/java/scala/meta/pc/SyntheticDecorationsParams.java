@@ -25,4 +25,8 @@ public interface SyntheticDecorationsParams extends VirtualFileParams {
    * Response should contain decorations for implicit conversions.
    */
   boolean implicitConversions();
+  /**
+   * Response should contain decorations for closing labels.
+   */
+  boolean closingLabels();
 }

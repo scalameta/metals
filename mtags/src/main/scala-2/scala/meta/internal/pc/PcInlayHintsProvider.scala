@@ -8,6 +8,7 @@ import scala.meta.pc.InlayHintsParams
 
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintKind
+import java.net.URI
 
 final class PcInlayHintsProvider(
     protected val compiler: MetalsGlobal,
@@ -21,7 +22,7 @@ final class PcInlayHintsProvider(
   )
   lazy val text = unit.source.content
   lazy val textStr = text.mkString
-  val uri = params.uri()
+  val uri: URI = params.uri()
 
   typeCheck(unit)
   val pos: Position =
@@ -666,7 +667,7 @@ final class PcInlayHintsProvider(
       } else Nil
     }
 
-    def make(name: String, pos: Position) = {
+    def make(name: String, pos: Position): InlayHint = {
       InlayHints.makeInlayHint(
         adjustPos(pos).focusEnd.toLsp,
         LabelPart(name) :: Nil,

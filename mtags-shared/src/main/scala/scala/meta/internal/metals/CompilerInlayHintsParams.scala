@@ -33,7 +33,8 @@ case class CompilerInlayHintsParams(
       implicitConversions = implicitConversions,
       implicitParameters = implicitParameters,
       hintsXRayMode = hintsXRayMode,
-      byNameParameters = byNameParameters
+      byNameParameters = byNameParameters,
+      closingLabels = closingLabels
     )
   }
 

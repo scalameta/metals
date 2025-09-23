@@ -21,7 +21,7 @@ case class InlayHints(
 
   def add(
       inlayHint: InlayHint
-  ) = copy(inlayHints = addInlayHint(inlayHint))
+  ): InlayHints = copy(inlayHints = addInlayHint(inlayHint))
 
   def add(
       pos: l.Range,
