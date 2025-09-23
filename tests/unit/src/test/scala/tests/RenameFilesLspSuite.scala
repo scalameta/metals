@@ -990,6 +990,38 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     sourcesAreCompiled = true,
   )
 
+  renamed(
+    "wildcard-import-file-to-subdir",
+    s"""|/$prefix/calcs/SomeCalc.scala
+        |package research.gadgets.examples
+        |package <<calcs>>
+        |class SomeCalc {
+        |  val a = 1
+        |}
+        |object Calc {
+        |  val a = 1
+        |}
+        |/$prefix/calcs/VolCalc.scala
+        |package research.gadgets.examples
+        |package calcs
+        |object VolCalc {
+        |  val a = new SomeCalc()
+        |  val b = Calc.a
+        |}
+        |/$prefix/scripts/Simulate.scala
+        |package research.gadgets.examples
+        |package scripts
+        |import <<research.gadgets.examples.calcs._>>
+        |object Simulation {
+        |  val a = new SomeCalc()
+        |  val b = Calc.a
+        |}
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/calcs/SomeCalc.scala" -> s"$prefix/calcs/test/SomeCalc.scala"),
+    expectedRenames = Map("research.gadgets.examples.calcs._" -> "research.gadgets.examples.calcs.test._"),
+    sourcesAreCompiled = true,
+  )
+
   /* Cases that are not yet supported */
 
   renamed(
