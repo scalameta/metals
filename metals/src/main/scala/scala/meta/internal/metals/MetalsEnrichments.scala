@@ -91,9 +91,15 @@ object MetalsEnrichments
   @volatile
   private var followSymlinkDefault = false
   def onFeatureFlags(featureFlags: m.infra.FeatureFlagProvider): Unit = {
-    followSymlinkDefault = featureFlags
+    val newValue = featureFlags
       .readBoolean(m.infra.FeatureFlag.FOLLOW_SYMLINKS)
       .orElse(false)
+    if (newValue != followSymlinkDefault) {
+      scribe.info(
+        s"featureflag: followSymlinkDefault changed from $followSymlinkDefault to $newValue"
+      )
+    }
+    followSymlinkDefault = newValue
   }
 
   implicit class XtensionScanner(scanner: LegacyScanner) {
