@@ -289,7 +289,7 @@ class PackageProvider(
     val packagesRenames = optTree
       .map(collectPackageRenames(baseRename, _))
       .getOrElse(List(baseRename))
-    val shortestRename = packagesRenames.last.newPackageParts.mkString(".")
+    val longestRename = packagesRenames.head.newPackageParts.mkString(".")
 
     val importerRenamer =
       new ImporterRenamer(references.toList, packagesRenames)
@@ -308,7 +308,7 @@ class PackageProvider(
       .toSet -- imported
 
     val newImports = Option.when(toImport.nonEmpty) {
-      calcNewImports(optTree, toImport, shortestRename)
+      calcNewImports(optTree, toImport, longestRename)
     }
     val changes =
       refsInImportsEdits ++ newImports ++ fullyQuilifiedChanges
@@ -402,12 +402,34 @@ class PackageProvider(
         case _ => None
       }
 
-    def findPackageRename(ref: Reference, parts: List[String]): Option[String] =
-      pkgRenames.collectFirst {
-        case PackagePartsRenamer(oldPackageParts, newPackageParts)
-            if parts.startsWith(ref.allParts(oldPackageParts)) =>
-          (newPackageParts ++ parts.drop(oldPackageParts.length)).mkString(".")
-      }
+    def findPackageRename(ref: Reference, parts: List[String]): Option[String] = {
+      scribe.info(s"calcFullyQualifiedEdits: findPackageRename called with ref=${ref.definition.name}, parts=${parts}")
+      val result = pkgRenames.collectFirst {
+        case PackagePartsRenamer(oldPackageParts, newPackageParts) => {
+          val refAllParts = ref.allParts(oldPackageParts)
+          val startsWithMatch = parts.startsWith(refAllParts)
+          scribe.info(s"calcFullyQualifiedEdits: Checking rename oldPkg=${oldPackageParts}, newPkg=${newPackageParts}")
+          scribe.info(s"calcFullyQualifiedEdits: ref.allParts(oldPkg)=${refAllParts}, parts.startsWith=${startsWithMatch}")
+
+          if (startsWithMatch) {
+            val result = (newPackageParts ++ parts.drop(oldPackageParts.length)).mkString(".")
+            scribe.info(s"calcFullyQualifiedEdits: Standard match result=${result}")
+            result
+          } else if (oldPackageParts.nonEmpty && newPackageParts.nonEmpty &&
+                    newPackageParts.last == parts.head &&
+                    parts.drop(1).contains(ref.definition.name)) {
+            val result = (newPackageParts ++ parts.drop(1)).mkString(".")
+            scribe.info(s"calcFullyQualifiedEdits: Relative match result=${result}")
+            result
+          } else {
+            scribe.info(s"calcFullyQualifiedEdits: No match for this rename")
+            null // This will be filtered out by collectFirst
+          }
+        }
+      }.filter(_ != null)
+      scribe.info(s"calcFullyQualifiedEdits: Final result = ${result}")
+      result.headOption
+    }
 
     def existsPackagePart(ref: Reference, parts: List[String]): Boolean =
       pkgRenames.exists { case PackagePartsRenamer(oldPackageParts, _) =>

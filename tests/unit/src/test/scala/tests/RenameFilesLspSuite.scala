@@ -1004,6 +1004,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |/$prefix/calcs/VolCalc.scala
         |package research.gadgets.examples
         |package calcs
+        |<<//>>
         |object VolCalc {
         |  val a = new SomeCalc()
         |  val b = Calc.a
@@ -1018,7 +1019,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/calcs/SomeCalc.scala" -> s"$prefix/calcs/test/SomeCalc.scala"),
-    expectedRenames = Map("calcs" -> "calcs.test", "research.gadgets.examples.calcs._" -> "research.gadgets.examples.calcs.test._"),
+    expectedRenames = Map("calcs" -> "calcs.test", "research.gadgets.examples.calcs._" -> "research.gadgets.examples.calcs.test._", "//" -> "import research.gadgets.examples.calcs.test.{Calc, SomeCalc}\n//"),
     sourcesAreCompiled = true,
   )
 
