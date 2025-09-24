@@ -18,7 +18,7 @@ import coursierapi.MavenRepository
 import coursierapi.Repository
 
 object CoursierHelpers {
-  lazy val defaultRepositories: List[Repository] =
+  def defaultRepositories: List[Repository] =
     // Reimplment how `COURSIER_REPOSITORIES` is interpreted by Coursier CLI
     // since the Java interfaces don't correctly assign credentials to each
     // host. See https://github.com/coursier/interface/issues/460
@@ -28,10 +28,11 @@ object CoursierHelpers {
     Option(System.getenv("COURSIER_REPOSITORIES")) match {
       case Some(value) =>
         val parts = value.split("\\|").toList
+        val repos = parseCustomRepositories(parts)
         scribe.info(
-          s"Using custom Coursier repositories from env: ${parts.mkString(",")}"
+          s"Using custom Coursier repositories from env: ${repos}"
         )
-        parseCustomRepositories(parts)
+        repos
       case None =>
         Repository.defaults().asScala.toList ++
           List(
@@ -56,7 +57,7 @@ object CoursierHelpers {
   def parseRepository(s: String): Try[Repository] = Try {
     if (s == "central") {
       Repository.central()
-    } else if (s == "ivy2local") {
+    } else if (s.compareToIgnoreCase("ivy2local") == 0) {
       Repository.ivy2Local()
     } else if (s.startsWith("sonatype:")) {
       MavenRepository.of(
@@ -110,7 +111,7 @@ object CoursierHelpers {
     val credentials = envCredentials()
     for {
       r <- customRepositories
-      repo <- parseRepository(r) match {
+      repo <- parseRepository(r.trim()) match {
         case Failure(ex) =>
           scribe.warn(s"Ignoring invalid Coursier repository '$r'", ex)
           Nil
