@@ -3,7 +3,6 @@ package scala.meta.internal.metals.mcp
 import java.io.PrintWriter
 import java.net.InetSocketAddress
 import java.nio.file.Path
-import java.time.Duration
 import java.util.Arrays
 import java.util.function.BiFunction
 import java.util.{List => JList}
@@ -111,7 +110,6 @@ class MetalsMcpServer(
       .async(servlet)
       .serverInfo("scala-mcp-server", "0.1.0")
       .capabilities(capabilities)
-      .requestTimeout(Duration.ofMinutes(1))
       .build()
 
     cancelable.add(() => asyncServer.close())

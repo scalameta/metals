@@ -1,5 +1,7 @@
 package tests.mcp
 
+import java.time.Duration
+
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -17,7 +19,8 @@ import io.modelcontextprotocol.spec.McpSchema.TextContent
 class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext) {
   private val objectMapper = new ObjectMapper()
   private val transport = new HttpClientSseClientTransport(url)
-  private val client = McpClient.async(transport).build()
+  private val client =
+    McpClient.async(transport).requestTimeout(Duration.ofMinutes(5)).build()
 
   private def callTool(
       toolName: String,
