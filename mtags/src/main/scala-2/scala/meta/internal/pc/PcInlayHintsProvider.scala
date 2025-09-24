@@ -1,5 +1,7 @@
 package scala.meta.internal.pc
 
+import java.net.URI
+
 import scala.annotation.tailrec
 
 import scala.meta.internal.metals.PcQueryContext
@@ -8,7 +10,6 @@ import scala.meta.pc.InlayHintsParams
 
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintKind
-import java.net.URI
 
 final class PcInlayHintsProvider(
     protected val compiler: MetalsGlobal,
