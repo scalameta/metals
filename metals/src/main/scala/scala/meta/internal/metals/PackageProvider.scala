@@ -507,9 +507,12 @@ class PackageProvider(
       directlyImportedSymbols: () => Set[String],
       importerRenamer: ImporterRenamer,
   ): ImportEdits[TopLevelDeclaration] = {
-    importerRenamer
-      .renameFor(importParts)
+    scribe.info(s"calcImportEditsForFileMove: Starting with importer=${importer.syntax}, importParts=${importParts}, source=${source}")
+    val renameResult = importerRenamer.renameFor(importParts)
+    scribe.info(s"calcImportEditsForFileMove: renameFor(${importParts}) returned: ${renameResult}")
+    val finalResult = renameResult
       .map { case (newPackageName, referencesNames) =>
+        scribe.info(s"calcImportEditsForFileMove: Processing rename - newPackageName=${newPackageName}, referencesNames=${referencesNames}")
         lazy val wildcardImportsOnlyFromMovedFiles = {
           val symbolsImportedByWildcard = defProvider
             .symbolOccurrence(source, importer.ref.pos.toLsp.getEnd)
@@ -523,36 +526,56 @@ class PackageProvider(
                   directlyImportedSymbols(),
                 )
             )
-          symbolsImportedByWildcard.forall(symbol =>
+          val result = symbolsImportedByWildcard.forall(symbol =>
             referencesNames.exists(_.symbols.contains(symbol))
           )
+          scribe.info(s"calcImportEditsForFileMove: wildcardImportsOnlyFromMovedFiles=${result}, symbolsImportedByWildcard.size=${symbolsImportedByWildcard}")
+          result
         }
         lazy val importedImplicits =
           referencesNames.filter(_.isGivenOrExtension).toList
         val importees = importer.importees
+        scribe.info(s"calcImportEditsForFileMove: Processing ${importees.size} importees: ${importees.map(_.syntax)}")
         def findReferenceByName(
             name: String
         ): Option[List[TopLevelDeclaration]] =
           referencesNames.find(_.name == name).map(List(_))
         def findReference(
             importee: Importee
-        ): Option[List[TopLevelDeclaration]] =
-          importee match {
-            case Importee.Name(name) => findReferenceByName(name.value)
-            case Importee.Rename(from, _) => findReferenceByName(from.value)
-            case Importee.Unimport(name) => findReferenceByName(name.value)
+        ): Option[List[TopLevelDeclaration]] = {
+          val result = importee match {
+            case Importee.Name(name) => 
+              val found = findReferenceByName(name.value)
+              scribe.info(s"calcImportEditsForFileMove: Importee.Name(${name.value}) -> ${found.isDefined}")
+              found
+            case Importee.Rename(from, _) => 
+              val found = findReferenceByName(from.value)
+              scribe.info(s"calcImportEditsForFileMove: Importee.Rename(${from.value}) -> ${found.isDefined}")
+              found
+            case Importee.Unimport(name) => 
+              val found = findReferenceByName(name.value)
+              scribe.info(s"calcImportEditsForFileMove: Importee.Unimport(${name.value}) -> ${found.isDefined}")
+              found
             case Importee.Wildcard() if wildcardImportsOnlyFromMovedFiles =>
-              Some(List.empty)
+              scribe.info(s"calcImportEditsForFileMove: Importee.Wildcard() -> updating wildcard import path")
+              Some(referencesNames.toList)
             case Importee.GivenAll() if wildcardImportsOnlyFromMovedFiles =>
+              scribe.info(s"calcImportEditsForFileMove: Importee.GivenAll() -> handling as importedImplicits (${importedImplicits.size} items)")
               Some(importedImplicits.toList)
-            case _ => None
+            case other => 
+              scribe.info(s"calcImportEditsForFileMove: Unhandled importee: ${other.syntax} -> None")
+              None
           }
+          result
+        }
         val (handledRefs0, refsImportees, refsIndices) =
           importees.zipWithIndex.flatMap { case (imp, indx) =>
             findReference(imp).map((_, imp, indx))
           }.unzip3
         val handledRefs = handledRefs0.flatten
+        scribe.info(s"calcImportEditsForFileMove: Found ${refsImportees} matching importees, ${handledRefs} handled references")
         if (refsImportees.length == 0) {
+          scribe.info(s"calcImportEditsForFileMove: No matching importees found, returning empty ImportEdits")
           ImportEdits.empty
         } else {
           val importeeStrings = refsImportees.flatMap {
@@ -563,23 +586,35 @@ class PackageProvider(
             case _ => None
           }
           val newImportStr = {
-            def bracedImporteeStr = refsImportees.filter {
-              case _: Importee.Wildcard => false
-              case _: Importee.Unimport => false
-              case _ => true
-            } match {
-              case List(Importee.Rename(_, _)) =>
-                s"{${mkImportees(importeeStrings)}}"
-              case _ => mkImportees(importeeStrings)
+            val hasWildcardToUpdate = refsImportees.exists {
+              case _: Importee.Wildcard => true
+              case _ => false
+            } && wildcardImportsOnlyFromMovedFiles
+
+            if (hasWildcardToUpdate && newPackageName.nonEmpty) {
+              s"${newPackageName.mkString(".")}._"
+            } else {
+              def bracedImporteeStr = refsImportees.filter {
+                case _: Importee.Wildcard => false
+                case _: Importee.Unimport => false
+                case _ => true
+              } match {
+                case List(Importee.Rename(_, _)) =>
+                  s"{${mkImportees(importeeStrings)}}"
+                case _ => mkImportees(importeeStrings)
+              }
+              if (importeeStrings.nonEmpty && newPackageName.nonEmpty)
+                s"${newPackageName.mkString(".")}.$bracedImporteeStr"
+              else ""
             }
-            if (importeeStrings.nonEmpty && newPackageName.nonEmpty)
-              s"${newPackageName.mkString(".")}.$bracedImporteeStr"
-            else ""
           }
+          scribe.info(s"calcImportEditsForFileMove: Generated newImportStr='${newImportStr}', importeeStrings=${importeeStrings}")
           if (refsImportees.length == importer.importees.length) {
+            scribe.info(s"calcImportEditsForFileMove: All importees matched (${refsImportees}/${importer.importees}), handling complete import replacement")
             val importChange =
-              if (newImportStr == "")
+              if (newImportStr == "") {
                 // we delete the import
+                scribe.info(s"calcImportEditsForFileMove: Deleting entire import statement")
                 importer.parent
                   .map(line =>
                     new TextEdit(
@@ -588,11 +623,15 @@ class PackageProvider(
                     )
                   )
                   .toList
-              else List(new TextEdit(importer.pos.toLsp, newImportStr))
+              } else {
+                scribe.info(s"calcImportEditsForFileMove: Replacing entire import with: ${newImportStr}")
+                List(new TextEdit(importer.pos.toLsp, newImportStr))
+              }
             ImportEdits(handledRefs, importChange)
           } else {
             // In this branch some importees should be removed from the import, but not all.
             // Trying to remove them with commas
+            scribe.info(s"calcImportEditsForFileMove: Partial import handling - removing ${refsImportees.length}/${importer.importees.length} importees")
             val indSet = refsIndices.toSet
             val oldImportEdits =
               importees.zip(importees.drop(1)).zipWithIndex.flatMap {
@@ -625,11 +664,17 @@ class PackageProvider(
                   new TextEdit(newImportPos, s"import $newImportStr\n")
                 newImportEdit :: oldImportEdits
               }
+            scribe.info(s"calcImportEditsForFileMove: Partial import result - ${importChages} edits")
             ImportEdits(handledRefs, importChages)
           }
         }
       }
-      .getOrElse(ImportEdits.empty)
+      .getOrElse {
+        scribe.info(s"calcImportEditsForFileMove: No rename found for importParts=${importParts}, returning empty ImportEdits")
+        ImportEdits.empty
+      }
+    scribe.info(s"calcImportEditsForFileMove: Final result - ${finalResult.handledRefs.size} handled refs, ${finalResult.edits} edits")
+    finalResult
   }
 
   private def findImporters(tree: Tree): Vector[Importer] = {

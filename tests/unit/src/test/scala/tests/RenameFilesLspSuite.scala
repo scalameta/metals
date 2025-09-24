@@ -1018,7 +1018,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/calcs/SomeCalc.scala" -> s"$prefix/calcs/test/SomeCalc.scala"),
-    expectedRenames = Map("research.gadgets.examples.calcs._" -> "research.gadgets.examples.calcs.test._"),
+    expectedRenames = Map("calcs" -> "calcs.test", "research.gadgets.examples.calcs._" -> "research.gadgets.examples.calcs.test._"),
     sourcesAreCompiled = true,
   )
 
