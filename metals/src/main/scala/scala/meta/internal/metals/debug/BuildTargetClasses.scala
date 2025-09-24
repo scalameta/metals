@@ -64,6 +64,7 @@ final class BuildTargetClasses(
     if (
       path.isScalaFilename && hasBazelBuildServer && belongsToTestTarget(path)
     ) {
+      invalidateTestFrameworkCacheForDocuments(docs)
       extractTestClassesFromDocuments(docs, path).foreach { testClasses =>
         if (testClasses.nonEmpty) {
           bazelTestClassCache.put(path, testClasses)
@@ -510,6 +511,20 @@ final class BuildTargetClasses(
       case index => withoutPrefix.substring(0, index)
     }
     withoutHashAndAfter.replace("/", ".")
+  }
+
+  private def invalidateTestFrameworkCacheForDocuments(
+      docs: TextDocuments
+  ): Unit = {
+    docs.documents.foreach { doc =>
+      doc.symbols.foreach { symbolInfo =>
+        symbolInfo.signature match {
+          case _: ClassSignature =>
+            symbolInfoCache.remove(symbolInfo.symbol)
+          case _ =>
+        }
+      }
+    }
   }
 
   private def populateBazelTestClasses(
