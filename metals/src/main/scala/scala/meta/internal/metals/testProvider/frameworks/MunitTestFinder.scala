@@ -30,7 +30,8 @@ class MunitTestFinder(
     semanticdbs: () => Semanticdbs,
 ) {
 
-  protected val baseParentClasses: Set[String] = MunitTestFinder.baseParentClasses
+  protected val baseParentClasses: Set[String] =
+    MunitTestFinder.baseParentClasses
   protected val testFunctionsNames: Set[String] = Set("test")
   private def testMethodSymbols = baseParentClasses.flatMap(base =>
     testFunctionsNames.map(func => base + func)
