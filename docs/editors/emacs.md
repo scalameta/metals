@@ -243,9 +243,6 @@ not exist yet.
 
 ```
 
-The `-Dmetals.client=emacs` flag is important since it configures Metals for
-usage with Emacs.
-
 ```scala mdoc:generic
 
 ```
