@@ -444,7 +444,6 @@ final class BuildTargetClasses(
           }
       }
     }
-
   }
 
   private def extractParentSymbols(classSig: ClassSignature): List[String] = {
