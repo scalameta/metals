@@ -9,7 +9,10 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
-def localSnapshotVersion = sys.env.getOrElse("METALS_VERSION", "1.5.1-SNAPSHOT")
+def localSnapshotVersion = sys.env.getOrElse(
+  "METALS_VERSION",
+  s"1.5.1-${sys.env.getOrElse("METALS_VERSION_SUFFIX", "SNAPSHOT")}",
+)
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 
