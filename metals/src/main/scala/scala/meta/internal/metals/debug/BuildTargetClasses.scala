@@ -11,6 +11,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.metals.debug.BuildTargetClasses.Classes
 import scala.meta.internal.metals.debug.BuildTargetClasses.TestSymbolInfo
+import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.Scala.Descriptor
@@ -30,6 +31,7 @@ import ch.epfl.scala.{bsp4j => b}
 final class BuildTargetClasses(
     val buildTargets: BuildTargets,
     val compilers: () => Compilers,
+    symbolIndex: OnDemandSymbolIndex,
 )(implicit
     val ec: ExecutionContext
 ) extends SemanticdbFeatureProvider {
@@ -38,8 +40,7 @@ final class BuildTargetClasses(
   private val bazelTestClassCache =
     TrieMap.empty[AbsolutePath, List[(String, TestSymbolInfo)]]
 
-  private val symbolInfoCache =
-    TrieMap.empty[String, (Option[PcSymbolInformation], AbsolutePath)]
+  private val symbolCache = new SymbolCache(compilers, symbolIndex)
 
   type JVMRunEnvironmentsMap =
     TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem]
@@ -64,7 +65,8 @@ final class BuildTargetClasses(
     if (
       path.isScalaFilename && hasBazelBuildServer && belongsToTestTarget(path)
     ) {
-      invalidateTestFrameworkCacheForDocuments(docs)
+//      invalidateTestFrameworkCacheForDocuments(docs)
+      symbolCache.removeSymbolsForPath(path)
       extractTestClassesFromDocuments(docs, path).foreach { testClasses =>
         if (testClasses.nonEmpty) {
           bazelTestClassCache.put(path, testClasses)
@@ -78,7 +80,7 @@ final class BuildTargetClasses(
   }
   override def reset(): Unit = {
     bazelTestClassCache.clear()
-    symbolInfoCache.clear()
+    symbolCache.clear()
   }
 
   def classesOf(target: b.BuildTargetIdentifier): Classes = {
@@ -453,31 +455,6 @@ final class BuildTargetClasses(
     }.toList
   }
 
-  private def fetchAndCacheSymbolInfo(
-      path: AbsolutePath,
-      symbol: String,
-  ): Future[Option[PcSymbolInformation]] = {
-    compilers().info(path, symbol).map { result =>
-      symbolInfoCache.put(symbol, (result, path))
-      result
-    }
-  }
-
-  private def getCachedSymbolInfo(
-      path: AbsolutePath,
-      symbol: String,
-  ): Future[Option[PcSymbolInformation]] = {
-    symbolInfoCache.get(symbol) match {
-      case Some((cachedSymbolInfo, cachedPath)) =>
-        if (cachedPath == path) {
-          Future.successful(cachedSymbolInfo)
-        } else {
-          fetchAndCacheSymbolInfo(path, symbol)
-        }
-      case None =>
-        fetchAndCacheSymbolInfo(path, symbol)
-    }
-  }
 
   private def collectParentsForSymbol(
       symbol: String,
@@ -496,7 +473,7 @@ final class BuildTargetClasses(
             case _ => Future.successful(Nil)
           }
         case None =>
-          getCachedSymbolInfo(path, symbol).map {
+          symbolCache.getCachedSymbolInfo(path, symbol).map {
             case Some(pcInfo) => pcInfo.recursiveParents
             case None => Nil
           }
@@ -513,19 +490,6 @@ final class BuildTargetClasses(
     withoutHashAndAfter.replace("/", ".")
   }
 
-  private def invalidateTestFrameworkCacheForDocuments(
-      docs: TextDocuments
-  ): Unit = {
-    docs.documents.foreach { doc =>
-      doc.symbols.foreach { symbolInfo =>
-        symbolInfo.signature match {
-          case _: ClassSignature =>
-            symbolInfoCache.remove(symbolInfo.symbol)
-          case _ =>
-        }
-      }
-    }
-  }
 
   private def populateBazelTestClasses(
       classes: Map[b.BuildTargetIdentifier, Classes],

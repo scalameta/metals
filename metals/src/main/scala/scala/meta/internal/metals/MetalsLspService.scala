@@ -200,7 +200,7 @@ abstract class MetalsLspService(
   val fileChanges: FileChanges = new FileChanges(buildTargets, () => folder)
 
   val buildTargetClasses =
-    new BuildTargetClasses(buildTargets, () => compilers)
+    new BuildTargetClasses(buildTargets, () => compilers, definitionIndex)
 
   val scalaVersionSelector = new ScalaVersionSelector(
     () => userConfig,
