@@ -189,7 +189,7 @@ final case class InlayHintBlock(
         val naiveIndent = indentLevel - hint.pos.getEnd.getCharacter
         val labels =
           if (naiveIndent <= 0) hint.labels
-          else LabelPart(" ".repeat(naiveIndent)) :: hint.labels
+          else LabelPart(" " * naiveIndent) :: hint.labels
         hint.copy(labels = labels)
       }
   }
