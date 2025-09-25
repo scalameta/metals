@@ -261,7 +261,7 @@ lazy val mtagsShared = project
     ),
     scalacOptions ++= crossSetting(
       scalaVersion.value,
-      if213 = List("-target:8"),
+      if213 = List("-release:8", "-target:8"),
     ),
     crossVersion := CrossVersion.full,
     Compile / packageSrc / publishArtifact := true,
