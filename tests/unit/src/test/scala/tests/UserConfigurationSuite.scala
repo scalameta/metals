@@ -1,10 +1,14 @@
 package tests
 
 import java.nio.file.Paths
+import java.util.Optional
 import java.util.Properties
 
+import scala.meta.infra.FeatureFlag
+import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.InlayHintsOption
 import scala.meta.internal.metals.InlayHintsOptions
 import scala.meta.internal.metals.JavaFormatConfig
@@ -32,7 +36,11 @@ class UserConfigurationSuite extends BaseSuite {
       // java11 ambiguous .putAll via Properties/Hashtable, use .put
       props.foreach { case (k, v) => jprops.put(k, v) }
       val obtained =
-        UserConfiguration.fromJson(json, ClientConfiguration.default, jprops)
+        UserConfiguration.fromJson(
+          json,
+          ClientConfiguration.default,
+          jprops,
+        )
       fn(obtained)
     }
   }
@@ -185,6 +193,16 @@ class UserConfigurationSuite extends BaseSuite {
       "(to learn the syntax see https://scalameta.org/docs/semanticdb/specification.html#symbol-1)",
   )
 
+  checkError(
+    "invalid workspace symbol provider",
+    """
+      |{
+      | "workspace-symbol-provider": "invalid"
+      |}
+      |""".stripMargin,
+    "json error: invalid config value 'invalid' for workspaceSymbolProvider. Valid values are \"bsp\" and \"mbt\"",
+  )
+
   checkOK(
     "strip-margin false",
     """
@@ -237,6 +255,40 @@ class UserConfigurationSuite extends BaseSuite {
     )
   }
 
+  test("mbt feature flag") {
+    val alwaysEnableMbtFeatureFlag = new FeatureFlagProvider {
+      override def readBoolean(
+          flag: FeatureFlag
+      ): Optional[java.lang.Boolean] = {
+        Optional.of(flag == FeatureFlag.MBT_WORKSPACE_SYMBOL_PROVIDER)
+      }
+    }
+
+    // Assert that feature flag overrides when there is no custom setting
+    val Right(obtained) = UserConfiguration.fromJson(
+      UserConfiguration.parse("{}"),
+      ClientConfiguration.default,
+      featureFlags = alwaysEnableMbtFeatureFlag,
+    )
+    assertEquals(
+      obtained.workspaceSymbolProvider,
+      WorkspaceSymbolProviderConfig("mbt"),
+    )
+
+    // Assert that a custom "bsp" setting overrides the feature flag
+    val Right(obtained2) = UserConfiguration.fromJson(
+      UserConfiguration.parse("""{
+                                |  "workspaceSymbolProvider": "bsp"
+                                |}""".stripMargin),
+      ClientConfiguration.default,
+      featureFlags = alwaysEnableMbtFeatureFlag,
+    )
+    assertEquals(
+      obtained2.workspaceSymbolProvider,
+      WorkspaceSymbolProviderConfig("bsp"),
+    )
+  }
+
   test("check-print") {
     val fakePath = AbsolutePath(Paths.get("./.scalafmt.conf"))
     val fakePathString = fakePath.toString().replace("\\", "\\\\")
@@ -275,6 +327,7 @@ class UserConfigurationSuite extends BaseSuite {
       javaFormatConfig = Some(JavaFormatConfig(fakePath, Some("profile"))),
       scalafixRulesDependencies = List("rule1", "rule2"),
       customProjectRoot = Some("customs"),
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig("mbt"),
       verboseCompilation = true,
       automaticImportBuild = AutoImportBuildKind.All,
       scalaCliLauncher = Some("scala-cli"),
@@ -288,6 +341,7 @@ class UserConfigurationSuite extends BaseSuite {
           |  "presentationCompilerDiagnostics": true,
           |  "enableIndentOnPaste": true,
           |  "customProjectRoot": "customs",
+          |  "workspaceSymbolProvider": "mbt",
           |  "buildOnChange": true,
           |  "javaFormat": {
           |    "eclipseConfigPath": "$fakePathString",
@@ -355,7 +409,10 @@ class UserConfigurationSuite extends BaseSuite {
     val clientConfig = ClientConfiguration(MetalsServerConfig.default, params)
 
     val roundtrip = UserConfiguration
-      .fromJson(roundtripJson, clientConfig)
+      .fromJson(
+        roundtripJson,
+        clientConfig,
+      )
       .getOrElse(fail("Failed to parse roundtrip json"))
       // maps have a different order
       .copy(inlayHintsOptions = nonDefault.inlayHintsOptions)

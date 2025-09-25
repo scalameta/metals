@@ -1,5 +1,7 @@
 package scala.meta.internal.metals.mbt
 
+import java.lang.reflect.InaccessibleObjectException
+import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.nio.file.Files
 
@@ -12,6 +14,41 @@ import org.lmdbjava.Dbi
 import org.lmdbjava.DbiFlags
 import org.lmdbjava.Env
 import org.lmdbjava.Txn
+
+object LMDB {
+
+  /**
+   * Returns true if this JVM process has been configured with the correct VM
+   * options for LMDB to function correctly.
+   *
+   * If not, we log a warning with instructions on how to fix the problem.
+   */
+  def isSupportedOrWarn(): Boolean = {
+    try {
+      val address = classOf[Buffer].getDeclaredField("address")
+      address.setAccessible(true)
+      true
+    } catch {
+      case _: InaccessibleObjectException =>
+        scribe.warn(
+          s"""|Invalid config, can't use `"workspaceSymbolProvider": "mbt"` without additional JVM options.
+              |To fix this problem, add the following settings:
+              |
+              |  "metals.serverProperties": [
+              |    // Existing server properties
+              |    "--add-opens=java.base/java.nio=ALL-UNNAMED",
+              |    "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
+              |  ]
+              |
+              |Restart Metals ("Reload Window") to apply the new JVM options.
+              |For this server instance, falling back to "bsp" workspace symbol provider.
+              |""".stripMargin
+        )
+        false
+
+    }
+  }
+}
 
 class LMDB(val workspace: AbsolutePath) {
   private val dbpath = workspace.resolve(".metals").resolve("mbt")

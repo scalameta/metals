@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 
@@ -15,6 +16,7 @@ class UserConfigurationSync(
     initializeParams: lsp4j.InitializeParams,
     languageClient: MetalsLanguageClient,
     clientConfig: ClientConfiguration,
+    featureFlags: FeatureFlagProvider,
 )(implicit ec: ExecutionContext) {
   private val section = "metals"
   private val supportsConfiguration: Boolean = (for {
@@ -88,7 +90,11 @@ class UserConfigurationSync(
   private def userConfigFrom(
       json: JsonObject
   ): Option[UserConfiguration] =
-    UserConfiguration.fromJson(json, clientConfig) match {
+    UserConfiguration.fromJson(
+      json,
+      clientConfig,
+      featureFlags = featureFlags,
+    ) match {
       case Left(errors) =>
         errors.foreach { error => scribe.error(s"config error: $error") }
         None

@@ -63,7 +63,7 @@ object MetalsLogger {
     val logStreams = logfiles.map(logfile =>
       Files.newOutputStream(
         logfile.toNIO,
-        StandardOpenOption.APPEND,
+        StandardOpenOption.TRUNCATE_EXISTING,
         StandardOpenOption.CREATE,
       )
     )

@@ -60,7 +60,7 @@ import org.lmdbjava.Env
  */
 final class MbtWorkspaceSymbolProvider(
     val gitWorkspace: AbsolutePath,
-    config: WorkspaceSymbolProviderConfig,
+    config: () => WorkspaceSymbolProviderConfig,
     statistics: () => StatisticsConfig,
     metrics: infra.MonitoringClient = new NoopMonitoringClient(),
 ) {
@@ -117,7 +117,7 @@ final class MbtWorkspaceSymbolProvider(
       params: l.WorkspaceSymbolParams,
       token: CancelToken,
   ): List[l.SymbolInformation] = {
-    if (!config.isMBT) {
+    if (!config().isMBT) {
       scribe.error(
         "invalid state, MbtWorkspaceSymbolProvider.workspaceSymbol cannot be used when config.isMBT is false"
       )
@@ -214,7 +214,7 @@ final class MbtWorkspaceSymbolProvider(
   }
 
   def onReindex(): IndexingStats = {
-    if (!config.isMBT) {
+    if (!config().isMBT) {
       return IndexingStats.empty
     }
     // Stage 0: discover the files that need to be indexed

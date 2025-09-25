@@ -2,14 +2,19 @@ package scala.meta.internal.metals
 
 import java.util.Properties
 
+import scala.annotation.nowarn
+
+import scala.meta.infra.FeatureFlag
+import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.mbt.LMDB
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.FileSystemWatcher
-import org.eclipse.lsp4j.jsonrpc.messages.Either
+import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 
 object Configs {
 
@@ -25,35 +30,37 @@ object Configs {
         else workspace.toURI.toString.stripSuffix("/")
       new DidChangeWatchedFilesRegistrationOptions(
         (List(
-          new FileSystemWatcher(Either.forLeft(s"$root/**/*.{scala,java}")),
-          new FileSystemWatcher(Either.forLeft(s"$root/*.sbt")),
-          new FileSystemWatcher(Either.forLeft(s"$root/pom.xml")),
-          new FileSystemWatcher(Either.forLeft(s"$root/*.sc")),
-          new FileSystemWatcher(Either.forLeft(s"$root/*?.gradle")),
-          new FileSystemWatcher(Either.forLeft(s"$root/*.gradle.kts")),
-          new FileSystemWatcher(Either.forLeft(s"$root/project/*.{scala,sbt}")),
+          new FileSystemWatcher(JEither.forLeft(s"$root/**/*.{scala,java}")),
+          new FileSystemWatcher(JEither.forLeft(s"$root/*.sbt")),
+          new FileSystemWatcher(JEither.forLeft(s"$root/pom.xml")),
+          new FileSystemWatcher(JEither.forLeft(s"$root/*.sc")),
+          new FileSystemWatcher(JEither.forLeft(s"$root/*?.gradle")),
+          new FileSystemWatcher(JEither.forLeft(s"$root/*.gradle.kts")),
           new FileSystemWatcher(
-            Either.forLeft(s"$root/project/project/*.{scala,sbt}")
+            JEither.forLeft(s"$root/project/*.{scala,sbt}")
           ),
           new FileSystemWatcher(
-            Either.forLeft(s"$root/project/build.properties")
+            JEither.forLeft(s"$root/project/project/*.{scala,sbt}")
           ),
           new FileSystemWatcher(
-            Either.forLeft(s"$root/.metals/.reports/bloop/*/*")
+            JEither.forLeft(s"$root/project/build.properties")
           ),
-          new FileSystemWatcher(Either.forLeft(s"$root/**/.bsp/*.json")),
+          new FileSystemWatcher(
+            JEither.forLeft(s"$root/.metals/.reports/bloop/*/*")
+          ),
+          new FileSystemWatcher(JEither.forLeft(s"$root/**/.bsp/*.json")),
         ) ++ bazelPaths(root)).asJava
       )
     }
 
     def bazelPaths(root: String): List[FileSystemWatcher] =
       List(
-        new FileSystemWatcher(Either.forLeft(s"$root/**/BUILD")),
-        new FileSystemWatcher(Either.forLeft(s"$root/**/BUILD.bazel")),
-        new FileSystemWatcher(Either.forLeft(s"$root/WORKSPACE")),
-        new FileSystemWatcher(Either.forLeft(s"$root/WORKSPACE.bazel")),
-        new FileSystemWatcher(Either.forLeft(s"$root/**/*.bzl")),
-        new FileSystemWatcher(Either.forLeft(s"$root/*.bazelproject")),
+        new FileSystemWatcher(JEither.forLeft(s"$root/**/BUILD")),
+        new FileSystemWatcher(JEither.forLeft(s"$root/**/BUILD.bazel")),
+        new FileSystemWatcher(JEither.forLeft(s"$root/WORKSPACE")),
+        new FileSystemWatcher(JEither.forLeft(s"$root/WORKSPACE.bazel")),
+        new FileSystemWatcher(JEither.forLeft(s"$root/**/*.bzl")),
+        new FileSystemWatcher(JEither.forLeft(s"$root/*.bazelproject")),
       )
   }
 
@@ -116,16 +123,55 @@ object Configs {
   }
 
   object WorkspaceSymbolProviderConfig {
-    def default: WorkspaceSymbolProviderConfig =
-      new WorkspaceSymbolProviderConfig(
-        System.getProperty("metals.workspace-symbol-provider", "bsp")
-      )
+    def mbt: WorkspaceSymbolProviderConfig = WorkspaceSymbolProviderConfig(
+      "mbt"
+    )
+    def bsp: WorkspaceSymbolProviderConfig = WorkspaceSymbolProviderConfig(
+      "bsp"
+    )
+    def default: WorkspaceSymbolProviderConfig = bsp
+    def fromConfigOrFeatureFlag(
+        value: Option[String],
+        featureFlags: FeatureFlagProvider,
+    ): Either[String, WorkspaceSymbolProviderConfig] = {
+      value match {
+        case Some("mbt") if !LMDB.isSupportedOrWarn() =>
+          Right(WorkspaceSymbolProviderConfig.bsp)
+        case Some(ok @ ("bsp" | "mbt")) =>
+          Right(WorkspaceSymbolProviderConfig(ok))
+        case Some(invalid) =>
+          Left(
+            s"invalid config value '$invalid' for workspaceSymbolProvider. Valid values are \"bsp\" and \"mbt\""
+          )
+        case None =>
+          // The config is not explicitly set so fallback to the default, which
+          // can optionally be overridden by a feature flag
+          val isMbtEnabled = featureFlags
+            .readBoolean(FeatureFlag.MBT_WORKSPACE_SYMBOL_PROVIDER)
+            .orElse(false)
+          if (isMbtEnabled && LMDB.isSupportedOrWarn()) {
+            scribe.info(
+              "featureflag: MBT_WORKSPACE_SYMBOL_PROVIDER is enabled overriding default config"
+            )
+            Right(WorkspaceSymbolProviderConfig.mbt)
+          } else {
+            Right(WorkspaceSymbolProviderConfig.default)
+          }
+      }
+    }
   }
-  final class WorkspaceSymbolProviderConfig(val value: String) {
+  @nowarn
+  final case class WorkspaceSymbolProviderConfig private (val value: String) {
+    if (!List("bsp", "mbt").contains(value)) {
+      throw new IllegalArgumentException(
+        s"only bsp or mbt are accepted, got $value"
+      )
+    }
+
     def isMBT: Boolean =
       value == "mbt" // New BSP-free workspace/symbol implementation
     def isBSP: Boolean =
-      value != "mbt" // The classic BSP-based workspace/symbol implementation
+      value == "bsp" // The classic BSP-based workspace/symbol implementation
   }
 
   object TelemetryConfig {

@@ -33,7 +33,7 @@ class MbtWorkspaceSymbolProviderSuite extends munit.FunSuite {
   def newProvider(): MbtWorkspaceSymbolProvider =
     new MbtWorkspaceSymbolProvider(
       workspace(),
-      new Configs.WorkspaceSymbolProviderConfig("mbt"),
+      () => Configs.WorkspaceSymbolProviderConfig.mbt,
       () => StatisticsConfig.workspaceSymbol,
     )
 
@@ -155,7 +155,7 @@ object Hello2 {
     test(dir) {
       val provider = new MbtWorkspaceSymbolProvider(
         AbsolutePath(dir.name),
-        new Configs.WorkspaceSymbolProviderConfig("mbt"),
+        () => Configs.WorkspaceSymbolProviderConfig.mbt,
         () => StatisticsConfig.default,
       )
       provider.onReindex()

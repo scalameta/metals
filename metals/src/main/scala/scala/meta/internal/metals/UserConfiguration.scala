@@ -1,12 +1,16 @@
 package scala.meta.internal.metals
 
 import java.util.Properties
+import java.{util => ju}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
+import scala.meta.infra.FeatureFlagProvider
+import scala.meta.internal.infra.NoopFeatureFlagProvider
+import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.JsonParser.XtensionSerializedAsOption
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Symbol
@@ -62,6 +66,8 @@ case class UserConfiguration(
     buildOnFocus: Boolean = true,
     preferredBuildServer: Option[String] = None,
     useSourcePath: Boolean = true,
+    workspaceSymbolProvider: WorkspaceSymbolProviderConfig =
+      WorkspaceSymbolProviderConfig.default,
 ) {
 
   override def toString(): String = {
@@ -91,7 +97,7 @@ case class UserConfiguration(
         case Some(value) => Some(key -> value.toString)
       }
 
-    val fields = List(
+    val fields: ju.Map[String, Any] = List(
       optStringField("javaHome", javaHome),
       optStringField("sbtScript", sbtScript),
       optStringField("gradleScript", gradleScript),
@@ -169,6 +175,12 @@ case class UserConfiguration(
         (
           "useSourcePath",
           useSourcePath,
+        )
+      ),
+      Some(
+        (
+          "workspaceSymbolProvider",
+          workspaceSymbolProvider.value,
         )
       ),
     ).flatten.toMap.asJava
@@ -538,12 +550,23 @@ object UserConfiguration {
            |the compiler to find types that have not been built yet.
            |""".stripMargin,
       ),
+      UserConfigurationOption(
+        "workspace-symbol-provider",
+        "bsp",
+        "\"mbt\"",
+        "Workspace Symbol Provider",
+        """|The workspace symbol provider to use. The only valid values are "bsp" and "mbt".
+           |- "bsp": The classic solution that only indexes sources from the BSP server.
+           |- "mbt": A new BSP-free solution that indexes sources from the git repository.
+           |""".stripMargin,
+      ),
     )
 
   def fromJson(
       json: JsonObject,
       clientConfiguration: ClientConfiguration,
       properties: Properties = System.getProperties,
+      featureFlags: FeatureFlagProvider = NoopFeatureFlagProvider,
   ): Either[List[String], UserConfiguration] = {
     val errors = ListBuffer.empty[String]
 
@@ -577,6 +600,16 @@ object UserConfiguration {
             )
         },
       )
+    def getParsedKey[T](
+        key: String,
+        parse: Option[String] => Either[String, T],
+    ): Option[T] = parse(getStringKey(key)) match {
+      case Left(err) =>
+        errors += s"json error: $err"
+        None
+      case Right(ok) =>
+        Some(ok)
+    }
     def getStringKey(key: String): Option[String] =
       getStringKeyOnObj(key, json)
 
@@ -817,6 +850,14 @@ object UserConfiguration {
     val buildOnFocus = getBooleanKey("build-on-focus").getOrElse(true)
     val preferredBuildServer = getStringKey("preferred-build-server")
     val useSourcePath = getBooleanKey("use-source-path").getOrElse(true)
+    val workspaceSymbolProvider = getParsedKey(
+      "workspace-symbol-provider",
+      value =>
+        WorkspaceSymbolProviderConfig.fromConfigOrFeatureFlag(
+          value,
+          featureFlags,
+        ),
+    ).getOrElse(WorkspaceSymbolProviderConfig.default)
 
     if (errors.isEmpty) {
       Right(
@@ -855,6 +896,7 @@ object UserConfiguration {
           buildOnFocus,
           preferredBuildServer,
           useSourcePath,
+          workspaceSymbolProvider,
         )
       )
     } else {

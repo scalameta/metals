@@ -10,11 +10,12 @@ import scala.meta.internal.jdk.CollectionConverters._
 class AggregateFeatureFlagProvider(val underlying: List[FeatureFlagProvider])
     extends FeatureFlagProvider {
 
-  override def readBoolean(flag: FeatureFlag): Optional[java.lang.Boolean] =
-    underlying.foldLeft(Optional.empty[java.lang.Boolean])((acc, provider) =>
+  override def readBoolean(flag: FeatureFlag): Optional[java.lang.Boolean] = {
+    underlying.foldLeft(Optional.empty[java.lang.Boolean])((acc, provider) => {
       if (acc.isPresent) acc // Return first non-empty result
       else provider.readBoolean(flag)
-    )
+    })
+  }
 }
 
 object AggregateFeatureFlagProvider {

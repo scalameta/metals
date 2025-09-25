@@ -296,7 +296,7 @@ abstract class MetalsLspService(
   val mbtWorkspaceSymbolProvider: MbtWorkspaceSymbolProvider =
     new MbtWorkspaceSymbolProvider(
       folder,
-      initialServerConfig.workspaceSymbolProvider,
+      () => userConfig.workspaceSymbolProvider,
       () => clientConfig.initialConfig.statistics,
       metrics,
     )
@@ -729,6 +729,11 @@ abstract class MetalsLspService(
 
   def onUserConfigUpdate(newConfig: UserConfiguration): Future[Unit] = {
     val old = setUserConfig(newConfig)
+
+    if (old.workspaceSymbolProvider != newConfig.workspaceSymbolProvider) {
+      Future(mbtWorkspaceSymbolProvider.onReindex())
+    }
+
     if (userConfig.excludedPackages != old.excludedPackages) {
       workspaceSymbols.indexClasspath()
     }
@@ -1317,8 +1322,8 @@ abstract class MetalsLspService(
   def workspaceSymbol(
       params: WorkspaceSymbolParams,
       token: CancelToken,
-  ): Future[List[SymbolInformation]] =
-    if (initialServerConfig.workspaceSymbolProvider.isMBT) {
+  ): Future[List[SymbolInformation]] = {
+    if (userConfig.workspaceSymbolProvider.isMBT) {
       Future {
         mbtWorkspaceSymbolProvider.queryWorkspaceSymbol(params, token)
       }
@@ -1337,6 +1342,7 @@ abstract class MetalsLspService(
         result
       }
     }
+  }
 
   def workspaceSymbol(query: String): Seq[SymbolInformation] = {
     workspaceSymbols.search(query, focusedDocument)

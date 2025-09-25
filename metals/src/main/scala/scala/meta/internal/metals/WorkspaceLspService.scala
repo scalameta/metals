@@ -136,7 +136,12 @@ class WorkspaceLspService(
   }
 
   private val userConfigSync =
-    new UserConfigurationSync(initializeParams, languageClient, clientConfig)
+    new UserConfigurationSync(
+      initializeParams,
+      languageClient,
+      clientConfig,
+      featureFlags,
+    )
 
   val statusBar: StatusBar = register {
     new StatusBar(
@@ -607,8 +612,9 @@ class WorkspaceLspService(
 
   override def didChangeConfiguration(
       params: DidChangeConfigurationParams
-  ): CompletableFuture[Unit] =
+  ): CompletableFuture[Unit] = {
     userConfigSync.onDidChangeConfiguration(params, folderServices).asJava
+  }
 
   override def didChangeWatchedFiles(
       params: DidChangeWatchedFilesParams
