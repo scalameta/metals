@@ -48,7 +48,7 @@ object ServerCommands {
     """Unconditionally stop the current running Bloop server and start a new one using Bloop launcher""",
   )
 
-  val ResetWorkspace = new Command(
+  val ResetWorkspace = new ParametrizedCommand[Boolean](
     "reset-workspace",
     "Clean and restart build server",
     """|Clean metals cache and restart build server.
@@ -56,6 +56,8 @@ object ServerCommands {
        |When using Bloop, clears all directories in .bloop.
        |This will ensure that Bloop will have a fully reset state.
        |""".stripMargin,
+    "[boolean], force the reset without asking the user",
+    default = Some(false),
   )
 
   val ScanWorkspaceSources = new Command(
