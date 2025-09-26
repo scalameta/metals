@@ -608,10 +608,9 @@ class ProjectMetalsLspService(
 
   def resetWorkspace(): Future[ResetWorkspaceState] =
     for {
-      _ <- connect(Disconnect(true))
+      _ <- compilations.clean(recompile = false)
       wasBloop = optProjectRoot match {
         case Some(path) if buildTools.isBloop(path) =>
-          clearBloopDir(path)
           true
         case Some(path) if buildTools.isBazelBsp =>
           clearFolders(
@@ -626,7 +625,6 @@ class ProjectMetalsLspService(
           false
       }
       _ = tables.cleanAll()
-      _ <- connectionProvider.fullConnect()
     } yield ResetWorkspaceState(wasBloop)
 
   val treeView =

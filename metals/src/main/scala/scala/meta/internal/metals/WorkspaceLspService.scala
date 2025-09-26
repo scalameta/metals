@@ -1476,32 +1476,47 @@ class WorkspaceLspService(
   def workspaceSymbol(query: String): Seq[lsp4j.SymbolInformation] =
     folderServices.flatMap(_.workspaceSymbol(query))
 
-  private def maybeResetWorkspace(force: Boolean): Future[Unit] = {
-    def reset(): Future[Unit] =
-      Future
-        .sequence(
-          folderServices.map(folder => folder.resetWorkspace().map((folder, _)))
-        )
-        .flatMap { states =>
-          val restartBloop = states
-            .find { case (_, state) =>
-              state.didResetBloop
-            }
-            .collect { case (folder, _) =>
-              folder.connect(CreateSession(shutdownBuildServer = true))
-            }
-          val restartBspServers = states
-            .filter { case (_, state) =>
-              !state.didResetBloop
-            }
-            .collect { case (folder, _) =>
-              folder.connect(CreateSession(shutdownBuildServer = true))
-            }
-          Future.sequence(restartBloop ++ restartBspServers)
+  private def resetAllFolders(): Future[Unit] = {
+    Future
+      .sequence(
+        folderServices.map(folder => folder.resetWorkspace().map((folder, _)))
+      )
+      .flatMap { states =>
+        val bloopProjects = states.filter { case (_, state) =>
+          state.didResetBloop
         }
-        .ignoreValue
+
+        val restartBloop = bloopProjects.headOption
+          .collect { case (folder, _) =>
+            folder.connect(CreateSession(shutdownBuildServer = true))
+          }
+          .getOrElse(Future.unit)
+
+        val reconnectedOtherBloopProjects = restartBloop.flatMap { _ =>
+          bloopProjects match {
+            case Nil => Future.unit
+            case _ =>
+              val restOfProjects = bloopProjects.tail.map { case (folder, _) =>
+                folder.connect(CreateSession(shutdownBuildServer = false))
+              }
+              Future.sequence(restOfProjects)
+          }
+        }
+        val restartBspServers = states
+          .filter { case (_, state) =>
+            !state.didResetBloop
+          }
+          .collect { case (folder, _) =>
+            folder.connect(CreateSession(shutdownBuildServer = true))
+          }
+        Future.sequence(reconnectedOtherBloopProjects +: restartBspServers)
+      }
+      .ignoreValue
+  }
+
+  private def maybeResetWorkspace(force: Boolean): Future[Unit] = {
     if (force) {
-      reset()
+      resetAllFolders()
     } else {
       languageClient
         .showMessageRequest(Messages.ResetWorkspace.params())
@@ -1509,7 +1524,7 @@ class WorkspaceLspService(
         .flatMap { response =>
           if (response != null)
             response.getTitle match {
-              case Messages.ResetWorkspace.resetWorkspace => reset()
+              case Messages.ResetWorkspace.resetWorkspace => resetAllFolders()
               case _ => Future.unit
             }
           else {
