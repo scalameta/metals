@@ -555,6 +555,57 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
           |""".stripMargin
   }
 
+  test("build-error-diagnostics") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{
+           |  "a": {},
+           |  "b": {
+           |    "dependsOn": ["a"]
+           |  }
+           |}
+           |/a/src/main/scala/a/A.scala
+           |package foo
+           |
+           |import scala.language.experimental.macros
+           |import scala.reflect.macros.blackbox
+           |
+           |object FooMacro {
+           |  def crashNow: Int = macro crashNowImpl
+           |
+           |  def crashNowImpl(c: blackbox.Context): c.Expr[Int] = {
+           |    import c.universe._
+           |    val badSymbol = c.internal.newTermSymbol(NoSymbol, TermName("badSymbol"))
+           |    val badTree = Ident(badSymbol)
+           |    c.Expr[Int](badTree)
+           |  }
+           |}
+           |
+           |/b/src/main/scala/b/B.scala
+           |package example
+           |import foo.FooMacro
+           |
+           |object Bar extends App {
+           |  FooMacro.crashNow
+           |} 
+           |""".stripMargin
+      )
+      _ <- server.didOpen("b/src/main/scala/b/B.scala")
+      _ <- server.didSave("b/src/main/scala/b/B.scala")
+      _ = assertContains(
+        client.workspaceDiagnostics,
+        "error: Unexpected error when compiling b: java.lang.AssertionError: assertion failed:",
+      )
+      _ <- server.didChange("b/src/main/scala/b/B.scala") {
+        _.replace("FooMacro.crashNow", "// FooMacro.crashNow")
+      }
+      _ <- server.didSave("b/src/main/scala/b/B.scala")
+      _ = assertNoDiagnostics()
+    } yield ()
+  }
+
   class Basic(name: String) {
     val path: String = s"$name/src/main/scala/$name/${name.toUpperCase()}.scala"
     def content(tpe: String, value: String): String =

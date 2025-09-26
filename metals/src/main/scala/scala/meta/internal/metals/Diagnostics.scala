@@ -25,6 +25,7 @@ import org.eclipse.{lsp4j => l}
 private final case class CompilationStatus(
     code: bsp4j.StatusCode,
     errors: Int,
+    originId: String,
 )
 
 case class DiagnosticWithOrigin(diagnostic: Diagnostic, originId: String)
@@ -67,6 +68,14 @@ final class Diagnostics(
   private val compilationStatus =
     TrieMap.empty[BuildTargetIdentifier, CompilationStatus]
 
+  /*
+   * A map of build crashes diagnostics.
+   * The key is the path of the markdown file that contains the build crash.
+   * The diagnostics will be removed at the end of the next compilation.
+   */
+  private val buildErrorDiagnostics =
+    TrieMap.empty[AbsolutePath, Diagnostic]
+
   def forFile(path: AbsolutePath): Seq[Diagnostic] = {
     diagnostics
       .getOrElse(path, new ConcurrentLinkedQueue[DiagnosticWithOrigin]())
@@ -83,12 +92,14 @@ final class Diagnostics(
   def reset(): Unit = {
     val keys = diagnostics.keys
     diagnostics.clear()
+    buildErrorDiagnostics.clear()
     keys.foreach { key => publishDiagnostics(key) }
   }
 
   def reset(paths: Seq[AbsolutePath]): Unit =
     for (path <- paths if diagnostics.contains(path)) {
       diagnostics.remove(path)
+      buildErrorDiagnostics.remove(path)
       publishDiagnostics(path)
     }
 
@@ -117,6 +128,8 @@ final class Diagnostics(
       downstreamTargets.remove(target)
     }
 
+    removeStaleBuildErrorDiagnostics()
+
     // Bazel doesn't clean diagnostics for paths with no errors, so instead we remove everything
     // from previous compilations.
     val isBazel = buildTargets.buildServerOf(target).exists(_.isBazel)
@@ -140,7 +153,7 @@ final class Diagnostics(
     publishDiagnosticsBuffer()
 
     compileTimer.remove(target)
-    val status = CompilationStatus(statusCode, report.getErrors())
+    val status = CompilationStatus(statusCode, report.getErrors(), originId)
     compilationStatus.update(target, status)
   }
 
@@ -440,4 +453,34 @@ final class Diagnostics(
 
   private def shouldAdjustWithinToken(diagnostic: l.Diagnostic): Boolean =
     diagnostic.getSource() == "scala-cli"
+
+  def onBuildTargetCompilationCrash(
+      reportPath: AbsolutePath,
+      message: String,
+  ): Unit = {
+    val diagnostic = new l.Diagnostic(
+      new l.Range(new l.Position(0, 0), new l.Position(0, 0)),
+      message,
+      l.DiagnosticSeverity.Error,
+      "build-server",
+    )
+    buildErrorDiagnostics(reportPath) = diagnostic
+
+    languageClient.publishDiagnostics(
+      new PublishDiagnosticsParams(
+        reportPath.toURI.toString(),
+        List(diagnostic).asJava,
+      )
+    )
+  }
+
+  private def removeStaleBuildErrorDiagnostics(): Unit = {
+    val all = buildErrorDiagnostics.keySet
+    all.foreach { path =>
+      languageClient.publishDiagnostics(
+        new PublishDiagnosticsParams(path.toURI.toString(), List().asJava)
+      )
+      buildErrorDiagnostics.remove(path)
+    }
+  }
 }
