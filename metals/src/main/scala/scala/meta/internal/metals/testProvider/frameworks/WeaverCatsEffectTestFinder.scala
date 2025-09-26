@@ -10,7 +10,13 @@ class WeaverCatsEffectTestFinder(
     semanticdbs: () => Semanticdbs,
 ) extends MunitTestFinder(trees, symbolIndex, semanticdbs) {
   override protected val baseParentClasses: Set[String] =
-    Set("weaver/MutableFSuite#", "weaver/FunSuiteF#")
+    WeaverCatsEffectTestFinder.baseParentClasses
   override protected val testFunctionsNames: Set[String] =
     Set("test", "pureTest", "loggedTest")
+}
+
+object WeaverCatsEffectTestFinder {
+  val baseParentClasses: Set[String] =
+    Set("weaver/MutableFSuite#", "weaver/FunSuiteF#", "weaver/IOSuite#",
+      "weaver/SimpleIOSuite#", "weaver/MutableIOSuite#")
 }
