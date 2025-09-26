@@ -400,6 +400,15 @@ object UserConfiguration {
            |""".stripMargin,
       ),
       UserConfigurationOption(
+        "inlay-hints.closing-labels.enable",
+        "false",
+        "false",
+        "Should display closing label hints for methods/classes/objects next to their closing braces",
+        """|When this option is enabled, each method/class/object definition that uses braces syntax,
+           | will get a closing label hint next to the closing brace with the name of the definition.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
         "enable-semantic-highlighting",
         "true",
         "false",
