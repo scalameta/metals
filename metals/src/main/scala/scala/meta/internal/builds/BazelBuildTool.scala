@@ -72,14 +72,15 @@ object BazelBuildTool {
   val name: String = "bazel"
   val bspName: String = "bazelbsp"
   val bspVersion: String = "4.0.1"
+  val defaultBazelVersion = "8.2.1"
 
   def resolveBazelVersion(projectRoot: AbsolutePath): String = {
     val bazelVersionFile = projectRoot.resolve(".bazelversion")
     if (bazelVersionFile.exists && bazelVersionFile.isFile) {
       val version = bazelVersionFile.readText.trim()
-      if (version.nonEmpty) version else bspVersion
+      if (version.nonEmpty) version else defaultBazelVersion
     } else {
-      bspVersion
+      defaultBazelVersion
     }
   }
 
