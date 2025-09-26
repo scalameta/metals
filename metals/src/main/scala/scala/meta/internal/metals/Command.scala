@@ -65,18 +65,20 @@ case class ParametrizedCommand[T: ClassTag](
     title: String,
     description: String,
     arguments: String,
+    default: Option[T] = None,
 ) extends BaseCommand {
 
   private val parser = new JsonParser.Of[T]
 
   def unapply(params: l.ExecuteCommandParams): Option[T] = {
     val args = Option(params.getArguments()).toList.flatMap(_.asScala)
-    if (args.size != 1 || !isApplicableCommand(params)) None
+    if (default.isEmpty && args.size != 1 || !isApplicableCommand(params)) None
+    else if (default.isDefined && args.size != 1) default
     else {
       args(0) match {
         case parser.Jsonized(t1) =>
           Option(t1)
-        case _ => None
+        case _ => default
       }
     }
   }

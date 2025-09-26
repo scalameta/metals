@@ -48,7 +48,10 @@ class ResetWorkspaceLspSuite extends BaseLspSuite(s"reset-workspace") {
       _ = assert(classFileExists)
       _ = client.resetWorkspace =
         new MessageActionItem(Messages.ResetWorkspace.resetWorkspace)
-      _ <- server.executeCommand(ServerCommands.ResetWorkspace)
+      _ <- server.executeCommandUnsafe(
+        ServerCommands.ResetWorkspace.id,
+        Seq.empty,
+      )
       _ = assertNoDiff(
         client.workspaceShowMessages,
         "",
