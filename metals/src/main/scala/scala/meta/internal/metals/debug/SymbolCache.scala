@@ -20,6 +20,7 @@ final class SymbolCache(
 
   private val symbolDefinitionCache =
     TrieMap.empty[AbsolutePath, Set[String]]
+  private val futMap = TrieMap.empty[(AbsolutePath, String), Future[Option[PcSymbolInformation]]]
 
   def getCachedSymbolInfo(
       path: AbsolutePath,
@@ -56,36 +57,43 @@ final class SymbolCache(
     scribe.info(
       s"[${Thread.currentThread().getId}] Fetching and caching symbol info for '$symbol' at path '$path'"
     )
-    compilers().info(path, symbol).map { result =>
-      symbolIndex.definition(mtags.Symbol(symbol)) match {
-        case Some(definition) =>
-          scribe.info(
-            s"[${Thread.currentThread().getId}][$originalThreadId] Found definition for '$symbol' at path '${definition.path}'"
-          )
-          symbolInfoCache.get(symbol) match {
-            case Some((existingInfo, existingPath)) =>
+    def futu = {
+        val fut = compilers().info(path, symbol).map { result =>
+          val a = symbolIndex.definition(mtags.Symbol(symbol)) match {
+            case Some(definition) =>
               scribe.info(
-                s"[${Thread.currentThread().getId}][$originalThreadId] Overwriting existing cache entry for '$symbol': old path '$existingPath' -> new path '${definition.path}'"
+                s"[${Thread.currentThread().getId}][$originalThreadId] Found definition for '$symbol' at path '${definition.path}'"
               )
+              symbolInfoCache.get(symbol) match {
+                case Some((existingInfo, existingPath)) =>
+                  scribe.info(
+                    s"[${Thread.currentThread().getId}][$originalThreadId] Overwriting existing cache entry for '$symbol': old path '$existingPath' -> new path '${definition.path}'"
+                  )
+                case None =>
+                  scribe.info(
+                    s"[${Thread.currentThread().getId}][$originalThreadId] Adding new cache entry for '$symbol' at path '${definition.path}'"
+                  )
+              }
+              symbolInfoCache.put(symbol, (result, definition.path))
+              symbolDefinitionCache.updateWith(definition.path) { existing =>
+                Some(existing.getOrElse(Set.empty) + symbol)
+              }
+              result
             case None =>
               scribe.info(
-                s"[${Thread.currentThread().getId}][$originalThreadId] Adding new cache entry for '$symbol' at path '${definition.path}'"
+                s"[${Thread.currentThread().getId}][$originalThreadId] No definition found for '$symbol'"
               )
+              // Fallback to original behavior if definition not found
+              symbolInfoCache.put(symbol, (result, path))
+              result
           }
-          symbolInfoCache.put(symbol, (result, definition.path))
-          symbolDefinitionCache.updateWith(definition.path) { existing =>
-            Some(existing.getOrElse(Set.empty) + symbol)
-          }
-          result
-        case None =>
-          scribe.info(
-            s"[${Thread.currentThread().getId}][$originalThreadId] No definition found for '$symbol'"
-          )
-          // Fallback to original behavior if definition not found
-          symbolInfoCache.put(symbol, (result, path))
-          result
+          futMap.remove(path -> symbol)
+          a
+        }
+        futMap.put(path -> symbol, fut)
+        fut
       }
-    }
+    futMap.getOrElseUpdate(path -> symbol, futu)
   }
 
   def clear(): Unit = {
