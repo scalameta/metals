@@ -65,7 +65,6 @@ final class BuildTargetClasses(
     if (
       path.isScalaFilename && hasBazelBuildServer && belongsToTestTarget(path)
     ) {
-//      invalidateTestFrameworkCacheForDocuments(docs)
       symbolCache.removeSymbolsForPath(path)
       extractTestClassesFromDocuments(docs, path).foreach { testClasses =>
         if (testClasses.nonEmpty) {
