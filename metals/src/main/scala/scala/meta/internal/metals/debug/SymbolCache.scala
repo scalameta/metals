@@ -65,11 +65,11 @@ final class SymbolCache(
           symbolInfoCache.get(symbol) match {
             case Some((existingInfo, existingPath)) =>
               scribe.info(
-                s"[${Thread.currentThread().getId}][$originalThreadId] Overwriting existing cache entry for '$symbol': old path '$existingPath' -> new path '${definition.path}', existing info: $existingInfo, new info: $result"
+                s"[${Thread.currentThread().getId}][$originalThreadId] Overwriting existing cache entry for '$symbol': old path '$existingPath' -> new path '${definition.path}'"
               )
             case None =>
               scribe.info(
-                s"[${Thread.currentThread().getId}][$originalThreadId] Adding new cache entry for '$symbol' at path '${definition.path}', new info: $result"
+                s"[${Thread.currentThread().getId}][$originalThreadId] Adding new cache entry for '$symbol' at path '${definition.path}'"
               )
           }
           symbolInfoCache.put(symbol, (result, definition.path))
