@@ -28,14 +28,14 @@ final class SymbolCache(
     symbolInfoCache.get(symbol) match {
       case Some((cachedSymbolInfo, cachedPath)) =>
         if (cachedPath == path) {
-          scribe.info(s"Cache hit for symbol '$symbol' at path '$path'. Cache state: $symbolInfoCache")
+          scribe.info(s"[${Thread.currentThread().getId}] Cache hit for symbol '$symbol' at path '$path'. Cache state: $symbolInfoCache")
           Future.successful(cachedSymbolInfo)
         } else {
-          scribe.info(s"Cache miss for symbol '$symbol' - cached path '$cachedPath' != current path '$path'. Cache state: $symbolInfoCache")
+          scribe.info(s"[${Thread.currentThread().getId}] Cache miss for symbol '$symbol' - cached path '$cachedPath' != current path '$path'. Cache state: $symbolInfoCache")
           fetchAndCacheSymbolInfo(path, symbol)
         }
       case None =>
-        scribe.info(s"Cache miss for symbol '$symbol' - not found in cache. Cache state: $symbolInfoCache")
+        scribe.info(s"[${Thread.currentThread().getId}] Cache miss for symbol '$symbol' - not found in cache. Cache state: $symbolInfoCache")
         fetchAndCacheSymbolInfo(path, symbol)
     }
   }
@@ -46,27 +46,34 @@ final class SymbolCache(
   ): Future[Option[PcSymbolInformation]] = {
     import scala.meta.internal.mtags
     
-    scribe.info(s"Fetching and caching symbol info for '$symbol' at path '$path'")
-    compilers().info(path, symbol).flatMap { result =>
+    val originalThreadId = Thread.currentThread().getId
+    scribe.info(s"[${Thread.currentThread().getId}] Fetching and caching symbol info for '$symbol' at path '$path'")
+    compilers().info(path, symbol).map { result =>
       symbolIndex.definition(mtags.Symbol(symbol)) match {
         case Some(definition) =>
-            scribe.info(s"Found definition for '$symbol' at path '$definition.path'")
+            scribe.info(s"[${Thread.currentThread().getId}][$originalThreadId] Found definition for '$symbol' at path '${definition.path}'")
+            symbolInfoCache.get(symbol) match {
+              case Some((existingInfo, existingPath)) =>
+                scribe.info(s"[${Thread.currentThread().getId}][$originalThreadId] Overwriting existing cache entry for '$symbol': old path '$existingPath' -> new path '${definition.path}', existing info: $existingInfo, new info: $result")
+              case None =>
+                scribe.info(s"[${Thread.currentThread().getId}][$originalThreadId] Adding new cache entry for '$symbol' at path '${definition.path}', new info: $result")
+            }
           symbolInfoCache.put(symbol, (result, definition.path))
           symbolDefinitionCache.updateWith(definition.path) { existing =>
             Some(existing.getOrElse(Set.empty) + symbol)
           }
-          Future.successful(result)
+          result
         case None =>
-            scribe.info(s"No definition found for '$symbol'")
+            scribe.info(s"[${Thread.currentThread().getId}][$originalThreadId] No definition found for '$symbol'")
           // Fallback to original behavior if definition not found
           symbolInfoCache.put(symbol, (result, path))
-          Future.successful(result)
+          result
       }
     }
   }
 
   def clear(): Unit = {
-    scribe.info(s"Clearing cache")
+    scribe.info(s"[${Thread.currentThread().getId}] Clearing cache")
     symbolInfoCache.clear()
     symbolDefinitionCache.clear()
   }
@@ -75,11 +82,11 @@ final class SymbolCache(
   def removeSymbolsForPath(path: AbsolutePath): Unit = {
     symbolDefinitionCache.get(path) match {
       case Some(symbols) =>
-        scribe.info(s"Removing ${symbols.size} cached symbols for path '$path': ${symbols.mkString(", ")}")
+        scribe.info(s"[${Thread.currentThread().getId}] Removing ${symbols.size} cached symbols for path '$path': ${symbols.mkString(", ")}")
         symbols.foreach(symbolInfoCache.remove)
         symbolDefinitionCache.remove(path)
       case None =>
-        scribe.info(s"No cached symbols found to remove for path '$path'")
+        scribe.info(s"[${Thread.currentThread().getId}] No cached symbols found to remove for path '$path'")
     }
   }
 
