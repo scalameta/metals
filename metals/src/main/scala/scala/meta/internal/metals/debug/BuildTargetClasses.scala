@@ -455,7 +455,6 @@ final class BuildTargetClasses(
     }.toList
   }
 
-
   private def collectParentsForSymbol(
       symbol: String,
       doc: TextDocument,
@@ -489,7 +488,6 @@ final class BuildTargetClasses(
     }
     withoutHashAndAfter.replace("/", ".")
   }
-
 
   private def populateBazelTestClasses(
       classes: Map[b.BuildTargetIdentifier, Classes],
