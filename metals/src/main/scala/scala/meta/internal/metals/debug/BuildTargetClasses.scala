@@ -12,7 +12,6 @@ import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.metals.debug.BuildTargetClasses.Classes
 import scala.meta.internal.metals.debug.BuildTargetClasses.TestSymbolInfo
 import scala.meta.internal.mtags.OnDemandSymbolIndex
-import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
@@ -522,12 +521,7 @@ object TestFrameworkDetector {
 }
 
 object TestFrameworkSymbolRegistry {
-  import scala.meta.internal.metals.testProvider.frameworks.ScalatestStyle
-  import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
-  import scala.meta.internal.metals.testProvider.frameworks.WeaverCatsEffectTestFinder
-  import scala.meta.internal.metals.testProvider.frameworks.ZioTestFinder
-  import scala.meta.internal.metals.testProvider.frameworks.JunitTestFinder
-  import scala.meta.internal.metals.testProvider.frameworks.TestNGTestFinder
+  import scala.meta.internal.metals.testProvider.frameworks.*
 
   private lazy val scalatestSymbols: Map[String, TestFramework] =
     ScalatestStyle.baseSymbols.map(_ -> TestFramework.ScalaTest).toMap

@@ -1,7 +1,9 @@
 package scala.meta.internal.metals.debug
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.pc.PcSymbolInformation
