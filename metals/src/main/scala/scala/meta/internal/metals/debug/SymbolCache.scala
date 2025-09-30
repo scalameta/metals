@@ -57,12 +57,10 @@ final class SymbolCache(
               compilerResult,
             )
           }
-
         pendingCompilerInfoRequests.put(requestKey, compilerInfoFuture)
         compilerInfoFuture.onComplete { _ =>
           pendingCompilerInfoRequests.remove(requestKey)
         }
-
         compilerInfoFuture
     }
   }
