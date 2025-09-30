@@ -243,61 +243,6 @@ class DefinitionLspSuite
     } yield ()
   }
 
-  test("goto-definition-into-dependency-sources") {
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        s"""|/metals.json
-            |{
-            |  "a": {
-            |    "scalaVersion": "${V.latestScala3Next}",
-            |    "libraryDependencies": [
-            |      "org.scala-lang:scala3-library_3:${V.latestScala3Next}"
-            |    ]
-            |  }
-            |}
-            |/a/src/main/scala/Main.scala
-            |package example
-            |object Main {
-            |  val list = List(1, 2, 3)
-            |  list.map(identity)
-            |}
-            |""".stripMargin
-      )
-      _ <- server.didOpen("a/src/main/scala/Main.scala")
-      _ = server.workspaceDefinitions
-
-      listDefinition <- server.definition(
-        "a/src/main/scala/Main.scala",
-        "Li@@st(1, 2, 3)",
-        workspace,
-      )
-      mapDefinition <- server.definition(
-        "a/src/main/scala/Main.scala",
-        "list.ma@@p(identity)",
-        workspace,
-      )
-
-      _ = assert(
-        listDefinition.nonEmpty,
-        s"Expected a definition location for 'List', but got an empty result.",
-      )
-      _ = assert(
-        listDefinition.head.getUri.contains("scala-library"),
-        s"Expected List definition URI to contain 'scala-library', but was: ${listDefinition.head.getUri}",
-      )
-      _ = assert(
-        mapDefinition.nonEmpty,
-        s"Expected a definition location for 'map', but got an empty result.",
-      )
-      _ = assert(
-        mapDefinition.head.getUri.contains("scala-library"),
-        s"Expected map definition URI to contain 'scala-library', but was: ${mapDefinition.head.getUri}",
-      )
-
-    } yield ()
-  }
-
   test("stale") {
     for {
       _ <- initialize(

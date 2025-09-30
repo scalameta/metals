@@ -3,7 +3,6 @@ package scala.meta.internal.metals.mcp
 import java.io.PrintWriter
 import java.net.InetSocketAddress
 import java.nio.file.Path
-import java.time.Duration
 import java.util.Arrays
 import java.util.function.BiFunction
 import java.util.{List => JList}
@@ -51,8 +50,10 @@ import io.modelcontextprotocol.spec.McpSchema.Tool
 import io.undertow.Undertow
 import io.undertow.servlet.Servlets
 import io.undertow.servlet.api.InstanceHandle
+import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.services.LanguageClient
 import reactor.core.publisher.Mono
 
@@ -111,7 +112,6 @@ class MetalsMcpServer(
       .async(servlet)
       .serverInfo("scala-mcp-server", "0.1.0")
       .capabilities(capabilities)
-      .requestTimeout(Duration.ofMinutes(1))
       .build()
 
     cancelable.add(() => asyncServer.close())
@@ -870,7 +870,7 @@ class MetalsMcpServer(
     new AsyncToolSpecification(
       new Tool(
         "format-file",
-        "Format a Scala file and return the formatted text",
+        "Format a Scala file and use LSP to apply the changes. If LSP client is not available, it will be done in the background",
         schema,
       ),
       withErrorHandling { (_, arguments) =>
@@ -883,22 +883,39 @@ class MetalsMcpServer(
 
           formattingProvider
             .formatForMcp(path, projectPath, cancelChecker)
-            .map {
+            .flatMap {
               case Left(errorMessage) =>
-                new CallToolResult(
-                  createContent(errorMessage),
-                  true,
+                Future.successful(
+                  new CallToolResult(
+                    createContent(errorMessage),
+                    true,
+                  )
                 )
-              case Right(None) =>
-                new CallToolResult(
-                  createContent("File is already properly formatted."),
-                  false,
+              case Right(Nil) =>
+                Future.successful(
+                  new CallToolResult(
+                    createContent("File is already properly formatted."),
+                    false,
+                  )
                 )
-              case Right(Some(formattedText)) =>
-                new CallToolResult(
-                  createContent(formattedText),
-                  false,
-                )
+              case Right(formattedText) =>
+                languageClient
+                  .applyEdit(
+                    new ApplyWorkspaceEditParams(
+                      new WorkspaceEdit(
+                        Map(
+                          path.toURI.toString -> formattedText.asJava
+                        ).asJava
+                      )
+                    )
+                  )
+                  .asScala
+                  .map { _ =>
+                    new CallToolResult(
+                      createContent(s"$path was formatted"),
+                      false,
+                    )
+                  }
             }
             .toMono
         } else {

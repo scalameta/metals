@@ -454,6 +454,15 @@ object MetalsEnrichments
     def isJarFileSystem: Boolean =
       path.toNIO.getFileSystem().provider().getScheme().equals("jar")
 
+    def openJar: Option[AbsolutePath] = if (path.isJar) {
+      Some(
+        AbsolutePath(
+          m.internal.io.PlatformFileIO
+            .newJarFileSystem(path, create = false)
+            .getPath("/")
+        )
+      )
+    } else None
     def isInReadonlyDirectory(workspace: AbsolutePath): Boolean =
       path.toNIO.startsWith(
         workspace.resolve(Directories.readonly).toNIO

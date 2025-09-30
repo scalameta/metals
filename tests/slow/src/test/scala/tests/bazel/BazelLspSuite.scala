@@ -477,6 +477,157 @@ class BazelLspSuite
     } yield ()
   }
 
+  test("goto-definition-into-dependency-sources") {
+    cleanWorkspace()
+    val bazelVersion =
+      s"""|/.bazelversion
+          |6.4.0
+          |""".stripMargin
+
+    val workspaceFile =
+      """|/WORKSPACE
+         |load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+         |
+         |http_archive(
+         |    name = "bazel_skylib",
+         |    sha256 = "b8a1527901774180afc798aeb28c4634bdccf19c4d98e7bdd1ce79d1fe9aaad7",
+         |    urls = [
+         |        "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.4.1/bazel-skylib-1.4.1.tar.gz",
+         |        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.4.1/bazel-skylib-1.4.1.tar.gz",
+         |    ],
+         |)
+         |
+         |http_archive(
+         |    name = "io_bazel_rules_scala",
+         |    sha256 = "3b00fa0b243b04565abb17d3839a5f4fa6cc2cac571f6db9f83c1982ba1e19e5",
+         |    strip_prefix = "rules_scala-6.5.0",
+         |    url = "https://github.com/bazelbuild/rules_scala/releases/download/v6.5.0/rules_scala-v6.5.0.tar.gz",
+         |)
+         |
+         |load("@io_bazel_rules_scala//:scala_config.bzl", "scala_config")
+         |scala_config(scala_version = "2.12.18")
+         |
+         |load("@io_bazel_rules_scala//scala:scala.bzl", "rules_scala_setup", "rules_scala_toolchain_deps_repositories")
+         |
+         |rules_scala_setup()
+         |rules_scala_toolchain_deps_repositories(fetch_sources = True)
+         |
+         |load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
+         |rules_proto_dependencies()
+         |rules_proto_toolchains()
+         |
+         |load("@io_bazel_rules_scala//scala:toolchains.bzl", "scala_register_toolchains")
+         |scala_register_toolchains()
+         |
+         |register_toolchains(
+         |    "//:semanticdb_toolchain",
+         |)
+         |
+         |http_archive(
+         |    name = "rules_jvm_external",
+         |    sha256 = "6274687f6fc5783b589f56a2f1ed60de3ce1f99bc4e8f9edef3de43bdf7c6e74",
+         |    strip_prefix = "rules_jvm_external-4.3",
+         |    url = "https://github.com/bazelbuild/rules_jvm_external/archive/4.3.zip",
+         |)
+         |
+         |load("@rules_jvm_external//:defs.bzl", "maven_install")
+         |
+         |maven_install(
+         |    name = "maven",
+         |    artifacts = [
+         |        "com.typesafe.scala-logging:scala-logging_2.12:3.9.5",
+         |    ],
+         |    repositories = [
+         |        "https://repo1.maven.org/maven2",
+         |    ],
+         |    fetch_sources = True
+         |)
+         |""".stripMargin
+
+    val buildFiles =
+      s"""|/BUILD
+          |load("@io_bazel_rules_scala//scala:scala.bzl", "scala_library")
+          |load("@io_bazel_rules_scala//scala:scala_toolchain.bzl", "scala_toolchain")
+          |
+          |scala_toolchain(
+          |    name = "semanticdb_toolchain_impl",
+          |    enable_semanticdb = True,
+          |    semanticdb_bundle_in_jar = False,
+          |    visibility = ["//visibility:public"],
+          |)
+          |
+          |toolchain(
+          |    name = "semanticdb_toolchain",
+          |    toolchain = "semanticdb_toolchain_impl",
+          |    toolchain_type = "@io_bazel_rules_scala//scala:toolchain_type",
+          |    visibility = ["//visibility:public"],
+          |)
+          |
+          |scala_library(
+          |    name = "calculator",
+          |    srcs = glob(["Main.scala"]),
+          |    visibility = ["//visibility:public"],
+          |    deps = [
+          |        "@maven//:com_typesafe_scala_logging_scala_logging_2_12"
+          |    ],
+          |)
+          |
+          |""".stripMargin
+
+    val sourceFiles =
+      s"""
+         |/Main.scala
+         |import com.typesafe.scalalogging.Logger
+         |
+         |class Calculator {
+         |  val logger = Logger("SimpleLogger")
+         |
+         |  def add(a: Int, b: Int): Int = a + b
+         |  def subtract(a: Int, b: Int): Int = a - b
+         |  def multiply(a: Int, b: Int): Int = a * b
+         |}
+         |
+         |""".stripMargin
+
+    val layout =
+      s"""$bazelVersion
+         |$workspaceFile
+         |$buildFiles
+         |$sourceFiles
+         |""".stripMargin
+
+    for {
+      _ <- initialize(layout)
+      _ <- server.didOpen("Main.scala")
+      _ = server.workspaceDefinitions
+
+      loggerDefinition <- server.definition(
+        "Main.scala",
+        """import org.joda.time.Instant
+          |import com.typesafe.scalalogging.Log@@ger
+          |
+          |class Calculator {
+          |  val instant = new Instant()
+          |  val logger = Logger("SimpleLogger")
+          |
+          |  def add(a: Int, b: Int): Int = a + b
+          |  def subtract(a: Int, b: Int): Int = a - b
+          |  def multiply(a: Int, b: Int): Int = a * b
+          |}""".stripMargin,
+        workspace,
+      )
+
+      _ = assert(
+        loggerDefinition.nonEmpty,
+        s"Expected a definition location for 'Logger', but got an empty result.",
+      )
+      _ = assert(
+        loggerDefinition.head.getUri.contains("scala-logging"),
+        s"Expected logger definition URI to contain 'scala-logging', but was: ${loggerDefinition.head.getUri}",
+      )
+    } yield ()
+  }
+
   private val commonCode =
     """|scala_library(
        |    name = "hello_lib",

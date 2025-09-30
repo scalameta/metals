@@ -333,6 +333,36 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     } yield ()
   }
 
+  test("duplicated-source") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": {},
+          |  "b": { "additionalSources": ["a/src/main/scala/"], "dependsOn": ["a"]}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |object A extends App{
+          |  val n: Int = ""
+          |}
+        """.stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ <- server.didSave("a/src/main/scala/a/A.scala")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/a/A.scala:2:16: error: type mismatch;
+           | found   : String("")
+           | required: Int
+           |  val n: Int = ""
+           |               ^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("tokenization-error") {
     cleanWorkspace()
     for {
