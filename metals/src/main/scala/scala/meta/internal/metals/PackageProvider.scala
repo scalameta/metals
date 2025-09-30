@@ -649,6 +649,7 @@ class PackageProvider(
             case Importee.Name(name) => Some(name.value)
             case Importee.Rename(from, to) =>
               Some(s"${from.value} => ${to.value}")
+            case Importee.Unimport(name) => Some(s"${name.value} => _")
             case Importee.GivenAll() => Some("given")
             case _ => None
           }
@@ -659,7 +660,15 @@ class PackageProvider(
             } && wildcardImportsOnlyFromMovedFiles
 
             if (hasWildcardToUpdate && newPackageName.nonEmpty) {
-              s"${newPackageName.mkString(".")}._"
+              // Check if there are unimports that need to be preserved alongside wildcard
+              val unimports = refsImportees.collect {
+                case Importee.Unimport(name) => s"${name.value} => _"
+              }
+              if (unimports.nonEmpty) {
+                s"${newPackageName.mkString(".")}.{${unimports.mkString(", ")}, _}"
+              } else {
+                s"${newPackageName.mkString(".")}._"
+              }
             } else {
               def bracedImporteeStr = refsImportees.filter {
                 case _: Importee.Wildcard => false
