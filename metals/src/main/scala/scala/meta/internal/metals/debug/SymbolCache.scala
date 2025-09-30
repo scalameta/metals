@@ -44,9 +44,7 @@ final class SymbolCache(
       path: AbsolutePath,
       symbol: String,
   ): Future[Option[PcSymbolInformation]] = {
-
     val requestKey = (path, symbol)
-
     pendingCompilerInfoRequests.get(requestKey) match {
       case Some(existingFuture) =>
         existingFuture
