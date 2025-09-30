@@ -254,7 +254,10 @@ final class Diagnostics(
     val targets = for {
       path <- diagnostics.keySet
       targets <- buildTargets.sourceBuildTargets(path)
-      if targets.exists(inverseDeps.apply)
+      targetSet = targets.toSet
+      /* We add the check for `!targetSet.contains(buildTarget)` to avoid removing diagnostics
+       * if a file is duplicated across targets */
+      if targets.exists(inverseDeps.apply) && !targetSet.contains(buildTarget)
     } yield {
       diagnostics.remove(path)
       publishDiagnostics(path)
