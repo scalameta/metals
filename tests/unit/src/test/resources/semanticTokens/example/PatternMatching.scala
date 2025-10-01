@@ -8,7 +8,7 @@
   }
 
   <<// tuple deconstruction>>/*comment*/
-  <<val>>/*keyword*/ (<<left>>/*variable,definition,readonly*/, <<right>>/*variable,definition,readonly*/) = (<<1>>/*number*/, <<2>>/*number*/)
+  <<val>>/*keyword*/ (<<left>>/*variable,definition,readonly*/, <<right>>/*variable,readonly*/) = (<<1>>/*number*/, <<2>>/*number*/)
   (<<left>>/*variable,readonly*/, <<right>>/*variable,readonly*/)
 
   <<// val deconstruction>>/*comment*/
