@@ -26,7 +26,7 @@ jobs:
       - name: Set up JVM
         uses: actions/setup-java@v5
         with:
-          java-version: '8'
+          java-version: '17'
           distribution: 'temurin'
           cache: 'sbt'
       - uses: sbt/setup-sbt@v1
