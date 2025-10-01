@@ -402,52 +402,16 @@ class PackageProvider(
         case _ => None
       }
 
-    def findPackageRename(
-        ref: Reference,
-        parts: List[String],
-    ): Option[String] = {
-      scribe.info(
-        s"calcFullyQualifiedEdits: findPackageRename called with ref=${ref.definition.name}, parts=${parts}"
-      )
-      val result = pkgRenames
-        .collectFirst {
-          case PackagePartsRenamer(oldPackageParts, newPackageParts) => {
-            val refAllParts = ref.allParts(oldPackageParts)
-            val startsWithMatch = parts.startsWith(refAllParts)
-            scribe.info(
-              s"calcFullyQualifiedEdits: Checking rename oldPkg=${oldPackageParts}, newPkg=${newPackageParts}"
-            )
-            scribe.info(
-              s"calcFullyQualifiedEdits: ref.allParts(oldPkg)=${refAllParts}, parts.startsWith=${startsWithMatch}"
-            )
-
-            if (startsWithMatch) {
-              val result =
-                (newPackageParts ++ parts.drop(oldPackageParts.length))
-                  .mkString(".")
-              scribe.info(
-                s"calcFullyQualifiedEdits: Standard match result=${result}"
-              )
-              result
-            } else if (
-              oldPackageParts.nonEmpty && newPackageParts.nonEmpty &&
-              newPackageParts.last == parts.head &&
-              parts.drop(1).contains(ref.definition.name)
-            ) {
-              val result = (newPackageParts ++ parts.drop(1)).mkString(".")
-              scribe.info(
-                s"calcFullyQualifiedEdits: Relative match result=${result}"
-              )
-              result
-            } else {
-              scribe.info(s"calcFullyQualifiedEdits: No match for this rename")
-              null // This will be filtered out by collectFirst
-            }
-          }
-        }
-        .filter(_ != null)
-      scribe.info(s"calcFullyQualifiedEdits: Final result = ${result}")
-      result.headOption
+    def findPackageRename(ref: Reference, parts: List[String]): Option[String] ={
+      val result = pkgRenames.collectFirst {
+          case PackagePartsRenamer(oldPackageParts, newPackageParts)
+            // Exclude PackagePartsRenamer with empty oldPackageParts from fully qualified renaming.
+            // When oldPackageParts is empty, simple references like "Calc.a" should get an import added
+            // (e.g., "import foo.Calc") rather than being rewritten as fully qualified names (e.g., "foo.Calc.a").
+            if parts.startsWith(ref.allParts(oldPackageParts)) && oldPackageParts.nonEmpty =>
+          (newPackageParts ++ parts.drop(oldPackageParts.length)).mkString(".")
+      }
+      result
     }
 
     def existsPackagePart(ref: Reference, parts: List[String]): Boolean =
