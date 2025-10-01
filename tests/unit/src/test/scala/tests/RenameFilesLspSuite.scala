@@ -272,7 +272,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B" -> s"$prefix/C/B"),
     expectedRenames =
-      Map("A" -> "C", "import A.B._\nimport A.B.{Sun, _}" -> "import C.B.Sun"),
+      Map("A" -> "C", "import A.B._\nimport A.B.{Sun, _}" -> "import C.B.{Sun, _}"),
     sourcesAreCompiled = true,
   )
 
@@ -567,7 +567,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/Sun.scala" -> s"$prefix/C/Moon.scala"),
-    expectedRenames = Map("A" -> "C", "A.{Moon => _, _}" -> "C.Sun"),
+    expectedRenames = Map("A" -> "C", "A.{Moon => _, _}" -> "C.{Moon => _, _}"),
     sourcesAreCompiled = true,
   )
 
@@ -580,15 +580,14 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |/$prefix/B/Moon.scala
         |package B
         |import <<A._>>
-        |<<import A.{Moon => _}
-        |>>
+        |<<import A.{Moon => _}>>
         |object Moon {
         | val sun = Sun
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/Sun.scala" -> s"$prefix/C/Moon.scala"),
     expectedRenames =
-      Map("A" -> "C", "A._" -> "C.Sun", "import A.{Moon => _}\n" -> ""),
+      Map("A" -> "C", "A._" -> "C._", "import A.{Moon => _}" -> "import C.{Moon => _}"),
     sourcesAreCompiled = true,
   )
 

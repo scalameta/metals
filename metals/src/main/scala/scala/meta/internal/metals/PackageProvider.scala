@@ -649,7 +649,7 @@ class PackageProvider(
             case Importee.Name(name) => Some(name.value)
             case Importee.Rename(from, to) =>
               Some(s"${from.value} => ${to.value}")
-            case Importee.Unimport(name) => Some(s"${name.value} => _")
+            case Importee.Unimport(name) => Some(s"{${name.value} => _}")
             case Importee.GivenAll() => Some("given")
             case _ => None
           }
