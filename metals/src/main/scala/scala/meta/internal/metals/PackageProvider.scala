@@ -666,7 +666,8 @@ class PackageProvider(
               }
               val explicitImports = refsImportees.collect {
                 case Importee.Name(name) => name.value
-                case Importee.Rename(from, to) => s"${from.value} => ${to.value}"
+                case Importee.Rename(from, to) =>
+                  s"${from.value} => ${to.value}"
               }
               val allImportees = (unimports ++ explicitImports).distinct
               if (allImportees.nonEmpty) {
