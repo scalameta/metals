@@ -762,7 +762,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/C/D/Sun.scala"),
     expectedRenames = Map(
       "A.B" -> "C.D",
-      "A.B.*\nimport A.B.given" -> "C.D.given\nimport C.D.Sun",
+      "A.B.*\nimport A.B.given" -> "C.D.given\nimport C.D.*",
     ),
     sourcesAreCompiled = true,
     scalaVersion = Some(V.scala3),
@@ -775,13 +775,13 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |case class Sun()
         |/$prefix/X/Moon.scala
         |package X
-        |import <<A>>.<<_>>
+        |import <<A>>._
         |object Moon {
         |  val o = Sun()
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/Sun.scala" -> s"$prefix/C/Sun.scala"),
-    expectedRenames = Map("A" -> "C", "_" -> "Sun"),
+    expectedRenames = Map("A" -> "C"),
     sourcesAreCompiled = true,
   )
 
@@ -806,7 +806,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/A/D/Sun.scala"),
-    expectedRenames = Map("B" -> "D", "//" -> "import D.Sun\n//"),
+    expectedRenames = Map("B" -> "D", "//" -> "import A.D.Sun\n//"),
     sourcesAreCompiled = true,
   )
 
@@ -846,14 +846,14 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |}
         |/$prefix/X/Moon.scala
         |package X
-        |import <<A>>.<<B>>.<<_>>
+        |import <<A>>.<<B>>._
         |object Moon {
         | val o = Sun().get2
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/C/D/Sun.scala"),
     expectedRenames =
-      Map("A" -> "C", "B" -> "D", "_" -> "{Sun, XtentionSun, m}"),
+      Map("A" -> "C", "B" -> "D"),
     sourcesAreCompiled = true,
   )
 
@@ -946,7 +946,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/Z/A" -> s"$prefix/Z/C"),
-    expectedRenames = Map("A" -> "C", "A._" -> "C.Sun"),
+    expectedRenames = Map("A" -> "C", "A._" -> "C._"),
     sourcesAreCompiled = true,
   )
 
@@ -970,7 +970,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/Z/A" -> s"$prefix/Z/C"),
-    expectedRenames = Map("A" -> "C", "A._" -> "C.{Mercury, Sun}"),
+    expectedRenames = Map("A" -> "C", "A._" -> "C._"),
     sourcesAreCompiled = true,
   )
 
@@ -1000,7 +1000,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |}
         |""".stripMargin,
     fileRenames = Map(s"$prefix/Z/A" -> s"$prefix/Z/C"),
-    expectedRenames = Map("A" -> "C", "A._" -> "C.{Mercury, Sun}"),
+    expectedRenames = Map("A" -> "C", "A._" -> "C._"),
     sourcesAreCompiled = true,
   )
 
