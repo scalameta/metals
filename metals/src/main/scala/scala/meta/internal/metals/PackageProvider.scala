@@ -516,8 +516,8 @@ class PackageProvider(
       directlyImportedSymbols: () => Set[String],
       importerRenamer: ImporterRenamer,
   ): ImportEdits[TopLevelDeclaration] = {
-    val renameResult = importerRenamer.renameFor(importParts)
-    val finalResult = renameResult
+    importerRenamer
+      .renameFor(importParts)
       .map { case (newPackageName, referencesNames) =>
         lazy val wildcardImportsOnlyFromMovedFiles = {
           val symbolsImportedByWildcard = defProvider
@@ -532,10 +532,9 @@ class PackageProvider(
                   directlyImportedSymbols(),
                 )
             )
-          val result = symbolsImportedByWildcard.forall(symbol =>
+          symbolsImportedByWildcard.forall(symbol =>
             referencesNames.exists(_.symbols.contains(symbol))
           )
-          result
         }
         lazy val importedImplicits =
           referencesNames.filter(_.isGivenOrExtension).toList
@@ -671,10 +670,8 @@ class PackageProvider(
           }
         }
       }
-      .getOrElse {
-        ImportEdits.empty
-      }
-    finalResult
+      .getOrElse(ImportEdits.empty)
+
   }
 
   private def findImporters(tree: Tree): Vector[Importer] = {
