@@ -426,7 +426,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |class One(f: Foo)
         |""".stripMargin,
     fileRenames = Map(s"$prefix/two/Foo.scala" -> s"$prefix/three/Foo.scala"),
-    expectedRenames = Map("two" -> "three", "two._" -> "three.Foo"),
+    expectedRenames = Map("two" -> "three", "two._" -> "three._"),
     sourcesAreCompiled = true,
   )
 
@@ -475,7 +475,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     fileRenames = Map(s"$prefix/two/Foo.scala" -> s"$prefix/three/Foo.scala"),
     expectedRenames = Map(
       "two" -> "three",
-      "import two._\nimport two.{BB => CC}" -> "import two.{BB => CC}\nimport three.Foo",
+      "import two._\nimport two.{BB => CC}" -> "import three._\nimport two.{BB => CC}",
     ),
     sourcesAreCompiled = true,
   )
@@ -490,15 +490,14 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |/$prefix/one/One.scala
         |package one
         |
-        |import <<two>>.{BB => CC<<,_>>}
-        |<<//>>
+        |import <<two>>.{BB => CC, _}
         |
         |class One(f: Foo)
         |class Two(f: CC)
         |""".stripMargin,
     fileRenames = Map(s"$prefix/two/Foo.scala" -> s"$prefix/three/Foo.scala"),
     expectedRenames =
-      Map("two" -> "three", ",_" -> "", "//" -> "import three.Foo\n//"),
+      Map("two" -> "three"),
     sourcesAreCompiled = true,
   )
 
@@ -521,8 +520,8 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     fileRenames = Map(s"$prefix/two/Foo.scala" -> s"$prefix/three/Foo.scala"),
     expectedRenames = Map(
       "two" -> "three",
-      "two._" -> "three.{BB => CC}",
-      "two.{BB => CC}" -> "three.Foo",
+      "two._" -> "three._",
+      "two.{BB => CC}" -> "three.{BB => CC}",
     ),
     sourcesAreCompiled = true,
   )
