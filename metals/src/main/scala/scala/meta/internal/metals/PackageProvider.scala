@@ -402,13 +402,18 @@ class PackageProvider(
         case _ => None
       }
 
-    def findPackageRename(ref: Reference, parts: List[String]): Option[String] ={
+    def findPackageRename(
+        ref: Reference,
+        parts: List[String],
+    ): Option[String] = {
       val result = pkgRenames.collectFirst {
-          case PackagePartsRenamer(oldPackageParts, newPackageParts)
+        case PackagePartsRenamer(oldPackageParts, newPackageParts)
             // Exclude PackagePartsRenamer with empty oldPackageParts from fully qualified renaming.
             // When oldPackageParts is empty, simple references like "Calc.a" should get an import added
             // (e.g., "import foo.Calc") rather than being rewritten as fully qualified names (e.g., "foo.Calc.a").
-            if parts.startsWith(ref.allParts(oldPackageParts)) && oldPackageParts.nonEmpty =>
+            if parts.startsWith(
+              ref.allParts(oldPackageParts)
+            ) && oldPackageParts.nonEmpty =>
           (newPackageParts ++ parts.drop(oldPackageParts.length)).mkString(".")
       }
       result
