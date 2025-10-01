@@ -444,7 +444,7 @@ class PackageProvider(
   }
 
   /**
-   * Calculates edits for import statemants that select elements from files old package.
+   * Calculates edits for import statements that select elements from files old package.
    * E.g
    * Moved file:
    * file://root/a/b/c/d/File.scala
@@ -461,7 +461,8 @@ class PackageProvider(
    *
    * import c.d.A  //YES
    * import a.b.c.d.{A, B => BB} //YES
-   * import a.b.c.d._ //PARTIALLY if possible will delete this import (all elements imported by _ will be added explicitly)
+   * import a.b.c.d._ //YES - wildcard imports are preserved and updated with new package name
+   * import a.b.c.d.{A, B => _, _} //YES - mixed imports with unimports and wildcards are preserved
    * import c.d.A.C //NO
    * ```
    * @return
@@ -585,7 +586,8 @@ class PackageProvider(
             } && wildcardImportsOnlyFromMovedFiles
 
             if (hasWildcardToUpdate && newPackageName.nonEmpty) {
-              // Check if there are unimports and explicit imports that need to be preserved alongside wildcard
+              // When updating wildcard imports, preserve any existing unimports and explicit imports
+              // by combining them with the wildcard in a single import statement
               val unimports = refsImportees.collect {
                 case Importee.Unimport(name) => s"${name.value} => _"
               }
