@@ -31,7 +31,7 @@ jobs:
           cache: 'sbt'
       - uses: sbt/setup-sbt@v1
       - name: Publish ${{ github.event.inputs.project }} to Sonatype
-        run: sbt "set ThisBuild/version := ${{ github.event.inputs.version }} ; set ThisBuild/isSnapshot := false; ci-release"
+        run: sbt "set ThisBuild/version := \"${{ github.event.inputs.version }}\" ; set ThisBuild/isSnapshot := false; ci-release"
         env:
           CI_COMMIT_TAG: v${{ github.event.inputs.version }}
           CI_RELEASE: ${{ github.event.inputs.scala != '' && format('++{0} ', github.event.inputs.scala) || '+' }}; mtags/publishSigned; mtagsShared/publishSigned
