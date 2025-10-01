@@ -1009,39 +1009,39 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
 
   renamed(
     "wildcard-import-file-to-subdir",
-    s"""|/$prefix/calcs/SomeCalc.scala
-        |package research.gadgets.examples
-        |package <<calcs>>
-        |class SomeCalc {
+    s"""|/$prefix/D/Sun.scala
+        |package A.B.C
+        |package <<D>>
+        |class Sun {
         |  val a = 1
         |}
-        |object Calc {
+        |object Moon {
         |  val a = 1
         |}
-        |/$prefix/calcs/VolCalc.scala
-        |package research.gadgets.examples
-        |package calcs
+        |/$prefix/D/Mars.scala
+        |package A.B.C
+        |package D
         |<<//>>
-        |object VolCalc {
-        |  val a = new SomeCalc()
-        |  val b = Calc.a
+        |object Mars {
+        |  val a = new Sun()
+        |  val b = Moon.a
         |}
-        |/$prefix/scripts/Simulate.scala
-        |package research.gadgets.examples
-        |package scripts
-        |import <<research.gadgets.examples.calcs._>>
-        |object Simulation {
-        |  val a = new SomeCalc()
-        |  val b = Calc.a
+        |/$prefix/E/Usage.scala
+        |package A.B.C
+        |package E
+        |import <<A.B.C.D._>>
+        |object Usage {
+        |  val a = new Sun()
+        |  val b = Moon.a
         |}
         |""".stripMargin,
     fileRenames = Map(
-      s"$prefix/calcs/SomeCalc.scala" -> s"$prefix/calcs/test/SomeCalc.scala"
+      s"$prefix/D/Sun.scala" -> s"$prefix/D/F/Sun.scala"
     ),
     expectedRenames = Map(
-      "calcs" -> "calcs.test",
-      "research.gadgets.examples.calcs._" -> "research.gadgets.examples.calcs.test._",
-      "//" -> "import research.gadgets.examples.calcs.test.{Calc, SomeCalc}\n//",
+      "D" -> "D.F",
+      "A.B.C.D._" -> "A.B.C.D.F._",
+      "//" -> "import A.B.C.D.F.{Moon, Sun}\n//",
     ),
     sourcesAreCompiled = true,
   )
