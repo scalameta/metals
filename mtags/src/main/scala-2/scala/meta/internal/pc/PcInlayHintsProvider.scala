@@ -70,10 +70,10 @@ final class PcInlayHintsProvider(
       TypeParameters,
       InferredType,
       ClosingLabel
-    ).flatMap(
-      _.getInlayHints(tree)
-    ).foldLeft(firstPassHints) { case (acc, next) =>
-      acc.add(next)
+    ).flatMap { provider =>
+      provider.getInlayHints(tree).map((_, provider.origin))
+    }.foldLeft(firstPassHints) { case (acc, (hint, origin)) =>
+      acc.add(hint, origin)
     }
   }
 
@@ -134,9 +134,11 @@ final class PcInlayHintsProvider(
 
   trait InlayHintable {
     def getInlayHints(tree: Tree): List[InlayHint]
+    def origin: InlayHintOrigin
   }
 
   object NamedParameters extends InlayHintable {
+    def origin: InlayHintOrigin = InlayHintOrigin.NamedParameters
     def getInlayHints(tree: Tree): List[InlayHint] = {
       if (params.namedParameters()) {
         tree match {
@@ -208,6 +210,7 @@ final class PcInlayHintsProvider(
   }
 
   object ImplicitConversion extends InlayHintable {
+    def origin: InlayHintOrigin = InlayHintOrigin.ImplicitConversion
     def getInlayHints(tree: Tree): List[InlayHint] = {
       if (params.implicitConversions())
         tree match {
@@ -242,6 +245,7 @@ final class PcInlayHintsProvider(
   }
 
   object ImplicitParameters extends InlayHintable {
+    def origin: InlayHintOrigin = InlayHintOrigin.ImplicitParameters
     def getInlayHints(tree: Tree): List[InlayHint] = {
       if (params.implicitParameters())
         tree match {
@@ -398,6 +402,7 @@ final class PcInlayHintsProvider(
   }
 
   object TypeParameters extends InlayHintable {
+    def origin: InlayHintOrigin = InlayHintOrigin.TypeParameters
     def getInlayHints(tree: Tree): List[InlayHint] = {
       if (params.typeParameters())
         tree match {
@@ -448,6 +453,7 @@ final class PcInlayHintsProvider(
   }
 
   object InferredType extends InlayHintable {
+    def origin: InlayHintOrigin = InlayHintOrigin.InferredType
     def getInlayHints(tree: Tree): List[InlayHint] = {
       if (params.inferredTypes())
         tree match {
@@ -531,6 +537,7 @@ final class PcInlayHintsProvider(
   }
 
   object ByNameParameters extends InlayHintable {
+    def origin: InlayHintOrigin = InlayHintOrigin.ByNameParameters
     // Extract the positions at which `=>` hints should be inserted
     def getInlayHints(tree: Tree): List[InlayHint] = {
       if (params.byNameParameters())
@@ -649,6 +656,7 @@ final class PcInlayHintsProvider(
   }
 
   object ClosingLabel extends InlayHintable {
+    def origin: InlayHintOrigin = InlayHintOrigin.ClosingLabel
     // Extract (name and position) defdefs that end with curly braces
     def getInlayHints(tree: Tree): List[InlayHint] = {
       if (params.closingLabels()) {

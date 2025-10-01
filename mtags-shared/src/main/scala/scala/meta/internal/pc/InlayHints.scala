@@ -13,24 +13,44 @@ import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintKind
 import org.eclipse.{lsp4j => l}
 
+sealed trait InlayHintOrigin
+object InlayHintOrigin {
+  case object NamedParameters extends InlayHintOrigin
+  case object ByNameParameters extends InlayHintOrigin
+  case object ImplicitConversion extends InlayHintOrigin
+  case object ImplicitParameters extends InlayHintOrigin
+  case object TypeParameters extends InlayHintOrigin
+  case object InferredType extends InlayHintOrigin
+  case object ClosingLabel extends InlayHintOrigin
+  case object XRayMode extends InlayHintOrigin
+}
+
+case class InlayHintWithOrigin(
+    hint: InlayHint,
+    origin: InlayHintOrigin
+)
+
 case class InlayHints(
     uri: URI,
-    inlayHints: List[InlayHint],
+    inlayHints: List[InlayHintWithOrigin],
     blockInlayHints: Map[Int, InlayHintBlock]
 ) {
 
   def add(
-      inlayHint: InlayHint
-  ): InlayHints = copy(inlayHints = addInlayHint(inlayHint))
+      inlayHint: InlayHint,
+      origin: InlayHintOrigin
+  ): InlayHints = copy(inlayHints = addInlayHint(inlayHint, origin))
 
   def add(
       pos: l.Range,
       labelParts: List[LabelPart],
-      kind: InlayHintKind
+      kind: InlayHintKind,
+      origin: InlayHintOrigin
   ): InlayHints =
     copy(inlayHints =
       addInlayHint(
-        InlayHints.makeInlayHint(pos.getStart(), labelParts, kind, uri)
+        InlayHints.makeInlayHint(pos.getStart(), labelParts, kind, uri),
+        origin
       )
     )
 
@@ -88,12 +108,25 @@ case class InlayHints(
    * InferType can sometimes generate duplicate hints (e.g. for symbols inside of `for`-comprehensons)
    * That is why we have to deduplicate them when adding new inlay hints
    */
-  private def addInlayHint(inlayHint: InlayHint): List[InlayHint] =
-    if (inlayHints.contains(inlayHint)) inlayHints
-    else inlayHints :+ inlayHint
+  private def addInlayHint(
+      inlayHint: InlayHint,
+      origin: InlayHintOrigin
+  ): List[InlayHintWithOrigin] = {
+    val wrapped = InlayHintWithOrigin(inlayHint, origin)
+    // Only filter duplicates for InferredType hints
+    if (
+      origin == InlayHintOrigin.InferredType && inlayHints.exists(
+        _.hint == inlayHint
+      )
+    ) {
+      inlayHints
+    } else {
+      inlayHints :+ wrapped
+    }
+  }
 
   def result(): List[InlayHint] =
-    inlayHints.reverse ++ blockInlayHints.values.toList
+    inlayHints.reverse.map(_.hint) ++ blockInlayHints.values.toList
       .flatMap(_.build)
       .map(makeInlayHint)
 
