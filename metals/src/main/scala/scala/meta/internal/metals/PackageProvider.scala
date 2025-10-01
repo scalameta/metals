@@ -406,7 +406,7 @@ class PackageProvider(
         ref: Reference,
         parts: List[String],
     ): Option[String] = {
-      val result = pkgRenames.collectFirst {
+      pkgRenames.collectFirst {
         case PackagePartsRenamer(oldPackageParts, newPackageParts)
             // Exclude PackagePartsRenamer with empty oldPackageParts from fully qualified renaming.
             // When oldPackageParts is empty, simple references like "Calc.a" should get an import added
@@ -416,7 +416,6 @@ class PackageProvider(
             ) && oldPackageParts.nonEmpty =>
           (newPackageParts ++ parts.drop(oldPackageParts.length)).mkString(".")
       }
-      result
     }
 
     def existsPackagePart(ref: Reference, parts: List[String]): Boolean =
