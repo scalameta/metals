@@ -260,7 +260,23 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
   )
 
   renamed(
-    "references-wildcard-imports",
+    "references-wildcard-imports-preserve-explicit-2",
+    s"""|/$prefix/A/B/Sun.scala
+        |package <<A>>.B
+        |object Sun
+        |/$prefix/B/Moon.scala
+        |package B
+        |<<import A.B.{Sun, _}>>
+        |object Moon
+        |""".stripMargin,
+    fileRenames = Map(s"$prefix/A/B" -> s"$prefix/C/B"),
+    expectedRenames =
+      Map("A" -> "C", "import A.B.{Sun, _}" -> "import C.B.{Sun, _}"),
+    sourcesAreCompiled = true,
+  )
+
+  renamed(
+    "references-wildcard-imports-preserve-explicit-and-dont-merge",
     s"""|/$prefix/A/B/Sun.scala
         |package <<A>>.B
         |object Sun
@@ -272,7 +288,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |""".stripMargin,
     fileRenames = Map(s"$prefix/A/B" -> s"$prefix/C/B"),
     expectedRenames =
-      Map("A" -> "C", "import A.B._\nimport A.B.{Sun, _}" -> "import C.B.{Sun, _}"),
+      Map("A" -> "C", "import A.B._\nimport A.B.{Sun, _}" -> "import C.B._\nimport C.B.{Sun, _}"),
     sourcesAreCompiled = true,
   )
 

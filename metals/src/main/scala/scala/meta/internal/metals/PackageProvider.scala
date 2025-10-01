@@ -660,12 +660,17 @@ class PackageProvider(
             } && wildcardImportsOnlyFromMovedFiles
 
             if (hasWildcardToUpdate && newPackageName.nonEmpty) {
-              // Check if there are unimports that need to be preserved alongside wildcard
+              // Check if there are unimports and explicit imports that need to be preserved alongside wildcard
               val unimports = refsImportees.collect {
                 case Importee.Unimport(name) => s"${name.value} => _"
               }
-              if (unimports.nonEmpty) {
-                s"${newPackageName.mkString(".")}.{${unimports.mkString(", ")}, _}"
+              val explicitImports = refsImportees.collect {
+                case Importee.Name(name) => name.value
+                case Importee.Rename(from, to) => s"${from.value} => ${to.value}"
+              }
+              val allImportees = (unimports ++ explicitImports).distinct
+              if (allImportees.nonEmpty) {
+                s"${newPackageName.mkString(".")}.{${allImportees.mkString(", ")}, _}"
               } else {
                 s"${newPackageName.mkString(".")}._"
               }
