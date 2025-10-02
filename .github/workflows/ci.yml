@@ -33,7 +33,7 @@ jobs:
             java: "24"
             shard: 2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: coursier/setup-action@v1
       - uses: actions/setup-java@v5
         with:
@@ -163,7 +163,7 @@ jobs:
             os: ubuntu-latest
             java: "21"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
