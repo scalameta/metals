@@ -4,7 +4,7 @@ object V {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
   val scala212 = "2.12.20"
-  val scala213 = "2.13.16"
+  val scala213 = "2.13.17"
   val scala3 = "3.3.6"
   val scala3ForSBT2 = "3.7.2"
   val latestScala3Next = "3.7.3"
@@ -143,9 +143,9 @@ object V {
     "2.12.19",
     "2.12.18",
     "2.12.17",
-    "2.13.13",
     "2.13.14",
     "2.13.15",
+    "2.13.16",
   )
 
   def minimumSupportedSbtVersion = {
