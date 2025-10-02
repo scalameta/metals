@@ -766,7 +766,7 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
     fileRenames = Map(s"$prefix/A/B/Sun.scala" -> s"$prefix/C/D/Sun.scala"),
     expectedRenames = Map(
       "A.B" -> "C.D",
-      "A.B.*\nimport A.B.given" -> "C.D.given\nimport C.D.*",
+      "A.B.*\nimport A.B.given" -> "C.D.*\nimport C.D.given",
     ),
     sourcesAreCompiled = true,
     scalaVersion = Some(V.scala3),
