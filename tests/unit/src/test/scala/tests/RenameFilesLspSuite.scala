@@ -831,7 +831,8 @@ class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
         |""".stripMargin,
     fileRenames =
       Map(s"$prefix/A/B/Solaris.scala" -> s"$prefix/A/D/Solaris.scala"),
-    expectedRenames = Map("B" -> "D", "//" -> "import D.{Solaris, given}\n//"),
+    expectedRenames =
+      Map("B" -> "D", "//" -> "import A.D.{Solaris, given}\n//"),
     sourcesAreCompiled = true,
     scalaVersion = Some(V.scala3),
   )
