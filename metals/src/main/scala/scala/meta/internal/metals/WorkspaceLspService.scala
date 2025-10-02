@@ -1479,7 +1479,26 @@ class WorkspaceLspService(
   private def maybeResetWorkspace(force: Boolean): Future[Unit] = {
     def reset(): Future[Unit] =
       Future
-        .sequence(folderServices.map(_.resetWorkspace()))
+        .sequence(
+          folderServices.map(folder => folder.resetWorkspace().map((folder, _)))
+        )
+        .flatMap { states =>
+          val restartBloop = states
+            .find { case (_, state) =>
+              state.didResetBloop
+            }
+            .collect { case (folder, _) =>
+              folder.connect(CreateSession(shutdownBuildServer = true))
+            }
+          val restartBspServers = states
+            .filter { case (_, state) =>
+              !state.didResetBloop
+            }
+            .collect { case (folder, _) =>
+              folder.connect(CreateSession(shutdownBuildServer = true))
+            }
+          Future.sequence(restartBloop ++ restartBspServers)
+        }
         .ignoreValue
     if (force) {
       reset()

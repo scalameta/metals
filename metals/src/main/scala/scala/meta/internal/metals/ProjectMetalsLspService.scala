@@ -21,6 +21,7 @@ import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
+import scala.meta.internal.metals.data.ResetWorkspaceState
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
 import scala.meta.internal.metals.mcp.McpQueryEngine
@@ -605,24 +606,28 @@ class ProjectMetalsLspService(
           .BuildTool("scala-cli", buildTargetsData, lastImportedBuild)
     }
 
-  def resetWorkspace(): Future[Unit] =
+  def resetWorkspace(): Future[ResetWorkspaceState] =
     for {
       _ <- connect(Disconnect(true))
-      _ = optProjectRoot match {
+      wasBloop = optProjectRoot match {
         case Some(path) if buildTools.isBloop(path) =>
           clearBloopDir(path)
+          true
         case Some(path) if buildTools.isBazelBsp =>
           clearFolders(
             path.resolve(Directories.bazelBsp),
             path.resolve(Directories.bsp),
           )
+          false
         case Some(path) if buildTools.isBsp =>
           clearFolders(path.resolve(Directories.bsp))
+          false
         case _ =>
+          false
       }
       _ = tables.cleanAll()
       _ <- connectionProvider.fullConnect()
-    } yield ()
+    } yield ResetWorkspaceState(wasBloop)
 
   val treeView =
     new FolderTreeViewProvider(
