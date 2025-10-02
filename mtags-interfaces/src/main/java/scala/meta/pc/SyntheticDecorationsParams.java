@@ -28,5 +28,7 @@ public interface SyntheticDecorationsParams extends VirtualFileParams {
   /**
    * Response should contain decorations for closing labels.
    */
-  boolean closingLabels();
+  default boolean closingLabels() {
+    return false;
+  };
 }

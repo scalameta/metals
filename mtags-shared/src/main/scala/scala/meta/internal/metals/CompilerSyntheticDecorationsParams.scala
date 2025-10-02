@@ -14,7 +14,7 @@ case class CompilerSyntheticDecorationsParams(
     hintsXRayMode: Boolean,
     byNameParameters: Boolean,
     implicitConversions: Boolean,
-    closingLabels: Boolean
+    override val closingLabels: Boolean
 ) extends SyntheticDecorationsParams {
   override def uri(): URI = virtualFileParams.uri
   override def text(): String = virtualFileParams.text
