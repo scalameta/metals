@@ -679,13 +679,16 @@ class ProjectMetalsLspService(
         newConfig.startMcpServer && newConfig.startMcpServer != old.startMcpServer
       ) startMcpServer()
       else Future.unit
-
+    val projectRootChanged =
+      userConfig.customProjectRoot != old.customProjectRoot
     val slowConnect =
       if (
-        userConfig.customProjectRoot != old.customProjectRoot || userConfig.enableBestEffort != old.enableBestEffort
+        projectRootChanged || userConfig.enableBestEffort != old.enableBestEffort
       ) {
+        if (projectRootChanged) {
+          tables.buildServers.reset()
+        }
         tables.buildTool.reset()
-        tables.buildServers.reset()
         connectionProvider.fullConnect()
       } else Future.successful(())
 
