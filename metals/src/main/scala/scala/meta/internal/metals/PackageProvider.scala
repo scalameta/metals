@@ -517,6 +517,7 @@ class PackageProvider(
       directlyImportedSymbols: () => Set[String],
       importerRenamer: ImporterRenamer,
   ): ImportEdits[TopLevelDeclaration] = {
+    val wildcardSyntax = getWildcardSyntax(source)
     importerRenamer
       .renameFor(importParts)
       .map { case (newPackageName, referencesNames) =>
@@ -575,7 +576,7 @@ class PackageProvider(
             case Importee.Name(name) => Some(name.value)
             case Importee.Rename(from, to) =>
               Some(s"${from.value} => ${to.value}")
-            case Importee.Unimport(name) => Some(s"{${name.value} => _}")
+            case Importee.Unimport(name) => Some(s"{${name.value} => $wildcardSyntax}")
             case Importee.GivenAll() => Some("given")
             case _ => None
           }
@@ -589,7 +590,7 @@ class PackageProvider(
               // When updating wildcard imports, preserve any existing unimports and explicit imports
               // by combining them with the wildcard in a single import statement
               val unimports = refsImportees.collect {
-                case Importee.Unimport(name) => s"${name.value} => _"
+                case Importee.Unimport(name) => s"${name.value} => $wildcardSyntax"
               }
               val explicitImports = refsImportees.collect {
                 case Importee.Name(name) => name.value
@@ -598,9 +599,9 @@ class PackageProvider(
               }
               val allImportees = (unimports ++ explicitImports).distinct
               if (allImportees.nonEmpty) {
-                s"${newPackageName.mkString(".")}.{${allImportees.mkString(", ")}, _}"
+                s"${newPackageName.mkString(".")}.{${allImportees.mkString(", ")}, $wildcardSyntax}"
               } else {
-                s"${newPackageName.mkString(".")}._"
+                s"${newPackageName.mkString(".")}.$wildcardSyntax"
               }
             } else {
               def bracedImporteeStr = refsImportees.filter {
@@ -851,6 +852,16 @@ class PackageProvider(
   }
 
   private def wrap(str: String): String = Identifier.backtickWrap(str)
+
+  private def getWildcardSyntax(path: AbsolutePath): String = {
+    val dialect = buildTargets
+      .inverseSources(path)
+      .flatMap(buildTargets.scalaTarget)
+      .map(_.scalaVersion)
+      .getOrElse("2.13") // default to Scala 2.13 if version cannot be determined
+    
+    if (dialect.startsWith("3")) "*" else "_"
+  }
 
   private def workspaceEdit(
       path: AbsolutePath,
