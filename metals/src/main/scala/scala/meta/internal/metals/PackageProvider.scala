@@ -576,7 +576,8 @@ class PackageProvider(
             case Importee.Name(name) => Some(name.value)
             case Importee.Rename(from, to) =>
               Some(s"${from.value} => ${to.value}")
-            case Importee.Unimport(name) => Some(s"{${name.value} => $wildcardSyntax}")
+            case Importee.Unimport(name) =>
+              Some(s"{${name.value} => $wildcardSyntax}")
             case Importee.GivenAll() => Some("given")
             case _ => None
           }
@@ -590,7 +591,8 @@ class PackageProvider(
               // When updating wildcard imports, preserve any existing unimports and explicit imports
               // by combining them with the wildcard in a single import statement
               val unimports = refsImportees.collect {
-                case Importee.Unimport(name) => s"${name.value} => $wildcardSyntax"
+                case Importee.Unimport(name) =>
+                  s"${name.value} => $wildcardSyntax"
               }
               val explicitImports = refsImportees.collect {
                 case Importee.Name(name) => name.value
@@ -858,8 +860,10 @@ class PackageProvider(
       .inverseSources(path)
       .flatMap(buildTargets.scalaTarget)
       .map(_.scalaVersion)
-      .getOrElse("2.13") // default to Scala 2.13 if version cannot be determined
-    
+      .getOrElse(
+        "2.13"
+      ) // default to Scala 2.13 if version cannot be determined
+
     if (dialect.startsWith("3")) "*" else "_"
   }
 
