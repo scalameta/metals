@@ -45,21 +45,23 @@ final class SymbolCache(
       symbol: String,
   ): Future[Option[PcSymbolInformation]] = {
     val requestKey = (path, symbol)
-    pendingCompilerInfoRequests.getOrElseUpdate(requestKey, {
-      val compilerInfoFuture =
-        compilers().info(path, symbol).map { compilerResult =>
-          processCompilerResult(
-            symbol,
-            path,
-            compilerResult,
-          )
+    pendingCompilerInfoRequests.getOrElseUpdate(
+      requestKey, {
+        val compilerInfoFuture =
+          compilers().info(path, symbol).map { compilerResult =>
+            processCompilerResult(
+              symbol,
+              path,
+              compilerResult,
+            )
+          }
+        pendingCompilerInfoRequests.put(requestKey, compilerInfoFuture)
+        compilerInfoFuture.onComplete { _ =>
+          pendingCompilerInfoRequests.remove(requestKey)
         }
-      pendingCompilerInfoRequests.put(requestKey, compilerInfoFuture)
-      compilerInfoFuture.onComplete { _ =>
-        pendingCompilerInfoRequests.remove(requestKey)
-      }
-      compilerInfoFuture
-    })
+        compilerInfoFuture
+      },
+    )
   }
 
   private def processCompilerResult(
