@@ -182,7 +182,7 @@ class MillServerSuite
          |/build.sc
          |import mill._, scalalib._
          |object foo extends ScalaModule {
-         |  def scalaVersion = "2.13.13"
+         |  def scalaVersion = "${V.scala213}"
          |}
          |/foo/src/Main.scala
          |package foo
@@ -227,7 +227,7 @@ class MillServerSuite
   }
 
   checkJavaHomeUpdate(
-    "mill-java-home-update",
+    "mill-java-home-update".flaky,
     fileContent => s"""|/build.sc
                        |import mill._, scalalib._
                        |object a extends ScalaModule {
@@ -252,11 +252,11 @@ class MillServerSuite
          |import mill.api.daemon.internal.bsp.BspModuleApi
          |  
          |object foo extends ScalaModule {
-         |  def scalaVersion = "2.13.13"
+         |  def scalaVersion = "${V.scala213}"
          |}
          |  
          |object bar extends ScalaModule   {
-         |  def scalaVersion = "2.13.13"
+         |  def scalaVersion = "${V.scala213}"
          |
          |   override def bspBuildTarget: BspBuildTarget = super.bspBuildTarget.copy(
          |     tags = super.bspBuildTarget.tags ++ Seq(BspModuleApi.Tag.NoIDE),
