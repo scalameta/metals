@@ -2,52 +2,91 @@ import sbt._
 
 object V {
   val scala210 = "2.10.7"
+  
   val scala211 = "2.11.12"
+  
   val scala212 = "2.12.20"
+  
   val scala213 = "2.13.17"
+  
   val scala3 = "3.3.6"
+  
   val scala3ForSBT2 = "3.7.2"
+  
   val latestScala3Next = "3.7.3"
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
   val sbtScala = "2.12.18"
+  
   val sbtMill = "2.13.15"
+  
   // Rules need to be manually updated to support
   val bazelScalaVersion = "2.13.12"
+  
   val betterMonadicFor = "0.3.1"
-  val bloop = "2.0.15"
+  
+  val bloop = "2.0.16"
+
   val bloopConfig = "2.3.3"
+  
   val bsp = "2.2.0-M2"
+  
   val coursier = "2.1.25-M19"
   // changing coursier interfaces version may be not binary compatible.
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
+  
   val coursierInterfaces = "1.0.29-M2"
+  
   val debugAdapter = "4.2.8"
+  
   val genyVersion = "1.0.0"
+  
   val gitter8Version = "0.18.0"
+  
   val gradleBloop = "1.6.4"
+  
   val java8Compat = "1.0.2"
+  
   val javaSemanticdb = "0.11.1"
+  
   val jsoup = "1.21.2"
+  
   val kindProjector = "0.13.3"
+  
   val lsp4jV = "0.24.0"
+  
   val mavenBloop = "2.0.1"
+  
   val mill = "1.0.6"
+  
   val mdoc = "2.7.2"
+  
   val munit = "1.2.0"
+  
   val pprint = "0.7.3"
+  
   val sbtBloop = bloop
+  
   val sbtJdiTools = "1.2.0"
+  
   val scalaCli = "1.9.1"
+  
   val scalafix = "0.14.3"
+  
   val scalafmt = "3.7.15"
+  
   val scalameta = "4.13.10"
+  
   val scribe = "3.17.0"
+  
   val qdox = "2.2.0"
+  
   val sbt2Version = "2.0.0-RC6"
 
   val guava = "com.google.guava" % "guava" % "33.5.0-jre"
+  
   val lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
+  
   val dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
 
   val eclipseJdt = Seq(
