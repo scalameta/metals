@@ -30,6 +30,10 @@ public interface VirtualFileParams {
         return Optional.empty();
     }
 
+    default boolean shouldReturnDiagnostics(){
+        return false;
+    }
+
     /**
      * This can be used to pass some additional data to the compiler.
      */
