@@ -916,8 +916,8 @@ class WorkspaceLspService(
               .discoverMainClasses(unresolvedParams)
         }
         discovered.liftToLspError.asJavaObject
-      case ServerCommands.ResetWorkspace() =>
-        maybeResetWorkspace().asJavaObject
+      case ServerCommands.ResetWorkspace(force) =>
+        maybeResetWorkspace(force).asJavaObject
       case ServerCommands.RunScalafix(params) =>
         val uri = params.getTextDocument().getUri()
         getServiceFor(uri).runScalafix(uri).asJavaObject
@@ -1476,26 +1476,50 @@ class WorkspaceLspService(
   def workspaceSymbol(query: String): Seq[lsp4j.SymbolInformation] =
     folderServices.flatMap(_.workspaceSymbol(query))
 
-  private def maybeResetWorkspace(): Future[Unit] = {
-    languageClient
-      .showMessageRequest(Messages.ResetWorkspace.params())
-      .asScala
-      .flatMap { response =>
-        if (response != null)
-          response.getTitle match {
-            case Messages.ResetWorkspace.resetWorkspace =>
-              Future
-                .sequence(folderServices.map(_.resetWorkspace()))
-                .ignoreValue
-            case _ => Future.unit
-          }
-        else {
-          Future.unit
+  private def maybeResetWorkspace(force: Boolean): Future[Unit] = {
+    def reset(): Future[Unit] =
+      Future
+        .sequence(
+          folderServices.map(folder => folder.resetWorkspace().map((folder, _)))
+        )
+        .flatMap { states =>
+          val restartBloop = states
+            .find { case (_, state) =>
+              state.didResetBloop
+            }
+            .collect { case (folder, _) =>
+              folder.connect(CreateSession(shutdownBuildServer = true))
+            }
+          val restartBspServers = states
+            .filter { case (_, state) =>
+              !state.didResetBloop
+            }
+            .collect { case (folder, _) =>
+              folder.connect(CreateSession(shutdownBuildServer = true))
+            }
+          Future.sequence(restartBloop ++ restartBspServers)
         }
-      }
-      .recover { e =>
-        scribe.warn("Error requesting workspace reset", e)
-      }
+        .ignoreValue
+    if (force) {
+      reset()
+    } else {
+      languageClient
+        .showMessageRequest(Messages.ResetWorkspace.params())
+        .asScala
+        .flatMap { response =>
+          if (response != null)
+            response.getTitle match {
+              case Messages.ResetWorkspace.resetWorkspace => reset()
+              case _ => Future.unit
+            }
+          else {
+            Future.unit
+          }
+        }
+        .recover { e =>
+          scribe.warn("Error requesting workspace reset", e)
+        }
+    }
   }
 
 }
