@@ -16,7 +16,7 @@ object V {
   val bazelScalaVersion = "2.13.12"
   val betterMonadicFor = "0.3.1"
   val bloop = "2.0.14"
-  val bloopConfig = "2.3.2"
+  val bloopConfig = "2.3.3"
   val bsp = "2.2.0-M2"
   val coursier = "2.1.25-M18"
   // changing coursier interfaces version may be not binary compatible.
