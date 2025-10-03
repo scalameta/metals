@@ -517,7 +517,8 @@ class PackageProvider(
       directlyImportedSymbols: () => Set[String],
       importerRenamer: ImporterRenamer,
   ): ImportEdits[TopLevelDeclaration] = {
-    val wildcardSyntax = getWildcardSyntax(source)
+    val dialect = importer.origin.dialectOpt.getOrElse(dialects.Scala213)
+    val wildcardSyntax = if (dialect.allowStarWildcardImport) "*" else "_"
     importerRenamer
       .renameFor(importParts)
       .map { case (newPackageName, referencesNames) =>
@@ -854,18 +855,6 @@ class PackageProvider(
   }
 
   private def wrap(str: String): String = Identifier.backtickWrap(str)
-
-  private def getWildcardSyntax(path: AbsolutePath): String = {
-    val dialect = buildTargets
-      .inverseSources(path)
-      .flatMap(buildTargets.scalaTarget)
-      .map(_.scalaVersion)
-      .getOrElse(
-        "2.13"
-      ) // default to Scala 2.13 if version cannot be determined
-
-    if (dialect.startsWith("3")) "*" else "_"
-  }
 
   private def workspaceEdit(
       path: AbsolutePath,
