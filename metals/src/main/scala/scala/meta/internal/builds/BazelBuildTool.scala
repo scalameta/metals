@@ -86,7 +86,7 @@ object BazelBuildTool {
 
   def getScalaRulesName(projectRoot: AbsolutePath): String = {
     val version = resolveBazelVersion(projectRoot)
-    if (SemVer.isLaterVersion("8.0.0", version)) "scala_rules"
+    if (SemVer.isLaterVersion("8.0.0", version)) "rules_scala"
     else "io_bazel_rules_scala"
   }
 

@@ -99,3 +99,11 @@ class ZioTestFinder(
     }
   }
 }
+
+object ZioTestFinder {
+  val baseParentClasses: Set[String] = Set(
+    "zio/test/DefaultRunnableSpec#",
+    "zio/test/RunnableSpec#",
+    "zio/test/ZIOSpecDefault#",
+  )
+}
