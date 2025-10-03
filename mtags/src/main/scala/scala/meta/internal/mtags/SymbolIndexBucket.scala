@@ -70,9 +70,9 @@ class SymbolIndexBucket(
         try {
           root.listRecursive.toList.flatMap {
             case source if source.isScala =>
-              addSourceFile(source, None, isJava = false)
+              addSourceFile(source, None, isJava = false, isDependency = true)
             case source if source.isJava =>
-              addSourceFile(source, None, isJava = true)
+              addSourceFile(source, None, isJava = true, isDependency = true)
             case _ =>
               None
           }
@@ -103,10 +103,11 @@ class SymbolIndexBucket(
   def addSourceFile(
       source: AbsolutePath,
       sourceDirectory: Option[AbsolutePath],
-      isJava: Boolean
+      isJava: Boolean,
+      isDependency: Boolean = false
   ): Option[IndexingResult] = try {
     val IndexingResult(path, topLevels, overrides, toplevelMembers) =
-      indexSource(source, dialect, sourceDirectory, isJava)
+      indexSource(source, dialect, sourceDirectory, isJava, isDependency)
     topLevels.foreach { symbol =>
       toplevels.updateWith(symbol) {
         case Some(acc) => Some(acc + source)
@@ -124,11 +125,16 @@ class SymbolIndexBucket(
       source: AbsolutePath,
       dialect: Dialect,
       sourceDirectory: Option[AbsolutePath],
-      isJava: Boolean
+      isJava: Boolean,
+      isDependency: Boolean
   ): IndexingResult = {
     val uri = source.toIdeallyRelativeURI(sourceDirectory)
     val (doc, overrides, toplevelMembers) =
-      mtags.extendedIndexing(source, dialect)
+      mtags.extendedIndexing(
+        path = source,
+        dialect = dialect,
+        isDependency = isDependency
+      )
     val sourceTopLevels =
       doc.occurrences.iterator
         .filterNot(_.symbol.isPackage)
