@@ -15,7 +15,7 @@ object V {
   // Rules need to be manually updated to support
   val bazelScalaVersion = "2.13.12"
   val betterMonadicFor = "0.3.1"
-  val bloop = "2.0.15"
+  val bloop = "2.0.16"
   val bloopConfig = "2.3.3"
   val bsp = "2.2.0-M2"
   val coursier = "2.1.25-M19"
