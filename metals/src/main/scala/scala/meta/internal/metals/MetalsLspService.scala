@@ -1550,8 +1550,25 @@ abstract class MetalsLspService(
 
   def discoverMainClasses(
       unresolvedParams: DebugDiscoveryParams
-  ): Future[b.DebugSessionParams] =
-    debugDiscovery.runCommandDiscovery(unresolvedParams)
+  ): Future[b.DebugSessionParams] = {
+    val path = Option(unresolvedParams.path).map(_.toAbsolutePath)
+    val buildTarget = path
+      .flatMap(buildTargets.inverseSources(_))
+      .orElse {
+        Option(unresolvedParams.buildTarget)
+          .flatMap(buildTargets.findByDisplayName)
+          .map(_.getId())
+      }
+
+    buildTarget match {
+      case Some(target) =>
+        compilations
+          .compilationFinished(Seq(target), compileInverseDependencies = false)
+          .flatMap(_ => debugDiscovery.runCommandDiscovery(unresolvedParams))
+      case None =>
+        debugDiscovery.runCommandDiscovery(unresolvedParams)
+    }
+  }
 
   def supportsBuildTarget(
       target: b.BuildTargetIdentifier
