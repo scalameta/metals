@@ -1571,7 +1571,9 @@ abstract class MetalsLspService(
   def discoverMainClasses(
       unresolvedParams: DebugDiscoveryParams
   ): Future[b.DebugSessionParams] =
-    afterCompilationFinished(unresolvedParams)(debugDiscovery.runCommandDiscovery)
+    afterCompilationFinished(unresolvedParams)(
+      debugDiscovery.runCommandDiscovery
+    )
 
   def supportsBuildTarget(
       target: b.BuildTargetIdentifier
