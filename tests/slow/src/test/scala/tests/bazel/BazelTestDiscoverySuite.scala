@@ -162,6 +162,67 @@ class BazelTestDiscoverySuite
     }
   }
 
+  test("junit-test-discovery") {
+    cleanWorkspace()
+    val testLayout =
+      s"""|${buildFileWithToolchain()}
+          |scala_junit_test(
+          |    name = "junit_test",
+          |    srcs = ["JUnitTest.scala"],
+          |    suffixes = ["Test"],
+          |    deps = ["@maven//:junit_junit"],
+          |)
+          |/JUnitTest.scala
+          |import org.junit.Test
+          |import org.junit.Assert._
+          |
+          |class JUnitTest {
+          |
+          |  @Test
+          |  def testSimpleAssertion(): Unit = {
+          |    assertEquals(2, 1 + 1 + 3)
+          |  }
+          |
+          |  @Test
+          |  def testAnotherAssertion(): Unit = {
+          |    assertTrue("This should be true", true)
+          |  }
+          |}
+          |""".stripMargin
+
+    for {
+      _ <- initialize(
+        BazelModuleLayout(
+          testLayout,
+          V.scala3,
+          bazelVersion,
+          enableToolChainRegistration = true,
+        )
+      )
+      _ <- server.didOpen("JUnitTest.scala")
+      _ <- server.didSave("JUnitTest.scala")
+
+      _ <- server.waitFor(java.util.concurrent.TimeUnit.SECONDS.toMillis(15))
+
+      testSuites <- server.discoverTestSuites(List("JUnitTest.scala"))
+
+    } yield {
+      val testEvents = testSuites.flatMap(_.events.asScala.toList)
+      assert(
+        testEvents.nonEmpty,
+        s"Expected to find test events, but got empty list. TestSuites: $testSuites",
+      )
+
+      val testClasses = testEvents.collect {
+        case event if event.toString.contains("JUnitTest") => "JUnitTest"
+      }
+      assert(
+        testClasses.nonEmpty,
+        s"Expected to find 'JUnitTest' in discovered classes: ${testEvents.mkString(", ")}",
+      )
+    }
+  }
+
   test("scalatest-debug-mode") {
     cleanWorkspace()
     val testLayout =
