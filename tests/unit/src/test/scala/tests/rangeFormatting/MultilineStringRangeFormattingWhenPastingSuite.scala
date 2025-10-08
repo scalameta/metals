@@ -343,4 +343,36 @@ class MultilineStringRangeFormattingWhenPastingSuite
         |}""".stripMargin,
   )
 
+  check(
+    "paste-after-pipe",
+    s"""|object Main {
+        |  val x = '''|@@'''.stripMargin
+        |}""".stripMargin,
+    s"""|Some
+        |multiline
+        |text""".stripMargin,
+    s"""|object Main {
+        |  val x = '''|Some
+        |             |multiline
+        |             |text'''.stripMargin
+        |}""".stripMargin,
+  )
+
+  check(
+    "paste-after-pipe2",
+    s"""|object Main {
+        |  val x = '''|@@'''
+        |  .stripMargin
+        |}""".stripMargin,
+    s"""|Some
+        |multiline
+        |text""".stripMargin,
+    s"""|object Main {
+        |  val x = '''|Some
+        |             |multiline
+        |             |text'''
+        |  .stripMargin
+        |}""".stripMargin,
+  )
+
 }

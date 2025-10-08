@@ -290,8 +290,18 @@ case class MultilineString(userConfig: () => UserConfiguration)
             Some(textEdit)
         }
       case _ =>
-        val isFirstLineOfMultiLine = lineText.trim.contains("\"\"\"")
-        if (isFirstLineOfMultiLine) {
+        val isBeforeOpeningQuotes = lineText.indexOf("\"\"\"") match {
+          case -1 => false
+          case idx =>
+            val lastQuote = idx + 3
+            lineText.indexOf("stripMargin", lastQuote) match {
+              case -1 =>
+                !lines.lift(line + 1).exists(_.trim.startsWith(".stripMargin"))
+              case _ => false
+            }
+        }
+
+        if (isBeforeOpeningQuotes) {
           None
         } else {
           val newText = defaultIndent + "|"
