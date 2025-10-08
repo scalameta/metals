@@ -1,9 +1,13 @@
 package tests.bazel
 
+import java.util.concurrent.TimeUnit
+
 import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BazelDigest
+import scala.meta.internal.metals.DebugDiscoveryParams
+import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
@@ -92,6 +96,68 @@ class BazelTestDiscoverySuite
       assert(
         testClasses.nonEmpty,
         s"Expected to find 'SimpleTest' in discovered classes: ${testEvents.mkString(", ")}",
+      )
+    }
+  }
+
+  test("scalatest-with-multiple-tests") {
+    cleanWorkspace()
+    val testLayout =
+      s"""|${buildFileWithToolchain()}
+          |scala_test(
+          |    name = "multi_test",
+          |    srcs = ["MultiTest.scala"],
+          |)
+          |
+          |/MultiTest.scala
+          |import org.scalatest.funsuite.AnyFunSuite
+          |
+          |class MultiTest extends AnyFunSuite {
+          |  test("first test") {
+          |    assert(1 + 1 == 2)
+          |  }
+          |
+          |  test("second test") {
+          |    assert(2 * 2 == 4)
+          |  }
+          |
+          |  test("third test") {
+          |    assert(3 * 3 == 9)
+          |  }
+          |}
+          |
+          |""".stripMargin
+
+    for {
+      _ <- initialize(
+        BazelModuleLayout(
+          testLayout,
+          V.scala3,
+          bazelVersion,
+          enableToolChainRegistration = true,
+        )
+      )
+
+      _ <- server.didOpen("MultiTest.scala")
+      _ <- server.didSave("MultiTest.scala")
+
+      _ <- server.waitFor(java.util.concurrent.TimeUnit.SECONDS.toMillis(10))
+
+      testSuites <- server.discoverTestSuites(List("MultiTest.scala"))
+
+    } yield {
+      val testEvents = testSuites.flatMap(_.events.asScala.toList)
+      assert(
+        testEvents.nonEmpty,
+        s"Expected to find test events, but got empty list",
+      )
+
+      val testClasses = testEvents.collect {
+        case event if event.toString.contains("MultiTest") => "MultiTest"
+      }
+      assert(
+        testClasses.nonEmpty,
+        s"Expected to find 'MultiTest' in discovered classes: ${testEvents.mkString(", ")}",
       )
     }
   }
