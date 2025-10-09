@@ -939,10 +939,6 @@ class MetalsMcpServer(
       """{
         |  "type": "object",
         |  "properties": {
-        |    "ruleName": {
-        |      "type": "string",
-        |      "description": "The name of the scalafix rule to run, should be a valid scalafix rule name and not include any special characters or whitespaces"
-        |    },
         |    "ruleImplementation": {
         |      "type": "string",
         |      "description": "The implementation of the scalafix rule to run, this should contain the actual scalafix rule implementation."
@@ -964,7 +960,7 @@ class MetalsMcpServer(
         |      "description": "File to run it all, if empty will run on all files in given targets"
         |    }
         |  },
-        |  "required": ["ruleName", "ruleImplementation"]
+        |  "required": ["description", "ruleImplementation"]
         |} 
         |""".stripMargin
     new AsyncToolSpecification(
@@ -982,10 +978,8 @@ class MetalsMcpServer(
       ),
       withErrorHandling { (_, arguments) =>
         import scala.meta._
-        val ruleName = arguments.getAs[String]("ruleName")
         val ruleImplementation = arguments.getAs[String]("ruleImplementation")
-        val description =
-          arguments.getOptAs[String]("description").getOrElse(ruleName)
+        val description = arguments.getAs[String]("description")
         val sampleCode = arguments.getOptAs[String]("sampleCode")
         def helper = {
           sampleCode match {
@@ -1021,17 +1015,16 @@ class MetalsMcpServer(
           }
         val resultingFuture =
           scalafixLlmRuleProvider.runOnAllTargets(
-            ruleName,
             ruleImplementation,
             description,
             modules,
             runOn.toList,
           )
         resultingFuture.map {
-          case Right(_) =>
+          case Right(res) =>
             new CallToolResult(
               createContent(
-                s"Created and ran Scalafix rule $ruleName successfully"
+                s"Created and ran Scalafix rule ${res.ruleName} successfully"
               ),
               false,
             )

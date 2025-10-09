@@ -5,6 +5,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
+import scala.meta._
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Directories
@@ -14,6 +15,7 @@ import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.ScalafixProvider
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.mcp.ScalafixLlmRuleProvider.RunResult
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.io.AbsolutePath
 
@@ -30,8 +32,8 @@ class ScalafixLlmRuleProvider(
     scalaVersionSelector: ScalaVersionSelector,
 )(implicit ec: ExecutionContext) {
   private val rulesDirectory = workspace.resolve(Directories.rules)
-
-  private def layout(
+  private case class ScalafixRule(name: String, dep: Dependency)
+  private def ruleLayout(
       ruleName: String,
       scalaVersion: String,
       ruleImplementation: String,
@@ -52,35 +54,85 @@ class ScalafixLlmRuleProvider(
         |
         |""".stripMargin
   }
+
+  private def ruleNameFromSource(
+      parsed: Source,
+      ruleImplementation: String,
+  ): Either[String, String] =
+    parsed
+      .collect {
+        case Init.After_4_6_0(
+              Type.Name("SemanticRule"),
+              _,
+              List(
+                Term.ArgClause(
+                  List(
+                    Lit.String(name)
+                  ),
+                  _,
+                )
+              ),
+            ) =>
+          name
+      }
+      .headOption
+      .toRight(s"Could not detect rule name in:\n $ruleImplementation")
+
+  private def classNameFromSource(
+      ruleImplementation: String,
+      parsed: Source,
+  ): Either[String, String] = {
+
+    val stats = parsed match {
+      case Source(List(Pkg(_, stats))) => stats
+      case Source(stats) => stats
+    }
+    stats.collectFirst { case cls: Defn.Class =>
+      cls.name.syntax
+    } match {
+      case Some(clsName) =>
+        Right(clsName)
+      case None =>
+        Left(s"Could not detect class name in:\n $ruleImplementation")
+    }
+  }
+
+  private def packageNameFromSource(parsed: Source): String =
+    parsed match {
+      case Source(List(Pkg(name, _))) =>
+        name.syntax
+      case _ =>
+        ""
+    }
+
   private def publishRule(
-      ruleName: String,
       scalaVersion: String,
       ruleImplementation: String,
       description: String,
-  ): Either[String, Dependency] = {
-    val ruleContents = layout(ruleName, scalaVersion, ruleImplementation)
-    import scala.meta._
-    val checkPackage = ruleContents.parse[Source] match {
+  ): Either[String, ScalafixRule] = {
+
+    val parsedImplementation = ruleImplementation.parse[Source] match {
       case Parsed.Success(source) => Right(source)
       case Parsed.Error(pos, message, details) =>
         Left(s"Error parsing rule: $message")
     }
+
     val result = for {
-      packageName <- checkPackage
+      parsed <- parsedImplementation
+      packageName = packageNameFromSource(parsed)
+      className <- classNameFromSource(ruleImplementation, parsed)
+      ruleName <- ruleNameFromSource(parsed, ruleImplementation)
     } yield {
+      val ruleContents = ruleLayout(ruleName, scalaVersion, ruleImplementation)
       val ruleDir = rulesDirectory.resolve(ruleName)
-      val rulesFile = ruleDir.resolve(s"$ruleName.scala")
+      val rulesFile = ruleDir.resolve(s"$className.scala")
       rulesFile.writeText(ruleContents)
+
       scribe.debug(s"Wrote the rule to $rulesFile")
 
-      val ruleNameToUse = packageName match {
-        case Source(List(Pkg(name, _))) => name.syntax + "." + ruleName
-        case _ =>
-          ruleName
-      }
       val metadataFile =
         ruleDir.resolve(s"resources/META-INF/services/scalafix.v1.Rule")
-      metadataFile.writeText(s"${ruleNameToUse}")
+      metadataFile.writeText(s"$packageName.$className")
       scribe.debug(s"Wrote the rule definition to $metadataFile")
 
       val readmeFile = ruleDir.resolve("README.md")
@@ -112,7 +164,12 @@ class ScalafixLlmRuleProvider(
       result match {
         case Some(_) =>
           readmeFile.writeText(description)
-          Right(createDependency(ruleName, binaryVersion))
+          Right(
+            ScalafixRule(
+              ruleName,
+              createDependency(ruleName, binaryVersion),
+            )
+          )
         case None =>
           readmeFile.deleteIfExists()
           Left(s"Error publishing rule: ${errorReporting.toString()}")
@@ -123,12 +180,11 @@ class ScalafixLlmRuleProvider(
   }
 
   def runOnAllTargets(
-      ruleName: String,
       ruleImplementation: String,
       description: String,
       targets: List[String],
       files: List[AbsolutePath],
-  ): Future[Either[String, Boolean]] = {
+  ): Future[Either[String, RunResult]] = {
     val publishedBuffer = TrieMap.empty[String, Dependency]
     val allTargets = targets.flatMap { targetName =>
       buildTargets
@@ -139,31 +195,33 @@ class ScalafixLlmRuleProvider(
         }
     }
     val allScalaVersions = allTargets.map(_.scalaVersion).toSet
-    def loop(scalaVersions: List[String]): Either[String, Unit] =
+    def loop(
+        scalaVersions: List[String],
+        name: String,
+    ): Either[String, String] =
       scalaVersions match {
         case scalaVersion :: next =>
           publishRule(
-            ruleName,
             scalaVersion,
             ruleImplementation,
             description,
           ) match {
             case Left(value) => Left(value)
             case Right(value) =>
-              publishedBuffer.put(scalaVersion, value)
-              loop(next)
+              publishedBuffer.put(scalaVersion, value.dep)
+              loop(next, value.name)
           }
-        case Nil => Right(())
+        case Nil => Right(name)
       }
-    loop(allScalaVersions.toList) match {
+    loop(allScalaVersions.toList, "") match {
       case Left(error) => Future.successful(Left(error))
-      case Right(_) =>
-        runScalafixRuleForAllTargets(ruleName, files)
+      case Right(publishedRuleName) =>
+        runScalafixRuleForAllTargets(publishedRuleName, files)
           .map { changeWasApplied =>
             if (changeWasApplied) {
-              Right(true)
+              Right(RunResult(publishedRuleName, changeWasApplied))
             } else {
-              Left("No changes were made for rule " + ruleName)
+              Left("No changes were made for rule " + publishedRuleName)
             }
           }
           .recover { case error =>
@@ -295,6 +353,7 @@ class ScalafixLlmRuleProvider(
 }
 
 object ScalafixLlmRuleProvider {
+  case class RunResult(ruleName: String, changeWasApplied: Boolean)
   // Curated list of rules that LLMs can use
   def curatedRules: Map[String, String] = {
     Map(
