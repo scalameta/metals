@@ -1536,7 +1536,7 @@ abstract class MetalsLspService(
     buildTarget match {
       case Some(target) =>
         compilations
-          .compilationFinished(Seq(target), compileInverseDependencies = false)
+          .compileTarget(target)
           .flatMap(_ => action(params))
       case None =>
         action(params)
