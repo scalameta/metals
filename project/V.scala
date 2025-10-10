@@ -71,7 +71,7 @@ object V {
 
   val scalaCli = "1.9.1"
 
-  val scalafix = "0.14.3"
+  val scalafix = "0.14.4"
 
   val scalafmt = "3.7.15"
 
