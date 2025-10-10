@@ -7,7 +7,7 @@ import scala.meta.internal.metals.codeactions.RemoveInfixRefactor
 
 class RemoveInfixLspSuite
     extends BaseCodeActionLspSuite(
-      "convertPatternMatch"
+      "removeInfixApply"
     ) {
 
   val filterAction: CodeAction => Boolean = { (act: CodeAction) =>

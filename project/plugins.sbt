@@ -1,5 +1,5 @@
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.4.8")
-addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.14.3")
+addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.14.4")
 addSbtPlugin("com.github.sbt" % "sbt-ci-release" % "1.11.2")
 addSbtPlugin("org.scalameta" % "sbt-mdoc" % "2.5.2")
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.13.1")
