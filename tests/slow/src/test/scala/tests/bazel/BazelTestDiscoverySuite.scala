@@ -54,11 +54,11 @@ class BazelTestDiscoverySuite
       ShellRunner.runSync(
         List("bazel", "shutdown"),
         workspace,
-        redirectErrorOutput = false
+        redirectErrorOutput = false,
       ) match {
-        case Some(output) => 
+        case Some(output) =>
           scribe.info(s"Bazel shutdown completed: $output")
-        case None => 
+        case None =>
           scribe.warn("Bazel shutdown command failed or produced no output")
       }
     } catch {
