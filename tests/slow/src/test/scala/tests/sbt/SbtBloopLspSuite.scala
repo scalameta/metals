@@ -277,7 +277,7 @@ class SbtBloopLspSuite
       _ = client.importBuildChanges = ImportBuildChanges.yes
       _ <- server.didChange("build.sbt") { text =>
         s"""$text
-           |libraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.1.4"
+           |libraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.4.4"
            |""".stripMargin
       }
       _ <- server.didSave("build.sbt")
