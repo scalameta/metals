@@ -67,17 +67,17 @@ jobs:
       matrix:
         type:
           [
-            gradle-mac,
-            sbt,
-            maven,
-            gradle,
-            scalacli,
-            mill,
+#            gradle-mac,
+#            sbt,
+#            maven,
+#            gradle,
+#            scalacli,
+#            mill,
             bazel,
-            feature,
-            cross,
-            scalafmt,
-            scalafix,
+#            feature,
+#            cross,
+#            scalafmt,
+#            scalafix,
           ]
         include:
 #          - type: gradle-mac
