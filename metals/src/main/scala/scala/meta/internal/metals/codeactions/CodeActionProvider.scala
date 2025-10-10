@@ -32,6 +32,7 @@ final class CodeActionProvider(
     new CreateNewSymbol(compilers, languageClient),
     new ActionableDiagnostic(),
     new StringActions(trees),
+    new RemoveInfixRefactor(trees),
     extractMemberAction,
     new SourceOrganizeImports(scalafixProvider, buildTargets, diagnostics),
     new OrganizeImportsQuickFix(scalafixProvider, buildTargets, diagnostics),
