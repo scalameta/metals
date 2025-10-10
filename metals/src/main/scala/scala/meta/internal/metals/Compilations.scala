@@ -161,7 +161,7 @@ final class Compilations(
     compileBatch.cancelAll()
   }
 
-  def recompileAll(): Future[Unit] = {
+  def clean(recompile: Boolean): Future[Unit] = {
     cancel()
 
     def clean(
@@ -183,7 +183,9 @@ final class Compilations(
       for {
         cleanResult <- cleaned
         if cleanResult.getCleaned() == true
-        _ <- compile(timeout = None)(targetIds).future
+        _ <-
+          if (recompile) compile(timeout = None)(targetIds).future
+          else Future.successful(())
       } yield ()
     }
 
