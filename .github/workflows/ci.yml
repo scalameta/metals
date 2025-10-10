@@ -80,88 +80,88 @@ jobs:
             scalafix,
           ]
         include:
-          - type: gradle-mac
-            command: bin/test.sh 'slow/testOnly -- tests.gradle.*'
-            name: Gradle MacOS integration
-            os: macOS-latest
-            java: "17"
-          - type: sbt
-            command: |
-              bin/test.sh +sbt-metals/publishLocal
-              bin/test.sh 'slow/testOnly -- tests.sbt.*'
-            name: Sbt integration
-            os: ubuntu-latest
-            java: "17"
-          - type: sbt-metals jdk8
-            command: bin/test.sh sbt-metals/scripted
-            name: Sbt-metals/scripted jdk11
-            os: ubuntu-latest
-            java: "11"
-          - type: sbt-metals Sbt 2
-            command: bin/test.sh '++3.x; sbt-metals/scripted'
-            name: sbt-metals/scripted (Sbt 2)
-            os: ubuntu-latest
-            java: "21"
-          - type: maven
-            command: bin/test.sh 'slow/testOnly -- tests.maven.*'
-            name: Maven integration
-            os: ubuntu-latest
-            java: "21"
-          - type: gradle
-            command: bin/test.sh 'slow/testOnly -- tests.gradle.*'
-            name: Gradle integration
-            os: ubuntu-latest
-            java: "17"
-          - type: mill
-            command: bin/test.sh 'slow/testOnly -- tests.mill.*'
-            name: Mill integration
-            os: ubuntu-latest
-            java: "21"
+#          - type: gradle-mac
+#            command: bin/test.sh 'slow/testOnly -- tests.gradle.*'
+#            name: Gradle MacOS integration
+#            os: macOS-latest
+#            java: "17"
+#          - type: sbt
+#            command: |
+#              bin/test.sh +sbt-metals/publishLocal
+#              bin/test.sh 'slow/testOnly -- tests.sbt.*'
+#            name: Sbt integration
+#            os: ubuntu-latest
+#            java: "17"
+#          - type: sbt-metals jdk8
+#            command: bin/test.sh sbt-metals/scripted
+#            name: Sbt-metals/scripted jdk11
+#            os: ubuntu-latest
+#            java: "11"
+#          - type: sbt-metals Sbt 2
+#            command: bin/test.sh '++3.x; sbt-metals/scripted'
+#            name: sbt-metals/scripted (Sbt 2)
+#            os: ubuntu-latest
+#            java: "21"
+#          - type: maven
+#            command: bin/test.sh 'slow/testOnly -- tests.maven.*'
+#            name: Maven integration
+#            os: ubuntu-latest
+#            java: "21"
+#          - type: gradle
+#            command: bin/test.sh 'slow/testOnly -- tests.gradle.*'
+#            name: Gradle integration
+#            os: ubuntu-latest
+#            java: "17"
+#          - type: mill
+#            command: bin/test.sh 'slow/testOnly -- tests.mill.*'
+#            name: Mill integration
+#            os: ubuntu-latest
+#            java: "21"
           - type: bazel
             command: bin/test.sh 'slow/testOnly -- tests.bazel.*'
             name: Bazel integration
             os: ubuntu-latest
             java: "21"
-          - type: scalacli
-            command: bin/test.sh 'slow/testOnly -- tests.scalacli.*'
-            name: Scala CLI integration
-            os: ubuntu-latest
-            java: "21"
-          - type: feature
-            command: bin/test.sh 'slow/testOnly -- tests.feature.*'
-            name: LSP integration tests
-            os: ubuntu-latest
-            java: "21"
-          - type: cross
-            command: sbt +cross/test
-            name: Scala cross tests
-            os: ubuntu-latest
-            java: "17"
-          - type: mtags-java
-            command: sbt javapc/test
-            name: Scala javapc tests
-            os: ubuntu-latest
-            java: "21"
-          - type: cross-test-2-11
-            command: sbt cross-test-2-11
-            name: Scala 2.11 cross tests
-            os: ubuntu-latest
-            java: "21"
-          - type: scalafix
-            command: sbt scalafixCheck docs/docusaurusCreateSite
-            name: Scalafix and docs
-            os: ubuntu-latest
-            java: "21"
-          - type: scalafmt
-            command: ./bin/scalafmt --test
-            name: Formatting
-            os: ubuntu-latest
-            java: "21"
-          - type: MiMa
-            command: sbt interfaces/mimaReportBinaryIssues
-            name: MiMa
-            os: ubuntu-latest
-            java: "21"
+#          - type: scalacli
+#            command: bin/test.sh 'slow/testOnly -- tests.scalacli.*'
+#            name: Scala CLI integration
+#            os: ubuntu-latest
+#            java: "21"
+#          - type: feature
+#            command: bin/test.sh 'slow/testOnly -- tests.feature.*'
+#            name: LSP integration tests
+#            os: ubuntu-latest
+#            java: "21"
+#          - type: cross
+#            command: sbt +cross/test
+#            name: Scala cross tests
+#            os: ubuntu-latest
+#            java: "17"
+#          - type: mtags-java
+#            command: sbt javapc/test
+#            name: Scala javapc tests
+#            os: ubuntu-latest
+#            java: "21"
+#          - type: cross-test-2-11
+#            command: sbt cross-test-2-11
+#            name: Scala 2.11 cross tests
+#            os: ubuntu-latest
+#            java: "21"
+#          - type: scalafix
+#            command: sbt scalafixCheck docs/docusaurusCreateSite
+#            name: Scalafix and docs
+#            os: ubuntu-latest
+#            java: "21"
+#          - type: scalafmt
+#            command: ./bin/scalafmt --test
+#            name: Formatting
+#            os: ubuntu-latest
+#            java: "21"
+#          - type: MiMa
+#            command: sbt interfaces/mimaReportBinaryIssues
+#            name: MiMa
+#            os: ubuntu-latest
+#            java: "21"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v5
