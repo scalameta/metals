@@ -645,17 +645,15 @@ class DebugDiscoverySuite
       _ <- server.didSave(fooPath)
       _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
       _ = cleanCompileCache("a")
-      result <- server
-        .startDebuggingUnresolved(
-          new DebugDiscoveryParams(
-            server.toPath(fooPath).toURI.toString,
-            "testFile",
-          ).toJson
-        )
-        .recover { case e: ResponseErrorException => e.getMessage }
-    } yield assertNoDiff(
-      result.toString,
-      SemanticDbNotFoundException.getMessage(),
+      debugger <- server.startDebuggingUnresolved(
+        new DebugDiscoveryParams(
+          server.toPath(fooPath).toURI.toString,
+          "testFile",
+        ).toJson
+      )
+    } yield assert(
+      debugger != null,
+      "Should successfully compile and return debugger even after cache is cleaned",
     )
   }
 
