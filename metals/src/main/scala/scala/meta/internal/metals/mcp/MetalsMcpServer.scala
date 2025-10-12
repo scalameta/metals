@@ -1100,7 +1100,7 @@ class MetalsMcpServer(
       ),
       withErrorHandling { (_, _) =>
         Future {
-          val allRules = scalafixLlmRuleProvider.allRules
+          val allRules = ScalafixLlmRuleProvider.allRules(projectPath)
           val content =
             allRules.toList.sortBy(_._1).map { case (ruleName, description) =>
               s"- $ruleName: $description"
