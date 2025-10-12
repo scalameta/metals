@@ -10,7 +10,7 @@ import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
-
+import scala.meta.tokens.TokenExtensions
 import org.eclipse.{lsp4j => l}
 
 class RemoveInfixRefactor(trees: Trees) extends CodeAction {
@@ -29,7 +29,7 @@ class RemoveInfixRefactor(trees: Trees) extends CodeAction {
         range.getStart(),
       )
       .map {
-        case func @ Term.ApplyInfix(lhs, op, _, argClause) =>
+        case func @ Term.ApplyInfix(lhs, op, _, argClause) if !op.tokens.exists(_.isSymbolicInfixOperator) =>
           val select: Term = Term.Select(lhs, op)
           val apply = Term.Apply(select, argClause)
           val edits = List(new l.TextEdit(func.pos.toLsp, apply.syntax))
