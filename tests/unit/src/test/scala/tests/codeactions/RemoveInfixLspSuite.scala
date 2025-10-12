@@ -1,9 +1,9 @@
 package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.PatternMatchRefactor
+import scala.meta.internal.metals.codeactions.RemoveInfixRefactor
 
 import org.eclipse.lsp4j.CodeAction
-import scala.meta.internal.metals.codeactions.RemoveInfixRefactor
 
 class RemoveInfixLspSuite
     extends BaseCodeActionLspSuite(

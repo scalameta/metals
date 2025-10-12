@@ -11,6 +11,7 @@ import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 import scala.meta.tokens.TokenExtensions
+
 import org.eclipse.{lsp4j => l}
 
 class RemoveInfixRefactor(trees: Trees) extends CodeAction {
