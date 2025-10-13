@@ -173,6 +173,21 @@ class BspConnector(
                 .map(Some(_))
           }
 
+        case ResolvedMultiple(_, availableServers)
+            if userConfig().preferredBuildServer.exists(
+              availableServers.map(_.getName).contains
+            ) =>
+          val preferredServer = userConfig().preferredBuildServer.flatMap(pbs =>
+            availableServers.find(s => s.getName == pbs)
+          )
+          bspServers
+            .newServer(
+              projectRoot,
+              bspTraceRoot,
+              preferredServer.get,
+              bspStatusOpt,
+            )
+            .map(Some(_))
         case ResolvedMultiple(_, availableServers) =>
           val distinctServers = availableServers
             .groupBy(_.getName())

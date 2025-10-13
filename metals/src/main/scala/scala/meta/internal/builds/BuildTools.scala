@@ -55,7 +55,7 @@ final class BuildTools(
       .map(isBloop)
       .getOrElse(
         isBloop
-      ) || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade())
+      ) || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade()) || (isBsp && userConfig().preferredBuildServer.isDefined)
   }
   def isBloop(root: AbsolutePath): Boolean = hasJsonFile(root.resolve(".bloop"))
   def bloopProject: Option[AbsolutePath] = searchForBuildTool(isBloop)
