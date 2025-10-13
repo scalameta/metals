@@ -83,6 +83,7 @@ inThisBuild(
           )
         )
     },
+    PB.protocVersion := V.protobuf,
   )
 )
 
@@ -320,12 +321,15 @@ lazy val mtagsShared = project
       else Nil
     },
     libraryDependencies ++= List(
-      "org.slf4j" % "slf4j-api" % "1.7.36",
+      "com.google.protobuf" % "protobuf-java-util" % V.protobuf,
+      "com.google.protobuf" % "protobuf-java" % V.protobuf,
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "4.29.3",
+      "org.slf4j" % "slf4j-api" % "1.7.36",
     ),
+    (Compile / PB.targets) :=
+      Seq(PB.gens.java(V.protobuf) -> (Compile / sourceManaged).value),
   )
   .dependsOn(interfaces)
 
