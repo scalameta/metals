@@ -90,16 +90,19 @@ Global / onLoad ~= { old =>
   if (!scala.util.Properties.isWin) {
     import java.nio.file._
     val prePush = Paths.get(".git", "hooks", "pre-push")
-    Files.createDirectories(prePush.getParent)
-    Files.write(
-      prePush,
-      """#!/bin/sh
-        |set -eux
-        |bin/scalafmt --diff --diff-branch databricks
-        |git diff --exit-code
-        |""".stripMargin.getBytes(),
-    )
-    prePush.toFile.setExecutable(true)
+    // Skip hook installation if .git/hooks doesn't exist (e.g., in worktrees)
+    if (Files.exists(prePush.getParent)) {
+      Files.createDirectories(prePush.getParent)
+      Files.write(
+        prePush,
+        """#!/bin/sh
+          |set -eux
+          |bin/scalafmt --diff --diff-branch databricks
+          |git diff --exit-code
+          |""".stripMargin.getBytes(),
+      )
+      prePush.toFile.setExecutable(true)
+    }
   }
   old
 }
@@ -229,6 +232,11 @@ val sharedJavaOptions = Seq(
   "-Djol.magicFieldOffset=true", "-Djol.tryWithSudo=true",
   "-Djdk.attach.allowAttachSelf", "--add-opens=java.base/java.nio=ALL-UNNAMED",
   "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED",
 )
 
 val sharedScalacOptions = List(
@@ -276,7 +284,8 @@ lazy val interfaces = project
     ),
     crossPaths := false,
     libraryDependencies ++= List(
-      V.lsp4j
+      "org.slf4j" % "slf4j-api" % "1.7.36",
+      V.lsp4j,
     ),
     javacOptions := Seq("--release", "8"),
     crossVersion := CrossVersion.disabled,
@@ -303,6 +312,7 @@ lazy val mtagsShared = project
       if213 = List("-target:8"),
     ),
     crossVersion := CrossVersion.full,
+    libraryDependencies ++= pprintDebuggingDependency,
     Compile / packageSrc / publishArtifact := true,
     Compile / scalacOptions ++= {
       if (scalaVersion.value == V.lastPublishedScala3)
@@ -310,10 +320,11 @@ lazy val mtagsShared = project
       else Nil
     },
     libraryDependencies ++= List(
-      "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "4.29.3",
+      "org.slf4j" % "slf4j-api" % "1.7.36",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
+      "org.lz4" % "lz4-java" % "1.8.0",
+      "com.google.protobuf" % "protobuf-java" % "4.29.3",
     ),
   )
   .dependsOn(interfaces)
@@ -394,12 +405,7 @@ val mtagsSettings = List(
       ),
     )
   },
-  libraryDependencies ++= {
-    if (isCI) Nil
-    // NOTE(olafur) pprint is indispensable for me while developing, I can't
-    // use println anymore for debugging because pprint.log is 100 times better.
-    else List("com.lihaoyi" %% "pprint" % V.pprint)
-  },
+  libraryDependencies ++= pprintDebuggingDependency,
   buildInfoPackage := "scala.meta.internal.mtags",
   buildInfoKeys := Seq[BuildInfoKey](
     "scalaCompilerVersion" -> scalaVersion.value
@@ -441,6 +447,12 @@ lazy val mtags3 = project
   )
   .dependsOn(interfaces)
   .enablePlugins(BuildInfoPlugin)
+
+val pprintDebuggingDependency: List[ModuleID] =
+  if (isCI) Nil
+  // NOTE(olafur) pprint is indispensable for me while developing, I can't
+  // use println anymore for debugging because pprint.log is 100 times better.
+  else List("com.lihaoyi" %% "pprint" % V.pprint)
 
 lazy val mtags = project
   .settings(

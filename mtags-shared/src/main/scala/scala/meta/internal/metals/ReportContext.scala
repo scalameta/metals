@@ -6,7 +6,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import java.util.logging.Logger
 
 import scala.util.Try
 import scala.util.control.NonFatal
@@ -16,6 +15,8 @@ import scala.meta.internal.metals.utils.LimitedFilesManager
 import scala.meta.internal.metals.utils.TimestampedFile
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
 import scala.meta.internal.mtags.MD5
+
+import org.slf4j.LoggerFactory
 
 trait ReportContext {
   def unsanitized: Reporter
@@ -92,7 +93,7 @@ class StdReporter(
     level: ReportLevel,
     override val name: String
 ) extends Reporter {
-  private val logger = Logger.getLogger(classOf[ReportContext].getName)
+  private val logger = LoggerFactory.getLogger(classOf[StdReporter].getName)
 
   val maybeReportsDir: Path =
     workspace.resolve(pathToReports).resolve(name)
@@ -156,7 +157,7 @@ class StdReporter(
           path
         }
         if (!ifVerbose) {
-          logger.severe(
+          logger.error(
             s"${report.shortSummary} (full report at: $pathToReport)"
           )
         }

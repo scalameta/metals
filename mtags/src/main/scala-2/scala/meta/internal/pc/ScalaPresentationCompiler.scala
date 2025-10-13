@@ -9,7 +9,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
-import java.util.logging.Logger
 import java.{util => ju}
 
 import scala.collection.Seq
@@ -55,6 +54,8 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -65,6 +66,7 @@ case class ScalaPresentationCompiler(
     ec: ExecutionContextExecutor = ExecutionContext.global,
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
+    logger: Logger = LoggerFactory.getLogger("mtags"),
     folderPath: Option[Path] = None,
     reportsLevel: ReportLevel = ReportLevel.Info,
     completionItemPriority: CompletionItemPriority = (_: String) => 0,
@@ -74,9 +76,6 @@ case class ScalaPresentationCompiler(
   implicit val executionContext: ExecutionContextExecutor = ec
 
   val scalaVersion = BuildInfo.scalaCompilerVersion
-
-  val logger: Logger =
-    Logger.getLogger(classOf[ScalaPresentationCompiler].getName)
 
   implicit val reportContex: ReportContext =
     folderPath
@@ -112,6 +111,9 @@ case class ScalaPresentationCompiler(
   ): PresentationCompiler =
     copy(config = config)
 
+  override def withLogger(logger: Logger): PresentationCompiler =
+    copy(logger = logger)
+
   override def withCompletionItemPriority(
       priority: CompletionItemPriority
   ): PresentationCompiler =
@@ -140,6 +142,7 @@ case class ScalaPresentationCompiler(
 
   val compilerAccess =
     new ScalaCompilerAccess(
+      logger,
       config,
       sh,
       () => new ScalaCompilerWrapper(newCompiler()),
@@ -635,7 +638,7 @@ case class ScalaPresentationCompiler(
     val (isSuccess, unprocessed) =
       settings.processArguments(options, processAll = true)
     if (unprocessed.nonEmpty || !isSuccess) {
-      logger.warning(s"Unknown compiler options: ${unprocessed.mkString(", ")}")
+      logger.warn(s"Unknown compiler options: ${unprocessed.mkString(", ")}")
     }
     // settings are needed during the constructor of interactive.Global
     // and the reporter doesn't have a reference to global yet

@@ -47,12 +47,14 @@ class ScalaCompilerWrapper(global: MetalsGlobal)
 }
 
 class ScalaCompilerAccess(
+    logger: org.slf4j.Logger,
     config: PresentationCompilerConfig,
     sh: Option[ScheduledExecutorService],
     newCompiler: () => ScalaCompilerWrapper,
     id: String = ""
 )(implicit ec: ExecutionContextExecutor)
     extends CompilerAccess[MetalsReporter, MetalsGlobal](
+      logger,
       config,
       sh,
       newCompiler,

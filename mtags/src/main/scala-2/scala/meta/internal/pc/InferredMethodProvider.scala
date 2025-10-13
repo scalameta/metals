@@ -163,7 +163,7 @@ final class InferredMethodProvider(
             if (typ != null)
               Some(prettyType(arg.tpe))
             else {
-              logger.warning(
+              logger.warn(
                 "infer-method: could not infer type of argument, defaulting to Any"
               )
               Some("Any")

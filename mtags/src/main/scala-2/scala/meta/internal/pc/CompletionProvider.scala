@@ -517,7 +517,7 @@ class CompletionProvider(
         getLastVisitedParentTrees(pos)
       ) match {
         case NoneCompletion =>
-          logger.warning(e.getMessage)
+          logger.warn(e.getMessage)
           (
             InterestingMembers(Nil, SymbolSearch.Result.COMPLETE),
             NoneCompletion,

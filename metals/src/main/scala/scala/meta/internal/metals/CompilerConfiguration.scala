@@ -25,6 +25,7 @@ import scala.meta.pc.SymbolSearch
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.InitializeParams
+import org.slf4j.LoggerFactory
 
 class CompilerConfiguration(
     workspace: AbsolutePath,
@@ -280,6 +281,8 @@ class CompilerConfiguration(
       JavaPresentationCompiler()
   }
 
+  private val mtagsLogger = LoggerFactory.getLogger("mtags")
+
   private def configure(
       pc: PresentationCompiler,
       search: SymbolSearch,
@@ -287,6 +290,7 @@ class CompilerConfiguration(
   ): PresentationCompiler =
     pc.withSearch(search)
       .withExecutorService(ec)
+      .withLogger(mtagsLogger)
       .withCompletionItemPriority(completionItemPriority)
       .withWorkspace(workspace.toNIO)
       .withScheduledExecutorService(sh)

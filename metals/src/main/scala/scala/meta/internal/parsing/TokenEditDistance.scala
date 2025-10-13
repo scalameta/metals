@@ -1,7 +1,5 @@
 package scala.meta.internal.parsing
 
-import java.util.logging.Logger
-
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.ArraySeq
 import scala.reflect.ClassTag
@@ -18,6 +16,8 @@ import scala.meta.tokenizers.Tokenized
 import ch.epfl.scala.{bsp4j => b}
 import difflib._
 import org.eclipse.{lsp4j => l}
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * Helper to map between position between two similar strings.
@@ -232,7 +232,7 @@ object TokenEditDistance {
   )(implicit ops: TokenOps[A])
       extends TokenEditDistance {
 
-    private val logger: Logger = Logger.getLogger(this.getClass.getName)
+    private val logger: Logger = LoggerFactory.getLogger(this.getClass)
     def toRevised(
         range: l.Range,
         adjustWithinToken: Boolean = false,
@@ -325,7 +325,7 @@ object TokenEditDistance {
               )
             }
           case (start, end) =>
-            logger.warning(
+            logger.warn(
               s"stale range: ${start.map(_.show)} ${end.map(_.show)}"
             )
             None

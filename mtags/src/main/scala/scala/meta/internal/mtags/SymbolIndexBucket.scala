@@ -2,8 +2,6 @@ package scala.meta.internal.mtags
 
 import java.io.UncheckedIOException
 import java.nio.CharBuffer
-import java.util.logging.Level
-import java.util.logging.Logger
 
 import scala.util.Properties
 import scala.util.control.NonFatal
@@ -16,6 +14,8 @@ import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
+
+import org.slf4j.LoggerFactory
 
 final case class SymbolLocation(
     path: AbsolutePath,
@@ -43,8 +43,7 @@ class SymbolIndexBucket(
     dialect: Dialect,
     onError: PartialFunction[Throwable, Unit]
 ) {
-
-  private val logger = Logger.getLogger(classOf[SymbolIndexBucket].getName)
+  private val logger = LoggerFactory.getLogger(classOf[SymbolIndexBucket])
 
   def close(): Unit = sourceJars.close()
 
@@ -295,7 +294,7 @@ class SymbolIndexBucket(
     }
   } catch {
     case NonFatal(e) =>
-      logger.log(Level.WARNING, s"Error indexing $file", e)
+      logger.warn(s"Error indexing $file", e)
       if (retry) addMtagsSourceFile(file, retry = false)
   }
 

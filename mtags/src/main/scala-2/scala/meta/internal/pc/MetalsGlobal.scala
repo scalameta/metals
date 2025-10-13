@@ -2,7 +2,6 @@ package scala.meta.internal.pc
 
 import java.nio.file.Path
 import java.util
-import java.util.logging.Logger
 import java.{util => ju}
 
 import scala.collection.concurrent.TrieMap
@@ -31,6 +30,7 @@ import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 
 import org.eclipse.{lsp4j => l}
+import org.slf4j.Logger
 
 class MetalsGlobal(
     settings: Settings,
@@ -69,7 +69,7 @@ class MetalsGlobal(
     backgroundCompilation = !metalsConfig.emitDiagnostics()
   )
 
-  val logger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)
+  val logger: Logger = org.slf4j.LoggerFactory.getLogger(classOf[MetalsGlobal])
 
   val richCompilationCache: TrieMap[String, RichCompilationUnit] =
     TrieMap.empty[String, RichCompilationUnit]
@@ -637,7 +637,7 @@ class MetalsGlobal(
     try loop(symbol).filterNot(_ == NoSymbol)
     catch {
       case NonFatal(e) =>
-        logger.severe(
+        logger.error(
           s"invalid SemanticDB symbol: $symbol\n${e.getMessage}"
         )
         Nil

@@ -86,7 +86,7 @@ final class AutoImportsProvider(
             .take(5)
             .map(_.getClass().getName())
             .mkString(",")
-          logger.warning(
+          logger.warn(
             s"Could not infer edits for $pkg, tree around the position were $trees, auto import position was ${importPosition}"
           )
         }

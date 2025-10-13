@@ -5,8 +5,6 @@ import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.jar.JarFile
-import java.util.logging.Level
-import java.util.logging.Logger
 
 import scala.reflect.NameTransformer
 import scala.util.Properties
@@ -15,11 +13,14 @@ import scala.util.control.NonFatal
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
 /**
  * An index to lookup classfiles contained in a given classpath.
  */
 class PackageIndex() {
-  val logger: Logger = Logger.getLogger(classOf[PackageIndex].getName)
+  val logger: Logger = LoggerFactory.getLogger(classOf[PackageIndex])
   val packages = new util.HashMap[String, util.Set[String]]()
   private val isVisited = new util.HashSet[Path]()
   private val enterPackage =
@@ -42,7 +43,7 @@ class PackageIndex() {
         }
       } catch {
         case NonFatal(e) =>
-          logger.log(Level.SEVERE, entry.toURI.toString, e)
+          logger.error(entry.toURI.toString, e)
       }
     }
   }

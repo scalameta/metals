@@ -4,8 +4,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.logging.Level
-import java.util.logging.Logger
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.util.control.NonFatal
@@ -13,6 +11,8 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.PcQueryContext
 import scala.meta.pc.CancelToken
 import scala.meta.pc.PresentationCompilerConfig
+
+import org.slf4j.Logger
 
 /**
  * Manages the lifecycle and multi-threaded access to the presentation compiler.
@@ -22,15 +22,13 @@ import scala.meta.pc.PresentationCompilerConfig
  *   for functions that support cancellation.
  */
 abstract class CompilerAccess[Reporter, Compiler](
+    logger: Logger,
     config: PresentationCompilerConfig,
     sh: Option[ScheduledExecutorService],
     newCompiler: () => CompilerWrapper[Reporter, Compiler],
     shouldResetJobQueue: Boolean,
     id: String = ""
 )(implicit ec: ExecutionContextExecutor) {
-
-  private val logger: Logger =
-    Logger.getLogger(classOf[CompilerAccess[_, _]].getName)
 
   private val jobs = CompilerJobQueue(id)
   private var _compiler: CompilerWrapper[Reporter, Compiler] = _
@@ -177,8 +175,7 @@ abstract class CompilerAccess[Reporter, Compiler](
       cause: String
   )(implicit queryInfo: PcQueryContext): T = {
     shutdownCurrentCompiler()
-    logger.log(
-      Level.INFO,
+    logger.info(
       s"compiler crashed due to $cause, retrying with new compiler instance."
     )
     try thunk(loadCompiler())

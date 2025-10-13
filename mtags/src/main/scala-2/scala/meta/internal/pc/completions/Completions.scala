@@ -1,7 +1,6 @@
 package scala.meta.internal.pc.completions
 
 import java.net.URI
-import java.util.logging.Level
 
 import scala.collection.immutable.Nil
 import scala.collection.mutable
@@ -469,7 +468,7 @@ trait Completions { this: MetalsGlobal =>
       )
     catch {
       case NonFatal(e) =>
-        logger.log(Level.SEVERE, e.getMessage(), e)
+        logger.error(e.getMessage(), e)
         NoneCompletion
     }
   }

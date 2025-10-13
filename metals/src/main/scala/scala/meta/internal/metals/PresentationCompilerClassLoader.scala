@@ -10,10 +10,12 @@ package scala.meta.internal.metals
  */
 class PresentationCompilerClassLoader(parent: ClassLoader)
     extends ClassLoader(ClassLoader.getSystemClassLoader().getParent()) {
+
   override def findClass(name: String): Class[_] = {
     val isShared =
-      name.startsWith("org.eclipse.lsp4j") ||
+      name.startsWith("org.slf4j") ||
         name.startsWith("com.google.gson") ||
+        name.startsWith("org.eclipse.lsp4j") ||
         name.startsWith("scala.meta.pc") ||
         name.startsWith("javax")
     if (isShared) {

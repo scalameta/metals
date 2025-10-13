@@ -12,6 +12,8 @@ import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.InlayHint;
 import org.eclipse.lsp4j.SelectionRange;
 
+import org.slf4j.Logger;
+
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -256,6 +258,13 @@ public abstract class PresentationCompiler {
 	 * Clean the symbol table and other mutable state in the compiler.
 	 */
 	public abstract void restart();
+
+	/**
+	 * Set logger level for reports.
+	 */
+	public PresentationCompiler withLogger(Logger logger) {
+		return this;
+	};
 
 	/**
 	 * Set logger level for reports.

@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import java.util.concurrent.ScheduledExecutorService
 
 import scala.concurrent.ExecutionContextExecutor
+import org.slf4j.Logger
 
 import scala.meta.internal.metals.ReportContext
 import scala.meta.pc.PresentationCompilerConfig
@@ -10,11 +11,13 @@ import scala.meta.pc.PresentationCompilerConfig
 import dotty.tools.dotc.reporting.StoreReporter
 
 class Scala3CompilerAccess(
+    logger: Logger,
     config: PresentationCompilerConfig,
     sh: Option[ScheduledExecutorService],
     newCompiler: () => Scala3CompilerWrapper,
 )(using ec: ExecutionContextExecutor)
     extends CompilerAccess[StoreReporter, MetalsDriver](
+      logger,
       config,
       sh,
       newCompiler,

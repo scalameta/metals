@@ -1,13 +1,13 @@
 package scala.meta.internal.pc
 
-import java.util.logging.Level
-import java.util.logging.Logger
-
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.pc.*
+
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Flags
@@ -19,7 +19,7 @@ class CompilerSearchVisitor(
 )(using ctx: Context, reports: ReportContext)
     extends SymbolSearchVisitor:
 
-  val logger: Logger = Logger.getLogger(classOf[CompilerSearchVisitor].getName)
+  val logger: Logger = LoggerFactory.getLogger(classOf[CompilerSearchVisitor])
 
   private def isAccessibleImplicitClass(sym: Symbol) =
     val owner = sym.maybeOwner
@@ -32,7 +32,7 @@ class CompilerSearchVisitor(
       isAccessibleImplicitClass(sym)
   catch
     case err: AssertionError =>
-      logger.log(Level.WARNING, err.getMessage())
+      logger.warn(err.getMessage())
       false
     case NonFatal(error) =>
       reports.incognito.create(
@@ -42,7 +42,7 @@ class CompilerSearchVisitor(
           error,
         )
       )
-      logger.log(Level.SEVERE, error.getMessage(), error)
+      logger.error(error.getMessage(), error)
       false
 
   private def toSymbols(
@@ -81,7 +81,7 @@ class CompilerSearchVisitor(
       try toSymbols(pkg, innerPath.toList).filter(visitSymbol)
       catch
         case NonFatal(e) =>
-          logger.log(Level.WARNING, e.getMessage(), e)
+          logger.warn(e.getMessage(), e)
           Nil
     added.size
   end visitClassfile

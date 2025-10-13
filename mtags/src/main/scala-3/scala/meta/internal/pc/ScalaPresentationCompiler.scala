@@ -32,6 +32,8 @@ import dotty.tools.dotc.reporting.StoreReporter
 import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.TextEdit
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 case class ScalaPresentationCompiler(
     buildTargetIdentifier: String = "",
@@ -39,6 +41,7 @@ case class ScalaPresentationCompiler(
     classpath: Seq[Path] = Nil,
     options: List[String] = Nil,
     search: SymbolSearch = EmptySymbolSearch,
+    logger: Logger = LoggerFactory.getLogger("mtags"),
     ec: ExecutionContextExecutor = ExecutionContext.global,
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
@@ -71,6 +74,7 @@ case class ScalaPresentationCompiler(
 
   val compilerAccess: CompilerAccess[StoreReporter, MetalsDriver] =
     Scala3CompilerAccess(
+      logger,
       config,
       sh,
       () => new Scala3CompilerWrapper(newDriver),

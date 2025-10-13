@@ -1,7 +1,6 @@
 package scala.meta.internal.metals
 
 import java.nio.file.Paths
-import java.util.logging.Logger
 
 import scala.util.Failure
 import scala.util.Properties
@@ -12,6 +11,8 @@ import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
+import org.slf4j.LoggerFactory
+
 /**
  * Locates zip file on disk that contains the source code for the JDK.
  */
@@ -20,8 +21,7 @@ object JdkSources {
   private val sources = RelativePath(Paths.get(zipFileName))
   private val libSources = RelativePath(Paths.get("lib")).resolve(sources)
 
-  private val logger: Logger =
-    Logger.getLogger(JdkSources.getClass().getName)
+  private val logger = LoggerFactory.getLogger(JdkSources.getClass)
 
   def apply(
       userJavaHome: Option[String] = None
@@ -37,7 +37,7 @@ object JdkSources {
     Option(path).filter(_.nonEmpty).flatMap { str =>
       Try(AbsolutePath(str)) match {
         case Failure(exception) =>
-          logger.warning(
+          logger.warn(
             s"Failed to parse java home path $str: ${exception.getMessage}"
           )
           None

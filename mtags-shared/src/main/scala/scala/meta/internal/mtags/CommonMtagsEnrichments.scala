@@ -7,8 +7,6 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.util.PriorityQueue
-import java.util.logging.Level
-import java.util.logging.Logger
 import java.{util => ju}
 
 import scala.annotation.tailrec
@@ -32,12 +30,12 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
+import org.slf4j.LoggerFactory
 
 object CommonMtagsEnrichments extends CommonMtagsEnrichments {}
 trait CommonMtagsEnrichments {
 
-  private def logger: Logger =
-    Logger.getLogger(classOf[CommonMtagsEnrichments].getName)
+  private def logger = LoggerFactory.getLogger(classOf[CommonMtagsEnrichments])
 
   protected def decodeJson[T](
       obj: AnyRef,
@@ -53,7 +51,7 @@ trait CommonMtagsEnrichments {
         )
       } catch {
         case NonFatal(e) =>
-          logger.log(Level.SEVERE, s"decode error: $cls", e)
+          logger.error(s"decode error: $cls", e)
           None
       }
     }

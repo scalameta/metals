@@ -1,8 +1,6 @@
 package scala.meta.internal.metals
 
 import java.util.Optional
-import java.util.logging.Level
-import java.util.logging.Logger
 
 import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
@@ -26,6 +24,8 @@ import scala.meta.pc.ContentType.PLAINTEXT
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 
+import org.slf4j.LoggerFactory
+
 /**
  * Implementation of the `documentation(symbol: String): Option[SymbolDocumentation]` method in `SymbolSearch`.
  *
@@ -33,7 +33,7 @@ import scala.meta.pc.SymbolDocumentation
  */
 class Docstrings(index: GlobalSymbolIndex)(implicit rc: ReportContext) {
   val cache = new TrieMap[Content, SymbolDocumentation]()
-  private val logger = Logger.getLogger(classOf[Docstrings].getName)
+  private val logger = LoggerFactory.getLogger(classOf[Docstrings])
 
   def documentation(
       symbol: String,
@@ -147,7 +147,7 @@ class Docstrings(index: GlobalSymbolIndex)(implicit rc: ReportContext) {
           maybeCacheAlternative(defn, contentType)
         } catch {
           case NonFatal(e) =>
-            logger.log(Level.SEVERE, defn.path.toURI.toString, e)
+            logger.error(defn.path.toURI.toString, e)
         }
       case None =>
     }

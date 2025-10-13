@@ -10,7 +10,7 @@ object V {
   val scala3ForSBT2 = "3.6.2"
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
-  val sbtScala = "2.12.18"
+  val sbtScala = "2.12.20"
   val ammonite212Version = "2.12.19"
   val ammonite213Version = "2.13.14"
   // Rules need to be manually updated to support
@@ -46,7 +46,7 @@ object V {
   val scalafix = "0.14.0"
   val scalafmt = "3.7.15"
   val scalameta = "4.12.3"
-  val scribe = "3.16.0"
+  val scribe = "3.15.2"
   val qdox = "2.2.0"
 
   val guava = "com.google.guava" % "guava" % "33.4.8-jre"

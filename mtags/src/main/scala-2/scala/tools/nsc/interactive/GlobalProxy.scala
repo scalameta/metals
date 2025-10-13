@@ -1,7 +1,5 @@
 package scala.tools.nsc.interactive
 
-import java.util.logging.Level
-
 import scala.tools.nsc.util.WorkScheduler
 import scala.util.control.NonFatal
 
@@ -47,8 +45,7 @@ trait GlobalProxy { this: MetalsGlobal =>
         while (compileRunner.isAlive) Thread.sleep(0)
       } catch {
         case NonFatal(e) =>
-          logger.log(
-            Level.INFO,
+          logger.info(
             "unexpected error shutting down presentation compiler thread",
             e
           )

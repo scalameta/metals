@@ -8,8 +8,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
-import java.util.logging.Level
-import java.util.logging.Logger
 
 import scala.annotation.tailrec
 import scala.util.Failure
@@ -32,6 +30,7 @@ import geny.Generator
 import org.eclipse.{lsp4j => l}
 import org.scalameta.UnreachableError
 import org.scalameta.invariants.InvariantFailedException
+import org.slf4j.LoggerFactory
 
 object ScalametaCommonEnrichments extends ScalametaCommonEnrichments {}
 trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
@@ -63,8 +62,8 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     else index
   }
 
-  private def logger: Logger =
-    Logger.getLogger(classOf[ScalametaCommonEnrichments].getName)
+  private def logger =
+    LoggerFactory.getLogger(classOf[ScalametaCommonEnrichments])
 
   implicit class XtensionMetaPosition(pos: m.Position) {
     def toSemanticdb: s.Range = {
@@ -234,12 +233,12 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
         Paths.get(uri).filename
       } match {
         case Failure(exception) =>
-          logger.warning(exception.getMessage())
+          logger.warn(exception.getMessage())
           Try {
             Paths.get(input.path).filename
           } match {
             case Failure(exception) =>
-              logger.warning(exception.getMessage())
+              logger.warn(exception.getMessage())
               input.path.reverse.takeWhile(c => c != '/' && c != '\\').reverse
             case Success(value) =>
               value
@@ -260,15 +259,13 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
       doc.tokenize
     } catch {
       case invariant: InvariantFailedException =>
-        logger.log(
-          Level.SEVERE,
+        logger.error(
           s"Got invariant failed exception for '${doc}', which should not happen:\n" +
             invariant.getMessage()
         )
         Tokenized.Error(m.Position.None, invariant.getMessage(), invariant)
       case unreachable: UnreachableError =>
-        logger.log(
-          Level.SEVERE,
+        logger.error(
           s"Got unreachable exception for '${doc}', which should not happen:\n" +
             unreachable.getMessage()
         )

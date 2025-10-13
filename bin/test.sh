@@ -46,18 +46,7 @@ run_with_restart_loop
 
 cat ~/.local/share/scalacli/bloop/daemon/output
 
-rm .jvmopts
-touch .jvmopts
-echo "-Xss4m" >> .jvmopts
-echo "-Xmx4G"  >> .jvmopts
-echo "-XX:ReservedCodeCacheSize=1024m" >> .jvmopts
-echo "-XX:+TieredCompilation" >> .jvmopts
-echo "-Dfile.encoding=UTF-8" >> .jvmopts
-echo "-XX:+HeapDumpOnOutOfMemoryError" >> .jvmopts
-echo "-XX:+ExitOnOutOfMemoryError" >> .jvmopts
-
 echo $PWD
-
 sbt "$1"
 
 # sbt must be the last command - its exit code signals if tests passed or not
