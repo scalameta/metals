@@ -248,7 +248,7 @@ object Embedded {
   private def mtagsDependency(
       scalaVersion: String,
       metalsVersion: String,
-  ): Dependency = {
+  ): (Dependency, String) = {
     val mtagsScalaVersion =
       // Mtags was historically cross-built against the full Scala version
       // (example: 2.13.20), but is now cross-built against the binary version
@@ -260,7 +260,7 @@ object Embedded {
       "org.scalameta",
       s"mtags_$mtagsScalaVersion",
       metalsVersion,
-    )
+    ) -> mtagsScalaVersion
   }
 
   private def mdocDependency(
@@ -338,11 +338,11 @@ object Embedded {
     )
   }
 
-  def downloadMtags(scalaVersion: String, metalsVersion: String): List[Path] =
-    downloadDependency(
-      mtagsDependency(scalaVersion, metalsVersion),
-      Some(scalaVersion),
-    )
+  def downloadMtags(scalaVersion: String, metalsVersion: String): List[Path] = {
+    val (dependency, mtagsScalaVersion) =
+      mtagsDependency(scalaVersion, metalsVersion)
+    downloadDependency(dependency, Some(mtagsScalaVersion))
+  }
 
   def downloadScala3PresentationCompiler(scalaVersion: String): List[Path] =
     downloadDependency(

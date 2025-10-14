@@ -147,20 +147,26 @@ object MtagsResolver {
 
       def fetch(fetchResolveType: ResolveType.Value, tries: Int = 5): State =
         try {
-          val metalsVersion = removedScalaVersions.getOrElse(
-            scalaVersion,
-            BuildInfo.metalsVersion,
-          )
-          if (metalsVersion != BuildInfo.metalsVersion) {
-            scribe.warn(
-              s"$scalaVersion is no longer supported in the current Metals versions, using the last known supported version $metalsVersion"
-            )
-          }
+          // Historically, we used to resolve mtags against the user's Scala
+          // version, and if it was an old Scala version then we would fallback
+          // to the last mtags release that support this old version. Now,
+          // instead, we resolve mtags with the same Scala version as we build
+          // Metals against. The risk of doing so is low because it can only
+          // crash in one of the following cases:
+          // - We are running user-compiled Scala macro annotations or whitebox
+          //   macros that rely on matching the exact Scala version. Blackbox
+          //   macros are not enabled in mtags.
+          // - The newer Scala compiler started rejecting code that was accepted
+          //   by older Scala versions. The user would get the same error from
+          //   upgrading their Scala version so they have to deal with it sooner
+          //   or later anyways.
+          val metalsVersion = BuildInfo.metalsVersion
           val jarsFuture = Future {
             fetchResolveType match {
               case ResolveType.StablePC =>
                 Embedded.downloadScala3PresentationCompiler(scalaVersion)
-              case _ => Embedded.downloadMtags(scalaVersion, metalsVersion)
+              case _ =>
+                Embedded.downloadMtags(scalaVersion, metalsVersion)
             }
           }
 
