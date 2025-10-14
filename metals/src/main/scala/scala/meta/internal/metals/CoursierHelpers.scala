@@ -29,7 +29,7 @@ object CoursierHelpers {
       case Some(value) =>
         val parts = value.split("\\|").toList
         val repos = parseCustomRepositories(parts)
-        scribe.info(
+        scribe.debug(
           s"Using custom Coursier repositories from env: ${repos}"
         )
         repos

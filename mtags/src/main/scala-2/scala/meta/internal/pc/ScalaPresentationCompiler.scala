@@ -617,7 +617,7 @@ case class ScalaPresentationCompiler(
     settings.outputDirs.setSingleOutput(vd)
     settings.classpath.value = classpath
     if (sourcePath.nonEmpty) {
-      logger.info(
+      logger.debug(
         s"[$buildTargetIdentifier]: sourcepath: ${sourcePath.mkString(File.pathSeparator)}"
       )
       settings.sourcepath.value = sourcePath.mkString(File.pathSeparator)
