@@ -53,7 +53,7 @@ final class BatchedFunction[A, B](
 
   def logQueue(): Unit = {
     if (shouldLogQueue && !queue.isEmpty()) {
-      scribe.debug(
+      scribe.trace(
         s"Current $functionId queue: \n" + queue.toArray
           .map {
             case Request(args, promise, _) =>
