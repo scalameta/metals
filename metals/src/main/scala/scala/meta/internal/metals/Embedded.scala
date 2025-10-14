@@ -248,12 +248,20 @@ object Embedded {
   private def mtagsDependency(
       scalaVersion: String,
       metalsVersion: String,
-  ): Dependency =
+  ): Dependency = {
+    val mtagsScalaVersion =
+      // Mtags was historically cross-built against the full Scala version
+      // (example: 2.13.20), but is now cross-built against the binary version
+      // (2.13).
+      if (scalaVersion.startsWith("2.12")) BuildInfo.scala212
+      else if (scalaVersion.startsWith("2.13")) BuildInfo.scala213
+      else scalaVersion
     Dependency.of(
       "org.scalameta",
-      s"mtags_$scalaVersion",
+      s"mtags_$mtagsScalaVersion",
       metalsVersion,
     )
+  }
 
   private def mdocDependency(
       scalaBinaryVersion: String,

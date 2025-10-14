@@ -741,9 +741,7 @@ abstract class MetalsLspService(
     userConfig.fallbackScalaVersion.foreach { version =>
       if (!ScalaVersions.isSupportedAtReleaseMomentScalaVersion(version)) {
         val params =
-          Messages.UnsupportedScalaVersion.fallbackScalaVersionParams(
-            version
-          )
+          Messages.UnsupportedScalaVersion.fallbackScalaVersionParams(version)
         languageClient.showMessage(params)
       }
     }

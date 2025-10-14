@@ -147,30 +147,30 @@ object V {
   def nonDeprecatedScala2Versions = Seq(
     scala213,
     scala212,
-    "2.12.19",
-    "2.12.18",
-    "2.12.17",
-    "2.13.12",
-    "2.13.13",
-    "2.13.14",
-    "2.13.15",
+    // "2.12.19",
+    // "2.12.18",
+    // "2.12.17",
+    // "2.13.12",
+    // "2.13.13",
+    // "2.13.14",
+    // "2.13.15",
   )
 
   def minimumSupportedSbtVersion = {
     // Update when deprecating a Scala version together with sbt version
-    val sbtScalaVersion = "2.12.17"
+    val sbtScalaVersion = "2.12.20"
     if (!nonDeprecatedScala2Versions.contains(sbtScalaVersion))
       throw new RuntimeException(
         "Please change minimalSupportedSbtVersion when removing support for a particular Scala version"
       )
-    "1.8.0"
+    "1.11.0"
   }
 
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
 
   // Scala 3
-  def nonDeprecatedScala3Versions =
-    Seq(lastPublishedScala3, "3.3.1")
+  def nonDeprecatedScala3Versions: Seq[String] =
+    Seq()
 
   // NOTE if you had a new Scala Version make sure it's contained in quickPublishScalaVersions
   def scala3Versions = nonDeprecatedScala3Versions
@@ -182,9 +182,9 @@ object V {
   def deprecatedScalaVersions = deprecatedScala2Versions
 
   val quickPublishScalaVersions = Set(
-    bazelScalaVersion,
+    // bazelScalaVersion,
 //    scala211,
-    sbtScala,
+    // sbtScala,
     scala212,
 //    ammonite212Version,
     scala213,

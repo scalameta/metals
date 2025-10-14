@@ -192,6 +192,10 @@ class DefinitionScala2Suite
       ),
     )
 
+// NOTE(olafurpg):This mostly passes but relies on definitions from a few scala3
+// libraries that we now treat as "binaryVersion=2.13" because we disabled Scala
+// 3 support in the cross-matrix.
+@munit.IgnoreSuite
 class DefinitionScala3Suite
     extends DefinitionSuiteBase(
       inputProps = InputProperties.scala3(),

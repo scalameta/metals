@@ -63,7 +63,7 @@ jobs:
         type:
           [
 #            sbt,
-            bazel,
+            # bazel,
 #            feature,
             cross,
             scalafmt,
