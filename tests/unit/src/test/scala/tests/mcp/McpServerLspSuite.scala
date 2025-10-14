@@ -320,6 +320,8 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
       _ = assertNoDiff(
         result,
         s"""|Error: No changes were made for rule ReplaceJohnWithJohnatan
+            |Files tried:
+            |a/src/main/scala/com/example/Hello.scala
             |Sample code structure: ${sampleCode.parse[Stat].get.structure}
             |""".stripMargin,
       )
