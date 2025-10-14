@@ -623,7 +623,9 @@ class ProjectMetalsLspService(
           for {
             _ <- connect(ImportBuildAndIndex(session))
           } {
-            focusedDocument().foreach(path => compilations.compileFile(path))
+            if (userConfig.buildOnFocus) {
+              focusedDocument().foreach(path => compilations.compileFile(path))
+            }
           }
       }
     } else {
