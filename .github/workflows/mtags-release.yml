@@ -7,10 +7,10 @@ on:
         description: "Metals version (e.g., 1.2.3)"
         required: true
       branch:
-        description: "Branch or tag to release from (e.g., v1.6.2)"
+        description: "Branch or tag to release from (e.g., v1.6.3)"
         required: true
       scala:
-        description: "Scala version (e.g., 2.13.16)"
+        description: "Scala version (e.g., 2.13.17)"
         required: false
 
 jobs:
