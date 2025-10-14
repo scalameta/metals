@@ -167,7 +167,7 @@ class ScalafixLlmRuleProvider(
           Right(
             ScalafixRule(
               ruleName,
-              createDependency(ruleName, binaryVersion),
+              ScalafixLlmRuleProvider.createDependency(ruleName, binaryVersion),
             )
           )
         case None =>
@@ -230,27 +230,6 @@ class ScalafixLlmRuleProvider(
     }
   }
 
-  def allRules: Map[String, String] = {
-    val rulesDir = workspace.resolve(Directories.rules)
-    val rules = if (rulesDir.exists && rulesDir.isDirectory) {
-      rulesDir.list
-        .filter(_.isDirectory)
-        .map { ruleDir =>
-          val ruleName = ruleDir.filename
-          val readmeFile = ruleDir.resolve("README.md")
-          val description = if (readmeFile.exists) {
-            readmeFile.readTextOpt.getOrElse(ruleName)
-          } else {
-            ruleName
-          }
-          ruleName -> description
-        }
-        .toSeq
-        .toMap
-    } else Map.empty[String, String]
-    rules ++ ScalafixLlmRuleProvider.curatedRules
-  }
-
   def runScalafixRuleForAllTargets(
       ruleName: String,
       runOnSources: List[AbsolutePath] = Nil,
@@ -284,7 +263,7 @@ class ScalafixLlmRuleProvider(
       ruleName: String,
       source: AbsolutePath,
   ): Future[Unit] = {
-    val rule = allRules.get(ruleName)
+    val rule = ScalafixLlmRuleProvider.allRules(workspace).get(ruleName)
     rule match {
       case Some(value) =>
         val scalaVersion = scalaVersionSelector.scalaVersionForPath(source)
@@ -303,19 +282,10 @@ class ScalafixLlmRuleProvider(
   ): Option[Dependency] = {
     ScalafixLlmRuleProvider.curatedRules.get(ruleName) match {
       case Some(value) => None
-      case None => Some(createDependency(ruleName, binaryVersion))
+      case None =>
+        Some(ScalafixLlmRuleProvider.createDependency(ruleName, binaryVersion))
     }
   }
-
-  private def createDependency(
-      ruleName: String,
-      binaryVersion: String,
-  ): Dependency =
-    Dependency.of(
-      s"com.github.metals",
-      s"${ruleName}_$binaryVersion",
-      "0.1.0-SNAPSHOT",
-    )
 
   private def runScalafixRule(
       ruleName: String,
@@ -353,6 +323,51 @@ class ScalafixLlmRuleProvider(
 }
 
 object ScalafixLlmRuleProvider {
+
+  def allRules(workspace: AbsolutePath): Map[String, String] = {
+    generatedRules(workspace) ++ curatedRules
+  }
+
+  def additionalDependencies(
+      ruleNames: List[String],
+      binaryVersion: String,
+  ): Map[String, Dependency] = {
+    ruleNames
+      .map(ruleName => ruleName -> createDependency(ruleName, binaryVersion))
+      .toMap
+  }
+
+  def createDependency(
+      ruleName: String,
+      binaryVersion: String,
+  ): Dependency =
+    Dependency.of(
+      s"com.github.metals",
+      s"${ruleName}_$binaryVersion",
+      "0.1.0-SNAPSHOT",
+    )
+
+  def generatedRules(workspace: AbsolutePath): Map[String, String] = {
+    val rulesDir = workspace.resolve(Directories.rules)
+    val rules = if (rulesDir.exists && rulesDir.isDirectory) {
+      rulesDir.list
+        .filter(_.isDirectory)
+        .map { ruleDir =>
+          val ruleName = ruleDir.filename
+          val readmeFile = ruleDir.resolve("README.md")
+          val description = if (readmeFile.exists) {
+            readmeFile.readTextOpt.getOrElse(ruleName)
+          } else {
+            ruleName
+          }
+          ruleName -> description
+        }
+        .toSeq
+        .toMap
+    } else Map.empty[String, String]
+    rules
+  }
+
   case class RunResult(ruleName: String, changeWasApplied: Boolean)
   // Curated list of rules that LLMs can use
   def curatedRules: Map[String, String] = {
