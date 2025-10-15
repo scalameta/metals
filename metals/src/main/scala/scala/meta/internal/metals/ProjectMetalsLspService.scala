@@ -29,6 +29,7 @@ import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.metals.watcher.FileWatcherEvent
 import scala.meta.internal.metals.watcher.FileWatcherEvent.EventType
 import scala.meta.internal.metals.watcher.NoopFileWatcher
+import scala.meta.internal.metals.watcher.ProjectFileWatcher
 import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.tvp.FolderTreeViewProvider
@@ -104,19 +105,24 @@ class ProjectMetalsLspService(
       metricName = config.metricName.map(name => name -> metrics),
     )
 
-  override val fileWatcher: FileWatcher = NoopFileWatcher
-  // Disable the project file watcher because we rely on LSP file watching events for **/*.{scala,java}
-  // register(
-  //   new ProjectFileWatcher(
-  //     initialServerConfig,
-  //     () => folder,
-  //     buildTargets,
-  //     fileWatchFilter,
-  //     params => {
-  //       didChangeWatchedFiles(params)
-  //     },
-  //   )
-  // )
+  override val fileWatcher: FileWatcher =
+    if (Testing.isEnabled)
+      // Only use file watcher when running tests. A lot of our tests rely on file watching notifications to pass.
+      register(
+        new ProjectFileWatcher(
+          initialServerConfig,
+          () => folder,
+          buildTargets,
+          fileWatchFilter,
+          params => {
+            didChangeWatchedFiles(params)
+          },
+        )
+      )
+    else
+      // In production, rely on file watching notifications from the LSP client (VS Code, etc). Starting a file watcher
+      // on every build sync ends up being expensive in large projects.
+      NoopFileWatcher
 
   protected val bspConfigGenerator: BspConfigGenerator = new BspConfigGenerator(
     folder,
