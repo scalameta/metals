@@ -4,8 +4,10 @@ import java.nio.charset.StandardCharsets
 import java.util.Arrays
 
 import scala.meta.internal.metals.StringBloomFilter
+import scala.meta.internal.mtags.DocumentToplevels
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.io.AbsolutePath
 
 /**
  *  A git blob with optional metadata like the text contents, parse SemanticDB, or a bloom filter from symbol indexing.
@@ -27,6 +29,19 @@ final class GitBlob(
     case _ => false
   }
   def oid: String = new String(oidBytes, StandardCharsets.UTF_8)
+  def toOIDIndex(workspace: AbsolutePath): OIDIndex = {
+    val toplevels =
+      if (semanticdb == null) DocumentToplevels.empty
+      else DocumentToplevels.fromDocument(semanticdb)
+    OIDIndex(
+      this.toLanguage,
+      this.oidBytes,
+      workspace.resolve(path).toNIO,
+      this.bloomFilter,
+      toplevels.pkg,
+      toplevels.toplevels,
+    )
+  }
   def toLanguage: Language = {
     if (path.endsWith(".java")) {
       Language.JAVA

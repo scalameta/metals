@@ -229,6 +229,14 @@ abstract class MetalsLspService(
     clientConfig.initialConfig.enableBestEffort,
   )
   var indexingPromise: Promise[Unit] = Promise[Unit]()
+  def workspaceSymbolIndexingPromise: Promise[Unit] = {
+    if (userConfig.workspaceSymbolProvider.isMBT) {
+      // Don't block on BSP indexing when mbt is enabled.
+      Promise.successful[Unit](())
+    } else {
+      indexingPromise
+    }
+  }
   def buildServerPromise: Promise[Unit]
   val parseTrees = new BatchedFunction[AbsolutePath, Unit](
     paths =>
@@ -284,21 +292,25 @@ abstract class MetalsLspService(
       connectionBspStatus,
     )
 
+  val mbtWorkspaceSymbolProvider: MbtWorkspaceSymbolProvider =
+    cancelables.register(
+      new MbtWorkspaceSymbolProvider(
+        folder,
+        () => userConfig.workspaceSymbolProvider,
+        () => clientConfig.initialConfig.statistics,
+        metrics,
+      )
+    )
   val workspaceSymbols: WorkspaceSymbolProvider =
     new WorkspaceSymbolProvider(
       folder,
       buildTargets,
       definitionIndex,
       saveClassFileToDisk = !clientConfig.isVirtualDocumentSupported(),
+      () => userConfig,
       () => excludedPackageHandler,
       classpathSearchIndexer = classpathSearchIndexer,
-    )
-  val mbtWorkspaceSymbolProvider: MbtWorkspaceSymbolProvider =
-    new MbtWorkspaceSymbolProvider(
-      folder,
-      () => userConfig.workspaceSymbolProvider,
-      () => clientConfig.initialConfig.statistics,
-      metrics,
+      mbtWorkspaceSymbolProvider = mbtWorkspaceSymbolProvider,
     )
 
   protected def warnings: Warnings = NoopWarnings
@@ -1321,24 +1333,18 @@ abstract class MetalsLspService(
       params: WorkspaceSymbolParams,
       token: CancelToken,
   ): Future[List[SymbolInformation]] = {
-    if (userConfig.workspaceSymbolProvider.isMBT) {
-      Future {
-        mbtWorkspaceSymbolProvider.queryWorkspaceSymbol(params, token)
+    workspaceSymbolIndexingPromise.future.map { _ =>
+      val timer = new Timer(time)
+      val result =
+        workspaceSymbols
+          .search(params.getQuery, token, focusedDocument)
+          .toList
+      if (clientConfig.initialConfig.statistics.isWorkspaceSymbol) {
+        scribe.info(
+          s"time: found ${result.length} results for query '${params.getQuery}' in $timer"
+        )
       }
-    } else {
-      indexingPromise.future.map { _ =>
-        val timer = new Timer(time)
-        val result =
-          workspaceSymbols
-            .search(params.getQuery, token, focusedDocument)
-            .toList
-        if (clientConfig.initialConfig.statistics.isWorkspaceSymbol) {
-          scribe.info(
-            s"time: found ${result.length} results for query '${params.getQuery}' in $timer"
-          )
-        }
-        result
-      }
+      result
     }
   }
 

@@ -7,6 +7,8 @@ import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
 
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolSearch
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolSearchParams
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.pc.InterruptException
@@ -27,10 +29,12 @@ final class WorkspaceSymbolProvider(
     val buildTargets: BuildTargets,
     val index: GlobalSymbolIndex,
     saveClassFileToDisk: Boolean,
+    userConfig: () => UserConfiguration,
     excludedPackageHandler: () => ExcludedPackagesHandler,
     bucketSize: Int = CompressedPackageIndex.DefaultBucketSize,
     classpathSearchIndexer: ClasspathSearch.Indexer =
       ClasspathSearch.Indexer.default,
+    mbtWorkspaceSymbolProvider: MbtWorkspaceSymbolSearch,
 )(implicit rc: ReportContext) {
   val MaxWorkspaceMatchesForShortQuery = 100
   val inWorkspace: TrieMap[Path, WorkspaceSymbolsIndex] =
@@ -89,7 +93,22 @@ final class WorkspaceSymbolProvider(
       visitor: SymbolSearchVisitor,
       target: Option[BuildTargetIdentifier],
   ): (SymbolSearch.Result, Int) = {
-    val workspaceCount = workspaceSearch(query, visitor, target)
+    val workspaceCount =
+      // the mbt-based index still doesn't support buildtarget-based search
+      // so we fallback to the non-mbt index for those queries.
+      if (target.isEmpty && userConfig().workspaceSymbolProvider.isMBT) {
+        mbtWorkspaceSymbolProvider.workspaceSymbolSearch(
+          MbtWorkspaceSymbolSearchParams(
+            query.query,
+            target.fold("")(_.getUri),
+          ),
+          visitor,
+        )
+        0
+      } else {
+        workspaceSearch(query, visitor, target)
+      }
+    // NOTE: we don't count the number of matches from the workspace
     val (res, inDepsCount) = inDependencies.search(query, visitor)
     (res, workspaceCount + inDepsCount)
   }

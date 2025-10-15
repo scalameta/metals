@@ -1,8 +1,10 @@
 package scala.meta.internal.metals.mbt
+import java.net.URI
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
-import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.{util => ju}
 
 import scala.collection.mutable
 import scala.collection.parallel.CollectionConverters._
@@ -15,6 +17,7 @@ import scala.meta.infra
 import scala.meta.inputs.Input
 import scala.meta.internal.infra.NoopMonitoringClient
 import scala.meta.internal.metals.CancelTokens
+import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.Fuzzy
@@ -27,11 +30,13 @@ import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Scala.DescriptorParser
-import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.tokenizers.UnexpectedInputEndException
+import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+import scala.meta.pc.SymbolSearch
+import scala.meta.pc.SymbolSearchVisitor
 
 import org.eclipse.{lsp4j => l}
 import org.lmdbjava.Env
@@ -63,24 +68,12 @@ final class MbtWorkspaceSymbolProvider(
     config: () => WorkspaceSymbolProviderConfig,
     statistics: () => StatisticsConfig,
     metrics: infra.MonitoringClient = new NoopMonitoringClient(),
-) {
+) extends MbtWorkspaceSymbolSearch
+    with Cancelable {
 
   private val isStatisticsEnabled: Boolean = statistics().isWorkspaceSymbol
 
   private val db = new LMDB(gitWorkspace)
-  private case class OIDIndex(
-      oid: Array[Byte],
-      // Not used for anything except debugging. It's tricky to troubleshoot
-      // when you only have a random git OID.
-      path: Path,
-      // The set of all SemanticDB symbols that are *defined* in this file. For
-      // example, the symbol "scala/metals/Main.main()." for the file
-      // "metals/src/main/scala/scala/meta/metals/Main.scala". Importantly, you
-      // must use WorkspaceSymbolQuery to search in this set, it doesn't
-      // actually include the full symbol (yet), it only includes prefixes of
-      // different parts of the symbol.
-      documentSymbols: StringBloomFilter,
-  )
   // The workspace symbol index is, simplified, a list of bloom filters, where
   // each bloom filter represents the set of symbols that are defined in a
   // single file. This could technically be a Map[Path, StringBloomFilter] but
@@ -107,28 +100,95 @@ final class MbtWorkspaceSymbolProvider(
   // The "workspaceSymbols" includes serialized bloom filters under this subkey.
   private val tableBloomFilterSubkey = 2
 
+  override def workspaceSymbolSearch(
+      params: MbtWorkspaceSymbolSearchParams,
+      visitor: SymbolSearchVisitor,
+  ): SymbolSearch.Result = {
+    if (!config().isMBT) {
+      scribe.error(
+        "invalid state, MbtWorkspaceSymbolProvider.search cannot be used when config.isMBT is false"
+      )
+      return SymbolSearch.Result.INCOMPLETE
+    }
+    this.onQueryWorkspaceSymbol(
+      new l.WorkspaceSymbolParams(params.query),
+      CancelTokens.empty,
+      visitor = (
+          doc: s.TextDocument,
+          info: s.SymbolInformation,
+          occ: s.SymbolOccurrence,
+      ) => {
+        if (!doc.uri.startsWith("file://")) {
+          throw new IllegalArgumentException(s"invalid uri: ${doc.uri}")
+        }
+        val path = Paths.get(URI.create(doc.uri))
+        visitor.visitWorkspaceSymbol(
+          path,
+          info.symbol,
+          info.kind.toLsp,
+          occ.range.getOrElse(s.Range()).toLsp,
+        )
+        if (visitor.isCancelled()) Stop else Continue
+      },
+    )
+    SymbolSearch.Result.COMPLETE
+  }
+
   def queryWorkspaceSymbol(
       query: String,
       token: CancelToken = CancelTokens.empty,
   ): List[l.SymbolInformation] = {
     queryWorkspaceSymbol(new l.WorkspaceSymbolParams(query), token)
   }
+
   def queryWorkspaceSymbol(
       params: l.WorkspaceSymbolParams,
       token: CancelToken,
   ): List[l.SymbolInformation] = {
+    val result = new ConcurrentLinkedQueue[l.SymbolInformation]()
+    onQueryWorkspaceSymbol(
+      params,
+      token,
+      visitor = (
+          doc: s.TextDocument,
+          info: s.SymbolInformation,
+          symbol: s.SymbolOccurrence,
+      ) => {
+        val (desc, owner) = DescriptorParser(info.symbol)
+        result.add(
+          new l.SymbolInformation(
+            desc.name.value,
+            info.kind.toLsp,
+            new l.Location(
+              doc.uri,
+              symbol.range.fold(new l.Range())(r => r.toLsp),
+            ),
+            owner.replace('/', '.'),
+          )
+        )
+        if (result.size >= maxResults) Stop
+        else Continue
+      },
+    )
+    result.asScala.toList
+  }
+  private def onQueryWorkspaceSymbol(
+      params: l.WorkspaceSymbolParams,
+      token: CancelToken,
+      visitor: MbtSymbolSearchVisitor,
+  ): Unit = {
     if (!config().isMBT) {
       scribe.error(
         "invalid state, MbtWorkspaceSymbolProvider.workspaceSymbol cannot be used when config.isMBT is false"
       )
-      return Nil
+      return
     }
-    db.readTransaction[List[l.SymbolInformation]](
+    db.readTransaction[Unit](
       tableName,
       s"query(${params.getQuery})",
-      Nil,
+      (),
     ) { (env, db, txn, _) =>
-      workspaceSymbolUnsafe(params, env, db, txn, token)
+      workspaceSymbolUnsafe(params, env, db, txn, token, visitor)
     }
   }
 
@@ -139,18 +199,19 @@ final class MbtWorkspaceSymbolProvider(
       db: org.lmdbjava.Dbi[ByteBuffer],
       txn: org.lmdbjava.Txn[ByteBuffer],
       token: CancelToken,
-  ): List[l.SymbolInformation] = {
+      visitor: MbtSymbolSearchVisitor,
+  ): Unit = {
     val timer = new Timer(Time.system)
     if (index.isEmpty) {
       scribe.error(s"workspace/symbol index is empty")
-      return Nil
+      return
     }
     val query = WorkspaceSymbolQuery.fuzzy(params.getQuery)
     val exactQuery =
       WorkspaceSymbolQuery.exactDescriptorPart(params.getQuery)
     val keyBuffer = ByteBuffer.allocateDirect(env.getMaxKeySize())
     if (token.isCanceled()) {
-      return Nil
+      return
     }
 
     val oids = new ConcurrentLinkedQueue[Match]()
@@ -175,42 +236,31 @@ final class MbtWorkspaceSymbolProvider(
       rankedOIDs.iterator.map(o => readTextDocument(keyBuffer, db, txn, o.file))
     )
     if (token.isCanceled()) {
-      return Nil
+      return
     }
     cursor.close()
     txn.close()
-    val result = new ConcurrentLinkedQueue[l.SymbolInformation]()
+    val result =
+      new ju.concurrent.atomic.AtomicReference[MbtSymbolSearchResult](Continue)
+    val resultCount = new ju.concurrent.atomic.AtomicInteger(0)
     for {
-      semanticdb <- semanticdbs.par
-      if result.size < maxResults
-      symbol <- semanticdb.occurrences
-      if result.size < maxResults
+      doc <- semanticdbs.par
+      if result.get() == Continue
+      symbol <- doc.occurrences
       if query.matches(symbol.symbol)
     } {
-      val kind = semanticdb.symbols
+      // TODO: optimize this naive lookup
+      val info = doc.symbols
         .find(_.symbol == symbol.symbol)
-        .map(_.kind)
-        .getOrElse(SymbolInformation.Kind.UNKNOWN_KIND)
-      val (desc, owner) = DescriptorParser(symbol.symbol)
-      result.add(
-        new l.SymbolInformation(
-          desc.name.value,
-          kind.toLsp,
-          new l.Location(
-            semanticdb.uri,
-            symbol.range.fold(new l.Range())(r => r.toLsp),
-          ),
-          owner.replace('/', '.'),
-        )
-      )
+        .getOrElse(s.SymbolInformation())
+      result.compareAndSet(Continue, visitor.onMatch(doc, info, symbol))
+      resultCount.incrementAndGet()
     }
     if (isStatisticsEnabled) {
       scribe.info(
-        s"workspace/symbol query '${params.getQuery}' matched ${result.size} results in ${timer}, sourced from ${rankedOIDs.length} candidate files"
+        s"workspace/symbol query '${params.getQuery}' matched ${resultCount.get()} results in ${timer}, sourced from ${rankedOIDs.length} candidate files"
       )
     }
-
-    result.asScala.toList
   }
 
   def onReindex(): IndexingStats = {
@@ -290,15 +340,7 @@ final class MbtWorkspaceSymbolProvider(
     // Step 6: assemble the in-memory index. Only the bloom filters, file
     // paths (for debugging) and OIDs are needed.
     index.clear()
-    index.appendAll(
-      files.iterator.map(file =>
-        OIDIndex(
-          file.oidBytes,
-          gitWorkspace.resolve(file.path).toNIO,
-          file.bloomFilter,
-        )
-      )
-    )
+    index.appendAll(files.iterator.map(_.toOIDIndex(gitWorkspace)))
     files.clear()
 
     metrics.recordEvent(
@@ -452,4 +494,7 @@ final class MbtWorkspaceSymbolProvider(
     file.path.endsWith(".scala")
   }
 
+  override def cancel(): Unit = {
+    db.close()
+  }
 }

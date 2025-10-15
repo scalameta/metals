@@ -9,6 +9,10 @@ import scala.meta.internal.async.ConcurrentQueue
  */
 final class MutableCancelable extends Cancelable {
   private val toCancel = new ConcurrentLinkedQueue[Cancelable]()
+  def register[T <: Cancelable](cancelable: T): T = {
+    toCancel.add(cancelable)
+    cancelable
+  }
   def add(cancelable: Cancelable): this.type = {
     toCancel.add(cancelable)
     this
