@@ -119,7 +119,7 @@ object DownloadDependencies {
 
   def downloadSemanticDBJavac(): Seq[Path] = {
     scribe.info("Downloading semanticdb-javac")
-    Embedded.downloadSemanticdbJavac
+    Embedded.downloadSemanticdbJavac()
   }
 
   def downloadBazelBsp(): Seq[Path] = {

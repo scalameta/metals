@@ -25,7 +25,7 @@ import mdoc.interfaces.Mdoc
  * - mdoc
  */
 final class Embedded(
-    workDoneProgress: WorkDoneProgress
+    workDoneProgress: BaseWorkDoneProgress
 ) extends Cancelable {
 
   private val mdocs: TrieMap[String, URLClassLoader] =
@@ -327,7 +327,7 @@ object Embedded {
       Some(scalaVersion),
     )
 
-  def downloadSemanticdbJavac: List[Path] = {
+  def downloadSemanticdbJavac(): List[Path] = {
     downloadDependency(
       Dependency.of(
         "com.sourcegraph",

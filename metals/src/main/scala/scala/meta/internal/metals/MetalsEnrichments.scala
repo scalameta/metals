@@ -247,7 +247,7 @@ object MetalsEnrichments
       }
   }
 
-  implicit class XtensionJavaFuture[T](future: CompletionStage[T]) {
+  implicit class XtensionJavaCompletionStage[T](future: CompletionStage[T]) {
     def asScala: Future[T] = FutureConverters.toScala(future)
   }
 

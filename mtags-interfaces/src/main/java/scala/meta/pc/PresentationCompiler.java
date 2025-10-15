@@ -109,7 +109,8 @@ public abstract class PresentationCompiler {
 	public abstract CompletableFuture<java.util.List<DocumentHighlight>> documentHighlight(OffsetParams params);
 
 	/**
-	 * Returns the references of the symbol under the current position in the target files.
+	 * Returns the references of the symbol under the current position in the target
+	 * files.
 	 */
 	public CompletableFuture<java.util.List<ReferencesResult>> references(ReferencesRequest params) {
 		return CompletableFuture.completedFuture(Collections.emptyList());
@@ -117,6 +118,7 @@ public abstract class PresentationCompiler {
 
 	/**
 	 * Execute the given code action
+	 * 
 	 * @since 1.4.1
 	 * @deprecated Please use the code action with optional data.
 	 */
@@ -135,7 +137,8 @@ public abstract class PresentationCompiler {
 	}
 
 	/**
-	 * Returns the list of code actions supported by the current presentation compiler.
+	 * Returns the list of code actions supported by the current presentation
+	 * compiler.
 	 */
 	public List<String> supportedCodeActions() {
 		return Arrays.asList();
@@ -345,11 +348,12 @@ public abstract class PresentationCompiler {
 	 *                              compiler plugins excluding
 	 *                              org.scalamacros:paradise, kind-projector and
 	 *                              better-monadic-for.
-	 * @param sourcePath			The source path for this build target, used by the PC to locate types
-	 *                              that have not been built yet.
+	 * @param sourcePath            The source path for this build target, used by
+	 *                              the PC to locate types that have not been built
+	 *                              yet.
 	 */
-	public PresentationCompiler newInstance(String buildTargetIdentifier, List<Path> classpath,
-                                            List<String> options, List<Path> sourcePath) {
+	public PresentationCompiler newInstance(String buildTargetIdentifier, List<Path> classpath, List<String> options,
+			List<Path> sourcePath) {
 		return newInstance(buildTargetIdentifier, classpath, options);
 	}
 

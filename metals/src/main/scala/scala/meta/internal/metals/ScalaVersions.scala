@@ -172,8 +172,7 @@ class ScalaVersions(
    *   `some-library_2.13-2.11` -> 2.13
    */
   def scalaBinaryVersionFromJarName(filename: String): Option[String] = {
-    val dropEnding = filename
-      .stripSuffix(".jar")
+    val dropEnding = filename.stripSuffix(".jar")
 
     List(scalaLibraryRegex, scalaVersionRegex)
       .flatMap(_.findAllMatchIn(dropEnding).toList)

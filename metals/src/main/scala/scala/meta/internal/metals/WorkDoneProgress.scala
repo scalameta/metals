@@ -25,11 +25,19 @@ import org.eclipse.lsp4j.WorkDoneProgressReport
 import org.eclipse.lsp4j.jsonrpc.messages
 import org.eclipse.lsp4j.services.LanguageClient
 
+trait BaseWorkDoneProgress {
+  def trackBlocking[T](message: String)(thunk: => T): T
+}
+
+object EmptyWorkDoneProgress extends BaseWorkDoneProgress {
+  override def trackBlocking[T](message: String)(thunk: => T): T = thunk
+}
 class WorkDoneProgress(
     client: LanguageClient,
     time: Time,
 )(implicit ec: ExecutionContext)
-    extends Cancelable {
+    extends Cancelable
+    with BaseWorkDoneProgress {
   case class Task(
       onCancel: Option[() => Unit],
       showTimer: Boolean,

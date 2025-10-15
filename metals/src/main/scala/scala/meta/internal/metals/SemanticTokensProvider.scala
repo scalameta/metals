@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import scala.annotation.nowarn
 import scala.annotation.switch
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
@@ -19,6 +20,7 @@ import scala.meta.tokens._
 
 import org.eclipse.lsp4j.SemanticTokenModifiers
 import org.eclipse.lsp4j.SemanticTokenTypes
+import org.eclipse.lsp4j.{Position => LspPosition}
 
 /**
  *  Provides semantic tokens of file
@@ -558,6 +560,100 @@ object SemanticTokensProvider {
         case _ => List.empty
       }
     }
+  }
+
+  /**
+   * Find the start that is actually contained in the file and not
+   * in the added parts such as imports in sbt.
+   *
+   * @param line line within the adjusted source
+   * @param character line within the adjusted source
+   * @param remaining the rest of the tokens to analyze
+   * @return the first found that should be contained with the rest
+   */
+  @tailrec
+  def findCorrectStart(
+      line: Integer,
+      character: Integer,
+      remaining: List[Integer],
+      adjust: AdjustLspData,
+  ): List[Integer] = {
+    remaining match {
+      case lineDelta :: charDelta :: next =>
+        val newCharacter: Integer =
+          // only increase character delta if the same line
+          if (lineDelta == 0) character + charDelta
+          else charDelta
+
+        val adjustedTokenPos = adjust.adjustPos(
+          new LspPosition(line + lineDelta, newCharacter),
+          adjustToZero = false,
+        )
+        if (
+          adjustedTokenPos.getLine() >= 0 &&
+          adjustedTokenPos.getCharacter() >= 0
+        )
+          (adjustedTokenPos.getLine(): Integer) ::
+            (adjustedTokenPos.getCharacter(): Integer) :: next
+        else
+          findCorrectStart(
+            line + lineDelta,
+            newCharacter,
+            next.drop(3),
+            adjust,
+          )
+      case _ => Nil
+    }
+  }
+
+  def adjustForScala3Worksheet(tokens: List[Integer]): List[Integer] = {
+    @tailrec
+    @nowarn
+    def loop(
+        remaining: List[Integer],
+        acc: List[List[Integer]],
+        adjustColumnDelta: Int =
+          0, // after multiline string we need to adjust column delta of the next token in line
+    ): List[Integer] = {
+      remaining match {
+        case Nil => acc.reverse.flatten
+        // we need to remove additional indent
+        case deltaLine :: deltaColumn :: len :: next if deltaLine != 0 =>
+          if (deltaColumn - 2 >= 0) {
+            val adjustedColumn: Integer = deltaColumn - 2
+            val adjusted: List[Integer] =
+              List(deltaLine, adjustedColumn, len) ++ next.take(2)
+            loop(
+              next.drop(2),
+              adjusted :: acc,
+            )
+          }
+          // for multiline strings, we highlight the entire line inluding leading whitespace
+          // so we need to adjust the length after removing additional indent
+          else {
+            val deltaLen = deltaColumn - 2
+            val adjustedLen: Integer = Math.max(0, len + deltaLen)
+            val adjusted: List[Integer] =
+              List(deltaLine, deltaColumn, adjustedLen) ++ next.take(2)
+            loop(
+              next.drop(2),
+              adjusted :: acc,
+              deltaLen,
+            )
+          }
+        case deltaLine :: deltaColumn :: next =>
+          val adjustedColumn: Integer = deltaColumn + adjustColumnDelta
+          val adjusted: List[Integer] =
+            List(deltaLine, adjustedColumn) ++ next.take(3)
+          loop(
+            next.drop(3),
+            adjusted :: acc,
+          )
+      }
+    }
+
+    // Delta for first token was already adjusted in `findCorrectStart`
+    loop(tokens.drop(5), List(tokens.take(5)))
   }
 }
 

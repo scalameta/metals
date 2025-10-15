@@ -102,7 +102,7 @@ class MetalsSymbolSearch(
       buildTargetIdentifier: String,
       visitor: SymbolSearchVisitor,
   ): SymbolSearch.Result = {
-    def search(query: WorkspaceSymbolQuery) =
+    def search(query: WorkspaceSymbolQuery): (SymbolSearch.Result, Int) =
       wsp.search(
         query,
         visitor,
