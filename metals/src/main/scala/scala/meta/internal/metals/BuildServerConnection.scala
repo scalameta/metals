@@ -39,7 +39,6 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j._
 import com.google.gson.Gson
 import org.eclipse.lsp4j.jsonrpc.JsonRpcException
-import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.MessageIssueException
 import org.eclipse.lsp4j.services.LanguageClient
@@ -608,7 +607,7 @@ object BuildServerConnection {
         val wrapper: MessageConsumer => MessageConsumer =
           requestMonitorOpt.map(_.wrapper).getOrElse(identity)
         val launcher =
-          new Launcher.Builder[MetalsBuildServer]()
+          new LargeLauncher.Builder[MetalsBuildServer]()
             .traceMessages(tracePrinter.orNull)
             .setOutput(output)
             .setInput(input)
