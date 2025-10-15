@@ -1,3 +1,4 @@
+import scala.util.Random
 import scala.collection.mutable
 import scala.sys.process._
 import Developers._
@@ -815,20 +816,22 @@ lazy val javapc = project
   )
   .dependsOn(mtest, `mtags-java`)
 
-def isInTestShard(name: String, logger: Logger): Boolean = {
-  val groupIndex = TestGroups.testGroups.indexWhere(group => group(name))
-  if (groupIndex == -1) {
-    logger.warn(
-      s"""|Test is not contained in a shard: $name
-          |It will be executed by default in the first shard.
-          |Please add it to "project/TestGroups.scala". """.stripMargin
-    )
-  }
-  if (!isCI) {
-    true
-  } else {
-    val groupId = Math.max(0, groupIndex) + 1
-    System.getenv("TEST_SHARD").toInt == groupId
+def isInTestShard(name: String): Boolean = {
+  (
+    Option(System.getenv("TEST_SHARD_COUNT")),
+    Option(System.getenv("TEST_SHARD")),
+  ) match {
+    case (Some(shardCount), Some(oneBasedTestShard)) =>
+      val testShard = oneBasedTestShard.toInt - 1
+      val nameShard = new Random(name.hashCode).nextInt(shardCount.toInt)
+      nameShard == testShard
+    case _ =>
+      if (isCI) {
+        throw new Exception(
+          s"TEST_SHARD_COUNT and TEST_SHARD must be set when running in CI."
+        )
+      }
+      true
   }
 }
 
@@ -860,7 +863,7 @@ lazy val unit = project
   .settings(
     testSettings,
     Test / testOptions ++= Seq(
-      Tests.Filter(name => isInTestShard(name, sLog.value))
+      Tests.Filter(name => isInTestShard(name))
     ),
     sharedSettings,
     Test / javaOptions ++= sharedJavaOptions ++ Seq(
