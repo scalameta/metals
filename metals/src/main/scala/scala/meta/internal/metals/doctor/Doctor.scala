@@ -11,6 +11,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.ExecutionContext
 import scala.util.Try
 
+import scala.meta.infra.FeatureFlag
+import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.bsp.BspResolvedResult
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.ConnectionBspStatus
@@ -331,6 +333,18 @@ final class Doctor(
       html.element("p") { builder =>
         builder.bold("Project's Java: ")
         builder.text(jdk.print)
+      }
+    }
+    serviceInfo.featureFlagProvider().foreach { ff =>
+      html.element("h3")(_.text("Feature Flags"))
+      FeatureFlag.values().foreach { flag =>
+        html.element("ul") { builder =>
+          builder.element("li") { builder =>
+            builder.bold(flag.name)
+            builder.text(": ")
+            builder.text(s"${ff.readBoolean(flag).orElse(null)}")
+          }
+        }
       }
     }
 
@@ -763,10 +777,12 @@ trait TargetsInfoProvider {
 
 sealed trait MetalsServiceInfo {
   def getJavaInfo(): Option[JavaInfo]
+  def featureFlagProvider(): Option[FeatureFlagProvider]
 }
 object MetalsServiceInfo {
   object FallbackService extends MetalsServiceInfo {
     def getJavaInfo(): Option[JavaInfo] = None
+    def featureFlagProvider(): Option[FeatureFlagProvider] = None
   }
 
   case class ProjectService(
@@ -775,7 +791,9 @@ object MetalsServiceInfo {
       buildTools: BuildTools,
       bspStatus: ConnectionBspStatus,
       javaInfo: () => Option[JavaInfo],
+      featureFlags: FeatureFlagProvider,
   ) extends MetalsServiceInfo {
     def getJavaInfo(): Option[JavaInfo] = javaInfo()
+    def featureFlagProvider(): Option[FeatureFlagProvider] = Some(featureFlags)
   }
 }

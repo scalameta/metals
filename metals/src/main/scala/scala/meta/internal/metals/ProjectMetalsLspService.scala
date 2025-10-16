@@ -478,6 +478,7 @@ class ProjectMetalsLspService(
       buildTools,
       connectionBspStatus,
       () => getProjectsJavaInfo,
+      featureFlags,
     )
 
   private def getProjectsJavaInfo: Option[JavaInfo] = {
