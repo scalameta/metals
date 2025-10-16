@@ -283,6 +283,8 @@ class MetalsGlobal(
       targetType: Type,
       pos: Position
   ): List[WorkspaceImplicitMember] = {
+    val startTime = System.currentTimeMillis()
+
     val context = doLocateContext(pos)
     val buffer = mutable.ListBuffer.empty[WorkspaceImplicitMember]
     val seenImplicitClasses = mutable.Set.empty[String]
@@ -335,8 +337,16 @@ class MetalsGlobal(
     }
 
     search.iterateAllClasspathClasses(visitor)
+    val elapsedMs = System.currentTimeMillis() - startTime
+    val result = buffer.toList.distinct
+    logger.info(
+      s"[MetalsGlobal.findImplicitExtensionsForType] Performance stats:"
+    )
+    logger.info(
+      s"[MetalsGlobal.findImplicitExtensionsForType]   Total time: ${elapsedMs}ms"
+    )
 
-    buffer.toList.distinct
+    result
   }
 
   def symbolDocumentation(
