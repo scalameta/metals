@@ -317,11 +317,12 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
         "Converts John to Johnatan",
         Some(sampleCode),
       )
+      path = RelativePath("a/src/main/scala/com/example/Hello.scala")
       _ = assertNoDiff(
         result,
         s"""|Error: No changes were made for rule ReplaceJohnWithJohnatan
             |Files tried:
-            |a/src/main/scala/com/example/Hello.scala
+            |$path
             |Sample code structure: ${sampleCode.parse[Stat].get.structure}
             |""".stripMargin,
       )
