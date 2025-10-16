@@ -452,14 +452,8 @@ class CompletionProvider(
               if qualifier.tpe != null && !qualifier.tpe.isError =>
             val result =
               workspaceExtensionMethods(query, pos, visit, qualifier.tpe)
-
-            // Add implicit extension methods for this type
             try {
-              val extensions = findImplicitExtensionsForType(qualifier.tpe, pos)
-
-              // Add the extension methods to the results
-              extensions.foreach { ext =>
-                // Filter out methods inherited from AnyVal (equals, hashCode, toString, etc.)
+              findImplicitExtensionsForType(qualifier.tpe, pos).foreach { ext =>
                 val isInheritedFromAnyVal =
                   ext.sym.owner == definitions.AnyValClass ||
                     ext.sym.name == nme.equals_ ||
