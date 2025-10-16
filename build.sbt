@@ -10,9 +10,13 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
+// The OSS version of Metals that this Databricks-internal fork is based on.
+// Make sure to bump up this version when we merge with upstream.
+val forkBaseVersion = "1.5.1"
+
 def localSnapshotVersion = sys.env.getOrElse(
   "METALS_VERSION",
-  s"1.5.1-${sys.env.getOrElse("METALS_VERSION_SUFFIX", "SNAPSHOT")}",
+  s"$forkBaseVersion-${sys.env.getOrElse("METALS_VERSION_SUFFIX", "SNAPSHOT")}",
 )
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
@@ -559,6 +563,11 @@ lazy val metals = project
     buildInfoKeys := Seq[BuildInfoKey](
       "localSnapshotVersion" -> localSnapshotVersion,
       "metalsVersion" -> version.value,
+      // Databricks-only: Use the latest matching OSS sbt-metals version. Our
+      // internal release of sbt-metals is never going to work out of the box
+      // without adding the s3 resolver to sbt's classpath. It's much simpler to
+      // just use an older sbt-metals instead.
+      "sbtMetalsVersion" -> forkBaseVersion,
       "mdocVersion" -> V.mdoc,
       "bspVersion" -> V.bsp,
       "sbtVersion" -> sbtVersion.value,
