@@ -387,40 +387,6 @@ class SbtBloopLspSuite
     }
   }
 
-  test("produce-diagnostics-on-save") {
-    cleanWorkspace()
-    workspace.resolve("sbt").createDirectories()
-    for {
-      _ <- initialize(
-        s"""|/project/build.properties
-            |sbt.version=$sbtVersion
-            |/build.sbt
-            |scalaVersion := "${V.scala213}"
-            |""".stripMargin
-      )
-      _ = client.messageRequests.clear()
-      _ = assertStatus(_.isInstalled)
-      _ <- server.didChange("build.sbt") { text =>
-        text + "\nval x: String = 42\n"
-      }
-      _ = assertNoDiff(
-        client.pathDiagnostics("build.sbt"),
-        "",
-      )
-      _ <- server.didSave("build.sbt")
-    } yield {
-      assertNoDiff(
-        client.pathDiagnostics("build.sbt"),
-        """|build.sbt:3:17: error: type mismatch;
-           | found   : Int(42)
-           | required: String
-           |val x: String = 42
-           |                ^^
-           |""".stripMargin,
-      )
-    }
-  }
-
   test("supported-scala") {
     cleanWorkspace()
     for {

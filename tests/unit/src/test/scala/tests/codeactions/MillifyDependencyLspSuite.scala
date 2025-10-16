@@ -86,6 +86,6 @@ class MillifyDependencyLspSuite
        |  "org.scalameta" %%<<>> "metals" % "1.0"
        |}""".stripMargin,
     fileName = "build.sbt",
-    isSourceFile = false,
+    createInSrcDir = false,
   )
 }

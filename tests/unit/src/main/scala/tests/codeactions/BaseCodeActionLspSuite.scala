@@ -23,7 +23,7 @@ abstract class BaseCodeActionLspSuite(
       scalafixConf: String = "",
       scalacOptions: List[String] = Nil,
       fileName: String = "A.scala",
-      isSourceFile: Boolean = true,
+      createInSrcDir: Boolean = true,
       filterAction: CodeAction => Boolean = _ => true,
   )(implicit loc: Location): Unit = {
     val fileContent = input.replace("<<", "").replace(">>", "")
@@ -35,7 +35,7 @@ abstract class BaseCodeActionLspSuite(
       scalafixConf = scalafixConf,
       scalacOptions = scalacOptions,
       fileName = fileName,
-      isSourceFile = isSourceFile,
+      createInSrcDir = createInSrcDir,
       filterAction = filterAction,
     )
   }
@@ -63,7 +63,7 @@ abstract class BaseCodeActionLspSuite(
       renamePath: Option[String] = None,
       extraOperations: => Unit = (),
       fileName: String = "A.scala",
-      isSourceFile: Boolean = true,
+      createInSrcDir: Boolean = true,
       changeFile: String => String = identity,
       expectError: Boolean = false,
       filterAction: CodeAction => Boolean = _ => true,
@@ -75,7 +75,7 @@ abstract class BaseCodeActionLspSuite(
       if (scalacOptions.nonEmpty)
         s""""scalacOptions": ["${scalacOptions.mkString("\",\"")}"],"""
       else ""
-    val path = toPath(fileName, isSourceFile)
+    val path = toPath(fileName, createInSrcDir)
 
     val layout = overrideLayout.getOrElse {
       s"""/metals.json

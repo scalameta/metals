@@ -3,7 +3,6 @@ package scala.meta.internal.pc
 import java.{util => ju}
 
 import scala.reflect.internal.Reporter
-import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
 
 import scala.meta.internal.jdk.CollectionConverters._
@@ -21,8 +20,6 @@ trait Compat { this: MetalsGlobal =>
       case s: StoreReporter => Some(s)
       case _ => None
     }
-  def createStoreReporter(settings: Settings): StoreReporter =
-    new StoreReporter(settings)
 
   def isAliasCompletion(m: Member): Boolean = m match {
     case tm: TypeMember => tm.aliasInfo.nonEmpty

@@ -333,10 +333,6 @@ public abstract class PresentationCompiler {
 	public abstract PresentationCompiler newInstance(String buildTargetIdentifier, List<Path> classpath,
 			List<String> options);
 
-	public CompletableFuture<List<Diagnostic>> didSave(VirtualFileParams params) {
-		return CompletableFuture.completedFuture(Collections.emptyList());
-	}
-
 	// =============================
 	// Intentionally missing methods
 	// =============================

@@ -1,6 +1,5 @@
 package scala.meta.internal.builds
 
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import scala.concurrent.ExecutionContext
@@ -11,7 +10,6 @@ import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.Confirmation
-import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Tables
@@ -36,7 +34,6 @@ final class BloopInstall(
     tables: Tables,
     shellRunner: ShellRunner,
     userConfig: () => UserConfiguration,
-    diagnostics: Diagnostics,
 )(implicit ec: ExecutionContext) {
 
   override def toString: String = s"BloopInstall($workspace)"
@@ -97,14 +94,7 @@ final class BloopInstall(
       .map { value =>
         BloopDiagnosticsParser
           .getDiagnosticsFromErrors(buffer.toArray)
-          .foreach(diagnostic =>
-            diagnostics.onPublishDiagnostics(
-              diagnostic.getUri.toAbsolutePath,
-              diagnostic.getDiagnostics.asScala.toSeq,
-              isReset = true,
-              originId = "METALS-$" + UUID.randomUUID().toString,
-            )
-          )
+          .foreach(languageClient.publishDiagnostics)
         value
       }
     processFuture.future.foreach { result =>

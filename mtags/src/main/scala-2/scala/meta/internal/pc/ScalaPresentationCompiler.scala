@@ -15,7 +15,6 @@ import scala.collection.Seq
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
 import scala.reflect.internal.FatalError
-import scala.reflect.internal.util.RangePosition
 import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.Settings
 import scala.tools.nsc.reporters.StoreReporter
@@ -50,10 +49,8 @@ import scala.meta.pc.{PcSymbolInformation => IPcSymbolInformation}
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
-import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.InlayHint
-import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SignatureHelp
@@ -172,39 +169,6 @@ case class ScalaPresentationCompiler(
     )
   }
 
-  private def collectDiagnosticsPC(
-      pc: CompilerWrapper[StoreReporter, MetalsGlobal],
-      params: VirtualFileParams
-  ): ju.List[Diagnostic] = {
-    val unit = new TypeCheckCompilationUnit(pc.compiler(params), params)
-    unit.diagnosticsReporter.infos
-      .flatMap(info =>
-        info.pos match {
-          case range: RangePosition =>
-            val source = range.source
-
-            val lineStart = source.offsetToLine(range.start)
-            val characterStart = range.start - source.lineToOffset(lineStart)
-
-            val lineEnd = source.offsetToLine(range.end)
-            val characterEnd = range.end - source.lineToOffset(lineEnd)
-
-            val diagnostic = new Diagnostic(
-              new Range(
-                new Position(lineStart, characterStart),
-                new Position(lineEnd, characterEnd)
-              ),
-              info.msg
-            )
-            diagnostic.setSeverity(DiagnosticSeverity.Error)
-            Some(diagnostic)
-          case _ => None
-        }
-      )
-      .toList
-      .asJava
-  }
-
   override def didChange(
       params: VirtualFileParams
   ): CompletableFuture[ju.List[Diagnostic]] = {
@@ -224,19 +188,6 @@ case class ScalaPresentationCompiler(
         DiagnosticsProvider.getDiagnostics(compiler, params).asJava
       } else List.empty[Diagnostic].asJava
     }(params.toQueryContext)
-  }
-
-  override def didSave(
-      params: VirtualFileParams
-  ): CompletableFuture[util.List[Diagnostic]] = {
-    if (params.uri().toAbsolutePath.isSbt) {
-      compilerAccess.withNonInterruptableCompiler(
-        List.empty[Diagnostic].asJava,
-        params.token
-      )(collectDiagnosticsPC(_, params))(params.toQueryContext)
-    } else {
-      CompletableFuture.completedFuture(List.empty.asJava)
-    }
   }
 
   def didClose(uri: URI): Unit = {

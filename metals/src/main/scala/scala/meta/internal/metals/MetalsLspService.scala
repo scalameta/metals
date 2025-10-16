@@ -3,7 +3,6 @@ package scala.meta.internal.metals
 import java.net.URI
 import java.nio.file._
 import java.util
-import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -857,43 +856,6 @@ abstract class MetalsLspService(
     Future
       .sequence(
         List(
-          {
-            if (path.isSbt) {
-              val originId = "METALS-$" + UUID.randomUUID().toString
-              if (buildTargets.sbtBuildScalaTarget(path).isDefined) {
-                val didSaveDiagnostics = compilers.didSave(path)
-                didSaveDiagnostics
-                  .map(diagnosticsList => {
-                    diagnostics.onPublishDiagnostics(
-                      path,
-                      diagnosticsList,
-                      isReset = true,
-                      originId = originId,
-                    )
-                  })
-              } else if (diagnostics.hasDiagnosticError(path)) {
-                // we end up here if project import failed with errors in sbt file, and it is not a build target
-                // therefore, we cannot use didSave for it, so we revise old diagnostics and republish them
-                val revisedDiagnostics = diagnostics
-                  .getFileDiagnostics(path)
-                  .flatMap(d =>
-                    diagnostics
-                      .toFreshDiagnostic(path, d, fallbackToNearest = false)
-                  )
-                diagnostics.onPublishDiagnostics(
-                  path,
-                  revisedDiagnostics,
-                  isReset = true,
-                  originId = originId,
-                )
-                Future.successful(())
-              } else {
-                Future.successful(())
-              }
-            } else {
-              Future.successful(())
-            }
-          },
           renameProvider.runSave(),
           parseTrees(path),
           onChange(List(path)),

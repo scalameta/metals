@@ -2,7 +2,6 @@ package scala.meta.internal.pc
 
 import scala.tools.nsc.reporters.Reporter
 import scala.tools.nsc.reporters.StoreReporter
-import scala.tools.nsc.Settings
 
 import scala.meta.pc.OutlineFiles
 import java.io.Closeable
@@ -21,9 +20,6 @@ trait Compat { this: MetalsGlobal with Closeable =>
       case s: StoreReporter => Some(s)
       case _ => None
     }
-
-  def createStoreReporter(settings: Settings): StoreReporter =
-    new StoreReporter
 
   def isAliasCompletion(m: Member): Boolean = false
 
