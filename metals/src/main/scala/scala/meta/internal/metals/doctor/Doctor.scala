@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.concurrent.ExecutionContext
 import scala.util.Try
+import scala.util.control.NonFatal
 
 import scala.meta.infra.FeatureFlag
 import scala.meta.infra.FeatureFlagProvider
@@ -106,6 +107,13 @@ final class Doctor(
    * Checks if there are any potential problems and if any, notifies the user.
    */
   def check(headDoctor: HeadDoctor): Unit = {
+    try checkUnsafe(headDoctor)
+    catch {
+      case NonFatal(e) =>
+        scribe.error(s"Error running Doctor check", e)
+    }
+  }
+  private def checkUnsafe(headDoctor: HeadDoctor): Unit = {
     scribe.info(s"running doctor check")
     val scalaTargets = buildTargets.allScala.toList
     val javaTargets = buildTargets.allJava.toList

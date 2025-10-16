@@ -5,6 +5,7 @@ import java.{util => ju}
 import scala.concurrent.ExecutionContext
 import scala.io.Source
 import scala.util.Try
+import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -34,7 +35,7 @@ object JdkVersion {
 
   def fromShell(
       javaHome: AbsolutePath
-  )(implicit ec: ExecutionContext): Option[JdkVersion] = {
+  )(implicit ec: ExecutionContext): Option[JdkVersion] = try {
     ShellRunner
       .runSync(
         List(javaHome.resolve("bin/java").toString, "-version"),
@@ -47,6 +48,13 @@ object JdkVersion {
           .findFirstIn(javaVersionResponse)
           .flatMap(JdkVersion.parse)
       }
+  } catch {
+    case NonFatal(e) =>
+      scribe.error(
+        s"Error getting JDK version from shell for Java home '$javaHome'",
+        e,
+      )
+      None
   }
 
   def fromReleaseFile(javaHome: AbsolutePath): Option[JdkVersion] =
