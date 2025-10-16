@@ -268,6 +268,77 @@ class MetalsGlobal(
     buffer.toList
   }
 
+  /**
+   * Find all implicit class extension methods available for a specific type.
+   *
+   * This method iterates through ALL classpath classes to find implicit classes,
+   * then extracts their methods using the presentation compiler. This works for both
+   * workspace and classpath implicit classes.
+   *
+   * @param targetType The type for which to find implicit extensions (e.g., Int, String)
+   * @param pos The position in the source code (used for context and accessibility checks)
+   * @return A list of all methods from implicit classes that can extend targetType
+   */
+  def findImplicitExtensionsForType(
+      targetType: Type,
+      pos: Position
+  ): List[WorkspaceImplicitMember] = {
+    val context = doLocateContext(pos)
+    val buffer = mutable.ListBuffer.empty[WorkspaceImplicitMember]
+    val seenImplicitClasses = mutable.Set.empty[String]
+
+    /**
+     * Process a symbol from the classpath - this returns classes/objects.
+     * We check if it's an implicit class and if its constructor parameter is compatible
+     * with the target type.
+     */
+    def processSymbol(sym: Symbol): Boolean = {
+      if (sym.isClass && sym.isImplicit && sym.isStatic) {
+        val implicitClassId = sym.fullName
+
+        // Only process each implicit class once
+        if (!seenImplicitClasses(implicitClassId)) {
+          seenImplicitClasses += implicitClassId
+
+          if (context.isAccessible(sym, sym.info)) {
+            val ownerConstructor = sym.info.member(nme.CONSTRUCTOR)
+            def typeParams = sym.info.typeParams
+
+            ownerConstructor.info.paramss match {
+              case List(List(param)) =>
+                val paramType = boundedWildcardType(param.info, typeParams)
+                val isCompatible =
+                  try {
+                    targetType <:< paramType
+                  } catch {
+                    case NonFatal(e) =>
+                      false
+                  }
+
+                if (isCompatible) {
+                  val methods = sym.info.members
+                    .filter(m => m.isMethod && !m.isConstructor && m.isPublic)
+                    .map(m => new WorkspaceImplicitMember(m, sym))
+
+                  buffer ++= methods
+                }
+              case _ =>
+            }
+          }
+        }
+      }
+      true
+    }
+
+    val visitor = new CompilerSearchVisitor(context, processSymbol) {
+      override def shouldVisitPackage(pkg: String): Boolean = true
+    }
+
+    search.iterateAllClasspathClasses(visitor)
+
+    buffer.toList.distinct
+  }
+
   def symbolDocumentation(
       symbol: Symbol,
       contentType: m.pc.ContentType = m.pc.ContentType.MARKDOWN

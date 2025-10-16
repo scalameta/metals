@@ -216,18 +216,34 @@ class CompletionProvider(
               )
             ) "($0)"
             else ""
+
+          // For implicit class extension methods, we need to import the implicit class,
+          // not the method itself. The method is accessed directly by name.
+          val implicitClass = m.implicitClass
+
+          // Use SingleType instead of ThisType for proper path-dependent type handling
+          val typeRef = TypeRef(
+            if (
+              implicitClass.owner.isPackageClass || implicitClass.owner.isEmptyPackageClass
+            )
+              NoPrefix
+            else
+              SingleType(NoPrefix, implicitClass.owner.sourceModule),
+            implicitClass,
+            Nil
+          )
+
           val (short, edits) = ShortenedNames.synthesize(
-            TypeRef(
-              ThisType(m.sym.owner),
-              m.sym,
-              Nil
-            ),
+            typeRef,
             pos,
             context,
             impPos
           )
+
+          // Insert just the method name (not qualified)
+          val methodName = Identifier.backtickWrap(m.sym.name.decoded)
           val edit: l.TextEdit = textEdit(
-            short + suffix,
+            methodName + suffix,
             editRange
           )
           item.setTextEdit(edit)
@@ -434,7 +450,34 @@ class CompletionProvider(
         typedTreeAt(pos) match {
           case Select(qualifier, _)
               if qualifier.tpe != null && !qualifier.tpe.isError =>
-            workspaceExtensionMethods(query, pos, visit, qualifier.tpe)
+            val result =
+              workspaceExtensionMethods(query, pos, visit, qualifier.tpe)
+
+            // Add implicit extension methods for this type
+            try {
+              val extensions = findImplicitExtensionsForType(qualifier.tpe, pos)
+
+              // Add the extension methods to the results
+              extensions.foreach { ext =>
+                // Filter out methods inherited from AnyVal (equals, hashCode, toString, etc.)
+                val isInheritedFromAnyVal =
+                  ext.sym.owner == definitions.AnyValClass ||
+                    ext.sym.name == nme.equals_ ||
+                    ext.sym.name == nme.hashCode_ ||
+                    ext.sym.name == nme.toString_
+
+                if (!isInheritedFromAnyVal) {
+                  visit(ext)
+                }
+              }
+            } catch {
+              case e: Exception =>
+                logger.warning(
+                  s"Error finding implicit extensions: ${e.getMessage}"
+                )
+            }
+
+            result
           case _ => SymbolSearch.Result.COMPLETE
         }
       }
@@ -458,7 +501,7 @@ class CompletionProvider(
           ownerConstructor.info.paramss match {
             case List(List(param))
                 if selectType <:< boundedWildcardType(param.info, typeParams) =>
-              visit(new WorkspaceImplicitMember(sym))
+              visit(new WorkspaceImplicitMember(sym, sym.owner))
             case _ => false
           }
         } else false
