@@ -222,7 +222,7 @@ class Compilers(
     loadCompiler(path).foreach(_.didClose(path.toNIO.toUri()))
   }
 
-  def didOpen(path: AbsolutePath): Unit = {
+  def didOpen(path: AbsolutePath): Future[List[Diagnostic]] = {
     didFocus(path)
   }
 

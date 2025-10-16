@@ -1,9 +1,5 @@
 package tests
 
-import scala.concurrent.Future
-import scala.concurrent.duration.Duration
-import scala.concurrent.duration._
-
 import scala.meta.internal.metals.UserConfiguration
 
 class PCDiagnosticsSuite extends BaseLspSuite("pc-diagnostics") {
@@ -61,7 +57,6 @@ class PCDiagnosticsSuite extends BaseLspSuite("pc-diagnostics") {
       _ <- server.didFocus("a/src/main/scala/a/TypeErrors.scala")
       // diagnostics are sent asynchronously and we don't have a future to await here
       // so we wait until the diagnostics are available or 5 seconds have passed
-      _ <- waitUntil(5.seconds)(client.workspaceDiagnostics.nonEmpty)
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/scala/a/TypeErrors.scala:4:21: error: type mismatch;
@@ -104,7 +99,6 @@ class PCDiagnosticsSuite extends BaseLspSuite("pc-diagnostics") {
       _ <- server.didChange("a/src/main/scala/a/Dynamic.scala")(
         _.replace("val text: String = \"hello\"", "val text: String = 123")
       )
-      _ <- waitUntil(5.seconds)(client.workspaceDiagnostics.nonEmpty)
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/scala/a/Dynamic.scala:5:22: error: type mismatch;
@@ -151,11 +145,4 @@ class PCDiagnosticsSuite extends BaseLspSuite("pc-diagnostics") {
     } yield ()
   }
 
-  private def waitUntil(timeout: Duration)(cond: => Boolean): Future[Unit] =
-    Future {
-      val deadline = System.nanoTime() + timeout.toNanos
-      while (!cond && System.nanoTime() < deadline) {
-        Thread.sleep(100)
-      }
-    }
 }

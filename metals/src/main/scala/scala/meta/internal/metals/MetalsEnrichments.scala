@@ -15,6 +15,7 @@ import java.util
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
@@ -1285,6 +1286,21 @@ object MetalsEnrichments
 
     def findFirstTrailing(predicate: m.Token => Boolean): Option[m.Token] =
       trailingTokens.find(predicate)
+  }
+  implicit class XtensionScheduledExecutorService(
+      sh: ScheduledExecutorService
+  ) {
+    def sleep(duration: FiniteDuration): Future[Unit] = {
+      val promise = Promise[Unit]()
+      sh.schedule(
+        new Runnable {
+          def run(): Unit = promise.trySuccess(())
+        },
+        duration.toMillis,
+        TimeUnit.MILLISECONDS,
+      )
+      promise.future
+    }
   }
 
   implicit class XtensionTreeBraceHandler(stat: Tree) {

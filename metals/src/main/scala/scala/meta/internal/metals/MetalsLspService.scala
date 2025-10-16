@@ -606,15 +606,36 @@ abstract class MetalsLspService(
       compilers,
     )
 
-  protected val diagnosticsDebouncer: DiagnosticsDebouncer = register(
-    new DiagnosticsDebouncer(
-      buffers,
-      diagnostics,
-      compilers,
-      sh,
-      sys.Prop[Int]("metals.errors-delay").option.getOrElse(500).millis,
+  val diagnosticsDebouncerDelay: FiniteDuration =
+    if (Testing.isEnabled) 0.millis
+    else sys.Prop[Int]("metals.errors-delay").option.getOrElse(500).millis
+  protected val fileDidChange: BatchedFunction[AbsolutePath, Unit] =
+    BatchedFunction.fromFuture[AbsolutePath, Unit](
+      changedFiles => {
+        for {
+          _ <- sh.sleep(diagnosticsDebouncerDelay)
+          futures = for {
+            file <- changedFiles.distinct
+            pc <- compilers.loadCompiler(file).toList
+            contents <- buffers.get(file).toList
+          } yield {
+            for {
+              reportedDiagnostics <- pc
+                .didChange(
+                  CompilerVirtualFileParams(file.toNIO.toUri, contents)
+                )
+                .asScala
+              _ = diagnostics.publishDiagnosticsNotAdjusted(
+                file,
+                reportedDiagnostics.asScala.toList,
+              )
+            } yield ()
+          }
+          _ <- Future.sequence(futures)
+        } yield ()
+      },
+      "fileDidChange",
     )
-  )
 
   def optFileSystemSemanticdbs(): Option[FileSystemSemanticdbs] = None
 
@@ -805,10 +826,15 @@ abstract class MetalsLspService(
     }
 
     val parser = parseTrees(path)
-    compilers.didOpen(path)
+    val didOpen = compilers.didOpen(path)
 
     if (path.isDependencySource(folder)) {
-      parser.asJava
+      Future
+        .sequence(
+          List(parser, didOpen.ignoreValue)
+        )
+        .ignoreValue
+        .asJava
     } else {
       buildServerPromise.future.flatMap { _ =>
         def load(): Future[Unit] = {
@@ -818,6 +844,7 @@ abstract class MetalsLspService(
                 maybeCompileOnDidFocus(path, prevBuildTarget),
                 compilers.load(List(path)),
                 parser,
+                didOpen.ignoreValue,
                 interactive,
                 testProvider.didOpen(path),
               )
@@ -846,21 +873,23 @@ abstract class MetalsLspService(
     scalaCli.didFocus(path)
 
     // when focusing on a new file, display updated diagnostics
-    compilers
-      .didFocus(path)
-      .map(diagnostics.publishDiagnosticsNotAdjusted(path, _))
+    val future = for {
+      // when focusing on a new file, display updated diagnostics
+      reportedDiagnostics <- compilers.didFocus(path)
+      _ = diagnostics.publishDiagnosticsNotAdjusted(path, reportedDiagnostics)
+      result <-
+        // Don't trigger compilation on didFocus events under cascade compilation
+        // because save events already trigger compile in inverse dependencies.
+        if (path.isDependencySource(folder)) {
+          Future.successful(DidFocusResult.NoBuildTarget)
+        } else if (recentlyOpenedFiles.isRecentlyActive(path)) {
+          Future.successful(DidFocusResult.RecentlyActive)
+        } else {
+          maybeCompileOnDidFocus(path, prevBuildTarget)
+        }
+    } yield result
 
-    syncStatusReporter.didFocus(uri)
-
-    // Don't trigger compilation on didFocus events under cascade compilation
-    // because save events already trigger compile in inverse dependencies.
-    if (path.isDependencySource(folder)) {
-      CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
-    } else if (recentlyOpenedFiles.isRecentlyActive(path)) {
-      CompletableFuture.completedFuture(DidFocusResult.RecentlyActive)
-    } else {
-      maybeCompileOnDidFocus(path, prevBuildTarget).asJava
-    }
+    future.asJava
   }
 
   def sync(
@@ -916,10 +945,13 @@ abstract class MetalsLspService(
         val path = params.getTextDocument.getUri.toAbsolutePath
         buffers.put(path, change.getText)
         diagnostics.didChange(path)
-        compilers.didChange(path)
-        diagnosticsDebouncer.didChange(params.getTextDocument.getVersion, path)
-        referencesProvider.didChange(path, change.getText)
-        parseTrees(path).asJava
+        val futures = List.newBuilder[Future[Unit]]
+        futures += compilers.didChange(path).ignoreValue
+        futures += fileDidChange(path)
+        // diagnosticsDebouncer.didChange(params.getTextDocument.getVersion, path)
+        futures += referencesProvider.didChange(path, change.getText)
+        futures += parseTrees(path)
+        Future.sequence(futures.result()).ignoreValue.asJava
     }
   }
 
