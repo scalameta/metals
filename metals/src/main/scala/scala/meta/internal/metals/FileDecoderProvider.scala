@@ -25,13 +25,16 @@ import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metap.DocumentPrinter
 import scala.meta.internal.metap.Main
 import scala.meta.internal.mtags.SemanticdbClasspath
+import scala.meta.internal.mtags.SemanticdbPrinter
 import scala.meta.internal.mtags.URIEncoderDecoder
 import scala.meta.internal.parsing.ClassArtifact
 import scala.meta.internal.parsing.ClassFinder
 import scala.meta.internal.parsing.ClassFinderGranularity
 import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.semanticdbjavac.Semanticdb
 import scala.meta.io.AbsolutePath
 import scala.meta.metap.Format
+import scala.meta.metap.Format.Detailed
 import scala.meta.metap.Settings
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -719,9 +722,17 @@ final class FileDecoderProvider(
     decodeFromSemanticDB(
       path,
       reporter => {
-        val settings = Settings().withFormat(format)
-        val printer = new DocumentPrinter(settings, reporter, document)
-        printer.print()
+        format match {
+          case Detailed =>
+            // This format is easier to understand than what DocumentPrinter produces.
+            val doc = Semanticdb.TextDocument.parseFrom(document.toByteString)
+            val printed = SemanticdbPrinter.printDocument(doc)
+            reporter.out.print(printed)
+          case _ =>
+            val settings = Settings().withFormat(format)
+            val printer = new DocumentPrinter(settings, reporter, document)
+            printer.print()
+        }
       },
     )
 

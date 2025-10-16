@@ -2,8 +2,8 @@ package tests.pc
 
 import java.net.URI
 
-import scala.meta.internal.mtags.Semanticdbs
-import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.mtags.SemanticdbPrinter
+import scala.meta.internal.semanticdbjavac.Semanticdb
 
 import munit.Location
 import tests.BasePCSuite
@@ -22,12 +22,18 @@ class PcSemanticdbSuite extends BasePCSuite {
        |  val a = 123
        |  val b = a + 1
        |}""".stripMargin,
-    """|package a
+    """|   package a
+       |//         ^ definition a/
        |
-       |object O/*a.O.*/ {
-       |  val a/*a.O.a.*/ = 123
-       |  val b/*a.O.b.*/ = a/*a.O.a.*/ +/*scala.Int#`+`(+4).*/ 1
-       |}
+       |   object O {
+       |//        ^ definition a/O.
+       |     val a = 123
+       |//       ^ definition a/O.a.
+       |     val b = a + 1
+       |//       ^ definition a/O.b.
+       |//           ^ reference a/O.a.
+       |//             ^ reference scala/Int#`+`(+4).
+       |   }
        |""".stripMargin
   )
 
@@ -40,21 +46,32 @@ class PcSemanticdbSuite extends BasePCSuite {
        |  val b = a + 1
        |}""".stripMargin,
     // local0 comes most likely from the script object use to wrap ScriptSource
-    """|/*local0*/import $ivy.`org.kohsuke:github-api:1.114`
+    """|   import $ivy.`org.kohsuke:github-api:1.114`
+       |// ^ definition local0
        |
-       |object O/*local1*/ {
-       |  val a/*local2*/ = 123
-       |  val b/*local3*/ = a/*local2*/ +/*scala.Int#`+`(+4).*/ 1
-       |}
+       |   object O {
+       |//        ^ definition local1
+       |     val a = 123
+       |//       ^ definition local2
+       |     val b = a + 1
+       |//       ^ definition local3
+       |//           ^ reference local2
+       |//             ^ reference scala/Int#`+`(+4).
+       |   }
        |""".stripMargin,
     filename = "A.worksheet.sc",
     compat = Map(
       "3" ->
-        """|import $ivy.`org.kohsuke:github-api:1.114`
+        """|   import $ivy.`org.kohsuke:github-api:1.114`
            |
-           |object O/*_empty_.O.*/ {
-           |  val a/*_empty_.O.a.*/ = 123
-           |  val b/*_empty_.O.b.*/ = a/*_empty_.O.a.*/ +/*scala.Int#`+`(+4).*/ 1
+           |   object O {
+           |//        ^ definition _empty_.O.
+           |     val a = 123
+           |//       ^ definition _empty_.O.a.
+           |     val b = a + 1
+           |//       ^ definition _empty_.O.b.
+           |//           ^ reference _empty_.O.a.
+           |//             ^ reference scala/Int#`+`(+4).
            |}
            |""".stripMargin
     )
@@ -71,9 +88,12 @@ class PcSemanticdbSuite extends BasePCSuite {
       val uri = new URI(s"file:///$filename")
       val doc = presentationCompiler.semanticdbTextDocument(uri, original)
 
-      val document = TextDocument.parseFrom(doc.get())
-      val withCode = document.withText(original)
-      val obtained = Semanticdbs.printTextDocument(withCode)
+      val document = Semanticdb.TextDocument
+        .parseFrom(doc.get())
+        .toBuilder()
+        .setText(original)
+        .build()
+      val obtained = SemanticdbPrinter.printDocument(document)
       assertNoDiff(
         obtained,
         getExpected(expected, compat, scalaVersion)
