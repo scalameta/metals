@@ -1,93 +1,775 @@
-<!doctype html><html lang=en dir=ltr class="blog-wrapper blog-list-page plugin-blog plugin-id-default" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.9.1"><title data-rh=true>Blog | Metals</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:image content=http://scalameta.org/metals/img/scalameta-logo.png /><meta data-rh=true name=twitter:image content=http://scalameta.org/metals/img/scalameta-logo.png /><meta data-rh=true property=og:url content=http://scalameta.org/metals/blog/page/23 /><meta data-rh=true property=og:locale content=en /><meta data-rh=true name=docusaurus_locale content=en /><meta data-rh=true name=docsearch:language content=en /><meta data-rh=true property=og:title content="Blog | Metals"/><meta data-rh=true name=description content=Blog /><meta data-rh=true property=og:description content=Blog /><meta data-rh=true name=docusaurus_tag content=blog_posts_list /><meta data-rh=true name=docsearch:docusaurus_tag content=blog_posts_list /><link data-rh=true rel=icon href=/metals/img/favicon.ico /><link data-rh=true rel=canonical href=http://scalameta.org/metals/blog/page/23 /><link data-rh=true rel=alternate href=http://scalameta.org/metals/blog/page/23 hreflang=en /><link data-rh=true rel=alternate href=http://scalameta.org/metals/blog/page/23 hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@id":"http://scalameta.org/metals/blog/page/23","@type":"Blog","blogPost":[{"@id":"http://scalameta.org/metals/blog/2023/07/17/workspace-folders","@type":"BlogPosting","author":{"@type":"Person","image":"https://github.com/kasiaMarek.png","name":"Katarzyna Marek","url":"https://github.com/kasiaMarek"},"datePublished":"2023-07-17T00:00:00.000Z","description":"In the upcoming version of metals we will add support for","headline":"Workspace folders","keywords":[],"mainEntityOfPage":"http://scalameta.org/metals/blog/2023/07/17/workspace-folders","name":"Workspace folders","url":"http://scalameta.org/metals/blog/2023/07/17/workspace-folders"}],"description":"Blog","headline":"Blog","mainEntityOfPage":"http://scalameta.org/metals/blog/page/23"}</script><link rel=alternate type=application/rss+xml href=/metals/blog/rss.xml title="Metals RSS Feed"><link rel=alternate type=application/atom+xml href=/metals/blog/atom.xml title="Metals Atom Feed"><link rel=preconnect href=https://www.google-analytics.com><link rel=preconnect href=https://www.googletagmanager.com><script async src="https://www.googletagmanager.com/gtag/js?id=UA-140140828-1"></script><script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("js",new Date),gtag("config","UA-140140828-1",{})</script><link rel=stylesheet href=/metals/assets/css/styles.8e378d32.css /><script src=/metals/assets/js/runtime~main.536d293c.js defer></script><script src=/metals/assets/js/main.3417ca16.js defer></script></head><body class=navigation-with-keyboard><svg style="display: none;"><defs>
+<!doctype html><html lang=en dir=ltr class="blog-wrapper blog-list-page plugin-blog plugin-id-default" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.9.1"><title data-rh=true>Blog | Metals</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:image content=http://scalameta.org/metals/img/scalameta-logo.png /><meta data-rh=true name=twitter:image content=http://scalameta.org/metals/img/scalameta-logo.png /><meta data-rh=true property=og:url content=http://scalameta.org/metals/blog/page/23 /><meta data-rh=true property=og:locale content=en /><meta data-rh=true name=docusaurus_locale content=en /><meta data-rh=true name=docsearch:language content=en /><meta data-rh=true property=og:title content="Blog | Metals"/><meta data-rh=true name=description content=Blog /><meta data-rh=true property=og:description content=Blog /><meta data-rh=true name=docusaurus_tag content=blog_posts_list /><meta data-rh=true name=docsearch:docusaurus_tag content=blog_posts_list /><link data-rh=true rel=icon href=/metals/img/favicon.ico /><link data-rh=true rel=canonical href=http://scalameta.org/metals/blog/page/23 /><link data-rh=true rel=alternate href=http://scalameta.org/metals/blog/page/23 hreflang=en /><link data-rh=true rel=alternate href=http://scalameta.org/metals/blog/page/23 hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@id":"http://scalameta.org/metals/blog/page/23","@type":"Blog","blogPost":[{"@id":"http://scalameta.org/metals/blog/2023/07/19/silver","@type":"BlogPosting","author":{"@type":"Person","image":"https://github.com/tgodzik.png","name":"Tomasz Godzik","url":"https://twitter.com/TomekGodzik"},"datePublished":"2023-07-19T00:00:00.000Z","description":"We're happy to announce the release of of Metals v1.0.0, which was a long time","headline":"Metals v1.0.0 - Silver","keywords":[],"mainEntityOfPage":"http://scalameta.org/metals/blog/2023/07/19/silver","name":"Metals v1.0.0 - Silver","url":"http://scalameta.org/metals/blog/2023/07/19/silver"}],"description":"Blog","headline":"Blog","mainEntityOfPage":"http://scalameta.org/metals/blog/page/23"}</script><link rel=alternate type=application/rss+xml href=/metals/blog/rss.xml title="Metals RSS Feed"><link rel=alternate type=application/atom+xml href=/metals/blog/atom.xml title="Metals Atom Feed"><link rel=preconnect href=https://www.google-analytics.com><link rel=preconnect href=https://www.googletagmanager.com><script async src="https://www.googletagmanager.com/gtag/js?id=UA-140140828-1"></script><script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("js",new Date),gtag("config","UA-140140828-1",{})</script><link rel=stylesheet href=/metals/assets/css/styles.8e378d32.css /><script src=/metals/assets/js/runtime~main.40bc2551.js defer></script><script src=/metals/assets/js/main.63dc0601.js defer></script></head><body class=navigation-with-keyboard><svg style="display: none;"><defs>
 <symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
 </defs></svg>
-<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/metals/img/scalameta-logo.png /><link rel=preload as=image href=https://github.com/kasiaMarek.png /><div role=region aria-label="Skip to main content"><a class=skipToContent_fXgn href=#__docusaurus_skipToContent_fallback>Skip to main content</a></div><nav aria-label=Main class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/metals/><div class=navbar__logo><img src=/metals/img/scalameta-logo.png alt="" class="themedComponent_mlkZ themedComponent--light_NVdE"/><img src=/metals/img/scalameta-logo.png alt="" class="themedComponent_mlkZ themedComponent--dark_xIcU"/></div><b class="navbar__title text--truncate">Metals</b></a><a class="navbar__item navbar__link" href=/metals/docs/>Docs</a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/metals/blog/>Blog</a><a href=https://github.com/scalameta/metals target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPIU><use href=#theme-svg-external-link /></svg></a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="toggle_vylO colorModeToggle_DEke"><button class="clean-btn toggleButton_gllP toggleButtonDisabled_aARS" type=button disabled title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_g3eP lightToggleIcon_pyhR"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_g3eP darkToggleIcon_wfgR"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_g3eP systemToggleIcon_QzmC"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_Bca1><div class="navbar__search searchBarContainer_NW3z" dir=ltr><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_YFbd" value="" /><div class="loadingRing_RJI3 searchBarLoadingRing_YnHq"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class="container margin-vert--lg"><div class=row><aside class="col col--3"><nav class="sidebar_re4s thin-scrollbar" aria-label="Blog recent posts navigation"><div class="sidebarItemTitle_pO2u margin-bottom--md">All Blog Posts</div><div role=group><h3 class=yearGroupHeading_rMGB>2025</h3><ul class="sidebarItemList_Yudw clean-list"><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2025/08/09/osmium>Metals v1.6.2 - Osmium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2025/07/31/osmium>Metals v1.6.1 - Osmium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2025/06/05/osmium>Metals v1.6.0 - Osmium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2025/05/13/strontium>Metals v1.5.3 - Strontium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2025/03/26/strontium>Metals v1.5.2 - Strontium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2025/01/24/strontium>Metals v1.5.1 - Strontium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2025/01/22/strontium>Metals v1.5.0 - Strontium</a></ul></div><div role=group><h3 class=yearGroupHeading_rMGB>2024</h3><ul class="sidebarItemList_Yudw clean-list"><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/12/16/palladium>Metals v1.4.2 - Palladium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/11/15/palladium>Metals v1.4.1 - Palladium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/10/24/palladium>Metals v1.4.0 - Palladium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/08/01/thallium>Metals v1.3.5 - Thallium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/07/24/thallium>Metals v1.3.4 - Thallium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/07/12/thallium>Metals v1.3.3 - Thallium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/06/19/thallium>Metals v1.3.2 - Thallium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/05/16/thallium>Metals v1.3.1 - Thallium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/04/15/thalium>Metals v1.3.0 - Thallium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/02/15/bismuth>Metals v1.2.2 - Bismuth</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/02/07/bismuth>Metals v1.2.1 - Bismuth</a></ul></div><div role=group><h3 class=yearGroupHeading_rMGB>2023</h3><ul class="sidebarItemList_Yudw clean-list"><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2023/12/12/bismuth>Metals v1.2.0 - Bismuth</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2023/10/17/silver>Metals v1.1.0 - Silver</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2023/08/28/silver>Metals v1.0.1 - Silver</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2023/07/19/silver>Metals v1.0.0 - Silver</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2023/07/17/workspace-folders>Workspace folders</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2023/04/21/aluminium>Metals v0.11.12 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2023/03/02/aluminium>Metals v0.11.11 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2023/01/02/aluminium>Metals v0.11.10 - Aluminium</a></ul></div><div role=group><h3 class=yearGroupHeading_rMGB>2022</h3><ul class="sidebarItemList_Yudw clean-list"><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/10/06/aluminium>Metals v0.11.9 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/08/10/aluminium>Metals v0.11.8 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/07/04/aluminium>Metals v0.11.7 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/06/03/aluminium>Metals v0.11.6 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/04/28/aluminium>Metals v0.11.5 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/04/27/aluminium>Metals v0.11.4 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/04/26/aluminium>Metals v0.11.3 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/03/08/aluminium>Metals v0.11.2 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/02/23/towards-better-releases>Towards better releases</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/01/17/aluminium>Metals v0.11.1 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/01/12/aluminium>Metals v0.11.0 - Aluminium</a></ul></div><div role=group><h3 class=yearGroupHeading_rMGB>2021</h3><ul class="sidebarItemList_Yudw clean-list"><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/11/03/tungsten>Metals v0.10.9 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/10/26/tungsten>Metals v0.10.8 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/09/16/tungsten>Metals v0.10.7 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/09/06/tungsten>Metals v0.10.6 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/07/14/tungsten>Metals v0.10.5 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/05/31/tungsten>Metals v0.10.4 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/05/17/tungsten>Metals v0.10.3 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/04/20/tungsten>Metals v0.10.2 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/04/06/tungsten>Metals v0.10.1 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/02/24/tungsten>Metals v0.10.0 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/02/02/metals-retro-part1>A Metals Retrospective (Part 1)</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/01/19/lithium>Metals v0.9.10 - Lithium</a></ul></div><div role=group><h3 class=yearGroupHeading_rMGB>2020</h3><ul class="sidebarItemList_Yudw clean-list"><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/12/19/lithium>Metals v0.9.8 - Lithium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/11/26/lithium>Metals v0.9.7 - Lithium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/11/20/lithium>Metals v0.9.6 - Lithium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/11/10/lithium>Metals v0.9.5 - Lithium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/11/06/sbt-BSP-support>sbt BSP support</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/09/21/lithium>Metals v0.9.4 - Lithium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/08/19/lithium>Metals v0.9.3 - Lithium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/07/23/configuring-a-client>A Dive into Configuring Metals</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/07/15/lithium>Metals v0.9.2 - Lithium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/07/01/lithium>Metals v0.9.1 - Lithium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/05/04/lithium>Metals v0.9.0 - Lithium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/04/10/cobalt>Metals v0.8.4 - Cobalt</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/03/19/cobalt>Metals v0.8.3 - Cobalt</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/02/26/cobalt>Metals v0.8.1 - Cobalt</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/01/10/cobalt>Metals v0.8.0 - Cobalt</a></ul></div><div role=group><h3 class=yearGroupHeading_rMGB>2019</h3><ul class="sidebarItemList_Yudw clean-list"><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/09/23/thorium>Metals v0.7.6 - Thorium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/09/12/thorium>Metals v0.7.5 - Thorium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/09/02/thorium>Metals v0.7.2 - Thorium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/06/28/thorium>Metals v0.7.0 - Thorium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/06/11/radium>Metals v0.6.1 - Radium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/04/26/mercury>Metals v0.5.1 - Mercury</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/04/12/mercury>Metals v0.5.0 - Mercury</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/02/01/tin>Metals v0.4.4 - Tin</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/01/24/tin>Metals v0.4.0 - Tin</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/01/22/bloom-filters>Low-memory symbol indexing with bloom filters</a></ul></div><div role=group><h3 class=yearGroupHeading_rMGB>2018</h3><ul class="sidebarItemList_Yudw clean-list"><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2018/12/14/iron>Metals v0.3.2 - Iron</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2018/12/12/fast-goto-definition>Fast goto definition with low memory footprint</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2018/12/06/iron>Metals v0.3 - Iron</a></ul></div></nav></aside><main class="col col--7"><article class=margin-bottom--xl><header><h2 class=title_f1Hy><a href=/metals/blog/2023/07/17/workspace-folders>Workspace folders</a></h2><div class="container_mt6G margin-vert--md"><time datetime=2023-07-17T00:00:00.000Z>July 17, 2023</time> · <!-- -->5 min read</div><div class="margin-top--md margin-bottom--sm row"><div class="col col--12 authorCol_Hf19"><div class="avatar margin-bottom--sm"><a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer" class=avatar__photo-link><img class="avatar__photo authorImage_XqGP" src=https://github.com/kasiaMarek.png alt="Katarzyna Marek"/></a><div class="avatar__intro authorDetails_lV9A"><div class=avatar__name><a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer"><span class=authorName_yefp translate=no>Katarzyna Marek</span></a></div><div class=authorSocials_rSDt></div></div></div></div></div></header><div class=markdown><p>In the upcoming version of metals we will add support for
-<a href=https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_workspaceFolders target=_blank rel="noopener noreferrer">LSP workspace folders</a>.
-This feature allows you to load multiple Scala projects/modules into the same
-workspace without the need to switch between multiple windows.</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id=the-new-multi-root-approach>The new multi-root approach<a href=#the-new-multi-root-approach class=hash-link aria-label="Direct link to The new multi-root approach" title="Direct link to The new multi-root approach" translate=no>​</a></h2>
-<p>Before this feature metals would only support a single project treating a
-workspace root folder as the root of the project. The workspace root was
-established based on the <code>rootUri</code> field of
-<a href=https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initializeParams target=_blank rel="noopener noreferrer"><code>InitializeParams</code></a>
-sent by the client upon initialization.</p>
-<p>Now a single metals instance can accommodate several projects (or multiple roots
-of a project) at the time. In <code>InitializeParams</code> metals first looks for
-projects' roots under <code>workspaceFolders</code> in <code>InitializeParams</code> and if empty we
-still fallback to the <code>rootUri</code>. Loaded projects can be changed dynamically
-though <code>didChangeWorkspaceFolders</code> notifications, which allow the client
-(editor) to inform metals about any added or removed projects.</p>
-<p>All workspace folders are handled in metals separately and are oblivious of each
-other. E.g. for the following multi project structure</p>
-<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style=--prism-color:#bfc7d5;--prism-background-color:#292d3e><div class=codeBlockContent_QJqH><pre tabindex=0 class="prism-code language-text codeBlock_bY9V thin-scrollbar" style=color:#bfc7d5;background-color:#292d3e><code class=codeBlockLines_e6Vv><span class=token-line style=color:#bfc7d5><span class="token plain">project1</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">|- build.sbt</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">|- src</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">  |- Main.scala</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain" style=display:inline-block></span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">project2</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">|- build.sbt</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">|- src</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">  |- Main.scala</span><br/></span></code></pre></div></div>
-<p>we will keep two separate entities: one responsible for <code>project1</code>, and another
-one for <code>project2</code>. Upon receiving most requests metals will redirect them to
-the entity responsible for the project of interest. If there are no other clues
-the project is chosen based on the currently opened file. E.g. if the user wants
-to insert an inferred type in the file <code>../project1/src/Main</code>, the request
-received by Metals will be redirected to the entity responsible for <code>project1</code>.</p>
-<p>For some requests we collect information from all the projects and send a joint
-result, e.g. when searching for workspace symbols.</p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id=how-do-i-use-the-multi-root-feature>How do I use the multi-root feature?<a href=#how-do-i-use-the-multi-root-feature class=hash-link aria-label="Direct link to How do I use the multi-root feature?" title="Direct link to How do I use the multi-root feature?" translate=no>​</a></h2>
-<h3 class="anchor anchorWithStickyNavbar_LWe7" id=vscode>VSCode<a href=#vscode class=hash-link aria-label="Direct link to VSCode" title="Direct link to VSCode" translate=no>​</a></h3>
-<p>In VSCode workspace folder support is achieved by
-<a href=https://code.visualstudio.com/docs/editor/multi-root-workspaces target=_blank rel="noopener noreferrer">multi-root workspaces</a>.
-To load multiple projects into a single workspace you can simply open one of the
-projects and add the other one using <code>File > Add Folder to Workspace</code> and then
-choosing the correct folder.</p>
-<p><img decoding=async loading=lazy src=https://i.imgur.com/LTYrx9V.gif alt=add-workspace-folder class=img_ev3q /></p>
-<p>Now you have two projects loaded side by side, so you can easily see both and
-switch between them. All of the current metals functionality accommodates
-multiple projects, so you can use metals the same way as you did before. The
-biggest changes will be visible in the places where information from the whole
-workspace is collected, like workspace symbol search, test explorer, or metals
-doctor.</p>
-<p><img decoding=async loading=lazy src=https://i.imgur.com/zWmmsC2.gif alt=multi-root-tests class=img_ev3q /></p>
-<p>The target project for a command is usually chosen based on the currently opened
-file. E.g. if you run <code>Switch build server</code> the command it will be executed for
-the project in focus. If no project is in focus the editor will explicitly ask
-for which project the command should be executed.</p>
-<p><img decoding=async loading=lazy src=https://i.imgur.com/tV7K822.gif alt=target-folder class=img_ev3q /></p>
-<p>Finally, logs can still be found in the <code>.metals/metals.log</code> in the root of each
-project. Note, that for the time being all information is logged to all opened
-workspace folders, so anything logged for <code>project1</code> will also be visible in
-logs for <code>project2</code>.</p>
-<h3 class="anchor anchorWithStickyNavbar_LWe7" id=nvim-metals-section-written-by-ckipp01>nvim-metals (<em>section written by <a href=https://github.com/ckipp01 target=_blank rel="noopener noreferrer">ckipp01</a></em>)<a href=#nvim-metals-section-written-by-ckipp01 class=hash-link aria-label="Direct link to nvim-metals-section-written-by-ckipp01" title="Direct link to nvim-metals-section-written-by-ckipp01" translate=no>​</a></h3>
-<p>When using nvim-metals, you'll start just like you do with any other project.
-Since the idea of a workspace is a bit "artificial" with Neovim, you can really
-just add any new root to have a multi-root workspace. All you'll need to do is
-navigate to a file at the root level of the workspace you'd like to add, and use
-the
-<a href=https://neovim.io/doc/user/lsp.html#vim.lsp.buf.add_workspace_folder() target=_blank rel="noopener noreferrer"><code>vim.lsp.buf.add_workspace_folder()</code></a>
-function to add the folder containing the file you're in as another root.</p>
-<p><img decoding=async loading=lazy src=https://i.imgur.com/E8iriR9.gif alt=add_workspace_folder class=img_ev3q /></p>
-<p>To make this easier, you can also just create a mapping to use.</p>
-<div class="language-lua codeBlockContainer_Ckt0 theme-code-block" style=--prism-color:#bfc7d5;--prism-background-color:#292d3e><div class=codeBlockContent_QJqH><pre tabindex=0 class="prism-code language-lua codeBlock_bY9V thin-scrollbar" style=color:#bfc7d5;background-color:#292d3e><code class=codeBlockLines_e6Vv><span class=token-line style=color:#bfc7d5><span class="token plain">vim.keymap.set("n", "&lt;leader>awf", vim.lsp.buf.add_workspace_folder)</span><br/></span></code></pre></div></div>
-<p>To verify that this has worked correctly you should be able to now see both
-workspaces reflected in your Metals Doctor.</p>
-<p><img decoding=async loading=lazy src=https://i.imgur.com/2u48wDK.gif alt="nvim-metals doctor" class=img_ev3q /></p>
-<p>You should also see that some commands, like the
-<a href=https://neovim.io/doc/user/lsp.html#vim.lsp.buf.workspace_symbol() target=_blank rel="noopener noreferrer"><code>vim.lsp.buf.workspace_symbol()</code></a>
-now show results from all the added workspaces.</p>
-<p><img decoding=async loading=lazy src=https://i.imgur.com/RczJIcp.gif alt=workspace_symbols class=img_ev3q /></p>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id=changes-for-the-clients>Changes for the clients<a href=#changes-for-the-clients class=hash-link aria-label="Direct link to Changes for the clients" title="Direct link to Changes for the clients" translate=no>​</a></h2>
-<p>Since workspace folders are a part of the LSP for any client implementing this
-capability the multi-root support should work out of the box, however, there
-will be a few minor changes to needed accommodate the new approach.</p>
-<ol>
-<li>The metals doctor result json format will change to contain a list of
-diagnostics for each workspace folder. Current format can be found in the
-description of <code>RunDoctor</code> command (visible in <code>ClientCommands.scala</code> in
-<code>metals</code> repo).</li>
-<li>For test explorer users <code>BuildTargetUpdate</code> will also now contain information
-about the target folder.</li>
-</ol>
-<h2 class="anchor anchorWithStickyNavbar_LWe7" id=quick-summary>Quick summary<a href=#quick-summary class=hash-link aria-label="Direct link to Quick summary" title="Direct link to Quick summary" translate=no>​</a></h2>
-<p>Metals now supports the
-<a href=https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_workspaceFolders target=_blank rel="noopener noreferrer">LSP workspace folders</a>,
-which in VSCode are implemented by
-<a href=https://code.visualstudio.com/docs/editor/multi-root-workspaces target=_blank rel="noopener noreferrer">multi-root workspaces</a>.</p>
-<p>If you haven't yet make sure to try out our new multi-root support!</div></article><nav class=pagination-nav aria-label="Blog list page navigation"><a class="pagination-nav__link pagination-nav__link--prev" href=/metals/blog/page/22><div class=pagination-nav__label>Newer entries</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/metals/blog/page/24><div class=pagination-nav__label>Older entries</div></a></nav></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Overview</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/metals/docs/>Overview</a><li class=footer__item><a class=footer__link-item href=/metals/docs/build-tools/overview>Build Tools</a><li class=footer__item><a class=footer__link-item href=/metals/docs/contributors/project-goals>Project Goals</a><li class=footer__item><a class=footer__link-item href=/metals/docs/contributors/getting-started>Contributing</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Social</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/scalameta/metals target=_blank>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/metals/img/scalameta-logo.png /><link rel=preload as=image href=https://github.com/tgodzik.png /><div role=region aria-label="Skip to main content"><a class=skipToContent_fXgn href=#__docusaurus_skipToContent_fallback>Skip to main content</a></div><nav aria-label=Main class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/metals/><div class=navbar__logo><img src=/metals/img/scalameta-logo.png alt="" class="themedComponent_mlkZ themedComponent--light_NVdE"/><img src=/metals/img/scalameta-logo.png alt="" class="themedComponent_mlkZ themedComponent--dark_xIcU"/></div><b class="navbar__title text--truncate">Metals</b></a><a class="navbar__item navbar__link" href=/metals/docs/>Docs</a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/metals/blog/>Blog</a><a href=https://github.com/scalameta/metals target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPIU><use href=#theme-svg-external-link /></svg></a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="toggle_vylO colorModeToggle_DEke"><button class="clean-btn toggleButton_gllP toggleButtonDisabled_aARS" type=button disabled title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_g3eP lightToggleIcon_pyhR"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_g3eP darkToggleIcon_wfgR"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_g3eP systemToggleIcon_QzmC"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_Bca1><div class="navbar__search searchBarContainer_NW3z" dir=ltr><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_YFbd" value="" /><div class="loadingRing_RJI3 searchBarLoadingRing_YnHq"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class="container margin-vert--lg"><div class=row><aside class="col col--3"><nav class="sidebar_re4s thin-scrollbar" aria-label="Blog recent posts navigation"><div class="sidebarItemTitle_pO2u margin-bottom--md">All Blog Posts</div><div role=group><h3 class=yearGroupHeading_rMGB>2025</h3><ul class="sidebarItemList_Yudw clean-list"><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2025/10/16/osmium>Metals v1.6.3 - Osmium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2025/08/09/osmium>Metals v1.6.2 - Osmium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2025/07/31/osmium>Metals v1.6.1 - Osmium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2025/06/05/osmium>Metals v1.6.0 - Osmium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2025/05/13/strontium>Metals v1.5.3 - Strontium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2025/03/26/strontium>Metals v1.5.2 - Strontium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2025/01/24/strontium>Metals v1.5.1 - Strontium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2025/01/22/strontium>Metals v1.5.0 - Strontium</a></ul></div><div role=group><h3 class=yearGroupHeading_rMGB>2024</h3><ul class="sidebarItemList_Yudw clean-list"><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/12/16/palladium>Metals v1.4.2 - Palladium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/11/15/palladium>Metals v1.4.1 - Palladium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/10/24/palladium>Metals v1.4.0 - Palladium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/08/01/thallium>Metals v1.3.5 - Thallium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/07/24/thallium>Metals v1.3.4 - Thallium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/07/12/thallium>Metals v1.3.3 - Thallium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/06/19/thallium>Metals v1.3.2 - Thallium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/05/16/thallium>Metals v1.3.1 - Thallium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/04/15/thalium>Metals v1.3.0 - Thallium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/02/15/bismuth>Metals v1.2.2 - Bismuth</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2024/02/07/bismuth>Metals v1.2.1 - Bismuth</a></ul></div><div role=group><h3 class=yearGroupHeading_rMGB>2023</h3><ul class="sidebarItemList_Yudw clean-list"><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2023/12/12/bismuth>Metals v1.2.0 - Bismuth</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2023/10/17/silver>Metals v1.1.0 - Silver</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2023/08/28/silver>Metals v1.0.1 - Silver</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2023/07/19/silver>Metals v1.0.0 - Silver</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2023/07/17/workspace-folders>Workspace folders</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2023/04/21/aluminium>Metals v0.11.12 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2023/03/02/aluminium>Metals v0.11.11 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2023/01/02/aluminium>Metals v0.11.10 - Aluminium</a></ul></div><div role=group><h3 class=yearGroupHeading_rMGB>2022</h3><ul class="sidebarItemList_Yudw clean-list"><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/10/06/aluminium>Metals v0.11.9 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/08/10/aluminium>Metals v0.11.8 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/07/04/aluminium>Metals v0.11.7 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/06/03/aluminium>Metals v0.11.6 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/04/28/aluminium>Metals v0.11.5 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/04/27/aluminium>Metals v0.11.4 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/04/26/aluminium>Metals v0.11.3 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/03/08/aluminium>Metals v0.11.2 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/02/23/towards-better-releases>Towards better releases</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/01/17/aluminium>Metals v0.11.1 - Aluminium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2022/01/12/aluminium>Metals v0.11.0 - Aluminium</a></ul></div><div role=group><h3 class=yearGroupHeading_rMGB>2021</h3><ul class="sidebarItemList_Yudw clean-list"><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/11/03/tungsten>Metals v0.10.9 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/10/26/tungsten>Metals v0.10.8 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/09/16/tungsten>Metals v0.10.7 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/09/06/tungsten>Metals v0.10.6 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/07/14/tungsten>Metals v0.10.5 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/05/31/tungsten>Metals v0.10.4 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/05/17/tungsten>Metals v0.10.3 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/04/20/tungsten>Metals v0.10.2 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/04/06/tungsten>Metals v0.10.1 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/02/24/tungsten>Metals v0.10.0 - Tungsten</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/02/02/metals-retro-part1>A Metals Retrospective (Part 1)</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2021/01/19/lithium>Metals v0.9.10 - Lithium</a></ul></div><div role=group><h3 class=yearGroupHeading_rMGB>2020</h3><ul class="sidebarItemList_Yudw clean-list"><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/12/19/lithium>Metals v0.9.8 - Lithium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/11/26/lithium>Metals v0.9.7 - Lithium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/11/20/lithium>Metals v0.9.6 - Lithium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/11/10/lithium>Metals v0.9.5 - Lithium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/11/06/sbt-BSP-support>sbt BSP support</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/09/21/lithium>Metals v0.9.4 - Lithium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/08/19/lithium>Metals v0.9.3 - Lithium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/07/23/configuring-a-client>A Dive into Configuring Metals</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/07/15/lithium>Metals v0.9.2 - Lithium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/07/01/lithium>Metals v0.9.1 - Lithium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/05/04/lithium>Metals v0.9.0 - Lithium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/04/10/cobalt>Metals v0.8.4 - Cobalt</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/03/19/cobalt>Metals v0.8.3 - Cobalt</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/02/26/cobalt>Metals v0.8.1 - Cobalt</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2020/01/10/cobalt>Metals v0.8.0 - Cobalt</a></ul></div><div role=group><h3 class=yearGroupHeading_rMGB>2019</h3><ul class="sidebarItemList_Yudw clean-list"><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/09/23/thorium>Metals v0.7.6 - Thorium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/09/12/thorium>Metals v0.7.5 - Thorium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/09/02/thorium>Metals v0.7.2 - Thorium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/06/28/thorium>Metals v0.7.0 - Thorium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/06/11/radium>Metals v0.6.1 - Radium</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/04/26/mercury>Metals v0.5.1 - Mercury</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/04/12/mercury>Metals v0.5.0 - Mercury</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/02/01/tin>Metals v0.4.4 - Tin</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/01/24/tin>Metals v0.4.0 - Tin</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2019/01/22/bloom-filters>Low-memory symbol indexing with bloom filters</a></ul></div><div role=group><h3 class=yearGroupHeading_rMGB>2018</h3><ul class="sidebarItemList_Yudw clean-list"><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2018/12/14/iron>Metals v0.3.2 - Iron</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2018/12/12/fast-goto-definition>Fast goto definition with low memory footprint</a><li class=sidebarItem__DBe><a class=sidebarItemLink_mo7H href=/metals/blog/2018/12/06/iron>Metals v0.3 - Iron</a></ul></div></nav></aside><main class="col col--7"><article class=margin-bottom--xl><header><h2 class=title_f1Hy><a href=/metals/blog/2023/07/19/silver>Metals v1.0.0 - Silver</a></h2><div class="container_mt6G margin-vert--md"><time datetime=2023-07-19T00:00:00.000Z>July 19, 2023</time> · <!-- -->28 min read</div><div class="margin-top--md margin-bottom--sm row"><div class="col col--12 authorCol_Hf19"><div class="avatar margin-bottom--sm"><a href=https://twitter.com/TomekGodzik target=_blank rel="noopener noreferrer" class=avatar__photo-link><img class="avatar__photo authorImage_XqGP" src=https://github.com/tgodzik.png alt="Tomasz Godzik"/></a><div class="avatar__intro authorDetails_lV9A"><div class=avatar__name><a href=https://twitter.com/TomekGodzik target=_blank rel="noopener noreferrer"><span class=authorName_yefp translate=no>Tomasz Godzik</span></a></div><div class=authorSocials_rSDt></div></div></div></div></div></header><div class=markdown><p>We're happy to announce the release of of Metals v1.0.0, which was a long time
+in the making. This release is a culmination of a lot of work from the community
+and the core Metals team. As it stands, Metals supports most of the important
+LSP features and beyond, which makes it equivalent to many IDEs, but in your
+favorite editor.</p>
+<p>Bringing in version 1.0.0 doesn't mean that we don't have anything else to
+improve, but it means that we are confident that Metals is ready for production
+use in business and personal projects. We will continue to improve Metals and
+add new features, but we will also fully focus on making Metals the most
+productive and stable environment for all Scala developers. For that goal we are
+providing a number of reporting improvements that can help identify any problems
+you might have. There are more of these type of features coming your way.</p>
+<p>Note for plugin authors: Starting from this release, any changes in minor
+version will mean that there are changes to the Metals behavior or json APIs
+that need to be accounted for.</p>
+<table><tr><td>Commits since last release<td align=center>211<tr><td>Merged PRs<td align=center>181<tr><td>Contributors<td align=center>17<tr><td>Closed issues<td align=center>67<tr><td>New features<td align=center>5</table>
+<p>For full details: [<a href=https://github.com/scalameta/metals/milestone/ target=_blank rel="noopener noreferrer">https://github.com/scalameta/metals/milestone/</a><em>num</em>?closed=1]
+(<a href="https://github.com/scalameta/metals/milestone/_num_?closed=1" target=_blank rel="noopener noreferrer">https://github.com/scalameta/metals/milestone/_num_?closed=1</a>)</p>
+<p>Metals is a language server for Scala that works with VS Code, Vim, Emacs and
+Sublime Text. Metals is developed at the <a href=https://scala.epfl.ch/ target=_blank rel="noopener noreferrer">Scala Center</a>
+and <a href=https://virtuslab.com target=_blank rel="noopener noreferrer">VirtusLab</a> with the help from
+<a href=https://lunatech.com target=_blank rel="noopener noreferrer">Lunatech</a> along with contributors from the community.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id=tldr>TL;DR<a href=#tldr class=hash-link aria-label="Direct link to TL;DR" title="Direct link to TL;DR" translate=no>​</a></h2>
+<p>Check out <a href=https://scalameta.org/metals/ target=_blank rel="noopener noreferrer">https://scalameta.org/metals/</a>, and
+give Metals a try!</p>
+<ul>
+<li><a href=#add-multi-root-projects-support>Add multi-root projects support</a></li>
+<li><a href=#hover-support-in-java-files>Hover support in Java files</a></li>
+<li><a href=#command-for-running-specified-scalafix-rules>Command for running specified scalafix rules</a></li>
+<li><a href=#add-clean-all-command>Add clean-all command</a></li>
+<li><a href=#better-support-for-scala-cli>Better support for Scala CLI</a></li>
+<li><a href=#support-new-scala-versions>Support new Scala versions</a></li>
+<li><a href=#miscellaneous>Miscellaneous</a></li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id=add-multi-root-projects-support>Add multi-root projects support<a href=#add-multi-root-projects-support class=hash-link aria-label="Direct link to Add multi-root projects support" title="Direct link to Add multi-root projects support" translate=no>​</a></h2>
+<p>Up until this release, Metals could only be used in workspaces with a single
+root. This means that if for example you used the <code>Add folder to Workspace</code>
+option in Visual Studio Code to add a new folder to your workspace, Metals would
+not work in that folder. This is no longer the case and Metals will work in all
+folders in your workspace.</p>
+<p>The work included making sure that all existing features work reliably and
+sensibly within multi root workspaces. For instance users will properly be shown
+a single Metals doctor (or a single HTTP server for editors that do not support
+the doctor interface). Test explorer will also show all tests from all folders
+clearly marked with the folder name. Most other commands will be invoked in the
+currently active folder in order not to create large cascading computations such
+as multiple folders compiling everything.</p>
+<p>This tremendously useful improvement was authored by
+<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>. Take a look at the
+<a href=https://scalameta.org/metals/blog/2023/07/17/workspace-folders target=_blank rel="noopener noreferrer">blogpost</a> for
+more details!</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id=hover-support-in-java-files>Hover support in Java files<a href=#hover-support-in-java-files class=hash-link aria-label="Direct link to Hover support in Java files" title="Direct link to Hover support in Java files" translate=no>​</a></h2>
+<p>Another improvement for a better experience in Java files was contributed by
+<a href=https://github.com/VankaTaganai target=_blank rel="noopener noreferrer">VankaTaganai</a>. Starting from this release you
+will be able to hover on names in Java files to see more information about them.
+This feature is primarily aimed at Scala developers that need to from time to
+time look into Java source and figure out what's going on there. This will not
+provide an experience of a full Java language server, but it will provide some
+basic functionality that will make it easier to work with Java sources.</p>
+<p><img decoding=async loading=lazy src=https://i.imgur.com/mp1BKse.gif alt=java-hover class=img_ev3q /></p>
+<p>Please let us know about any issues! This is a new feature and we expect that it
+might take some time to get it ironed out.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id=command-for-running-specified-scalafix-rules>Command for running specified scalafix rules<a href=#command-for-running-specified-scalafix-rules class=hash-link aria-label="Direct link to Command for running specified scalafix rules" title="Direct link to Command for running specified scalafix rules" translate=no>​</a></h2>
+<p>Users will now be able to run a single Scalafix rule on a file in their project.
+This might be particularly useful if you don't want to run everything at once
+and see exactly what is being done by each Scalafix rule.</p>
+<p>This great usability improvement was done by
+<a href=https://github.com/LaurenceWarne target=_blank rel="noopener noreferrer">LaurenceWarne</a>.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id=add-clean-all-command>Add clean-all command<a href=#add-clean-all-command class=hash-link aria-label="Direct link to Add clean-all command" title="Direct link to Add clean-all command" translate=no>​</a></h2>
+<p>This new feature has been demanded by users for a long while. Thanks to work
+done by <a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>, you will be able to run the
+<code>metals.reset-workspace</code> command to remove all the possible caches and
+compilation artifacts that might be causing issues in your workspace.</p>
+<p>This should be seen as a last resort and used in as an alternative to the
+somewhat popular practice of blowing away your <code>.metals/</code> and <code>.bloop/</code>
+directories. Please do keep in mind that if you're finding that you need this
+often, it's probably a bug and should be reported.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id=better-support-for-scala-cli>Better support for Scala CLI<a href=#better-support-for-scala-cli class=hash-link aria-label="Direct link to Better support for Scala CLI" title="Direct link to Better support for Scala CLI" translate=no>​</a></h2>
+<p>With Scala CLI becoming the official runner for Scala 3, we have been working on
+improving the support for it in Metals. This release brings a number of
+improvements that aim to improve both Scala CLI experience and the overall Scala
+experience.</p>
+<p>This includes the following:</p>
+<ul>
+<li>If there are no build tools present Metals will now fallback to Scala CLI,
+which means that even if a user creates a single file they will be able to run
+it and get all the proper support users would expect. If a build tool
+configuration appears in the workspace, Metals will suggest switching to that
+instead.</li>
+<li>Scala CLI gets the same status as the already supported build tools, which
+means that we will not automatically suggest importing another build tool if
+we have Scala CLI already configured.</li>
+<li>If <code>project.scala</code> is present in the workspace, Metals will suggest importing
+Scala CLI project, which includes automatically using the <code>setupIde</code> command
+to setup the .bsp configuration.</li>
+</ul>
+<p>This splendid work was done by <a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a></p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id=support-new-scala-versions>Support new Scala versions<a href=#support-new-scala-versions class=hash-link aria-label="Direct link to Support new Scala versions" title="Direct link to Support new Scala versions" translate=no>​</a></h2>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id=support-for-scala-330>Support for Scala 3.3.0<a href=#support-for-scala-330 class=hash-link aria-label="Direct link to Support for Scala 3.3.0" title="Direct link to Support for Scala 3.3.0" translate=no>​</a></h3>
+<p>For more information about the release take a look at
+<a href=https://www.scala-lang.org/blog/2023/05/30/scala-3.3.0-released.html target=_blank rel="noopener noreferrer">https://www.scala-lang.org/blog/2023/05/30/scala-3.3.0-released.html</a></p>
+<p>Here we only show a short summary of the main feature from the release notes.</p>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id=linting>Linting<a href=#linting class=hash-link aria-label="Direct link to Linting" title="Direct link to Linting" translate=no>​</a></h4>
+<p>Scala 3.3.0 brings back linting to the Scala compiler. Right now, you can enable
+checking for unused symbols and discarded values. More linting options will come
+soon in the following Scala 3.3.x releases.</p>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id=fewer-braces>Fewer braces<a href=#fewer-braces class=hash-link aria-label="Direct link to Fewer braces" title="Direct link to Fewer braces" translate=no>​</a></h4>
+<p>Braces around method parameters can now be replaced with a colon. This can lead
+to cleaner, shorter, and often more readable code in places like configuration
+DSLs or test case definitions.</p>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id=boundary-and-break>Boundary and break<a href=#boundary-and-break class=hash-link aria-label="Direct link to Boundary and break" title="Direct link to Boundary and break" translate=no>​</a></h4>
+<p>Two new methods were added to the standard library: boundary and break. They are
+safer and more expressive replacements for non-local returns, which were
+deprecated recently.</p>
+<p>break allows for a type-safe early escape from anywhere inside the block
+delimited by boundary to its end, returning the passed value from the entire
+block.</p>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id=the-new-default-implementation-of-lazy-vals>The new default implementation of lazy vals<a href=#the-new-default-implementation-of-lazy-vals class=hash-link aria-label="Direct link to The new default implementation of lazy vals" title="Direct link to The new default implementation of lazy vals" translate=no>​</a></h4>
+<p>Last but not least, we have changed the default implementation of lazy vals. The
+new implementation has better performance and is safer under parallel access.
+This may result in improvements in the performance of effect systems.</p>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id=support-for-scala-21218>Support for Scala 2.12.18<a href=#support-for-scala-21218 class=hash-link aria-label="Direct link to Support for Scala 2.12.18" title="Direct link to Support for Scala 2.12.18" translate=no>​</a></h3>
+<p>This release improves compatibility by adding support for JDK 20 and 21 with ASM
+9.5 upgrade.</p>
+<p>It also aids migration to Scala 2.13 and Scala 3 with improvements for the
+-Xsource flag.</p>
+<p>For more information about the release take a look at
+<a href=https://github.com/scala/scala/releases/tag/v2.12.18 target=_blank rel="noopener noreferrer">https://github.com/scala/scala/releases/tag/v2.12.18</a></p>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id=support-for-scala-21311>Support for Scala 2.13.11<a href=#support-for-scala-21311 class=hash-link aria-label="Direct link to Support for Scala 2.13.11" title="Direct link to Support for Scala 2.13.11" translate=no>​</a></h3>
+<p>Similar to Scala 2.12.18 this release improves compatibility by adding support
+for JDK 20 and 21 with ASM 9.5 upgrade.</p>
+<p>It also aids migration to Scala 3 with improvements for the -Xsource flag with
+even more warnings. For more information about the release take a look at
+<a href=https://github.com/scala/scala/releases/tag/v2.13.11 target=_blank rel="noopener noreferrer">https://github.com/scala/scala/releases/tag/v2.13.11</a></p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id=miscellaneous>Miscellaneous<a href=#miscellaneous class=hash-link aria-label="Direct link to Miscellaneous" title="Direct link to Miscellaneous" translate=no>​</a></h2>
+<ul>
+<li>bugfix: Show named argument completions inside constructors
+<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a></li>
+<li>bugfix: Fix semantic highlight for <code>@@</code> symbol
+<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a></li>
+<li>bugfix: Fix semantic highlight for multiline comments <code>@@</code> symbol
+<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a></li>
+<li>improvement: Add selection expansion for multiline comments
+<a href=https://github.com/doofin target=_blank rel="noopener noreferrer">doofin</a></li>
+<li>bugfix: Ignore shebang in .sc scripts <a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a></li>
+<li>bugfix: Semantic hightlight for extension methods type params
+<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a></li>
+<li>bugfix: Add bloop package for mill bloop import command (fix for newer Mill
+versions) <a href=https://github.com/mehdimas target=_blank rel="noopener noreferrer">mehdimas</a></li>
+<li>bugfix: Fix support for Java 12 to 16 <a href=https://github.com/adpi2 target=_blank rel="noopener noreferrer">adpi2</a></li>
+<li>bugfix: Argument name completion for context function parameter
+<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a></li>
+<li>bugfix: Fix highlight and rename for unapply in for comprehensions
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>bugfix: Always change the correct comment when changing to mill syntax in
+Scala CLI scripts <a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a></li>
+<li>bugfix: Correctly index semanticdb when reconnecting to sbt BSP server
+<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a></li>
+<li>bugfix: Don't backtick soft keywords in select position of statements
+<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a></li>
+<li>bugfix: Properly backtick types when needed
+<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a></li>
+<li>bugfix: Fix semantic highlight in files starting with annotation
+<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a></li>
+<li>bugfix: Show hover when cursor is right after symbol
+<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a></li>
+<li>improvement: Provide extension method code completions when typing <code>xxx.@@</code>
+<a href=https://github.com/Mee-Tree target=_blank rel="noopener noreferrer">Mee-Tree</a></li>
+<li>bugfix: properly index all toplevel given
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>bugfix: Argument completions for case class in apply calls
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>improvement: Add semantic highlight for docstring
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>bugfix: Improve indexing of regions based on indentation
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>bugfix: Fix issues with worksheets using outdated dependencies
+<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a></li>
+<li>bugfix: Use relative uri for interactive java TextDocument when browsing Java
+sources from dependencies (<a href=https://github.com/Arthurm1 target=_blank rel="noopener noreferrer">Arthurm1</a>)</li>
+<li>bugfix: Fix reversed version order in dep completions in scala 2
+<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a></li>
+<li>improvement: Use semantic highlight for using directives
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>bugfix: Fix semantic highlight for named arguments in Scala 2
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>bugfix: Shorten dependency diagnostic ranges for scala-cli
+(<a href=https://github.com/LaurenceWarne target=_blank rel="noopener noreferrer">LaurenceWarne</a>)</li>
+<li>bugfix: Scala 3 fix override completions starting w/ def
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>bugfix: Properly index vals in constructors
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>bugfix: Index cases for enum (<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>bugfix: Don't show import completions with case class members
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>improvement: Refactor type completions to provide both type symbol and object
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>bugfix: Check parent docs even when class is indexed
+(<a href=https://github.com/Arthurm1 target=_blank rel="noopener noreferrer">Arthurm1</a>)</li>
+<li>improvement: Properly restart sbt server
+<a href=https://github.com/scalameta/metals/pull/5340 target=_blank rel="noopener noreferrer">#5340</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>improvement: Check if possible java home is a correct path
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix: find correctly symbols for type companion objects
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>feat: make sure we capture <code>.config/mill-version</code> for Mill builds
+(<a href=https://github.com/ckipp01 target=_blank rel="noopener noreferrer">ckipp01</a>)</li>
+<li>chore: Update default Bloop to 1.5.8 <a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a></li>
+<li>bugfix: Peovide <code>textDocument/documentSymbol</code> for scripts
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>bugfix: backup old log files when too long
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>bugfix: Fix scala-cli dependency completions for scala-cli 1.0.1
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>improvement: Dependency version completions for scala native
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>fix: Correctly sort params in markdown
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>improvement: Add error reports upon compiler access error
+<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a></li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id=contributors>Contributors<a href=#contributors class=hash-link aria-label="Direct link to Contributors" title="Direct link to Contributors" translate=no>​</a></h2>
+<p>Big thanks to everybody who contributed to this release or reported an issue!</p>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style=--prism-color:#bfc7d5;--prism-background-color:#292d3e><div class=codeBlockContent_QJqH><pre tabindex=0 class="prism-code language-text codeBlock_bY9V thin-scrollbar" style=color:#bfc7d5;background-color:#292d3e><code class=codeBlockLines_e6Vv><span class=token-line style=color:#bfc7d5><span class="token plain">$ git shortlog -sn --no-merges v0.11.12..v1.0.0</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">    55	Tomasz Godzik</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">    40	Katarzyna Marek</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">    32	Jakub Ciesluk</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">     5	Chris Kipp</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">     5	doofin</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">     4	Arthur McGibbon</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">     3	rochala</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">     2	Laurence Warne</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">     2	eason du</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">     1	Alexandre Archambault</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">     1	Brice Jaglin</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">     1	Dmitry Polchinsky</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">     1	Ethan Atkins</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">     1	Lorenzo Gabriele</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">     1	Mehdi Massoudi</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">     1	Panov Ivan</span><br/></span><span class=token-line style=color:#bfc7d5><span class="token plain">     1	adpi2</span><br/></span></code></pre></div></div>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id=merged-prs>Merged PRs<a href=#merged-prs class=hash-link aria-label="Direct link to Merged PRs" title="Direct link to Merged PRs" translate=no>​</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id=v100-2023-07-12><a href=https://github.com/scalameta/metals/tree/v1.0.0 target=_blank rel="noopener noreferrer">v1.0.0</a> (2023-07-12)<a href=#v100-2023-07-12 class=hash-link aria-label="Direct link to v100-2023-07-12" title="Direct link to v100-2023-07-12" translate=no>​</a></h2>
+<p><a href=https://github.com/scalameta/metals/compare/v0.11.12...v1.0.0 target=_blank rel="noopener noreferrer">Full Changelog</a></p>
+<p><strong>Merged pull requests:</strong></p>
+<ul>
+<li>chore: Rename blogpost to be of correct date
+<a href=https://github.com/scalameta/metals/pull/5460 target=_blank rel="noopener noreferrer">#5460</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>chore: Update scalafmt bootstrap
+<a href=https://github.com/scalameta/metals/pull/5459 target=_blank rel="noopener noreferrer">#5459</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>chore: Small reword account for release timeline [skip ci]
+<a href=https://github.com/scalameta/metals/pull/5458 target=_blank rel="noopener noreferrer">#5458</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>docs: blog about multi-root
+<a href=https://github.com/scalameta/metals/pull/5215 target=_blank rel="noopener noreferrer">#5215</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>build(deps): Update scribe, scribe-file, scribe-slf4j from 3.11.7 to 3.11.8
+<a href=https://github.com/scalameta/metals/pull/5454 target=_blank rel="noopener noreferrer">#5454</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update scalafmt-core, scalafmt-dynamic from 3.7.9 to 3.7.10
+<a href=https://github.com/scalameta/metals/pull/5455 target=_blank rel="noopener noreferrer">#5455</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update cli_3, scala-cli-bsp from 1.0.1 to 1.0.2
+<a href=https://github.com/scalameta/metals/pull/5457 target=_blank rel="noopener noreferrer">#5457</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>fix: Make ResetWorkspace more stable
+<a href=https://github.com/scalameta/metals/pull/5440 target=_blank rel="noopener noreferrer">#5440</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>refactor: Change namePos to namePosition
+<a href=https://github.com/scalameta/metals/pull/5448 target=_blank rel="noopener noreferrer">#5448</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>bugfix: Revert H2 update to avoid issues with database version bump
+<a href=https://github.com/scalameta/metals/pull/5449 target=_blank rel="noopener noreferrer">#5449</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>Improvement: compiler access error reporting
+<a href=https://github.com/scalameta/metals/pull/5439 target=_blank rel="noopener noreferrer">#5439</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>build(deps): Update semanticdb-java from 0.8.22 to 0.8.24
+<a href=https://github.com/scalameta/metals/pull/5442 target=_blank rel="noopener noreferrer">#5442</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update scala-xml from 2.1.0 to 2.2.0
+<a href=https://github.com/scalameta/metals/pull/5444 target=_blank rel="noopener noreferrer">#5444</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update flyway-core from 9.20.0 to 9.20.1
+<a href=https://github.com/scalameta/metals/pull/5443 target=_blank rel="noopener noreferrer">#5443</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update sbt, scripted-plugin from 1.9.1 to 1.9.2
+<a href=https://github.com/scalameta/metals/pull/5445 target=_blank rel="noopener noreferrer">#5445</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update scalafmt-core, scalafmt-dynamic from 3.7.7 to 3.7.9
+<a href=https://github.com/scalameta/metals/pull/5446 target=_blank rel="noopener noreferrer">#5446</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>refactor: Reduce the level when mtags was found to debug
+<a href=https://github.com/scalameta/metals/pull/5436 target=_blank rel="noopener noreferrer">#5436</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>chore: Add support for Scala 3.3.1-RC4 and move older versions into
+removedScalaVersions <a href=https://github.com/scalameta/metals/pull/5430 target=_blank rel="noopener noreferrer">#5430</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>fix: Correctly sort params in markdown
+<a href=https://github.com/scalameta/metals/pull/5414 target=_blank rel="noopener noreferrer">#5414</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>chore: Don't publish for Scala 3.0.2
+<a href=https://github.com/scalameta/metals/pull/5429 target=_blank rel="noopener noreferrer">#5429</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>improvement: Dependency version completions for scala native
+<a href=https://github.com/scalameta/metals/pull/5373 target=_blank rel="noopener noreferrer">#5373</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>improvement: detect scala cli when <code>project.scala</code>
+<a href=https://github.com/scalameta/metals/pull/5383 target=_blank rel="noopener noreferrer">#5383</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>fix: Fix scala-cli dep completions for scala-cli 1.0.1
+<a href=https://github.com/scalameta/metals/pull/5335 target=_blank rel="noopener noreferrer">#5335</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>chore: Don't publish nightlies any longer since they are available in…
+<a href=https://github.com/scalameta/metals/pull/5428 target=_blank rel="noopener noreferrer">#5428</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>chore: Update lihaoyi's and scalameta dependencies
+<a href=https://github.com/scalameta/metals/pull/5425 target=_blank rel="noopener noreferrer">#5425</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>Add support for stable presentation compiler
+<a href=https://github.com/scalameta/metals/pull/5423 target=_blank rel="noopener noreferrer">#5423</a>
+(<a href=https://github.com/rochala target=_blank rel="noopener noreferrer">rochala</a>)</li>
+<li>bugfix: backup log files instead of truncating
+<a href=https://github.com/scalameta/metals/pull/5399 target=_blank rel="noopener noreferrer">#5399</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>bugfix: <code>textDocument/documentSymbol</code> for scripts
+<a href=https://github.com/scalameta/metals/pull/5422 target=_blank rel="noopener noreferrer">#5422</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>build(deps): Update scalafmt-core, scalafmt-dynamic from 3.7.4 to 3.7.7
+<a href=https://github.com/scalameta/metals/pull/5418 target=_blank rel="noopener noreferrer">#5418</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>chore: Only print debug compile queue if not empty
+<a href=https://github.com/scalameta/metals/pull/5410 target=_blank rel="noopener noreferrer">#5410</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>build(deps): Update semanticdb-java from 0.8.21 to 0.8.22
+<a href=https://github.com/scalameta/metals/pull/5421 target=_blank rel="noopener noreferrer">#5421</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update scribe, scribe-file, scribe-slf4j from 3.11.5 to 3.11.7
+<a href=https://github.com/scalameta/metals/pull/5417 target=_blank rel="noopener noreferrer">#5417</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update h2 from 2.1.214 to 2.2.220
+<a href=https://github.com/scalameta/metals/pull/5416 target=_blank rel="noopener noreferrer">#5416</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update protobuf-java from 3.23.3 to 3.23.4
+<a href=https://github.com/scalameta/metals/pull/5415 target=_blank rel="noopener noreferrer">#5415</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update scalameta, semanticdb-scalac, ... from 4.8.0 to 4.8.2
+<a href=https://github.com/scalameta/metals/pull/5419 target=_blank rel="noopener noreferrer">#5419</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>chore: Bump Scala 3 RC to 3.3.1-RC3
+<a href=https://github.com/scalameta/metals/pull/5413 target=_blank rel="noopener noreferrer">#5413</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>build(deps): Update scalameta, semanticdb-scalac, ... from 4.7.8 to 4.8.0
+<a href=https://github.com/scalameta/metals/pull/5393 target=_blank rel="noopener noreferrer">#5393</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>chore: Update Bloop to 1.5.8
+<a href=https://github.com/scalameta/metals/pull/5398 target=_blank rel="noopener noreferrer">#5398</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>get more info from mill test
+<a href=https://github.com/scalameta/metals/pull/5394 target=_blank rel="noopener noreferrer">#5394</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>feat: make sure we capture <code>.config/mill-version</code> for Mill builds
+<a href=https://github.com/scalameta/metals/pull/5404 target=_blank rel="noopener noreferrer">#5404</a>
+(<a href=https://github.com/ckipp01 target=_blank rel="noopener noreferrer">ckipp01</a>)</li>
+<li>chore: Change information about finding java home to debug
+<a href=https://github.com/scalameta/metals/pull/5402 target=_blank rel="noopener noreferrer">#5402</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>refactor: a bit more details in logs about whether the java path exists
+<a href=https://github.com/scalameta/metals/pull/5401 target=_blank rel="noopener noreferrer">#5401</a>
+(<a href=https://github.com/ckipp01 target=_blank rel="noopener noreferrer">ckipp01</a>)</li>
+<li>feat: account for <code>ScalaDiagnostic</code> in diagnostic data
+<a href=https://github.com/scalameta/metals/pull/5338 target=_blank rel="noopener noreferrer">#5338</a>
+(<a href=https://github.com/ckipp01 target=_blank rel="noopener noreferrer">ckipp01</a>)</li>
+<li>build(deps): Update guava from 32.1.0-jre to 32.1.1-jre
+<a href=https://github.com/scalameta/metals/pull/5396 target=_blank rel="noopener noreferrer">#5396</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update sbt, scripted-plugin from 1.8.3 to 1.9.1
+<a href=https://github.com/scalameta/metals/pull/5391 target=_blank rel="noopener noreferrer">#5391</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>bugfix:[Scala 3] correctly find imports for toplevel type companion objects
+<a href=https://github.com/scalameta/metals/pull/5377 target=_blank rel="noopener noreferrer">#5377</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>improvement: Check if possible java home is a correct path
+<a href=https://github.com/scalameta/metals/pull/5240 target=_blank rel="noopener noreferrer">#5240</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>improvement: Show current compilation queue when debugging flag is on
+<a href=https://github.com/scalameta/metals/pull/5386 target=_blank rel="noopener noreferrer">#5386</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>build(deps): Update guava from 32.0.1-jre to 32.1.0-jre
+<a href=https://github.com/scalameta/metals/pull/5389 target=_blank rel="noopener noreferrer">#5389</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>chore: Add support for Scala 3.3.1-RC2
+<a href=https://github.com/scalameta/metals/pull/5388 target=_blank rel="noopener noreferrer">#5388</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>improvement: Catch an error if thrown during tokenization
+<a href=https://github.com/scalameta/metals/pull/5385 target=_blank rel="noopener noreferrer">#5385</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>improvement: if no build tool fallback to scala-cli
+<a href=https://github.com/scalameta/metals/pull/5221 target=_blank rel="noopener noreferrer">#5221</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>Improvement: restart sbt server
+<a href=https://github.com/scalameta/metals/pull/5340 target=_blank rel="noopener noreferrer">#5340</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>implement Java folding using JDK scanner
+<a href=https://github.com/scalameta/metals/pull/5328 target=_blank rel="noopener noreferrer">#5328</a>
+(<a href=https://github.com/Arthurm1 target=_blank rel="noopener noreferrer">Arthurm1</a>)</li>
+<li>Check parent docs even when class is indexed
+<a href=https://github.com/scalameta/metals/pull/5382 target=_blank rel="noopener noreferrer">#5382</a>
+(<a href=https://github.com/Arthurm1 target=_blank rel="noopener noreferrer">Arthurm1</a>)</li>
+<li>improvement: Refactor type completions to provide both type symbol and object
+<a href=https://github.com/scalameta/metals/pull/5326 target=_blank rel="noopener noreferrer">#5326</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>bugfix: Make mtags-shared published with full scala version
+<a href=https://github.com/scalameta/metals/pull/5380 target=_blank rel="noopener noreferrer">#5380</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>Use public API for java hover
+<a href=https://github.com/scalameta/metals/pull/5375 target=_blank rel="noopener noreferrer">#5375</a>
+(<a href=https://github.com/Arthurm1 target=_blank rel="noopener noreferrer">Arthurm1</a>)</li>
+<li>improvement: Add error reports upon compiler access error
+<a href=https://github.com/scalameta/metals/pull/5315 target=_blank rel="noopener noreferrer">#5315</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>fix: Don't show completions with case class members
+<a href=https://github.com/scalameta/metals/pull/5324 target=_blank rel="noopener noreferrer">#5324</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>bugfix: emit cases for enum
+<a href=https://github.com/scalameta/metals/pull/5372 target=_blank rel="noopener noreferrer">#5372</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>build(deps): Update mill-contrib-testng from 0.10.12 to 0.11.1
+<a href=https://github.com/scalameta/metals/pull/5376 target=_blank rel="noopener noreferrer">#5376</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>Fix #5367: Support comma-separated paths in -Xplugin
+<a href=https://github.com/scalameta/metals/pull/5368 target=_blank rel="noopener noreferrer">#5368</a>
+(<a href=https://github.com/lolgab target=_blank rel="noopener noreferrer">lolgab</a>)</li>
+<li>bugfix: emit symbols for vals in constructors
+<a href=https://github.com/scalameta/metals/pull/5358 target=_blank rel="noopener noreferrer">#5358</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>build(deps): Update flyway-core from 9.19.4 to 9.20.0
+<a href=https://github.com/scalameta/metals/pull/5371 target=_blank rel="noopener noreferrer">#5371</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update coursier from 2.1.4 to 2.1.5
+<a href=https://github.com/scalameta/metals/pull/5370 target=_blank rel="noopener noreferrer">#5370</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>bugfix: Scala 3 adjust edit range for override completions starting w/ def
+<a href=https://github.com/scalameta/metals/pull/5365 target=_blank rel="noopener noreferrer">#5365</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>fix: Shorten Dep Diagnostic Ranges for scala-cli
+<a href=https://github.com/scalameta/metals/pull/5362 target=_blank rel="noopener noreferrer">#5362</a>
+(<a href=https://github.com/LaurenceWarne target=_blank rel="noopener noreferrer">LaurenceWarne</a>)</li>
+<li>improvement: add scala cli as a build tool
+<a href=https://github.com/scalameta/metals/pull/5291 target=_blank rel="noopener noreferrer">#5291</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>bugfix: handle backticks in inverse semanticdb path
+<a href=https://github.com/scalameta/metals/pull/5347 target=_blank rel="noopener noreferrer">#5347</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>bugfix: Properly check symbol before invoking owner
+<a href=https://github.com/scalameta/metals/pull/5360 target=_blank rel="noopener noreferrer">#5360</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>chore: Update Ammonite supported versions
+<a href=https://github.com/scalameta/metals/pull/5355 target=_blank rel="noopener noreferrer">#5355</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>chore: Update warnings list after Scala version bump
+<a href=https://github.com/scalameta/metals/pull/5359 target=_blank rel="noopener noreferrer">#5359</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>deps: update millw to 0.4.7
+<a href=https://github.com/scalameta/metals/pull/5353 target=_blank rel="noopener noreferrer">#5353</a>
+(<a href=https://github.com/ckipp01 target=_blank rel="noopener noreferrer">ckipp01</a>)</li>
+<li>refactor: Move scalacli tests to a separate job
+<a href=https://github.com/scalameta/metals/pull/5351 target=_blank rel="noopener noreferrer">#5351</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>fix: Highlight for named arguments in Scala 2
+<a href=https://github.com/scalameta/metals/pull/5350 target=_blank rel="noopener noreferrer">#5350</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>build(deps): Update ammonite-util from 2.5.8 to 2.5.9
+<a href=https://github.com/scalameta/metals/pull/5348 target=_blank rel="noopener noreferrer">#5348</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>improvement: Semantic highlight for using directives
+<a href=https://github.com/scalameta/metals/pull/5301 target=_blank rel="noopener noreferrer">#5301</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>fix: Fix reversed version order in dep completions in scala 2
+<a href=https://github.com/scalameta/metals/pull/5206 target=_blank rel="noopener noreferrer">#5206</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>build(deps): Update protobuf-java from 3.23.2 to 3.23.3
+<a href=https://github.com/scalameta/metals/pull/5343 target=_blank rel="noopener noreferrer">#5343</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update semanticdb-java from 0.8.20 to 0.8.21
+<a href=https://github.com/scalameta/metals/pull/5344 target=_blank rel="noopener noreferrer">#5344</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update interface from 1.0.16 to 1.0.18
+<a href=https://github.com/scalameta/metals/pull/5345 target=_blank rel="noopener noreferrer">#5345</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update flyway-core from 9.19.1 to 9.19.4
+<a href=https://github.com/scalameta/metals/pull/5331 target=_blank rel="noopener noreferrer">#5331</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>improvement: truncate <code>metals.log</code>
+<a href=https://github.com/scalameta/metals/pull/5311 target=_blank rel="noopener noreferrer">#5311</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>fix: add in a null check after calling <code>stabilizedType</code>
+<a href=https://github.com/scalameta/metals/pull/5336 target=_blank rel="noopener noreferrer">#5336</a>
+(<a href=https://github.com/ckipp01 target=_blank rel="noopener noreferrer">ckipp01</a>)</li>
+<li>use relative uri for interactive java TextDocument
+<a href=https://github.com/scalameta/metals/pull/5325 target=_blank rel="noopener noreferrer">#5325</a>
+(<a href=https://github.com/Arthurm1 target=_blank rel="noopener noreferrer">Arthurm1</a>)</li>
+<li>bugfix: Fix issues with recent nightlies
+<a href=https://github.com/scalameta/metals/pull/5327 target=_blank rel="noopener noreferrer">#5327</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>build(deps): Update semanticdb-java from 0.8.18 to 0.8.20
+<a href=https://github.com/scalameta/metals/pull/5330 target=_blank rel="noopener noreferrer">#5330</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>bugfix: keep evaluated worksheets synced with dependencies in presentation
+compiler <a href=https://github.com/scalameta/metals/pull/5248 target=_blank rel="noopener noreferrer">#5248</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>build(deps): Update munit from 1.0.0-M7 to 1.0.0-M8
+<a href=https://github.com/scalameta/metals/pull/5332 target=_blank rel="noopener noreferrer">#5332</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update gradle-bloop from 1.6.0 to 1.6.1
+<a href=https://github.com/scalameta/metals/pull/5329 target=_blank rel="noopener noreferrer">#5329</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update sbt-jmh from 0.4.4 to 0.4.5
+<a href=https://github.com/scalameta/metals/pull/5323 target=_blank rel="noopener noreferrer">#5323</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update guava from 32.0.0-jre to 32.0.1-jre
+<a href=https://github.com/scalameta/metals/pull/5319 target=_blank rel="noopener noreferrer">#5319</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>chore: Add support for Scala 2.13.11
+<a href=https://github.com/scalameta/metals/pull/5316 target=_blank rel="noopener noreferrer">#5316</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix: make sure tmpl point is within source file bounds
+<a href=https://github.com/scalameta/metals/pull/5310 target=_blank rel="noopener noreferrer">#5310</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>fix: Regions based on indent
+<a href=https://github.com/scalameta/metals/pull/5260 target=_blank rel="noopener noreferrer">#5260</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>Scalafix 0.11.0 <a href=https://github.com/scalameta/metals/pull/5304 target=_blank rel="noopener noreferrer">#5304</a>
+(<a href=https://github.com/bjaglin target=_blank rel="noopener noreferrer">bjaglin</a>)</li>
+<li>build(deps): Update scalameta, semanticdb-scalac, ... from 4.7.7 to 4.7.8
+<a href=https://github.com/scalameta/metals/pull/5299 target=_blank rel="noopener noreferrer">#5299</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update scalafmt-core, scalafmt-dynamic from 3.7.3 to 3.7.4
+<a href=https://github.com/scalameta/metals/pull/5298 target=_blank rel="noopener noreferrer">#5298</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>chore: Add support for Scala 2.12.18
+<a href=https://github.com/scalameta/metals/pull/5297 target=_blank rel="noopener noreferrer">#5297</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>build(deps): bump @docusaurus/preset-classic from 2.4.0 to 2.4.1 in /website
+<a href=https://github.com/scalameta/metals/pull/5296 target=_blank rel="noopener noreferrer">#5296</a>
+(<a href=https://github.com/dependabot%5Bbot%5D target=_blank rel="noopener noreferrer">dependabot[bot]</a>)</li>
+<li>build(deps): bump @docusaurus/core from 2.4.0 to 2.4.1 in /website
+<a href=https://github.com/scalameta/metals/pull/5295 target=_blank rel="noopener noreferrer">#5295</a>
+(<a href=https://github.com/dependabot%5Bbot%5D target=_blank rel="noopener noreferrer">dependabot[bot]</a>)</li>
+<li>build(deps): bump @docusaurus/plugin-client-redirects from 2.4.0 to 2.4.1 in
+/website <a href=https://github.com/scalameta/metals/pull/5294 target=_blank rel="noopener noreferrer">#5294</a>
+(<a href=https://github.com/dependabot%5Bbot%5D target=_blank rel="noopener noreferrer">dependabot[bot]</a>)</li>
+<li>feature: create single http server and doctor result
+<a href=https://github.com/scalameta/metals/pull/5208 target=_blank rel="noopener noreferrer">#5208</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>chore: Fix issues with Bloop and new Java module
+<a href=https://github.com/scalameta/metals/pull/5290 target=_blank rel="noopener noreferrer">#5290</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix: handle delete file events notifications
+<a href=https://github.com/scalameta/metals/pull/5270 target=_blank rel="noopener noreferrer">#5270</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>build(deps): Update protobuf-java from 3.23.1 to 3.23.2
+<a href=https://github.com/scalameta/metals/pull/5286 target=_blank rel="noopener noreferrer">#5286</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update guava from 31.1-jre to 32.0.0-jre
+<a href=https://github.com/scalameta/metals/pull/5285 target=_blank rel="noopener noreferrer">#5285</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>improvement: Add semantic highlight for docstring
+<a href=https://github.com/scalameta/metals/pull/5153 target=_blank rel="noopener noreferrer">#5153</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>refactor: Remove all warnings from the code
+<a href=https://github.com/scalameta/metals/pull/5282 target=_blank rel="noopener noreferrer">#5282</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>improvement: Make sure 'isAccessibleFrom' always succeeds
+<a href=https://github.com/scalameta/metals/pull/5271 target=_blank rel="noopener noreferrer">#5271</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix[Scala 3]: Fix issues when shortened type is used in type bounds
+<a href=https://github.com/scalameta/metals/pull/5281 target=_blank rel="noopener noreferrer">#5281</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>website : clarify Manual tests
+<a href=https://github.com/scalameta/metals/pull/5264 target=_blank rel="noopener noreferrer">#5264</a>
+(<a href=https://github.com/doofin target=_blank rel="noopener noreferrer">doofin</a>)</li>
+<li>feat: Add clean-all command
+<a href=https://github.com/scalameta/metals/pull/5060 target=_blank rel="noopener noreferrer">#5060</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>refactor: Update test shards with all the new test suites
+<a href=https://github.com/scalameta/metals/pull/5283 target=_blank rel="noopener noreferrer">#5283</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix: Make sure we don't fail when restarting the compiler
+<a href=https://github.com/scalameta/metals/pull/5278 target=_blank rel="noopener noreferrer">#5278</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>build(deps): Update flyway-core from 9.18.0 to 9.19.1
+<a href=https://github.com/scalameta/metals/pull/5275 target=_blank rel="noopener noreferrer">#5275</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>chore: Add support for Scala 3.3.1-RC1
+<a href=https://github.com/scalameta/metals/pull/5273 target=_blank rel="noopener noreferrer">#5273</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>build(deps): Update scribe, scribe-file, scribe-slf4j from 3.11.3 to 3.11.5
+<a href=https://github.com/scalameta/metals/pull/5274 target=_blank rel="noopener noreferrer">#5274</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>chore: Add support for Scala 3.3.0 and deprecated older 3.2.x
+<a href=https://github.com/scalameta/metals/pull/5261 target=_blank rel="noopener noreferrer">#5261</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>website fix <a href=https://github.com/scalameta/metals/pull/5263 target=_blank rel="noopener noreferrer">#5263</a>
+(<a href=https://github.com/doofin target=_blank rel="noopener noreferrer">doofin</a>)</li>
+<li>fix: Arg completions for case class in nested apply
+<a href=https://github.com/scalameta/metals/pull/5207 target=_blank rel="noopener noreferrer">#5207</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>bugfix: skip package objects as completions & never <code>backtickify</code> package
+objects <a href=https://github.com/scalameta/metals/pull/5259 target=_blank rel="noopener noreferrer">#5259</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>Add Command for Running Specified Scalafix Rules
+<a href=https://github.com/scalameta/metals/pull/5223 target=_blank rel="noopener noreferrer">#5223</a>
+(<a href=https://github.com/LaurenceWarne target=_blank rel="noopener noreferrer">LaurenceWarne</a>)</li>
+<li>build(deps): Update scala-debug-adapter from 3.0.9 to 3.1.3
+<a href=https://github.com/scalameta/metals/pull/5218 target=_blank rel="noopener noreferrer">#5218</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>bugfix: NoPosition on Bind in semantic tokens for scala 2
+<a href=https://github.com/scalameta/metals/pull/5257 target=_blank rel="noopener noreferrer">#5257</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>buigfix: given scala toplevel mtags
+<a href=https://github.com/scalameta/metals/pull/5247 target=_blank rel="noopener noreferrer">#5247</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>bugfix: Only log message if it's not null
+<a href=https://github.com/scalameta/metals/pull/5255 target=_blank rel="noopener noreferrer">#5255</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>build(deps): Update protobuf-java from 3.22.5 to 3.23.1
+<a href=https://github.com/scalameta/metals/pull/5252 target=_blank rel="noopener noreferrer">#5252</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update flyway-core from 9.17.0 to 9.18.0
+<a href=https://github.com/scalameta/metals/pull/5253 target=_blank rel="noopener noreferrer">#5253</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>Java hover <a href=https://github.com/scalameta/metals/pull/5024 target=_blank rel="noopener noreferrer">#5024</a>
+(<a href=https://github.com/VankaTaganai target=_blank rel="noopener noreferrer">VankaTaganai</a>)</li>
+<li>Provide extension method code completions when typing <code>xxx.@@</code>
+<a href=https://github.com/scalameta/metals/pull/5235 target=_blank rel="noopener noreferrer">#5235</a>
+(<a href=https://github.com/Mee-Tree target=_blank rel="noopener noreferrer">Mee-Tree</a>)</li>
+<li>fix: Show hover when cursor is right after symbol
+<a href=https://github.com/scalameta/metals/pull/5133 target=_blank rel="noopener noreferrer">#5133</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>fix: Semantic highlight on for-comp with <code>=</code> line
+<a href=https://github.com/scalameta/metals/pull/5132 target=_blank rel="noopener noreferrer">#5132</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>fix: Fix semantic highlight in files starting with annotation
+<a href=https://github.com/scalameta/metals/pull/5187 target=_blank rel="noopener noreferrer">#5187</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>build(deps): Update protobuf-java from 3.22.3 to 3.22.5
+<a href=https://github.com/scalameta/metals/pull/5243 target=_blank rel="noopener noreferrer">#5243</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update scribe, scribe-file, scribe-slf4j from 3.11.1 to 3.11.3
+<a href=https://github.com/scalameta/metals/pull/5244 target=_blank rel="noopener noreferrer">#5244</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update coursier from 2.1.3 to 2.1.4
+<a href=https://github.com/scalameta/metals/pull/5245 target=_blank rel="noopener noreferrer">#5245</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>improvement: Log message while unexpected error happens.
+<a href=https://github.com/scalameta/metals/pull/5239 target=_blank rel="noopener noreferrer">#5239</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>improvement: Retry indexing source file
+<a href=https://github.com/scalameta/metals/pull/5236 target=_blank rel="noopener noreferrer">#5236</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>improvement: Don't fail on refreshing semantic tokens
+<a href=https://github.com/scalameta/metals/pull/5237 target=_blank rel="noopener noreferrer">#5237</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix: Check position before invoking .pos.point
+<a href=https://github.com/scalameta/metals/pull/5238 target=_blank rel="noopener noreferrer">#5238</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>Backtick types <a href=https://github.com/scalameta/metals/pull/5159 target=_blank rel="noopener noreferrer">#5159</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>fix: Don't backting soft keywords in Select
+<a href=https://github.com/scalameta/metals/pull/5234 target=_blank rel="noopener noreferrer">#5234</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>fix: Add test for arg completions with second arg first
+<a href=https://github.com/scalameta/metals/pull/5211 target=_blank rel="noopener noreferrer">#5211</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>improvement: move ClasspathSearch and PackageIndex to mtags-shared
+<a href=https://github.com/scalameta/metals/pull/5229 target=_blank rel="noopener noreferrer">#5229</a>
+(<a href=https://github.com/rochala target=_blank rel="noopener noreferrer">rochala</a>)</li>
+<li>chore: Add support for Scala 3.3.0-RC6
+<a href=https://github.com/scalameta/metals/pull/5228 target=_blank rel="noopener noreferrer">#5228</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix: Correctly index semanticdb when reconnecting
+<a href=https://github.com/scalameta/metals/pull/5222 target=_blank rel="noopener noreferrer">#5222</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>build(deps): Update sbt, scripted-plugin from 1.8.2 to 1.8.3
+<a href=https://github.com/scalameta/metals/pull/5227 target=_blank rel="noopener noreferrer">#5227</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>bugfix: Always change the correct comment when changing to mill syntax
+<a href=https://github.com/scalameta/metals/pull/5214 target=_blank rel="noopener noreferrer">#5214</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>docs: Update <code>architecture.md</code> after adding support for multi root
+<a href=https://github.com/scalameta/metals/pull/5209 target=_blank rel="noopener noreferrer">#5209</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>fix: Fix highlight and rename for unapply in for-comp
+<a href=https://github.com/scalameta/metals/pull/5210 target=_blank rel="noopener noreferrer">#5210</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>bugfix: argument name completion for context function parameter
+<a href=https://github.com/scalameta/metals/pull/5175 target=_blank rel="noopener noreferrer">#5175</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>bugfix: send folder name and uri with information about tests
+<a href=https://github.com/scalameta/metals/pull/5212 target=_blank rel="noopener noreferrer">#5212</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>Add support for the no-longer supported Java 12 to 16
+<a href=https://github.com/scalameta/metals/pull/5213 target=_blank rel="noopener noreferrer">#5213</a>
+(<a href=https://github.com/adpi2 target=_blank rel="noopener noreferrer">adpi2</a>)</li>
+<li>refactor: use -release instead of -target
+<a href=https://github.com/scalameta/metals/pull/5177 target=_blank rel="noopener noreferrer">#5177</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>Keep exception cause in some mtags exceptions
+<a href=https://github.com/scalameta/metals/pull/5205 target=_blank rel="noopener noreferrer">#5205</a>
+(<a href=https://github.com/alexarchambault target=_blank rel="noopener noreferrer">alexarchambault</a>)</li>
+<li>fix: Add bloop package for bloop command
+<a href=https://github.com/scalameta/metals/pull/5200 target=_blank rel="noopener noreferrer">#5200</a>
+(<a href=https://github.com/mehdimas target=_blank rel="noopener noreferrer">mehdimas</a>)</li>
+<li>build(deps): Update interface from 1.0.15 to 1.0.16
+<a href=https://github.com/scalameta/metals/pull/5204 target=_blank rel="noopener noreferrer">#5204</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update sbt-ci-release from 1.5.11 to 1.5.12
+<a href=https://github.com/scalameta/metals/pull/5201 target=_blank rel="noopener noreferrer">#5201</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update coursier from 2.1.2 to 2.1.3
+<a href=https://github.com/scalameta/metals/pull/5203 target=_blank rel="noopener noreferrer">#5203</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update semanticdb-java from 0.8.16 to 0.8.18
+<a href=https://github.com/scalameta/metals/pull/5202 target=_blank rel="noopener noreferrer">#5202</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): bump coursier/setup-action from 1.3.0 to 1.3.3
+<a href=https://github.com/scalameta/metals/pull/5194 target=_blank rel="noopener noreferrer">#5194</a>
+(<a href=https://github.com/dependabot%5Bbot%5D target=_blank rel="noopener noreferrer">dependabot[bot]</a>)</li>
+<li>bugfix: hightlight for extension methods type params
+<a href=https://github.com/scalameta/metals/pull/5166 target=_blank rel="noopener noreferrer">#5166</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>build(deps): Update jsoup from 1.15.4 to 1.16.1
+<a href=https://github.com/scalameta/metals/pull/5192 target=_blank rel="noopener noreferrer">#5192</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>feature: add multi-root projects support
+<a href=https://github.com/scalameta/metals/pull/5033 target=_blank rel="noopener noreferrer">#5033</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>build(deps): Update flyway-core from 9.16.3 to 9.17.0
+<a href=https://github.com/scalameta/metals/pull/5186 target=_blank rel="noopener noreferrer">#5186</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>build(deps): Update semanticdb-java from 0.8.15 to 0.8.16
+<a href=https://github.com/scalameta/metals/pull/5185 target=_blank rel="noopener noreferrer">#5185</a>
+(<a href=https://github.com/scalameta-bot target=_blank rel="noopener noreferrer">scalameta-bot</a>)</li>
+<li>improvement: Fail the build if supported sbt version wasn't updated
+<a href=https://github.com/scalameta/metals/pull/5146 target=_blank rel="noopener noreferrer">#5146</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix: Auto comment shebang for scripts
+<a href=https://github.com/scalameta/metals/pull/5180 target=_blank rel="noopener noreferrer">#5180</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>Add support for Scala 3.3.0-RC5
+<a href=https://github.com/scalameta/metals/pull/5184 target=_blank rel="noopener noreferrer">#5184</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>chore[skip ci]: Switch to 0.11.12_mtags_release to avoid locking issue
+<a href=https://github.com/scalameta/metals/pull/5183 target=_blank rel="noopener noreferrer">#5183</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>Bump swoval version <a href=https://github.com/scalameta/metals/pull/5181 target=_blank rel="noopener noreferrer">#5181</a>
+(<a href=https://github.com/eatkins target=_blank rel="noopener noreferrer">eatkins</a>)</li>
+<li>fix<!-- -->:selection<!-- --> expansion in comments
+<a href=https://github.com/scalameta/metals/pull/4921 target=_blank rel="noopener noreferrer">#4921</a>
+(<a href=https://github.com/doofin target=_blank rel="noopener noreferrer">doofin</a>)</li>
+<li>fix: Fix semantic tokens for multiline comments
+<a href=https://github.com/scalameta/metals/pull/5178 target=_blank rel="noopener noreferrer">#5178</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>fix: Fix PcCollector for <code>@@</code> symbol
+<a href=https://github.com/scalameta/metals/pull/5100 target=_blank rel="noopener noreferrer">#5100</a>
+(<a href=https://github.com/jkciesluk target=_blank rel="noopener noreferrer">jkciesluk</a>)</li>
+<li>bugfix: arguments name completions for constructors
+<a href=https://github.com/scalameta/metals/pull/5174 target=_blank rel="noopener noreferrer">#5174</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+<li>chore: Add back locking mechanism with using jq syntax for selection
+<a href=https://github.com/scalameta/metals/pull/5171 target=_blank rel="noopener noreferrer">#5171</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>chore: Small change to run release
+<a href=https://github.com/scalameta/metals/pull/5170 target=_blank rel="noopener noreferrer">#5170</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>bugfix[skip ci] Remove lock mechanism since it stopped working
+<a href=https://github.com/scalameta/metals/pull/5169 target=_blank rel="noopener noreferrer">#5169</a>
+(<a href=https://github.com/tgodzik target=_blank rel="noopener noreferrer">tgodzik</a>)</li>
+<li>docs: release notes v0.11.12
+<a href=https://github.com/scalameta/metals/pull/5148 target=_blank rel="noopener noreferrer">#5148</a>
+(<a href=https://github.com/kasiaMarek target=_blank rel="noopener noreferrer">kasiaMarek</a>)</li>
+</ul></div></article><nav class=pagination-nav aria-label="Blog list page navigation"><a class="pagination-nav__link pagination-nav__link--prev" href=/metals/blog/page/22><div class=pagination-nav__label>Newer entries</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/metals/blog/page/24><div class=pagination-nav__label>Older entries</div></a></nav></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Overview</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/metals/docs/>Overview</a><li class=footer__item><a class=footer__link-item href=/metals/docs/build-tools/overview>Build Tools</a><li class=footer__item><a class=footer__link-item href=/metals/docs/contributors/project-goals>Project Goals</a><li class=footer__item><a class=footer__link-item href=/metals/docs/contributors/getting-started>Contributing</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Social</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/scalameta/metals target=_blank>
                       <img src="https://img.shields.io/github/stars/scalameta/metals.svg?color=%23087e8b&label=stars&logo=github&style=social"/>
                     </a><li class=footer__item><a href=https://discord.gg/RFpSVth target=_blank>
                       <img src="https://img.shields.io/discord/632642981228314653?logo=discord&style=social"/>
