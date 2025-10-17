@@ -504,6 +504,33 @@ val toolchainJavaOptions = List(
   "--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED",
   "--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED",
 )
+lazy val `java-header-compiler` = project
+  .settings(
+    moduleName := "java-header-compiler",
+    autoScalaLibrary := false,
+    crossPaths := false,
+    // Must set Java home to fork on compile and see errors in sbt compile
+    javaHome := Some(file(sys.env("JAVA_HOME"))),
+    crossVersion := CrossVersion.disabled,
+    Compile / fullClasspath := Nil,
+    // For some reason, need the same options for java and javac to pass compilation
+    Compile / javaOptions ++= toolchainJavaOptions,
+    Compile / javacOptions ++= toolchainJavaOptions,
+    Compile / packageBin / mappings ++= {
+      // Add the META-INF/services/com.sun.source.util.Plugin file to the JAR only
+      // during packaging to avoid errors during incremental compilation where
+      // resources are added to the compile-classpath causing javac to fail because
+      // the plugin itself is not compiled yet. Adding -proc:none didn't help.
+      val resourceDir = (Compile / sourceDirectory).value / "resources-packaged"
+      (resourceDir.allPaths.get() pair Path.relativeTo(resourceDir)).map {
+        case (file, path) => file -> path
+      }
+    },
+  )
+  .disablePlugins(ScalafixPlugin)
+  // For some strange reason, it fails to build because it's missing
+  // --add-export options
+  .disablePlugins(BloopPlugin)
 
 lazy val `semanticdb-javac` = project
   .settings(
@@ -530,13 +557,17 @@ lazy val `semanticdb-javac` = project
   )
   .dependsOn(jsemanticdb)
   .disablePlugins(ScalafixPlugin)
-  // For some strange reason, it fails to build because it's missing
-  // --add-export options
-  .disablePlugins(BloopPlugin)
 
 lazy val `mtags-java` = project
+  .settings(
+    libraryDependencies ++= pprintDebuggingDependency,
+    javaHome := Some(file(sys.env("JAVA_HOME"))),
+    Test / javaOptions ++= sharedJavaOptions,
+    Compile / javacOptions ++= sharedJavaOptions.map(o => s"-J$o"),
+    Compile / javacOptions ++= List("-Xlint:deprecation"),
+  )
   .configure(JavaPcSettings.settings(sharedSettings))
-  .dependsOn(interfaces, mtagsShared)
+  .dependsOn(interfaces, mtagsShared, `semanticdb-javac`)
 
 lazy val metals = project
   .settings(
@@ -620,6 +651,7 @@ lazy val metals = project
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
         .exclude("ch.epfl.scala", "bsp4j"),
     ),
+    Compile / resourceGenerators += packageJavaHeaderCompiler,
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](
       "localSnapshotVersion" -> localSnapshotVersion,
@@ -706,6 +738,7 @@ lazy val input = project
     scalacOptions -= "-Xsource:3",
     javaHome := Some(file(sys.env("JAVA_HOME"))),
     publish / skip := true,
+    javaHome := Some(file(sys.env("JAVA_HOME"))),
     libraryDependencies ++= List(
       // NOTE: we should be able to use our inlined semanticdb-javac compiler
       // plugin but it breaks incremental compilation because it adds the
@@ -888,11 +921,28 @@ lazy val cross = project
   )
   .dependsOn(mtest)
 
+// This plugin is ~5kb with no external dependencies. It only uses javac APIs to
+// wipe out method bodies and field initializers.
+lazy val packageJavaHeaderCompiler = Def.task {
+  val javaHeaderCompilerJar =
+    (`java-header-compiler` / Compile / Keys.`package`).value
+  val file =
+    (Compile / managedResourceDirectories).value.head / "java-header-compiler.jar"
+  IO.copyFile(javaHeaderCompilerJar, file)
+  Seq(file)
+}
+
 lazy val javapc = project
   .in(file("tests/javapc"))
   .settings(
     testSettings,
     sharedSettings,
+    libraryDependencies ++= List(
+      "com.outr" %% "scribe" % V.scribe,
+      "com.outr" %% "scribe-slf4j2" % V.scribe,
+    ),
+    Compile / resourceGenerators += packageJavaHeaderCompiler,
+    Test / javaOptions ++= sharedJavaOptions,
   )
   .dependsOn(mtest, `mtags-java`)
 
@@ -1001,6 +1051,8 @@ lazy val bench = project
     buildInfoKeys := Seq[BuildInfoKey](scalaVersion),
     buildInfoPackage := "bench",
     Jmh / bspEnabled := false,
+    Jmh / fork := true,
+    Jmh / javaOptions ++= sharedJavaOptions,
   )
   .dependsOn(unit)
   .enablePlugins(JmhPlugin)
