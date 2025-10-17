@@ -57,4 +57,11 @@ public interface InlayHintsParams extends RangeParams {
     return false;
   }
 
+  /**
+   * Response should contain decorations for closing labels.
+   */
+  default boolean closingLabels() {
+    return false;
+  }
+
 }

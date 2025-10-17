@@ -439,7 +439,7 @@ class DebugProvider(
               new Discovered(
                 pcInfo.symbol,
                 testInfo.fullyQualifiedName,
-                pcInfo.recursiveParents.map(_.symbolToFullQualifiedName).toSet,
+                pcInfo.recursiveParents.map(_.symbolToFullyQualifiedName).toSet,
                 (pcInfo.annotations ++ pcInfo.memberDefsAnnotations).toSet,
                 isModule = pcInfo.symbol.endsWith("."),
               )

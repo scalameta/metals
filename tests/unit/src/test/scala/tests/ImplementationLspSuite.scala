@@ -771,6 +771,7 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
        |""".stripMargin,
     "scala/collection/generic/DefaultSerializable#",
     filter = _.contains("DefaultSerializable"),
+    maxRetry = 3,
   )
 
   override protected def libraryDependencies: List[String] =

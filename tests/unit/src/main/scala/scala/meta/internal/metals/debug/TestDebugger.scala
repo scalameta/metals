@@ -194,7 +194,18 @@ final class TestDebugger(
         // This might sometimes be printed in the JVM, but does not cause any actual issues
         if (
           !output.contains("Picked up JAVA_TOOL_OPTIONS") &&
-          !output.contains("transport error 202: send failed: Broken pipe")
+          !output.contains("transport error 202: send failed: Broken pipe") &&
+          !output.contains(
+            "WARNING: A terminally deprecated method in sun.misc.Unsafe has been called"
+          ) &&
+          !output.contains("WARNING: sun.misc.Unsafe") &&
+          !output.contains(
+            "WARNING: Please consider reporting this to the maintainers"
+          ) &&
+          !output.contains("WARNING: Use --enable-native-access=ALL-UNNAMED") &&
+          !output.contains(
+            "WARNING: Restricted methods will be blocked in a future release"
+          )
         )
           fail(new IllegalStateException(output))
       case _ =>

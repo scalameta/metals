@@ -289,7 +289,7 @@ class PackageProvider(
     val packagesRenames = optTree
       .map(collectPackageRenames(baseRename, _))
       .getOrElse(List(baseRename))
-    val shortestRename = packagesRenames.last.newPackageParts.mkString(".")
+    val longestRename = packagesRenames.head.newPackageParts.mkString(".")
 
     val importerRenamer =
       new ImporterRenamer(references.toList, packagesRenames)
@@ -308,7 +308,7 @@ class PackageProvider(
       .toSet -- imported
 
     val newImports = Option.when(toImport.nonEmpty) {
-      calcNewImports(optTree, toImport, shortestRename)
+      calcNewImports(optTree, toImport, longestRename)
     }
     val changes =
       refsInImportsEdits ++ newImports ++ fullyQuilifiedChanges
@@ -402,12 +402,21 @@ class PackageProvider(
         case _ => None
       }
 
-    def findPackageRename(ref: Reference, parts: List[String]): Option[String] =
+    def findPackageRename(
+        ref: Reference,
+        parts: List[String],
+    ): Option[String] = {
       pkgRenames.collectFirst {
         case PackagePartsRenamer(oldPackageParts, newPackageParts)
-            if parts.startsWith(ref.allParts(oldPackageParts)) =>
+            // Exclude PackagePartsRenamer with empty oldPackageParts from fully qualified renaming.
+            // When oldPackageParts is empty, simple references like "Calc.a" should get an import added
+            // (e.g., "import foo.Calc") rather than being rewritten as fully qualified names (e.g., "foo.Calc.a").
+            if parts.startsWith(
+              ref.allParts(oldPackageParts)
+            ) && oldPackageParts.nonEmpty =>
           (newPackageParts ++ parts.drop(oldPackageParts.length)).mkString(".")
       }
+    }
 
     def existsPackagePart(ref: Reference, parts: List[String]): Boolean =
       pkgRenames.exists { case PackagePartsRenamer(oldPackageParts, _) =>
@@ -435,7 +444,7 @@ class PackageProvider(
   }
 
   /**
-   * Calculates edits for import statemants that select elements from files old package.
+   * Calculates edits for import statements that select elements from files old package.
    * E.g
    * Moved file:
    * file://root/a/b/c/d/File.scala
@@ -452,7 +461,8 @@ class PackageProvider(
    *
    * import c.d.A  //YES
    * import a.b.c.d.{A, B => BB} //YES
-   * import a.b.c.d._ //PARTIALLY if possible will delete this import (all elements imported by _ will be added explicitly)
+   * import a.b.c.d._ //YES - wildcard imports are preserved and updated with new package name
+   * import a.b.c.d.{A, B => _, _} //YES - mixed imports with unimports and wildcards are preserved
    * import c.d.A.C //NO
    * ```
    * @return
@@ -507,6 +517,8 @@ class PackageProvider(
       directlyImportedSymbols: () => Set[String],
       importerRenamer: ImporterRenamer,
   ): ImportEdits[TopLevelDeclaration] = {
+    val dialect = importer.origin.dialectOpt.getOrElse(dialects.Scala213)
+    val wildcardSyntax = if (dialect.allowStarWildcardImport) "*" else "_"
     importerRenamer
       .renameFor(importParts)
       .map { case (newPackageName, referencesNames) =>
@@ -536,17 +548,23 @@ class PackageProvider(
           referencesNames.find(_.name == name).map(List(_))
         def findReference(
             importee: Importee
-        ): Option[List[TopLevelDeclaration]] =
-          importee match {
-            case Importee.Name(name) => findReferenceByName(name.value)
-            case Importee.Rename(from, _) => findReferenceByName(from.value)
-            case Importee.Unimport(name) => findReferenceByName(name.value)
+        ): Option[List[TopLevelDeclaration]] = {
+          val result = importee match {
+            case Importee.Name(name) =>
+              findReferenceByName(name.value)
+            case Importee.Rename(from, _) =>
+              findReferenceByName(from.value)
+            case Importee.Unimport(name) =>
+              findReferenceByName(name.value)
             case Importee.Wildcard() if wildcardImportsOnlyFromMovedFiles =>
-              Some(List.empty)
+              Some(referencesNames.toList)
             case Importee.GivenAll() if wildcardImportsOnlyFromMovedFiles =>
               Some(importedImplicits.toList)
-            case _ => None
+            case _ =>
+              None
           }
+          result
+        }
         val (handledRefs0, refsImportees, refsIndices) =
           importees.zipWithIndex.flatMap { case (imp, indx) =>
             findReference(imp).map((_, imp, indx))
@@ -559,26 +577,53 @@ class PackageProvider(
             case Importee.Name(name) => Some(name.value)
             case Importee.Rename(from, to) =>
               Some(s"${from.value} => ${to.value}")
+            case Importee.Unimport(name) =>
+              Some(s"{${name.value} => $wildcardSyntax}")
             case Importee.GivenAll() => Some("given")
             case _ => None
           }
           val newImportStr = {
-            def bracedImporteeStr = refsImportees.filter {
-              case _: Importee.Wildcard => false
-              case _: Importee.Unimport => false
-              case _ => true
-            } match {
-              case List(Importee.Rename(_, _)) =>
-                s"{${mkImportees(importeeStrings)}}"
-              case _ => mkImportees(importeeStrings)
+            val hasWildcardToUpdate = refsImportees.exists {
+              case _: Importee.Wildcard => true
+              case _ => false
+            } && wildcardImportsOnlyFromMovedFiles
+
+            if (hasWildcardToUpdate && newPackageName.nonEmpty) {
+              // When updating wildcard imports, preserve any existing unimports and explicit imports
+              // by combining them with the wildcard in a single import statement
+              val unimports = refsImportees.collect {
+                case Importee.Unimport(name) =>
+                  s"${name.value} => $wildcardSyntax"
+              }
+              val explicitImports = refsImportees.collect {
+                case Importee.Name(name) => name.value
+                case Importee.Rename(from, to) =>
+                  s"${from.value} => ${to.value}"
+              }
+              val allImportees = (unimports ++ explicitImports).distinct
+              if (allImportees.nonEmpty) {
+                s"${newPackageName.mkString(".")}.{${allImportees.mkString(", ")}, $wildcardSyntax}"
+              } else {
+                s"${newPackageName.mkString(".")}.$wildcardSyntax"
+              }
+            } else {
+              def bracedImporteeStr = refsImportees.filter {
+                case _: Importee.Wildcard => false
+                case _: Importee.Unimport => false
+                case _ => true
+              } match {
+                case List(Importee.Rename(_, _)) =>
+                  s"{${mkImportees(importeeStrings)}}"
+                case _ => mkImportees(importeeStrings)
+              }
+              if (importeeStrings.nonEmpty && newPackageName.nonEmpty)
+                s"${newPackageName.mkString(".")}.$bracedImporteeStr"
+              else ""
             }
-            if (importeeStrings.nonEmpty && newPackageName.nonEmpty)
-              s"${newPackageName.mkString(".")}.$bracedImporteeStr"
-            else ""
           }
           if (refsImportees.length == importer.importees.length) {
             val importChange =
-              if (newImportStr == "")
+              if (newImportStr == "") {
                 // we delete the import
                 importer.parent
                   .map(line =>
@@ -588,7 +633,9 @@ class PackageProvider(
                     )
                   )
                   .toList
-              else List(new TextEdit(importer.pos.toLsp, newImportStr))
+              } else {
+                List(new TextEdit(importer.pos.toLsp, newImportStr))
+              }
             ImportEdits(handledRefs, importChange)
           } else {
             // In this branch some importees should be removed from the import, but not all.
@@ -630,6 +677,7 @@ class PackageProvider(
         }
       }
       .getOrElse(ImportEdits.empty)
+
   }
 
   private def findImporters(tree: Tree): Vector[Importer] = {

@@ -41,6 +41,7 @@ class ChosenBuildTool(conn: () => Connection) {
   }
 
   def reset(): Unit = {
+    currentTool.set(None)
     conn().update("delete from chosen_build_tool;") { _ => () }
   }
 }

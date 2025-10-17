@@ -62,7 +62,7 @@ final class BspServers(
       case availableServers =>
         val md5 = digestServerDetails(availableServers)
         val selectedServer = for {
-          name <- tables.buildServers.selectedServer(md5)
+          name <- tables.buildServers.selectedServer()
           server <- availableServers.find(_.getName == name)
         } yield server
         selectedServer match {

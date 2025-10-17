@@ -298,6 +298,14 @@ object Embedded {
       resolution: Option[ResolutionParams] = None,
   ): Fetch = {
 
+    val mtagsInterfaceOverride = Map(
+      "3.5.0" -> "1.3.1",
+      "3.4.3" -> "1.3.0",
+      "3.4.2" -> "1.3.0",
+      "3.4.1" -> "1.2.1",
+      "3.4.0" -> "1.2.0",
+    )
+
     val resolutionParams = resolution.getOrElse(ResolutionParams.create())
 
     scalaVersion.foreach { scalaVersion =>
@@ -313,6 +321,16 @@ object Embedded {
         resolutionParams.forceVersions(
           scala3CompilerDependencies(scalaVersion)
         )
+      mtagsInterfaceOverride.get(scalaVersion).foreach { overrideVersion =>
+        resolutionParams.forceVersions(
+          Map(
+            coursierapi.Module.of(
+              "org.scalameta",
+              "mtags-interfaces",
+            ) -> overrideVersion
+          ).asJava
+        )
+      }
     }
 
     Fetch

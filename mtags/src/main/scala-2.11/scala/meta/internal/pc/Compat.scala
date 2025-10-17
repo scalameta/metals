@@ -4,11 +4,8 @@ import scala.tools.nsc.reporters.Reporter
 import scala.tools.nsc.reporters.StoreReporter
 
 import scala.meta.pc.OutlineFiles
-import java.io.Closeable
 
-trait Compat { this: MetalsGlobal with Closeable =>
-  override def close(): Unit = {}
-
+trait Compat { this: MetalsGlobal =>
   def metalsFunctionArgTypes(tpe: Type): List[Type] = {
     val dealiased = tpe.dealiasWiden
     if (definitions.isFunctionTypeDirect(dealiased)) dealiased.typeArgs.init

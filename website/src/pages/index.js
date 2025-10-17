@@ -3,60 +3,6 @@ import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import Layout from "@theme/Layout";
 
-const Dropdown = () => {
-  const gitpod = (template, organization) =>
-    `https://gitpod.io/#template=${template},organization=${organization}/https://github.com/scalameta/gitpod-g8`;
-
-  const links = [
-    { organization: "scala", template: "hello-world", label: "Hello World!" },
-    { organization: "scala", template: "scala3", label: "Scala 3" },
-    {
-      organization: "scala",
-      template: "scalatest-example",
-      label: "Scalatest",
-    },
-    {
-      organization: "akka",
-      template: "akka-scala-seed",
-      label: "Akka",
-    },
-    {
-      organization: "zio",
-      template: "zio-project-seed",
-      label: "ZIO",
-    },
-    {
-      organization: "playframework",
-      template: "play-scala-seed",
-      label: "Play Framework",
-    },
-    {
-      organization: "scala-native",
-      template: "scala-native",
-      label: "Scala Native",
-    },
-  ].map(({ organization, template, label }) => (
-    <li key={template}>
-      <a
-        className="dropdown__link"
-        target="_blank"
-        rel="noopener noreferrer"
-        href={gitpod(template, organization)}
-      >
-        {label}
-      </a>
-    </li>
-  ));
-  return (
-    <div className="dropdown dropdown--hoverable">
-      <button className="button button--lg button--outline button--primary margin--sm">
-        Try Online with Gitpod
-      </button>
-      <ul className="dropdown__menu">{links}</ul>
-    </div>
-  );
-};
-
 const Supported = (props) => {
   const companies = [
     {
@@ -191,7 +137,6 @@ const Index = (props) => {
             >
               Get started
             </Link>
-            <Dropdown />
             <Features />
             <Supported />
           </div>

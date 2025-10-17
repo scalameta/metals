@@ -37,6 +37,7 @@ abstract class BaseInlayHintsExpectSuite(
             true,
             true,
             true,
+            false,
           )
           val inlayHints =
             compiler

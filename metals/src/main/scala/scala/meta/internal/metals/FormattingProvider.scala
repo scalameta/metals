@@ -176,7 +176,7 @@ final class FormattingProvider(
       path: AbsolutePath,
       projectRoot: AbsolutePath,
       token: CancelChecker,
-  ): Future[Either[String, Option[String]]] = {
+  ): Future[Either[String, List[l.TextEdit]]] = {
     reset(token)
     val input = path.toInputFromBuffers(buffers)
 
@@ -217,10 +217,19 @@ final class FormattingProvider(
           Left(s"Formatting error: ${e.getMessage}")
       }
     }
+    def fullDocumentFormat(config: AbsolutePath) = {
+      val fullDocumentRange =
+        Position.Range(input, 0, input.chars.length).toLsp
+      formatWithConfig(config).map { formatted =>
+        formatted.map { text =>
+          new l.TextEdit(fullDocumentRange, text)
+        }.toList
+      }
+    }
 
     scalafmtConf(projectRoot) match {
       case Some(config) =>
-        Future.successful(formatWithConfig(config))
+        Future.successful(fullDocumentFormat(config))
       case None =>
         // No config found, use default config
         val defaultConfig = projectRoot.resolve(Directories.hiddenScalafmt)
@@ -239,7 +248,7 @@ final class FormattingProvider(
               )
           }
         }
-        Future.successful(formatWithConfig(defaultConfig))
+        Future.successful(fullDocumentFormat(defaultConfig))
     }
   }
 
