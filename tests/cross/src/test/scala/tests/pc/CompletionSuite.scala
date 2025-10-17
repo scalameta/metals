@@ -1581,13 +1581,9 @@ class CompletionSuite extends BaseCompletionSuite {
         |  scala@@
         |}
         |""".stripMargin,
-    """|scala `<root>`
-       |""".stripMargin,
-    compat = Map(
-      "2" ->
-        """|scala _root_
-           |""".stripMargin
-    )
+    """|ScalaReflectionException scala
+       |scala _root_
+       |""".stripMargin
   )
 
   check(

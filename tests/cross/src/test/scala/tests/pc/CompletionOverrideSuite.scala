@@ -952,11 +952,12 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|overTop: Int
+       |Override
        |deprecatedOverriding scala
        |override def overTop: Int
        |""".stripMargin,
     includeDetail = false,
-    topLines = Some(3),
+    topLines = Some(4),
     compat = Map(
       "2.11" ->
         """|overTop: Int
@@ -997,12 +998,13 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
        |   overr@@
        |}
        |""".stripMargin,
-    """|deprecatedOverriding scala
+    """|Override
+       |deprecatedOverriding scala
        |override def hello1: Int
        |override val hello2: Int
        |""".stripMargin,
     includeDetail = false,
-    topLines = Some(3),
+    topLines = Some(4),
     compat = Map(
       "2.11" ->
         """|override def hello1: Int

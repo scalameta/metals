@@ -97,15 +97,10 @@ class CancelCompletionSuite extends BaseCompletionSuite {
       |  val x = asser@@
       |}
     """.stripMargin,
-    """|assert(assertion: Boolean): Unit
+    """|AssertionError
+       |assert(assertion: Boolean): Unit
        |assert(assertion: Boolean, message: => Any): Unit
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|assert(inline assertion: Boolean): Unit
-           |assert(inline assertion: Boolean, inline message: => Any): Unit
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   /**
