@@ -66,18 +66,15 @@ class CompletionBacktickSuite extends BaseCompletionSuite {
   )
 
   check(
-    "named-arg".tag(IgnoreScala3),
+    "named-arg",
     """|object Main {
        |  def foo(`type`: Int) = 42
        |  foo(type@@)
        |}
        |""".stripMargin,
-    """`type` = : Int
-      |""".stripMargin,
-    filterText = "type",
-    compat = Map(
-      "3" -> ""
-    )
+    """|`type` = : Int
+       |TypeNotPresentException java.lang
+       |""".stripMargin
   )
 
   check(
