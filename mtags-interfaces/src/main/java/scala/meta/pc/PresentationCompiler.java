@@ -195,6 +195,13 @@ public abstract class PresentationCompiler {
 	public abstract CompletableFuture<List<Diagnostic>> didChange(VirtualFileParams params);
 
 	/**
+	 * Return source metadata of symbol at given position
+	 */
+	public CompletableFuture<List<SymbolSource>> symbolSource(OffsetParams params) {
+		return CompletableFuture.completedFuture(Collections.emptyList());
+	}
+
+	/**
 	 * Returns decorations for missing type adnotations, inferred type parameters,
 	 * implicit parameters and conversions.
 	 */
