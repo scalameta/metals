@@ -949,6 +949,9 @@ class MetalsMcpServer(
         |    },
         |    "targets": {
         |      "type": "array",
+        |      "items": {
+        |        "type": "string"
+        |      },
         |      "description": "The targets to run the rule on, if empty will run on the last focused target"
         |    },
         |    "sampleCode": {
