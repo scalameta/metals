@@ -2,8 +2,8 @@ package tests.pc
 
 import java.net.URI
 
+import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.mtags.SemanticdbPrinter
-import scala.meta.internal.semanticdbjavac.Semanticdb
 
 import munit.Location
 import tests.BasePCSuite

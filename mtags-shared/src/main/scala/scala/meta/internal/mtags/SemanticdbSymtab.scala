@@ -3,7 +3,7 @@ package scala.meta.internal.mtags
 import java.util.HashMap
 
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.semanticdbjavac.Semanticdb
+import scala.meta.internal.jsemanticdb.Semanticdb
 
 class SemanticdbSymtab(
     private val symtab: collection.Map[String, Semanticdb.SymbolInformation]

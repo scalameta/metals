@@ -18,6 +18,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.cli.Reporter
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
@@ -31,7 +32,6 @@ import scala.meta.internal.parsing.ClassArtifact
 import scala.meta.internal.parsing.ClassFinder
 import scala.meta.internal.parsing.ClassFinderGranularity
 import scala.meta.internal.semanticdb.TextDocument
-import scala.meta.internal.semanticdbjavac.Semanticdb
 import scala.meta.io.AbsolutePath
 import scala.meta.metap.Format
 import scala.meta.metap.Format.Detailed

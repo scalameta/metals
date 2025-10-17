@@ -1,6 +1,6 @@
 package scala.meta.internal.mtags
 
-import scala.meta.internal.semanticdbjavac.Semanticdb
+import scala.meta.internal.jsemanticdb.Semanticdb
 
 object SemanticdbRanges {
   implicit val rangeOrdering: Ordering[Semanticdb.Range] =

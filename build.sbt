@@ -161,6 +161,8 @@ commands ++= Seq(
       runMtagsPublishLocal(st, v, localSnapshotVersion)
     }
     "interfaces/publishLocal" ::
+      "jsemanticdb/publishLocal" ::
+      "semanticdb-javac/publishLocal" ::
       s"++${V.scala213} metals/publishLocal" ::
       "mtags-java/publishLocal" ::
       publishMtags
@@ -301,6 +303,27 @@ lazy val interfaces = project
     ),
   )
 
+lazy val jsemanticdb = project
+  .in(file("jsemanticdb"))
+  .settings(sharedSettings)
+  .settings(
+    moduleName := "jsemanticdb",
+    Compile / packageSrc / publishArtifact := true,
+    autoScalaLibrary := false,
+    crossPaths := false,
+    // Must set Java home to fork on compile and see errors in sbt compile
+    javaHome := Some(file(sys.env("JAVA_HOME"))),
+    crossVersion := CrossVersion.disabled,
+    Compile / fullClasspath := Nil,
+    libraryDependencies ++= List(
+      "org.slf4j" % "slf4j-api" % "1.7.36",
+      "com.google.protobuf" % "protobuf-java-util" % V.protobuf,
+      "com.google.protobuf" % "protobuf-java" % V.protobuf,
+    ),
+    (Compile / PB.targets) :=
+      Seq(PB.gens.java(V.protobuf) -> (Compile / sourceManaged).value),
+  )
+
 lazy val mtagsShared = project
   .in(file("mtags-shared"))
   .settings(sharedSettings)
@@ -336,7 +359,7 @@ lazy val mtagsShared = project
     (Compile / PB.targets) :=
       Seq(PB.gens.java(V.protobuf) -> (Compile / sourceManaged).value),
   )
-  .dependsOn(interfaces)
+  .dependsOn(interfaces, jsemanticdb)
 
 def multiScalaDirectories(root: File, scalaVersion: String) = {
   val base = root / "src" / "main"
@@ -472,6 +495,44 @@ lazy val mtags = project
   )
   .dependsOn(mtagsShared)
   .enablePlugins(BuildInfoPlugin)
+
+val toolchainJavaOptions = List(
+  "--add-modules", "jdk.compiler",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED",
+)
+
+lazy val `semanticdb-javac` = project
+  .settings(
+    moduleName := "semanticdb-javac",
+    autoScalaLibrary := false,
+    crossPaths := false,
+    // Must set Java home to fork on compile and see errors in sbt compile
+    javaHome := Some(file(sys.env("JAVA_HOME"))),
+    crossVersion := CrossVersion.disabled,
+    Compile / fullClasspath := Nil,
+    // For some reason, need the same options for java and javac to pass compilation
+    Compile / javaOptions ++= toolchainJavaOptions,
+    Compile / javacOptions ++= toolchainJavaOptions,
+    Compile / packageBin / mappings ++= {
+      // Add the META-INF/services/com.sun.source.util.Plugin file to the JAR only
+      // during packaging to avoid errors during incremental compilation where
+      // resources are added to the compile-classpath causing javac to fail because
+      // the plugin itself is not compiled yet. Adding -proc:none didn't help.
+      val resourceDir = (Compile / sourceDirectory).value / "resources-packaged"
+      (resourceDir.allPaths.get() pair Path.relativeTo(resourceDir)).map {
+        case (file, path) => file -> path
+      }
+    },
+  )
+  .dependsOn(jsemanticdb)
+  .disablePlugins(ScalafixPlugin)
+  // For some strange reason, it fails to build because it's missing
+  // --add-export options
+  .disablePlugins(BloopPlugin)
 
 lazy val `mtags-java` = project
   .configure(JavaPcSettings.settings(sharedSettings))
@@ -805,7 +866,7 @@ lazy val mtest = project
       scalaVersion.value,
     ),
   )
-  .dependsOn(mtags)
+  .dependsOn(mtags, `semanticdb-javac`)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val cross = project

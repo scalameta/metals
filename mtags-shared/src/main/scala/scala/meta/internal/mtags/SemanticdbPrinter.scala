@@ -3,8 +3,8 @@ package scala.meta.internal.mtags
 import scala.collection.BufferedIterator
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.mtags.SemanticdbRanges._
-import scala.meta.internal.semanticdbjavac.Semanticdb
 
 object SemanticdbPrinter {
   def printDocument(doc: Semanticdb.TextDocument): String = {

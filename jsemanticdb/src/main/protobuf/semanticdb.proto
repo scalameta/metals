@@ -6,7 +6,9 @@
 
 syntax = "proto3";
 
-package scala.meta.internal.semanticdbjavac;
+package scala.meta.internal.semanticdb;
+
+option java_package = "scala.meta.internal.jsemanticdb";
 
 enum Schema {
   LEGACY = 0;
