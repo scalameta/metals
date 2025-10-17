@@ -26,6 +26,8 @@ class CompletionCaseInsensitiveSuite extends BaseCompletionSuite {
       | }
       |}""".stripMargin,
     """longNameYouWillNotRemember: Long
+      |Long scala
+      |Long2long(x: lang.Long): Long
       |long2Long(x: Long): lang.Long
       |longArrayOps(xs: Array[Long]): ArrayOps[Long]
       |longWrapper(x: Long): RichLong
@@ -76,14 +78,21 @@ class CompletionCaseInsensitiveSuite extends BaseCompletionSuite {
   )
 
   check(
-    "lower case query should still only match for segments, so 'ill' should not bring up the long name",
+    "lower case query should still only match for segments, so 'ill' should only bring up the long name starting with 'ill'",
     """
       |object A {
       | def test(longNameYouWillNotRemember: Long): Unit = {
       |   val foo = ill@@
       | }
       |}""".stripMargin,
-    ""
+    """|IllegalAccessError java.lang
+       |IllegalAccessException java.lang
+       |IllegalArgumentException java.lang
+       |IllegalCallerException java.lang
+       |IllegalMonitorStateException java.lang
+       |IllegalStateException java.lang
+       |IllegalThreadStateException java.lang
+       |""".stripMargin
   )
 
 }

@@ -196,6 +196,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|value: Int
+       |ValueOf scala
        |val
        |var
        |varargs - scala.annotation
@@ -206,6 +207,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     compat = Map(
       "2.13" ->
         """|value: Int
+           |ValueOf scala
            |val
            |var
            |varargs - scala.annotation
@@ -215,6 +217,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
            |""".stripMargin,
       "3" ->
         """|value: Int
+           |ValueOf scala
            |val
            |var
            |varargs(): varargs
@@ -234,12 +237,14 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |  }
       |}
       |""".stripMargin,
-    """|val
+    """|ValueOf scala
+       |val
        |var
        |varargs - scala.annotation
        |""".stripMargin,
     compat = Map(
-      "3" -> """|val
+      "3" -> """|ValueOf scala
+                |val
                 |var
                 |varargs(): varargs
                 |varargs - scala.annotation
@@ -279,6 +284,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|value: Int
+       |ValueOf scala
        |varargs - scala.annotation
        |""".stripMargin,
     compat = Map(
@@ -424,8 +430,8 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |  typ@@
       |}
     """.stripMargin,
-    """type
-    """.stripMargin
+    """|TypeNotPresentException java.lang
+       |type""".stripMargin
   )
 
   check(
@@ -442,7 +448,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     """.stripMargin,
     // NOTE(olafur) `type` is technically valid in blocks but they're not completed
     // to reduce noise (we do the same for class, object, trait).
-    ""
+    "TypeNotPresentException java.lang"
   )
 
   check(

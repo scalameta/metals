@@ -70,8 +70,8 @@ class FuzzySuite extends BaseSuite {
 
   // Basic first character case-insensitive matching
   checkForgiving("name", "name", true)
-  checkForgiving("name", "Name", false)
-  checkForgiving("Name", "name", false)
+  checkForgiving("name", "Name", true)
+  checkForgiving("Name", "name", true)
   checkForgiving("Name", "Name", true)
   checkForgiving("xame", "Name", false)
 
@@ -82,6 +82,13 @@ class FuzzySuite extends BaseSuite {
   checkForgiving("namYo", "LongNameYouCouldForget", false)
   checkForgiving("NAMYO", "longNameYouCouldForget", false)
   checkForgiving("ameYo", "longNameYouCouldForget", false)
+  checkForgiving(
+    "sen",
+    "Sentence Case Metric (12m Average)",
+    true,
+  )
+  checkForgiving("va", "ClassValue", false)
+  checkForgiving("va", "java", false)
 
   checkForgiving("_name", "_Name", false)
   checkForgiving("na1", "name1", true)
