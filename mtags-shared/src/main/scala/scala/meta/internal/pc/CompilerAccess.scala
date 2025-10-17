@@ -94,6 +94,7 @@ abstract class CompilerAccess[Reporter, Compiler](
       },
       token
     )
+
     // Interrupt the queue thread
     token.onCancel.whenCompleteAsync(
       (isCancelled, _) => {
@@ -205,8 +206,13 @@ abstract class CompilerAccess[Reporter, Compiler](
       { () =>
         token.checkCanceled()
         Thread.interrupted() // clear interrupt bit
-        result.complete(thunk())
-        ()
+        try {
+          result.complete(thunk())
+        } catch {
+          case NonFatal(e) =>
+            logger.error(s"presentation compiler error ${e.getMessage()}", e)
+            result.completeExceptionally(e)
+        }
       }
     )
 
