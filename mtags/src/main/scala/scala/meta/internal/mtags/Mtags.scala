@@ -52,7 +52,8 @@ final class Mtags(implicit rc: ReportContext) {
   def extendedIndexing(
       path: AbsolutePath,
       dialect: Dialect = dialects.Scala213,
-      includeMembers: Boolean = false
+      includeMembers: Boolean = false,
+      isDependency: Boolean = false
   ): (
       TextDocument,
       MtagsIndexer.AllOverrides,
@@ -66,10 +67,11 @@ final class Mtags(implicit rc: ReportContext) {
           new JavaToplevelMtags(input, includeInnerClasses = true)
         else
           new ScalaToplevelMtags(
-            input,
+            input = input,
             includeInnerClasses = true,
-            includeMembers,
-            dialect
+            includeMembers = includeMembers,
+            dialect = dialect,
+            isDependency = isDependency
           )
       addLines(language, input.text)
       val doc =
@@ -171,7 +173,8 @@ object Mtags {
   def extendedIndexing(
       path: AbsolutePath,
       dialect: Dialect = dialects.Scala213,
-      includeMembers: Boolean = false
+      includeMembers: Boolean = false,
+      isDependency: Boolean = false
   )(implicit
       rc: ReportContext = new EmptyReportContext()
   ): (
@@ -179,7 +182,7 @@ object Mtags {
       MtagsIndexer.AllOverrides,
       MtagsIndexer.AllToplevelMembers
   ) = {
-    new Mtags().extendedIndexing(path, dialect, includeMembers)
+    new Mtags().extendedIndexing(path, dialect, includeMembers, isDependency)
   }
 
   def topLevelSymbols(

@@ -51,7 +51,8 @@ class ScalaToplevelMtags(
     includeInnerClasses: Boolean,
     includeMembers: Boolean,
     dialect: Dialect,
-    collectIdentifiers: Boolean = false
+    collectIdentifiers: Boolean = false,
+    isDependency: Boolean = false
 )(implicit rc: ReportContext)
     extends MtagsIndexer {
 
@@ -278,15 +279,15 @@ class ScalaToplevelMtags(
         // also covers extension methods because of `def` inside
         case DEF
             // extension group
-            if (includeMembers && (dialect.allowExtensionMethods && currRegion.isExtension || currRegion.isImplicit)) =>
+            if ((includeMembers || isDependency) && (dialect.allowExtensionMethods && currRegion.isExtension || currRegion.isImplicit)) =>
           acceptTrivia()
           newIdentifier.foreach { name =>
             withOwner(currRegion.owner) {
-              method(
-                name.name,
-                region.overloads.disambiguator(name.name),
-                name.pos,
-                EXTENSION
+              indexMethod(
+                currRegion.owner,
+                name,
+                region,
+                isImplicit = currRegion.isImplicit
               )
             }
           }
@@ -297,7 +298,7 @@ class ScalaToplevelMtags(
           )
         // inline extension method `extension (...) def foo = ...`
         case DEF
-            if includeMembers && expectTemplate
+            if (includeMembers || isDependency) && expectTemplate
               .map(needToParseExtension)
               .getOrElse(false) =>
           expectTemplate match {
@@ -309,12 +310,7 @@ class ScalaToplevelMtags(
               acceptTrivia()
               newIdentifier.foreach { name =>
                 withOwner(expect.owner) {
-                  method(
-                    name.name,
-                    region.overloads.disambiguator(name.name),
-                    name.pos,
-                    EXTENSION
-                  )
+                  indexMethod(expect.owner, name, region)
                 }
               }
               loop(indent.notAfterNewline, currRegion, None)
@@ -770,6 +766,41 @@ class ScalaToplevelMtags(
           case _ => (acc0, currIdent)
         }
       case _ => (acc0, newIndent)
+    }
+  }
+
+  private def indexMethod(
+      owner: String,
+      name: Identifier,
+      region: Region,
+      isImplicit: Boolean = false
+  ): Unit = {
+    if (!isDependency) {
+      method(
+        name.name,
+        region.overloads.disambiguator(name.name),
+        name.pos,
+        EXTENSION
+      )
+    } else {
+      if (
+        (owner.endsWith("/package.") || owner.endsWith(
+          "$package."
+        )) || (isImplicit && (owner
+          .contains("/package.") || owner.contains("$package.")))
+      ) {
+        val defSymbol = symbol(
+          Descriptor.Method(
+            name.name,
+            region.overloads.disambiguator(name.name)
+          )
+        )
+        addToplevelMembers(
+          List(
+            ToplevelMember(defSymbol, name.pos.toRange, Kind.METHOD)
+          )
+        )
+      }
     }
   }
 
