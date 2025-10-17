@@ -15,6 +15,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.parsing.BloopDiagnosticsParser
 import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
 
@@ -63,6 +64,12 @@ final class BloopInstall(
       javaHome: Option[String],
   ): CancelableFuture[WorkspaceLoadedStatus] = {
     persistChecksumStatus(Status.Started, buildTool)
+    val buffer = scala.collection.mutable.ArrayBuffer.empty[String]
+    val errorHandler = (x: String) => {
+      buffer.append(x)
+      scribe.error(x)
+    }
+
     val processFuture = shellRunner
       .run(
         s"${buildTool.executableName} bloopInstall",
@@ -77,11 +84,18 @@ final class BloopInstall(
           "METALS_ENABLED" -> "true",
           "SCALAMETA_VERSION" -> BuildInfo.semanticdbVersion,
         ) ++ sys.env,
+        processErr = errorHandler,
       )
       .map {
         case ExitCodes.Success => WorkspaceLoadedStatus.Installed
         case ExitCodes.Cancel => WorkspaceLoadedStatus.Cancelled
         case result => WorkspaceLoadedStatus.Failed(result)
+      }
+      .map { value =>
+        BloopDiagnosticsParser
+          .getDiagnosticsFromErrors(buffer.toArray)
+          .foreach(languageClient.publishDiagnostics)
+        value
       }
     processFuture.future.foreach { result =>
       try result.toChecksumStatus.foreach(persistChecksumStatus(_, buildTool))

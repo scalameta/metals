@@ -378,7 +378,9 @@ class ConnectionProvider(
           else
             request.request match {
               case Disconnect(shutdownBuildServer) =>
-                disconnect(shutdownBuildServer)
+                disconnect(
+                  shutdownBuildServer
+                )
               case Index(check) => index(check)
               case ImportBuildAndIndex(session) =>
                 importBuildAndIndex(session)
