@@ -5,6 +5,7 @@ import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 
 import munit.Location
 import munit.TestOptions
+import org.eclipse.lsp4j.debug.CompletionItem
 import tests.BaseDapSuite
 import tests.QuickBuildInitializer
 import tests.QuickBuildLayout
@@ -214,6 +215,8 @@ class CompletionDapSuite
                              |notifyAll()
                              |new
                              |""".stripMargin,
+    // Skip auto-import suggestions
+    includeCompletionItem = item => !item.getLabel().contains(" - "),
     expectedEdit = "name",
     topLines = None,
   )(
@@ -334,6 +337,7 @@ class CompletionDapSuite
       noResults: Boolean = false,
       isLineNullable: Boolean = false,
       requestOtherThreadStackTrace: Boolean = false,
+      includeCompletionItem: CompletionItem => Boolean = _ => true,
   )(
       source: String
   )(implicit loc: Location): Unit = {
@@ -362,6 +366,7 @@ class CompletionDapSuite
         val targets = completer.response
           .getTargets()
         val completionItems = targets
+          .filter(item => includeCompletionItem(item))
           .map { item =>
             item.getLabel()
           }

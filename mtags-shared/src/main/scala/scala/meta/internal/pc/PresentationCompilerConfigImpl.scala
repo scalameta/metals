@@ -1,5 +1,7 @@
 package scala.meta.internal.pc
 
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.util
 import java.util.Optional
 import java.util.concurrent.TimeUnit
@@ -30,7 +32,8 @@ case class PresentationCompilerConfigImpl(
     semanticdbCompilerOptions: util.List[String] =
       PresentationCompilerConfig.defaultSemanticdbCompilerOptions(),
     override val hoverContentType: ContentType = ContentType.MARKDOWN,
-    override val emitDiagnostics: Boolean = false
+    override val emitDiagnostics: Boolean = false,
+    override val workspaceRoot: Path = Paths.get(System.getProperty("user.dir"))
 ) extends PresentationCompilerConfig {
 
   override def isStripMarginOnTypeFormattingEnabled(): Boolean =

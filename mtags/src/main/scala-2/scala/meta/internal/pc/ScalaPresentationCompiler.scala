@@ -646,6 +646,7 @@ case class ScalaPresentationCompiler(
     val mg = new MetalsGlobal(
       settings,
       reporter,
+      logger,
       search,
       buildTargetIdentifier,
       config,

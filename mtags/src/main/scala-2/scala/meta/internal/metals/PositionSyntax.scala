@@ -1,9 +1,17 @@
 package scala.meta.internal.metals
 
+import scala.{meta => m}
+
 import scala.meta.Position
 import scala.meta.internal.inputs.XtensionInput
 
+import org.eclipse.{lsp4j => l}
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
 object PositionSyntax {
+
+  val logger: Logger = LoggerFactory.getLogger(getClass)
 
   def formatMessage(
       pos: Position,
@@ -127,6 +135,47 @@ object PositionSyntax {
         case range: Position.Range =>
           lineContent(range.startLine).text
       }
+  }
+
+  implicit class XtensionTestLspRange(range: l.Range) {
+    def formatMessage(
+        severity: String,
+        message: String,
+        input: m.Input
+    ): String = {
+      try {
+        val start = range.getStart
+        val end = range.getEnd
+        val pos = m.Position.Range(
+          input,
+          start.getLine,
+          start.getCharacter,
+          end.getLine,
+          end.getCharacter
+        )
+        pos.formatMessage(severity, message)
+      } catch {
+        case e: IllegalArgumentException =>
+          val result =
+            s"${range.getStart.getLine}:${range.getStart.getCharacter} ${message}"
+          logger.error(result, e)
+          result
+      }
+    }
+  }
+
+  implicit class XtensionTestDiagnostic(d: l.Diagnostic) {
+    def formatMessage(uri: String, hint: String): String = {
+      val severity = d.getSeverity.toString.toLowerCase()
+      s"$severity:$hint $uri:${d.getRange.getStart.getLine} ${d.getMessage}"
+    }
+    def formatMessage(input: m.Input): String = {
+      d.getRange.formatMessage(
+        d.getSeverity.toString.toLowerCase(),
+        d.getMessage,
+        input
+      )
+    }
   }
 
 }

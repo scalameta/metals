@@ -40,7 +40,6 @@ class RequestMonitorImpl(bspStatus: ConnectionBspStatus, serverName: String)
         }
         consumer.consume(message)
       }
-
     }
 
   private def isPing(message: RequestMessage): Boolean =

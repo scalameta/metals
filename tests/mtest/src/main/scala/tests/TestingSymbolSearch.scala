@@ -21,7 +21,7 @@ import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 
-import org.eclipse.lsp4j.Location
+import org.eclipse.{lsp4j => l}
 
 /**
  * Implementation of `SymbolSearch` for testing purposes.
@@ -51,19 +51,19 @@ class TestingSymbolSearch(
     docs.documentation(symbol, parents, contentType)
   }
 
-  override def definition(symbol: String, source: URI): ju.List[Location] = {
+  override def definition(symbol: String, source: URI): ju.List[l.Location] = {
     index.definition(Symbol(symbol)) match {
       case None =>
         ju.Collections.emptyList()
       case Some(value) =>
-        import org.eclipse.lsp4j.Range
-        import org.eclipse.lsp4j.Position
+        // The production implementation of SymbolSearch actually computes the
+        // correct URI and range.
         val filename = value.path.toNIO.getFileName().toString()
         val uri = s"$symbol $filename"
         ju.Collections.singletonList(
-          new Location(
+          new l.Location(
             uri,
-            new Range(new Position(0, 0), new Position(0, 0))
+            new l.Range(new l.Position(0, 0), new l.Position(0, 0))
           )
         )
     }

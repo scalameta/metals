@@ -30,6 +30,10 @@ object Directories {
     RelativePath(".bsp")
   def metalsSettings: RelativePath =
     RelativePath(".metals").resolve("settings.json")
+  def javaHeaderCompiler: RelativePath =
+    RelativePath(".metals").resolve("lib").resolve("java-header-compiler.jar")
+  def outDir: RelativePath =
+    RelativePath(".metals").resolve("out")
 
   val stacktraceFilename = "stacktrace.scala"
   val dependenciesName = "dependencies"

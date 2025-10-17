@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.nio.file.Paths;
+import java.nio.file.Path;
 
 /**
  * Configuration options used by the Metals presentation compiler.
@@ -133,5 +135,12 @@ public interface PresentationCompilerConfig {
 		return ContentType.MARKDOWN;
 	}
 
-	default boolean emitDiagnostics() { return false; }
+	default boolean emitDiagnostics() {
+		return false;
+	}
+
+	default Path workspaceRoot() {
+		return Paths.get(System.getProperty("user.dir"));
+	}
+
 }

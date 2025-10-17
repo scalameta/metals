@@ -54,7 +54,4 @@ class BaseJavaHoverSuite extends BaseJavaPCSuite with TestHovers {
     }
   }
 
-  private def packageName(name: String): String = {
-    name.toLowerCase.split(" ").mkString("_")
-  }
 }

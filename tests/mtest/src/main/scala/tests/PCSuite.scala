@@ -32,22 +32,18 @@ trait PCSuite {
   protected val allRepos: Seq[Repository] =
     Repository.defaults().asScala.toSeq
 
-  protected def fetch: Fetch = Fetch
-    .create()
-    .withRepositories(allRepos: _*)
+  protected def createFetch(): Fetch =
+    Fetch.create().withRepositories(allRepos: _*)
 
-  protected def indexJdkSources: Unit = JdkSources() match {
+  protected def indexJdkSources(): Unit = JdkSources() match {
     case Right(jdk) =>
       // We don't actually need to index, since java toplevels are trivial.
       index.underlying.addIndexedSourceJar(jdk, Nil, dialect)
     case _ =>
   }
 
-  protected def extraLibraries(f: Fetch): Seq[Path] = f
-    .fetch()
-    .asScala
-    .map(_.toPath())
-    .toSeq
+  protected def extraLibraries(f: Fetch): Seq[Path] =
+    f.fetch().asScala.map(_.toPath()).toSeq
 
   protected def search(
       myclasspath: Seq[Path]
@@ -102,6 +98,13 @@ trait PCSuite {
         println(s"warn: ${e.getMessage}")
     }
     workspace.inputs(file.toURI.toString()) = (code2, dialect)
+  }
+
+  protected def packageName(name: String): String = {
+    if (name.isEmpty()) {
+      throw new IllegalArgumentException("package name cannot be empty")
+    }
+    name.toLowerCase.split(" ").mkString("_").replaceAll("[^a-z0-9_]", "")
   }
 
 }

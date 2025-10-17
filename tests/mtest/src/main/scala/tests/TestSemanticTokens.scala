@@ -2,11 +2,13 @@ package tests
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
+import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.pc.SemanticTokens
 import scala.meta.internal.pc.SemanticTokens._
 import scala.meta.pc.Node
+import scala.meta.pc.VirtualFileParams
 
 import org.eclipse.{lsp4j => l}
 
@@ -40,6 +42,49 @@ object TestSemanticTokens {
 
     // return
     buffer.toList.mkString(",")
+  }
+
+  def semanticStringV2(
+      params: VirtualFileParams,
+      semanticTokens: l.SemanticTokens
+  ): String = {
+    val nodes = semanticTokens.getData().asScala
+    if (nodes.length % 5 != 0) {
+      throw new RuntimeException(
+        s"Expected semantic tokens length to be dividable by 5. URI: ${params.uri}"
+      )
+    }
+    val out = new StringBuilder
+    val it = nodes.iterator.buffered
+    var prev = new l.Position(0, 0)
+    def peekLine() = prev.getLine() + it.head
+    var start = 0
+    params.text().linesWithSeparators.zipWithIndex.foreach {
+      case (line, lineNumber) =>
+        val end = start + line.length
+        out.append(line.replace("\t", " "))
+        while (it.hasNext && lineNumber == peekLine()) {
+          val deltaLine = it.next()
+          val deltaStart = it.next()
+          val length = it.next()
+          val tokenType = it.next()
+          val tokenModifier = it.next()
+          val startLine = prev.getLine() + deltaLine
+          val startCharacter =
+            deltaStart + (if (lineNumber == prev.getLine()) prev.getCharacter()
+                          else 0)
+          out.append(" ".repeat(startCharacter))
+          out.append("^".repeat(length))
+          out.append(" ")
+          out.append(decorationString(tokenType, tokenModifier))
+          out.append("\n")
+
+          prev = new l.Position(startLine, startCharacter)
+        }
+
+        start = end
+    }
+    out.toString()
   }
 
   // We can't always correctly determin which node will be used outside the compiler,

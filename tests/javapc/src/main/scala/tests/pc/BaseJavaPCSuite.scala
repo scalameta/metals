@@ -25,10 +25,10 @@ abstract class BaseJavaPCSuite extends BaseSuite with PCSuite {
   val tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("java.metals"))
 
   protected lazy val presentationCompiler: PresentationCompiler = {
-    val fetchRepos = fetch
-    extraDependencies.foreach(fetchRepos.addDependencies(_))
+    val fetch = createFetch()
+    extraDependencies.foreach(fetch.addDependencies(_))
 
-    val myclasspath: Seq[Path] = extraLibraries(fetchRepos)
+    val myclasspath: Seq[Path] = extraLibraries(fetch)
 
     indexJdkSources
 

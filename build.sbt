@@ -704,12 +704,19 @@ lazy val input = project
   .settings(
     sharedSettings,
     scalacOptions -= "-Xsource:3",
+    javaHome := Some(file(sys.env("JAVA_HOME"))),
     publish / skip := true,
     libraryDependencies ++= List(
+      // NOTE: we should be able to use our inlined semanticdb-javac compiler
+      // plugin but it breaks incremental compilation because it adds the
+      // META-INF/services/com.sun.source.util.Plugin file to the compilation of
+      // the plugin itself, and the plugin doesn't exist yet.
+      "com.sourcegraph" % "semanticdb-javac" % V.javaSemanticdb,
       // these projects have macro annotations
       "org.scalameta" %% "scalameta" % V.scalameta,
       "io.circe" %% "circe-derivation-annotations" % "0.13.0-M5",
     ),
+    javacOptions += s"-Xplugin:semanticdb -sourceroot:${(ThisBuild / baseDirectory).value} -targetroot:${(Compile / classDirectory).value}",
     scalacOptions ++= Seq("-P:semanticdb:synthetics:on", "-Ymacro-annotations"),
     scalacOptions ~= { options =>
       options.filter(!_.contains("-Wunused"))
@@ -843,8 +850,11 @@ lazy val mtest = project
           else if (scalaVersion.value == "2.13.11") "1.0.0-M10"
           else V.munit
         },
+        "com.outr" %% "scribe" % V.scribe,
+        "com.outr" %% "scribe-slf4j2" % V.scribe,
         "io.get-coursier" % "interface" % V.coursierInterfaces,
       ),
+    dependencyOverrides += "org.scala-lang" % "scala-library" % scalaVersion.value,
     buildInfoPackage := "tests",
     buildInfoObject := "BuildInfoVersions",
     buildInfoKeys := Seq[BuildInfoKey](
@@ -950,13 +960,12 @@ lazy val unit = project
     buildInfoPackage := "tests",
     Compile / resourceGenerators += InputProperties
       .resourceGenerator(input, input3),
-    Compile / compile :=
-      (Compile / compile)
-        .dependsOn(
-          input / Test / compile,
-          input3 / Test / compile,
-        )
-        .value,
+    Compile / compile := (Compile / compile)
+      .dependsOn(
+        input / Test / compile,
+        input3 / Test / compile,
+      )
+      .value,
     buildInfoKeys := Seq[BuildInfoKey](
       "sourceroot" -> (ThisBuild / baseDirectory).value,
       "targetDirectory" -> (Test / target).value,

@@ -1,5 +1,7 @@
 package tests
 
+import java.nio.file.Files
+
 import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.io.PathIO
@@ -9,6 +11,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MtagsBinaries
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompiler
 
 import tests.InputProperties
@@ -25,7 +28,10 @@ object TestScala3Compiler {
         val time = new FakeTime
         val client = new TestingClient(PathIO.workingDirectory, Buffers())
         val status = new WorkDoneProgress(client, time)(ec)
-        val embedded = new Embedded(status)
+        val tmp = Files.createTempDirectory("metals")
+        tmp.toFile.deleteOnExit()
+        val workspace = AbsolutePath(tmp.toFile)
+        val embedded = new Embedded(workspace, status)
         val pc = embedded
           .presentationCompiler(mtags)
           .newInstance(

@@ -1,15 +1,16 @@
 package bench
 
+import java.nio.file.Files
 import java.nio.file.Path
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContextExecutor
 
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.ExcludedPackagesHandler
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MtagsBinaries
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
@@ -25,12 +26,15 @@ import tests.TestingSymbolSearch
 
 abstract class PcBenchmark {
 
+  private val tmp = Files.createTempDirectory("metals")
+  private val workspace = AbsolutePath(tmp.toFile)
   protected val presentationCompilers: TrieMap[String, PresentationCompiler] =
     TrieMap.empty[String, PresentationCompiler]
   protected implicit val ec: ExecutionContextExecutor =
     scala.concurrent.ExecutionContext.global
   protected val embedded = new Embedded(
-    new metals.WorkDoneProgress(NoopLanguageClient, metals.Time.system)
+    workspace,
+    new metals.WorkDoneProgress(NoopLanguageClient, metals.Time.system),
   )
 
   protected final val benchmarkedScalaVersions: Array[String] = Array(
@@ -91,6 +95,7 @@ abstract class PcBenchmark {
   @TearDown
   def tearDown(): Unit = {
     presentationCompilers.values.foreach(_.shutdown())
+    workspace.deleteRecursively()
   }
 
 }

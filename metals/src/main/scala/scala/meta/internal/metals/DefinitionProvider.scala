@@ -95,7 +95,7 @@ final class DefinitionProvider(
     )
 
     def fromCompiler() =
-      if (path.isScalaFilename) {
+      if (path.isScalaFilename || path.isJavaFilename) {
         compilers()
           .definition(params, token)
           .map {
@@ -110,7 +110,12 @@ final class DefinitionProvider(
                 )
               )
           }
-      } else Future.successful(None)
+      } else {
+        scribe.warn(
+          s"DefinitionProvider: skipping path ${path} because it is not a scala or java file"
+        )
+        Future.successful(None)
+      }
 
     def fromSemanticDb() = Future.successful {
       semanticdbs()
@@ -184,8 +189,7 @@ final class DefinitionProvider(
       sym: String,
       targets: List[BuildTargetIdentifier],
   ): ju.List[Location] = {
-    destinationProvider
-      .fromSymbol(sym, targets.toSet) match {
+    destinationProvider.fromSymbol(sym, targets.toSet) match {
       case None => ju.Collections.emptyList()
       case Some(r) => r.locations
     }
@@ -581,9 +585,17 @@ class DefinitionProviderReportBuilder(
     result
   }
 
+  private def symbolDefinitelyHasNoDefinition(symbol: String): Boolean = {
+    symbol == "" ||
+    symbol.endsWith("/") // Ignore packages
+  }
+
   def build(): Option[Report] =
     compilerDefn match {
-      case Some(compilerDefn) if !foundScalaDocDef && compilerDefn.isEmpty =>
+      case Some(compilerDefn)
+          if !foundScalaDocDef &&
+            compilerDefn.isEmpty &&
+            !symbolDefinitelyHasNoDefinition(compilerDefn.querySymbol) =>
         Some(
           Report(
             "empty-definition",

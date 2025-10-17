@@ -6,6 +6,7 @@ import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.sys.process.Process
 import scala.util.Failure
 import scala.util.Success
 import scala.util.control.NonFatal
@@ -67,6 +68,8 @@ abstract class BaseLspSuite(
 
   protected def initializationOptions: Option[InitializationOptions] = None
 
+  def initializeGitRepo: Boolean = false
+
   private var useVirtualDocs = false
   protected val changeSpacesToDash = true
 
@@ -110,6 +113,7 @@ abstract class BaseLspSuite(
         scribe.warn(bspTrace.toString() + ":\n" + bspTrace.readText)
     }
   }
+
   def writeLayout(layout: String): Unit = {
     FileLayout.fromString(layout, workspace)
   }
@@ -118,12 +122,24 @@ abstract class BaseLspSuite(
     FileLayout.fromString(layout, workspace.resolve(folderName))
   }
 
+  def execSilentCommand(command: List[String]): Unit = {
+    Process(command, cwd = workspace.toFile).!!
+  }
+
   def initialize(
       layout: String,
       expectError: Boolean = false,
   ): Future[InitializeResult] = {
     Debug.printEnclosing()
     writeLayout(layout)
+    if (initializeGitRepo) {
+      execSilentCommand(List("git", "init", "-b", "main"))
+      execSilentCommand(List("git", "add", "."))
+      execSilentCommand(
+        List("git", "commit", "--no-gpg-sign", "--no-verify", "-m",
+          "initial commit")
+      )
+    }
     initializer.initialize(workspace, server, client, expectError, userConfig)
   }
 
@@ -156,6 +172,22 @@ abstract class BaseLspSuite(
   def test(
       testOpts: TestOptions,
       withoutVirtualDocs: Boolean = false,
+      maxRetry: Int = 0,
+  )(
+      fn: => Future[Unit]
+  )(implicit loc: Location): Unit = {
+    testLSP(testOpts, withoutVirtualDocs, maxRetry)(fn)
+  }
+
+  def testLSP(
+      testOpts: TestOptions,
+      // TODO: replace this parameter, clients should use
+      // `.tag(TestingServer.virtualDocTag)` instead.  Not to mention, this
+      // should be named "withVirtualDocs" because setting it to true actually
+      // enables virtual docs.
+      withoutVirtualDocs: Boolean = false,
+      // TODO: same as for withoutVirtualDocs, the whole point of the MUnit
+      // tagging system is to not add a bunch of method parameters like this.
       maxRetry: Int = 0,
   )(
       fn: => Future[Unit]

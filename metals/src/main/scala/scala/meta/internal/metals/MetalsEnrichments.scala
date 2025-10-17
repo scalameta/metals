@@ -326,6 +326,7 @@ object MetalsEnrichments
   }
 
   implicit class XtensionJavaList[A](lst: util.List[A]) {
+    def widen[B >: A]: util.List[B] = lst.asInstanceOf[util.List[B]]
     def map[B](fn: A => B): util.List[B] = {
       val out = new util.ArrayList[B]()
       val iter = lst.iterator()
@@ -875,10 +876,6 @@ object MetalsEnrichments
   }
 
   implicit class XtensionDiagnosticLSP(d: l.Diagnostic) {
-    def formatMessage(uri: String, hint: String): String = {
-      val severity = d.getSeverity.toString.toLowerCase()
-      s"$severity:$hint $uri:${d.getRange.getStart.getLine} ${d.getMessage}"
-    }
     def asTextEdit: Option[l.TextEdit] = {
       decodeJson(d.getData, classOf[l.TextEdit])
     }

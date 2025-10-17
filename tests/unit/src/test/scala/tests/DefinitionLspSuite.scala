@@ -486,7 +486,6 @@ class DefinitionLspSuite
       definition <- server.definition(
         "a/src/main/scala/example/MainA.scala",
         testCase,
-        workspace,
       )
       _ = assert(definition.nonEmpty, "Definition for Dsl class not found")
       mainDefUri = definition.head.getUri()
@@ -568,7 +567,6 @@ class DefinitionLspSuite
       locations <- server.definition(
         "a/src/main/scala/a/Main.scala",
         testCase,
-        workspace,
       )
       _ = assert(locations.nonEmpty)
       _ = assert(locations.head.getUri().endsWith("scala/Double.scala"))
@@ -637,7 +635,6 @@ class DefinitionLspSuite
       locations <- server.definition(
         "a/src/main/scala/a/Main.scala",
         testCase,
-        workspace,
       )
       _ = assert(locations.length == 3)
       _ = assert(locations.forall(_.getUri().endsWith("a/Main.scala")))
@@ -733,7 +730,6 @@ class DefinitionLspSuite
       locations <- server.definition(
         "a/src/main/scala/a/Main.scala",
         testCase,
-        workspace,
       )
       _ = assert(locations.length == 1)
       _ = assert(locations.forall(_.getUri().endsWith("a/Other.scala")))

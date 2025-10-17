@@ -15,6 +15,7 @@ import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.pc.CompletionItemData
@@ -436,6 +437,14 @@ trait CommonMtagsEnrichments {
     def get(i: Int): Option[T] =
       if (i >= 0 && i < lst.length) Some(lst(i))
       else None
+  }
+
+  implicit class XtensionJSemanticdbRange(range: Semanticdb.Range) {
+    def toLspRange: l.Range =
+      new l.Range(
+        new l.Position(range.getStartLine(), range.getStartCharacter()),
+        new l.Position(range.getEndLine(), range.getEndCharacter())
+      )
   }
 
 }

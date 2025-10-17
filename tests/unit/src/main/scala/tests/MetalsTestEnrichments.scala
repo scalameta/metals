@@ -14,7 +14,6 @@ import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.Memory
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.SemanticdbDefinition
@@ -152,42 +151,6 @@ object MetalsTestEnrichments {
         None,
       )
       wsp.buildTargets.addData(data0)
-    }
-  }
-  implicit class XtensionTestLspRange(range: l.Range) {
-    def formatMessage(
-        severity: String,
-        message: String,
-        input: m.Input,
-    ): String = {
-      try {
-        val start = range.getStart
-        val end = range.getEnd
-        val pos = m.Position.Range(
-          input,
-          start.getLine,
-          start.getCharacter,
-          end.getLine,
-          end.getCharacter,
-        )
-        pos.formatMessage(severity, message)
-      } catch {
-        case e: IllegalArgumentException =>
-          val result =
-            s"${range.getStart.getLine}:${range.getStart.getCharacter} ${message}"
-          scribe.error(result, e)
-          result
-      }
-    }
-
-  }
-  implicit class XtensionTestDiagnostic(diag: l.Diagnostic) {
-    def formatMessage(input: m.Input): String = {
-      diag.getRange.formatMessage(
-        diag.getSeverity.toString.toLowerCase(),
-        diag.getMessage,
-        input,
-      )
     }
   }
   implicit class XtensionMetaToken(token: m.Token) {

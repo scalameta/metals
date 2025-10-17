@@ -7,6 +7,7 @@ import scala.collection.mutable.ListBuffer
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
+import scala.util.control.NonFatal
 import scala.util.matching.Regex
 
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -20,6 +21,7 @@ import scala.meta.tokens._
 
 import org.eclipse.lsp4j.SemanticTokenModifiers
 import org.eclipse.lsp4j.SemanticTokenTypes
+import org.eclipse.lsp4j.SemanticTokens
 import org.eclipse.lsp4j.{Position => LspPosition}
 
 /**
@@ -71,6 +73,47 @@ object SemanticTokensProvider {
       delta = delta.moveOffset(lines.last.length())
     }
     (buffer.toList, delta)
+  }
+
+  def fromPC(
+      nodes: collection.Seq[Node],
+      params: VirtualFileParams,
+      path: AbsolutePath,
+      isScala3: Boolean,
+      trees: Trees,
+      adjust: AdjustLspData,
+  )(implicit rc: ReportContext): SemanticTokens = {
+    if (path.isJava) {
+      // A reimplementation of how we map `Node` to LSP semantic tokens that
+      // should be easier to reason about and have faster performance.
+      new SemanticTokensProviderV2(params, nodes).provide()
+    } else {
+      val plist =
+        try {
+          SemanticTokensProvider.provide(
+            nodes.toList,
+            params,
+            path,
+            isScala3,
+            trees,
+          )
+        } catch {
+          case NonFatal(e) =>
+            scribe.error(
+              s"Failed to tokenize input for semantic tokens for $path",
+              e,
+            )
+            Nil
+        }
+
+      val tokens =
+        findCorrectStart(0, 0, plist.toList, adjust)
+      if (isScala3 && path.isWorksheet) {
+        new SemanticTokens(adjustForScala3Worksheet(tokens).asJava)
+      } else {
+        new SemanticTokens(tokens.asJava)
+      }
+    }
   }
 
   /**

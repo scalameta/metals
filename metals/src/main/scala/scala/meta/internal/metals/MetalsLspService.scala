@@ -158,7 +158,7 @@ abstract class MetalsLspService(
   implicit val executionContext: ExecutionContextExecutorService = ec
 
   protected val embedded: Embedded = register(
-    new Embedded(workDoneProgress)
+    new Embedded(folder, workDoneProgress)
   )
 
   val tables: Tables = register(new Tables(folder, time))
@@ -299,6 +299,8 @@ abstract class MetalsLspService(
         () => userConfig.workspaceSymbolProvider,
         () => clientConfig.initialConfig.statistics,
         metrics,
+        buffers,
+        timerProvider,
       )
     )
   val workspaceSymbols: WorkspaceSymbolProvider =
@@ -307,8 +309,8 @@ abstract class MetalsLspService(
       buildTargets,
       definitionIndex,
       saveClassFileToDisk = !clientConfig.isVirtualDocumentSupported(),
-      () => userConfig,
-      () => excludedPackageHandler,
+      userConfig = () => userConfig,
+      excludedPackageHandler = () => excludedPackageHandler,
       classpathSearchIndexer = classpathSearchIndexer,
       mbtWorkspaceSymbolProvider = mbtWorkspaceSymbolProvider,
     )
@@ -452,6 +454,7 @@ abstract class MetalsLspService(
     new Compilers(
       folder,
       clientConfig,
+      initialServerConfig,
       () => userConfig,
       buildTargets,
       buffers,
@@ -467,6 +470,8 @@ abstract class MetalsLspService(
       sourceMapper,
       worksheetProvider,
       () => referencesProvider,
+      mbtWorkspaceSymbolProvider,
+      timerProvider,
     )
   )
 
@@ -948,7 +953,6 @@ abstract class MetalsLspService(
         val futures = List.newBuilder[Future[Unit]]
         futures += compilers.didChange(path).ignoreValue
         futures += fileDidChange(path)
-        // diagnosticsDebouncer.didChange(params.getTextDocument.getVersion, path)
         futures += referencesProvider.didChange(path, change.getText)
         futures += parseTrees(path)
         Future.sequence(futures.result()).ignoreValue.asJava

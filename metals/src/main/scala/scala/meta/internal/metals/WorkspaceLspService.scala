@@ -1268,6 +1268,7 @@ class WorkspaceLspService(
         folderFilesPattern.setMatches(lsp4j.FileOperationPatternKind.Folder)
         val fileOperationOptions = new lsp4j.FileOperationOptions(
           List(
+            // TODO: should we also support java files here?
             new lsp4j.FileOperationFilter(scalaFilesPattern),
             new lsp4j.FileOperationFilter(folderFilesPattern),
           ).asJava

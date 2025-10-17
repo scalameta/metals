@@ -24,7 +24,7 @@ object TestingWorkspaceSymbolProvider {
       index = index,
       saveClassFileToDisk = saveClassFileToDisk,
       userConfig = () => UserConfiguration.default,
-      () => ExcludedPackagesHandler.default,
+      excludedPackageHandler = () => ExcludedPackagesHandler.default,
       bucketSize = bucketSize,
       mbtWorkspaceSymbolProvider = EmptyMbtWorkspaceSymbolSearch,
     )(EmptyReportContext)

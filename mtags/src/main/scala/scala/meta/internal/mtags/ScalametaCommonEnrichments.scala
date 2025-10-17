@@ -35,6 +35,9 @@ import org.slf4j.LoggerFactory
 object ScalametaCommonEnrichments extends ScalametaCommonEnrichments {}
 trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
 
+  private val logger =
+    LoggerFactory.getLogger(classOf[ScalametaCommonEnrichments])
+
   def indexAfterSpacesAndComments(text: Array[Char]): Int = {
     var isInComment = false
     var startedStateChange = false
@@ -62,9 +65,6 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     else index
   }
 
-  private def logger =
-    LoggerFactory.getLogger(classOf[ScalametaCommonEnrichments])
-
   implicit class XtensionMetaPosition(pos: m.Position) {
     def toSemanticdb: s.Range = {
       new s.Range(
@@ -74,6 +74,8 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
         pos.endColumn
       )
     }
+    def toLspStartPosition: l.Position =
+      new l.Position(pos.startLine, pos.startColumn)
     def toLsp: l.Range = {
       new l.Range(
         new l.Position(pos.startLine, pos.startColumn),

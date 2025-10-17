@@ -57,10 +57,10 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
       else
         PackageIndex.scalaLibrary
 
-    val fetchRepos = fetch
-    extraDependencies(scalaVersion).foreach(fetchRepos.addDependencies(_))
+    val fetch = createFetch()
+    extraDependencies(scalaVersion).foreach(fetch.addDependencies(_))
 
-    val myclasspath: Seq[Path] = extraLibraries(fetchRepos) ++ scalaLibrary
+    val myclasspath: Seq[Path] = extraLibraries(fetch) ++ scalaLibrary
 
     if (requiresJdkSources) indexJdkSources
     if (requiresScalaLibrarySources)

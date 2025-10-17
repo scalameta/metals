@@ -54,6 +54,17 @@ object Library {
       "xnio",
       List(Dependency.of("org.jboss.xnio", "xnio-nio", "3.8.8.Final")),
     )
+  def springbootStarterWeb: Library =
+    fetchSources(
+      "springboot-starter-web",
+      List(
+        Dependency.of(
+          "org.springframework.boot",
+          "spring-boot-starter-web",
+          "2.7.13",
+        )
+      ),
+    )
 
   def damlrxjavaSources: List[AbsolutePath] =
     fetchSources(

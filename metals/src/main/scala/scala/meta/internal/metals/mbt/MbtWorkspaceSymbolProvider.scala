@@ -2,13 +2,13 @@ package scala.meta.internal.metals.mbt
 import java.net.URI
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.{util => ju}
 
 import scala.collection.mutable
 import scala.collection.parallel.CollectionConverters._
-import scala.jdk.CollectionConverters._
 import scala.util.Try
 import scala.util.Using
 
@@ -16,25 +16,29 @@ import scala.meta.dialects
 import scala.meta.infra
 import scala.meta.inputs.Input
 import scala.meta.internal.infra.NoopMonitoringClient
+import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.CancelTokens
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.metals.Memory
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.StringBloomFilter
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
+import scala.meta.internal.metals.TimerProvider
 import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.internal.mtags.Mtags
-import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Scala.DescriptorParser
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.tokenizers.UnexpectedInputEndException
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+import scala.meta.pc.SemanticdbCompilationUnit
+import scala.meta.pc.SemanticdbFileManager
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 
@@ -68,8 +72,43 @@ final class MbtWorkspaceSymbolProvider(
     config: () => WorkspaceSymbolProviderConfig,
     statistics: () => StatisticsConfig,
     metrics: infra.MonitoringClient = new NoopMonitoringClient(),
+    buffers: Buffers = Buffers(),
+    timerProvider: TimerProvider = TimerProvider.empty,
 ) extends MbtWorkspaceSymbolSearch
-    with Cancelable {
+    with Cancelable
+    with SemanticdbFileManager {
+
+  def close(): Unit = {
+    db.close()
+  }
+
+  def listPackage(pkg: String): ju.List[SemanticdbCompilationUnit] = {
+    timerProvider.timedThunk(
+      s"SemanticdbFileManager.listPackage $pkg (index size ${index.size})",
+      thresholdMillis = 10,
+    ) {
+      db.readTransaction[ju.List[SemanticdbCompilationUnit]](
+        tableName,
+        "listPackage",
+        ju.Collections.emptyList(),
+      ) { (env, db, txn, _) =>
+        val keyBuffer = ByteBuffer.allocateDirect(env.getMaxKeySize())
+        val result = mutable.ArrayBuffer.empty[SemanticdbCompilationUnit]
+        index.foreach { f =>
+          if (f.language == s.Language.JAVA && f.semanticdbPackage == pkg) {
+            val doc = this.readTextDocument(keyBuffer, db, txn, f)
+            val text = AbsolutePath(f.path).toInputFromBuffers(buffers).text
+            result += VirtualTextDocument.fromDocument(
+              f.semanticdbPackage,
+              f.toplevelSymbols,
+              doc.copy(text = text),
+            )
+          }
+        }
+        result.asJava
+      }
+    }
+  }
 
   private val isStatisticsEnabled: Boolean = statistics().isWorkspaceSymbol
 
@@ -275,6 +314,7 @@ final class MbtWorkspaceSymbolProvider(
       .sortInPlace()(Ordering.by[GitBlob, String](file => file.oid))
     if (files.isEmpty) {
       // An error is logged if GitVCS.lsFilesStage fails.
+      scribe.info("workspace/symbol indexing found no files to index")
       return IndexingStats.empty
     }
     if (isStatisticsEnabled) {
@@ -341,6 +381,7 @@ final class MbtWorkspaceSymbolProvider(
     // paths (for debugging) and OIDs are needed.
     index.clear()
     index.appendAll(files.iterator.map(_.toOIDIndex(gitWorkspace)))
+    index.sortInPlace()(Ordering.by[OIDIndex, Path](_.path))
     files.clear()
 
     metrics.recordEvent(
@@ -385,9 +426,25 @@ final class MbtWorkspaceSymbolProvider(
         val bloomFilterBytes = new Array[Byte](valueFromDb.remaining())
         valueFromDb.get(bloomFilterBytes)
         file.bloomFilter = StringBloomFilter.fromBytes(bloomFilterBytes)
+
+        // TODO: remove me, we should not hold onto the SemanticDBs in memory here
+        // We're only doing it temporarily to compute the toplevel package name and toplevel
+        keyBuffer
+          .clear()
+          .putInt(dbVersion)
+          .putInt(tableSemanticdbSubkey)
+          .put(file.oidBytes)
+          .flip()
+        val semanticdbFromDb = db.get(txn, keyBuffer)
+        if (semanticdbFromDb != null) {
+          val semanticdbBytes = new Array[Byte](semanticdbFromDb.remaining())
+          semanticdbFromDb.get(semanticdbBytes)
+          file.semanticdb = TextDocument.parseFrom(semanticdbBytes)
+        }
       } else {
         missingKeys.append(index)
       }
+
     }
     missingKeys
   }

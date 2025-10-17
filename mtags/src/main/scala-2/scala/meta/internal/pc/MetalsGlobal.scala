@@ -35,6 +35,7 @@ import org.slf4j.Logger
 class MetalsGlobal(
     settings: Settings,
     reporter: MetalsReporter,
+    val logger: Logger,
     val search: SymbolSearch,
     val buildTargetIdentifier: String,
     val metalsConfig: PresentationCompilerConfig,
@@ -68,8 +69,6 @@ class MetalsGlobal(
   hijackPresentationCompilerThread(
     backgroundCompilation = !metalsConfig.emitDiagnostics()
   )
-
-  val logger: Logger = org.slf4j.LoggerFactory.getLogger(classOf[MetalsGlobal])
 
   val richCompilationCache: TrieMap[String, RichCompilationUnit] =
     TrieMap.empty[String, RichCompilationUnit]
@@ -123,7 +122,7 @@ class MetalsGlobal(
   override def assertCorrectThread(): Unit = {
     val name = Thread.currentThread().getName
     if (!name.startsWith("Compiler Job Thread")) {
-      println(s"Wrong thread: $name")
+      logger.debug(s"Wrong thread: $name")
     }
   }
 

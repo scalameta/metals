@@ -106,7 +106,8 @@ class MetalsSymbolSearch(
       wsp.search(
         query,
         visitor,
-        Some(new BuildTargetIdentifier(buildTargetIdentifier)),
+        if (buildTargetIdentifier.isEmpty()) None
+        else Some(new BuildTargetIdentifier(buildTargetIdentifier)),
       )
 
     val wQuery = WorkspaceSymbolQuery.exact(query)

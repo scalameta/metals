@@ -138,7 +138,7 @@ class DidFocusLspSuite extends BaseLspSuite("did-focus") {
 class DidFocusWhileCompilingLspSuite
     extends BaseLspSuite("did-focus-while-compiling") {
   var fakeTime: FakeTime = _
-  val compileDelayMillis = 5000
+  val compileDelayMillis = 200
   override def time: Time = fakeTime
 
   // sleep 5s during the compilation, so that we can make sure

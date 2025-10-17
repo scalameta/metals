@@ -7,7 +7,6 @@ import org.eclipse.lsp4j.SignatureHelp;
 import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.WorkspaceEdit;
 import org.eclipse.lsp4j.Range;
-
 import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.InlayHint;
 import org.eclipse.lsp4j.SelectionRange;
@@ -312,6 +311,22 @@ public abstract class PresentationCompiler {
 	 * Provide workspace root for features like ammonite script $file completions.
 	 */
 	public abstract PresentationCompiler withWorkspace(Path workspace);
+
+	/**
+	 * Provide SemanticdbFileManager for features like listing all files that define
+	 * a symbol in a given package.
+	 */
+	public PresentationCompiler withSemanticdbFileManager(SemanticdbFileManager semanticdbFileManager) {
+		return this;
+	}
+
+	/**
+	 * Provide EmbeddedClient for features like getting the java header compiler
+	 * plugin jar.
+	 */
+	public PresentationCompiler withEmbeddedClient(EmbeddedClient buildClient) {
+		return this;
+	}
 
 	/**
 	 * Provide CompletionItemPriority for additional sorting completion items.

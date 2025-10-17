@@ -21,6 +21,7 @@ import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.PresentationCompiler
+import scala.meta.pc.SemanticdbFileManager
 import scala.meta.pc.SymbolSearch
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -40,6 +41,7 @@ class CompilerConfiguration(
     trees: Trees,
     mtagsResolver: MtagsResolver,
     sourceMapper: SourceMapper,
+    semanticdbFileManager: SemanticdbFileManager,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext) {
 
   private val plugins = new CompilerPlugins()
@@ -49,6 +51,15 @@ class CompilerConfiguration(
     def shutdown(): Unit
   }
 
+  case class StandaloneJavaCompiler(
+      search: SymbolSearch,
+      completionItemPriority: CompletionItemPriority,
+  ) extends MtagsPresentationCompiler {
+    private val pc =
+      configure(JavaPresentationCompiler(), search, completionItemPriority)
+    def await: PresentationCompiler = pc
+    def shutdown(): Unit = pc.shutdown()
+  }
   case class StandaloneCompiler(
       scalaVersion: String,
       symbolSearch: SymbolSearch,
@@ -277,8 +288,8 @@ class CompilerConfiguration(
         )
     }
 
-    protected def fallback: JavaPresentationCompiler =
-      JavaPresentationCompiler()
+    protected def fallback: PresentationCompiler =
+      StandaloneJavaCompiler(search, completionItemPriority).await
   }
 
   private val mtagsLogger = LoggerFactory.getLogger("mtags")
@@ -294,6 +305,8 @@ class CompilerConfiguration(
       .withCompletionItemPriority(completionItemPriority)
       .withWorkspace(workspace.toNIO)
       .withScheduledExecutorService(sh)
+      .withSemanticdbFileManager(semanticdbFileManager)
+      .withEmbeddedClient(embedded)
       .withReportsLoggerLevel(MetalsServerConfig.default.loglevel)
       .withConfiguration {
         val options =
@@ -308,6 +321,7 @@ class CompilerConfiguration(
               () => userConfig().enableStripMarginOnTypeFormatting,
             hoverContentType = config.hoverContentType(),
             emitDiagnostics = userConfig().presentationCompilerDiagnostics,
+            workspaceRoot = workspace.toNIO,
           )
       }
 
@@ -377,7 +391,7 @@ class CompilerConfiguration(
     }
   }
 
-  private def enrichWithReleaseOption(scalaTarget: ScalaTarget) = {
+  private def enrichWithReleaseOption(scalaTarget: ScalaTarget): Seq[String] = {
     val scalacOptions = scalaTarget.scalac.getOptions().asScala.toSeq
     def existsReleaseSetting = scalacOptions.exists(opt =>
       opt.startsWith("-release") ||

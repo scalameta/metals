@@ -628,8 +628,20 @@ final case class TestingServer(
     }
   }
 
-  def toPath(filename: String): AbsolutePath = {
-    TestingServer.toPath(workspace, filename, virtualDocSources)
+  // Resolves to the given path even if the file does not exist.
+  def resolvePath(filename: String, root: AbsolutePath): AbsolutePath = {
+    if (filename.startsWith("file:") || filename.startsWith("jar:")) {
+      return AbsolutePath(Paths.get(URI.create(filename)))
+    }
+    val path = Paths.get(filename)
+    if (path.isAbsolute) {
+      return AbsolutePath(path)
+    }
+    root.resolve(RelativePath(filename))
+  }
+  // Returns a guaranteed existing path.
+  def toPath(filename: String, root: AbsolutePath = workspace): AbsolutePath = {
+    TestingServer.toPath(root, filename, virtualDocSources)
   }
 
   def toPathFromSymbol(symbol: String, filename: String): AbsolutePath = {
@@ -1179,7 +1191,7 @@ final case class TestingServer(
     if (offset < 0) sys.error(s"missing @@\n$original")
     val text = original.replace("@@", replaceWith)
     val input = m.Input.String(text)
-    val path = root.resolve(filename)
+    val path = resolvePath(filename, root)
     path.touch()
     val pos = m.Position.Range(input, offset, offset)
     for {
@@ -1229,7 +1241,7 @@ final case class TestingServer(
   def offsetParams(
       filename: String,
       original: String,
-      root: AbsolutePath,
+      root: AbsolutePath = workspace,
   ): Future[(String, TextDocumentPositionParams)] =
     positionFromString(filename, original, root) { case (text, textId, start) =>
       (text, new TextDocumentPositionParams(textId, start))
@@ -1521,13 +1533,45 @@ final case class TestingServer(
     }
   }
 
+  // Does a goto-definition from a substring AND it does not trigger a didChange
+  // notification.
+  def definitionSubstringQuery(
+      filename: String,
+      substringQuery: String,
+  ): Future[List[Location]] = {
+    val queryOffset = substringQuery.indexOf("@@")
+    if (queryOffset < 0) {
+      throw new IllegalArgumentException(
+        s"query '$substringQuery' does not contain '@@'"
+      )
+    }
+    val abspath = toPath(filename)
+    val input = abspath.toInputFromBuffers(buffers)
+    val queryText = substringQuery.replace("@@", "")
+    val textOffset = input.text.indexOf(queryText)
+    if (textOffset < 0) {
+      throw new IllegalArgumentException(
+        s"query '$queryText' is not a substring of text '${input.text}'"
+      )
+    }
+    val offset = textOffset + queryOffset
+    val params = new TextDocumentPositionParams(
+      abspath.toTextDocumentIdentifier,
+      input.toOffsetPosition(offset).toLspStartPosition,
+    )
+    for {
+      definition <- fullServer.definition(params).asScala
+    } yield {
+      definition.asScala.toList
+    }
+  }
+
   def definition(
       filename: String,
       query: String,
-      root: AbsolutePath,
   ): Future[List[Location]] = {
     for {
-      (_, params) <- offsetParams(filename, query, root)
+      (_, params) <- offsetParams(filename, query)
       definition <- fullServer.definition(params).asScala
     } yield {
       definition.asScala.toList
@@ -2111,6 +2155,7 @@ final case class TestingServer(
       },
     )
   }
+
 }
 
 object TestingServer {
@@ -2119,6 +2164,10 @@ object TestingServer {
       filename: String,
       virtualDocSources: TrieMap[String, AbsolutePath],
   ): AbsolutePath = {
+    if (filename.startsWith("file:") || filename.startsWith("jar:")) {
+      // An absolute URI so we don't try to resolve it
+      return AbsolutePath(Paths.get(URI.create(filename)))
+    }
     val path = RelativePath(filename)
     val base = List(workspace, workspace.resolve(Directories.readonly))
     val dependencies = workspace.resolve(Directories.dependencies).list.toList

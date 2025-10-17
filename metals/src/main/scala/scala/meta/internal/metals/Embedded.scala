@@ -1,7 +1,9 @@
 package scala.meta.internal.metals
 
 import java.net.URLClassLoader
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.util.ServiceLoader
 
 import scala.collection.concurrent.TrieMap
@@ -10,7 +12,9 @@ import scala.util.Properties
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.internal.worksheets.MdocClassLoader
+import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
+import scala.meta.pc.EmbeddedClient
 import scala.meta.pc.PresentationCompiler
 
 import coursierapi.Dependency
@@ -25,9 +29,22 @@ import mdoc.interfaces.Mdoc
  * - mdoc
  */
 final class Embedded(
-    workDoneProgress: BaseWorkDoneProgress
-) extends Cancelable {
+    workspace: AbsolutePath,
+    workDoneProgress: BaseWorkDoneProgress = EmptyWorkDoneProgress,
+) extends Cancelable
+    with EmbeddedClient {
 
+  override def javaHeaderCompilerPluginJarPath(): Path =
+    this.javaHeaderCompiler.toNIO
+  override lazy val semanticdbJavacPluginJarPath: Path =
+    Embedded.downloadSemanticdbJavac().head
+  override lazy val targetDir: Path =
+    workspace.resolve(Directories.outDir).toNIO
+  override def jdkSourcesReadonlyDir(): Path =
+    workspace
+      .resolve(Directories.dependencies)
+      .resolve(JdkSources.zipFileName)
+      .toNIO
   private val mdocs: TrieMap[String, URLClassLoader] =
     TrieMap.empty
   private val presentationCompilers: TrieMap[String, URLClassLoader] =
@@ -58,6 +75,16 @@ final class Embedded(
     )
   }
 
+  lazy val javaHeaderCompiler: AbsolutePath = {
+    val out = workspace.resolve(Directories.javaHeaderCompiler)
+    out.parent.createDirectories()
+    Files.copy(
+      this.getClass.getResourceAsStream("/java-header-compiler.jar"),
+      out.toNIO,
+      StandardCopyOption.REPLACE_EXISTING,
+    )
+    out
+  }
   def presentationCompiler(
       mtags: MtagsBinaries.Artifacts
   ): PresentationCompiler = {

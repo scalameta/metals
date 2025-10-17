@@ -166,6 +166,7 @@ abstract class CompilerAccess[Reporter, Compiler](
     }
   }
 
+  // TODO: make this return `String`, we should not hide meaningful exceptions
   protected def handleSharedCompilerException(t: Throwable): Option[String]
 
   protected def ignoreException(t: Throwable): Boolean

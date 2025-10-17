@@ -34,6 +34,7 @@ import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
+import scala.meta.pc.SemanticdbFileManager
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SyntheticDecorationsParams
 
@@ -73,6 +74,7 @@ import org.eclipse.lsp4j.{debug => d}
 class Compilers(
     workspace: AbsolutePath,
     config: ClientConfiguration,
+    serverConfig: MetalsServerConfig,
     userConfig: () => UserConfiguration,
     buildTargets: BuildTargets,
     buffers: Buffers,
@@ -88,6 +90,8 @@ class Compilers(
     sourceMapper: SourceMapper,
     worksheetProvider: WorksheetProvider,
     completionItemPriority: () => CompletionItemPriority,
+    semanticdbFileManager: SemanticdbFileManager,
+    timerProvider: TimerProvider,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Cancelable {
 
@@ -104,6 +108,7 @@ class Compilers(
     trees,
     mtagsResolver,
     sourceMapper,
+    semanticdbFileManager,
   )
 
   import compilerConfiguration._
@@ -139,21 +144,43 @@ class Compilers(
   private var lastPathWithFallbackCompiler: Option[AbsolutePath] = None
 
   // The "fallback" compiler is used for source files that don't belong to a build target.
-  private def fallbackCompiler: PresentationCompiler = {
+  private def fallbackCompiler(path: AbsolutePath): PresentationCompiler = {
+    val language = path.toLanguage
     jcache
       .compute(
-        PresentationCompilerKey.Default,
+        PresentationCompilerKey.Default(language),
         (_, value) => {
           val scalaVersion =
             scalaVersionSelector.fallbackScalaVersion(isAmmonite = false)
 
           Option(value) match {
             case Some(lazyPc) =>
-              val presentationCompiler = lazyPc.await
-              if (presentationCompiler.scalaVersion() == scalaVersion) {
+              if (language.isJava) {
+                // Always use the same compiler for Java because the fallback
+                // Java compiler is not switching between compiler versions like
+                // we do for the fallback Scala 2.12/2.13/3 Scala compilers.
                 lazyPc
               } else {
-                presentationCompiler.shutdown()
+                val presentationCompiler = lazyPc.await
+                if (presentationCompiler.scalaVersion() == scalaVersion) {
+                  lazyPc
+                } else {
+                  presentationCompiler.shutdown()
+                  StandaloneCompiler(
+                    scalaVersion,
+                    search,
+                    Nil,
+                    completionItemPriority(),
+                  )
+                }
+              }
+            case None =>
+              if (language.isJava) {
+                StandaloneJavaCompiler(
+                  search,
+                  completionItemPriority(),
+                )
+              } else {
                 StandaloneCompiler(
                   scalaVersion,
                   search,
@@ -161,13 +188,6 @@ class Compilers(
                   completionItemPriority(),
                 )
               }
-            case None =>
-              StandaloneCompiler(
-                scalaVersion,
-                search,
-                Nil,
-                completionItemPriority(),
-              )
           }
         },
       )
@@ -230,9 +250,22 @@ class Compilers(
     val maybeDiagnostics =
       for (pc <- loadCompiler(path); contents <- buffers.get(path))
         yield {
-          pc.didChange(CompilerVirtualFileParams(path.toNIO.toUri, contents))
-            .asScala
-            .map(_.asScala.toList)
+          timerProvider.timed(
+            "computed diagnostics",
+            onlyIf = serverConfig.statistics.isDiagnostics,
+          ) {
+            pc.didChange(
+              CompilerVirtualFileParams(
+                path.toNIO.toUri,
+                contents,
+                EmptyCancelToken,
+                outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
+              )
+            ).asScala
+              .map { result =>
+                result.asScala.toList
+              }
+          }
         }
 
     maybeDiagnostics.getOrElse(Future.successful(List.empty))
@@ -1119,7 +1152,7 @@ class Compilers(
             )
             lastPathWithFallbackCompiler = Some(path)
           }
-          Some(fallbackCompiler)
+          Some(fallbackCompiler(path))
         case Some(value) =>
           if (path.isScalaFilename) loadCompiler(value)
           else if (path.isJavaFilename && forceScala)
@@ -1555,7 +1588,7 @@ class Compilers(
       source: AbsolutePath,
       text: String,
   ): s.TextDocument = {
-    val pc = loadCompiler(source).getOrElse(fallbackCompiler)
+    val pc = loadCompiler(source).getOrElse(fallbackCompiler(source))
 
     val (prependedLinesSize, modifiedText) =
       Option
@@ -1655,7 +1688,8 @@ object Compilers {
         extends PresentationCompilerKey
     final case class JavaBuildTarget(id: BuildTargetIdentifier)
         extends PresentationCompilerKey
-    case object Default extends PresentationCompilerKey
+    final case class Default(language: s.Language)
+        extends PresentationCompilerKey
   }
 
 }

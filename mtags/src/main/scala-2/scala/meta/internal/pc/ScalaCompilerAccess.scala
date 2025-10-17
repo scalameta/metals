@@ -90,7 +90,7 @@ class ScalaCompilerAccess(
         } else if (isCompilerRelated) {
           Some("an error in the Scala compiler")
         } else {
-          None
+          Some(s"$t")
         }
       case t => throw t
     }
