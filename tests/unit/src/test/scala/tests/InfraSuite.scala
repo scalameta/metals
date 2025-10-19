@@ -10,7 +10,6 @@ import scala.meta.infra.FeatureFlagProvider
 import scala.meta.infra.Metric
 import scala.meta.infra.MonitoringClient
 import scala.meta.internal.metals.Configs.TelemetryConfig
-import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.{BuildInfo => V}
 
 object TestingInfra {
@@ -35,9 +34,7 @@ class TestingFeatureFlagProvider extends FeatureFlagProvider {
 }
 
 class InfraSuite extends BaseLspSuite("infraSuite") {
-  override def serverConfig: MetalsServerConfig = super.serverConfig.copy(
-    telemetry = new TelemetryConfig("enabled")
-  )
+  override def telemetryConfig: TelemetryConfig = new TelemetryConfig("enabled")
   test("dependency".tag(FlakyWindows)) {
     cleanWorkspace()
     for {

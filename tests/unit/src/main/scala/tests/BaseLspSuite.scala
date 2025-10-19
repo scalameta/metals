@@ -13,6 +13,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.Configs.TelemetryConfig
 import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.ExecuteClientCommandConfig
 import scala.meta.internal.metals.Icons
@@ -47,6 +48,7 @@ abstract class BaseLspSuite(
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
       presentationCompilerDiagnostics = false,
     )
+  def telemetryConfig: TelemetryConfig = new TelemetryConfig("disabled")
   def serverConfig: MetalsServerConfig = MetalsServerConfig.default
   def time: Time = Time.system
   implicit val ex: ExecutionContextExecutorService =
@@ -224,6 +226,7 @@ abstract class BaseLspSuite(
     val config = serverConfig.copy(
       executeClientCommand = ExecuteClientCommandConfig.on,
       icons = this.icons,
+      telemetry = telemetryConfig,
     )
 
     val initOptions = initializationOptions
