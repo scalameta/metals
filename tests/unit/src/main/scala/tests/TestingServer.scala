@@ -1533,6 +1533,48 @@ final case class TestingServer(
     }
   }
 
+  def assertDefinition(
+      filename: String,
+      substringQuery: String,
+      expected: String,
+      redactLineNumbers: Boolean = false,
+  )(implicit loc: munit.Location): Future[List[Location]] = {
+    for {
+      locs <- definitionSubstringQuery(filename, substringQuery)
+    } yield {
+      val workspaceURI = workspace.toURI.toString()
+      val messages = locs.map(loc => {
+        val abspath = AbsolutePath(Paths.get(URI.create(loc.getUri())))
+        val relpath =
+          if (loc.getUri().startsWith(workspaceURI))
+            loc.getUri().stripPrefix(workspaceURI)
+          else {
+            loc.getUri().split('!') match {
+              case Array(jar, filepath) =>
+                val jarname = jar.split("/").last
+                s"$jarname!$filepath"
+              case _ => loc.getUri
+            }
+          }
+        val input = abspath.toInputFromBuffers(buffers).copy(path = relpath)
+        val Some(pos) = loc.getRange().toMeta(input)
+        val result = pos.formatMessage("", "definition")
+        if (redactLineNumbers) {
+          val toReplace = s":${pos.startLine + 1}:${pos.startColumn + 1}:"
+          Assertions.assert(
+            result.contains(toReplace),
+            s"result=$result\ntoReplace=$toReplace",
+          )
+          result.replace(toReplace, ":LINE:COLUMN:")
+        } else {
+          result
+        }
+      })
+      Assertions.assertNoDiff(messages.sorted.mkString("\n"), expected)
+      locs
+    }
+  }
+
   // Does a goto-definition from a substring AND it does not trigger a didChange
   // notification.
   def definitionSubstringQuery(

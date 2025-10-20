@@ -1,9 +1,5 @@
 package tests.j
 
-import scala.concurrent.Future
-import scala.concurrent.duration.Duration
-import scala.concurrent.duration._
-
 class JavaPCDiagnosticsSuite extends BaseJavaPCSuite("java-pc-diagnostics") {
 
   test("no-errors") {
@@ -51,9 +47,6 @@ class JavaPCDiagnosticsSuite extends BaseJavaPCSuite("java-pc-diagnostics") {
       )
       _ <- server.didOpen("a/src/main/java/a/TypeErrors.java")
       _ <- server.didFocus("a/src/main/java/a/TypeErrors.java")
-      // diagnostics are sent asynchronously and we don't have a future to await here
-      // so we wait until the diagnostics are available or 5 seconds have passed
-      _ <- waitUntil(5.seconds)(client.workspaceDiagnostics.nonEmpty)
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/java/a/TypeErrors.java:4:30: error: incompatible types: java.lang.String cannot be converted to int
@@ -95,7 +88,6 @@ class JavaPCDiagnosticsSuite extends BaseJavaPCSuite("java-pc-diagnostics") {
           "public static String text = 123",
         )
       )
-      _ <- waitUntil(5.seconds)(client.workspaceDiagnostics.nonEmpty)
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/java/a/Dynamic.java:5:31: error: incompatible types: int cannot be converted to java.lang.String
@@ -209,11 +201,72 @@ class JavaPCDiagnosticsSuite extends BaseJavaPCSuite("java-pc-diagnostics") {
     } yield ()
   }
 
-  private def waitUntil(timeout: Duration)(cond: => Boolean): Future[Unit] =
-    Future {
-      val deadline = System.nanoTime() + timeout.toNanos
-      while (!cond && System.nanoTime() < deadline) {
-        Thread.sleep(100)
-      }
-    }
+  // This demonstrates an unwanted behavior where we ignore the build
+  // dependencies from BSP. We allow imports to any file from any target.
+  test("target-cycles") {
+    cleanWorkspace()
+    val person = "a/src/main/java/a/Person.java"
+    val main = "b/src/main/java/b/Main.java"
+    for {
+      _ <- initialize(
+        s"""|
+            |/metals.json
+            |{
+            |  "a": {},
+            |  "b": {
+            |    "dependsOn": ["a"]
+            |  }
+            |}
+            |/$person
+            |package a;
+            |
+            |public class Person {
+            |  public String name;
+            |  public int age;
+            |  public Person(String name, int age) {
+            |    this.name = name;
+            |    this.age = age;
+            |  }
+            |  public static String greeting() {
+            |    return b.Main.greet();
+            |  }
+            |}
+            |/$main
+            |package b;
+            |
+            |public class Main {
+            |  public static String greet() {
+            |    return new a.Person("Alice", 30).name;
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen(person)
+      _ <- server.didOpen(main)
+      _ = assertNoDiagnostics()
+      _ <- server.didChange(person)(
+        _.replace("greet()", "greet2()")
+      )
+      _ <- server.didChange(main)(
+        _.replace(".name", ".name2")
+      )
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        // If we disallowed cycles, then it would report an error that b.Main
+        // does not exist, not that `greet2` does not exist.
+        """|a/src/main/java/a/Person.java:11:18: error: cannot find symbol
+           |  symbol:   method greet2()
+           |  location: class b.Main
+           |    return b.Main.greet2();
+           |                 ^^^^^^^
+           |b/src/main/java/b/Main.java:5:37: error: cannot find symbol
+           |  symbol:   variable name2
+           |  location: class a.Person
+           |    return new a.Person("Alice", 30).name2;
+           |                                    ^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
 }

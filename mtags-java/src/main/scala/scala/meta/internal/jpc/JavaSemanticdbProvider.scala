@@ -11,7 +11,13 @@ import scala.meta.internal.semanticdb.javac.SemanticdbJavacOptions
 import scala.meta.internal.semanticdb.javac.SemanticdbVisitor
 import scala.meta.pc.VirtualFileParams
 
-case class TargetRange(startOffset: Long, endOffset: Long)
+import com.sun.source.tree.CompilationUnitTree
+
+case class TargetRange(
+    cu: CompilationUnitTree,
+    startOffset: Long,
+    endOffset: Long
+)
 class JavaSemanticdbProvider(
     compiler: JavaMetalsCompiler
 ) {
@@ -35,7 +41,10 @@ class JavaSemanticdbProvider(
       targetRange: Option[TargetRange]
   ): Semanticdb.TextDocument = {
     val sourceroot = compiler.metalsConfig.workspaceRoot()
-    val cu = compile.cu
+    val cu = targetRange match {
+      case Some(range) => range.cu
+      case None => compile.cu
+    }
     val options = new SemanticdbJavacOptions()
     options.sourceroot = sourceroot
     options.includeText = true

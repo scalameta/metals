@@ -65,7 +65,7 @@ class JavaCompletionProvider(
         .withAnalyzePhase()
     val task = compile.task
     val cu = compile.cu
-    scanner = new JavaTreeScanner(task, cu)
+    scanner = new JavaTreeScanner(compiler.logger, task, cu)
     val position =
       CursorPosition(params.offset(), params.offset(), params.offset())
     val node = compiler.compilerTreeNode(scanner, position)

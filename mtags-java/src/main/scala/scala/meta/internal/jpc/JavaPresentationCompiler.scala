@@ -168,8 +168,7 @@ case class JavaPresentationCompiler(
       params: OffsetParams
   ): CompletableFuture[DefinitionResult] = {
     request(params, DefinitionResultImpl.empty) { pc =>
-      // new JavaDefinitionProvider(pc, params).definition()
-      DefinitionResultImpl.empty
+      new JavaDefinitionProvider(pc, params).definition()
     }
   }
 
@@ -177,9 +176,8 @@ case class JavaPresentationCompiler(
       params: OffsetParams
   ): CompletableFuture[DefinitionResult] =
     request(params, DefinitionResultImpl.empty) { pc =>
-      // new JavaDefinitionProvider(pc, params, TypeDefinitionProcessor)
-      //   .definition()
-      DefinitionResultImpl.empty
+      new JavaDefinitionProvider(pc, params, TypeDefinitionProcessor)
+        .definition()
     }
 
   override def documentHighlight(
@@ -204,8 +202,7 @@ case class JavaPresentationCompiler(
       isExtension: lang.Boolean
   ): CompletableFuture[util.List[AutoImportsResult]] = {
     request(params, util.Collections.emptyList[AutoImportsResult]()) { pc =>
-      // new JavaAutoImportProvider(pc, params, name).autoImports().asJava
-      util.Collections.emptyList[AutoImportsResult]()
+      new JavaAutoImportProvider(pc, params, name).autoImports().asJava
     }
   }
 

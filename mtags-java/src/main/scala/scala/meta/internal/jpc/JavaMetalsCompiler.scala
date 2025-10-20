@@ -49,7 +49,7 @@ class JavaMetalsCompiler(
     embedded
   )
 
-  def doSearch(query: String): collection.Seq[String] = {
+  def doSearch(query: String): Seq[String] = {
     val v = new JavaCompletionSearchVisitor()
     // Allow importing from anywhere, not only the current build target.
     // TODO: Make this configurable?
@@ -99,12 +99,11 @@ class JavaMetalsCompiler(
       extraClasspath: Seq[Path] = Nil,
       extraOptions: List[String] = Nil
   ): JavaSourceCompile = {
-    val compile = prune.compileTask(
+    prune.compileTask(
       params,
       extraClasspath ++ classpath,
       extraOptions ++ options
     )
-    compile
   }
 
   def nodeAtPosition(
@@ -117,7 +116,7 @@ class JavaMetalsCompiler(
       extraClasspath,
       extraOptions
     ).withAnalyzePhase()
-    val scanner = new JavaTreeScanner(task.task, task.cu)
+    val scanner = new JavaTreeScanner(logger, task.task, task.cu)
     val position = params match {
       case p: RangeParams =>
         CursorPosition(p.offset(), p.offset(), p.endOffset())
@@ -186,6 +185,8 @@ class JavaMetalsCompiler(
     }
   }
 
+  // NOTE: this function probably needs a reimplementation. It may not handle
+  // tricker cases like implementing a supermethod from a grandparent class.
   private def overriddenSymbols(
       task: JavacTask,
       executableElement: ExecutableElement,

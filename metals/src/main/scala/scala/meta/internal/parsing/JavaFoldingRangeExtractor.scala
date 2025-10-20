@@ -20,8 +20,13 @@ import com.sun.source.util.TreePathScanner
 import com.sun.source.util.Trees
 import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.FoldingRangeKind
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-final object JavaFoldingRangeExtractor {
+object JavaFoldingRangeExtractor {
+
+  val logger: Logger =
+    LoggerFactory.getLogger(classOf[JavaFoldingRangeExtractor.type])
 
   private case class Range(
       startPos: Long,
@@ -56,8 +61,8 @@ final object JavaFoldingRangeExtractor {
       try {
         super.scan(tree, p)
       } catch {
-        case _: AssertionError =>
-        // ignore
+        case e: AssertionError =>
+          logger.debug("assertion error in javac", e)
       }
     }
 

@@ -91,6 +91,18 @@ class JavaPruneCompiler(
     options.result()
   }
 
+  /**
+   * Returns a parsed but not analyzed compile task. Call `.withAnalyze()` to
+   * also run the analysis phase.
+   *
+   * Throws an error if the compiler fails to parse the provided options for any
+   * reason.
+   *
+   * Logs warnings if the compiler reports diagnostics *before* parsing, which
+   * often indicates a configuration problem. It's not displayed to the user
+   * because it's not an actionable error, but might be helpful debugging why
+   * something is not working for a user.
+   */
   def compileTask(
       params: pc.VirtualFileParams,
       classpath: Seq[Path] = Nil,
@@ -101,9 +113,6 @@ class JavaPruneCompiler(
     originalURIs.put(file.source, params.uri().toString())
     val store = new JavaCompileTaskListener()
     val options = compileOptions(file, classpath, extraOptions)
-    // logger.info(
-    //   s"javapc: Compiling with options: ${options.mkString(" ")}"
-    // )
     val task =
       try
         compiler.getTask(

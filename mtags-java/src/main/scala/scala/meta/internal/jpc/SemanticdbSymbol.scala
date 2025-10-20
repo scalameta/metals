@@ -81,24 +81,6 @@ object SemanticdbSymbol {
     }
   }
 
-  private def disambiguator(executableElement: ExecutableElement): String = {
-    val elements = executableElement.getEnclosingElement.getEnclosedElements
-    val methods = elements.asScala.collect {
-      case e: ExecutableElement
-          if e.getSimpleName == executableElement.getSimpleName =>
-        e
-    }.toBuffer
-    val sortedMethods = methods.sortBy(_.getReceiverType() == null)
-    val index = sortedMethods.zipWithIndex.collectFirst {
-      case (e, i) if e.equals(executableElement) => i
-    }
-
-    index match {
-      case Some(i) => if (i == 0) "()" else s"(+$i)"
-      case scala.None => "()"
-    }
-  }
-
   /**
    * Computes the method "disambiguator" according to the SemanticDB spec.
    *
@@ -117,5 +99,22 @@ object SemanticdbSymbol {
    * <p><a href="https://scalameta.org/docs/semanticdb/specification.html#symbol-2">Link to
    * SemanticDB spec</a>.
    */
+  private def disambiguator(executableElement: ExecutableElement): String = {
+    val elements = executableElement.getEnclosingElement.getEnclosedElements
+    val methods = elements.asScala.collect {
+      case e: ExecutableElement
+          if e.getSimpleName == executableElement.getSimpleName =>
+        e
+    }.toBuffer
+    val sortedMethods = methods.sortBy(_.getReceiverType() == null)
+    val index = sortedMethods.zipWithIndex.collectFirst {
+      case (e, i) if e.equals(executableElement) => i
+    }
+
+    index match {
+      case Some(i) => if (i == 0) "()" else s"(+$i)"
+      case scala.None => "()"
+    }
+  }
 
 }

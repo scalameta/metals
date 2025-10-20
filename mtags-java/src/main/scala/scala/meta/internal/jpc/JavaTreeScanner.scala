@@ -16,8 +16,10 @@ import com.sun.source.util.JavacTask
 import com.sun.source.util.TreePath
 import com.sun.source.util.TreePathScanner
 import com.sun.source.util.Trees
+import org.slf4j.Logger
 
 class JavaTreeScanner(
+    logger: Logger,
     task: JavacTask,
     var root: CompilationUnitTree
 ) extends TreePathScanner[TreePath, CursorPosition] {
@@ -28,8 +30,8 @@ class JavaTreeScanner(
     try {
       super.scan(tree, p)
     } catch {
-      case _: AssertionError =>
-        // ignore
+      case e: AssertionError =>
+        logger.debug("assertion error in javac", e)
         null
     }
   }

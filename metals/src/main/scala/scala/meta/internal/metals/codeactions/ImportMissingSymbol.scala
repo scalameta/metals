@@ -3,6 +3,7 @@ package scala.meta.internal.metals.codeactions
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.internal.jpc.JavacDiagnostic
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -135,6 +136,11 @@ class ImportMissingSymbol(compilers: Compilers, buildTargets: BuildTargets)
             case d @ ScalacDiagnostic.NotAMember(name)
                 if isScala3 && params.getRange().overlapsWith(d.getRange()) =>
               importMissingSymbol(d, name, findExtensionMethods = true)
+            case d @ JavacDiagnostic.CannotFindSymbol(err)
+                if file.toLanguage.isJava &&
+                  err.isCantResolve &&
+                  params.getRange().overlapsWith(d.getRange()) =>
+              importMissingSymbol(d, err.symbol)
           }
       )
       .map { actions =>
