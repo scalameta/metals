@@ -130,12 +130,11 @@ case class JavaPresentationCompiler(
       params: OffsetParams
   ): CompletableFuture[SignatureHelp] =
     request(params, new SignatureHelp()) { pc =>
-      // new JavaSignatureHelpProvider(
-      //   pc,
-      //   params,
-      //   config.hoverContentType()
-      // ).signatureHelp()
-      new SignatureHelp()
+      new JavaSignatureHelpProvider(
+        pc,
+        params,
+        config.hoverContentType()
+      ).signatureHelp()
     }
 
   override def semanticTokens(
