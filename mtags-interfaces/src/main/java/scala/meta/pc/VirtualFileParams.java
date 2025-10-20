@@ -30,7 +30,7 @@ public interface VirtualFileParams {
         return Optional.empty();
     }
 
-    default boolean shouldReturnDiagnostics(){
+    default boolean shouldReturnDiagnostics() {
         return false;
     }
 
