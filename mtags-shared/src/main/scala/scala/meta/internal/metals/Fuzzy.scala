@@ -113,7 +113,7 @@ class Fuzzy {
     }
     loopDelimiters(
       query.length,
-      lastIndex(symbol),
+      li,
       0,
       skipNames
     )

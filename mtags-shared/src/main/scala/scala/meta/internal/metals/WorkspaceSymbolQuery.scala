@@ -68,7 +68,6 @@ object WorkspaceSymbolQuery {
       bloomFilterCachedQueries.forall(bloom.mightContain)
     def matches(symbol: CharSequence, isTrailingDot: Boolean): Boolean =
       Fuzzy.matches(query, symbol, if (isTrailingDot) 1 else 0)
-
   }
 
   object AlternativeQuery {

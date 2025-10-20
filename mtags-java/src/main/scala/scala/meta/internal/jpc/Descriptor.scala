@@ -1,4 +1,4 @@
-package scala.meta.internal.pc
+package scala.meta.internal.jpc
 
 sealed trait Descriptor {
   import Descriptor._
@@ -12,6 +12,8 @@ sealed trait Descriptor {
       case Class(value) => s"${encode(value)}#"
       case TypeVariable(value) => s"[${encode(value)}]"
       case Var(value) => s"${encode(value)}."
+      case Parameter(value) => s"(${encode(value)})"
+      case Local(value) => s"local${value}"
     }
   }
 }
@@ -21,11 +23,16 @@ case object Empty extends Descriptor {
 }
 final case class Package(value: String) extends Descriptor
 final case class Method(value: String, disambiguator: String) extends Descriptor
+final case class Parameter(value: String) extends Descriptor
 final case class Class(value: String) extends Descriptor
 final case class TypeVariable(value: String) extends Descriptor
 final case class Var(value: String) extends Descriptor
+final case class Local(value: String) extends Descriptor
 
 object Descriptor {
+  def isGlobal(value: String): Boolean = {
+    value != "" && !value.startsWith("local")
+  }
 
   def encode(value: String): String =
     if (value == "") ""

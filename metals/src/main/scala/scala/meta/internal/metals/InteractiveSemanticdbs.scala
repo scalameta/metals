@@ -31,7 +31,6 @@ final class InteractiveSemanticdbs(
     tables: Tables,
     compilers: () => Compilers,
     semanticdbIndexer: () => SemanticdbIndexer,
-    javaInteractiveSemanticdb: JavaInteractiveSemanticdb,
     buffers: Buffers,
     scalaCliServers: => ScalaCliServers,
 ) extends Cancelable
@@ -139,9 +138,7 @@ final class InteractiveSemanticdbs(
 
   private def compile(source: AbsolutePath, text: String): Try[s.TextDocument] =
     Try {
-      if (source.isJavaFilename)
-        javaInteractiveSemanticdb.textDocument(source, text)
-      else compilers().semanticdbTextDocument(source, text)
+      compilers().semanticdbTextDocument(source, text)
     }
 
 }

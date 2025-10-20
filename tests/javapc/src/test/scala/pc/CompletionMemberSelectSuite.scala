@@ -61,9 +61,9 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
       |  }
       |}
       |""".stripMargin,
-    """|substring(int arg0)
-       |substring(int arg0, int arg1)
-       |subSequence(int arg0, int arg1)
+    """|substring(int beginIndex)
+       |substring(int beginIndex, int endIndex)
+       |subSequence(int beginIndex, int endIndex)
        |""".stripMargin,
   )
 
@@ -78,9 +78,9 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
       |  }
       |}
       |""".stripMargin,
-    """|substring(int arg0)
-       |substring(int arg0, int arg1)
-       |subSequence(int arg0, int arg1)
+    """|substring(int beginIndex)
+       |substring(int beginIndex, int endIndex)
+       |subSequence(int beginIndex, int endIndex)
        |""".stripMargin,
   )
 
@@ -95,9 +95,9 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
       |  }
       |}
       |""".stripMargin,
-    """|substring(int arg0)
-       |substring(int arg0, int arg1)
-       |subSequence(int arg0, int arg1)
+    """|substring(int beginIndex)
+       |substring(int beginIndex, int endIndex)
+       |subSequence(int beginIndex, int endIndex)
        |""".stripMargin,
   )
 
@@ -112,9 +112,9 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
       |  }
       |}
       |""".stripMargin,
-    """|substring(int arg0)
-       |substring(int arg0, int arg1)
-       |subSequence(int arg0, int arg1)
+    """|substring(int beginIndex)
+       |substring(int beginIndex, int endIndex)
+       |subSequence(int beginIndex, int endIndex)
        |""".stripMargin,
   )
 
@@ -132,14 +132,14 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
     """|println()
        |getClass()
        |hashCode()
-       |equals(java.lang.Object arg0)
+       |equals(java.lang.Object obj)
        |clone()
        |toString()
        |notify()
        |notifyAll()
        |wait()
        |wait(long arg0)
-       |wait(long arg0, int arg1)
+       |wait(long timeoutMillis, int nanos)
        |finalize()
        |""".stripMargin,
   )

@@ -10,7 +10,9 @@ import scala.meta.io.AbsolutePath
  *
  * Exposes useful methods to lookup metadata about the input project.
  */
-abstract class BaseExpectSuite(val suiteName: String) extends BaseSuite {
+abstract class BaseExpectSuite(
+    val suiteName: String
+) extends BaseSuite {
   lazy val input: InputProperties = InputProperties.scala2()
   case class SymbolTable(symbols: Seq[SymbolInformation]) {
     def info(sym: String): Option[SymbolInformation] = {

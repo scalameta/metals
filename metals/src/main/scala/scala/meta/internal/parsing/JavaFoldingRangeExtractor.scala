@@ -4,7 +4,8 @@ import javax.tools.Diagnostic.NOPOS
 
 import scala.annotation.tailrec
 
-import scala.meta.internal.pc.JavaMetalsGlobal
+import scala.meta.internal.jpc.JavaMetalsCompiler
+import scala.meta.internal.jpc.SourceJavaFileObject
 import scala.meta.io.AbsolutePath
 
 import com.sun.source.tree.BlockTree
@@ -13,6 +14,7 @@ import com.sun.source.tree.CompilationUnitTree
 import com.sun.source.tree.ImportTree
 import com.sun.source.tree.LineMap
 import com.sun.source.tree.LiteralTree
+import com.sun.source.tree.Tree
 import com.sun.source.util.SourcePositions
 import com.sun.source.util.TreePathScanner
 import com.sun.source.util.Trees
@@ -49,6 +51,15 @@ final object JavaFoldingRangeExtractor {
     var imports: List[Range] = Nil
     var regions: List[Range] = Nil
     var strings: List[Range] = Nil
+
+    override def scan(tree: Tree, p: Unit): Unit = {
+      try {
+        super.scan(tree, p)
+      } catch {
+        case _: AssertionError =>
+        // ignore
+      }
+    }
 
     private def createRange(
         kind: String,
@@ -121,13 +132,8 @@ final object JavaFoldingRangeExtractor {
       text: String,
       path: AbsolutePath,
   ): Option[(Trees, CompilationUnitTree)] = {
-    val javacTask = JavaMetalsGlobal.baseCompilationTask(text, path.toURI)
-    val elems = javacTask.parse()
-    javacTask.analyze()
-    val trees = Trees.instance(javacTask)
-    val iter = elems.iterator
-    // only one CompilationUnitTree for a single file
-    if (iter.hasNext) Some((trees, iter.next())) else None
+    val source = SourceJavaFileObject.make(text, path.toURI)
+    JavaMetalsCompiler.parse(source)
   }
 
   // search for any comments in file that aren't defined within a String

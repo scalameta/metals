@@ -26,6 +26,7 @@ import coursierapi.Repository
 import munit.Tag
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
+import org.slf4j.LoggerFactory
 
 abstract class BasePCSuite extends BaseSuite with PCSuite {
 
@@ -62,15 +63,17 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
 
     val myclasspath: Seq[Path] = extraLibraries(fetch) ++ scalaLibrary
 
-    if (requiresJdkSources) indexJdkSources
+    if (requiresJdkSources) indexJdkSources()
     if (requiresScalaLibrarySources)
       indexScalaLibrary(index, scalaVersion)
 
     val scalacOpts = scalacOptions(myclasspath)
+    val logger = LoggerFactory.getLogger(classOf[ScalaPresentationCompiler])
 
     new ScalaPresentationCompiler()
       .withSearch(search(myclasspath))
       .withConfiguration(config)
+      .withLogger(logger)
       .withExecutorService(executorService)
       .withScheduledExecutorService(executorService)
       .withCompletionItemPriority(completionItemPriority)

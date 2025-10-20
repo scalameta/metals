@@ -410,8 +410,6 @@ abstract class MetalsLspService(
   }
 
   protected val interactiveSemanticdbs: InteractiveSemanticdbs = {
-    val javaInteractiveSemanticdb =
-      JavaInteractiveSemanticdb.create(folder, buildTargets)
     register(
       new InteractiveSemanticdbs(
         folder,
@@ -420,7 +418,6 @@ abstract class MetalsLspService(
         tables,
         () => compilers,
         () => semanticDBIndexer,
-        javaInteractiveSemanticdb,
         buffers,
         scalaCli,
       )

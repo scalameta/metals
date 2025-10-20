@@ -22,7 +22,7 @@ abstract class BaseSelectionRangeSuite extends BasePCSuite {
       original: String,
       expectedRanges: List[String],
       compat: Map[String, List[String]] = Map.empty
-  ): Unit = {
+  )(implicit loc: munit.Location): Unit = {
     test(name) {
       val (code, offset) = params(original, "SelectionRange.scala")
       val offsetParams: ju.List[OffsetParams] = List[OffsetParams](
@@ -61,7 +61,7 @@ abstract class BaseSelectionRangeSuite extends BasePCSuite {
       range: Option[l.SelectionRange],
       expected: List[String],
       original: String
-  ): Unit = {
+  )(implicit loc: munit.Location): Unit = {
     assert(range.nonEmpty)
     expected.headOption.foreach { expectedRange =>
       val withRange = applyRanges(original, range.get)

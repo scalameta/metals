@@ -1,4 +1,4 @@
-package scala.meta.internal.pc
+package scala.meta.internal.jpc
 
 import javax.lang.model.element.Element
 import javax.lang.model.element.Modifier

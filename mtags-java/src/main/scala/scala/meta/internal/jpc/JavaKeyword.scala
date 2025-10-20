@@ -1,4 +1,4 @@
-package scala.meta.internal.pc
+package scala.meta.internal.jpc
 
 case class JavaKeyword(
     name: String,

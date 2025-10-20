@@ -58,8 +58,8 @@ class CompletionIdentifierSuite extends BaseJavaCompletionSuite {
   )
 
   check(
-    "outer class",
-    """
+    "outer-class",
+    """package outer;
       |
       |class OneMore {}
       |
@@ -77,7 +77,7 @@ class CompletionIdentifierSuite extends BaseJavaCompletionSuite {
   )
 
   check(
-    "import List",
+    "import-list",
     """
       |import java.util.List;
       |
@@ -92,10 +92,11 @@ class CompletionIdentifierSuite extends BaseJavaCompletionSuite {
     """
       |List
       |""".stripMargin,
+    filterItem = item => !item.getLabel().contains(" - "),
   )
 
   check(
-    "import util",
+    "import-util",
     """
       |import java.util.*;
       |
@@ -119,6 +120,7 @@ class CompletionIdentifierSuite extends BaseJavaCompletionSuite {
       |AbstractSequentialList
       |AbstractList
       |""".stripMargin,
+    filterItem = item => !item.getLabel().contains(" - "),
   )
 
   check(
@@ -138,5 +140,51 @@ class CompletionIdentifierSuite extends BaseJavaCompletionSuite {
       |duplicate
       |duplicate(int bar)
       |""".stripMargin,
+  )
+
+  check(
+    "inner class",
+    """
+      |class A {
+      |   class B { public int SUPER_FIELD = 42 }
+      |   class C extends B {
+      |      public void foo() {
+      |         SUPER@@
+      |      }
+      |   }
+      |}
+      |""".stripMargin,
+    """
+      |SUPER_FIELD
+      |""".stripMargin,
+  )
+
+  check(
+    "constructor",
+    """
+      |package constructor;
+      |class UserFactoryBuilderCrew {
+      |  public static void create() {
+      |    new UserFactoryBuilder@@();
+      |  }
+      |}
+      |""".stripMargin,
+    """
+      |UserFactoryBuilderCrew()
+      |""".stripMargin,
+  )
+
+  check(
+    "import".fail.pending(
+      "special case to not insert import if you're aready at an import"
+    ),
+    """
+      |import SimpleFileVisitor@@
+      |""".stripMargin,
+    """|SimpleFileVisitor - java.nio.file
+       |""".stripMargin,
+    editedFile = """
+                   |import java.nio.file.SimpleFileVisitor;
+                   |""".stripMargin,
   )
 }

@@ -29,8 +29,10 @@ class HoverDependencySuite extends BaseJavaHoverSuite {
       |}
       |""".stripMargin,
     """|```java
-       |public static com.google.common.collect.Range<C> closed(C arg0, C arg1)
+       |public static com.google.common.collect.Range<C> closed(C lower, C upper)
        |```
+       |Returns a range that contains all values greater than or equal to `lower` and less than
+       |or equal to `upper`.
        |""".stripMargin,
   )
 }

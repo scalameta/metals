@@ -42,7 +42,7 @@ class HoverDocSuite extends BaseJavaHoverSuite {
       |""".stripMargin,
     if (isJava22)
       """|```java
-         |public void sort(java.util.Comparator<? super E> arg0)
+         |public void sort(java.util.Comparator<? super E> c)
          |```
          |Sorts this list according to the order induced by the specified
          |[Comparator](Comparator) (optional operation).  The sort is *stable*:
@@ -61,7 +61,7 @@ class HoverDocSuite extends BaseJavaHoverSuite {
          |""".stripMargin
     else
       """|```java
-         |public void sort(java.util.Comparator<? super E> arg0)
+         |public void sort(java.util.Comparator<? super E> c)
          |```
          |Sorts this list according to the order induced by the specified
          |[Comparator](Comparator).  The sort is *stable*: this method must not
@@ -91,14 +91,15 @@ class HoverDocSuite extends BaseJavaHoverSuite {
       |}
       |""".stripMargin,
     """|```java
-       |public static java.nio.file.Path get(java.lang.String arg0, java.lang.String[] arg1)
+       |public static java.nio.file.Path get(java.lang.String first, java.lang.String[] more)
        |```
        |Converts a path string, or a sequence of strings that when joined form
-       |a path string, to a `Path`.""".stripMargin,
+       |a path string, to a `Path`.
+       |""".stripMargin,
   )
 
   check(
-    "list of",
+    "list-of",
     """
       |import java.util.List;
       |
@@ -109,10 +110,11 @@ class HoverDocSuite extends BaseJavaHoverSuite {
       |}
       |""".stripMargin,
     """|```java
-       |public static java.util.List<E> of(E arg0, E arg1, E arg2)
+       |public static java.util.List<E> of(E e1, E e2, E e3)
        |```
        |Returns an unmodifiable list containing three elements.
        |
-       |See [Unmodifiable Lists]() for details.""".stripMargin,
+       |See [Unmodifiable Lists]() for details.
+       |""".stripMargin,
   )
 }

@@ -16,10 +16,10 @@ import scala.collection.mutable.ArrayBuffer
 import scala.util.Using
 
 import scala.meta.inputs.Input
+import scala.meta.internal.jpc.SourceJavaFileObject
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.logging.MetalsLogger
-import scala.meta.internal.pc.SourceJavaFileObject
 import scala.meta.io.AbsolutePath
 
 import com.sun.source.tree.MethodInvocationTree

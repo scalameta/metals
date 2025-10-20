@@ -1,4 +1,4 @@
-package scala.meta.internal.pc
+package scala.meta.internal.jpc
 
 import scala.collection.immutable.Nil
 
@@ -23,6 +23,16 @@ class JavaTreeScanner(
 ) extends TreePathScanner[TreePath, CursorPosition] {
 
   var lastVisitedParentTrees: List[TreePath] = Nil
+
+  override def scan(tree: Tree, p: CursorPosition): TreePath = {
+    try {
+      super.scan(tree, p)
+    } catch {
+      case _: AssertionError =>
+        // ignore
+        null
+    }
+  }
 
   override def visitCompilationUnit(
       t: CompilationUnitTree,

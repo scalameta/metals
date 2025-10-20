@@ -15,11 +15,11 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.infra.FeatureFlagProvider
+import scala.meta.internal.jpc.JavaPresentationCompiler
 import scala.meta.internal.metals.Configs.SourcePathConfig
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.EmptySymbolSearch
-import scala.meta.internal.pc.JavaPresentationCompiler
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CompletionItemPriority

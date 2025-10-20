@@ -11,8 +11,9 @@ import scala.meta.io.AbsolutePath
  *
  * @param directoryName root directory name: metals/src/test/resources/$name
  */
-abstract class DirectoryExpectSuite(directoryName: String)
-    extends BaseExpectSuite(directoryName) {
+abstract class DirectoryExpectSuite(
+    directoryName: String
+) extends BaseExpectSuite(directoryName) {
 
   def testCases(): List[ExpectTestCase]
 

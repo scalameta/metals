@@ -1,4 +1,4 @@
-package scala.meta.internal.pc
+package scala.meta.internal.jpc
 
 import javax.lang.model.`type`.ArrayType
 import javax.lang.model.`type`.DeclaredType
@@ -12,6 +12,9 @@ import javax.lang.model.element.VariableElement
 import scala.annotation.tailrec
 import scala.jdk.CollectionConverters._
 
+import scala.meta.internal.metals.CompilerVirtualFileParams
+import scala.meta.internal.mtags.CommonMtagsEnrichments._
+import scala.meta.internal.pc.CompletionFuzzy
 import scala.meta.pc.OffsetParams
 
 import com.sun.source.tree.ClassTree
@@ -22,16 +25,21 @@ import com.sun.source.tree.Tree.Kind._
 import com.sun.source.util.JavacTask
 import com.sun.source.util.TreePath
 import com.sun.source.util.Trees
+import com.sun.tools.javac.code.Type.PackageType
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.InsertTextFormat
+import org.eclipse.{lsp4j => l}
 
 class JavaCompletionProvider(
-    compiler: JavaMetalsGlobal,
+    compiler: JavaMetalsCompiler,
     params: OffsetParams,
     isCompletionSnippetsEnabled: Boolean
 ) {
+  private val includeDetailInLabel =
+    compiler.metalsConfig.isDetailIncludedInLabel
+  var scanner: JavaTreeScanner = _
 
   lazy val identifier = extractIdentifier.toLowerCase
   def completions(): CompletionList = {
@@ -45,9 +53,19 @@ class JavaCompletionProvider(
           ";" +
           params.text().substring(params.offset())
       else params.text()
-    val task: JavacTask =
-      compiler.compilationTask(textWithSemicolon, params.uri())
-    val scanner = JavaMetalsGlobal.scanner(task)
+    val compile =
+      compiler
+        .compilationTask(
+          CompilerVirtualFileParams(
+            params.uri(),
+            textWithSemicolon,
+            params.token()
+          )
+        )
+        .withAnalyzePhase()
+    val task = compile.task
+    val cu = compile.cu
+    scanner = new JavaTreeScanner(task, cu)
     val position =
       CursorPosition(params.offset(), params.offset(), params.offset())
     val node = compiler.compilerTreeNode(scanner, position)
@@ -55,9 +73,18 @@ class JavaCompletionProvider(
     node match {
       case Some(n) =>
         val items = n.getLeaf.getKind match {
-          case MEMBER_SELECT => completeMemberSelect(task, n).distinct
-          case IDENTIFIER => completeIdentifier(task, n).distinct ++ keywords(n)
-          case _ => keywords(n)
+          case MEMBER_SELECT =>
+            completeMemberSelect(task, n).distinct
+          case IDENTIFIER =>
+            completeIdentifier(task, n).distinct ++ keywords(n)
+          case NEW_CLASS =>
+            completeIdentifier(
+              task,
+              n,
+              elementFilter = _.getKind() == ElementKind.CONSTRUCTOR
+            ).distinct
+          case _ =>
+            keywords(n)
         }
         new CompletionList(items.asJava)
       case None => new CompletionList()
@@ -73,11 +100,25 @@ class JavaCompletionProvider(
     }
   }
 
+  private val defaultMembers = Set(
+    "clone", "finalize", "getClass", "hashCode", "equals", "toString", "notify",
+    "notifyAll", "wait"
+  )
+
   private def memberScore(element: Element, containingElement: Element): Int = {
-    val idScore = identifierScore(element)
-    val memberScore =
-      if (element.getEnclosingElement() == containingElement) 0 else 1
-    idScore << 1 | memberScore
+    var score = 0
+    identifierScore(element) match {
+      case 0 => score = score | (1 << 28)
+      case 1 => score = score | (1 << 27)
+      case _ =>
+    }
+    if (element.getEnclosingElement() == containingElement) {
+      score = score | (1 << 26)
+    }
+    if (!defaultMembers.contains(element.getSimpleName().toString())) {
+      score = score | (1 << 25)
+    }
+    -score
   }
 
   private def completeMemberSelect(
@@ -93,30 +134,114 @@ class JavaCompletionProvider(
       case dt: DeclaredType => completeDeclaredType(task, dt)
       case _: ArrayType => completeArrayType()
       case tv: TypeVariable => completeTypeVariable(task, tv)
+      case pkg: PackageType => completePackageType(task, pkg)
       case _ => Nil
     }
   }
 
   private def completeIdentifier(
       task: JavacTask,
-      path: TreePath
+      path: TreePath,
+      elementFilter: Element => Boolean = _ => true
   ): List[CompletionItem] =
-    completeFromScope(task, path)
+    completeFromScope(task, path, elementFilter)
 
   private def completeFromScope(
       task: JavacTask,
-      path: TreePath
+      path: TreePath,
+      elementFilter: Element => Boolean
   ): List[CompletionItem] = {
     val trees = Trees.instance(task)
     val scope = trees.getScope(path)
 
     val scopeCompletion = JavaScopeVisitor.scopeMembers(task, scope)
     val identifier = extractIdentifier
+    val items = List.newBuilder[CompletionItem]
 
-    scopeCompletion
+    items ++= scopeCompletion
       .sortBy(el => identifierScore(el))
+      .iterator
+      .filter(elementFilter)
       .map(completionItem)
       .filter(item => CompletionFuzzy.matches(identifier, item.getLabel))
+
+    val inScope = scopeCompletion.map(_.toString()).toSet
+    autoImportItems(
+      identifier,
+      (elem, item) => {
+        if (!inScope.contains(elem)) {
+          items += item
+        }
+      }
+    )
+
+    items.result()
+  }
+
+  private def autoImportItems(
+      query: String,
+      onMatch: (String, CompletionItem) => Unit
+  ): Unit = {
+    compiler.doSearch(query).foreach { fqn =>
+      val parts = fqn.split('.')
+      val simpleName = parts.last
+      val packageName = parts.dropRight(1).mkString(".")
+      val item = new l.CompletionItem()
+      item.setKind(CompletionItemKind.Class)
+      if (includeDetailInLabel) {
+        item.setLabel(s"${simpleName} - ${packageName}")
+      } else {
+        item.setLabel(simpleName)
+        item.setDetail(packageName)
+      }
+      val edit = new l.TextEdit(
+        new l.Range(
+          Positions.toLspPosition(
+            scanner.root.getLineMap(),
+            params.offset() - identifier.length(),
+            params.text()
+          ),
+          Positions.toLspPosition(
+            scanner.root.getLineMap(),
+            params.offset(),
+            params.text()
+          )
+        ),
+        simpleName
+      )
+      item.setTextEdit(edit)
+      item.setKind(CompletionItemKind.Class)
+      // TODO?: move auto-import computation to completionItem/resolve so we
+      // don't compute this eagerly for all items here.
+      val additionalEdit =
+        new JavaAutoImportEditor(params.text(), fqn).textEdit()
+      item.setAdditionalTextEdits(List(additionalEdit).asJava)
+      onMatch(fqn, item)
+      item
+    }
+  }
+
+  private def completePackageType(
+      task: JavacTask,
+      pkg: PackageType
+  ): List[CompletionItem] = {
+    val pkgElement = task.getElements().getPackageOf(pkg.asElement())
+    val v = new JavaCompletionSearchVisitor()
+    compiler.search.search(
+      pkgElement.getQualifiedName().toString(),
+      this.compiler.buildTargetId,
+      v
+    )
+    val fuzzyMatches = List.newBuilder[CompletionItem]
+    v.visitedFQN.foreach { fqn =>
+      val elem = task.getElements().getTypeElement(fqn)
+      if (elem != null) {
+        val item = completionItem(elem)
+        item.setKind(CompletionItemKind.Class)
+        fuzzyMatches += item
+      }
+    }
+    fuzzyMatches.result()
   }
 
   private def completeDeclaredType(

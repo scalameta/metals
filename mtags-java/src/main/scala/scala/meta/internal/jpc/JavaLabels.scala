@@ -1,4 +1,4 @@
-package scala.meta.internal.pc
+package scala.meta.internal.jpc
 
 import javax.lang.model.`type`.TypeMirror
 import javax.lang.model.element.ElementKind.CONSTRUCTOR

@@ -67,6 +67,7 @@ public class SemanticdbVisitor extends TreePathScanner<Void, Void> {
 	private final LocalSymbolsCache locals;
 	private final Types types;
 	private final Trees trees;
+	private final SourcePositions sourcePositions;
 	private final CompilationUnitTree compUnitTree;
 	private final Elements elements;
 	private final SemanticdbJavacOptions options;
@@ -74,8 +75,18 @@ public class SemanticdbVisitor extends TreePathScanner<Void, Void> {
 	private final ArrayList<Semanticdb.SymbolInformation> symbolInfos;
 	private String source;
 	public String uri;
-
 	private final LinkedHashMap<Tree, TreePath> nodes;
+
+	private boolean skipTreesOutsideTargetRange = false;
+	private long targetStartOffset = Long.MIN_VALUE;
+	private long targetEndOffset = Long.MAX_VALUE;
+
+	/** Only emit symbol occurrences that are within the target offset range. */
+	public void skipTreesOutsideTargetRange(long start, long end) {
+		this.skipTreesOutsideTargetRange = true;
+		this.targetStartOffset = start;
+		this.targetEndOffset = end;
+	}
 
 	public SemanticdbVisitor(JavacTask task, GlobalSymbolsCache globals, SemanticdbJavacOptions options,
 			CompilationUnitTree compUnitTree) {
@@ -90,6 +101,7 @@ public class SemanticdbVisitor extends TreePathScanner<Void, Void> {
 		this.types = types;
 		this.elements = elements;
 		this.trees = trees;
+		this.sourcePositions = trees.getSourcePositions();
 		this.compUnitTree = compUnitTree;
 		this.occurrences = new ArrayList<>();
 		this.symbolInfos = new ArrayList<>();
@@ -238,12 +250,32 @@ public class SemanticdbVisitor extends TreePathScanner<Void, Void> {
 		}
 	}
 
+	private boolean isOffsetInTargetRange(long start, long end, long offset) {
+		return offset >= start && offset <= end;
+	}
+
+	private boolean doesTreeEncloseTargetRange(Tree tree) {
+		if (!skipTreesOutsideTargetRange) {
+			return true;
+		}
+		var start = this.sourcePositions.getStartPosition(compUnitTree, tree);
+		var end = this.sourcePositions.getEndPosition(compUnitTree, tree);
+		return isOffsetInTargetRange(start, end, targetStartOffset)
+				|| isOffsetInTargetRange(start, end, targetEndOffset);
+	}
+
 	// =======================================
 	// Overridden methods from TreePathScanner
 	// =======================================
 	@Override
 	public Void scan(Tree tree, Void unused) {
+		// System.out.println("scanning tree: " + tree);
 		if (tree != null) {
+			if (!doesTreeEncloseTargetRange(tree)) {
+				// Skip trees outside the target offset range. This only
+				// happens when we're doing a partial semanticdb request.
+				return null;
+			}
 			TreePath path = new TreePath(getCurrentPath(), tree);
 			nodes.put(tree, path);
 		}
@@ -398,9 +430,8 @@ public class SemanticdbVisitor extends TreePathScanner<Void, Void> {
 		if (sym == null)
 			return Optional.empty();
 
-		SourcePositions sourcePositions = trees.getSourcePositions();
-		int start = (int) sourcePositions.getStartPosition(compUnitTree, tree);
-		int end = (int) sourcePositions.getEndPosition(compUnitTree, tree);
+		int start = (int) this.sourcePositions.getStartPosition(compUnitTree, tree);
+		int end = (int) this.sourcePositions.getEndPosition(compUnitTree, tree);
 		if (kind.isPlusOne())
 			start++;
 

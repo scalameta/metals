@@ -1,8 +1,9 @@
-package scala.meta.internal.pc
+package scala.meta.internal.jpc
 
 import java.util.Optional
 
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
+import scala.meta.internal.pc.HoverMarkup
 import scala.meta.pc.ContentType
 import scala.meta.pc.ContentType.MARKDOWN
 import scala.meta.pc.HoverSignature

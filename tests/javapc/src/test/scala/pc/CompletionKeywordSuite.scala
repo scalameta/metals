@@ -92,6 +92,7 @@ class CompletionKeywordSuite extends BaseJavaCompletionSuite {
       |}
       |""".stripMargin,
     "",
+    filterItem = item => !item.getLabel().contains(" - "),
   )
 
   check(
