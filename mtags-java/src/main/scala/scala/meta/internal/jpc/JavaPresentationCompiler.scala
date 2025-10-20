@@ -142,8 +142,7 @@ case class JavaPresentationCompiler(
       params: VirtualFileParams
   ): CompletableFuture[util.List[Node]] = {
     request(params, util.Collections.emptyList[Node]()) { pc =>
-      // new JavaSemanticTokensProvider(pc, params).semanticTokens()
-      util.Collections.emptyList[Node]()
+      new JavaSemanticTokensProvider(pc, params).semanticTokens()
     }
   }
 
