@@ -3,18 +3,12 @@ package scala.meta.internal.metals
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.Import
-import scala.meta.Pkg
-import scala.meta.Source
-import scala.meta.Stat
-import scala.meta.inputs.Input.VirtualFile
-import scala.meta.inputs.Position
+import scala.meta._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.MissingSymbolDiagnostic
 import scala.meta.internal.parsing.Trees
-import scala.meta.internal.pc.ScriptFirstImportPosition
-import scala.meta.internal.semanticdb.Scala._
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.CancelToken
 
 import org.eclipse.lsp4j
@@ -31,13 +25,13 @@ class MetalsPasteProvider(
   def didPaste(
       params: MetalsPasteParams,
       cancelToken: CancelToken,
-  ): Future[Option[TextEdit]] = {
+  ): Future[List[TextEdit]] = {
     val path = params.textDocument.getUri.toAbsolutePath
     val orginalPath = params.originDocument.getUri().toAbsolutePath
     val isScala3 =
       buildTargets.scalaVersion(path).exists(ScalaVersions.isScala3Version)
-    val MissingSymbol = new MissingSymbolDiagnostic(isScala3)
 
+    val MissingSymbol = new MissingSymbolDiagnostic(isScala3)
     compilers
       .didChange(
         path,
@@ -58,49 +52,175 @@ class MetalsPasteProvider(
                 params.originDocument,
                 adjustPositionToOrigin(params, offset),
               )
+
+            val destinationParams =
+              new TextDocumentPositionParams(
+                params.textDocument,
+                d.getRange().getStart(),
+              )
+
             for {
               defnResult <- definitions.definition(
                 orginalPath,
                 symbolsPositionParams,
                 cancelToken,
               )
+              defnName = findNameFromSemanticdbSymbol(defnResult.symbol)
+              autoImports <- compilers.autoImports(
+                destinationParams,
+                defnName,
+                findExtensionMethods = true,
+                cancelToken,
+              )
             } yield {
-              if (defnResult.isEmpty) None
-              else {
-                val symbolDesc = defnResult.symbol.desc
-                val symbolName = symbolDesc.name.value
-                lazy val owner = defnResult.symbol.owner
-                lazy val ownerName = owner.desc.name.value
-
-                val importText =
-                  if (name != symbolName) {
-                    if (
-                      symbolDesc.isMethod &&
-                      (symbolName == "apply" || symbolName == "unapply" || symbolName == "<init>")
-                    )
-                      if (ownerName == name) s"import ${owner.fqcn}"
-                      else s"import ${owner.owner.fqcn}.{${ownerName} => $name}"
-                    else s"import ${owner.fqcn}.{$symbolName => $name}"
-                  } else s"import ${defnResult.symbol.fqcn}"
-
-                Some(importText)
+              if (!defnResult.isEmpty) {
+                importEdit(
+                  name,
+                  defnName,
+                  autoImports,
+                  defnResult,
+                  isScala3,
+                ).flatten
+                // packages are not handled in auto imports, so we need to handle them here
+              } else if (defnResult.symbol.endsWith("/") && name != defnName) {
+                // this means the package was renamed
+                val fullPath = defnResult.symbol.split("/")
+                val edits = for {
+                  toRename <- fullPath.lastOption
+                  if fullPath.length > 1
+                  owner = fullPath.dropRight(1).mkString(".")
+                  importString = s"import $owner.{$toRename => $name}"
+                  edit <- createImportEdit(path, importString)
+                } yield edit
+                edits.toList
+              } else {
+                Nil
               }
+
             }
         }
         Future
           .sequence(imports)
-          .map(_.flatten.distinct)
-          .map { imports =>
-            Option.when(imports.nonEmpty) {
-              val (prefix, suffix, pos) =
-                autoImportPosition(path, params.text, params.range.getStart())
-              new lsp4j.TextEdit(
-                new lsp4j.Range(pos, pos),
-                imports.mkString(prefix, "\n", suffix),
+          .map { edits =>
+            val flattened = edits.flatten.distinct
+            flattened
+              .groupBy(edit =>
+                (edit.getRange().getStart(), edit.getRange().getEnd())
               )
-            }
+              .map { case (_, editsWithSameRange) =>
+                if (editsWithSameRange.size > 1) {
+                  val merged = new TextEdit(
+                    editsWithSameRange.head.getRange(),
+                    editsWithSameRange
+                      .map(_.getNewText())
+                      .sorted
+                      .mkString
+                      .replace("\n\n", "\n"),
+                  )
+                  merged
+                } else {
+                  editsWithSameRange.head
+                }
+              }
+              .toList
           }
       }
+  }
+
+  private def importEdit(
+      name: String,
+      defnName: String,
+      autoImports: java.util.List[AutoImportsResult],
+      defnResult: DefinitionResult,
+      isScala3: Boolean,
+  ) = {
+    def isSameSymbolOrCompanion(
+        importedSymbol: String,
+        defnSymbol: String,
+    ): Boolean = {
+      val imported = stripSymbolSuffix(importedSymbol)
+      val defn = stripSymbolSuffix(defnSymbol)
+      imported == defn
+    }
+    for {
+      autoImport <- autoImports.asScala.collectFirst {
+        case autoImport: AutoImportsResult
+            if autoImport
+              .symbol()
+              .asScala
+              .exists(
+                isSameSymbolOrCompanion(_, defnResult.symbol)
+              ) =>
+          autoImport
+      }.toList
+    } yield {
+      if (name != defnName) {
+        renameImportEdit(name, defnName, autoImport, isScala3)
+      } else
+        autoImport.edits().asScala.toList
+    }
+  }
+
+  private def renameImport(name: String, rename: String, isScala3: Boolean) = {
+    if (isScala3) s"$name as $rename"
+    else s"{$name => $rename}"
+  }
+
+  private def renameImportEdit(
+      name: String,
+      defnName: String,
+      autoImport: AutoImportsResult,
+      isScala3: Boolean,
+  ) = {
+    autoImport
+      .edits()
+      .asScala
+      .collectFirst {
+        case edit
+            if edit.getNewText().startsWith("import ") && edit
+              .getNewText()
+              .endsWith(defnName + "\n") =>
+          new TextEdit(
+            edit.getRange(),
+            edit
+              .getNewText()
+              .replace(
+                defnName + "\n",
+                renameImport(defnName, name, isScala3) + "\n",
+              ),
+          )
+      }
+      .toList
+  }
+
+  private val replaceApplyRegex = raw"\.apply\(\+?\d*\)".r
+  private val replaceSuffixRegex = raw"\(\+?\d*\)".r
+
+  /**
+   * Try to avoid symbol.desc, since that causes additional parsing
+   */
+  private def findNameFromSemanticdbSymbol(symbol: String): String = {
+    val stripped = stripSymbolSuffix(symbol)
+    // method
+    if (stripped.endsWith(")")) {
+      replaceSuffixRegex.replaceAllIn(stripped.split("\\.").last, "")
+    } else {
+      // everything else
+      stripped.split("/|\\.").last
+    }
+  }
+
+  /**
+   *  Strip useless suffix that can't be imported
+   */
+  private def stripSymbolSuffix(symbol: String): String = {
+    replaceApplyRegex.replaceAllIn(
+      symbol
+        .stripSuffix("#")
+        .stripSuffix("."),
+      "",
+    )
+
   }
 
   private def adjustPositionToOrigin(
@@ -121,47 +241,59 @@ class MetalsPasteProvider(
     }
   }
 
-  private def autoImportPosition(
+  private def createImportEdit(
       path: AbsolutePath,
-      text: String,
-      pos: lsp4j.Position,
-  ): (String, String, lsp4j.Position) = {
+      importText: String,
+  ): Option[TextEdit] = {
 
-    lazy val fallback = {
-      val inputFromText = new VirtualFile(path.toURI.toString, text)
-      val point = ScriptFirstImportPosition.infer(text)
-      val pos = Position.Range(inputFromText, point, point).toLsp.getStart()
-      ("", "\n\n", pos)
+    def newTextEdit(pos: lsp4j.Position, text: String): TextEdit = {
+      new TextEdit(new lsp4j.Range(pos, pos), text)
     }
 
-    def afterImportsPositon(stats: List[Stat]) =
-      stats
-        .takeWhile {
-          case _: Import => true
-          case _ => false
-        }
-        .lastOption
-        .map { imp =>
-          ("\n", "\n", imp.pos.toLsp.getEnd())
-        }
-    trees.findLastEnclosingAt[Pkg](path, pos, _ => true) match {
-      case Some(pkg @ Pkg(_, stats)) =>
-        afterImportsPositon(stats).getOrElse(
-          (
-            "",
-            "\n\n",
-            stats.headOption
-              .map(_.pos.toLsp.getStart())
-              .getOrElse(pkg.pos.toLsp.getEnd()),
+    def loop(tree: Tree): Option[TextEdit] = {
+      tree match {
+        case pkg: Pkg =>
+          loop(pkg.body).orElse(
+            Some(newTextEdit(pkg.name.pos.toLsp.getEnd(), "\n\n" + importText))
           )
-        )
-      case _ =>
-        trees.get(path) match {
-          case Some(Source(stats)) =>
-            afterImportsPositon(stats).getOrElse(fallback)
-          case _ => fallback
-        }
-    }
-  }
+        case pkg: Pkg.Body if pkg.stats.exists(!_.is[Pkg]) =>
+          pkg.stats.findLast(_.is[Import]) match {
+            case Some(lastImport) =>
+              Some(
+                newTextEdit(lastImport.pos.toLsp.getEnd(), "\n" + importText)
+              )
+            case None =>
+              pkg.stats.headOption
+                .map(firstStat =>
+                  newTextEdit(
+                    firstStat.pos.toLsp.getStart(),
+                    importText + "\n\n",
+                  )
+                )
+          }
 
+        case pkg: Pkg.Body =>
+          pkg.stats.iterator.map(loop).collectFirst { case Some(pos) =>
+            pos
+          }
+        case source: Source =>
+          source.stats.iterator
+            .map(loop)
+            .collectFirst { case Some(pos) =>
+              pos
+            }
+            .orElse(
+              Some(newTextEdit(source.pos.toLsp.getStart(), "\n" + importText))
+            )
+        case _ =>
+          None
+      }
+    }
+    trees.get(path) match {
+      case Some(source) =>
+        loop(source)
+      case _ => None
+    }
+
+  }
 }
