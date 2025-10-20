@@ -23,23 +23,33 @@ class MetalsPasteSuite
         |object Bar {
         | def k = 2
         |}
+        |/a/src/main/scala/example/from/FromFile.scala
+        |package example.from
+        |
+        |import example.utils.Bar
+        |
+        |object Foo {
+        |  val j = 3
+        |}
+        |
+        |object Main {
+        |  <<from<<val set: Set[Int] = Set(Foo.j, Bar.k, Bar(3).i)>>from>>
+        |}
+        |/a/src/main/scala/example/to/ToFile.scala
+        |package to
+        |
+        |import example.from.Foo
+        |import example.utils.Bar
+        |
+        |object Copy {
+        |  <<to<<>>to>>
+        |}
         |""".stripMargin,
-    """|package example.from
+    """|
+       |package to
        |
+       |import example.from.Foo
        |import example.utils.Bar
-       |
-       |object Foo {
-       |  val j = 3
-       |}
-       |
-       |object Main {
-       |  <<val set: Set[Int] = Set(Foo.j, Bar.k, Bar(3).i)>>
-       |}
-       |""".stripMargin,
-    """|package example
-       |
-       |<<import example.from.Foo>>
-       |<<import example.utils.Bar>>
        |
        |object Copy {
        |  val set: Set[Int] = Set(Foo.j, Bar.k, Bar(3).i)
@@ -58,106 +68,149 @@ class MetalsPasteSuite
         |object Bar {
         | def k = 2
         |}
+        |
+        |/a/src/main/scala/example/from/FromFile.scala
+        |package example.from
+        |
+        |import example.utils.{Bar => Baz}
+        |
+        |object Foo {
+        |  val j = 3
+        |}
+        |
+        |object Main {
+        |  <<from<<val set: Set[Int] = Set(Foo.j, Baz.k, Baz(3).i)>>from>>
+        |}
+        |
+        |/a/src/main/scala/example/to/ToFile.scala
+        |package to
+        |import scala.util.Try
+        |
+        |object Copy {
+        |  def t = Try(true)
+        |  <<to<<>>to>>
+        |}
         |""".stripMargin,
-    """|package example.from
-       |
+    """|package to
+       |import scala.util.Try
+       |import example.from.Foo
        |import example.utils.{Bar => Baz}
        |
-       |object Foo {
-       |  val j = 3
-       |}
-       |
-       |object Main {
-       |  <<val set: Set[Int] = Set(Foo.j, Baz.k, Baz(3).i)>>
-       |}
-       |""".stripMargin,
-    """|package example
-       |
-       |import scala.util.Try
-       |<<import example.from.Foo>>
-       |<<import example.utils.{Bar => Baz}>>
        |
        |object Copy {
        |  def t = Try(true)
        |  val set: Set[Int] = Set(Foo.j, Baz.k, Baz(3).i)
        |}
+       |
        |""".stripMargin,
   )
 
+  private def cleanupMarkers(content: String) = {
+    content.replaceAll("(<<\\w+<<)|(>>\\w+>>)", "")
+  }
   def checkCopyEdit(
       name: TestOptions,
       layout: String,
-      originFile: String,
-      copyToFile: String,
+      expected: String,
   )(implicit loc: Location): Unit =
     test(name) {
       cleanWorkspace()
-      val copyToPath = "a/src/main/scala/to/CopyTo.scala"
-      val originPath = "a/src/main/scala/from/CopyFrom.scala"
+      val fromMarkerStart = "<<from<<"
+      val fromMarkerEnd = ">>from>>"
+      val files = FileLayout.mapFromString(layout)
+      val (originFile, originFileContent) = files
+        .find { case (_, content) =>
+          content.contains(fromMarkerStart)
+        }
+        .getOrElse(
+          throw new RuntimeException(s"No $fromMarkerStart marker specified")
+        )
 
-      val copyToContent = copyToFile.replaceAll("<<.*>>[\\n\\r]*", "")
-      val copyToExpected = copyToFile.replaceAll("<<|>>", "")
-      val originContent = originFile.replaceAll("<<|>>", "")
+      val originStartRange = originFileContent.indexOf(fromMarkerStart)
+      assert(
+        originStartRange >= 0,
+        s"No $fromMarkerStart found in origin file.",
+      )
+      val originEndRange =
+        originFileContent.indexOf(fromMarkerEnd) - fromMarkerEnd.length()
+      assert(originEndRange >= 0, s"No $fromMarkerEnd found in origin file.")
 
-      val originStartRange = originFile.indexOf("<<")
-      assert(originStartRange >= 0, "No << found in origin file.")
-      val originEndRange = originFile.indexOf(">>") - 2
-      assert(originEndRange >= 0, "No >> found in origin file.")
-      val copiedText = originContent
+      val copiedText = cleanupMarkers(originFileContent)
         .drop(originStartRange)
         .take(originEndRange - originStartRange)
 
-      val copiedStart = copyToContent.indexOf(copiedText)
+      val toMarkerStart = "<<to<<"
+      val toMarkerEnd = ">>to>>"
+      val (destinationFile, destinationFileContent) = files
+        .find { case (_, content) =>
+          content.contains(toMarkerStart)
+        }
+        .getOrElse(throw new RuntimeException("No from marker specified"))
+
+      val destinationRangeStart = destinationFileContent.indexOf(toMarkerStart)
       assert(
-        copiedStart >= 0,
-        s"Not found copied text: $copiedText in origin file",
+        destinationRangeStart >= 0,
+        assert(
+          destinationRangeStart >= 0,
+          s"No $toMarkerStart found in destination file.",
+        ),
       )
-      val copiedEndRange = copiedStart + copiedText.length()
+
+      val destinationRangeEnd =
+        destinationFileContent.indexOf(toMarkerEnd) - toMarkerStart.length()
+      assert(
+        destinationRangeEnd >= 0,
+        assert(
+          destinationRangeEnd >= 0,
+          s"No $toMarkerEnd found in destination file.",
+        ),
+      )
+
+      val afterCopiedContent = cleanupMarkers(
+        destinationFileContent.take(
+          destinationRangeStart
+        ) + copiedText + destinationFileContent.drop(destinationRangeStart)
+      )
 
       val copiedRange = Position
         .Range(
-          Input.VirtualFile(copyToPath, copyToContent),
-          copiedStart,
-          copiedEndRange,
+          Input.VirtualFile(destinationFile, afterCopiedContent),
+          destinationRangeStart,
+          destinationRangeStart + copiedText.length(),
         )
         .toLsp
 
       val originPosition = Position
         .Range(
-          Input.VirtualFile(originPath, originContent),
+          Input.VirtualFile(originFile, cleanupMarkers(originFileContent)),
           originStartRange,
-          originStartRange,
+          originEndRange,
         )
         .toLsp
         .getStart()
 
+      val cleanedUpLayout = layout.replaceAll("(<<\\w+<<)|(>>\\w+>>)", "")
+
       for {
-        _ <- initialize(
-          s"""|$layout
-              |/$originPath
-              |$originContent
-              |/$copyToPath
-              |${copyToContent.replace(copiedText, "")}
-              |""".stripMargin
-        )
-        _ <- server.didOpen(copyToPath)
-        _ <- server.didOpen("a/src/main/scala/to/CopyTo.scala")
-        _ <- server.didChange(copyToPath) { _ => copyToContent }
-        copyToUri = server.toPath(copyToPath).toURI.toString()
-        originUri = server.toPath(originPath).toURI.toString()
+        _ <- initialize(cleanedUpLayout)
+        _ <- server.didOpen(originFile)
+        _ <- server.didOpen(destinationFile)
+        _ <- server.didChange(destinationFile) { _ => afterCopiedContent }
+        copyToUri = server.toPath(destinationFile).toURI.toString()
+        originUri = server.toPath(originFile).toURI.toString()
         _ <- server.executeCommand(
           ServerCommands.MetalsPaste,
           MetalsPasteParams(
             new TextDocumentIdentifier(copyToUri),
             copiedRange,
-            copyToContent,
+            afterCopiedContent,
             new TextDocumentIdentifier(originUri),
             originPosition,
           ),
         )
         _ = assertNoDiff(
-          server.buffers.get(server.toPath(copyToPath)).get,
-          copyToExpected,
+          server.buffers.get(server.toPath(destinationFile)).get,
+          expected,
         )
       } yield ()
     }
