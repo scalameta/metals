@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import java.io.File
 import java.io.IOException
 import java.lang.reflect.Type
 import java.net.URI
@@ -410,19 +409,18 @@ object MetalsEnrichments
         fileNamePredicate: String => Boolean
     ): Boolean = {
       val directoriesToCheck = Set("test", "src", "it")
-      def dirFilter(f: File) = directoriesToCheck(f.getName()) || f
-        .listFiles()
-        .exists(dir => dir.isDirectory && directoriesToCheck(dir.getName()))
+      def dirFilter(f: AbsolutePath) = directoriesToCheck(f.filename) || f.list
+        .exists(dir => dir.isDirectory && directoriesToCheck(dir.filename))
       def isScalaDir(
-          file: File,
-          dirFilter: File => Boolean = _ => true,
+          file: AbsolutePath,
+          dirFilter: AbsolutePath => Boolean = _ => true,
       ): Boolean = {
-        file.listFiles().exists { file =>
-          if (file.isDirectory()) dirFilter(file) && isScalaDir(file)
-          else fileNamePredicate(file.getName())
+        file.list.exists { file =>
+          if (file.isDirectory) dirFilter(file) && isScalaDir(file)
+          else fileNamePredicate(file.filename)
         }
       }
-      path.isDirectory && isScalaDir(path.toFile, dirFilter)
+      path.isDirectory && isScalaDir(path, dirFilter)
     }
 
     def scalaSourcerootOption: String = s""""-P:semanticdb:sourceroot:$path""""
