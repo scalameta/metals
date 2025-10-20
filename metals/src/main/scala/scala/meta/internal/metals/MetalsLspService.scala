@@ -472,6 +472,7 @@ abstract class MetalsLspService(
       () => referencesProvider,
       mbtWorkspaceSymbolProvider,
       timerProvider,
+      featureFlags,
     )
   )
 
@@ -976,6 +977,11 @@ abstract class MetalsLspService(
     Future
       .sequence(
         List(
+          Future.successful(
+            buildTargets
+              .inverseSources(path)
+              .foreach(compilers.restartPresentationCompilers)
+          ),
           renameProvider.runSave(),
           parseTrees(path),
           onChange(List(path)),

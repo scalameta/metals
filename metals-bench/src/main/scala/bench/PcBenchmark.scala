@@ -83,7 +83,7 @@ abstract class PcBenchmark {
 
     }
     pc.withSearch(search)
-      .newInstance("", classpath.asJava, Nil.asJava, Nil.asJava)
+      .newInstance("", classpath.asJava, Nil.asJava, () => Nil.asJava)
   }
 
   @Setup

@@ -38,7 +38,7 @@ object TestScala3Compiler {
             name,
             input.classpath.entries.map(_.toNIO).asJava,
             Nil.asJava,
-            Nil.asJava,
+            () => Nil.asJava,
           )
         Some(pc)
       case _ => None

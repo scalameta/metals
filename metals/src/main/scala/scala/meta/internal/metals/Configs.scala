@@ -6,11 +6,13 @@ import scala.annotation.nowarn
 
 import scala.meta.infra.FeatureFlag
 import scala.meta.infra.FeatureFlagProvider
+import scala.meta.internal.infra.NoopFeatureFlagProvider
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.mbt.LMDB
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
+import scala.meta.pc.SourcePathMode
 
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.FileSystemWatcher
@@ -118,6 +120,13 @@ object Configs {
           "metals.completion-item.resolve",
           default = true,
         ),
+        sourcePathMode = SourcePathConfig
+          .fromConfigOrFeatureFlag(
+            Option(props.getProperty("metals.source-path")),
+            NoopFeatureFlagProvider,
+          )
+          .toOption
+          .getOrElse(SourcePathMode.PRUNED),
       )
     }
   }
@@ -195,5 +204,37 @@ object Configs {
       isAllEnabled || value.contains("metrics")
     def isFeatureFlagsEnabled: Boolean =
       isAllEnabled || value.contains("feature-flags")
+  }
+
+  object SourcePathConfig {
+
+    def fromConfigOrFeatureFlag(
+        value: Option[String],
+        featureFlags: FeatureFlagProvider,
+        default: SourcePathMode = SourcePathMode.DISABLED,
+    ): Either[String, SourcePathMode] = {
+      value.map(_.toLowerCase) match {
+        case Some("full") => Right(SourcePathMode.FULL)
+        case Some("disabled") => Right(SourcePathMode.DISABLED)
+        case Some("pruned") => Right(SourcePathMode.PRUNED)
+        case Some(invalid) =>
+          Left(
+            s"invalid config value '$invalid' for source path. Valid values are \"full\", \"disabled\", and \"pruned\""
+          )
+        case None =>
+          val isPrunedEnabled = featureFlags
+            .readBoolean(FeatureFlag.SCALA_SOURCEPATH_PRUNED)
+            .orElse(false)
+          if (isPrunedEnabled) {
+            scribe.debug(
+              s"Overriding source path mode via Feature Flag to: PRUNED"
+            )
+            Right(SourcePathMode.PRUNED)
+          } else {
+            scribe.debug(s"Leaving default source path mode: $default")
+            Right(default)
+          }
+      }
+    }
   }
 }

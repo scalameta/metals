@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Supplier;
 
 /**
  * The public API of the presentation compiler.
@@ -117,7 +118,7 @@ public abstract class PresentationCompiler {
 
 	/**
 	 * Execute the given code action
-	 * 
+	 *
 	 * @since 1.4.1
 	 * @deprecated Please use the code action with optional data.
 	 */
@@ -363,12 +364,12 @@ public abstract class PresentationCompiler {
 	 *                              compiler plugins excluding
 	 *                              org.scalamacros:paradise, kind-projector and
 	 *                              better-monadic-for.
-	 * @param sourcePath            The source path for this build target, used by
+	 * @param sourcePath            A supplier that returns the source path for this build target, used by
 	 *                              the PC to locate types that have not been built
 	 *                              yet.
 	 */
 	public PresentationCompiler newInstance(String buildTargetIdentifier, List<Path> classpath, List<String> options,
-			List<Path> sourcePath) {
+			Supplier<List<Path>> sourcePath) {
 		return newInstance(buildTargetIdentifier, classpath, options);
 	}
 
@@ -417,5 +418,4 @@ public abstract class PresentationCompiler {
 	public String buildTargetId() {
 		return "";
 	}
-
 }

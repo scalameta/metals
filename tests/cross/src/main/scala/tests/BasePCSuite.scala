@@ -74,7 +74,7 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
       .withExecutorService(executorService)
       .withScheduledExecutorService(executorService)
       .withCompletionItemPriority(completionItemPriority)
-      .newInstance("", myclasspath.asJava, scalacOpts.asJava, Nil.asJava)
+      .newInstance("", myclasspath.asJava, scalacOpts.asJava, () => Nil.asJava)
   }
 
   protected def config: PresentationCompilerConfig =

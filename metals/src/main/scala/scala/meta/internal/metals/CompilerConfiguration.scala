@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.nio.file.Path
 import java.util.concurrent.ScheduledExecutorService
+import java.util.function.Supplier
 import java.{util => ju}
 
 import scala.concurrent.Await
@@ -13,6 +14,8 @@ import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 
+import scala.meta.infra.FeatureFlagProvider
+import scala.meta.internal.metals.Configs.SourcePathConfig
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.EmptySymbolSearch
@@ -22,6 +25,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SemanticdbFileManager
+import scala.meta.pc.SourcePathMode
 import scala.meta.pc.SymbolSearch
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -42,6 +46,7 @@ class CompilerConfiguration(
     mtagsResolver: MtagsResolver,
     sourceMapper: SourceMapper,
     semanticdbFileManager: SemanticdbFileManager,
+    featureFlags: FeatureFlagProvider,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext) {
 
   private val plugins = new CompilerPlugins()
@@ -109,7 +114,7 @@ class CompilerConfiguration(
     protected def fallback: PresentationCompiler
     protected def newCompiler(
         classpath: Seq[Path],
-        srcFiles: Seq[Path] = Seq(),
+        srcFiles: Supplier[ju.List[Path]] = () => Nil.asJava,
     ): PresentationCompiler
 
     protected val presentationCompilerRef =
@@ -122,19 +127,42 @@ class CompilerConfiguration(
           .targetClasspath(buildTargetId, cancelCompilerPromise)
           .getOrElse(Future.successful(Nil))
       } yield {
-        val sourceItems = buildTargets.sourceItemsToBuildTargets
-          .filter(_._2.iterator().asScala.toList.contains(buildTargetId))
-          .map(_._1.toNIO)
-          .toList
-
+        def sourceFiles() = buildTargets
+          .buildTargetTransitiveSources(buildTargetId)
+          .map(_.toNIO)
+          .toSeq
+          .asJava
         // set wasResolved to avoid races on timeout below
         val classpathSeq = classpath.toAbsoluteClasspath.map(_.toNIO).toSeq
-        val result = newCompiler(classpathSeq, sourceItems)
+        val result = newCompiler(classpathSeq, sourceFiles _)
         // Request finished, we can remove and shut down the fallback
         Option(presentationCompilerRef.getAndSet(result))
-          .foreach(_.shutdown())
+          .foreach { oldCompiler =>
+            scribe.warn(
+              s"[${buildTargetId.getUri}] Real PC loaded, replacing fallback PC."
+            )
+            oldCompiler.shutdown()
+          }
         result
       }
+    }
+
+    /**
+     * A presentation compiler that does not wait for the real classpath to arrive through BSP.
+     * Instead, all transitive sources are used to resolve names. Third party dependencies won't
+     * work but that should still be a much smoother experience until the real PC is available.
+     */
+    def fallbackWithSources(): PresentationCompiler = {
+      val scalaVersion = buildTargets
+        .scalaTarget(buildTargetId)
+        .map(_.scalaVersion)
+        .getOrElse(BuildInfo.scala213)
+      def sourceItems() = buildTargets
+        .buildTargetTransitiveSources(buildTargetId)
+        .map(_.toNIO)
+        .toSeq
+        .asJava
+      newCompiler(Embedded.scalaLibrary(scalaVersion), sourceItems _)
     }
 
     def await: PresentationCompiler = {
@@ -153,13 +181,13 @@ class CompilerConfiguration(
       } catch {
         case _: ju.concurrent.TimeoutException =>
           scribe.warn(
-            s"Still waiting for information about classpath, using standalone compiler for now"
+            s"[${buildTargetId.getUri}] Still waiting for information about classpath, using standalone compiler for now"
           )
           this.synchronized {
             val old = presentationCompilerRef.get()
             if (old != null) old
             else {
-              val newFallback = fallback
+              val newFallback = fallbackWithSources()
               presentationCompilerRef.set(newFallback)
               newFallback
             }
@@ -187,9 +215,9 @@ class CompilerConfiguration(
 
     def buildTargetId: BuildTargetIdentifier = scalaTarget.id
 
-    protected def newCompiler(
+    override protected def newCompiler(
         classpath: Seq[Path],
-        srcFiles: Seq[Path] = Seq(),
+        srcFiles: Supplier[ju.List[Path]] = () => Nil.asJava,
     ): PresentationCompiler = {
       val name = scalaTarget.scalac.getTarget().getUri
       val options = enrichWithReleaseOption(scalaTarget)
@@ -217,8 +245,7 @@ class CompilerConfiguration(
         if (scalaTarget.isBestEffort) Seq(scalaTarget.bestEffortPath)
         else Seq.empty
 
-      val sourcePath = if (userConfig().useSourcePath) srcFiles else Seq.empty
-      scribe.debug(s"Source path: ${sourcePath.mkString(":")}")
+      scribe.debug(s"Source path: ${srcFiles.get().asScala.mkString(":")}")
 
       fromMtags(
         mtags,
@@ -227,7 +254,7 @@ class CompilerConfiguration(
         name,
         search,
         referenceCounter,
-        sourcePath,
+        srcFiles,
       )
         .withBuildTargetName(scalaTarget.displayName)
     }
@@ -276,7 +303,7 @@ class CompilerConfiguration(
 
     protected def newCompiler(
         classpath: Seq[Path],
-        srcFiles: Seq[Path] = Seq(),
+        srcFiles: Supplier[ju.List[Path]] = () => Nil.asJava,
     ): PresentationCompiler = {
       val pc = JavaPresentationCompiler()
       configure(pc, search, completionItemPriority)
@@ -284,7 +311,7 @@ class CompilerConfiguration(
           targetId.getUri(),
           classpath.asJava,
           log.asJava,
-          srcFiles.asJava,
+          srcFiles,
         )
     }
 
@@ -322,8 +349,23 @@ class CompilerConfiguration(
             hoverContentType = config.hoverContentType(),
             emitDiagnostics = userConfig().presentationCompilerDiagnostics,
             workspaceRoot = workspace.toNIO,
+            sourcePathMode =
+              getSourcePathMode(config.initialConfig.compilers.sourcePathMode),
           )
       }
+
+  private def getSourcePathMode(oldMode: SourcePathMode): SourcePathMode = {
+    SourcePathConfig.fromConfigOrFeatureFlag(
+      sys.props.get("metals.source-path"),
+      featureFlags,
+      oldMode,
+    ) match {
+      case Right(mode) => mode
+      case Left(error) =>
+        scribe.error(error)
+        oldMode
+    }
+  }
 
   private def fromMtags(
       mtags: MtagsBinaries,
@@ -332,7 +374,7 @@ class CompilerConfiguration(
       name: String,
       symbolSearch: SymbolSearch,
       referenceCounter: CompletionItemPriority,
-      sourcePath: Seq[Path] = Seq.empty,
+      sourcePath: Supplier[ju.List[Path]] = () => Nil.asJava,
   ): PresentationCompiler = {
     val pc = mtags match {
       case MtagsBinaries.BuildIn => new ScalaPresentationCompiler()
@@ -346,7 +388,7 @@ class CompilerConfiguration(
         name,
         classpathSeq.asJava,
         (log ++ filteredOptions).asJava,
-        sourcePath.asJava,
+        sourcePath,
       )
   }
 

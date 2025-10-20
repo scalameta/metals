@@ -17,7 +17,7 @@ public interface PresentationCompilerConfig {
 	/**
 	 * Command ID to trigger parameter hints (textDocument/signatureHelp) in the
 	 * editor.
-	 * 
+	 *
 	 * See
 	 * https://scalameta.org/metals/docs/integrations/new-editor.html#compileroptionsparameterhintscommand
 	 * for details.
@@ -143,4 +143,8 @@ public interface PresentationCompilerConfig {
 		return Paths.get(System.getProperty("user.dir"));
 	}
 
+	/**
+	 * Returns the mode of the source path to use.
+	 */
+	default SourcePathMode sourcePathMode() { return SourcePathMode.PRUNED; }
 }

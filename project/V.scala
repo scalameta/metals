@@ -182,7 +182,7 @@ object V {
   def deprecatedScalaVersions = deprecatedScala2Versions
 
   val quickPublishScalaVersions = Set(
-    // bazelScalaVersion,
+//     bazelScalaVersion,
 //    scala211,
     // sbtScala,
     scala212,

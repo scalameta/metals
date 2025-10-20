@@ -11,6 +11,8 @@ import scala.reflect.internal.util.Position
 import scala.reflect.internal.util.ScriptSourceFile
 import scala.reflect.internal.util.SourceFile
 import scala.reflect.internal.{Flags => gf}
+import scala.tools.nsc.LogicalPackage
+import scala.tools.nsc.MetalsJavaPlatform
 import scala.tools.nsc.Mode
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
@@ -26,6 +28,7 @@ import scala.meta.internal.semanticdb.scalac.SemanticdbOps
 import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.SourcePathMode
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 
@@ -35,12 +38,12 @@ import org.slf4j.Logger
 class MetalsGlobal(
     settings: Settings,
     reporter: MetalsReporter,
-    val logger: Logger,
     val search: SymbolSearch,
     val buildTargetIdentifier: String,
     val metalsConfig: PresentationCompilerConfig,
     val workspace: Option[Path],
-    val completionItemPriority: CompletionItemPriority
+    val completionItemPriority: CompletionItemPriority,
+    val rootSrcPackage: LogicalPackage
 ) extends Global(settings, reporter)
     with completions.Completions
     with completions.AmmoniteFileCompletions
@@ -70,12 +73,18 @@ class MetalsGlobal(
     backgroundCompilation = !metalsConfig.emitDiagnostics()
   )
 
+  lazy val logger: Logger =
+    org.slf4j.LoggerFactory.getLogger(classOf[MetalsGlobal])
+
   val richCompilationCache: TrieMap[String, RichCompilationUnit] =
     TrieMap.empty[String, RichCompilationUnit]
 
   // for those paths units were fully compiled (not just outlined)
   val fullyCompiled: mutable.Set[String] = mutable.Set.empty[String]
 
+  object PruneLateSourcesComponent extends PruneLateSources {
+    val global: compiler.type = compiler
+  }
   class MetalsInteractiveAnalyzer(val global: compiler.type)
       extends InteractiveAnalyzer {
 
@@ -111,8 +120,22 @@ class MetalsGlobal(
     }
   }
 
+  // Register the pruning phase with the compiler
+  override protected def computeInternalPhases(): Unit = {
+    super.computeInternalPhases()
+    if (metalsConfig.sourcePathMode() == SourcePathMode.PRUNED) {
+      logger.debug(s"[$buildTargetIdentifier] using pruned search path")
+      phasesSet += PruneLateSourcesComponent
+    }
+  }
+
   override lazy val analyzer: this.MetalsInteractiveAnalyzer =
     new MetalsInteractiveAnalyzer(compiler)
+
+  override lazy val platform: ThisPlatform = new GlobalPlatform
+    with MetalsJavaPlatform {
+    val rootPackage: LogicalPackage = rootSrcPackage
+  }
 
   def isDocs: Boolean = System.getProperty("metals.signature-help") != "no-docs"
 

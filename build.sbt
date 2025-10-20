@@ -585,6 +585,7 @@ lazy val metals = project
       // for bloom filters
       "com.google.code.findbugs" % "jsr305" % "3.0.2", // for nullability annotations
       V.guava,
+      "org.slf4j" % "slf4j-api" % "1.7.36",
       "org.scalameta" %% "metaconfig-core" % "0.14.0",
       // For MBT persistent cache
       "org.lmdbjava" % "lmdbjava" % "0.9.1",

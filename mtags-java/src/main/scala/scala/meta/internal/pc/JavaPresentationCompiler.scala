@@ -8,6 +8,7 @@ import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
+import java.util.function.Supplier
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
@@ -201,7 +202,7 @@ case class JavaPresentationCompiler(
       buildTargetIdentifier: String,
       classpath: util.List[Path],
       options: util.List[String],
-      sourcePath: util.List[Path]
+      sourcePath: Supplier[util.List[Path]]
   ): PresentationCompiler =
     newInstance(buildTargetIdentifier, classpath, options)
 

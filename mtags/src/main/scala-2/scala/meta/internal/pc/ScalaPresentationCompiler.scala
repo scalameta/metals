@@ -15,6 +15,7 @@ import scala.collection.Seq
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
 import scala.reflect.io.VirtualDirectory
+import scala.tools.nsc.ParsedLogicalPackage
 import scala.tools.nsc.Settings
 
 import scala.meta.internal.jdk.CollectionConverters._
@@ -24,6 +25,7 @@ import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ReportLevel
+import scala.meta.internal.metals.SimpleTimer
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
@@ -41,6 +43,7 @@ import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
 import scala.meta.pc.ReferencesRequest
 import scala.meta.pc.ReferencesResult
+import scala.meta.pc.SourcePathMode
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
 import scala.meta.pc.{PcSymbolInformation => IPcSymbolInformation}
@@ -70,7 +73,7 @@ case class ScalaPresentationCompiler(
     folderPath: Option[Path] = None,
     reportsLevel: ReportLevel = ReportLevel.Info,
     completionItemPriority: CompletionItemPriority = (_: String) => 0,
-    sourcePath: Seq[Path] = Nil
+    sourcePath: ju.function.Supplier[ju.List[Path]] = () => Nil.asJava
 ) extends PresentationCompiler {
 
   implicit val executionContext: ExecutionContextExecutor = ec
@@ -168,20 +171,20 @@ case class ScalaPresentationCompiler(
       buildTargetIdentifier,
       classpath,
       options,
-      util.Collections.emptyList()
+      () => util.Collections.emptyList()
     )
 
   override def newInstance(
       buildTargetIdentifier: String,
       classpath: util.List[Path],
       options: util.List[String],
-      sourcePath: util.List[Path]
+      sourcePath: ju.function.Supplier[ju.List[Path]]
   ): PresentationCompiler = {
     copy(
       buildTargetIdentifier = buildTargetIdentifier,
       classpath = classpath.asScala,
       options = options.asScala.toList,
-      sourcePath = sourcePath.asScala
+      sourcePath = sourcePath
     )
   }
 
@@ -198,7 +201,13 @@ case class ScalaPresentationCompiler(
           val sourceFile = new MetalsSourceFile(params)
           metalsAsk[Unit](askReload(List(sourceFile), _))
 
-          val diags = mGlobal.diagnosticsOf(sourceFile)
+          val diags =
+            SimpleTimer.timedThunk(
+              s"[${ScalaPresentationCompiler.this.buildTargetIdentifier}] diagnostics",
+              thresholdMillis = 300
+            ) {
+              mGlobal.diagnosticsOf(sourceFile)
+            }
           diags.asJava
       }(emptyQueryContext)
     } else { CompletableFuture.completedFuture(noDiags) }
@@ -614,15 +623,31 @@ case class ScalaPresentationCompiler(
     val vd = new VirtualDirectory("(memory)", None)
     val settings = new Settings
     settings.Ymacroexpand.value = "discard"
+    settings.YpresentationAnyThread.value = true
     settings.outputDirs.setSingleOutput(vd)
     settings.classpath.value = classpath
-    if (sourcePath.nonEmpty) {
-      logger.debug(
-        s"[$buildTargetIdentifier]: sourcepath: ${sourcePath.mkString(File.pathSeparator)}"
-      )
-      settings.sourcepath.value = sourcePath.mkString(File.pathSeparator)
+
+    if (config.sourcePathMode() != SourcePathMode.DISABLED) {
+      settings.sourcepath.value =
+        sourcePath.get().asScala.mkString(File.pathSeparator)
     }
-    settings.YpresentationAnyThread.value = true
+    settings.verbose.value = reportsLevel.isVerbose
+
+    logger.debug(
+      s"[$buildTargetIdentifier] using source path mode: ${config.sourcePathMode()}"
+    )
+
+    val rootSrcPackage = SimpleTimer.timedThunk(
+      s"[$buildTargetIdentifier] collect logical packages",
+      thresholdMillis = 1000
+    ) {
+      ParsedLogicalPackage.collectLogicalPackages(settings)
+    }
+
+    if (reportsLevel.isVerbose)
+      logger.debug(
+        s"[$buildTargetIdentifier] source path: ${rootSrcPackage.prettyPrint()}"
+      )
     if (
       !BuildInfo.scalaCompilerVersion.startsWith("2.11") &&
       BuildInfo.scalaCompilerVersion != "2.12.4"
@@ -646,12 +671,12 @@ case class ScalaPresentationCompiler(
     val mg = new MetalsGlobal(
       settings,
       reporter,
-      logger,
       search,
       buildTargetIdentifier,
       config,
       folderPath,
-      completionItemPriority
+      completionItemPriority,
+      rootSrcPackage
     )
     reporter._metalsGlobal = mg
     mg

@@ -1,0 +1,229 @@
+// we need to be in this unholy package in order to access package private classes
+// like SourceFileEntryImpl and PackageEntryImpl
+package scala.tools.nsc
+
+import java.io.File
+import java.net.URL
+
+import scala.reflect.io.AbstractFile
+import scala.tools.nsc.classpath._
+import scala.tools.nsc.reporters.ConsoleReporter
+import scala.tools.nsc.reporters.Reporter
+import scala.tools.nsc.util.ClassPath
+
+import scala.meta.internal.pc.classpath.LogicalPackagesProvider
+
+/**
+ * A ClassPath implementation that can find sources regardless of the directory where they're declared.
+ */
+class LogicalSourcePath(val dirs: Seq[File], rootPackage: LogicalPackage)
+    extends ClassPath {
+
+  // We don't have any classfiles, only source files
+  def findClassFile(className: String): Option[AbstractFile] = None
+  override def classes(inPackage: PackageName): Seq[ClassFileEntry] = Seq.empty
+
+  override def hasPackage(inPackage: PackageName): Boolean = findPackage(
+    inPackage.dottedString
+  ).isDefined
+
+  /** Return all packages contained inside `inPackage`. Package entries contain the *full name* of the package. */
+  override def packages(inPackage: PackageName): Seq[PackageEntry] = {
+    val rawPackage = inPackage.dottedString
+    findPackage(rawPackage) match {
+      case Some(pkg) => packagesIn(pkg, rawPackage)
+      case None => Seq.empty[PackageEntry]
+    }
+  }
+
+  /** Return all sources contained directly inside `inPackage` */
+  override def sources(inPackage: PackageName): Seq[SourceFileEntry] = {
+    val rawPackage = inPackage.dottedString
+    findPackage(rawPackage) match {
+      case Some(pkg) => sourcesIn(pkg)
+      case None => Seq.empty[SourceFileEntry]
+    }
+  }
+
+  private def sourcesIn(pkg: LogicalPackage) = {
+    pkg.sources.map(p => SourceFileEntryImpl(AbstractFile.getFile(p)))
+  }
+
+  private def packagesIn(pkg: LogicalPackage, prefix: String) = {
+    val pre = if (prefix.isEmpty) prefix else s"$prefix."
+    pkg.packages.map(p => PackageEntryImpl(pre + p.name))
+  }
+
+  /** Allows to get entries for packages and classes merged with sources possibly in one pass. */
+  override def list(inPackage: PackageName): ClassPathEntries = {
+    val rawPackage = inPackage.dottedString
+    val res = findPackage(rawPackage) match {
+      case Some(pkg) =>
+        ClassPathEntries(packagesIn(pkg, rawPackage), sourcesIn(pkg))
+      case None => ClassPathEntries(Seq(), Seq())
+    }
+    res
+  }
+
+  /** Not sure what the purpose of this method really is, it's not called by the compiler */
+  override def asURLs: Seq[URL] = dirs.map(_.toURI.toURL)
+
+  override def asClassPathStrings: Seq[String] = Seq()
+
+  override def asSourcePathString: String =
+    dirs.map(_.toString).mkString(File.pathSeparator)
+
+  /** Return the package for the given fullName, if any */
+  private def findPackage(fullName: String): Option[LogicalPackage] = {
+    if (fullName == "") Option(rootPackage)
+    else
+      fullName.split('.').foldLeft(Option(rootPackage)) { (pkg, name) =>
+        pkg.flatMap(_.getPackage(name))
+      }
+  }
+
+  override def toString: String = rootPackage.prettyPrint()
+}
+
+/**
+ * A logical package representation. This is disconnected from the file system, and faithfully
+ * represents the nesting of packages and sources that contribute classes to those packages.
+ */
+trait LogicalPackage {
+
+  /** The name of the package, or the empty string if it's the root package */
+  def name: String
+
+  /** Return all member packages. Only direct members are returned. */
+  def packages: Seq[LogicalPackage]
+
+  /**
+   * Return all sources contained by this package. Only direct members are returned, and there are no duplicates.
+   *
+   * The return type is a sequence and not a Set in order to have deterministic runs
+   */
+  def sources: Seq[String]
+
+  /** Return this directly nested package, if it exists */
+  def getPackage(name: String): Option[LogicalPackage]
+
+  /**
+   * Pretty print the package tree.
+   */
+  def prettyPrint(): String =
+    prettyPrintWith().toString()
+
+  private def prettyPrintWith(
+      indent: Int = 0,
+      sb: StringBuilder = new StringBuilder
+  ): StringBuilder = {
+    sb ++= " " * indent
+    sb ++= s"$name\n"
+    packages.sortBy(_.name).foreach(_.prettyPrintWith(indent + 4, sb))
+    sources.foreach { s =>
+      sb ++= (" " * (indent + 4))
+      sb ++= Option(AbstractFile.getFile(s)).map(_.name).getOrElse(s) + "\n"
+    }
+    sb
+  }
+}
+
+/**
+ * Represent a package and its contents in a way that's close to the file system.
+ *
+ * A package contains any number of nested packages and source files. It is mutable in order to allow adding
+ * members at any level, as they are discovered by parsing source files.
+ *
+ * @param name simple name of the package
+ * @note This class is not thread safe
+ */
+class ParsedLogicalPackage(
+    val name: String,
+    val parent: Option[ParsedLogicalPackage]
+) extends LogicalPackage {
+  require(
+    (name.trim.isEmpty && parent.isEmpty) || (name.trim.nonEmpty && parent.nonEmpty),
+    s"Unexpected package name `$name` and parent `$parent`."
+  )
+
+  import scala.collection.mutable
+
+  def this(name: String, parent: ParsedLogicalPackage) =
+    this(name, Some(parent))
+
+  private val subpackages =
+    mutable.LinkedHashMap.empty[String, ParsedLogicalPackage]
+  private val directSources = mutable.ListBuffer.empty[String]
+
+  /**
+   * Return the existing member package, or create a new one and add it to this package.
+   *
+   * @param name simple name of the package to be added or looked up
+   */
+  def enterPackage(name: String): ParsedLogicalPackage = synchronized {
+    subpackages.get(name) match {
+      case Some(p) => p
+      case None =>
+        val p = new ParsedLogicalPackage(name, this)
+        subpackages(name) = p
+        p
+    }
+  }
+
+  /** Return this directly nested package, if it exists */
+  def getPackage(name: String): Option[ParsedLogicalPackage] =
+    subpackages.get(name)
+
+  /** Add a source file to this package */
+  def enterSource(fileName: String): this.type = synchronized {
+    directSources += fileName
+    this
+  }
+
+  /** Return all member packages. Only direct members are returned. */
+  def packages: Seq[ParsedLogicalPackage] = subpackages.values.toList
+
+  /**
+   * Return all sources contained by this package. Only direct members are returned, and there are no duplicates.
+   *
+   * The return type is a sequence and not a Set in order to have deterministic runs
+   */
+  def sources: Seq[String] = directSources.toSeq.distinct
+
+  override def toString(): String =
+    s"package $name(${packages.size} packages and ${sources.size} files)"
+}
+
+/**
+ * A helper object to parse sourcepaths and extract logical packages.
+ */
+object ParsedLogicalPackage {
+  def collectLogicalPackages(settings: Settings): LogicalPackage = {
+    // scalastyle:off indentation (turning it off because an error is reported otherwise. A likely bug in scalastyle)
+    //
+    // prepare a minimal settings object having only the sourcepath and classpath (Sbt uses
+    // bootclasspath to pass the scala-library sources). Only the scala-library is absolutely
+    // necessary (because the parser initializes Scala primitive types from the classpath), but
+    // we keep the whole classpath for simplicity
+    //
+    // scalastyle:on indentation
+    val outlineSettings = new Settings(println)
+    outlineSettings.usejavacp.value = settings.usejavacp.value
+    outlineSettings.classpath.value = settings.classpath.value
+    outlineSettings.sourcepath.value = settings.sourcepath.value
+    outlineSettings.bootclasspath.value = settings.bootclasspath.value
+
+    val global = new OutlineParseCompiler(
+      outlineSettings,
+      new ConsoleReporter(outlineSettings)
+    )
+    // we need to initialize it here, otherwise parsers will blow up
+    new global.Run
+
+    global.rootPackage
+  }
+
+  class OutlineParseCompiler(currentSettings: Settings, reporter: Reporter)
+      extends Global(currentSettings, reporter)
+      with LogicalPackagesProvider
+}

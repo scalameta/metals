@@ -1,16 +1,8 @@
 package tests
 
-import scala.meta.internal.metals.UserConfiguration
-
-class PCDiagnosticsSuite extends BaseLspSuite("pc-diagnostics") {
-
-  override def userConfig: UserConfiguration =
-    UserConfiguration(
-      fallbackScalaVersion = Some(BuildInfo.scalaVersion),
-      presentationCompilerDiagnostics = true,
-      buildOnChange = false,
-      buildOnFocus = false,
-    )
+class PCDiagnosticsSuite
+    extends BaseLspSuite("pc-diagnostics")
+    with BaseSourcePathSuite {
 
   test("no-errors") {
     cleanWorkspace()
@@ -110,39 +102,4 @@ class PCDiagnosticsSuite extends BaseLspSuite("pc-diagnostics") {
       )
     } yield ()
   }
-
-  // this tests that the presentation compiler is able to load sources
-  // that haven't been compiled yet, but are placed in the right directory structure
-  test("cross-file-reference") {
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        """|
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
-           |/a/src/main/scala/a/Person.scala
-           |package a
-           |
-           |case class Person(name: String, age: Int)
-           |/a/src/main/scala/a/Main.scala
-           |package a
-           |
-           |object Main {
-           |  val person = Person("Alice", 30)
-           |  def greet(): String = s"Hello, ${person.name}!"
-           |}
-           |""".stripMargin
-      )
-      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-      _ <- server.didFocus("a/src/main/scala/a/Main.scala")
-      // emitting diagnostics for the first time may take a couple of seconds
-      // not good practice, but they arrive fully asynchronously and we don't have
-      // a way to know when typechecking finished
-      _ <- server.waitFor(2000)
-      _ = assertNoDiagnostics()
-    } yield ()
-  }
-
 }

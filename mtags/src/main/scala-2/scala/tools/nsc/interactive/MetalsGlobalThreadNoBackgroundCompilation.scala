@@ -19,7 +19,9 @@ final class MetalsGlobalThreadNoBackgroundCompilation(
    */
   override def run(): Unit = {
     compiler.debugLog("starting new runner thread")
-    System.err.println(s"Starting up PC for $name")
+    System.err.println(
+      s"Starting up PC for $name. Sourcepath: ${if (compiler.settings.sourcepath.value.isEmpty) "empty" else "non-empty"}"
+    )
     while (compiler ne null) try {
       compiler.checkNoResponsesOutstanding()
       compiler.log.logreplay(

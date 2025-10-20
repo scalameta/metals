@@ -11,6 +11,7 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
+import scala.meta.infra.FeatureFlagProvider
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal
@@ -92,6 +93,7 @@ class Compilers(
     completionItemPriority: () => CompletionItemPriority,
     semanticdbFileManager: SemanticdbFileManager,
     timerProvider: TimerProvider,
+    featureFlags: FeatureFlagProvider,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Cancelable {
 
@@ -109,6 +111,7 @@ class Compilers(
     mtagsResolver,
     sourceMapper,
     semanticdbFileManager,
+    featureFlags,
   )
 
   import compilerConfiguration._
@@ -333,6 +336,24 @@ class Compilers(
       } {
         compiler.restart()
       }
+    }
+  }
+
+  /**
+   * Restart the PC for this target and all build targets that depend on it.
+   *
+   * This is necessary when the user makes code changes and downstream targets may
+   * have loaded symbols from that target (either from sources or its classpath). In order to see
+   * these changes the PC needs to be restarted.
+   */
+  def restartPresentationCompilers(target: BuildTargetIdentifier): Unit = {
+    // Restart PC for all build targets that depend on this target
+    for {
+      target <- buildTargets.allInverseDependencies(target)
+      compiler <- buildTargetPCFromCache(target)
+    } {
+      scribe.debug(s"Restarting PC for target ${target.getUri}")
+      compiler.restart()
     }
   }
 
@@ -1285,12 +1306,7 @@ class Compilers(
       val pc = jcache
         .computeIfAbsent(key, { _ => newCompiler = true; getCompiler() })
         .await
-      Option(
-        if (newCompiler) {
-          loadInitialFiles(pc)
-        } else
-          pc
-      )
+      Option(if (newCompiler) loadInitialFiles(pc) else pc)
     }
 
   private def withKeyAndDefault[T](

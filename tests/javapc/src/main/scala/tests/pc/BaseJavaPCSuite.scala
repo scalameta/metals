@@ -38,7 +38,7 @@ abstract class BaseJavaPCSuite extends BaseSuite with PCSuite {
         PresentationCompilerConfigImpl()
           .copy(isHoverDocumentationEnabled = documentationHoverEnabled)
       )
-      .newInstance("", myclasspath.asJava, Nil.asJava, Nil.asJava)
+      .newInstance("", myclasspath.asJava, Nil.asJava, () => Nil.asJava)
   }
 
   override def params(

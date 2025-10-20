@@ -10,6 +10,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.ContentType
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
+import scala.meta.pc.SourcePathMode
 
 case class PresentationCompilerConfigImpl(
     debug: Boolean = false,
@@ -33,7 +34,9 @@ case class PresentationCompilerConfigImpl(
       PresentationCompilerConfig.defaultSemanticdbCompilerOptions(),
     override val hoverContentType: ContentType = ContentType.MARKDOWN,
     override val emitDiagnostics: Boolean = false,
-    override val workspaceRoot: Path = Paths.get(System.getProperty("user.dir"))
+    override val workspaceRoot: Path =
+      Paths.get(System.getProperty("user.dir")),
+    override val sourcePathMode: SourcePathMode = SourcePathMode.PRUNED
 ) extends PresentationCompilerConfig {
 
   override def isStripMarginOnTypeFormattingEnabled(): Boolean =
