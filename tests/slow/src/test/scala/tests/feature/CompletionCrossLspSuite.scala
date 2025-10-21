@@ -154,6 +154,50 @@ class CompletionCrossLspSuite
     } yield ()
   }
 
+  test("implicit-class-circe-encoder") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": { 
+           |    "scalaVersion": "${V.scala213}",
+           |    "libraryDependencies": ["io.circe::circe-core:0.14.1"]
+           |  }
+           |}
+           |/a/src/main/scala/a/A.scala
+           |package example
+           |
+           |object Main {
+           |  // @@
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ = assertNoDiagnostics()
+      _ <- assertCompletion(
+        "2.asJ@@",
+        """|asJson(implicit encoder: Encoder[A]): Json (implicit)
+           |asJsonObject(implicit encoder: Encoder.AsObject[A]): JsonObject (implicit)
+           |""".stripMargin,
+        filter = _.contains("asJson"),
+      )
+      // Test auto-import of the implicit class when applying completion
+      _ <- assertCompletionEdit(
+        "2.asJ@@",
+        """|package example
+           |
+           |import io.circe.syntax.EncoderOps
+           |
+           |object Main {
+           |  2.asJson
+           |}
+           |""".stripMargin,
+        filter = _.contains("asJson"),
+      )
+    } yield ()
+  }
+
   test("basic-scala3") {
     cleanWorkspace()
     for {
