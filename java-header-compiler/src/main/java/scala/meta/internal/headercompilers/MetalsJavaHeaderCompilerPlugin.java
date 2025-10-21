@@ -143,9 +143,6 @@ public class MetalsJavaHeaderCompilerPlugin implements Plugin {
 			this.trees = trees;
 		}
 
-		/**
-		 * Visits a method declaration node in the AST.
-		 */
 		@Override
 		public void visitClassDef(JCClassDecl classDecl) {
 			boolean isAnnotation = (classDecl.mods.flags & Flags.ANNOTATION) != 0;
@@ -253,9 +250,6 @@ public class MetalsJavaHeaderCompilerPlugin implements Plugin {
 			}
 		}
 
-		/**
-		 * Visits a variable declaration node (fields, local variables, parameters).
-		 */
 		@Override
 		public void visitVarDef(JCVariableDecl varDecl) {
 
@@ -269,10 +263,6 @@ public class MetalsJavaHeaderCompilerPlugin implements Plugin {
 			super.visitVarDef(varDecl);
 		}
 
-		/**
-		 * Determines the TypeKind from a Tree node representing a type. This is
-		 * necessary because full type resolution isn't complete during the ENTER phase.
-		 */
 		private TypeKind getTypeKindFromTree(Tree typeTree) {
 			// Check if the tree is a primitive type tree (int, boolean, etc.)
 			if (typeTree instanceof PrimitiveTypeTree) {
@@ -293,10 +283,6 @@ public class MetalsJavaHeaderCompilerPlugin implements Plugin {
 			return TypeKind.DECLARED;
 		}
 
-		/**
-		 * Helper method to create a JCTree AST node representing the default value for
-		 * a given type.
-		 */
 		private JCExpression getDefaultValue(Tree tree, TypeKind kind) {
 			switch (kind) {
 			case BOOLEAN:
