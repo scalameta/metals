@@ -23,15 +23,11 @@ final class TimerProvider(time: Time, metrics: infra.MonitoringClient)(implicit
       didWhat: String,
       reportStatus: Boolean = false,
       onlyIf: Boolean = false,
-      thresholdMillis: Long = 2,
       metricName: Option[String] = None,
   )(thunk: => Future[T]): Future[T] = {
-    withTimer(didWhat, reportStatus)(thunk).map { case (timer, value) =>
+    withTimer(didWhat, reportStatus, onlyIf)(thunk).map { case (timer, value) =>
       metricName.foreach { name =>
         metrics.recordEvent(infra.Event.duration(name, timer.elapsed))
-      }
-      if (onlyIf && timer.elapsedMillis < thresholdMillis) {
-        scribe.info(s"time: $didWhat in $timer")
       }
       value
     }
@@ -58,13 +54,17 @@ final class TimerProvider(time: Time, metrics: infra.MonitoringClient)(implicit
     result
   }
 
-  def withTimer[T](didWhat: String, reportStatus: Boolean)(
+  def withTimer[T](
+      didWhat: String,
+      reportStatus: Boolean,
+      onlyIf: Boolean,
+  )(
       thunk: => Future[T]
   ): Future[(Timer, T)] = {
     val elapsed = new Timer(time)
     val result = thunk
     result.map { value =>
-      if (reportStatus || elapsed.isLogWorthy) {
+      if (onlyIf && (reportStatus || elapsed.isLogWorthy)) {
         scribe.info(s"time: $didWhat in $elapsed")
       }
       (elapsed, value)
