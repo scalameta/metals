@@ -89,20 +89,6 @@ object MetalsEnrichments
     with AsScalaExtensions
     with MtagsEnrichments {
 
-  @volatile
-  private var followSymlinkDefault = false
-  def onFeatureFlags(featureFlags: m.infra.FeatureFlagProvider): Unit = {
-    val newValue = featureFlags
-      .readBoolean(m.infra.FeatureFlag.FOLLOW_SYMLINKS)
-      .orElse(false)
-    if (newValue != followSymlinkDefault) {
-      scribe.info(
-        s"featureflag: followSymlinkDefault changed from $followSymlinkDefault to $newValue"
-      )
-    }
-    followSymlinkDefault = newValue
-  }
-
   implicit class XtensionScanner(scanner: LegacyScanner) {
 
     import scala.meta.internal.tokenizers.LegacyToken._
@@ -798,7 +784,8 @@ object MetalsEnrichments
      * (sources, jar dependencies, source dependencies) can add up to tens of seconds on Linux.
      */
     def toAbsolutePath: AbsolutePath =
-      toAbsolutePath(followSymlink = followSymlinkDefault)
+      // Default is `false` because it's *slow* in large Bazel workspaces.
+      toAbsolutePath(followSymlink = false)
 
     def toAbsolutePath(followSymlink: Boolean): AbsolutePath =
       MtagsEnrichments.XtensionStringMtags(value).toAbsolutePath(followSymlink)

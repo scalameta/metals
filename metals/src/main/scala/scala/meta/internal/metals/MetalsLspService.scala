@@ -740,7 +740,6 @@ abstract class MetalsLspService(
                 Future(mbtWorkspaceSymbolProvider.onReindex()),
                 Future(workspaceSymbols.indexClasspath()),
                 Future(formattingProvider.load()),
-                Future(MetalsEnrichments.onFeatureFlags(featureFlags)),
               )
             )
       } yield ()
