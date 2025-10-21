@@ -182,7 +182,6 @@ class CompletionCrossLspSuite
            |""".stripMargin,
         filter = _.contains("asJson"),
       )
-      // Test auto-import of the implicit class when applying completion
       _ <- assertCompletionEdit(
         "2.asJ@@",
         """|package example
