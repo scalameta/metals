@@ -2,6 +2,7 @@ package scala.meta.internal.mtags
 
 import java.nio.charset.Charset
 import java.nio.file.Files
+import java.util.logging.Logger
 
 import scala.util.matching.Regex
 
@@ -20,6 +21,9 @@ trait Semanticdbs {
   def textDocument(path: AbsolutePath): TextDocumentLookup
 }
 object Semanticdbs {
+
+  private val logger = Logger.getLogger(classOf[Semanticdbs].getName)
+
   def loadTextDocuments(path: AbsolutePath): s.TextDocuments = {
     val in = Files.newInputStream(path.toNIO)
     try s.TextDocuments.parseFrom(in)
@@ -69,8 +73,18 @@ object Semanticdbs {
   ): TextDocumentLookup = {
     val reluri = scalaRelativePath.toURI(false).toString
     val sdocs = loadTextDocuments(semanticdbPath)
-    sdocs.documents.find(_.uri.replace("\\", "/") == reluri) match {
-      case None => TextDocumentLookup.NoMatchingUri(scalaPath, sdocs)
+    sdocs.documents.find { doc =>
+      val uri = doc.uri.replace("\\", "/")
+      uri == reluri ||
+      // workaround if tool generates absolute path
+      scalaPath.toURI.toString == "file:///" + uri
+    } match {
+      case None =>
+        val relatives = { sdocs.documents.map(_.uri).mkString(", ") }
+        logger.warning(
+          s"Could not find text document for $scalaPath, semanticdbdocuments's relative paths were: $relatives"
+        )
+        TextDocumentLookup.NoMatchingUri(scalaPath, sdocs)
       case Some(sdoc) if scalaPath.exists =>
         val text = FileIO.slurp(scalaPath, charset)
         if (text.startsWith(Shebang.shebang)) {
