@@ -399,7 +399,7 @@ object QuickBuild {
       val bloopDirectory = workspace.resolve(".bloop").toNIO
       Files.createDirectories(bloopDirectory)
       AbsolutePath(bloopDirectory).list
-        .filter(_.extension == "json")
+        .filter(_.isJson)
         .foreach(json => update(json))
       MD5.bytesToHex(digest.digest())
     }
@@ -425,7 +425,7 @@ object QuickBuild {
           val bloopDirectory = workspace.resolve(".bloop").toNIO
           Files.createDirectories(bloopDirectory)
           AbsolutePath(bloopDirectory).list
-            .filter(_.extension == "json")
+            .filter(_.isJson)
             .foreach(json => json.delete())
           val bloopProjects = projects.map(_.toBloop(workspace))
           val byName = bloopProjects.map(p => p.name -> p).toMap

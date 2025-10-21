@@ -16,23 +16,23 @@ class LimitedFilesManager(
     extension: String
 ) {
 
-  def getAllFiles(): List[TimestampedFile] = {
+  def listFiles(directory: Path): List[File] = {
     if (Files.exists(directory) && Files.isDirectory(directory)) {
-      val oldFormat =
-        directory.toFile().listFiles().filter(_.isFile())
-      directoriesWithDate.flatMap(filesWithDate) ++
-        oldFormat.flatMap(timestampedFile).toList
+      val list = directory.toFile().listFiles()
+      if (list != null) list.toList else List()
     } else List()
   }
 
+  def getAllFiles(): List[TimestampedFile] = {
+    val oldFormat = listFiles(directory).filter(_.isFile())
+    directoriesWithDate.flatMap(filesWithDate) ++
+      oldFormat.flatMap(timestampedFile).toList
+  }
+
   def directoriesWithDate: List[File] =
-    if (Files.exists(directory) && Files.isDirectory(directory))
-      directory
-        .toFile()
-        .listFiles()
-        .toList
-        .filter(d => d.isDirectory() && TimeFormatter.hasDateName(d.getName()))
-    else List()
+    listFiles(directory).filter(d =>
+      d.isDirectory() && TimeFormatter.hasDateName(d.getName())
+    )
 
   def deleteOld(limit: Int = fileLimit): List[TimestampedFile] = {
     val files = getAllFiles()
@@ -42,7 +42,7 @@ class LimitedFilesManager(
         .slice(0, files.length - limit)
       filesToDelete.foreach { f => Files.delete(f.toPath) }
       val emptyDateDirectories =
-        directoriesWithDate.filter(_.listFiles().isEmpty)
+        directoriesWithDate.filter(d => listFiles(d.toPath()).isEmpty)
       emptyDateDirectories.foreach { d => Files.delete(d.toPath) }
       filesToDelete
     } else List()
@@ -58,7 +58,7 @@ class LimitedFilesManager(
 
   private def filesWithDate(dir: File): List[TimestampedFile] = {
     val date = dir.getName
-    dir.listFiles().flatMap(withTimeAndDate(_, date)).toList
+    listFiles(dir.toPath()).flatMap(withTimeAndDate(_, date)).toList
   }
 
   private def withTimeAndDate(

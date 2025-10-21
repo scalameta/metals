@@ -181,7 +181,7 @@ final class BspServers(
     val buf = List.newBuilder[AbsolutePath]
     def visit(dir: AbsolutePath): Unit =
       dir.list.foreach { p =>
-        if (p.extension == "json") {
+        if (p.isJson) {
           buf += p
         }
       }

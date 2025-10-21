@@ -473,6 +473,9 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     def isTasty: Boolean = {
       filename.endsWith(".tasty")
     }
+    def isJson: Boolean = {
+      extension == "json"
+    }
     def isScalaScript: Boolean = {
       filename.endsWith(".sc") && !isWorksheet && !isMill
     }
