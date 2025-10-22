@@ -254,7 +254,7 @@ class Compilers(
       for (pc <- loadCompiler(path); contents <- buffers.get(path))
         yield {
           timerProvider.timed(
-            "computed diagnostics",
+            s"[${pc.buildTargetId()}] computed diagnostics",
             onlyIf = serverConfig.statistics.isDiagnostics,
           ) {
             pc.didChange(

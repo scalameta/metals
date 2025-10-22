@@ -201,14 +201,7 @@ case class ScalaPresentationCompiler(
           val sourceFile = new MetalsSourceFile(params)
           metalsAsk[Unit](askReload(List(sourceFile), _))
 
-          val diags =
-            SimpleTimer.timedThunk(
-              s"[${ScalaPresentationCompiler.this.buildTargetIdentifier}] diagnostics",
-              thresholdMillis = 300
-            ) {
-              mGlobal.diagnosticsOf(sourceFile)
-            }
-          diags.asJava
+          mGlobal.diagnosticsOf(sourceFile).asJava
       }(emptyQueryContext)
     } else { CompletableFuture.completedFuture(noDiags) }
   }
