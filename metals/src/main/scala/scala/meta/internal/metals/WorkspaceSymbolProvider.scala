@@ -447,10 +447,8 @@ final class WorkspaceSymbolProvider(
     }
   }
 
-  // Implement SemanticdbFeatureProvider interface
   override def onChange(docs: TextDocuments, path: AbsolutePath): Unit = {
     scribe.info(s"[WorkspaceSymbolProvider.onChange] Called for $path")
-    // Extract implicit class members from semanticdb after compilation
     if (path.isScalaFilename) {
       val dialect = ScalaVersions.dialectForScalaVersion(
         buildTargets.scalaVersion(path).getOrElse(BuildInfo.scala213),
@@ -478,12 +476,10 @@ final class WorkspaceSymbolProvider(
   }
 
   override def onDelete(path: AbsolutePath): Unit = {
-    // Remove implicit class members when file is deleted
     implicitClassMembers.remove(path)
   }
 
   override def reset(): Unit = {
-    // Clear implicit class members cache
     implicitClassMembers.clear()
   }
 }

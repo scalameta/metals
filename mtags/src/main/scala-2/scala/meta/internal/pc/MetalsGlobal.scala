@@ -1301,14 +1301,12 @@ class MetalsGlobal(
     val buffer = mutable.ListBuffer.empty[WorkspaceImplicitMember]
 
     try {
-      // Get the semanticdb symbol for the target type
       val targetTypeSymbol = semanticdbSymbol(targetType.typeSymbol)
 
       logger.info(
         s"[MetalsGlobal] Converting type to symbol: $targetType -> $targetTypeSymbol"
       )
 
-      // Query indexed implicit class members through SymbolSearch
       val members = search.queryImplicitClassMembers(targetTypeSymbol)
 
       logger.info(
@@ -1321,11 +1319,9 @@ class MetalsGlobal(
           s"[MetalsGlobal]   Processing member: ${member.methodName} from ${member.classSymbol}"
         )
         try {
-          // Resolve the method symbol from the semanticdb string
           val methodSym = inverseSemanticdbSymbol(member.methodSymbol)
 
           if (methodSym != NoSymbol && methodSym.exists) {
-            // Check if accessible from current context
             val isAccessible =
               try {
                 context.isAccessible(methodSym, methodSym.owner.thisType)
@@ -1350,7 +1346,6 @@ class MetalsGlobal(
           }
         } catch {
           case NonFatal(e) =>
-            // Log and skip if symbol resolution fails
             logger.info(
               s"Failed to resolve implicit class member: ${member.methodSymbol} - ${e.getMessage}"
             )

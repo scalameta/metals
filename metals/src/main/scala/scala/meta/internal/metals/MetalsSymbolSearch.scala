@@ -149,9 +149,7 @@ class MetalsSymbolSearch(
 
     val results = List.newBuilder[scala.meta.pc.ImplicitClassMemberResult]
 
-    // Query the indexed implicit class members from WorkspaceSymbolProvider
     wsp.implicitClassMembers.values.flatten.foreach { member =>
-      // Check if this implicit class accepts the parameter type
       if (member.paramType == paramTypeSymbol) {
         scribe.debug(
           s"[MetalsSymbolSearch]   Match found: ${member.methodName} from ${member.classSymbol}"

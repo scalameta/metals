@@ -78,17 +78,6 @@ class ScalaToplevelMtags(
   private def addToplevelMembers(members: List[ToplevelMember]) =
     toplevelMembersBuilder ++= members
 
-  private def addImplicitClassMembers(members: List[ImplicitClassMember]) =
-    implicitClassMembersBuilder ++= members
-
-  // TODO: Implement implicit class member collection in ScalaToplevelMtags
-  // When parsing a class with ExpectTemplate.isImplicit=true:
-  // 1. Extract parameter type from constructor (single parameter)
-  // 2. Scan method definitions in class body
-  // 3. Build ImplicitClassMember entries
-  // 4. Add to implicitClassMembersBuilder
-  // This is needed for workspace source indexing to work with implicit classes.
-
   import ScalaToplevelMtags._
 
   private val identifiers = Set.newBuilder[String]

@@ -439,7 +439,6 @@ class CompletionProvider(
             )
             val result =
               workspaceExtensionMethods(query, pos, visit, qualifier.tpe)
-            // Also add indexed implicit class members
             val implicitMembers =
               findIndexedImplicitExtensionsForType(qualifier.tpe, pos)
             if (implicitMembers.nonEmpty) {
