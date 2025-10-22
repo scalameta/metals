@@ -4,6 +4,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContextExecutorService
+import scala.concurrent.Future
 import scala.concurrent.Promise
 
 import scala.meta.internal.implementation.ImplementationProvider
@@ -42,4 +43,7 @@ trait IndexProviders {
   def folder: AbsolutePath
   def implementationProvider: ImplementationProvider
   def resetService(): Unit
+
+  /** Resets the presentation compilers and refreshes the diagnostics. */
+  def resetPresentationCompilers(): Future[Unit]
 }

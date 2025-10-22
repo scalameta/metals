@@ -978,6 +978,7 @@ abstract class MetalsLspService(
               .inverseSources(path)
               .foreach(compilers.restartPresentationCompilers)
           ),
+          refreshDiagnostics(),
           renameProvider.runSave(),
           parseTrees(path),
           onChange(List(path)),
@@ -985,6 +986,22 @@ abstract class MetalsLspService(
       )
       .ignoreValue
       .asJava
+  }
+
+  protected def refreshDiagnostics(): Future[Unit] = {
+    // rerun diagnostics for all open documents
+    val futures = buffers.open.map(path =>
+      for {
+        reportedDiagnostics <- compilers.didFocus(path)
+        _ = diagnostics.publishDiagnosticsNotAdjusted(path, reportedDiagnostics)
+      } yield ()
+    )
+    Future.sequence(futures).map(_ => ())
+  }
+
+  def resetPresentationCompilers(): Future[Unit] = {
+    compilers.restartAll()
+    refreshDiagnostics()
   }
 
   protected def didCompileTarget(report: CompileReport): Unit = {

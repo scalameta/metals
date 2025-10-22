@@ -351,6 +351,11 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       }
       sourcesToIndex += SourceToIndex(source, sourceItem, targets.asScala)
     }
+    // at this point we have all sources for each build target, so presentation compilers should
+    // restart to pick up the correct sourcepath. We don't need to wait for the actual
+    // indexing to finish since they don't impact how the presentation compiler works
+    resetPresentationCompilers()
+
     val threadPool = new ForkJoinPool(
       Runtime.getRuntime().availableProcessors() match {
         case 1 => 1
