@@ -90,7 +90,7 @@ support for Scala 3 in the near future.</p>
 a new paste command that allows to automatically add imports when copying
 between files. This command is enabled by default in Scala files within VS Code
 and requires the origin to be filed when adding in other editors.</p>
-<p><img decoding="async" loading="lazy" alt="paste-import" src="http://scalameta.org/metals/assets/images/on-paste-f7a865e5314c8c682e8490599a01dda4.gif" width="1074" height="428" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2025-10-16-osmium/on-paste.gif?raw=true" alt="paste-import" class="img_ev3q"></p>
 <p>The change will currently only work for Scala 2, some further work is needed to
 add support for Scala 3.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="testing-add-cursor-based-target-discovery-for-running-closest-main-or-test">Testing: Add cursor-based target discovery for running closest main or test<a href="http://scalameta.org/metals/blog/2025/10/16/osmium#testing-add-cursor-based-target-discovery-for-running-closest-main-or-test" class="hash-link" aria-label="Direct link to Testing: Add cursor-based target discovery for running closest main or test" title="Direct link to Testing: Add cursor-based target discovery for running closest main or test" translate="no">​</a></h2>
@@ -99,7 +99,7 @@ add support for Scala 3.</p>
 closest main or test to the cursor.</p>
 <p>This new command is available in Visual Studio Code via <code>metals.run-closest</code> in
 the command palette and can be assigned to a new shortcut.</p>
-<p><img decoding="async" loading="lazy" alt="run-closest" src="http://scalameta.org/metals/assets/images/run-closest-8bf7f6703c4afccfdd750997b1661c94.gif" width="1432" height="708" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2025-10-16-osmium/run-closest.gif?raw=true" alt="run-closest" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="testing-test-discovery-for-bazel">Testing: Test discovery for Bazel<a href="http://scalameta.org/metals/blog/2025/10/16/osmium#testing-test-discovery-for-bazel" class="hash-link" aria-label="Direct link to Testing: Test discovery for Bazel" title="Direct link to Testing: Test discovery for Bazel" translate="no">​</a></h2>
 <p>Up until this release, discovering tests in your Bazel workspace was not
 supported. This was because Bazel BSP server itself doesn't provide any
@@ -664,7 +664,7 @@ give Metals a try!</p>
 </ul>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="sql-highlighting">SQL highlighting<a href="http://scalameta.org/metals/blog/2025/07/31/osmium#sql-highlighting" class="hash-link" aria-label="Direct link to SQL highlighting" title="Direct link to SQL highlighting" translate="no">​</a></h2>
 <p>Thanks to <a href="https://github.com/Mensh1kov" target="_blank" rel="noopener noreferrer">Mensh1kov</a> Metals now supports highlighting SQL queries in the editor when <code>sql</code> or <code>fr</code> interpolated strings are used.</p>
-<p><img decoding="async" loading="lazy" alt="sql-highlighting" src="http://scalameta.org/metals/assets/images/sql-highlighting-1672abf3f31a744dcde00669d303f4ab.gif" width="976" height="633" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2025-07-31-osmium/sql-highlighting.gif?raw=true" alt="sql-highlighting" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="model-context-protocol-improvements">Model Context Protocol Improvements<a href="http://scalameta.org/metals/blog/2025/07/31/osmium#model-context-protocol-improvements" class="hash-link" aria-label="Direct link to Model Context Protocol Improvements" title="Direct link to Model Context Protocol Improvements" translate="no">​</a></h2>
 <p>The biggest number of improvements in this release are related to MCP support. This includes both new features and overall quality of life improvements.</p>
 <h3 class="anchor anchorWithStickyNavbar_LWe7" id="new-features">New features<a href="http://scalameta.org/metals/blog/2025/07/31/osmium#new-features" class="hash-link" aria-label="Direct link to New features" title="Direct link to New features" translate="no">​</a></h3>
@@ -1032,12 +1032,6 @@ give Metals a try!</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="module-status-bar">Module status bar<a href="http://scalameta.org/metals/blog/2025/06/05/osmium#module-status-bar" class="hash-link" aria-label="Direct link to Module status bar" title="Direct link to Module status bar" translate="no">​</a></h2>
 <p>This release includes a new status bar, which should make some information about the module state more visible.</p>
 <p>By default, the status shows the name of the module (build target) that the file in focus belongs to. If the file doesn't belong to any build target or due to an error the build target cannot be resolved, the status will show <code>no build target</code> error message. If the build target is found but there is a compile error in an upstream module, the status will show an error with the name of the upstream module. Finally, if the build target is found and there are no upstream errors, but there are new error reports created for the build target, the status will show a warning with the number of error reports.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/Xk76qJM.png" alt="module-status-bar-no-error" class="img_ev3q">
-<em>Module status bar showing build target name.</em></p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/7rErfM9.png" alt="module-status-upstream-error" class="img_ev3q">
-<em>Module status bar showing a compile error in an upstream module</em></p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/ciNdDCl.png" alt="module-status-erros-reports" class="img_ev3q">
-<em>Module status bar indicating 4 new error reports</em></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="fixed-blocking-user-requests">Fixed blocking user requests<a href="http://scalameta.org/metals/blog/2025/06/05/osmium#fixed-blocking-user-requests" class="hash-link" aria-label="Direct link to Fixed blocking user requests" title="Direct link to Fixed blocking user requests" translate="no">​</a></h2>
 <p>In the previous release, a bug was introduced where Metals would sometimes block waiting for the response for user notification. As a result, <code>Import build</code>, <code>Switch build server</code> and similar requests would fail to work. This issue was fixed in this release with an added timeout.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="fixes-for-backticked-identifiers">Fixes for backticked identifiers<a href="http://scalameta.org/metals/blog/2025/06/05/osmium#fixes-for-backticked-identifiers" class="hash-link" aria-label="Direct link to Fixes for backticked identifiers" title="Direct link to Fixes for backticked identifiers" translate="no">​</a></h2>
@@ -1285,36 +1279,19 @@ give Metals a try!</p>
 <p>Best effort compilation was first introduced to Metals <code>v1.3.4</code> (see <a href="https://scalameta.org/metals/blog/2024/07/24/thallium#scala-3-best-effort-compilation" target="_blank" rel="noopener noreferrer">here</a>); however, due to multiple issues with it, it was disabled. Since then, a lot was fixed and improved in the area, so this release reintroduces best effort compilation behind a setting; simply set <code>metals.enableBestEffort</code> to <code>true</code> and give it a try.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="new-inlay-hints">New inlay hints<a href="http://scalameta.org/metals/blog/2025/05/13/strontium#new-inlay-hints" class="hash-link" aria-label="Direct link to New inlay hints" title="Direct link to New inlay hints" translate="no">​</a></h2>
 <h3 class="anchor anchorWithStickyNavbar_LWe7" id="named-parameters">Named parameters<a href="http://scalameta.org/metals/blog/2025/05/13/strontium#named-parameters" class="hash-link" aria-label="Direct link to Named parameters" title="Direct link to Named parameters" translate="no">​</a></h3>
-<p><a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a> added inlay hints for showing parameters' names on call site. The new inlay hint is available under <code>inlay-hints.named-parameters.enable</code> Metals setting, for now available only for Scala 2.
-<img decoding="async" loading="lazy" src="https://i.imgur.com/MJwFuqs.png" alt="named-params" class="img_ev3q">
-<em>Named parameters inlay hints</em></p>
+<p><a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a> added inlay hints for showing parameters' names on call site. The new inlay hint is available under <code>inlay-hints.named-parameters.enable</code> Metals setting, for now available only for Scala 2.</p>
 <h3 class="anchor anchorWithStickyNavbar_LWe7" id="by-name-parameters">By-name parameters<a href="http://scalameta.org/metals/blog/2025/05/13/strontium#by-name-parameters" class="hash-link" aria-label="Direct link to By-name parameters" title="Direct link to By-name parameters" translate="no">​</a></h3>
-<p>We also have new inlay hints marking by-name parameters with <code>=&gt;</code> on the call site. Thanks go to <a href="https://github.com/harpocrates" target="_blank" rel="noopener noreferrer">harpocrates</a>.
-<img decoding="async" loading="lazy" src="https://i.imgur.com/sk2k6Ay.png" alt="by-name-params" class="img_ev3q"></p>
+<p>We also have new inlay hints marking by-name parameters with <code>=&gt;</code> on the call site. Thanks go to <a href="https://github.com/harpocrates" target="_blank" rel="noopener noreferrer">harpocrates</a>.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="remove-invalid-imports-code-action">Remove invalid imports code action<a href="http://scalameta.org/metals/blog/2025/05/13/strontium#remove-invalid-imports-code-action" class="hash-link" aria-label="Direct link to Remove invalid imports code action" title="Direct link to Remove invalid imports code action" translate="no">​</a></h2>
 <p>This release also has a new code action for removing invalid imports, saving you the trouble of deleting them manually. It is yet another improvement added by <a href="https://github.com/harpocrates" target="_blank" rel="noopener noreferrer">harpocrates</a>. Code action works both for Scala 2 and Scala 3, though older Scala 2 versions might get only partial support.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/mArQW9N.gif" alt="remove-invalid-imports" class="img_ev3q">
-<em>Remove invalid import</em>
-<img decoding="async" loading="lazy" src="https://i.imgur.com/Ht9htWM.gif" alt="remove-invalid-imports-2" class="img_ev3q">
-<em>Remove invalid import in multi-import statement</em></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="convert-to-named-lambda-parameters-code-action">Convert to named lambda parameters code action<a href="http://scalameta.org/metals/blog/2025/05/13/strontium#convert-to-named-lambda-parameters-code-action" class="hash-link" aria-label="Direct link to Convert to named lambda parameters code action" title="Direct link to Convert to named lambda parameters code action" translate="no">​</a></h2>
 <p>Thanks to <a href="https://github.com/KacperFKorban" target="_blank" rel="noopener noreferrer">KacperFKorban</a> we have a new code action that converts a wildcard lambda into a lambda with parameters. This was only implemented for Scala 3 and will work from versions <code>3.7.2</code> and LTS <code>3.3.7</code>.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/XE799H1.gif" alt="convert-to-named-1" class="img_ev3q">
-<em>Convert to named lambda parameters with single wildcard.</em></p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/8H9HKxh.gif" alt="convert-to-named-2" class="img_ev3q">
-<em>Convert to named lambda parameters with multiple wildcards.</em></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="support-using-directives-in-worksheets">Support using directives in worksheets<a href="http://scalameta.org/metals/blog/2025/05/13/strontium#support-using-directives-in-worksheets" class="hash-link" aria-label="Direct link to Support using directives in worksheets" title="Direct link to Support using directives in worksheets" translate="no">​</a></h2>
 <p>Since Metals has been supporting Scala-CLI for a while, and it is Metals's recommended tool for scripts, we are further embracing Scala-CLI style, and <code>using</code> directives are now supported also in the worksheets. Thanks go to <a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a> for adding this improvement.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/vCyEooA.png" alt="using-directives-worksheet" class="img_ev3q">
-<em>A dependency added with <code>using</code> directives in a worksheet.</em></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="improve-auto-fill-arguments">Improve auto-fill arguments<a href="http://scalameta.org/metals/blog/2025/05/13/strontium#improve-auto-fill-arguments" class="hash-link" aria-label="Direct link to Improve auto-fill arguments" title="Direct link to Improve auto-fill arguments" translate="no">​</a></h2>
 <p>For a while now, Metals had a special completion for auto-filling argument names, however it was somewhat hidden. Now, the discoveribility of that feature was improved, and it naturally appear in the completion suggestion list. Thanks, <a href="https://github.com/LiathHelvetica" target="_blank" rel="noopener noreferrer">LiathHelvetica</a> and <a href="https://github.com/natsukagami" target="_blank" rel="noopener noreferrer">natsukagami</a>, for making the change.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/k5mOEAR.gif" alt="auto-fill" class="img_ev3q">
-<em>Auto-fill arguments for a case class.</em></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="discover-tests-for-zio-test-framework">Discover tests for ZIO test framework<a href="http://scalameta.org/metals/blog/2025/05/13/strontium#discover-tests-for-zio-test-framework" class="hash-link" aria-label="Direct link to Discover tests for ZIO test framework" title="Direct link to Discover tests for ZIO test framework" translate="no">​</a></h2>
 <p>With this release also comes support for discovering and running single test cases from Metals when using the ZIO test framework. Thanks go to <a href="https://github.com/kaplan-shaked" target="_blank" rel="noopener noreferrer">kaplan-shaked</a>, making this their first contribution!</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/j4uP6qh.gif" alt="run-zio-test" class="img_ev3q">
-<em>Run single ZIO test testcase.</em></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="miscellaneous">Miscellaneous<a href="http://scalameta.org/metals/blog/2025/05/13/strontium#miscellaneous" class="hash-link" aria-label="Direct link to Miscellaneous" title="Direct link to Miscellaneous" translate="no">​</a></h2>
 <ul>
 <li>improvement : Able to get environment variables from shell <a href="https://github.com/ajafri2001" target="_blank" rel="noopener noreferrer">ajafri2001</a></li>
@@ -1657,13 +1634,13 @@ help in a number of cases and make the experience more reliable.</p>
 location of the test failure was not shown, only the start of the test case.
 Now, we will correctly show the exact location of the test failure, which should
 make it easier to navigate to the failing test.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/JuIES78.gif" alt="test-loc" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2025-03-26-strontium/JuIES78.gif?raw=true" alt="test-loc" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="convert-sbt-style-deps-on-paste-in-for-scala-cli">Convert sbt style deps on paste in for scala-cli<a href="http://scalameta.org/metals/blog/2025/03/26/strontium#convert-sbt-style-deps-on-paste-in-for-scala-cli" class="hash-link" aria-label="Direct link to Convert sbt style deps on paste in for scala-cli" title="Direct link to Convert sbt style deps on paste in for scala-cli" translate="no">​</a></h2>
 <p>Thanks to <a href="https://github.com/majk-p" target="_blank" rel="noopener noreferrer">majk-p</a> any sbt style dependencies that
 you paste into a Scala CLI file after <code>//&gt; using dep</code> will be automatically
 converted to Scala CLI style dependencies. This was previously only supported in
 a code action, but turns out to be useful enough to apply the rewrite automatically on paste.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/6BNvmmO.gif" alt="paste-dep" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2025-03-26-strontium/6BNvmmO.gif?raw=true" alt="paste-dep" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="add-test-cases-discovery-for-testng">Add test cases discovery for TestNG<a href="http://scalameta.org/metals/blog/2025/03/26/strontium#add-test-cases-discovery-for-testng" class="hash-link" aria-label="Direct link to Add test cases discovery for TestNG" title="Direct link to Add test cases discovery for TestNG" translate="no">​</a></h2>
 <p>Thanks to <a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a> it's now possible to run
 TestNG tests inside Metals, which was previously not possible.</p>
@@ -2496,9 +2473,9 @@ found.</p>
 new Scala file with the added symbol. Now, for anything starting with a lower
 case we offer to create a method instead.</p>
 <p>This will work both when the symbol is used as a parameter:</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/9fWQ3Yg.gif" alt="first-example" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2024-12-16-palladium/9fWQ3Yg.gif?raw=true" alt="first-example" class="img_ev3q"></p>
 <p>as well as a standalone function call:</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/gizIjBB.gif" alt="second-example" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2024-12-16-palladium/gizIjBB.gif?raw=true" alt="second-example" class="img_ev3q"></p>
 <p>The feature has only been implemented for Scala 2 for the time being and there
 might be still some unsupported cases.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="contributors">Contributors<a href="http://scalameta.org/metals/blog/2024/12/16/palladium#contributors" class="hash-link" aria-label="Direct link to Contributors" title="Direct link to Contributors" translate="no">​</a></h2>
@@ -3619,7 +3596,7 @@ information about the project. This great feature has been delivered by
 frequency, so the symbols more often referenced in project appear higher on the
 list of completions. This cool feature was added by
 <a href="https://github.com/Temurlock" target="_blank" rel="noopener noreferrer">Temurlock</a>.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/lAOeVCZ.gif" alt="sort-by-freq" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2024-07-24-thallium/lAOeVCZ.gif?raw=true" alt="sort-by-freq" class="img_ev3q"></p>
 <h1>Miscellaneous</h1>
 <ul>
 <li>fix: show zero extent references for implicits when using pc</li>
@@ -3735,7 +3712,7 @@ projects.</p>
 <p>In this version of Metals we added a central database that can be found under
 the <code>.metals</code> directory in user home, which contains shared indexes of JDK
 sources thus avoiding a need to index them more than once on any given machine.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/lTMmhD8.gif" alt="jdk-sources" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2024-07-12-thallium/lTMmhD8.gif?raw=true" alt="jdk-sources" class="img_ev3q"></p>
 <p>This great improvement was added by <a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="value-completions-for-union-types">Value completions for union types<a href="http://scalameta.org/metals/blog/2024/07/12/thallium#value-completions-for-union-types" class="hash-link" aria-label="Direct link to Value completions for union types" title="Direct link to Value completions for union types" translate="no">​</a></h2>
 <p>Union types are a new feature in Scala 3 that allows types to be combined when
@@ -3745,7 +3722,7 @@ we need to specify that certain value can be of more than one type.</p>
 <p>In this version of Metals <a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a> added
 support for value completions where union types are unions of specific literal
 types. If used together with intersection types it will still work as expected.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/FKrytqC.png" alt="example" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2024-07-12-thallium/FKrytqC.png?raw=true" alt="example" class="img_ev3q"></p>
 <p>The feature will work on latest LTS and Next Scala versions as it required some
 work upstream in the compiler itself.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="allow-debugging-for-all-build-servers">Allow debugging for all build servers<a href="http://scalameta.org/metals/blog/2024/07/12/thallium#allow-debugging-for-all-build-servers" class="hash-link" aria-label="Direct link to Allow debugging for all build servers" title="Direct link to Allow debugging for all build servers" translate="no">​</a></h2>
@@ -3943,7 +3920,7 @@ information from outline compilation will be only available within the same
 build target (module).</p>
 <p>Further work is being done on a similar approach for Scala 3, which should be
 available in one of the upcoming releases.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/ZBwWGTK.gif" alt="broken-code" class="img_ev3q"> <em>Completions on not compiling
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2024-06-19-thallium/ZBwWGTK.gif?raw=true" alt="broken-code" class="img_ev3q"> <em>Completions on not compiling
 code</em></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="use-presentation-compiler-as-fallback-for-references-search">Use presentation compiler as fallback for references search<a href="http://scalameta.org/metals/blog/2024/06/19/thallium#use-presentation-compiler-as-fallback-for-references-search" class="hash-link" aria-label="Direct link to Use presentation compiler as fallback for references search" title="Direct link to Use presentation compiler as fallback for references search" translate="no">​</a></h2>
 <p>Before this release Metals would always use information from SemanticDB to
@@ -3951,7 +3928,7 @@ search for references. Since SemanticDB is produced during compilation it would
 fail to find references for code that didn't compile. Now if SemanticDB
 information is missing or outdated Metals will fallback to using presentation
 compiler for reference search for all the files this concerns.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/tI43rhl.gif" alt="uncompiled-go-to-ref" class="img_ev3q"> <em>Find references on
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2024-06-19-thallium/tI43rhl.gif?raw=true" alt="uncompiled-go-to-ref" class="img_ev3q"> <em>Find references on
 non-compiling code</em></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="allow-to-override-debug-server-startup-timeout">Allow to override debug server startup timeout<a href="http://scalameta.org/metals/blog/2024/06/19/thallium#allow-to-override-debug-server-startup-timeout" class="hash-link" aria-label="Direct link to Allow to override debug server startup timeout" title="Direct link to Allow to override debug server startup timeout" translate="no">​</a></h2>
 <p>Until this release there was a fixed timeout for debug server startup time set
@@ -4641,7 +4618,7 @@ of a custom solution. Thanks to this, the decorations behave much more naturally
 like usual code, you can navigate to definition and get proper hovers. It will
 also allow all editors to support decorations without implementing the
 additional extension to the protocol.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/G6H2aPr.gif" alt="inlay-hints" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2024-04-15-thalium/G6H2aPr.gif?raw=true" alt="inlay-hints" class="img_ev3q"></p>
 <p>Additionally, together with inlay hints we reworked all the decoration settings
 to be included in a single object and two new ones were added:</p>
 <ul>
@@ -4665,7 +4642,7 @@ inlay hints, but without go to definition and hover.</p>
 <p>Another great new feature done by <a href="https://github.com/jkciesluk" target="_blank" rel="noopener noreferrer">jkciesluk</a>
 enables users to get a suggestion that will complete a pattern match with all
 types within a union type.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/yY2TvSk.gif" alt="union" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2024-04-15-thalium/yY2TvSk.gif?raw=true" alt="union" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="debugger-improvements">Debugger improvements<a href="http://scalameta.org/metals/blog/2024/04/15/thalium#debugger-improvements" class="hash-link" aria-label="Direct link to Debugger improvements" title="Direct link to Debugger improvements" translate="no">​</a></h2>
 <p>The Scala debugger adapter library, which is responsible for providing debugging
 experience in Metals, has been released recently under v4.0.0 with a lot of
@@ -4702,7 +4679,7 @@ dependencies as Metals didn't index type hierarchy. Thanks to
 <a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a> it's now possible to do that in both
 Scala and Java files with an exception of JDK to avoid additional cost of
 indexing it in every workspace. The latter will be fixed later on.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/JarfZHE.gif" alt="implementations" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2024-04-15-thalium/JarfZHE.gif?raw=true" alt="implementations" class="img_ev3q"></p>
 <p>As with inlay hints, this feature will not work when using older deprecated
 Scala 2 versions and some of the older Scala 3 3.3.x and 3.4.x versions.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="completions-for-implicit-classes">Completions for implicit classes<a href="http://scalameta.org/metals/blog/2024/04/15/thalium#completions-for-implicit-classes" class="hash-link" aria-label="Direct link to Completions for implicit classes" title="Direct link to Completions for implicit classes" translate="no">​</a></h2>
@@ -4710,7 +4687,7 @@ Scala 2 versions and some of the older Scala 3 3.3.x and 3.4.x versions.</p>
 adding support for completions of old style extension methods that were declared
 within implicit classes. This will work similar to extensions method completions
 for Scala 3.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/pLt8GF2.gif" alt="implicit" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2024-04-15-thalium/pLt8GF2.gif?raw=true" alt="implicit" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="plugin-author-changes">Plugin author changes<a href="http://scalameta.org/metals/blog/2024/04/15/thalium#plugin-author-changes" class="hash-link" aria-label="Direct link to Plugin author changes" title="Direct link to Plugin author changes" translate="no">​</a></h2>
 <p>Doctor format version changed to 6 due to the
 <a href="https://github.com/scalameta/metals/pull/6226" target="_blank" rel="noopener noreferrer">added project Java information</a>.</p>
@@ -5245,9 +5222,9 @@ library dependencies in Bazel definition.</p>
 by <a href="https://github.com/jkciesluk" target="_blank" rel="noopener noreferrer">jkciesluk</a>, with
 <a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a> contributing additional improvements to
 the area.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/HGwKygN.gif" alt="bazel completions" class="img_ev3q"> <em>Completions in a Bazel
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2024-02-07-bismuth/HGwKygN.gif?raw=true" alt="bazel completions" class="img_ev3q"> <em>Completions in a Bazel
 project.</em></p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/ELWMVfa.gif" alt="bazel go to definitions" class="img_ev3q"> <em>Hover and go to
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2024-02-07-bismuth/ELWMVfa.gif?raw=true" alt="bazel go to definitions" class="img_ev3q"> <em>Hover and go to
 definition in a Bazel project.</em></p>
 <p>You can get the slightly more advanced features working by enabling
 <a href="https://scalameta.org/docs/semanticdb/guide.html" target="_blank" rel="noopener noreferrer">SemanticDB</a> in your project.
@@ -5262,11 +5239,11 @@ Simply add the following content to your build:</p>
 <div class="language-Scala language-scala codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-scala codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#bfc7d5"><span class="token plain">register_toolchains(</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">    "//:semanticdb_toolchain",</span><br></span><span class="token-line" style="color:#bfc7d5"><span class="token plain">)</span><br></span></code></pre></div></div>
 </li>
 </ul>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/2mj9QLP.gif" alt="bazel add semanticdb" class="img_ev3q"> <em>Adding SemanticDB to a
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2024-02-07-bismuth/2mj9QLP.gif?raw=true" alt="bazel add semanticdb" class="img_ev3q"> <em>Adding SemanticDB to a
 Bazel project.</em></p>
 <p>Enabling SemanticDB in your Bazel project will allow you to use such features as
 go to references.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/SwNQOIf.gif" alt="bazel go to references" class="img_ev3q"> <em>Go to references in
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2024-02-07-bismuth/SwNQOIf.gif?raw=true" alt="bazel go to references" class="img_ev3q"> <em>Go to references in
 a Bazel project.</em></p>
 <p>You can read more about Metals current support for Bazel and setting it up in
 <a href="https://scalameta.org/metals/docs/build-tools/bazel" target="_blank" rel="noopener noreferrer">documentation</a>. Our Bazel
@@ -5276,7 +5253,7 @@ support is still in the early stages but we'd love to get your feedback!</p>
 can run your code using <code>native</code> and <code>js</code> platforms straight from the editor.
 Just click on the <code>run</code> code lens or trigger debug run in any other way
 appropriate for your editor of choice.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/TTX3crM.gif" alt="run native" class="img_ev3q"> <em>Running a Scala Native program
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2024-02-07-bismuth/TTX3crM.gif?raw=true" alt="run native" class="img_ev3q"> <em>Running a Scala Native program
 using code lenses.</em></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="metals-view-for-uncompiled-changes">Metals view for uncompiled changes<a href="http://scalameta.org/metals/blog/2024/02/07/bismuth#metals-view-for-uncompiled-changes" class="hash-link" aria-label="Direct link to Metals view for uncompiled changes" title="Direct link to Metals view for uncompiled changes" translate="no">​</a></h2>
 <p>In the previous release, metals view was enhanced and brought to Scala 3. You
@@ -5285,7 +5262,7 @@ can read more about that
 The feature was further improved by <a href="https://github.com/tgodzik" target="_blank" rel="noopener noreferrer">tgodzik</a>, and
 now the information about workspace symbols is updated as you write, instead of
 on compile as before.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/whEjhZ0.gif" alt="tree view update" class="img_ev3q"> <em>Tree view updating while
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2024-02-07-bismuth/whEjhZ0.gif?raw=true" alt="tree view update" class="img_ev3q"> <em>Tree view updating while
 typing.</em></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="lsp-progress-support">LSP Progress support<a href="http://scalameta.org/metals/blog/2024/02/07/bismuth#lsp-progress-support" class="hash-link" aria-label="Direct link to LSP Progress support" title="Direct link to LSP Progress support" translate="no">​</a></h2>
 <p>For clients that do not support metals status, slow tasks notifications can now
@@ -5705,7 +5682,7 @@ give Metals a try!</p>
 synthetic decorations such as inferred types or implicit conversions. This was
 not ideal as it meant that the information was not always up to date and could
 be inconsistent with the current state of code.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/td11vRH.gif" alt="synthetics" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2023-12-12-bismuth/td11vRH.gif?raw=true" alt="synthetics" class="img_ev3q"></p>
 <p>To fix that <a href="https://github.com/jkciesluk" target="_blank" rel="noopener noreferrer">jkciesluk</a> switched to using the
 presentation compiler for this information. This means that each time code
 changes the decorations will be refreshed. This also added a number of new
@@ -5724,11 +5701,11 @@ work in Scala 3.</p>
 indexing in case of jars and semanticdb for local workspace files. This means
 that Scala 3 is fully supported and this has been the last big feature missing
 for full parity between Scala 2 and 3.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/Vun4kJh.gif" alt="tree-view" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2023-12-12-bismuth/Vun4kJh.gif?raw=true" alt="tree-view" class="img_ev3q"></p>
 <p>All the existing features should now work for Scala 3 as well. This includes the
 reveal command which allows to quickly reveal the current file in the tree view
 including inside jars.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/xW0W3I3.gif" alt="tree-view-reveal" class="img_ev3q"> Additionally, we improved
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2023-12-12-bismuth/xW0W3I3.gif?raw=true" alt="tree-view-reveal" class="img_ev3q"> Additionally, we improved
 icons used by the tree view. They will now use the default VS Code icons for the
 most part, which should make them more consistent with the rest of the editor.</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="go-to-definition-for-scaladoc">Go to definition for scaladoc<a href="http://scalameta.org/metals/blog/2023/12/12/bismuth#go-to-definition-for-scaladoc" class="hash-link" aria-label="Direct link to Go to definition for scaladoc" title="Direct link to Go to definition for scaladoc" translate="no">​</a></h2>
@@ -5736,7 +5713,7 @@ most part, which should make them more consistent with the rest of the editor.</
 of a form <code>[[name.name.ClassName]]</code>. Thanks to
 <a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a> Metals will now allow you to
 navigate to the target of the link via normal go to definition.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/TYNMCEm.gif" alt="scaladoc-def" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2023-12-12-bismuth/TYNMCEm.gif?raw=true" alt="scaladoc-def" class="img_ev3q"></p>
 <p>To learn more about linking in scaladoc check out the
 <a href="https://docs.scala-lang.org/scala3/guides/scaladoc/linking.html" target="_blank" rel="noopener noreferrer">Scala documentation</a></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="custom-project-root-setting">Custom project root setting<a href="http://scalameta.org/metals/blog/2023/12/12/bismuth#custom-project-root-setting" class="hash-link" aria-label="Direct link to Custom project root setting" title="Direct link to Custom project root setting" translate="no">​</a></h2>
@@ -5749,7 +5726,7 @@ dependency open in the same window.</p>
 <p>To help with that we added a new setting <code>metals.customProjectRoot</code> that allows
 you to specify the root directory for your project. This setting is available in
 the settings UI and can be set to a path relative to the workspace root.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/sgr1j1T.png" alt="custom-root" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2023-12-12-bismuth/sgr1j1T.png?raw=true" alt="custom-root" class="img_ev3q"></p>
 <p>Another amazing feature from <a href="https://github.com/kasiaMarek" target="_blank" rel="noopener noreferrer">kasiaMarek</a></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="bsp-errors-in-status">Bsp errors in status<a href="http://scalameta.org/metals/blog/2023/12/12/bismuth#bsp-errors-in-status" class="hash-link" aria-label="Direct link to Bsp errors in status" title="Direct link to Bsp errors in status" translate="no">​</a></h2>
 <p>In the previous release Metals started showing more errors from the build server
@@ -5760,7 +5737,7 @@ relevant.</p>
 bar item that will show the number of errors in the build server. This will be
 shown only if there are any errors and will be hidden once the reports connected
 to them are removed.</p>
-<p><img decoding="async" loading="lazy" src="https://i.imgur.com/Kdn2347.gif" alt="bsp-status" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" src="https://github.com/scalameta/gh-pages-images/blob/master/metals/2023-12-12-bismuth/Kdn2347.gif?raw=true" alt="bsp-status" class="img_ev3q"></p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="add-back-unintentionally-removed-support-for-211x">Add back unintentionally removed support for 2.11.x<a href="http://scalameta.org/metals/blog/2023/12/12/bismuth#add-back-unintentionally-removed-support-for-211x" class="hash-link" aria-label="Direct link to Add back unintentionally removed support for 2.11.x" title="Direct link to Add back unintentionally removed support for 2.11.x" translate="no">​</a></h2>
 <p>For the most of the releases Scala 2.11.12 support was not being actively
 tested, which led to some of the features not working properly. This release
