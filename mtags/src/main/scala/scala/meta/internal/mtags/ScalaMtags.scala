@@ -454,22 +454,18 @@ class ScalaMtags(
   }
 
   private def collectImplicitClassMembers(cls: Defn.Class): Unit = {
-    // Extract parameter type from the primary constructor
     cls.ctor.paramss match {
       case List(List(param)) =>
-        // Get the parameter type as a string symbol
         param.decltpe match {
           case Some(tpe) =>
             val paramTypeSymbol = typeToSymbol(tpe)
             val classSymbol = symbol(Descriptor.Type(cls.name.value))
             
-            // Log detection of implicit class
             System.err.println(
               s"[ScalaMtags] Detected implicit class: ${cls.name.value}, " +
               s"classSymbol=$classSymbol, paramType=$paramTypeSymbol"
             )
             
-            // Collect all public methods from the class body
             var methodCount = 0
             cls.templ.stats.foreach {
               case defn: Defn.Def if !defn.mods.exists {

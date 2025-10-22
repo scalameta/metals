@@ -583,7 +583,6 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
             referencesProvider.addIdentifiers(source, identifiers)
           )
         
-        // Extract implicit class members from the indexing
         optMtags.foreach { mtags =>
           val implicitMembers = mtags.implicitClassMembers()
           if (implicitMembers.nonEmpty) {

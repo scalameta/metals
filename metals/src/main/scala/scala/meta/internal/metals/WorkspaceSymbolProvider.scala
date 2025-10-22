@@ -78,8 +78,7 @@ final class WorkspaceSymbolProvider(
         s"from ${implicitClassMembers.size} files into cache"
       )
       
-      // Log details about what's being loaded
-      implicitClassMembers.values.flatten.groupBy(_.paramType).foreach { 
+      implicitClassMembers.values.flatten.groupBy(_.paramType).foreach {
         case (paramType, members) =>
           scribe.debug(
             s"[WorkspaceSymbolProvider]   Type $paramType: ${members.size} methods " +
