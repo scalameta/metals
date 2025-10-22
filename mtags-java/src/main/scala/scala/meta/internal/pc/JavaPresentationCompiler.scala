@@ -89,12 +89,16 @@ case class JavaPresentationCompiler(
   override def definition(
       params: OffsetParams
   ): CompletableFuture[DefinitionResult] =
-    CompletableFuture.completedFuture(DefinitionResultImpl.empty)
+    CompletableFuture.completedFuture(
+      new JavaDefinitionProvider(javaCompiler, params).definition()
+    )
 
   override def typeDefinition(
       params: OffsetParams
   ): CompletableFuture[DefinitionResult] =
-    CompletableFuture.completedFuture(DefinitionResultImpl.empty)
+    CompletableFuture.completedFuture(
+      new JavaDefinitionProvider(javaCompiler, params).typeDefinition()
+    )
 
   override def documentHighlight(
       params: OffsetParams
