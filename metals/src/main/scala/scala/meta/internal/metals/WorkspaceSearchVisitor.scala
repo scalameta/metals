@@ -1,7 +1,7 @@
 package scala.meta.internal.metals
 
 import java.nio.file.Path
-import java.{util => ju}
+import java.util.concurrent.ConcurrentLinkedQueue
 
 import scala.collection.mutable
 
@@ -35,9 +35,9 @@ class WorkspaceSearchVisitor(
     resultOrdering: Ordering[SymbolDefinition] = DefaultSymbolDefinitionOrdering,
 )(implicit rc: ReportContext)
     extends SymbolSearchVisitor {
-  private val fromWorkspace = new ju.ArrayList[l.SymbolInformation]()
-  private val fromClasspath = new ju.ArrayList[l.SymbolInformation]()
-  private val bufferedClasspath = new ju.ArrayList[(String, String)]()
+  private val fromWorkspace = new ConcurrentLinkedQueue[l.SymbolInformation]()
+  private val fromClasspath = new ConcurrentLinkedQueue[l.SymbolInformation]()
+  private val bufferedClasspath = new ConcurrentLinkedQueue[(String, String)]()
   def allResults(): Seq[l.SymbolInformation] = {
     if (fromWorkspace.isEmpty) {
       bufferedClasspath.forEach { case (pkg, name) =>
@@ -45,41 +45,39 @@ class WorkspaceSearchVisitor(
       }
     }
 
-    fromWorkspace.sort(byNameLength)
-    fromClasspath.sort(byNameLength)
+    val sortedFromWorkspace =
+      fromWorkspace.asScala.toBuffer.sorted(byNameLength)
+    val sortedFromClasspath =
+      fromClasspath.asScala.toBuffer.sorted(byNameLength)
 
-    val result = new ju.ArrayList[l.SymbolInformation]()
-    result.addAll(fromWorkspace)
-    result.addAll(fromClasspath)
+    val result = Seq.newBuilder[l.SymbolInformation]
+    result ++= sortedFromWorkspace
+    result ++= sortedFromClasspath
 
     if (!bufferedClasspath.isEmpty && fromClasspath.isEmpty) {
       val dependencies = workspace.resolve(Directories.workspaceSymbol)
       if (!dependencies.isFile) {
         dependencies.writeText(Messages.WorkspaceSymbolDependencies.title)
       }
-      result.add(
-        new l.SymbolInformation(
-          Messages.WorkspaceSymbolDependencies.title,
-          // NOTE(olafur) The "Event" symbol kind is arbitrarily picked, in VS
-          // Code its icon is a yellow lightning which makes it similar but
-          // distinct enough from the regular results. I tried the "File" kind
-          // but found the icon in VS Code to be ugly and its white color
-          // attracted too much attention.
-          SymbolKind.Event,
-          new l.Location(
-            dependencies.toURI.toString(),
-            new l.Range(new l.Position(0, 0), new l.Position(0, 0)),
-          ),
-        )
+      result += new l.SymbolInformation(
+        Messages.WorkspaceSymbolDependencies.title,
+        // NOTE(olafur) The "Event" symbol kind is arbitrarily picked, in VS
+        // Code its icon is a yellow lightning which makes it similar but
+        // distinct enough from the regular results. I tried the "File" kind
+        // but found the icon in VS Code to be ugly and its white color
+        // attracted too much attention.
+        SymbolKind.Event,
+        new l.Location(
+          dependencies.toURI.toString(),
+          new l.Range(new l.Position(0, 0), new l.Position(0, 0)),
+        ),
       )
     }
-    result.asScala.toSeq
+    result.result()
   }
-  private val byNameLength = new ju.Comparator[l.SymbolInformation] {
-    def compare(x: l.SymbolInformation, y: l.SymbolInformation): Int = {
-      Integer.compare(x.getName().length(), y.getName().length())
-    }
-  }
+  private val byNameLength = Ordering.by[l.SymbolInformation, Int](info =>
+    if (info.getName() == null) Int.MaxValue else info.getName().length()
+  )
   private val isVisited: mutable.Set[AbsolutePath] =
     mutable.Set.empty[AbsolutePath]
   private def definition(
