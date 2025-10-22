@@ -165,6 +165,15 @@ class CompletionCrossLspSuite
            |    "libraryDependencies": ["io.circe::circe-core:0.14.1"]
            |  }
            |}
+           |/a/src/main/scala/example/ImplicitOps.scala
+           |package example
+           |
+           |object Implicits {
+           |  implicit class MyIntOps(val n: Int) {
+           |    def doubled: Int = n * 2
+           |    def tripled: Int = n * 3
+           |  }
+           |}
            |/a/src/main/scala/a/A.scala
            |package example
            |
@@ -176,23 +185,22 @@ class CompletionCrossLspSuite
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiagnostics()
       _ <- assertCompletion(
-        "2.asJ@@",
-        """|asJson(implicit encoder: Encoder[A]): Json (implicit)
-           |asJsonObject(implicit encoder: Encoder.AsObject[A]): JsonObject (implicit)
+        "2.dou@@",
+        """|doubled: Int (implicit)
            |""".stripMargin,
-        filter = _.contains("asJson"),
+        filter = _.contains("doubled"),
       )
       _ <- assertCompletionEdit(
-        "2.asJ@@",
+        "2.dou@@",
         """|package example
            |
-           |import io.circe.syntax.EncoderOps
+           |import example.Implicits.MyIntOps
            |
            |object Main {
-           |  2.asJson
+           |  2.doubled
            |}
            |""".stripMargin,
-        filter = _.contains("asJson"),
+        filter = _.contains("doubled"),
       )
     } yield ()
   }

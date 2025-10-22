@@ -434,7 +434,33 @@ class CompletionProvider(
         typedTreeAt(pos) match {
           case Select(qualifier, _)
               if qualifier.tpe != null && !qualifier.tpe.isError =>
-            workspaceExtensionMethods(query, pos, visit, qualifier.tpe)
+            logger.info(
+              s"[CompletionProvider] Member selection detected on type: ${qualifier.tpe}"
+            )
+            val result = workspaceExtensionMethods(query, pos, visit, qualifier.tpe)
+            // Also add indexed implicit class members
+            val implicitMembers = findIndexedImplicitExtensionsForType(qualifier.tpe, pos)
+            if (implicitMembers.nonEmpty) {
+              logger.info(
+                s"[CompletionProvider] Found ${implicitMembers.size} implicit class members " +
+                s"for type ${qualifier.tpe}"
+              )
+            }
+            implicitMembers.foreach { ext =>
+              val isInheritedFromAnyVal =
+                ext.sym.owner == definitions.AnyValClass ||
+                  ext.sym.name == nme.equals_ ||
+                  ext.sym.name == nme.hashCode_ ||
+                  ext.sym.name == nme.toString_
+
+              if (!isInheritedFromAnyVal) {
+                logger.info(
+                  s"[CompletionProvider]   Adding implicit member: ${ext.sym.name}"
+                )
+                visit(ext)
+              }
+            }
+            result
           case _ => SymbolSearch.Result.COMPLETE
         }
       }

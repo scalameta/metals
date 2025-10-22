@@ -132,4 +132,51 @@ class MetalsSymbolSearch(
       Some(new BuildTargetIdentifier(buildTargetIdentifier)),
     )
   }
+
+  override def queryImplicitClassMembers(
+      paramTypeSymbol: String
+  ): ju.List[scala.meta.pc.ImplicitClassMemberResult] = {
+    import scala.meta.internal.jdk.CollectionConverters._
+    
+    scribe.info(
+      s"[MetalsSymbolSearch] Querying implicit class members for type: $paramTypeSymbol"
+    )
+    
+    val totalCached = wsp.implicitClassMembers.values.flatten.size
+    scribe.info(
+      s"[MetalsSymbolSearch] Total implicit class members in cache: $totalCached"
+    )
+    
+    val results = List.newBuilder[scala.meta.pc.ImplicitClassMemberResult]
+    
+    // Query the indexed implicit class members from WorkspaceSymbolProvider
+    wsp.implicitClassMembers.values.flatten.foreach { member =>
+      // Check if this implicit class accepts the parameter type
+      if (member.paramType == paramTypeSymbol) {
+        scribe.debug(
+          s"[MetalsSymbolSearch]   Match found: ${member.methodName} from ${member.classSymbol}"
+        )
+        results += new scala.meta.pc.ImplicitClassMemberResult(
+          member.methodSymbol,
+          member.methodName,
+          member.classSymbol
+        )
+      }
+    }
+    
+    val resultList = results.result()
+    if (resultList.nonEmpty) {
+      scribe.info(
+        s"[MetalsSymbolSearch] Found ${resultList.size} implicit class members for $paramTypeSymbol"
+      )
+    } else {
+      scribe.debug(
+        s"[MetalsSymbolSearch] No implicit class members found for $paramTypeSymbol"
+      )
+    }
+    
+    resultList.asJava
+  }
+
+  def workspaceSymbols(): WorkspaceSymbolProvider = wsp
 }

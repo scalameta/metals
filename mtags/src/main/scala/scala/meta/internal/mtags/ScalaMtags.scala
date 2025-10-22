@@ -38,6 +38,11 @@ class ScalaMtags(
     }
   }
 
+  private val implicitClassMembersBuilder =
+    List.newBuilder[ImplicitClassMember]
+  override def implicitClassMembers(): List[ImplicitClassMember] =
+    implicitClassMembersBuilder.result()
+
   private var _toplevelSourceRef: Option[(String, OverloadDisambiguator)] = None
   private def toplevelSourceData: (String, OverloadDisambiguator) = {
     _toplevelSourceRef match {
@@ -253,11 +258,15 @@ class ScalaMtags(
           continue()
         case t: Defn.Class =>
           val isImplicit = t.mods.has[Mod.Implicit]
+          System.err.println(s"[ScalaMtags.loop] Processing class: ${t.name.value}, isImplicit=$isImplicit")
           if (isImplicit) {
+            System.err.println(s"[ScalaMtags.loop] Found implicit class: ${t.name.value}, calling collectImplicitClassMembers")
             // emit symbol for implicit conversion
             withOwner() {
               method(t.name, "()", Kind.METHOD, Property.IMPLICIT.value)
             }
+            // collect implicit class information for indexing
+            collectImplicitClassMembers(t)
           }
           val properties = if (t.mods.has[Mod.Case]) Property.CASE.value else 0
           tpe(t.name, Kind.CLASS, properties)
@@ -442,5 +451,92 @@ class ScalaMtags(
       }
     }
     extract(t, 0)
+  }
+
+  private def collectImplicitClassMembers(cls: Defn.Class): Unit = {
+    // Extract parameter type from the primary constructor
+    cls.ctor.paramss match {
+      case List(List(param)) =>
+        // Get the parameter type as a string symbol
+        param.decltpe match {
+          case Some(tpe) =>
+            val paramTypeSymbol = typeToSymbol(tpe)
+            val classSymbol = symbol(Descriptor.Type(cls.name.value))
+            
+            // Log detection of implicit class
+            System.err.println(
+              s"[ScalaMtags] Detected implicit class: ${cls.name.value}, " +
+              s"classSymbol=$classSymbol, paramType=$paramTypeSymbol"
+            )
+            
+            // Collect all public methods from the class body
+            var methodCount = 0
+            cls.templ.stats.foreach {
+              case defn: Defn.Def if !defn.mods.exists {
+                    case Mod.Private(_) => true
+                    case Mod.Protected(_) => true
+                    case _ => false
+                  } =>
+                val methodSymbol = Symbols.Global(
+                  classSymbol,
+                  Descriptor.Method(defn.name.value, "()")
+                )
+                implicitClassMembersBuilder += ImplicitClassMember(
+                  classSymbol = classSymbol,
+                  paramType = paramTypeSymbol,
+                  methodSymbol = methodSymbol,
+                  methodName = defn.name.value,
+                  range = cls.pos.toSemanticdb
+                )
+                methodCount += 1
+                System.err.println(
+                  s"[ScalaMtags]   Method: ${defn.name.value}, methodSymbol=$methodSymbol"
+                )
+              case _ => // ignore non-method members
+            }
+            
+            if (methodCount > 0) {
+              System.err.println(
+                s"[ScalaMtags] Indexed implicit class ${cls.name.value} " +
+                s"with $methodCount methods for type $paramTypeSymbol"
+              )
+            }
+          case None => // no type annotation on parameter
+        }
+      case _ => // not a single-parameter constructor
+    }
+  }
+
+  private def typeToSymbol(tpe: Type): String = {
+    tpe match {
+      case Type.Name(value) =>
+        // Simple type name - check if it's a well-known scala type
+        // Common Scala types are assumed to be in scala package
+        val scalaTypes = Set("Int", "Long", "Float", "Double", "Boolean", "Char", "Byte", "Short", "String", "Any", "AnyRef", "AnyVal", "Unit", "Nothing", "Null")
+        if (scalaTypes.contains(value)) {
+          s"scala/${value}#"
+        } else {
+          // For other types, try current owner's package
+          s"${currentOwner}${value}#"
+        }
+      case Type.Select(qual, Type.Name(name)) =>
+        // Qualified type like scala.Int
+        qualToSymbol(qual) + Descriptor.Type(name).value
+      case Type.Apply(base, _) =>
+        // Generic type, use base type
+        typeToSymbol(base)
+      case _ =>
+        // Fallback
+        "scala/Any#"
+    }
+  }
+
+  private def qualToSymbol(qual: Term.Ref): String = {
+    qual match {
+      case Term.Name(value) => value + "/"
+      case Term.Select(q: Term.Ref, Term.Name(name)) =>
+        qualToSymbol(q) + name + "/"
+      case _ => ""
+    }
   }
 }

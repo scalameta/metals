@@ -9,8 +9,11 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.mtags.ImplicitClassMember
+import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.ToplevelMember
 import scala.meta.internal.pc.InterruptException
+import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 import scala.meta.pc.SymbolSearch
@@ -32,7 +35,7 @@ final class WorkspaceSymbolProvider(
     bucketSize: Int = CompressedPackageIndex.DefaultBucketSize,
     classpathSearchIndexer: ClasspathSearch.Indexer =
       ClasspathSearch.Indexer.default,
-)(implicit rc: ReportContext) {
+)(implicit rc: ReportContext) extends SemanticdbFeatureProvider {
   val MaxWorkspaceMatchesForShortQuery = 100
   val inWorkspace: TrieMap[Path, WorkspaceSymbolsIndex] =
     TrieMap.empty[Path, WorkspaceSymbolsIndex]
@@ -49,6 +52,9 @@ final class WorkspaceSymbolProvider(
   val topLevelMembers: TrieMap[AbsolutePath, Seq[ToplevelMember]] =
     TrieMap.empty[AbsolutePath, Seq[ToplevelMember]]
 
+  val implicitClassMembers: TrieMap[AbsolutePath, Seq[ImplicitClassMember]] =
+    TrieMap.empty[AbsolutePath, Seq[ImplicitClassMember]]
+
   def search(
       query: String,
       fileInFocus: Option[AbsolutePath],
@@ -60,6 +66,28 @@ final class WorkspaceSymbolProvider(
       toplevelMembers: Map[AbsolutePath, Seq[ToplevelMember]]
   ): Unit = {
     topLevelMembers ++= toplevelMembers
+  }
+
+  def addImplicitClassMembers(
+      implicitClassMembers: Map[AbsolutePath, Seq[ImplicitClassMember]]
+  ): Unit = {
+    val totalMembers = implicitClassMembers.values.map(_.size).sum
+    if (totalMembers > 0) {
+      scribe.info(
+        s"[WorkspaceSymbolProvider] Loading $totalMembers implicit class members " +
+        s"from ${implicitClassMembers.size} files into cache"
+      )
+      
+      // Log details about what's being loaded
+      implicitClassMembers.values.flatten.groupBy(_.paramType).foreach { 
+        case (paramType, members) =>
+          scribe.debug(
+            s"[WorkspaceSymbolProvider]   Type $paramType: ${members.size} methods " +
+            s"(${members.map(_.methodName).mkString(", ")})"
+          )
+      }
+    }
+    this.implicitClassMembers ++= implicitClassMembers
   }
 
   def search(
@@ -417,6 +445,43 @@ final class WorkspaceSymbolProvider(
           new PreferredScalaVersionOrdering(preferredScalaVersions.toSet)
       }
     }
+  }
+  
+  // Implement SemanticdbFeatureProvider interface
+  override def onChange(docs: TextDocuments, path: AbsolutePath): Unit = {
+    scribe.info(s"[WorkspaceSymbolProvider.onChange] Called for $path")
+    // Extract implicit class members from semanticdb after compilation
+    if (path.isScalaFilename) {
+      val dialect = ScalaVersions.dialectForScalaVersion(
+        buildTargets.scalaVersion(path).getOrElse(BuildInfo.scala213),
+        includeSource3 = true
+      )
+      try {
+        val (_, _, _, implicitMembers) = Mtags.extendedIndexing(path, dialect)
+        scribe.info(
+          s"[WorkspaceSymbolProvider.onChange] Extracted ${implicitMembers.size} implicit class members from $path"
+        )
+        if (implicitMembers.nonEmpty) {
+          scribe.info(
+            s"[WorkspaceSymbolProvider.onChange] Adding ${implicitMembers.size} implicit class members to cache"
+          )
+          addImplicitClassMembers(Map(path -> implicitMembers))
+        }
+      } catch {
+        case NonFatal(e) =>
+          scribe.warn(s"Failed to extract implicit class members from $path: ${e.getMessage}", e)
+      }
+    }
+  }
+  
+  override def onDelete(path: AbsolutePath): Unit = {
+    // Remove implicit class members when file is deleted
+    implicitClassMembers.remove(path)
+  }
+  
+  override def reset(): Unit = {
+    // Clear implicit class members cache
+    implicitClassMembers.clear()
   }
 }
 case class PackageNode(
