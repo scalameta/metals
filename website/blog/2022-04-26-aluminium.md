@@ -71,7 +71,7 @@ currently:
 - displays the compilation status of project
 - allows to navigate to the build target info for each target
 
-![new-doctor-view](https://imgur.com/ByzzlM8.png)
+![new-doctor-view](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-04-26-aluminium/ByzzlM8.png?raw=true)
 
 ## Create companion object code action
 
@@ -79,7 +79,7 @@ Thanks to the efforts of [zmerr](https://github.com/zmerr), Metals offers a new
 code action - `Create companion object`. As its name suggests, it can be used to
 automatically create a companion object for the given class, trait or enum.
 
-![create-companion-object-code-action](https://imgur.com/HW5rr5f.gif) Theme:
+![create-companion-object-code-action](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-04-26-aluminium/HW5rr5f.gif?raw=true) Theme:
 [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
 ## Add status bar when starting a debug session
@@ -94,18 +94,18 @@ Until now, the user had no idea what is happening because Metals didn't show any
 progress indicator. [ckipp01](https://github.com/ckipp01) addressed this problem
 and added a status bar for each of the steps.
 
-![start-debug-session-status-bar](https://imgur.com/qh7Jzdy.gif) Theme:
+![start-debug-session-status-bar](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-04-26-aluminium/qh7Jzdy.gif?raw=true) Theme:
 [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
 ## Ensure the "no run or test" message is shown to user.
 
 There is a command `Run main class or tests in current file` which is a
 convenient way, as name suggests, of running main class:
-![run-main](https://imgur.com/rShZ8L3.gif) Theme:
+![run-main](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-04-26-aluminium/rShZ8L3.gif?raw=true) Theme:
 [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
 or running tests in the current file:
-![run-tests](https://imgur.com/BtbOubC.gif) Theme:
+![run-tests](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-04-26-aluminium/BtbOubC.gif?raw=true) Theme:
 [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
 It is also possible to just press `F5` in file and Metals will execute main
@@ -114,7 +114,7 @@ class or run tests in the current file if no run configuration is defined.
 However, this command was silently failing when there was no class or test to
 run in the file. This is no longer the case, now Metals will display proper
 error message in this scenario.
-![no-class-to-run](https://imgur.com/xda3ApF.gif) Theme:
+![no-class-to-run](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-04-26-aluminium/xda3ApF.gif?raw=true) Theme:
 [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
 ## Show better unnaply signatures
@@ -122,7 +122,7 @@ error message in this scenario.
 Previously, when pattern matching Metals was showing real `unnaply` method
 signature, which wasn't very useful. Now, Metals properly uses unapply result
 type to show what types can be matched on.
-![unnaply-signatures](https://imgur.com/Gzg11YT.png) Theme:
+![unnaply-signatures](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-04-26-aluminium/Gzg11YT.png?raw=true) Theme:
 [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
 ## Provide an easier way to configure bloop settings
@@ -135,7 +135,7 @@ Each modification of `Bloop Jvm Properties` settings will try to update that
 global file if possible. In case of manually configured settings, Metals will
 inform user about it and ask for their action.
 
-![update-bloop-settings](https://imgur.com/Xz2gO0h.gif) Theme:
+![update-bloop-settings](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-04-26-aluminium/Xz2gO0h.gif?raw=true) Theme:
 [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
 ## Better MUnit support in Test Explorer
@@ -144,7 +144,7 @@ Disclaimer: **this works only when Bloop is a build server**
 
 Test Explorer in Metals is now able to detect some single test cases for
 [MUnit](https://scalameta.org/munit/) test framework.
-![munit-single-tests](https://imgur.com/QQMLy6M.png) Theme:
+![munit-single-tests](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-04-26-aluminium/QQMLy6M.png?raw=true) Theme:
 [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
 More information about current MUnit support status can be found at this

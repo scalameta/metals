@@ -6,7 +6,7 @@ title: Emacs
 Metals works in Emacs thanks to the
 [`lsp-mode`](https://github.com/emacs-lsp/lsp-mode) package (another option is the [Eglot](#eglot) package).
 
-![Emacs demo](https://i.imgur.com/KJQLMZ7.gif)
+![Emacs demo](https://github.com/scalameta/gh-pages-images/blob/master/metals/emacs/KJQLMZ7.gif?raw=true)
 
 ```scala mdoc:requirements
 
@@ -177,14 +177,14 @@ The above shall become unnecessary once [this issue](https://github.com/emacs-ls
 
 To manually trigger a build import, run `M-x lsp-metals-build-import`.
 
-![Import build command](https://i.imgur.com/SvGXJDK.png)
+![Import build command](https://github.com/scalameta/gh-pages-images/blob/master/metals/emacs/SvGXJDK.png?raw=true)
 
 ## Run doctor
 
 Run `M-x lsp-metals-doctor-run` to troubleshoot potential configuration problems
 in your build.
 
-![Run doctor command](https://i.imgur.com/yelm0jd.png)
+![Run doctor command](https://github.com/scalameta/gh-pages-images/blob/master/metals/emacs/yelm0jd.png?raw=true)
 
 ### eglot
 

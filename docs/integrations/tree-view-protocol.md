@@ -14,7 +14,7 @@ One "tree view" represents the root of a tree along with all of its descendent
 tree nodes. Multiple tree views can be displayed at the same time in an editor
 client.
 
-![Example tree views](https://i.imgur.com/FRWL3Aq.png)
+![Example tree views](https://github.com/scalameta/gh-pages-images/blob/master/metals/tree-view-protocol/FRWL3Aq.png?raw=true)
 
 A tree view is uniquely identified by a `viewId: string` field in other data
 structures.

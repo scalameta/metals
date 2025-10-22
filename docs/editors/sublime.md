@@ -6,7 +6,7 @@ title: Sublime Text
 Metals works with Sublime Text (build 4000 or later) thanks to the
 [sublimelsp/LSP](https://github.com/sublimelsp/LSP) and [scalameta/metals-sublime](https://github.com/scalameta/metals-sublime) plugins.
 
-![Sublime Text demo](https://i.imgur.com/vJKP0T3.gif)
+![Sublime Text demo](https://github.com/scalameta/gh-pages-images/blob/master/metals/sublime/vJKP0T3.gif?raw=true)
 
 ```scala mdoc:requirements
 
@@ -40,7 +40,7 @@ definition.
 
 ## Importing a build
 
-![Build Import](https://i.imgur.com/eUk30Zy.png)
+![Build Import](https://github.com/scalameta/gh-pages-images/blob/master/metals/sublime/eUk30Zy.png?raw=true)
 
 Open Sublime in the base directory of your Scala project and it will then prompt you to import the build as long as you're using one of the [supported build tools](https://scalameta.org/metals/docs/build-tools/overview.html). Click "Import build" to start the installation step.
 
@@ -55,7 +55,7 @@ workspace. The exact time depends on the complexity of the build and if the libr
 For more detailed information about what is happening behind the scenes during
 `sbt bloopInstall` run `lsp toggle server panel` in the command palette. You can optionally add key binding for this command.
 
-![Server logs](https://i.imgur.com/PilER2E.png)
+![Server logs](https://github.com/scalameta/gh-pages-images/blob/master/metals/sublime/PilER2E.png?raw=true)
 
 Once the import step completes, compilation starts for your open `*.scala`
 files. Once the sources have compiled successfully, you can navigate the
@@ -66,17 +66,17 @@ sources with "Goto definition" by pressing `F12`.
 The default key binding is `shift+F12`. If you use vim-bindings, you need to be
 in insert-mode.
 
-![Find references](https://i.imgur.com/BJDkczD.gif)
+![Find references](https://github.com/scalameta/gh-pages-images/blob/master/metals/sublime/BJDkczD.gif?raw=true)
 
 ## Goto symbol in workspace
 
 You can search for symbols in your dependency source using the command palette.
 
-![workspace symbols](https://i.imgur.com/8X0XNi2.gif)
+![workspace symbols](https://github.com/scalameta/gh-pages-images/blob/master/metals/sublime/8X0XNi2.gif?raw=true)
 
 ## Manually trigger build import
 
-![Import build command](https://i.imgur.com/LViPc95.png)
+![Import build command](https://github.com/scalameta/gh-pages-images/blob/master/metals/sublime/LViPc95.png?raw=true)
 
 You can optionally register a key binding for the command.
 
@@ -107,7 +107,7 @@ set following setting in the "Preferences > Preferences: LSP Settings":
 }
 ```
 
-![Symbol references in the popup](https://i.imgur.com/7tSiEfX.gif
+![Symbol references in the popup](https://github.com/scalameta/gh-pages-images/blob/master/metals/sublime/7tSiEfX.gif?raw=true
 )
 
 ### Additional key mappings 
@@ -128,7 +128,7 @@ definition.
   }
 ]
 ```
-![Add key mapping for formatting document via scalafmt](https://i.imgur.com/wVjC1Ij.gif)
+![Add key mapping for formatting document via scalafmt](https://github.com/scalameta/gh-pages-images/blob/master/metals/sublime/wVjC1Ij.gif?raw=true)
 
 
 ### Add key mapping for Goto symbol in workspace
@@ -163,7 +163,7 @@ Open "Preferences > Key Binding" and add:
 ```
 
 
-![Import after Enter key was hit](https://i.imgur.com/RDYx9mB.gif)
+![Import after Enter key was hit](https://github.com/scalameta/gh-pages-images/blob/master/metals/sublime/RDYx9mB.gif?raw=true)
 
 ## Using latest Metals SNAPSHOT
 

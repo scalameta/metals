@@ -354,7 +354,7 @@ bottle-neck appears to be starting the file watcher and parsing all `*.scala`
 and `*.java` sources in the workspace. The following flamegraph shows a detailed
 breakdown of what goes on during indexing.
 
-![Akka indexing flamegraph](https://i.imgur.com/Xhr1wXp.jpg)(https://geirsson.com/assets/metals-akka-initialize.svg)
+![Akka indexing flamegraph](https://github.com/scalameta/gh-pages-images/blob/master/metals/2019-01-22-bloom-filters/Xhr1wXp.jpg?raw=true)(https://geirsson.com/assets/metals-akka-initialize.svg)
 
 > Click on image to interactively explore the flamegraph.
 
@@ -371,7 +371,7 @@ the distribution is different for how long each indexing task takes. Prisma has
 fewer sources (80k lines of Scala code, no Java) and a larger number of library
 dependencies compared to Akka.
 
-![Prisma indexing flamegraph](https://i.imgur.com/JR3SNx6.jpg)(https://geirsson.com/assets/metals-prisma-initialize.svg)
+![Prisma indexing flamegraph](https://github.com/scalameta/gh-pages-images/blob/master/metals/2019-01-22-bloom-filters/JR3SNx6.jpg?raw=true)(https://geirsson.com/assets/metals-prisma-initialize.svg)
 
 > Click on image to interactively explore the flamegraph.
 
@@ -411,4 +411,4 @@ installation instructions here
 https://scalameta.org/metals/docs/editors/overview.html.
 
 The indexer is working when the status bar says `Indexing⠋`
-![Indexing status bar](https://i.imgur.com/6VLPu9c.gif)
+![Indexing status bar](https://github.com/scalameta/gh-pages-images/blob/master/metals/2019-01-22-bloom-filters/6VLPu9c.gif?raw=true)
