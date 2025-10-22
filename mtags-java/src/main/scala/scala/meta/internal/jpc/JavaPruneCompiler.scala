@@ -56,6 +56,8 @@ class JavaPruneCompiler(
   // ever contain a single entry.
   val originalURIs = new mutable.HashMap[JavaFileObject, String]()
 
+  val patches = new mutable.HashSet[PatchedModule]()
+
   override def close(): Unit = {
     fileManager.close()
   }
@@ -87,7 +89,17 @@ class JavaPruneCompiler(
     }
     options ++= processExtraOptions(extraOptions, file)
     // Add --patch-module option if we're compiling sources from the JDK.
-    options ++= file.patch.toList.flatMap(_.asOptions)
+    file.patch.foreach { patch =>
+      if (!patches.contains(patch)) {
+        // The JavaCompiler instance is stateful and only allows you to define
+        // the --patch-module option once per module. It throws an exception if
+        // you define conflicting patches, and we automatically handle this by
+        // throwing a DuplicatePatchModuleException, which triggers a restart of
+        // the JavaCompiler instance.
+        patches.add(patch)
+        options ++= patch.asOptions
+      }
+    }
     options.result()
   }
 

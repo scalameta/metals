@@ -21,16 +21,11 @@ class SourceJavaFileObject(
   override def toUri(): URI = uri
 }
 
-class PatchedModule(moduleName: String, sourceRoot: String) {
+case class PatchedModule(moduleName: String, sourceRoot: String) {
   def asOptions: List[String] = List(
     "--patch-module",
     s"$moduleName=$sourceRoot"
   )
-  override def toString(): String = s"PatchedModule($moduleName, $sourceRoot)"
-}
-object PatchedModule {
-  def unapply(source: SourceJavaFileObject): Option[PatchedModule] =
-    source.patchedModule
 }
 
 object SourceJavaFileObject {
