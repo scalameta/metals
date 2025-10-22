@@ -35,7 +35,8 @@ final class WorkspaceSymbolProvider(
     bucketSize: Int = CompressedPackageIndex.DefaultBucketSize,
     classpathSearchIndexer: ClasspathSearch.Indexer =
       ClasspathSearch.Indexer.default,
-)(implicit rc: ReportContext) extends SemanticdbFeatureProvider {
+)(implicit rc: ReportContext)
+    extends SemanticdbFeatureProvider {
   val MaxWorkspaceMatchesForShortQuery = 100
   val inWorkspace: TrieMap[Path, WorkspaceSymbolsIndex] =
     TrieMap.empty[Path, WorkspaceSymbolsIndex]
@@ -75,14 +76,14 @@ final class WorkspaceSymbolProvider(
     if (totalMembers > 0) {
       scribe.info(
         s"[WorkspaceSymbolProvider] Loading $totalMembers implicit class members " +
-        s"from ${implicitClassMembers.size} files into cache"
+          s"from ${implicitClassMembers.size} files into cache"
       )
-      
+
       implicitClassMembers.values.flatten.groupBy(_.paramType).foreach {
         case (paramType, members) =>
           scribe.debug(
             s"[WorkspaceSymbolProvider]   Type $paramType: ${members.size} methods " +
-            s"(${members.map(_.methodName).mkString(", ")})"
+              s"(${members.map(_.methodName).mkString(", ")})"
           )
       }
     }
@@ -445,7 +446,7 @@ final class WorkspaceSymbolProvider(
       }
     }
   }
-  
+
   // Implement SemanticdbFeatureProvider interface
   override def onChange(docs: TextDocuments, path: AbsolutePath): Unit = {
     scribe.info(s"[WorkspaceSymbolProvider.onChange] Called for $path")
@@ -453,7 +454,7 @@ final class WorkspaceSymbolProvider(
     if (path.isScalaFilename) {
       val dialect = ScalaVersions.dialectForScalaVersion(
         buildTargets.scalaVersion(path).getOrElse(BuildInfo.scala213),
-        includeSource3 = true
+        includeSource3 = true,
       )
       try {
         val (_, _, _, implicitMembers) = Mtags.extendedIndexing(path, dialect)
@@ -468,16 +469,19 @@ final class WorkspaceSymbolProvider(
         }
       } catch {
         case NonFatal(e) =>
-          scribe.warn(s"Failed to extract implicit class members from $path: ${e.getMessage}", e)
+          scribe.warn(
+            s"Failed to extract implicit class members from $path: ${e.getMessage}",
+            e,
+          )
       }
     }
   }
-  
+
   override def onDelete(path: AbsolutePath): Unit = {
     // Remove implicit class members when file is deleted
     implicitClassMembers.remove(path)
   }
-  
+
   override def reset(): Unit = {
     // Clear implicit class members cache
     implicitClassMembers.clear()

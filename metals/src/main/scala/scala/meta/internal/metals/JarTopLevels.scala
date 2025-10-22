@@ -78,9 +78,12 @@ final class JarTopLevels(conn: () => Connection) extends JarIndexingInfo(conn) {
       toplevels: List[(String, AbsolutePath)],
       type_hierarchy: List[(AbsolutePath, String, OverriddenSymbol)],
       toplevelMembers: Map[AbsolutePath, List[ToplevelMember]] = Map.empty,
-      implicitClassMembers: Map[AbsolutePath, List[ImplicitClassMember]] = Map.empty,
+      implicitClassMembers: Map[AbsolutePath, List[ImplicitClassMember]] =
+        Map.empty,
   ): Int = {
-    if (toplevels.isEmpty && type_hierarchy.isEmpty && toplevelMembers.isEmpty && implicitClassMembers.isEmpty)
+    if (
+      toplevels.isEmpty && type_hierarchy.isEmpty && toplevelMembers.isEmpty && implicitClassMembers.isEmpty
+    )
       0
     else {
       // Add jar to H2
@@ -92,7 +95,10 @@ final class JarTopLevels(conn: () => Connection) extends JarIndexingInfo(conn) {
           putToplevels(jar, toplevels) + putTypeHierarchyInfo(
             jar,
             type_hierarchy,
-          ) + putToplevelMembersInfo(jar, toplevelMembers) + putImplicitClassMembersInfo(jar, implicitClassMembers)
+          ) + putToplevelMembersInfo(
+            jar,
+            toplevelMembers,
+          ) + putImplicitClassMembersInfo(jar, implicitClassMembers)
         )
         .getOrElse(0)
     }
@@ -414,7 +420,7 @@ class JarIndexingInfo(conn: () => Connection) {
       scribe.info(
         s"[JarTopLevels] Storing $totalMembers implicit class members from ${implicitClassMemberMap.size} files to database"
       )
-      
+
       // Add implicit class members for jar to H2
       var implicitClassMemberStmt: PreparedStatement = null
       try {
@@ -426,7 +432,7 @@ class JarIndexingInfo(conn: () => Connection) {
           implicitClassMembers.foreach { member =>
             scribe.debug(
               s"[JarTopLevels]   Storing: paramType=${member.paramType}, " +
-              s"method=${member.methodName}, methodSymbol=${member.methodSymbol}"
+                s"method=${member.methodName}, methodSymbol=${member.methodSymbol}"
             )
             implicitClassMemberStmt.setString(1, member.classSymbol)
             implicitClassMemberStmt.setString(2, member.paramType)
@@ -446,7 +452,9 @@ class JarIndexingInfo(conn: () => Connection) {
         }
         // Return number of rows inserted
         val inserted = implicitClassMemberStmt.executeBatch().sum
-        scribe.info(s"[JarTopLevels] Successfully stored $inserted implicit class members")
+        scribe.info(
+          s"[JarTopLevels] Successfully stored $inserted implicit class members"
+        )
         inserted
       } catch {
         case e: JdbcBatchUpdateException =>
@@ -473,7 +481,8 @@ class JarIndexingInfo(conn: () => Connection) {
   ): Option[Map[AbsolutePath, List[ImplicitClassMember]]] =
     try {
       val fs = getFileSystem(jar)
-      val implicitClassMembers = List.newBuilder[(AbsolutePath, ImplicitClassMember)]
+      val implicitClassMembers =
+        List.newBuilder[(AbsolutePath, ImplicitClassMember)]
       conn()
         .query(
           """select icm.class_symbol, icm.param_type, icm.method_symbol, icm.method_name, icm.start_line, icm.start_character, icm.end_line, icm.end_character, icm.path
@@ -499,7 +508,7 @@ class JarIndexingInfo(conn: () => Connection) {
               paramType,
               methodSymbol,
               methodName,
-              range
+              range,
             ))
           }
         }

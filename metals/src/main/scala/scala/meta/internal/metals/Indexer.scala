@@ -582,17 +582,19 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
           .foreach(identifiers =>
             referencesProvider.addIdentifiers(source, identifiers)
           )
-        
+
         optMtags.foreach { mtags =>
           val implicitMembers = mtags.implicitClassMembers()
           if (implicitMembers.nonEmpty) {
             scribe.info(
               s"[Indexer.indexSourceFile] Found ${implicitMembers.size} implicit class members in $source"
             )
-            workspaceSymbols.addImplicitClassMembers(Map(source -> implicitMembers))
+            workspaceSymbols.addImplicitClassMembers(
+              Map(source -> implicitMembers)
+            )
           }
         }
-        
+
         workspaceSymbols.didChange(source, symbols.toSeq, methodSymbols.toSeq)
 
         // Since the `symbols` here are toplevel symbols,
@@ -640,7 +642,9 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
             }
             tables.jarSymbols.getImplicitClassMembers(path) match {
               case Some(implicitClassMembersMap) =>
-                workspaceSymbols.addImplicitClassMembers(implicitClassMembersMap)
+                workspaceSymbols.addImplicitClassMembers(
+                  implicitClassMembersMap
+                )
               case None => // already handled above if we had to reindex
             }
           case None =>
@@ -651,11 +655,15 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
               tables.jarSymbols.addToplevelMembersInfo(path, toplevelMembers)
             }
             if (implicitClassMembers.nonEmpty) {
-              tables.jarSymbols.addImplicitClassMembersInfo(path, implicitClassMembers)
+              tables.jarSymbols.addImplicitClassMembersInfo(
+                path,
+                implicitClassMembers,
+              )
             }
         }
       case None =>
-        val (toplevels, overrides, toplevelMembers, implicitClassMembers) = indexJar(path, dialect)
+        val (toplevels, overrides, toplevelMembers, implicitClassMembers) =
+          indexJar(path, dialect)
         tables.jarSymbols.putJarIndexingInfo(
           path,
           toplevels,

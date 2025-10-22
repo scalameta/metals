@@ -437,13 +437,15 @@ class CompletionProvider(
             logger.info(
               s"[CompletionProvider] Member selection detected on type: ${qualifier.tpe}"
             )
-            val result = workspaceExtensionMethods(query, pos, visit, qualifier.tpe)
+            val result =
+              workspaceExtensionMethods(query, pos, visit, qualifier.tpe)
             // Also add indexed implicit class members
-            val implicitMembers = findIndexedImplicitExtensionsForType(qualifier.tpe, pos)
+            val implicitMembers =
+              findIndexedImplicitExtensionsForType(qualifier.tpe, pos)
             if (implicitMembers.nonEmpty) {
               logger.info(
                 s"[CompletionProvider] Found ${implicitMembers.size} implicit class members " +
-                s"for type ${qualifier.tpe}"
+                  s"for type ${qualifier.tpe}"
               )
             }
             implicitMembers.foreach { ext =>

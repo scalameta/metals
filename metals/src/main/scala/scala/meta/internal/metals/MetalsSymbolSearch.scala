@@ -137,18 +137,18 @@ class MetalsSymbolSearch(
       paramTypeSymbol: String
   ): ju.List[scala.meta.pc.ImplicitClassMemberResult] = {
     import scala.meta.internal.jdk.CollectionConverters._
-    
+
     scribe.info(
       s"[MetalsSymbolSearch] Querying implicit class members for type: $paramTypeSymbol"
     )
-    
+
     val totalCached = wsp.implicitClassMembers.values.flatten.size
     scribe.info(
       s"[MetalsSymbolSearch] Total implicit class members in cache: $totalCached"
     )
-    
+
     val results = List.newBuilder[scala.meta.pc.ImplicitClassMemberResult]
-    
+
     // Query the indexed implicit class members from WorkspaceSymbolProvider
     wsp.implicitClassMembers.values.flatten.foreach { member =>
       // Check if this implicit class accepts the parameter type
@@ -159,11 +159,11 @@ class MetalsSymbolSearch(
         results += new scala.meta.pc.ImplicitClassMemberResult(
           member.methodSymbol,
           member.methodName,
-          member.classSymbol
+          member.classSymbol,
         )
       }
     }
-    
+
     val resultList = results.result()
     if (resultList.nonEmpty) {
       scribe.info(
@@ -174,7 +174,7 @@ class MetalsSymbolSearch(
         s"[MetalsSymbolSearch] No implicit class members found for $paramTypeSymbol"
       )
     }
-    
+
     resultList.asJava
   }
 

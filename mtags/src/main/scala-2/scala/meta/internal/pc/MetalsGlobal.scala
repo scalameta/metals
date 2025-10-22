@@ -1299,22 +1299,22 @@ class MetalsGlobal(
   ): List[WorkspaceImplicitMember] = {
     val context = doLocateContext(pos)
     val buffer = mutable.ListBuffer.empty[WorkspaceImplicitMember]
-    
+
     try {
       // Get the semanticdb symbol for the target type
       val targetTypeSymbol = semanticdbSymbol(targetType.typeSymbol)
-      
+
       logger.info(
         s"[MetalsGlobal] Converting type to symbol: $targetType -> $targetTypeSymbol"
       )
-      
+
       // Query indexed implicit class members through SymbolSearch
       val members = search.queryImplicitClassMembers(targetTypeSymbol)
-      
+
       logger.info(
         s"[MetalsGlobal] Query returned ${members.size()} implicit class members for $targetTypeSymbol"
       )
-      
+
       import scala.meta.internal.jdk.CollectionConverters._
       members.asScala.foreach { member =>
         logger.info(
@@ -1323,15 +1323,16 @@ class MetalsGlobal(
         try {
           // Resolve the method symbol from the semanticdb string
           val methodSym = inverseSemanticdbSymbol(member.methodSymbol)
-          
+
           if (methodSym != NoSymbol && methodSym.exists) {
             // Check if accessible from current context
-            val isAccessible = try {
-              context.isAccessible(methodSym, methodSym.owner.thisType)
-            } catch {
-              case NonFatal(_) => false
-            }
-            
+            val isAccessible =
+              try {
+                context.isAccessible(methodSym, methodSym.owner.thisType)
+              } catch {
+                case NonFatal(_) => false
+              }
+
             if (isAccessible) {
               logger.info(
                 s"[MetalsGlobal]     Resolved and accessible: ${methodSym.fullName}"
@@ -1350,10 +1351,12 @@ class MetalsGlobal(
         } catch {
           case NonFatal(e) =>
             // Log and skip if symbol resolution fails
-            logger.info(s"Failed to resolve implicit class member: ${member.methodSymbol} - ${e.getMessage}")
+            logger.info(
+              s"Failed to resolve implicit class member: ${member.methodSymbol} - ${e.getMessage}"
+            )
         }
       }
-      
+
       if (buffer.nonEmpty) {
         logger.info(
           s"[MetalsGlobal] Returning ${buffer.size} implicit members for type $targetType"
@@ -1363,7 +1366,7 @@ class MetalsGlobal(
       case NonFatal(e) =>
         logger.fine(s"Error querying implicit class members: ${e.getMessage}")
     }
-    
+
     buffer.toList.distinct
   }
 }

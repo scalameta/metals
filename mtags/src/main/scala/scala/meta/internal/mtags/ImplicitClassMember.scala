@@ -19,4 +19,3 @@ case class ImplicitClassMember(
     methodName: String,
     range: Range
 )
-

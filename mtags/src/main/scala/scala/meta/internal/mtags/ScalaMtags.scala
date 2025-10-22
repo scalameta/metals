@@ -258,9 +258,13 @@ class ScalaMtags(
           continue()
         case t: Defn.Class =>
           val isImplicit = t.mods.has[Mod.Implicit]
-          System.err.println(s"[ScalaMtags.loop] Processing class: ${t.name.value}, isImplicit=$isImplicit")
+          System.err.println(
+            s"[ScalaMtags.loop] Processing class: ${t.name.value}, isImplicit=$isImplicit"
+          )
           if (isImplicit) {
-            System.err.println(s"[ScalaMtags.loop] Found implicit class: ${t.name.value}, calling collectImplicitClassMembers")
+            System.err.println(
+              s"[ScalaMtags.loop] Found implicit class: ${t.name.value}, calling collectImplicitClassMembers"
+            )
             // emit symbol for implicit conversion
             withOwner() {
               method(t.name, "()", Kind.METHOD, Property.IMPLICIT.value)
@@ -460,12 +464,12 @@ class ScalaMtags(
           case Some(tpe) =>
             val paramTypeSymbol = typeToSymbol(tpe)
             val classSymbol = symbol(Descriptor.Type(cls.name.value))
-            
+
             System.err.println(
               s"[ScalaMtags] Detected implicit class: ${cls.name.value}, " +
-              s"classSymbol=$classSymbol, paramType=$paramTypeSymbol"
+                s"classSymbol=$classSymbol, paramType=$paramTypeSymbol"
             )
-            
+
             var methodCount = 0
             cls.templ.stats.foreach {
               case defn: Defn.Def if !defn.mods.exists {
@@ -490,11 +494,11 @@ class ScalaMtags(
                 )
               case _ => // ignore non-method members
             }
-            
+
             if (methodCount > 0) {
               System.err.println(
                 s"[ScalaMtags] Indexed implicit class ${cls.name.value} " +
-                s"with $methodCount methods for type $paramTypeSymbol"
+                  s"with $methodCount methods for type $paramTypeSymbol"
               )
             }
           case None => // no type annotation on parameter
@@ -508,7 +512,9 @@ class ScalaMtags(
       case Type.Name(value) =>
         // Simple type name - check if it's a well-known scala type
         // Common Scala types are assumed to be in scala package
-        val scalaTypes = Set("Int", "Long", "Float", "Double", "Boolean", "Char", "Byte", "Short", "String", "Any", "AnyRef", "AnyVal", "Unit", "Nothing", "Null")
+        val scalaTypes = Set("Int", "Long", "Float", "Double", "Boolean",
+          "Char", "Byte", "Short", "String", "Any", "AnyRef", "AnyVal", "Unit",
+          "Nothing", "Null")
         if (scalaTypes.contains(value)) {
           s"scala/${value}#"
         } else {
