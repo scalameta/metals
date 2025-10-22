@@ -166,6 +166,14 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
           scribe.warn("File watching failed, indexes will not be updated.", e)
       }
     }
+    for (buildTool <- allBuildTargetsData)
+      timerProvider.timedThunk(
+        s"indexed workspace ${buildTool.name} sources",
+        clientConfig.initialConfig.statistics.isIndex,
+        metricName = Some("index_workspace_sources"),
+      ) {
+        indexWorkspaceSources(buildTool.data)
+      }
     timerProvider.timedThunk(
       "indexed library classpath",
       clientConfig.initialConfig.statistics.isIndex,
@@ -180,14 +188,6 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     ) {
       semanticDBIndexer.onTargetRoots()
     }
-    for (buildTool <- allBuildTargetsData)
-      timerProvider.timedThunk(
-        s"indexed workspace ${buildTool.name} sources",
-        clientConfig.initialConfig.statistics.isIndex,
-        metricName = Some("index_workspace_sources"),
-      ) {
-        indexWorkspaceSources(buildTool.data)
-      }
     var usedJars = Set.empty[AbsolutePath]
     for (buildTool <- allBuildTargetsData)
       timerProvider.timedThunk(
