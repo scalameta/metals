@@ -264,8 +264,7 @@ case class JavaPresentationCompiler(
       params: util.List[OffsetParams]
   ): CompletableFuture[util.List[SelectionRange]] =
     CompletableFuture.completedFuture(
-      util.Collections.emptyList[SelectionRange]()
-      // new JavaSelectionRangeProvider().provide(params)
+      new JavaSelectionRangeProvider().provide(params)
     )
 
   override def shutdown(): Unit = {

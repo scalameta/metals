@@ -10,6 +10,8 @@ import tests.pc.BaseJavaPCSuite
 
 abstract class BaseJavaSignatureHelpSuite extends BaseJavaPCSuite {
 
+  def qux2 = 42
+
   def check(
       options: munit.TestOptions,
       original: String,
