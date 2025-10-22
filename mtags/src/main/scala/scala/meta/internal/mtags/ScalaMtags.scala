@@ -492,7 +492,7 @@ class ScalaMtags(
                 System.err.println(
                   s"[ScalaMtags]   Method: ${defn.name.value}, methodSymbol=$methodSymbol"
                 )
-              case _ => 
+              case _ =>
             }
 
             if (methodCount > 0) {
@@ -501,9 +501,9 @@ class ScalaMtags(
                   s"with $methodCount methods for type $paramTypeSymbol"
               )
             }
-          case None => 
+          case None =>
         }
-      case _ => 
+      case _ =>
     }
   }
 
