@@ -155,13 +155,23 @@ class JavaToplevelMtags(
     }
   }
 
+  private def isEndOfFile: Boolean = {
+    reader.ch == Chars.SU
+  }
+
   @tailrec
   private def skipMultilineComment(prevStar: Boolean): Unit = {
+    if (isEndOfFile) {
+      // Prevent infinite loop
+      return
+    }
     reader.nextChar()
     if (prevStar) {
       if (reader.ch == '/') reader.nextChar()
       else skipMultilineComment(prevStar = reader.ch == '*')
-    } else skipMultilineComment(prevStar = reader.ch == '*')
+    } else {
+      skipMultilineComment(prevStar = reader.ch == '*')
+    }
   }
 
   private def fetchToken(inPath: Boolean = false): Token = {
@@ -189,7 +199,7 @@ class JavaToplevelMtags(
         reader.nextChar()
         kwOrIdent(start, builder.append(ch.toChar))
       } else if (builder.isEmpty) {
-        unexpectedCharacter(ch.toChar, reader.endCharOffset)
+        ignoreLine()
       } else {
 
         val pos = Position.Range(input, start, reader.endCharOffset)
@@ -202,6 +212,12 @@ class JavaToplevelMtags(
             Token.Word(name, pos)
         }
       }
+    }
+
+    def ignoreLine(): Token = {
+      skipLine
+      toNextNonWhiteSpace()
+      parseToken
     }
 
     def parseToken: Token = {
@@ -275,7 +291,7 @@ class JavaToplevelMtags(
           reader.nextChar()
           kwOrIdent(reader.endCharOffset, new StringBuilder(first + 1)) match {
             case Token.Word("include", _) => Token.IncludeHeader
-            case _ => unexpectedCharacter('#', first)
+            case _ => ignoreLine()
           }
         case _ =>
           val token = kwOrIdent(reader.endCharOffset, new StringBuilder(first))
@@ -352,28 +368,6 @@ class JavaToplevelMtags(
       toNextNonWhiteSpace()
     }
   }
-
-  private def readCurrentLine: String = {
-    def loop(builder: StringBuilder): String = {
-      val ch = reader.ch.toChar
-      if (ch == '\n' || ch == Chars.SU)
-        builder.mkString
-      else {
-        val next = builder.append(ch)
-        reader.nextChar()
-        loop(next)
-      }
-    }
-
-    val lineOffset = reader.lineStartOffset
-    val existing = input.text.substring(lineOffset, reader.endCharOffset)
-    loop(new StringBuilder().append(existing))
-  }
-
-  private def unexpectedCharacter(c: Char, pos: Int): Nothing =
-    throw new Exception(
-      s"Unexpected symbol '$c' at word pos: '$pos' Line: '$readCurrentLine'"
-    )
 
 }
 

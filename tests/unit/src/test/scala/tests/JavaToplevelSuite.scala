@@ -236,4 +236,62 @@ class JavaToplevelSuite extends BaseToplevelSuite {
     mode = All,
   )
 
+  check(
+    "template",
+    s"""|package jackson;
+        |<#include "/@includes/license.ftl" />
+        |<#list vv.types as type><#list type.minor as minor><#assign name = minor.class?cap_first />
+        |<#assign fields = minor.fields!type.fields />
+        |<#assign friendlyType = (minor.friendlyType!minor.boxedType!type.boxedType) />
+        |public class JsonNode {
+        |  </#if>
+        |  </#list>
+        |  public enum Type {
+        |    Decimal,
+        |  }
+        |}
+        |""".stripMargin,
+    List("jackson/", "jackson/JsonNode#", "jackson/JsonNode#Type#"),
+    mode = All,
+  )
+
+  check(
+    "unknown-token",
+    s"""|package jackson;
+        |😎
+        |public class JsonNode {
+        |  public enum Type {
+        |    Decimal,
+        |  }
+        |}
+        |""".stripMargin,
+    List("jackson/", "jackson/JsonNode#", "jackson/JsonNode#Type#"),
+    mode = All,
+  )
+  check(
+    "unclosed-literal",
+    s"""|package jackson;
+        |public class JsonNode {
+        |"Doesn't close
+        |  public enum Type {
+        |    Decimal,
+        |  }
+        |}
+        |""".stripMargin,
+    List("jackson/", "jackson/JsonNode#"),
+    mode = All,
+  )
+  check(
+    "unclosed-comment",
+    s"""|package jackson;
+        |public class JsonNode {
+        |/* Doesn't close
+        |  public enum Type {
+        |    Decimal,
+        |  }
+        |}
+        |""".stripMargin,
+    List("jackson/", "jackson/JsonNode#"),
+    mode = All,
+  )
 }
