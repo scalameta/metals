@@ -457,29 +457,6 @@ val mtagsSettings = List(
   },
 )
 
-lazy val mtags3 = project
-  .in(file(".mtags"))
-  .settings(
-    Compile / unmanagedSourceDirectories := Seq(),
-    sharedSettings,
-    mtagsSettings,
-    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags" / "src" / "main" / "scala",
-    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala",
-    Compile / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "mtags-shared" / "src" / "main" / "scala-3",
-    // Make mtags3 empty for now to speed up the build while we only support Scala 2.x
-    Compile / unmanagedSourceDirectories := Seq(),
-    moduleName := "mtags3",
-    scalaVersion := V.lastPublishedScala3,
-    target := (ThisBuild / baseDirectory).value / "mtags" / "target" / "target3",
-    publish / skip := true,
-    libraryDependencies += V.guava,
-    scalafixConfig := Some(
-      (ThisBuild / baseDirectory).value / ".scalafix3.conf"
-    ),
-  )
-  .dependsOn(interfaces)
-  .enablePlugins(BuildInfoPlugin)
-
 val pprintDebuggingDependency: List[ModuleID] =
   if (isCI) Nil
   // NOTE(olafur) pprint is indispensable for me while developing, I can't
