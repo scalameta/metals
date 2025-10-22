@@ -444,7 +444,7 @@ case class ScalafixProvider(
       file
     }
 
-    val scalaVersion = scalaTarget.scalaVersion
+    val scalaVersion = ScalaVersions.dropVendorSuffix(scalaTarget.scalaVersion)
     val scalafixRulesKey =
       ScalafixRulesClasspathKey(
         scalaBinaryVersion,
