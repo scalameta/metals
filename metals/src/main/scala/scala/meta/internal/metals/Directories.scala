@@ -26,6 +26,8 @@ object Directories {
     RelativePath(".metals").resolve(stacktraceFilename)
   def bazelBsp: RelativePath =
     RelativePath(".bazelbsp")
+  def dbBsp: RelativePath =
+    RelativePath(".bazelbsp") // Same as bazelBsp
   def bsp: RelativePath =
     RelativePath(".bsp")
   def metalsSettings: RelativePath =

@@ -561,24 +561,37 @@ class ProjectMetalsLspService(
           .BuildTool("scala-cli", buildTargetsData, lastImportedBuild)
     }
 
-  def resetWorkspace(): Future[Unit] =
+  def resetWorkspace(): Future[Unit] = {
     for {
       _ <- connect(Disconnect(true))
-      _ = optProjectRoot match {
-        case Some(path) if buildTools.isBloop(path) =>
-          clearBloopDir(path)
-        case Some(path) if buildTools.isBazelBsp =>
-          clearFolders(
-            path.resolve(Directories.bazelBsp),
-            path.resolve(Directories.bsp),
-          )
-        case Some(path) if buildTools.isBsp =>
-          clearFolders(path.resolve(Directories.bsp))
-        case _ =>
-      }
+      _ = clearBuildToolFolders()
       _ = tables.cleanAll()
       _ <- connectionProvider.fullConnect()
     } yield ()
+  }
+
+  private def clearBuildToolFolders(): Unit = {
+    buildTools.dbBspPath match {
+      case Some(dir) =>
+        clearFolders(dir)
+        return
+      case _ =>
+    }
+
+    optProjectRoot match {
+      // NOTE(olafurpg): optProjectRoot is seemingly always None?
+      case Some(path) if buildTools.isBloop(path) =>
+        clearBloopDir(path)
+      case Some(path) if buildTools.isBazelBsp =>
+        clearFolders(
+          path.resolve(Directories.bazelBsp),
+          path.resolve(Directories.bsp),
+        )
+      case Some(path) if buildTools.isBsp =>
+        clearFolders(path.resolve(Directories.bsp))
+      case _ =>
+    }
+  }
 
   val treeView =
     new FolderTreeViewProvider(

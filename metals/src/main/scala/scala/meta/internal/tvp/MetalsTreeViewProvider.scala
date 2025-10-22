@@ -69,13 +69,14 @@ class MetalsTreeViewProvider(
           echoCommand(ServerCommands.RunDoctor, "bug"),
           echoCommand(ServerCommands.GotoLog, "bug"),
           echoCommand(ServerCommands.ReadVscodeDocumentation, "book"),
-          echoCommand(ServerCommands.ReadBloopDocumentation, "book"),
-          echoCommand(ServerCommands.ChatOnDiscord, "discord"),
-          echoCommand(ServerCommands.OpenIssue, "issue-opened"),
-          echoCommand(ServerCommands.OpenFeatureRequest, "github"),
-          echoCommand(ServerCommands.MetalsGithub, "github"),
-          echoCommand(ServerCommands.BloopGithub, "github"),
-          echoCommand(ServerCommands.ScalametaTwitter, "twitter"),
+          // echoCommand(ServerCommands.ReadBloopDocumentation, "book"),
+          // echoCommand(ServerCommands.ChatOnDiscord, "discord"),
+          echoCommand(ServerCommands.ChatOnSlack, "issue-opened"),
+          // echoCommand(ServerCommands.OpenIssue, "issue-opened"),
+          // echoCommand(ServerCommands.OpenFeatureRequest, "github"),
+          // echoCommand(ServerCommands.MetalsGithub, "github"),
+          // echoCommand(ServerCommands.BloopGithub, "github"),
+          // echoCommand(ServerCommands.ScalametaTwitter, "twitter"),
         )
       case Project =>
         val showFolderName = folderTreeViewProviders.length > 1
@@ -87,19 +88,19 @@ class MetalsTreeViewProvider(
         Option(params.nodeUri) match {
           case None =>
             Array(
-              TreeViewNode.fromCommand(ServerCommands.ImportBuild, "sync"),
-              TreeViewNode
-                .fromCommand(ServerCommands.NewScalaProject, "empty-window"),
+              // TreeViewNode.fromCommand(ServerCommands.ImportBuild, "sync"),
+              // TreeViewNode
+              //   .fromCommand(ServerCommands.NewScalaProject, "empty-window"),
               TreeViewNode
                 .fromCommand(ServerCommands.ConnectBuildServer, "connect"),
-              TreeViewNode
-                .fromCommand(ServerCommands.BspSwitch, "discard"),
-              TreeViewNode
-                .fromCommand(ServerCommands.CascadeCompile, "cascade"),
-              TreeViewNode.fromCommand(ServerCommands.CancelCompile, "cancel"),
-              TreeViewNode.fromCommand(ServerCommands.CleanCompile, "clean"),
-              TreeViewNode
-                .fromCommand(ServerCommands.RestartBuildServer, "debug-stop"),
+              // TreeViewNode
+              //   .fromCommand(ServerCommands.BspSwitch, "discard"),
+              // TreeViewNode
+              //   .fromCommand(ServerCommands.CascadeCompile, "cascade"),
+              // TreeViewNode.fromCommand(ServerCommands.CancelCompile, "cancel"),
+              // TreeViewNode.fromCommand(ServerCommands.CleanCompile, "clean"),
+              // TreeViewNode
+              //   .fromCommand(ServerCommands.RestartBuildServer, "debug-stop"),
               TreeViewNode
                 .fromCommand(ServerCommands.ResetWorkspace, "clean-all"),
               TreeViewNode

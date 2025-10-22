@@ -71,6 +71,11 @@ final class BuildTools(
     dir.list.exists(_.extension == "json")
   }
 
+  def dbBspPath: Option[AbsolutePath] = {
+    val dir = workspace.resolve(Directories.dbBsp)
+    if (dir.isDirectory && isBsp) Some(dir) else None
+  }
+
   def isBazelBsp: Boolean = {
     workspace.resolve(Directories.bazelBsp).isDirectory &&
     BazelBuildTool.existingProjectView(workspace).nonEmpty &&

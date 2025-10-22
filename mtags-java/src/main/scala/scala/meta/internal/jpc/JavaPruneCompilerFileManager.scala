@@ -26,7 +26,11 @@ class PruneCompilerFileManager(
 
   override def close(): Unit = {
     if (isClosed.compareAndSet(false, true)) {
-      super.close()
+      try super.close()
+      catch {
+        // Ignore, happens when the jar file has been deleted
+        case _: java.nio.file.NoSuchFileException =>
+      }
     }
   }
 

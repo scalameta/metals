@@ -685,6 +685,12 @@ object ServerCommands {
     "Open the Scalameta server on Discord to discuss with other Metals users.",
   )
 
+  val ChatOnSlack = new OpenBrowserCommand(
+    "https://REDACTED_SLACK_URL/archives/C08KG10UXTK",
+    "Chat on Slack",
+    "Open the #cursor-feedback channel on Slack to report bugs or ask questions.",
+  )
+
   val ReadVscodeDocumentation = new OpenBrowserCommand(
     "https://scalameta.org/metals/docs/editors/vscode.html",
     "Read Metals documentation",
