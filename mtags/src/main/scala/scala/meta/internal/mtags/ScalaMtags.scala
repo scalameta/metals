@@ -492,7 +492,7 @@ class ScalaMtags(
                 System.err.println(
                   s"[ScalaMtags]   Method: ${defn.name.value}, methodSymbol=$methodSymbol"
                 )
-              case _ => // ignore non-method members
+              case _ => 
             }
 
             if (methodCount > 0) {
@@ -501,35 +501,24 @@ class ScalaMtags(
                   s"with $methodCount methods for type $paramTypeSymbol"
               )
             }
-          case None => // no type annotation on parameter
+          case None => 
         }
-      case _ => // not a single-parameter constructor
+      case _ => 
     }
   }
 
   private def typeToSymbol(tpe: Type): String = {
     tpe match {
       case Type.Name(value) =>
-        // Simple type name - check if it's a well-known scala type
-        // Common Scala types are assumed to be in scala package
-        val scalaTypes = Set("Int", "Long", "Float", "Double", "Boolean",
-          "Char", "Byte", "Short", "String", "Any", "AnyRef", "AnyVal", "Unit",
-          "Nothing", "Null")
-        if (scalaTypes.contains(value)) {
-          s"scala/${value}#"
-        } else {
-          // For other types, try current owner's package
-          s"${currentOwner}${value}#"
-        }
+        s"${value}#"
       case Type.Select(qual, Type.Name(name)) =>
-        // Qualified type like scala.Int
+        // Qualified type like scala.Int - preserve the full path
         qualToSymbol(qual) + Descriptor.Type(name).value
       case Type.Apply(base, _) =>
         // Generic type, use base type
         typeToSymbol(base)
       case _ =>
-        // Fallback
-        "scala/Any#"
+        "Any#"
     }
   }
 

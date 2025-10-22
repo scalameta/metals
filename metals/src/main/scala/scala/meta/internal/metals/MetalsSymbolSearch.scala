@@ -149,10 +149,19 @@ class MetalsSymbolSearch(
 
     val results = List.newBuilder[scala.meta.pc.ImplicitClassMemberResult]
 
+    // Extract the simple type name for flexible matching
+    // Handles both "scala/Int#" from queries and "Int#" from indexed data
+    val simpleTypeName = paramTypeSymbol.split("/").last
+    
     wsp.implicitClassMembers.values.flatten.foreach { member =>
-      if (member.paramType == paramTypeSymbol) {
+      // Match if either:
+      // 1. Exact match (e.g., both are "scala/Int#")
+      // 2. Simple name match (e.g., query "scala/Int#" matches indexed "Int#")
+      val memberSimpleName = member.paramType.split("/").last
+      if (member.paramType == paramTypeSymbol || memberSimpleName == simpleTypeName) {
         scribe.debug(
-          s"[MetalsSymbolSearch]   Match found: ${member.methodName} from ${member.classSymbol}"
+          s"[MetalsSymbolSearch]   Match found: ${member.methodName} from ${member.classSymbol} " +
+          s"(query: $paramTypeSymbol, indexed: ${member.paramType})"
         )
         results += new scala.meta.pc.ImplicitClassMemberResult(
           member.methodSymbol,
