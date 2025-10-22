@@ -42,8 +42,8 @@ The current implementation of TE is a better version of code lenses, with more u
 ### Getting and analyzing results
 
 After test run was finished TE analyzes execution results and sets proper statutes for each test included in run.
-![](https://imgur.com/vop095s.png)
-![](https://imgur.com/TLhwEtG.png)
+![](https://github.com/scalameta/gh-pages-images/blob/master/metals/test-explorer/vop095s.png?raw=true)
+![](https://github.com/scalameta/gh-pages-images/blob/master/metals/test-explorer/TLhwEtG.png?raw=true)
 
 Such detailed information is available thanks to the [sbt-test-interface](https://github.com/sbt/test-interface) which abstracts over test framework internals, most important classes are: [Event](https://github.com/sbt/test-interface/blob/17a94641942546e21f4c6b300a3360be2d2888f6/src/main/java/sbt/testing/Event.java) and [Status](https://github.com/sbt/test-interface/blob/17a94641942546e21f4c6b300a3360be2d2888f6/src/main/java/sbt/testing/Status.java) which are used in the [sbt.ForkMain](https://github.com/sbt/sbt/blob/50c3cf10825bae3e89af11b3a2c9741e6d98add5/testing/agent/src/main/java/sbt/ForkMain.java). Almost all of build servers (if not all of them) uses `ForkMain` and `sbt-test-interface` to offload testing.
 

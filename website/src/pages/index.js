@@ -36,14 +36,14 @@ const Features = (props) => {
     {
       title: "Simple installation",
       content: "Open a directory, import your build and start coding.",
-      image: "https://i.imgur.com/L5CurFG.png",
+      image: "https://github.com/scalameta/gh-pages-images/blob/master/metals/index/L5CurFG.png?raw=true",
       imageAlign: "left",
     },
     {
       title: "Accurate diagnostics",
       content:
         "Compile on file save and see errors from the build tool directly inside the editor. No more switching focus to the console.",
-      image: "https://i.imgur.com/JYLQGrc.gif",
+      image: "https://github.com/scalameta/gh-pages-images/blob/master/metals/index/JYLQGrc.gif?raw=true",
       imageAlign: "right",
     },
     {
@@ -59,7 +59,7 @@ const Features = (props) => {
       title: "Goto definition",
       content:
         "Jump to symbol definitions in your project sources and Scala/Java library dependencies.",
-      image: "https://i.imgur.com/bCIhFof.gif",
+      image: "https://github.com/scalameta/gh-pages-images/blob/master/metals/index/bCIhFof.gif?raw=true",
       imageAlign: "right",
     },
     {
@@ -73,14 +73,14 @@ const Features = (props) => {
     {
       title: "Hover (aka. type at point)",
       content: "See the expression type and symbol signature under the cursor.",
-      image: "https://i.imgur.com/2MfQvsM.gif",
+      image: "https://github.com/scalameta/gh-pages-images/blob/master/metals/index/2MfQvsM.gif?raw=true",
       imageAlign: "right",
     },
     {
       title: "Signature help (aka. parameter hints)",
       content:
         "View a method signature and method overloads as you fill in the arguments.",
-      image: "https://i.imgur.com/DAWIrHu.gif",
+      image: "https://github.com/scalameta/gh-pages-images/blob/master/metals/index/DAWIrHu.gif?raw=true",
       imageAlign: "left",
     },
     {
@@ -93,7 +93,7 @@ const Features = (props) => {
     {
       title: "Fuzzy symbol search",
       content: "Search for symbols in the workspace or library dependencies.",
-      image: "https://i.imgur.com/w5yrK1w.gif",
+      image: "https://github.com/scalameta/gh-pages-images/blob/master/metals/index/w5yrK1w.gif?raw=true",
       imageAlign: "left",
     },
   ];

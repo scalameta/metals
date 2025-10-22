@@ -3,18 +3,18 @@ package docs
 object Image {
   val all: Map[String, Map[String, String]] = Map(
     "vscode" -> Map(
-      "importBuild" -> "https://i.imgur.com/0VqZWay.png",
-      "importChanges" -> "https://i.imgur.com/72kdZkL.png",
-      "importCommand" -> "https://i.imgur.com/QHLKt8u.png",
-      "runDoctor" -> "https://i.imgur.com/K02g0UM.png",
+      "importBuild" -> "https://github.com/scalameta/gh-pages-images/blob/master/metals/Image/0VqZWay.png?raw=true",
+      "importChanges" -> "https://github.com/scalameta/gh-pages-images/blob/master/metals/Image/72kdZkL.png?raw=true",
+      "importCommand" -> "https://github.com/scalameta/gh-pages-images/blob/master/metals/Image/QHLKt8u.png?raw=true",
+      "runDoctor" -> "https://github.com/scalameta/gh-pages-images/blob/master/metals/Image/K02g0UM.png?raw=true",
     ),
     "vim" -> Map(
-      "importBuild" -> "https://i.imgur.com/1EyQPTC.png",
-      "importChanges" -> "https://i.imgur.com/iocTVb6.png",
+      "importBuild" -> "https://github.com/scalameta/gh-pages-images/blob/master/metals/Image/1EyQPTC.png?raw=true",
+      "importChanges" -> "https://github.com/scalameta/gh-pages-images/blob/master/metals/Image/iocTVb6.png?raw=true",
     ),
     "emacs" -> Map(
-      "importBuild" -> "https://i.imgur.com/UdwMQFk.png",
-      "importChanges" -> "https://i.imgur.com/UFK0p8i.png",
+      "importBuild" -> "https://github.com/scalameta/gh-pages-images/blob/master/metals/Image/UdwMQFk.png?raw=true",
+      "importChanges" -> "https://github.com/scalameta/gh-pages-images/blob/master/metals/Image/UFK0p8i.png?raw=true",
     ),
   )
   def importBuild(editor: String): String =

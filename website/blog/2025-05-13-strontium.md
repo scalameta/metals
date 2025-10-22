@@ -86,51 +86,28 @@ Best effort compilation was first introduced to Metals `v1.3.4` (see [here](http
 
 ### Named parameters
 [tgodzik](https://github.com/tgodzik) added inlay hints for showing parameters' names on call site. The new inlay hint is available under `inlay-hints.named-parameters.enable` Metals setting, for now available only for Scala 2.
-![named-params](https://i.imgur.com/MJwFuqs.png)
-*Named parameters inlay hints*
 
 ### By-name parameters
 We also have new inlay hints marking by-name parameters with `=>` on the call site. Thanks go to [harpocrates](https://github.com/harpocrates).
-![by-name-params](https://i.imgur.com/sk2k6Ay.png)
 
 ## Remove invalid imports code action
 This release also has a new code action for removing invalid imports, saving you the trouble of deleting them manually. It is yet another improvement added by [harpocrates](https://github.com/harpocrates). Code action works both for Scala 2 and Scala 3, though older Scala 2 versions might get only partial support.
-
-![remove-invalid-imports](https://i.imgur.com/mArQW9N.gif)
-*Remove invalid import*
-![remove-invalid-imports-2](https://i.imgur.com/Ht9htWM.gif)
-*Remove invalid import in multi-import statement*
 
 ## Convert to named lambda parameters code action
 
 Thanks to [KacperFKorban](https://github.com/KacperFKorban) we have a new code action that converts a wildcard lambda into a lambda with parameters. This was only implemented for Scala 3 and will work from versions `3.7.2` and LTS `3.3.7`.
 
-![convert-to-named-1](https://i.imgur.com/XE799H1.gif)
-*Convert to named lambda parameters with single wildcard.*
-
-![convert-to-named-2](https://i.imgur.com/8H9HKxh.gif)
-*Convert to named lambda parameters with multiple wildcards.*
-
 ## Support using directives in worksheets
 
 Since Metals has been supporting Scala-CLI for a while, and it is Metals's recommended tool for scripts, we are further embracing Scala-CLI style, and `using` directives are now supported also in the worksheets. Thanks go to [tgodzik](https://github.com/tgodzik) for adding this improvement.
-
-![using-directives-worksheet](https://i.imgur.com/vCyEooA.png)
-*A dependency added with `using` directives in a worksheet.*
 
 ## Improve auto-fill arguments
 
 For a while now, Metals had a special completion for auto-filling argument names, however it was somewhat hidden. Now, the discoveribility of that feature was improved, and it naturally appear in the completion suggestion list. Thanks, [LiathHelvetica](https://github.com/LiathHelvetica) and [natsukagami](https://github.com/natsukagami), for making the change.
 
-![auto-fill](https://i.imgur.com/k5mOEAR.gif)
-*Auto-fill arguments for a case class.*
-
 ## Discover tests for ZIO test framework
 
 With this release also comes support for discovering and running single test cases from Metals when using the ZIO test framework. Thanks go to [kaplan-shaked](https://github.com/kaplan-shaked), making this their first contribution!
-
-![run-zio-test](https://i.imgur.com/j4uP6qh.gif)
-*Run single ZIO test testcase.*
 
 ## Miscellaneous
 - improvement : Able to get environment variables from shell [ajafri2001](https://github.com/ajafri2001)

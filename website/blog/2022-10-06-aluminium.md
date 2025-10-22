@@ -68,7 +68,7 @@ returned type of the body of a function and in that case any adjustments had to
 be made manually. Now, whenever the compiler shows type mismatch error Metals
 should be able to adjust the type for you automatically.
 
-![adjust-type](https://i.imgur.com/R7z7JNf.gif)
+![adjust-type](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-10-06-aluminium/R7z7JNf.gif?raw=true)
 
 As this feature is quite new and might still require some tinkering, please
 report any issues you find.
@@ -92,7 +92,7 @@ Thanks to [alexarchambault](https://github.com/alexarchambault), who is also
 leading the effort on ScalaCLI, Metals now supports ScalaCLI scripts along with
 the Ammonite ones.
 
-![scala-cli](https://i.imgur.com/ghR1Src.gif)
+![scala-cli](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-10-06-aluminium/ghR1Src.gif?raw=true)
 
 Whenever, Metals will be opened on a file with `*.sc` extension (but not
 `*.worksheet.sc`), users will be prompted to choose which tool they want to use
@@ -121,7 +121,7 @@ something from another package, you would need to do it manually.
 This problem is now resolved. Users can easily get such symbols automatically
 imported, which creates a seamless more workflow.
 
-![auto-import](https://i.imgur.com/COKtciq.gif)
+![auto-import](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-10-06-aluminium/COKtciq.gif?raw=true)
 
 These completions will also allow you to automatically import extension methods.
 
@@ -135,7 +135,7 @@ fill in all the arguments of the current method using the symbol in scope or
 with `???` if no symbols match. Users can later tabulate over the different
 proposal to adjust them.
 
-![auto-fill](https://i.imgur.com/tZTKnSw.gif)
+![auto-fill](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-10-06-aluminium/tZTKnSw.gif?raw=true)
 
 The feature was already available for Scala 2.
 
@@ -169,7 +169,7 @@ presentation compiler already used in such features as hovers or completions.
 Thanks to this change document highlight should work even if your code doesn't
 compile.
 
-![document-highlight](https://i.imgur.com/0uhc9P5.gif)
+![document-highlight](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-10-06-aluminium/0uhc9P5.gif?raw=true)
 
 This should also make it easier for us to fix any issue that might pop up and it
 has already improved support for locally defined classes.
@@ -182,7 +182,7 @@ exhaustive completion with all of them. This was previously not available for
 Scala 3, but thanks to ([jkciesluk](https://github.com/jkciesluk)) users can now
 benefit from this feature in their Scala 3 codebases.
 
-![exhaustive](https://i.imgur.com/6wynpRq.gif)
+![exhaustive](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-10-06-aluminium/6wynpRq.gif?raw=true)
 
 The Scala 3 version will additionally work with the Scala enums as well as offer
 completions for simple cases with one possible type, which might be useful to
@@ -196,7 +196,7 @@ is the possibility to extract arbitrary parts of code into a separate function.
 It will also add any values unavailable in the selected scope as parameters in
 the new function.
 
-![extract-method](https://i.imgur.com/VMXLKPg.gif)
+![extract-method](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-10-06-aluminium/VMXLKPg.gif?raw=true)
 
 The code action will currently not turn any methods or classes into parameters
 even if they is not available in the scope into which the code is being
@@ -214,7 +214,7 @@ import $$ivy.`io.circe::circe-core:0.14.2`
 which will bring in the `circe-core` dependency. Starting in this version it
 will be possible to auto complete group ids, artifact names and their versions.
 
-![import-dep](https://i.imgur.com/TWgIIVp.gif)
+![import-dep](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-10-06-aluminium/TWgIIVp.gif?raw=true)
 
 Thanks to [LaurenceWarne](https://github.com/LaurenceWarne) for the great
 feature!
@@ -229,7 +229,7 @@ This release brings about
 which is an LSP feature that enables users to see which method are invoked in a
 current method or which methods invoke the current one.
 
-![call-hierarchy-dep](https://i.imgur.com/1lTYFmu.gif)
+![call-hierarchy-dep](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-10-06-aluminium/1lTYFmu.gif?raw=true)
 
 This non trivial feature was brought to you by
 [riiswa](https://github.com/riiswa), thanks for the great work!

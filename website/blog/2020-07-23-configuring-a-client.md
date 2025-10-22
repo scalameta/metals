@@ -95,7 +95,7 @@ containing the definition of the method or symbol or display the full method
 hierarchy allowing you to choose where to go.
 
 Here is an example of what this looks like in Vim:
-![Super Method Hierarchy](https://i.imgur.com/rEvhzG1.png)
+![Super Method Hierarchy](https://github.com/scalameta/gh-pages-images/blob/master/metals/2020-07-23-configuring-a-client/rEvhzG1.png?raw=true)
 
 This feature is actually turned off by default since in very large code bases
 you may experience a lag. So if a user wanted to turn this on, it wouldn't be a

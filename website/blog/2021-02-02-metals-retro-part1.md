@@ -3,7 +3,7 @@ authors: ckipp
 title: A Metals Retrospective (Part 1)
 ---
 
-![metals-banner](https://i.imgur.com/FYZXteD.png)
+![metals-banner](https://github.com/scalameta/gh-pages-images/blob/master/metals/2021-02-02-metals-retro-part1/FYZXteD.png?raw=true)
 
 At the end of 2020 the Metals team sent out a survey to gather input from our
 users in hopes to get a better picture of who you are, what you want out of
@@ -23,7 +23,7 @@ this to be a 2 part series. You can expect the following:
 
 ## Editor Support
 
-![editor-results](https://i.imgur.com/w67gMGW.png)
+![editor-results](https://github.com/scalameta/gh-pages-images/blob/master/metals/2021-02-02-metals-retro-part1/w67gMGW.png?raw=true)
 
 Surprising no one, VS Code came out on top for editors with the most desire for
 Metals support. Our
@@ -142,8 +142,8 @@ communication open with pretty impressive response times if you ever get stuck.
 Here are the results about where people go for question about Metals and also
 where they get their news about Metals.
 
-![metals info](https://i.imgur.com/6Ijm9Bv.png)
-![metals help](https://i.imgur.com/2Qysoqe.png)
+![metals info](https://github.com/scalameta/gh-pages-images/blob/master/metals/2021-02-02-metals-retro-part1/6Ijm9Bv.png?raw=true)
+![metals help](https://github.com/scalameta/gh-pages-images/blob/master/metals/2021-02-02-metals-retro-part1/2Qysoqe.png?raw=true)
 
 Apart from the places that we had listed in the survey, the place mentioned the
 most for where people hear about Metals related news was

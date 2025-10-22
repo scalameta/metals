@@ -80,15 +80,15 @@ ones to your GitHub issue. Invoking the `Metals: Zip reports` command will
 create a zip of all the incognito that reports can also be included in the
 issue.
 
-![Reports](https://i.imgur.com/wBwFjpZ.gif)
-![Zip reports](https://i.imgur.com/YN3U3N9.gif)
+![Reports](https://github.com/scalameta/gh-pages-images/blob/master/metals/2023-04-21-aluminium/wBwFjpZ.gif?raw=true)
+![Zip reports](https://github.com/scalameta/gh-pages-images/blob/master/metals/2023-04-21-aluminium/YN3U3N9.gif?raw=true)
 
 ## New code action for converting dependencies from sbt to scala-cli compliant ones
 
 New code action for scala-cli `using (dep | lib | plugin)` directives, which
 allows to convert dependencies from sbt style to scala-cli compliant ones.
 
-![Convert dependency](https://i.imgur.com/G9W7Nox.gif)
+![Convert dependency](https://github.com/scalameta/gh-pages-images/blob/master/metals/2023-04-21-aluminium/G9W7Nox.gif?raw=true)
 
 A great contribution by [majk-p](https://github.com/majk-p).
 
