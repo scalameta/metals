@@ -54,6 +54,10 @@ public class SemanticdbTrees {
 		}
 
 		for (AnnotationTree annotation : mods.getAnnotations()) {
+			if (annotation == null) {
+				// Can happen when compiling invalid code
+				continue;
+			}
 			annotations.add(annotationBuilder(annotation));
 		}
 
