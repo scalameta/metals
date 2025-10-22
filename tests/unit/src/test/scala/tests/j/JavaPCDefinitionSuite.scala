@@ -44,6 +44,15 @@ class JavaPCDefinitionSuite extends BaseJavaPCSuite("java-pc-definition") {
       )
       _ <- server.assertDefinition(
         loc.getUri(),
+        "int l@@ength = asb.length();",
+        """|src.zip!/java.base/java/lang/String.java:LINE:COLUMN: definition
+           |        int length = asb.length();
+           |            ^^^^^^
+           |""".stripMargin,
+        redactLineNumbers = true,
+      )
+      _ <- server.assertDefinition(
+        loc.getUri(),
         "(AbstractS@@tringBuilder sb)",
         """|src.zip!/java.base/java/lang/AbstractStringBuilder.java:LINE:COLUMN: definition
            |abstract class AbstractStringBuilder implements Appendable, CharSequence {

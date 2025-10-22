@@ -587,6 +587,7 @@ class DefinitionProviderReportBuilder(
 
   private def symbolDefinitelyHasNoDefinition(symbol: String): Boolean = {
     symbol == "" ||
+    symbol.contains("UNKNOWN_BECAUSE_WE_HAVENT_HANDLED_LOCALS_YET") ||
     symbol.endsWith("/") // Ignore packages
   }
 
