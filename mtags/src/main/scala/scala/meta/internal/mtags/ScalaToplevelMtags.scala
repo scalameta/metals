@@ -65,12 +65,8 @@ class ScalaToplevelMtags(
   override def toplevelMembers(): List[ToplevelMember] =
     toplevelMembersBuilder.result()
 
-  override def implicitClassMembers(): List[ImplicitClassMember] =
-    implicitClassMembersBuilder.result()
-
   private val overridden = List.newBuilder[(String, List[OverriddenSymbol])]
   private val toplevelMembersBuilder = List.newBuilder[ToplevelMember]
-  private val implicitClassMembersBuilder = List.newBuilder[ImplicitClassMember]
 
   // Flag to track if file contains implicit classes (for optimization)
   private var hasImplicitClasses: Boolean = false
