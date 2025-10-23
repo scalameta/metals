@@ -63,7 +63,7 @@ public interface SymbolSearch {
      * @return list of implicit class members applicable to this type
      */
     default List<ImplicitClassMemberResult> queryImplicitClassMembers(String paramTypeSymbol) {
-        return java.util.Collections.emptyList(); // Default implementation returns empty list
+        return java.util.Collections.emptyList(); 
     }
     
     enum Result {

@@ -263,7 +263,6 @@ class ScalaMtags(
             withOwner() {
               method(t.name, "()", Kind.METHOD, Property.IMPLICIT.value)
             }
-            // collect implicit class information for indexing
             collectImplicitClassMembers(t)
           }
           val properties = if (t.mods.has[Mod.Case]) Property.CASE.value else 0
