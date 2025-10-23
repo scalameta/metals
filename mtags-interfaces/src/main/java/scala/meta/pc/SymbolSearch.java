@@ -54,6 +54,20 @@ public interface SymbolSearch {
     Result searchMethods(String query,
                   String buildTargetIdentifier,
                   SymbolSearchVisitor visitor);
+
+    /**
+     * Iterate through ALL classpath classes without any query filtering.
+     * This is useful when you need to find all classes of a specific type (like implicit classes)
+     * that don't follow naming conventions.
+     *
+     * @param visitor The visitor that will be called for each classfile
+     * @return The number of classfiles visited
+     */
+    default int iterateAllClasspathClasses(SymbolSearchVisitor visitor) {
+        // Default implementation does nothing - only MetalsSymbolSearch implements this
+        return 0;
+    }
+
     enum Result {
         COMPLETE,
         INCOMPLETE
