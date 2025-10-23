@@ -219,6 +219,12 @@ val sharedSettings = sharedJavacOptions ++ sharedScalacOptions ++ List(
       )
     ),
   ),
+  libraryDependencies ++= {
+    if (isCI) Nil
+    // NOTE(olafur) pprint is indispensable for me while developing, I can't
+    // use println anymore for debugging because pprint.log is 100 times better.
+    else List("com.lihaoyi" %% "pprint" % V.pprint)
+  },
   scalacOptions ++= lintingOptions(scalaVersion.value),
 )
 
@@ -349,12 +355,6 @@ val mtagsSettings = List(
         scala3SemanticdbDependency,
       ),
     )
-  },
-  libraryDependencies ++= {
-    if (isCI) Nil
-    // NOTE(olafur) pprint is indispensable for me while developing, I can't
-    // use println anymore for debugging because pprint.log is 100 times better.
-    else List("com.lihaoyi" %% "pprint" % V.pprint)
   },
   buildInfoPackage := "scala.meta.internal.mtags",
   buildInfoKeys := Seq[BuildInfoKey](

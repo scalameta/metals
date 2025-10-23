@@ -12,12 +12,10 @@ import javax.lang.model.element.ExecutableElement
 import javax.lang.model.element.Modifier
 import javax.lang.model.element.PackageElement
 import javax.lang.model.element.TypeElement
-import javax.lang.model.element.TypeParameterElement
 import javax.lang.model.element.VariableElement
 import javax.lang.model.util.Elements
 import javax.lang.model.util.Types
 
-import scala.annotation.tailrec
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.jdk.CollectionConverters.SeqHasAsJava
 import scala.jdk.OptionConverters.RichOptional
@@ -180,7 +178,7 @@ class JavaHoverProvider(
       types: Types,
       elements: Elements
   ): String = {
-    val sym = semanticdbSymbol(element)
+    val sym = compiler.semanticdbSymbol(element)
     compiler.search
       .documentation(
         sym,
@@ -237,82 +235,9 @@ class JavaHoverProvider(
         enclosedExecutableElement,
         enclosingElement
       ))
-      symbol = semanticdbSymbol(enclosedExecutableElement)
+      symbol = compiler.semanticdbSymbol(enclosedExecutableElement)
     } yield symbol
     overriddenSymbols.toList.asJava
   }
 
-  private def semanticdbSymbol(element: Element): String = {
-
-    @tailrec
-    def descriptors(
-        acc: List[Descriptor],
-        element: Element
-    ): List[Descriptor] = {
-      if (element == null || element.getSimpleName.toString == "") {
-        if (acc.isEmpty) Empty :: Nil
-        else acc
-      } else {
-        val elements = {
-          element match {
-            case packageElement: PackageElement =>
-              packageElement.getQualifiedName.toString
-                .split('.')
-                .map(Package(_))
-                .toList
-            case executableElement: ExecutableElement =>
-              List(
-                Method(
-                  executableElement.getSimpleName().toString(),
-                  disambiguator(executableElement)
-                )
-              )
-            case typeElement: TypeElement =>
-              List(Class(typeElement.getSimpleName().toString()))
-            case typeParameterElement: TypeParameterElement =>
-              List(
-                TypeVariable(typeParameterElement.getSimpleName().toString())
-              )
-            case variableElement: VariableElement =>
-              List(Var(variableElement.getSimpleName().toString()))
-            case _ => List(Empty)
-          }
-        }
-
-        descriptors(elements ::: acc, element.getEnclosingElement())
-      }
-    }
-
-    val decs = descriptors(Nil, element).filter(_ != Empty)
-
-    (decs match {
-      case Nil => List.empty[Descriptor]
-      case d @ (Package(_) :: _) => d
-      case d => Package("_empty_") :: d
-    }).mkString("")
-  }
-
-  private def disambiguator(executableElement: ExecutableElement): String = {
-    val methods =
-      executableElement.getEnclosingElement.getEnclosedElements.asScala
-        .collect {
-          case e: ExecutableElement
-              if e.getSimpleName == executableElement.getSimpleName =>
-            e
-        }
-
-    val index = methods.zipWithIndex.collectFirst {
-      case (e, i) if e.equals(executableElement) => i
-    }
-
-    index match {
-      case Some(i) => if (i == 0) "()" else s"(+$i)"
-      case None => "()"
-    }
-  }
-
-  object Symbols {
-    val None: String = ""
-    val RootPackage: String = "_root_/"
-  }
 }

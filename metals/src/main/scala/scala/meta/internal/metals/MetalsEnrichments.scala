@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import java.io.IOException
 import java.lang.reflect.Type
 import java.net.URI
 import java.nio.charset.StandardCharsets
@@ -37,6 +36,7 @@ import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.concurrent.FileLock
 import scala.meta.internal.metals.debug.DiscoveryFailures
 import scala.meta.internal.mtags.MtagsEnrichments
 import scala.meta.internal.parsing.EmptyResult
@@ -514,24 +514,6 @@ object MetalsEnrichments
         else None
       }
 
-      def withJarDirLock[A](dir: AbsolutePath)(f: => A)(fallback: => A): A = {
-        if (!dir.exists) Files.createDirectories(dir.toNIO)
-        val lockFile = dir.resolve(".lock")
-        if (lockFile.exists) {
-          fallback
-        } else {
-          try {
-            Files.createFile(lockFile.toNIO)
-            f
-          } catch {
-            case _: IOException =>
-              fallback
-          } finally {
-            Files.deleteIfExists(lockFile.toNIO)
-          }
-        }
-      }
-
       def retry: AbsolutePath = {
         Thread.sleep(50)
         this.toFileOnDisk0(workspace, retryCount + 1)
@@ -572,21 +554,23 @@ object MetalsEnrichments
 
             lazy val currentJarMeta = readJarMeta(jarMetaFile)
             lazy val jarMeta = toJarMeta(jar)
-
             val updateMeta = !jarDir.exists || !currentJarMeta.contains(jarMeta)
             if (!out.exists || updateMeta) {
-              withJarDirLock(jarDir) {
-                if (updateMeta) {
-                  val prevFiles = FileIO
-                    .listAllFilesRecursively(jarDir)
-                    .filter(_.filename != ".lock")
-                  prevFiles.foreach(_.delete())
+              if (updateMeta) {
+                FileLock.withDeleteLock(jarDir)(() => {
+                  jarDir.deleteRecursively()
+                  if (!jarDir.exists) jarDir.createDirectories()
                   Files.write(jarMetaFile.toNIO, jarMeta.getBytes)
-                }
-                copyFile(path, out)
-              }(retry)
-            } else
+                  copyFile(path, out)
+                })(retry)
+              } else {
+                FileLock.withWriteLock(jarDir)(() => {
+                  copyFile(path, out)
+                })(retry)
+              }
+            } else {
               out
+            }
           case None =>
             val out =
               workspace.resolve(Directories.readonly).resolveZipPath(path.toNIO)
