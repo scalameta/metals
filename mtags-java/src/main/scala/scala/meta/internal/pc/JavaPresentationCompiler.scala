@@ -67,7 +67,9 @@ case class JavaPresentationCompiler(
   override def signatureHelp(
       params: OffsetParams
   ): CompletableFuture[SignatureHelp] =
-    CompletableFuture.completedFuture(new SignatureHelp())
+    CompletableFuture.completedFuture(
+      new JavaSignatureHelpProvider(javaCompiler, params).signatureHelp()
+    )
 
   override def hover(
       params: OffsetParams
