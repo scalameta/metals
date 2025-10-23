@@ -154,16 +154,22 @@ class MetalsSymbolSearch(
     val simpleTypeName = paramTypeSymbol.split("/").last
 
     wsp.implicitClassMembers.values.flatten.foreach { member =>
-      // Match if either:
+      // Match if:
       // 1. Exact match (e.g., both are "scala/Int#")
       // 2. Simple name match (e.g., query "scala/Int#" matches indexed "Int#")
+      // 3. Generic type match (e.g., indexed "A#", "K#" etc. matches ANY query type)
       val memberSimpleName = member.paramType.split("/").last
+      val isGenericType = memberSimpleName.length == 2 && memberSimpleName.endsWith("#") && 
+                          memberSimpleName.head.isUpper
+      
       if (
-        member.paramType == paramTypeSymbol || memberSimpleName == simpleTypeName
+        member.paramType == paramTypeSymbol || 
+        memberSimpleName == simpleTypeName ||
+        isGenericType
       ) {
         scribe.debug(
           s"[MetalsSymbolSearch]   Match found: ${member.methodName} from ${member.classSymbol} " +
-            s"(query: $paramTypeSymbol, indexed: ${member.paramType})"
+            s"(query: $paramTypeSymbol, indexed: ${member.paramType}, isGeneric: $isGenericType)"
         )
         results += new scala.meta.pc.ImplicitClassMemberResult(
           member.methodSymbol,

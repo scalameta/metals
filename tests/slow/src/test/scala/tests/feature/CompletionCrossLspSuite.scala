@@ -154,7 +154,7 @@ class CompletionCrossLspSuite
     } yield ()
   }
 
-  test("implicit-class-circe-encoder") {
+  test("implicit-class-circe-dependency") {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -163,15 +163,6 @@ class CompletionCrossLspSuite
            |  "a": { 
            |    "scalaVersion": "${V.scala213}",
            |    "libraryDependencies": ["io.circe::circe-core:0.14.1"]
-           |  }
-           |}
-           |/a/src/main/scala/example/ImplicitOps.scala
-           |package example
-           |
-           |object Implicits {
-           |  implicit class MyIntOps(val n: Int) {
-           |    def doubled: Int = n * 2
-           |    def tripled: Int = n * 3
            |  }
            |}
            |/a/src/main/scala/a/A.scala
@@ -184,23 +175,78 @@ class CompletionCrossLspSuite
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ = assertNoDiagnostics()
+      // Test that asJson method from Circe's EncoderOps implicit class is available on Int
       _ <- assertCompletion(
-        "2.dou@@",
-        """|doubled: Int (implicit)
+        "2.asJ@@",
+        """|asJson(implicit encoder: Encoder[A]): Json (implicit)
+           |asJsonObject(implicit encoder: Encoder.AsObject[A]): JsonObject (implicit)
            |""".stripMargin,
-        filter = _.contains("doubled"),
+        filter = _.contains("asJson"),
       )
+      // Test auto-import of the implicit class when applying completion
       _ <- assertCompletionEdit(
-        "2.dou@@",
+        "2.asJ@@",
         """|package example
            |
-           |import example.Implicits.MyIntOps
+           |import io.circe.syntax.EncoderOps
            |
            |object Main {
-           |  2.doubled
+           |  2.asJson($0)
            |}
            |""".stripMargin,
-        filter = _.contains("doubled"),
+        filter = _.contains("asJson"),
+      )
+    } yield ()
+  }
+
+  test("implicit-class-workspace") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": { 
+           |    "scalaVersion": "${V.scala213}"
+           |  }
+           |}
+           |/a/src/main/scala/a/MyImplicits.scala
+           |package example
+           |
+           |object MyImplicits {
+           |  implicit class MyIntOps(n: Int) {
+           |    def myDouble: Int = n * 2
+           |    def myTriple: Int = n * 3
+           |  }
+           |}
+           |/a/src/main/scala/a/A.scala
+           |package example
+           |
+           |object Main {
+           |  // @@
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ = assertNoDiagnostics()
+      // Test that methods from workspace implicit class are available
+      _ <- assertCompletion(
+        "10.myD@@",
+        """|myDouble: Int (implicit)
+           |""".stripMargin,
+        filter = _.contains("myDouble"),
+      )
+      // Test auto-import of the implicit class when applying completion
+      _ <- assertCompletionEdit(
+        "10.myD@@",
+        """|package example
+           |
+           |import example.MyImplicits.MyIntOps
+           |
+           |object Main {
+           |  10.myDouble
+           |}
+           |""".stripMargin,
+        filter = _.contains("myDouble"),
       )
     } yield ()
   }

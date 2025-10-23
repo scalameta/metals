@@ -12,6 +12,7 @@ import scala.meta.Dialect
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.io.PlatformFileIO
+import scala.meta.internal.mtags.ScalaMtags
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
@@ -142,7 +143,19 @@ class SymbolIndexBucket(
   ): IndexingResult = {
     val uri = source.toIdeallyRelativeURI(sourceDirectory)
     val (doc, overrides, toplevelMembers, implicitClassMembers) =
-      mtags.extendedIndexing(source, dialect)
+      if (isJava) {
+        mtags.extendedIndexing(source, dialect)
+      } else {
+        // Use full parser (ScalaMtags) to extract implicit class members
+        val input = source.toInput
+        val scalaMtags = new ScalaMtags(input, dialect)
+        scalaMtags.indexRoot()
+        val doc = scalaMtags.index()
+        val overrides = scalaMtags.overrides()
+        val toplevelMembers = scalaMtags.toplevelMembers()
+        val implicitMembers = scalaMtags.implicitClassMembers()
+        (doc, overrides, toplevelMembers, implicitMembers)
+      }
     val sourceTopLevels =
       doc.occurrences.iterator
         .filterNot(_.symbol.isPackage)

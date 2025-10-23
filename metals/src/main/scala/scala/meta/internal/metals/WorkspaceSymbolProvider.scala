@@ -11,6 +11,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.ImplicitClassMember
 import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.ScalaMtags
 import scala.meta.internal.mtags.ToplevelMember
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.semanticdb.TextDocuments
@@ -455,7 +456,11 @@ final class WorkspaceSymbolProvider(
         includeSource3 = true,
       )
       try {
-        val (_, _, _, implicitMembers) = Mtags.extendedIndexing(path, dialect)
+        // Use ScalaMtags (full parser) to extract implicit class members
+        val input = path.toInput
+        val mtags = new ScalaMtags(input, dialect)
+        mtags.indexRoot()
+        val implicitMembers = mtags.implicitClassMembers()
         scribe.info(
           s"[WorkspaceSymbolProvider.onChange] Extracted ${implicitMembers.size} implicit class members from $path"
         )

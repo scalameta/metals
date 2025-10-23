@@ -32,6 +32,9 @@ class ScalaMtags(
   def source: Source = root.get
   override def language: Language = Language.SCALA
   override def indexRoot(): Unit = {
+    if (input.path.contains("circe") || input.path.contains("syntax")) {
+      System.err.println(s"[ScalaMtags.indexRoot] Indexing Circe file: ${input.path}")
+    }
     root match {
       case Parsed.Success(tree) => apply(tree)
       case _ => // do nothing in case of parse error
