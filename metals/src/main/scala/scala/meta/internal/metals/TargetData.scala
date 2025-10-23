@@ -61,6 +61,8 @@ final class TargetData(val isAmmonite: Boolean = false) {
     TrieMap.empty[AbsolutePath, Unit]
   val sourceJarNameToJarFile: MMap[String, AbsolutePath] =
     TrieMap.empty[String, AbsolutePath]
+  val hasScalaLibraryDependency: MMap[BuildTargetIdentifier, Boolean] =
+    TrieMap.empty[BuildTargetIdentifier, Boolean]
   val isSourceRoot: util.Set[AbsolutePath] =
     ConcurrentHashSet.empty[AbsolutePath]
   // if workspace contains symlinks, original source items are kept here and source items dealiased
@@ -317,6 +319,28 @@ final class TargetData(val isAmmonite: Boolean = false) {
     inverseDependencySources.clear()
     sourceJarNameToJarFile.clear()
     isSourceRoot.clear()
+    hasScalaLibraryDependency.clear()
+  }
+
+  /**
+   * Check if the build target has the scala library on its classpath.
+   *
+   * @note This method won't force the classpath to be resolved via the BSP
+   *       if it's not already resolved.
+   */
+  def hasScalaLibrary(id: BuildTargetIdentifier): Boolean = {
+    hasScalaLibraryDependency.get(id) match {
+      case Some(value) => value
+      case None =>
+        buildTargetClasspath.get(id) match {
+          case Some(classpath) =>
+            val value = classpath.exists(_.contains("scala-library"))
+            hasScalaLibraryDependency(id) = value
+            value
+
+          case None => false
+        }
+    }
   }
 
   def addWorkspaceBuildTargets(result: WorkspaceBuildTargetsResult): Unit = {

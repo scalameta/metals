@@ -145,6 +145,9 @@ final class BuildTargets private (
   )(implicit executionContext: ExecutionContext): Option[Future[List[String]]] =
     data.fromOptions(_.targetClasspath(id, cancelPromise))
 
+  def hasScalaLibrary(id: BuildTargetIdentifier): Boolean =
+    data.iterator.exists(_.hasScalaLibrary(id))
+
   def targetClassDirectories(
       id: BuildTargetIdentifier
   ): List[String] =

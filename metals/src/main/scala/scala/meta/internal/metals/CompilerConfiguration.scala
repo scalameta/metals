@@ -162,7 +162,7 @@ class CompilerConfiguration(
         .map(_.toNIO)
         .toSeq
         .asJava
-      newCompiler(Embedded.scalaLibrary(scalaVersion), sourceItems _)
+      newCompiler(embedded.scalaLibraries(scalaVersion), sourceItems _)
     }
 
     def await: PresentationCompiler = {
@@ -246,11 +246,20 @@ class CompilerConfiguration(
         else Seq.empty
 
       scribe.debug(s"Source path: ${srcFiles.get().asScala.mkString(":")}")
+      val fallbackScalaLib =
+        if (!buildTargets.hasScalaLibrary(scalaTarget.id)) {
+          scribe.warn(
+            s"scala-library.jar not found on classpath for ${scalaTarget.displayName}, adding default library for ${scalaTarget.scalaVersion}"
+          )
+          embedded.scalaLibraries(scalaTarget.scalaVersion)
+        } else {
+          Nil
+        }
 
       fromMtags(
         mtags,
         nonBestEffortOptions,
-        classpath ++ additionalClasspath ++ bestEffortDirs ++ selfBestEffortDir,
+        classpath ++ additionalClasspath ++ bestEffortDirs ++ selfBestEffortDir ++ fallbackScalaLib,
         name,
         search,
         referenceCounter,

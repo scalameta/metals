@@ -34,7 +34,7 @@ trait LogicalPackagesProvider extends Global {
     // this is going to be the root package where all top level symbols coming from source files
     // will be added
     val pkg: ParsedLogicalPackage = newPackage()
-    logger.info(s"Parsing ${sourceRoots.size} files.")
+    logger.debug(s"Parsing ${sourceRoots.size} files.")
     for {
       batchFile <- sourceRoots
     } {

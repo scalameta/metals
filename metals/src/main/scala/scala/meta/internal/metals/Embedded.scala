@@ -49,10 +49,20 @@ final class Embedded(
     TrieMap.empty
   private val presentationCompilers: TrieMap[String, URLClassLoader] =
     TrieMap.empty
+  private val scalaLibraries: TrieMap[String, List[Path]] =
+    TrieMap.empty
+
+  def scalaLibraries(scalaVersion: String): List[Path] = {
+    scalaLibraries.getOrElseUpdate(
+      scalaVersion,
+      Embedded.scalaLibrary(scalaVersion),
+    )
+  }
 
   override def cancel(): Unit = {
     presentationCompilers.clear()
     mdocs.clear()
+    scalaLibraries.clear()
   }
 
   def mdoc(scalaVersion: String): Mdoc = {
