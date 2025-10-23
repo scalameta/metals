@@ -36,7 +36,7 @@ abstract class BaseToplevelSuite extends BaseSuite {
         mode match {
           case All | ToplevelWithInner =>
             val includeMembers = mode == All
-            val (doc, overrides, toplevelMembers) =
+            val (doc, overrides, toplevelMembers, _) =
               Mtags.extendedIndexing(input, dialect, includeMembers)
             val overriddenMap = overrides.toMap
             val types = toplevelMembers.map {
