@@ -162,17 +162,16 @@ class SymbolIndexBucket(
     val toplevelMembers = toplevelMtags.toplevelMembers()
     
     // Additionally use full parser (ScalaMtags) ONLY if fast scanner detected implicit classes
-    val implicitClassMembers = if (!isJava && toplevelMtags.isInstanceOf[ScalaToplevelMtags] && 
-                                   toplevelMtags.asInstanceOf[ScalaToplevelMtags].containsImplicitClasses) {
-      try {
-        val scalaMtags = new ScalaMtags(input, dialect)
-        scalaMtags.indexRoot()
-        scalaMtags.implicitClassMembers()
-      } catch {
-        case NonFatal(_) => Nil
-      }
-    } else {
-      Nil
+    val implicitClassMembers = toplevelMtags match {
+      case scala: ScalaToplevelMtags if scala.containsImplicitClasses =>
+        try {
+          val scalaMtags = new ScalaMtags(input, dialect)
+          scalaMtags.indexRoot()
+          scalaMtags.implicitClassMembers()
+        } catch {
+          case NonFatal(_) => Nil
+        }
+      case _ => Nil
     }
     val sourceTopLevels =
       doc.occurrences.iterator
