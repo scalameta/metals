@@ -159,11 +159,12 @@ class MetalsSymbolSearch(
       // 2. Simple name match (e.g., query "scala/Int#" matches indexed "Int#")
       // 3. Generic type match (e.g., indexed "A#", "K#" etc. matches ANY query type)
       val memberSimpleName = member.paramType.split("/").last
-      val isGenericType = memberSimpleName.length == 2 && memberSimpleName.endsWith("#") && 
-                          memberSimpleName.head.isUpper
-      
+      val isGenericType =
+        memberSimpleName.length == 2 && memberSimpleName.endsWith("#") &&
+          memberSimpleName.head.isUpper
+
       if (
-        member.paramType == paramTypeSymbol || 
+        member.paramType == paramTypeSymbol ||
         memberSimpleName == simpleTypeName ||
         isGenericType
       ) {

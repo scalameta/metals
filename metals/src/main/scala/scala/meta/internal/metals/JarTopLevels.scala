@@ -480,6 +480,9 @@ class JarIndexingInfo(conn: () => Connection) {
       jar: AbsolutePath
   ): Option[Map[AbsolutePath, List[ImplicitClassMember]]] =
     try {
+      scribe.info(
+        s"[JarTopLevels] Reading implicit class members from database for JAR: $jar"
+      )
       val fs = getFileSystem(jar)
       val implicitClassMembers =
         List.newBuilder[(AbsolutePath, ImplicitClassMember)]
@@ -513,12 +516,17 @@ class JarIndexingInfo(conn: () => Connection) {
           }
         }
         .headOption
-        .map(_ =>
-          implicitClassMembers.result().groupBy(_._1).map {
+        .map { _ =>
+          val result = implicitClassMembers.result().groupBy(_._1).map {
             case (path, members) =>
               (path, members.map(_._2))
           }
-        )
+          val totalMembers = result.values.map(_.size).sum
+          scribe.info(
+            s"[JarTopLevels] Retrieved $totalMembers implicit class members from ${result.size} files from database"
+          )
+          result
+        }
     } catch {
       case error @ (_: ZipError | _: ZipException) =>
         scribe.warn(s"corrupted jar $jar: $error")

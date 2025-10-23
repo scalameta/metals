@@ -681,7 +681,9 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
   ) = {
     scribe.info(s"[Indexer.indexJar] Indexing JAR: $path")
     val indexResult = definitionIndex.addSourceJar(path, dialect, reindex)
-    scribe.info(s"[Indexer.indexJar] Got ${indexResult.size} indexing results from JAR")
+    scribe.info(
+      s"[Indexer.indexJar] Got ${indexResult.size} indexing results from JAR"
+    )
     val toplevels = indexResult.flatMap {
       case IndexingResult(path, toplevels, _, _, _) =>
         toplevels.map((_, path))

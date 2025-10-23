@@ -141,10 +141,11 @@ class SymbolIndexBucket(
       sourceDirectory: Option[AbsolutePath],
       isJava: Boolean
   ): IndexingResult = {
-    implicit val rc: scala.meta.pc.reports.ReportContext = new scala.meta.pc.reports.EmptyReportContext()
+    implicit val rc: scala.meta.pc.reports.ReportContext =
+      new scala.meta.pc.reports.EmptyReportContext()
     val uri = source.toIdeallyRelativeURI(sourceDirectory)
     val input = source.toInput
-    
+
     // Use fast scanner (ScalaToplevelMtags) for toplevel symbols
     val toplevelMtags = if (isJava) {
       new JavaToplevelMtags(input, includeInnerClasses = true)
@@ -160,7 +161,7 @@ class SymbolIndexBucket(
     val doc = toplevelMtags.index()
     val overrides = toplevelMtags.overrides()
     val toplevelMembers = toplevelMtags.toplevelMembers()
-    
+
     // Additionally use full parser (ScalaMtags) ONLY if fast scanner detected implicit classes
     val implicitClassMembers = toplevelMtags match {
       case scala: ScalaToplevelMtags if scala.containsImplicitClasses =>
