@@ -141,21 +141,39 @@ class SymbolIndexBucket(
       sourceDirectory: Option[AbsolutePath],
       isJava: Boolean
   ): IndexingResult = {
+    implicit val rc: scala.meta.pc.reports.ReportContext = new scala.meta.pc.reports.EmptyReportContext()
     val uri = source.toIdeallyRelativeURI(sourceDirectory)
-    val (doc, overrides, toplevelMembers, implicitClassMembers) =
-      if (isJava) {
-        mtags.extendedIndexing(source, dialect)
-      } else {
-        // Use full parser (ScalaMtags) to extract implicit class members
-        val input = source.toInput
+    val input = source.toInput
+    
+    // Use fast scanner (ScalaToplevelMtags) for toplevel symbols
+    val toplevelMtags = if (isJava) {
+      new JavaToplevelMtags(input, includeInnerClasses = true)
+    } else {
+      new ScalaToplevelMtags(
+        input,
+        includeInnerClasses = true,
+        includeMembers = false,
+        dialect
+      )
+    }
+    toplevelMtags.indexRoot()
+    val doc = toplevelMtags.index()
+    val overrides = toplevelMtags.overrides()
+    val toplevelMembers = toplevelMtags.toplevelMembers()
+    
+    // Additionally use full parser (ScalaMtags) ONLY if fast scanner detected implicit classes
+    val implicitClassMembers = if (!isJava && toplevelMtags.isInstanceOf[ScalaToplevelMtags] && 
+                                   toplevelMtags.asInstanceOf[ScalaToplevelMtags].containsImplicitClasses) {
+      try {
         val scalaMtags = new ScalaMtags(input, dialect)
         scalaMtags.indexRoot()
-        val doc = scalaMtags.index()
-        val overrides = scalaMtags.overrides()
-        val toplevelMembers = scalaMtags.toplevelMembers()
-        val implicitMembers = scalaMtags.implicitClassMembers()
-        (doc, overrides, toplevelMembers, implicitMembers)
+        scalaMtags.implicitClassMembers()
+      } catch {
+        case NonFatal(_) => Nil
       }
+    } else {
+      Nil
+    }
     val sourceTopLevels =
       doc.occurrences.iterator
         .filterNot(_.symbol.isPackage)

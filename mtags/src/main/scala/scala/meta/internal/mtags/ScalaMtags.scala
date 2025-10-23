@@ -32,9 +32,6 @@ class ScalaMtags(
   def source: Source = root.get
   override def language: Language = Language.SCALA
   override def indexRoot(): Unit = {
-    if (input.path.contains("circe") || input.path.contains("syntax")) {
-      System.err.println(s"[ScalaMtags.indexRoot] Indexing Circe file: ${input.path}")
-    }
     root match {
       case Parsed.Success(tree) => apply(tree)
       case _ => // do nothing in case of parse error
@@ -261,13 +258,7 @@ class ScalaMtags(
           continue()
         case t: Defn.Class =>
           val isImplicit = t.mods.has[Mod.Implicit]
-          System.err.println(
-            s"[ScalaMtags.loop] Processing class: ${t.name.value}, isImplicit=$isImplicit"
-          )
           if (isImplicit) {
-            System.err.println(
-              s"[ScalaMtags.loop] Found implicit class: ${t.name.value}, calling collectImplicitClassMembers"
-            )
             // emit symbol for implicit conversion
             withOwner() {
               method(t.name, "()", Kind.METHOD, Property.IMPLICIT.value)
@@ -468,12 +459,6 @@ class ScalaMtags(
             val paramTypeSymbol = typeToSymbol(tpe)
             val classSymbol = symbol(Descriptor.Type(cls.name.value))
 
-            System.err.println(
-              s"[ScalaMtags] Detected implicit class: ${cls.name.value}, " +
-                s"classSymbol=$classSymbol, paramType=$paramTypeSymbol"
-            )
-
-            var methodCount = 0
             cls.templ.stats.foreach {
               case defn: Defn.Def if !defn.mods.exists {
                     case Mod.Private(_) => true
@@ -491,18 +476,7 @@ class ScalaMtags(
                   methodName = defn.name.value,
                   range = cls.pos.toSemanticdb
                 )
-                methodCount += 1
-                System.err.println(
-                  s"[ScalaMtags]   Method: ${defn.name.value}, methodSymbol=$methodSymbol"
-                )
               case _ =>
-            }
-
-            if (methodCount > 0) {
-              System.err.println(
-                s"[ScalaMtags] Indexed implicit class ${cls.name.value} " +
-                  s"with $methodCount methods for type $paramTypeSymbol"
-              )
             }
           case None =>
         }

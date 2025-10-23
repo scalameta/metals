@@ -71,6 +71,10 @@ class ScalaToplevelMtags(
   private val overridden = List.newBuilder[(String, List[OverriddenSymbol])]
   private val toplevelMembersBuilder = List.newBuilder[ToplevelMember]
   private val implicitClassMembersBuilder = List.newBuilder[ImplicitClassMember]
+  
+  // Flag to track if file contains implicit classes (for optimization)
+  private var hasImplicitClasses: Boolean = false
+  def containsImplicitClasses: Boolean = hasImplicitClasses
 
   private def addOverridden(symbols: List[OverriddenSymbol]) =
     overridden += ((currentOwner, symbols))
@@ -429,6 +433,9 @@ class ScalaToplevelMtags(
         case COLON if dialect.allowSignificantIndentation =>
           (expectTemplate, nextIsNL()) match {
             case (Some(expect), true) if needToParseBody(expect) =>
+              if (expect.isImplicit) {
+                hasImplicitClasses = true
+              }
               val next = expect.startIndentedRegion(
                 currRegion,
                 isImplicitClass = expect.isImplicit
@@ -469,6 +476,9 @@ class ScalaToplevelMtags(
                 scanner.mtagsNextToken()
                 loop(indent.notAfterNewline, currRegion, expectTemplate)
               } else {
+                if (expect.isImplicit) {
+                  hasImplicitClasses = true
+                }
                 val next =
                   expect.startInBraceRegion(
                     currRegion,
