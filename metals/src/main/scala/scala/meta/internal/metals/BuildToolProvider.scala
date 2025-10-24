@@ -21,6 +21,7 @@ class BuildToolProvider(
   private val buildToolSelector: BuildToolSelector = new BuildToolSelector(
     languageClient,
     tables,
+    buildTools.getUserConfig,
   )
 
   def buildTool: Option[BuildTool] =
