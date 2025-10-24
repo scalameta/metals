@@ -75,9 +75,6 @@ class JavaPruneCompiler(
       "-parameters",
       // NOTE(olafurpg): I think we can remove this?
       "-XDdiags.showEndPos=true",
-      // javac doesn't lint a lot, we should replace this with something like
-      // errorprone
-      "-Xlint:all",
       // Critical! This enables our custom prune file manager
       "-sourcepath",
       "",

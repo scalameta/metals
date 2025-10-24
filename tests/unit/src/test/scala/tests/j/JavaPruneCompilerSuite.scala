@@ -34,6 +34,16 @@ class JavaPruneCompilerSuite extends BaseJavaPruneCompilerSuite {
     "a/src/main/java/example/foo/Example.java",
   )
 
+  checkNoErrors(
+    "warnings",
+    """|/foo/Example.java
+       |package foo;
+       |public class Example implements java.io.Serializable {
+       |}
+       |""".stripMargin,
+    "foo/Example.java",
+  )
+
   checkErrors(
     "type-error",
     """|
