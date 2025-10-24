@@ -433,7 +433,7 @@ class UserConfigurationSuite extends BaseSuite {
       | "target-build-tool": "invalid-tool"
       |}
     """.stripMargin,
-    "Invalid target-build-tool 'invalid-tool'. Valid values are: sbt, gradle, mvn, mill, scala-cli, bazel",
+    "Invalid target-build-tool 'invalid-tool'. Valid values are: bazel, gradle, mill, mvn, sbt, scala-cli",
   )
 
   checkOK(

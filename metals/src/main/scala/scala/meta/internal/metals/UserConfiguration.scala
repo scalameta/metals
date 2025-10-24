@@ -850,7 +850,7 @@ object UserConfiguration {
         if (validBuildTools.contains(tool)) {
           Some(tool)
         } else {
-          errors += s"Invalid target-build-tool '$tool'. Valid values are: ${validBuildTools.mkString(", ")}"
+          errors += s"Invalid target-build-tool '$tool'. Valid values are: ${validBuildTools.toSeq.sorted.mkString(", ")}"
           None
         }
       }
