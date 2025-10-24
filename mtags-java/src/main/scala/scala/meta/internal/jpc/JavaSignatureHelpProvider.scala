@@ -185,7 +185,7 @@ class JavaSignatureHelpProvider(
     override def visitNewClass(node: NewClassTree, p: Unit): TreePath = {
       val selectEnd = sourcePositions.getEndPosition(cu, node.getIdentifier())
       if (selectEnd > targetOffset) {
-        return null
+        return super.visitNewClass(node, p)
       }
       lastInvocation = Some(getCurrentPath())
       var r = scan(node.getEnclosingExpression(), p);
@@ -199,7 +199,7 @@ class JavaSignatureHelpProvider(
       val selectEnd =
         sourcePositions.getEndPosition(cu, node.getAnnotationType())
       if (selectEnd > targetOffset) {
-        return null
+        return super.visitAnnotation(node, p)
       }
       lastInvocation = Some(getCurrentPath())
       var r = super.scan(node.getAnnotationType(), p);
@@ -212,7 +212,7 @@ class JavaSignatureHelpProvider(
     ): TreePath = {
       val selectEnd = sourcePositions.getEndPosition(cu, node.getMethodSelect())
       if (selectEnd > targetOffset) {
-        return null
+        return super.visitMethodInvocation(node, p)
       }
       lastInvocation = Some(getCurrentPath())
       var r = super.scan(node.getTypeArguments(), p);

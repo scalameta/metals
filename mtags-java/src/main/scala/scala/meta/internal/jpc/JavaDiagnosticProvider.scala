@@ -33,24 +33,24 @@ class JavaDiagnosticProvider(
     compile.task.analyze()
     params.checkCanceled()
 
-    compile.listener.diagnostics.iterator
+    for {
+      d <- compile.listener.diagnostics.iterator
       // The compiler may report noisy diagnostics from transitive dependencies
-      .filter(d =>
-        // TODO: we can't rely on the URI here, getName() with originaluri- is better.
-        d.getSource() != null && d.getSource().toUri() == params.uri()
-      )
-      .map(d => toLspDiagnostic(lineMap, d))
-      .toList
-  }
+      // TODO: we can't rely on the URI here, getName() with originaluri- is better.
+      if d.getSource() != null && d.getSource().toUri() == params.uri()
+    } yield toLspDiagnostic(lineMap, d)
+  }.toList
 
   private def toLspDiagnostic(
       lineMap: LineMap,
       d: Diagnostic[_ <: JavaFileObject]
   ): l.Diagnostic = {
     new l.Diagnostic(
-      new l.Range(
-        Positions.toLspPosition(lineMap, d.getPosition(), params.text()),
-        Positions.toLspPosition(lineMap, d.getEndPosition(), params.text())
+      Positions.toLspRange(
+        lineMap,
+        d.getPosition(),
+        d.getEndPosition(),
+        params.text()
       ),
       d.getMessage(null),
       d.getKind() match {

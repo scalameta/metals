@@ -44,6 +44,17 @@ class JavaPruneCompilerSuite extends BaseJavaPruneCompilerSuite {
     "foo/Example.java",
   )
 
+  checkNoErrors(
+    "jdk-add-exports",
+    """|/foo/Example.java
+       |import com.sun.tools.javac.code.Symbol;
+       |public class Example {
+       |    public static final Symbol symbol = null;
+       |}
+       |""".stripMargin,
+    "foo/Example.java",
+  )
+
   checkErrors(
     "type-error",
     """|

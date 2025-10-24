@@ -79,4 +79,19 @@ class SignatureHelpSuite extends BaseJavaSignatureHelpSuite {
        |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
        |""".stripMargin,
   )
+
+  check(
+    "chain",
+    """
+      |public class A {
+      |    public A self(String message) { return this; }
+      |    public void foo(String message) {
+      |        new A().self("bla@@h").foo(String.format("blah %s", "foo"));
+      |    }
+      |}
+      |""".stripMargin,
+    """|=> self(java.lang.String message)
+       |        ^^^^^^^^^^^^^^^^^^^^^^^^
+       |""".stripMargin,
+  )
 }
