@@ -93,19 +93,21 @@ final class MbtWorkspaceSymbolProvider(
         ju.Collections.emptyList(),
       ) { (env, db, txn, _) =>
         val keyBuffer = ByteBuffer.allocateDirect(env.getMaxKeySize())
-        val result = mutable.ArrayBuffer.empty[SemanticdbCompilationUnit]
+        val result = new ConcurrentLinkedQueue[SemanticdbCompilationUnit]()
         index.foreach { f =>
           if (f.language == s.Language.JAVA && f.semanticdbPackage == pkg) {
             val doc = this.readTextDocument(keyBuffer, db, txn, f)
             val text = AbsolutePath(f.path).toInputFromBuffers(buffers).text
-            result += VirtualTextDocument.fromDocument(
-              f.semanticdbPackage,
-              f.toplevelSymbols,
-              doc.copy(text = text),
+            result.add(
+              VirtualTextDocument.fromDocument(
+                f.semanticdbPackage,
+                f.toplevelSymbols,
+                doc.copy(text = text),
+              )
             )
           }
         }
-        result.asJava
+        new ju.ArrayList(result)
       }
     }
   }
