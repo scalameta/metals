@@ -17,11 +17,12 @@ class BuildToolProvider(
     val folder: AbsolutePath,
     warnings: ProjectWarnings,
     languageClient: MetalsLanguageClient,
+    userConfig: () => UserConfiguration,
 )(implicit ec: ExecutionContext) {
   private val buildToolSelector: BuildToolSelector = new BuildToolSelector(
     languageClient,
     tables,
-    buildTools.getUserConfig,
+    userConfig,
   )
 
   def buildTool: Option[BuildTool] =
