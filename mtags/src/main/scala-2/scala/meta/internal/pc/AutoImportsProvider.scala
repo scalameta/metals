@@ -101,6 +101,7 @@ final class AutoImportsProvider(
               context,
               value
             )
+
             val nameEdit = new l.TextEdit(namePos, short)
             nameEdit :: edits
         }

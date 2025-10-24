@@ -266,7 +266,10 @@ trait Signatures { compiler: MetalsGlobal =>
             val name =
               if (isGroup) importNames.mkString("{", ", ", "}")
               else importNames.mkString
-            s"${indent}import ${scope.fullname(owner)}.${name}"
+            val isTwirl =
+              if (pos.source.toString.endsWith("scala.html")) "\n@" else ""
+
+            s"${indent}${isTwirl}import ${scope.fullname(owner)}.${name}"
           }
           .mkString(topPadding, "\n", "\n")
         val startPos = pos.withPoint(lineStart).focus
