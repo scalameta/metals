@@ -58,9 +58,15 @@ class SemanticdbTypeVisitor extends SimpleTypeVisitor8<Semanticdb.Type, Void> {
 				typeSig.setTypeParameters(Semanticdb.Scope.newBuilder());
 
 				if (wildcardType.getExtendsBound() != null) {
-					typeSig.setUpperBound(super.visit(wildcardType.getExtendsBound()));
+					var extendsBound = super.visit(wildcardType.getExtendsBound());
+					if (extendsBound != null) {
+						typeSig.setUpperBound(extendsBound);
+					}
 				} else if (wildcardType.getSuperBound() != null) {
-					typeSig.setLowerBound(super.visit(wildcardType.getSuperBound()));
+					var superBound = super.visit(wildcardType.getSuperBound());
+					if (superBound != null) {
+						typeSig.setLowerBound(superBound);
+					}
 				}
 
 				declarations.addHardlinks(Semanticdb.SymbolInformation.newBuilder().setSymbol("local_wildcard")
