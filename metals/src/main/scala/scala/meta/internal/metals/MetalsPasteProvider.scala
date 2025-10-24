@@ -42,7 +42,7 @@ class MetalsPasteProvider(
         val imports = diagnostics.collect {
           case d @ MissingSymbol(name, _)
               if params.range.overlapsWith(d.getRange()) =>
-            scribe.debug(s"Missing diagnostics: ${diagnostics}")
+            scribe.debug(s"Missing diagnostic: ${d}")
             val offset =
               if (isScala3) d.getRange().getEnd()
               else d.getRange().getStart()
