@@ -203,7 +203,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
           buildTool.data,
           buildTool.importedBuild.dependencySources,
         )
-        scribe.info(s"indexed ${usedJars.size} dependency source jars")
+        scribe.debug(s"indexed ${usedJars.size} dependency source jars")
       }
     // Schedule removal of unused toplevel symbols from cache
     if (usedJars.nonEmpty)

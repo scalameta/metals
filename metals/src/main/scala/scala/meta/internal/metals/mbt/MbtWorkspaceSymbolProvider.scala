@@ -307,14 +307,14 @@ final class MbtWorkspaceSymbolProvider(
       return IndexingStats.empty
     }
     // Stage 0: discover the files that need to be indexed
-    scribe.info("workspace/symbol indexing started")
+    scribe.debug("workspace/symbol indexing started")
     val timer = new Timer(Time.system)
     val files = GitVCS
       .lsFilesStage(gitWorkspace, isRelevantPath)
       .sortInPlace()(Ordering.by[GitBlob, String](file => file.oid))
     if (files.isEmpty) {
       // An error is logged if GitVCS.lsFilesStage fails.
-      scribe.info("workspace/symbol indexing found no files to index")
+      scribe.warn("workspace/symbol indexing found no files to index")
       return IndexingStats.empty
     }
     if (isStatisticsEnabled) {

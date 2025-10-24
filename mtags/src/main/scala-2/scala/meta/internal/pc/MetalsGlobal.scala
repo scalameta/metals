@@ -659,9 +659,7 @@ class MetalsGlobal(
     try loop(symbol).filterNot(_ == NoSymbol)
     catch {
       case NonFatal(e) =>
-        logger.error(
-          s"invalid SemanticDB symbol: $symbol\n${e.getMessage}"
-        )
+        logger.error(s"invalid SemanticDB symbol: $symbol", e)
         Nil
     }
   }

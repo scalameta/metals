@@ -19,6 +19,13 @@ object LanguageClientLogger extends Writer {
       output: LogOutput,
       outputFormat: OutputFormat,
   ): Unit = {
+    MetalsSingletonLogFilter(record) match {
+      // This filter should already be applied, but the filter is seemingly
+      // only applied to the metals.log file writer, not the LSP client, so
+      // we redo the filtering here.
+      case None => return
+      case _ =>
+    }
     languageClient.foreach { client =>
       client.logMessage(new MessageParams(MessageType.Log, output.plainText))
     }

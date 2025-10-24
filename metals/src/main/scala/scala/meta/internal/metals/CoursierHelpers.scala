@@ -18,7 +18,7 @@ import coursierapi.MavenRepository
 import coursierapi.Repository
 
 object CoursierHelpers {
-  def defaultRepositories: List[Repository] =
+  lazy val defaultRepositories: List[Repository] =
     // Reimplment how `COURSIER_REPOSITORIES` is interpreted by Coursier CLI
     // since the Java interfaces don't correctly assign credentials to each
     // host. See https://github.com/coursier/interface/issues/460

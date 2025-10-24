@@ -159,9 +159,6 @@ object Configs {
             .readBoolean(FeatureFlag.MBT_WORKSPACE_SYMBOL_PROVIDER)
             .orElse(false)
           if (isMbtEnabled && LMDB.isSupportedOrWarn()) {
-            scribe.info(
-              "featureflag: MBT_WORKSPACE_SYMBOL_PROVIDER is enabled overriding default config"
-            )
             Right(WorkspaceSymbolProviderConfig.mbt)
           } else {
             Right(WorkspaceSymbolProviderConfig.default)

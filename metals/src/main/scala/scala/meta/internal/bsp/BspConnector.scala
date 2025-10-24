@@ -98,7 +98,7 @@ class BspConnector(
         regeneratedConfig: Boolean = false,
     ): Future[Option[BuildServerConnection]] = {
       def bspStatusOpt = Option.when(addLivenessMonitor)(bspStatus)
-      scribe.info("Attempting to connect to the build server...")
+      scribe.debug("Attempting to connect to the build server...")
       resolve(buildTool) match {
         case ResolvedNone =>
           scribe.info("No build server found")

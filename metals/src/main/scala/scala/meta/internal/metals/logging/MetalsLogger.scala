@@ -1,6 +1,5 @@
 package scala.meta.internal.metals.logging
 
-import java.io.OutputStream
 import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -23,7 +22,6 @@ import scribe.format.FormatterInterpolator
 import scribe.format.date
 import scribe.format.levelPaddedRight
 import scribe.format.messages
-import scribe.modify.LogModifier
 
 object MetalsLogger {
 
@@ -97,23 +95,6 @@ object MetalsLogger {
       .replace()
   }
 
-  case class MetalsFilter(id: String = "MetalsFilter") extends LogModifier {
-    override def withId(id: String): LogModifier = copy(id = id)
-    override def priority: Priority = Priority.Normal
-    override def apply(record: LogRecord): Option[LogRecord] = {
-      if (
-        record.className.startsWith(
-          "org.flywaydb"
-        ) && record.level < scribe.Level.Warn.value
-      ) {
-        None
-      } else {
-        Some(record)
-      }
-    }
-
-  }
-
   def setupLspLogger(
       folders: List[AbsolutePath],
       redirectSystemStreams: Boolean,
@@ -184,15 +165,4 @@ object MetalsLogger {
   def silentInTests: LoggerSupport[Unit] =
     if (MetalsServerConfig.isTesting) silent
     else default
-}
-
-class MutipleOutputsStream(outputs: List[OutputStream]) extends OutputStream {
-  override def write(b: Int): Unit = outputs.foreach(_.write(b))
-
-  override def write(b: Array[Byte], off: Int, len: Int): Unit =
-    outputs.foreach(_.write(b, off, len))
-
-  override def flush(): Unit = outputs.foreach(_.flush())
-
-  override def close(): Unit = outputs.foreach(_.close())
 }

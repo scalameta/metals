@@ -17,11 +17,10 @@ object SimpleTimer {
     val result = thunk
     timer.stop()
     if (
-      onlyIf && (thresholdMillis == 0 || timer.elapsed(
-        TimeUnit.MILLISECONDS
-      ) > thresholdMillis)
+      onlyIf && (thresholdMillis == 0 ||
+        timer.elapsed(TimeUnit.MILLISECONDS) > thresholdMillis)
     ) {
-      logger.info(s"time: $didWhat in $timer")
+      logger.debug(s"time: $didWhat in $timer")
     }
 
     result

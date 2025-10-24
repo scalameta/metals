@@ -348,7 +348,7 @@ final class BloopServers(
       val running = BloopRifle.check(config, bloopLogger)
 
       if (running) {
-        scribe.info("Found a Bloop server running")
+        scribe.debug("Found a Bloop server running")
         Future.unit
       } else {
         scribe.info("No running Bloop server found, starting one.")

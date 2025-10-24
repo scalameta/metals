@@ -114,7 +114,7 @@ final class Doctor(
     }
   }
   private def checkUnsafe(headDoctor: HeadDoctor): Unit = {
-    scribe.info(s"running doctor check")
+    scribe.debug(s"running doctor check")
     val scalaTargets = buildTargets.allScala.toList
     val javaTargets = buildTargets.allJava.toList
     scribe.debug(

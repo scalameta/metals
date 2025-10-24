@@ -212,7 +212,7 @@ class Compilers(
   def restartAll(): Unit = {
     val count = cache.size
     cancel()
-    scribe.info(
+    scribe.debug(
       s"restarted ${count} presentation compiler${LogMessages.plural(count)}"
     )
   }

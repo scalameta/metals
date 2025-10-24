@@ -10,6 +10,8 @@ import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 import scala.meta.internal.io.PathIO
+import scala.meta.internal.metals.logging.LogOnce
+import scala.meta.internal.metals.logging.TracingIsEnabled
 import scala.meta.io.AbsolutePath
 
 /**
@@ -79,7 +81,7 @@ object Trace {
     def setupPrintWriter(paths: List[AbsolutePath]): Option[PrintWriter] =
       paths match {
         case head :: _ if head.isFile =>
-          scribe.info(s"tracing is enabled: $head")
+          LogOnce.info(TracingIsEnabled(head.toString))
           val fos = Files.newOutputStream(
             head.toNIO,
             StandardOpenOption.CREATE,
@@ -98,4 +100,5 @@ object Trace {
 
     setupPrintWriter(tracePaths)
   }
+
 }

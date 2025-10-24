@@ -172,7 +172,7 @@ final class WorkspaceSymbolProvider(
       excludedPackageHandler(),
       bucketSize,
     )
-    scribe.info(s"indexed ${jars.size} workspace jars")
+    scribe.debug(s"indexed ${jars.size} workspace jars")
   }
 
   private def workspaceMethodSearch(
