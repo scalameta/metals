@@ -1,5 +1,7 @@
 package scala.meta.internal.pc
 
+import java.util.Optional
+
 import scala.collection.mutable
 
 import scala.meta.internal.jdk.CollectionConverters._
@@ -111,7 +113,14 @@ final class AutoImportsProvider(
             s"Could not infer edits for $pkg, tree around the position were $trees, auto import position was ${importPosition}"
           )
         }
-        (AutoImportsResultImpl(pkg, edits.asJava), sym)
+        (
+          AutoImportsResultImpl(
+            pkg,
+            edits.asJava,
+            Optional.of(semanticdbSymbol(sym))
+          ),
+          sym
+        )
     }
 
     all match {

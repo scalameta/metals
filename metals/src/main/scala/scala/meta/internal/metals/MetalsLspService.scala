@@ -1294,7 +1294,7 @@ abstract class MetalsLspService(
         )
         applyEdits(
           params.textDocument.getUri(),
-          optEdit.toList ++ didPasteEdits,
+          optEdit ++ didPasteEdits,
         )
       }
   }
