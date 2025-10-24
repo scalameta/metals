@@ -355,6 +355,38 @@ class SbtBloopLspSuite
     } yield ()
   }
 
+  test("produce-diagnostics-on-error") {
+    cleanWorkspace()
+    workspace.resolve("sbt").createDirectories()
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=$sbtVersion
+            |/build.sbt
+            |scalaVersion := "${V.scala213}"
+            |val x: String = 42
+            |""".stripMargin,
+        expectError = true,
+      )
+      _ = assertStatus(!_.isInstalled)
+      _ = assertNoDiff(
+        client.pathDiagnostics("build.sbt", formatMessage = false),
+        """|error: type mismatch;
+           | found   : Int(42)
+           | required: String
+           |val x: String = 42
+           |                ^
+           |""".stripMargin,
+      )
+      _ = server.didChange("build.sbt", s"""scalaVersion := "${V.scala213}" """)
+      _ = server.didSave("build.sbt")
+      _ <- server.executeCommand(ServerCommands.ImportBuild)
+      _ = assertStatus(_.isInstalled)
+    } yield {
+      assertNoDiff(client.pathDiagnostics("build.sbt"), "")
+    }
+  }
+
   test("supported-scala") {
     cleanWorkspace()
     for {
@@ -803,7 +835,7 @@ class SbtBloopLspSuite
       _ <- initialize(
         s"""|/build.sbt
             |def foo(): String = "2.13.2"
-            |def bar(): String = foo() 
+            |def bar(): String = foo()
             |scalaVersion := "2.13.2"
          """.stripMargin
       )
@@ -814,7 +846,7 @@ class SbtBloopLspSuite
            |def foo(): String = "2.13.2"
            |    ^^^
            |build.sbt:2:21: info: reference
-           |def bar(): String = foo() 
+           |def bar(): String = foo()
            |                    ^^^
            |""".stripMargin,
       )
@@ -827,20 +859,20 @@ class SbtBloopLspSuite
       _ <- initialize(
         s"""|/build.sbt
             |def foo(): String = "2.13.2"
-            |def bar(): String = foo() 
+            |def bar(): String = foo()
             |scalaVersion := "2.13.2"
          """.stripMargin
       )
       _ <- server.assertRename(
         "build.sbt",
         s"""|def foo(): String = "2.13.2"
-            |def bar(): String = foo@@() 
+            |def bar(): String = foo@@()
             |scalaVersion := "2.13.2"
          """.stripMargin,
         Map(
           "build.sbt" ->
             s"""|def foo2(): String = "2.13.2"
-                |def bar(): String = foo2() 
+                |def bar(): String = foo2()
                 |scalaVersion := "2.13.2"
           """.stripMargin
         ),
@@ -905,7 +937,7 @@ class SbtBloopLspSuite
       _ <- initialize(
         s"""|/build.sbt
             |def foo() = "2.13.2"
-            |def bar() = foo() 
+            |def bar() = foo()
             |scalaVersion := "2.13.2"
            """.stripMargin
       )
