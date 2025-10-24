@@ -393,4 +393,57 @@ class UserConfigurationSuite extends BaseSuite {
       )
     )
   }
+
+  checkOK(
+    "target-build-tool-valid",
+    """
+      |{
+      | "target-build-tool": "bazel"
+      |}
+    """.stripMargin,
+  ) { obtained =>
+    assert(obtained.targetBuildTool == Some("bazel"))
+  }
+
+  checkOK(
+    "target-build-tool-unset",
+    """
+      |{
+      |}
+    """.stripMargin,
+  ) { obtained =>
+    assert(obtained.targetBuildTool.isEmpty)
+  }
+
+  checkOK(
+    "target-build-tool-empty-string",
+    """
+      |{
+      | "target-build-tool": ""
+      |}
+    """.stripMargin,
+  ) { obtained =>
+    assert(obtained.targetBuildTool.isEmpty)
+  }
+
+  checkError(
+    "target-build-tool-invalid",
+    """
+      |{
+      | "target-build-tool": "invalid-tool"
+      |}
+    """.stripMargin,
+    "Invalid target-build-tool 'invalid-tool'. Valid values are: sbt, gradle, mvn, mill, scala-cli, bazel",
+  )
+
+  checkOK(
+    "target-build-tool-all-valid-values",
+    """
+      |{
+      | "target-build-tool": "sbt"
+      |}
+    """.stripMargin,
+  ) { obtained =>
+    assert(obtained.targetBuildTool == Some("sbt"))
+  }
 }
