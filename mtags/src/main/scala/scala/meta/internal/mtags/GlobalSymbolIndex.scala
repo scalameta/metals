@@ -128,5 +128,6 @@ case class IndexingResult(
     path: AbsolutePath,
     topLevels: List[String],
     overrides: List[(String, List[OverriddenSymbol])],
-    toplevelMembers: List[ToplevelMember]
+    toplevelMembers: List[ToplevelMember],
+    implicitClassMembers: List[ImplicitClassMember]
 )

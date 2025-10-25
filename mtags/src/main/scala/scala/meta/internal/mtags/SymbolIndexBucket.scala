@@ -12,6 +12,7 @@ import scala.meta.Dialect
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.io.PlatformFileIO
+import scala.meta.internal.mtags.ScalaMtags
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
@@ -105,7 +106,13 @@ class SymbolIndexBucket(
       sourceDirectory: Option[AbsolutePath],
       isJava: Boolean
   ): Option[IndexingResult] = try {
-    val IndexingResult(path, topLevels, overrides, toplevelMembers) =
+    val IndexingResult(
+      path,
+      topLevels,
+      overrides,
+      toplevelMembers,
+      implicitClassMembers
+    ) =
       indexSource(source, dialect, sourceDirectory, isJava)
     topLevels.foreach { symbol =>
       toplevels.updateWith(symbol) {
@@ -113,7 +120,15 @@ class SymbolIndexBucket(
         case None => Some(Set(source))
       }
     }
-    Some(IndexingResult(path, topLevels, overrides, toplevelMembers))
+    Some(
+      IndexingResult(
+        path,
+        topLevels,
+        overrides,
+        toplevelMembers,
+        implicitClassMembers
+      )
+    )
   } catch {
     case NonFatal(e) =>
       onError(e)
@@ -126,9 +141,39 @@ class SymbolIndexBucket(
       sourceDirectory: Option[AbsolutePath],
       isJava: Boolean
   ): IndexingResult = {
+    implicit val rc: scala.meta.pc.reports.ReportContext =
+      new scala.meta.pc.reports.EmptyReportContext()
     val uri = source.toIdeallyRelativeURI(sourceDirectory)
-    val (doc, overrides, toplevelMembers) =
-      mtags.extendedIndexing(source, dialect)
+    val input = source.toInput
+
+    // Use fast scanner (ScalaToplevelMtags) for toplevel symbols
+    val toplevelMtags = if (isJava) {
+      new JavaToplevelMtags(input, includeInnerClasses = true)
+    } else {
+      new ScalaToplevelMtags(
+        input,
+        includeInnerClasses = true,
+        includeMembers = false,
+        dialect
+      )
+    }
+    toplevelMtags.indexRoot()
+    val doc = toplevelMtags.index()
+    val overrides = toplevelMtags.overrides()
+    val toplevelMembers = toplevelMtags.toplevelMembers()
+
+    // Additionally use full parser (ScalaMtags) ONLY if fast scanner detected implicit classes
+    val implicitClassMembers = toplevelMtags match {
+      case scala: ScalaToplevelMtags if scala.containsImplicitClasses =>
+        try {
+          val scalaMtags = new ScalaMtags(input, dialect)
+          scalaMtags.indexRoot()
+          scalaMtags.implicitClassMembers()
+        } catch {
+          case NonFatal(_) => Nil
+        }
+      case _ => Nil
+    }
     val sourceTopLevels =
       doc.occurrences.iterator
         .filterNot(_.symbol.isPackage)
@@ -144,7 +189,13 @@ class SymbolIndexBucket(
           .filter(sym => !isTrivialToplevelSymbol(uri, sym, "scala"))
           .toList
       }
-    IndexingResult(source, topLevels, overrides, toplevelMembers)
+    IndexingResult(
+      source,
+      topLevels,
+      overrides,
+      toplevelMembers,
+      implicitClassMembers
+    )
   }
 
   // Returns true if symbol is com/foo/Bar# and path is /com/foo/Bar.scala

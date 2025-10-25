@@ -38,6 +38,11 @@ class ScalaMtags(
     }
   }
 
+  private val implicitClassMembersBuilder =
+    List.newBuilder[ImplicitClassMember]
+  override def implicitClassMembers(): List[ImplicitClassMember] =
+    implicitClassMembersBuilder.result()
+
   private var _toplevelSourceRef: Option[(String, OverloadDisambiguator)] = None
   private def toplevelSourceData: (String, OverloadDisambiguator) = {
     _toplevelSourceRef match {
@@ -258,6 +263,7 @@ class ScalaMtags(
             withOwner() {
               method(t.name, "()", Kind.METHOD, Property.IMPLICIT.value)
             }
+            collectImplicitClassMembers(t)
           }
           val properties = if (t.mods.has[Mod.Case]) Property.CASE.value else 0
           tpe(t.name, Kind.CLASS, properties)
@@ -442,5 +448,62 @@ class ScalaMtags(
       }
     }
     extract(t, 0)
+  }
+
+  private def collectImplicitClassMembers(cls: Defn.Class): Unit = {
+    cls.ctor.paramss match {
+      case List(List(param)) =>
+        param.decltpe match {
+          case Some(tpe) =>
+            val paramTypeSymbol = typeToSymbol(tpe)
+            val classSymbol = symbol(Descriptor.Type(cls.name.value))
+
+            cls.templ.stats.foreach {
+              case defn: Defn.Def if !defn.mods.exists {
+                    case Mod.Private(_) => true
+                    case Mod.Protected(_) => true
+                    case _ => false
+                  } =>
+                val methodSymbol = Symbols.Global(
+                  classSymbol,
+                  Descriptor.Method(defn.name.value, "()")
+                )
+                implicitClassMembersBuilder += ImplicitClassMember(
+                  classSymbol = classSymbol,
+                  paramType = paramTypeSymbol,
+                  methodSymbol = methodSymbol,
+                  methodName = defn.name.value,
+                  range = cls.pos.toSemanticdb
+                )
+              case _ =>
+            }
+          case None =>
+        }
+      case _ =>
+    }
+  }
+
+  private def typeToSymbol(tpe: Type): String = {
+    tpe match {
+      case Type.Name(value) =>
+        s"${value}#"
+      case Type.Select(qual, Type.Name(name)) =>
+        // Qualified type like scala.Int - preserve the full path
+        qualToSymbol(qual) + Descriptor.Type(name).value
+      case Type.Apply(base, _) =>
+        // Generic type, use base type
+        typeToSymbol(base)
+      case _ =>
+        "Any#"
+    }
+  }
+
+  private def qualToSymbol(qual: Term.Ref): String = {
+    qual match {
+      case Term.Name(value) => value + "/"
+      case Term.Select(q: Term.Ref, Term.Name(name)) =>
+        qualToSymbol(q) + name + "/"
+      case _ => ""
+    }
   }
 }
