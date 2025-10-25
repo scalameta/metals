@@ -208,17 +208,11 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
         """|value: Int
            |val
            |var
+           |ValueOf scala
            |varargs - scala.annotation
            |override def equals(x$1: Object): Boolean
            |override def hashCode(): Int
            |override def finalize(): Unit
-           |""".stripMargin,
-      "3" ->
-        """|value: Int
-           |val
-           |var
-           |varargs(): varargs
-           |varargs - scala.annotation
            |""".stripMargin
     )
   )
@@ -234,37 +228,22 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |  }
       |}
       |""".stripMargin,
-    """|val
+    """|
+       |val
        |var
+       |ValueOf scala
        |varargs - scala.annotation
        |""".stripMargin,
     compat = Map(
-      "3" -> """|val
-                |var
-                |varargs(): varargs
-                |varargs - scala.annotation
-                |""".stripMargin
+      "2.12" -> """|val
+                   |var
+                   |varargs - scala.annotation
+                   |""".stripMargin,
+      "2.11" -> """|val
+                   |var
+                   |varargs - scala.annotation
+                   |""".stripMargin
     )
-  )
-
-  check(
-    "given-def",
-    """
-      |package foo
-      |
-      |object A {
-      |  def someMethod = {
-      |    gi@@
-      |  }
-      |}
-      |""".stripMargin,
-    """|given (commit: '')
-       |""".stripMargin,
-    includeCommitCharacter = true,
-    compat = Map(
-      "2" -> ""
-    ),
-    topLines = Some(5)
   )
 
   check(
@@ -279,12 +258,16 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     """|value: Int
+       |ValueOf scala
        |varargs - scala.annotation
        |""".stripMargin,
     compat = Map(
-      "3" -> """|value: Int
-                |varargs(): varargs
-                |varargs - scala.annotation""".stripMargin
+      "2.12" ->
+        """|value: Int
+           |varargs - scala.annotation""".stripMargin,
+      "2.11" ->
+        """|value: Int
+           |varargs - scala.annotation""".stripMargin
     )
   )
 
@@ -424,8 +407,8 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
       |  typ@@
       |}
     """.stripMargin,
-    """type
-    """.stripMargin
+    """|TypeNotPresentException java.lang
+       |type""".stripMargin
   )
 
   check(
@@ -442,7 +425,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite {
     """.stripMargin,
     // NOTE(olafur) `type` is technically valid in blocks but they're not completed
     // to reduce noise (we do the same for class, object, trait).
-    ""
+    "TypeNotPresentException java.lang"
   )
 
   check(

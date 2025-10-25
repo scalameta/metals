@@ -331,9 +331,12 @@ class Fuzzy {
         val qChar = query.charAt(queryPos)
         val sChar = symbol.charAt(symbolPos)
         if (
-          queryPos == queryStartIdx && // we are at the first letter of the query string
-          symbolStartCharIsLower && // the first letter of the symbol is lowercase. (we expect the user to remember classes)
-          qChar.toUpper == sChar // therefore we check if it matches the upper case character
+          // we are at the first letter of the query string
+          queryPos == queryStartIdx &&
+          // accept symbols starting with the same letter as the query if query is lower case
+          ((symbolStartCharIsLower && qChar.toUpper == sChar) ||
+            // if it's a start of both avoid, we match most forgiving
+            (symbolPos == symbolStartIdx && qChar.toLower == sChar.toLower))
         ) {
           loop(queryPos + 1, queryPos, symbolPos + 1, symbolPos)
         } else if (

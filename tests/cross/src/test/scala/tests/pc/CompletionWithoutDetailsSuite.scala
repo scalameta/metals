@@ -31,13 +31,6 @@ class CompletionWithoutDetailsSuite extends BaseCompletionSuite {
            |List
            |List
            |JList
-           |""".stripMargin,
-      "3" ->
-        """|List
-           |List
-           |List
-           |List
-           |List
            |""".stripMargin
     ),
     includeDetail = false,
@@ -63,13 +56,6 @@ class CompletionWithoutDetailsSuite extends BaseCompletionSuite {
            |List java.awt
            |List java.util
            |JList javax.swing
-           |""".stripMargin,
-      "3" ->
-        """|List scala.collection.immutable
-           |List java.awt
-           |List java.util
-           |List scala.collection.immutable
-           |List[A](elems: A*): CC[A]
            |""".stripMargin
     ),
     includeDetail = true,

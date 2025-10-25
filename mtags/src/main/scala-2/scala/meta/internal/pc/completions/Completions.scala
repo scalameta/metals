@@ -187,7 +187,7 @@ trait Completions { this: MetalsGlobal =>
     // accessors of case class members are more relevant
     if (!sym.isCaseAccessor) relevance |= IsNotCaseAccessor
     // public symbols are more relevant
-    if (!sym.isPublic) relevance |= IsNotCaseAccessor
+    if (!sym.isPublic && !sym.hasGetter) relevance |= IsNotPublic
     // synthetic symbols are less relevant (e.g. `copy` on case classes)
     if (sym.isSynthetic) relevance |= IsSynthetic
     if (sym.isDeprecated) relevance |= IsDeprecated
@@ -228,10 +228,11 @@ trait Completions { this: MetalsGlobal =>
       def fuzzyScore(o: Member): Int = {
         fuzzyCache.getOrElseUpdate(
           o.sym, {
-            val name = o.sym.name.toString().toLowerCase()
+            val name = o.sym.name.toString()
             if (name.startsWith(queryLower)) 0
-            else if (name.toLowerCase().contains(queryLower)) 1
-            else 2
+            else if (name.startsWith(query)) 1
+            else if (name.toLowerCase().contains(queryLower)) 2
+            else 3
           }
         )
       }

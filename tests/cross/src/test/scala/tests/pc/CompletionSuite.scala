@@ -25,13 +25,6 @@ class CompletionSuite extends BaseCompletionSuite {
            |List - java.awt
            |List - java.util
            |JList - javax.swing
-           |""".stripMargin,
-      "3" ->
-        """|List scala.collection.immutable
-           |List - java.awt
-           |List - java.util
-           |List - scala.collection.immutable
-           |List[A](elems: A*): CC[A]
            |""".stripMargin
     ),
     topLines = Some(5)
@@ -472,18 +465,7 @@ class CompletionSuite extends BaseCompletionSuite {
                    |AsJavaLongConsumer - scala.jdk.FunctionWrappers
                    |FromJavaBiConsumer - scala.jdk.FunctionWrappers
                    |FromJavaIntConsumer - scala.jdk.FunctionWrappers
-                   |""".stripMargin,
-      "3" -> """|AsJavaConverters - scala.collection.convert
-                |JavaConverters - scala.collection
-                |JavaConversions - scala.concurrent
-                |AsJavaConsumer - scala.jdk.FunctionWrappers
-                |FromJavaConsumer - scala.jdk.FunctionWrappers
-                |AsJavaBiConsumer - scala.jdk.FunctionWrappers
-                |AsJavaIntConsumer - scala.jdk.FunctionWrappers
-                |AsJavaLongConsumer - scala.jdk.FunctionWrappers
-                |FromJavaBiConsumer - scala.jdk.FunctionWrappers
-                |FromJavaIntConsumer - scala.jdk.FunctionWrappers
-                |""".stripMargin
+                   |""".stripMargin
     )
   )
 
@@ -1581,13 +1563,9 @@ class CompletionSuite extends BaseCompletionSuite {
         |  scala@@
         |}
         |""".stripMargin,
-    """|scala `<root>`
-       |""".stripMargin,
-    compat = Map(
-      "2" ->
-        """|scala _root_
-           |""".stripMargin
-    )
+    """|ScalaReflectionException scala
+       |scala _root_
+       |""".stripMargin
   )
 
   check(
