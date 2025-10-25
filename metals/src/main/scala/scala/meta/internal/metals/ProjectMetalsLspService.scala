@@ -163,6 +163,7 @@ class ProjectMetalsLspService(
     folder,
     warnings,
     languageClient,
+    () => userConfig,
   )
 
   protected val bloopServers: BloopServers = new BloopServers(

@@ -7,6 +7,7 @@ import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.ChooseBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Tables
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 
 import org.eclipse.lsp4j.MessageActionItem
@@ -18,6 +19,7 @@ import org.eclipse.lsp4j.MessageActionItem
 final class BuildToolSelector(
     languageClient: MetalsLanguageClient,
     tables: Tables,
+    userConfig: () => UserConfiguration,
 )(implicit ec: ExecutionContext) {
   def checkForChosenBuildTool(
       buildTools: List[BuildTool]
@@ -30,7 +32,23 @@ final class BuildToolSelector(
           case buildTool :: Nil =>
             tables.buildTool.chooseBuildTool(buildTool.executableName)
             Future.successful(Some(buildTool))
-          case _ => requestBuildToolChoice(buildTools)
+          case _ =>
+            // Check if user has configured a preferred build tool
+            userConfig().targetBuildTool match {
+              case Some(preferredTool) =>
+                buildTools.find(_.executableName == preferredTool) match {
+                  case Some(buildTool) =>
+                    tables.buildTool.chooseBuildTool(buildTool.executableName)
+                    Future.successful(Some(buildTool))
+                  case None =>
+                    scribe.warn(
+                      s"Configured target-build-tool '$preferredTool' not found in available build tools: ${buildTools.map(_.executableName).mkString(", ")}"
+                    )
+                    requestBuildToolChoice(buildTools)
+                }
+              case None =>
+                requestBuildToolChoice(buildTools)
+            }
         }
     }
 
