@@ -19,6 +19,8 @@ import scala.meta.pc.reports.ReportContext
 import coursierapi.Fetch
 import coursierapi.Repository
 import munit.Assertions.fail
+import org.eclipse.lsp4j.MarkupContent
+import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 
 trait PCSuite {
 
@@ -106,4 +108,12 @@ trait PCSuite {
     workspace.inputs(file.toURI.toString()) = (code2, dialect)
   }
 
+  def doc(e: JEither[String, MarkupContent]): String = {
+    if (e == null) ""
+    else if (e.isLeft) {
+      " " + e.getLeft
+    } else {
+      " " + e.getRight.getValue
+    }
+  }.trim
 }

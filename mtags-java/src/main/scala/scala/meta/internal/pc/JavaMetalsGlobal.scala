@@ -4,12 +4,15 @@ import java.io.File
 import java.io.Writer
 import java.net.URI
 import java.nio.file.Path
+import java.{util => ju}
 import javax.lang.model.element.Element
 import javax.lang.model.element.ExecutableElement
 import javax.lang.model.element.PackageElement
 import javax.lang.model.element.TypeElement
 import javax.lang.model.element.TypeParameterElement
 import javax.lang.model.element.VariableElement
+import javax.lang.model.util.Elements
+import javax.lang.model.util.Types
 import javax.tools.Diagnostic
 import javax.tools.DiagnosticListener
 import javax.tools.JavaCompiler
@@ -19,7 +22,11 @@ import javax.tools.ToolProvider
 import scala.annotation.tailrec
 import scala.jdk.CollectionConverters._
 
+import scala.meta.internal.mtags.CommonMtagsEnrichments._
+import scala.meta.pc.ContentType
+import scala.meta.pc.ParentSymbols
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 
 import com.sun.source.util.JavacTask
@@ -48,6 +55,72 @@ class JavaMetalsGlobal(
       None,
       List("-classpath", classpath.mkString(File.pathSeparator))
     )
+  }
+
+  def documentation(
+      element: Element,
+      types: Types,
+      elements: Elements,
+      contentType: ContentType
+  ): Option[SymbolDocumentation] = {
+    val sym = semanticdbSymbol(element)
+    search
+      .documentation(
+        sym,
+        new ParentSymbols {
+          override def parents(): java.util.List[String] = {
+            element match {
+              case executableElement: ExecutableElement =>
+                element.getEnclosingElement match {
+                  case enclosingElement: TypeElement =>
+                    overriddenSymbols(
+                      executableElement,
+                      enclosingElement,
+                      types,
+                      elements
+                    )
+                  case _ => java.util.Collections.emptyList[String]
+                }
+              case _ => java.util.Collections.emptyList[String]
+            }
+          }
+        },
+        contentType
+      )
+      .asScala
+  }
+
+  private def overriddenSymbols(
+      executableElement: ExecutableElement,
+      enclosingElement: TypeElement,
+      types: Types,
+      elements: Elements
+  ): ju.List[String] = {
+    val overriddenSymbols = for {
+      // get superclasses
+      superType <- types.directSupertypes(enclosingElement.asType()).asScala
+      superElement = types.asElement(superType)
+      // get elements of superclass
+      enclosedElement <- superElement match {
+        case typeElement: TypeElement =>
+          typeElement.getEnclosedElements().asScala
+        case _ => Nil
+      }
+      // filter out non-methods
+      enclosedExecutableElement <- enclosedElement match {
+        case enclosedExecutableElement: ExecutableElement =>
+          Some(enclosedExecutableElement)
+        case _ => None
+      }
+      // check super method overrides original method
+      if (elements.overrides(
+        executableElement,
+        enclosedExecutableElement,
+        enclosingElement
+      ))
+      symbol = semanticdbSymbol(enclosedExecutableElement)
+    } yield symbol
+    overriddenSymbols.toList.asJava
   }
 
   def semanticdbSymbol(element: Element): String = {
@@ -170,4 +243,5 @@ object JavaMetalsGlobal {
 
     new JavaTreeScanner(task, root)
   }
+
 }
