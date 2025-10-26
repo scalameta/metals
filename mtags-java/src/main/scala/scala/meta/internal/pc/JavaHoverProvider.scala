@@ -21,6 +21,7 @@ import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
 
+import com.sun.source.tree.Tree.Kind
 import com.sun.source.util.JavacTask
 import com.sun.source.util.Trees
 
@@ -48,17 +49,18 @@ class JavaHoverProvider(
     val scanner = JavaMetalsGlobal.scanner(task)
     val types = task.getTypes()
     val elements = task.getElements()
-    val position = params match {
-      case p: RangeParams =>
-        CursorPosition(p.offset(), p.offset(), p.endOffset())
-      case p: OffsetParams => CursorPosition(p.offset(), p.offset(), p.offset())
-    }
+    val position = compiler.positionFromParams(params)
 
     val node = compiler.compilerTreeNode(scanner, position)
 
     for {
       n <- node
-      element = Trees.instance(task).getElement(n)
+      // We want to show constructor if we are hovering over a new class
+      nodeOrConstructor =
+        if (n.getParentPath().getLeaf().getKind() == Kind.NEW_CLASS)
+          n.getParentPath()
+        else n
+      element = Trees.instance(task).getElement(nodeOrConstructor)
       docs =
         if (compiler.metalsConfig.isHoverDocumentationEnabled)
           compiler
