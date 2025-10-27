@@ -40,6 +40,10 @@ final class BuildTools(
   private val lastDetectedBuildTools = new AtomicReference(
     Map.empty[String, BuildTool]
   )
+
+  // Ensure allAvailable stays in sync with static method allBuildToolNames.
+  assert(allAvailable.map(_.executableName).toSet == BuildTools.allBuildToolNames)
+
   // NOTE: We do a couple extra check here before we say a workspace with a
   // `.bsp` is auto-connectable, and we ensure that a user has explicitly chosen
   // to use another build server besides Bloop or it's a BSP server for a build
@@ -296,4 +300,14 @@ object BuildTools {
       explicitChoiceMade = () => false,
       charset = StandardCharsets.UTF_8,
     )
+
+  /** All known build tool executable names for configuration validation */
+  val allBuildToolNames: Set[String] = Set(
+    SbtBuildTool.name,
+    GradleBuildTool.name,
+    MavenBuildTool.name,
+    MillBuildTool.name,
+    ScalaCliBuildTool.name,
+    BazelBuildTool.name,
+  )
 }

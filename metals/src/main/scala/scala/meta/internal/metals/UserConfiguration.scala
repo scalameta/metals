@@ -838,16 +838,8 @@ object UserConfiguration {
 
     val targetBuildTool = {
       import scala.meta.internal.builds._
-      val validBuildTools = Set(
-        SbtBuildTool.name,
-        GradleBuildTool.name,
-        MavenBuildTool.name,
-        MillBuildTool.name,
-        ScalaCliBuildTool.name,
-        BazelBuildTool.name
-      )
       getStringKey("target-build-tool").flatMap { tool =>
-        if (validBuildTools.contains(tool)) {
+        if (BuildTools.allBuildToolNames.contains(tool)) {
           Some(tool)
         } else {
           errors += s"Invalid target-build-tool '$tool'. Valid values are: ${validBuildTools.toSeq.sorted.mkString(", ")}"
