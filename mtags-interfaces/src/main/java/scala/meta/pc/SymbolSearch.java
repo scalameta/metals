@@ -66,6 +66,17 @@ public interface SymbolSearch {
         return java.util.Collections.emptyList(); 
     }
     
+    /**
+     * Returns all implicit classes in the workspace and dependencies.
+     * Returns class symbols that can be resolved in the presentation compiler.
+     * This is used for type-based matching of implicit classes.
+     * 
+     * @return list of implicit class symbols (e.g., "io/circe/syntax/EncoderOps#")
+     */
+    default List<String> queryAllImplicitClasses() {
+        return java.util.Collections.emptyList();
+    }
+    
     enum Result {
         COMPLETE,
         INCOMPLETE

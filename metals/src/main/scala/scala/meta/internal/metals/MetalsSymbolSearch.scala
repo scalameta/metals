@@ -188,5 +188,28 @@ class MetalsSymbolSearch(
     resultList.asJava
   }
 
+  override def queryAllImplicitClasses(): ju.List[String] = {
+    import scala.meta.internal.jdk.CollectionConverters._
+    
+    scribe.info(s"[MetalsSymbolSearch] Querying all implicit classes")
+    
+    val totalCached = wsp.implicitClassMembers.values.flatten.size
+    scribe.info(
+      s"[MetalsSymbolSearch] Total implicit class members in cache: $totalCached"
+    )
+    
+    // Get unique class symbols from all implicit class members
+    val classSymbols = wsp.implicitClassMembers.values.flatten
+      .map(_.classSymbol)
+      .toSet
+      .toList
+    
+    scribe.info(
+      s"[MetalsSymbolSearch] Found ${classSymbols.size} unique implicit classes"
+    )
+    
+    classSymbols.asJava
+  }
+
   def workspaceSymbols(): WorkspaceSymbolProvider = wsp
 }

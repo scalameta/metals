@@ -523,7 +523,7 @@ class JarIndexingInfo(conn: () => Connection) {
           }
           val totalMembers = result.values.map(_.size).sum
           scribe.info(
-            s"[JarTopLevels] Retrieved $totalMembers implicit class members from ${result.size} files from database"
+            s"[JarTopLevels] Retrieved $totalMembers implicit class members from ${result.size} files from database, $result"
           )
           result
         }

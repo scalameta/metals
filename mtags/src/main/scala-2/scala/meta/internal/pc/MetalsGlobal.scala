@@ -1292,6 +1292,7 @@ class MetalsGlobal(
 
   /**
    * Find implicit class extension methods available for a specific type using indexed data.
+   * This version uses type-based matching in the presentation compiler for better accuracy.
    */
   def findIndexedImplicitExtensionsForType(
       targetType: Type,
@@ -1301,65 +1302,107 @@ class MetalsGlobal(
     val buffer = mutable.ListBuffer.empty[WorkspaceImplicitMember]
 
     try {
-      val targetTypeSymbol = semanticdbSymbol(targetType.typeSymbol)
-
       logger.info(
-        s"[MetalsGlobal] Converting type to symbol: $targetType -> $targetTypeSymbol"
+        s"[MetalsGlobal.findIndexed] Searching implicit classes for type: $targetType"
       )
 
-      val members = search.queryImplicitClassMembers(targetTypeSymbol)
+      // Query all implicit classes from index
+      val implicitClassSymbols = search.queryAllImplicitClasses()
 
       logger.info(
-        s"[MetalsGlobal] Query returned ${members.size()} implicit class members for $targetTypeSymbol"
+        s"[MetalsGlobal.findIndexed] Found ${implicitClassSymbols.size()} implicit classes to check"
       )
 
       import scala.meta.internal.jdk.CollectionConverters._
-      members.asScala.foreach { member =>
-        logger.info(
-          s"[MetalsGlobal]   Processing member: ${member.methodName} from ${member.classSymbol}"
-        )
+      implicitClassSymbols.asScala.foreach { classSymbolStr =>
         try {
-          val methodSym = inverseSemanticdbSymbol(member.methodSymbol)
+          val classSym = inverseSemanticdbSymbol(classSymbolStr)
 
-          if (methodSym != NoSymbol && methodSym.exists) {
-            val isAccessible =
-              try {
-                context.isAccessible(methodSym, methodSym.owner.thisType)
-              } catch {
-                case NonFatal(_) => false
-              }
+          if (classSym != NoSymbol && classSym.exists) {
+            logger.info(
+              s"[MetalsGlobal.findIndexed]   Checking class: ${classSym.fullName}"
+            )
 
-            if (isAccessible) {
-              logger.info(
-                s"[MetalsGlobal]     Resolved and accessible: ${methodSym.fullName}"
-              )
-              buffer += new WorkspaceImplicitMember(methodSym)
-            } else {
-              logger.info(
-                s"[MetalsGlobal]     Not accessible in current context"
-              )
+            // Get the primary constructor parameter type
+            val constructorParamTypeOpt = for {
+              ctor <- classSym.primaryConstructor.paramss.flatten.headOption
+              paramType = ctor.tpe
+            } yield paramType
+
+            constructorParamTypeOpt match {
+              case Some(paramType) =>
+                // Use presentation compiler type checking
+                val matches = try {
+                  targetType <:< paramType || targetType.widen <:< paramType
+                } catch {
+                  case NonFatal(_) => false
+                }
+
+                logger.info(
+                  s"[MetalsGlobal.findIndexed]     Param type: $paramType, matches: $matches"
+                )
+
+                if (matches) {
+                  // Add all public methods from the implicit class
+                  classSym.tpe.members.foreach { member =>
+                    if (member.isMethod && member.isPublic && !member.isConstructor) {
+                      // Filter out methods inherited from AnyVal
+                      val isInheritedFromAnyVal =
+                        member.owner == definitions.AnyValClass ||
+                          member.name == nme.equals_ ||
+                          member.name == nme.hashCode_ ||
+                          member.name == nme.toString_
+
+                      if (!isInheritedFromAnyVal) {
+                        val isAccessible = try {
+                          context.isAccessible(member, member.owner.thisType)
+                        } catch {
+                          case NonFatal(_) => false
+                        }
+
+                        if (isAccessible) {
+                          logger.info(
+                            s"[MetalsGlobal.findIndexed]       Adding method: ${member.name}"
+                          )
+                          buffer += new WorkspaceImplicitMember(member)
+                        }
+                      }
+                    }
+                  }
+                }
+
+              case None =>
+                logger.info(
+                  s"[MetalsGlobal.findIndexed]     No constructor param found"
+                )
             }
           } else {
             logger.info(
-              s"[MetalsGlobal]     Failed to resolve symbol: ${member.methodSymbol}"
+              s"[MetalsGlobal.findIndexed]   Failed to resolve: $classSymbolStr"
             )
           }
         } catch {
           case NonFatal(e) =>
             logger.info(
-              s"Failed to resolve implicit class member: ${member.methodSymbol} - ${e.getMessage}"
+              s"[MetalsGlobal.findIndexed] Error processing $classSymbolStr: ${e.getMessage}"
             )
         }
       }
 
       if (buffer.nonEmpty) {
         logger.info(
-          s"[MetalsGlobal] Returning ${buffer.size} implicit members for type $targetType"
+          s"[MetalsGlobal.findIndexed] Returning ${buffer.size} implicit members for type $targetType"
+        )
+      } else {
+        logger.info(
+          s"[MetalsGlobal.findIndexed] No matching implicit members found for type $targetType"
         )
       }
     } catch {
       case NonFatal(e) =>
-        logger.fine(s"Error querying implicit class members: ${e.getMessage}")
+        logger.info(
+          s"[MetalsGlobal.findIndexed] Error querying implicit classes: ${e.getMessage}"
+        )
     }
 
     buffer.toList.distinct
