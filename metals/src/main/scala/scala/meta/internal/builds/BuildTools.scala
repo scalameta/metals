@@ -41,9 +41,6 @@ final class BuildTools(
     Map.empty[String, BuildTool]
   )
 
-  // Ensure allAvailable stays in sync with static method allBuildToolNames.
-  assert(allAvailable.map(_.executableName).toSet == BuildTools.allBuildToolNames)
-
   // NOTE: We do a couple extra check here before we say a workspace with a
   // `.bsp` is auto-connectable, and we ensure that a user has explicitly chosen
   // to use another build server besides Bloop or it's a BSP server for a build

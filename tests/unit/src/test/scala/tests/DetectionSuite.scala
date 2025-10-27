@@ -219,4 +219,23 @@ class DetectionSuite extends BaseSuite {
        |import mill._
        |""".stripMargin,
   )
+
+  test("all-available-matches-static-names") {
+    // Verify that allAvailable stays in sync with allBuildToolNames
+    val workspace = FileLayout.fromString(
+      """|/build.sbt
+         |lazy val a = project
+         |""".stripMargin
+    )
+    workspace.toFile.deleteOnExit()
+
+    val buildTools = BuildTools.default(workspace)
+    val availableNames = buildTools.allAvailable.map(_.executableName).toSet
+
+    assertEquals(
+      availableNames,
+      BuildTools.allBuildToolNames,
+      "allAvailable.executableNames must match BuildTools.allBuildToolNames",
+    )
+  }
 }
