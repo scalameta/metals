@@ -85,7 +85,7 @@ final class MbtWorkspaceSymbolProvider(
   def listPackage(pkg: String): ju.List[SemanticdbCompilationUnit] = {
     timerProvider.timedThunk(
       s"SemanticdbFileManager.listPackage $pkg (index size ${index.size})",
-      thresholdMillis = 10,
+      thresholdMillis = 200,
     ) {
       db.readTransaction[ju.List[SemanticdbCompilationUnit]](
         tableName,
