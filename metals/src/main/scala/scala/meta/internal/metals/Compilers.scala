@@ -236,7 +236,7 @@ class Compilers(
     }
 
   def didClose(path: AbsolutePath): Unit = {
-    loadCompiler(path).foreach(_.didClose(path.toNIO.toUri))
+    loadCompiler(path).foreach(_.didClose(path.toNIO.toUri()))
   }
 
   def didChange(
