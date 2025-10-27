@@ -105,7 +105,11 @@ case class JavaPresentationCompiler(
   override def documentHighlight(
       params: OffsetParams
   ): CompletableFuture[util.List[DocumentHighlight]] =
-    CompletableFuture.completedFuture(Nil.asJava)
+    CompletableFuture.completedFuture(
+      new JavaDocumentHighlightProvider(javaCompiler, params)
+        .documentHighlight()
+        .asJava
+    )
 
   override def references(
       params: ReferencesRequest

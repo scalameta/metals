@@ -24,12 +24,19 @@ import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
 import scala.meta.pc.ContentType
+import scala.meta.pc.OffsetParams
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.RangeParams
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 
+import com.sun.source.tree.CompilationUnitTree
+import com.sun.source.tree.MethodTree
+import com.sun.source.tree.Tree
+import com.sun.source.tree.VariableTree
 import com.sun.source.util.JavacTask
+import com.sun.source.util.SourcePositions
 import com.sun.source.util.TreePath
 
 class JavaMetalsGlobal(
@@ -38,6 +45,53 @@ class JavaMetalsGlobal(
     val classpath: Seq[Path]
 ) {
   var lastVisitedParentTrees: List[TreePath] = Nil
+
+  def positionFromParams(params: OffsetParams): CursorPosition = {
+    params match {
+      case p: RangeParams =>
+        CursorPosition(p.offset(), p.offset(), p.endOffset())
+      case p: OffsetParams => CursorPosition(p.offset(), p.offset(), p.offset())
+    }
+  }
+
+  /**
+   * Return the real start and end for the name. For definitions the start and end include the whole element.
+   *
+   * @param text
+   * @param elementName
+   * @param originalStart
+   * @param originalEnd
+   */
+  def findIndentifierStartAndEnd(
+      text: String,
+      elementName: String,
+      originalStart: Int,
+      originalEnd: Int,
+      leaf: Tree,
+      root: CompilationUnitTree,
+      sourcePositions: SourcePositions
+  ): (Int, Int) =
+    if (originalEnd - originalStart == elementName.length()) {
+      (originalStart, originalEnd)
+    } else {
+      val declarationStart = leaf match {
+        case mt: MethodTree =>
+          sourcePositions.getEndPosition(root, mt.getReturnType())
+        case vt: VariableTree =>
+          sourcePositions.getEndPosition(root, vt.getType())
+        case _ =>
+          originalStart
+      }
+      val subText = text.substring(declarationStart.toInt, originalEnd)
+      val nameIndex = subText.indexOf(elementName)
+      if (nameIndex >= 0) {
+        val nameStart = declarationStart + nameIndex
+        val nameEnd = nameStart + elementName.length()
+        (nameStart.toInt, nameEnd.toInt)
+      } else {
+        (originalStart, originalEnd)
+      }
+    }
 
   def compilerTreeNode(
       scanner: JavaTreeScanner,
