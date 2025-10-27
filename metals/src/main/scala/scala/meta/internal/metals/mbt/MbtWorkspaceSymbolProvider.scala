@@ -119,7 +119,8 @@ final class MbtWorkspaceSymbolProvider(
   // each bloom filter represents the set of symbols that are defined in a
   // single file. This could technically be a Map[Path, StringBloomFilter] but
   // it's an array since it's cleaner to process it in parallel like that.
-  private val index = mutable.ArrayBuffer.empty[OIDIndex]
+  @volatile
+  private var index = mutable.ArrayBuffer.empty[OIDIndex]
 
   // The maximum number of symbol results to return. Users only look at the top
   // 20 results, nobody scrolls down the list, so we could probably cut this
@@ -381,9 +382,10 @@ final class MbtWorkspaceSymbolProvider(
 
     // Step 6: assemble the in-memory index. Only the bloom filters, file
     // paths (for debugging) and OIDs are needed.
-    index.clear()
-    index.appendAll(files.iterator.map(_.toOIDIndex(gitWorkspace)))
-    index.sortInPlace()(Ordering.by[OIDIndex, Path](_.path))
+    val newIndex =
+      mutable.ArrayBuffer.from(files.iterator.map(_.toOIDIndex(gitWorkspace)))
+    newIndex.sortInPlace()(Ordering.by[OIDIndex, Path](_.path))
+    index = newIndex
     files.clear()
 
     metrics.recordEvent(
