@@ -11,6 +11,10 @@ import tests.BaseImportSuite
 
 class TargetBuildToolLspSuite extends BaseImportSuite("target-build-tool") {
 
+  private var testConfig: UserConfiguration = UserConfiguration()
+
+  override def userConfig: UserConfiguration = testConfig
+
   // SBT will be the main tool for this test
   def buildTool: SbtBuildTool = SbtBuildTool(None, workspace, () => userConfig)
 
@@ -23,8 +27,7 @@ class TargetBuildToolLspSuite extends BaseImportSuite("target-build-tool") {
 
   test("target-build-tool-sbt") {
     // Override userConfig to prefer sbt
-    val configuredUserConfig =
-      UserConfiguration(targetBuildTool = Some("sbt"))
+    testConfig = UserConfiguration(targetBuildTool = Some("sbt"))
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -37,10 +40,6 @@ class TargetBuildToolLspSuite extends BaseImportSuite("target-build-tool") {
             |}
             |""".stripMargin,
         expectError = false,
-        preInitialized = () => {
-          server.server.tables.buildTool.reset()
-          server.server.userConfigSync.updateUserConfiguration(configuredUserConfig)
-        },
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -57,8 +56,7 @@ class TargetBuildToolLspSuite extends BaseImportSuite("target-build-tool") {
 
   test("target-build-tool-mill") {
     // Override userConfig to prefer mill
-    val configuredUserConfig =
-      UserConfiguration(targetBuildTool = Some("mill"))
+    testConfig = UserConfiguration(targetBuildTool = Some("mill"))
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -71,10 +69,6 @@ class TargetBuildToolLspSuite extends BaseImportSuite("target-build-tool") {
             |}
             |""".stripMargin,
         expectError = false,
-        preInitialized = () => {
-          server.server.tables.buildTool.reset()
-          server.server.userConfigSync.updateUserConfiguration(configuredUserConfig)
-        },
       )
       _ <- server.server.indexingPromise.future
       // Verify that mill was chosen
@@ -84,9 +78,13 @@ class TargetBuildToolLspSuite extends BaseImportSuite("target-build-tool") {
 
   test("target-build-tool-not-found") {
     // Set the target-build-tool config to bazel, but only sbt and mill are present
-    val configuredUserConfig =
-      UserConfiguration(targetBuildTool = Some("bazel"))
+    testConfig = UserConfiguration(targetBuildTool = Some("bazel"))
     cleanWorkspace()
+    // Since bazel doesn't exist, user will be prompted to choose
+    client.chooseBuildTool = actions =>
+      actions
+        .find(_.getTitle == "sbt")
+        .getOrElse(actions.head)
     for {
       _ <- initialize(
         s"""|/build.sbt
@@ -98,10 +96,6 @@ class TargetBuildToolLspSuite extends BaseImportSuite("target-build-tool") {
             |}
             |""".stripMargin,
         expectError = false,
-        preInitialized = () => {
-          server.server.tables.buildTool.reset()
-          server.server.userConfigSync.updateUserConfiguration(configuredUserConfig)
-        },
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
