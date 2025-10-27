@@ -95,9 +95,11 @@ object Digest {
       )
     val isXml = ext == "xml"
 
-    if (isScala && path.isFile) {
+    if (!path.isFile) {
+      true
+    } else if (isScala) {
       digestScala(path, digest)
-    } else if (isGeneralJVM && path.isFile) {
+    } else if (isGeneralJVM) {
       digestGeneralJvm(path, digest)
     } else if (isXml) {
       digestXml(path, digest)
