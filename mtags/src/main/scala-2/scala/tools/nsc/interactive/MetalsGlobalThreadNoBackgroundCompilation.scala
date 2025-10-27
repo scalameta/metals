@@ -38,7 +38,7 @@ final class MetalsGlobalThreadNoBackgroundCompilation(
         compiler.debugLog("exiting presentation compiler")
         compiler.log.close()
 
-        System.err.println(s"Shutting down PC for $name")
+        compiler.debugLog(s"Shutting down PC for $name")
         // make sure we don't keep around stale instances
         compiler = null
       case ex: Throwable =>

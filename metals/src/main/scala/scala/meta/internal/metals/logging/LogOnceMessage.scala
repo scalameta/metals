@@ -2,7 +2,7 @@ package scala.meta.internal.metals.logging
 
 import java.util.concurrent.atomic.AtomicBoolean
 
-sealed abstract class LogOnceMessage(val message: String) {
+abstract class LogOnceMessage(val message: String) {
   val isLogged = new AtomicBoolean(false)
 }
 
