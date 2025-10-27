@@ -67,7 +67,7 @@ object BloopDiagnosticsParser {
             range,
             errorTextEnriched,
             DiagnosticSeverity.Error,
-            uriFilepath.toString,
+            "sbt",
           )
         } yield FileDiagnostic(uriFilepath.toString, diagnostic)
       })

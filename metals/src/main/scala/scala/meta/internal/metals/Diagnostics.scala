@@ -86,12 +86,6 @@ final class Diagnostics(
     keys.foreach { key => publishDiagnostics(key) }
   }
 
-  def resetAllExceptSbt(): Unit = {
-    val keys = diagnostics.keys.filterNot(_.isSbt)
-    diagnostics.filterInPlace((path, _) => path.isSbt)
-    keys.foreach { key => publishDiagnostics(key) }
-  }
-
   def reset(paths: Seq[AbsolutePath]): Unit =
     for (path <- paths if diagnostics.contains(path)) {
       diagnostics.remove(path)
