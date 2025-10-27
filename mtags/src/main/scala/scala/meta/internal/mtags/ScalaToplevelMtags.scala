@@ -1200,7 +1200,11 @@ class ScalaToplevelMtags(
   def failMessage(expected: String): String = {
     newPosition.formatMessage(
       "error",
-      s"expected $expected; obtained $currentToken"
+      s"""|expected $expected; obtained $currentToken\n
+          |
+          |Current stack trace:
+          |${Thread.currentThread().getStackTrace().mkString("\n")}
+          |""".stripMargin
     )
   }
 

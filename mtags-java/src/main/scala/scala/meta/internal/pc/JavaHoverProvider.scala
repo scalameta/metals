@@ -1,6 +1,5 @@
 package scala.meta.internal.pc
 
-import java.util
 import javax.lang.model.`type`.TypeMirror
 import javax.lang.model.element.Element
 import javax.lang.model.element.ElementKind.ANNOTATION_TYPE
@@ -13,20 +12,16 @@ import javax.lang.model.element.Modifier
 import javax.lang.model.element.PackageElement
 import javax.lang.model.element.TypeElement
 import javax.lang.model.element.VariableElement
-import javax.lang.model.util.Elements
-import javax.lang.model.util.Types
 
 import scala.jdk.CollectionConverters.CollectionHasAsScala
-import scala.jdk.CollectionConverters.SeqHasAsJava
-import scala.jdk.OptionConverters.RichOptional
 
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
 import scala.meta.pc.ContentType
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
-import scala.meta.pc.ParentSymbols
 import scala.meta.pc.RangeParams
 
+import com.sun.source.tree.Tree.Kind
 import com.sun.source.util.JavacTask
 import com.sun.source.util.Trees
 
@@ -54,20 +49,24 @@ class JavaHoverProvider(
     val scanner = JavaMetalsGlobal.scanner(task)
     val types = task.getTypes()
     val elements = task.getElements()
-    val position = params match {
-      case p: RangeParams =>
-        CursorPosition(p.offset(), p.offset(), p.endOffset())
-      case p: OffsetParams => CursorPosition(p.offset(), p.offset(), p.offset())
-    }
+    val position = compiler.positionFromParams(params)
 
     val node = compiler.compilerTreeNode(scanner, position)
 
     for {
       n <- node
-      element = Trees.instance(task).getElement(n)
+      // We want to show constructor if we are hovering over a new class
+      nodeOrConstructor =
+        if (n.getParentPath().getLeaf().getKind() == Kind.NEW_CLASS)
+          n.getParentPath()
+        else n
+      element = Trees.instance(task).getElement(nodeOrConstructor)
       docs =
         if (compiler.metalsConfig.isHoverDocumentationEnabled)
-          documentation(element, types, elements)
+          compiler
+            .documentation(element, types, elements, contentType)
+            .map(_.docstring())
+            .getOrElse("")
         else ""
       hover <- hoverType(element, docs)
     } yield hover
@@ -171,73 +170,6 @@ class JavaHoverProvider(
     val name = element.getSimpleName
 
     s"$modifiers$variableType $name"
-  }
-
-  private def documentation(
-      element: Element,
-      types: Types,
-      elements: Elements
-  ): String = {
-    val sym = compiler.semanticdbSymbol(element)
-    compiler.search
-      .documentation(
-        sym,
-        new ParentSymbols {
-          override def parents(): util.List[String] = {
-            element match {
-              case executableElement: ExecutableElement =>
-                element.getEnclosingElement match {
-                  case enclosingElement: TypeElement =>
-                    overriddenSymbols(
-                      executableElement,
-                      enclosingElement,
-                      types,
-                      elements
-                    )
-                  case _ => util.Collections.emptyList[String]
-                }
-              case _ => util.Collections.emptyList[String]
-            }
-          }
-        },
-        contentType
-      )
-      .toScala
-      .map(_.docstring())
-      .getOrElse("")
-  }
-
-  private def overriddenSymbols(
-      executableElement: ExecutableElement,
-      enclosingElement: TypeElement,
-      types: Types,
-      elements: Elements
-  ): util.List[String] = {
-    val overriddenSymbols = for {
-      // get superclasses
-      superType <- types.directSupertypes(enclosingElement.asType()).asScala
-      superElement = types.asElement(superType)
-      // get elements of superclass
-      enclosedElement <- superElement match {
-        case typeElement: TypeElement =>
-          typeElement.getEnclosedElements().asScala
-        case _ => Nil
-      }
-      // filter out non-methods
-      enclosedExecutableElement <- enclosedElement match {
-        case enclosedExecutableElement: ExecutableElement =>
-          Some(enclosedExecutableElement)
-        case _ => None
-      }
-      // check super method overrides original method
-      if (elements.overrides(
-        executableElement,
-        enclosedExecutableElement,
-        enclosingElement
-      ))
-      symbol = compiler.semanticdbSymbol(enclosedExecutableElement)
-    } yield symbol
-    overriddenSymbols.toList.asJava
   }
 
 }
