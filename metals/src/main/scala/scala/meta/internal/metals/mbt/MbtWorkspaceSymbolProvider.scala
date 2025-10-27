@@ -16,6 +16,7 @@ import scala.meta.dialects
 import scala.meta.infra
 import scala.meta.inputs.Input
 import scala.meta.internal.infra.NoopMonitoringClient
+import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.CancelTokens
 import scala.meta.internal.metals.Cancelable
@@ -95,11 +96,15 @@ final class MbtWorkspaceSymbolProvider(
         val keyBuffer = ByteBuffer.allocateDirect(env.getMaxKeySize())
         val result = new ConcurrentLinkedQueue[SemanticdbCompilationUnit]()
         index.foreach { f =>
-          if (f.language == s.Language.JAVA && f.semanticdbPackage == pkg) {
+          if (
+            f.language == Semanticdb.Language.JAVA &&
+            f.semanticdbPackage == pkg
+          ) {
             val doc = this.readTextDocument(keyBuffer, db, txn, f)
             val text = AbsolutePath(f.path).toInputFromBuffers(buffers).text
             result.add(
               VirtualTextDocument.fromDocument(
+                f.language.toPCLanguage,
                 f.semanticdbPackage,
                 f.toplevelSymbols,
                 doc.copy(text = text),
@@ -472,7 +477,7 @@ final class MbtWorkspaceSymbolProvider(
         // No need to hold on the text contents after we have read them
         file.textBytes = null
         mtags.indexToplevelSymbols(
-          file.toLanguage,
+          file.toJLanguage,
           input,
           dialects.Scala213,
         )

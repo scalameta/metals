@@ -4,11 +4,11 @@ import java.nio.file.Path
 
 import scala.collection.mutable
 
+import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.StringBloomFilter
-import scala.meta.internal.{semanticdb => s}
 
 case class OIDIndex(
-    language: s.Language,
+    language: Semanticdb.Language,
     oid: Array[Byte],
     // Not used for anything except debugging. It's tricky to troubleshoot
     // when you only have a random git OID.

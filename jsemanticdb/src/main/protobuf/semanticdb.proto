@@ -36,6 +36,7 @@ enum Language {
   SCALA = 1;
   JAVA = 2;
   KOTLIN = 3;
+  PROTOBUF = 4;
 }
 
 message Range {

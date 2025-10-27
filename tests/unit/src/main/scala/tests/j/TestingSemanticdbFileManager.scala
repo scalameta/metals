@@ -4,6 +4,7 @@ import java.{util => ju}
 
 import scala.collection.mutable
 
+import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.mbt.VirtualTextDocument
 import scala.meta.internal.mtags.Mtags
@@ -17,12 +18,18 @@ import scala.meta.pc.SemanticdbFileManager
  * @param root
  * @param mtags
  */
-class TestingSemanticdbFileManager(root: AbsolutePath, mtags: Mtags)
-    extends SemanticdbFileManager {
+class TestingSemanticdbFileManager(
+    root: AbsolutePath,
+    mtags: Mtags,
+    languages: Set[Semanticdb.Language] = Set(Semanticdb.Language.JAVA),
+) extends SemanticdbFileManager {
   lazy val docs: mutable.Buffer[VirtualTextDocument] = root.listRecursive
     .filter(_.isFile)
-    .filter(_.extension == "java")
-    .map(f => VirtualTextDocument.fromText(mtags, f.toURI, f.readText))
+    .filter(f => languages.contains(f.toJLanguage))
+    .map(f =>
+      VirtualTextDocument
+        .fromText(mtags, f.toJLanguage.toPCLanguage, f.toURI, f.readText)
+    )
     .toBuffer
 
   override def listPackage(pkg: String): ju.List[SemanticdbCompilationUnit] = {

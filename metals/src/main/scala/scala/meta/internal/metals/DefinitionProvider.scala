@@ -413,7 +413,6 @@ class DestinationProvider(
     // on disk is more likely to parse.
     lazy val parsed = {
       mtags.index(
-        symbolDefinition.path.toLanguage,
         symbolDefinition.path,
         symbolDefinition.dialect,
       )

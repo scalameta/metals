@@ -3,9 +3,10 @@ package scala.meta.internal.metals.mbt
 import java.nio.charset.StandardCharsets
 import java.util.Arrays
 
+import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.StringBloomFilter
 import scala.meta.internal.mtags.DocumentToplevels
-import scala.meta.internal.semanticdb.Language
+import scala.meta.internal.mtags.ScalametaCommonEnrichments
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 
@@ -34,7 +35,7 @@ final class GitBlob(
       if (semanticdb == null) DocumentToplevels.empty
       else DocumentToplevels.fromDocument(semanticdb)
     OIDIndex(
-      this.toLanguage,
+      this.toJLanguage,
       this.oidBytes,
       workspace.resolve(path).toNIO,
       this.bloomFilter,
@@ -42,13 +43,8 @@ final class GitBlob(
       toplevels.toplevels,
     )
   }
-  def toLanguage: Language = {
-    if (path.endsWith(".java")) {
-      Language.JAVA
-    } else if (path.endsWith(".scala")) {
-      Language.SCALA
-    } else {
-      Language.UNKNOWN_LANGUAGE
-    }
+
+  def toJLanguage: Semanticdb.Language = {
+    ScalametaCommonEnrichments.filenameToJLanguage(path)
   }
 }

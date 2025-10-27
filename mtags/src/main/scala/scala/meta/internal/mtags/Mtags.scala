@@ -1,8 +1,12 @@
 package scala.meta.internal.mtags
 
+import java.util.concurrent.ConcurrentHashMap
+
 import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.inputs.Input
+import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
@@ -14,14 +18,17 @@ import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 
 final class Mtags(implicit rc: ReportContext) {
-  def totalLinesOfCode: Long = javaLines + scalaLines
+  def totalLinesOfCode: Long = lineCounts.values.asScala.sum
   def totalSymbols: Long = symbolsCount
-  def totalLinesOfScala: Long = scalaLines
-  def totalLinesOfJava: Long = javaLines
+  def totalLinesOfScala: Long =
+    lineCounts.getOrDefault(Semanticdb.Language.SCALA, 0L)
+  def totalLinesOfProtobuf: Long =
+    lineCounts.getOrDefault(Semanticdb.Language.PROTOBUF, 0L)
+  def totalLinesOfJava: Long =
+    lineCounts.getOrDefault(Semanticdb.Language.JAVA, 0L)
 
   def allSymbols(path: AbsolutePath, dialect: Dialect): TextDocument = {
-    val language = path.toLanguage
-    index(language, path, dialect)
+    index(path, dialect)
   }
 
   def toplevels(
@@ -29,7 +36,7 @@ final class Mtags(implicit rc: ReportContext) {
       dialect: Dialect = dialects.Scala213
   ): TextDocument = {
     val input = path.toInput
-    val language = input.toLanguage
+    val language = input.toJLanguage
 
     if (language.isJava || language.isScala) {
       val mtags =
@@ -47,6 +54,8 @@ final class Mtags(implicit rc: ReportContext) {
         path,
         mtags.index()
       )
+    } else if (language.isProtobuf) {
+      new ProtobufToplevelMtags(input, includeGeneratedSymbols = true).index()
     } else {
       TextDocument()
     }
@@ -58,7 +67,7 @@ final class Mtags(implicit rc: ReportContext) {
       includeMembers: Boolean = false
   ): (TextDocument, MtagsIndexer.AllOverrides) = {
     val input = path.toInput
-    val language = input.toLanguage
+    val language = input.toJLanguage
     if (language.isJava || language.isScala) {
       val mtags =
         if (language.isJava)
@@ -81,7 +90,12 @@ final class Mtags(implicit rc: ReportContext) {
         )
       val overrides = mtags.overrides()
       (doc, overrides)
-    } else (TextDocument(), Nil)
+    } else if (language.isProtobuf) {
+      new ProtobufToplevelMtags(input, includeGeneratedSymbols = true).index()
+      (TextDocument(), Nil)
+    } else {
+      (TextDocument(), Nil)
+    }
   }
 
   def topLevelSymbols(
@@ -95,19 +109,21 @@ final class Mtags(implicit rc: ReportContext) {
   }
 
   def index(
-      language: Language,
       path: AbsolutePath,
       dialect: Dialect
   ): TextDocument = {
+    val language = path.toJLanguage
     val input = path.toInput
     addLines(language, input.text)
     val result =
-      if (language.isJava) {
+      if (language == Semanticdb.Language.JAVA) {
         JavaMtags
           .index(input, includeMembers = true)
           .index()
-      } else if (language.isScala) {
+      } else if (language == Semanticdb.Language.SCALA) {
         ScalaMtags.index(input, dialect).index()
+      } else if (language == Semanticdb.Language.PROTOBUF) {
+        new ProtobufToplevelMtags(input, includeGeneratedSymbols = true).index()
       } else {
         TextDocument()
       }
@@ -121,23 +137,23 @@ final class Mtags(implicit rc: ReportContext) {
   }
 
   def indexToplevelSymbols(
-      language: Language,
+      language: Semanticdb.Language,
       input: Input.VirtualFile,
       dialect: Dialect
   ): TextDocument = {
     addLines(language, input.text)
     val result =
-      if (language.isJava) {
+      if (language == Semanticdb.Language.JAVA) {
         new JavaToplevelMtags(input, includeInnerClasses = true)
           .index()
-      } else if (language.isScala) {
+      } else if (language == Semanticdb.Language.SCALA) {
         new ScalaToplevelMtags(
           input,
           includeInnerClasses = true,
           includeMembers = true,
           dialect
         ).index()
-      } else if (input.path.endsWith(".proto")) {
+      } else if (language == Semanticdb.Language.PROTOBUF) {
         new ProtobufToplevelMtags(input, includeGeneratedSymbols = true).index()
       } else {
         TextDocument()
@@ -147,24 +163,26 @@ final class Mtags(implicit rc: ReportContext) {
       .withUri(input.path)
       .withText("")
       .withSchema(Schema.SEMANTICDB4)
-      .withLanguage(language)
+      // NOTE: we loose the protobuf language here, can only recover it from the URI.
+      .withLanguage(language.toLanguage)
   }
   private var symbolsCount: Long = 0L
-  private var javaLines: Long = 0L
-  private var scalaLines: Long = 0L
-  private def addLines(language: Language, text: String): Unit = {
-    if (language.isJava) {
-      javaLines += text.linesIterator.length
-    } else if (language.isScala) {
-      scalaLines += text.linesIterator.length
-    }
+  private val lineCounts = new ConcurrentHashMap[Semanticdb.Language, Long]
+
+  private def addLines(language: Semanticdb.Language, text: String): Unit = {
+    val linesCount = text.linesIterator.length
+    lineCounts.compute(
+      language,
+      (_, existingLinesCount) =>
+        linesCount + Option(existingLinesCount).getOrElse(0L)
+    )
   }
 }
 object Mtags {
   def index(path: AbsolutePath, dialect: Dialect)(implicit
       rc: ReportContext = EmptyReportContext
   ): TextDocument = {
-    new Mtags().index(path.toLanguage, path, dialect)
+    new Mtags().index(path, dialect)
   }
 
   def toplevels(document: TextDocument): List[String] = {

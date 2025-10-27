@@ -15,6 +15,7 @@ import scala.meta.internal.semanticdb.SymbolInformation.Kind.CLASS
 import scala.meta.internal.semanticdb.SymbolInformation.Kind.OBJECT
 import scala.meta.internal.semanticdb.SymbolInformation.Kind.PACKAGE_OBJECT
 import scala.meta.internal.{semanticdb => s}
+import scala.meta.pc
 import scala.meta.pc.SemanticdbCompilationUnit
 
 /**
@@ -22,6 +23,7 @@ import scala.meta.pc.SemanticdbCompilationUnit
  */
 final case class VirtualTextDocument(
     private val _uri: URI,
+    override val language: pc.Language,
     text: String,
     pkg: String,
     _toplevelSymbols: collection.Seq[String],
@@ -50,6 +52,7 @@ object VirtualTextDocument {
     }
   }
   def fromDocument(
+      language: pc.Language,
       pkg: String,
       toplevelSymbols: collection.Seq[String],
       doc: s.TextDocument,
@@ -63,13 +66,24 @@ object VirtualTextDocument {
     //     "TextDocument.text is empty for uri: " + doc.uri
     //   )
     // }
-    VirtualTextDocument(URI.create(doc.uri), doc.text, pkg, toplevelSymbols)
+    VirtualTextDocument(
+      URI.create(doc.uri),
+      language,
+      doc.text,
+      pkg,
+      toplevelSymbols,
+    )
   }
 
-  def fromText(mtags: Mtags, uri: URI, text: String): VirtualTextDocument = {
+  def fromText(
+      mtags: Mtags,
+      language: pc.Language,
+      uri: URI,
+      text: String,
+  ): VirtualTextDocument = {
     val input = Input.VirtualFile(uri.toString(), text)
     val doc = mtags.indexToplevelSymbols(
-      input.toLanguage,
+      input.toJLanguage,
       input,
       meta.dialects.Scala213,
     )
@@ -83,6 +97,6 @@ object VirtualTextDocument {
       }
       .getOrElse("_root_")
 
-    VirtualTextDocument(uri, text, pkg, toplevelSymbols)
+    VirtualTextDocument(uri, language, text, pkg, toplevelSymbols)
   }
 }

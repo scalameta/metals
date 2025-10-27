@@ -5,6 +5,7 @@ import java.nio.file.Paths
 import scala.meta.inputs.Input
 import scala.meta.internal.jpc.JavaDiagnosticProvider
 import scala.meta.internal.jpc.JavaMetalsCompiler
+import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.Embedded
@@ -43,6 +44,8 @@ abstract class BaseJavaPruneCompilerSuite extends munit.FunSuite {
       diagnostics: List[l.Diagnostic],
       input: Input.VirtualFile,
   )
+  def languages: Set[Semanticdb.Language] =
+    Set(Semanticdb.Language.JAVA, Semanticdb.Language.PROTOBUF)
   def compileFiles(
       layout: String,
       mainPath: String,
@@ -54,7 +57,8 @@ abstract class BaseJavaPruneCompilerSuite extends munit.FunSuite {
       )
     }
     val embedded = new Embedded(tmp(), EmptyWorkDoneProgress)
-    val semanticdbFileManager = new TestingSemanticdbFileManager(tmp(), mtags)
+    val semanticdbFileManager =
+      new TestingSemanticdbFileManager(tmp(), mtags, languages)
     val dir = FileLayout.fromString(layout, root = tmp())
     val uri = dir.resolve(mainPath).toNIO.toUri
     val text = dir.resolve(mainPath).toInputFromBuffers(Buffers()).text

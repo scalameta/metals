@@ -20,11 +20,13 @@ import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
+import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
+import scala.meta.pc
 
 import geny.Generator
 import org.eclipse.{lsp4j => l}
@@ -196,18 +198,32 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     }
   }
 
-  protected def filenameToLanguage(filename: String): Language = {
+  private def isScalaFilename(filename: String): Boolean = {
+    filename.endsWith(".scala") ||
+    filename.endsWith(".sc") ||
+    filename.endsWith(".sbt")
+  }
+
+  def filenameToJLanguage(filename: String): Semanticdb.Language = {
+    if (filename.endsWith(".java")) Semanticdb.Language.JAVA
+    else if (isScalaFilename(filename)) Semanticdb.Language.SCALA
+    else if (filename.endsWith(".proto")) Semanticdb.Language.PROTOBUF
+    else Semanticdb.Language.UNKNOWN_LANGUAGE
+  }
+  def filenameToLanguage(filename: String): Language = {
     if (filename.endsWith(".java")) Language.JAVA
-    else if (
-      filename.endsWith(".scala") || filename.endsWith(".sc")
-      || filename.endsWith(".sbt") || filename.endsWith(".mill")
-    )
+    else if (isScalaFilename(filename))
       Language.SCALA
     else Language.UNKNOWN_LANGUAGE
   }
 
   implicit class XtensionPathMetals(file: Path) {
     def isClassfile: Boolean = file.filename.endsWith(".class")
+    def toJLanguage: Semanticdb.Language = {
+      val filename = file.getFileName
+      if (filename == null) Semanticdb.Language.UNKNOWN_LANGUAGE
+      else filenameToJLanguage(filename.toString)
+    }
     def toLanguage: Language = {
       val filename = file.getFileName
       if (filename == null) Language.UNKNOWN_LANGUAGE
@@ -459,6 +475,12 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
       path.toNIO.getFileName.toString.endsWith(".semanticdb")
     }
     def extension: String = PathIO.extension(path.toNIO)
+    def toPCLanguage: pc.Language = {
+      toJLanguage.toPCLanguage
+    }
+    def toJLanguage: Semanticdb.Language = {
+      path.toNIO.toJLanguage
+    }
     def toLanguage: Language = {
       path.toNIO.toLanguage
     }
@@ -544,7 +566,49 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     }
   }
 
+  implicit class XtensionSemanticdbLanguage(language: s.Language) {
+    def toJLanguage: Semanticdb.Language =
+      language match {
+        case s.Language.JAVA => Semanticdb.Language.JAVA
+        case s.Language.SCALA => Semanticdb.Language.SCALA
+        case _ => Semanticdb.Language.UNKNOWN_LANGUAGE
+      }
+
+    def toPCLanguage: pc.Language =
+      language match {
+        case s.Language.JAVA => pc.Language.JAVA
+        case s.Language.SCALA => pc.Language.SCALA
+        case _ => pc.Language.UNKNOWN_LANGUAGE
+      }
+  }
+  implicit class XtensionJSemanticdbLanguage(language: Semanticdb.Language) {
+    def toLanguage: Language =
+      language match {
+        case Semanticdb.Language.JAVA => Language.JAVA
+        case Semanticdb.Language.SCALA => Language.SCALA
+        // Upstream SemanticDB does not have Protobuf.
+        case _ => Language.UNKNOWN_LANGUAGE
+      }
+    def isJava: Boolean = language == Semanticdb.Language.JAVA
+    def isScala: Boolean = language == Semanticdb.Language.SCALA
+    def isProtobuf: Boolean = language == Semanticdb.Language.PROTOBUF
+    def toPCLanguage: pc.Language =
+      language match {
+        case Semanticdb.Language.JAVA => pc.Language.JAVA
+        case Semanticdb.Language.SCALA => pc.Language.SCALA
+        case Semanticdb.Language.PROTOBUF => pc.Language.PROTOBUF
+        case _ => pc.Language.UNKNOWN_LANGUAGE
+      }
+  }
+
   implicit class XtensionInputOffset(input: Input) {
+    def toJLanguage: Semanticdb.Language =
+      input match {
+        case Input.VirtualFile(path, _) =>
+          filenameToJLanguage(path)
+        case _ =>
+          Semanticdb.Language.UNKNOWN_LANGUAGE
+      }
     def toLanguage: Language =
       input match {
         case Input.VirtualFile(path, _) =>
