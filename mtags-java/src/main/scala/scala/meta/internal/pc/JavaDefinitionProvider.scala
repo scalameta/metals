@@ -60,12 +60,7 @@ class JavaDefinitionProvider(
     val task: JavacTask =
       compiler.compilationTask(params.text(), params.uri())
     val scanner = JavaMetalsGlobal.scanner(task)
-    val position = params match {
-      case p: RangeParams =>
-        CursorPosition(p.offset(), p.offset(), p.endOffset())
-      case p: OffsetParams => CursorPosition(p.offset(), p.offset(), p.offset())
-    }
-
+    val position = compiler.positionFromParams(params)
     val node = compiler.compilerTreeNode(scanner, position)
 
     for {
@@ -114,20 +109,19 @@ class JavaDefinitionProvider(
 
           if (startPos >= 0 && endPos >= 0) {
             val elementName = targetElement.getSimpleName().toString()
-            val realStart = startPos.toInt + params
-              .text()
-              .substring(startPos.toInt, endPos.toInt)
-              .indexOf(elementName)
-            // Try to get just the name position, not the whole element
-            val nameLength =
-              if (elementName.nonEmpty) elementName.length() else 0
-            val nameEndPos =
-              if (realStart >= 0) realStart + nameLength else endPos.toInt
-            val nameStartPos = if (realStart >= 0) realStart else startPos.toInt
+            val (start, end) = compiler.findIndentifierStartAndEnd(
+              params.text(),
+              elementName,
+              startPos.toInt,
+              endPos.toInt,
+              elementTree,
+              n.getCompilationUnit(),
+              sourcePositions
+            )
             val range = new Range(
-              offsetToPosition(nameStartPos, params.text()),
+              offsetToPosition(start, params.text()),
               offsetToPosition(
-                nameEndPos,
+                end,
                 params.text()
               )
             )

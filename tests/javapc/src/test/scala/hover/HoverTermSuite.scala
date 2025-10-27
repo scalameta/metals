@@ -4,7 +4,7 @@ import tests.pc.BaseJavaHoverSuite
 
 class HoverTermSuite extends BaseJavaHoverSuite {
   check(
-    "new class",
+    "new-class",
     """
       |class A {
       |
@@ -21,7 +21,7 @@ class HoverTermSuite extends BaseJavaHoverSuite {
   )
 
   check(
-    "new T class",
+    "new-t-class",
     """
       |class A<T> {
       |

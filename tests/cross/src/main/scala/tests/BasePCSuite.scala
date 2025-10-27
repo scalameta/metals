@@ -24,8 +24,6 @@ import coursierapi.Fetch
 import coursierapi.MavenRepository
 import coursierapi.Repository
 import munit.Tag
-import org.eclipse.lsp4j.MarkupContent
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 
 abstract class BasePCSuite extends BaseSuite with PCSuite {
 
@@ -213,15 +211,6 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
       code: String,
       filename: String = "test.scala"
   ): (String, Int, Int) = super.hoverParams(code, filename)
-
-  def doc(e: JEither[String, MarkupContent]): String = {
-    if (e == null) ""
-    else if (e.isLeft) {
-      " " + e.getLeft
-    } else {
-      " " + e.getRight.getValue
-    }
-  }.trim
 
   def sortLines(stableOrder: Boolean, string: String): String = {
     if (stableOrder) string
