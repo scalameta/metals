@@ -873,6 +873,7 @@ abstract class MetalsLspService(
         .getOrElse(current)
     }
     scalaCli.didFocus(path)
+    syncStatusReporter.didFocus(uri)
 
     // when focusing on a new file, display updated diagnostics
     val future = for {
@@ -903,7 +904,9 @@ abstract class MetalsLspService(
       .andThen {
         case Success(targets) =>
           syncStatusReporter.expanded(uri, Some(targets.toList))
-        case Failure(_) => syncStatusReporter.expanded(uri, None)
+        case Failure(_) =>
+          syncStatusReporter.expanded(uri, None)
+          syncStatusReporter.importFinished(Some(uri))
       }
       .ignoreValue
   }
