@@ -192,12 +192,11 @@ case class ScalaPresentationCompiler(
       params: VirtualFileParams
   ): CompletableFuture[ju.List[Diagnostic]] = {
     val noDiags = Seq[Diagnostic]().asJava
-    if (config.emitDiagnostics) {
+    if (params.uri().toString.endsWith(".scala") && config.emitDiagnostics) {
       compilerAccess.withInterruptableCompiler(noDiags, EmptyCancelToken) {
         pc =>
           val mGlobal = pc.compiler()
           import mGlobal._
-
           val sourceFile = new MetalsSourceFile(params)
           metalsAsk[Unit](askReload(List(sourceFile), _))
 
