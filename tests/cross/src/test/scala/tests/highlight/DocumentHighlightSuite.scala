@@ -1157,7 +1157,7 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
   )
 
   check(
-    "implicit-class-long",
+    "implicit-class-long".tag(IgnoreScalaVersion.forLessThan("2.13.16")),
     """|object Foo {
        |  implicit class Xtension(s: String) {
        |    def <<someVeryyyyyyLongName>>(suffix: String = "suf"): String = ???
