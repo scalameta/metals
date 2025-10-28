@@ -390,6 +390,12 @@ object MetalsEnrichments
     def isBazelRelatedPath: Boolean = {
       val filename = path.toNIO.getFileName.toString
       filename == "WORKSPACE" ||
+      filename == "WORKSPACE.bazel" ||
+      filename == "WORKSPACE.bzlmod" ||
+      filename == "MODULE.bazel" ||
+      filename == "MODULE.bazel.lock" ||
+      filename == "REPO.bazel" ||
+      filename == "VENDOR.bazel" ||
       filename == "BUILD" ||
       filename == "BUILD.bazel" ||
       filename.endsWith(".bzl") ||
