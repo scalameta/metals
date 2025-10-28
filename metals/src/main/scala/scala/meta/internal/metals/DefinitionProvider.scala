@@ -355,10 +355,13 @@ final class DefinitionProvider(
   }
 
   private def fromMtags(source: AbsolutePath, dirtyPos: Position) = {
-    Mtags
-      .allToplevels(source.toInput, scalaVersionSelector.getDialect(source))
-      .occurrences
-      .find(_.encloses(dirtyPos))
+    // in case the index is off and the file has been deleted, we don't want to throw an exception.
+    if (source.exists)
+      Mtags
+        .allToplevels(source.toInput, scalaVersionSelector.getDialect(source))
+        .occurrences
+        .find(_.encloses(dirtyPos))
+    else None
   }
 
 }
