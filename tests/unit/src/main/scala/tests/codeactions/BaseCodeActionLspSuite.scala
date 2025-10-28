@@ -93,6 +93,7 @@ abstract class BaseCodeActionLspSuite(
       retryAction: Int = 0,
       assume: () => Boolean = () => true,
       applyCodeAction: Boolean = true,
+      dependencies: List[String] = Nil,
   )(implicit loc: Location): Unit = {
     val scalacOptionsJson =
       if (scalacOptions.nonEmpty)
@@ -102,7 +103,7 @@ abstract class BaseCodeActionLspSuite(
 
     val layout = overrideLayout.getOrElse {
       s"""/metals.json
-         |{"a":{$scalacOptionsJson "scalaVersion" : "$scalaVersion"}}
+         |{"a":{$scalacOptionsJson "scalaVersion" : "$scalaVersion", "libraryDependencies": ${toJsonArray(dependencies)} }}
          |$scalafixConf
          |/$path
          |$input""".stripMargin
