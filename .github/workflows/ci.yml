@@ -80,7 +80,9 @@ jobs:
 #            os: metals-ubuntu-latest
 #            java: "17"
           - type: bazel
-            command: bin/test.sh 'slow/testOnly -- tests.bazel.*'
+            command: |
+              bin/test.sh quick-publish-local
+              bin/test.sh 'slow/testOnly -- tests.bazel.*'
             name: Bazel integration
             os: metals-ubuntu-latest
             java: "17"
