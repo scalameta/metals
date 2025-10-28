@@ -56,12 +56,14 @@ class TargetBuildToolLspSuite extends BaseImportSuite("target-build-tool") {
         client.workspaceMessageRequests,
         List(
           // Should NOT show chooseBuildToolMessage since config specifies sbt
-          importBuildMessage,
+          importBuildMessage
         ).mkString("\n"),
       )
       _ <- server.server.indexingPromise.future
       // Verify that sbt was chosen
-      _ = assert(server.server.tables.buildTool.selectedBuildTool().contains("sbt"))
+      _ = assert(
+        server.server.tables.buildTool.selectedBuildTool().contains("sbt")
+      )
     } yield ()
   }
 
@@ -78,10 +80,13 @@ class TargetBuildToolLspSuite extends BaseImportSuite("target-build-tool") {
             |  def scalaVersion = "${V.scala213}"
             |}
             |""".stripMargin,
-        expectError = true, // BloopImportInitializer runs sbt which won't work with mill
+        expectError =
+          true, // BloopImportInitializer runs sbt which won't work with mill
       )
       // Verify that mill was chosen (even though build didn't complete)
-      _ = assert(server.server.tables.buildTool.selectedBuildTool().contains("mill"))
+      _ = assert(
+        server.server.tables.buildTool.selectedBuildTool().contains("mill")
+      )
     } yield ()
   }
 
@@ -119,4 +124,3 @@ class TargetBuildToolLspSuite extends BaseImportSuite("target-build-tool") {
   }
 
 }
-
