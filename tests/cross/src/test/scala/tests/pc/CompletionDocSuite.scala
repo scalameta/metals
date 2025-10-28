@@ -284,69 +284,6 @@ class CompletionDocSuite extends BaseCompletionSuite {
         |Iterator scala.collection
         |""".stripMargin
 
-  def iteratorAndSpecificIterableFactoryDocs213(
-      withLinearSeqIterator: Boolean = true
-  ): String = {
-    val linearSeqIteratorDocs =
-      if (withLinearSeqIterator) {
-        "\n" +
-          """|> A specialized Iterator for LinearSeqs that is lazy enough for Stream and LazyList. This is accomplished by not
-             |evaluating the tail after returning the current head.
-             |LinearSeqIterator scala.collection""".stripMargin
-      } else {
-        ""
-      }
-    s"""|$iteratorDocs213> Explicit instantiation of the `Iterator` trait to reduce class file size in subclasses.
-        |AbstractIterator scala.collection
-        |> Buffered iterators are iterators which provide a method `head`
-        | that inspects the next element without discarding it.
-        |BufferedIterator scala.collection$linearSeqIteratorDocs
-        |> Base trait for companion objects of collections that require an implicit `ClassTag`.
-        |
-        |**Type Parameters**
-        |- `CC`: Collection type constructor (e.g. `ArraySeq`)
-        |ClassTagIterableFactory scala.collection
-        |> Base trait for companion objects of collections that require an implicit evidence.
-        |
-        |**Type Parameters**
-        |- `CC`: Collection type constructor (e.g. `ArraySeq`)
-        |- `Ev`: Unary type constructor for the implicit evidence required for an element type
-        |           (typically `Ordering` or `ClassTag`)
-        |EvidenceIterableFactory scala.collection
-        |> This trait provides default implementations for the factory methods `fromSpecific` and
-        |`newSpecificBuilder` that need to be refined when implementing a collection type that refines
-        |the `CC` and `C` type parameters. It is used for collections that have an additional constraint,
-        |expressed by the `evidenceIterableFactory` method.
-        |
-        |The default implementations in this trait can be used in the common case when `CC[A]` is the
-        |same as `C`.
-        |EvidenceIterableFactoryDefaults scala.collection
-        |> Base trait for companion objects of unconstrained collection types that may require
-        |multiple traversals of a source collection to build a target collection `CC`.
-        |
-        |
-        |**Type Parameters**
-        |- `CC`: Collection type constructor (e.g. `List`)
-        |IterableFactory scala.collection
-        |> This trait provides default implementations for the factory methods `fromSpecific` and
-        |`newSpecificBuilder` that need to be refined when implementing a collection type that refines
-        |the `CC` and `C` type parameters.
-        |
-        |The default implementations in this trait can be used in the common case when `CC[A]` is the
-        |same as `C`.
-        |IterableFactoryDefaults scala.collection
-        |> Base trait for companion objects of collections that require an implicit `Ordering`.
-        |
-        |**Type Parameters**
-        |- `CC`: Collection type constructor (e.g. `SortedSet`)
-        |SortedIterableFactory scala.collection
-        |> **Type Parameters**
-        |- `A`: Type of elements (e.g. `Int`, `Boolean`, etc.)
-        |- `C`: Type of collection (e.g. `List[Int]`, `TreeMap[Int, String]`, etc.)
-        |SpecificIterableFactory scala.collection
-        |""".stripMargin
-  }
-
   check(
     "scala4",
     """
@@ -398,10 +335,56 @@ class CompletionDocSuite extends BaseCompletionSuite {
     includeDocs = true,
     compat = Map(
       // LinearSeqIterator should actually not be added since it's private and it's fixed in 2.13.5
-      "2.13" -> iteratorAndSpecificIterableFactoryDocs213(
-        withLinearSeqIterator = false
-      ),
-      "3" -> iteratorDocs213
+      "2.13" ->
+        s"""|$iteratorDocs213> Explicit instantiation of the `Iterator` trait to reduce class file size in subclasses.
+            |AbstractIterator scala.collection
+            |> Buffered iterators are iterators which provide a method `head`
+            | that inspects the next element without discarding it.
+            |BufferedIterator scala.collection
+            |> Base trait for companion objects of collections that require an implicit `ClassTag`.
+            |
+            |**Type Parameters**
+            |- `CC`: Collection type constructor (e.g. `ArraySeq`)
+            |ClassTagIterableFactory scala.collection
+            |> Base trait for companion objects of collections that require an implicit evidence.
+            |
+            |**Type Parameters**
+            |- `CC`: Collection type constructor (e.g. `ArraySeq`)
+            |- `Ev`: Unary type constructor for the implicit evidence required for an element type
+            |           (typically `Ordering` or `ClassTag`)
+            |EvidenceIterableFactory scala.collection
+            |> This trait provides default implementations for the factory methods `fromSpecific` and
+            |`newSpecificBuilder` that need to be refined when implementing a collection type that refines
+            |the `CC` and `C` type parameters. It is used for collections that have an additional constraint,
+            |expressed by the `evidenceIterableFactory` method.
+            |
+            |The default implementations in this trait can be used in the common case when `CC[A]` is the
+            |same as `C`.
+            |EvidenceIterableFactoryDefaults scala.collection
+            |> Base trait for companion objects of unconstrained collection types that may require
+            |multiple traversals of a source collection to build a target collection `CC`.
+            |
+            |
+            |**Type Parameters**
+            |- `CC`: Collection type constructor (e.g. `List`)
+            |IterableFactory scala.collection
+            |> This trait provides default implementations for the factory methods `fromSpecific` and
+            |`newSpecificBuilder` that need to be refined when implementing a collection type that refines
+            |the `CC` and `C` type parameters.
+            |
+            |The default implementations in this trait can be used in the common case when `CC[A]` is the
+            |same as `C`.
+            |IterableFactoryDefaults scala.collection
+            |> Base trait for companion objects of collections that require an implicit `Ordering`.
+            |
+            |**Type Parameters**
+            |- `CC`: Collection type constructor (e.g. `SortedSet`)
+            |SortedIterableFactory scala.collection
+            |> **Type Parameters**
+            |- `A`: Type of elements (e.g. `Int`, `Boolean`, etc.)
+            |- `C`: Type of collection (e.g. `List[Int]`, `TreeMap[Int, String]`, etc.)
+            |SpecificIterableFactory scala.collection
+            |""".stripMargin
     )
   )
 
