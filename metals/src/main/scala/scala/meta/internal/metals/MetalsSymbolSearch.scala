@@ -133,61 +133,6 @@ class MetalsSymbolSearch(
     )
   }
 
-  override def queryImplicitClassMembers(
-      paramTypeSymbol: String
-  ): ju.List[scala.meta.pc.ImplicitClassMemberResult] = {
-    import scala.meta.internal.jdk.CollectionConverters._
-
-    scribe.info(
-      s"[MetalsSymbolSearch] Querying implicit class members for type: $paramTypeSymbol"
-    )
-
-    val totalCached = wsp.implicitClassMembers.values.flatten.size
-    scribe.info(
-      s"[MetalsSymbolSearch] Total implicit class members in cache: $totalCached"
-    )
-
-    val results = List.newBuilder[scala.meta.pc.ImplicitClassMemberResult]
-
-    val simpleTypeName = paramTypeSymbol.split("/").last
-
-    wsp.implicitClassMembers.values.flatten.foreach { member =>
-      val memberSimpleName = member.paramType.split("/").last
-      val isGenericType =
-        memberSimpleName.length == 2 && memberSimpleName.endsWith("#") &&
-          memberSimpleName.head.isUpper
-
-      if (
-        member.paramType == paramTypeSymbol ||
-        memberSimpleName == simpleTypeName ||
-        isGenericType
-      ) {
-        scribe.debug(
-          s"[MetalsSymbolSearch]   Match found: ${member.methodName} from ${member.classSymbol} " +
-            s"(query: $paramTypeSymbol, indexed: ${member.paramType}, isGeneric: $isGenericType)"
-        )
-        results += new scala.meta.pc.ImplicitClassMemberResult(
-          member.methodSymbol,
-          member.methodName,
-          member.classSymbol,
-        )
-      }
-    }
-
-    val resultList = results.result()
-    if (resultList.nonEmpty) {
-      scribe.info(
-        s"[MetalsSymbolSearch] Found ${resultList.size} implicit class members for $paramTypeSymbol"
-      )
-    } else {
-      scribe.debug(
-        s"[MetalsSymbolSearch] No implicit class members found for $paramTypeSymbol"
-      )
-    }
-
-    resultList.asJava
-  }
-
   override def queryAllImplicitClasses(): ju.List[String] = {
     import scala.meta.internal.jdk.CollectionConverters._
     

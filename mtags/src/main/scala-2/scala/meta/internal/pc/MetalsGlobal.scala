@@ -1331,15 +1331,22 @@ class MetalsGlobal(
 
             constructorParamTypeOpt match {
               case Some(paramType) =>
-                // Use presentation compiler type checking
+                val isTypeParameter = paramType.typeSymbol.isTypeParameter ||
+                                       paramType.typeSymbol.isAbstractType
+                
                 val matches = try {
-                  targetType <:< paramType || targetType.widen <:< paramType
+                  if (isTypeParameter) {
+                    true
+                  } else {
+                    targetType <:< paramType || targetType.widen <:< paramType
+                  }
                 } catch {
                   case NonFatal(_) => false
                 }
 
                 logger.info(
-                  s"[MetalsGlobal.findIndexed]     Param type: $paramType, matches: $matches"
+                  s"[MetalsGlobal.findIndexed]     Param type: $paramType, " +
+                  s"isTypeParameter: $isTypeParameter, matches: $matches"
                 )
 
                 if (matches) {
