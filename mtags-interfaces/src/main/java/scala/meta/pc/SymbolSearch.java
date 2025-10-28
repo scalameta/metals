@@ -56,17 +56,6 @@ public interface SymbolSearch {
                   SymbolSearchVisitor visitor);
     
     /**
-     * Returns implicit class members that are applicable for the given parameter type.
-     * This is used to provide completions for methods from implicit classes.
-     * 
-     * @param paramTypeSymbol the semanticdb symbol of the parameter type (e.g., "scala/Int#")
-     * @return list of implicit class members applicable to this type
-     */
-    default List<ImplicitClassMemberResult> queryImplicitClassMembers(String paramTypeSymbol) {
-        return java.util.Collections.emptyList(); 
-    }
-    
-    /**
      * Returns all implicit classes in the workspace and dependencies.
      * Returns class symbols that can be resolved in the presentation compiler.
      * This is used for type-based matching of implicit classes.

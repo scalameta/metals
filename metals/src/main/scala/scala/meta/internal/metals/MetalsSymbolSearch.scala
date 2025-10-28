@@ -143,7 +143,6 @@ class MetalsSymbolSearch(
       s"[MetalsSymbolSearch] Total implicit class members in cache: $totalCached"
     )
     
-    // Get unique class symbols from all implicit class members
     val classSymbols = wsp.implicitClassMembers.values.flatten
       .map(_.classSymbol)
       .toSet

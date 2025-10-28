@@ -1306,7 +1306,6 @@ class MetalsGlobal(
         s"[MetalsGlobal.findIndexed] Searching implicit classes for type: $targetType"
       )
 
-      // Query all implicit classes from index
       val implicitClassSymbols = search.queryAllImplicitClasses()
 
       logger.info(

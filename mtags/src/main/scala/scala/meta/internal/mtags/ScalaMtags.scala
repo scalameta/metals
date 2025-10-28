@@ -451,59 +451,7 @@ class ScalaMtags(
   }
 
   private def collectImplicitClassMembers(cls: Defn.Class): Unit = {
-    cls.ctor.paramss match {
-      case List(List(param)) =>
-        param.decltpe match {
-          case Some(tpe) =>
-            val paramTypeSymbol = typeToSymbol(tpe)
-            val classSymbol = symbol(Descriptor.Type(cls.name.value))
-
-            cls.templ.stats.foreach {
-              case defn: Defn.Def if !defn.mods.exists {
-                    case Mod.Private(_) => true
-                    case Mod.Protected(_) => true
-                    case _ => false
-                  } =>
-                val methodSymbol = Symbols.Global(
-                  classSymbol,
-                  Descriptor.Method(defn.name.value, "()")
-                )
-                implicitClassMembersBuilder += ImplicitClassMember(
-                  classSymbol = classSymbol,
-                  paramType = paramTypeSymbol,
-                  methodSymbol = methodSymbol,
-                  methodName = defn.name.value,
-                  range = cls.pos.toSemanticdb
-                )
-              case _ =>
-            }
-          case None =>
-        }
-      case _ =>
-    }
-  }
-
-  private def typeToSymbol(tpe: Type): String = {
-    tpe match {
-      case Type.Name(value) =>
-        s"${value}#"
-      case Type.Select(qual, Type.Name(name)) =>
-        // Qualified type like scala.Int - preserve the full path
-        qualToSymbol(qual) + Descriptor.Type(name).value
-      case Type.Apply(base, _) =>
-        // Generic type, use base type
-        typeToSymbol(base)
-      case _ =>
-        "Any#"
-    }
-  }
-
-  private def qualToSymbol(qual: Term.Ref): String = {
-    qual match {
-      case Term.Name(value) => value + "/"
-      case Term.Select(q: Term.Ref, Term.Name(name)) =>
-        qualToSymbol(q) + name + "/"
-      case _ => ""
-    }
+    val classSymbol = symbol(Descriptor.Type(cls.name.value))
+    implicitClassMembersBuilder += ImplicitClassMember(classSymbol)
   }
 }

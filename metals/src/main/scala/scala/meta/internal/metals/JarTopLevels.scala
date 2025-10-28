@@ -416,44 +416,30 @@ class JarIndexingInfo(conn: () => Connection) {
       implicitClassMemberMap: Map[AbsolutePath, List[ImplicitClassMember]],
   ): Int =
     if (implicitClassMemberMap.nonEmpty) {
-      val totalMembers = implicitClassMemberMap.values.map(_.size).sum
+      val totalClasses = implicitClassMemberMap.values.map(_.size).sum
       scribe.info(
-        s"[JarTopLevels] Storing $totalMembers implicit class members from ${implicitClassMemberMap.size} files to database"
+        s"[JarTopLevels] Storing $totalClasses implicit classes from ${implicitClassMemberMap.size} files to database"
       )
 
-      // Add implicit class members for jar to H2
       var implicitClassMemberStmt: PreparedStatement = null
       try {
         implicitClassMemberStmt = conn().prepareStatement(
-          s"insert into implicit_class_members (class_symbol, param_type, method_symbol, method_name, start_line, start_character, end_line, end_character, path, jar) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          s"insert into implicit_class_members (class_symbol, jar) values (?, ?)"
         )
 
-        implicitClassMemberMap.foreach { case (path, implicitClassMembers) =>
+        implicitClassMemberMap.foreach { case (_, implicitClassMembers) =>
           implicitClassMembers.foreach { member =>
             scribe.debug(
-              s"[JarTopLevels]   Storing: paramType=${member.paramType}, " +
-                s"method=${member.methodName}, methodSymbol=${member.methodSymbol}"
+              s"[JarTopLevels]   Storing: classSymbol=${member.classSymbol}"
             )
             implicitClassMemberStmt.setString(1, member.classSymbol)
-            implicitClassMemberStmt.setString(2, member.paramType)
-            implicitClassMemberStmt.setString(3, member.methodSymbol)
-            implicitClassMemberStmt.setString(4, member.methodName)
-            implicitClassMemberStmt.setInt(5, member.range.startLine)
-            implicitClassMemberStmt.setInt(6, member.range.startCharacter)
-            implicitClassMemberStmt.setInt(7, member.range.endLine)
-            implicitClassMemberStmt.setInt(8, member.range.endCharacter)
-            implicitClassMemberStmt.setString(
-              9,
-              path.toString,
-            )
-            implicitClassMemberStmt.setInt(10, jar)
+            implicitClassMemberStmt.setInt(2, jar)
             implicitClassMemberStmt.addBatch()
           }
         }
-        // Return number of rows inserted
         val inserted = implicitClassMemberStmt.executeBatch().sum
         scribe.info(
-          s"[JarTopLevels] Successfully stored $inserted implicit class members"
+          s"[JarTopLevels] Successfully stored $inserted implicit classes"
         )
         inserted
       } catch {
@@ -481,14 +467,12 @@ class JarIndexingInfo(conn: () => Connection) {
   ): Option[Map[AbsolutePath, List[ImplicitClassMember]]] =
     try {
       scribe.info(
-        s"[JarTopLevels] Reading implicit class members from database for JAR: $jar"
+        s"[JarTopLevels] Reading implicit class symbols from database for JAR: $jar"
       )
-      val fs = getFileSystem(jar)
-      val implicitClassMembers =
-        List.newBuilder[(AbsolutePath, ImplicitClassMember)]
+      val implicitClasses = List.newBuilder[ImplicitClassMember]
       conn()
         .query(
-          """select icm.class_symbol, icm.param_type, icm.method_symbol, icm.method_name, icm.start_line, icm.start_character, icm.end_line, icm.end_character, icm.path
+          """select icm.class_symbol
             |from indexed_jar ij
             |left join implicit_class_members icm
             |on ij.id=icm.jar
@@ -496,36 +480,18 @@ class JarIndexingInfo(conn: () => Connection) {
         ) { _.setString(1, getMD5Digest(jar)) } { rs =>
           if (rs.getString(1) != null) {
             val classSymbol = rs.getString(1)
-            val paramType = rs.getString(2)
-            val methodSymbol = rs.getString(3)
-            val methodName = rs.getString(4)
-            val startLine = rs.getInt(5)
-            val startChar = rs.getInt(6)
-            val endLine = rs.getInt(7)
-            val endChar = rs.getInt(8)
-            val path = AbsolutePath(fs.getPath(rs.getString(9)))
-            import scala.meta.internal.semanticdb.Range
-            val range = Range(startLine, startChar, endLine, endChar)
-            implicitClassMembers += (path -> ImplicitClassMember(
-              classSymbol,
-              paramType,
-              methodSymbol,
-              methodName,
-              range,
-            ))
+            implicitClasses += ImplicitClassMember(classSymbol)
           }
         }
         .headOption
         .map { _ =>
-          val result = implicitClassMembers.result().groupBy(_._1).map {
-            case (path, members) =>
-              (path, members.map(_._2))
-          }
-          val totalMembers = result.values.map(_.size).sum
+          val classes = implicitClasses.result()
           scribe.info(
-            s"[JarTopLevels] Retrieved $totalMembers implicit class members from ${result.size} files from database, $result"
+            s"[JarTopLevels] Retrieved ${classes.size} implicit classes from database"
           )
-          result
+          // Return as Map with dummy path since we don't store paths anymore
+          // WorkspaceSymbolProvider will handle this as a flat list
+          Map(jar -> classes)
         }
     } catch {
       case error @ (_: ZipError | _: ZipException) =>

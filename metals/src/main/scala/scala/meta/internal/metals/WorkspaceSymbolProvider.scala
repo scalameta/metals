@@ -73,20 +73,17 @@ final class WorkspaceSymbolProvider(
   def addImplicitClassMembers(
       implicitClassMembers: Map[AbsolutePath, Seq[ImplicitClassMember]]
   ): Unit = {
-    val totalMembers = implicitClassMembers.values.map(_.size).sum
-    if (totalMembers > 0) {
+    val totalClasses = implicitClassMembers.values.map(_.size).sum
+    if (totalClasses > 0) {
       scribe.info(
-        s"[WorkspaceSymbolProvider] Loading $totalMembers implicit class members " +
-          s"from ${implicitClassMembers.size} files into cache"
+        s"[WorkspaceSymbolProvider] Loading $totalClasses implicit classes " +
+          s"from ${implicitClassMembers.size} sources into cache"
       )
-
-      implicitClassMembers.values.flatten.groupBy(_.paramType).foreach {
-        case (paramType, members) =>
-          scribe.debug(
-            s"[WorkspaceSymbolProvider]   Type $paramType: ${members.size} methods " +
-              s"(${members.map(_.methodName).mkString(", ")})"
-          )
-      }
+      
+      val uniqueClasses = implicitClassMembers.values.flatten.map(_.classSymbol).toSet
+      scribe.debug(
+        s"[WorkspaceSymbolProvider]   Unique classes: ${uniqueClasses.mkString(", ")}"
+      )
     }
     this.implicitClassMembers ++= implicitClassMembers
   }
