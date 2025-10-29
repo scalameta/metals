@@ -430,10 +430,7 @@ class ScalaToplevelMtags(
                 toplevelMembersBuilder += ToplevelMember(
                   currentOwner,
                   semanticdb.Range(0, 0, 0, 0),
-                  )
-                ToplevelMember
-                    /** EndMarker */
-                    .Kind.ImplicitClass.Kind.ImplicitClass
+                  ToplevelMember.Kind.ImplicitClass
                 )
               }
               val next = expect.startIndentedRegion(
