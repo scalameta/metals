@@ -24,51 +24,27 @@ object ToplevelMember {
   object Kind {
     case object Type extends Kind
     case object ImplicitClass extends Kind
-  }
-  
-  trait KindCodec[A] {
-    def encode(kind: Kind): A
-    def decode(value: A): Kind
-  }
-  
-  object KindCodec {
-    implicit val intCodec: KindCodec[Int] = new KindCodec[Int] {
-      def encode(kind: Kind): Int = kind match {
-        case Kind.Type => SymbolInformation.Kind.TYPE.value // 7
-        case Kind.ImplicitClass => 100 // Custom value, higher than any SymbolInformation.Kind
-      }
-      
-      def decode(value: Int): Kind = value match {
-        case 7 => Kind.Type
-        case 100 => Kind.ImplicitClass
-        case _ => 
-          throw new IllegalArgumentException(s"Unsupported value for ToplevelMember.Kind: $value")
-      }
-    }
     
-    implicit class KindCodecOps(kind: Kind) {
-      def encode[A](implicit codec: KindCodec[A]): A = codec.encode(kind)
-    }
+    private val idMapping: Map[Kind, Int] = Map(
+      Type -> SymbolInformation.Kind.TYPE.value, // 7
+      ImplicitClass -> 100 // Custom value, higher than any SymbolInformation.Kind
+    )
     
-    implicit class CodecDecodeOps[A](value: A) {
-      def decodeKind(implicit codec: KindCodec[A]): Kind = codec.decode(value)
-    }
-  }
-  
-  trait ToLsp[A] {
-    def toLsp(value: A): org.eclipse.lsp4j.SymbolKind
-  }
-  
-  object ToLsp {
-    implicit val kindToLsp: ToLsp[Kind] = new ToLsp[Kind] {
-      def toLsp(kind: Kind): org.eclipse.lsp4j.SymbolKind = kind match {
-        case Kind.Type => org.eclipse.lsp4j.SymbolKind.Class
-        case Kind.ImplicitClass => org.eclipse.lsp4j.SymbolKind.Class
-      }
-    }
+    private val reverseMapping: Map[Int, Kind] = idMapping.map(_.swap)
     
-    implicit class ToLspOps[A](value: A)(implicit ev: ToLsp[A]) {
-      def toLsp: org.eclipse.lsp4j.SymbolKind = ev.toLsp(value)
+    private val lspMapping: Map[Kind, org.eclipse.lsp4j.SymbolKind] = Map(
+      Type -> org.eclipse.lsp4j.SymbolKind.Class,
+      ImplicitClass -> org.eclipse.lsp4j.SymbolKind.Class
+    )
+    
+    def fromId(id: Int): Kind = reverseMapping.getOrElse(
+      id,
+      throw new IllegalArgumentException(s"Unsupported id for ToplevelMember.Kind: $id")
+    )
+    
+    implicit class KindOps(val kind: Kind) extends AnyVal {
+      def toId: Int = idMapping(kind)
+      def toLsp: org.eclipse.lsp4j.SymbolKind = lspMapping(kind)
     }
   }
 }

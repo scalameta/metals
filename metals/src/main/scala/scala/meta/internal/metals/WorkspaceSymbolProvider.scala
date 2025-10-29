@@ -12,7 +12,7 @@ import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.ImplicitClassMember
 import scala.meta.internal.mtags.ScalaMtags
 import scala.meta.internal.mtags.ToplevelMember
-import scala.meta.internal.mtags.ToplevelMember.ToLsp._
+import scala.meta.internal.mtags.ToplevelMember.Kind._
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
