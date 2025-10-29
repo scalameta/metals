@@ -1291,8 +1291,7 @@ class MetalsGlobal(
   }
 
   /**
-   * Find implicit class extension methods available for a specific type using indexed data.
-   * This version uses type-based matching in the presentation compiler for better accuracy.
+   * Find implicit class extension methods available for a specific type using indexed topLevel data.
    */
   def findIndexedImplicitExtensionsForType(
       targetType: Type,
@@ -1330,6 +1329,7 @@ class MetalsGlobal(
 
             constructorParamTypeOpt match {
               case Some(paramType) =>
+                // We assume that classes with type parameter could be matched with any type
                 val isTypeParameter = paramType.typeSymbol.isTypeParameter ||
                   paramType.typeSymbol.isAbstractType
 

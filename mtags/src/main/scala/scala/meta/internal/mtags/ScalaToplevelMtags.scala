@@ -2,24 +2,23 @@ package scala.meta.internal.mtags
 
 import java.nio.file.Paths
 import java.util.Optional
-
 import scala.annotation.tailrec
-
 import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
-import scala.meta.internal.inputs._
+import scala.meta.internal.inputs.*
 import scala.meta.internal.metals.Report
-import scala.meta.internal.mtags.ScalametaCommonEnrichments._
-import scala.meta.internal.semanticdb.Implicits._
+import scala.meta.internal.mtags.ScalametaCommonEnrichments.*
+import scala.meta.internal.semanticdb
+import scala.meta.internal.semanticdb.Implicits.*
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyToken
-import scala.meta.internal.tokenizers.LegacyToken._
+import scala.meta.internal.tokenizers.LegacyToken.*
 import scala.meta.internal.tokenizers.LegacyTokenData
 import scala.meta.pc.reports.ReportContext
 import scala.meta.tokenizers.TokenizeException
@@ -426,11 +425,9 @@ class ScalaToplevelMtags(
           (expectTemplate, nextIsNL()) match {
             case (Some(expect), true) if needToParseBody(expect) =>
               if (expect.isImplicit) {
-                // Add implicit class as TopLevelMember with ImplicitClass kind
-                import scala.meta.internal.semanticdb.{Range => SemanticdbRange}
                 toplevelMembersBuilder += TopLevelMember(
                   currentOwner,
-                  SemanticdbRange(0, 0, 0, 0),
+                  semanticdb.Range(0, 0, 0, 0),
                   TopLevelMember.Kind.ImplicitClass
                 )
               }
@@ -475,13 +472,9 @@ class ScalaToplevelMtags(
                 loop(indent.notAfterNewline, currRegion, expectTemplate)
               } else {
                 if (expect.isImplicit) {
-                  // Add implicit class as TopLevelMember with ImplicitClass kind
-                  import scala.meta.internal.semanticdb.{
-                    Range => SemanticdbRange
-                  }
                   toplevelMembersBuilder += TopLevelMember(
                     currentOwner,
-                    SemanticdbRange(0, 0, 0, 0),
+                    semanticdb.Range(0, 0, 0, 0),
                     TopLevelMember.Kind.ImplicitClass
                   )
                 }
