@@ -10,9 +10,9 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.ImplicitClassMember
-import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.ScalaMtags
 import scala.meta.internal.mtags.ToplevelMember
+import scala.meta.internal.mtags.ToplevelMember.ToLsp._
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
@@ -129,7 +129,7 @@ final class WorkspaceSymbolProvider(
       target: Option[BuildTargetIdentifier],
   ): (SymbolSearch.Result, Int) = {
     val workspaceCount = workspaceSearch(query, visitor, target)
-    val typeCount = workspaceTopelevelSearch(query, visitor)
+    val typeCount = workspaceTopLevelSearch(query, visitor)
     val (res, inDepsCount) = inDependencies.search(query, visitor)
     (res, workspaceCount + inDepsCount + typeCount)
   }
@@ -316,7 +316,7 @@ final class WorkspaceSymbolProvider(
       )
   }
 
-  private def workspaceTopelevelSearch(
+  private def workspaceTopLevelSearch(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor,
   ): Int = {

@@ -18,8 +18,8 @@ import scala.meta.internal.mtags.ImplicitClassMember
 import scala.meta.internal.mtags.OverriddenSymbol
 import scala.meta.internal.mtags.ResolvedOverriddenSymbol
 import scala.meta.internal.mtags.ToplevelMember
+import scala.meta.internal.mtags.ToplevelMember.KindCodec._
 import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
-import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.io.AbsolutePath
 
 import org.h2.jdbc.JdbcBatchUpdateException
@@ -342,7 +342,7 @@ class JarIndexingInfo(conn: () => Connection) {
             val endLine = rs.getInt(4)
             val endChar = rs.getInt(5)
             val path = AbsolutePath(fs.getPath(rs.getString(6)))
-            val kind = SymbolInformation.Kind.fromValue(rs.getInt(7))
+            val kind = rs.getInt(7).decodeKind
             import scala.meta.internal.semanticdb.Range
             val range = Range(startLine, startChar, endLine, endChar)
             toplevelMembers += (path -> ToplevelMember(symbol, range, kind))
@@ -392,7 +392,7 @@ class JarIndexingInfo(conn: () => Connection) {
               6,
               path.toString,
             )
-            toplevelMemberStmt.setInt(7, toplevelMember.kind.value)
+            toplevelMemberStmt.setInt(7, toplevelMember.kind.encode[Int])
             toplevelMemberStmt.setInt(8, jar)
             toplevelMemberStmt.addBatch()
           }

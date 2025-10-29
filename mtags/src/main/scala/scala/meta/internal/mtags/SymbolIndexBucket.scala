@@ -161,19 +161,7 @@ class SymbolIndexBucket(
     val doc = toplevelMtags.index()
     val overrides = toplevelMtags.overrides()
     val toplevelMembers = toplevelMtags.toplevelMembers()
-
-    // Additionally use full parser (ScalaMtags) ONLY if fast scanner detected implicit classes
-    val implicitClassMembers = toplevelMtags match {
-      case scala: ScalaToplevelMtags if scala.containsImplicitClasses =>
-        try {
-          val scalaMtags = new ScalaMtags(input, dialect)
-          scalaMtags.indexRoot()
-          scalaMtags.implicitClassMembers()
-        } catch {
-          case NonFatal(_) => Nil
-        }
-      case _ => Nil
-    }
+    val implicitClassMembers = toplevelMtags.implicitClassMembers()
     val sourceTopLevels =
       doc.occurrences.iterator
         .filterNot(_.symbol.isPackage)

@@ -65,12 +65,12 @@ class ScalaToplevelMtags(
   override def toplevelMembers(): List[ToplevelMember] =
     toplevelMembersBuilder.result()
 
+  override def implicitClassMembers(): List[ImplicitClassMember] =
+    implicitClassMembersBuilder.result()
+
   private val overridden = List.newBuilder[(String, List[OverriddenSymbol])]
   private val toplevelMembersBuilder = List.newBuilder[ToplevelMember]
-
-  // Flag to track if file contains implicit classes
-  private var hasImplicitClasses: Boolean = false
-  def containsImplicitClasses: Boolean = hasImplicitClasses
+  private val implicitClassMembersBuilder = List.newBuilder[ImplicitClassMember]
 
   private def addOverridden(symbols: List[OverriddenSymbol]) =
     overridden += ((currentOwner, symbols))
@@ -430,7 +430,7 @@ class ScalaToplevelMtags(
           (expectTemplate, nextIsNL()) match {
             case (Some(expect), true) if needToParseBody(expect) =>
               if (expect.isImplicit) {
-                hasImplicitClasses = true
+                implicitClassMembersBuilder += ImplicitClassMember(currentOwner)
               }
               val next = expect.startIndentedRegion(
                 currRegion,
@@ -473,7 +473,7 @@ class ScalaToplevelMtags(
                 loop(indent.notAfterNewline, currRegion, expectTemplate)
               } else {
                 if (expect.isImplicit) {
-                  hasImplicitClasses = true
+                  implicitClassMembersBuilder += ImplicitClassMember(currentOwner)
                 }
                 val next =
                   expect.startInBraceRegion(
@@ -818,7 +818,7 @@ class ScalaToplevelMtags(
         val typeSymbol = symbol(Descriptor.Type(ident.name))
         if (owner.endsWith("/package.") || owner.endsWith("$package.")) {
           addToplevelMembers(
-            List(ToplevelMember(typeSymbol, ident.pos.toRange, Kind.TYPE))
+            List(ToplevelMember(typeSymbol, ident.pos.toRange, ToplevelMember.Kind.Type))
           )
         }
         if (emitTermMember) {
