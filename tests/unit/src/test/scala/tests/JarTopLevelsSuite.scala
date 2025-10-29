@@ -121,16 +121,6 @@ class JarTopLevelsSuite extends BaseTablesSuite {
     val toplevelMembers = Map(
       filePath -> List(
         TopLevelMember(
-          "foo/package.Bye#",
-          Range(1, 0, 2, 1),
-          TopLevelMember.Kind.Type,
-        ),
-        TopLevelMember(
-          "foo/package.Hello#",
-          Range(1, 0, 2, 1),
-          TopLevelMember.Kind.Type,
-        ),
-        TopLevelMember(
           "foo/package.Hello#",
           Range(1, 0, 2, 1),
           TopLevelMember.Kind.Type,
