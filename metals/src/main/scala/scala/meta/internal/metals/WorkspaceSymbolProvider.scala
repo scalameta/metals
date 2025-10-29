@@ -9,8 +9,8 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
-import scala.meta.internal.mtags.TopLevelMember
-import scala.meta.internal.mtags.TopLevelMember.Kind._
+import scala.meta.internal.mtags.ToplevelMember
+import scala.meta.internal.mtags.ToplevelMember.Kind._
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -47,8 +47,8 @@ final class WorkspaceSymbolProvider(
   var inDependencies: ClasspathSearch =
     ClasspathSearch.empty
 
-  val topLevelMembers: TrieMap[AbsolutePath, Seq[TopLevelMember]] =
-    TrieMap.empty[AbsolutePath, Seq[TopLevelMember]]
+  val topLevelMembers: TrieMap[AbsolutePath, Seq[ToplevelMember]] =
+    TrieMap.empty[AbsolutePath, Seq[ToplevelMember]]
 
   def search(
       query: String,
@@ -58,7 +58,7 @@ final class WorkspaceSymbolProvider(
   }
 
   def addToplevelMembers(
-      toplevelMembers: Map[AbsolutePath, Seq[TopLevelMember]]
+      toplevelMembers: Map[AbsolutePath, Seq[ToplevelMember]]
   ): Unit = {
     topLevelMembers ++= toplevelMembers
   }

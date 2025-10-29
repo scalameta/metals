@@ -63,16 +63,16 @@ class ScalaToplevelMtags(
   override def overrides(): List[(String, List[OverriddenSymbol])] =
     overridden.result()
 
-  override def toplevelMembers(): List[TopLevelMember] =
+  override def toplevelMembers(): List[ToplevelMember] =
     toplevelMembersBuilder.result()
 
   private val overridden = List.newBuilder[(String, List[OverriddenSymbol])]
-  private val toplevelMembersBuilder = List.newBuilder[TopLevelMember]
+  private val toplevelMembersBuilder = List.newBuilder[ToplevelMember]
 
   private def addOverridden(symbols: List[OverriddenSymbol]) =
     overridden += ((currentOwner, symbols))
 
-  private def addToplevelMembers(members: List[TopLevelMember]) =
+  private def addToplevelMembers(members: List[ToplevelMember]) =
     toplevelMembersBuilder ++= members
 
   import ScalaToplevelMtags._
@@ -427,10 +427,13 @@ class ScalaToplevelMtags(
           (expectTemplate, nextIsNL()) match {
             case (Some(expect), true) if needToParseBody(expect) =>
               if (expect.isImplicit) {
-                toplevelMembersBuilder += TopLevelMember(
+                toplevelMembersBuilder += ToplevelMember(
                   currentOwner,
                   semanticdb.Range(0, 0, 0, 0),
-                  TopLevelMember.Kind.ImplicitClass
+                  )
+                ToplevelMember
+                    /** EndMarker */
+                    .Kind.ImplicitClass.Kind.ImplicitClass
                 )
               }
               val next = expect.startIndentedRegion(
@@ -474,10 +477,10 @@ class ScalaToplevelMtags(
                 loop(indent.notAfterNewline, currRegion, expectTemplate)
               } else {
                 if (expect.isImplicit) {
-                  toplevelMembersBuilder += TopLevelMember(
+                  toplevelMembersBuilder += ToplevelMember(
                     currentOwner,
                     semanticdb.Range(0, 0, 0, 0),
-                    TopLevelMember.Kind.ImplicitClass
+                    ToplevelMember.Kind.ImplicitClass
                   )
                 }
                 val next =
@@ -824,10 +827,10 @@ class ScalaToplevelMtags(
         if (owner.endsWith("/package.") || owner.endsWith("$package.")) {
           addToplevelMembers(
             List(
-              TopLevelMember(
+              ToplevelMember(
                 typeSymbol,
                 ident.pos.toRange,
-                TopLevelMember.Kind.Type
+                ToplevelMember.Kind.Type
               )
             )
           )

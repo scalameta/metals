@@ -8,7 +8,7 @@ import scala.collection.concurrent.TrieMap
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
-import scala.meta.internal.mtags.TopLevelMember
+import scala.meta.internal.mtags.ToplevelMember
 import scala.meta.io.AbsolutePath
 import scala.meta.pc._
 
@@ -133,7 +133,7 @@ class MetalsSymbolSearch(
   override def queryAllImplicitClasses(): ju.List[String] = {
 
     val implicitClasses = wsp.topLevelMembers.values.flatten
-      .filter(_.kind == TopLevelMember.Kind.ImplicitClass)
+      .filter(_.kind == ToplevelMember.Kind.ImplicitClass)
 
     val classSymbols = implicitClasses
       .map(_.symbol)
