@@ -218,22 +218,18 @@ class CompletionProvider(
             else ""
           val implicitClass = m.implicitClass
 
-          val typeRef = TypeRef(
-            ThisType(implicitClass),
-            m.sym,
-            Nil
-          )
-          // Use the method name, but import the implicit class
-          val (short, edits) = ShortenedNames.synthesize(
-            typeRef,
+          val (_, edits) = ShortenedNames.synthesize(
+            TypeRef(
+              ThisType(implicitClass.owner),
+              implicitClass,
+              Nil
+            ),
             pos,
             context,
             impPos
           )
-          val methodName = Identifier.backtickWrap(m.sym.name.decoded)
-          println(s"SHort: $short, methodName: $methodName")
           val edit: l.TextEdit = textEdit(
-            methodName + suffix,
+            ident + suffix,
             editRange
           )
           item.setTextEdit(edit)
