@@ -216,18 +216,20 @@ class CompletionProvider(
               )
             ) "($0)"
             else ""
-          val (short, edits) = ShortenedNames.synthesize(
+          // Use the method name, but import the implicit class
+          val (_, edits) = ShortenedNames.synthesize(
             TypeRef(
-              ThisType(m.sym.owner),
-              m.sym,
+              ThisType(m.implicitClass.owner),
+              m.implicitClass,
               Nil
             ),
             pos,
             context,
             impPos
           )
+          val methodName = m.sym.name.decoded
           val edit: l.TextEdit = textEdit(
-            short + suffix,
+            methodName + suffix,
             editRange
           )
           item.setTextEdit(edit)
@@ -478,17 +480,17 @@ class CompletionProvider(
     val context = doLocateContext(pos)
     val visitor = new CompilerSearchVisitor(
       context,
-      sym =>
-        if (sym.safeOwner.isImplicit && sym.owner.isStatic) {
-          val ownerConstructor = sym.owner.info.member(nme.CONSTRUCTOR)
-          def typeParams = sym.owner.info.typeParams
-          ownerConstructor.info.paramss match {
-            case List(List(param))
-                if selectType <:< boundedWildcardType(param.info, typeParams) =>
-              visit(new WorkspaceImplicitMember(sym))
-            case _ => false
-          }
-        } else false
+        sym =>
+          if (sym.safeOwner.isImplicit && sym.owner.isStatic) {
+            val ownerConstructor = sym.owner.info.member(nme.CONSTRUCTOR)
+            def typeParams = sym.owner.info.typeParams
+            ownerConstructor.info.paramss match {
+              case List(List(param))
+                  if selectType <:< boundedWildcardType(param.info, typeParams) =>
+                visit(new WorkspaceImplicitMember(sym, sym.owner))
+              case _ => false
+            }
+          } else false
     )
     search.searchMethods(query, buildTargetIdentifier, visitor)
   }

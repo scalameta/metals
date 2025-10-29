@@ -144,7 +144,7 @@ class MetalsSymbolSearch(
 
     val totalCached = implicitClasses.size
     scribe.info(
-      s"[MetalsSymbolSearch] Total implicit classes in cache: $totalCached"
+      s"[MetalsSymbolSearch] Total implicit classes in cache: $totalCached, ${implicitClasses.toList}"
     )
 
     val classSymbols = implicitClasses

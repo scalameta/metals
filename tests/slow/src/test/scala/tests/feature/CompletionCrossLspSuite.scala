@@ -251,6 +251,52 @@ class CompletionCrossLspSuite
     } yield ()
   }
 
+  test("implicit-class-duration") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": { 
+           |    "scalaVersion": "${V.scala213}"
+           |  }
+           |}
+           |/a/src/main/scala/a/A.scala
+           |package example
+           |
+           |object Main {
+           |  // @@
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ = assertNoDiagnostics()
+      // Test that hours method from DurationInt implicit class is available on Int
+      _ <- assertCompletion(
+        "2.hour@@",
+        """|hour: FiniteDuration (implicit)
+           |hour[C](c: C)(implicit ev: DurationConversions.Classifier[C]): ev.R (implicit)
+           |hours: FiniteDuration (implicit)
+           |hours[C](c: C)(implicit ev: DurationConversions.Classifier[C]): ev.R (implicit)
+           |""".stripMargin,
+        filter = _.contains("hour"),
+      )
+      // Test auto-import of the implicit class when applying completion
+      _ <- assertCompletionEdit(
+        "2.hour@@",
+        """|package example
+           |
+           |import scala.concurrent.duration.DurationInt
+           |
+           |object Main {
+           |  2.hour
+           |}
+           |""".stripMargin,
+        filter = str => str.contains("hour") && str.contains("FiniteDuration") && !str.contains("[C]"),
+      )
+    } yield ()
+  }
+
   test("basic-scala3") {
     cleanWorkspace()
     for {
