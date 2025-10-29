@@ -142,6 +142,4 @@ class MetalsSymbolSearch(
 
     classSymbols.asJava
   }
-
-  def workspaceSymbols(): WorkspaceSymbolProvider = wsp
 }
