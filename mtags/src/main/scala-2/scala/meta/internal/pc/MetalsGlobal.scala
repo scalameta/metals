@@ -1379,10 +1379,12 @@ class MetalsGlobal(
                           logger.info(
                             s"[MetalsGlobal.findIndexed]       Adding method: ${extensionMethod.name} from ${implicitClassSymbol.fullName}"
                           )
-                          visit(new WorkspaceImplicitMember(
-                            extensionMethod,
-                            implicitClassSymbol
-                          ))
+                          visit(
+                            new WorkspaceImplicitMember(
+                              extensionMethod,
+                              implicitClassSymbol
+                            )
+                          )
                         }
                       }
                     }
