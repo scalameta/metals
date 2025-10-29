@@ -105,12 +105,7 @@ class SymbolIndexBucket(
       sourceDirectory: Option[AbsolutePath],
       isJava: Boolean
   ): Option[IndexingResult] = try {
-    val IndexingResult(
-      path,
-      topLevels,
-      overrides,
-      toplevelMembers
-    ) =
+    val IndexingResult(path, topLevels, overrides, toplevelMembers) =
       indexSource(source, dialect, sourceDirectory, isJava)
     topLevels.foreach { symbol =>
       toplevels.updateWith(symbol) {
@@ -119,12 +114,7 @@ class SymbolIndexBucket(
       }
     }
     Some(
-      IndexingResult(
-        path,
-        topLevels,
-        overrides,
-        toplevelMembers
-      )
+      IndexingResult(path, topLevels, overrides, toplevelMembers)
     )
   } catch {
     case NonFatal(e) =>
@@ -156,12 +146,7 @@ class SymbolIndexBucket(
           .filter(sym => !isTrivialToplevelSymbol(uri, sym, "scala"))
           .toList
       }
-    IndexingResult(
-      source,
-      topLevels,
-      overrides,
-      toplevelMembers
-    )
+    IndexingResult(source, topLevels, overrides, toplevelMembers)
   }
 
   // Returns true if symbol is com/foo/Bar# and path is /com/foo/Bar.scala

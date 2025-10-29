@@ -90,10 +90,7 @@ final class JarTopLevels(conn: () => Connection) extends JarIndexingInfo(conn) {
           putToplevels(jar, toplevels) + putTypeHierarchyInfo(
             jar,
             type_hierarchy,
-          ) + putToplevelMembersInfo(
-            jar,
-            toplevelMembers,
-          )
+          ) + putToplevelMembersInfo(jar, toplevelMembers)
         )
         .getOrElse(0)
     }

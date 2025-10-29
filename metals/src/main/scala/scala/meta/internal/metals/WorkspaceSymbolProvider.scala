@@ -104,7 +104,7 @@ final class WorkspaceSymbolProvider(
       target: Option[BuildTargetIdentifier],
   ): (SymbolSearch.Result, Int) = {
     val workspaceCount = workspaceSearch(query, visitor, target)
-    val typeCount = workspaceTopLevelSearch(query, visitor)
+    val typeCount = workspaceToplevelSearch(query, visitor)
     val (res, inDepsCount) = inDependencies.search(query, visitor)
     (res, workspaceCount + inDepsCount + typeCount)
   }
@@ -291,7 +291,7 @@ final class WorkspaceSymbolProvider(
       )
   }
 
-  private def workspaceTopLevelSearch(
+  private def workspaceToplevelSearch(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor,
   ): Int = {

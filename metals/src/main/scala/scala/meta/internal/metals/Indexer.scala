@@ -630,8 +630,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
             }
         }
       case None =>
-        val (toplevels, overrides, toplevelMembers) =
-          indexJar(path, dialect)
+        val (toplevels, overrides, toplevelMembers) = indexJar(path, dialect)
         tables.jarSymbols.putJarIndexingInfo(
           path,
           toplevels,
