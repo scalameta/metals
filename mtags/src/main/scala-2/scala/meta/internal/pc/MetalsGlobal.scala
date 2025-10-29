@@ -1301,26 +1301,13 @@ class MetalsGlobal(
     val context = doLocateContext(pos)
 
     try {
-      logger.info(
-        s"[MetalsGlobal.findIndexed] Searching implicit classes for type: $targetType"
-      )
-
       val implicitClassSymbols = search.queryAllImplicitClasses()
 
-      logger.info(
-        s"[MetalsGlobal.findIndexed] Found ${implicitClassSymbols.size()} implicit classes to check"
-      )
-
-      import scala.meta.internal.jdk.CollectionConverters._
       implicitClassSymbols.asScala.foreach { classSymbolStr =>
         try {
           val implicitClassSymbol = inverseSemanticdbSymbol(classSymbolStr)
 
           if (implicitClassSymbol != NoSymbol && implicitClassSymbol.exists) {
-            logger.info(
-              s"[MetalsGlobal.findIndexed]   Checking class: ${implicitClassSymbol.fullName}"
-            )
-
             // Get the primary constructor parameter type
             val constructorParamTypeOpt = for {
               ctor <-
@@ -1345,13 +1332,8 @@ class MetalsGlobal(
                     case NonFatal(_) => false
                   }
 
-                logger.info(
-                  s"[MetalsGlobal.findIndexed]     Param type: $paramType, " +
-                    s"isTypeParameter: $isTypeParameter, matches: $matches"
-                )
-
                 if (matches) {
-                  // Add all public methods from the implicit class
+                  // Add(visit) all public accessible methods from the implicit class
                   implicitClassSymbol.tpe.members.foreach { extensionMethod =>
                     if (
                       extensionMethod.isMethod && extensionMethod.isPublic && !extensionMethod.isConstructor
@@ -1364,7 +1346,6 @@ class MetalsGlobal(
                           extensionMethod.name == nme.toString_
 
                       if (!isInheritedFromAnyVal) {
-                        // Check accessibility using the same approach as CompilerSearchVisitor
                         val isAccessible =
                           try {
                             context.isAccessible(
@@ -1376,9 +1357,6 @@ class MetalsGlobal(
                           }
 
                         if (isAccessible) {
-                          logger.info(
-                            s"[MetalsGlobal.findIndexed]       Adding method: ${extensionMethod.name} from ${implicitClassSymbol.fullName}"
-                          )
                           visit(
                             new WorkspaceImplicitMember(
                               extensionMethod,
@@ -1392,25 +1370,18 @@ class MetalsGlobal(
                 }
 
               case None =>
-                logger.info(
-                  s"[MetalsGlobal.findIndexed]     No constructor param found"
-                )
             }
-          } else {
-            logger.info(
-              s"[MetalsGlobal.findIndexed]   Failed to resolve: $classSymbolStr"
-            )
           }
         } catch {
           case NonFatal(e) =>
-            logger.info(
+            logger.warning(
               s"[MetalsGlobal.findIndexed] Error processing $classSymbolStr: ${e.getMessage}"
             )
         }
       }
     } catch {
       case NonFatal(e) =>
-        logger.info(
+        logger.warning(
           s"[MetalsGlobal.findIndexed] Error querying implicit classes: ${e.getMessage}"
         )
     }
