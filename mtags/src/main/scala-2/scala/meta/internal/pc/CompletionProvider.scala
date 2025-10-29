@@ -439,9 +439,8 @@ class CompletionProvider(
             logger.info(
               s"[CompletionProvider] Member selection detected on type: ${qualifier.tpe}"
             )
-            workspaceExtensionMethods(query, pos, visit, qualifier.tpe)
             findIndexedImplicitExtensionsForType(qualifier.tpe, pos, visit)
-            SymbolSearch.Result.COMPLETE
+            workspaceExtensionMethods(query, pos, visit, qualifier.tpe)
           case _ => SymbolSearch.Result.COMPLETE
         }
       }
