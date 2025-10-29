@@ -1333,7 +1333,7 @@ class MetalsGlobal(
                   }
 
                 if (matches) {
-                  // Add(visit) all public accessible methods from the implicit class
+                  // Add (visit) all public accessible methods from the implicit class
                   implicitClassSymbol.tpe.members.foreach { extensionMethod =>
                     if (
                       extensionMethod.isMethod && extensionMethod.isPublic && !extensionMethod.isConstructor
