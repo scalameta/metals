@@ -436,9 +436,6 @@ class CompletionProvider(
         typedTreeAt(pos) match {
           case Select(qualifier, _)
               if qualifier.tpe != null && !qualifier.tpe.isError =>
-            logger.info(
-              s"[CompletionProvider] Member selection detected on type: ${qualifier.tpe}"
-            )
             findIndexedImplicitExtensionsForType(qualifier.tpe, pos, visit)
             workspaceExtensionMethods(query, pos, visit, qualifier.tpe)
           case _ => SymbolSearch.Result.COMPLETE
