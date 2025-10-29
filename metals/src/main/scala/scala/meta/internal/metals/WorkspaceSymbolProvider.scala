@@ -9,7 +9,6 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
-import scala.meta.internal.mtags.ScalaMtags
 import scala.meta.internal.mtags.TopLevelMember
 import scala.meta.internal.mtags.TopLevelMember.Kind._
 import scala.meta.internal.pc.InterruptException

@@ -12,7 +12,6 @@ import scala.meta.Dialect
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.io.PlatformFileIO
-import scala.meta.internal.mtags.ScalaMtags
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}

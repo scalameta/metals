@@ -1,6 +1,5 @@
 package scala.meta.internal.mtags
 
-import scala.meta.internal.mtags.TopLevelMember.Kind
 import scala.meta.internal.semanticdb.Range
 import scala.meta.internal.semanticdb.SymbolInformation
 
