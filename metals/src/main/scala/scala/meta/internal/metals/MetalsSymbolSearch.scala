@@ -132,4 +132,29 @@ class MetalsSymbolSearch(
       Some(new BuildTargetIdentifier(buildTargetIdentifier)),
     )
   }
+
+  /**
+   * Iterate through ALL classpath classes without any query filtering.
+   * This is useful when you need to find specific types of classes (like implicit classes)
+   * that don't follow naming conventions.
+   *
+   * @param visitor The visitor that will be called for each classfile
+   * @return The number of classfiles visited
+   */
+  override def iterateAllClasspathClasses(visitor: SymbolSearchVisitor): Int = {
+    var count = 0
+    val classpathPackages = wsp.inDependencies.packages
+
+    classpathPackages.foreach { compressedPkg =>
+      compressedPkg.members.foreach { classfile =>
+        if (
+          classfile.isClassfile && visitor.shouldVisitPackage(classfile.pkg)
+        ) {
+          count += visitor.visitClassfile(classfile.pkg, classfile.filename)
+        }
+      }
+    }
+
+    count
+  }
 }
