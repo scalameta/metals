@@ -20,7 +20,6 @@ import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.builds.WorkspaceReload
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.IndexingResult
-import scala.meta.internal.mtags.TopLevelMember
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.io.AbsolutePath
 
