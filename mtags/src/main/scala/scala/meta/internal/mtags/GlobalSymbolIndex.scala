@@ -125,9 +125,9 @@ case class SymbolDefinition(
 }
 
 case class IndexingResult(
-    path: AbsolutePath,
-    topLevels: List[String],
-    overrides: List[(String, List[OverriddenSymbol])],
-    toplevelMembers: List[ToplevelMember],
-    implicitClassMembers: List[ImplicitClassMember]
+                           path: AbsolutePath,
+                           topLevels: List[String],
+                           overrides: List[(String, List[OverriddenSymbol])],
+                           toplevelMembers: List[TopLevelMember],
+                           implicitClassMembers: List[ImplicitClassMember]
 )

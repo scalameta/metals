@@ -8,7 +8,7 @@ import java.sql.Statement
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PlatformFileIO
 import scala.meta.internal.metals.JarTopLevels
-import scala.meta.internal.mtags.ToplevelMember
+import scala.meta.internal.mtags.TopLevelMember
 import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
 import scala.meta.internal.semanticdb.Range
 import scala.meta.io.AbsolutePath
@@ -120,15 +120,27 @@ class JarTopLevelsSuite extends BaseTablesSuite {
       List.empty[(AbsolutePath, String, UnresolvedOverriddenSymbol)]
     val toplevelMembers = Map(
       filePath -> List(
-        ToplevelMember(
-          "foo/package.Hello#",
-          Range(1, 0, 2, 1),
-          ToplevelMember.Kind.Type,
-        ),
-        ToplevelMember(
+        )
+      ,TopLevelMember(
           "foo/package.Bye#",
           Range(1, 0, 2, 1),
-          ToplevelMember.Kind.Type,
+          TopLevelMember.Kind.Type,
+        )
+          ,TopLevelMember
+        /** EndMarker */
+        (
+          "foo/package.Hello#",
+          Range(1, 0, 2, 1),
+          TopLevelMember.Kind.Type,
+        )(
+          "foo/package.Hello#",
+          Range(1, 0, 2, 1),
+          TopLevelMember.Kind.Type,
+        ),
+        TopLevelMember(
+          "foo/package.Bye#",
+          Range(1, 0, 2, 1),
+          TopLevelMember.Kind.Type,
         ),
       )
     )

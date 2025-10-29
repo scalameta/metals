@@ -11,8 +11,8 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.ImplicitClassMember
 import scala.meta.internal.mtags.ScalaMtags
-import scala.meta.internal.mtags.ToplevelMember
-import scala.meta.internal.mtags.ToplevelMember.Kind._
+import scala.meta.internal.mtags.TopLevelMember
+import scala.meta.internal.mtags.TopLevelMember.Kind._
 import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
@@ -51,8 +51,8 @@ final class WorkspaceSymbolProvider(
   var inDependencies: ClasspathSearch =
     ClasspathSearch.empty
 
-  val topLevelMembers: TrieMap[AbsolutePath, Seq[ToplevelMember]] =
-    TrieMap.empty[AbsolutePath, Seq[ToplevelMember]]
+  val topLevelMembers: TrieMap[AbsolutePath, Seq[TopLevelMember]] =
+    TrieMap.empty[AbsolutePath, Seq[TopLevelMember]]
 
   val implicitClassMembers: TrieMap[AbsolutePath, Seq[ImplicitClassMember]] =
     TrieMap.empty[AbsolutePath, Seq[ImplicitClassMember]]
@@ -65,7 +65,7 @@ final class WorkspaceSymbolProvider(
   }
 
   def addToplevelMembers(
-      toplevelMembers: Map[AbsolutePath, Seq[ToplevelMember]]
+      toplevelMembers: Map[AbsolutePath, Seq[TopLevelMember]]
   ): Unit = {
     topLevelMembers ++= toplevelMembers
   }

@@ -7,7 +7,7 @@ import scala.meta.dialects
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.ResolvedOverriddenSymbol
-import scala.meta.internal.mtags.ToplevelMember
+import scala.meta.internal.mtags.TopLevelMember
 import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
 import scala.meta.io.AbsolutePath
 
@@ -40,7 +40,7 @@ abstract class BaseToplevelSuite extends BaseSuite {
               Mtags.extendedIndexing(input, dialect, includeMembers)
             val overriddenMap = overrides.toMap
             val types = toplevelMembers.map {
-              case ToplevelMember(symbol, _, _) =>
+              case TopLevelMember(symbol, _, _) =>
                 s"type $symbol"
             }
             val symbols = doc.symbols.map { symbolInfo =>

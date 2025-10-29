@@ -17,9 +17,9 @@ import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.ImplicitClassMember
 import scala.meta.internal.mtags.OverriddenSymbol
 import scala.meta.internal.mtags.ResolvedOverriddenSymbol
-import scala.meta.internal.mtags.ToplevelMember
-import scala.meta.internal.mtags.ToplevelMember.Kind
-import scala.meta.internal.mtags.ToplevelMember.Kind._
+import scala.meta.internal.mtags.TopLevelMember
+import scala.meta.internal.mtags.TopLevelMember.Kind
+import scala.meta.internal.mtags.TopLevelMember.Kind._
 import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
 import scala.meta.io.AbsolutePath
 
@@ -75,11 +75,11 @@ final class JarTopLevels(conn: () => Connection) extends JarIndexingInfo(conn) {
    * @return the number of toplevel symbols inserted
    */
   def putJarIndexingInfo(
-      path: AbsolutePath,
-      toplevels: List[(String, AbsolutePath)],
-      type_hierarchy: List[(AbsolutePath, String, OverriddenSymbol)],
-      toplevelMembers: Map[AbsolutePath, List[ToplevelMember]] = Map.empty,
-      implicitClassMembers: Map[AbsolutePath, List[ImplicitClassMember]] =
+                          path: AbsolutePath,
+                          toplevels: List[(String, AbsolutePath)],
+                          type_hierarchy: List[(AbsolutePath, String, OverriddenSymbol)],
+                          toplevelMembers: Map[AbsolutePath, List[TopLevelMember]] = Map.empty,
+                          implicitClassMembers: Map[AbsolutePath, List[ImplicitClassMember]] =
         Map.empty,
   ): Int = {
     if (
@@ -324,10 +324,10 @@ class JarIndexingInfo(conn: () => Connection) {
 
   def getToplevelMembers(
       jar: AbsolutePath
-  ): Option[Map[AbsolutePath, List[ToplevelMember]]] =
+  ): Option[Map[AbsolutePath, List[TopLevelMember]]] =
     try {
       val fs = getFileSystem(jar)
-      val toplevelMembers = List.newBuilder[(AbsolutePath, ToplevelMember)]
+      val toplevelMembers = List.newBuilder[(AbsolutePath, TopLevelMember)]
       conn()
         .query(
           """select tm.symbol, tm.start_line, tm.start_character, tm.end_line, tm.end_character, tm.path, tm.kind
@@ -346,7 +346,7 @@ class JarIndexingInfo(conn: () => Connection) {
             val kind = Kind.fromId(rs.getInt(7))
             import scala.meta.internal.semanticdb.Range
             val range = Range(startLine, startChar, endLine, endChar)
-            toplevelMembers += (path -> ToplevelMember(symbol, range, kind))
+            toplevelMembers += (path -> TopLevelMember(symbol, range, kind))
           }
         }
         .headOption
@@ -363,16 +363,16 @@ class JarIndexingInfo(conn: () => Connection) {
     }
 
   def addToplevelMembersInfo(
-      path: AbsolutePath,
-      toplevelMembers: Map[AbsolutePath, List[ToplevelMember]],
+                              path: AbsolutePath,
+                              toplevelMembers: Map[AbsolutePath, List[TopLevelMember]],
   ): Int = {
     val jar = addOrUpdateJar(path, "toplevel_members_indexed")
     jar.map(putToplevelMembersInfo(_, toplevelMembers)).getOrElse(0)
   }
 
   protected def putToplevelMembersInfo(
-      jar: Int,
-      toplevelMemberMap: Map[AbsolutePath, List[ToplevelMember]],
+                                        jar: Int,
+                                        toplevelMemberMap: Map[AbsolutePath, List[TopLevelMember]],
   ): Int =
     if (toplevelMemberMap.nonEmpty) {
       // Add type members for jar to H2

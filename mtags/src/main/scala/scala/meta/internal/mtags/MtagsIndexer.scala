@@ -179,6 +179,6 @@ trait MtagsIndexer {
 
 object MtagsIndexer {
   type AllOverrides = List[(String, List[OverriddenSymbol])]
-  type AllToplevelMembers = List[ToplevelMember]
+  type AllToplevelMembers = List[TopLevelMember]
   type AllImplicitClassMembers = List[ImplicitClassMember]
 }

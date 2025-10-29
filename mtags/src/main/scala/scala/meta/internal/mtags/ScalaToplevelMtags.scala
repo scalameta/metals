@@ -62,20 +62,20 @@ class ScalaToplevelMtags(
   override def overrides(): List[(String, List[OverriddenSymbol])] =
     overridden.result()
 
-  override def toplevelMembers(): List[ToplevelMember] =
+  override def toplevelMembers(): List[TopLevelMember] =
     toplevelMembersBuilder.result()
 
   override def implicitClassMembers(): List[ImplicitClassMember] =
     implicitClassMembersBuilder.result()
 
   private val overridden = List.newBuilder[(String, List[OverriddenSymbol])]
-  private val toplevelMembersBuilder = List.newBuilder[ToplevelMember]
+  private val toplevelMembersBuilder = List.newBuilder[TopLevelMember]
   private val implicitClassMembersBuilder = List.newBuilder[ImplicitClassMember]
 
   private def addOverridden(symbols: List[OverriddenSymbol]) =
     overridden += ((currentOwner, symbols))
 
-  private def addToplevelMembers(members: List[ToplevelMember]) =
+  private def addToplevelMembers(members: List[TopLevelMember]) =
     toplevelMembersBuilder ++= members
 
   import ScalaToplevelMtags._
@@ -818,7 +818,8 @@ class ScalaToplevelMtags(
         val typeSymbol = symbol(Descriptor.Type(ident.name))
         if (owner.endsWith("/package.") || owner.endsWith("$package.")) {
           addToplevelMembers(
-            List(ToplevelMember(typeSymbol, ident.pos.toRange, ToplevelMember.Kind.Type))
+            List(
+              TopLevelMember(typeSymbol, ident.pos.toRange, TopLevelMember.Kind.Type))
           )
         }
         if (emitTermMember) {

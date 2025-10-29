@@ -11,13 +11,13 @@ import scala.meta.internal.semanticdb.SymbolInformation
  * @param range The range of the toplevel member in the source file.
  * @param kind The kind of the toplevel member.
  */
-case class ToplevelMember(
+case class TopLevelMember(
     symbol: String,
     range: Range,
-    kind: ToplevelMember.Kind
+    kind: TopLevelMember.Kind
 )
 
-object ToplevelMember {
+object TopLevelMember {
   
   sealed trait Kind
   
