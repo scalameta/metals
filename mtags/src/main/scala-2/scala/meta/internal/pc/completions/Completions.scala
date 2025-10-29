@@ -41,7 +41,7 @@ trait Completions { this: MetalsGlobal =>
     def editRange: Option[l.Range] = None
   }
 
-  class WorkspaceImplicitMember(sym: Symbol, val implicitClassSymbol: Symbol)
+  class WorkspaceImplicitMember(sym: Symbol, val definingClassSymbol: Symbol)
       extends ScopeMember(sym, sym.tpe, true, EmptyTree)
 
   class WorkspaceInterpolationMember(

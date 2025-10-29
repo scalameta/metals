@@ -216,7 +216,7 @@ class CompletionProvider(
               )
             ) "($0)"
             else ""
-          val implicitClassSymbol = m.implicitClassSymbol
+          val implicitClassSymbol = m.definingClassSymbol
 
           val (_, edits) = ShortenedNames.synthesize(
             TypeRef(
