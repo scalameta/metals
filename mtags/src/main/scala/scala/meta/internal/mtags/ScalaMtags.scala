@@ -38,10 +38,6 @@ class ScalaMtags(
     }
   }
 
-  private val toplevelMembersBuilder = List.newBuilder[TopLevelMember]
-  override def toplevelMembers(): List[TopLevelMember] =
-    toplevelMembersBuilder.result()
-
   private var _toplevelSourceRef: Option[(String, OverloadDisambiguator)] = None
   private def toplevelSourceData: (String, OverloadDisambiguator) = {
     _toplevelSourceRef match {
@@ -262,7 +258,6 @@ class ScalaMtags(
             withOwner() {
               method(t.name, "()", Kind.METHOD, Property.IMPLICIT.value)
             }
-            collectImplicitClassMembers(t)
           }
           val properties = if (t.mods.has[Mod.Case]) Property.CASE.value else 0
           tpe(t.name, Kind.CLASS, properties)
@@ -447,14 +442,5 @@ class ScalaMtags(
       }
     }
     extract(t, 0)
-  }
-
-  private def collectImplicitClassMembers(cls: Defn.Class): Unit = {
-    val classSymbol = symbol(Descriptor.Type(cls.name.value))
-    toplevelMembersBuilder += TopLevelMember(
-      classSymbol,
-      cls.pos.toSemanticdb,
-      TopLevelMember.Kind.ImplicitClass
-    )
   }
 }
