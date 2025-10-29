@@ -1323,7 +1323,8 @@ class MetalsGlobal(
 
             // Get the primary constructor parameter type
             val constructorParamTypeOpt = for {
-              ctor <- implicitClassSymbol.primaryConstructor.paramss.flatten.headOption
+              ctor <-
+                implicitClassSymbol.primaryConstructor.paramss.flatten.headOption
               paramType = ctor.tpe
             } yield paramType
 
@@ -1365,7 +1366,10 @@ class MetalsGlobal(
                       if (!isInheritedFromAnyVal) {
                         val isAccessible =
                           try {
-                            context.isAccessible(extensionMethod, extensionMethod.owner.thisType)
+                            context.isAccessible(
+                              extensionMethod,
+                              extensionMethod.owner.thisType
+                            )
                           } catch {
                             case NonFatal(_) => false
                           }
