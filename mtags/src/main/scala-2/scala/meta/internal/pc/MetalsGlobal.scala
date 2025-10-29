@@ -1368,7 +1368,6 @@ class MetalsGlobal(
                     }
                   }
                 }
-
               case None =>
             }
           }
