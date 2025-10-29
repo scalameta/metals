@@ -1314,16 +1314,16 @@ class MetalsGlobal(
       import scala.meta.internal.jdk.CollectionConverters._
       implicitClassSymbols.asScala.foreach { classSymbolStr =>
         try {
-          val classSym = inverseSemanticdbSymbol(classSymbolStr)
+          val implicitClassSymbol = inverseSemanticdbSymbol(classSymbolStr)
 
-          if (classSym != NoSymbol && classSym.exists) {
+          if (implicitClassSymbol != NoSymbol && implicitClassSymbol.exists) {
             logger.info(
-              s"[MetalsGlobal.findIndexed]   Checking class: ${classSym.fullName}"
+              s"[MetalsGlobal.findIndexed]   Checking class: ${implicitClassSymbol.fullName}"
             )
 
             // Get the primary constructor parameter type
             val constructorParamTypeOpt = for {
-              ctor <- classSym.primaryConstructor.paramss.flatten.headOption
+              ctor <- implicitClassSymbol.primaryConstructor.paramss.flatten.headOption
               paramType = ctor.tpe
             } yield paramType
 
@@ -1351,32 +1351,32 @@ class MetalsGlobal(
 
                 if (matches) {
                   // Add all public methods from the implicit class
-                  classSym.tpe.members.foreach { member =>
+                  implicitClassSymbol.tpe.members.foreach { extensionMethod =>
                     if (
-                      member.isMethod && member.isPublic && !member.isConstructor
+                      extensionMethod.isMethod && extensionMethod.isPublic && !extensionMethod.isConstructor
                     ) {
                       // Filter out methods inherited from AnyVal
                       val isInheritedFromAnyVal =
-                        member.owner == definitions.AnyValClass ||
-                          member.name == nme.equals_ ||
-                          member.name == nme.hashCode_ ||
-                          member.name == nme.toString_
+                        extensionMethod.owner == definitions.AnyValClass ||
+                          extensionMethod.name == nme.equals_ ||
+                          extensionMethod.name == nme.hashCode_ ||
+                          extensionMethod.name == nme.toString_
 
                       if (!isInheritedFromAnyVal) {
                         val isAccessible =
                           try {
-                            context.isAccessible(member, member.owner.thisType)
+                            context.isAccessible(extensionMethod, extensionMethod.owner.thisType)
                           } catch {
                             case NonFatal(_) => false
                           }
 
                         if (isAccessible) {
                           logger.info(
-                            s"[MetalsGlobal.findIndexed]       Adding method: ${member.name} from ${classSym.fullName}"
+                            s"[MetalsGlobal.findIndexed]       Adding method: ${extensionMethod.name} from ${implicitClassSymbol.fullName}"
                           )
                           buffer += new WorkspaceImplicitMember(
-                            member,
-                            classSym
+                            extensionMethod,
+                            implicitClassSymbol
                           )
                         }
                       }

@@ -216,12 +216,12 @@ class CompletionProvider(
               )
             ) "($0)"
             else ""
-          val implicitClass = m.implicitClass
+          val implicitClassSymbol = m.implicitClassSymbol
 
           val (_, edits) = ShortenedNames.synthesize(
             TypeRef(
-              ThisType(implicitClass.owner),
-              implicitClass,
+              ThisType(implicitClassSymbol.owner),
+              implicitClassSymbol,
               Nil
             ),
             pos,
@@ -450,10 +450,10 @@ class CompletionProvider(
               )
             }
             implicitMembers.foreach { ext =>
-                logger.info(
-                  s"[CompletionProvider]   Adding implicit member: ${ext.sym.name}"
-                )
-                visit(ext)
+              logger.info(
+                s"[CompletionProvider]   Adding implicit member: ${ext.sym.name}"
+              )
+              visit(ext)
             }
             result
           case _ => SymbolSearch.Result.COMPLETE
