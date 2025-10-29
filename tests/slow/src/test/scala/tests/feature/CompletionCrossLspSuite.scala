@@ -292,7 +292,9 @@ class CompletionCrossLspSuite
            |  2.hour
            |}
            |""".stripMargin,
-        filter = str => str.contains("hour") && str.contains("FiniteDuration") && !str.contains("[C]"),
+        filter = str =>
+          str.contains("hour") && str.contains("FiniteDuration") && !str
+            .contains("[C]"),
       )
     } yield ()
   }

@@ -1374,7 +1374,10 @@ class MetalsGlobal(
                           logger.info(
                             s"[MetalsGlobal.findIndexed]       Adding method: ${member.name} from ${classSym.fullName}"
                           )
-                          buffer += new WorkspaceImplicitMember(member, classSym)
+                          buffer += new WorkspaceImplicitMember(
+                            member,
+                            classSym
+                          )
                         }
                       }
                     }
