@@ -450,18 +450,10 @@ class CompletionProvider(
               )
             }
             implicitMembers.foreach { ext =>
-              val isInheritedFromAnyVal =
-                ext.sym.owner == definitions.AnyValClass ||
-                  ext.sym.name == nme.equals_ ||
-                  ext.sym.name == nme.hashCode_ ||
-                  ext.sym.name == nme.toString_
-
-              if (!isInheritedFromAnyVal) {
                 logger.info(
                   s"[CompletionProvider]   Adding implicit member: ${ext.sym.name}"
                 )
                 visit(ext)
-              }
             }
             result
           case _ => SymbolSearch.Result.COMPLETE
