@@ -584,20 +584,6 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
             referencesProvider.addIdentifiers(source, identifiers)
           )
 
-        optMtags.foreach { mtags =>
-          val members = mtags.toplevelMembers()
-          val implicitClasses =
-            members.filter(_.kind == TopLevelMember.Kind.ImplicitClass)
-          if (implicitClasses.nonEmpty) {
-            scribe.info(
-              s"[Indexer.indexSourceFile] Found ${implicitClasses.size} implicit classes in $source"
-            )
-          }
-          if (members.nonEmpty) {
-            workspaceSymbols.addToplevelMembers(Map(source -> members))
-          }
-        }
-
         workspaceSymbols.didChange(source, symbols.toSeq, methodSymbols.toSeq)
 
         // Since the `symbols` here are toplevel symbols,
