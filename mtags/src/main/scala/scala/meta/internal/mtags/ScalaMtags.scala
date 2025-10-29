@@ -38,10 +38,9 @@ class ScalaMtags(
     }
   }
 
-  private val implicitClassMembersBuilder =
-    List.newBuilder[ImplicitClassMember]
-  override def implicitClassMembers(): List[ImplicitClassMember] =
-    implicitClassMembersBuilder.result()
+  private val toplevelMembersBuilder = List.newBuilder[TopLevelMember]
+  override def toplevelMembers(): List[TopLevelMember] =
+    toplevelMembersBuilder.result()
 
   private var _toplevelSourceRef: Option[(String, OverloadDisambiguator)] = None
   private def toplevelSourceData: (String, OverloadDisambiguator) = {
@@ -452,6 +451,10 @@ class ScalaMtags(
 
   private def collectImplicitClassMembers(cls: Defn.Class): Unit = {
     val classSymbol = symbol(Descriptor.Type(cls.name.value))
-    implicitClassMembersBuilder += ImplicitClassMember(classSymbol)
+    toplevelMembersBuilder += TopLevelMember(
+      classSymbol,
+      cls.pos.toSemanticdb,
+      TopLevelMember.Kind.ImplicitClass
+    )
   }
 }

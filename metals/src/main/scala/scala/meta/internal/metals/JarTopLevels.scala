@@ -14,7 +14,6 @@ import scala.meta.internal.metals.JarTopLevels.getFileSystem
 import scala.meta.internal.metals.JdbcEnrichments._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
-import scala.meta.internal.mtags.ImplicitClassMember
 import scala.meta.internal.mtags.OverriddenSymbol
 import scala.meta.internal.mtags.ResolvedOverriddenSymbol
 import scala.meta.internal.mtags.TopLevelMember
@@ -78,19 +77,16 @@ final class JarTopLevels(conn: () => Connection) extends JarIndexingInfo(conn) {
                           path: AbsolutePath,
                           toplevels: List[(String, AbsolutePath)],
                           type_hierarchy: List[(AbsolutePath, String, OverriddenSymbol)],
-                          toplevelMembers: Map[AbsolutePath, List[TopLevelMember]] = Map.empty,
-                          implicitClassMembers: Map[AbsolutePath, List[ImplicitClassMember]] =
-        Map.empty,
+                          toplevelMembers: Map[AbsolutePath, List[TopLevelMember]] = Map.empty
   ): Int = {
     if (
-      toplevels.isEmpty && type_hierarchy.isEmpty && toplevelMembers.isEmpty && implicitClassMembers.isEmpty
+      toplevels.isEmpty && type_hierarchy.isEmpty && toplevelMembers.isEmpty
     )
       0
     else {
       // Add jar to H2
       addOrUpdateJar(path, "type_hierarchy_indexed")
-      addOrUpdateJar(path, "toplevel_members_indexed")
-      val jar = addOrUpdateJar(path, "implicit_class_members_indexed")
+      val jar = addOrUpdateJar(path, "toplevel_members_indexed")
       jar
         .map(jar =>
           putToplevels(jar, toplevels) + putTypeHierarchyInfo(
@@ -99,7 +95,7 @@ final class JarTopLevels(conn: () => Connection) extends JarIndexingInfo(conn) {
           ) + putToplevelMembersInfo(
             jar,
             toplevelMembers,
-          ) + putImplicitClassMembersInfo(jar, implicitClassMembers)
+          )
         )
         .getOrElse(0)
     }
@@ -411,94 +407,6 @@ class JarIndexingInfo(conn: () => Connection) {
         if (toplevelMemberStmt != null) toplevelMemberStmt.close()
       }
     } else 0
-
-  protected def putImplicitClassMembersInfo(
-      jar: Int,
-      implicitClassMemberMap: Map[AbsolutePath, List[ImplicitClassMember]],
-  ): Int =
-    if (implicitClassMemberMap.nonEmpty) {
-      val totalClasses = implicitClassMemberMap.values.map(_.size).sum
-      scribe.info(
-        s"[JarTopLevels] Storing $totalClasses implicit classes from ${implicitClassMemberMap.size} files to database"
-      )
-
-      var implicitClassMemberStmt: PreparedStatement = null
-      try {
-        implicitClassMemberStmt = conn().prepareStatement(
-          s"insert into implicit_class_members (class_symbol, jar) values (?, ?)"
-        )
-
-        implicitClassMemberMap.foreach { case (_, implicitClassMembers) =>
-          implicitClassMembers.foreach { member =>
-            scribe.debug(
-              s"[JarTopLevels]   Storing: classSymbol=${member.classSymbol}"
-            )
-            implicitClassMemberStmt.setString(1, member.classSymbol)
-            implicitClassMemberStmt.setInt(2, jar)
-            implicitClassMemberStmt.addBatch()
-          }
-        }
-        val inserted = implicitClassMemberStmt.executeBatch().sum
-        scribe.info(
-          s"[JarTopLevels] Successfully stored $inserted implicit classes"
-        )
-        inserted
-      } catch {
-        case e: JdbcBatchUpdateException =>
-          scribe.error(s"failed to insert implicit class members", e)
-          0
-        case e: JdbcSQLIntegrityConstraintViolationException =>
-          scribe.error(s"failed to insert implicit class members", e)
-          0
-      } finally {
-        if (implicitClassMemberStmt != null) implicitClassMemberStmt.close()
-      }
-    } else 0
-
-  def addImplicitClassMembersInfo(
-      path: AbsolutePath,
-      implicitClassMembers: Map[AbsolutePath, List[ImplicitClassMember]],
-  ): Int = {
-    val jar = addOrUpdateJar(path, "implicit_class_members_indexed")
-    jar.map(putImplicitClassMembersInfo(_, implicitClassMembers)).getOrElse(0)
-  }
-
-  def getImplicitClassMembers(
-      jar: AbsolutePath
-  ): Option[Map[AbsolutePath, List[ImplicitClassMember]]] =
-    try {
-      scribe.info(
-        s"[JarTopLevels] Reading implicit class symbols from database for JAR: $jar"
-      )
-      val implicitClasses = List.newBuilder[ImplicitClassMember]
-      conn()
-        .query(
-          """select icm.class_symbol
-            |from indexed_jar ij
-            |left join implicit_class_members icm
-            |on ij.id=icm.jar
-            |where ij.implicit_class_members_indexed=true and ij.md5=?""".stripMargin
-        ) { _.setString(1, getMD5Digest(jar)) } { rs =>
-          if (rs.getString(1) != null) {
-            val classSymbol = rs.getString(1)
-            implicitClasses += ImplicitClassMember(classSymbol)
-          }
-        }
-        .headOption
-        .map { _ =>
-          val classes = implicitClasses.result()
-          scribe.info(
-            s"[JarTopLevels] Retrieved ${classes.size} implicit classes from database"
-          )
-          // Return as Map with dummy path since we don't store paths anymore
-          // WorkspaceSymbolProvider will handle this as a flat list
-          Map(jar -> classes)
-        }
-    } catch {
-      case error @ (_: ZipError | _: ZipException) =>
-        scribe.warn(s"corrupted jar $jar: $error")
-        None
-    }
 
   def getMD5Digest(path: AbsolutePath): String = {
     val attributes = Files

@@ -20,6 +20,7 @@ import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.builds.WorkspaceReload
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.IndexingResult
+import scala.meta.internal.mtags.TopLevelMember
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.io.AbsolutePath
 
@@ -484,7 +485,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
             definitionIndex.addIndexedSourceJar(zip, Nil, dialect)
             implementationProvider.addTypeHierarchyElements(overrides)
           case None =>
-            val (_, overrides, _, _) = indexJar(zip, dialect)
+            val (_, overrides, _) = indexJar(zip, dialect)
             sharedIndices.jvmTypeHierarchy.addTypeHierarchyInfo(
               zip,
               overrides,
@@ -584,14 +585,15 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
           )
 
         optMtags.foreach { mtags =>
-          val implicitMembers = mtags.implicitClassMembers()
-          if (implicitMembers.nonEmpty) {
+          val members = mtags.toplevelMembers()
+          val implicitClasses = members.filter(_.kind == TopLevelMember.Kind.ImplicitClass)
+          if (implicitClasses.nonEmpty) {
             scribe.info(
-              s"[Indexer.indexSourceFile] Found ${implicitMembers.size} implicit class members in $source"
+              s"[Indexer.indexSourceFile] Found ${implicitClasses.size} implicit classes in $source"
             )
-            workspaceSymbols.addImplicitClassMembers(
-              Map(source -> implicitMembers)
-            )
+          }
+          if (members.nonEmpty) {
+            workspaceSymbols.addToplevelMembers(Map(source -> members))
           }
         }
 
@@ -625,7 +627,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
               case Some(toplevelMembersMap) =>
                 workspaceSymbols.addToplevelMembers(toplevelMembersMap)
               case None =>
-                val (_, _, toplevelMembers, implicitClassMembers) =
+                val (_, _, toplevelMembers) =
                   indexJar(path, dialect, reindex = true)
                 if (toplevelMembers.nonEmpty) {
                   tables.jarSymbols.addToplevelMembersInfo(
@@ -633,43 +635,23 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
                     toplevelMembers,
                   )
                 }
-                if (implicitClassMembers.nonEmpty) {
-                  tables.jarSymbols.addImplicitClassMembersInfo(
-                    path,
-                    implicitClassMembers,
-                  )
-                }
-            }
-            tables.jarSymbols.getImplicitClassMembers(path) match {
-              case Some(implicitClassMembersMap) =>
-                workspaceSymbols.addImplicitClassMembers(
-                  implicitClassMembersMap
-                )
-              case None => // already handled above if we had to reindex
             }
           case None =>
-            val (_, overrides, toplevelMembers, implicitClassMembers) =
+            val (_, overrides, toplevelMembers) =
               indexJar(path, dialect, reindex = true)
             tables.jarSymbols.addTypeHierarchyInfo(path, overrides)
             if (toplevelMembers.nonEmpty) {
               tables.jarSymbols.addToplevelMembersInfo(path, toplevelMembers)
             }
-            if (implicitClassMembers.nonEmpty) {
-              tables.jarSymbols.addImplicitClassMembersInfo(
-                path,
-                implicitClassMembers,
-              )
-            }
         }
       case None =>
-        val (toplevels, overrides, toplevelMembers, implicitClassMembers) =
+        val (toplevels, overrides, toplevelMembers) =
           indexJar(path, dialect)
         tables.jarSymbols.putJarIndexingInfo(
           path,
           toplevels,
           overrides,
           toplevelMembers,
-          implicitClassMembers,
         )
     }
   }
@@ -685,38 +667,29 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       s"[Indexer.indexJar] Got ${indexResult.size} indexing results from JAR"
     )
     val toplevels = indexResult.flatMap {
-      case IndexingResult(path, toplevels, _, _, _) =>
+      case IndexingResult(path, toplevels, _, _) =>
         toplevels.map((_, path))
     }
     val overrides = indexResult.flatMap {
-      case IndexingResult(path, _, list, _, _) =>
+      case IndexingResult(path, _, list, _) =>
         list.flatMap { case (symbol, overridden) =>
           overridden.map((path, symbol, _))
         }
     }
     val toplevelMembersMap = indexResult.collect {
-      case IndexingResult(path, _, _, toplevelMembers, _)
+      case IndexingResult(path, _, _, toplevelMembers)
           if toplevelMembers.nonEmpty =>
+        val implicitClasses = toplevelMembers.filter(_.kind == TopLevelMember.Kind.ImplicitClass)
+        if (implicitClasses.nonEmpty) {
+          scribe.info(
+            s"[Indexer.indexJar] Found ${implicitClasses.size} implicit classes in $path"
+          )
+        }
         path -> toplevelMembers
     }.toMap
-    val implicitClassMembersMap = indexResult.collect {
-      case IndexingResult(path, _, _, _, implicitClassMembers)
-          if implicitClassMembers.nonEmpty =>
-        scribe.info(
-          s"[Indexer.indexJar] Found ${implicitClassMembers.size} implicit class members in $path"
-        )
-        path -> implicitClassMembers
-    }.toMap
-    scribe.info(
-      s"[Indexer.indexJar] Total implicit class members map size: ${implicitClassMembersMap.size} files"
-    )
     implementationProvider.addTypeHierarchyElements(overrides)
     workspaceSymbols.addToplevelMembers(toplevelMembersMap)
-    workspaceSymbols.addImplicitClassMembers(implicitClassMembersMap)
-    scribe.info(
-      s"[Indexer.indexJar] Added implicit class members to workspace symbols"
-    )
-    (toplevels, overrides, toplevelMembersMap, implicitClassMembersMap)
+    (toplevels, overrides, toplevelMembersMap)
   }
 
   def reindexWorkspaceSources(

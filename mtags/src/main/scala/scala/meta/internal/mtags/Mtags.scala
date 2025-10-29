@@ -56,8 +56,7 @@ final class Mtags(implicit rc: ReportContext) {
   ): (
       TextDocument,
       MtagsIndexer.AllOverrides,
-      MtagsIndexer.AllToplevelMembers,
-      MtagsIndexer.AllImplicitClassMembers
+      MtagsIndexer.AllToplevelMembers
   ) = {
     val input = path.toInput
     val language = input.toLanguage
@@ -80,9 +79,8 @@ final class Mtags(implicit rc: ReportContext) {
         )
       val overrides = mtags.overrides()
       val toplevelMembers = mtags.toplevelMembers()
-      val implicitClassMembers = mtags.implicitClassMembers()
-      (doc, overrides, toplevelMembers, implicitClassMembers)
-    } else (TextDocument(), Nil, Nil, Nil)
+      (doc, overrides, toplevelMembers)
+    } else (TextDocument(), Nil, Nil)
   }
 
   def topLevelSymbols(
@@ -179,8 +177,7 @@ object Mtags {
   ): (
       TextDocument,
       MtagsIndexer.AllOverrides,
-      MtagsIndexer.AllToplevelMembers,
-      MtagsIndexer.AllImplicitClassMembers
+      MtagsIndexer.AllToplevelMembers
   ) = {
     new Mtags().extendedIndexing(path, dialect, includeMembers)
   }

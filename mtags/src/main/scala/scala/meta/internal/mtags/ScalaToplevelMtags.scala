@@ -65,12 +65,8 @@ class ScalaToplevelMtags(
   override def toplevelMembers(): List[TopLevelMember] =
     toplevelMembersBuilder.result()
 
-  override def implicitClassMembers(): List[ImplicitClassMember] =
-    implicitClassMembersBuilder.result()
-
   private val overridden = List.newBuilder[(String, List[OverriddenSymbol])]
   private val toplevelMembersBuilder = List.newBuilder[TopLevelMember]
-  private val implicitClassMembersBuilder = List.newBuilder[ImplicitClassMember]
 
   private def addOverridden(symbols: List[OverriddenSymbol]) =
     overridden += ((currentOwner, symbols))
@@ -430,7 +426,13 @@ class ScalaToplevelMtags(
           (expectTemplate, nextIsNL()) match {
             case (Some(expect), true) if needToParseBody(expect) =>
               if (expect.isImplicit) {
-                implicitClassMembersBuilder += ImplicitClassMember(currentOwner)
+                // Add implicit class as TopLevelMember with ImplicitClass kind
+                import scala.meta.internal.semanticdb.{Range => SemanticdbRange}
+                toplevelMembersBuilder += TopLevelMember(
+                  currentOwner,
+                  SemanticdbRange(0, 0, 0, 0),
+                  TopLevelMember.Kind.ImplicitClass
+                )
               }
               val next = expect.startIndentedRegion(
                 currRegion,
@@ -473,7 +475,13 @@ class ScalaToplevelMtags(
                 loop(indent.notAfterNewline, currRegion, expectTemplate)
               } else {
                 if (expect.isImplicit) {
-                  implicitClassMembersBuilder += ImplicitClassMember(currentOwner)
+                  // Add implicit class as TopLevelMember with ImplicitClass kind
+                  import scala.meta.internal.semanticdb.{Range => SemanticdbRange}
+                  toplevelMembersBuilder += TopLevelMember(
+                    currentOwner,
+                    SemanticdbRange(0, 0, 0, 0),
+                    TopLevelMember.Kind.ImplicitClass
+                  )
                 }
                 val next =
                   expect.startInBraceRegion(

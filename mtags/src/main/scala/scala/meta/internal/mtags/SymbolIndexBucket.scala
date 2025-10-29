@@ -110,8 +110,7 @@ class SymbolIndexBucket(
       path,
       topLevels,
       overrides,
-      toplevelMembers,
-      implicitClassMembers
+      toplevelMembers
     ) =
       indexSource(source, dialect, sourceDirectory, isJava)
     topLevels.foreach { symbol =>
@@ -125,8 +124,7 @@ class SymbolIndexBucket(
         path,
         topLevels,
         overrides,
-        toplevelMembers,
-        implicitClassMembers
+        toplevelMembers
       )
     )
   } catch {
@@ -161,7 +159,6 @@ class SymbolIndexBucket(
     val doc = toplevelMtags.index()
     val overrides = toplevelMtags.overrides()
     val toplevelMembers = toplevelMtags.toplevelMembers()
-    val implicitClassMembers = toplevelMtags.implicitClassMembers()
     val sourceTopLevels =
       doc.occurrences.iterator
         .filterNot(_.symbol.isPackage)
@@ -181,8 +178,7 @@ class SymbolIndexBucket(
       source,
       topLevels,
       overrides,
-      toplevelMembers,
-      implicitClassMembers
+      toplevelMembers
     )
   }
 
