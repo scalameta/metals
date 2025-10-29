@@ -1331,27 +1331,30 @@ class MetalsGlobal(
             constructorParamTypeOpt match {
               case Some(paramType) =>
                 val isTypeParameter = paramType.typeSymbol.isTypeParameter ||
-                                       paramType.typeSymbol.isAbstractType
-                
-                val matches = try {
-                  if (isTypeParameter) {
-                    true
-                  } else {
-                    targetType <:< paramType || targetType.widen <:< paramType
+                  paramType.typeSymbol.isAbstractType
+
+                val matches =
+                  try {
+                    if (isTypeParameter) {
+                      true
+                    } else {
+                      targetType <:< paramType || targetType.widen <:< paramType
+                    }
+                  } catch {
+                    case NonFatal(_) => false
                   }
-                } catch {
-                  case NonFatal(_) => false
-                }
 
                 logger.info(
                   s"[MetalsGlobal.findIndexed]     Param type: $paramType, " +
-                  s"isTypeParameter: $isTypeParameter, matches: $matches"
+                    s"isTypeParameter: $isTypeParameter, matches: $matches"
                 )
 
                 if (matches) {
                   // Add all public methods from the implicit class
                   classSym.tpe.members.foreach { member =>
-                    if (member.isMethod && member.isPublic && !member.isConstructor) {
+                    if (
+                      member.isMethod && member.isPublic && !member.isConstructor
+                    ) {
                       // Filter out methods inherited from AnyVal
                       val isInheritedFromAnyVal =
                         member.owner == definitions.AnyValClass ||
@@ -1360,11 +1363,12 @@ class MetalsGlobal(
                           member.name == nme.toString_
 
                       if (!isInheritedFromAnyVal) {
-                        val isAccessible = try {
-                          context.isAccessible(member, member.owner.thisType)
-                        } catch {
-                          case NonFatal(_) => false
-                        }
+                        val isAccessible =
+                          try {
+                            context.isAccessible(member, member.owner.thisType)
+                          } catch {
+                            case NonFatal(_) => false
+                          }
 
                         if (isAccessible) {
                           logger.info(

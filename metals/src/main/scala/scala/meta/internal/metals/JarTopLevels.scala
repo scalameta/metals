@@ -74,14 +74,12 @@ final class JarTopLevels(conn: () => Connection) extends JarIndexingInfo(conn) {
    * @return the number of toplevel symbols inserted
    */
   def putJarIndexingInfo(
-                          path: AbsolutePath,
-                          toplevels: List[(String, AbsolutePath)],
-                          type_hierarchy: List[(AbsolutePath, String, OverriddenSymbol)],
-                          toplevelMembers: Map[AbsolutePath, List[TopLevelMember]] = Map.empty
+      path: AbsolutePath,
+      toplevels: List[(String, AbsolutePath)],
+      type_hierarchy: List[(AbsolutePath, String, OverriddenSymbol)],
+      toplevelMembers: Map[AbsolutePath, List[TopLevelMember]] = Map.empty,
   ): Int = {
-    if (
-      toplevels.isEmpty && type_hierarchy.isEmpty && toplevelMembers.isEmpty
-    )
+    if (toplevels.isEmpty && type_hierarchy.isEmpty && toplevelMembers.isEmpty)
       0
     else {
       // Add jar to H2
@@ -359,16 +357,16 @@ class JarIndexingInfo(conn: () => Connection) {
     }
 
   def addToplevelMembersInfo(
-                              path: AbsolutePath,
-                              toplevelMembers: Map[AbsolutePath, List[TopLevelMember]],
+      path: AbsolutePath,
+      toplevelMembers: Map[AbsolutePath, List[TopLevelMember]],
   ): Int = {
     val jar = addOrUpdateJar(path, "toplevel_members_indexed")
     jar.map(putToplevelMembersInfo(_, toplevelMembers)).getOrElse(0)
   }
 
   protected def putToplevelMembersInfo(
-                                        jar: Int,
-                                        toplevelMemberMap: Map[AbsolutePath, List[TopLevelMember]],
+      jar: Int,
+      toplevelMemberMap: Map[AbsolutePath, List[TopLevelMember]],
   ): Int =
     if (toplevelMemberMap.nonEmpty) {
       // Add type members for jar to H2

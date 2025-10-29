@@ -476,7 +476,9 @@ class ScalaToplevelMtags(
               } else {
                 if (expect.isImplicit) {
                   // Add implicit class as TopLevelMember with ImplicitClass kind
-                  import scala.meta.internal.semanticdb.{Range => SemanticdbRange}
+                  import scala.meta.internal.semanticdb.{
+                    Range => SemanticdbRange
+                  }
                   toplevelMembersBuilder += TopLevelMember(
                     currentOwner,
                     SemanticdbRange(0, 0, 0, 0),
@@ -827,7 +829,12 @@ class ScalaToplevelMtags(
         if (owner.endsWith("/package.") || owner.endsWith("$package.")) {
           addToplevelMembers(
             List(
-              TopLevelMember(typeSymbol, ident.pos.toRange, TopLevelMember.Kind.Type))
+              TopLevelMember(
+                typeSymbol,
+                ident.pos.toRange,
+                TopLevelMember.Kind.Type
+              )
+            )
           )
         }
         if (emitTermMember) {

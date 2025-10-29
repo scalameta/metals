@@ -586,7 +586,8 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
 
         optMtags.foreach { mtags =>
           val members = mtags.toplevelMembers()
-          val implicitClasses = members.filter(_.kind == TopLevelMember.Kind.ImplicitClass)
+          val implicitClasses =
+            members.filter(_.kind == TopLevelMember.Kind.ImplicitClass)
           if (implicitClasses.nonEmpty) {
             scribe.info(
               s"[Indexer.indexSourceFile] Found ${implicitClasses.size} implicit classes in $source"
@@ -679,7 +680,8 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     val toplevelMembersMap = indexResult.collect {
       case IndexingResult(path, _, _, toplevelMembers)
           if toplevelMembers.nonEmpty =>
-        val implicitClasses = toplevelMembers.filter(_.kind == TopLevelMember.Kind.ImplicitClass)
+        val implicitClasses =
+          toplevelMembers.filter(_.kind == TopLevelMember.Kind.ImplicitClass)
         if (implicitClasses.nonEmpty) {
           scribe.info(
             s"[Indexer.indexJar] Found ${implicitClasses.size} implicit classes in $path"
