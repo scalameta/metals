@@ -60,23 +60,6 @@ final class WorkspaceSymbolProvider(
   def addToplevelMembers(
       toplevelMembers: Map[AbsolutePath, Seq[TopLevelMember]]
   ): Unit = {
-    val implicitClasses = toplevelMembers.values.flatten
-      .filter(_.kind == TopLevelMember.Kind.ImplicitClass)
-      .size
-    if (implicitClasses > 0) {
-      scribe.info(
-        s"[WorkspaceSymbolProvider] Loading $implicitClasses implicit classes " +
-          s"from ${toplevelMembers.size} sources into cache"
-      )
-
-      val uniqueClasses = toplevelMembers.values.flatten
-        .filter(_.kind == TopLevelMember.Kind.ImplicitClass)
-        .map(_.symbol)
-        .toSet
-      scribe.debug(
-        s"[WorkspaceSymbolProvider]   Unique implicit classes: ${uniqueClasses.mkString(", ")}"
-      )
-    }
     topLevelMembers ++= toplevelMembers
   }
 

@@ -647,11 +647,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       dialect: Dialect,
       reindex: Boolean = false,
   ) = {
-    scribe.info(s"[Indexer.indexJar] Indexing JAR: $path")
     val indexResult = definitionIndex.addSourceJar(path, dialect, reindex)
-    scribe.info(
-      s"[Indexer.indexJar] Got ${indexResult.size} indexing results from JAR"
-    )
     val toplevels = indexResult.flatMap {
       case IndexingResult(path, toplevels, _, _) =>
         toplevels.map((_, path))
@@ -665,13 +661,6 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     val toplevelMembersMap = indexResult.collect {
       case IndexingResult(path, _, _, toplevelMembers)
           if toplevelMembers.nonEmpty =>
-        val implicitClasses =
-          toplevelMembers.filter(_.kind == TopLevelMember.Kind.ImplicitClass)
-        if (implicitClasses.nonEmpty) {
-          scribe.info(
-            s"[Indexer.indexJar] Found ${implicitClasses.size} implicit classes in $path"
-          )
-        }
         path -> toplevelMembers
     }.toMap
     implementationProvider.addTypeHierarchyElements(overrides)

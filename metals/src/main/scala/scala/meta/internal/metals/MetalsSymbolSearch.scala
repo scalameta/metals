@@ -1,22 +1,16 @@
 package scala.meta.internal.metals
 
-import java.net.URI
-import java.util.Optional
-import java.{util => ju}
-
-import scala.collection.concurrent.TrieMap
-
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags.Mtags
-import scala.meta.io.AbsolutePath
-import scala.meta.pc.ContentType
-import scala.meta.pc.ParentSymbols
-import scala.meta.pc.SymbolDocumentation
-import scala.meta.pc.SymbolSearch
-import scala.meta.pc.SymbolSearchVisitor
-
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Location
+
+import java.net.URI
+import java.util as ju
+import java.util.Optional
+import scala.collection.concurrent.TrieMap
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.mtags.{Mtags, TopLevelMember}
+import scala.meta.io.AbsolutePath
+import scala.meta.pc.*
 
 /**
  * Implementation of SymbolSearch that delegates to WorkspaceSymbolProvider and SymbolDocumentationIndexer.
@@ -134,27 +128,14 @@ class MetalsSymbolSearch(
   }
 
   override def queryAllImplicitClasses(): ju.List[String] = {
-    import scala.meta.internal.jdk.CollectionConverters._
-    import scala.meta.internal.mtags.TopLevelMember
-
-    scribe.info(s"[MetalsSymbolSearch] Querying all implicit classes")
 
     val implicitClasses = wsp.topLevelMembers.values.flatten
       .filter(_.kind == TopLevelMember.Kind.ImplicitClass)
-
-    val totalCached = implicitClasses.size
-    scribe.info(
-      s"[MetalsSymbolSearch] Total implicit classes in cache: $totalCached, ${implicitClasses.toList}"
-    )
 
     val classSymbols = implicitClasses
       .map(_.symbol)
       .toSet
       .toList
-
-    scribe.info(
-      s"[MetalsSymbolSearch] Found ${classSymbols.size} unique implicit classes"
-    )
 
     classSymbols.asJava
   }
