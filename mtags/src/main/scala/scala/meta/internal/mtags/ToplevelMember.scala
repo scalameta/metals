@@ -42,7 +42,7 @@ object ToplevelMember {
       throw new IllegalArgumentException(s"Unsupported id for ToplevelMember.Kind: $id")
     )
     
-    implicit class KindOps(val kind: Kind) extends AnyVal {
+    implicit class KindOps(val kind: Kind) {
       def toId: Int = idMapping(kind)
       def toLsp: org.eclipse.lsp4j.SymbolKind = lspMapping(kind)
     }
