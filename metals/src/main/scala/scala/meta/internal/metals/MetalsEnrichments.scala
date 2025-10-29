@@ -9,6 +9,7 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.util
@@ -783,6 +784,9 @@ object MetalsEnrichments
           )
           None
       }
+
+    def asURItoAbsolutePath: AbsolutePath =
+      AbsolutePath(Paths.get(URI.create(value)))
 
     /**
      * Use followSymlink judiciously. It is an expensive operation, involving several OS calls

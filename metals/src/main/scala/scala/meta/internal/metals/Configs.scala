@@ -180,6 +180,45 @@ object Configs {
       value == "bsp" // The classic BSP-based workspace/symbol implementation
   }
 
+  @nowarn
+  final case class DefinitionIndexStrategy(val value: String) {
+    require(List("classpath", "sources").contains(value), value)
+    def isClasspath: Boolean =
+      value == "classpath"
+    def isSources: Boolean =
+      value == "sources"
+  }
+
+  object DefinitionIndexStrategy {
+    def classpath: DefinitionIndexStrategy =
+      DefinitionIndexStrategy("classpath")
+    def sources: DefinitionIndexStrategy =
+      DefinitionIndexStrategy("sources")
+    def default: DefinitionIndexStrategy = sources
+    def fromConfigOrFeatureFlag(
+        value: Option[String],
+        featureFlags: FeatureFlagProvider,
+    ): Either[String, DefinitionIndexStrategy] = {
+      value match {
+        case Some(ok @ ("classpath" | "sources")) =>
+          Right(DefinitionIndexStrategy(ok))
+        case Some(invalid) =>
+          Left(
+            s"invalid config value '$invalid' for definitionIndexStrategy. Valid values are \"classpath\" and \"sources\""
+          )
+        case None =>
+          val isClasspathEnabled = featureFlags
+            .readBoolean(FeatureFlag.CLASSPATH_DEFINITION_INDEX)
+            .orElse(false)
+          if (isClasspathEnabled) {
+            Right(DefinitionIndexStrategy.sources)
+          } else {
+            Right(DefinitionIndexStrategy.default)
+          }
+      }
+    }
+  }
+
   object TelemetryConfig {
     def default: TelemetryConfig =
       // NOTE: by default, Metals confusingly does not send telemetry even when

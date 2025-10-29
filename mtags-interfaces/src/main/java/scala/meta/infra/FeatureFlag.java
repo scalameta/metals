@@ -8,4 +8,11 @@ public enum FeatureFlag {
 	 * removal).
 	 */
 	SCALA_SOURCEPATH_PRUNED,
+
+	/**
+	 * If enabled, uses more lightweight indexing for "Go to definition" by skipping
+	 * up-frontindexing of *-sources.jar files. Instead, definitions are resolved at
+	 * query time by reading the "source" debug attribute in classfiles.
+	 */
+	CLASSPATH_DEFINITION_INDEX,
 }

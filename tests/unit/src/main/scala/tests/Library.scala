@@ -16,7 +16,31 @@ case class Library(
     name: String,
     classpath: Classpath,
     sources: Classpath,
-)
+) {
+  def ++(other: Library): Library =
+    Library(
+      s"$name++${other.name}",
+      classpath ++ other.classpath,
+      sources ++ other.sources,
+    )
+  def asModules: List[mtags.DependencyModule] = {
+    for {
+      jar <- this.classpath.entries
+      sourcesFilename = jar.toNIO.getFileName.toString
+        .replace(".jar", "-sources.jar")
+      sources = this.sources.entries.find(
+        _.toNIO.getFileName.toString == sourcesFilename
+      )
+      version = jar.toNIO.getParent().getFileName().toString()
+      name = jar.toNIO.getParent().getParent().getFileName().toString()
+      org = jar.toNIO.getParent.getParent.getParent
+        .toString()
+        .split("maven2/", 2)(1)
+        .replace("/", ".")
+      coordinates = mtags.MavenCoordinates(org, name, version)
+    } yield mtags.DependencyModule(coordinates, jar, sources)
+  }
+}
 
 object Library {
   def jdk: Library =
@@ -54,6 +78,11 @@ object Library {
       "xnio",
       List(Dependency.of("org.jboss.xnio", "xnio-nio", "3.8.8.Final")),
     )
+  def xnio2: Library =
+    fetchSources(
+      "xnio",
+      List(Dependency.of("org.jboss.xnio", "xnio-nio", "3.8.17.Final")),
+    )
   def springbootStarterWeb: Library =
     fetchSources(
       "springboot-starter-web",
@@ -74,6 +103,9 @@ object Library {
       .filter(_.toString.endsWith("bindings-rxjava-2.0.0-sources.jar"))
 
   def allScala2: List[Library] = {
+    List(allScala2Library)
+  }
+  def allScala2Library: Library = {
     import mtags.BuildInfo.scalaCompilerVersion
 
     val dependencies = List(
@@ -91,7 +123,7 @@ object Library {
       Dependency.of("org.scalameta", "scalameta_2.12", "4.1.4"),
       Dependency.of("org.scala-lang", "scala-compiler", scalaCompilerVersion),
     )
-    List(fetchSources("scala2-suite", dependencies))
+    fetchSources("scala2-suite", dependencies)
   }
 
   def fetchSources(name: String, deps: List[Dependency]): Library = {

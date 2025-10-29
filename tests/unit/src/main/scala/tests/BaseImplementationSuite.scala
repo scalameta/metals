@@ -22,7 +22,7 @@ abstract class BaseImplementationSuite(name: String)
   }
 
   def checkSymbols(
-      name: String,
+      name: munit.TestOptions,
       fileContents: String,
       expectedSymbols: String,
       scalaVersion: String = BuildInfo.scalaVersion,

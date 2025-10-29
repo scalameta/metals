@@ -19,7 +19,9 @@ import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.builds.WorkspaceReload
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.DependencyModule
 import scala.meta.internal.mtags.IndexingResult
+import scala.meta.internal.mtags.MavenCoordinates
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.io.AbsolutePath
 
@@ -199,6 +201,9 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
           buildTool.data,
           buildTool.importedBuild.dependencySources,
         )
+        if (indexProviders.userConfig.definitionIndexStrategy.isClasspath) {
+          indexDependencyModules(buildTool.importedBuild.dependencyModules)
+        }
         usedJars ++= indexDependencySources(
           buildTool.data,
           buildTool.importedBuild.dependencySources,
@@ -376,6 +381,43 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     } finally threadPool.shutdown()
   }
 
+  private def indexDependencyModules(
+      dependencyModules: b.DependencyModulesResult
+  ): Unit = {
+    val isVisited = new ju.HashSet[AbsolutePath]()
+    for {
+      item <- dependencyModules.getItems.asScala
+      module <- Option(item.getModules()).toList.flatMap(_.asScala.iterator)
+      maven <- module.asMavenDependencyModule
+      jar <- maven.getArtifacts().asScala.collectFirst {
+        case a if a.getClassifier() == null => a.getUri().asURItoAbsolutePath
+      }
+      if jar.isJar && !isVisited.contains(jar)
+    } {
+      isVisited.add(jar)
+      val sources = maven.getArtifacts().asScala.collectFirst {
+        case a if a.getClassifier() == "sources" =>
+          a.getUri().asURItoAbsolutePath
+      }
+      val coordinates = MavenCoordinates(
+        maven.getOrganization(),
+        maven.getName(),
+        maven.getVersion(),
+      )
+      val dependencyModule = DependencyModule(coordinates, jar, sources)
+      val dialect = buildTargets
+        .scalaTarget(item.getTarget)
+        .map(scalaTarget =>
+          ScalaVersions.dialectForScalaVersion(
+            scalaTarget.scalaVersion,
+            includeSource3 = true,
+          )
+        )
+        .getOrElse(Scala213)
+      definitionIndex.addDependencyModule(dependencyModule, dialect)
+    }
+  }
+
   private def indexDependencySources(
       data: TargetData,
       dependencySources: b.DependencySourcesResult,
@@ -395,8 +437,10 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       isVisited.add(sourceUri)
       try {
         if (path.isJar && path.exists) {
-          usedJars += path
-          addSourceJarSymbols(path)
+          if (!indexProviders.userConfig.definitionIndexStrategy.isClasspath) {
+            usedJars += path
+            addSourceJarSymbols(path)
+          }
         } else if (path.isDirectory) {
           val dialect = buildTargets
             .scalaTarget(item.getTarget)

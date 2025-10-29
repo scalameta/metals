@@ -13,6 +13,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.Configs
 import scala.meta.internal.metals.Configs.TelemetryConfig
 import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.ExecuteClientCommandConfig
@@ -47,6 +48,7 @@ abstract class BaseLspSuite(
     UserConfiguration(
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
       presentationCompilerDiagnostics = false,
+      definitionIndexStrategy = Configs.DefinitionIndexStrategy.classpath,
     )
   def telemetryConfig: TelemetryConfig = new TelemetryConfig("disabled")
   def serverConfig: MetalsServerConfig = MetalsServerConfig.default

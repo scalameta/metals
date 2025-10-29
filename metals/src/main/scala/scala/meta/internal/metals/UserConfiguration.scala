@@ -10,6 +10,7 @@ import scala.util.Try
 
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.infra.NoopFeatureFlagProvider
+import scala.meta.internal.metals.Configs.DefinitionIndexStrategy
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.JsonParser.XtensionSerializedAsOption
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -68,6 +69,8 @@ case class UserConfiguration(
     useSourcePath: Boolean = true,
     workspaceSymbolProvider: WorkspaceSymbolProviderConfig =
       WorkspaceSymbolProviderConfig.default,
+    definitionIndexStrategy: DefinitionIndexStrategy =
+      DefinitionIndexStrategy.default,
 ) {
 
   override def toString(): String = {
@@ -181,6 +184,12 @@ case class UserConfiguration(
         (
           "workspaceSymbolProvider",
           workspaceSymbolProvider.value,
+        )
+      ),
+      Some(
+        (
+          "definitionIndexStrategy",
+          definitionIndexStrategy.value,
         )
       ),
     ).flatten.toMap.asJava
@@ -858,6 +867,14 @@ object UserConfiguration {
           featureFlags,
         ),
     ).getOrElse(WorkspaceSymbolProviderConfig.default)
+    val definitionIndexStrategy = getParsedKey(
+      "definition-index-strategy",
+      value =>
+        DefinitionIndexStrategy.fromConfigOrFeatureFlag(
+          value,
+          featureFlags,
+        ),
+    ).getOrElse(DefinitionIndexStrategy.default)
 
     if (errors.isEmpty) {
       Right(
@@ -897,6 +914,7 @@ object UserConfiguration {
           preferredBuildServer,
           useSourcePath,
           workspaceSymbolProvider,
+          definitionIndexStrategy,
         )
       )
     } else {

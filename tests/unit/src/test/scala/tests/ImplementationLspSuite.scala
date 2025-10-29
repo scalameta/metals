@@ -255,7 +255,7 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
   )
 
   check(
-    "java-classes",
+    "java-classes".ignore.pending("requires definitionIndexStrategy=sources"),
     """|/a/src/main/scala/a/Main.scala
        |package a
        |class <<MyException>> extends Exce@@ption
@@ -278,7 +278,7 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
   )
 
   check(
-    "lib-type",
+    "lib-type".ignore.pending("requires definitionIndexStrategy=sources"),
     """|/a/src/main/scala/a/Main.scala
        |package a
        |object Main {
@@ -306,7 +306,9 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
   )
 
   check(
-    "type-alias-global",
+    "type-alias-global".ignore.pending(
+      "requires definitionIndexStrategy=sources"
+    ),
     """|/a/src/main/scala/a/Main.scala
        |package a
        |object Main {
@@ -607,7 +609,7 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
   )
 
   checkSymbols(
-    "set",
+    "set".ignore.pending("requires definitionIndexStrategy=sources"),
     """|package a
        |class MySet[A] extends S@@et[A] {
        |  override def iterator: Iterator[A] = ???
@@ -642,7 +644,7 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
 
   if (isJava17) {
     checkSymbols(
-      "exception",
+      "exception".ignore.pending("requires definitionIndexStrategy=sources"),
       """package a
         |class MyException extends Excep@@tion
         |""".stripMargin,

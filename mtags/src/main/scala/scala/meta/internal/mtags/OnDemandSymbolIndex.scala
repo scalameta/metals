@@ -28,7 +28,8 @@ import scala.meta.io.AbsolutePath
 final class OnDemandSymbolIndex(
     dialectBuckets: TrieMap[Dialect, SymbolIndexBucket],
     onError: PartialFunction[Throwable, Unit],
-    toIndexSource: AbsolutePath => AbsolutePath
+    toIndexSource: AbsolutePath => AbsolutePath,
+    isClasspathDefinitionIndexEnabled: () => Boolean
 )(implicit rc: ReportContext)
     extends GlobalSymbolIndex {
   val mtags = new Mtags
@@ -41,7 +42,13 @@ final class OnDemandSymbolIndex(
   private def getOrCreateBucket(dialect: Dialect): SymbolIndexBucket =
     dialectBuckets.getOrElseUpdate(
       dialect,
-      SymbolIndexBucket.empty(dialect, mtags, toIndexSource, onError)
+      new SymbolIndexBucket(
+        isClasspathDefinitionIndexEnabled = isClasspathDefinitionIndexEnabled,
+        dialect = dialect,
+        mtags = mtags,
+        toIndexSource = toIndexSource,
+        onError = onError
+      )
     )
 
   override def definition(symbol: Symbol): Option[SymbolDefinition] = {
@@ -93,6 +100,27 @@ final class OnDemandSymbolIndex(
         }
       }
     )
+
+  override def addDependencyModule(
+      module: DependencyModule,
+      dialect: Dialect
+  ): List[IndexingResult] = {
+    tryRun(
+      module.jar,
+      List.empty, {
+        try {
+          getOrCreateBucket(dialect).addDependencyModule(module)
+        } catch {
+          case e: ZipError =>
+            onError(new IndexingExceptions.InvalidJarException(module.jar, e))
+            List.empty
+          case e: ZipException =>
+            onError(new IndexingExceptions.InvalidJarException(module.jar, e))
+            List.empty
+        }
+      }
+    )
+  }
 
   // Used to add cached toplevel symbols to index
   def addIndexedSourceJar(
@@ -152,9 +180,15 @@ object OnDemandSymbolIndex {
       onError: PartialFunction[Throwable, Unit] = { case NonFatal(e) =>
         throw e
       },
-      toIndexSource: AbsolutePath => AbsolutePath = identity
+      toIndexSource: AbsolutePath => AbsolutePath = identity,
+      isClasspathDefinitionIndexEnabled: () => Boolean = () => false
   )(implicit rc: ReportContext): OnDemandSymbolIndex = {
-    new OnDemandSymbolIndex(TrieMap.empty, onError, toIndexSource)
+    new OnDemandSymbolIndex(
+      TrieMap.empty,
+      onError,
+      toIndexSource,
+      isClasspathDefinitionIndexEnabled
+    )
   }
 
 }

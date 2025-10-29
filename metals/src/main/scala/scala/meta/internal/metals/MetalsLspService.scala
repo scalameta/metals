@@ -1866,6 +1866,8 @@ abstract class MetalsLspService(
           scribe.error("unexpected error during source scanning", e)
       },
       toIndexSource = path => sourceMapper.mappedTo(path).getOrElse(path),
+      isClasspathDefinitionIndexEnabled =
+        () => userConfig.definitionIndexStrategy.isClasspath,
     )
   }
 

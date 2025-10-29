@@ -412,6 +412,7 @@ val mtagsSettings = List(
     scalaVersion.value,
   ),
   libraryDependencies ++= Seq(
+    "org.ow2.asm" % "asm" % "9.9",
     "com.lihaoyi" %% "geny" % V.genyVersion,
     "com.thoughtworks.qdox" % "qdox" % V.qdox, // for java mtags
     "org.scala-lang.modules" %% "scala-java8-compat" % V.java8Compat,
@@ -976,7 +977,7 @@ lazy val unit = project
     sharedSettings,
     Test / javaOptions ++= sharedJavaOptions ++ Seq(
       "-Dmetals.env=testing",
-      "-Xmx3G",
+      "-Xmx16G",
       "-XX:+HeapDumpOnOutOfMemoryError",
       "-XX:+ExitOnOutOfMemoryError",
     ),

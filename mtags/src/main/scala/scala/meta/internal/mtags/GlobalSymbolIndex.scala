@@ -91,6 +91,22 @@ trait GlobalSymbolIndex {
   ): List[IndexingResult]
 
   /**
+   * Same as `addSourceJar` but additionally includes the matching jar of
+   * classfiles. The benefit of using this method over `addSourceJar` is that
+   * you can delay expensive indexing of the sources.jar until at query time by
+   * looking up the "source" debug attribute of classfiles in the jar.
+   */
+  def addDependencyModule(
+      dependencyModule: DependencyModule,
+      dialect: Dialect
+  ): List[IndexingResult] = {
+    for {
+      sources <- dependencyModule.sources.toList
+      result <- addSourceJar(sources, dialect)
+    } yield result
+  }
+
+  /**
    * The same as `addSourceJar` except for directories
    */
   def addSourceDirectory(

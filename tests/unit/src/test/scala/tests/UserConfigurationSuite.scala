@@ -340,7 +340,6 @@ class UserConfigurationSuite extends BaseSuite {
       s"""|{
           |  "presentationCompilerDiagnostics": true,
           |  "enableIndentOnPaste": true,
-          |  "customProjectRoot": "customs",
           |  "workspaceSymbolProvider": "mbt",
           |  "buildOnChange": true,
           |  "javaFormat": {
@@ -365,6 +364,8 @@ class UserConfigurationSuite extends BaseSuite {
           |  "gradleScript": "gradle",
           |  "scalafixConfigPath": "$fakePathString",
           |  "superMethodLensesEnabled": true,
+          |  "definitionIndexStrategy": "sources",
+          |  "customProjectRoot": "customs",
           |  "buildOnFocus": true,
           |  "millScript": "mill",
           |  "bloopSbtAlreadyInstalled": true,

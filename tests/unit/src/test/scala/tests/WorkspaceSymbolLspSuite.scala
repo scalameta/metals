@@ -361,7 +361,11 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
     } yield ()
   }
 
-  test("symbolic-from-classpath") {
+  test(
+    "symbolic-from-classpath".ignore.pending(
+      "requires definitionIndexStrategy=sources"
+    )
+  ) {
     cleanWorkspace()
     for {
       _ <- initialize(

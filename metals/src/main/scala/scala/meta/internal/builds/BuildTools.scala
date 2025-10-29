@@ -51,11 +51,10 @@ final class BuildTools(
   def isAutoConnectable(
       maybeProjectRoot: Option[AbsolutePath] = None
   ): Boolean = {
-    maybeProjectRoot
-      .map(isBloop)
-      .getOrElse(
-        isBloop
-      ) || (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade()) || (isBsp && userConfig().preferredBuildServer.isDefined)
+    maybeProjectRoot.map(isBloop).getOrElse(isBloop) ||
+    (isBsp && all.isEmpty) ||
+    (isBsp && explicitChoiceMade()) ||
+    (isBsp && userConfig().preferredBuildServer.isDefined)
   }
   def isBloop(root: AbsolutePath): Boolean = hasJsonFile(root.resolve(".bloop"))
   def bloopProject: Option[AbsolutePath] = searchForBuildTool(isBloop)
