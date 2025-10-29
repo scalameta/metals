@@ -439,23 +439,9 @@ class CompletionProvider(
             logger.info(
               s"[CompletionProvider] Member selection detected on type: ${qualifier.tpe}"
             )
-            val result =
-              workspaceExtensionMethods(query, pos, visit, qualifier.tpe)
-            val implicitMembers =
-              findIndexedImplicitExtensionsForType(qualifier.tpe, pos)
-            if (implicitMembers.nonEmpty) {
-              logger.info(
-                s"[CompletionProvider] Found ${implicitMembers.size} implicit class members " +
-                  s"for type ${qualifier.tpe}"
-              )
-            }
-            implicitMembers.foreach { ext =>
-              logger.info(
-                s"[CompletionProvider]   Adding implicit member: ${ext.sym.name}"
-              )
-              visit(ext)
-            }
-            result
+            workspaceExtensionMethods(query, pos, visit, qualifier.tpe)
+            findIndexedImplicitExtensionsForType(qualifier.tpe, pos, visit)
+            SymbolSearch.Result.COMPLETE
           case _ => SymbolSearch.Result.COMPLETE
         }
       }

@@ -1295,10 +1295,10 @@ class MetalsGlobal(
    */
   def findIndexedImplicitExtensionsForType(
       targetType: Type,
-      pos: Position
-  ): List[WorkspaceImplicitMember] = {
+      pos: Position,
+      visit: Member => Boolean
+  ): Unit = {
     val context = doLocateContext(pos)
-    val buffer = mutable.ListBuffer.empty[WorkspaceImplicitMember]
 
     try {
       logger.info(
@@ -1364,6 +1364,7 @@ class MetalsGlobal(
                           extensionMethod.name == nme.toString_
 
                       if (!isInheritedFromAnyVal) {
+                        // Check accessibility using the same approach as CompilerSearchVisitor
                         val isAccessible =
                           try {
                             context.isAccessible(
@@ -1378,10 +1379,10 @@ class MetalsGlobal(
                           logger.info(
                             s"[MetalsGlobal.findIndexed]       Adding method: ${extensionMethod.name} from ${implicitClassSymbol.fullName}"
                           )
-                          buffer += new WorkspaceImplicitMember(
+                          visit(new WorkspaceImplicitMember(
                             extensionMethod,
                             implicitClassSymbol
-                          )
+                          ))
                         }
                       }
                     }
@@ -1405,23 +1406,11 @@ class MetalsGlobal(
             )
         }
       }
-
-      if (buffer.nonEmpty) {
-        logger.info(
-          s"[MetalsGlobal.findIndexed] Returning ${buffer.size} implicit members for type $targetType"
-        )
-      } else {
-        logger.info(
-          s"[MetalsGlobal.findIndexed] No matching implicit members found for type $targetType"
-        )
-      }
     } catch {
       case NonFatal(e) =>
         logger.info(
           s"[MetalsGlobal.findIndexed] Error querying implicit classes: ${e.getMessage}"
         )
     }
-
-    buffer.toList.distinct
   }
 }
