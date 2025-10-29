@@ -28,7 +28,7 @@ object ToplevelMember {
     private final val ImplicitClassId = 100 // Custom value, higher than any SymbolInformation.Kind
     
     def fromId(id: Int): Kind = id match {
-      case SymbolInformation.Kind.TYPE.value => Type
+      case SymbolInformation.Kind.TYPE.value => Type // Trying to keep compatibility with old ids
       case ImplicitClassId => ImplicitClass
       case _ =>
         throw new IllegalArgumentException(s"Unsupported id for ToplevelMember.Kind: $id")
@@ -36,7 +36,7 @@ object ToplevelMember {
     
     implicit class KindOps(val kind: Kind) {
       def toId: Int = kind match {
-        case Type => SymbolInformation.Kind.TYPE.value
+        case Type => SymbolInformation.Kind.TYPE.value // Trying to keep compatibility with old ids
         case ImplicitClass => ImplicitClassId
       }
       
