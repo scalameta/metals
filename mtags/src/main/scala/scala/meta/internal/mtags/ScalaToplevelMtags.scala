@@ -2,7 +2,9 @@ package scala.meta.internal.mtags
 
 import java.nio.file.Paths
 import java.util.Optional
+
 import scala.annotation.tailrec
+
 import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
