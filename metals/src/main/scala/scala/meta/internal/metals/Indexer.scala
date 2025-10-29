@@ -583,7 +583,6 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
           .foreach(identifiers =>
             referencesProvider.addIdentifiers(source, identifiers)
           )
-
         workspaceSymbols.didChange(source, symbols.toSeq, methodSymbols.toSeq)
 
         // Since the `symbols` here are toplevel symbols,
