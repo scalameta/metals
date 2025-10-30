@@ -14,6 +14,7 @@ import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.mtags.CoursierComplete
 
+import munit.Location
 import org.eclipse.{lsp4j => l}
 import tests.FileLayout
 
@@ -518,64 +519,79 @@ class ScalaCliSuite extends BaseScalaCliSuite("3.3.3") {
     } yield ()
   }
 
-  test("single-file-config") {
-    cleanWorkspace()
-    val msg = FileOutOfScalaCliBspScope.askToRegenerateConfigAndRestartBspMsg(
-      "File: SomeFile.scala"
-    )
-    def workspaceMsgs =
-      server.client.messageRequests.asScala
-        .filter(
-          _ != "scala-cli bspConfig"
-        ) // to achieve the same behavior no matter if scala-cli in installed or not
-        .mkString("\n")
-    def hasBuildTarget(fileName: String) = server.server.buildTargets
-      .inverseSources(workspace.resolve(fileName))
-      .isDefined
-    for {
-      _ <- initialize(
-        s"""/src/Main.scala
-           |object Main:
-           |  def foo = 3
-           |  val m = foo
-           |/SomeFile.scala
-           |object Other:
-           |  def foo = 3
-           |  val m = foo
-           |/.bsp/scala-cli.json
-           |${ScalaCli.scalaCliBspJsonContent(projectRoot = workspace.resolve("src/Main.scala").toString())}
-           |/.scala-build/ide-inputs.json
-           |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
-           |""".stripMargin
+  def checkReconnect(name: String, viaCommand: Boolean)(implicit
+      location: Location
+  ): Unit = {
+    test(name) {
+      cleanWorkspace()
+      val msg = FileOutOfScalaCliBspScope.askToRegenerateConfigAndRestartBspMsg(
+        "File: SomeFile.scala"
       )
-      _ <- server.didOpen("src/Main.scala")
-      _ = assertNoDiff(workspaceMsgs, "")
-      _ = assert(hasBuildTarget("src/Main.scala"))
-      _ = assert(!hasBuildTarget("SomeFile.scala"))
+      def workspaceMsgs =
+        server.client.messageRequests.asScala
+          .filter(
+            _ != "scala-cli bspConfig"
+          ) // to achieve the same behavior no matter if scala-cli in installed or not
+          .mkString("\n")
+      def hasBuildTarget(fileName: String) = server.server.buildTargets
+        .inverseSources(workspace.resolve(fileName))
+        .isDefined
+      for {
+        _ <- initialize(
+          s"""/src/Main.scala
+             |object Main:
+             |  def foo = 3
+             |  val m = foo
+             |/SomeFile.scala
+             |object Other:
+             |  def foo = 3
+             |  val m = foo
+             |/.bsp/scala-cli.json
+             |${ScalaCli.scalaCliBspJsonContent(projectRoot = workspace.resolve("src/Main.scala").toString())}
+             |/.scala-build/ide-inputs.json
+             |${BaseScalaCliSuite.scalaCliIdeInputJson(".")}
+             |""".stripMargin
+        )
+        _ <- server.didOpen("src/Main.scala")
+        _ = assertNoDiff(workspaceMsgs, "")
+        _ = assert(hasBuildTarget("src/Main.scala"))
+        _ = assert(!hasBuildTarget("SomeFile.scala"))
 
-      _ <- server.didOpen("SomeFile.scala")
-      _ <- server.server.buildServerPromise.future
-      _ = assertNoDiff(workspaceMsgs, msg)
-      _ = assert(!hasBuildTarget("SomeFile.scala"))
+        _ <- server.didOpen("SomeFile.scala")
+        _ <- server.server.buildServerPromise.future
+        _ = assertNoDiff(workspaceMsgs, msg)
+        _ = assert(!hasBuildTarget("SomeFile.scala"))
 
-      _ = server.client.regenerateAndRestartScalaCliBuildSever =
-        FileOutOfScalaCliBspScope.regenerateAndRestart
-      _ <- server.didOpen("SomeFile.scala")
-      _ <- server.server.buildServerPromise.future
-      _ = assertNoDiff(
-        workspaceMsgs,
-        List(msg, msg).mkString("\n"),
-      )
-      _ = assert(hasBuildTarget("src/Main.scala"))
-      _ = assert(hasBuildTarget("SomeFile.scala"))
-
-      _ <- server.didOpen("SomeFile.scala")
-      _ = assertNoDiff(
-        workspaceMsgs,
-        List(msg, msg).mkString("\n"),
-      )
-    } yield ()
+        _ = server.client.regenerateAndRestartScalaCliBuildSever =
+          FileOutOfScalaCliBspScope.regenerateAndRestart
+        _ <-
+          if (viaCommand)
+            server.executeCommand(ServerCommands.ModuleStatusBarClicked)
+          else Future.unit
+        _ = server.client.regenerateAndRestartScalaCliBuildSever = {
+          if (viaCommand) FileOutOfScalaCliBspScope.ignore
+          else FileOutOfScalaCliBspScope.regenerateAndRestart
+        }
+        _ <- server.didOpen("SomeFile.scala")
+        _ <- server.server.buildServerPromise.future
+        expectedMessages = List(msg, msg).mkString("\n")
+        _ = assertNoDiff(
+          workspaceMsgs,
+          expectedMessages,
+        )
+        _ = assert(hasBuildTarget("src/Main.scala"))
+        _ = assert(hasBuildTarget("SomeFile.scala"))
+        _ = assertNoDiff(
+          workspaceMsgs,
+          expectedMessages,
+        )
+        _ <- server.didOpen("SomeFile.scala")
+      } yield ()
+    }
   }
+
+  checkReconnect("single-file-config-status", viaCommand = false)
+  checkReconnect("single-file-config-status-command", viaCommand = true)
 
   def startDebugging(
       main: String,

@@ -180,7 +180,7 @@ object ModuleStatus {
       "error",
       show = true,
       tooltip = "No build target for file found.",
-      command = ServerCommands.RunDoctor.id,
+      command = ServerCommands.ModuleStatusBarClicked.id,
       commandTooltip = "Open doctor.",
     ).withStatusType(StatusType.module)
 }

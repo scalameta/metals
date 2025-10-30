@@ -204,6 +204,16 @@ object ServerCommands {
        |""".stripMargin,
   )
 
+  val ModuleStatusBarClicked = new Command(
+    "module-status-bar-clicked",
+    "Handle module status bar click",
+    """|Handle click on the module status bar.
+       |
+       |For Scala CLI workspaces, offers to regenerate BSP configuration.
+       |Otherwise, opens the doctor.
+       |""".stripMargin,
+  )
+
   val ZipReports = new Command(
     "zip-reports",
     "Create a zip with error reports",
@@ -776,6 +786,7 @@ object ServerCommands {
       AnalyzeStacktrace,
       ResolveStacktraceLocation,
       BspSwitch,
+      ModuleStatusBarClicked,
       ConnectBuildServer,
       CancelCompile,
       CascadeCompile,
