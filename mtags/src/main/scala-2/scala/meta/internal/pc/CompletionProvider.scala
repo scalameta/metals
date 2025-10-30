@@ -398,8 +398,6 @@ class CompletionProvider(
         !head.sym.isLocalToBlock ||
           !head.sym.pos.isAfter(pos) ||
           head.sym.isParameter
-      
-
 
       if (
         !isSeen(id) &&
@@ -438,7 +436,12 @@ class CompletionProvider(
         typedTreeAt(pos) match {
           case Select(qualifier, _)
               if qualifier.tpe != null && !qualifier.tpe.isError =>
-            findIndexedImplicitExtensionsForType(query, qualifier.tpe, pos, visit)
+            findIndexedImplicitExtensionsForType(
+              query,
+              qualifier.tpe,
+              pos,
+              visit
+            )
             workspaceExtensionMethods(query, pos, visit, qualifier.tpe)
           case _ => SymbolSearch.Result.COMPLETE
         }

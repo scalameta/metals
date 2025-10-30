@@ -1311,14 +1311,18 @@ class MetalsGlobal(
           if (implicitClassSymbol != NoSymbol && implicitClassSymbol.exists) {
             // Filter out implicit classes that introduce a lot of methods which aren't usually useful
             val implicitClassOwner = implicitClassSymbol.owner
-            val isNoisyImplicitClass = 
-              implicitClassOwner != null && 
-              implicitClassOwner != NoSymbol && {
-                val ownerName = implicitClassOwner.fullName
-                ownerName.startsWith("scala.collection.convert.StreamExtensions") ||
-                ownerName.contains("scala.reflect.api.Internals.InternalApi.DecoratorApi")
-              }
-            
+            val isNoisyImplicitClass =
+              implicitClassOwner != null &&
+                implicitClassOwner != NoSymbol && {
+                  val ownerName = implicitClassOwner.fullName
+                  ownerName.startsWith(
+                    "scala.collection.convert.StreamExtensions"
+                  ) ||
+                  ownerName.contains(
+                    "scala.reflect.api.Internals.InternalApi.DecoratorApi"
+                  )
+                }
+
             if (!isNoisyImplicitClass) {
               // Get the primary constructor parameter type
               val constructorParamTypeOpt = for {
@@ -1348,8 +1352,9 @@ class MetalsGlobal(
                     // Add (visit) all public accessible methods from the implicit class that match the query
                     implicitClassSymbol.tpe.members.foreach { extensionMethod =>
                       val methodName = extensionMethod.name.decoded
-                      val matchesQuery = CompletionFuzzy.matchesSubCharacters(query, methodName)
-                      
+                      val matchesQuery =
+                        CompletionFuzzy.matchesSubCharacters(query, methodName)
+
                       if (
                         matchesQuery &&
                         extensionMethod.isMethod && extensionMethod.isPublic && !extensionMethod.isConstructor
@@ -1373,7 +1378,9 @@ class MetalsGlobal(
                             }
 
                           if (isAccessible) {
-                            logger.info(s"[MetalsGlobal.findIndexed]       Adding method: ${extensionMethod.name} from ${implicitClassSymbol.fullName}")
+                            logger.info(
+                              s"[MetalsGlobal.findIndexed]       Adding method: ${extensionMethod.name} from ${implicitClassSymbol.fullName}"
+                            )
                             visit(
                               new WorkspaceImplicitMember(
                                 extensionMethod,
@@ -1382,10 +1389,10 @@ class MetalsGlobal(
                             )
                           }
                         }
+                      }
                     }
                   }
-                }
-              case None =>
+                case None =>
               }
             }
           }
