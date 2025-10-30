@@ -1341,14 +1341,14 @@ class MetalsGlobal(
                     paramType.typeSymbol.isAbstractType
 
                   val matches =
-                    try {
-                      if (isTypeParameter) {
-                        true
-                      } else {
+                    if (isTypeParameter) {
+                      true
+                    } else {
+                      try {
                         targetType <:< paramType || targetType.widen <:< paramType
+                      } catch {
+                        case NonFatal(_) => false
                       }
-                    } catch {
-                      case NonFatal(_) => false
                     }
 
                   if (matches) {
