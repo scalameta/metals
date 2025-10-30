@@ -427,10 +427,12 @@ class ScalaToplevelMtags(
           (expectTemplate, nextIsNL()) match {
             case (Some(expect), true) if needToParseBody(expect) =>
               if (expect.isImplicit) {
-                toplevelMembersBuilder += ToplevelMember(
-                  currentOwner,
-                  semanticdb.Range(0, 0, 0, 0),
-                  ToplevelMember.Kind.ImplicitClass
+                addToplevelMembers(
+                  ToplevelMember(
+                    currentOwner,
+                    semanticdb.Range(0, 0, 0, 0),
+                    ToplevelMember.Kind.ImplicitClass
+                  ) :: Nil
                 )
               }
               val next = expect.startIndentedRegion(
@@ -474,10 +476,12 @@ class ScalaToplevelMtags(
                 loop(indent.notAfterNewline, currRegion, expectTemplate)
               } else {
                 if (expect.isImplicit) {
-                  toplevelMembersBuilder += ToplevelMember(
-                    currentOwner,
-                    semanticdb.Range(0, 0, 0, 0),
-                    ToplevelMember.Kind.ImplicitClass
+                  addToplevelMembers(
+                    ToplevelMember(
+                      currentOwner,
+                      semanticdb.Range(0, 0, 0, 0),
+                      ToplevelMember.Kind.ImplicitClass
+                    ) :: Nil
                   )
                 }
                 val next =

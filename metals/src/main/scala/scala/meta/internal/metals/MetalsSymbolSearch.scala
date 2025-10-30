@@ -131,7 +131,6 @@ class MetalsSymbolSearch(
   }
 
   override def queryAllImplicitClasses(): ju.List[String] = {
-
     val implicitClasses = wsp.topLevelMembers.values.flatten
       .filter(_.kind == ToplevelMember.Kind.ImplicitClass)
 

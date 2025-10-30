@@ -295,17 +295,20 @@ final class WorkspaceSymbolProvider(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor,
   ): Int = {
+    val excluded = excludedPackageHandler()
     val all = for {
       (path, symbols) <- topLevelMembers.iterator
       symbol <- symbols
       if query.matches(symbol.symbol)
     } yield {
-      visitor.visitWorkspaceSymbol(
-        path.toNIO,
-        symbol.symbol,
-        symbol.kind.toLsp,
-        symbol.range.toLsp,
-      )
+      if (!excluded.isExcludedPackage(symbol.symbol)) {
+        visitor.visitWorkspaceSymbol(
+          path.toNIO,
+          symbol.symbol,
+          symbol.kind.toLsp,
+          symbol.range.toLsp,
+        )
+      }
     }
     all.length
   }
