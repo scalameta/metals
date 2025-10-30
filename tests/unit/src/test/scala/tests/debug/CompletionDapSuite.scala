@@ -78,7 +78,7 @@ class CompletionDapSuite
          |until(end: Int, step: Int): Range
          |""".stripMargin,
     expectedEdit = "1.until(@@)",
-    topLines = Some(5),
+    topLines = Some(4),
   )(
     """|/a/src/main/scala/a/Main.scala
        |package a
