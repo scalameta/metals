@@ -477,6 +477,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
           |FutureConverters - scala.jdk
           |FutureConverters - scala.jdk.javaapi
           |CompletableFuture - java.util.concurrent
+          |FutureConvertersImpl - scala.concurrent.impl
           |""".stripMargin,
         saveCompletionOrder = true,
       )
@@ -577,6 +578,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
           |FutureConverters - scala.jdk
           |FutureConverters - scala.jdk.javaapi
           |CompletableFuture - java.util.concurrent
+          |FutureConvertersImpl - scala.concurrent.impl
           |""".stripMargin,
         saveCompletionOrder = true,
       )
