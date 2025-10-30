@@ -1320,6 +1320,9 @@ class MetalsGlobal(
                   ) ||
                   ownerName.contains(
                     "scala.reflect.api.Internals.InternalApi.DecoratorApi"
+                  ) ||
+                  ownerName.contains(
+                    "scala.Predef"
                   )
                 }
 
