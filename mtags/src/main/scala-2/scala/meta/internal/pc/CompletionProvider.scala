@@ -457,12 +457,12 @@ class CompletionProvider(
       selectType: Type
   ): SymbolSearch.Result = {
     val context = doLocateContext(pos)
-    
+
     def matchesType(paramType: Type, typeParams: List[Symbol]): Boolean = {
       // Special handling for type parameters - they could match any type
       val isTypeParameter = paramType.typeSymbol.isTypeParameter ||
         paramType.typeSymbol.isAbstractType
-      
+
       if (isTypeParameter) {
         true
       } else {
@@ -475,18 +475,18 @@ class CompletionProvider(
         }
       }
     }
-    
+
     def isValidImplicitExtension(sym: Symbol): Boolean = {
       // Must be a member of an implicit class
       if (!sym.safeOwner.isImplicit) return false
-      
+
       // Check if owner is accessible and static
       if (!sym.owner.isStatic) return false
-      
+
       // Get the implicit class constructor
       val ownerConstructor = sym.owner.info.member(nme.CONSTRUCTOR)
       def typeParams = sym.owner.info.typeParams
-      
+
       // Check if the implicit class can be applied to the target type
       ownerConstructor.info.paramss match {
         case List(List(param)) =>
@@ -494,7 +494,7 @@ class CompletionProvider(
         case _ => false
       }
     }
-    
+
     val visitor = new CompilerSearchVisitor(
       context,
       sym =>
@@ -502,7 +502,7 @@ class CompletionProvider(
           visit(new WorkspaceImplicitMember(sym, sym.owner))
         } else false
     )
-    
+
     search.searchMethods(query, buildTargetIdentifier, visitor)
   }
 

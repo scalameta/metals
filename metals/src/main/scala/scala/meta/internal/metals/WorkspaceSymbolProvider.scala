@@ -118,13 +118,13 @@ final class WorkspaceSymbolProvider(
     searchImplicitClassMethods(query, visitor, target)
     SymbolSearch.Result.COMPLETE
   }
-  
+
   private def isNoisyImplicitClass(classSymbol: String): Boolean = {
     classSymbol.contains("scala/collection/convert/StreamExtensions") ||
     classSymbol.contains("scala/reflect/api/Internals") ||
     classSymbol.contains("scala/Predef")
   }
-  
+
   private def searchImplicitClassMethods(
       query: String,
       visitor: SymbolSearchVisitor,
@@ -146,14 +146,14 @@ final class WorkspaceSymbolProvider(
           if member.kind == ToplevelMember.Kind.ImplicitClass
         } yield (source.toNIO, member)
     }
-    
+
     implicitClasses.foreach { case (path, implicitClass) =>
       if (!isNoisyImplicitClass(implicitClass.symbol)) {
         visitor.visitImplicitClassSymbol(
           path,
           implicitClass.symbol,
           query,
-          implicitClass.range.toLsp
+          implicitClass.range.toLsp,
         )
       }
     }

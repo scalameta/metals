@@ -169,7 +169,7 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
           visitRegularSymbol(top)
       }
     }
-    
+
     private def visitRegularSymbol(top: SymbolSearchCandidate): Int = {
       var added = 0
       for {
@@ -182,7 +182,7 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
       }
       added
     }
-    
+
     private def visitImplicitClassMethods(
         implicitClass: SymbolSearchCandidate.ImplicitClass
     ): Int = {
@@ -190,13 +190,13 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
       try {
         val implicitClassSymbol = inverseSemanticdbSymbol(implicitClass.symbol)
         val query = implicitClass.query
-        
+
         if (implicitClassSymbol != NoSymbol && implicitClassSymbol.exists) {
           implicitClassSymbol.tpe.members.foreach { extensionMethod =>
             val methodName = extensionMethod.name.decoded
             val matchesQuery =
               CompletionFuzzy.matchesSubCharacters(query, methodName)
-            
+
             if (
               matchesQuery &&
               extensionMethod.isMethod && extensionMethod.isPublic && !extensionMethod.isConstructor
@@ -207,14 +207,14 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
                   extensionMethod.name == nme.equals_ ||
                   extensionMethod.name == nme.hashCode_ ||
                   extensionMethod.name == nme.toString_
-              
+
               if (!isInheritedFromAnyVal) {
                 val isAccessible =
                   context.isAccessible(
                     extensionMethod,
                     extensionMethod.owner.thisType
                   )
-                
+
                 if (isAccessible) {
                   if (visitMember(extensionMethod)) {
                     added += 1
@@ -229,7 +229,7 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
       }
       added
     }
-    
+
     def visitClassfile(pkg: String, filename: String): Int = {
       visit(SymbolSearchCandidate.Classfile(pkg, filename))
     }
@@ -241,7 +241,7 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
     ): Int = {
       visit(SymbolSearchCandidate.Workspace(symbol, path))
     }
-    
+
     override def visitImplicitClassSymbol(
         path: Path,
         symbol: String,
