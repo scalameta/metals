@@ -436,7 +436,7 @@ class CompletionProvider(
         typedTreeAt(pos) match {
           case Select(qualifier, _)
               if qualifier.tpe != null && !qualifier.tpe.isError =>
-            findIndexedImplicitExtensionsForType(
+            findImplicitExtensionsForType(
               query,
               qualifier.tpe,
               pos,

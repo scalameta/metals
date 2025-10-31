@@ -1293,7 +1293,7 @@ class MetalsGlobal(
   /**
    * Find implicit class extension methods available for a specific type using indexed topLevel data.
    */
-  def findIndexedImplicitExtensionsForType(
+  def findImplicitExtensionsForType(
       query: String,
       targetType: Type,
       pos: Position,
