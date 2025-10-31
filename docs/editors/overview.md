@@ -326,7 +326,7 @@ pattern matches and more.
 
 See the expression type and symbol signature under the cursor.
 
-![](https://i.imgur.com/2MfQvsM.gif)
+![](https://github.com/scalameta/gh-pages-images/blob/master/metals/overview/2MfQvsM.gif?raw=true)
 
 - **Expression type**: shows the non-generic type of the highlighted expression.
 - **Symbol signature**: shows the generic signature of symbol under the cursor
@@ -336,7 +336,7 @@ See the expression type and symbol signature under the cursor.
 
 View a method signature and method overloads as you fill in the arguments.
 
-![](https://i.imgur.com/DAWIrHu.gif)
+![](https://github.com/scalameta/gh-pages-images/blob/master/metals/overview/DAWIrHu.gif?raw=true)
 
 ## Find references
 
@@ -377,7 +377,7 @@ Fuzzy search a symbol in the workspace of library dependencies by its name.
 - Queries ending with a dot `.` list nested symbols.
 - Queries containing a semicolon `;` search library dependencies.
 
-![Fuzzy symbol search example](https://i.imgur.com/w5yrK1w.gif)
+![Fuzzy symbol search example](https://github.com/scalameta/gh-pages-images/blob/master/metals/overview/w5yrK1w.gif?raw=true)
 
 ## Formatting
 
@@ -399,7 +399,7 @@ Fold ranges such as large multi-line expressions, import groups and comments.
 
 Highlight references to the same symbol in the open file.
 
-![](https://i.imgur.com/0uhc9P5.gif)
+![](https://github.com/scalameta/gh-pages-images/blob/master/metals/overview/0uhc9P5.gif?raw=true)
 
 ## Package explorer
 
@@ -413,7 +413,7 @@ tree representation of tests. Although it was implemented in order to use Visual
 Studio Code's
 [Testing API](https://code.visualstudio.com/api/extension-guides/testing). The
 Test Explorer API is editor agnostic and can be used by other editors than just
-VS Code. ![test-explorer](https://i.imgur.com/Z3VtS0O.gif)
+VS Code. ![test-explorer](https://github.com/scalameta/gh-pages-images/blob/master/metals/overview/Z3VtS0O.gif?raw=true)
 
 Work on the Test Explorer is still in progress and the feature has some known
 limitations:

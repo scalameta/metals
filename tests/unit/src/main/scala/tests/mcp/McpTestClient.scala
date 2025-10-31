@@ -135,4 +135,5 @@ class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext) {
     params.put("symbolType", symbolTypes)
     callTool("typed-glob-search", params).map(_.mkString)
   }
+
 }

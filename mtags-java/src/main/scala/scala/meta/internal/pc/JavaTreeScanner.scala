@@ -9,6 +9,7 @@ import com.sun.source.tree.IdentifierTree
 import com.sun.source.tree.ImportTree
 import com.sun.source.tree.MemberReferenceTree
 import com.sun.source.tree.MemberSelectTree
+import com.sun.source.tree.MethodTree
 import com.sun.source.tree.NewClassTree
 import com.sun.source.tree.Tree
 import com.sun.source.tree.VariableTree
@@ -110,6 +111,11 @@ class JavaTreeScanner(
     visitNode(node, p, super.visitClass)
   }
 
+  override def visitMethod(node: MethodTree, p: CursorPosition): TreePath = {
+
+    visitNode(node, p, super.visitMethod)
+  }
+
   override def visitNewClass(
       node: NewClassTree,
       p: CursorPosition
@@ -120,7 +126,7 @@ class JavaTreeScanner(
 
     if (start <= p.start && p.end <= end) {
       lastVisitedParentTrees = getCurrentPath :: lastVisitedParentTrees
-      getCurrentPath
+      super.visitNewClass(node, p)
     } else {
       super.visitNewClass(node, p)
       visitNode(node, p, super.visitNewClass)

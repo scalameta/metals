@@ -65,7 +65,7 @@ it. But, this was time-consuming and not always beginner friendly.
 Now, Metals provides auto-completion for extension methods and automatically
 imports them!
 
-![extension-methods](https://i.imgur.com/EAbVHeH.gif)
+![extension-methods](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-08-10-aluminium/EAbVHeH.gif?raw=true)
 
 ## [Scala 3] Convert to Named Parameters code action
 
@@ -74,7 +74,7 @@ imports them!
 Thanks to the contribution by [@jkciesluk](https://github.com/jkciesluk), this
 feature is now available for Scala 3!
 
-![convert-to-named](https://i.imgur.com/9i7MWoQ.gif)
+![convert-to-named](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-08-10-aluminium/9i7MWoQ.gif?raw=true)
 
 ## [Scala 3] Scaladoc completion
 
@@ -82,7 +82,7 @@ Metals now supports offering Scaladoc completions in Scala 3. When typing `/**`
 you get an option to auto-complete a scaladoc template for methods, classes,
 etc.!
 
-![scala-doc-completion](https://i.imgur.com/MEJUXr3.gif)
+![scala-doc-completion](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-08-10-aluminium/MEJUXr3.gif?raw=true)
 
 ## [Scala 3] Completions in string interpolation
 
@@ -92,7 +92,7 @@ possible to get an automatic conversion to string interpolation when typing
 `$value`, as well as automatic wrapping in `{}` when accessing members of such
 value.
 
-![scala3-interpolation](https://i.imgur.com/EyFKpiv.gif)
+![scala3-interpolation](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-08-10-aluminium/EyFKpiv.gif?raw=true)
 
 ## [Scala 2] Automatically import types in string interpolations
 
@@ -103,7 +103,7 @@ something from another package, you would need to do it manually.
 This problem is now resolved. Users can easily get such symbols automatically
 imported, which creates a seamless workflow.
 
-![scala2-inteprolation](https://i.imgur.com/cCWTQnj.gif)
+![scala2-inteprolation](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-08-10-aluminium/cCWTQnj.gif?raw=true)
 
 The feature is also being worked on for Scala 3.
 

@@ -163,6 +163,7 @@ class ProjectMetalsLspService(
     folder,
     warnings,
     languageClient,
+    () => userConfig,
   )
 
   protected val bloopServers: BloopServers = new BloopServers(
@@ -263,6 +264,7 @@ class ProjectMetalsLspService(
     languageClient,
     buildTargets,
     scalaVersionSelector,
+    compilations,
   )
 
   def startMcpServer(): Future[Unit] =

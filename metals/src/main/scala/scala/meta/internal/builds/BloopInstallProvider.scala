@@ -1,6 +1,5 @@
 package scala.meta.internal.builds
 import java.io.IOException
-import java.nio.file.Files
 
 import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -27,12 +26,11 @@ trait BloopInstallProvider extends BuildTool {
     val bloopDir = projectRoot.resolve(".bloop")
     try {
       if (bloopDir.exists && bloopDir.isDirectory) {
-        bloopDir.toFile.listFiles().foreach { file =>
+        bloopDir.list.foreach { file =>
           if (
-            file.isFile() && file.getName().endsWith(".json") && file
-              .getName() != "bloop.settings.json"
+            file.isFile && file.isJson && file.filename != "bloop.settings.json"
           ) {
-            Files.delete(file.toPath())
+            file.delete()
           }
         }
       }

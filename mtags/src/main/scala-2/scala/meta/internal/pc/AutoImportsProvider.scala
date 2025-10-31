@@ -1,5 +1,7 @@
 package scala.meta.internal.pc
 
+import java.util.Optional
+
 import scala.collection.mutable
 
 import scala.meta.internal.jdk.CollectionConverters._
@@ -23,6 +25,14 @@ final class AutoImportsProvider(
       cursor = Some(params.offset())
     )
     val pos = unit.position(params.offset)
+    // macros might break it, see https://github.com/scalameta/metals/issues/2006
+    val shouldApplyNameEdit =
+      if (pos.start + name.length() < params.text().length()) {
+        val foundName =
+          params.text().substring(pos.start, pos.start + name.length())
+        foundName == name
+      } else false
+
     // make sure the compilation unit is loaded
     typedTreeAt(pos)
 
@@ -100,7 +110,12 @@ final class AutoImportsProvider(
               value
             )
             val nameEdit = new l.TextEdit(namePos, short)
-            nameEdit :: edits
+
+            if (short != name && shouldApplyNameEdit) {
+              nameEdit :: edits
+            } else {
+              edits
+            }
         }
         if (edits.isEmpty) {
           val trees = lastVisitedParentTrees
@@ -111,7 +126,14 @@ final class AutoImportsProvider(
             s"Could not infer edits for $pkg, tree around the position were $trees, auto import position was ${importPosition}"
           )
         }
-        (AutoImportsResultImpl(pkg, edits.asJava), sym)
+        (
+          AutoImportsResultImpl(
+            pkg,
+            edits.asJava,
+            Optional.of(semanticdbSymbol(sym))
+          ),
+          sym
+        )
     }
 
     all match {

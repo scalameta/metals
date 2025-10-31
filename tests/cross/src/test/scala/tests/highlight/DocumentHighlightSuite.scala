@@ -1157,6 +1157,19 @@ class DocumentHighlightSuite extends BaseDocumentHighlightSuite {
   )
 
   check(
+    "implicit-class-long".tag(IgnoreScalaVersion.forLessThan("2.13.16")),
+    """|object Foo {
+       |  implicit class Xtension(s: String) {
+       |    def <<someVeryyyyyyLongName>>(suffix: String = "suf"): String = ???
+       |  }
+       |  
+       |  val y = "abc".<<someV@@eryyyyyyLongName>>()
+       |  
+       |}
+       |""".stripMargin
+  )
+
+  check(
     "destruct-tuple".tag(IgnoreScalaVersion.forLessThan("2.13.17")),
     """|object O {
        |  val (<<f@@oo>>, bar) = (???, ???)

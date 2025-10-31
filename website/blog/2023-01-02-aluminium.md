@@ -125,7 +125,7 @@ The first experiment within that area was done by
 you will see a warning whenever a library has a newer version available and
 you'll have a quick fix suggested via code action.
 
-![actionable](https://i.imgur.com/3D9WcQb.gif) These warnings can be disabled
+![actionable](https://github.com/scalameta/gh-pages-images/blob/master/metals/2023-01-02-aluminium/3D9WcQb.gif?raw=true) These warnings can be disabled
 within ScalaCLi using:
 
 ```
@@ -166,7 +166,7 @@ always easy and convenient to do that. From now on Metals also allows users to
 use the `go to type definition` feature within all the supported editors. User
 will be able to go directly to the type of a particular symbol.
 
-![type-def](https://i.imgur.com/t77kB1S.gif)
+![type-def](https://github.com/scalameta/gh-pages-images/blob/master/metals/2023-01-02-aluminium/t77kB1S.gif?raw=true)
 
 This feature might work a bit differently depending on the symbol you are
 checking:
@@ -190,7 +190,7 @@ Java command to run within the code lenses, that can be used by the editors. It
 currently works with VS Code and it will run main classes within the task
 terminal.
 
-![run-main](https://i.imgur.com/tXfSSj7.gif)
+![run-main](https://github.com/scalameta/gh-pages-images/blob/master/metals/2023-01-02-aluminium/tXfSSj7.gif?raw=true)
 
 In next release, we also plan to use the same mechanism for running main classes
 from all the other places. We also want to make tests runnable without the
@@ -207,7 +207,7 @@ which can't be used outside the current file.
 Metals will now allow users to rename any local code irrelevant of whether the
 workspace was compiled or not.
 
-![rename-local](https://i.imgur.com/EEKchJB.gif)
+![rename-local](https://github.com/scalameta/gh-pages-images/blob/master/metals/2023-01-02-aluminium/EEKchJB.gif?raw=true)
 
 When renaming symbols that might be use outside the current file the previous
 limitations will apply.
@@ -217,7 +217,7 @@ limitations will apply.
 Thanks to [lwronski](https://github.com/lwronski) it's now possible to run and
 debug scripts when using Scala CLI.
 
-![script-debug](https://i.imgur.com/bwfoEFY.gif)
+![script-debug](https://github.com/scalameta/gh-pages-images/blob/master/metals/2023-01-02-aluminium/bwfoEFY.gif?raw=true)
 
 For running scripts without debugging we will also provide the possibility of
 using the explicit Java command to run from code lenses.

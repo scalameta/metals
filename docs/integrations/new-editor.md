@@ -651,7 +651,7 @@ Metals has an optional web interface that can be used to trigger server commands
 and respond to server requests. This interface is not intended for regular
 users, it exists only to help editor plugin authors integrate with Metals.
 
-![Metals http client](https://i.imgur.com/t5RJ3q6.png)
+![Metals http client](https://github.com/scalameta/gh-pages-images/blob/master/metals/new-editor/t5RJ3q6.png?raw=true)
 
 The server is enabled by passing the `-Dmetals.http=on` system property. The
 server runs by default at [`http://localhost:5031`](http://localhost:5031/).
@@ -694,7 +694,7 @@ In general, Metals uses status notifications to update the user about ongoing
 events in the server such as batch compilation in the build server or when a
 successful connection was established with the build server.
 
-![Metals status bar](https://i.imgur.com/XX9CLRH.gif)
+![Metals status bar](https://github.com/scalameta/gh-pages-images/blob/master/metals/new-editor/XX9CLRH.gif?raw=true)
 
 The "🚀 Imported build" and "🔄 Compiling explorer" messages at the bottom of
 the window are `metals/status` notifications.
@@ -725,7 +725,7 @@ The Metals did focus notification is sent from the client to the server when the
 editor changes focus to a new text document. Unlike `textDocument/didOpen`, the
 did focus notification is sent even when the text document is already open.
 
-![Metals did focus](https://i.imgur.com/XjTtAZK.gif)
+![Metals did focus](https://github.com/scalameta/gh-pages-images/blob/master/metals/new-editor/XjTtAZK.gif?raw=true)
 
 Observe that the compilation error appears as soon as `UserTest.scala` is
 focused even if the text document was already open before. The LSP

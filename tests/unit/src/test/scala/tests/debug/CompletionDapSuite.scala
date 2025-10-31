@@ -184,9 +184,9 @@ class CompletionDapSuite
     "single-dot",
     expression = "Main.@@",
     expectedCompletions = """|name: Option[String]
-                             |args: Array[String]
                              |executionStart: Long
                              |main(args: Array[String]): Unit
+                             |delayedInit(body: => Unit): Unit
                              |""".stripMargin,
     expectedEdit = "Main.name",
     topLines = Some(4),

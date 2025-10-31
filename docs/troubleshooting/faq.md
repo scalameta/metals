@@ -17,7 +17,7 @@ additional parameter for starting Metals server.
 
 ## I'm using Scala 2.13.x but doctor shows me `*-build` and `*-build-build` at 2.12.x
 
-![build-build-doctor](https://i.imgur.com/mgnRXse.png)
+![build-build-doctor](https://github.com/scalameta/gh-pages-images/blob/master/metals/faq/mgnRXse.png?raw=true)
 
 When using sbt and Metals you get completions and hovers in your sbt build
 files. This is done by extra BSP connections with Bloop. So your build is
@@ -34,7 +34,7 @@ see this in the Doctor since sbt does not yet have sbt file support._
 
 ## Why do I see this popup about Bloop when I upgrade?
 
-![update-bloop](https://i.imgur.com/0rtoIxy.png)
+![update-bloop](https://github.com/scalameta/gh-pages-images/blob/master/metals/faq/0rtoIxy.png?raw=true)
 
 Sometimes when you update to the latest version of Metals you will see this
 popup. Remember that [Bloop](https://scalacenter.github.io/bloop/) runs in the
@@ -87,11 +87,11 @@ Worksheet code is entirely wrapped in a class (`class MdocApp`). The class wrapp
 
 If worksheet evaluation times out, you can also increase the timeout by setting `-Dmetals.worksheet-timeout=<number of seconds>` server property:
 
-![worksheet-timeout](https://i.imgur.com/v2GEanF.png)
+![worksheet-timeout](https://github.com/scalameta/gh-pages-images/blob/master/metals/faq/v2GEanF.png?raw=true)
 
 ## Why do I get a warning to save my file when I try to organize imports?
 
-![organize-imports-warning](https://i.imgur.com/g8d82bV.png)
+![organize-imports-warning](https://github.com/scalameta/gh-pages-images/blob/master/metals/faq/g8d82bV.png?raw=true)
 
 You'll currently see this if you try to use your editor action to organize
 imports. You'll also see this if you use the following setting in VS Code.

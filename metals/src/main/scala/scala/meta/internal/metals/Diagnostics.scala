@@ -352,9 +352,10 @@ final class Diagnostics(
 
   // Adjust positions for type errors for changes in the open buffer.
   // Only needed when merging syntax errors with type errors.
-  private def toFreshDiagnostic(
+  def toFreshDiagnostic(
       path: AbsolutePath,
       d: Diagnostic,
+      fallbackToNearest: Boolean = true,
   ): Option[Diagnostic] = {
     val snapshot = snapshots.get(path)
     snapshot match {
@@ -365,6 +366,7 @@ final class Diagnostics(
           .toRevised(
             range = d.getRange,
             adjustWithinToken = shouldAdjustWithinToken(d),
+            fallbackToNearest = fallbackToNearest,
           )
           .map { range =>
             val ld = new l.Diagnostic(

@@ -381,12 +381,6 @@ abstract class MetalsLspService(
     buildTargets,
   )
 
-  protected val javaHighlightProvider: JavaDocumentHighlightProvider =
-    new JavaDocumentHighlightProvider(
-      definitionProvider,
-      semanticdbs,
-    )
-
   protected def onCreate(path: AbsolutePath): Unit = {
     buildTargets.onCreate(path)
     compilers.didChange(path, false)
@@ -911,7 +905,6 @@ abstract class MetalsLspService(
         val fingerprint = fingerprints.add(path, FileIO.slurp(path, charset))
         (path, fingerprint)
       }
-
     Future
       .sequence(
         List(
@@ -993,12 +986,9 @@ abstract class MetalsLspService(
   override def documentHighlights(
       params: TextDocumentPositionParams
   ): CompletableFuture[util.List[DocumentHighlight]] = {
-    if (params.getTextDocument.getUri.toAbsolutePath.isJava)
-      CancelTokens { _ => javaHighlightProvider.documentHighlight(params) }
-    else
-      CancelTokens.future { token =>
-        compilers.documentHighlight(params, token)
-      }
+    CancelTokens.future { token =>
+      compilers.documentHighlight(params, token)
+    }
   }
 
   override def documentSymbol(
@@ -1294,7 +1284,7 @@ abstract class MetalsLspService(
         )
         applyEdits(
           params.textDocument.getUri(),
-          optEdit.toList ++ didPasteEdits,
+          optEdit ++ didPasteEdits,
         )
       }
   }

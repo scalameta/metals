@@ -949,6 +949,9 @@ class MetalsMcpServer(
         |    },
         |    "targets": {
         |      "type": "array",
+        |      "items": {
+        |        "type": "string"
+        |      },
         |      "description": "The targets to run the rule on, if empty will run on the last focused target"
         |    },
         |    "sampleCode": {
@@ -1090,7 +1093,7 @@ class MetalsMcpServer(
       """{
         |  "type": "object",
         |  "properties": { }
-        |} 
+        |}
         |""".stripMargin
     new AsyncToolSpecification(
       new Tool(
@@ -1100,7 +1103,7 @@ class MetalsMcpServer(
       ),
       withErrorHandling { (_, _) =>
         Future {
-          val allRules = scalafixLlmRuleProvider.allRules
+          val allRules = ScalafixLlmRuleProvider.allRules(projectPath)
           val content =
             allRules.toList.sortBy(_._1).map { case (ruleName, description) =>
               s"- $ruleName: $description"

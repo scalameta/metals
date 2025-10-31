@@ -8,6 +8,7 @@ import scala.concurrent.duration._
 import scala.meta._
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersionSelector
@@ -15,7 +16,7 @@ import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.ScalafixProvider
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.metals.mcp.ScalafixLlmRuleProvider.RunResult
+import scala.meta.internal.metals.mcp.ScalafixLlmRuleProvider.ScalafixRunResult
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.io.AbsolutePath
 
@@ -30,6 +31,7 @@ class ScalafixLlmRuleProvider(
     metalsClient: MetalsLanguageClient,
     buildTargets: BuildTargets,
     scalaVersionSelector: ScalaVersionSelector,
+    compilations: Compilations,
 )(implicit ec: ExecutionContext) {
   private val rulesDirectory = workspace.resolve(Directories.rules)
   private case class ScalafixRule(name: String, dep: Dependency)
@@ -62,18 +64,18 @@ class ScalafixLlmRuleProvider(
     parsed
       .collect {
         case Init.After_4_6_0(
-              Type.Name("SemanticRule"),
+              Type.Name(className),
               _,
               List(
                 Term.ArgClause(
                   List(
-                    Lit.String(name)
+                    Lit.String(stringValue)
                   ),
                   _,
                 )
               ),
-            ) =>
-          name
+            ) if className == "SemanticRule" || className == "SyntacticRule" =>
+          stringValue
       }
       .headOption
       .toRight(s"Could not detect rule name in:\n $ruleImplementation")
@@ -100,7 +102,7 @@ class ScalafixLlmRuleProvider(
   private def packageNameFromSource(parsed: Source): String =
     parsed match {
       case Source(List(Pkg(name, _))) =>
-        name.syntax
+        name.syntax + "."
       case _ =>
         ""
     }
@@ -132,7 +134,7 @@ class ScalafixLlmRuleProvider(
 
       val metadataFile =
         ruleDir.resolve(s"resources/META-INF/services/scalafix.v1.Rule")
-      metadataFile.writeText(s"$packageName.$className")
+      metadataFile.writeText(s"$packageName$className")
       scribe.debug(s"Wrote the rule definition to $metadataFile")
 
       val readmeFile = ruleDir.resolve("README.md")
@@ -167,7 +169,7 @@ class ScalafixLlmRuleProvider(
           Right(
             ScalafixRule(
               ruleName,
-              createDependency(ruleName, binaryVersion),
+              ScalafixLlmRuleProvider.createDependency(ruleName, binaryVersion),
             )
           )
         case None =>
@@ -184,15 +186,19 @@ class ScalafixLlmRuleProvider(
       description: String,
       targets: List[String],
       files: List[AbsolutePath],
-  ): Future[Either[String, RunResult]] = {
+  ): Future[Either[String, ScalafixRunResult]] = {
     val publishedBuffer = TrieMap.empty[String, Dependency]
-    val allTargets = targets.flatMap { targetName =>
-      buildTargets
-        .findByDisplayName(targetName)
-        .flatMap(bd => buildTargets.scalaTarget(bd.getId()))
-        .collect {
-          case scalaTarget if !scalaTarget.isSbt => scalaTarget
-        }
+    val allTargets = if (targets.isEmpty) {
+      buildTargets.allScala.toList
+    } else {
+      targets.flatMap { targetName =>
+        buildTargets
+          .findByDisplayName(targetName)
+          .flatMap(bd => buildTargets.scalaTarget(bd.getId()))
+          .collect {
+            case scalaTarget if !scalaTarget.isSbt => scalaTarget
+          }
+      }
     }
     val allScalaVersions = allTargets.map(_.scalaVersion).toSet
     def loop(
@@ -213,48 +219,38 @@ class ScalafixLlmRuleProvider(
           }
         case Nil => Right(name)
       }
-    loop(allScalaVersions.toList, "") match {
-      case Left(error) => Future.successful(Left(error))
-      case Right(publishedRuleName) =>
-        runScalafixRuleForAllTargets(publishedRuleName, files)
-          .map { changeWasApplied =>
-            if (changeWasApplied) {
-              Right(RunResult(publishedRuleName, changeWasApplied))
-            } else {
-              Left("No changes were made for rule " + publishedRuleName)
-            }
+    if (allScalaVersions.isEmpty) {
+      Future.successful(Left("No Scala versions found"))
+    } else {
+      loop(allScalaVersions.toList, "") match {
+        case Left(error) => Future.successful(Left(error))
+        case Right(publishedRuleName) =>
+          compilations.compileTargets(allTargets.map(_.id)).flatMap { _ =>
+            runScalafixRuleForAllTargets(publishedRuleName, files)
+              .map { scalafixRunResult =>
+                if (scalafixRunResult.changeWasApplied) {
+                  Right(scalafixRunResult)
+                } else {
+                  val tried = scalafixRunResult.files
+                    .map(_.toRelative(workspace))
+                    .mkString("\n")
+                  Left(
+                    s"No changes were made for rule $publishedRuleName\nFiles tried:\n${tried}"
+                  )
+                }
+              }
+              .recover { case error =>
+                Left(error.getMessage)
+              }
           }
-          .recover { case error =>
-            Left(error.getMessage)
-          }
+      }
     }
-  }
-
-  def allRules: Map[String, String] = {
-    val rulesDir = workspace.resolve(Directories.rules)
-    val rules = if (rulesDir.exists && rulesDir.isDirectory) {
-      rulesDir.list
-        .filter(_.isDirectory)
-        .map { ruleDir =>
-          val ruleName = ruleDir.filename
-          val readmeFile = ruleDir.resolve("README.md")
-          val description = if (readmeFile.exists) {
-            readmeFile.readTextOpt.getOrElse(ruleName)
-          } else {
-            ruleName
-          }
-          ruleName -> description
-        }
-        .toSeq
-        .toMap
-    } else Map.empty[String, String]
-    rules ++ ScalafixLlmRuleProvider.curatedRules
   }
 
   def runScalafixRuleForAllTargets(
       ruleName: String,
       runOnSources: List[AbsolutePath] = Nil,
-  ): Future[Boolean] = {
+  ): Future[ScalafixRunResult] = {
     val allTargets =
       buildTargets.allBuildTargetIds.map(buildTargets.scalaTarget).collect {
         case Some(scalaTarget) if !scalaTarget.isSbt => scalaTarget
@@ -277,14 +273,16 @@ class ScalafixLlmRuleProvider(
         dependency,
       )
     }
-    Future.sequence(allFutures.toList).map(results => results.exists(identity))
+    Future
+      .sequence(allFutures.toList)
+      .map(results => ScalafixRunResult.fromSequence(results, ruleName))
   }
 
   def runScalafixRule(
       ruleName: String,
       source: AbsolutePath,
   ): Future[Unit] = {
-    val rule = allRules.get(ruleName)
+    val rule = ScalafixLlmRuleProvider.allRules(workspace).get(ruleName)
     rule match {
       case Some(value) =>
         val scalaVersion = scalaVersionSelector.scalaVersionForPath(source)
@@ -303,25 +301,16 @@ class ScalafixLlmRuleProvider(
   ): Option[Dependency] = {
     ScalafixLlmRuleProvider.curatedRules.get(ruleName) match {
       case Some(value) => None
-      case None => Some(createDependency(ruleName, binaryVersion))
+      case None =>
+        Some(ScalafixLlmRuleProvider.createDependency(ruleName, binaryVersion))
     }
   }
-
-  private def createDependency(
-      ruleName: String,
-      binaryVersion: String,
-  ): Dependency =
-    Dependency.of(
-      s"com.github.metals",
-      s"${ruleName}_$binaryVersion",
-      "0.1.0-SNAPSHOT",
-    )
 
   private def runScalafixRule(
       ruleName: String,
       sources: List[AbsolutePath],
       publishedRule: Option[Dependency],
-  ): Future[Boolean] = {
+  ): Future[ScalafixRunResult] = {
     val all =
       sources.filter(file => file.filename.isScala).map { file =>
         val ruleRun = publishedRule match {
@@ -343,9 +332,9 @@ class ScalafixLlmRuleProvider(
             new ApplyWorkspaceEditParams(new WorkspaceEdit(allEdits.asJava))
           )
           .asScala
-          .map(_ => true)
+          .map(_ => ScalafixRunResult(ruleName, true, sources))
       } else {
-        Future.successful(false)
+        Future.successful(ScalafixRunResult(ruleName, false, sources))
       }
     }
   }
@@ -353,7 +342,67 @@ class ScalafixLlmRuleProvider(
 }
 
 object ScalafixLlmRuleProvider {
-  case class RunResult(ruleName: String, changeWasApplied: Boolean)
+
+  case class ScalafixRunResult(
+      ruleName: String,
+      changeWasApplied: Boolean,
+      files: List[AbsolutePath],
+  )
+
+  object ScalafixRunResult {
+    def fromSequence(
+        results: List[ScalafixRunResult],
+        ruleName: String,
+    ): ScalafixRunResult = {
+      val changeWasApplied = results.exists(_.changeWasApplied)
+      val files = results.flatMap(_.files)
+      ScalafixRunResult(ruleName, changeWasApplied, files)
+    }
+  }
+  def allRules(workspace: AbsolutePath): Map[String, String] = {
+    generatedRules(workspace) ++ curatedRules
+  }
+
+  def additionalDependencies(
+      ruleNames: List[String],
+      binaryVersion: String,
+  ): Map[String, Dependency] = {
+    ruleNames
+      .map(ruleName => ruleName -> createDependency(ruleName, binaryVersion))
+      .toMap
+  }
+
+  def createDependency(
+      ruleName: String,
+      binaryVersion: String,
+  ): Dependency =
+    Dependency.of(
+      s"com.github.metals",
+      s"${ruleName}_$binaryVersion",
+      "0.1.0-SNAPSHOT",
+    )
+
+  def generatedRules(workspace: AbsolutePath): Map[String, String] = {
+    val rulesDir = workspace.resolve(Directories.rules)
+    val rules = if (rulesDir.exists && rulesDir.isDirectory) {
+      rulesDir.list
+        .filter(_.isDirectory)
+        .map { ruleDir =>
+          val ruleName = ruleDir.filename
+          val readmeFile = ruleDir.resolve("README.md")
+          val description = if (readmeFile.exists) {
+            readmeFile.readTextOpt.getOrElse(ruleName)
+          } else {
+            ruleName
+          }
+          ruleName -> description
+        }
+        .toSeq
+        .toMap
+    } else Map.empty[String, String]
+    rules
+  }
+
   // Curated list of rules that LLMs can use
   def curatedRules: Map[String, String] = {
     Map(
