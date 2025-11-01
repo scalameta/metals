@@ -1289,4 +1289,105 @@ class MetalsGlobal(
       }
     }
   }
+
+  /**
+   * Find implicit class extension methods available for a specific type using indexed topLevel data.
+   */
+  def findImplicitExtensionsForType(
+      query: String,
+      targetType: Type,
+      pos: Position,
+      visit: Member => Boolean
+  ): Unit = {
+    val context = doLocateContext(pos)
+    val implicitClassSymbols = search.queryAllImplicitClasses()
+
+    implicitClassSymbols.asScala.foreach { classSymbolStr =>
+      val implicitClassSymbol = inverseSemanticdbSymbol(classSymbolStr)
+
+      if (implicitClassSymbol != NoSymbol && implicitClassSymbol.exists) {
+        // Filter out implicit classes that introduce a lot of methods which aren't usually useful
+        val implicitClassOwner = implicitClassSymbol.owner
+        val isNoisyImplicitClass =
+          implicitClassOwner != null &&
+            implicitClassOwner != NoSymbol && {
+              val ownerName = implicitClassOwner.fullName
+              ownerName.startsWith(
+                "scala.collection.convert.StreamExtensions"
+              ) ||
+              ownerName.contains(
+                "scala.reflect.api.Internals.InternalApi.DecoratorApi"
+              ) ||
+              ownerName.contains(
+                "scala.Predef"
+              )
+            }
+
+        if (!isNoisyImplicitClass) {
+          // Get the primary constructor parameter type
+          val constructorParamTypeOpt = for {
+            ctor <-
+              implicitClassSymbol.primaryConstructor.paramss.flatten.headOption
+            paramType = ctor.tpe
+          } yield paramType
+
+          constructorParamTypeOpt match {
+            case Some(paramType) =>
+              // We assume that classes with type parameter could be matched with any type
+              val isTypeParameter = paramType.typeSymbol.isTypeParameter ||
+                paramType.typeSymbol.isAbstractType
+
+              val matches =
+                if (isTypeParameter) {
+                  true
+                } else {
+                  try {
+                    targetType <:< paramType || targetType.widen <:< paramType
+                  } catch {
+                    case NonFatal(_) => false
+                  }
+                }
+
+              if (matches) {
+                // Add (visit) all public accessible methods from the implicit class that match the query
+                implicitClassSymbol.tpe.members.foreach { extensionMethod =>
+                  val methodName = extensionMethod.name.decoded
+                  val matchesQuery =
+                    CompletionFuzzy.matchesSubCharacters(query, methodName)
+                  if (
+                    matchesQuery &&
+                    extensionMethod.isMethod && extensionMethod.isPublic && !extensionMethod.isConstructor
+                  ) {
+                    // Filter out methods inherited from AnyVal
+                    val isInheritedFromAnyVal =
+                      extensionMethod.owner == definitions.AnyValClass ||
+                        extensionMethod.name == nme.equals_ ||
+                        extensionMethod.name == nme.hashCode_ ||
+                        extensionMethod.name == nme.toString_
+
+                    if (!isInheritedFromAnyVal) {
+                      val isAccessible =
+                        context.isAccessible(
+                          extensionMethod,
+                          extensionMethod.owner.thisType
+                        )
+
+                      if (isAccessible) {
+                        visit(
+                          new WorkspaceImplicitMember(
+                            extensionMethod,
+                            implicitClassSymbol
+                          )
+                        )
+                      }
+                    }
+                  }
+                }
+              }
+            case None =>
+          }
+        }
+      }
+    }
+  }
 }
