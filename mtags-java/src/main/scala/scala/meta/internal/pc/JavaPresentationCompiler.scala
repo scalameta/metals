@@ -114,7 +114,11 @@ case class JavaPresentationCompiler(
   override def references(
       params: ReferencesRequest
   ): CompletableFuture[util.List[ReferencesResult]] =
-    CompletableFuture.completedFuture(Nil.asJava)
+    CompletableFuture.completedFuture(
+      new JavaReferencesProvider(javaCompiler, params)
+        .references()
+        .asJava
+    )
 
   override def getTasty(
       targetUri: URI,
