@@ -19,24 +19,6 @@ import play.twirl.compiler.TwirlCompiler
 
 object TwirlAdjustments {
 
-  /**
-   * Resolves a stable Scala version string for use with the Twirl compiler.
-   *
-   * For Scala 2.x versions, this trims the patch segment and returns only the major and minor version
-   * (e.g., "2.13.12" becomes "2.13"). For Scala 3.x and others, it returns the full base version
-   * without any suffixes (e.g., "3.3.1" remains "3.3.1").
-   *
-   * @param the full Scala version string (e.g., "2.13.12", "3.3.1-bin")
-   * @return a normalized Scala version string compatible with Twirl
-   */
-  private def resolveVersion(scalaVersion: String): String = {
-    val base = scalaVersion.split('-')(0)
-    base match {
-      case v if v.startsWith("2") => v.split('.').take(2).mkString(".")
-      case v => v
-    }
-  }
-
   def isPlayProject(implicit file: VirtualFile): Boolean =
     file.path.contains("views/")
 
@@ -86,7 +68,7 @@ object TwirlAdjustments {
         codec = Codec(
           scala.util.Properties.sourceEncoding
         ),
-        scalaVersion = Some(resolveVersion(scalaVersion)),
+        scalaVersion = Some(scalaVersion),
         inclusiveDot = true,
       )
 
