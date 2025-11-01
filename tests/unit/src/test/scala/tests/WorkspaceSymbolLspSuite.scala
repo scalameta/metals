@@ -7,6 +7,7 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.{BuildInfo => V}
 
 import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.WorkspaceSymbolParams
@@ -316,6 +317,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
          |scala.sys.process.ProcessImpl#Future
          |scala.jdk.FutureConverters.FutureOps
          |java.util.concurrent.FutureTask
+         |scala.concurrent.Await.FutureValue
          |java.util.concurrent.RunnableFuture
          |java.util.concurrent.ExecutorCompletionService#QueueingFuture
          |java.util.concurrent.ScheduledFuture
@@ -323,7 +325,6 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
          |scala.jdk.javaapi.FutureConverters
          |java.util.concurrent.CompletableFuture
          |java.util.concurrent.ThreadPerTaskExecutor#ThreadBoundFuture
-         |java.util.concurrent.ScheduledThreadPoolExecutor#ScheduledFutureTask
          |""".stripMargin
     else """|scala.concurrent.Future
            |scala.concurrent.Future
@@ -331,6 +332,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
            |scala.sys.process.ProcessImpl#Future
            |scala.jdk.FutureConverters.FutureOps
            |java.util.concurrent.FutureTask
+           |scala.concurrent.Await.FutureValue
            |java.util.concurrent.RunnableFuture
            |java.util.concurrent.ExecutorCompletionService#QueueingFuture
            |java.util.concurrent.ScheduledFuture
@@ -338,7 +340,6 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
            |scala.jdk.javaapi.FutureConverters
            |java.util.concurrent.CompletableFuture
            |java.util.concurrent.ScheduledThreadPoolExecutor#ScheduledFutureTask
-           |scala.concurrent.impl.FutureConvertersImpl
            |""".stripMargin
   test("excluded") {
     cleanWorkspace()
@@ -371,6 +372,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
            |scala.concurrent.Future
            |scala.sys.process.ProcessImpl#Future
            |scala.jdk.FutureConverters.FutureOps
+           |scala.concurrent.Await.FutureValue
            |scala.jdk.FutureConverters
            |scala.jdk.javaapi.FutureConverters
            |scala.concurrent.impl.FutureConvertersImpl
@@ -395,6 +397,33 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
         """|scala.<:<
            |scala.<:<
            |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("extension-symbol") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { "scalaVersion": "${V.latestScala3Next}" }
+           |}
+           |/a/src/main/scala/a/A.scala
+           |package a
+           |
+           |object A {
+           |  extension (i: Int) {
+           |    def foobar: Int = i + 1
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ = assertNoDiff(
+        server.workspaceSymbol("foobar"),
+        "a.A.foobar",
       )
     } yield ()
   }

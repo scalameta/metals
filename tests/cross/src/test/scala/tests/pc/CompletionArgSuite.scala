@@ -507,6 +507,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
     """|`type` = : Int
        |`type` = number : Int
        |`type` = number2 : Int
+       |TypeNotPresentException java.lang
        |""".stripMargin,
     topLines = Some(5)
   )
@@ -534,7 +535,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |  ___
         |}
         |""".stripMargin,
-    "foo(auto@@)",
+    "foo(autof@@)",
     "foo(argument = ${1:number}, other = ${2:hello})"
   )
 
@@ -552,7 +553,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |  ___
         |}
         |""".stripMargin,
-    "foo(auto@@)",
+    "foo(autof@@)",
     "foo(animal = ${1:dog}, furniture = ${2:chair})"
   )
 
@@ -566,7 +567,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |  ___
         |}
         |""".stripMargin,
-    "foo(auto@@)",
+    "foo(autof@@)",
     "foo(argument = ${1|???,argument,number|}, other = ${2:hello})"
   )
 
@@ -580,7 +581,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |  ___
         |}
         |""".stripMargin,
-    "foo(auto@@)",
+    "foo(autof@@)",
     "foo(argument = ${1:number}, other = ${2:???}, isTrue = ${3:???}, opt = ${4:???})"
   )
 
@@ -595,7 +596,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |  ___
         |}
         |""".stripMargin,
-    "foo(auto@@)",
+    "foo(autof@@)",
     "foo(argument = ${1|???,list4,list3|}, other = ${2|???,list2,list1|})",
     compat = Map(
       "3" -> "foo(argument = ${1|???,list3,list4|}, other = ${2|???,list1,list2|})"
@@ -611,7 +612,7 @@ class CompletionArgSuite extends BaseCompletionSuite {
         |  ___
         |}
         |""".stripMargin,
-    "f(auto@@)",
+    "f(autof@@)",
     "f(a = ${1|???,str1,str|}, b = ${2|???,str1,str|}, `type` = ${3|???,str1,str|})",
     compat = Map(
       "3" -> "f(a = ${1|???,str,str1|}, b = ${2|???,str,str1|}, `type` = ${3|???,str,str1|})"
@@ -876,10 +877,11 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |value = value : Int
        |""".stripMargin,
     compat = Map(
-      "3" ->
-        """|value = : Int
+      "2.13" ->
+        """|value: Int
+           |value = : Int
            |value = value : Int
-           |value: Int
+           |ValueOf scala
            |""".stripMargin
     ),
     topLines = Some(4)
@@ -908,15 +910,10 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|aaa = : Int
+       |AnyRef: Specializable
        |assert(assertion: Boolean): Unit
        |""".stripMargin,
-    topLines = Some(2),
-    compat = Map(
-      "3" ->
-        """|aaa = : Int
-           |assert(inline assertion: Boolean): Unit
-           |""".stripMargin
-    )
+    topLines = Some(3)
   )
 
   check(
@@ -929,15 +926,9 @@ class CompletionArgSuite extends BaseCompletionSuite {
        |}
        |""".stripMargin,
     """|aaa = : Int
-       |assert(assertion: Boolean): Unit
+       |AnyRef: Specializable
        |""".stripMargin,
-    topLines = Some(2),
-    compat = Map(
-      "3" ->
-        """|aaa = : Int
-           |assert(inline assertion: Boolean): Unit
-           |""".stripMargin
-    )
+    topLines = Some(2)
   )
 
   check(

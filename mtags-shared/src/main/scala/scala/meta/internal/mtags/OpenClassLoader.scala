@@ -5,7 +5,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import scala.collection.mutable
-import scala.util.Try
+import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.CommonMtagsEnrichments.XtensionNIOPath
@@ -48,6 +48,11 @@ final class OpenClassLoader extends URLClassLoader(Array.empty) {
   }
 
   def loadClassSafe(symbol: String): Option[Class[_]] =
-    Try(loadClass(symbol)).toOption
+    try {
+      Some(loadClass(symbol))
+    } catch {
+      case _: ClassNotFoundException => None
+      case NonFatal(_) => None
+    }
 
 }

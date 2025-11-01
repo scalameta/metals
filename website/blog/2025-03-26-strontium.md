@@ -71,7 +71,7 @@ location of the test failure was not shown, only the start of the test case.
 Now, we will correctly show the exact location of the test failure, which should
 make it easier to navigate to the failing test.
 
-![test-loc](https://i.imgur.com/JuIES78.gif)
+![test-loc](https://github.com/scalameta/gh-pages-images/blob/master/metals/2025-03-26-strontium/JuIES78.gif?raw=true)
 
 ## Convert sbt style deps on paste in for scala-cli
 
@@ -80,7 +80,7 @@ you paste into a Scala CLI file after `//> using dep` will be automatically
 converted to Scala CLI style dependencies. This was previously only supported in
 a code action, but turns out to be useful enough to apply the rewrite automatically on paste.
 
-![paste-dep](https://i.imgur.com/6BNvmmO.gif)
+![paste-dep](https://github.com/scalameta/gh-pages-images/blob/master/metals/2025-03-26-strontium/6BNvmmO.gif?raw=true)
 
 ## Add test cases discovery for TestNG
 

@@ -85,6 +85,36 @@ class FileDecoderProviderLspSuite
   )
 
   check(
+    "decode-classfile-from-jar",
+    s"""
+       |/metals.json
+       |{
+       |  "a": {
+       |    "scalaVersion": "${scala.meta.internal.metals.BuildInfo.scala213}",
+       |    "libraryDependencies": [
+       |      "org.scalameta::munit:0.7.29"
+       |    ]
+       |  }
+       |}
+       |/a/src/main/scala/a/Main.scala
+       |package a
+       |import munit.Tag
+       |
+       |object Main {
+       |  val a : Tag = null
+       |  println(a)
+       |}
+       |""".stripMargin,
+    "a/src/main/scala/a/Main.scala",
+    None,
+    "javap",
+    Right(FileDecoderProviderLspSuite.tagClassFromJar),
+    customUri = Some(
+      s"metalsDecode:jar:${coursierCacheDir.toUri}v1/https/repo1.maven.org/maven2/org/scalameta/munit_2.13/0.7.29/munit_2.13-0.7.29-sources.jar!/munit/Tag.scala.javap"
+    ),
+  )
+
+  check(
     "tasty-multiple",
     s"""|/metals.json
         |{
@@ -586,7 +616,7 @@ trait FileDecoderProviderLspSpec { self: BaseLspSuite =>
       extension: String,
       expected: Either[String, String],
       transformResult: String => String = identity,
-      customUri: Option[String] = None,
+      customUri: => Option[String] = None,
   ): Unit = check(
     testName,
     Map("somefolder" -> input),
@@ -618,6 +648,7 @@ trait FileDecoderProviderLspSpec { self: BaseLspSuite =>
       for {
         _ <- initialize(input, expectError = false)
         _ <- server.didOpen(filePath)
+        _ <- server.workspaceReferences()
         result <- server.executeDecodeFileCommand(uri)
       } yield {
         assertEquals(
@@ -1223,6 +1254,19 @@ object FileDecoderProviderLspSuite {
        |@FunctionalInterface
        |public interface LoggerFactory {
        |    Logger create(String name);
+       |}
+       |""".stripMargin
+
+  val tagClassFromJar: String =
+    """|Compiled from "Tag.scala"
+       |public class munit.Tag implements munit.internal.junitinterface.Tag,java.lang.annotation.Annotation,java.io.Serializable {
+       |  private final java.lang.String value;
+       |  public java.lang.String value();
+       |  public boolean equals(java.lang.Object);
+       |  public int hashCode();
+       |  public java.lang.Class<? extends java.lang.annotation.Annotation> annotationType();
+       |  public java.lang.String toString();
+       |  public munit.Tag(java.lang.String);
        |}
        |""".stripMargin
 

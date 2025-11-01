@@ -10,7 +10,7 @@ Metals out-of-the-box.
 
 ```
 
-![Import build](https://i.imgur.com/t5RJ3q6.png)
+![Import build](https://github.com/scalameta/gh-pages-images/blob/master/metals/sbt/t5RJ3q6.png?raw=true)
 
 The Automatic build import process for sbt happens through
 [Bloop](https://scalacenter.github.io/bloop/), a build server for Scala. Bloop

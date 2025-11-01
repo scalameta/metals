@@ -916,8 +916,8 @@ class WorkspaceLspService(
               .discoverMainClasses(unresolvedParams)
         }
         discovered.liftToLspError.asJavaObject
-      case ServerCommands.ResetWorkspace() =>
-        maybeResetWorkspace().asJavaObject
+      case ServerCommands.ResetWorkspace(force) =>
+        maybeResetWorkspace(force).asJavaObject
       case ServerCommands.RunScalafix(params) =>
         val uri = params.getTextDocument().getUri()
         getServiceFor(uri).runScalafix(uri).asJavaObject
@@ -936,6 +936,18 @@ class WorkspaceLspService(
         Future {
           doctor.executeRunDoctor()
         }.asJavaObject
+      case ServerCommands.ModuleStatusBarClicked() =>
+        focusedDocument
+          .get()
+          .zip(currentFolder)
+          .map { case (focused, service) =>
+            service.maybeImportFileAndLoad(
+              focused,
+              () => Future.successful(moduleStatus.refresh()),
+            )
+          }
+          .getOrElse(Future.successful(()))
+          .asJavaObject
       case ServerCommands.ZipReports() =>
         Future {
           val zip =
@@ -1227,6 +1239,10 @@ class WorkspaceLspService(
       case ServerCommands.MetalsPaste(params) =>
         val path = params.originDocument.getUri().toAbsolutePath
         getServiceFor(path).didPaste(params).asJavaObject
+      case ServerCommands.CopyFQNOfSymbol(params) =>
+        getServiceFor(params.getTextDocument.getUri())
+          .copyFQNOfSymbol(params)
+          .asJavaObject
       case actionCommand
           if currentOrHeadOrFallback.allActionCommandsIds(
             actionCommand.getCommand()
@@ -1472,26 +1488,65 @@ class WorkspaceLspService(
   def workspaceSymbol(query: String): Seq[lsp4j.SymbolInformation] =
     folderServices.flatMap(_.workspaceSymbol(query))
 
-  private def maybeResetWorkspace(): Future[Unit] = {
-    languageClient
-      .showMessageRequest(Messages.ResetWorkspace.params())
-      .asScala
-      .flatMap { response =>
-        if (response != null)
-          response.getTitle match {
-            case Messages.ResetWorkspace.resetWorkspace =>
-              Future
-                .sequence(folderServices.map(_.resetWorkspace()))
-                .ignoreValue
-            case _ => Future.unit
-          }
-        else {
-          Future.unit
+  private def resetAllFolders(): Future[Unit] = {
+    Future
+      .sequence(
+        folderServices.map(folder => folder.resetWorkspace().map((folder, _)))
+      )
+      .flatMap { states =>
+        val bloopProjects = states.filter { case (_, state) =>
+          state.didResetBloop
         }
+
+        val restartBloop = bloopProjects.headOption
+          .collect { case (folder, _) =>
+            folder.connect(CreateSession(shutdownBuildServer = true))
+          }
+          .getOrElse(Future.unit)
+
+        val reconnectedOtherBloopProjects = restartBloop.flatMap { _ =>
+          bloopProjects match {
+            case Nil => Future.unit
+            case _ =>
+              val restOfProjects = bloopProjects.tail.map { case (folder, _) =>
+                folder.connect(CreateSession(shutdownBuildServer = false))
+              }
+              Future.sequence(restOfProjects)
+          }
+        }
+        val restartBspServers = states
+          .filter { case (_, state) =>
+            !state.didResetBloop
+          }
+          .collect { case (folder, _) =>
+            folder.connect(CreateSession(shutdownBuildServer = true))
+          }
+        Future.sequence(reconnectedOtherBloopProjects +: restartBspServers)
       }
-      .recover { e =>
-        scribe.warn("Error requesting workspace reset", e)
-      }
+      .ignoreValue
+  }
+
+  private def maybeResetWorkspace(force: Boolean): Future[Unit] = {
+    if (force) {
+      resetAllFolders()
+    } else {
+      languageClient
+        .showMessageRequest(Messages.ResetWorkspace.params())
+        .asScala
+        .flatMap { response =>
+          if (response != null)
+            response.getTitle match {
+              case Messages.ResetWorkspace.resetWorkspace => resetAllFolders()
+              case _ => Future.unit
+            }
+          else {
+            Future.unit
+          }
+        }
+        .recover { e =>
+          scribe.warn("Error requesting workspace reset", e)
+        }
+    }
   }
 
 }

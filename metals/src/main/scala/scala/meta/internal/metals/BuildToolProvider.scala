@@ -14,13 +14,15 @@ import scala.meta.io.AbsolutePath
 class BuildToolProvider(
     buildTools: BuildTools,
     tables: Tables,
-    folder: AbsolutePath,
+    val folder: AbsolutePath,
     warnings: ProjectWarnings,
     languageClient: MetalsLanguageClient,
+    userConfig: () => UserConfiguration,
 )(implicit ec: ExecutionContext) {
   private val buildToolSelector: BuildToolSelector = new BuildToolSelector(
     languageClient,
     tables,
+    userConfig,
   )
 
   def buildTool: Option[BuildTool] =

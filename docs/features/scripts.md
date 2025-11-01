@@ -10,7 +10,7 @@ not `*.worksheet.sc` or a build server has not already started for it, users
 will be prompted to use [Scala CLI](https://scala-cli.virtuslab.org/) to power
 the script.
 
-![scala-cli](https://i.imgur.com/ghR1Src.gif)
+![scala-cli](https://github.com/scalameta/gh-pages-images/blob/master/metals/scripts/ghR1Src.gif?raw=true)
 
 Scripts are usually used for smaller programs and the main difference is that
 statements can be put on top level without a need for additional objects or

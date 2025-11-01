@@ -9,7 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-integration" at
   "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
-def localSnapshotVersion = "1.6.3-SNAPSHOT"
+def localSnapshotVersion = "1.6.4-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 
@@ -219,6 +219,12 @@ val sharedSettings = sharedJavacOptions ++ sharedScalacOptions ++ List(
       )
     ),
   ),
+  libraryDependencies ++= {
+    if (isCI) Nil
+    // NOTE(olafur) pprint is indispensable for me while developing, I can't
+    // use println anymore for debugging because pprint.log is 100 times better.
+    else List("com.lihaoyi" %% "pprint" % V.pprint)
+  },
   scalacOptions ++= lintingOptions(scalaVersion.value),
 )
 
@@ -261,13 +267,13 @@ lazy val mtagsShared = project
     ),
     scalacOptions ++= crossSetting(
       scalaVersion.value,
-      if213 = List("-target:8"),
+      if213 = List("-release:8", "-target:8"),
     ),
     crossVersion := CrossVersion.full,
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "4.32.0",
+      "com.google.protobuf" % "protobuf-java" % "4.32.1",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
@@ -350,12 +356,6 @@ val mtagsSettings = List(
       ),
     )
   },
-  libraryDependencies ++= {
-    if (isCI) Nil
-    // NOTE(olafur) pprint is indispensable for me while developing, I can't
-    // use println anymore for debugging because pprint.log is 100 times better.
-    else List("com.lihaoyi" %% "pprint" % V.pprint)
-  },
   buildInfoPackage := "scala.meta.internal.mtags",
   buildInfoKeys := Seq[BuildInfoKey](
     "scalaCompilerVersion" -> scalaVersion.value
@@ -411,10 +411,10 @@ lazy val metals = project
       "com.swoval" % "file-tree-views" % "2.1.12",
       // for http client
       "io.undertow" % "undertow-core" % "2.2.20.Final",
-      "org.jboss.xnio" % "xnio-nio" % "3.8.16.Final",
+      "org.jboss.xnio" % "xnio-nio" % "3.8.17.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "11.11.2",
-      "com.h2database" % "h2" % "2.3.232",
+      "org.flywaydb" % "flyway-core" % "11.14.0",
+      "com.h2database" % "h2" % "2.4.240",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
@@ -444,7 +444,7 @@ lazy val metals = project
       "com.outr" %% "scribe-file" % V.scribe,
       "com.outr" %% "scribe-slf4j2" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "4.2.1",
+      "com.lihaoyi" %% "ujson" % "4.3.2",
       // For fetching projects' templates
       "com.lihaoyi" %% "requests" % "0.9.0",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
@@ -459,8 +459,8 @@ lazy val metals = project
       // For test frameworks
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       // For MCP
-      "io.modelcontextprotocol.sdk" % "mcp" % "0.11.2",
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.19.2",
+      "io.modelcontextprotocol.sdk" % "mcp" % "0.12.1",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.20.0",
       "io.undertow" % "undertow-servlet" % "2.3.12.Final",
       // For Twirl
       "org.playframework.twirl" %% "twirl-compiler" % "2.0.9",
@@ -479,6 +479,7 @@ lazy val metals = project
       "gitter8Version" -> V.gitter8Version,
       "gradleBloopVersion" -> V.gradleBloop,
       "mavenBloopVersion" -> V.mavenBloop,
+      "sbt2Version" -> V.sbt2Version,
       "scalametaVersion" -> V.scalameta,
       "semanticdbVersion" -> V.semanticdb(scalaVersion.value),
       "javaSemanticdbVersion" -> V.javaSemanticdb,
@@ -521,7 +522,7 @@ lazy val `sbt-metals` = project
     (pluginCrossBuild / sbtVersion) := {
       scalaBinaryVersion.value match {
         case "2.12" => "1.5.8"
-        case _ => "2.0.0-M4"
+        case _ => V.sbt2Version
       }
     },
   )

@@ -40,6 +40,7 @@ final class BuildTools(
   private val lastDetectedBuildTools = new AtomicReference(
     Map.empty[String, BuildTool]
   )
+
   // NOTE: We do a couple extra check here before we say a workspace with a
   // `.bsp` is auto-connectable, and we ensure that a user has explicitly chosen
   // to use another build server besides Bloop or it's a BSP server for a build
@@ -68,7 +69,7 @@ final class BuildTools(
     bspGlobalDirectories.exists(hasJsonFile)
   }
   private def hasJsonFile(dir: AbsolutePath): Boolean = {
-    dir.list.exists(_.extension == "json")
+    dir.list.exists(_.isJson)
   }
 
   def isBazelBsp: Boolean = {
@@ -152,22 +153,19 @@ final class BuildTools(
     for {
       bspFolder <- bspFolders
       if (bspFolder.exists && bspFolder.isDirectory)
-      buildTool <- bspFolder.toFile
-        .listFiles()
+      buildTool <- bspFolder.list.toList
         .flatMap(file =>
-          if (file.isFile() && file.getName().endsWith(".json")) {
-            val absolutePath = AbsolutePath(file.toPath())
+          if (file.isFile && file.isJson) {
             for {
-              config <- BspServers.readInBspConfig(absolutePath, charset)
+              config <- BspServers.readInBspConfig(file, charset)
               if !knownBsps(config.getName())
             } yield BspOnly(
               config.getName(),
               root,
-              absolutePath,
+              file,
             )
           } else None
         )
-        .toList
     } yield buildTool
   }
 
@@ -188,15 +186,13 @@ final class BuildTools(
       case None =>
         if (isProjectRoot(workspace)) Some(workspace)
         else
-          workspace.toNIO
-            .toFile()
-            .listFiles()
+          workspace.list
             .collectFirst {
               case file
                   if file.isDirectory &&
-                    !file.getName.startsWith(".") &&
-                    isProjectRoot(AbsolutePath(file.toPath())) =>
-                AbsolutePath(file.toPath())
+                    !file.filename.startsWith(".") &&
+                    isProjectRoot(file) =>
+                file
             }
     }
   }
@@ -301,4 +297,14 @@ object BuildTools {
       explicitChoiceMade = () => false,
       charset = StandardCharsets.UTF_8,
     )
+
+  /** All known build tool executable names for configuration validation */
+  val allBuildToolNames: Set[String] = Set(
+    SbtBuildTool.name,
+    GradleBuildTool.name,
+    MavenBuildTool.name,
+    MillBuildTool.name,
+    ScalaCliBuildTool.name,
+    BazelBuildTool.name,
+  )
 }

@@ -12,7 +12,7 @@ To manually tell Metals to connect with Bloop, run the "Connect to build server"
 (id: `build.connect`) command. In VS Code, open the "Command palette"
 (`Cmd + Shift + P`) and search "connect to build server".
 
-![Import connect to build server command](https://i.imgur.com/mIR0WTe.png)
+![Import connect to build server command](https://github.com/scalameta/gh-pages-images/metals/bloop/mIR0WTe.png?raw=true)
 
 In case of any issues, it's also possible to restart a running Bloop server
 using the `Restart Bloop server` command (id: `build-restart`).

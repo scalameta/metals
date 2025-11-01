@@ -4,7 +4,7 @@ sidebar_label: Helix
 title: Helix
 ---
 
-![helix demo](https://i.imgur.com/b0sETIY.gif)
+![helix demo](https://github.com/scalameta/gh-pages-images/blob/master/metals/helix/b0sETIY.gif?raw=true)
 
 ```scala mdoc:requirements
 

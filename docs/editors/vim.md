@@ -4,7 +4,7 @@ sidebar_label: Vim
 title: Vim
 ---
 
-![nvim-metals demo](https://i.imgur.com/BglIFli.gif)
+![nvim-metals demo](https://github.com/scalameta/gh-pages-images/blob/master/metals/vim/BglIFli.gif?raw=true)
 
 While Metals works with most LSP clients for [Vim](https://www.vim.org/) and
 [Neovim](https://neovim.io/), we recommend using the dedicated Neovim plugin to

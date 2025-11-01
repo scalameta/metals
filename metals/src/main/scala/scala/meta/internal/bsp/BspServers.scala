@@ -62,7 +62,7 @@ final class BspServers(
       case availableServers =>
         val md5 = digestServerDetails(availableServers)
         val selectedServer = for {
-          name <- tables.buildServers.selectedServer(md5)
+          name <- tables.buildServers.selectedServer()
           server <- availableServers.find(_.getName == name)
         } yield server
         selectedServer match {
@@ -181,7 +181,7 @@ final class BspServers(
     val buf = List.newBuilder[AbsolutePath]
     def visit(dir: AbsolutePath): Unit =
       dir.list.foreach { p =>
-        if (p.extension == "json") {
+        if (p.isJson) {
           buf += p
         }
       }

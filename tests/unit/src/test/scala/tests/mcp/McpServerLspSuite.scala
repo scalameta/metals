@@ -1,11 +1,12 @@
 package tests.mcp
 
+import scala.meta.internal.metals.mcp.CursorEditor
 import scala.meta.internal.metals.mcp.McpConfig
 import scala.meta.internal.metals.mcp.McpMessages
 import scala.meta.internal.metals.mcp.NoClient
 import scala.meta.internal.metals.mcp.SymbolType
-import scala.meta.internal.metals.mcp.VSCodeEditor
 
+import munit.Location
 import tests.BaseLspSuite
 
 class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
@@ -107,100 +108,144 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
     } yield ()
   }
 
-  test("run-scalafix-rule") {
-    cleanWorkspace()
-    val initial =
-      """|package com.example
-         |
-         |object Hello { 
-         |  val str = "John"
-         |  def main(args: Array[String]): Unit = println(str)
-         |}
-         |""".stripMargin
-    val expectedResult =
-      """|package com.example
-         |
-         |object Hello { 
-         |  val str = "Johnatan"
-         |  def main(args: Array[String]): Unit = println(str)
-         |}
-         |""".stripMargin
-    for {
-      _ <- initialize(
-        s"""
-           |/metals.json
-           |{"a": {}}
-           |/a/src/main/scala/com/example/Hello.scala
-           |$initial
-           |""".stripMargin
-      )
-      _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
-      client <- startMcpServer()
-      result <- client.generateScalafixRule(
-        "ReplaceJohnWithJohnatan",
-        """|
-           |package fix
+  def checkScalafixRule(
+      testName: String,
+      input: String,
+      expectedMessage: String,
+      expectedRules: String,
+  )(implicit loc: Location): Unit = {
+    test(testName) {
+      cleanWorkspace()
+      val initial =
+        """|package com.example
            |
-           |import scalafix.v1._
-           |import scala.meta._
-           |
-           |class ReplaceJohnWithJohnatan extends SemanticRule("ReplaceJohnWithJohnatan") {
-           |  override def fix(implicit doc: SemanticDocument): Patch = {
-           |    doc.tree.collect {
-           |      case lit @ Lit.String(value) if value.contains("John") =>
-           |        val newValue = value.replace("John", "\"Johnatan\"")
-           |        Patch.replaceTree(lit, newValue)
-           |    }.asPatch
-           |  }
+           |object Hello { 
+           |  val str = "John"
+           |  def main(args: Array[String]): Unit = println(str)
            |}
+           |""".stripMargin
+      val expectedResult =
+        """|package com.example
            |
-           |""".stripMargin,
-        "Replaces John with Johnatan",
-      )
-      _ = assertNoDiff(
-        result,
-        """|Created and ran Scalafix rule ReplaceJohnWithJohnatan successfully
-           |""".stripMargin,
-      )
-      _ = assertNoDiff(
-        server.buffers
-          .get(workspace.resolve("a/src/main/scala/com/example/Hello.scala"))
-          .get,
-        expectedResult,
-      )
-      // Test listing scalafix rules after creating one
-      rules <- client.listScalafixRules()
-      _ = assertNoDiff(
-        rules,
-        """|Available scalafix rules:
-           |- ExplicitResultTypes: Inserts type annotations for inferred public members.
-           |- OrganizeImports: Organize import statements, used for source.organizeImports code action
-           |- ProcedureSyntax: Replaces deprecated Scala 2.x procedure syntax with explicit ': Unit ='
-           |- RedundantSyntax: Removes redundant syntax such as `final` modifiers on an object
-           |- RemoveUnused: Removes unused imports and terms that reported by the compiler under -Wunused
-           |- ReplaceJohnWithJohnatan: Replaces John with Johnatan
-           |""".stripMargin,
-      )
-      _ <- server.didChange("a/src/main/scala/com/example/Hello.scala") {
-        _.replace("Johnatan", "John")
-      }
-      _ <- server.didSave("a/src/main/scala/com/example/Hello.scala")
-      _ = assertNoDiff(
-        server.buffers
-          .get(workspace.resolve("a/src/main/scala/com/example/Hello.scala"))
-          .get,
-        initial,
-      )
-      _ <- client.runScalafixRule("ReplaceJohnWithJohnatan")
-      _ = assertNoDiff(
-        server.buffers
-          .get(workspace.resolve("a/src/main/scala/com/example/Hello.scala"))
-          .get,
-        expectedResult,
-      )
-      _ <- client.shutdown()
-    } yield ()
+           |object Hello { 
+           |  val str = "Johnatan"
+           |  def main(args: Array[String]): Unit = println(str)
+           |}
+           |""".stripMargin
+      for {
+        _ <- initialize(
+          s"""
+             |/metals.json
+             |{"a": {}}
+             |/a/src/main/scala/com/example/Hello.scala
+             |$initial
+             |""".stripMargin
+        )
+        _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
+        client <- startMcpServer()
+        result <- client.generateScalafixRule(
+          input,
+          "Replaces John with Johnatan",
+        )
+        _ = assertNoDiff(
+          result,
+          expectedMessage,
+        )
+        _ = assertNoDiff(
+          server.buffers
+            .get(workspace.resolve("a/src/main/scala/com/example/Hello.scala"))
+            .get,
+          expectedResult,
+        )
+        // Test listing scalafix rules after creating one
+        rules <- client.listScalafixRules()
+        _ = assertNoDiff(
+          rules,
+          expectedRules,
+        )
+        _ <- server.didChange("a/src/main/scala/com/example/Hello.scala") {
+          _.replace("Johnatan", "John")
+        }
+        _ <- server.didSave("a/src/main/scala/com/example/Hello.scala")
+        _ = assertNoDiff(
+          server.buffers
+            .get(workspace.resolve("a/src/main/scala/com/example/Hello.scala"))
+            .get,
+          initial,
+        )
+        _ <- client.runScalafixRule("ReplaceJohnWithJohnatan")
+        _ = assertNoDiff(
+          server.buffers
+            .get(workspace.resolve("a/src/main/scala/com/example/Hello.scala"))
+            .get,
+          expectedResult,
+        )
+        _ <- client.shutdown()
+      } yield ()
+    }
   }
+
+  checkScalafixRule(
+    "replace-john-with-johnatan-simple",
+    """|
+       |package fix
+       |
+       |import scalafix.v1._
+       |import scala.meta._
+       |
+       |class ReplaceJohnWithJohnatan extends SemanticRule("ReplaceJohnWithJohnatan") {
+       |  override def fix(implicit doc: SemanticDocument): Patch = {
+       |    doc.tree.collect {
+       |      case lit @ Lit.String(value) if value.contains("John") =>
+       |        val newValue = value.replace("John", "\"Johnatan\"")
+       |        Patch.replaceTree(lit, newValue)
+       |    }.asPatch
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|Created and ran Scalafix rule ReplaceJohnWithJohnatan successfully
+       |""".stripMargin,
+    """|Available scalafix rules:
+       |- ExplicitResultTypes: Inserts type annotations for inferred public members.
+       |- OrganizeImports: Organize import statements, used for source.organizeImports code action
+       |- ProcedureSyntax: Replaces deprecated Scala 2.x procedure syntax with explicit ': Unit ='
+       |- RedundantSyntax: Removes redundant syntax such as `final` modifiers on an object
+       |- RemoveUnused: Removes unused imports and terms that reported by the compiler under -Wunused
+       |- ReplaceJohnWithJohnatan: Replaces John with Johnatan
+       |""".stripMargin,
+  )
+
+  checkScalafixRule(
+    "replace-john-with-johnatan-mismatch",
+    """|
+       |package fix
+       |
+       |import scalafix.v1._
+       |import scala.meta._
+       |
+       |class ReplacerClass extends SemanticRule("Replacer") {
+       |  override def fix(implicit doc: SemanticDocument): Patch = {
+       |    doc.tree.collect {
+       |      case lit @ Lit.String(value) if value.contains("John") =>
+       |        val newValue = value.replace("John", "\"Johnatan\"")
+       |        Patch.replaceTree(lit, newValue)
+       |    }.asPatch
+       |  }
+       |}
+       |
+       |""".stripMargin,
+    """|Created and ran Scalafix rule Replacer successfully
+       |""".stripMargin,
+    """|Available scalafix rules:
+       |- ExplicitResultTypes: Inserts type annotations for inferred public members.
+       |- OrganizeImports: Organize import statements, used for source.organizeImports code action
+       |- ProcedureSyntax: Replaces deprecated Scala 2.x procedure syntax with explicit ': Unit ='
+       |- RedundantSyntax: Removes redundant syntax such as `final` modifiers on an object
+       |- RemoveUnused: Removes unused imports and terms that reported by the compiler under -Wunused
+       |- Replacer: Replaces John with Johnatan
+       |""".stripMargin,
+  )
 
   test("list-scalafix-rules") {
     cleanWorkspace()
@@ -252,7 +297,6 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
       client <- startMcpServer()
       // Test with no rules present
       result <- client.generateScalafixRule(
-        "ReplaceJohnWithJohnatan",
         """|
            |package fix
            |
@@ -273,9 +317,12 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
         "Converts John to Johnatan",
         Some(sampleCode),
       )
+      path = RelativePath("a/src/main/scala/com/example/Hello.scala")
       _ = assertNoDiff(
         result,
         s"""|Error: No changes were made for rule ReplaceJohnWithJohnatan
+            |Files tried:
+            |$path
             |Sample code structure: ${sampleCode.parse[Stat].get.structure}
             |""".stripMargin,
       )
@@ -386,7 +433,7 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
   override def afterEach(context: AfterEach): Unit = {
     super.afterEach(context)
     assertEquals(
-      McpConfig.readPort(server.workspace, "root", VSCodeEditor),
+      McpConfig.readPort(server.workspace, "root", CursorEditor),
       None,
     )
     assert(

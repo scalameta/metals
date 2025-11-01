@@ -66,7 +66,8 @@ class FindTextInDependencyJarsSuite
       assertLocations(
         jdkLocations, {
           val line =
-            if (isJava21) 1487
+            if (isJava24) 1545
+            else if (isJava21) 1487
             else if (
               SemVer.isCompatibleVersion(
                 "17.0.8",

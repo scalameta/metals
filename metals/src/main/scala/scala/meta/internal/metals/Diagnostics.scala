@@ -254,7 +254,10 @@ final class Diagnostics(
     val targets = for {
       path <- diagnostics.keySet
       targets <- buildTargets.sourceBuildTargets(path)
-      if targets.exists(inverseDeps.apply)
+      targetSet = targets.toSet
+      /* We add the check for `!targetSet.contains(buildTarget)` to avoid removing diagnostics
+       * if a file is duplicated across targets */
+      if targets.exists(inverseDeps.apply) && !targetSet.contains(buildTarget)
     } yield {
       diagnostics.remove(path)
       publishDiagnostics(path)
@@ -349,9 +352,10 @@ final class Diagnostics(
 
   // Adjust positions for type errors for changes in the open buffer.
   // Only needed when merging syntax errors with type errors.
-  private def toFreshDiagnostic(
+  def toFreshDiagnostic(
       path: AbsolutePath,
       d: Diagnostic,
+      fallbackToNearest: Boolean = true,
   ): Option[Diagnostic] = {
     val snapshot = snapshots.get(path)
     snapshot match {
@@ -362,6 +366,7 @@ final class Diagnostics(
           .toRevised(
             range = d.getRange,
             adjustWithinToken = shouldAdjustWithinToken(d),
+            fallbackToNearest = fallbackToNearest,
           )
           .map { range =>
             val ld = new l.Diagnostic(

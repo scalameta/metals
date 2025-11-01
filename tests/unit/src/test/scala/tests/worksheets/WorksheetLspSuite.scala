@@ -110,6 +110,7 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
       )
     } yield ()
   }
+
   // Ensure that on Java +9 that all modules are correctly loaded with the Mdoc
   // classloader including things like the java.sql module.
   // https://github.com/scalameta/metals/issues/2187
@@ -124,13 +125,20 @@ class WorksheetLspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
            |  "a": {}
            |}
            |/${path}
-           |new java.sql.Date(100L)
+           |new java.sql.RowId{
+           |  def getBytes(): Array[Byte] = ???
+           |  override def toString(): String = "Row!"
+           |}
            |""".stripMargin
       )
       _ <- server.didOpen(path)
       _ <- server.assertInlayHints(
         path,
-        "new java.sql.Date(100L)/* // : java.sql.Date = 1970-01-01*/",
+        """|new java.sql.RowId{
+           |  def getBytes(): Array[Byte] = ???
+           |  override def toString(): String = "Row!"
+           |}/* // : Object with java.sql.RowId = Row!*/
+           |""".stripMargin,
       )
     } yield ()
   }

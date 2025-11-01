@@ -7,4 +7,5 @@ class JunitTestFinder extends AnnotationTestFinder {
 
 object JunitTestFinder {
   val junitAnnotationSymbol = "org/junit/Test#"
+  val junitBaseClassSymbol = "junit/framework/TestCase#"
 }

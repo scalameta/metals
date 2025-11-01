@@ -50,8 +50,10 @@ import io.modelcontextprotocol.spec.McpSchema.Tool
 import io.undertow.Undertow
 import io.undertow.servlet.Servlets
 import io.undertow.servlet.api.InstanceHandle
+import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.services.LanguageClient
 import reactor.core.publisher.Mono
 
@@ -868,7 +870,7 @@ class MetalsMcpServer(
     new AsyncToolSpecification(
       new Tool(
         "format-file",
-        "Format a Scala file and return the formatted text",
+        "Format a Scala file and use LSP to apply the changes. If LSP client is not available, it will be done in the background",
         schema,
       ),
       withErrorHandling { (_, arguments) =>
@@ -881,22 +883,39 @@ class MetalsMcpServer(
 
           formattingProvider
             .formatForMcp(path, projectPath, cancelChecker)
-            .map {
+            .flatMap {
               case Left(errorMessage) =>
-                new CallToolResult(
-                  createContent(errorMessage),
-                  true,
+                Future.successful(
+                  new CallToolResult(
+                    createContent(errorMessage),
+                    true,
+                  )
                 )
-              case Right(None) =>
-                new CallToolResult(
-                  createContent("File is already properly formatted."),
-                  false,
+              case Right(Nil) =>
+                Future.successful(
+                  new CallToolResult(
+                    createContent("File is already properly formatted."),
+                    false,
+                  )
                 )
-              case Right(Some(formattedText)) =>
-                new CallToolResult(
-                  createContent(formattedText),
-                  false,
-                )
+              case Right(formattedText) =>
+                languageClient
+                  .applyEdit(
+                    new ApplyWorkspaceEditParams(
+                      new WorkspaceEdit(
+                        Map(
+                          path.toURI.toString -> formattedText.asJava
+                        ).asJava
+                      )
+                    )
+                  )
+                  .asScala
+                  .map { _ =>
+                    new CallToolResult(
+                      createContent(s"$path was formatted"),
+                      false,
+                    )
+                  }
             }
             .toMono
         } else {
@@ -920,10 +939,6 @@ class MetalsMcpServer(
       """{
         |  "type": "object",
         |  "properties": {
-        |    "ruleName": {
-        |      "type": "string",
-        |      "description": "The name of the scalafix rule to run, should be a valid scalafix rule name and not include any special characters or whitespaces"
-        |    },
         |    "ruleImplementation": {
         |      "type": "string",
         |      "description": "The implementation of the scalafix rule to run, this should contain the actual scalafix rule implementation."
@@ -934,6 +949,9 @@ class MetalsMcpServer(
         |    },
         |    "targets": {
         |      "type": "array",
+        |      "items": {
+        |        "type": "string"
+        |      },
         |      "description": "The targets to run the rule on, if empty will run on the last focused target"
         |    },
         |    "sampleCode": {
@@ -945,7 +963,7 @@ class MetalsMcpServer(
         |      "description": "File to run it all, if empty will run on all files in given targets"
         |    }
         |  },
-        |  "required": ["ruleName", "ruleImplementation"]
+        |  "required": ["description", "ruleImplementation"]
         |} 
         |""".stripMargin
     new AsyncToolSpecification(
@@ -963,10 +981,8 @@ class MetalsMcpServer(
       ),
       withErrorHandling { (_, arguments) =>
         import scala.meta._
-        val ruleName = arguments.getAs[String]("ruleName")
         val ruleImplementation = arguments.getAs[String]("ruleImplementation")
-        val description =
-          arguments.getOptAs[String]("description").getOrElse(ruleName)
+        val description = arguments.getAs[String]("description")
         val sampleCode = arguments.getOptAs[String]("sampleCode")
         def helper = {
           sampleCode match {
@@ -1002,17 +1018,16 @@ class MetalsMcpServer(
           }
         val resultingFuture =
           scalafixLlmRuleProvider.runOnAllTargets(
-            ruleName,
             ruleImplementation,
             description,
             modules,
             runOn.toList,
           )
         resultingFuture.map {
-          case Right(_) =>
+          case Right(res) =>
             new CallToolResult(
               createContent(
-                s"Created and ran Scalafix rule $ruleName successfully"
+                s"Created and ran Scalafix rule ${res.ruleName} successfully"
               ),
               false,
             )
@@ -1078,7 +1093,7 @@ class MetalsMcpServer(
       """{
         |  "type": "object",
         |  "properties": { }
-        |} 
+        |}
         |""".stripMargin
     new AsyncToolSpecification(
       new Tool(
@@ -1088,7 +1103,7 @@ class MetalsMcpServer(
       ),
       withErrorHandling { (_, _) =>
         Future {
-          val allRules = scalafixLlmRuleProvider.allRules
+          val allRules = ScalafixLlmRuleProvider.allRules(projectPath)
           val content =
             allRules.toList.sortBy(_._1).map { case (ruleName, description) =>
               s"- $ruleName: $description"

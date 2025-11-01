@@ -67,7 +67,9 @@ case class JavaPresentationCompiler(
   override def signatureHelp(
       params: OffsetParams
   ): CompletableFuture[SignatureHelp] =
-    CompletableFuture.completedFuture(new SignatureHelp())
+    CompletableFuture.completedFuture(
+      new JavaSignatureHelpProvider(javaCompiler, params).signatureHelp()
+    )
 
   override def hover(
       params: OffsetParams
@@ -89,17 +91,25 @@ case class JavaPresentationCompiler(
   override def definition(
       params: OffsetParams
   ): CompletableFuture[DefinitionResult] =
-    CompletableFuture.completedFuture(DefinitionResultImpl.empty)
+    CompletableFuture.completedFuture(
+      new JavaDefinitionProvider(javaCompiler, params).definition()
+    )
 
   override def typeDefinition(
       params: OffsetParams
   ): CompletableFuture[DefinitionResult] =
-    CompletableFuture.completedFuture(DefinitionResultImpl.empty)
+    CompletableFuture.completedFuture(
+      new JavaDefinitionProvider(javaCompiler, params).typeDefinition()
+    )
 
   override def documentHighlight(
       params: OffsetParams
   ): CompletableFuture[util.List[DocumentHighlight]] =
-    CompletableFuture.completedFuture(Nil.asJava)
+    CompletableFuture.completedFuture(
+      new JavaDocumentHighlightProvider(javaCompiler, params)
+        .documentHighlight()
+        .asJava
+    )
 
   override def references(
       params: ReferencesRequest

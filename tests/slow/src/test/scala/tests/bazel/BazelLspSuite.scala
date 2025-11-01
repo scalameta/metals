@@ -23,6 +23,7 @@ import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import tests.BaseImportSuite
 import tests.BazelBuildLayout
+import tests.BazelModuleLayout
 import tests.BazelServerInitializer
 
 class BazelLspSuite
@@ -191,7 +192,7 @@ class BazelLspSuite
       _ = server.headServer.connectionProvider.buildServerPromise = Promise()
       _ = client.resetWorkspace =
         new MessageActionItem(Messages.ResetWorkspace.resetWorkspace)
-      _ <- server.executeCommand(ServerCommands.ResetWorkspace)
+      _ <- server.executeCommand(ServerCommands.ResetWorkspace, true)
       _ <- server.server.buildServerPromise.future
       resultAfter <- getTargetInfo(targets.head.bazelEscapedDisplayName)
       _ = assertNoDiff(resultAfter, expectedTarget)
@@ -199,8 +200,7 @@ class BazelLspSuite
       assertNoDiff(
         client.workspaceMessageRequests,
         List(
-          Messages.DeprecatedRemovedScalaVersion.message(Set("2.13.12")),
-          Messages.ResetWorkspace.message,
+          Messages.DeprecatedRemovedScalaVersion.message(Set("2.13.12"))
         ).mkString("\n"),
       )
       assert(bazelBspConfig.exists)
@@ -309,7 +309,7 @@ class BazelLspSuite
         .runJava(
           Dependency.of(
             BazelBuildTool.dependency.getModule(),
-            BazelBuildTool.version,
+            BazelBuildTool.bspVersion,
           ),
           BazelBuildTool.mainClass,
           workspace,
@@ -317,7 +317,7 @@ class BazelLspSuite
           None,
         )
         .future
-      _ = assertContains(jsonFile, BazelBuildTool.version)
+      _ = assertContains(jsonFile, BazelBuildTool.bspVersion)
       _ <- initialize(
         BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
       )
@@ -337,7 +337,7 @@ class BazelLspSuite
            |                   ^
            |""".stripMargin,
       )
-      _ = assertContains(jsonFile, BazelBuildTool.version)
+      _ = assertContains(jsonFile, BazelBuildTool.bspVersion)
     } yield ()
   }
 
@@ -358,7 +358,7 @@ class BazelLspSuite
       _ <- server.didOpen("Hello.scala")
       _ = assertNoDiff(
         projectview.readText,
-        BazelBuildTool.fallbackProjectView,
+        BazelBuildTool.fallbackProjectView(workspace),
       )
       _ <- server.didChange("Hello.scala") { text =>
         text.replace("def hello: String", "def hello: Int")
@@ -391,7 +391,7 @@ class BazelLspSuite
       )
       _ = assertNoDiff(
         projectview.readText,
-        BazelBuildTool.fallbackProjectView,
+        BazelBuildTool.fallbackProjectView(workspace),
       )
     } yield ()
   }
@@ -425,6 +425,255 @@ class BazelLspSuite
     } yield ()
   }
 
+  test("bazel-8.2.1") {
+    cleanWorkspace()
+    val bazelVersion821 = "8.2.1"
+    for {
+      _ <- initialize(
+        BazelModuleLayout(moduleWorkspaceLayout, "3.3.6", bazelVersion821)
+      )
+      _ = assert(bazelBspConfig.exists)
+
+      // Check that the project view uses scala_rules for Bazel 8.2.1
+      projectViewFile = workspace.list.find(
+        _.filename.endsWith(".bazelproject")
+      )
+      _ = assert(projectViewFile.isDefined, "Project view file should exist")
+      projectViewContent = projectViewFile.get.readText
+      _ = assertNoDiff(
+        projectViewContent,
+        """|targets:
+           |    @//...:all
+           |
+           |allow_manual_targets_sync: false
+           |
+           |derive_targets_from_directories: false
+           |
+           |enabled_rules:
+           |    rules_scala
+           |    rules_java
+           |    rules_jvm
+           |
+           |""".stripMargin,
+      )
+
+      _ <- server.didOpen("Hello.scala")
+      _ <- server.didChange("Hello.scala") { text =>
+        text.replace("def hello: String", "def hello: Int")
+      }
+      _ <- server.didSave("Hello.scala")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|Hello.scala:4:19: error: Type Mismatch Error
+           |Found:    ("Hello" : String)
+           |Required: Int
+           |
+           |longer explanation available when compiling with `-explain`
+           |  def hello: Int = "Hello"
+           |                  ^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("goto-definition-into-dependency-sources") {
+    cleanWorkspace()
+    val bazelVersion =
+      s"""|/.bazelversion
+          |6.4.0
+          |""".stripMargin
+
+    val workspaceFile =
+      """|/WORKSPACE
+         |load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+         |
+         |http_archive(
+         |    name = "bazel_skylib",
+         |    sha256 = "b8a1527901774180afc798aeb28c4634bdccf19c4d98e7bdd1ce79d1fe9aaad7",
+         |    urls = [
+         |        "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.4.1/bazel-skylib-1.4.1.tar.gz",
+         |        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.4.1/bazel-skylib-1.4.1.tar.gz",
+         |    ],
+         |)
+         |
+         |http_archive(
+         |    name = "io_bazel_rules_scala",
+         |    sha256 = "3b00fa0b243b04565abb17d3839a5f4fa6cc2cac571f6db9f83c1982ba1e19e5",
+         |    strip_prefix = "rules_scala-6.5.0",
+         |    url = "https://github.com/bazelbuild/rules_scala/releases/download/v6.5.0/rules_scala-v6.5.0.tar.gz",
+         |)
+         |
+         |load("@io_bazel_rules_scala//:scala_config.bzl", "scala_config")
+         |scala_config(scala_version = "2.12.18")
+         |
+         |load("@io_bazel_rules_scala//scala:scala.bzl", "rules_scala_setup", "rules_scala_toolchain_deps_repositories")
+         |
+         |rules_scala_setup()
+         |rules_scala_toolchain_deps_repositories(fetch_sources = True)
+         |
+         |load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
+         |rules_proto_dependencies()
+         |rules_proto_toolchains()
+         |
+         |load("@io_bazel_rules_scala//scala:toolchains.bzl", "scala_register_toolchains")
+         |scala_register_toolchains()
+         |
+         |register_toolchains(
+         |    "//:semanticdb_toolchain",
+         |)
+         |
+         |http_archive(
+         |    name = "rules_jvm_external",
+         |    sha256 = "6274687f6fc5783b589f56a2f1ed60de3ce1f99bc4e8f9edef3de43bdf7c6e74",
+         |    strip_prefix = "rules_jvm_external-4.3",
+         |    url = "https://github.com/bazelbuild/rules_jvm_external/archive/4.3.zip",
+         |)
+         |
+         |load("@rules_jvm_external//:defs.bzl", "maven_install")
+         |
+         |maven_install(
+         |    name = "maven",
+         |    artifacts = [
+         |        "com.typesafe.scala-logging:scala-logging_2.12:3.9.5",
+         |    ],
+         |    repositories = [
+         |        "https://repo1.maven.org/maven2",
+         |    ],
+         |    fetch_sources = True
+         |)
+         |""".stripMargin
+
+    val buildFiles =
+      s"""|/BUILD
+          |load("@io_bazel_rules_scala//scala:scala.bzl", "scala_library")
+          |load("@io_bazel_rules_scala//scala:scala_toolchain.bzl", "scala_toolchain")
+          |
+          |scala_toolchain(
+          |    name = "semanticdb_toolchain_impl",
+          |    enable_semanticdb = True,
+          |    semanticdb_bundle_in_jar = False,
+          |    visibility = ["//visibility:public"],
+          |)
+          |
+          |toolchain(
+          |    name = "semanticdb_toolchain",
+          |    toolchain = "semanticdb_toolchain_impl",
+          |    toolchain_type = "@io_bazel_rules_scala//scala:toolchain_type",
+          |    visibility = ["//visibility:public"],
+          |)
+          |
+          |scala_library(
+          |    name = "calculator",
+          |    srcs = glob(["Main.scala"]),
+          |    visibility = ["//visibility:public"],
+          |    deps = [
+          |        "@maven//:com_typesafe_scala_logging_scala_logging_2_12"
+          |    ],
+          |)
+          |
+          |""".stripMargin
+
+    val sourceFiles =
+      s"""
+         |/Main.scala
+         |import com.typesafe.scalalogging.Logger
+         |
+         |class Calculator {
+         |  val logger = Logger("SimpleLogger")
+         |
+         |  def add(a: Int, b: Int): Int = a + b
+         |  def subtract(a: Int, b: Int): Int = a - b
+         |  def multiply(a: Int, b: Int): Int = a * b
+         |}
+         |
+         |""".stripMargin
+
+    val layout =
+      s"""$bazelVersion
+         |$workspaceFile
+         |$buildFiles
+         |$sourceFiles
+         |""".stripMargin
+
+    for {
+      _ <- initialize(layout)
+      _ <- server.didOpen("Main.scala")
+      _ = server.workspaceDefinitions
+
+      loggerDefinition <- server.definition(
+        "Main.scala",
+        """import org.joda.time.Instant
+          |import com.typesafe.scalalogging.Log@@ger
+          |
+          |class Calculator {
+          |  val instant = new Instant()
+          |  val logger = Logger("SimpleLogger")
+          |
+          |  def add(a: Int, b: Int): Int = a + b
+          |  def subtract(a: Int, b: Int): Int = a - b
+          |  def multiply(a: Int, b: Int): Int = a * b
+          |}""".stripMargin,
+        workspace,
+      )
+
+      _ = assert(
+        loggerDefinition.nonEmpty,
+        s"Expected a definition location for 'Logger', but got an empty result.",
+      )
+      _ = assert(
+        loggerDefinition.head.getUri.contains("scala-logging"),
+        s"Expected logger definition URI to contain 'scala-logging', but was: ${loggerDefinition.head.getUri}",
+      )
+    } yield ()
+  }
+
+  private val commonCode =
+    """|scala_library(
+       |    name = "hello_lib",
+       |    srcs = ["Hello.scala", "Bar.scala"],
+       |)
+       |
+       |scala_binary(
+       |    name = "hello",
+       |    srcs = ["Main.scala", "Decode.scala"],
+       |    main_class = "main",
+       |    deps = [":hello_lib"],
+       |)
+       |
+       |/Hello.scala
+       |package examples.scala3
+       |
+       |class Hello {
+       |  def hello: String = "Hello"
+       |
+       |}
+       |
+       |/Bar.scala
+       |package examples.scala3
+       |
+       |class Bar {
+       |  def bar: String = "bar"
+       |  def hi = new Hello().hello
+       |}
+       |
+       |/Main.scala
+       |import examples.scala3.Hello
+       |
+       |object Main {
+       |def msg = new Hello().hello
+       |}
+       |
+       |/Decode.scala
+       |class Decode {
+       | def decoded = this
+       |}
+       |
+       |object Decode {
+       | def decode: String = "decode"
+       |}
+       |
+       |""".stripMargin
+
   private val workspaceLayout =
     s"""|/BUILD
         |load("@io_bazel_rules_scala//scala:scala_toolchain.bzl", "scala_toolchain")
@@ -444,50 +693,29 @@ class BazelLspSuite
         |    visibility = ["//visibility:public"],
         |)
         |
-        |scala_library(
-        |    name = "hello_lib",
-        |    srcs = ["Hello.scala", "Bar.scala"],
+        |$commonCode
+        |""".stripMargin
+
+  private val moduleWorkspaceLayout =
+    s"""|/BUILD
+        |load("@rules_scala//scala:scala.bzl", "scala_binary", "scala_library")
+        |load("@rules_scala//scala:scala_toolchain.bzl", "scala_toolchain")
+        |
+        |scala_toolchain(
+        |    name = "semanticdb_toolchain_impl",
+        |    enable_semanticdb = True,
+        |    semanticdb_bundle_in_jar = False,
+        |    visibility = ["//visibility:public"],
         |)
         |
-        |scala_binary(
-        |    name = "hello",
-        |    srcs = ["Main.scala", "Decode.scala"],
-        |    main_class = "main",
-        |    deps = [":hello_lib"],
+        |toolchain(
+        |    name = "semanticdb_toolchain",
+        |    toolchain = "semanticdb_toolchain_impl",
+        |    toolchain_type = "@scala_rules//scala:toolchain_type",
+        |    visibility = ["//visibility:public"],
         |)
         |
-        |/Hello.scala
-        |package examples.scala3
-        |
-        |class Hello {
-        |  def hello: String = "Hello"
-        |
-        |}
-        |
-        |/Bar.scala
-        |package examples.scala3
-        |
-        |class Bar {
-        |  def bar: String = "bar"
-        |  def hi = new Hello().hello
-        |}
-        |
-        |/Main.scala
-        |import examples.scala3.Hello
-        |
-        |object Main {
-        |def msg = new Hello().hello
-        |}
-        |
-        |/Decode.scala
-        |class Decode {
-        | def decoded = this
-        |}
-        |
-        |object Decode {
-        | def decode: String = "decode"
-        |}
-        |
+        |$commonCode
         |""".stripMargin
 
 }

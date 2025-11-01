@@ -21,6 +21,7 @@ import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
+import scala.meta.internal.metals.data.ResetWorkspaceState
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
 import scala.meta.internal.metals.mcp.McpQueryEngine
@@ -99,6 +100,13 @@ class ProjectMetalsLspService(
   def connect[T](config: ConnectRequest): Future[BuildChange] =
     connectionProvider.Connect.connect(config)
 
+  def isOnlyScalaCli: Boolean = {
+    buildTools.loadSupported() match {
+      case (_: ScalaCliBuildTool) :: Nil => true
+      case _ => false
+    }
+  }
+
   override val fileWatcher: ProjectFileWatcher = register(
     new ProjectFileWatcher(
       initialServerConfig,
@@ -162,6 +170,7 @@ class ProjectMetalsLspService(
     folder,
     warnings,
     languageClient,
+    () => userConfig,
   )
 
   protected val bloopServers: BloopServers = new BloopServers(
@@ -262,6 +271,7 @@ class ProjectMetalsLspService(
     languageClient,
     buildTargets,
     scalaVersionSelector,
+    compilations,
   )
 
   def startMcpServer(): Future[Unit] =
@@ -466,6 +476,9 @@ class ProjectMetalsLspService(
           case FileOutOfScalaCliBspScope.regenerateAndRestart =>
             val buildTool = ScalaCliBuildTool(folder, folder, () => userConfig)
             connect(GenerateBspConfigAndConnect(buildTool)).ignoreValue
+          case FileOutOfScalaCliBspScope.openDoctor =>
+            headDoctor.executeRunDoctor()
+            Future.successful(())
           case _ => Future.successful(())
         }
     } else Future.successful(())
@@ -605,24 +618,26 @@ class ProjectMetalsLspService(
           .BuildTool("scala-cli", buildTargetsData, lastImportedBuild)
     }
 
-  def resetWorkspace(): Future[Unit] =
+  def resetWorkspace(): Future[ResetWorkspaceState] =
     for {
-      _ <- connect(Disconnect(true))
-      _ = optProjectRoot match {
+      _ <- compilations.clean(recompile = false)
+      wasBloop = optProjectRoot match {
         case Some(path) if buildTools.isBloop(path) =>
-          clearBloopDir(path)
+          true
         case Some(path) if buildTools.isBazelBsp =>
           clearFolders(
             path.resolve(Directories.bazelBsp),
             path.resolve(Directories.bsp),
           )
+          false
         case Some(path) if buildTools.isBsp =>
           clearFolders(path.resolve(Directories.bsp))
+          false
         case _ =>
+          false
       }
       _ = tables.cleanAll()
-      _ <- connectionProvider.fullConnect()
-    } yield ()
+    } yield ResetWorkspaceState(wasBloop)
 
   val treeView =
     new FolderTreeViewProvider(
@@ -679,13 +694,16 @@ class ProjectMetalsLspService(
         newConfig.startMcpServer && newConfig.startMcpServer != old.startMcpServer
       ) startMcpServer()
       else Future.unit
-
+    val projectRootChanged =
+      userConfig.customProjectRoot != old.customProjectRoot
     val slowConnect =
       if (
-        userConfig.customProjectRoot != old.customProjectRoot || userConfig.enableBestEffort != old.enableBestEffort
+        projectRootChanged || userConfig.enableBestEffort != old.enableBestEffort
       ) {
+        if (projectRootChanged) {
+          tables.buildServers.reset()
+        }
         tables.buildTool.reset()
-        tables.buildServers.reset()
         connectionProvider.fullConnect()
       } else Future.successful(())
 

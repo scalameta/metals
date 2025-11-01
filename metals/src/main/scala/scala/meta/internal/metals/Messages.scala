@@ -125,11 +125,20 @@ object Messages {
     s"Import already running. \nPlease cancel the current import to run a new one.",
   )
 
-  val ImportProjectPartiallyFailed = new MessageParams(
-    MessageType.Warning,
-    "Import project partially failed, limited functionality may work in some parts of the workspace. " +
-      "See the logs for more details. ",
-  )
+  object ImportProjectPartiallyFailed {
+    val showLogs = new MessageActionItem("Show logs")
+
+    def params(): ShowMessageRequestParams = {
+      val request = new ShowMessageRequestParams()
+      request.setMessage(
+        "Import project partially failed, limited functionality may work in some parts of the workspace. " +
+          "See the logs for more details. "
+      )
+      request.setType(MessageType.Warning)
+      request.setActions(List(showLogs).asJava)
+      request
+    }
+  }
 
   val InsertInferredTypeFailed = new MessageParams(
     MessageType.Error,
@@ -1101,9 +1110,9 @@ object Messages {
   val missedByUser = new MessageActionItem("Missed by user")
 
 }
-
 object FileOutOfScalaCliBspScope {
   val regenerateAndRestart = new MessageActionItem("Yes")
+  val openDoctor = new MessageActionItem("Open Doctor")
   val ignore = new MessageActionItem("No")
   def askToRegenerateConfigAndRestartBspMsg(file: String): String =
     s"""|$file is outside of scala-cli build server scope.
@@ -1118,7 +1127,7 @@ object FileOutOfScalaCliBspScope {
       )
     )
     params.setType(MessageType.Warning)
-    params.setActions(List(regenerateAndRestart, ignore).asJava)
+    params.setActions(List(regenerateAndRestart, ignore, openDoctor).asJava)
     params
   }
 }

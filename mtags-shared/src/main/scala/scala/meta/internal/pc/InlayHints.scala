@@ -13,24 +13,45 @@ import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintKind
 import org.eclipse.{lsp4j => l}
 
+sealed trait InlayHintOrigin
+object InlayHintOrigin {
+  case object NamedParameters extends InlayHintOrigin
+  case object ByNameParameters extends InlayHintOrigin
+  case object ImplicitConversion extends InlayHintOrigin
+  case object ImplicitParameters extends InlayHintOrigin
+  case object TypeParameters extends InlayHintOrigin
+  case object InferredType extends InlayHintOrigin
+  case object ClosingLabel extends InlayHintOrigin
+  case object XRayMode extends InlayHintOrigin
+}
+
+case class InlayHintWithOrigin(
+    hint: InlayHint,
+    origin: InlayHintOrigin
+)
+
 case class InlayHints(
     uri: URI,
-    inlayHints: List[InlayHint],
-    blockInlayHints: Map[Int, InlayHintBlock],
-    definitions: Set[Int]
+    inlayHints: List[InlayHintWithOrigin],
+    blockInlayHints: Map[Int, InlayHintBlock]
 ) {
-  def containsDef(offset: Int): Boolean = definitions(offset)
-  def addDefinition(offset: Int): InlayHints =
-    copy(
-      definitions = definitions + offset
-    )
+
+  def add(
+      inlayHint: InlayHint,
+      origin: InlayHintOrigin
+  ): InlayHints = copy(inlayHints = addInlayHint(inlayHint, origin))
+
   def add(
       pos: l.Range,
       labelParts: List[LabelPart],
-      kind: InlayHintKind
+      kind: InlayHintKind,
+      origin: InlayHintOrigin
   ): InlayHints =
     copy(inlayHints =
-      addInlayHint(makeInlayHint(pos.getStart(), labelParts, kind))
+      addInlayHint(
+        InlayHints.makeInlayHint(pos.getStart(), labelParts, kind, uri),
+        origin
+      )
     )
 
   /*
@@ -79,10 +100,56 @@ case class InlayHints(
   }
 
   private def makeInlayHint(
+      bih: BlockInlayHint
+  ): InlayHint =
+    InlayHints.makeInlayHint(bih.pos.getEnd, bih.labels, bih.kind, uri)
+
+  /**
+   * InferType can sometimes generate duplicate hints (e.g. for symbols inside of `for`-comprehensons)
+   * That is why we have to deduplicate them when adding new inlay hints
+   */
+  private def addInlayHint(
+      inlayHint: InlayHint,
+      origin: InlayHintOrigin
+  ): List[InlayHintWithOrigin] = {
+    val wrapped = InlayHintWithOrigin(inlayHint, origin)
+    // Only filter duplicates for InferredType hints
+    if (
+      origin == InlayHintOrigin.InferredType && inlayHints.exists(
+        _.hint == inlayHint
+      )
+    ) {
+      inlayHints
+    } else {
+      inlayHints :+ wrapped
+    }
+  }
+
+  def result(): List[InlayHint] =
+    inlayHints.reverse.map(_.hint) ++ blockInlayHints.values.toList
+      .flatMap(_.build)
+      .map(makeInlayHint)
+
+}
+
+object InlayHints {
+  private val gson = new Gson()
+
+  def makeInlayHint(
+      pos: l.Range,
+      labelParts: List[LabelPart],
+      kind: InlayHintKind,
+      uri: URI
+  ): InlayHint = {
+    makeInlayHint(pos.getStart(), labelParts, kind, uri)
+  }
+
+  def makeInlayHint(
       pos: l.Position,
       labelParts: List[LabelPart],
-      kind: InlayHintKind
-  ) = {
+      kind: InlayHintKind,
+      uri: URI
+  ): InlayHint = {
     val hint = new InlayHint()
     hint.setPosition(pos)
     val (label, dataInfo) = labelParts.map(lp => (lp.label, lp.data)).unzip
@@ -91,30 +158,8 @@ case class InlayHints(
     hint.setKind(kind)
     hint
   }
-
-  private def makeInlayHint(
-      bih: BlockInlayHint
-  ): InlayHint =
-    makeInlayHint(bih.pos.getEnd, bih.labels, bih.kind)
-
-  // If method has both type parameter and implicit parameter, we want the type parameter decoration to be displayed first,
-  // but it's added second. This method adds the decoration to the right position in the list.
-  private def addInlayHint(inlayHint: InlayHint): List[InlayHint] = {
-    val atSamePos =
-      inlayHints.takeWhile(_.getPosition() == inlayHint.getPosition())
-    (atSamePos :+ inlayHint) ++ inlayHints.drop(atSamePos.size)
-  }
-  def result(): List[InlayHint] =
-    inlayHints.reverse ++ blockInlayHints.values.toList
-      .flatMap(_.build)
-      .map(makeInlayHint)
-
-}
-
-object InlayHints {
-  private val gson = new Gson()
   def empty(uri: URI): InlayHints =
-    InlayHints(uri, Nil, Map.empty[Int, InlayHintBlock], Set.empty)
+    InlayHints(uri, Nil, Map.empty[Int, InlayHintBlock])
 
   /**
    * Creates a label for inlay hint by inserting `parts` on correct positions in `tpeStr`.
@@ -189,7 +234,7 @@ final case class InlayHintBlock(
         val naiveIndent = indentLevel - hint.pos.getEnd.getCharacter
         val labels =
           if (naiveIndent <= 0) hint.labels
-          else LabelPart(" ".repeat(naiveIndent)) :: hint.labels
+          else LabelPart(" " * naiveIndent) :: hint.labels
         hint.copy(labels = labels)
       }
   }

@@ -6,11 +6,20 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.BatchedFunction
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.metals.debug.BuildTargetClasses.Classes
 import scala.meta.internal.metals.debug.BuildTargetClasses.TestSymbolInfo
+import scala.meta.internal.mtags.OnDemandSymbolIndex
+import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
+import scala.meta.internal.semanticdb.SymbolInformation
+import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.semanticdb.TextDocuments
+import scala.meta.internal.semanticdb.TypeRef
+import scala.meta.io.AbsolutePath
 
 import bloop.config.Config.TestFramework
 import ch.epfl.scala.{bsp4j => b}
@@ -18,10 +27,19 @@ import ch.epfl.scala.{bsp4j => b}
 /**
  * In-memory index of main class symbols grouped by their enclosing build target
  */
-final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
+final class BuildTargetClasses(
+    val buildTargets: BuildTargets,
+    val compilers: () => Compilers,
+    symbolIndex: OnDemandSymbolIndex,
+)(implicit
     val ec: ExecutionContext
-) {
+) extends SemanticdbFeatureProvider {
   private val index = TrieMap.empty[b.BuildTargetIdentifier, Classes]
+
+  private val bazelTestClassCache =
+    TrieMap.empty[AbsolutePath, List[(String, TestSymbolInfo)]]
+
+  private val symbolCache = new SymbolCache(compilers, symbolIndex)
 
   type JVMRunEnvironmentsMap =
     TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem]
@@ -41,6 +59,27 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
       "buildTargetClasses",
       default = Some(()),
     )
+
+  override def onChange(docs: TextDocuments, path: AbsolutePath): Unit = {
+    if (
+      path.isScalaFilename && hasBazelBuildServer && belongsToTestTarget(path)
+    ) {
+      symbolCache.removeSymbolsForPath(path)
+      extractTestClassesFromDocuments(docs, path).foreach { testClasses =>
+        if (testClasses.nonEmpty) {
+          bazelTestClassCache.put(path, testClasses)
+        }
+      }
+    }
+  }
+
+  override def onDelete(path: AbsolutePath): Unit = {
+    bazelTestClassCache.remove(path)
+  }
+  override def reset(): Unit = {
+    bazelTestClassCache.clear()
+    symbolCache.clear()
+  }
 
   def classesOf(target: b.BuildTargetIdentifier): Classes = {
     index.getOrElse(target, new Classes)
@@ -112,9 +151,15 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
             .map(cacheMainClasses(classes, _))
 
           val updateTestClasses =
-            connection
-              .testClasses(new b.ScalaTestClassesParams(targetsList))
-              .map(cacheTestClasses(classes, _))
+            if (hasBazelBuildServer) {
+              Future.successful(
+                populateBazelTestClasses(classes, targets0)
+              )
+            } else {
+              connection
+                .testClasses(new b.ScalaTestClassesParams(targetsList))
+                .map(cacheTestClasses(classes, _))
+            }
 
           for {
             _ <- updateMainClasses
@@ -271,6 +316,252 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
   def cancel(): Unit = {
     rebuildIndex.cancelAll()
   }
+
+  private def hasBazelBuildServer: Boolean = {
+    buildTargets.allBuildTargetIds.exists { targetId =>
+      buildTargets.buildServerOf(targetId).exists(_.isBazel)
+    }
+  }
+
+  private def belongsToTestTarget(path: AbsolutePath): Boolean = {
+    buildTargets.inverseSources(path).exists { targetId =>
+      buildTargets.info(targetId).exists { buildTarget =>
+        buildTarget.getTags.asScala.contains("test")
+      }
+    }
+  }
+
+  private def extractTestClassesFromDocuments(
+      docs: TextDocuments,
+      path: AbsolutePath,
+  ): Future[List[(String, TestSymbolInfo)]] = {
+    val testClasses =
+      scala.collection.mutable.ListBuffer[(String, TestSymbolInfo)]()
+
+    val futures = docs.documents.flatMap { doc =>
+      doc.symbols.flatMap { symbolInfo =>
+        processTestAnnotations(symbolInfo, testClasses)
+        processTestClassHierarchy(symbolInfo, doc, path, testClasses)
+      }
+    }
+
+    Future.sequence(futures).map(_ => testClasses.toList)
+  }
+
+  private def processTestAnnotations(
+      symbolInfo: SymbolInformation,
+      testClasses: scala.collection.mutable.ListBuffer[(String, TestSymbolInfo)],
+  ): Unit = {
+    symbolInfo.annotations.foreach { annotation =>
+      annotation.tpe match {
+        case TypeRef(_, annotationSymbol, _) =>
+          TestFrameworkDetector.fromSymbol(annotationSymbol) match {
+            case Some(framework) =>
+              val classSymbol = symbolInfo.symbol
+              val className = symbolToClassName(classSymbol)
+              val testInfo = TestSymbolInfo(className, framework)
+              val classSymbolWithoutFunctionName =
+                classSymbol.indexOf('#') match {
+                  case -1 => classSymbol
+                  case index => classSymbol.substring(0, index + 1)
+                }
+              testClasses += ((classSymbolWithoutFunctionName, testInfo))
+            case None =>
+          }
+        case _ =>
+      }
+    }
+  }
+
+  private def processTestClassHierarchy(
+      symbolInfo: SymbolInformation,
+      doc: TextDocument,
+      path: AbsolutePath,
+      testClasses: scala.collection.mutable.ListBuffer[(String, TestSymbolInfo)],
+  ): Option[Future[Unit]] = {
+    symbolInfo.signature match {
+      case classSig: ClassSignature =>
+        val symbol = symbolInfo.symbol
+        val className = symbolToClassName(symbol)
+        if (className.nonEmpty) {
+          Some(
+            detectTestFrameworkUsingClassHierarchy(classSig, doc, path)
+              .map { frameworkOpt =>
+                frameworkOpt.foreach { framework =>
+                  val testInfo = TestSymbolInfo(className, framework)
+                  testClasses += ((symbol, testInfo))
+                }
+              }
+          )
+        } else None
+      case _ => None
+    }
+  }
+
+  private def detectTestFrameworkUsingClassHierarchy(
+      classSig: ClassSignature,
+      doc: TextDocument,
+      path: AbsolutePath,
+  ): Future[Option[TestFramework]] = {
+    val initialParents = extractParentSymbols(classSig)
+    searchClassHierarchyForTestFramework(
+      initialParents,
+      doc,
+      path,
+    )
+  }
+
+  private def searchClassHierarchyForTestFramework(
+      symbols: List[String],
+      doc: TextDocument,
+      path: AbsolutePath,
+      visited: Set[String] = Set.empty,
+  ): Future[Option[TestFramework]] = {
+    if (symbols.isEmpty) {
+      Future.successful(None)
+    } else {
+      val directFramework = symbols
+        .map(symbol =>
+          TestFrameworkDetector
+            .fromSymbol(symbol)
+        )
+        .collectFirst { case Some(framework) => framework }
+
+      directFramework match {
+        case Some(framework) => Future.successful(Some(framework))
+        case None =>
+          val nextLevelFutures = symbols
+            .filterNot(visited.contains)
+            .map(symbol => collectParentsForSymbol(symbol, doc, path, visited))
+          Future.sequence(nextLevelFutures).flatMap { parentList =>
+            val allParents = parentList.flatten.distinct
+
+            searchClassHierarchyForTestFramework(
+              allParents,
+              doc,
+              path,
+              visited ++ symbols,
+            )
+          }
+      }
+    }
+  }
+
+  private def extractParentSymbols(classSig: ClassSignature): List[String] = {
+    classSig.parents.collect { case TypeRef(_, parentSymbol, _) =>
+      parentSymbol
+    }.toList
+  }
+
+  private def collectParentsForSymbol(
+      symbol: String,
+      doc: TextDocument,
+      path: AbsolutePath,
+      visited: Set[String],
+  ): Future[List[String]] = {
+    if (visited.contains(symbol)) {
+      Future.successful(Nil)
+    } else {
+      doc.symbols.find(_.symbol == symbol) match {
+        case Some(symbolInfo) =>
+          symbolInfo.signature match {
+            case classSig: ClassSignature =>
+              Future.successful(extractParentSymbols(classSig))
+            case _ => Future.successful(Nil)
+          }
+        case None =>
+          symbolCache.getCachedSymbolInfo(path, symbol).map {
+            case Some(pcInfo) => pcInfo.recursiveParents
+            case None => Nil
+          }
+      }
+    }
+  }
+
+  private def symbolToClassName(symbol: String): String = {
+    val withoutPrefix = symbol.stripPrefix("_empty_/")
+    val withoutHashAndAfter = withoutPrefix.indexOf('#') match {
+      case -1 => withoutPrefix
+      case index => withoutPrefix.substring(0, index)
+    }
+    withoutHashAndAfter.replace("/", ".")
+  }
+
+  private def populateBazelTestClasses(
+      classes: Map[b.BuildTargetIdentifier, Classes],
+      targets: Seq[b.BuildTargetIdentifier],
+  ): Unit = {
+    import scala.jdk.CollectionConverters.*
+
+    targets.foreach { target =>
+      val sourceFiles = buildTargets.sourceItemsToBuildTargets
+        .filter { case (_, buildTargetIds) =>
+          buildTargetIds.asScala.toList.contains(target)
+        }
+        .map(_._1)
+        .filter(_.isScalaFilename)
+        .toList
+
+      sourceFiles.foreach { sourcePath =>
+        bazelTestClassCache.get(sourcePath).foreach { testClasses =>
+          testClasses.foreach { case (symbol, testInfo) =>
+            classes(target).testClasses.put(symbol, testInfo)
+          }
+        }
+      }
+    }
+  }
+
+}
+
+object TestFrameworkDetector {
+  def fromSymbol(symbol: String): Option[TestFramework] = {
+    TestFrameworkSymbolRegistry.frameworkForSymbol(symbol)
+  }
+}
+
+object TestFrameworkSymbolRegistry {
+  import scala.meta.internal.metals.testProvider.frameworks.*
+
+  private lazy val scalatestSymbols: Map[String, TestFramework] =
+    ScalatestStyle.baseSymbols.map(_ -> TestFramework.ScalaTest).toMap
+
+  private lazy val munitSymbols: Map[String, TestFramework] =
+    MunitTestFinder.baseParentClasses.map(_ -> TestFramework.munit).toMap
+
+  private lazy val weaverSymbols: Map[String, TestFramework] =
+    WeaverCatsEffectTestFinder.baseParentClasses
+      .map(_ -> TestFrameworkUtils.WeaverTestFramework)
+      .toMap
+
+  private lazy val zioTestSymbols: Map[String, TestFramework] =
+    ZioTestFinder.baseParentClasses
+      .map(_ -> TestFrameworkUtils.ZioTestFramework)
+      .toMap
+
+  private lazy val junitSymbols: Map[String, TestFramework] = Set(
+    JunitTestFinder.junitBaseClassSymbol,
+    JunitTestFinder.junitAnnotationSymbol,
+  ).map(_ -> TestFramework.JUnit).toMap
+
+  private lazy val testngSymbols: Map[String, TestFramework] = {
+    val testngFinder = new TestNGTestFinder()
+    Set(testngFinder.expectedAnnotationSymbol)
+      .map(_ -> TestFramework.TestNG)
+      .toMap
+  }
+
+  private lazy val allFrameworkSymbols: Map[String, TestFramework] =
+    scalatestSymbols ++
+      munitSymbols ++
+      weaverSymbols ++
+      zioTestSymbols ++
+      junitSymbols ++
+      testngSymbols
+
+  def frameworkForSymbol(symbol: String): Option[TestFramework] = {
+    allFrameworkSymbols.get(symbol)
+  }
 }
 
 object TestFrameworkUtils {
@@ -316,6 +607,7 @@ object BuildTargetClasses {
       fullyQualifiedName: FullyQualifiedClassName,
       framework: TestFramework,
   )
+
   final class Classes {
     val mainClasses = new TrieMap[Symbol, b.ScalaMainClass]()
     val testClasses = new TrieMap[Symbol, TestSymbolInfo]()

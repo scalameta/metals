@@ -1,5 +1,7 @@
 package scala.meta.internal.pc
 
+import java.net.URI
+
 import scala.annotation.tailrec
 
 import scala.meta.internal.metals.PcQueryContext
@@ -21,6 +23,7 @@ final class PcInlayHintsProvider(
   )
   lazy val text = unit.source.content
   lazy val textStr = text.mkString
+  val uri: URI = params.uri()
 
   typeCheck(unit)
   val pos: Position =
@@ -59,61 +62,18 @@ final class PcInlayHintsProvider(
         )
       case _ => inlayHints
     }
-    tree match {
-      case NamedParameters(params) =>
-        params.foldLeft(firstPassHints) { case (acc, (prefix, name, pos)) =>
-          acc.add(
-            adjustPos(pos).focusStart.toLsp,
-            LabelPart(name.toString() + " = " + prefix) :: Nil,
-            InlayHintKind.Parameter
-          )
-        }
-      case ImplicitConversion(symbol, range) =>
-        val adjusted = adjustPos(range)
-        firstPassHints
-          .add(
-            adjusted.focusStart.toLsp,
-            labelPart(symbol, symbol.decodedName) :: LabelPart("(") :: Nil,
-            InlayHintKind.Parameter
-          )
-          .add(
-            adjusted.focusEnd.toLsp,
-            LabelPart(")") :: Nil,
-            InlayHintKind.Parameter
-          )
-      case ImplicitParameters(trees, pos) =>
-        firstPassHints.add(
-          adjustPos(pos).focusEnd.toLsp,
-          ImplicitParameters.partsFromImplicitArgs(trees),
-          InlayHintKind.Parameter
-        )
-      case TypeParameters(tpes, pos) if tpes.forall(_ != null) =>
-        val label = tpes.map(toLabelParts(_, pos)).separated("[", ", ", "]")
-        firstPassHints.add(
-          adjustPos(pos).focusEnd.toLsp,
-          label,
-          InlayHintKind.Type
-        )
-      case ByNameParameters(byNameArgs) =>
-        byNameArgs.foldLeft(firstPassHints) { case (ih, pos) =>
-          ih.add(
-            adjustPos(pos.focusStart).toLsp,
-            List(LabelPart("=> ")),
-            InlayHintKind.Parameter
-          )
-        }
-      case InferredType(tpe, pos) if tpe != null && !tpe.isError =>
-        val adjustedPos = adjustPos(pos).focusEnd
-        if (firstPassHints.containsDef(adjustedPos.start)) firstPassHints
-        else
-          firstPassHints
-            .add(
-              adjustedPos.toLsp,
-              LabelPart(": ") :: toLabelParts(tpe.finalResultType, pos),
-              InlayHintKind.Type
-            )
-            .addDefinition(adjustedPos.start)
-      case _ => firstPassHints
+    List(
+      ByNameParameters,
+      NamedParameters,
+      ImplicitConversion,
+      ImplicitParameters,
+      TypeParameters,
+      InferredType,
+      ClosingLabel
+    ).flatMap { provider =>
+      provider.getInlayHints(tree).map((_, provider.origin))
+    }.foldLeft(firstPassHints) { case (acc, (hint, origin)) =>
+      acc.add(hint, origin)
     }
   }
 
@@ -172,37 +132,50 @@ final class PcInlayHintsProvider(
       LabelPart(label, symbol = semanticdbSymbol(symbol))
     }
 
-  object NamedParameters {
-    def unapply(
-        tree: Tree
-    ): Option[List[(String, Name, Position)]] = {
+  trait InlayHintable {
+    def getInlayHints(tree: Tree): List[InlayHint]
+    def origin: InlayHintOrigin
+  }
+
+  object NamedParameters extends InlayHintable {
+    def origin: InlayHintOrigin = InlayHintOrigin.NamedParameters
+    def getInlayHints(tree: Tree): List[InlayHint] = {
       if (params.namedParameters()) {
         tree match {
           case Apply(fun: Select, args) if isNotInterestingApply(fun) =>
-            None
+            Nil
           case Apply(TypeApply(fun: Select, _), args)
               if isNotInterestingApply(fun) =>
-            None
+            Nil
           case Apply(fun, args)
               if isRealApply(fun) &&
                 /* We don't want to show named parameters for unapplies*/
                 args.exists(arg => arg.pos.isRange && arg.pos != fun.pos) &&
                 /* It's most likely a block argument, even if it's not it's
-                   doubtful that anyone wants to see the named parameters */
+                    doubtful that anyone wants to see the named parameters */
                 !isSingleBlock(args) =>
             val applyParams = fun.tpe.params
-            Some(args.zip(applyParams).collect {
-              case (arg, param)
-                  if !isNamedArg(arg) && !isDefaultArgument(arg) =>
-                val prefix =
-                  if (param.isByNameParam && params.byNameParameters()) "=> "
-                  else ""
-                (prefix, param.name, arg.pos)
-            })
-          case _ => None
+            make(
+              args.zip(applyParams).collect {
+                case (arg, param)
+                    if !isNamedArg(arg) && !isDefaultArgument(arg) =>
+                  (param.name, arg.pos)
+              }
+            )
+          case _ => Nil
         }
-      } else None
+      } else Nil
     }
+
+    private def make(params: List[(Name, Position)]): List[InlayHint] =
+      params.map { case (name, pos) =>
+        InlayHints.makeInlayHint(
+          adjustPos(pos).focusStart.toLsp,
+          LabelPart(name.toString() + " = ") :: Nil,
+          InlayHintKind.Parameter,
+          uri
+        )
+      }
 
     private def isDefaultArgument(arg: Tree) = {
       arg.symbol != null && arg.symbol.isDefaultGetter
@@ -236,31 +209,62 @@ final class PcInlayHintsProvider(
         isNotStringContextApply(fun) && fun.symbol.paramss.nonEmpty
   }
 
-  object ImplicitConversion {
-    def unapply(tree: Tree): Option[(Symbol, Position)] = {
+  object ImplicitConversion extends InlayHintable {
+    def origin: InlayHintOrigin = InlayHintOrigin.ImplicitConversion
+    def getInlayHints(tree: Tree): List[InlayHint] = {
       if (params.implicitConversions())
         tree match {
           case Apply(fun, args)
               if isImplicitConversion(fun) && args.exists(_.pos.isRange) =>
             val lastArgPos = args.lastOption.fold(fun.pos)(_.pos)
-            Some((fun.symbol, lastArgPos))
-          case _ => None
+            make(fun.symbol, lastArgPos)
+          case _ => Nil
         }
-      else None
+      else Nil
+    }
+
+    def make(symbol: Symbol, range: Position): List[InlayHint] = {
+      val adjusted = adjustPos(range)
+      List(
+        InlayHints.makeInlayHint(
+          adjusted.focusStart.toLsp,
+          labelPart(symbol, symbol.decodedName) :: LabelPart("(") :: Nil,
+          InlayHintKind.Parameter,
+          uri
+        ),
+        InlayHints.makeInlayHint(
+          adjusted.focusEnd.toLsp,
+          LabelPart(")") :: Nil,
+          InlayHintKind.Parameter,
+          uri
+        )
+      )
     }
     private def isImplicitConversion(fun: Tree) =
       fun.pos.isOffset && fun.symbol != null && fun.symbol.isImplicit
   }
-  object ImplicitParameters {
-    def unapply(tree: Tree): Option[(List[Tree], Position)] = {
+
+  object ImplicitParameters extends InlayHintable {
+    def origin: InlayHintOrigin = InlayHintOrigin.ImplicitParameters
+    def getInlayHints(tree: Tree): List[InlayHint] = {
       if (params.implicitParameters())
         tree match {
           case implicitApply: ApplyToImplicitArgs if !tree.pos.isOffset =>
-            Some(implicitApply.args, tree.pos)
-          case _ => None
+            make(implicitApply.args, tree.pos)
+          case _ => Nil
         }
-      else None
+      else Nil
     }
+
+    def make(trees: List[Tree], pos: Position): List[InlayHint] =
+      List(
+        InlayHints.makeInlayHint(
+          adjustPos(pos).focusEnd.toLsp,
+          ImplicitParameters.partsFromImplicitArgs(trees),
+          InlayHintKind.Parameter,
+          uri
+        )
+      )
 
     private def reversedLabelPartsFromParams(
         vparams: List[ValDef]
@@ -397,14 +401,15 @@ final class PcInlayHintsProvider(
       symbol != null && symbol.safeOwner.decodedName == nme.valueOf.decoded.capitalize
   }
 
-  object TypeParameters {
-    def unapply(tree: Tree): Option[(List[Type], Position)] = {
+  object TypeParameters extends InlayHintable {
+    def origin: InlayHintOrigin = InlayHintOrigin.TypeParameters
+    def getInlayHints(tree: Tree): List[InlayHint] = {
       if (params.typeParameters())
         tree match {
           case TypeApply(sel: Select, _)
               if isForComprehensionMethod(sel) || syntheticTupleApply(sel) ||
                 isInfix(sel, textStr) || sel.symbol.name == nme.unapply =>
-            None
+            Nil
           case TypeApply(fun, args)
               if args.exists(_.pos.isOffset) && tree.pos.isRange =>
             val pos = fun match {
@@ -412,10 +417,10 @@ final class PcInlayHintsProvider(
                 sel.namePosition
               case _ => fun.pos
             }
-            Some(args.map(_.tpe.widen), pos)
+            make(args.map(_.tpe.widen), pos)
           /* Case matching <<.>>> in the following code:
            *
-           * class Foo[T](val t: T)
+          * class Foo[T](val t: T)
            * val foo = <<new Foo/*[String]*/>>("foo")
            */
           case New(tpt: TypeTree)
@@ -424,17 +429,32 @@ final class PcInlayHintsProvider(
               /* orginal (untyped tree) is an AppliedTypeTree
                * if the type parameter is explicitly passed by the user
                */
-              case _: AppliedTypeTree => None
-              case _ => Some(tpt.tpe.typeArgs.map(_.widen), tpt.pos)
+              case _: AppliedTypeTree => Nil
+              case _ => make(tpt.tpe.typeArgs.map(_.widen), tpt.pos)
             }
-          case _ => None
+          case _ => Nil
         }
-      else None
+      else Nil
+    }
+
+    def make(tpes: List[Type], pos: Position): List[InlayHint] = {
+      if (tpes.forall(_ != null)) {
+        val label = tpes.map(toLabelParts(_, pos)).separated("[", ", ", "]")
+        List(
+          InlayHints.makeInlayHint(
+            adjustPos(pos).focusEnd.toLsp,
+            label,
+            InlayHintKind.Type,
+            uri
+          )
+        )
+      } else Nil
     }
   }
 
-  object InferredType {
-    def unapply(tree: Tree): Option[(Type, Position)] = {
+  object InferredType extends InlayHintable {
+    def origin: InlayHintOrigin = InlayHintOrigin.InferredType
+    def getInlayHints(tree: Tree): List[InlayHint] = {
       if (params.inferredTypes())
         tree match {
           case vd @ ValDef(_, _, tpt, _)
@@ -443,20 +463,35 @@ final class PcInlayHintsProvider(
                 maybeShowUnapply(vd) &&
                 !isCompilerGeneratedSymbol(vd.symbol) &&
                 !isValDefBind(vd) =>
-            Some(vd.symbol.tpe.widen, vd.namePosition)
+            make(vd.symbol.tpe.widen, vd.namePosition)
           case dd @ DefDef(_, _, _, _, tpt, _)
               if hasMissingTypeAnnot(dd, tpt) &&
                 !dd.symbol.isConstructor &&
                 !dd.symbol.isMutable &&
                 !samePosAsOwner(dd.symbol) =>
-            Some(dd.symbol.tpe.widen, findTpePos(dd))
+            make(dd.symbol.tpe.widen, findTpePos(dd))
           case bb @ Bind(name, Ident(nme.WILDCARD))
               if params.hintsInPatternMatch && name != nme.WILDCARD && name != nme.DEFAULT_CASE =>
-            Some(bb.symbol.tpe.widen, bb.namePosition)
-          case _ => None
+            make(bb.symbol.tpe.widen, bb.namePosition)
+          case _ => Nil
         }
-      else None
+      else Nil
     }
+
+    private def make(tpe: Type, pos: Position): List[InlayHint] = {
+      if (tpe != null && !tpe.isError) {
+        val adjustedPos = adjustPos(pos).focusEnd
+        List(
+          InlayHints.makeInlayHint(
+            adjustedPos.toLsp,
+            LabelPart(": ") :: toLabelParts(tpe.finalResultType, pos),
+            InlayHintKind.Type,
+            uri
+          )
+        )
+      } else Nil
+    }
+
     private def hasMissingTypeAnnot(tree: MemberDef, tpt: Tree) =
       tree.pos.isRange && tree.namePosition.isRange && tpt.pos.isOffset && tpt.pos.start != 0
 
@@ -501,16 +536,17 @@ final class PcInlayHintsProvider(
     }
   }
 
-  object ByNameParameters {
+  object ByNameParameters extends InlayHintable {
+    def origin: InlayHintOrigin = InlayHintOrigin.ByNameParameters
     // Extract the positions at which `=>` hints should be inserted
-    def unapply(tree: Tree): Option[List[Position]] = {
+    def getInlayHints(tree: Tree): List[InlayHint] = {
       if (params.byNameParameters())
         tree match {
           case Apply(sel: Select, _)
               if isForComprehensionMethod(
                 sel
               ) || sel.symbol.name == nme.unapply =>
-            None
+            Nil
           case Apply(fun, args) if fun.tpe != null =>
             val params = fun.tpe.params
 
@@ -535,17 +571,27 @@ final class PcInlayHintsProvider(
              *
              *     someOption.getOrElse(/*=> */fallbackCode)
              */
-            Some(singleArgBlockCase.getOrElse {
+            make(singleArgBlockCase.getOrElse {
               args
                 .zip(params)
                 .collect { case (tree, param) if param.isByNameParam => tree }
                 .map(tree => tree.pos)
                 .filter(_.isRange) // filter out default arguments
             })
-          case _ => None
+          case _ => Nil
         }
-      else None
+      else Nil
     }
+
+    def make(byNameArgs: List[Position]): List[InlayHint] =
+      byNameArgs.map { pos =>
+        InlayHints.makeInlayHint(
+          adjustPos(pos.focusStart).toLsp,
+          List(LabelPart("=> ")),
+          InlayHintKind.Parameter,
+          uri
+        )
+      }
 
     // If the position passed in wraps a brace-delimited expression, return the position after the opening brace
     private def byNamePosForBlockLike(pos: Position): Option[Position] = {
@@ -607,7 +653,48 @@ final class PcInlayHintsProvider(
           endsInSimpleSelect(innerTree)
         case _ => false
       }
+  }
 
+  object ClosingLabel extends InlayHintable {
+    def origin: InlayHintOrigin = InlayHintOrigin.ClosingLabel
+    // Extract (name and position) defdefs that end with curly braces
+    def getInlayHints(tree: Tree): List[InlayHint] = {
+      if (params.closingLabels()) {
+        tree match {
+          case tree: DefDef if !isIgnoredSymbol(tree.symbol) =>
+            val lastChar = text(tree.pos.end - 1)
+            if (lastChar == '}') {
+              List(make(tree.name.toString, tree.pos))
+            } else Nil
+          case tree: ImplDef =>
+            val lastChar = text(tree.pos.end - 1)
+            if (lastChar == '}') {
+              List(make(tree.name.toString, tree.pos))
+            } else Nil
+          case _ => Nil
+        }
+      } else Nil
+    }
+
+    def make(name: String, pos: Position): InlayHint = {
+      InlayHints.makeInlayHint(
+        adjustPos(pos).focusEnd.toLsp,
+        LabelPart(name) :: Nil,
+        InlayHintKind.Parameter,
+        uri
+      )
+    }
+
+    private def isIgnoredSymbol(sym: Symbol): Boolean = {
+      sym.isSynthetic ||
+      sym.isPrimaryConstructor ||
+      samePosAsOwner(sym)
+    }
+
+    private def samePosAsOwner(sym: Symbol) = {
+      val owner = sym.safeOwner
+      sym.pos == owner.pos
+    }
   }
 
   private def syntheticTupleApply(sel: Select): Boolean = {

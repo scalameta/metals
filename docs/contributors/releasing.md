@@ -64,6 +64,12 @@ put any smaller changes that you think are worth mentioning to the users in the
 `Miscellaneous` section and any large ones as their own section with more
 explanation and examples.
 
+If you want to add images to the release notes, you can add them to the separate
+folder in the `gh-pages-images` repository and reference them in the release
+notes using the
+`![image-name](https://github.com/scalameta/gh-pages-images/blob/master/metals/<release-name>/image-name.gif?raw=true)`
+format.
+
 ### Update Metals version
 
 - `build.sbt` - update `localSnapshotVersion` and `mimaPreviousArtifacts`
@@ -138,6 +144,9 @@ primary	git@github.com:scalameta/metals.git (push)
     - check or update `enum` values of `fallbackScalaVersion` property in
       `package.json`. They should be the same as `V.supportedScalaVersions` in
       `build.sbt`
+    - update `metals.serverVersion` in `package.json` and if needed also
+      `metals.bloopVersion` if it was set previously to the version within
+      metals.
     - open a PR, feel free to merge after CI is green
     - open the last generated release draft, tag with a new version and publish
       the release. The new version should always be the next minor since patches
@@ -185,14 +194,11 @@ afterwards without the release pressure.
   - In scalameta project:
     - checkout on the tag for this version
     - apply required changes for supporting new Scala2 compiler
-    - create and push tag with the following name:
-      `semanticdb_v${existing-scalameta-version}_${scala-version}` Notice this
-      tag should include
-      [these changes in `release.yml`](https://github.com/scalameta/scalameta/pull/2562/commits/1dfc99677659f5a9919c0dc9166547a0b332d35c)
+    - run manually the
+      [release workflow](https://github.com/scalameta/scalameta/actions/workflows/release-custom.yml)
 
-- Release mtags artifact. To do this push a tag to the metals repository in a form of:
-
-  `v1.3.5@2.13.16@mtags/publishSigned@mtagsShared/publishSigned`
-
-  This will trigger a release workflow that will publish the mtags artifact to
-  Sonatype. Replace `v1.3.5` and `2.13.16` with the version of the release you are making.
+- Release mtags artifact. To do this you also need to run manually the
+  [release workflow](https://github.com/scalameta/scalameta/actions/workflows/release-custom.yml).
+  You should first check if any manual changes are needed for that version. If
+  they are, you need to apply them on a separate branch and then run the
+  workflow from that branch.

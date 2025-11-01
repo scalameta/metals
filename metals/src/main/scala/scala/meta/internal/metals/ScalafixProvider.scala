@@ -21,6 +21,8 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
+import scala.meta.internal.metals.clients.language.MetalsStatusParams
+import scala.meta.internal.metals.mcp.ScalafixLlmRuleProvider
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.semanticdb.TextDocuments
@@ -48,6 +50,7 @@ case class ScalafixProvider(
     interactive: InteractiveSemanticdbs,
     tables: Tables,
     buildHasErrors: AbsolutePath => Boolean,
+    statusBar: StatusBar,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
   import ScalafixProvider._
   private val scalafixCache = TrieMap.empty[ScalaVersion, Scalafix]
@@ -63,11 +66,26 @@ case class ScalafixProvider(
       file: AbsolutePath,
       rules: List[String],
   ): Future[List[l.TextEdit]] = {
-    val definedRules = rulesFromScalafixConf()
+    lazy val generatedRules =
+      ScalafixLlmRuleProvider.generatedRules(workspace).keySet
+    lazy val definedRules =
+      rulesFromScalafixConf() ++ generatedRules
     val rulesFut =
       if (rules.isEmpty) askForRule(definedRules).map(_.toList)
       else Future.successful(rules)
-    rulesFut.flatMap(runRules(file, _))
+    rulesFut.flatMap { rulesToRun =>
+      def additionalDeps(scalaVersion: ScalaVersion) = {
+        val generatedRulesSelected =
+          rulesToRun.filter(generatedRules.contains(_))
+
+        ScalafixLlmRuleProvider.additionalDependencies(
+          generatedRulesSelected,
+          ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion),
+        )
+
+      }
+      runRules(file, rulesToRun, additionalDeps)
+    }
   }
 
   def runRuleFromDep(
@@ -149,15 +167,21 @@ case class ScalafixProvider(
                   results
                 ) && buildHasErrors(file) =>
               if (!silent) {
-                val msg = "Attempt to organize your imports failed. " +
-                  "It looks like you have compilation issues causing your semanticdb to be stale. " +
+                val statusMsg = "Attempt to organize your imports failed"
+                val fullMsg = statusMsg +
+                  ". It looks like you have compilation issues causing your semanticdb to be stale. " +
                   "Ensure everything is compiling and try again."
-                scribe.warn(
-                  msg
+                val params = new MetalsStatusParams(
+                  text = statusMsg,
+                  level = "warn",
+                  show = true,
+                  tooltip = fullMsg,
                 )
-                languageClient.showMessage(
-                  MessageType.Warning,
-                  msg,
+                scribe.warn(
+                  fullMsg
+                )
+                statusBar.addMessage(
+                  params
                 )
               }
               Future.successful(Nil)
@@ -420,7 +444,7 @@ case class ScalafixProvider(
       file
     }
 
-    val scalaVersion = scalaTarget.scalaVersion
+    val scalaVersion = ScalaVersions.dropVendorSuffix(scalaTarget.scalaVersion)
     val scalafixRulesKey =
       ScalafixRulesClasspathKey(
         scalaBinaryVersion,
@@ -729,6 +753,8 @@ case class ScalafixProvider(
   private def runRules(
       file: AbsolutePath,
       rules: List[String],
+      additionalRules: (ScalaVersion) => Map[String, Dependency] = _ =>
+        Map.empty,
   ): Future[List[l.TextEdit]] = {
     val result = for {
       buildId <- buildTargets.inverseSources(file)
@@ -738,6 +764,7 @@ case class ScalafixProvider(
         file,
         target,
         rules,
+        additionalRules(target.scalaVersion),
       )
     }
     result.getOrElse(Future.successful(Nil))

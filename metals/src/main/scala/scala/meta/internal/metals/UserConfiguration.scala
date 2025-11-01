@@ -54,6 +54,7 @@ case class UserConfiguration(
     customProjectRoot: Option[String] = None,
     verboseCompilation: Boolean = false,
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
+    targetBuildTool: Option[String] = None,
     scalaCliLauncher: Option[String] = None,
     defaultBspToBuildTool: Boolean = false,
     enableBestEffort: Boolean = false,
@@ -138,6 +139,7 @@ case class UserConfiguration(
         "autoImportBuilds" ->
           automaticImportBuild.toString().toLowerCase()
       ),
+      optStringField("targetBuildTool", targetBuildTool),
       optStringField("scalaCliLauncher", scalaCliLauncher),
       Some(
         (
@@ -400,6 +402,15 @@ object UserConfiguration {
            |""".stripMargin,
       ),
       UserConfigurationOption(
+        "inlay-hints.closing-labels.enable",
+        "false",
+        "false",
+        "Should display closing label hints for methods/classes/objects next to their closing braces",
+        """|When this option is enabled, each method/class/object definition that uses braces syntax,
+           | will get a closing label hint next to the closing brace with the name of the definition.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
         "enable-semantic-highlighting",
         "true",
         "false",
@@ -491,6 +502,16 @@ object UserConfiguration {
         """|Automatically import builds rather than prompting the user to choose. "initial" will 
            |only automatically import a build when a project is first opened, "all" will automate 
            |build imports after subsequent changes as well.""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "target-build-tool",
+        """empty string `""`.""",
+        """"bazel"""",
+        "Preferred build tool when multiple are detected",
+        """|The preferred build tool to use when multiple build definitions are detected in the workspace.
+           |This prevents the build tool selection dialog from appearing on startup.
+           |Valid values are: "sbt", "gradle", "mvn", "mill", "scala-cli", "bazel".
+           |""".stripMargin,
       ),
       UserConfigurationOption(
         "default-bsp-to-build-tool",
@@ -815,6 +836,18 @@ object UserConfiguration {
         case _ => AutoImportBuildKind.Off
       }
 
+    val targetBuildTool = {
+      import scala.meta.internal.builds._
+      getStringKey("target-build-tool").flatMap { tool =>
+        if (BuildTools.allBuildToolNames.contains(tool)) {
+          Some(tool)
+        } else {
+          errors += s"Invalid target-build-tool '$tool'. Valid values are: ${BuildTools.allBuildToolNames.toSeq.sorted.mkString(", ")}"
+          None
+        }
+      }
+    }
+
     val scalaCliLauncher = getStringKey("scala-cli-launcher")
     val defaultBspToBuildTool =
       getBooleanKey("default-bsp-to-build-tool").getOrElse(false)
@@ -855,6 +888,7 @@ object UserConfiguration {
           customProjectRoot,
           verboseCompilation,
           autoImportBuilds,
+          targetBuildTool,
           scalaCliLauncher,
           defaultBspToBuildTool,
           enableBestEffort,

@@ -48,7 +48,7 @@ object Compression {
       while (!isDone && !in.isAtEnd) {
         val tag = in.readTag()
         tag match {
-          case 10 /* magic tag for `writeString(1, ...)` */ =>
+          case 10 /* magic tag for `writeString(1, ...)` */ if pkg != null =>
             val name = in.readString()
             out += Classfile(pkg, name)
           case 18 /* magic tag for `writeString(2, ...)` */ =>

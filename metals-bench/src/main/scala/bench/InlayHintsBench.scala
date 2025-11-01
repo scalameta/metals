@@ -98,6 +98,7 @@ class InlayHintsBench extends PcBenchmark {
         true,
         true,
         false,
+        true,
       )
       pc.inlayHints(pcParams).get().asScala.toList
     }

@@ -115,6 +115,89 @@ class MillServerSuite
     }
   }
 
+  test("java-1.0.0") {
+    cleanWorkspace()
+
+    val fileContent =
+      """|
+         |package foo;
+         |
+         |import net.sourceforge.argparse4j.ArgumentParsers;
+         |import net.sourceforge.argparse4j.inf.Argume@@ntParser;
+         |import net.sourceforge.argparse4j.inf.Namespace;
+         |import org.thymeleaf.TemplateEngine;
+         |import org.thymeleaf.context.Context;
+         |
+         |public class Foo {
+         |  public static String generateHtml(String text) {
+         |    Context context = new Context();
+         |    context.setVariable("text", text);
+         |    return new TemplateEngine().process("<h1 th:text=\"${text}\"></h1>", context);
+         |  }
+         |
+         |  public static void main(String[] args) {
+         |    ArgumentParser parser = ArgumentParsers.newFor("template")
+         |        .build()
+         |        .defaultHelp(true)
+         |        .description("Inserts text into a HTML template");
+         |
+         |    parser.addArgument("-t", "--text").required(true).help("text to insert");
+         |
+         |    Namespace ns = null;
+         |    try {
+         |      ns = parser.parseArgs(args);
+         |    } catch (Exception e) {
+         |      System.out.println(e.getMessage());
+         |      System.exit(1);
+         |    }
+         |
+         |    System.out.println(generateHtml(ns.getString("text")));
+         |  }
+         |}
+         |""".stripMargin
+
+    for {
+      _ <- initialize(
+        s"""|
+            |/build.mill
+            |//| mill-version: ${V.millVersion}
+            |//// SNIPPET:BUILD
+            |package build
+            |import mill.*, javalib.*
+            |
+            |object foo extends JavaModule {
+            |  def mvnDeps = Seq(
+            |    mvn"net.sourceforge.argparse4j:argparse4j:0.9.0",
+            |    mvn"org.thymeleaf:thymeleaf:3.1.1.RELEASE"
+            |  )
+            |
+            |  object test extends JavaTests, TestModule.Junit4 {
+            |    def mvnDeps = Seq(
+            |      mvn"com.google.guava:guava:33.3.0-jre"
+            |    )
+            |  }
+            |}
+            |
+            |/foo/src/foo/Foo.java
+            |${fileContent.replace("@@", "")}
+            |""".stripMargin
+      )
+      _ <- server.didOpen("foo/src/foo/Foo.java")
+      _ <- server.didSave("foo/src/foo/Foo.java")
+      definition <- server.definition(
+        "foo/src/foo/Foo.java",
+        fileContent,
+        workspace,
+      )
+      _ = assert(
+        definition
+          .map(_.getUri())
+          .mkString("\n")
+          .contains("net/sourceforge/argparse4j/inf/ArgumentParser.java")
+      )
+    } yield ()
+  }
+
   test("too-old") {
     writeLayout(MillBuildLayout("", V.scala213, testDep = None, preBspVersion))
     for {
@@ -182,7 +265,7 @@ class MillServerSuite
          |/build.sc
          |import mill._, scalalib._
          |object foo extends ScalaModule {
-         |  def scalaVersion = "2.13.13"
+         |  def scalaVersion = "${V.scala213}"
          |}
          |/foo/src/Main.scala
          |package foo
@@ -227,7 +310,7 @@ class MillServerSuite
   }
 
   checkJavaHomeUpdate(
-    "mill-java-home-update",
+    "mill-java-home-update".flaky,
     fileContent => s"""|/build.sc
                        |import mill._, scalalib._
                        |object a extends ScalaModule {
@@ -252,11 +335,11 @@ class MillServerSuite
          |import mill.api.daemon.internal.bsp.BspModuleApi
          |  
          |object foo extends ScalaModule {
-         |  def scalaVersion = "2.13.13"
+         |  def scalaVersion = "${V.scala213}"
          |}
          |  
          |object bar extends ScalaModule   {
-         |  def scalaVersion = "2.13.13"
+         |  def scalaVersion = "${V.scala213}"
          |
          |   override def bspBuildTarget: BspBuildTarget = super.bspBuildTarget.copy(
          |     tags = super.bspBuildTarget.tags ++ Seq(BspModuleApi.Tag.NoIDE),
@@ -390,7 +473,7 @@ class MillServerSuite
           |
           |  object test extends ScalaTests with TestModule.Munit {
           |    def mvnDeps = Seq(
-          |      mvn"org.scalameta::munit::1.1.1"
+          |      mvn"org.scalameta::munit::1.2.0"
           |    )
           |
           |    def forkEnv = super.forkEnv() ++ Map("DOGGIES" -> "tests")

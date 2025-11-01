@@ -265,10 +265,13 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   def workspaceMessageRequests: String = {
     messageRequests.asScala.mkString("\n")
   }
-  def pathDiagnostics(filename: String): String = {
-    pathDiagnostics(toPath(filename))
+  def pathDiagnostics(
+      filename: String,
+      formatMessage: Boolean = true,
+  ): String = {
+    pathDiagnostics(toPath(filename), formatMessage)
   }
-  def pathDiagnostics(path: AbsolutePath): String = {
+  def pathDiagnostics(path: AbsolutePath, formatMessage: Boolean): String = {
     val isDeleted = !path.isFile
     val diags = diagnostics.getOrElse(path, Nil).sortBy(_.getRange)
     val relpath =
@@ -284,7 +287,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       }
     val sb = new StringBuilder
     diags.foreach { diag =>
-      val message = diag.formatMessage(input)
+      val message =
+        if (formatMessage) diag.formatMessage(input) else diag.getMessage
       sb.append(message).append("\n")
     }
     sb.toString()
@@ -299,8 +303,10 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       .mkString("\n")
   }
   def workspaceDiagnostics: String = {
-    val paths = diagnostics.keys.toList.sortBy(_.toURI.toString)
-    paths.map(pathDiagnostics).mkString
+    val paths = diagnostics.keys.toList
+      .filter(f => f.isScalaOrJava || f.extension == "conf")
+      .sortBy(_.toURI.toString)
+    paths.map(pathDiagnostics(_, formatMessage = true)).mkString
   }
 
   override def registerCapability(
@@ -433,6 +439,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
               .params()
               .getMessage()
           ) {
+            new MessageActionItem("Ignore")
+          } else if (ImportProjectPartiallyFailed.params() == params) {
             new MessageActionItem("Ignore")
           } else if (
             List(true, false)

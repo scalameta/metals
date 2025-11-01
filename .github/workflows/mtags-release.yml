@@ -1,0 +1,48 @@
+name: Release mtags and mtagsShared for version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Metals version (e.g., 1.2.3)"
+        required: true
+      branch:
+        description: "Branch or tag to release from (e.g., v1.6.3)"
+        required: true
+      scala:
+        description: "Scala version (e.g., 2.13.17)"
+        required: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out tag v${{ github.event.inputs.version }}
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.branch }}
+      - uses: olafurpg/setup-scala@v14
+      - name: Set up JVM
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'sbt'
+      - uses: sbt/setup-sbt@v1
+      - name: Publish ${{ github.event.inputs.project }} to Sonatype
+        run: sbt "set ThisBuild/version := \"${{ github.event.inputs.version }}\" ; set ThisBuild/isSnapshot := false; ++${{github.event.inputs.scala}}!; ci-release"
+        env:
+          CI_COMMIT_TAG: v${{ github.event.inputs.version }}
+          CI_RELEASE: mtags/publishSigned; mtagsShared/publishSigned
+          SCALAMETA_PLATFORM: ${{ github.event.inputs.platform }}
+          GIT_USER: scalameta@scalameta.org
+          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+          PGP_SECRET: ${{ secrets.PGP_SECRET }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          GITHUB_DEPLOY_KEY: ${{ secrets.GITHUB_DEPLOY_KEY }}
+          GOOGLE_APPLICATION_CREDENTIALS:
+            ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON:
+            ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}

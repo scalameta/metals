@@ -36,6 +36,7 @@ import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.scalacli.ScalaCliServers
 import scala.meta.io.AbsolutePath
 
+import org.eclipse.lsp4j
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 
@@ -565,12 +566,22 @@ class ConnectionProvider(
             "Connected to build server",
             true,
           ) {
-            bspConnector.connect(
-              buildToolProvider.buildTool,
-              folder,
-              () => userConfig,
-              shellRunner,
-            )
+            // If chosen build tool was removed at any point we want to readd it
+            val buildToolOpt: Future[Option[BuildTool]] =
+              buildToolProvider.buildTool match {
+                case Some(value) =>
+                  Future.successful(Some(value))
+                case None =>
+                  buildToolProvider.supportedBuildTool().map(_.map(_.buildTool))
+              }
+            buildToolOpt.flatMap { toolOpt =>
+              bspConnector.connect(
+                toolOpt,
+                folder,
+                () => userConfig,
+                shellRunner,
+              )
+            }
           }
           .withInterrupt
         result <- maybeSession match {
@@ -669,6 +680,10 @@ class ConnectionProvider(
     private def bloopInstallAndConnect(
         buildTool: BloopInstallProvider
     )(implicit cancelSwitch: CancelSwitch): Interruptable[BuildChange] = {
+      val logsFile = buildToolProvider.folder.resolve(Directories.log)
+      val logsPath = logsFile.toURI.toString
+      val logsLinesCountBefore =
+        if (logsFile.exists) logsFile.readText.linesIterator.size else 0
       for {
         result <- bloopInstall.run(buildTool).withInterrupt
         change <- {
@@ -681,10 +696,30 @@ class ConnectionProvider(
                     buildToolProvider.optProjectRoot
                   )
                 ) {
-                  // TODO(olafur) try to connect but gracefully error
-                  languageClient.showMessage(
-                    Messages.ImportProjectPartiallyFailed
-                  )
+                  languageClient
+                    .showMessageRequest(
+                      Messages.ImportProjectPartiallyFailed.params()
+                    )
+                    .asScala
+                    .foreach {
+                      case Messages.ImportProjectPartiallyFailed.showLogs =>
+                        val cursorRange = new lsp4j.Range(
+                          new lsp4j.Position(logsLinesCountBefore, 0),
+                          new lsp4j.Position(logsLinesCountBefore, 0),
+                        )
+                        val location = new lsp4j.Location(logsPath, cursorRange)
+                        languageClient.metalsExecuteClientCommand(
+                          ClientCommands.GotoLocation
+                            .toExecuteCommandParams(
+                              ClientCommands.WindowLocation(
+                                location.getUri(),
+                                location.getRange(),
+                              )
+                            )
+                        )
+                      case _ => Interruptable.successful(BuildChange.Failed)
+                    }
+
                   // Connect nevertheless, many build import failures are caused
                   // by resolution errors in one weird module while other modules
                   // exported successfully.

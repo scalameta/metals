@@ -11,8 +11,11 @@ import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import tests.BaseLspSuite
+import tests.mcp.McpTestUtils
 
-class ScalafixRunOnlyLspSuite extends BaseLspSuite("run-scalafix-rules") {
+class ScalafixRunOnlyLspSuite
+    extends BaseLspSuite("run-scalafix-rules")
+    with McpTestUtils {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(
@@ -32,7 +35,7 @@ class ScalafixRunOnlyLspSuite extends BaseLspSuite("run-scalafix-rules") {
       if (rules.isEmpty) null else rules.asJava,
     )
 
-  private val mainFile = "a/src/main/scala/Main.scala"
+  private val mainFile = "a/src/main/scala/com/example/Hello.scala"
 
   private val scalafixConf: String =
     """|/.scalafix.conf
@@ -111,6 +114,83 @@ class ScalafixRunOnlyLspSuite extends BaseLspSuite("run-scalafix-rules") {
            |}
            |""".stripMargin,
       )
+    } yield ()
+  }
+
+  test("generate-scalafix-run-rule") {
+    cleanWorkspace()
+
+    server.client.quickPickHandler = { rules =>
+      assertNoDiff(
+        rules.items.asScala.map(_.label).mkString(","),
+        "ReplaceJohnWithJohnatan",
+      )
+      RawMetalsQuickPickResult("ReplaceJohnWithJohnatan", cancelled = false)
+    }
+    val sampleCode = "println(\"John\")"
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/example/Hello.scala
+           |package com.example
+           |
+           |object Hello { 
+           |  val str = "John"
+           |  def main(args: Array[String]): Unit = println(str)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
+      client <- startMcpServer()
+      result <- client.generateScalafixRule(
+        """|
+           |package fix
+           |
+           |import scalafix.v1._
+           |import scala.meta._
+           |
+           |class ReplaceJohnWithJohnatan extends SemanticRule("ReplaceJohnWithJohnatan") {
+           |  override def fix(implicit doc: SemanticDocument): Patch = {
+           |    doc.tree.collect {
+           |      case lit @ Lit.String(value) if value.contains("John") =>
+           |        val newValue = value.replace("John", "\"Johnatan\"")
+           |        Patch.replaceTree(lit, newValue)
+           |    }.asPatch
+           |  }
+           |}
+           |
+           |""".stripMargin,
+        "Converts John to Johnatan",
+        Some(sampleCode),
+      )
+      _ = assertNoDiff(
+        result,
+        "Created and ran Scalafix rule ReplaceJohnWithJohnatan successfully",
+      )
+      _ = server.didChange("a/src/main/scala/com/example/Hello.scala") { code =>
+        code.replace("Johnatan", "John")
+      }
+      _ = server.didSave("a/src/main/scala/com/example/Hello.scala")
+
+      _ <- server.executeCommand(
+        ServerCommands.ScalafixRunOnly,
+        params(mainFile, List.empty[String]),
+      )
+      _ = assertNoDiff(
+        server.bufferContents("a/src/main/scala/com/example/Hello.scala"),
+        """|
+           |package com.example
+           |
+           |object Hello { 
+           |  val str = "Johnatan"
+           |  def main(args: Array[String]): Unit = println(str)
+           |}
+           |
+           |""".stripMargin,
+      )
+      _ <- client.shutdown()
     } yield ()
   }
 }

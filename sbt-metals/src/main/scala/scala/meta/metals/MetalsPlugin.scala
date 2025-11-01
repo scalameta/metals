@@ -82,11 +82,25 @@ object MetalsPlugin extends AutoPlugin {
     allDependencies ++= {
       if (javaSemanticdbEnabled.value) {
         val existing = ivyConfigurations.value.map(_.name).toSet
-        val configurations = Seq(
+        val baseConfigurations = Seq(
           Configurations.CompileInternal,
           Configurations.TestInternal,
-          Configurations.IntegrationTestInternal,
-        ).map(_.name).filter(existing.contains).mkString(",")
+        )
+        // Only add IntegrationTestInternal for Scala 2.x and sbt 1.x (not available in sbt 2.0+)
+        val allConfigurations = if (!isSbt2.value) {
+          val IntegrationTest =
+            Configuration.of("IntegrationTest", "it").extend(Runtime)
+          val IntegrationTestInternal = Configuration
+            .of("IntegrationTestInternal", "it-internal")
+            .extend(IntegrationTest, Optional, Provided)
+            .hide
+          baseConfigurations :+ IntegrationTestInternal
+
+        } else {
+          baseConfigurations
+        }
+        val configurations =
+          allConfigurations.map(_.name).filter(existing.contains).mkString(",")
         List(
           "com.sourcegraph" % "semanticdb-javac" % BuildInfo.javaSemanticdbVersion % configurations
         )
@@ -103,6 +117,10 @@ object MetalsPlugin extends AutoPlugin {
 
   def isScala3: Def.Initialize[Boolean] = Def.setting {
     ScalaInstance.isDotty(scalaVersion.value)
+  }
+
+  def isSbt2: Def.Initialize[Boolean] = Def.setting {
+    sbtVersion.value.startsWith("2.")
   }
 
   def javaSemanticdbOptions: Def.Initialize[Seq[String]] = {

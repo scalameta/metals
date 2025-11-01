@@ -676,6 +676,7 @@ class Compilers(
         hintsInPatternMatch = options.hintsInPatternMatch,
         hintsXRayMode = options.hintsXRayMode,
         namedParameters = options.namedParameters,
+        closingLabels = options.closingLabels,
       )
 
       pc
@@ -1771,10 +1772,8 @@ object Compilers {
   case class DidChangeCompilerFileParams(
       uri: URI,
       text: String,
-      returnDiagnostics: Boolean,
+      override val shouldReturnDiagnostics: Boolean,
       token: CancelToken = EmptyCancelToken,
-  ) extends VirtualFileParams {
-    override def data(): Object = Some(returnDiagnostics)
-  }
+  ) extends VirtualFileParams
 
 }
