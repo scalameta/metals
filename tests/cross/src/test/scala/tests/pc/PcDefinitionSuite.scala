@@ -11,13 +11,17 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
 
   override def requiresScalaLibrarySources: Boolean = true
 
-  override def definitions(offsetParams: OffsetParams): List[Location] =
+  override def definitions(offsetParams: OffsetParams): List[Location] = {
+    // all test cases create the same classes over and over again, leading to name
+    // clashes and flakiness. Restart with a fresh state ensures stable results.
+    presentationCompiler.restart()
     presentationCompiler
       .definition(offsetParams)
       .get()
       .locations()
       .asScala
       .toList
+  }
 
   check(
     "basic",
@@ -91,6 +95,19 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
   )
 
   check(
+    "implicit-apply",
+    """|
+       |object Main {
+       |  class Foo {
+       |    def <<apply>>(x: Int): Int = x + 2
+       |  }
+       |  val <<foo>> = new Foo()
+       |  fo@@o(1)
+       |}
+       |""".stripMargin
+  )
+
+  check(
     "tuple",
     // assert we don't go to `Tuple2.scala`
     """|
@@ -108,16 +125,22 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |}
        |""".stripMargin,
     compat = Map(
+      "2.12" ->
+        """|
+           |object Main {
+           |  /*scala/collection/immutable/List.apply(). List.scala*//*scala/collection/immutable/List. List.scala*/List(1)
+           |}
+           |""".stripMargin,
       "2.13" ->
         """|
            |object Main {
-           |  /*scala/collection/IterableFactory#apply(). Factory.scala*/List(1)
+           |  /*scala/collection/IterableFactory#apply(). Factory.scala*//*scala/package.List. package.scala*/List(1)
            |}
            |""".stripMargin,
       "3" ->
         """|
            |object Main {
-           |  /*scala/collection/IterableFactory#apply(). Factory.scala*/List(1)
+           |  /*scala/collection/IterableFactory#apply(). Factory.scala*//*scala/package.List. package.scala*/List(1)
            |}
            |""".stripMargin
     )
@@ -352,11 +375,81 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
   )
 
   check(
+    "case-class-ctor",
+    """|
+       |case class <<Foo>>(a: Int, b: String)
+       |class Main {
+       |  Fo@@o(a = 3, b = "42")
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "case-class-and-object",
+    """|
+       |case class <<Foo>>(a: Int, b: String)
+       |object Foo
+       |class Main {
+       |  Fo@@o(a = 3, b = "42")
+       |}
+       |""".stripMargin
+  )
+
+  check(
     "case-class-apply",
     """|
        |case class Foo(<<a>>: Int, b: String)
        |class Main {
        |  Foo(@@a = 3, b = "42")
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "case-class-apply-invalid",
+    """|
+       |case class <<Foo>>(a: Int, b: String)
+       |class Main {
+       |  Fo@@o(a = "3", b = "42")
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "custom-case-class-apply",
+    """|
+       |case class Foo(a: Int, b: String)
+       |object <<Foo>> {
+       |  def <<apply>>(a: Int): Foo = Foo(a, "42")
+       |}
+       |class Main {
+       |  Fo@@o(a = 3)
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "custom-case-class-apply-2",
+    """|
+       |case class Foo(a: Int, b: String)
+       |object <<Foo>> {
+       |  def <<apply>>(a: Int, b: String): Foo = new Foo(a, "")
+       |}
+       |class Main {
+       |  Fo@@o(a = 3, b = "42")
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "companion-apply",
+    """|
+       |class Foo(a: Int, b: String)
+       |object <<Foo>> {
+       |  def <<apply>>(a: Int): Foo = new Foo(a, "42")
+       |}
+       |class Main {
+       |  Fo@@o(a = 3)
        |}
        |""".stripMargin
   )

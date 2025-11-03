@@ -2,6 +2,8 @@ package scala.meta.internal.pc
 
 import java.{util => ju}
 
+import scala.jdk.CollectionConverters._
+
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.pc.DefinitionResult
@@ -81,39 +83,53 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
           semanticdbSymbol(symbol),
           ju.Collections.emptyList()
         )
-      } else if (
-        symbol.pos != null &&
-        symbol.pos.isDefined &&
-        symbol.pos.source.eq(unit.source)
-      ) {
-        val focused = symbol.pos.focus
-        val actualName = symbol.decodedName.stripSuffix("_=").trim
-        val namePos =
-          if (symbol.name.startsWith("x$") && symbol.isSynthetic) focused
-          else focused.withEnd(focused.start + actualName.length())
-        val adjusted = namePos.adjust(unit.source.content)._1
-
+      } else {
+        val allSyms = tree match {
+          case Select(qual, nme.apply)
+              if !findTypeDef
+                && qual.pos.sameRange(tree.pos)
+                && qual.hasExistingSymbol =>
+            if (symbol.isCaseApplyOrUnapply) // no symbol to navigate to
+              List(symbol.owner.companionClass)
+            else
+              List(symbol, qual.symbol)
+          case _ =>
+            List(symbol)
+        }
         DefinitionResultImpl(
           semanticdbSymbol(symbol),
-          ju.Collections.singletonList(
-            new Location(params.uri().toString(), adjusted.toLsp)
-          )
-        )
-      } else {
-        val res = new ju.ArrayList[Location]()
-        symbol.alternatives
-          .map(semanticdbSymbol)
-          .sorted
-          .foreach { sym =>
-            if (sym.isGlobal) {
-              res.addAll(search.definition(sym, params.uri()))
-            }
-          }
-        DefinitionResultImpl(
-          semanticdbSymbol(tree.symbol),
-          res
+          allSyms.flatMap(findSymbolLocations(_, unit)).asJava
         )
       }
+    }
+  }
+
+  private def findSymbolLocations(
+      symbol: Symbol,
+      unit: CompilationUnit
+  ): List[Location] = {
+    if (
+      symbol.pos != null &&
+      symbol.pos.isDefined &&
+      symbol.pos.source.eq(unit.source)
+    ) {
+      val focused = symbol.pos.focus
+      val actualName = symbol.decodedName.stripSuffix("_=").trim
+      val namePos =
+        if (symbol.name.startsWith("x$") && symbol.isSynthetic) focused
+        else focused.withEnd(focused.start + actualName.length())
+      val adjusted = namePos.adjust(unit.source.content)._1
+      List(new Location(params.uri().toString(), adjusted.toLsp))
+
+    } else {
+      symbol.alternatives
+        .map(semanticdbSymbol)
+        .sorted
+        .flatMap { sym =>
+          if (sym.isGlobal) {
+            search.definition(sym, params.uri()).asScala
+          } else Nil
+        }
     }
   }
 
