@@ -67,6 +67,10 @@ import org.lmdbjava.Env
  * on a hot cache, and incremental updates are processed at ~300-600k loc/s
  * depending on a variety of factors like coding style, split between
  * Java/Scala, etc.
+ *
+ * NOTE: this class will get replaced with MbtV2WorkspaceSymbolSearch since it
+ * was too complicated to retrofit incremental index updates to this array-based
+ * LMDB index.
  */
 final class MbtWorkspaceSymbolProvider(
     val gitWorkspace: AbsolutePath,
@@ -79,7 +83,7 @@ final class MbtWorkspaceSymbolProvider(
     with Cancelable
     with SemanticdbFileManager {
 
-  def close(): Unit = {
+  override def close(): Unit = {
     db.close()
   }
 
@@ -153,9 +157,9 @@ final class MbtWorkspaceSymbolProvider(
       params: MbtWorkspaceSymbolSearchParams,
       visitor: SymbolSearchVisitor,
   ): SymbolSearch.Result = {
-    if (!config().isMBT) {
+    if (!config().isMBT1) {
       scribe.error(
-        "invalid state, MbtWorkspaceSymbolProvider.search cannot be used when config.isMBT is false"
+        "invalid state, MbtWorkspaceSymbolProvider.search cannot be used when config.isMBT1 is false"
       )
       return SymbolSearch.Result.INCOMPLETE
     }
@@ -226,9 +230,9 @@ final class MbtWorkspaceSymbolProvider(
       token: CancelToken,
       visitor: MbtSymbolSearchVisitor,
   ): Unit = {
-    if (!config().isMBT) {
+    if (!config().isMBT1) {
       scribe.error(
-        "invalid state, MbtWorkspaceSymbolProvider.workspaceSymbol cannot be used when config.isMBT is false"
+        "invalid state, MbtWorkspaceSymbolProvider.workspaceSymbol cannot be used when config.isMBT1 is false"
       )
       return
     }
@@ -312,16 +316,25 @@ final class MbtWorkspaceSymbolProvider(
     }
   }
 
-  def onReindex(): IndexingStats = {
-    if (!config().isMBT) {
+  // NOTE(olafurpg):`onDidChange` is not supported with mbt-v1. I gave up trying
+  // because it was too complicated to implement it the array-based index and
+  // LMDB backend.  In mbt-v2, this is much much simpler to implement because
+  // it's using the same TrieMap[AbsolutePath, IndexedDocument] shape as all the
+  // other indexers in Metals.
+  def onDidChange(file: AbsolutePath): Unit = ()
+  def onDidDelete(file: AbsolutePath): Unit = ()
+  def onDidChangeSymbols(params: OnDidChangeSymbolsParams): Unit = ()
+
+  override def onReindex(): IndexingStats = {
+    if (!config().isMBT1) {
       return IndexingStats.empty
     }
     // Stage 0: discover the files that need to be indexed
     scribe.debug("workspace/symbol indexing started")
     val timer = new Timer(Time.system)
-    val files = GitVCS
-      .lsFilesStage(gitWorkspace, isRelevantPath)
-      .sortInPlace()(Ordering.by[GitBlob, String](file => file.oid))
+    val files =
+      // TODO: avoid copy here
+      mutable.ArrayBuffer.from(GitVCS.lsFilesStage(gitWorkspace).iterator)
     if (files.isEmpty) {
       // An error is logged if GitVCS.lsFilesStage fails.
       scribe.warn("workspace/symbol indexing found no files to index")
@@ -554,12 +567,6 @@ final class MbtWorkspaceSymbolProvider(
       scribe.error(s"TextDocument not found for file ${file.path}")
       TextDocument()
     }
-  }
-
-  private def isRelevantPath(file: GitBlob): Boolean = {
-    file.path.endsWith(".java") ||
-    file.path.endsWith(".proto") ||
-    file.path.endsWith(".scala")
   }
 
   override def cancel(): Unit = {

@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import java.io.Closeable
+
 import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 
@@ -13,6 +15,10 @@ trait Cancelable {
 }
 
 object Cancelable {
+  def fromCloseable[T <: Closeable](closeable: T): Cancelable =
+    new Cancelable {
+      override def cancel(): Unit = closeable.close()
+    }
   def apply(fn: () => Unit): Cancelable =
     new Cancelable {
       override def cancel(): Unit = fn()

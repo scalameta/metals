@@ -104,6 +104,15 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
   }
 
   implicit class XtensionSemanticdbRange(range: s.Range) {
+    def toJRange: Semanticdb.Range = {
+      Semanticdb.Range
+        .newBuilder()
+        .setStartLine(range.startLine)
+        .setStartCharacter(range.startCharacter)
+        .setEndLine(range.endLine)
+        .setEndCharacter(range.endCharacter)
+        .build()
+    }
     def isPoint: Boolean = {
       range.startLine == range.endLine &&
       range.startCharacter == range.endCharacter
@@ -510,6 +519,9 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
       AbsolutePath(Files.createDirectories(path.dealias.toNIO))
 
     def writeText(text: String): Unit = {
+      writeBytes(text.getBytes(StandardCharsets.UTF_8))
+    }
+    def writeBytes(bytes: Array[Byte]): Unit = {
       path.parent.createDirectories()
       val tmp = Files.createTempFile("metals", path.filename)
       // Write contents first to a temporary file and then try to
@@ -518,7 +530,7 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
       // file contents during a half-complete file write.
       Files.write(
         tmp,
-        text.getBytes(StandardCharsets.UTF_8),
+        bytes,
         StandardOpenOption.TRUNCATE_EXISTING
       )
       try {
@@ -535,7 +547,19 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     }
   }
 
+  implicit class XtensionJSymbolInformationKind(
+      kind: Semanticdb.SymbolInformation.Kind
+  ) {
+    def toSKind: s.SymbolInformation.Kind = {
+      s.SymbolInformation.Kind.fromValue(kind.getNumber())
+    }
+    def toLsp: l.SymbolKind = toSKind.toLsp
+  }
+
   implicit class XtensionSymbolInformationKind(kind: s.SymbolInformation.Kind) {
+    def toJKind: Semanticdb.SymbolInformation.Kind =
+      Semanticdb.SymbolInformation.Kind.forNumber(kind.value)
+
     def toLsp: l.SymbolKind =
       kind match {
         case k.LOCAL => l.SymbolKind.Variable

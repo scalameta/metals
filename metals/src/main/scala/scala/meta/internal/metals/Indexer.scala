@@ -19,6 +19,7 @@ import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.builds.WorkspaceReload
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.mbt.OnDidChangeSymbolsParams
 import scala.meta.internal.mtags.DependencyModule
 import scala.meta.internal.mtags.IndexingResult
 import scala.meta.internal.mtags.MavenCoordinates
@@ -27,6 +28,7 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.Position
+import org.eclipse.{lsp4j => l}
 
 // todo https://github.com/scalameta/metals/issues/4788
 // clean () =>, use plain values
@@ -539,12 +541,20 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
         val input = sourceToIndex0.toInput
         val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
+        val allSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         val optMtags = SemanticdbDefinition.foreachWithReturnMtags(
           input,
           dialect,
           includeMembers = true,
           collectIdentifiers = true,
         ) { case SemanticdbDefinition(info, occ, owner) =>
+          allSymbols += WorkspaceSymbolInformation(
+            info.symbol,
+            info.kind,
+            occ.range.fold(
+              new l.Range(new l.Position(0, 0), new l.Position(0, 0))
+            )(_.toLsp),
+          )
           if (info.isExtension) {
             occ.range.foreach { range =>
               methodSymbols += WorkspaceSymbolInformation(
@@ -584,6 +594,14 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
             referencesProvider.addIdentifiers(source, identifiers)
           )
         workspaceSymbols.didChange(source, symbols.toSeq, methodSymbols.toSeq)
+        mbtSymbolSearch.onDidChangeSymbols(
+          OnDidChangeSymbolsParams(
+            source,
+            input,
+            allSymbols,
+            methodSymbols.toSeq,
+          )
+        )
 
         // Since the `symbols` here are toplevel symbols,
         // we cannot use `symbols` for expiring the cache for all symbols in the source.

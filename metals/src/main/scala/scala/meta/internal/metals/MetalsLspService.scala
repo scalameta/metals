@@ -47,7 +47,8 @@ import scala.meta.internal.metals.doctor.MetalsServiceInfo
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
-import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
+import scala.meta.internal.metals.mbt.LazyMbtWorkspaceSymbolSearch
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolSearch
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.scalacli.ScalaCliServers
@@ -292,15 +293,15 @@ abstract class MetalsLspService(
       connectionBspStatus,
     )
 
-  val mbtWorkspaceSymbolProvider: MbtWorkspaceSymbolProvider =
-    cancelables.register(
-      new MbtWorkspaceSymbolProvider(
-        folder,
-        () => userConfig.workspaceSymbolProvider,
-        () => clientConfig.initialConfig.statistics,
-        metrics,
-        buffers,
-        timerProvider,
+  override val mbtSymbolSearch: MbtWorkspaceSymbolSearch =
+    cancelables.registerCloseable(
+      new LazyMbtWorkspaceSymbolSearch(
+        workspace = folder,
+        config = () => userConfig.workspaceSymbolProvider,
+        statistics = () => clientConfig.initialConfig.statistics,
+        buffers = buffers,
+        time = time,
+        metrics = metrics,
       )
     )
   val workspaceSymbols: WorkspaceSymbolProvider =
@@ -312,7 +313,7 @@ abstract class MetalsLspService(
       userConfig = () => userConfig,
       excludedPackageHandler = () => excludedPackageHandler,
       classpathSearchIndexer = classpathSearchIndexer,
-      mbtWorkspaceSymbolProvider = mbtWorkspaceSymbolProvider,
+      mbtWorkspaceSymbolProvider = mbtSymbolSearch,
     )
 
   protected def warnings: Warnings = NoopWarnings
@@ -404,7 +405,7 @@ abstract class MetalsLspService(
       semanticdbs,
     )
 
-  protected def onCreate(path: AbsolutePath): Unit = {
+  protected def onCreate(path: AbsolutePath): Future[List[Diagnostic]] = {
     buildTargets.onCreate(path)
     compilers.didChange(path)
   }
@@ -467,7 +468,7 @@ abstract class MetalsLspService(
       sourceMapper,
       worksheetProvider,
       () => referencesProvider,
-      mbtWorkspaceSymbolProvider,
+      mbtSymbolSearch,
       timerProvider,
       featureFlags,
     )
@@ -499,8 +500,10 @@ abstract class MetalsLspService(
     scalaVersionSelector,
     clientConfig.icons(),
     onCreate = path => {
-      onCreate(path)
-      onChange(List(path))
+      for {
+        _ <- onCreate(path)
+        _ <- onChange(List(path))
+      } yield ()
     },
   )
 
@@ -738,7 +741,14 @@ abstract class MetalsLspService(
             .sequence(
               List[Future[Unit]](
                 onInitialized(),
-                Future(mbtWorkspaceSymbolProvider.onReindex()),
+                Future {
+                  val stats = mbtSymbolSearch.onReindex()
+                  if (Testing.isEnabled) {
+                    stats.backgroundJobs
+                  } else {
+                    Future.unit
+                  }
+                }.flatten,
                 Future(workspaceSymbols.indexClasspath()),
                 Future(formattingProvider.load()),
               )
@@ -767,7 +777,7 @@ abstract class MetalsLspService(
     val old = setUserConfig(newConfig)
 
     if (old.workspaceSymbolProvider != newConfig.workspaceSymbolProvider) {
-      Future(mbtWorkspaceSymbolProvider.onReindex())
+      Future(mbtSymbolSearch.onReindex())
     }
 
     if (userConfig.excludedPackages != old.excludedPackages) {
@@ -1034,8 +1044,13 @@ abstract class MetalsLspService(
           .startsWith(reports.bloop.maybeReportsDir)
       )
     if (bloopReportDelete.nonEmpty) connectionBspStatus.onReportsUpdate()
-    otherDeleteEvents.map(_.getUri().toAbsolutePath).foreach(onDelete)
-    onChange(changeAndCreateEvents.map(_.getUri().toAbsolutePath))
+
+    val futures = List.newBuilder[Future[Unit]]
+    futures ++= otherDeleteEvents.map(event =>
+      onDelete(event.getUri().toAbsolutePath)
+    )
+    futures += onChange(changeAndCreateEvents.map(_.getUri().toAbsolutePath))
+    Future.sequence(futures.result()).ignoreValue
   }
 
   /**
@@ -1082,17 +1097,25 @@ abstract class MetalsLspService(
     Future
       .sequence(
         List(
-          userConfigPromise.future.flatMap { _ =>
-            if (userConfig.buildOnChange)
-              compilations
-                .compileFiles(
-                  List(path),
-                  Option(focusedDocumentBuildTarget.get()),
-                )
-            else Future.successful(())
-          },
+          // See comments above about hanging tests. Same issue here.
+          if (Testing.isEnabled && !userConfigPromise.isCompleted)
+            compilations.compileFiles(
+              List(path),
+              Option(focusedDocumentBuildTarget.get()),
+            )
+          else
+            userConfigPromise.future.flatMap { _ =>
+              if (userConfig.buildOnChange)
+                compilations
+                  .compileFiles(
+                    List(path),
+                    Option(focusedDocumentBuildTarget.get()),
+                  )
+              else Future.successful(())
+            },
           Future {
             diagnostics.didDelete(path)
+            mbtSymbolSearch.onDidDelete(path)
             testProvider.onFileDelete(path)
           },
         )

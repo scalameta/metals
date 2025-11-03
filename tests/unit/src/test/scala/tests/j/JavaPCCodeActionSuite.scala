@@ -6,7 +6,7 @@ class JavaPCCodeActionSuite extends BaseJavaPCSuite("java-pc-code-action") {
 
   testLSP("external-dep") {
     cleanWorkspace()
-    val path = "a/src/main/java/a/Example.java"
+    val path = "a/src/main/java/a/b/Example.java"
     for {
       _ <- initialize(
         s"""|
@@ -15,7 +15,7 @@ class JavaPCCodeActionSuite extends BaseJavaPCSuite("java-pc-code-action") {
             |  "a": {}
             |}
             |/$path
-            |package a;
+            |package a.b;
             |
             |public class Example {
             |  public static Object visitor = new SimpleFileVisitor
@@ -26,12 +26,12 @@ class JavaPCCodeActionSuite extends BaseJavaPCSuite("java-pc-code-action") {
       _ <- server.didFocus(path)
       _ = assertNoDiff(
         client.workspaceDiagnostics,
-        """|a/src/main/java/a/Example.java:4:38: error: cannot find symbol
+        """|a/src/main/java/a/b/Example.java:4:38: error: cannot find symbol
            |  symbol:   class SimpleFileVisitor
-           |  location: class a.Example
+           |  location: class a.b.Example
            |  public static Object visitor = new SimpleFileVisitor
            |                                     ^^^^^^^^^^^^^^^^^
-           |a/src/main/java/a/Example.java:5:1: error: '(' or '[' expected
+           |a/src/main/java/a/b/Example.java:5:1: error: '(' or '[' expected
            |}
            |^
            |""".stripMargin,

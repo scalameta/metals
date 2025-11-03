@@ -1,23 +1,65 @@
 package scala.meta.internal.metals.mbt
 
+import java.io.Closeable
+
+import scala.jdk.CollectionConverters._
+
+import scala.meta.io.AbsolutePath
+import scala.meta.pc.SemanticdbFileManager
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
+
+import org.eclipse.{lsp4j => l}
 
 case class MbtWorkspaceSymbolSearchParams(
     query: String,
     buildTargetIdentifier: String,
 )
 
-trait MbtWorkspaceSymbolSearch {
+trait MbtWorkspaceSymbolSearch extends SemanticdbFileManager with Closeable {
+
+  /**
+   * Index the entire repository. Normally, this is only called once in the lifetime
+   * of the process. However, it can be called multiple times if the user is flipping between
+   * settings, etc.
+   */
+  def onReindex(): IndexingStats
+  def onDidChange(file: AbsolutePath): Unit
+  def onDidDelete(file: AbsolutePath): Unit
+  def onDidChangeSymbols(params: OnDidChangeSymbolsParams): Unit
+
+  /**
+   * The main search API.
+   *
+   * @param params
+   * @param visitor *must* be thread-safe.
+   * @return
+   */
   def workspaceSymbolSearch(
       params: MbtWorkspaceSymbolSearchParams,
       visitor: SymbolSearchVisitor,
   ): SymbolSearch.Result
-}
 
-object EmptyMbtWorkspaceSymbolSearch extends MbtWorkspaceSymbolSearch {
-  override def workspaceSymbolSearch(
-      params: MbtWorkspaceSymbolSearchParams,
-      visitor: SymbolSearchVisitor,
-  ): SymbolSearch.Result = SymbolSearch.Result.COMPLETE
+  // Convenience method to avoid dealing with the visitor-based query API
+  // (including concurrency).  Mostly useful for testing. In production, use the
+  // visitor-based API.
+  final def queryWorkspaceSymbol(
+      query: String
+  ): List[l.SymbolInformation] = {
+    val visitor = new SimpleCollectingSymbolSearchVisitor()
+    workspaceSymbolSearch(
+      new MbtWorkspaceSymbolSearchParams(query, ""),
+      visitor,
+    )
+    visitor.results.asScala.toList
+  }
+
+  def close(): Unit
+}
+object MbtWorkspaceSymbolSearch {
+  def isRelevantPath(file: String): Boolean = {
+    file.endsWith(".java") ||
+    file.endsWith(".proto") ||
+    file.endsWith(".scala")
+  }
 }

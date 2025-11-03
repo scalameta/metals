@@ -639,10 +639,12 @@ object MetalsEnrichments
       }
     }
 
-    def touch(): Unit = {
+    def touch(): AbsolutePath = {
       if (!path.exists) {
         path.parent.createDirectories()
-        Files.createFile(path.toNIO)
+        AbsolutePath(Files.createFile(path.toNIO))
+      } else {
+        path
       }
     }
 

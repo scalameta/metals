@@ -32,7 +32,8 @@ object Configs {
         else workspace.toURI.toString.stripSuffix("/")
       new DidChangeWatchedFilesRegistrationOptions(
         (List(
-          new FileSystemWatcher(JEither.forLeft(s"$root/**/*.{scala,java}")),
+          new FileSystemWatcher(JEither.forLeft(s"$root/**/*.scala")),
+          new FileSystemWatcher(JEither.forLeft(s"$root/**/*.java")),
           new FileSystemWatcher(JEither.forLeft(s"$root/*.sbt")),
           new FileSystemWatcher(JEither.forLeft(s"$root/pom.xml")),
           new FileSystemWatcher(JEither.forLeft(s"$root/*.sc")),
@@ -132,12 +133,12 @@ object Configs {
   }
 
   object WorkspaceSymbolProviderConfig {
-    def mbt: WorkspaceSymbolProviderConfig = WorkspaceSymbolProviderConfig(
-      "mbt"
-    )
-    def bsp: WorkspaceSymbolProviderConfig = WorkspaceSymbolProviderConfig(
-      "bsp"
-    )
+    def mbt: WorkspaceSymbolProviderConfig =
+      WorkspaceSymbolProviderConfig("mbt")
+    def mbt2: WorkspaceSymbolProviderConfig =
+      WorkspaceSymbolProviderConfig("mbt-v2")
+    def bsp: WorkspaceSymbolProviderConfig =
+      WorkspaceSymbolProviderConfig("bsp")
     def default: WorkspaceSymbolProviderConfig = bsp
     def fromConfigOrFeatureFlag(
         value: Option[String],
@@ -146,7 +147,7 @@ object Configs {
       value match {
         case Some("mbt") if !LMDB.isSupportedOrWarn() =>
           Right(WorkspaceSymbolProviderConfig.bsp)
-        case Some(ok @ ("bsp" | "mbt")) =>
+        case Some(ok @ ("bsp" | "mbt" | "mbt-v2")) =>
           Right(WorkspaceSymbolProviderConfig(ok))
         case Some(invalid) =>
           Left(
@@ -155,27 +156,38 @@ object Configs {
         case None =>
           // The config is not explicitly set so fallback to the default, which
           // can optionally be overridden by a feature flag
-          val isMbtEnabled = featureFlags
-            .readBoolean(FeatureFlag.MBT_WORKSPACE_SYMBOL_PROVIDER)
+          val isMbtV2Enabled = featureFlags
+            .readBoolean(FeatureFlag.MBT_V2_SYMBOL_INDEX)
             .orElse(false)
-          if (isMbtEnabled && LMDB.isSupportedOrWarn()) {
-            Right(WorkspaceSymbolProviderConfig.mbt)
+          if (isMbtV2Enabled) {
+            Right(WorkspaceSymbolProviderConfig.mbt2)
           } else {
-            Right(WorkspaceSymbolProviderConfig.default)
+            val isMbtEnabled = featureFlags
+              .readBoolean(FeatureFlag.MBT_WORKSPACE_SYMBOL_PROVIDER)
+              .orElse(false)
+            if (isMbtEnabled && LMDB.isSupportedOrWarn()) {
+              Right(WorkspaceSymbolProviderConfig.mbt)
+            } else {
+              Right(WorkspaceSymbolProviderConfig.default)
+            }
           }
       }
     }
   }
   @nowarn
   final case class WorkspaceSymbolProviderConfig private (val value: String) {
-    if (!List("bsp", "mbt").contains(value)) {
+    if (!List("bsp", "mbt", "mbt-v2").contains(value)) {
       throw new IllegalArgumentException(
         s"only bsp or mbt are accepted, got $value"
       )
     }
 
     def isMBT: Boolean =
+      value.startsWith("mbt")
+    def isMBT1: Boolean =
       value == "mbt" // New BSP-free workspace/symbol implementation
+    def isMBT2: Boolean =
+      value == "mbt-v2"
     def isBSP: Boolean =
       value == "bsp" // The classic BSP-based workspace/symbol implementation
   }

@@ -13,7 +13,7 @@ abstract class BaseJavaPCSuite(name: String) extends BaseLspSuite(name) {
       presentationCompilerDiagnostics = true,
       buildOnChange = false,
       buildOnFocus = false,
-      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt2,
     )
 
   override def initializeGitRepo: Boolean = true

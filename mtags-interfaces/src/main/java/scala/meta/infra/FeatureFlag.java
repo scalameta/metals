@@ -1,6 +1,16 @@
 package scala.meta.infra;
 
 public enum FeatureFlag {
+	/**
+	 * If enabled, uses a new repo-wide symbol index that 1) loads faster, 2) is
+	 * reactive to file changes, and 3) supports build-target aware queries.
+	 */
+	MBT_V2_SYMBOL_INDEX,
+	/**
+	 * At 100% rollout already, will get retired soon. When enabled, replaced the
+	 * old BSP-based workspace symbol provider. Instead of waiting to index a BSP
+	 * build, it indexes the entire repo instead.
+	 */
 	MBT_WORKSPACE_SYMBOL_PROVIDER,
 	/**
 	 * If enabled, the presentation compiler will use the transitive closure of

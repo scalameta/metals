@@ -1,0 +1,72 @@
+// This file contains definitions for mbt, an acronym for "Metals Build Tool".
+// These data structures represent the data that Metals persists to disk to
+// cache indices from the workspace.
+syntax = "proto3";
+
+package scala.meta.internal.mbt;
+
+import "semanticdb.proto";
+
+option java_package = "scala.meta.internal.jmbt";
+
+// The root message that is written to .metals/index.mbt The binary encoding of
+// protobuf allows you to stream an index file to/from disk by reading/writing
+// one IndexedDocument at a time. When writing, just append the payload of an
+// `Index` message with a single document.  When reading, you need to decode one
+// tag at a time, which may require custom code depending on language bindings
+// you're using.
+message Index { repeated IndexedDocument documents = 1; }
+
+message SymbolInformation {
+  // A SemanticDB symbol.
+  string symbol = 1;
+  scala.meta.internal.semanticdb.SymbolInformation.Kind kind = 2;
+  scala.meta.internal.semanticdb.Range definition_range = 3;
+}
+
+message IndexedDocument {
+  enum BloomFilterVersion {
+    UNKNOWN_BLOOM_FILTER_VERSION = 0;
+    V1 = 1;
+  }
+
+  enum Source {
+    UNKNOWN_SOURCE = 0;
+    ON_DID_CHANGE_FILE = 1;
+    ON_DID_CHANGE_SYMBOLS = 2;
+  }
+
+  // Absolute URI to this file.
+  string uri = 1;
+
+  // The origin of this index. Helpful for troubleshooting issues.
+  Source source = 9;
+
+  // The Git object ID of this file, which is computed as the SHA-1 digest of
+  // the bytes `$HEADER\n$TEXT` where $HEADER is the string "blob <size>\0".
+  // The command `git ls-files --stage` lists all files in the repo along with
+  // their OID, which gives you a lightning-fast way way to pair files in the
+  // workspace with an OID-based index file.
+  string oid = 2;
+  // Only used for testing purposes, in-memory indexes should not hold large
+  // blocks of text.
+  string text = 3;
+  // The SemanticDB package that all the symbols defined in this file belong to.
+  // In Scala, there can be many packages defined in a single file, and this
+  // should be the top-level package that all symbols belong to.
+  string semanticdb_package = 4;
+  scala.meta.internal.semanticdb.Language language = 5;
+  repeated SymbolInformation symbols = 6;
+  // A bloom filter containing various permutations of the symbols defined in
+  // this file. The exact set of permutations is determined by the
+  // `BloomFilterVersion`. For example, to implement workspace/symbol, the bloom
+  // filter contains all prefixes of symbol *descriptor*, which for the symbol
+  // "java/OutputStream#" includes the strings "O", "Ou", "Out", "Outp",
+  // "Outpu", "Output", "S", "St", "Str", "Stre", "Strea", "Stream".
+  // More details in this blog post
+  // https://scalameta.org/metals/blog/2019/01/22/bloom-filters#fuzzy-symbol-search
+  // Future versions of this bloom filter may include non-symbol based data like
+  // the identifiers in these files to power repo-wide "Find References".
+  bytes bloom_filter = 7;
+  BloomFilterVersion bloom_filter_version = 8;
+}

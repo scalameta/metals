@@ -789,6 +789,23 @@ final case class TestingServer(
       .asScala
   }
 
+  def didChangeWatchedFiles(
+      filename: String,
+      changeType: l.FileChangeType = l.FileChangeType.Changed,
+  ): Future[Unit] = {
+    fullServer
+      .didChangeWatchedFiles(
+        new l.DidChangeWatchedFilesParams(
+          Collections.singletonList(
+            new l.FileEvent(
+              toPath(filename).toURI.toString(),
+              changeType,
+            )
+          )
+        )
+      )
+      .asScala
+  }
   def didChange(filename: String)(fn: String => String): Future[Unit] = {
     val abspath = toPath(filename)
     val oldText = abspath.toInputFromBuffers(buffers).text
@@ -822,6 +839,12 @@ final case class TestingServer(
 
   }
 
+  def didOpenAndFocus(filename: String): Future[Unit] = {
+    for {
+      _ <- didOpen(filename)
+      _ <- didFocus(filename)
+    } yield ()
+  }
   def didOpen(filename: String): Future[Unit] = {
     Debug.printEnclosing(filename)
     val abspath = toPath(filename)

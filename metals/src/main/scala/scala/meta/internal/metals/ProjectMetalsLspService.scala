@@ -418,11 +418,14 @@ class ProjectMetalsLspService(
       !savedFiles.isRecentlyActive(path) &&
       !buffers.contains(path)
     ) {
+      val futures = List.newBuilder[Future[Unit]]
       event.eventType match {
-        case EventType.CreateOrModify => onCreate(path)
+        case EventType.CreateOrModify =>
+          futures += onCreate(path).ignoreValue
         case _ =>
       }
-      onChange(List(path)).asJava
+      futures += onChange(List(path)).ignoreValue
+      Future.sequence(futures.result()).ignoreValue.asJava
     } else if (path.isSemanticdb) {
       val semanticdbPath = SemanticdbPath(path)
       def changeSemanticdb = {

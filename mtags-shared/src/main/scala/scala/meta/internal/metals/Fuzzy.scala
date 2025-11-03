@@ -283,6 +283,11 @@ class Fuzzy {
     loop(queryStartIdx, -1, symbolStartIdx, -1)
   }
 
+  // IMPORTANT: update IndexedDocument.currentBloomFilterVersion if you make
+  // changes to what kinds of symbols are inserted into the bloom filter here.
+  // We are persisting the bloom filters to disk so we need to bump up that
+  // version when we make changes to avoid reading old and incompatible versions
+  // of the index file.
   def bloomFilterSymbolStrings(
       symbols: Iterable[String]
   ): StringBloomFilter = {

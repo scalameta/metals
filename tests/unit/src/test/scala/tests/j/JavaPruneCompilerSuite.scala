@@ -55,6 +55,22 @@ class JavaPruneCompilerSuite extends BaseJavaPruneCompilerSuite {
     "foo/Example.java",
   )
 
+  checkNoErrors(
+    "import-same-nested-package",
+    """|/a/b/Example1.java
+       |package a.b;
+       |public class Example1 {
+       |    public static final String greeting = "hello";
+       |}
+       |/a/b/Example2.java
+       |package a.b;
+       |public class Example2 {
+       |    public static final String example1 = Example1.greeting;
+       |}
+       |""".stripMargin,
+    "a/b/Example2.java",
+  )
+
   checkErrors(
     "type-error",
     """|

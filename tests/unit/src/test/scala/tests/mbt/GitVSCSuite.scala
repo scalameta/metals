@@ -15,7 +15,7 @@ class GitVSCSuite extends munit.FunSuite {
   override def munitFixtures: Seq[AnyFixture[_]] = List(workspace)
 
   def lsFilesStage(): List[GitBlob] = {
-    GitVCS.lsFilesStage(workspace(), _ => true).sortBy(_.path).toList
+    GitVCS.lsFilesStage(workspace(), _ => true).toList.sortBy(_.path)
   }
 
   def assertLsFiles(expected: String)(implicit loc: munit.Location): Unit = {

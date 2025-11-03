@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.io.Closeable
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import scala.meta.internal.async.ConcurrentQueue
@@ -9,6 +10,10 @@ import scala.meta.internal.async.ConcurrentQueue
  */
 final class MutableCancelable extends Cancelable {
   private val toCancel = new ConcurrentLinkedQueue[Cancelable]()
+  def registerCloseable[T <: Closeable](closeable: T): T = {
+    toCancel.add(Cancelable.fromCloseable(closeable))
+    closeable
+  }
   def register[T <: Cancelable](cancelable: T): T = {
     toCancel.add(cancelable)
     cancelable
