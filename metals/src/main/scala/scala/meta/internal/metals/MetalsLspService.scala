@@ -509,6 +509,7 @@ abstract class MetalsLspService(
       buffers,
       () => userConfig,
       buildTargets,
+      () => languageClient,
     )
 
   val implementationProvider: ImplementationProvider =
@@ -1207,7 +1208,7 @@ abstract class MetalsLspService(
     CancelTokens { _ =>
       val path = params.getTextDocument.getUri.toAbsolutePath
       if (path.isJava)
-        javaFormattingProvider.format(params)
+        javaFormattingProvider.formatRange(params)
       else
         rangeFormattingProvider.format(params).asJava
     }

@@ -12,6 +12,7 @@ import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.InlayHintsOption
 import scala.meta.internal.metals.InlayHintsOptions
 import scala.meta.internal.metals.JavaFormatConfig
+import scala.meta.internal.metals.JavaFormatterConfig
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
@@ -301,6 +302,7 @@ class UserConfigurationSuite extends BaseSuite {
       millScript = Some("mill"),
       scalafmtConfigPath = Some(fakePath),
       scalafixConfigPath = Some(fakePath),
+      javaFormatter = Some(JavaFormatterConfig("eclipse")),
       symbolPrefixes = Map("java/util/" -> "hello."),
       worksheetScreenWidth = 140,
       worksheetCancelTimeout = 10,
@@ -337,68 +339,68 @@ class UserConfigurationSuite extends BaseSuite {
     val json = nonDefault.toString()
     assertNoDiff(
       json,
-      s"""|{
-          |  "presentationCompilerDiagnostics": true,
-          |  "enableIndentOnPaste": true,
-          |  "workspaceSymbolProvider": "mbt",
-          |  "buildOnChange": true,
-          |  "javaFormat": {
-          |    "eclipseConfigPath": "$fakePathString",
-          |    "eclipseProfile": "profile"
-          |  },
-          |  "defaultBspToBuildTool": true,
-          |  "excludedPackages": [
-          |    "excluded"
-          |  ],
-          |  "bloopJvmProperties": [
-          |    "a",
-          |    "b",
-          |    "c"
-          |  ],
-          |  "ammoniteJvmProperties": [
-          |    "aa",
-          |    "bb",
-          |    "cc"
-          |  ],
-          |  "enableStripMarginOnTypeFormatting": false,
-          |  "gradleScript": "gradle",
-          |  "scalafixConfigPath": "$fakePathString",
-          |  "superMethodLensesEnabled": true,
-          |  "definitionIndexStrategy": "sources",
-          |  "customProjectRoot": "customs",
-          |  "buildOnFocus": true,
-          |  "millScript": "mill",
-          |  "bloopSbtAlreadyInstalled": true,
-          |  "symbolPrefixes": {
-          |    "java/util/": "hello."
-          |  },
-          |  "inlayHintsOptions": {
-          |    "HintsInPatternMatch": "true",
-          |    "ImplicitArguments": "true",
-          |    "TypeParameters": "true",
-          |    "InferredType": "true",
-          |    "ImplicitConversions": "true"
-          |  },
-          |  "scalafixRulesDependencies": [
-          |    "rule1",
-          |    "rule2"
-          |  ],
-          |  "testUserInterface": "test explorer",
-          |  "bloopVersion": "1.2.3",
-          |  "fallbackScalaVersion": "3.2.1",
-          |  "useSourcePath": true,
-          |  "autoImportBuilds": "all",
-          |  "enableSemanticHighlighting": false,
-          |  "scalaCliLauncher": "scala-cli",
-          |  "sbtScript": "sbt",
-          |  "mavenScript": "mvn",
-          |  "verboseCompilation": true,
-          |  "worksheetCancelTimeout": 10,
-          |  "worksheetScreenWidth": 140,
-          |  "scalafmtConfigPath": "$fakePathString",
-          |  "javaHome": "/fake/home"
-          |}
-          |""".stripMargin,
+      s"""{
+  "javaHome": "/fake/home",
+  "sbtScript": "sbt",
+  "gradleScript": "gradle",
+  "mavenScript": "mvn",
+  "millScript": "mill",
+  "scalafmtConfigPath": "$fakePathString",
+  "scalafixConfigPath": "$fakePathString",
+  "symbolPrefixes": {
+    "java/util/": "hello."
+  },
+  "worksheetScreenWidth": 140,
+  "worksheetCancelTimeout": 10,
+  "bloopSbtAlreadyInstalled": true,
+  "bloopVersion": "1.2.3",
+  "bloopJvmProperties": [
+    "a",
+    "b",
+    "c"
+  ],
+  "ammoniteJvmProperties": [
+    "aa",
+    "bb",
+    "cc"
+  ],
+  "superMethodLensesEnabled": true,
+  "inlayHintsOptions": {
+    "HintsInPatternMatch": "true",
+    "ImplicitArguments": "true",
+    "TypeParameters": "true",
+    "InferredType": "true",
+    "ImplicitConversions": "true"
+  },
+  "enableStripMarginOnTypeFormatting": false,
+  "enableIndentOnPaste": true,
+  "enableSemanticHighlighting": false,
+  "excludedPackages": [
+    "excluded"
+  ],
+  "fallbackScalaVersion": "3.2.1",
+  "testUserInterface": "test explorer",
+  "javaFormat": {
+    "eclipseConfigPath": "$fakePathString",
+    "eclipseProfile": "profile"
+  },
+  "javaFormatter": "eclipse",
+  "scalafixRulesDependencies": [
+    "rule1",
+    "rule2"
+  ],
+  "customProjectRoot": "customs",
+  "verboseCompilation": true,
+  "autoImportBuilds": "all",
+  "scalaCliLauncher": "scala-cli",
+  "defaultBspToBuildTool": true,
+  "presentationCompilerDiagnostics": true,
+  "buildOnChange": true,
+  "buildOnFocus": true,
+  "useSourcePath": true,
+  "workspaceSymbolProvider": "mbt",
+  "definitionIndexStrategy": "sources"
+}""",
     )
     val roundtripJson = UserConfiguration.parse(json)
 

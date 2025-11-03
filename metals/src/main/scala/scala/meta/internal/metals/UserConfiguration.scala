@@ -1,8 +1,8 @@
 package scala.meta.internal.metals
 
 import java.util.Properties
-import java.{util => ju}
 
+import scala.collection.mutable.LinkedHashMap
 import scala.collection.mutable.ListBuffer
 import scala.util.Failure
 import scala.util.Success
@@ -56,6 +56,7 @@ case class UserConfiguration(
     fallbackScalaVersion: Option[String] = None,
     testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses,
     javaFormatConfig: Option[JavaFormatConfig] = None,
+    javaFormatter: Option[JavaFormatterConfig] = None,
     scalafixRulesDependencies: List[String] = Nil,
     customProjectRoot: Option[String] = None,
     verboseCompilation: Boolean = false,
@@ -100,101 +101,109 @@ case class UserConfiguration(
         case Some(value) => Some(key -> value.toString)
       }
 
-    val fields: ju.Map[String, Any] = List(
-      optStringField("javaHome", javaHome),
-      optStringField("sbtScript", sbtScript),
-      optStringField("gradleScript", gradleScript),
-      optStringField("mavenScript", mavenScript),
-      optStringField("millScript", millScript),
-      optStringField("scalafmtConfigPath", scalafmtConfigPath),
-      optStringField("scalafixConfigPath", scalafixConfigPath),
-      optStringField("scalafixConfigPath", scalafixConfigPath),
-      mapField("symbolPrefixes", symbolPrefixes),
-      Some(("worksheetScreenWidth", worksheetScreenWidth)),
-      Some(("worksheetCancelTimeout", worksheetCancelTimeout)),
-      Some(("bloopSbtAlreadyInstalled", bloopSbtAlreadyInstalled)),
-      optStringField("bloopVersion", bloopVersion),
-      listField("bloopJvmProperties", bloopJvmProperties),
-      listField("ammoniteJvmProperties", ammoniteJvmProperties),
-      Some(("superMethodLensesEnabled", superMethodLensesEnabled)),
-      mapField("inlayHintsOptions", inlayHintsOptions.options),
-      Some(
-        (
-          "enableStripMarginOnTypeFormatting",
-          enableStripMarginOnTypeFormatting,
-        )
-      ),
-      Some(("enableIndentOnPaste", enableIndentOnPaste)),
-      Some(
-        (
-          "enableSemanticHighlighting",
-          enableSemanticHighlighting,
-        )
-      ),
-      listField("excludedPackages", excludedPackages),
-      optStringField("fallbackScalaVersion", fallbackScalaVersion),
-      Some("testUserInterface" -> testUserInterface.toString()),
-      javaFormatConfig.map(value =>
-        "javaFormat" -> List(
-          Some("eclipseConfigPath" -> value.eclipseFormatConfigPath.toString()),
-          value.eclipseFormatProfile.map("eclipseProfile" -> _),
-        ).flatten.toMap.asJava
-      ),
-      listField(
-        "scalafixRulesDependencies",
-        Some(scalafixRulesDependencies),
-      ),
-      optStringField("customProjectRoot", customProjectRoot),
-      Some(("verboseCompilation", verboseCompilation)),
-      Some(
-        "autoImportBuilds" ->
-          automaticImportBuild.toString().toLowerCase()
-      ),
-      optStringField("scalaCliLauncher", scalaCliLauncher),
-      Some(
-        (
-          "defaultBspToBuildTool",
-          defaultBspToBuildTool,
-        )
-      ),
-      Some("presentationCompilerDiagnostics", presentationCompilerDiagnostics),
-      Some(
-        (
-          "buildOnChange",
-          buildOnChange,
-        )
-      ),
-      Some(
-        (
-          "buildOnFocus",
-          buildOnFocus,
-        )
-      ),
-      optStringField(
-        "preferredBuildServer",
-        preferredBuildServer,
-      ),
-      Some(
-        (
-          "useSourcePath",
-          useSourcePath,
-        )
-      ),
-      Some(
-        (
-          "workspaceSymbolProvider",
-          workspaceSymbolProvider.value,
-        )
-      ),
-      Some(
-        (
-          "definitionIndexStrategy",
-          definitionIndexStrategy.value,
-        )
-      ),
-    ).flatten.toMap.asJava
+    val fields = LinkedHashMap.from[String, Any](
+      List(
+        optStringField("javaHome", javaHome),
+        optStringField("sbtScript", sbtScript),
+        optStringField("gradleScript", gradleScript),
+        optStringField("mavenScript", mavenScript),
+        optStringField("millScript", millScript),
+        optStringField("scalafmtConfigPath", scalafmtConfigPath),
+        optStringField("scalafixConfigPath", scalafixConfigPath),
+        optStringField("scalafixConfigPath", scalafixConfigPath),
+        mapField("symbolPrefixes", symbolPrefixes),
+        Some(("worksheetScreenWidth", worksheetScreenWidth)),
+        Some(("worksheetCancelTimeout", worksheetCancelTimeout)),
+        Some(("bloopSbtAlreadyInstalled", bloopSbtAlreadyInstalled)),
+        optStringField("bloopVersion", bloopVersion),
+        listField("bloopJvmProperties", bloopJvmProperties),
+        listField("ammoniteJvmProperties", ammoniteJvmProperties),
+        Some(("superMethodLensesEnabled", superMethodLensesEnabled)),
+        mapField("inlayHintsOptions", inlayHintsOptions.options),
+        Some(
+          (
+            "enableStripMarginOnTypeFormatting",
+            enableStripMarginOnTypeFormatting,
+          )
+        ),
+        Some(("enableIndentOnPaste", enableIndentOnPaste)),
+        Some(
+          (
+            "enableSemanticHighlighting",
+            enableSemanticHighlighting,
+          )
+        ),
+        listField("excludedPackages", excludedPackages),
+        optStringField("fallbackScalaVersion", fallbackScalaVersion),
+        Some("testUserInterface" -> testUserInterface.toString()),
+        javaFormatConfig.map(value =>
+          "javaFormat" -> List(
+            Some(
+              "eclipseConfigPath" -> value.eclipseFormatConfigPath.toString()
+            ),
+            value.eclipseFormatProfile.map("eclipseProfile" -> _),
+          ).flatten.toMap.asJava
+        ),
+        optStringField("javaFormatter", javaFormatter.map(_.value)),
+        listField(
+          "scalafixRulesDependencies",
+          Some(scalafixRulesDependencies),
+        ),
+        optStringField("customProjectRoot", customProjectRoot),
+        Some(("verboseCompilation", verboseCompilation)),
+        Some(
+          "autoImportBuilds" ->
+            automaticImportBuild.toString().toLowerCase()
+        ),
+        optStringField("scalaCliLauncher", scalaCliLauncher),
+        Some(
+          (
+            "defaultBspToBuildTool",
+            defaultBspToBuildTool,
+          )
+        ),
+        Some(
+          "presentationCompilerDiagnostics",
+          presentationCompilerDiagnostics,
+        ),
+        Some(
+          (
+            "buildOnChange",
+            buildOnChange,
+          )
+        ),
+        Some(
+          (
+            "buildOnFocus",
+            buildOnFocus,
+          )
+        ),
+        optStringField(
+          "preferredBuildServer",
+          preferredBuildServer,
+        ),
+        Some(
+          (
+            "useSourcePath",
+            useSourcePath,
+          )
+        ),
+        Some(
+          (
+            "workspaceSymbolProvider",
+            workspaceSymbolProvider.value,
+          )
+        ),
+        Some(
+          (
+            "definitionIndexStrategy",
+            definitionIndexStrategy.value,
+          )
+        ),
+      ).flatten
+    )
     val gson = new GsonBuilder().setPrettyPrinting().create()
-    gson.toJson(fields).toString()
+    gson.toJson(fields.asJava).toString()
   }
 
   def shouldAutoImportNewProject: Boolean =
@@ -467,6 +476,15 @@ object UserConfiguration {
         """"GoogleStyle"""",
         "Eclipse Java formatting profile",
         """|If the Eclipse formatter file contains more than one profile, this option can be used to control which is used.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "java-formatter",
+        """empty string `""`.""",
+        """"google-java-format"""",
+        "Java formatter",
+        """|The Java formatter to use. Valid values are "eclipse", "google-java-format", or "none".
+           |If "none" is specified, Java formatting will be disabled. If not specified, defaults to "google-java-format".
            |""".stripMargin,
       ),
       UserConfigurationOption(
@@ -834,6 +852,11 @@ object UserConfiguration {
           )
         )
       )
+    val javaFormatter = getParsedKey(
+      "java-formatter",
+      value =>
+        JavaFormatterConfig.fromString(value.getOrElse("google-java-format")),
+    )
 
     val scalafixRulesDependencies =
       getStringListKey("scalafix-rules-dependencies").getOrElse(Nil)
@@ -902,6 +925,7 @@ object UserConfiguration {
           defaultScalaVersion,
           disableTestCodeLenses,
           javaFormatConfig,
+          javaFormatter,
           scalafixRulesDependencies,
           customProjectRoot,
           verboseCompilation,
