@@ -101,15 +101,17 @@ final class MbtWorkspaceSymbolProvider(
             f.semanticdbPackage == pkg
           ) {
             val doc = this.readTextDocument(keyBuffer, db, txn, f)
-            val text = AbsolutePath(f.path).toInputFromBuffers(buffers).text
-            result.add(
-              VirtualTextDocument.fromDocument(
-                f.language.toPCLanguage,
-                f.semanticdbPackage,
-                f.toplevelSymbols,
-                doc.copy(text = text),
+            if (doc.uri.nonEmpty && f.path.exists) {
+              val text = AbsolutePath(f.path).toInputFromBuffers(buffers).text
+              result.add(
+                VirtualTextDocument.fromDocument(
+                  f.language.toPCLanguage,
+                  f.semanticdbPackage,
+                  f.toplevelSymbols,
+                  doc.copy(text = text),
+                )
               )
-            )
+            }
           }
         }
         new ju.ArrayList(result)
