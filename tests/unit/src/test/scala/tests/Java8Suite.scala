@@ -36,7 +36,7 @@ class Java8Suite extends BaseCompletionLspSuite("completion-java-8") {
       _ = assertNoDiagnostics()
       _ <- assertCompletion(
         "val p = Path.o@@",
-        """|""".stripMargin,
+        "",
       )
     } yield ()
   }

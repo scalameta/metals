@@ -22,3 +22,18 @@ coursier launch sbt -- --client javapc/testOnly pc.CompletionIdentifierSuite "--
 
 For more information on filtering tests in MUnit, see the
 [MUnit filtering documentation](https://scalameta.org/munit/docs/filtering.html).
+
+## Preparing for PRs
+
+Once all tests are passing and the feature is ready for review, run the
+following commands:
+
+```
+coursier launch sbt -- --client scalafixAll
+```
+
+Then run:
+
+```
+./bin/scalafmt --diff --diff-branch databricks
+```

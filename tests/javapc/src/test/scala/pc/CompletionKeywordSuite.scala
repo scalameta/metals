@@ -11,7 +11,7 @@ class CompletionKeywordSuite extends BaseJavaCompletionSuite {
       |
       |class B implements A {
       |
-      |    public static int foo() {
+      |    public int foo() {
       |         sup@@
       |    }
       |
@@ -30,7 +30,7 @@ class CompletionKeywordSuite extends BaseJavaCompletionSuite {
       |
       |class B implements A {
       |
-      |    public static int foo() {
+      |    public int foo() {
       |         thi@@
       |    }
       |

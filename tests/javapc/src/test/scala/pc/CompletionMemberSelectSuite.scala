@@ -157,10 +157,44 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
       |  }
       |}
       |""".stripMargin,
-    """|cleanStack()
-       |clone()
-       |""".stripMargin,
+    "",
     // let's make sure we don't get any <clinit> method
     filterText = Some("cl"),
   )
+
+  check(
+    "completable-future-static-select",
+    """
+      |
+      |import java.util.concurrent.CompletableFuture;
+      |
+      |class Perfect {
+      |  
+      |  void println() {
+      |    CompletableFuture.allO@@
+      |  }
+      |}
+      |""".stripMargin,
+    """|allOf(java.util.concurrent.CompletableFuture<?>[] cfs)
+       |""".stripMargin,
+  )
+
+  check(
+    "completable-future-instance-select",
+    """
+      |
+      |import java.util.concurrent.CompletableFuture;
+      |
+      |class Perfect {
+      |  
+      |  void println() {
+      |    CompletableFuture<?> cf = new CompletableFuture<>();
+      |    cf.completeExc@@
+      |  }
+      |}
+      |""".stripMargin,
+    """|completeExceptionally(java.lang.Throwable ex)
+       |""".stripMargin,
+  )
+
 }

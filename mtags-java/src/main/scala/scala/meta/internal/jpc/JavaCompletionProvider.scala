@@ -6,6 +6,7 @@ import javax.lang.model.`type`.TypeVariable
 import javax.lang.model.element.Element
 import javax.lang.model.element.ElementKind
 import javax.lang.model.element.ExecutableElement
+import javax.lang.model.element.Modifier
 import javax.lang.model.element.TypeElement
 import javax.lang.model.element.VariableElement
 
@@ -131,9 +132,9 @@ class JavaCompletionProvider(
     val memberType = typeAnalyzer.typeMirror(newPath)
 
     memberType match {
-      case dt: DeclaredType => completeDeclaredType(task, dt)
+      case dt: DeclaredType => completeDeclaredTypeMembers(task, dt, path)
       case _: ArrayType => completeArrayType()
-      case tv: TypeVariable => completeTypeVariable(task, tv)
+      case tv: TypeVariable => completeTypeVariable(task, tv, path)
       case pkg: PackageType => completePackageType(task, pkg)
       case _ => Nil
     }
@@ -154,14 +155,29 @@ class JavaCompletionProvider(
     val trees = Trees.instance(task)
     val scope = trees.getScope(path)
 
-    val scopeCompletion = JavaScopeVisitor.scopeMembers(task, scope)
+    val scopeCompletion =
+      JavaScopeVisitor.scopeMembers(task, scope, trees, path)
     val identifier = extractIdentifier
     val items = List.newBuilder[CompletionItem]
+
+    val isStaticContext = Option(scope.getEnclosingMethod()) match {
+      case None => false
+      case Some(method) => method.getModifiers.contains(Modifier.STATIC)
+    }
 
     items ++= scopeCompletion
       .sortBy(el => identifierScore(el))
       .iterator
       .filter(elementFilter)
+      .filter(element =>
+        // If we're in a static context, filter out instance methods/fields
+        !isStaticContext || (element.getKind match {
+          case ElementKind.METHOD | ElementKind.FIELD =>
+            element.getModifiers.contains(Modifier.STATIC)
+          case _ =>
+            true
+        })
+      )
       .map(completionItem)
       .filter(item => CompletionFuzzy.matches(identifier, item.getLabel))
 
@@ -244,31 +260,32 @@ class JavaCompletionProvider(
     fuzzyMatches.result()
   }
 
-  private def completeDeclaredType(
+  private def completeDeclaredTypeMembers(
       task: JavacTask,
-      declaredType: DeclaredType
+      declaredType: DeclaredType,
+      path: TreePath
   ): List[CompletionItem] = {
-    // constructors cannot be invoked as members
-    val bannedKinds = Set(
-      ElementKind.CONSTRUCTOR,
-      ElementKind.STATIC_INIT,
-      ElementKind.INSTANCE_INIT
-    )
     val declaredElement = declaredType.asElement()
     val members = task.getElements
       .getAllMembers(declaredElement.asInstanceOf[TypeElement])
       .asScala
       .toList
 
+    val trees = Trees.instance(task)
+    // For member select, get scope from parent path (the actual access location)
+    val scopePath = if (path.getParentPath != null) path.getParentPath else path
+    val scope = trees.getScope(scopePath)
     val identifier = extractIdentifier
 
-    val completionItems = members
+    val completionItems = members.iterator
       .filter(member =>
-        CompletionFuzzy.matches(
-          identifier,
-          member.getSimpleName.toString
-        ) && !bannedKinds(member.getKind())
+        CompletionFuzzy.matches(identifier, member.getSimpleName.toString)
       )
+      // We can't call a constructor as a member
+      .filter(member => member.getKind() != ElementKind.CONSTRUCTOR)
+      // Respect private/protected/package-private visibility
+      .filter(member => trees.isAccessible(scope, member, declaredType))
+      .toList
       .sortBy { element =>
         memberScore(element, declaredElement)
       }
@@ -333,11 +350,12 @@ class JavaCompletionProvider(
   @tailrec
   private def completeTypeVariable(
       task: JavacTask,
-      typeVariable: TypeVariable
+      typeVariable: TypeVariable,
+      path: TreePath
   ): List[CompletionItem] = {
     typeVariable.getUpperBound match {
-      case dt: DeclaredType => completeDeclaredType(task, dt)
-      case tv: TypeVariable => completeTypeVariable(task, tv)
+      case dt: DeclaredType => completeDeclaredTypeMembers(task, dt, path)
+      case tv: TypeVariable => completeTypeVariable(task, tv, path)
       case _ => Nil
     }
   }

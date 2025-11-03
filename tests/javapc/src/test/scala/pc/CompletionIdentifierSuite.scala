@@ -37,7 +37,6 @@ class CompletionIdentifierSuite extends BaseJavaCompletionSuite {
       |""".stripMargin,
     """
       |bar
-      |bar()
       |""".stripMargin,
   )
 
@@ -187,4 +186,5 @@ class CompletionIdentifierSuite extends BaseJavaCompletionSuite {
                    |import java.nio.file.SimpleFileVisitor;
                    |""".stripMargin,
   )
+
 }

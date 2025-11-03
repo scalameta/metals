@@ -211,8 +211,6 @@ class CompletionDapSuite
     "java-scope",
     expression = "n@@",
     expectedCompletions = """|name
-                             |notify()
-                             |notifyAll()
                              |new
                              |""".stripMargin,
     // Skip auto-import suggestions
