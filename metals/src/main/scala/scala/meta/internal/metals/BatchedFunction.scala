@@ -2,20 +2,17 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.concurrent.duration.FiniteDuration
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.async.ConcurrentQueue
-import scala.meta.internal.metals.MetalsEnrichments._
 
 /**
  * Helper to batch multiple asynchronous requests and ensure only one request is active at a time.
@@ -173,35 +170,6 @@ final class BatchedFunction[A, B](
 }
 
 object BatchedFunction {
-
-  /**
-   * Delays executing the given function, creating a debounce-like effect with
-   * the important difference that the function flushes events every time the
-   * flushDelay has passed from the first invocation. A true debounce will
-   * indefinitely debounce if you're constantly firing the event.
-   */
-  def backpressure[A, B](
-      functionId: String,
-      flushDelay: FiniteDuration,
-      sh: ScheduledExecutorService,
-      shouldLogQueue: Boolean = false,
-      default: Option[B] = None,
-  )(
-      fn: Seq[A] => Future[B]
-  )(implicit ec: ExecutionContext): BatchedFunction[A, B] = {
-    BatchedFunction.fromFuture(
-      values => {
-        for {
-          _ <- sh.sleep(flushDelay)
-          result <- fn(values)
-        } yield result
-      },
-      functionId,
-      shouldLogQueue,
-      default,
-    )
-  }
-
   def fromFuture[A, B](
       fn: Seq[A] => Future[B],
       functionId: String,

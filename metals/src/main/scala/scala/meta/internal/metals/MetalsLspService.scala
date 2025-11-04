@@ -613,30 +613,36 @@ abstract class MetalsLspService(
       compilers,
     )
 
-  val diagnosticsBackpressureDelay: FiniteDuration =
+  val diagnosticsDebouncerDelay: FiniteDuration =
     if (Testing.isEnabled) 0.millis
     else sys.Prop[Int]("metals.errors-delay").option.getOrElse(500).millis
-
-  private def fileDidChange(file: AbsolutePath): Future[Unit] = {
-    val future = for {
-      pc <- compilers.loadCompiler(file)
-      contents <- buffers.get(file)
-    } yield {
-      for {
-        reportedDiagnostics <- pc
-          .didChange(
-            CompilerVirtualFileParams(file.toNIO.toUri, contents)
-          )
-          .asScala
-      } yield {
-        diagnostics.publishDiagnosticsNotAdjusted(
-          file,
-          reportedDiagnostics.asScala.toList,
-        )
-      }
-    }
-    future.getOrElse(Future.unit)
-  }
+  protected val fileDidChange: BatchedFunction[AbsolutePath, Unit] =
+    BatchedFunction.fromFuture[AbsolutePath, Unit](
+      changedFiles => {
+        for {
+          _ <- sh.sleep(diagnosticsDebouncerDelay)
+          futures = for {
+            file <- changedFiles.distinct
+            pc <- compilers.loadCompiler(file).toList
+            contents <- buffers.get(file).toList
+          } yield {
+            for {
+              reportedDiagnostics <- pc
+                .didChange(
+                  CompilerVirtualFileParams(file.toNIO.toUri, contents)
+                )
+                .asScala
+              _ = diagnostics.publishDiagnosticsNotAdjusted(
+                file,
+                reportedDiagnostics.asScala.toList,
+              )
+            } yield ()
+          }
+          _ <- Future.sequence(futures)
+        } yield ()
+      },
+      "fileDidChange",
+    )
 
   def optFileSystemSemanticdbs(): Option[FileSystemSemanticdbs] = None
 
@@ -942,26 +948,6 @@ abstract class MetalsLspService(
   override def didChange(
       params: DidChangeTextDocumentParams
   ): CompletableFuture[Unit] = {
-    didChangeDebounced(params).asJava
-  }
-
-  private val didChangeDebounced =
-    BatchedFunction.backpressure[DidChangeTextDocumentParams, Unit](
-      "didChange",
-      diagnosticsBackpressureDelay,
-      sh,
-    ) { paramss =>
-      Future
-        .sequence(for {
-          changess <- paramss.groupBy(_.getTextDocument.getUri).values
-          mostRecentChange <- changess.lastOption
-        } yield didChangeUnbatched(mostRecentChange))
-        .ignoreValue
-    }
-
-  private def didChangeUnbatched(
-      params: DidChangeTextDocumentParams
-  ): Future[Unit] = {
     val changesSize = params.getContentChanges.size()
     if (changesSize != 1) {
       scribe.debug(
@@ -970,7 +956,7 @@ abstract class MetalsLspService(
     }
 
     params.getContentChanges.asScala.lastOption match {
-      case None => Future.unit
+      case None => CompletableFuture.completedFuture(())
       case Some(change) =>
         val path = params.getTextDocument.getUri.toAbsolutePath
         buffers.put(path, change.getText)
@@ -980,7 +966,7 @@ abstract class MetalsLspService(
         futures += fileDidChange(path)
         futures += referencesProvider.didChange(path, change.getText)
         futures += parseTrees(path)
-        Future.sequence(futures.result()).ignoreValue
+        Future.sequence(futures.result()).ignoreValue.asJava
     }
   }
 
@@ -1043,8 +1029,12 @@ abstract class MetalsLspService(
     val importantEvents =
       events
         .filterNot(event =>
-          event.getUri().toAbsolutePathSafe.exists(_.isDirectory)
-        )
+          event.getUri().toAbsolutePathSafe match {
+            case None => true
+            case Some(path) =>
+              savedFiles.isRecentlyActive(path) || path.isDirectory
+          }
+        ) // de-duplicate didSave events.
         .toSeq
     val (deleteEvents, changeAndCreateEvents) =
       importantEvents.partition(_.getType().equals(FileChangeType.Deleted))
@@ -1073,18 +1063,6 @@ abstract class MetalsLspService(
   }
 
   protected def onChange(paths: Seq[AbsolutePath]): Future[Unit] = {
-    onChangeDebounced(paths)
-  }
-
-  private val onChangeDebounced =
-    BatchedFunction.backpressure[Seq[AbsolutePath], Unit](
-      "onChange",
-      diagnosticsBackpressureDelay,
-      sh,
-    ) { paths =>
-      onChangeUnbatched(paths.iterator.flatten.distinct.toSeq)
-    }
-  private def onChangeUnbatched(paths: Seq[AbsolutePath]): Future[Unit] = {
     paths.foreach { path =>
       fingerprints.add(path, FileIO.slurp(path, charset))
     }

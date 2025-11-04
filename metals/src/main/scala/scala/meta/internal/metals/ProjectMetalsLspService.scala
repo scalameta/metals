@@ -412,7 +412,12 @@ class ProjectMetalsLspService(
     val isScalaOrJava = path.isScalaOrJava
     if (isScalaOrJava && event.eventType == EventType.Delete) {
       onDelete(path).asJava
-    } else if (isScalaOrJava && !path.isDirectory) {
+    } else if (
+      isScalaOrJava &&
+      !path.isDirectory &&
+      !savedFiles.isRecentlyActive(path) &&
+      !buffers.contains(path)
+    ) {
       val futures = List.newBuilder[Future[Unit]]
       event.eventType match {
         case EventType.CreateOrModify =>
