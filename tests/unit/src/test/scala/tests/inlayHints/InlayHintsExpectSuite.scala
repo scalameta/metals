@@ -11,7 +11,8 @@ class InlayHintsExpectSuite
       "inlayHints",
       InputProperties.scala2(),
     ) {
-  override val compiler: PresentationCompiler = new ScalaPresentationCompiler(
-    classpath = InputProperties.scala2().classpath.entries.map(_.toNIO)
-  )
+  override lazy val compiler: PresentationCompiler =
+    new ScalaPresentationCompiler(
+      classpath = InputProperties.scala2().classpath.entries.map(_.toNIO)
+    )
 }

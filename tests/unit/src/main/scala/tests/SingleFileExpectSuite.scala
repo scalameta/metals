@@ -20,6 +20,7 @@ abstract class SingleFileExpectSuite(filename: String)
 
   final override def saveExpect(): Unit = {
     println(s"write: $path")
+    Files.createDirectories(path.toNIO.getParent)
     Files.write(
       path.toNIO,
       obtained().getBytes(StandardCharsets.UTF_8),

@@ -40,6 +40,38 @@ class SemanticdbSuite extends BaseJavaSemanticdbSuite {
        |""".stripMargin,
   )
 
+  check(
+    "record",
+    """
+      |package example;
+      |record Point(int x, int y) {
+      |    public int sum() {
+      |        return x + y;
+      |    }
+      |}
+      """.stripMargin,
+    """|package record;
+       |//         ^^^^^^ reference record/
+       |
+       |   package example;
+       |// ^ diagnostic - error class, interface, enum, or record expected
+       |   record Point(int x, int y) {
+       |//        ^^^^^ definition record/Point#
+       |//        ^^^^^ definition record/Point#`<init>`().
+       |//                  ^ definition local0
+       |//                  ^ definition record/Point#x.
+       |//                         ^ definition local1
+       |//                         ^ definition record/Point#y.
+       |       public int sum() {
+       |//                ^^^ definition record/Point#sum().
+       |           return x + y;
+       |//                ^ reference record/Point#x.
+       |//                    ^ reference record/Point#y.
+       |       }
+       |   }
+       |""".stripMargin,
+  )
+
   test("jdk") {
     val Right(jdkSources) = JdkSources()
     var isFound = false

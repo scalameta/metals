@@ -1,1 +1,2 @@
-class EmptyPackage/*_empty_.EmptyPackage#*/
+   class EmptyPackage
+//       ^^^^^^^^^^^^ definition _empty_/EmptyPackage#

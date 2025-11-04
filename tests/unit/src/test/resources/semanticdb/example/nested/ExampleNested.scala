@@ -1,3 +1,7 @@
-package example.nested
+   package example.nested
+//         ^^^^^^^ reference example/
+//                 ^^^^^^ reference example/nested/
 
-class ExampleNested/*example.nested.ExampleNested#*/ {}
+   class ExampleNested {}
+//       ^^^^^^^^^^^^^ definition example/nested/ExampleNested#
+//                     ^ definition example/nested/ExampleNested#`<init>`().

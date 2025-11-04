@@ -1,5 +1,10 @@
-package example
+   package example
+//         ^^^^^^^ definition example/
 
-object ExampleSuite/*example.ExampleSuite.*/ {
-  println/*scala.Predef.println(+1).*/(NamedArguments/*example.NamedArguments.*/.user2/*example.NamedArguments.user2.*/)
-}
+   object ExampleSuite {
+//        ^^^^^^^^^^^^ definition example/ExampleSuite.
+     println(NamedArguments.user2)
+//   ^^^^^^^ reference scala/Predef.println(+1).
+//           ^^^^^^^^^^^^^^ reference example/NamedArguments.
+//                          ^^^^^ reference example/NamedArguments.user2.
+   }

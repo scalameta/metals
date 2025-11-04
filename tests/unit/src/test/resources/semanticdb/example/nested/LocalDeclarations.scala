@@ -1,28 +1,59 @@
-package example.nested
+   package example.nested
+//         ^^^^^^^ reference example/
+//                 ^^^^^^ reference example/nested/
 
-trait LocalDeclarations/*example.nested.LocalDeclarations#*/ {
-  def foo/*example.nested.LocalDeclarations#foo().*/(): Unit/*scala.Unit#*/
-}
+   trait LocalDeclarations {
+//       ^^^^^^^^^^^^^^^^^ definition example/nested/LocalDeclarations#
+     def foo(): Unit
+//       ^^^ definition example/nested/LocalDeclarations#foo().
+//              ^^^^ reference scala/Unit#
+   }
 
-trait Foo/*example.nested.Foo#*/ {
-  val y/*example.nested.Foo#y.*/ = 3
-}
+   trait Foo {
+//       ^^^ definition example/nested/Foo#
+     val y = 3
+//       ^ definition example/nested/Foo#y.
+   }
 
-object LocalDeclarations/*example.nested.LocalDeclarations.*/ {
-  def create/*example.nested.LocalDeclarations.create().*/(): LocalDeclarations/*example.nested.LocalDeclarations#*/ = {
-    def bar/*local0*/(): Unit/*scala.Unit#*/ = ()
+   object LocalDeclarations {
+//        ^^^^^^^^^^^^^^^^^ definition example/nested/LocalDeclarations.
+     def create(): LocalDeclarations = {
+//       ^^^^^^ definition example/nested/LocalDeclarations.create().
+//                 ^^^^^^^^^^^^^^^^^ reference example/nested/LocalDeclarations#
+       def bar(): Unit = ()
+//         ^^^ definition local0
+//                ^^^^ reference scala/Unit#
 
-    val x/*local1*/ = new /*local3*/{
-      val x/*local2*/ = 2
-    }
+       val x = new {
+//         ^ definition local1
+//                 ^ definition local3
+         val x = 2
+//           ^ definition local2
+       }
 
-    val y/*local4*/ = new /*local5*/Foo/*example.nested.Foo#*/ /*java.lang.Object#`<init>`().*/{}
+       val y = new Foo {}
+//         ^ definition local4
+//                 ^ definition local5
+//                 ^^^ reference example/nested/Foo#
+//                     ^ reference java/lang/Object#`<init>`().
 
-    x/*local1*/.x/*local2*/ +/*scala.Int#`+`(+4).*/ y/*local4*/.y/*example.nested.Foo#y.*/
+       x.x + y.y
+//     ^ reference local1
+//       ^ reference local2
+//         ^ reference scala/Int#`+`(+4).
+//           ^ reference local4
+//             ^ reference example/nested/Foo#y.
 
-    new /*local6*/LocalDeclarations/*example.nested.LocalDeclarations#*/ /*java.lang.Object#`<init>`().*/with Foo/*example.nested.Foo#*/ {
-      override def foo/*local7*/(): Unit/*scala.Unit#*/ = bar/*local0*/()
-    }
+       new LocalDeclarations with Foo {
+//         ^ definition local6
+//         ^^^^^^^^^^^^^^^^^ reference example/nested/LocalDeclarations#
+//                           ^ reference java/lang/Object#`<init>`().
+//                                ^^^ reference example/nested/Foo#
+         override def foo(): Unit = bar()
+//                    ^^^ definition local7
+//                           ^^^^ reference scala/Unit#
+//                                  ^^^ reference local0
+       }
 
-  }
-}
+     }
+   }

@@ -1,5 +1,7 @@
 package tests
 
+import scala.collection.mutable
+
 import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.internal.inputs._
@@ -22,9 +24,19 @@ abstract class MtagsSuite(
     dialect: Dialect,
     exclude: InputFile => Boolean,
     ignoreUnknownSymbols: Boolean = false,
+    documentedUnknownSymbols: Set[String] = Set.empty,
 ) extends DirectoryExpectSuite(directory) {
 
+  private val discoveredUnknownSymbols = mutable.Set.empty[String]
   override lazy val input: InputProperties = loadInputProperties()
+
+  override def afterAll(): Unit = {
+    val diff = documentedUnknownSymbols -- discoveredUnknownSymbols
+    assert(
+      clue(diff).isEmpty,
+      s"to fix this problem, make sure to list exactly the symbols that are unknown",
+    )
+  }
 
   def testCases(): List[ExpectTestCase] = {
     input.allFiles.map { file =>
@@ -35,13 +47,23 @@ abstract class MtagsSuite(
           val input = file.input
           val mtags = Mtags.index(file.file, dialect)
           val obtained = Semanticdbs.printTextDocument(mtags)
-          val unknownSymbols = mtags.occurrences.collect {
-            case occ
-                if fileSymtab.info(occ.symbol).isEmpty && !occ.symbol
-                  .endsWith("/") =>
-              val pos = input.toPosition(occ)
-              pos.formatMessage("error", s"unknown symbol: ${occ.symbol}")
-          }
+          val allUnknownSymbols = mtags.occurrences
+            .collect {
+              case occ
+                  if fileSymtab.info(occ.symbol).isEmpty &&
+                    !occ.symbol.endsWith("/") =>
+                val pos = input.toPosition(occ)
+                pos.formatMessage("error", s"unknown symbol: ${occ.symbol}")
+            }
+          val unknownSymbols = allUnknownSymbols.filterNot(msg => {
+            documentedUnknownSymbols.exists { sym =>
+              val result = msg.contains(sym)
+              if (result) {
+                discoveredUnknownSymbols += sym
+              }
+              result
+            }
+          })
 
           if (!ignoreUnknownSymbols && unknownSymbols.nonEmpty) {
             fail(unknownSymbols.mkString("\n"))
@@ -83,6 +105,11 @@ class MtagsScala2Suite
           "MacroAnnotation",
         ).exists { name => file.file.toNIO.endsWith(s"$name.scala") }
       },
+      documentedUnknownSymbols = Set(
+        "example/JavaLocals#Point#x().", "example/JavaLocals#Point#y().",
+        "example/JavaExtends#MyRecord#name().", "example/JavaRecord#a().",
+        "example/JavaRecord#b().",
+      ),
     )
 
 // Ignored because it's failing to find SemanticDB files for Java sources. It

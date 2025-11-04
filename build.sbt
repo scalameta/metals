@@ -154,7 +154,12 @@ def crossTestDyn(state: State, scalaV: String): State = {
 
 commands ++= Seq(
   Command.command("save-expect") { s =>
-    "unit/test:runMain tests.SaveExpect" :: "quick-publish-local" :: "slow/test:runMain tests.feature.SlowSaveExpect" :: s
+    // Manually clean input because we rely on `unmanagedJars +=` to enable
+    // the semanticdb-javac compiler plugin, and it doesn't pick up changes
+    // in the plugin codebase otherwise.
+    "semanticdb-javac/package" :: "input/clean" :: "input/compile" ::
+      "unit/test:runMain tests.SaveExpect" ::
+      s
   },
   Command.command("quick-publish-local") { s =>
     val publishMtags = V.quickPublishScalaVersions.foldLeft(s) { case (st, v) =>
@@ -721,22 +726,27 @@ lazy val input = project
     javaHome := Some(file(sys.env("JAVA_HOME"))),
     publish / skip := true,
     javaHome := Some(file(sys.env("JAVA_HOME"))),
+    Compile / unmanagedJars ++= List(
+      // Normally, we would be able to `.dependsOn(semanticdb-javac)`, but it
+      // doesn't work because the project doesn't have a normal resource file
+      // META-INF/services/com.sun.source.util.Plugin, we add it only during `package`
+      // to work around a limitation in zinc incremental compilation where javac crashes
+      // when compiling the semanticdb-javac project with the plugin itself.
+      (`semanticdb-javac` / Compile / Keys.`package`).value
+    ),
     libraryDependencies ++= List(
-      // NOTE: we should be able to use our inlined semanticdb-javac compiler
-      // plugin but it breaks incremental compilation because it adds the
-      // META-INF/services/com.sun.source.util.Plugin file to the compilation of
-      // the plugin itself, and the plugin doesn't exist yet.
-      "com.sourcegraph" % "semanticdb-javac" % V.javaSemanticdb,
+      "org.slf4j" % "slf4j-api" % "1.7.36",
       // these projects have macro annotations
       "org.scalameta" %% "scalameta" % V.scalameta,
       "io.circe" %% "circe-derivation-annotations" % "0.13.0-M5",
     ),
-    javacOptions += s"-Xplugin:semanticdb -sourceroot:${(ThisBuild / baseDirectory).value} -targetroot:${(Compile / classDirectory).value}",
+    javacOptions += s"-Xplugin:MetalsSemanticdb -sourceroot:${(ThisBuild / baseDirectory).value} -targetroot:${(Compile / classDirectory).value}",
     scalacOptions ++= Seq("-P:semanticdb:synthetics:on", "-Ymacro-annotations"),
     scalacOptions ~= { options =>
       options.filter(!_.contains("-Wunused"))
     },
   )
+  .dependsOn(jsemanticdb)
   .disablePlugins(ScalafixPlugin)
 
 lazy val input3 = project
@@ -1032,9 +1042,12 @@ lazy val bench = project
     moduleName := "metals-bench",
     buildInfoKeys := Seq[BuildInfoKey](scalaVersion),
     buildInfoPackage := "bench",
+    libraryDependencies += "tools.profiler" % "async-profiler" % "4.2",
     Jmh / bspEnabled := false,
     Jmh / fork := true,
     Jmh / javaOptions ++= sharedJavaOptions,
+    Jmh / javaOptions +=
+      s"-Dmetals.flamegraph=${(ThisBuild / baseDirectory).value / "target"}/flamegraph.html",
   )
   .dependsOn(unit)
   .enablePlugins(JmhPlugin)

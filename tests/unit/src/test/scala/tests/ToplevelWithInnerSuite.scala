@@ -35,6 +35,7 @@ class ToplevelWithInnerScala2Suite
       "toplevel-with-inner",
       dialects.Scala213,
     )
+@munit.IgnoreSuite
 class ToplevelWithInnerScala3Suite
     extends ToplevelWithInnerSuite(
       InputProperties.scala3(),

@@ -1,9 +1,15 @@
-package example
+   package example
+//         ^^^^^^^ definition example/
 
-object Vars/*example.Vars.*/ {
-  var a/*example.Vars.a().*/ = 2
+   object Vars {
+//        ^^^^ definition example/Vars.
+     var a = 2
+//       ^ definition example/Vars.a().
 
-  a/*example.Vars.`a_=`().*/ = 2
+     a = 2
+//   ^ reference example/Vars.`a_=`().
 
-  Vars/*example.Vars.*/.a/*example.Vars.`a_=`().*/ = 3
-}
+     Vars.a = 3
+//   ^^^^ reference example/Vars.
+//        ^ reference example/Vars.`a_=`().
+   }

@@ -50,17 +50,26 @@ object SemanticdbPrinter {
       out.append("\n")
     }
 
+    def isInvalidRange(range: Semanticdb.Range): Boolean = {
+      range.getStartLine() < 0 ||
+      range.getStartCharacter() < 0 ||
+      range.getEndLine() < 0 ||
+      range.getEndCharacter() < 0
+    }
+
     val occs = doc
       .getOccurrencesList()
       .asScala
       .sortBy(_.getRange())
       .iterator
+      .filterNot(occ => isInvalidRange(occ.getRange()))
       .buffered
     val diags = doc
       .getDiagnosticsList()
       .asScala
       .sortBy(_.getRange())
       .iterator
+      .filterNot(diag => isInvalidRange(diag.getRange()))
       .buffered
     val lines = doc.getText().linesWithSeparators
     lines.zipWithIndex.foreach { case (line, lineNumber) =>

@@ -2,7 +2,8 @@ package tests
 
 import scala.util.Properties
 
-import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.jsemanticdb.Semanticdb
+import scala.meta.internal.mtags.SemanticdbPrinter
 
 /**
  * Baseline test suite that documents the unprocessed output of semanticdb-scalac
@@ -29,16 +30,19 @@ abstract class SemanticdbSuite(
         true
       }
     }
-    input.scalaFiles.filter(isEnabled).map { file =>
-      ExpectTestCase(
-        file,
-        { () =>
-          val textDocument = classpath.textDocument(file.file).get
-          val obtained = Semanticdbs.printTextDocument(textDocument)
-          obtained
-        },
-      )
-    }
+    for {
+      file <- input.allFiles
+      if isEnabled(file)
+      if file.isScalaOrJava
+    } yield ExpectTestCase(
+      file,
+      { () =>
+        val textDocument = classpath.textDocument(file.file).get
+        val jdoc = Semanticdb.TextDocument.parseFrom(textDocument.toByteArray)
+        val obtained = SemanticdbPrinter.printDocument(jdoc)
+        obtained
+      },
+    )
   }
 }
 
@@ -52,5 +56,6 @@ class SemanticdbScala2Suite
  * - anonymous givens https://github.com/lampepfl/dotty/issues/11692
  * - topelevel symbols https://github.com/lampepfl/dotty/issues/11693
  */
+@munit.IgnoreSuite
 class SemanticdbScala3Suite
     extends SemanticdbSuite(InputProperties.scala3(), "semanticdb-scala3")

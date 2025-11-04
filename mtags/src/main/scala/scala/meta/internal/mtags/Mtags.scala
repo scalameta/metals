@@ -117,9 +117,7 @@ final class Mtags(implicit rc: ReportContext) {
     addLines(language, input.text)
     val result =
       if (language == Semanticdb.Language.JAVA) {
-        JavaMtags
-          .index(input, includeMembers = true)
-          .index()
+        new JavaMtags(input, includeMembers = true).index()
       } else if (language == Semanticdb.Language.SCALA) {
         ScalaMtags.index(input, dialect).index()
       } else if (language == Semanticdb.Language.PROTOBUF) {

@@ -28,13 +28,6 @@ import com.thoughtworks.qdox.model.JavaModel
 import com.thoughtworks.qdox.parser.ParseException
 import org.eclipse.lsp4j
 
-object JavaMtags {
-  def index(
-      input: Input.VirtualFile,
-      includeMembers: Boolean
-  )(implicit rc: ReportContext): MtagsIndexer =
-    new JavaMtags(input, includeMembers)
-}
 class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
     implicit rc: ReportContext
 ) extends MtagsIndexer { self =>

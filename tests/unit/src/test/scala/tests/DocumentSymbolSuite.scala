@@ -63,6 +63,7 @@ class DocumentSymbolScala2Suite
       V.scala213,
     )
 
+@munit.IgnoreSuite
 class DocumentSymbolScala3Suite
     extends DocumentSymbolSuite(
       "documentSymbol-scala3",

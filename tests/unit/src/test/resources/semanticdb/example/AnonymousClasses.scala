@@ -1,3 +1,6 @@
-package example
+   package example
+//         ^^^^^^^ definition example/
 
-class AnonymousClasses/*example.AnonymousClasses#*/ {}
+   class AnonymousClasses {}
+//       ^^^^^^^^^^^^^^^^ definition example/AnonymousClasses#
+//                        ^ definition example/AnonymousClasses#`<init>`().

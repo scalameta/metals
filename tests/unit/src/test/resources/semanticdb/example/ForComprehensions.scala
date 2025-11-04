@@ -1,40 +1,77 @@
-package example
+   package example
+//         ^^^^^^^ definition example/
 
-class ForComprehensions/*example.ForComprehensions#*/ {
-  for {
-    a/*local0*/ <- List/*scala.package.List.*/(1)
-    b/*local1*/ <- List/*scala.package.List.*/(a/*local0*/)
-    if (
-      a/*local0*/,
-      b/*local1*/,
-    ) ==/*java.lang.Object#`==`().*/ (1, 2)
-    (
-      c/*local7*/,
-      d/*local8*/,
-    ) <- List/*scala.package.List.*/((a/*local0*/, b/*local1*/))
-    if (
-      a/*local0*/,
-      b/*local1*/,
-      c/*local7*/,
-      d/*local8*/,
-    ) ==/*java.lang.Object#`==`().*/ (1, 2, 3, 4)
-    e/*local10*/ = (
-      a/*local0*/,
-      b/*local1*/,
-      c/*local7*/,
-      d/*local8*/,
-    )
-    if e/*local10*/ ==/*java.lang.Object#`==`().*/ (1, 2, 3, 4)
-    f/*local11*/ <- List/*scala.package.List.*/(e/*local10*/)
-  } yield {
-    (
-      a/*local0*/,
-      b/*local1*/,
-      c/*local7*/,
-      d/*local8*/,
-      e/*local10*/,
-      f/*local11*/,
-    )
-  }
+   class ForComprehensions {
+//       ^^^^^^^^^^^^^^^^^ definition example/ForComprehensions#
+//                         ^ definition example/ForComprehensions#`<init>`().
+     for {
+       a <- List(1)
+//     ^ definition local0
+//          ^^^^ reference scala/package.List.
+       b <- List(a)
+//     ^ definition local1
+//          ^^^^ reference scala/package.List.
+//               ^ reference local0
+       if (
+         a,
+//       ^ reference local0
+         b,
+//       ^ reference local1
+       ) == (1, 2)
+//       ^^ reference java/lang/Object#`==`().
+       (
+         c,
+//       ^ definition local7
+         d,
+//       ^ definition local8
+       ) <- List((a, b))
+//          ^^^^ reference scala/package.List.
+//                ^ reference local0
+//                   ^ reference local1
+       if (
+         a,
+//       ^ reference local0
+         b,
+//       ^ reference local1
+         c,
+//       ^ reference local7
+         d,
+//       ^ reference local8
+       ) == (1, 2, 3, 4)
+//       ^^ reference java/lang/Object#`==`().
+       e = (
+//     ^ definition local10
+         a,
+//       ^ reference local0
+         b,
+//       ^ reference local1
+         c,
+//       ^ reference local7
+         d,
+//       ^ reference local8
+       )
+       if e == (1, 2, 3, 4)
+//        ^ reference local10
+//          ^^ reference java/lang/Object#`==`().
+       f <- List(e)
+//     ^ definition local11
+//          ^^^^ reference scala/package.List.
+//               ^ reference local10
+     } yield {
+       (
+         a,
+//       ^ reference local0
+         b,
+//       ^ reference local1
+         c,
+//       ^ reference local7
+         d,
+//       ^ reference local8
+         e,
+//       ^ reference local10
+         f,
+//       ^ reference local11
+       )
+     }
 
-}
+   }

@@ -5,7 +5,6 @@ import java.nio.charset.StandardCharsets
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
@@ -17,8 +16,10 @@ case class InputFile(
 ) {
   def sourceDirectoryRelativePath: RelativePath =
     file.toRelative(sourceDirectory)
-  def input: Input.VirtualFile = file.toInput
+  def input: Input.VirtualFile = Input.VirtualFile(file.toString, code)
   def isScala: Boolean = PathIO.extension(file.toNIO) == "scala"
+  def isJava: Boolean = PathIO.extension(file.toNIO) == "java"
+  def isScalaOrJava: Boolean = isScala || isJava
   def expectPath(name: String): AbsolutePath =
     AbsolutePath(BuildInfo.testResourceDirectory)
       .resolve(name)

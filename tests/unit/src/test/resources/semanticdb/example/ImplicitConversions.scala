@@ -1,28 +1,60 @@
-package example
+   package example
+//         ^^^^^^^ definition example/
 
-class ImplicitConversions/*example.ImplicitConversions#*/ {
-  implicit def string2Number/*example.ImplicitConversions#string2Number().*/(
-      string/*example.ImplicitConversions#string2Number().(string)*/: String/*scala.Predef.String#*/
-  ): Int/*scala.Int#*/ = 42
-  val message/*example.ImplicitConversions#message.*/ = ""
-  val number/*example.ImplicitConversions#number.*/ = 42
-  val tuple/*example.ImplicitConversions#tuple.*/ = (1, 2)
-  val char/*example.ImplicitConversions#char.*/: Char/*scala.Char#*/ = 'a'
+   class ImplicitConversions {
+//       ^^^^^^^^^^^^^^^^^^^ definition example/ImplicitConversions#
+//                           ^ definition example/ImplicitConversions#`<init>`().
+     implicit def string2Number(
+//                ^^^^^^^^^^^^^ definition example/ImplicitConversions#string2Number().
+         string: String
+//       ^^^^^^ definition example/ImplicitConversions#string2Number().(string)
+//               ^^^^^^ reference scala/Predef.String#
+     ): Int = 42
+//      ^^^ reference scala/Int#
+     val message = ""
+//       ^^^^^^^ definition example/ImplicitConversions#message.
+     val number = 42
+//       ^^^^^^ definition example/ImplicitConversions#number.
+     val tuple = (1, 2)
+//       ^^^^^ definition example/ImplicitConversions#tuple.
+     val char: Char = 'a'
+//       ^^^^ definition example/ImplicitConversions#char.
+//             ^^^^ reference scala/Char#
 
-  // extension methods
-  message/*example.ImplicitConversions#message.*/
-    .stripSuffix/*scala.collection.StringOps#stripSuffix().*/("h")
-  tuple/*example.ImplicitConversions#tuple.*/ +/*scala.Predef.any2stringadd#`+`().*/ "Hello"
+     // extension methods
+     message
+//   ^^^^^^^ reference example/ImplicitConversions#message.
+       .stripSuffix("h")
+//      ^^^^^^^^^^^ reference scala/collection/StringOps#stripSuffix().
+     tuple + "Hello"
+//   ^^^^^ reference example/ImplicitConversions#tuple.
+//         ^ reference scala/Predef.any2stringadd#`+`().
 
-  // implicit conversions
-  val x/*example.ImplicitConversions#x.*/: Int/*scala.Int#*/ = message/*example.ImplicitConversions#message.*/
+     // implicit conversions
+     val x: Int = message
+//       ^ definition example/ImplicitConversions#x.
+//          ^^^ reference scala/Int#
+//                ^^^^^^^ reference example/ImplicitConversions#message.
 
-  // interpolators
-  s/*scala.StringContext#s().*/"Hello $message/*example.ImplicitConversions#message.*/ $number/*example.ImplicitConversions#number.*/"
-  s/*scala.StringContext#s().*/"""Hello
-     |$message/*example.ImplicitConversions#message.*/
-     |$number/*example.ImplicitConversions#number.*/""".stripMargin/*scala.collection.StringOps#stripMargin(+1).*/
+     // interpolators
+     s"Hello $message $number"
+//   ^ reference scala/StringContext#s().
+//            ^^^^^^^ reference example/ImplicitConversions#message.
+//                     ^^^^^^ reference example/ImplicitConversions#number.
+     s"""Hello
+//   ^ reference scala/StringContext#s().
+        |$message
+//        ^^^^^^^ reference example/ImplicitConversions#message.
+        |$number""".stripMargin
+//        ^^^^^^ reference example/ImplicitConversions#number.
+//                  ^^^^^^^^^^^ reference scala/collection/StringOps#stripMargin(+1).
 
-  val a/*example.ImplicitConversions#a.*/: Int/*scala.Int#*/ = char/*example.ImplicitConversions#char.*/
-  val b/*example.ImplicitConversions#b.*/: Long/*scala.Long#*/ = char/*example.ImplicitConversions#char.*/
-}
+     val a: Int = char
+//       ^ definition example/ImplicitConversions#a.
+//          ^^^ reference scala/Int#
+//                ^^^^ reference example/ImplicitConversions#char.
+     val b: Long = char
+//       ^ definition example/ImplicitConversions#b.
+//          ^^^^ reference scala/Long#
+//                 ^^^^ reference example/ImplicitConversions#char.
+   }

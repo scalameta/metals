@@ -1,5 +1,11 @@
-package example
+   package example
+//         ^^^^^^^ definition example/
 
-class EtaExpansion/*example.EtaExpansion#*/ {
-  List/*scala.package.List.*/(1).map/*scala.collection.immutable.List#map().*/(identity/*scala.Predef.identity().*/)
-}
+   class EtaExpansion {
+//       ^^^^^^^^^^^^ definition example/EtaExpansion#
+//                    ^ definition example/EtaExpansion#`<init>`().
+     List(1).map(identity)
+//   ^^^^ reference scala/package.List.
+//           ^^^ reference scala/collection/immutable/List#map().
+//               ^^^^^^^^ reference scala/Predef.identity().
+   }

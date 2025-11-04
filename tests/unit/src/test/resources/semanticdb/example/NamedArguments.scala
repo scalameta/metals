@@ -1,34 +1,63 @@
-package example
+   package example
+//         ^^^^^^^ definition example/
 
-case class User/*example.User#*/(
-    name/*example.User#name.*/: String/*scala.Predef.String#*/ = {
-      // assert default values have occurrences
-      Map/*scala.Predef.Map.*/.toString/*java.lang.Object#toString().*/
-    }
-)
-object NamedArguments/*example.NamedArguments.*/ {
-  final val susan/*example.NamedArguments.susan.*/ = "Susan"
-  val user1/*example.NamedArguments.user1.*/ =
-    User/*example.User.*/
-      .apply/*example.User.apply().*/(
-        name/*example.User.apply().(name)*/ = "John"
-      )
-  val user2/*example.NamedArguments.user2.*/: User/*example.User#*/ =
-    User/*example.User.*/(
-      name/*example.User.apply().(name)*/ = susan/*example.NamedArguments.susan.*/
-    ).copy/*example.User#copy().*/(
-      name/*example.User#copy().(name)*/ = susan/*example.NamedArguments.susan.*/
-    )
+   case class User(
+//            ^^^^ definition example/User#
+//                ^ definition example/User#`<init>`().
+       name: String = {
+//     ^^^^ definition example/User#name.
+//           ^^^^^^ reference scala/Predef.String#
+         // assert default values have occurrences
+         Map.toString
+//       ^^^ reference scala/Predef.Map.
+//           ^^^^^^^^ reference java/lang/Object#toString().
+       }
+   )
+   object NamedArguments {
+//        ^^^^^^^^^^^^^^ definition example/NamedArguments.
+     final val susan = "Susan"
+//             ^^^^^ definition example/NamedArguments.susan.
+     val user1 =
+//       ^^^^^ definition example/NamedArguments.user1.
+       User
+//     ^^^^ reference example/User.
+         .apply(
+//        ^^^^^ reference example/User.apply().
+           name = "John"
+//         ^^^^ reference example/User.apply().(name)
+         )
+     val user2: User =
+//       ^^^^^ definition example/NamedArguments.user2.
+//              ^^^^ reference example/User#
+       User(
+//     ^^^^ reference example/User.
+         name = susan
+//       ^^^^ reference example/User.apply().(name)
+//              ^^^^^ reference example/NamedArguments.susan.
+       ).copy(
+//       ^^^^ reference example/User#copy().
+         name = susan
+//       ^^^^ reference example/User#copy().(name)
+//              ^^^^^ reference example/NamedArguments.susan.
+       )
 
-  // anonymous classes
-  @deprecated/*scala.deprecated#*//*scala.deprecated#`<init>`().*/(
-    message/*scala.deprecated#`<init>`().(message)*/ = "a",
-    since/*scala.deprecated#`<init>`().(since)*/ = susan/*example.NamedArguments.susan.*/,
-  ) def b/*example.NamedArguments.b().*/ = 1
+     // anonymous classes
+     @deprecated(
+//    ^^^^^^^^^^ reference scala/deprecated#
+//              ^ reference scala/deprecated#`<init>`().
+       message = "a",
+//     ^^^^^^^ reference scala/deprecated#`<init>`().(message)
+       since = susan,
+//     ^^^^^ reference scala/deprecated#`<init>`().(since)
+//             ^^^^^ reference example/NamedArguments.susan.
+     ) def b = 1
+//         ^ definition example/NamedArguments.b().
 
-  // vararg
-  List/*scala.package.List.*/(
-    elems/*scala.collection.IterableFactory#apply().(elems)*/ = 2
-  )
+     // vararg
+     List(
+//   ^^^^ reference scala/package.List.
+       elems = 2
+//     ^^^^^ reference scala/collection/IterableFactory#apply().(elems)
+     )
 
-}
+   }

@@ -28,15 +28,15 @@ import scala.meta.internal.{semanticdb => s}
  */
 
 abstract class DefinitionSuiteBase(
-    inputProps: InputProperties,
+    inputProps: () => InputProperties,
     directory: String,
     dialect: Dialect,
     badFileNames: List[String] = List.empty,
 ) extends DirectoryExpectSuite(directory) {
 
-  override lazy val input: InputProperties = inputProps
+  override lazy val input: InputProperties = inputProps()
 
-  override def testCases(): List[ExpectTestCase] = {
+  private def loadIndex(): OnDemandSymbolIndex = {
     val index = OnDemandSymbolIndex.empty()(EmptyReportContext)
     // Step 1. Index project sources
     input.allFiles.foreach { source =>
@@ -56,7 +56,11 @@ abstract class DefinitionSuiteBase(
         ),
       )
     }
+    index
+  }
 
+  override def testCases(): List[ExpectTestCase] = {
+    lazy val index = loadIndex()
     def hasKnownIssues(file: InputFile): Boolean = {
       badFileNames.exists { filename => file.file.toNIO.endsWith(filename) }
     }
@@ -184,7 +188,7 @@ abstract class DefinitionSuiteBase(
 
 class DefinitionScala2Suite
     extends DefinitionSuiteBase(
-      inputProps = InputProperties.scala2(),
+      inputProps = () => InputProperties.scala2(),
       directory = "definition",
       dialect = dialects.Scala213,
       badFileNames = List(
@@ -198,7 +202,7 @@ class DefinitionScala2Suite
 @munit.IgnoreSuite
 class DefinitionScala3Suite
     extends DefinitionSuiteBase(
-      inputProps = InputProperties.scala3(),
+      inputProps = () => InputProperties.scala3(),
       directory = "definition-scala3",
       dialect = dialects.Scala3,
       badFileNames = List(

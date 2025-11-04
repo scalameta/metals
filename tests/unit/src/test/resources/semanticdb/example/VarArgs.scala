@@ -1,6 +1,18 @@
-package example
+   package example
+//         ^^^^^^^ definition example/
 
-class VarArgs/*example.VarArgs#*/ {
-  def add/*example.VarArgs#add().*/(a/*example.VarArgs#add().(a)*/: Int/*scala.Int#*/*) = a/*example.VarArgs#add().(a)*/
-  def add2/*example.VarArgs#add2().*/(a/*example.VarArgs#add2().(a)*/: Seq/*scala.collection.immutable.Seq#*/[Int/*scala.Int#*/]*) = a/*example.VarArgs#add2().(a)*/
-}
+   class VarArgs {
+//       ^^^^^^^ definition example/VarArgs#
+//               ^ definition example/VarArgs#`<init>`().
+     def add(a: Int*) = a
+//       ^^^ definition example/VarArgs#add().
+//           ^ definition example/VarArgs#add().(a)
+//              ^^^ reference scala/Int#
+//                      ^ reference example/VarArgs#add().(a)
+     def add2(a: Seq[Int]*) = a
+//       ^^^^ definition example/VarArgs#add2().
+//            ^ definition example/VarArgs#add2().(a)
+//               ^^^ reference scala/collection/immutable/Seq#
+//                   ^^^ reference scala/Int#
+//                            ^ reference example/VarArgs#add2().(a)
+   }

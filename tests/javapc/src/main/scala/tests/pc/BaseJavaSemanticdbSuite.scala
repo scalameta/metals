@@ -22,9 +22,9 @@ class BaseJavaSemanticdbSuite extends BaseJavaPCSuite {
       original: String,
       expected: String,
       uri: Option[URI] = None,
+      filename: String = "SemanticdbInput.java",
   )(implicit loc: Location): Unit = {
     test(testOpt) {
-      val filename = "SemanticdbInput.java"
       val pkg = packageName(testOpt.name)
       val code = s"package $pkg;\n$original"
       val actualUri = uri.getOrElse(URI.create(s"file:///$filename"))

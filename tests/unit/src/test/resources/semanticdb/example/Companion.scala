@@ -1,5 +1,11 @@
-package example
+   package example
+//         ^^^^^^^ definition example/
 
-abstract class Companion/*example.Companion#*/() extends Object/*java.lang.Object#*//*java.lang.Object#`<init>`().*/() {}
+   abstract class Companion() extends Object() {}
+//                ^^^^^^^^^ definition example/Companion#
+//                         ^ definition example/Companion#`<init>`().
+//                                    ^^^^^^ reference java/lang/Object#
+//                                          ^ reference java/lang/Object#`<init>`().
 
-object Companion/*example.Companion.*/ {}
+   object Companion {}
+//        ^^^^^^^^^ definition example/Companion.

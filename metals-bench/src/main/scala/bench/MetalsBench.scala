@@ -28,11 +28,14 @@ import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import one.profiler.AsyncProfiler
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
 import org.openjdk.jmh.annotations.Mode
 import org.openjdk.jmh.annotations.Scope
+import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
+import org.openjdk.jmh.annotations.TearDown
 import tests.InputProperties
 import tests.Library
 
@@ -40,49 +43,83 @@ import tests.Library
 class MetalsBench {
 
   MetalsLogger.updateDefaultFormat()
-  val inputs: InputProperties = InputProperties.scala2()
-  val classpath =
+  lazy val inputs: InputProperties = InputProperties.scala2()
+  lazy val classpath =
     new SemanticdbClasspath(
       inputs.sourceroot,
       inputs.classpath,
       inputs.semanticdbTargets,
     )
-  val documents: List[(AbsolutePath, TextDocument)] =
+  lazy val documents: List[(AbsolutePath, TextDocument)] =
     inputs.scalaFiles.map { input =>
       (input.file, classpath.textDocument(input.file).get)
     }
 
-  val scalaLibrarySourcesJar: AbsolutePath = inputs.dependencySources.entries
-    .find(_.toNIO.getFileName.toString.contains("scala-library"))
-    .getOrElse {
-      sys.error(
-        s"missing: scala-library-sources.jar, obtained ${inputs.dependencySources}"
-      )
-    }
+  lazy val scalaLibrarySourcesJar: AbsolutePath =
+    inputs.dependencySources.entries
+      .find(_.toNIO.getFileName.toString.contains("scala-library"))
+      .getOrElse {
+        sys.error(
+          s"missing: scala-library-sources.jar, obtained ${inputs.dependencySources}"
+        )
+      }
 
-  val jdk: Classpath = Classpath(JdkSources().toOption.get)
-  val fullClasspath: Classpath = jdk ++ inputs.dependencySources
+  lazy val jdk: Classpath = Classpath(JdkSources().toOption.get)
+  lazy val fullClasspath: Classpath = jdk ++ inputs.dependencySources
 
-  val inflated: Inflated = Inflated.jars(fullClasspath)
+  lazy val inflated: Inflated = Inflated.jars(fullClasspath)
 
-  val scalaDependencySources: Inflated = {
+  lazy val scalaDependencySources: Inflated = {
     val result = inflated.filter(_.path.endsWith(".scala"))
     scribe.info(s"Scala lines: ${result.linesOfCode}")
     result
   }
 
-  val javaDependencySources: Inflated = {
+  lazy val javaLargeDependencySources: Inflated = {
     val result = inflated.filter(_.path.endsWith(".java"))
     scribe.info(s"Java lines: ${result.linesOfCode}")
     result
   }
 
-  val megaSources: Classpath = Classpath(
+  lazy val javaSmallDependencySources: Inflated =
+    javaLargeDependencySources.take(1_000)
+  lazy val javaDependencySources: Inflated = {
+    javaLargeDependencySources
+  }
+
+  lazy val megaSources: Classpath = Classpath(
     Library.allScala2
       .flatMap(_.sources.entries)
       .filter(_.toNIO.getFileName.toString.endsWith(".jar"))
   )
 
+  val profiler: AsyncProfiler = AsyncProfiler.getInstance()
+
+  private def flamegraphPath(): Option[String] =
+    // Return None here to disable automatic flamegraph generation
+    Option(System.getProperty("metals.flamegraph"))
+
+  @Setup
+  def setup(): Unit = {
+    flamegraphPath().foreach { _ =>
+      val startResult = profiler.execute(s"start,flamegraph")
+      if (startResult != "Profiling started") {
+        scribe.info(s"started profiler: $startResult")
+      }
+    }
+  }
+
+  @TearDown
+  def tearDown(): Unit = {
+    flamegraphPath().foreach { flamegraph =>
+      val stopResult = profiler.execute(s"stop,file=$flamegraph")
+      if (stopResult == "OK") {
+        scribe.info(s"flamegraph: $flamegraph")
+      } else {
+        scribe.info(s"stopped profiler: $stopResult")
+      }
+    }
+  }
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def mtagsScalaIndex(): Unit = {
@@ -179,8 +216,7 @@ class MetalsBench {
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def mtagsJavaParse(): Unit = {
     javaDependencySources.foreach { input =>
-      JavaMtags
-        .index(input, includeMembers = true)(EmptyReportContext)
+      new JavaMtags(input, includeMembers = true)(EmptyReportContext)
         .index()
     }
   }

@@ -1,9 +1,17 @@
-package example
+   package example
+//         ^^^^^^^ definition example/
 
-class /* comment */ Comments/*example.Comments#*/ {
-  object /* comment */ A/*example.Comments#A.*/
-  trait /* comment */ A/*example.Comments#A#*/
-  val /* comment */ a/*example.Comments#a.*/ = 1
-  def /* comment */ b/*example.Comments#b().*/ = 1
-  var /* comment */ c/*example.Comments#c().*/ = 1
-}
+   class /* comment */ Comments {
+//                     ^^^^^^^^ definition example/Comments#
+//                              ^ definition example/Comments#`<init>`().
+     object /* comment */ A
+//                        ^ definition example/Comments#A.
+     trait /* comment */ A
+//                       ^ definition example/Comments#A#
+     val /* comment */ a = 1
+//                     ^ definition example/Comments#a.
+     def /* comment */ b = 1
+//                     ^ definition example/Comments#b().
+     var /* comment */ c = 1
+//                     ^ definition example/Comments#c().
+   }

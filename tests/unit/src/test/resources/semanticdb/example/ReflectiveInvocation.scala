@@ -1,9 +1,17 @@
-package example
+   package example
+//         ^^^^^^^ definition example/
 
-class ReflectiveInvocation/*example.ReflectiveInvocation#*/ {
-  new /*local1*/Serializable/*scala.package.Serializable#*/ /*java.lang.Object#`<init>`().*/{
-    def message/*local0*/ = "message"
-    // reflective invocation
-  }.message/*local0*/
+   class ReflectiveInvocation {
+//       ^^^^^^^^^^^^^^^^^^^^ definition example/ReflectiveInvocation#
+//                            ^ definition example/ReflectiveInvocation#`<init>`().
+     new Serializable {
+//       ^ definition local1
+//       ^^^^^^^^^^^^ reference scala/package.Serializable#
+//                    ^ reference java/lang/Object#`<init>`().
+       def message = "message"
+//         ^^^^^^^ definition local0
+       // reflective invocation
+     }.message
+//     ^^^^^^^ reference local0
 
-}
+   }

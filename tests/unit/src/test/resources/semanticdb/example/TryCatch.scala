@@ -1,14 +1,27 @@
-package example
+   package example
+//         ^^^^^^^ definition example/
 
-class TryCatch/*example.TryCatch#*/ {
-  try {
-    val x/*local0*/ = 2
-    x/*local0*/ +/*scala.Int#`+`(+4).*/ 2
-  } catch {
-    case t/*local1*/: Throwable/*scala.package.Throwable#*/ =>
-      t/*local1*/.printStackTrace/*java.lang.Throwable#printStackTrace().*/()
-  } finally {
-    val text/*local2*/ = ""
-    text/*local2*/ +/*java.lang.String#`+`().*/ ""
-  }
-}
+   class TryCatch {
+//       ^^^^^^^^ definition example/TryCatch#
+//                ^ definition example/TryCatch#`<init>`().
+     try {
+       val x = 2
+//         ^ definition local0
+       x + 2
+//     ^ reference local0
+//       ^ reference scala/Int#`+`(+4).
+     } catch {
+       case t: Throwable =>
+//          ^ definition local1
+//             ^^^^^^^^^ reference scala/package.Throwable#
+         t.printStackTrace()
+//       ^ reference local1
+//         ^^^^^^^^^^^^^^^ reference java/lang/Throwable#printStackTrace().
+     } finally {
+       val text = ""
+//         ^^^^ definition local2
+       text + ""
+//     ^^^^ reference local2
+//          ^ reference java/lang/String#`+`().
+     }
+   }

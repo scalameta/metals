@@ -1,1 +1,0 @@
-<<class>>/*keyword*/ <<EmptyPackage>>/*class*/

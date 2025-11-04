@@ -1,10 +1,9 @@
 package scala.meta.internal.mtags
 
-import scala.{meta => m}
-
 import scala.meta.Name
 import scala.meta.Term
 import scala.meta.inputs.Input
+import scala.meta.inputs.Position
 import scala.meta.internal.semanticdb.Implicits._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
@@ -68,7 +67,7 @@ trait MtagsIndexer {
         )
     }
   }
-  def term(name: String, pos: m.Position, kind: Kind, properties: Int): String =
+  def term(name: String, pos: Position, kind: Kind, properties: Int): String =
     addSignature(Descriptor.Term(name), pos, kind, properties)
   def term(name: Term.Name, kind: Kind, properties: Int): String =
     addSignature(Descriptor.Term(name.value), name.pos, kind, properties)
@@ -88,7 +87,7 @@ trait MtagsIndexer {
     )
   def ctor(
       disambiguator: String,
-      pos: m.Position,
+      pos: Position,
       properties: Int
   ): String =
     addSignature(
@@ -100,13 +99,14 @@ trait MtagsIndexer {
   def method(
       name: String,
       disambiguator: String,
-      pos: m.Position,
-      properties: Int
+      pos: Position,
+      properties: Int,
+      kind: Kind = Kind.METHOD
   ): String =
     addSignature(
       Descriptor.Method(name, disambiguator),
       pos,
-      Kind.METHOD,
+      kind,
       properties
     )
   def method(
@@ -126,11 +126,11 @@ trait MtagsIndexer {
       properties
     )
   }
-  def tpe(name: String, pos: m.Position, kind: Kind, properties: Int): String =
+  def tpe(name: String, pos: Position, kind: Kind, properties: Int): String =
     addSignature(Descriptor.Type(name), pos, kind, properties)
   def tpe(name: Name, kind: Kind, properties: Int): String =
     addSignature(Descriptor.Type(name.value), name.pos, kind, properties)
-  def pkg(name: String, pos: m.Position): String = {
+  def pkg(name: String, pos: Position): String = {
     addSignature(Descriptor.Package(name), pos, Kind.PACKAGE, 0)
   }
   def pkg(ref: Term): Unit =
@@ -143,7 +143,7 @@ trait MtagsIndexer {
     }
   private def addSignature(
       signature: Descriptor,
-      definition: m.Position,
+      definition: Position,
       kind: s.SymbolInformation.Kind,
       properties: Int
   ): String = {

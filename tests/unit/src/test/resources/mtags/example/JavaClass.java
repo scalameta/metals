@@ -2,58 +2,59 @@ package example;
 
 public class JavaClass/*example.JavaClass#*/ {
 
-    private JavaClass() {
+	private JavaClass() {
 
-    }
-    public JavaClass/*example.JavaClass#`<init>`().*/(int d) {
-        this.d = d;
-    }
+	}
 
-    public static void a/*example.JavaClass#a().*/() {
-    }
+	public JavaClass/*example.JavaClass#`<init>`().*/(int d) {
+		this.d = d;
+	}
 
-    public int b/*example.JavaClass#b().*/() {
-        return 1;
-    }
+	public static void a/*example.JavaClass#a().*/() {
+		new JavaClass(42);
+	}
 
-    public static int c/*example.JavaClass#c.*/ = 2;
-    public int d/*example.JavaClass#d.*/ = 2;
+	public int b/*example.JavaClass#b().*/() {
+		return 1;
+	}
 
-    public class InnerClass/*example.JavaClass#InnerClass#*/ {
-        public int b/*example.JavaClass#InnerClass#b().*/() {
-            return 1;
-        }
+	public static int c/*example.JavaClass#c.*/ = 2;
+	public int d/*example.JavaClass#d.*/ = 2;
 
-        public int d/*example.JavaClass#InnerClass#d.*/ = 2;
-    }
+	public class InnerClass/*example.JavaClass#InnerClass#*/ {
+		public int b/*example.JavaClass#InnerClass#b().*/() {
+			return 1;
+		}
 
-    public static class InnerStaticClass/*example.JavaClass#InnerStaticClass#*/ {
-        public static void a/*example.JavaClass#InnerStaticClass#a().*/() {
-        }
+		public int d/*example.JavaClass#InnerClass#d.*/ = 2;
+	}
 
-        public int b/*example.JavaClass#InnerStaticClass#b().*/() {
-            return 1;
-        }
+	public static class InnerStaticClass/*example.JavaClass#InnerStaticClass#*/ {
+		public static void a/*example.JavaClass#InnerStaticClass#a().*/() {
+		}
 
-        public static int c/*example.JavaClass#InnerStaticClass#c.*/ = 2;
-        public int d/*example.JavaClass#InnerStaticClass#d.*/ = 2;
-    }
+		public int b/*example.JavaClass#InnerStaticClass#b().*/() {
+			return 1;
+		}
 
-    public interface InnerInterface/*example.JavaClass#InnerInterface#*/ {
-        public static void a/*example.JavaClass#InnerInterface#a().*/() {
-        }
+		public static int c/*example.JavaClass#InnerStaticClass#c.*/ = 2;
+		public int d/*example.JavaClass#InnerStaticClass#d.*/ = 2;
+	}
 
-        public int b/*example.JavaClass#InnerInterface#b().*/();
-    }
+	public interface InnerInterface/*example.JavaClass#InnerInterface#*/ {
+		public static void a/*example.JavaClass#InnerInterface#a().*/() {
+		}
 
-    public String publicName/*example.JavaClass#publicName().*/() {
-        return "name";
-    }
+		public int b/*example.JavaClass#InnerInterface#b().*/();
+	}
 
-    // Weird formatting
-    @Override
-    public String
-    toString/*example.JavaClass#toString().*/() {
-        return "";
-    }
+	public String publicName/*example.JavaClass#publicName().*/() {
+		return "name";
+	}
+
+	// Weird formatting
+	@Override
+	public String toString/*example.JavaClass#toString().*/() {
+		return "";
+	}
 }

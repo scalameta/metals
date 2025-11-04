@@ -1,9 +1,14 @@
-package example
+   package example
+//         ^^^^^^^ definition example/
 
-package object nested/*example.nested.package.*/ {
+   package object nested {
+//                ^^^^^^ definition example/nested/package.
 
-  class PackageObjectNestedClass/*example.nested.package.PackageObjectNestedClass#*/
+     class PackageObjectNestedClass
+//         ^^^^^^^^^^^^^^^^^^^^^^^^ definition example/nested/package.PackageObjectNestedClass#
+//                                 ^ definition example/nested/package.PackageObjectNestedClass#`<init>`().
 
-}
+   }
 
-class PackageObjectSibling/*example.PackageObjectSibling#*/
+   class PackageObjectSibling
+//       ^^^^^^^^^^^^^^^^^^^^ definition example/PackageObjectSibling#

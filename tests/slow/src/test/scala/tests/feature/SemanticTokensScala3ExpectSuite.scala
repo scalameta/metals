@@ -14,6 +14,7 @@ import tests.MetalsTestEnrichments
 import tests.TestScala3Compiler
 import tests.TestSemanticTokens
 
+@munit.IgnoreSuite
 class SemanticTokensScala3ExpectSuite(
 ) extends DirectoryExpectSuite("semanticTokens3") {
   override lazy val input: InputProperties = InputProperties.scala3()

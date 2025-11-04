@@ -1,26 +1,62 @@
-package example
+   package example
+//         ^^^^^^^ definition example/
 
-class Scalalib/*example.Scalalib#*/ {
-  val nil/*example.Scalalib#nil.*/ = List/*scala.collection.immutable.Nil.*/()
-  val lst/*example.Scalalib#lst.*/ = List/*scala.package.List.*/[
-    (
-        Nothing/*scala.Nothing#*/,
-        Null/*scala.Null#*/,
-        Singleton/*scala.Singleton#*/,
-        Any/*scala.Any#*/,
-        AnyRef/*scala.AnyRef#*/,
-        AnyVal/*scala.AnyVal#*/,
-        Int/*scala.Int#*/,
-        Short/*scala.Short#*/,
-        Double/*scala.Double#*/,
-        Float/*scala.Float#*/,
-        Char/*scala.Char#*/,
-    )
-  ](null)
-  lst/*example.Scalalib#lst.*/.isInstanceOf/*scala.Any#isInstanceOf().*/[Any/*scala.Any#*/]
-  lst/*example.Scalalib#lst.*/.asInstanceOf/*scala.Any#asInstanceOf().*/[Any/*scala.Any#*/]
-  println/*scala.Predef.println(+1).*/(lst/*example.Scalalib#lst.*/.##/*java.lang.Object#`##`().*/)
-  lst/*example.Scalalib#lst.*/ ne/*java.lang.Object#ne().*/ lst/*example.Scalalib#lst.*/
-  lst/*example.Scalalib#lst.*/ eq/*java.lang.Object#eq().*/ lst/*example.Scalalib#lst.*/
-  lst/*example.Scalalib#lst.*/ ==/*java.lang.Object#`==`().*/ lst/*example.Scalalib#lst.*/
-}
+   class Scalalib {
+//       ^^^^^^^^ definition example/Scalalib#
+//                ^ definition example/Scalalib#`<init>`().
+     val nil = List()
+//       ^^^ definition example/Scalalib#nil.
+//             ^^^^ reference scala/collection/immutable/Nil.
+     val lst = List[
+//       ^^^ definition example/Scalalib#lst.
+//             ^^^^ reference scala/package.List.
+       (
+           Nothing,
+//         ^^^^^^^ reference scala/Nothing#
+           Null,
+//         ^^^^ reference scala/Null#
+           Singleton,
+//         ^^^^^^^^^ reference scala/Singleton#
+           Any,
+//         ^^^ reference scala/Any#
+           AnyRef,
+//         ^^^^^^ reference scala/AnyRef#
+           AnyVal,
+//         ^^^^^^ reference scala/AnyVal#
+           Int,
+//         ^^^ reference scala/Int#
+           Short,
+//         ^^^^^ reference scala/Short#
+           Double,
+//         ^^^^^^ reference scala/Double#
+           Float,
+//         ^^^^^ reference scala/Float#
+           Char,
+//         ^^^^ reference scala/Char#
+       )
+     ](null)
+     lst.isInstanceOf[Any]
+//   ^^^ reference example/Scalalib#lst.
+//       ^^^^^^^^^^^^ reference scala/Any#isInstanceOf().
+//                    ^^^ reference scala/Any#
+     lst.asInstanceOf[Any]
+//   ^^^ reference example/Scalalib#lst.
+//       ^^^^^^^^^^^^ reference scala/Any#asInstanceOf().
+//                    ^^^ reference scala/Any#
+     println(lst.##)
+//   ^^^^^^^ reference scala/Predef.println(+1).
+//           ^^^ reference example/Scalalib#lst.
+//               ^^ reference java/lang/Object#`##`().
+     lst ne lst
+//   ^^^ reference example/Scalalib#lst.
+//       ^^ reference java/lang/Object#ne().
+//          ^^^ reference example/Scalalib#lst.
+     lst eq lst
+//   ^^^ reference example/Scalalib#lst.
+//       ^^ reference java/lang/Object#eq().
+//          ^^^ reference example/Scalalib#lst.
+     lst == lst
+//   ^^^ reference example/Scalalib#lst.
+//       ^^ reference java/lang/Object#`==`().
+//          ^^^ reference example/Scalalib#lst.
+   }
