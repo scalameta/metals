@@ -1,3 +1,4 @@
+addSbtPlugin("com.github.sbt" % "sbt-java-formatter" % "0.10.0")
 addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.8")
 addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "2.0.13")
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.4.7")

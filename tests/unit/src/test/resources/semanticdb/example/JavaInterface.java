@@ -3,10 +3,9 @@
 
    public interface JavaInterface {
 //                  ^^^^^^^^^^^^^ definition example/JavaInterface#
-       public static void a() {
-//                        ^ definition example/JavaInterface#a().
-       }
+     public static void a() {}
+//                      ^ definition example/JavaInterface#a().
 
-       public int b();
-//                ^ definition example/JavaInterface#b().
+     public int b();
+//              ^ definition example/JavaInterface#b().
    }

@@ -1,8 +1,8 @@
 package scala.meta.pc;
 
 /**
- * All known code action Ids, this is not a complete list, new code actions might
- * be added by clients, which is why this is not an enum
+ * All known code action Ids, this is not a complete list, new code actions might be added by
+ * clients, which is why this is not an enum
  */
 public class CodeActionId {
   public static final String ConvertToNamedArguments = "ConvertToNamedArguments";

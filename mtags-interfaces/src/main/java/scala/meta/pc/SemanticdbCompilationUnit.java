@@ -4,13 +4,13 @@ import java.net.URI;
 import java.util.List;
 
 public interface SemanticdbCompilationUnit {
-	Language language();
+  Language language();
 
-	String packageSymbol();
+  String packageSymbol();
 
-	List<String> toplevelSymbols();
+  List<String> toplevelSymbols();
 
-	URI uri();
+  URI uri();
 
-	String text();
+  String text();
 }

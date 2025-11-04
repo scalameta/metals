@@ -107,7 +107,9 @@ jobs:
             os: metals-ubuntu-latest
             java: "17"
           - type: scalafmt
-            command: ./bin/scalafmt --test
+            command: |
+              ./bin/scalafmt --test
+              sbt javafmtCheckAll
             name: Formatting
             os: metals-ubuntu-latest
             java: "17"

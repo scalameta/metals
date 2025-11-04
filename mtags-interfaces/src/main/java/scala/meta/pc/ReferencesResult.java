@@ -4,6 +4,7 @@ import java.util.List;
 import org.eclipse.lsp4j.Location;
 
 public interface ReferencesResult {
-    String symbol();
-    List<Location> locations();
+  String symbol();
+
+  List<Location> locations();
 }

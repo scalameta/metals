@@ -5,7 +5,6 @@
 //  ^^^^^^^^^^ reference java/lang/Deprecated#
 //             ^^^^^ reference java/lang/Deprecated#since().
 //                            ^^^^^^^^^^ reference java/lang/Deprecated#forRemoval().
-   class JavaAnnotation {
+   class JavaAnnotation {}
 //       ^^^^^^^^^^^^^^ definition example/JavaAnnotation#
 //       ^^^^^^^^^^^^^^ definition example/JavaAnnotation#`<init>`().
-   }

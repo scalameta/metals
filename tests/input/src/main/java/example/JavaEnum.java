@@ -1,12 +1,12 @@
 package example;
 
 public enum JavaEnum {
-	A(1), B(2);
+  A(1),
+  B(2);
 
-	JavaEnum(int d) {
-		this.d = d;
-	}
+  JavaEnum(int d) {
+    this.d = d;
+  }
 
-	public int d = 2;
-
+  public int d = 2;
 }

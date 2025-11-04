@@ -20,9 +20,11 @@ public enum PcSymbolKind {
 
   private int value;
 
-  public int getValue(){return value;}
+  public int getValue() {
+    return value;
+  }
 
-  private PcSymbolKind (int value) {
+  private PcSymbolKind(int value) {
     this.value = value;
   }
 }
