@@ -93,6 +93,11 @@ trait PcDiagnostics {
         case ex: FreshRunReq => throw ex // propagate a new run request
         case ShutdownReq => throw ShutdownReq // propagate a shutdown request
         case ex: ControlThrowable => throw ex
+        case NoProgressFatalError(e) =>
+          logger.debug(
+            s"[${unit.source}]: fatal error during background compile:",
+            e
+          )
         case ex: Throwable =>
           println(
             "[%s]: exception during background compile: ".format(
