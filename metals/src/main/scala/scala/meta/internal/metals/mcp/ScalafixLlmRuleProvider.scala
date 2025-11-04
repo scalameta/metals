@@ -193,7 +193,7 @@ class ScalafixLlmRuleProvider(
     } else {
       targets.flatMap { targetName =>
         buildTargets
-          .findByDisplayName(targetName)
+          .findByDisplayNameOrUri(targetName)
           .flatMap(bd => buildTargets.scalaTarget(bd.getId()))
           .collect {
             case scalaTarget if !scalaTarget.isSbt => scalaTarget
