@@ -410,10 +410,17 @@ final class BuildTargets private (
   ): Option[BuildTargetIdentifier] =
     inferBuildTargets(source).maxByOption(buildTargetsOrder)
 
-  def findByDisplayName(name: String): Option[BuildTarget] = {
+  def findByDisplayNameOrUri(name: String): Option[BuildTarget] = {
     data
       .fromIterators(_.buildTargetInfo.valuesIterator)
       .find(_.getDisplayName() == name)
+      .orElse(findByUri(name))
+  }
+
+  private def findByUri(name: String): Option[BuildTarget] = {
+    data
+      .fromIterators(_.buildTargetInfo.valuesIterator)
+      .find(_.getId().getUri == name)
   }
 
   @deprecated("Jar and source jar might not always be in the same directory")

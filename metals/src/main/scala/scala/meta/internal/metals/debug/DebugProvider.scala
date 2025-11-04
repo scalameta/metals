@@ -749,7 +749,7 @@ class DebugProvider(
     previousResult match {
       case Failure(ClassNotFoundInBuildTargetException(_, buildTarget)) =>
         val target =
-          buildTargets.findByDisplayName(buildTarget).map(_.getId()).toSeq
+          buildTargets.findByDisplayNameOrUri(buildTarget).map(_.getId()).toSeq
         for {
           _ <- compilations.compileTargets(target)
           _ <- buildTargetClasses.rebuildIndex(target)

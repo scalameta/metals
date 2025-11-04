@@ -41,7 +41,7 @@ class BuildTargetClassesFinder(
         case ClassNotFoundInBuildTargetException(className, target) =>
           revertToDependencies(
             className,
-            buildTargets.findByDisplayName(target),
+            buildTargets.findByDisplayNameOrUri(target),
           )
         case _: NoMainClassFoundException =>
           revertToDependencies(className, buildTarget = None)
@@ -117,7 +117,8 @@ class BuildTargetClassesFinder(
       else Failure(new NoMainClassFoundException(className))
     } { targetName =>
       buildTargets
-        .findByDisplayName(targetName)
+        .findByDisplayNameOrUri(targetName)
+        .orElse(buildTargets.findByDisplayNameOrUri(targetName))
         .fold[Try[List[(A, b.BuildTarget)]]] {
           Failure(
             new BuildTargetNotFoundException(
