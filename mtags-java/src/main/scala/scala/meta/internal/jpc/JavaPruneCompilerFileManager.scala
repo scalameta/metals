@@ -7,8 +7,8 @@ import javax.tools.ForwardingJavaFileManager
 import javax.tools.JavaFileManager
 import javax.tools.JavaFileObject
 
-import scala.annotation.nowarn
 import scala.jdk.CollectionConverters._
+import scala.util.control.NonFatal
 
 import scala.meta.pc.SemanticdbCompilationUnit
 import scala.meta.pc.SemanticdbFileManager
@@ -18,7 +18,6 @@ import org.slf4j.Logger
 class PruneCompilerFileManager(
     delegate: JavaFileManager,
     semanticdbFileManager: SemanticdbFileManager,
-    @nowarn("cat=unused")
     logger: Logger
 ) extends ForwardingJavaFileManager[JavaFileManager](delegate) {
 
@@ -38,7 +37,7 @@ class PruneCompilerFileManager(
   override def inferBinaryName(
       location: JavaFileManager.Location,
       file: JavaFileObject
-  ): String = {
+  ): String = try {
     file match {
       case s: SemanticdbCompilationUnit =>
         s.binaryName()
@@ -48,6 +47,15 @@ class PruneCompilerFileManager(
         //   java.lang.RuntimeException: java.lang.IllegalArgumentException: path.to.YourCustomClassName
         super.inferBinaryName(location, file)
     }
+  } catch {
+    case NonFatal(e) =>
+      val fallback =
+        file.toUri().toString().stripSuffix(".java").stripPrefix("file://")
+      logger.error(
+        s"PruneCompilerFileManager: failed to infer binary name for '${file.toUri()}'. Falling back to '${fallback}' to let compilation continue.",
+        e
+      )
+      fallback
   }
 
   // Convert package FQN ("java.io") into a list of source files defined in that package
@@ -56,7 +64,7 @@ class PruneCompilerFileManager(
       packageName: String,
       kinds: ju.Set[JavaFileObject.Kind],
       recurse: Boolean
-  ): lang.Iterable[JavaFileObject] = {
+  ): lang.Iterable[JavaFileObject] = try {
     location.getName() match {
       case "SOURCE_PATH" =>
         val pkgSymbol = packageName.replace('.', '/') + '/'
@@ -72,5 +80,12 @@ class PruneCompilerFileManager(
       case _ =>
         super.list(location, packageName, kinds, recurse)
     }
+  } catch {
+    case NonFatal(e) =>
+      logger.error(
+        s"PruneCompilerFileManager: failed to list files for package '$packageName' at location '$location'. Returning an empty list to let compilation continue.",
+        e
+      )
+      ju.Collections.emptyList()
   }
 }

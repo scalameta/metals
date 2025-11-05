@@ -16,6 +16,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
 import scala.jdk.CollectionConverters._
 import scala.util.Try
+import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.EmptyCancelToken
@@ -267,13 +268,24 @@ case class JavaPresentationCompiler(
       new JavaSelectionRangeProvider().provide(params)
     )
 
-  override def shutdown(): Unit = {
+  override def shutdown(): Unit = try {
     compiler.shutdown()
+  } catch {
+    // `shutdown()` runs concurrently with ongoing LSP requests like didChange, which
+    // can result in a `ConcurrentModificationException` that is fine to silently ignore.
+    case _: util.ConcurrentModificationException =>
+    case NonFatal(e) =>
+      logger.error("Error shutting down JavaPresentationCompiler", e)
   }
 
-  override def restart(): Unit = {
+  override def restart(): Unit = try {
     logger.info("javapc: restarting")
     compiler.shutdownCurrentCompiler()
+  } catch {
+    // Same reason as for `shutdown()`.
+    case _: util.ConcurrentModificationException =>
+    case NonFatal(e) =>
+      logger.error("Error restarting JavaPresentationCompiler", e)
   }
 
   override def withReportsLoggerLevel(level: String): PresentationCompiler =
