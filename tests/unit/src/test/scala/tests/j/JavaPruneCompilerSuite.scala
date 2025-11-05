@@ -90,4 +90,21 @@ class JavaPruneCompilerSuite extends BaseJavaPruneCompilerSuite {
        |               ^^^^
        |""".stripMargin,
   )
+
+  checkNoErrors(
+    "empty-file",
+    """|/foo/Example.java
+       |package foo; /*
+       |public class Example implements java.io.Serializable {
+       |} */
+       |/foo/Main.java
+       |package foo;
+       |public class Main {
+       |    public static void main(String[] args) {
+       |        System.out.println("Hello, World!");
+       |    }
+       |}
+       |""".stripMargin,
+    "foo/Main.java",
+  )
 }

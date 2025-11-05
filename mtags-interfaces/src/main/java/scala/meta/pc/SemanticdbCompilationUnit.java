@@ -8,6 +8,8 @@ public interface SemanticdbCompilationUnit {
 
   String packageSymbol();
 
+  String binaryName();
+
   List<String> toplevelSymbols();
 
   URI uri();

@@ -41,14 +41,11 @@ class PruneCompilerFileManager(
   ): String = {
     file match {
       case s: SemanticdbCompilationUnit =>
-        s.toplevelSymbols().asScala.headOption match {
-          case Some(sym) =>
-            // Convert SemanticDB symbol "java/io/File#" into a Java FQN "java.io.File"
-            sym.stripSuffix("#").stripSuffix(".").replace('/', '.')
-          case None =>
-            super.inferBinaryName(location, file)
-        }
+        s.binaryName()
       case _ =>
+        // NOTE: doing `super.inferBinaryName` with a custom `JavaFileObject`
+        // implementation causes the compiler to throw an error like this:
+        //   java.lang.RuntimeException: java.lang.IllegalArgumentException: path.to.YourCustomClassName
         super.inferBinaryName(location, file)
     }
   }

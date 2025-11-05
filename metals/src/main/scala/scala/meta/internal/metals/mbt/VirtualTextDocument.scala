@@ -32,6 +32,15 @@ final case class VirtualTextDocument(
   override def packageSymbol(): String = pkg
   override def uri(): URI = _uri
   override def toplevelSymbols(): ju.List[String] = _toplevelSymbols.asJava
+  override def binaryName(): String = {
+    // Convert SemanticDB symbol "java/io/File#" into a Java FQN "java.io.File"
+    _toplevelSymbols.headOption match {
+      case None =>
+        pkg.replace('/', '.')
+      case Some(sym) =>
+        sym.stripSuffix("#").stripSuffix(".").replace('/', '.')
+    }
+  }
   override def getName(): String = uri.toString
   override def getCharContent(ignoreEncodingErrors: Boolean): CharSequence =
     text
