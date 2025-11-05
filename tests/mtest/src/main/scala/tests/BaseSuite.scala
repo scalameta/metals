@@ -10,8 +10,11 @@ import scala.meta.internal.metals.Testing
 import scala.meta.internal.semver.SemVer
 
 import munit.Flaky
+import munit.Location
 import munit.Tag
+import munit.TestOptions
 
+case class Rerun(count: Int) extends munit.Tag("Rerun")
 abstract class BaseSuite extends munit.FunSuite with Assertions {
 
   /**
@@ -53,6 +56,21 @@ abstract class BaseSuite extends munit.FunSuite with Assertions {
 
   // NOTE(olafur): always ignore flaky test failures.
   override def munitFlakyOK = true
+
+  override def test(
+      options: TestOptions
+  )(body: => Any)(implicit loc: Location): Unit = {
+    val rerunCount =
+      options.tags.collectFirst { case Rerun(n) => n }.getOrElse(1)
+    if (rerunCount == 1) {
+      super.test(options)(body)(loc)
+    } else {
+      1.to(rerunCount)
+        .foreach(i =>
+          super.test(options.withName(s"${options.name}-$i"))(body)(loc)
+        )
+    }
+  }
 
   override def munitTestTransforms: List[TestTransform] =
     super.munitTestTransforms ++ List(
