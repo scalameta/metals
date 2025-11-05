@@ -1508,6 +1508,7 @@ abstract class MetalsLspService(
       sourceMapper,
       () => userConfig,
       testProvider,
+      tables.dismissedNotifications,
     )
   )
   buildClient.registerLogForwarder(debugProvider)
