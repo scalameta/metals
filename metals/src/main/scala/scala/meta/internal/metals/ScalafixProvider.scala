@@ -35,6 +35,7 @@ import org.eclipse.lsp4j.MessageType
 import org.eclipse.{lsp4j => l}
 import scalafix.interfaces.Scalafix
 import scalafix.interfaces.ScalafixEvaluation
+import scalafix.interfaces.ScalafixException
 import scalafix.interfaces.ScalafixFileEvaluationError
 import scalafix.internal.interfaces.ScalafixCoursier
 import scalafix.internal.interfaces.ScalafixInterfacesClassloader
@@ -670,7 +671,22 @@ case class ScalafixProvider(
           val scalafix =
             if (scalaVersion.startsWith("2.11")) scala211Fallback
             else
-              Scalafix.fetchAndClassloadInstance(scalaVersion)
+              try {
+                Scalafix.fetchAndClassloadInstance(scalaVersion)
+              } catch {
+                case e: ScalafixException
+                    if e.getMessage().contains("Failed to fetch") =>
+                  val binaryVersion =
+                    ScalaVersions.scalaBinaryVersionFromFullVersion(
+                      scalaVersion
+                    )
+                  Embedded.downloadDependency(
+                    "ch.epfl.scala",
+                    s"scalafix-cli_$binaryVersion",
+                    BuildInfo.scalafixVersion,
+                  )
+                  Scalafix.fetchAndClassloadInstance(scalaVersion)
+              }
           scalafix
         }
       },
