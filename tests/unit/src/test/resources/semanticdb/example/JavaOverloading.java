@@ -8,7 +8,7 @@
 //              ^^^^ definition example/JavaOverloading#name.
 
      public static int name(String name) {
-//                     ^^^^ definition example/JavaOverloading#name().
+//                     ^^^^ definition example/JavaOverloading#name(+2).
 //                          ^^^^^^ reference java/lang/String#
 //                                 ^^^^ definition local0
        return name.length();
@@ -17,12 +17,12 @@
      }
 
      public int name() {
-//              ^^^^ definition example/JavaOverloading#name(+1).
+//              ^^^^ definition example/JavaOverloading#name().
        return 1;
      }
 
      public int name(int n) {
-//              ^^^^ definition example/JavaOverloading#name(+2).
+//              ^^^^ definition example/JavaOverloading#name(+1).
 //                       ^ definition local1
        return n;
 //            ^ reference local1

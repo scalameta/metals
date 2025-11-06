@@ -1,6 +1,6 @@
 package example;
 
-public record JavaRecord/*example.JavaRecord#*//*example.JavaRecord#`<init>`().*/(int a/*example.JavaRecord#a().*//*example.JavaRecord#a.*/, int b/*example.JavaRecord#b().*//*example.JavaRecord#b.*/) {
+public record JavaRecord/*example.JavaRecord#*//*example.JavaRecord#`<init>`().*/(int a/*example.JavaRecord#a().*/, int b/*example.JavaRecord#b().*/) {
   public JavaRecord/*example.JavaRecord#`<init>`(+1).*/(int a) {
     this(a, 0);
   }

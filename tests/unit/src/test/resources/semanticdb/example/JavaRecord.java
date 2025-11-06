@@ -5,9 +5,9 @@
 //               ^^^^^^^^^^ definition example/JavaRecord#
 //               ^^^^^^^^^^ definition example/JavaRecord#`<init>`(+2).
 //                              ^ definition local0
-//                              ^ definition example/JavaRecord#a.
+//                              ^ definition example/JavaRecord#a().
 //                                     ^ definition local1
-//                                     ^ definition example/JavaRecord#b.
+//                                     ^ definition example/JavaRecord#b().
      public JavaRecord(int a) {
 //          ^^^^^^^^^^ definition example/JavaRecord#`<init>`().
 //                         ^ definition local2
@@ -40,7 +40,7 @@
      public int sum() {
 //              ^^^ definition example/JavaRecord#sum().
        return a + b;
-//            ^ reference example/JavaRecord#a.
-//                ^ reference example/JavaRecord#b.
+//            ^ reference example/JavaRecord#a().
+//                ^ reference example/JavaRecord#b().
      }
    }

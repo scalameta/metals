@@ -90,6 +90,10 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
   }
 
   def visitMembers[T <: JavaMember](cls: JavaClass): Unit = {
+    if (cls.isRecord()) {
+      // Records can't have declared fields
+      return
+    }
     val fields = cls.getFields
     if (fields == null) ()
     else fields.asScala.foreach(visitMember(cls, _))

@@ -59,14 +59,14 @@ class SemanticdbSuite extends BaseJavaSemanticdbSuite {
        |//        ^^^^^ definition record/Point#
        |//        ^^^^^ definition record/Point#`<init>`().
        |//                  ^ definition local0
-       |//                  ^ definition record/Point#x.
+       |//                  ^ definition record/Point#x().
        |//                         ^ definition local1
-       |//                         ^ definition record/Point#y.
+       |//                         ^ definition record/Point#y().
        |       public int sum() {
        |//                ^^^ definition record/Point#sum().
        |           return x + y;
-       |//                ^ reference record/Point#x.
-       |//                    ^ reference record/Point#y.
+       |//                ^ reference record/Point#x().
+       |//                    ^ reference record/Point#y().
        |       }
        |   }
        |""".stripMargin,

@@ -5,7 +5,9 @@ import static scala.meta.internal.semanticdb.javac.Debugging.pprint;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
@@ -17,6 +19,7 @@ import javax.lang.model.type.NoType;
 public final class GlobalSymbolsCache {
 
   private final IdentityHashMap<Element, String> globals = new IdentityHashMap<>();
+
   private final SemanticdbJavacOptions options;
 
   public GlobalSymbolsCache(SemanticdbJavacOptions options) {
@@ -68,7 +71,12 @@ public final class GlobalSymbolsCache {
     if (isAnonymousClass(sym) || isLocalVariable(sym)) return locals.put(sym);
 
     String owner = semanticdbSymbol(sym.getEnclosingElement(), locals);
+
     if (SemanticdbSymbols.isLocal(owner)) return locals.put(sym);
+
+    if (SemanticdbSymbols.isMethod(owner))
+      // children of methods can't be global symbols
+      return locals.put(sym);
 
     SemanticdbSymbols.Descriptor desc = semanticdbDescriptor(sym);
     if (options.verboseEnabled && desc.kind == SemanticdbSymbols.Descriptor.Kind.None) {
@@ -110,6 +118,14 @@ public final class GlobalSymbolsCache {
       return new SemanticdbSymbols.Descriptor(
           SemanticdbSymbols.Descriptor.Kind.TypeParameter, sym.getSimpleName().toString());
     } else if (sym instanceof VariableElement) {
+      // javac encodes record members as private final fields, but they're only
+      // publicly accessible as methods. It's also not valid to declare custom
+      // fields, you can only declare methods. Therefore, we just assume all
+      // record *field* members are in fact *method members.
+      if (sym.getEnclosingElement().getKind() == ElementKind.RECORD) {
+        return new SemanticdbSymbols.Descriptor(
+            SemanticdbSymbols.Descriptor.Kind.Method, sym.getSimpleName().toString(), "()");
+      }
       return new SemanticdbSymbols.Descriptor(
           SemanticdbSymbols.Descriptor.Kind.Term, sym.getSimpleName().toString());
     } else {
@@ -156,7 +172,10 @@ public final class GlobalSymbolsCache {
     // shouldn't be a big
     // issue.
     methods.sort(
-        (a, b) -> Boolean.compare(a.getReceiverType() == null, b.getReceiverType() == null));
+        (a, b) ->
+            Boolean.compare(
+                a.getModifiers().contains(Modifier.STATIC),
+                b.getModifiers().contains(Modifier.STATIC)));
     int index = methods.indexOf(sym);
     if (index == 0) return "()";
     return String.format("(+%d)", index);

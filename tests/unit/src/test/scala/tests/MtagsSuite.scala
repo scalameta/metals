@@ -106,9 +106,6 @@ class MtagsScala2Suite
         ).exists { name => file.file.toNIO.endsWith(s"$name.scala") }
       },
       documentedUnknownSymbols = Set(
-        "example/JavaLocals#Point#x().", "example/JavaLocals#Point#y().",
-        "example/JavaExtends#MyRecord#name().", "example/JavaRecord#a().",
-        "example/JavaRecord#b().",
       ),
     )
 

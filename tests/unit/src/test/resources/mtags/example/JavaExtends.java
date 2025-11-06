@@ -30,7 +30,7 @@ public class JavaExtends/*example.JavaExtends#*/ {
     void myMethod/*example.JavaExtends#MyInterface#myMethod().*/();
   }
 
-  record MyRecord/*example.JavaExtends#MyRecord#*//*example.JavaExtends#MyRecord#`<init>`().*/(String name/*example.JavaExtends#MyRecord#name().*//*example.JavaExtends#MyRecord#name.*/) implements MyInterface, Runnable {
+  record MyRecord/*example.JavaExtends#MyRecord#*//*example.JavaExtends#MyRecord#`<init>`().*/(String name/*example.JavaExtends#MyRecord#name().*/) implements MyInterface, Runnable {
     @Override
     public void close/*example.JavaExtends#MyRecord#close().*/() throws IOException {
       System.out.println("Closing...");

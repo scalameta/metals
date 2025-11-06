@@ -71,7 +71,7 @@
 //          ^^^^^^^^ definition example/JavaExtends#MyRecord#`<init>`().
 //                   ^^^^^^ reference java/lang/String#
 //                          ^^^^ definition local1
-//                          ^^^^ definition example/JavaExtends#MyRecord#name.
+//                          ^^^^ definition example/JavaExtends#MyRecord#name().
 //                                           ^^^^^^^^^^^ reference example/JavaExtends#MyInterface#
 //                                                        ^^^^^^^^ reference java/lang/Runnable#
        @Override

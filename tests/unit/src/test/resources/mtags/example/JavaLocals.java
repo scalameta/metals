@@ -4,7 +4,7 @@ import java.util.Scanner;
 import java.util.stream.Stream;
 
 public class JavaLocals/*example.JavaLocals#*/ {
-  record Point/*example.JavaLocals#Point#*//*example.JavaLocals#Point#`<init>`().*/(int x/*example.JavaLocals#Point#x().*//*example.JavaLocals#Point#x.*/, int y/*example.JavaLocals#Point#y().*//*example.JavaLocals#Point#y.*/) {}
+  record Point/*example.JavaLocals#Point#*//*example.JavaLocals#Point#`<init>`().*/(int x/*example.JavaLocals#Point#x().*/, int y/*example.JavaLocals#Point#y().*/) {}
 
   public int test/*example.JavaLocals#test().*/(int x) {
     int a = 1;
