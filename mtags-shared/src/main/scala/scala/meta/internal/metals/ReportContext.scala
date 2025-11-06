@@ -176,7 +176,10 @@ class StdReporter(
     val date = TimeFormatter.getDate()
     val time = TimeFormatter.getTime()
     val buildTargetPart =
-      resolveBuildTarget(report.path).map("_(" ++ _ ++ ")").getOrElse("")
+      resolveBuildTarget(report.path)
+        .map(_.replaceAll(":", "_"))
+        .map("~" ++ _ ++ "~")
+        .getOrElse("")
     val filename = s"r_${report.name}${buildTargetPart}_${time}.md"
     reportsDir.resolve(date).resolve(filename)
   }
@@ -297,7 +300,7 @@ object Report {
     Report(name, text, error, path = None)
 
   val idPrefix = "error id: "
-  val summaryTitle = "#### Short summary: "
+  val summaryTitle = "#### Short summary:"
 }
 
 sealed trait ReportLevel {
@@ -321,7 +324,7 @@ object ReportLevel {
 }
 
 object ReportFileName {
-  val pattern: Regex = "r_(?<name>[^()]*)(_\\((?<buildTarget>.*)\\))?_".r
+  val pattern: Regex = "r_(?<name>[^()~]*)(~(?<buildTarget>.*)~)?_".r
 
   def getReportNameAndBuildTarget(
       file: TimestampedFile

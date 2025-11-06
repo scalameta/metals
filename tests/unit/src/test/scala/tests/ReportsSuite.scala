@@ -52,7 +52,7 @@ class ReportsSuite extends BaseSuite {
       new String(Files.readAllBytes(path.get), StandardCharsets.UTF_8)
     assertNoDiff(
       s"""|${exampleText(StdReportContext.WORKSPACE_STR)}
-          |#### Short summary: 
+          |#### Short summary:
           |
           |Test error report.
           |""".stripMargin,
@@ -83,10 +83,10 @@ class ReportsSuite extends BaseSuite {
         val summary = Doctor.getErrorReportSummary(report, workspace)
         name -> (buildTarget, summary)
       }
-      .toMap
+      .sortBy(_._1)
     assertEquals(
       reports,
-      Map(
+      List(
         report.name -> (None, Some(report.shortSummary)),
         report2.name -> (Some("build-target"), Some(report2.shortSummary)),
       ),
@@ -131,7 +131,7 @@ class ReportsSuite extends BaseSuite {
     assertNoDiff(
       s"""|error id: $testId
           |${exampleText(StdReportContext.WORKSPACE_STR)}
-          |#### Short summary: 
+          |#### Short summary:
           |
           |Test error
           |""".stripMargin,
