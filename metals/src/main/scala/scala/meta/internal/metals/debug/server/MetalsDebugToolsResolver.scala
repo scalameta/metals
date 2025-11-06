@@ -12,17 +12,17 @@ import scala.meta.internal.metals.Embedded
 import ch.epfl.scala.debugadapter.BuildInfo
 import ch.epfl.scala.debugadapter.DebugToolsResolver
 import ch.epfl.scala.debugadapter.ScalaVersion
-import coursierapi.Dependency
+import coursier.Dependency
 
 class MetalsDebugToolsResolver extends DebugToolsResolver {
   def expressionCompilerDependency(scalaVersion: ScalaVersion): Dependency = {
     val module = s"${BuildInfo.expressionCompilerName}_$scalaVersion"
-    Dependency.of(BuildInfo.organization, module, BuildInfo.version)
+    Embedded.dependencyOf(BuildInfo.organization, module, BuildInfo.version)
   }
 
   def debugDecoderDependency(scalaVersion: ScalaVersion): Dependency = {
     val module = s"${BuildInfo.decoderName}_${scalaVersion.binaryVersion}"
-    Dependency.of(BuildInfo.organization, module, BuildInfo.version)
+    Embedded.dependencyOf(BuildInfo.organization, module, BuildInfo.version)
   }
 
   override def resolveExpressionCompiler(

@@ -515,7 +515,7 @@ object BloopServers {
 
     try {
       val cp = Embedded
-        .downloadDependency(coursierapi.Dependency.of(org, name, version))
+        .downloadDependency(org, name, version)
         .map(_.toFile())
       Right(cp)
     } catch {

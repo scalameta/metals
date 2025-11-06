@@ -29,7 +29,7 @@ import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
 
 import com.typesafe.config.ConfigFactory
-import coursierapi.Dependency
+import coursier.Dependency
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.{lsp4j => l}
@@ -98,7 +98,7 @@ case class ScalafixProvider(
       .flatMap(buildId => buildTargets.scalaTarget(buildId))
       .map { scalaTarget =>
         val additionalDeps = Map(
-          ruleName -> Dependency.of(ruleDep)
+          ruleName -> ruleDep
         )
         runScalafixRules(
           file,
@@ -682,7 +682,7 @@ case class ScalafixProvider(
     // last version that supports Scala 2.11.12
     val latestSupporting = "0.10.4"
     val jars = ScalafixCoursier.scalafixCliJars(
-      Embedded.repositories.asJava,
+      Embedded.apiRepositories.asJava,
       latestSupporting,
       V.scala211,
     )
@@ -708,7 +708,7 @@ case class ScalafixProvider(
             // Scalafix version that supports Scala 2.11 doesn't have the rule built in
             if (scalfixRulesKey.scalaVersion.startsWith("2.11"))
               Some(
-                Dependency.of(
+                Embedded.dependencyOf(
                   "com.github.liancheng",
                   "organize-imports_2.11",
                   "0.6.0",
@@ -810,12 +810,17 @@ object ScalafixProvider {
       rules: List[String],
       additionalDeps: Map[String, Dependency],
   ): Set[Dependency] = {
-    val fromSettings =
+    val fromSettings: Seq[Dependency] =
       userConfig.scalafixRulesDependencies.flatMap { dependencyString =>
         Try {
-          Dependency.parse(
+          val classic = coursierapi.Dependency.parse(
             dependencyString,
             coursierapi.ScalaVersion.of(scalaVersion),
+          )
+          Embedded.dependencyOf(
+            classic.getModule().getOrganization(),
+            classic.getModule().getName(),
+            classic.getVersion(),
           )
         } match {
           case Failure(exception) =>
@@ -830,39 +835,39 @@ object ScalafixProvider {
     val allDeps = fromSettings ++ rules.flatMap(builtInRuleDeps.get)
     // only get newest versions for each dependency
     allDeps
-      .sortBy(_.getVersion())
+      .sortBy(_.versionConstraint.asString)
       .reverse
-      .distinctBy(dep => dep.getModule())
+      .distinctBy(dep => dep.module)
       .toSet
   }
 
   // Hygiene rules from https://scalacenter.github.io/scalafix/docs/rules/community-rules.html
   private def builtInRules(binaryVersion: String) = {
-    val scaluzziDep = Dependency.of(
+    val scaluzziDep = Embedded.dependencyOf(
       "com.github.vovapolu",
       s"scaluzzi_$binaryVersion",
       "latest.release",
     )
 
-    val scalafixUnifiedDep = Dependency.of(
+    val scalafixUnifiedDep = Embedded.dependencyOf(
       "com.github.xuwei-k",
       s"scalafix-rules_$binaryVersion",
       "latest.release",
     )
 
-    val scalafixPixivRule = Dependency.of(
+    val scalafixPixivRule = Embedded.dependencyOf(
       "net.pixiv",
       s"scalafix-pixiv-rule_$binaryVersion",
       "latest.release",
     )
 
     val depsList = List(
-      "EmptyCollectionsUnified" -> Dependency.of(
+      "EmptyCollectionsUnified" -> Embedded.dependencyOf(
         "io.github.ghostbuster91.scalafix-unified",
         s"unified_$binaryVersion",
         "latest.release",
       ),
-      "UseNamedParameters" -> Dependency.of(
+      "UseNamedParameters" -> Embedded.dependencyOf(
         "com.github.jatcwang",
         s"scalafix-named-params_$binaryVersion",
         "latest.release",
