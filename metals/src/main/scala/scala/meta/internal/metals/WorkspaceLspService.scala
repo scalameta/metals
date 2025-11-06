@@ -936,6 +936,18 @@ class WorkspaceLspService(
         Future {
           doctor.executeRunDoctor()
         }.asJavaObject
+      case ServerCommands.ModuleStatusBarClicked() =>
+        focusedDocument
+          .get()
+          .zip(currentFolder)
+          .map { case (focused, service) =>
+            service.maybeImportFileAndLoad(
+              focused,
+              () => Future.successful(moduleStatus.refresh()),
+            )
+          }
+          .getOrElse(Future.successful(()))
+          .asJavaObject
       case ServerCommands.ZipReports() =>
         Future {
           val zip =

@@ -100,6 +100,13 @@ class ProjectMetalsLspService(
   def connect[T](config: ConnectRequest): Future[BuildChange] =
     connectionProvider.Connect.connect(config)
 
+  def isOnlyScalaCli: Boolean = {
+    buildTools.loadSupported() match {
+      case (_: ScalaCliBuildTool) :: Nil => true
+      case _ => false
+    }
+  }
+
   override val fileWatcher: ProjectFileWatcher = register(
     new ProjectFileWatcher(
       initialServerConfig,
@@ -469,6 +476,9 @@ class ProjectMetalsLspService(
           case FileOutOfScalaCliBspScope.regenerateAndRestart =>
             val buildTool = ScalaCliBuildTool(folder, folder, () => userConfig)
             connect(GenerateBspConfigAndConnect(buildTool)).ignoreValue
+          case FileOutOfScalaCliBspScope.openDoctor =>
+            headDoctor.executeRunDoctor()
+            Future.successful(())
           case _ => Future.successful(())
         }
     } else Future.successful(())

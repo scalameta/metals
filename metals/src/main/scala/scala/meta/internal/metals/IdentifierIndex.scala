@@ -9,6 +9,7 @@ import scala.util.control.NonFatal
 import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.parsing.JavaTokens
 import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyToken._
 import scala.meta.io.AbsolutePath
@@ -16,6 +17,7 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
+import org.eclipse.jdt.core.compiler.ITerminalSymbols
 
 class IdentifierIndex {
   val index: TrieMap[Path, IdentifierIndex.IndexEntry] = TrieMap.empty
@@ -39,18 +41,40 @@ class IdentifierIndex {
   def collectIdentifiers(
       text: String,
       dialect: Dialect,
+      path: AbsolutePath,
   ): Iterable[String] = {
     val identifiers = Set.newBuilder[String]
-    try {
-      val scanner = new LegacyScanner(Input.String(text), dialect)
-      scanner.foreach {
-        case ident if ident.token == IDENTIFIER => identifiers += ident.strVal
-        case _ =>
+
+    def indexScala() = {
+      try {
+        val scanner = new LegacyScanner(Input.String(text), dialect)
+        scanner.foreach {
+          case ident if ident.token == IDENTIFIER => identifiers += ident.strVal
+          case _ =>
+        }
+      } catch {
+        case NonFatal(_) =>
       }
-    } catch {
-      case NonFatal(_) =>
     }
 
+    def indexJava() = {
+      try {
+        val scanner = JavaTokens.tokenize(Input.String(text))
+        scanner.toOption.toList.flatten.foreach {
+          case ident if ident.id == ITerminalSymbols.TokenNameIdentifier =>
+            identifiers += ident.text
+          case _ =>
+        }
+      } catch {
+        case NonFatal(_) =>
+      }
+    }
+
+    if (path.isJava) {
+      indexJava()
+    } else {
+      indexScala()
+    }
     identifiers.result()
   }
 }

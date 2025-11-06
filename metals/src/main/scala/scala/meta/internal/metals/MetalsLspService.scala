@@ -1421,7 +1421,7 @@ abstract class MetalsLspService(
     stacktraceAnalyzer.resolveStacktraceLocationCommand(stacktraceLine)
 
   def findBuildTargetByDisplayName(target: String): Option[b.BuildTarget] =
-    buildTargets.findByDisplayName(target)
+    buildTargets.findByDisplayNameOrUri(target)
 
   def willRenameFile(
       oldPath: AbsolutePath,
@@ -1520,7 +1520,7 @@ abstract class MetalsLspService(
       .flatMap(buildTargets.inverseSources(_))
       .orElse {
         Option(params.buildTarget)
-          .flatMap(buildTargets.findByDisplayName)
+          .flatMap(buildTargets.findByDisplayNameOrUri)
           .map(_.getId())
       }
 
