@@ -121,7 +121,9 @@ final class FormattingProvider(
     )
     dependencies.foreach { dep =>
       Embedded.downloadDependency(
-        coursierapi.Dependency.of(dep.group, dep.artifact, dep.version)
+        dep.group,
+        dep.artifact,
+        dep.version,
       )
     }
   }

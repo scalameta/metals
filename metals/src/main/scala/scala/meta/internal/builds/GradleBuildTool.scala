@@ -11,10 +11,11 @@ import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
-import coursierapi.Credentials
-import coursierapi.IvyRepository
-import coursierapi.MavenRepository
-import coursierapi.Repository
+import coursier.MavenRepository
+import coursier.Repositories
+import coursier.Repository
+import coursier.core.Authentication
+import coursier.ivy.IvyRepository
 
 case class GradleBuildTool(
     userConfig: () => UserConfiguration,
@@ -134,36 +135,48 @@ object GradleBuildTool {
   def toGradleRepositories(
       repos: List[Repository]
   ): String = {
-    def authString(cr: Credentials) =
-      if (cr == null) ""
-      else
-        s"""|
-            |      credentials {
-            |        username "${cr.getUser()}"
-            |        password "${cr.getPassword()}"
-            |      }""".stripMargin
+    def authString(cr: Option[Authentication]) =
+      cr match {
+        case Some(auth) =>
+          val user = auth.userOpt match {
+            case Some(user) => s"username \"$user\""
+            case None => ""
+          }
+          val password = auth.passwordOpt match {
+            case Some(password) => s"password \"$password\""
+            case None => ""
+          }
+          if (user.isEmpty && password.isEmpty) ""
+          else
+            s"""|
+                |      credentials {
+                |        ${user}
+                |        ${password}
+                |      }""".stripMargin
+        case None => ""
+      }
 
     repos.collect {
-      case mr: MavenRepository if mr != Repository.central =>
+      case mr: MavenRepository if mr != Repositories.central =>
         // filter central etc.
         s"""|    maven {
-            |      url "${mr.getBase()}"${authString(mr.getCredentials())}
+            |      url "${mr.root}"${authString(mr.authentication)}
             |    }""".stripMargin
 
       case ir: IvyRepository =>
-        ir.getPattern().split("\\/\\[").toList match {
+        ir.pattern.string.split("\\/\\[").toList match {
           case url :: rest => {
             val layout = "[" ++ rest.mkString("/[")
             s"""|    ivy {
                 |      url "${url}"
                 |      patternLayout {
                 |        artifact "${layout}"
-                |      }${authString(ir.getCredentials())}
+                |      }${authString(ir.authentication)}
                 |    }""".stripMargin
           }
           case Nil => ""
         }
-      case mr if mr == Repository.central => "    mavenCentral()"
+      case mr if mr == Repositories.central => "    mavenCentral()"
     } match {
       case Nil =>
         """|  repositories {

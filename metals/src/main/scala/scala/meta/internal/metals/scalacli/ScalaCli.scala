@@ -295,8 +295,11 @@ object ScalaCli {
   def scalaCliClassPath(): Seq[String] =
     Embedded
       .downloadDependency(
-        coursierapi.Dependency
-          .of("org.virtuslab.scala-cli", "cli_3", BuildInfo.scalaCliVersion)
+        Embedded.dependencyOf(
+          "org.virtuslab.scala-cli",
+          "cli_3",
+          BuildInfo.scalaCliVersion,
+        )
       )
       .toSeq
       .map(_.toString())

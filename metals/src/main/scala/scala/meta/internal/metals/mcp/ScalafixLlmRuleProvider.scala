@@ -10,6 +10,7 @@ import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
@@ -20,7 +21,7 @@ import scala.meta.internal.metals.mcp.ScalafixLlmRuleProvider.ScalafixRunResult
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.io.AbsolutePath
 
-import coursierapi.Dependency
+import coursier.Dependency
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.WorkspaceEdit
 
@@ -376,7 +377,7 @@ object ScalafixLlmRuleProvider {
       ruleName: String,
       binaryVersion: String,
   ): Dependency =
-    Dependency.of(
+    Embedded.dependencyOf(
       s"com.github.metals",
       s"${ruleName}_$binaryVersion",
       "0.1.0-SNAPSHOT",
