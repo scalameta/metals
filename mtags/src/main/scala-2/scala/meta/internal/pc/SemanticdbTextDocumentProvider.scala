@@ -54,7 +54,10 @@ class SemanticdbTextDocumentProvider(
     // we recalculate md5, since there seems to be issue with newlines sometimes
     val document =
       try {
-        unit.toTextDocument(explicitDialect).withMd5(MD5.compute(code))
+        unit
+          .toTextDocument(explicitDialect)
+          .withMd5(MD5.compute(code))
+          .withDiagnostics(compiler.semanticdbDiagnosticsOf(unit))
       } catch {
         case _: TokenizeException | _: ParseException =>
           s.TextDocument.defaultInstance

@@ -11,6 +11,8 @@ import scala.tools.nsc.interactive.Problem
 import scala.tools.nsc.interactive.ShutdownReq
 import scala.util.control.ControlThrowable
 
+import scala.meta.internal.{semanticdb => s}
+
 import org.eclipse.{lsp4j => l}
 
 trait PcDiagnostics {
@@ -38,6 +40,32 @@ trait PcDiagnostics {
         Nil
     }
   }
+
+  def semanticdbDiagnosticsOf(unit: RichCompilationUnit): List[s.Diagnostic] = {
+    for {
+      p <- unit.problems.iterator
+      if p.pos.isDefined
+    } yield {
+      val range = p.pos.toLsp
+      s.Diagnostic(
+        message = p.msg,
+        severity = p.severityLevel match {
+          case ERROR.id => s.Diagnostic.Severity.ERROR
+          case WARNING.id => s.Diagnostic.Severity.WARNING
+          case INFO.id => s.Diagnostic.Severity.INFORMATION
+          case _ => s.Diagnostic.Severity.HINT
+        },
+        range = Some(
+          s.Range(
+            startLine = range.getStart().getLine(),
+            startCharacter = range.getStart().getCharacter(),
+            endLine = range.getEnd().getLine(),
+            endCharacter = range.getEnd().getCharacter()
+          )
+        )
+      )
+    }
+  }.toList
 
   private def toLspDiagnostic(prob: Problem): Option[l.Diagnostic] = {
     if (prob.pos.isDefined) {
