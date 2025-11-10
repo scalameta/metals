@@ -216,10 +216,12 @@ class CompletionProvider(
               )
             ) "($0)"
             else ""
-          val (short, edits) = ShortenedNames.synthesize(
+          val implicitClassSymbol = m.definingClassSymbol
+
+          val (_, edits) = ShortenedNames.synthesize(
             TypeRef(
-              ThisType(m.sym.owner),
-              m.sym,
+              ThisType(implicitClassSymbol.owner),
+              implicitClassSymbol,
               Nil
             ),
             pos,
@@ -227,7 +229,7 @@ class CompletionProvider(
             impPos
           )
           val edit: l.TextEdit = textEdit(
-            short + suffix,
+            ident + suffix,
             editRange
           )
           item.setTextEdit(edit)
@@ -434,6 +436,12 @@ class CompletionProvider(
         typedTreeAt(pos) match {
           case Select(qualifier, _)
               if qualifier.tpe != null && !qualifier.tpe.isError =>
+            findImplicitExtensionsForType(
+              query,
+              qualifier.tpe,
+              pos,
+              visit
+            )
             workspaceExtensionMethods(query, pos, visit, qualifier.tpe)
           case _ => SymbolSearch.Result.COMPLETE
         }
@@ -449,20 +457,52 @@ class CompletionProvider(
       selectType: Type
   ): SymbolSearch.Result = {
     val context = doLocateContext(pos)
+
+    def matchesType(paramType: Type, typeParams: List[Symbol]): Boolean = {
+      // Special handling for type parameters - they could match any type
+      val isTypeParameter = paramType.typeSymbol.isTypeParameter ||
+        paramType.typeSymbol.isAbstractType
+
+      if (isTypeParameter) {
+        true
+      } else {
+        try {
+          // Use bounded wildcard type to handle type parameters in the implicit class
+          val boundedParamType = boundedWildcardType(paramType, typeParams)
+          selectType <:< boundedParamType || selectType.widen <:< boundedParamType
+        } catch {
+          case scala.util.control.NonFatal(_) => false
+        }
+      }
+    }
+
+    def isValidImplicitExtension(sym: Symbol): Boolean = {
+      // Must be a member of an implicit class
+      if (!sym.safeOwner.isImplicit) return false
+
+      // Check if owner is accessible and static
+      if (!sym.owner.isStatic) return false
+
+      // Get the implicit class constructor
+      val ownerConstructor = sym.owner.info.member(nme.CONSTRUCTOR)
+      def typeParams = sym.owner.info.typeParams
+
+      // Check if the implicit class can be applied to the target type
+      ownerConstructor.info.paramss match {
+        case List(List(param)) =>
+          matchesType(param.info, typeParams)
+        case _ => false
+      }
+    }
+
     val visitor = new CompilerSearchVisitor(
       context,
       sym =>
-        if (sym.safeOwner.isImplicit && sym.owner.isStatic) {
-          val ownerConstructor = sym.owner.info.member(nme.CONSTRUCTOR)
-          def typeParams = sym.owner.info.typeParams
-          ownerConstructor.info.paramss match {
-            case List(List(param))
-                if selectType <:< boundedWildcardType(param.info, typeParams) =>
-              visit(new WorkspaceImplicitMember(sym))
-            case _ => false
-          }
+        if (isValidImplicitExtension(sym)) {
+          visit(new WorkspaceImplicitMember(sym, sym.owner))
         } else false
     )
+
     search.searchMethods(query, buildTargetIdentifier, visitor)
   }
 

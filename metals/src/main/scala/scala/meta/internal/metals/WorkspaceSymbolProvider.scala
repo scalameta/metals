@@ -10,6 +10,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.ToplevelMember
+import scala.meta.internal.mtags.ToplevelMember.Kind._
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -103,7 +104,7 @@ final class WorkspaceSymbolProvider(
       target: Option[BuildTargetIdentifier],
   ): (SymbolSearch.Result, Int) = {
     val workspaceCount = workspaceSearch(query, visitor, target)
-    val typeCount = workspaceTopelevelSearch(query, visitor)
+    val typeCount = workspaceToplevelSearch(query, visitor)
     val (res, inDepsCount) = inDependencies.search(query, visitor)
     (res, workspaceCount + inDepsCount + typeCount)
   }
@@ -114,7 +115,48 @@ final class WorkspaceSymbolProvider(
       target: Option[BuildTargetIdentifier],
   ): SymbolSearch.Result = {
     workspaceMethodSearch(query, visitor, target)
+    searchImplicitClassMethods(query, visitor, target)
     SymbolSearch.Result.COMPLETE
+  }
+
+  private def isNoisyImplicitClass(classSymbol: String): Boolean = {
+    classSymbol.contains("scala/collection/convert/StreamExtensions") ||
+    classSymbol.contains("scala/reflect/api/Internals") ||
+    classSymbol.contains("scala/Predef")
+  }
+
+  private def searchImplicitClassMethods(
+      query: String,
+      visitor: SymbolSearchVisitor,
+      target: Option[BuildTargetIdentifier],
+  ): Unit = {
+    val implicitClasses = target match {
+      case None =>
+        topLevelMembers.iterator
+          .flatMap { case (path, members) =>
+            members
+              .filter(_.kind == ToplevelMember.Kind.ImplicitClass)
+              .map(member => (path.toNIO, member))
+          }
+      case Some(targetId) =>
+        for {
+          source <- buildTargets.buildTargetTransitiveSources(targetId)
+          members <- topLevelMembers.get(source).iterator
+          member <- members
+          if member.kind == ToplevelMember.Kind.ImplicitClass
+        } yield (source.toNIO, member)
+    }
+
+    implicitClasses.foreach { case (path, implicitClass) =>
+      if (!isNoisyImplicitClass(implicitClass.symbol)) {
+        visitor.visitImplicitClassSymbol(
+          path,
+          implicitClass.symbol,
+          query,
+          implicitClass.range.toLsp,
+        )
+      }
+    }
   }
 
   def searchWorkspacePackages(
@@ -290,7 +332,7 @@ final class WorkspaceSymbolProvider(
       )
   }
 
-  private def workspaceTopelevelSearch(
+  private def workspaceToplevelSearch(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor,
   ): Int = {
@@ -299,12 +341,14 @@ final class WorkspaceSymbolProvider(
       symbol <- symbols
       if query.matches(symbol.symbol)
     } yield {
-      visitor.visitWorkspaceSymbol(
-        path.toNIO,
-        symbol.symbol,
-        symbol.kind.toLsp,
-        symbol.range.toLsp,
-      )
+      if (symbol.kind == ToplevelMember.Kind.Type) {
+        visitor.visitWorkspaceSymbol(
+          path.toNIO,
+          symbol.symbol,
+          symbol.kind.toLsp,
+          symbol.range.toLsp,
+        )
+      }
     }
     all.length
   }
@@ -418,6 +462,7 @@ final class WorkspaceSymbolProvider(
       }
     }
   }
+
 }
 case class PackageNode(
     children: TrieMap[String, PackageNode] = TrieMap.empty

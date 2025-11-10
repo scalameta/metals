@@ -113,7 +113,9 @@ class SymbolIndexBucket(
         case None => Some(Set(source))
       }
     }
-    Some(IndexingResult(path, topLevels, overrides, toplevelMembers))
+    Some(
+      IndexingResult(path, topLevels, overrides, toplevelMembers)
+    )
   } catch {
     case NonFatal(e) =>
       onError(e)
